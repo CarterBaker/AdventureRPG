@@ -9,7 +9,7 @@ public class Main extends Game {
     @Override
     public void create() {
         batch = new SpriteBatch();
-        setScreen(new WorldRenderer(this));
+        setScreen(new GameManager(this));
     }
 
     @Override

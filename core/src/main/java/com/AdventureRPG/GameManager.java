@@ -5,11 +5,11 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 
-public class WorldRenderer implements Screen {
+public class GameManager implements Screen {
     private final Main game;
     private Texture image;
 
-    public WorldRenderer(Main game) {
+    public GameManager(Main game) {
         this.game = game;
         image = new Texture("libgdx.png");
     }

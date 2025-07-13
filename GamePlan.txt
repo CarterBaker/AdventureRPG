@@ -1,77 +1,96 @@
-- Main.java
-{
-
-    -- GameManager.java "Will handle the splash screen and getting everything setup while the game starts. Also will handle mod loading if the game catches on"
-    {
-
-        --- UISystem.java
-        {
-            ---- SplashScreen.java
-            ---- MainMenu.java
-            ---- LoadGame.java "Called from main menu will show all saves found on disk (Will be it's own screen)"
-            ---- PauseGame.java
-            ---- Options.java
-            ---- Inventory.java "Will display items in the players inventory"
-            ---- Chests.java "Will have to display Inventory adn Chest so the 2 systems will need to be written well"
-            ---- Notification.java
-            ---- Tooltip.java
-
-            Method SendInput(Vector2 input) "If Input system needs to handle mouse clicks we will have a method like this in input system to handle which buttons were pressed"
-        }
-
-        --- StatsSystem.java "Defines stats and draws calculations and other functions"
-
-        --- InventorySystem.java "Anything inventory will through this. This will handle fetching item ID's, icons ect. Basically creating items to visualize using input"
-        {
-            ---- CraftingSystem.java "Will define combinable objects and stuff"
-        }
-
-        --- PlayerSystem.java
-        {
-            ---- InputSystem.java "Will handle player input possibly even mouse clicks? not sure how java handles things"
-            ---- CameraSystem.java "Simply rotates, the grid will move around the player"
-            ---- PlayerStats.java "Stores player statistics"
-            ---- PlayerInventory.java "Stores players inventory items"
-
-            Vector3 playerPosition
-
-            Method MovePlayer(Vector3 input) "Called from InputSystem. This does not actually move the player, instead it stores the players actual position to playerPosition the calls SetGrid(playerPosition)"
-        }
-
-        --- EntitySystem.java
-        {
-            DialogueSystem.java
-            EntityStats.java
-            EntityInventory.java
-        }
-
-        --- Grid.java "Will move instead of the player"
-        {
-            Method SetGrid(Vector3 input) "This will be called from MovePlayer. This will handle a cascade of things like what chunks to load ect. Essentially Handle how to move the world."
-            Method LogPlayerLocation(Vector3 input) "This will log the player positon to a specific point within a loaded chunk so if multiplayer is ever added when somebody else sees that chunk they see the player"
-        }
-
-        --- ChunkLoader.java "Loads specified chunks"
-        {
-            ---- BiomeLoader.java
-            ---- StructureLoader.java
-            ---- PropLoader.java "Can be used to load more intricate prop blocks"
-            ---- MeshGenerator.java
-            ---- Texturegenerator.java
-        }
-
-        --- TimeSystem.java
-
-        --- WeatherSystem.java
-
-        --- SaveLoadSystem.java
-        {
-            ---- SavePlayerData.java
-            ---- SaveInventoryData.java
-            ---- SaveChunkData.java
-            ---- SaveEntityData.java
-        }
-
-    }
-
-}
+/src
+|- Main.java
+|{
+|
+|    -- GameManager.java
+|    {
+|
+|        --- AudioSystem.java
+|        --- AnimationSystem.java
+|        --- CollisionSystem.java
+|        --- StatSystem.java
+|        --- CombatSystem.java
+|        --- InventorySystem.java
+|        --- CraftingSystem.java
+|        --- TradingSystem.java
+|        --- QuestSystem.java
+|        --- EconomySystem.java
+|        --- TimeSystem.java
+|        --- WeatherSystem.java
+|        --- LightingSystem.java
+|        --- EventSystem.java
+|
+|________/UISystem
+|        --- UISystem.java
+|        {
+|            ---- SplashScreen.java
+|            ---- MainMenu.java
+|            ---- LoadGame.java "Called from main menu will show all saves found on disk (Will be it's own screen)"
+|            ---- PauseGame.java
+|            ---- Options.java
+|            ---- Inventory.java "Will display items in the players inventory"
+|            ---- ChestMenu.java "Will have to display Inventory and Chest so the 2 systems will need to be written well"
+|            ---- CraftingMenu.java
+|            ---- SmeltingMenu.java
+|            ---- TradingMenu.java
+|            ---- Notification.java
+|            ---- Tooltip.java
+|            ---- MapSystem.java
+|
+|            Method SendInput(Vector2 input) "InputSystem will send data here and the UISystem will handle it to detect button presses"
+|        }
+|
+|________/EntitySystem
+|        --- EntitySystem.java (Abstract)
+|        {
+|            ---- ActionMachine.java (Abstract) "Will handle higher level behavior"
+|            ---- StateMachine.java (Abstract) "Similar to the ActionMachine but will handle more intricate interactions with the environment"
+|            ---- PathfindingSystem.java
+|            ---- MovementSystem.java
+|            ---- DialogueSystem.java
+|            ---- EntityInventory.java
+|            ---- EnitityMeshGenerator.java
+|            ---- EntityTexturegenerator.java
+|        }
+|
+|        --- PlayerSystem.java : EntitySystem
+|        {
+|            ---- InputSystem.java "The player will be their own entity and the InputSystem will replace the StateMachine."
+|            ---- CameraSystem.java
+|            ---- PlayerInventory.java "Stores players inventory items"
+|
+|            Vector3 playerPosition
+|
+|            Method MovePlayer(Vector3 input) "Called from InputSystem. This does not actually move the player, instead it stores the players actual position to playerPosition the calls SetGrid(playerPosition)"
+|        }
+|
+|________/WorldSystem
+|        --- Grid.java "Will move instead of the player"
+|        {
+|            Method SetGrid(Vector3 input) "This will be called from MovePlayer. This will handle a cascade of things like what chunks to load ect. Essentially Handle how to move the world."
+|            Method LogPlayerLocation(Vector3 input) "This will log the player positon to a specific point within a loaded chunk so if multiplayer is ever added when somebody else sees that chunk they see the player"
+|        }
+|
+|        --- ChunkLoader.java "Loads specified chunks"
+|        {
+|            ---- WorldLoader.java "Will lead guided procedural generation to create the world correctly according to my vision"
+|            ---- BiomeLoader.java "Will handle reading biome data fromm json"
+|            ---- StructureLoader.java "Will handle loading structure data from json"
+|            ---- BlockLoader.java "This is where logic for adding and removing blocks will go"
+|            ---- PropLoader.java "Required since some furniture will be slightly complicated"
+|            ---- MeshGenerator.java
+|            ---- Texturegenerator.java
+|        }
+|
+|________/SaveSystem
+|        --- SaveLoadSystem.java
+|        {
+|            ---- SavePlayerData.java
+|            ---- SaveInventoryData.java
+|            ---- SaveChunkData.java
+|            ---- SaveEntityData.java
+|        }
+|
+|    }
+|
+|}
