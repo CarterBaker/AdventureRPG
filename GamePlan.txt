@@ -25,11 +25,11 @@
 |        {
 |            ---- SplashScreen.java
 |            ---- MainMenu.java
-|            ---- LoadGame.java "Called from main menu will show all saves found on disk (Will be it's own screen)"
+|            ---- LoadGame.java "Called from main menu will show all saves found on disk"
 |            ---- PauseGame.java
 |            ---- Options.java
 |            ---- Inventory.java "Will display items in the players inventory"
-|            ---- ChestMenu.java "Will have to display Inventory and Chest so the 2 systems will need to be written well"
+|            ---- LootMenu.java "Will have to display Inventory and Chest so the 2 systems will need to be written well"
 |            ---- CraftingMenu.java
 |            ---- SmeltingMenu.java
 |            ---- TradingMenu.java
@@ -71,7 +71,7 @@
 |            Method LogPlayerLocation(Vector3 input) "This will log the player positon to a specific point within a loaded chunk so if multiplayer is ever added when somebody else sees that chunk they see the player"
 |        }
 |
-|        --- ChunkLoader.java "Loads specified chunks"
+|        --- ChunkLoader.java "Loads specified chunks. A SubChunk will be 16^3 blocks. A chunk will be 16^3 SubChunks"
 |        {
 |            ---- WorldLoader.java "Will lead guided procedural generation to create the world correctly according to my vision"
 |            ---- BiomeLoader.java "Will handle reading biome data fromm json"
