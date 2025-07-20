@@ -1,20 +1,26 @@
 package com.AdventureRPG;
 
+import java.io.File;
+
+import com.AdventureRPG.SettingsSystem.*;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
 public class Main extends Game {
     public SpriteBatch batch;
 
-    @Override
-    public void create() {
-        batch = new SpriteBatch();
-        setScreen(new GameManager(this));
+    private final File GAME_DIRECTORY;
+    private final Settings settings;
+
+    public Main(File GAME_DIRECTORY, Settings settings) {
+        this.GAME_DIRECTORY = GAME_DIRECTORY;
+        this.settings = settings;
     }
 
     @Override
-    public void render() {
-        super.render();
+    public void create() {
+        batch = new SpriteBatch();
+        setScreen(new GameManager(this, GAME_DIRECTORY, settings));
     }
 
     @Override
