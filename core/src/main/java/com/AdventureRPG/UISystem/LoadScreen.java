@@ -1,19 +1,19 @@
 package com.AdventureRPG.UISystem;
 
-public class MainMenu extends MenuType {
-    public MainMenu(UISystem UISystem, Menu Menu) {
+public class LoadScreen extends MenuType {
+    public LoadScreen(UISystem UISystem, Menu Menu) {
         super(UISystem, Menu);
     }
 
     @Override
     public void Open() {
         // Build or display UI components
-        System.out.println("Main Menu opened.");
+        System.out.println("Load Screen opened.");
     }
 
     @Override
     public void Close() {
         // Tear down or hide UI components
-        System.out.println("Main Menu closed.");
+        System.out.println("Load Screen closed.");
     }
 }
