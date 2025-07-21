@@ -16,27 +16,25 @@ public class Settings {
 
     // Region Map Settings \\
 
-    public static final String REGION_IMAGE_PATH = "assets/world/world.png";
-    public static final String REGION_DATA_PATH = "assets/world/regions.dat";
+    public String REGION_IMAGE_PATH = "world/world.png";
 
     // Chunk/Grid Settings \\
 
-    public static final int CHUNK_SIZE = 16;               // 16x16x16 blocks per chunk
-    public static final int CHUNKS_PER_PIXEL = 256;          // 256x256x256 chunks per pixel
-    public static final int MAX_RENDER_DISTANCE = 12;      // How many chunks around center
+    public int CHUNK_SIZE = 16; // 16x16x16 blocks per chunk
+    public int CHUNKS_PER_PIXEL = 256; // 256x256 chunks per pixel
+    public int MAX_RENDER_DISTANCE = 12; // How many chunks around center
 
     // World Boundaries \\
 
-    public static final int MIN_WORLD_HEIGHT = 0;          // Lava zone starts here
-    public static final int MAX_WORLD_HEIGHT = 384;        // Above this is vacuum
+    public int MIN_WORLD_HEIGHT = -256; // Lava zone starts here
+    public int MAX_WORLD_HEIGHT = 512; // Above this is vacuum
 
     // LOD Settings \\
 
-    public static final int LOD_START_DISTANCE = 16;        // Chunks beyond this use LOD
-    public static final int MAX_LOD_DISTANCE = 128;         // LODs visible up to this range
+    public int LOD_START_DISTANCE = 16; // Chunks beyond this use LOD
+    public int MAX_LOD_DISTANCE = 128; // LODs visible up to this range
 
     // Loader Settings \\
 
-    public static final int MAX_CHUNK_LOADS_PER_FRAME = 8; // To throttle load speed
-    
+    public int MAX_CHUNK_LOADS_PER_FRAME = 8; // To throttle load speed
 }
