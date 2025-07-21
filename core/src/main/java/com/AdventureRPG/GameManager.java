@@ -4,18 +4,32 @@ import java.io.File;
 
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
+import com.AdventureRPG.PlayerSystem.InputHandler;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.UISystem.UISystem;
 import com.badlogic.gdx.Gdx;
 
 public class GameManager implements Screen {
-    Main game;
-    File path;
-    Settings settings;
+
+    // Paths and Settings
+    public final Main game;
+    public final File path;
+    public final Settings settings;
+
+    // Game Systems
+    public final UISystem UISystem;
+    public final InputHandler InputHandler;
 
     public GameManager(Main game, File path, Settings settings) {
+
+        // Setup default Paths and Settings
         this.game = game;
         this.path = path;
         this.settings = settings;
+
+        // Setup Game Systems
+        UISystem = new UISystem(this);
+        InputHandler = new InputHandler(this);
     }
 
     @Override
