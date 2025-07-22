@@ -17,7 +17,7 @@ public class UISystem {
         this.GameManager = GameManager;
     }
 
-    public void Render() {
+    public void Update() {
         
     }
 

@@ -6,8 +6,9 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.AdventureRPG.PlayerSystem.InputHandler;;
 
-public class GameRenderer {
+public class GameUpdate {
 
     // Main
     public GameManager GameManager;
@@ -15,8 +16,9 @@ public class GameRenderer {
     // Systems
     public UISystem UISystem;
     public WorldSystem WorldSystem;
+    public InputHandler InputHandler;
 
-    public GameRenderer(GameManager GameManager) {
+    public GameUpdate(GameManager GameManager) {
 
         // Main
         this.GameManager = GameManager;
@@ -24,6 +26,7 @@ public class GameRenderer {
         // Systems
         this.UISystem = GameManager.UISystem;
         this.WorldSystem = GameManager.WorldSystem;
+        this.InputHandler = GameManager.InputHandler;
     }
 
     public void Draw(SpriteBatch SpriteBatch) {
@@ -32,13 +35,14 @@ public class GameRenderer {
 
         SpriteBatch.begin();
 
-        Render();
+        Update();
 
         SpriteBatch.end();
     }
 
-    private void Render() {
-        UISystem.Render();
-        WorldSystem.Render();
+    private void Update() {
+        UISystem.Update();
+        WorldSystem.Update();
+        InputHandler.Update();
     }
 }

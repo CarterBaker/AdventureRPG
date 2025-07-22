@@ -3,13 +3,18 @@ package com.AdventureRPG;
 import java.io.File;
 
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.math.Vector3;
 
+import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.SettingsSystem.*;
 import com.AdventureRPG.UISystem.*;
 import com.AdventureRPG.WorldSystem.WorldSystem;
-import com.AdventureRPG.PlayerSystem.InputHandler;
+import com.AdventureRPG.PlayerSystem.*;
 
 public class GameManager implements Screen {
+
+    // Delta
+    private float DeltaTime;
 
     // Paths and Settings
     public final Main game;
@@ -19,10 +24,11 @@ public class GameManager implements Screen {
     // Game Systems
     public final UISystem UISystem;
     public final WorldSystem WorldSystem;
+    public final Player Player;
     public final InputHandler InputHandler;
 
     // Main
-    public final GameRenderer Renderer;
+    public final GameUpdate Update;
 
     public GameManager(Main game, File path, Settings settings) {
 
@@ -32,12 +38,13 @@ public class GameManager implements Screen {
         this.settings = settings;
 
         // Setup Game Systems
-        UISystem = new UISystem(this);
-        WorldSystem = new WorldSystem(this, settings);
-        InputHandler = new InputHandler(this);
+        this.UISystem = new UISystem(this);
+        this.WorldSystem = new WorldSystem(this, settings);
+        this.InputHandler = new InputHandler(this);
+        this.Player = new Player(this);
 
         // Main
-        Renderer = new GameRenderer(this);
+        this.Update = new GameUpdate(this);
     }
 
     @Override
@@ -46,7 +53,8 @@ public class GameManager implements Screen {
 
     @Override
     public void render(float delta) {
-        Renderer.Draw(game.batch);
+        DeltaTime = delta;
+        Update.Draw(game.batch);
     }
 
     @Override
@@ -69,6 +77,15 @@ public class GameManager implements Screen {
     public void dispose() {
     }
 
+    public float DeltaTime() {
+        return DeltaTime;
+    }
+
+    public void Move(Vector3Int input) {
+        Player.Move(input);
+        WorldSystem.Move(Player.Position());
+    }
+
     // References \\
 
     // UISystem
@@ -83,6 +100,16 @@ public class GameManager implements Screen {
 
     public void Close(MenuType Menu) {
         UISystem.Close(Menu);
+    }
+
+    // World System
+
+    public Vector3 WrapAroundBlock(Vector3 input) {
+        return WorldSystem.WrapAroundBlock(input);
+    }
+
+    public Vector3Int WrapAroundWorld(Vector3Int input) {
+        return WorldSystem.WrapAroundWorld(input);
     }
 
     // Player System

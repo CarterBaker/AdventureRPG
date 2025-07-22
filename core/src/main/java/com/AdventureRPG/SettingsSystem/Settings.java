@@ -14,12 +14,17 @@ public class Settings {
     public int windowY = -1;
     public boolean fullscreen = false;
 
+    // Movement \\
+
+    public float BASE_SPEED = 1.5f; // Average human walking speed in m/s
+
     // Region Map Settings \\
 
     public String REGION_IMAGE_PATH = "world/world.png";
 
     // Chunk/Grid Settings \\
 
+    public float BLOCK_SIZE = 1; // 1x1x1 block scale
     public int CHUNK_SIZE = 16; // 16x16x16 blocks per chunk
     public int CHUNKS_PER_PIXEL = 256; // 256x256 chunks per pixel
     public int MAX_RENDER_DISTANCE = 12; // How many chunks around center
