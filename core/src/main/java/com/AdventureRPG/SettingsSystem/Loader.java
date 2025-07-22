@@ -1,23 +1,25 @@
 package com.AdventureRPG.SettingsSystem;
 
 import java.io.*;
-import com.badlogic.gdx.utils.Json;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class Loader {
 
-    public static Settings load(File file) {
-        Json json = new Json();
-        json.setUsePrototypes(false);  // Disable prototype references
-        json.setIgnoreUnknownFields(true);  // ignore unknown JSON keys
+    private static final Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .create();
 
+    public static Settings load(File file) {
         if (!file.exists()) {
             Settings defaultSettings = new Settings();
             save(file, defaultSettings); // Save default settings
             return defaultSettings;
         }
 
-        try (FileReader reader = new FileReader(file)) {
-            return json.fromJson(Settings.class, reader);
+        try (Reader reader = new FileReader(file)) {
+            return gson.fromJson(reader, Settings.class);
         } catch (IOException e) {
             e.printStackTrace();
             return new Settings(); // fallback
@@ -25,10 +27,8 @@ public class Loader {
     }
 
     public static void save(File file, Settings settings) {
-        Json json = new Json();
-        json.setUsePrototypes(false);
-        try (FileWriter writer = new FileWriter(file)) {
-            json.toJson(settings, writer);
+        try (Writer writer = new FileWriter(file)) {
+            gson.toJson(settings, writer);
         } catch (IOException e) {
             e.printStackTrace();
         }
