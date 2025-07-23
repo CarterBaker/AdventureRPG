@@ -10,6 +10,7 @@ import com.AdventureRPG.SettingsSystem.*;
 import com.AdventureRPG.UISystem.*;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.PlayerSystem.*;
+import com.AdventureRPG.SaveSystem.SaveSystem;
 
 public class GameManager implements Screen {
 
@@ -22,6 +23,7 @@ public class GameManager implements Screen {
     public final Settings settings;
 
     // Game Systems
+    public final SaveSystem SaveSystem;
     public final UISystem UISystem;
     public final WorldSystem WorldSystem;
     public final Player Player;
@@ -38,8 +40,9 @@ public class GameManager implements Screen {
         this.settings = settings;
 
         // Setup Game Systems
+        this.SaveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
-        this.WorldSystem = new WorldSystem(this, settings);
+        this.WorldSystem = new WorldSystem(this);
         this.InputHandler = new InputHandler(this);
         this.Player = new Player(this);
 

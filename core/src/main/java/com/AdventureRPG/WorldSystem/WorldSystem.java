@@ -6,21 +6,20 @@ import com.badlogic.gdx.math.Vector3;
 import com.AdventureRPG.Util.*;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
-
 import com.AdventureRPG.WorldSystem.World.WorldReader;
 import com.AdventureRPG.WorldSystem.Grid.Grid;
 import com.AdventureRPG.WorldSystem.Blocks.*;
+import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 
 public class WorldSystem {
 
-    // Game Manager
+    // Game
     public final GameManager GameManager;
-
-    // Settings
     public final Settings settings;
 
     // World System
     public final WorldReader WorldReader;
+    public final ChunkSystem ChunkSystem;
     public final Grid Grid;
 
     // Blocks
@@ -29,23 +28,20 @@ public class WorldSystem {
     // Dependencies
     public final Vector2Int WORLD_Scale;
 
-    public WorldSystem(GameManager GameManager, Settings settings) {
+    public WorldSystem(GameManager GameManager) {
 
-        // Game Manager
+        // Game
         this.GameManager = GameManager;
-
-        // Settings
-        this.settings = settings;
+        this.settings = GameManager.settings;
 
         // World System
         this.WorldReader = new WorldReader(this);
+        WORLD_Scale = WorldReader.GetWorldScale(); // Read total world scale before doing anything else
+        this.ChunkSystem = new ChunkSystem(this);
         this.Grid = new Grid(this);
 
         // Blocks
         this.blocks = Loader.LoadBlocks();
-
-        // Dependencies
-        WORLD_Scale = WorldReader.GetWorldScale();
     }
 
     public void Update() {
