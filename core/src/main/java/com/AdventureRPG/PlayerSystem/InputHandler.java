@@ -75,13 +75,13 @@ public class InputHandler extends InputAdapter {
         Vector3Int movement = new Vector3Int(0, 0, 0);
 
         if (W)
-            movement = movement.add(new Vector3Int(0, 0, -1));
-        if (S)
             movement = movement.add(new Vector3Int(0, 0, 1));
+        if (S)
+            movement = movement.add(new Vector3Int(0, 0, -1));
         if (A)
-            movement = movement.add(new Vector3Int(-1, 0, 0));
-        if (D)
             movement = movement.add(new Vector3Int(1, 0, 0));
+        if (D)
+            movement = movement.add(new Vector3Int(-1, 0, 0));
 
         if (!movement.equals(new Vector3Int())) {
             GameManager.Move(movement);

@@ -1,42 +1,56 @@
 [
     {
-        "ID": 0,
         "name": "Air",
+        "ID": 0,
         "top": 0,
         "side": 0,
         "bottom": 0
     },
     {
+        "name": "Water",
         "ID": 1,
+        "top": 0,
+        "side": 0,
+        "bottom": 0
+    },
+    {
+        "name": "Lava",
+        "ID": 2,
+        "top": 0,
+        "side": 0,
+        "bottom": 0
+    },
+    {
         "name": "Grass Block",
+        "ID": 3,
         "top": 0,
         "side": 1,
         "bottom": 2
     },
     {
-        "ID": 2,
         "name": "Dirt Block",
+        "ID": 4,
         "top": 2,
         "side": 2,
         "bottom": 2
     },
     {
-        "ID": 3,
         "name": "Stone Block",
+        "ID": 5,
         "top": 3,
         "side": 3,
         "bottom": 3
     },
     {
-        "ID": 4,
         "name": "Copper Ore",
+        "ID": 6,
         "top": 4,
         "side": 4,
         "bottom": 4
     },
     {
-        "ID": 5,
         "name": "Iron Ore",
+        "ID": 7,
         "top": 5,
         "side": 5,
         "bottom": 5

@@ -1,15 +1,15 @@
 package com.AdventureRPG.WorldSystem;
 
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
 import com.AdventureRPG.Util.*;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
 
-import com.AdventureRPG.WorldSystem.Chunks.ChunkManager;
-import com.AdventureRPG.WorldSystem.Regions.RegionManager;
-import com.AdventureRPG.WorldSystem.Data.PNGReader;
+import com.AdventureRPG.WorldSystem.World.WorldReader;
 import com.AdventureRPG.WorldSystem.Grid.Grid;
+import com.AdventureRPG.WorldSystem.Blocks.*;
 
 public class WorldSystem {
 
@@ -20,13 +20,11 @@ public class WorldSystem {
     public final Settings settings;
 
     // World System
-    public final ChunkManager ChunkManager;
-    public final RegionManager RegionManager;
-    public final PNGReader PNGReader;
+    public final WorldReader WorldReader;
     public final Grid Grid;
 
-    // World Loading
-    public final WorldLoader WorldLoader;
+    // Blocks
+    public final Block[] blocks;
 
     // Dependencies
     public final Vector2Int WORLD_Scale;
@@ -40,20 +38,24 @@ public class WorldSystem {
         this.settings = settings;
 
         // World System
-        this.ChunkManager = new ChunkManager();
-        this.RegionManager = new RegionManager();
-        this.PNGReader = new PNGReader(settings);
+        this.WorldReader = new WorldReader(this);
         this.Grid = new Grid(this);
 
-        // World Loading
-        this.WorldLoader = new WorldLoader(GameManager);
+        // Blocks
+        this.blocks = Loader.LoadBlocks();
 
         // Dependencies
-        WORLD_Scale = PNGReader.GetWorldScale();
+        WORLD_Scale = WorldReader.GetWorldScale();
     }
 
     public void Update() {
 
+    }
+
+    // Blocks
+
+    public Block getBlockByID(int id) {
+        return (id >= 0 && id < blocks.length) ? blocks[id] : null;
     }
 
     // Movement
@@ -75,7 +77,7 @@ public class WorldSystem {
         value = value % settings.BLOCK_SIZE;
 
         if (value < 0)
-            value += settings.BLOCK_SIZE; // Ensure positive
+            value += settings.BLOCK_SIZE;
 
         return value;
     }
@@ -101,8 +103,6 @@ public class WorldSystem {
         int Y = (int) Math.floor(input.y);
         int Z = (int) Math.floor(input.z);
 
-        // Wrap X and Z coordinates around the WORLD_Scale (Y is usually vertical and
-        // unwrapped)
         X = X % (WORLD_Scale.x / settings.CHUNK_SIZE);
         if (X < 0)
             X += (WORLD_Scale.x / settings.CHUNK_SIZE);
@@ -116,6 +116,21 @@ public class WorldSystem {
             Z += (WORLD_Scale.y / settings.CHUNK_SIZE);
 
         return new Vector3Int(X, Y, Z);
+    }
+
+    public Vector2Int WrapAroundImageRegion(Vector2 input) {
+        int scaleX = (WORLD_Scale.x / settings.CHUNKS_PER_PIXEL / settings.CHUNK_SIZE);
+        int scaleY = (WORLD_Scale.y / settings.CHUNKS_PER_PIXEL / settings.CHUNK_SIZE);
+
+        int wrappedX = (int) Math.floor(input.x) % scaleX;
+        if (wrappedX < 0)
+            wrappedX += scaleX;
+
+        int wrappedZ = (int) Math.floor(input.y) % scaleY;
+        if (wrappedZ < 0)
+            wrappedZ += scaleY;
+
+        return new Vector2Int(wrappedX, wrappedZ);
     }
 
     public Vector3Int WrapAroundWorld(Vector3Int input) {
