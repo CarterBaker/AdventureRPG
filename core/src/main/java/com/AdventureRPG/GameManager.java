@@ -31,6 +31,7 @@ public class GameManager implements Screen {
 
     // Main
     public final GameUpdate Update;
+    public final GameDispose Dispose;
 
     public GameManager(Main game, File path, Settings settings) {
 
@@ -48,6 +49,7 @@ public class GameManager implements Screen {
 
         // Main
         this.Update = new GameUpdate(this);
+        this.Dispose = new GameDispose(this);
     }
 
     @Override
@@ -78,6 +80,7 @@ public class GameManager implements Screen {
 
     @Override
     public void dispose() {
+        Dispose.cleanup();
     }
 
     public float DeltaTime() {
