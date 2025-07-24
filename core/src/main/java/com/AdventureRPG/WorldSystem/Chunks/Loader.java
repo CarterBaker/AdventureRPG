@@ -1,8 +1,8 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SaveSystem.ChunkData;
-import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.AdventureRPG.SettingsSystem.Settings;
 
 public class Loader {
 
@@ -10,11 +10,11 @@ public class Loader {
     private final ChunkData ChunkData;
     public final Settings Settings;
 
-    public Loader(WorldSystem WorldSystem) {
+    public Loader(GameManager GameManager) {
 
         // Chunk System
-        this.ChunkData = WorldSystem.GameManager.SaveSystem.ChunkData;
-        this.Settings = WorldSystem.settings;
+        this.ChunkData = GameManager.SaveSystem.ChunkData;
+        this.Settings = GameManager.settings;
     }
 
 }

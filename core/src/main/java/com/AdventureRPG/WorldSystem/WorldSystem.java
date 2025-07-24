@@ -1,15 +1,16 @@
 package com.AdventureRPG.WorldSystem;
 
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
-
-import com.AdventureRPG.Util.*;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
-import com.AdventureRPG.WorldSystem.World.WorldReader;
-import com.AdventureRPG.WorldSystem.Grid.Grid;
-import com.AdventureRPG.WorldSystem.Blocks.*;
+import com.AdventureRPG.Util.Vector2Int;
+import com.AdventureRPG.Util.Vector3Int;
+import com.AdventureRPG.WorldSystem.Blocks.Block;
+import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
+import com.AdventureRPG.WorldSystem.Grid.Grid;
+import com.AdventureRPG.WorldSystem.World.WorldReader;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 
 public class WorldSystem {
 
@@ -37,7 +38,7 @@ public class WorldSystem {
         // World System
         this.WorldReader = new WorldReader(this);
         WORLD_Scale = WorldReader.GetWorldScale(); // Read total world scale before doing anything else
-        this.ChunkSystem = new ChunkSystem(this);
+        this.ChunkSystem = new ChunkSystem(GameManager);
         this.Grid = new Grid(this);
 
         // Blocks

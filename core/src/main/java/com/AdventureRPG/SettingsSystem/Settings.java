@@ -27,7 +27,7 @@ public class Settings {
     public float BLOCK_SIZE = 1; // 1x1x1 block scale
     public int CHUNK_SIZE = 16; // 16x16x16 blocks per chunk
     public int CHUNKS_PER_PIXEL = 256; // 256x256 chunks per pixel
-    public int MAX_RENDER_DISTANCE = 12; // How many chunks around center
+    public int MAX_RENDER_DISTANCE = 64; // How many chunks around center
 
     // World Boundaries \\
 
