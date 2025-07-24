@@ -9,8 +9,5 @@ public class Block {
 
     public Block() {
     } // Required for JSON deserialization
-
-    public int getID() {
-        return ID;
-    }
+    
 }

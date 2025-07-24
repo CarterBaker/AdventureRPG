@@ -7,11 +7,11 @@ public class Chunk {
     private Block[][][] blocks;
     private boolean isDirty;
 
-    public Chunk(int x, int y, int z) {
+    public Chunk(int x, int y, int z, int CHUNK_SIZE) {
         this.x = x;
         this.y = y;
         this.z = z;
-        this.blocks = new Block[16][16][16];
+        this.blocks = new Block[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
         this.isDirty = false;
     }
 
