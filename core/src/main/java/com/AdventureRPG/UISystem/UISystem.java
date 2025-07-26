@@ -18,7 +18,7 @@ public class UISystem {
     }
 
     public void Update() {
-        
+
     }
 
     public void Open(Menu Menu) {
@@ -45,6 +45,5 @@ public class UISystem {
 
     public void Close(MenuType Menu) {
         Menu.Close();
-        openMenus.remove(Menu);
     }
 }

@@ -3,8 +3,8 @@ package com.AdventureRPG.SaveSystem;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
@@ -62,8 +62,6 @@ public class ChunkData {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        System.out.println("Temporary chunk file created: " + ChunkDataFile.getAbsolutePath());
     }
 
     public void WriteChunk(Chunk chunk) {

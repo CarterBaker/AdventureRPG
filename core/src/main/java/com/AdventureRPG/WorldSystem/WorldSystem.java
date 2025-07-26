@@ -1,7 +1,9 @@
 package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.GameManager;
+import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
@@ -16,9 +18,12 @@ public class WorldSystem {
 
     // Game
     public final GameManager GameManager;
+    public final SaveSystem SaveSystem;
+    public final UISystem UISystem;
     public final Settings settings;
 
     // World System
+    public final WorldTick WorldTick;
     public final WorldReader WorldReader;
     public final ChunkSystem ChunkSystem;
     public final Grid Grid;
@@ -33,12 +38,15 @@ public class WorldSystem {
 
         // Game
         this.GameManager = GameManager;
+        this.SaveSystem = GameManager.SaveSystem;
+        this.UISystem = GameManager.UISystem;
         this.settings = GameManager.settings;
 
         // World System
+        this.WorldTick = new WorldTick(this);
         this.WorldReader = new WorldReader(this);
-        WORLD_Scale = WorldReader.GetWorldScale(); // Read total world scale before doing anything else
-        this.ChunkSystem = new ChunkSystem(GameManager);
+        WORLD_Scale = WorldReader.GetWorldScale(); // This needs to be called as soon as possible
+        this.ChunkSystem = new ChunkSystem(this);
         this.Grid = new Grid(this);
 
         // Blocks
@@ -46,7 +54,8 @@ public class WorldSystem {
     }
 
     public void Update() {
-
+        WorldTick.Update();
+        ChunkSystem.Update();
     }
 
     // Blocks
@@ -58,7 +67,7 @@ public class WorldSystem {
     // Movement
 
     public void Move(Vector3 input) {
-        Grid.SetPosition(input);
+        Grid.MoveTo(input);
     }
 
     // Wrap Logic
@@ -103,10 +112,6 @@ public class WorldSystem {
         X = X % (WORLD_Scale.x / settings.CHUNK_SIZE);
         if (X < 0)
             X += (WORLD_Scale.x / settings.CHUNK_SIZE);
-
-        Y = Y % settings.CHUNK_SIZE;
-        if (Y < 0)
-            Y += settings.CHUNK_SIZE;
 
         Z = Z % (WORLD_Scale.y / settings.CHUNK_SIZE);
         if (Z < 0)

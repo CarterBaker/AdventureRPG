@@ -1,52 +1,76 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
-import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Vector3Int;
+import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.badlogic.gdx.math.Vector3;
 
 public class ChunkSystem {
 
     // Chunk System
+    private final WorldSystem WorldSystem;
     private final Settings settings;
     private final Loader Loader;
 
     // Rendered Chunks
-    private final int RenderRange;
-    private Vector3Int[][][] renderedChunks;
+    private final int range;
+    private final int height;
+    private final int size;
+    private final Vector3Int[][][] chunks;
 
-    public ChunkSystem(GameManager GameManager) {
+    // Variables
+    private Vector3Int currentChunk;
+
+    public ChunkSystem(WorldSystem WorldSystem) {
 
         // Chunk System
-        this.settings = GameManager.settings;
-        this.Loader = new Loader(GameManager);
+        this.WorldSystem = WorldSystem;
+        this.settings = WorldSystem.GameManager.settings;
+        this.Loader = new Loader(WorldSystem);
 
         // Rendered Chunks
-        RenderRange = settings.MAX_RENDER_DISTANCE;
-        renderedChunks = new Vector3Int[RenderRange][RenderRange][RenderRange];
+        this.range = settings.MAX_RENDER_DISTANCE;
+        this.height = settings.MAX_RENDER_HEIGHT;
+        this.size = settings.CHUNK_SIZE;
+        this.chunks = new Vector3Int[range][height][range];
+    };
+
+    public void Update() {
+        Loader.Update();
     }
 
-    public void ReloadChunks(Vector3Int currentChunk) {
-        if (!settings.debug)
-            return;
+    public void LoadChunks(Vector3Int currentChunk) {
 
-        int range = settings.MAX_RENDER_DISTANCE;
-        int size = settings.CHUNK_SIZE;
+        this.currentChunk = currentChunk;
 
-        for (int x = 0; x <= range; x++) {
-            for (int y = 0; y <= range; y++) {
-                for (int z = 0; z <= range; z++) {
-                    int cx = (x - (size / 2)) * size;
-                    int cy = (y - (size / 2)) * size;
-                    int cz = (z - (size / 2)) * size;
+        for (int x = 0; x <= range - 1; x++) {
+            for (int y = 0; y <= height - 1; y++) {
+                for (int z = 0; z <= range - 1; z++) {
+                    int ax = (x - (range / 2)) * size;
+                    int ay = (y - (height / 2)) * size;
+                    int az = (z - (range / 2)) * size;
 
-                    int fx = currentChunk.x + cx;
-                    int fy = currentChunk.y + cy;
-                    int fz = currentChunk.z + cz;
+                    int bx = currentChunk.x + ax;
+                    int by = currentChunk.y + ay;
+                    int bz = currentChunk.z + az;
 
-                    renderedChunks[x][y][z] = new Vector3Int(fx, fy, fz);
+                    Vector3 cPosition = new Vector3(bx, by, bz);
+                    chunks[x][y][z] = WorldSystem.WrapChunksAroundWorld(cPosition);
+
+                    System.out.println("Added Chunk: " + chunks[x][y][z].toString());
                 }
             }
         }
+
+        Loader.LoadChunks(chunks);
+    }
+
+    public void UpdateChunks(Vector3Int newChunk) {
+        Vector3Int chunkShift = new Vector3Int(
+                newChunk.x - currentChunk.x,
+                newChunk.y - currentChunk.y,
+                newChunk.z - currentChunk.z);
+        Loader.UpdateChunks(chunkShift);
     }
 
 }

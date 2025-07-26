@@ -22,12 +22,15 @@ public class Settings {
 
     public String REGION_IMAGE_PATH = "world/world.png";
 
-    // Chunk/Grid Settings \\
+    // Chunk Settings \\
 
     public float BLOCK_SIZE = 1; // 1x1x1 block scale
     public int CHUNK_SIZE = 16; // 16x16x16 blocks per chunk
     public int CHUNKS_PER_PIXEL = 256; // 256x256 chunks per pixel
+
+    // Render Settings \\
     public int MAX_RENDER_DISTANCE = 64; // How many chunks around center
+    public int MAX_RENDER_HEIGHT = 16; // How many chunks tall around center
 
     // World Boundaries \\
 
@@ -41,5 +44,9 @@ public class Settings {
 
     // Loader Settings \\
 
-    public int MAX_CHUNK_LOADS_PER_FRAME = 8; // To throttle load speed
+    public int MAX_CHUNK_LOADS_PER_FRAME = 256; // To throttle load speed
+    public int MAX_CHUNK_LOADS_PER_TICK = 8192; // To throttle load speed
+
+    // Tick \\
+    public float WORLD_TICK = 0.15f;
 }

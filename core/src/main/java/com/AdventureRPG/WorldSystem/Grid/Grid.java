@@ -1,10 +1,9 @@
 package com.AdventureRPG.WorldSystem.Grid;
 
-import com.badlogic.gdx.math.Vector3;
-
-import com.AdventureRPG.Util.*;
-import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
+import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.badlogic.gdx.math.Vector3;
 
 public class Grid {
 
@@ -18,10 +17,11 @@ public class Grid {
         this.WorldSystem = WorldSystem;
         this.ChunkSystem = WorldSystem.ChunkSystem;
 
-        ReloadChunks(); //This needs to be run once on start
+        // Init
+        LoadChunks(); // This needs to be run once on start
     }
 
-    public void SetPosition(Vector3 input) {
+    public void SetTo(Vector3 input) {
         position = WorldSystem.WrapAroundChunk(input);
         Vector3Int calculatedChunk = WorldSystem.WrapChunksAroundWorld(input);
 
@@ -29,11 +29,26 @@ public class Grid {
             return;
 
         currentChunk = calculatedChunk;
-        ReloadChunks();
+        LoadChunks();
     }
 
-    private void ReloadChunks() {
-        ChunkSystem.ReloadChunks(currentChunk);
+    public void MoveTo(Vector3 input) {
+        position = WorldSystem.WrapAroundChunk(input);
+        Vector3Int calculatedChunk = WorldSystem.WrapChunksAroundWorld(input);
+
+        if (calculatedChunk == currentChunk)
+            return;
+
+        currentChunk = calculatedChunk;
+        UpdateChunks();
+    }
+
+    private void LoadChunks() {
+        ChunkSystem.LoadChunks(currentChunk);
+    }
+
+    private void UpdateChunks() {
+        ChunkSystem.UpdateChunks(currentChunk);
     }
 
 }
