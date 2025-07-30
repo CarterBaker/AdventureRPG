@@ -6,11 +6,11 @@ import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.Util.Vector3Int;
+import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.AdventureRPG.WorldSystem.Grid.Grid;
-import com.AdventureRPG.WorldSystem.World.WorldReader;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
@@ -25,6 +25,8 @@ public class WorldSystem {
     // World System
     public final WorldTick WorldTick;
     public final WorldReader WorldReader;
+    public final WorldGenerator WorldGenerator;
+    public final BiomeSystem BiomeSystem;
     public final ChunkSystem ChunkSystem;
     public final Grid Grid;
 
@@ -46,6 +48,8 @@ public class WorldSystem {
         this.WorldTick = new WorldTick(this);
         this.WorldReader = new WorldReader(this);
         WORLD_Scale = WorldReader.GetWorldScale(); // This needs to be called as soon as possible
+        this.WorldGenerator = new WorldGenerator(this);
+        this.BiomeSystem = new BiomeSystem(GameManager);
         this.ChunkSystem = new ChunkSystem(this);
         this.Grid = new Grid(this);
 
@@ -59,6 +63,17 @@ public class WorldSystem {
     }
 
     // Blocks
+
+    public Block getBlockByName(String name) {
+
+        for (Block block : blocks) {
+            if (block != null && block.name.equalsIgnoreCase(name)) {
+                return block;
+            }
+        }
+
+        throw new RuntimeException("Block not found: " + name);
+    }
 
     public Block getBlockByID(int id) {
         return (id >= 0 && id < blocks.length) ? blocks[id] : null;

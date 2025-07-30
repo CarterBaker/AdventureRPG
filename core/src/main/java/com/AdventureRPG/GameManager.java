@@ -4,7 +4,7 @@ import java.io.File;
 
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.math.Vector3;
-
+import com.google.gson.Gson;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.SettingsSystem.*;
 import com.AdventureRPG.UISystem.*;
@@ -21,6 +21,7 @@ public class GameManager implements Screen {
     public final Main game;
     public final File path;
     public final Settings settings;
+    public final Gson gson;
 
     // Game Systems
     public final SaveSystem SaveSystem;
@@ -33,12 +34,13 @@ public class GameManager implements Screen {
     public final GameUpdate Update;
     public final GameDispose Dispose;
 
-    public GameManager(Main game, File path, Settings settings) {
+    public GameManager(Main game, File path, Settings settings, Gson gson) {
 
         // Setup default Paths and Settings
         this.game = game;
         this.path = path;
         this.settings = settings;
+        this.gson = gson;
 
         // Setup Game Systems
         this.SaveSystem = new SaveSystem(this);
@@ -50,6 +52,12 @@ public class GameManager implements Screen {
         // Main
         this.Update = new GameUpdate(this);
         this.Dispose = new GameDispose(this);
+
+        StartGame(); // Run once on game start
+    }
+
+    private void StartGame() {
+        UISystem.Open(Menu.Main);
     }
 
     @Override

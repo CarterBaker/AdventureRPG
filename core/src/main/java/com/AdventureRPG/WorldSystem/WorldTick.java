@@ -8,6 +8,7 @@ public class WorldTick {
     // Settings
     private final GameManager GameManager;
     private final Settings settings;
+    private final WorldSystem WorldSystem;
     private final float tickTime;
 
     // Tick
@@ -15,18 +16,19 @@ public class WorldTick {
     private boolean Tick;
 
     public WorldTick(WorldSystem WorldSystem) {
+
         this.GameManager = WorldSystem.GameManager;
         this.settings = WorldSystem.settings;
+        this.WorldSystem = GameManager.WorldSystem;
         this.tickTime = settings.WORLD_TICK;
     }
 
     public void Update() {
-        if (currentTime >= tickTime)
-        {
+
+        if (currentTime >= tickTime) {
             this.Tick = true;
             currentTime = 0f;
-        }
-        else {
+        } else {
             this.Tick = false;
             currentTime += GameManager.DeltaTime();
         }

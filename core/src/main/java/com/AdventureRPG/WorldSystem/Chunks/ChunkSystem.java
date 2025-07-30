@@ -8,8 +8,8 @@ import com.badlogic.gdx.math.Vector3;
 public class ChunkSystem {
 
     // Chunk System
-    private final WorldSystem WorldSystem;
     private final Settings settings;
+    private final WorldSystem WorldSystem;
     private final Loader Loader;
 
     // Rendered Chunks
@@ -24,8 +24,8 @@ public class ChunkSystem {
     public ChunkSystem(WorldSystem WorldSystem) {
 
         // Chunk System
+        this.settings = WorldSystem.settings;
         this.WorldSystem = WorldSystem;
-        this.settings = WorldSystem.GameManager.settings;
         this.Loader = new Loader(WorldSystem);
 
         // Rendered Chunks
@@ -36,6 +36,7 @@ public class ChunkSystem {
     };
 
     public void Update() {
+
         Loader.Update();
     }
 
@@ -56,8 +57,6 @@ public class ChunkSystem {
 
                     Vector3 cPosition = new Vector3(bx, by, bz);
                     chunks[x][y][z] = WorldSystem.WrapChunksAroundWorld(cPosition);
-
-                    System.out.println("Added Chunk: " + chunks[x][y][z].toString());
                 }
             }
         }
@@ -65,11 +64,15 @@ public class ChunkSystem {
         Loader.LoadChunks(chunks);
     }
 
-    public void UpdateChunks(Vector3Int newChunk) {
+    public void UpdateChunks(Vector3Int chunkCoords) {
+
         Vector3Int chunkShift = new Vector3Int(
-                newChunk.x - currentChunk.x,
-                newChunk.y - currentChunk.y,
-                newChunk.z - currentChunk.z);
+                chunkCoords.x - currentChunk.x,
+                chunkCoords.y - currentChunk.y,
+                chunkCoords.z - currentChunk.z);
+
+        this.currentChunk = chunkCoords;
+
         Loader.UpdateChunks(chunkShift);
     }
 

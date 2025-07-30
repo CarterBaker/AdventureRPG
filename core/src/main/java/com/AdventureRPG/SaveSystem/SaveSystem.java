@@ -11,6 +11,7 @@ public class SaveSystem {
     public final File path;
 
     // Save System
+    public final UserData UserData;
     public final ChunkData ChunkData;
 
     public SaveSystem(GameManager GameManager) {
@@ -20,28 +21,40 @@ public class SaveSystem {
         this.path = GameManager.path;
 
         // Save System
+        this.UserData = new UserData(this);
         this.ChunkData = new ChunkData(this);
+
+        // Load Data
+
         LoadChunkData();
 
     }
 
-    public void LoadChunkData(File Save) {
-        ChunkData.LoadChunkData(Save);
-    }
-
-    private void LoadChunkData() {
-        if (HasNewestSave())
-            ChunkData.LoadChunkData(path);
-        else
-            ChunkData.CreateTemporaryChunkData();
-    }
-
+    // Save System
     private boolean HasNewestSave() {
         return false;
     }
 
-    public void dispose() {
-        ChunkData.dispose();
+    // User Data
+
+    public void LoadUserData() {
+        if (HasNewestSave())
+            UserData.LoadUserData(path);
+    }
+
+    public void LoadUserData(File Save) {
+        UserData.LoadUserData(Save);
+    }
+
+    // Chunk Data
+
+    private void LoadChunkData() {
+        if (HasNewestSave())
+            ChunkData.LoadChunkData(path);
+    }
+
+    public void LoadChunkData(File Save) {
+        ChunkData.LoadChunkData(Save);
     }
 
 }

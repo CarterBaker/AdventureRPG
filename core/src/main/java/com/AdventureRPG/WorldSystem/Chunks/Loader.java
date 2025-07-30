@@ -2,12 +2,13 @@ package com.AdventureRPG.WorldSystem.Chunks;
 
 import com.AdventureRPG.SaveSystem.ChunkData;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.UISystem.LoadScreen;
 import com.AdventureRPG.UISystem.Menu;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Vector3Int;
+import com.AdventureRPG.WorldSystem.WorldGenerator;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
-import com.badlogic.gdx.math.Vector3;
 
 public class Loader {
 
@@ -17,6 +18,8 @@ public class Loader {
     private final UISystem UISystem;
     private final WorldSystem WorldSystem;
     private final WorldTick WorldTick;
+    public final WorldGenerator WorldGenerator;
+    private final ChunkSystem ChunkSystem;
 
     // Data
     private final int LOD_START_DISTANCE;
@@ -24,7 +27,9 @@ public class Loader {
     private final int MAX_CHUNK_LOADS_PER_FRAME;
     private final int MAX_CHUNK_LOADS_PER_TICK;
 
-    // Variables
+    // Loading
+    private LoadScreen loadScreen;
+
     private boolean loading;
 
     private final int range;
@@ -48,6 +53,8 @@ public class Loader {
         this.UISystem = WorldSystem.UISystem;
         this.WorldSystem = WorldSystem;
         this.WorldTick = WorldSystem.WorldTick;
+        this.WorldGenerator = new WorldGenerator(WorldSystem);
+        this.ChunkSystem = WorldSystem.ChunkSystem;
 
         // Data
         this.LOD_START_DISTANCE = settings.LOD_START_DISTANCE;
@@ -68,6 +75,7 @@ public class Loader {
     }
 
     public void Update() {
+
         if (loading)
             Load();
 
@@ -76,6 +84,7 @@ public class Loader {
     }
 
     private void ResetTick() {
+
         loadedChunksThisFrame = 0;
         loadedChunksThisTick = 0;
     }
@@ -83,10 +92,13 @@ public class Loader {
     // Load
 
     public void LoadChunks(Vector3Int[][][] chunks) {
+
         this.chunkQueue = chunks;
 
         loading = true;
-        UISystem.Open(Menu.LoadScreen);
+        this.loadScreen = (LoadScreen) UISystem.Open(Menu.LoadScreen);
+        loadScreen.SetMaxProgrss(range * height * range);
+
     }
 
     private int currentX = 0;
@@ -94,6 +106,7 @@ public class Loader {
     private int currentZ = 0;
 
     private void Load() {
+
         if (loadedChunksThisTick == MAX_CHUNK_LOADS_PER_TICK)
             return;
 
@@ -121,19 +134,25 @@ public class Loader {
         int y = input.y;
         int z = input.z;
 
+        // 1. Skip if the chunk was already loaded
         if (loadedChunks[x][y][z] != null)
             return;
 
+        // 2. Log the loaded chunk into the chunk cache
         loadedChunks[x][y][z] = chunkQueue[x][y][z];
 
-        int posX = (x * size) - ((range * size) / 2);
-        int posY = (y * size) - ((range * size) / 2);
-        int posZ = (z * size) - ((range * size) / 2);
+        // 3. Position should be subtract half the range multiplied by size
+        int posX = (x - (range / 2)) * size;
+        int posY = (y - (height / 2)) * size;
+        int posZ = (z - (range / 2)) * size;
 
-        Vector3 position = new Vector3(posX, posY, posZ);
-        Vector3Int wrappedPosition = WorldSystem.WrapChunksAroundWorld(position);
+        // 4. Assemble the chunkCoord and the gridPosition to LoadChunk
+        Vector3Int chunkCoord = loadedChunks[x][y][z];
+        Vector3Int gridPosition = new Vector3Int(posX, posY, posZ);
+        LoadChunk(chunkCoord, gridPosition);
 
-        LoadChunk(loadedChunks[x][y][z], wrappedPosition);
+        // 5. Log progress to the loading screen
+        loadScreen.IncreaseProgrss(1);
     }
 
     private void FinalizeLoad() {
@@ -141,7 +160,7 @@ public class Loader {
         if (totalLoadedChunks != maxChunks)
             return;
 
-        UISystem.Close(Menu.LoadScreen);
+        UISystem.Close(loadScreen);
         loading = false;
 
         // Reset loop state
@@ -158,9 +177,22 @@ public class Loader {
 
     // Base
 
-    private void LoadChunk(Vector3Int chunkToLoad, Vector3Int position) {
-        // System.out.println("Loading chunk at: " + chunkToLoad + " for position: " +
-        // position);
+    private void LoadChunk(Vector3Int chunkCoord, Vector3Int gridPosition) {
+
+        Chunk chunk = null;
+
+        // 2. After that attempt to load from file
+        chunk = ChunkData.ReadChunk(chunkCoord);
+
+        // 3. If the chunk could not be loaded it is null and needs to be generated
+        if (chunk == null)
+            chunk = WorldGenerator.GenerateChunk(chunkCoord);
+
+        // 3. Assign the chunk correct values to each chunk
+        chunk.AssignChunkSystem(ChunkSystem);
+        chunk.BuildAt(gridPosition);
+
+        // 4. Increase chunk count after a successful chunk load
         ChangeChunkCountBy(1);
     }
 
@@ -170,6 +202,7 @@ public class Loader {
     }
 
     private void ChangeChunkCountBy(int input) {
+
         loadedChunksThisFrame += 1;
         loadedChunksThisTick += input;
         totalLoadedChunks += input;

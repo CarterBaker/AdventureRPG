@@ -20,6 +20,6 @@ public class GameDispose {
     }
 
     public void cleanup() {
-        SaveSystem.dispose();
+
     }
 }

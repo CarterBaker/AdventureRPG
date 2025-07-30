@@ -21,7 +21,7 @@ public class UISystem {
 
     }
 
-    public void Open(Menu Menu) {
+    public MenuType Open(Menu Menu) {
         MenuType menuInstance = switch (Menu) {
             case LoadScreen -> new LoadScreen(this, Menu);
             case Main -> new MainMenu(this, Menu);
@@ -30,6 +30,8 @@ public class UISystem {
 
         openMenus.add(menuInstance);
         menuInstance.Open();
+
+        return menuInstance;
     }
 
     public void Close(Menu Menu) {

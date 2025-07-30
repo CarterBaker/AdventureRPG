@@ -1,12 +1,10 @@
-package com.AdventureRPG.WorldSystem.World;
+package com.AdventureRPG.WorldSystem;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
-
 import com.AdventureRPG.Util.Vector2Int;
-import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.SettingsSystem.Settings;
 
 public class WorldReader {
@@ -39,7 +37,7 @@ public class WorldReader {
         return worldScale;
     }
 
-    public WorldeRegion WorldRegionFromPosition(Vector3 input) {
+    public WorldRegion WorldRegionFromPosition(Vector3Int input) {
         Vector2 worldPosition = new Vector2(input.x, input.z);
         Vector2Int imagePixel = WorldSystem.WrapAroundImageRegion(worldPosition);
 
@@ -70,6 +68,6 @@ public class WorldReader {
             road = true;
         }
 
-        return new WorldeRegion(r, g, b, river, road);
+        return new WorldRegion(r, g, b, river, road);
     }
 }

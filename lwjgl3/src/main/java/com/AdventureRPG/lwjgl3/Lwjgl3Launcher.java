@@ -7,12 +7,20 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
-
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.AdventureRPG.Main;
 import com.AdventureRPG.SettingsSystem.*;
+import com.AdventureRPG.WorldSystem.Biomes.Biome;
+import com.AdventureRPG.WorldSystem.Biomes.BiomeDeserializer;
 
 public class Lwjgl3Launcher {
     private static final String GAME_DIRECTORY = "AdventureRPG";
+
+    private static final Gson gson = new GsonBuilder()
+            .registerTypeAdapter(Biome.class, new BiomeDeserializer())
+            .setPrettyPrinting()
+            .create();
 
     public static void main(String[] args) {
         if (StartupHelper.startNewJvmIfRequired())
@@ -26,9 +34,9 @@ public class Lwjgl3Launcher {
             baseGameDir.mkdirs();
 
         File settingsFile = new File(baseGameDir, "settings.json");
-        Settings settings = Loader.load(settingsFile);
+        Settings settings = Loader.load(settingsFile, gson);
 
-        Main mainGame = new Main(baseGameDir, settings);
+        Main mainGame = new Main(baseGameDir, settings, gson);
         Lwjgl3ApplicationConfiguration config = getConfigurationFromSettings(settings);
 
         config.setWindowListener(new com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter() {
@@ -71,7 +79,7 @@ public class Lwjgl3Launcher {
             settings.windowX = window.getPositionX();
             settings.windowY = window.getPositionY();
             settings.fullscreen = Gdx.graphics.isFullscreen();
-            Loader.save(file, settings);
+            Loader.save(file, settings, gson);
         }
     }
 }

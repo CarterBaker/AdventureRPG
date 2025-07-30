@@ -9,5 +9,5 @@ public class Block {
 
     public Block() {
     } // Required for JSON deserialization
-    
+
 }
