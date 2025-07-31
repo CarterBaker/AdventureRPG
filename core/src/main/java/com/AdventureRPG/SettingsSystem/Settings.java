@@ -29,6 +29,7 @@ public class Settings {
     public final int CHUNKS_PER_PIXEL; // 256x256 chunks per pixel
 
     // Render Settings \\
+
     public final int MAX_RENDER_DISTANCE; // How many chunks around player
     public final int MAX_RENDER_HEIGHT; // How many chunks tall around player
 
@@ -38,7 +39,8 @@ public class Settings {
     public final int MAX_LOD_DISTANCE; // LODs visible up to this range
 
     // Tick \\
-    public final float WORLD_TICK;
+
+    public final float WORLD_TICK; // Internal clock used to throttle world load
 
     // Loader Settings \\
 
@@ -61,8 +63,9 @@ public class Settings {
     public final int OCEAN_TIDE_OFFSET; // How High tides will rise from base
 
     public final int WATER_NOISE_OFFSET; // The offset for water biome noise
+    public final int WATER_HEIGHT_OFFSET; // The offset for water height control
 
-    public final int MIN_CAVE_ELEVATION; // Caves End Here
+    public final int MIN_CAVE_ELEVATION; // Deepest elevation caves can reach
 
     // Constructor
 
@@ -97,6 +100,7 @@ public class Settings {
         this.OCEAN_TIDE_OFFSET = builder.OCEAN_TIDE_OFFSET;
 
         this.WATER_NOISE_OFFSET = builder.WATER_NOISE_OFFSET;
+        this.WATER_HEIGHT_OFFSET = builder.WATER_HEIGHT_OFFSET;
 
         this.MIN_CAVE_ELEVATION = builder.MIN_CAVE_ELEVATION;
     }
@@ -136,81 +140,119 @@ public class Settings {
         public int OCEAN_TIDE_OFFSET = 8;
 
         public int WATER_NOISE_OFFSET = 12345;
+        public int WATER_HEIGHT_OFFSET = 8888;
 
         public int MIN_CAVE_ELEVATION = 128;
 
         // Build
 
-        public Builder setBaseSpeed(float speed) {
-            this.BASE_SPEED = speed;
+        public Builder BASE_SPEED(float BASE_SPEED) {
+            this.BASE_SPEED = BASE_SPEED;
             return this;
         }
 
-        public Builder setRegionImagePath(String path) {
-            this.REGION_IMAGE_PATH = path;
+        public Builder REGION_IMAGE_PATH(String REGION_IMAGE_PATH) {
+            this.REGION_IMAGE_PATH = REGION_IMAGE_PATH;
             return this;
         }
 
-        public Builder setChunkSettings(float blockSize, int chunkSize, int chunksPerPixel) {
-            this.BLOCK_SIZE = blockSize;
-            this.CHUNK_SIZE = chunkSize;
-            this.CHUNKS_PER_PIXEL = chunksPerPixel;
+        public Builder BLOCK_SIZE(float BLOCK_SIZE) {
+            this.BLOCK_SIZE = BLOCK_SIZE;
             return this;
         }
 
-        public Builder setRenderSettings(int renderDistance, int renderHeight) {
-            this.MAX_RENDER_DISTANCE = renderDistance;
-            this.MAX_RENDER_HEIGHT = renderHeight;
+        public Builder CHUNK_SIZE(int CHUNK_SIZE) {
+            this.CHUNK_SIZE = CHUNK_SIZE;
             return this;
         }
 
-        public Builder setLOD(int lodStart, int maxLod) {
-            this.LOD_START_DISTANCE = lodStart;
-            this.MAX_LOD_DISTANCE = maxLod;
+        public Builder CHUNKS_PER_PIXEL(int CHUNKS_PER_PIXEL) {
+            this.CHUNKS_PER_PIXEL = CHUNKS_PER_PIXEL;
             return this;
         }
 
-        public Builder setWorldTick(float tick) {
-            this.WORLD_TICK = tick;
+        public Builder MAX_RENDER_DISTANCE(int MAX_RENDER_DISTANCE) {
+            this.MAX_RENDER_DISTANCE = MAX_RENDER_DISTANCE;
             return this;
         }
 
-        public Builder setLoaderLimits(int perFrame, int perTick) {
-            this.MAX_CHUNK_LOADS_PER_FRAME = perFrame;
-            this.MAX_CHUNK_LOADS_PER_TICK = perTick;
+        public Builder MAX_RENDER_HEIGHT(int MAX_RENDER_HEIGHT) {
+            this.MAX_RENDER_HEIGHT = MAX_RENDER_HEIGHT;
             return this;
         }
 
-        public Builder setBiomePath(String path) {
-            this.BIOME_PATH = path;
+        public Builder LOD_START_DISTANCE(int LOD_START_DISTANCE) {
+            this.LOD_START_DISTANCE = LOD_START_DISTANCE;
             return this;
         }
 
-        public Builder setWorldGen(int baseElevation, int minElevation, int maxElevation) {
-            this.BASE_WORLD_ELEVATION = baseElevation;
-            this.MIN_WORLD_ELEVATION = minElevation;
-            this.MAX_WORLD_ELEVATION = maxElevation;
+        public Builder MAX_LOD_DISTANCE(int MAX_LOD_DISTANCE) {
+            this.MAX_LOD_DISTANCE = MAX_LOD_DISTANCE;
             return this;
         }
 
-        public Builder setElevationBlending(int blend) {
-            this.BASE_ELEVATION_BLENDING = blend;
+        public Builder WORLD_TICK(float WORLD_TICK) {
+            this.WORLD_TICK = WORLD_TICK;
             return this;
         }
 
-        public Builder setOceanSettings(int level, int tideOffset) {
-            this.BASE_OCEAN_LEVEL = level;
-            this.OCEAN_TIDE_OFFSET = tideOffset;
+        public Builder MAX_CHUNK_LOADS_PER_FRAME(int MAX_CHUNK_LOADS_PER_FRAME) {
+            this.MAX_CHUNK_LOADS_PER_FRAME = MAX_CHUNK_LOADS_PER_FRAME;
             return this;
         }
 
-        public Builder setWaterOffset(int noiseOffset) {
-            this.WATER_NOISE_OFFSET = noiseOffset;
+        public Builder MAX_CHUNK_LOADS_PER_TICK(int MAX_CHUNK_LOADS_PER_TICK) {
+            this.MAX_CHUNK_LOADS_PER_TICK = MAX_CHUNK_LOADS_PER_TICK;
             return this;
         }
 
-        public Builder setCaveSettings(int minCaveElevation) {
-            this.MIN_CAVE_ELEVATION = minCaveElevation;
+        public Builder BIOME_PATH(String BIOME_PATH) {
+            this.BIOME_PATH = BIOME_PATH;
+            return this;
+        }
+
+        public Builder BASE_WORLD_ELEVATION(int BASE_WORLD_ELEVATION) {
+            this.BASE_WORLD_ELEVATION = BASE_WORLD_ELEVATION;
+            return this;
+        }
+
+        public Builder MIN_WORLD_ELEVATION(int MIN_WORLD_ELEVATION) {
+            this.MIN_WORLD_ELEVATION = MIN_WORLD_ELEVATION;
+            return this;
+        }
+
+        public Builder MAX_WORLD_ELEVATION(int MAX_WORLD_ELEVATION) {
+            this.MAX_WORLD_ELEVATION = MAX_WORLD_ELEVATION;
+            return this;
+        }
+
+        public Builder BASE_ELEVATION_BLENDING(int BASE_ELEVATION_BLENDING) {
+            this.BASE_ELEVATION_BLENDING = BASE_ELEVATION_BLENDING;
+            return this;
+        }
+
+        public Builder BASE_OCEAN_LEVEL(int BASE_OCEAN_LEVEL) {
+            this.BASE_OCEAN_LEVEL = BASE_OCEAN_LEVEL;
+            return this;
+        }
+
+        public Builder OCEAN_TIDE_OFFSET(int OCEAN_TIDE_OFFSET) {
+            this.OCEAN_TIDE_OFFSET = OCEAN_TIDE_OFFSET;
+            return this;
+        }
+
+        public Builder WATER_NOISE_OFFSET(int WATER_NOISE_OFFSET) {
+            this.WATER_NOISE_OFFSET = WATER_NOISE_OFFSET;
+            return this;
+        }
+
+        public Builder WATER_HEIGHT_OFFSET(int WATER_HEIGHT_OFFSET) {
+            this.WATER_HEIGHT_OFFSET = WATER_HEIGHT_OFFSET;
+            return this;
+        }
+
+        public Builder MIN_CAVE_ELEVATION(int MIN_CAVE_ELEVATION) {
+            this.MIN_CAVE_ELEVATION = MIN_CAVE_ELEVATION;
             return this;
         }
 

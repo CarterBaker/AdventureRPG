@@ -28,9 +28,9 @@ public class Block {
 
         private String name;
         private int ID;
-        private int top;
-        private int side;
-        private int bottom;
+        private int top = -1;
+        private int side = -1;
+        private int bottom = -1;
 
         private State state;
 

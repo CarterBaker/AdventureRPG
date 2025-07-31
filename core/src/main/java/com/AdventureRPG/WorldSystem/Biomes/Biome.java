@@ -29,7 +29,8 @@ public class Biome {
     public final boolean ocean;
 
     public final float waterNoiseScaleX;
-    public final float watereNoiseScaleY;
+    public final float waterNoiseScaleY;
+    public final float waterThreshold;
 
     // SubTerrainian Biomes
 
@@ -61,6 +62,10 @@ public class Biome {
         this.aquatic = false;
         this.ocean = false;
 
+        this.waterNoiseScaleX = 0;
+        this.waterNoiseScaleY = 0;
+        this.waterThreshold = 0;
+
         this.allowCaves = false;
         this.subTerrainian = false;
         this.allowSurfaceBreak = false;
@@ -86,6 +91,10 @@ public class Biome {
         this.aquatic = builder.aquatic;
         this.ocean = builder.ocean;
 
+        this.waterNoiseScaleX = builder.waterNoiseScaleX;
+        this.waterNoiseScaleY = builder.waterNoiseScaleY;
+        this.waterThreshold = builder.waterThreshold;
+
         this.allowCaves = builder.allowCaves;
         this.subTerrainian = builder.subTerrainian;
         this.allowSurfaceBreak = builder.allowSurfaceBreak;
@@ -110,6 +119,10 @@ public class Biome {
 
         private boolean aquatic;
         private boolean ocean;
+
+        private float waterNoiseScaleX;
+        private float waterNoiseScaleY;
+        private float waterThreshold;
 
         private boolean allowCaves;
         private boolean subTerrainian;
@@ -149,6 +162,21 @@ public class Biome {
 
         public Builder ocean(boolean ocean) {
             this.ocean = ocean;
+            return this;
+        }
+
+        public Builder waterNoiseScaleX(float waterNoiseScaleX) {
+            this.waterNoiseScaleX = waterNoiseScaleX;
+            return this;
+        }
+
+        public Builder waterNoiseScaleY(float waterNoiseScaleY) {
+            this.waterNoiseScaleY = waterNoiseScaleY;
+            return this;
+        }
+
+        public Builder waterThreshold(float waterThreshold) {
+            this.waterThreshold = waterThreshold;
             return this;
         }
 

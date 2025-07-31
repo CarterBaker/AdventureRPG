@@ -30,6 +30,7 @@ public class WorldGenerator {
     private final int BASE_OCEAN_LEVEL;
 
     private final int WATER_NOISE_OFFSET;
+    private final int WATER_HEIGHT_OFFSET;
 
     private final int MIN_CAVE_ELEVATION;
 
@@ -62,6 +63,7 @@ public class WorldGenerator {
         this.BASE_OCEAN_LEVEL = settings.BASE_OCEAN_LEVEL;
 
         this.WATER_NOISE_OFFSET = settings.WATER_NOISE_OFFSET;
+        this.WATER_HEIGHT_OFFSET = settings.WATER_HEIGHT_OFFSET;
 
         this.MIN_CAVE_ELEVATION = settings.MIN_CAVE_ELEVATION;
 
@@ -137,11 +139,13 @@ public class WorldGenerator {
         }
 
         // Water noise for variation
-        float waterNoise = OpenSimplex2.noise2(Seed + WATER_NOISE_OFFSET, x * 0.01f, z * 0.01f);
-        float waterThreshold = 0.7f;
+        float waterNoiseScaleX = biome.waterNoiseScaleX * x;
+        float waterNoiseScaleY = biome.waterNoiseScaleY * z;
+        float waterNoise = OpenSimplex2.noise2(Seed + WATER_NOISE_OFFSET, waterNoiseScaleX, waterNoiseScaleY);
+        float waterThreshold = biome.waterThreshold;
 
         // Water heightmap decoupled from sea level
-        float waterHeightNorm = (OpenSimplex2.noise2(Seed + 8888, x * 0.008f, z * 0.008f) + 1f) / 2f;
+        float waterHeightNorm = (OpenSimplex2.noise2(Seed + WATER_HEIGHT_OFFSET, x * 0.008f, z * 0.008f) + 1f) / 2f;
         int localWaterHeight = (int) (MIN_WORLD_ELEVATION
                 + waterHeightNorm * (MAX_WORLD_ELEVATION - MIN_WORLD_ELEVATION));
 

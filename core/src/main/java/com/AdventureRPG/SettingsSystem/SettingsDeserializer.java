@@ -12,64 +12,80 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         JsonObject obj = json.getAsJsonObject();
         Settings.Builder builder = new Settings.Builder();
 
+        // Movement \\
+
         if (obj.has("BASE_SPEED"))
-            builder.setBaseSpeed(obj.get("BASE_SPEED").getAsFloat());
+            builder.BASE_SPEED(obj.get("BASE_SPEED").getAsFloat());
+
+        // Region Map Settings \\
 
         if (obj.has("REGION_IMAGE_PATH"))
-            builder.setRegionImagePath(obj.get("REGION_IMAGE_PATH").getAsString());
+            builder.REGION_IMAGE_PATH(obj.get("REGION_IMAGE_PATH").getAsString());
 
-        if (obj.has("BLOCK_SIZE") && obj.has("CHUNK_SIZE") && obj.has("CHUNKS_PER_PIXEL")) {
-            builder.setChunkSettings(
-                    obj.get("BLOCK_SIZE").getAsFloat(),
-                    obj.get("CHUNK_SIZE").getAsInt(),
-                    obj.get("CHUNKS_PER_PIXEL").getAsInt());
-        }
+        // Chunk Settings \\
 
-        if (obj.has("MAX_RENDER_DISTANCE") && obj.has("MAX_RENDER_HEIGHT")) {
-            builder.setRenderSettings(
-                    obj.get("MAX_RENDER_DISTANCE").getAsInt(),
-                    obj.get("MAX_RENDER_HEIGHT").getAsInt());
-        }
+        if (obj.has("BLOCK_SIZE"))
+            builder.BLOCK_SIZE(obj.get("BLOCK_SIZE").getAsFloat());
+        if (obj.has("CHUNK_SIZE"))
+            builder.CHUNK_SIZE(obj.get("CHUNK_SIZE").getAsInt());
+        if (obj.has("CHUNKS_PER_PIXEL"))
+            builder.CHUNKS_PER_PIXEL(obj.get("CHUNKS_PER_PIXEL").getAsInt());
 
-        if (obj.has("LOD_START_DISTANCE") && obj.has("MAX_LOD_DISTANCE")) {
-            builder.setLOD(
-                    obj.get("LOD_START_DISTANCE").getAsInt(),
-                    obj.get("MAX_LOD_DISTANCE").getAsInt());
-        }
+        // Render Settings \\
+
+        if (obj.has("MAX_RENDER_DISTANCE"))
+            builder.MAX_RENDER_DISTANCE(obj.get("MAX_RENDER_DISTANCE").getAsInt());
+        if (obj.has("MAX_RENDER_HEIGHT"))
+            builder.MAX_RENDER_HEIGHT(obj.get("MAX_RENDER_HEIGHT").getAsInt());
+
+        // LOD Settings \\
+
+        if (obj.has("LOD_START_DISTANCE"))
+            builder.LOD_START_DISTANCE(obj.get("LOD_START_DISTANCE").getAsInt());
+        if (obj.has("MAX_LOD_DISTANCE"))
+            builder.MAX_LOD_DISTANCE(obj.get("MAX_LOD_DISTANCE").getAsInt());
+
+        // Tick \\
 
         if (obj.has("WORLD_TICK"))
-            builder.setWorldTick(obj.get("WORLD_TICK").getAsFloat());
+            builder.WORLD_TICK(obj.get("WORLD_TICK").getAsFloat());
 
-        if (obj.has("MAX_CHUNK_LOADS_PER_FRAME") && obj.has("MAX_CHUNK_LOADS_PER_TICK")) {
-            builder.setLoaderLimits(
-                    obj.get("MAX_CHUNK_LOADS_PER_FRAME").getAsInt(),
-                    obj.get("MAX_CHUNK_LOADS_PER_TICK").getAsInt());
-        }
+        // Loader Settings \\
+
+        if (obj.has("MAX_CHUNK_LOADS_PER_FRAME"))
+            builder.MAX_CHUNK_LOADS_PER_FRAME(obj.get("MAX_CHUNK_LOADS_PER_FRAME").getAsInt());
+        if (obj.has("MAX_CHUNK_LOADS_PER_TICK"))
+            builder.MAX_CHUNK_LOADS_PER_TICK(obj.get("MAX_CHUNK_LOADS_PER_TICK").getAsInt());
+
+        // Biome Settings \\
 
         if (obj.has("BIOME_PATH"))
-            builder.setBiomePath(obj.get("BIOME_PATH").getAsString());
+            builder.BIOME_PATH(obj.get("BIOME_PATH").getAsString());
 
-        if (obj.has("BASE_WORLD_ELEVATION") && obj.has("MIN_WORLD_ELEVATION") && obj.has("MAX_WORLD_ELEVATION")) {
-            builder.setWorldGen(
-                    obj.get("BASE_WORLD_ELEVATION").getAsInt(),
-                    obj.get("MIN_WORLD_ELEVATION").getAsInt(),
-                    obj.get("MAX_WORLD_ELEVATION").getAsInt());
-        }
+        // World Generation \\
+
+        if (obj.has("BASE_WORLD_ELEVATION"))
+            builder.BASE_WORLD_ELEVATION(obj.get("BASE_WORLD_ELEVATION").getAsInt());
+        if (obj.has("MIN_WORLD_ELEVATION"))
+            builder.MIN_WORLD_ELEVATION(obj.get("MIN_WORLD_ELEVATION").getAsInt());
+        if (obj.has("MAX_WORLD_ELEVATION"))
+            builder.MAX_WORLD_ELEVATION(obj.get("MAX_WORLD_ELEVATION").getAsInt());
 
         if (obj.has("BASE_ELEVATION_BLENDING"))
-            builder.setElevationBlending(obj.get("BASE_ELEVATION_BLENDING").getAsInt());
+            builder.BASE_ELEVATION_BLENDING(obj.get("BASE_ELEVATION_BLENDING").getAsInt());
 
-        if (obj.has("BASE_OCEAN_LEVEL") && obj.has("OCEAN_TIDE_OFFSET")) {
-            builder.setOceanSettings(
-                    obj.get("BASE_OCEAN_LEVEL").getAsInt(),
-                    obj.get("OCEAN_TIDE_OFFSET").getAsInt());
-        }
+        if (obj.has("BASE_OCEAN_LEVEL"))
+            builder.BASE_OCEAN_LEVEL(obj.get("BASE_OCEAN_LEVEL").getAsInt());
+        if (obj.has("OCEAN_TIDE_OFFSET"))
+            builder.OCEAN_TIDE_OFFSET(obj.get("OCEAN_TIDE_OFFSET").getAsInt());
 
         if (obj.has("WATER_NOISE_OFFSET"))
-            builder.setWaterOffset(obj.get("WATER_NOISE_OFFSET").getAsInt());
+            builder.WATER_NOISE_OFFSET(obj.get("WATER_NOISE_OFFSET").getAsInt());
+        if (obj.has("WATER_HEIGHT_OFFSET"))
+            builder.WATER_HEIGHT_OFFSET(obj.get("WATER_HEIGHT_OFFSET").getAsInt());
 
         if (obj.has("MIN_CAVE_ELEVATION"))
-            builder.setCaveSettings(obj.get("MIN_CAVE_ELEVATION").getAsInt());
+            builder.MIN_CAVE_ELEVATION(obj.get("MIN_CAVE_ELEVATION").getAsInt());
 
         return builder.build();
     }
