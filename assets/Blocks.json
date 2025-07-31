@@ -2,85 +2,97 @@
     {
         "name": "Air",
         "ID": 0,
-        "top": 0,
-        "side": 0,
-        "bottom": 0
+        "top": -1,
+        "side": -1,
+        "bottom": -1,
+        "state": "GAS"
     },
     {
         "name": "Vacuum",
         "ID": 1,
-        "top": 0,
-        "side": 0,
-        "bottom": 0
+        "top": -1,
+        "side": -1,
+        "bottom": -1,
+        "state": "VACUUM"
     },
     {
         "name": "Water",
         "ID": 2,
-        "top": 0,
-        "side": 0,
-        "bottom": 0
+        "top": 9,
+        "side": 9,
+        "bottom": 9,
+        "state": "LIQUID"
     },
     {
         "name": "Lava",
         "ID": 3,
-        "top": 0,
-        "side": 0,
-        "bottom": 0
+        "top": 10,
+        "side": 10,
+        "bottom": 10,
+        "state": "LIQUID"
     },
     {
         "name": "Grass Block",
         "ID": 4,
         "top": 0,
         "side": 1,
-        "bottom": 2
+        "bottom": 2,
+        "state": "SOLID"
     },
     {
         "name": "Dirt Block",
         "ID": 5,
         "top": 2,
         "side": 2,
-        "bottom": 2
+        "bottom": 2,
+        "state": "SOLID"
     },
     {
         "name": "Stone Block",
         "ID": 6,
         "top": 3,
         "side": 3,
-        "bottom": 3
+        "bottom": 3,
+        "state": "SOLID"
     },
     {
         "name": "Copper Ore",
         "ID": 7,
         "top": 4,
         "side": 4,
-        "bottom": 4
+        "bottom": 4,
+        "state": "SOLID"
     },
     {
         "name": "Iron Ore",
         "ID": 8,
         "top": 5,
         "side": 5,
-        "bottom": 5
+        "bottom": 5,
+        "state": "SOLID"
     },
     {
         "name": "Gold Ore",
         "ID": 9,
         "top": 6,
         "side": 6,
-        "bottom": 6
+        "bottom": 6,
+        "state": "SOLID"
     },
     {
         "name": "Coal Ore",
         "ID": 10,
         "top": 7,
         "side": 7,
-        "bottom": 7
+        "bottom": 7,
+        "state": "SOLID"
     },
     {
         "name": "Sand",
         "ID": 11,
         "top": 8,
         "side": 8,
-        "bottom": 8
+        "bottom": 8,
+        "state": "SOLID"
     }
 ]

@@ -8,8 +8,9 @@ public class Loader {
 
     public static Settings load(File file, Gson gson) {
         if (!file.exists()) {
-            Settings defaultSettings = new Settings();
-            save(file, defaultSettings, gson); // Save default settings
+            // Create default Settings using Builder explicitly
+            Settings defaultSettings = new Settings.Builder().build();
+            save(file, defaultSettings, gson); // Save default settings JSON
             return defaultSettings;
         }
 
@@ -17,7 +18,8 @@ public class Loader {
             return gson.fromJson(reader, Settings.class);
         } catch (IOException e) {
             e.printStackTrace();
-            return new Settings(); // fallback
+            // Fallback to default built settings if loading fails
+            return new Settings.Builder().build();
         }
     }
 

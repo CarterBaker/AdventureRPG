@@ -2,10 +2,6 @@ package com.AdventureRPG.WorldSystem.Biomes;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
-import com.google.gson.JsonSyntaxException;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,42 +24,12 @@ public class BiomeSystem {
         this.settings = gameManager.settings;
 
         // Biome System
-        this.biomes = loadBiomes(gameManager);
+        this.biomes = Loader.LoadBiomes(gameManager);
 
         // Blending
         this.relatedBiomes = OrganizeSimilarBiomes(biomes);
         this.relatedSubTerrainianBiomes = OrganizeSubTerrainianBiomes();
         this.relatedSurfaceBiomes = OrganizeSurfaceBiomes();
-    }
-
-    private Biome[] loadBiomes(GameManager gameManager) {
-
-        File biomeDir = new File(settings.BIOME_PATH);
-        if (!biomeDir.exists() || !biomeDir.isDirectory()) {
-            throw new RuntimeException("Biome directory not found: " + settings.BIOME_PATH);
-        }
-
-        File[] jsonFiles = biomeDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
-        if (jsonFiles == null) {
-            throw new RuntimeException("Failed to list files in: " + settings.BIOME_PATH);
-        }
-
-        if (jsonFiles.length == 0) {
-            throw new RuntimeException("No biome JSON files found in: " + settings.BIOME_PATH);
-        }
-
-        Biome[] loadedBiomes = new Biome[jsonFiles.length];
-        for (int i = 0; i < jsonFiles.length; i++) {
-            File file = jsonFiles[i];
-            try {
-                String content = Files.readString(file.toPath());
-                loadedBiomes[i] = gameManager.gson.fromJson(content, Biome.class);
-            } catch (IOException | JsonSyntaxException e) {
-                throw new RuntimeException("Failed to load or parse biome: " + file.getName(), e);
-            }
-        }
-
-        return loadedBiomes;
     }
 
     private Map<Integer, int[]> OrganizeSimilarBiomes(Biome[] biomes) {

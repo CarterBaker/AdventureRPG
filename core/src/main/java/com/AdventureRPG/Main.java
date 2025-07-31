@@ -29,11 +29,31 @@ public class Main extends Game {
     @Override
     public void dispose() {
 
-        if (getScreen() != null) {
-            getScreen().dispose();
-        }
+        HandleGameWindow();
+        HandleSettingsFile();
 
         batch.dispose();
         super.dispose();
+    }
+
+    private void HandleGameWindow() {
+        if (getScreen() != null) {
+            getScreen().dispose();
+        }
+    }
+
+    private void HandleSettingsFile() {
+
+        if (!settings.debug)
+            return;
+
+        File settingsFile = new File(GAME_DIRECTORY, "settings.json");
+
+        if (settingsFile.exists()) {
+            boolean deleted = settingsFile.delete();
+            if (!deleted) {
+                System.err.println("Failed to delete settings file: " + settingsFile.getAbsolutePath());
+            }
+        }
     }
 }

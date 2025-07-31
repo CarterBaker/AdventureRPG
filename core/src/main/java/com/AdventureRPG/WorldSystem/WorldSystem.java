@@ -38,6 +38,9 @@ public class WorldSystem {
 
     public WorldSystem(GameManager GameManager) {
 
+        // Blocks
+        this.blocks = Loader.LoadBlocks(); // This needs to be called as soon as possible
+
         // Game
         this.GameManager = GameManager;
         this.SaveSystem = GameManager.SaveSystem;
@@ -52,9 +55,6 @@ public class WorldSystem {
         this.BiomeSystem = new BiomeSystem(GameManager);
         this.ChunkSystem = new ChunkSystem(this);
         this.Grid = new Grid(this);
-
-        // Blocks
-        this.blocks = Loader.LoadBlocks();
     }
 
     public void Update() {

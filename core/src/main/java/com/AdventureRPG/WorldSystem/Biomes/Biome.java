@@ -15,6 +15,7 @@ public class Biome {
     public final int ID;
 
     // Blending
+
     public final Set<Integer> similarBiomes;
 
     // Elevation
@@ -22,64 +23,103 @@ public class Biome {
     public final int elevation;
     public final int elevationBlending;
 
-    // SubTerrainian
+    // Water Biomes
+
+    public final boolean aquatic;
+    public final boolean ocean;
+
+    public final float waterNoiseScaleX;
+    public final float watereNoiseScaleY;
+
+    // SubTerrainian Biomes
 
     public final boolean allowCaves;
     public final boolean subTerrainian;
+    public final boolean allowSurfaceBreak;
 
     public final float caveNoiseScaleX;
     public final float caveNoiseScaleY;
     public final float caveNoiseScaleZ;
     public final float caveThreshold;
 
-    // Terrain
+    // Block Composition
 
     private final Map<Integer, Vector2Int> BiomeComposition;
 
     // Biome Construction
 
     public Biome() {
+
         this.name = "null";
         this.ID = 0;
+
         this.similarBiomes = new HashSet<>();
+
         this.elevation = 0;
         this.elevationBlending = 0;
+
+        this.aquatic = false;
+        this.ocean = false;
+
         this.allowCaves = false;
         this.subTerrainian = false;
+        this.allowSurfaceBreak = false;
+
         this.caveNoiseScaleX = 0f;
         this.caveNoiseScaleY = 0f;
         this.caveNoiseScaleZ = 0f;
         this.caveThreshold = 0f;
+
         this.BiomeComposition = new HashMap<>();
     }
 
     private Biome(Builder builder) {
+
         this.name = builder.name;
         this.ID = builder.ID;
+
         this.similarBiomes = builder.similarBiomes;
+
         this.elevation = builder.elevation;
         this.elevationBlending = builder.elevationBlending;
+
+        this.aquatic = builder.aquatic;
+        this.ocean = builder.ocean;
+
         this.allowCaves = builder.allowCaves;
         this.subTerrainian = builder.subTerrainian;
+        this.allowSurfaceBreak = builder.allowSurfaceBreak;
+
         this.caveNoiseScaleX = builder.caveNoiseScaleX;
         this.caveNoiseScaleY = builder.caveNoiseScaleY;
         this.caveNoiseScaleZ = builder.caveNoiseScaleZ;
         this.caveThreshold = builder.caveThreshold;
+
         this.BiomeComposition = builder.BiomeComposition;
     }
 
     public static class Builder {
-        private String name = "null";
-        private int ID = 0;
+
+        private String name;
+        private int ID;
+
         private Set<Integer> similarBiomes = new HashSet<>();
-        private int elevation = 0;
-        private int elevationBlending = 0;
-        private boolean allowCaves = false;
-        private boolean subTerrainian = false;
+
+        private int elevation;
+        private int elevationBlending;
+
+        private boolean aquatic;
+        private boolean ocean;
+
+        private boolean allowCaves;
+        private boolean subTerrainian;
+        private boolean allowSurfaceBreak;
+
         private float caveNoiseScaleX;
         private float caveNoiseScaleY;
         private float caveNoiseScaleZ;
         private float caveThreshold;
+
         private Map<Integer, Vector2Int> BiomeComposition = new HashMap<>();
 
         public Builder name(String name) {
@@ -102,6 +142,16 @@ public class Biome {
             return this;
         }
 
+        public Builder aquatic(boolean aquatic) {
+            this.aquatic = aquatic;
+            return this;
+        }
+
+        public Builder ocean(boolean ocean) {
+            this.ocean = ocean;
+            return this;
+        }
+
         public Builder allowCaves(boolean allowCaves) {
             this.allowCaves = allowCaves;
             return this;
@@ -109,6 +159,11 @@ public class Biome {
 
         public Builder subTerrainian(boolean subTerrainian) {
             this.subTerrainian = subTerrainian;
+            return this;
+        }
+
+        public Builder allowSurfaceBreak(boolean allowSurfaceBreak) {
+            this.allowSurfaceBreak = allowSurfaceBreak;
             return this;
         }
 

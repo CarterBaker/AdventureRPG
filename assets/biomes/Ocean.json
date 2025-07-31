@@ -1,0 +1,36 @@
+{
+    "name": "Ocean",
+    "ID": 0,
+    "elevation": 128,
+    "elevationBlending": 15,
+    "allowCaves": true,
+    "subTerrainian": false,
+    "allowSurfaceBreak": true,
+    "caveNoiseScaleX": 0.01,
+    "caveNoiseScaleY": 0.02,
+    "caveNoiseScaleZ": 0.01,
+    "caveThreshold": 0.6,
+    "aquatic": true,
+    "ocean": true,
+    "similarBiomes": [
+        0
+    ],
+    "BiomeComposition": {
+        "1": {
+            "x": 0,
+            "y": 2
+        },
+        "2": {
+            "x": 3,
+            "y": 5
+        },
+        "3": {
+            "x": 6,
+            "y": 50
+        },
+        "4": {
+            "x": 51,
+            "y": 100
+        }
+    }
+}

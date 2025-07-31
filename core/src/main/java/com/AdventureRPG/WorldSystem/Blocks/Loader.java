@@ -1,35 +1,41 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
-import java.util.List;
-
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 
+import java.util.List;
 
 public class Loader {
 
     public static Block[] LoadBlocks() {
-        // 1. Load file from assets
+        // Load file
         FileHandle file = Gdx.files.internal("blocks.json");
         String json = file.readString("UTF-8");
 
-        // 2. Parse JSON
-        Gson gson = new Gson();
-        List<Block> blockList = gson.fromJson(json, new TypeToken<List<Block>>() {}.getType());
+        // Use GSON with custom Block deserializer
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(Block.class, new BlockDeserializer())
+                .create();
 
-        // 3. Allocate the final array
+        List<Block> blockList = gson.fromJson(json, new TypeToken<List<Block>>() {
+        }.getType());
+
+        // Allocate based on max ID
         int maxID = 0;
         for (Block b : blockList)
-            if (b.ID > maxID) maxID = b.ID;
+            if (b.ID > maxID)
+                maxID = b.ID;
 
         Block[] result = new Block[maxID + 1];
-        for (Block b : blockList)
+        for (Block b : blockList) {
+            if (result[b.ID] != null)
+                throw new RuntimeException("Duplicate block ID detected: " + b.ID + " (" + b.name + ")");
             result[b.ID] = b;
+        }
 
-        // 4. Self-clean: all locals are GC eligible here, nothing retained
         return result;
     }
 }

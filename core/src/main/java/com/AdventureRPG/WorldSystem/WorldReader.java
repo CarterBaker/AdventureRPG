@@ -54,20 +54,8 @@ public class WorldReader {
         int r = (pixel >> 24) & 0xFF;
         int g = (pixel >> 16) & 0xFF;
         int b = (pixel >> 8) & 0xFF;
-        int a = pixel & 0xFF;
 
-        boolean river = false;
-        boolean road = false;
-
-        if (a == 1) {
-            river = true;
-        } else if (a == 2) {
-            road = true;
-        } else if (a == 3) {
-            river = true;
-            road = true;
-        }
-
-        return new WorldRegion(r, g, b, river, road);
+        return new WorldRegion(r, g, b);
     }
+
 }

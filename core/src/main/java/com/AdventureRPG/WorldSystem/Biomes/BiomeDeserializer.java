@@ -14,10 +14,6 @@ public class BiomeDeserializer implements JsonDeserializer<Biome> {
 
         String name = obj.get("name").getAsString();
         int ID = obj.get("ID").getAsInt();
-        int elevation = obj.get("elevation").getAsInt();
-        int elevationBlending = obj.get("elevationBlending").getAsInt();
-        boolean allowCaves = obj.get("allowCaves").getAsBoolean();
-        boolean subTerrainian = obj.get("subTerrainian").getAsBoolean();
 
         Set<Integer> similarBiomes = new HashSet<>();
         JsonArray similarArray = obj.getAsJsonArray("similarBiomes");
@@ -26,6 +22,16 @@ public class BiomeDeserializer implements JsonDeserializer<Biome> {
                 similarBiomes.add(e.getAsInt());
             }
         }
+
+        int elevation = obj.get("elevation").getAsInt();
+        int elevationBlending = obj.get("elevationBlending").getAsInt();
+
+        boolean aquatic = obj.get("aquatic").getAsBoolean();
+        boolean ocean = obj.get("ocean").getAsBoolean();
+
+        boolean allowCaves = obj.get("allowCaves").getAsBoolean();
+        boolean subTerrainian = obj.get("subTerrainian").getAsBoolean();
+        boolean allowSurfaceBreak = obj.get("allowSurfaceBreak").getAsBoolean();
 
         float caveNoiseScaleX = obj.get("caveNoiseScaleX").getAsFloat();
         float caveNoiseScaleY = obj.get("caveNoiseScaleY").getAsFloat();
@@ -43,18 +49,29 @@ public class BiomeDeserializer implements JsonDeserializer<Biome> {
         }
 
         return new Biome.Builder()
+
                 .name(name)
                 .ID(ID)
+
+                .similarBiomes(similarBiomes)
+
                 .elevation(elevation)
                 .elevationBlending(elevationBlending)
+
+                .aquatic(aquatic)
+                .ocean(ocean)
+
                 .allowCaves(allowCaves)
                 .subTerrainian(subTerrainian)
+                .allowSurfaceBreak(allowSurfaceBreak)
+
                 .caveNoiseScaleX(caveNoiseScaleX)
                 .caveNoiseScaleY(caveNoiseScaleY)
                 .caveNoiseScaleZ(caveNoiseScaleZ)
                 .caveThreshold(caveThreshold)
-                .similarBiomes(similarBiomes)
+
                 .BiomeComposition(composition)
+
                 .build();
     }
 }

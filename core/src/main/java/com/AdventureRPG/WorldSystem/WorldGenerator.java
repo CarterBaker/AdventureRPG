@@ -1,8 +1,5 @@
 package com.AdventureRPG.WorldSystem;
 
-import java.util.ArrayList;
-import java.util.Set;
-
 import com.AdventureRPG.SaveSystem.UserData;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Vector3Int;
@@ -30,6 +27,10 @@ public class WorldGenerator {
 
     private final int BASE_ELEVATION_BLENDING;
 
+    private final int BASE_OCEAN_LEVEL;
+
+    private final int WATER_NOISE_OFFSET;
+
     private final int MIN_CAVE_ELEVATION;
 
     // Data
@@ -37,6 +38,7 @@ public class WorldGenerator {
 
     private final Block AIR_BLOCK;
     private final Block VACUUM_BLOCK;
+    private final Block WATER_BLOCK;
     private final Block LAVA_BLOCK;
 
     public WorldGenerator(WorldSystem WorldSystem) {
@@ -57,6 +59,10 @@ public class WorldGenerator {
 
         this.BASE_ELEVATION_BLENDING = settings.BASE_ELEVATION_BLENDING;
 
+        this.BASE_OCEAN_LEVEL = settings.BASE_OCEAN_LEVEL;
+
+        this.WATER_NOISE_OFFSET = settings.WATER_NOISE_OFFSET;
+
         this.MIN_CAVE_ELEVATION = settings.MIN_CAVE_ELEVATION;
 
         // Data
@@ -64,6 +70,7 @@ public class WorldGenerator {
 
         this.AIR_BLOCK = WorldSystem.getBlockByName("air");
         this.VACUUM_BLOCK = WorldSystem.getBlockByName("vacuum");
+        this.WATER_BLOCK = WorldSystem.getBlockByName("water");
         this.LAVA_BLOCK = WorldSystem.getBlockByName("lava");
     }
 
@@ -124,8 +131,26 @@ public class WorldGenerator {
 
         biome = GetBiomeAtPosition(region, position);
 
+        // Ocean biome below ocean level fills with water
+        if (biome.ocean && y < BASE_OCEAN_LEVEL) {
+            return WATER_BLOCK;
+        }
+
+        // Water noise for variation
+        float waterNoise = OpenSimplex2.noise2(Seed + WATER_NOISE_OFFSET, x * 0.01f, z * 0.01f);
+        float waterThreshold = 0.7f;
+
+        // Water heightmap decoupled from sea level
+        float waterHeightNorm = (OpenSimplex2.noise2(Seed + 8888, x * 0.008f, z * 0.008f) + 1f) / 2f;
+        int localWaterHeight = (int) (MIN_WORLD_ELEVATION
+                + waterHeightNorm * (MAX_WORLD_ELEVATION - MIN_WORLD_ELEVATION));
+
+        if (!biome.ocean && biome.aquatic && y <= localWaterHeight && waterNoise > waterThreshold) {
+            return WATER_BLOCK;
+        }
+
         // Caves - only apply if under cave elevation and under terrain height
-        if (y < MIN_CAVE_ELEVATION && y < elevation && biome.allowCaves) {
+        if (y > MIN_CAVE_ELEVATION && y < elevation && biome.allowCaves) {
             float caveNoise = OpenSimplex2.noise3_ImproveXZ(
                     Seed + 9999,
                     x * biome.caveNoiseScaleX,
@@ -133,8 +158,15 @@ public class WorldGenerator {
                     z * biome.caveNoiseScaleZ);
 
             if (biome.isCave(caveNoise)) {
-                return AIR_BLOCK;
+                return biome.aquatic ? WATER_BLOCK : AIR_BLOCK;
             }
+        }
+
+        // Surface cave entrance holes
+        float surfaceBreakNoise = OpenSimplex2.noise2(Seed + 2222, x * 0.015f, z * 0.015f);
+
+        if (biome.allowSurfaceBreak && y == elevation && surfaceBreakNoise > 0.75f) {
+            return AIR_BLOCK; // or a special block like CAVE_ENTRANCE_BLOCK
         }
 
         // Terrain
@@ -146,7 +178,7 @@ public class WorldGenerator {
     private Biome GetBiomeAtPosition(WorldRegion region, Vector3Int position) {
         Biome baseBiome = BiomeSystem.GetBiomeByID(region.regionID);
 
-        int elevation = BlendedElevation(region, baseBiome);
+        elevation = BlendedElevation(region, baseBiome);
         boolean isUnderground = position.y < elevation;
 
         float blendNoise = OpenSimplex2.noise2(Seed + 4321, position.x * 0.002, position.z * 0.002);
