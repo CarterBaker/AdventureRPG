@@ -53,6 +53,11 @@ public class BiomeDeserializer implements JsonDeserializer<Biome> {
         if (obj.has("waterThreshold"))
             builder.waterThreshold(obj.get("waterThreshold").getAsFloat());
 
+        if (obj.has("waterHeightScaleX"))
+            builder.waterHeightScaleX(obj.get("waterHeightScaleX").getAsFloat());
+        if (obj.has("waterHeightScaleY"))
+            builder.waterHeightScaleY(obj.get("waterHeightScaleY").getAsFloat());
+
         // SubTerrainian Biomes
 
         if (obj.has("allowCaves"))
@@ -71,8 +76,24 @@ public class BiomeDeserializer implements JsonDeserializer<Biome> {
         if (obj.has("caveThreshold"))
             builder.caveThreshold(obj.get("caveThreshold").getAsFloat());
 
+        if (obj.has("breakNoiseScaleX"))
+            builder.breakNoiseScaleX(obj.get("breakNoiseScaleX").getAsFloat());
+        if (obj.has("breakNoiseScaleY"))
+            builder.breakNoiseScaleY(obj.get("breakNoiseScaleY").getAsFloat());
+        if (obj.has("breakThreshold"))
+            builder.breakThreshold(obj.get("breakThreshold").getAsFloat());
+
+        if (obj.has("biomeBlendScaleX"))
+            builder.biomeBlendScaleX(obj.get("biomeBlendScaleX").getAsFloat());
+        if (obj.has("biomeBlendScaleY"))
+            builder.biomeBlendScaleY(obj.get("biomeBlendScaleY").getAsFloat());
+
         // Block Composition
 
+        if (obj.has("airBlock"))
+            builder.airBlock(obj.get("airBlock").getAsInt());
+        if (obj.has("waterBlock"))
+            builder.waterBlock(obj.get("waterBlock").getAsInt());
         if (obj.has("BiomeComposition")) {
             JsonObject compObj = obj.getAsJsonObject("BiomeComposition");
             Map<Integer, Vector2Int> composition = new HashMap<>();

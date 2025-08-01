@@ -32,6 +32,9 @@ public class Biome {
     public final float waterNoiseScaleY;
     public final float waterThreshold;
 
+    public final float waterHeightScaleX;
+    public final float waterHeightScaleY;
+
     // SubTerrainian Biomes
 
     public final boolean allowCaves;
@@ -43,8 +46,17 @@ public class Biome {
     public final float caveNoiseScaleZ;
     public final float caveThreshold;
 
+    public final float breakNoiseScaleX;
+    public final float breakNoiseScaleY;
+    public final float breakThreshold;
+
+    public final float biomeBlendScaleX;
+    public final float biomeBlendScaleY;
+
     // Block Composition
 
+    public final int airBlock;
+    public final int waterBlock;
     private final Map<Integer, Vector2Int> BiomeComposition;
 
     // Biome Construction
@@ -66,6 +78,9 @@ public class Biome {
         this.waterNoiseScaleY = 0;
         this.waterThreshold = 0;
 
+        this.waterHeightScaleX = 0;
+        this.waterHeightScaleY = 0;
+
         this.allowCaves = false;
         this.subTerrainian = false;
         this.allowSurfaceBreak = false;
@@ -75,6 +90,15 @@ public class Biome {
         this.caveNoiseScaleZ = 0f;
         this.caveThreshold = 0f;
 
+        this.breakNoiseScaleX = 0f;
+        this.breakNoiseScaleY = 0f;
+        this.breakThreshold = 0f;
+
+        this.biomeBlendScaleX = 0f;
+        this.biomeBlendScaleY = 0f;
+
+        this.airBlock = 0;
+        this.waterBlock = 0;
         this.BiomeComposition = new HashMap<>();
     }
 
@@ -95,6 +119,9 @@ public class Biome {
         this.waterNoiseScaleY = builder.waterNoiseScaleY;
         this.waterThreshold = builder.waterThreshold;
 
+        this.waterHeightScaleX = builder.waterHeightScaleX;
+        this.waterHeightScaleY = builder.waterHeightScaleY;
+
         this.allowCaves = builder.allowCaves;
         this.subTerrainian = builder.subTerrainian;
         this.allowSurfaceBreak = builder.allowSurfaceBreak;
@@ -104,6 +131,15 @@ public class Biome {
         this.caveNoiseScaleZ = builder.caveNoiseScaleZ;
         this.caveThreshold = builder.caveThreshold;
 
+        this.breakNoiseScaleX = builder.breakNoiseScaleX;
+        this.breakNoiseScaleY = builder.breakNoiseScaleY;
+        this.breakThreshold = builder.breakThreshold;
+
+        this.biomeBlendScaleX = builder.biomeBlendScaleX;
+        this.biomeBlendScaleY = builder.biomeBlendScaleY;
+
+        this.airBlock = builder.airBlock;
+        this.waterBlock = builder.waterBlock;
         this.BiomeComposition = builder.BiomeComposition;
     }
 
@@ -124,6 +160,9 @@ public class Biome {
         private float waterNoiseScaleY;
         private float waterThreshold;
 
+        private float waterHeightScaleX;
+        private float waterHeightScaleY;
+
         private boolean allowCaves;
         private boolean subTerrainian;
         private boolean allowSurfaceBreak;
@@ -133,6 +172,15 @@ public class Biome {
         private float caveNoiseScaleZ;
         private float caveThreshold;
 
+        private float breakNoiseScaleX;
+        private float breakNoiseScaleY;
+        private float breakThreshold;
+
+        private float biomeBlendScaleX;
+        private float biomeBlendScaleY;
+
+        private int airBlock;
+        private int waterBlock;
         private Map<Integer, Vector2Int> BiomeComposition = new HashMap<>();
 
         public Builder name(String name) {
@@ -142,6 +190,11 @@ public class Biome {
 
         public Builder ID(int ID) {
             this.ID = ID;
+            return this;
+        }
+
+        public Builder similarBiomes(Set<Integer> similarBiomes) {
+            this.similarBiomes = similarBiomes;
             return this;
         }
 
@@ -180,6 +233,16 @@ public class Biome {
             return this;
         }
 
+        public Builder waterHeightScaleX(float waterHeightScaleX) {
+            this.waterHeightScaleX = waterHeightScaleX;
+            return this;
+        }
+
+        public Builder waterHeightScaleY(float waterHeightScaleY) {
+            this.waterHeightScaleY = waterHeightScaleY;
+            return this;
+        }
+
         public Builder allowCaves(boolean allowCaves) {
             this.allowCaves = allowCaves;
             return this;
@@ -192,16 +255,6 @@ public class Biome {
 
         public Builder allowSurfaceBreak(boolean allowSurfaceBreak) {
             this.allowSurfaceBreak = allowSurfaceBreak;
-            return this;
-        }
-
-        public Builder similarBiomes(Set<Integer> similarBiomes) {
-            this.similarBiomes = similarBiomes;
-            return this;
-        }
-
-        public Builder BiomeComposition(Map<Integer, Vector2Int> BiomeComposition) {
-            this.BiomeComposition = BiomeComposition;
             return this;
         }
 
@@ -222,6 +275,46 @@ public class Biome {
 
         public Builder caveThreshold(float caveThreshold) {
             this.caveThreshold = caveThreshold;
+            return this;
+        }
+
+        public Builder breakNoiseScaleX(float breakNoiseScaleX) {
+            this.breakNoiseScaleX = breakNoiseScaleX;
+            return this;
+        }
+
+        public Builder breakNoiseScaleY(float breakNoiseScaleY) {
+            this.breakNoiseScaleY = breakNoiseScaleY;
+            return this;
+        }
+
+        public Builder breakThreshold(float breakThreshold) {
+            this.breakThreshold = breakThreshold;
+            return this;
+        }
+
+        public Builder biomeBlendScaleX(float biomeBlendScaleX) {
+            this.biomeBlendScaleX = biomeBlendScaleX;
+            return this;
+        }
+
+        public Builder biomeBlendScaleY(float biomeBlendScaleY) {
+            this.biomeBlendScaleY = biomeBlendScaleY;
+            return this;
+        }
+
+        public Builder airBlock(int airBlock) {
+            this.airBlock = airBlock;
+            return this;
+        }
+
+        public Builder waterBlock(int waterBlock) {
+            this.waterBlock = waterBlock;
+            return this;
+        }
+
+        public Builder BiomeComposition(Map<Integer, Vector2Int> BiomeComposition) {
+            this.BiomeComposition = BiomeComposition;
             return this;
         }
 

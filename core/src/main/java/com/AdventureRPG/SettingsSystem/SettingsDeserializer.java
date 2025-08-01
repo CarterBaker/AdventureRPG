@@ -87,6 +87,14 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         if (obj.has("MIN_CAVE_ELEVATION"))
             builder.MIN_CAVE_ELEVATION(obj.get("MIN_CAVE_ELEVATION").getAsInt());
 
+        if (obj.has("CAVE_NOISE_OFFSET"))
+            builder.CAVE_NOISE_OFFSET(obj.get("CAVE_NOISE_OFFSET").getAsInt());
+        if (obj.has("SURFACE_BREAK__OFFSET"))
+            builder.SURFACE_BREAK__OFFSET(obj.get("SURFACE_BREAK__OFFSET").getAsInt());
+
+        if (obj.has("BIOME_BLEND_OFFSET"))
+            builder.BIOME_BLEND_OFFSET(obj.get("BIOME_BLEND_OFFSET").getAsInt());
+
         return builder.build();
     }
 }

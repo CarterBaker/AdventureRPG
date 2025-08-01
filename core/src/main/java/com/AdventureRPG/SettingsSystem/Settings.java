@@ -20,7 +20,7 @@ public class Settings {
 
     // Region Map Settings \\
 
-    public final String REGION_IMAGE_PATH;
+    public final String REGION_IMAGE_PATH; // The main image that controls the world
 
     // Chunk Settings \\
 
@@ -67,6 +67,11 @@ public class Settings {
 
     public final int MIN_CAVE_ELEVATION; // Deepest elevation caves can reach
 
+    public final int CAVE_NOISE_OFFSET; // The offset for cave biome noise
+    public final int SURFACE_BREAK__OFFSET; // The offset for cave biome noise
+
+    public final int BIOME_BLEND_OFFSET; // Offset for biome blending
+
     // Constructor
 
     public Settings(Builder builder) {
@@ -103,46 +108,56 @@ public class Settings {
         this.WATER_HEIGHT_OFFSET = builder.WATER_HEIGHT_OFFSET;
 
         this.MIN_CAVE_ELEVATION = builder.MIN_CAVE_ELEVATION;
+
+        this.CAVE_NOISE_OFFSET = builder.CAVE_NOISE_OFFSET;
+        this.SURFACE_BREAK__OFFSET = builder.SURFACE_BREAK__OFFSET;
+
+        this.BIOME_BLEND_OFFSET = builder.BIOME_BLEND_OFFSET;
     }
 
     // Builder
 
     public static class Builder {
 
-        public float BASE_SPEED = 1.5f;
+        private float BASE_SPEED = 1.5f;
 
-        public String REGION_IMAGE_PATH = "world/world.png";
+        private String REGION_IMAGE_PATH = "world/world.png";
 
-        public float BLOCK_SIZE = 1;
-        public int CHUNK_SIZE = 16;
-        public int CHUNKS_PER_PIXEL = 256;
+        private float BLOCK_SIZE = 1;
+        private int CHUNK_SIZE = 16;
+        private int CHUNKS_PER_PIXEL = 256;
 
-        public int MAX_RENDER_DISTANCE = 32;
-        public int MAX_RENDER_HEIGHT = 16;
+        private int MAX_RENDER_DISTANCE = 32;
+        private int MAX_RENDER_HEIGHT = 16;
 
-        public int LOD_START_DISTANCE = 16;
-        public int MAX_LOD_DISTANCE = 128;
+        private int LOD_START_DISTANCE = 16;
+        private int MAX_LOD_DISTANCE = 128;
 
-        public float WORLD_TICK = 0.1f;
+        private float WORLD_TICK = 0.1f;
 
-        public int MAX_CHUNK_LOADS_PER_FRAME = 256;
-        public int MAX_CHUNK_LOADS_PER_TICK = 30720;
+        private int MAX_CHUNK_LOADS_PER_FRAME = 256;
+        private int MAX_CHUNK_LOADS_PER_TICK = 30720;
 
-        public String BIOME_PATH = "biomes/";
+        private String BIOME_PATH = "biomes/";
 
-        public int BASE_WORLD_ELEVATION = 512;
-        public int MIN_WORLD_ELEVATION = 0;
-        public int MAX_WORLD_ELEVATION = 2048;
+        private int BASE_WORLD_ELEVATION = 512;
+        private int MIN_WORLD_ELEVATION = 0;
+        private int MAX_WORLD_ELEVATION = 2048;
 
-        public int BASE_ELEVATION_BLENDING = 100;
+        private int BASE_ELEVATION_BLENDING = 100;
 
-        public int BASE_OCEAN_LEVEL = 256;
-        public int OCEAN_TIDE_OFFSET = 8;
+        private int BASE_OCEAN_LEVEL = 256;
+        private int OCEAN_TIDE_OFFSET = 8;
 
-        public int WATER_NOISE_OFFSET = 12345;
-        public int WATER_HEIGHT_OFFSET = 8888;
+        private int WATER_NOISE_OFFSET = 12345;
+        private int WATER_HEIGHT_OFFSET = 8888;
 
-        public int MIN_CAVE_ELEVATION = 128;
+        private int MIN_CAVE_ELEVATION = 128;
+
+        private int CAVE_NOISE_OFFSET = 9999;
+        private int SURFACE_BREAK__OFFSET = 2222;
+
+        private int BIOME_BLEND_OFFSET = 4321;
 
         // Build
 
@@ -253,6 +268,21 @@ public class Settings {
 
         public Builder MIN_CAVE_ELEVATION(int MIN_CAVE_ELEVATION) {
             this.MIN_CAVE_ELEVATION = MIN_CAVE_ELEVATION;
+            return this;
+        }
+
+        public Builder CAVE_NOISE_OFFSET(int CAVE_NOISE_OFFSET) {
+            this.CAVE_NOISE_OFFSET = CAVE_NOISE_OFFSET;
+            return this;
+        }
+
+        public Builder SURFACE_BREAK__OFFSET(int SURFACE_BREAK__OFFSET) {
+            this.SURFACE_BREAK__OFFSET = SURFACE_BREAK__OFFSET;
+            return this;
+        }
+
+        public Builder BIOME_BLEND_OFFSET(int BIOME_BLEND_OFFSET) {
+            this.BIOME_BLEND_OFFSET = BIOME_BLEND_OFFSET;
             return this;
         }
 
