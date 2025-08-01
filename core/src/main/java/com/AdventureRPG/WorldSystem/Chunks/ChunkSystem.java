@@ -8,7 +8,7 @@ import com.badlogic.gdx.math.Vector3;
 public class ChunkSystem {
 
     // Chunk System
-    private final Settings settings;
+    public final Settings settings;
     private final WorldSystem WorldSystem;
     private final Loader Loader;
 
@@ -33,7 +33,7 @@ public class ChunkSystem {
         this.height = settings.MAX_RENDER_HEIGHT;
         this.size = settings.CHUNK_SIZE;
         this.chunks = new Vector3Int[range][height][range];
-    };
+    }
 
     public void Update() {
 

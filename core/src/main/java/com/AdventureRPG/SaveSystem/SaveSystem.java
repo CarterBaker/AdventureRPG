@@ -23,11 +23,6 @@ public class SaveSystem {
         // Save System
         this.UserData = new UserData(this);
         this.ChunkData = new ChunkData(this);
-
-        // Load Data
-
-        LoadChunkData();
-
     }
 
     // Save System
@@ -48,7 +43,7 @@ public class SaveSystem {
 
     // Chunk Data
 
-    private void LoadChunkData() {
+    public void LoadChunkData() {
         if (HasNewestSave())
             ChunkData.LoadChunkData(path);
     }

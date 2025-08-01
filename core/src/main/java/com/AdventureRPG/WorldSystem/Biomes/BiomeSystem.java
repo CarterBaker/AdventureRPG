@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class BiomeSystem {
 
-    // Game
+    // Base
     public final Settings settings;
 
     // Biome System
@@ -20,11 +20,11 @@ public class BiomeSystem {
 
     public BiomeSystem(GameManager gameManager) {
 
-        // Game
-        this.settings = gameManager.settings;
-
         // Biome System
-        this.biomes = Loader.LoadBiomes(gameManager);
+        this.biomes = Loader.LoadBiomes(gameManager); // This needs to be called as soon as possible
+
+        // Base
+        this.settings = gameManager.settings;
 
         // Blending
         this.relatedBiomes = OrganizeSimilarBiomes(biomes);

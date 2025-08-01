@@ -57,5 +57,4 @@ public class WorldReader {
 
         return new WorldRegion(r, g, b);
     }
-
 }

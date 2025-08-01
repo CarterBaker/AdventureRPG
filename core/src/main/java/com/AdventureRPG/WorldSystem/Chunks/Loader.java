@@ -188,9 +188,8 @@ public class Loader {
         if (chunk == null)
             chunk = WorldGenerator.GenerateChunk(chunkCoord);
 
-        // 3. Assign the chunk correct values to each chunk
-        chunk.AssignChunkSystem(ChunkSystem);
-        chunk.BuildAt(gridPosition);
+        // 3. Render each chunk
+        chunk.Render(gridPosition);
 
         // 4. Increase chunk count after a successful chunk load
         ChangeChunkCountBy(1);

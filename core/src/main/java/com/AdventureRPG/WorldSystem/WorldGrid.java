@@ -1,11 +1,10 @@
-package com.AdventureRPG.WorldSystem.Grid;
+package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
-import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.badlogic.gdx.math.Vector3;
 
-public class Grid {
+public class WorldGrid {
 
     private Vector3 position = new Vector3();
     private Vector3Int currentChunk = new Vector3Int();
@@ -13,12 +12,9 @@ public class Grid {
     private final WorldSystem WorldSystem;
     private final ChunkSystem ChunkSystem;
 
-    public Grid(WorldSystem WorldSystem) {
+    public WorldGrid(WorldSystem WorldSystem) {
         this.WorldSystem = WorldSystem;
         this.ChunkSystem = WorldSystem.ChunkSystem;
-
-        // Init
-        LoadChunks(); // This needs to be run once on start
     }
 
     public void SetTo(Vector3 input) {
@@ -43,11 +39,11 @@ public class Grid {
         UpdateChunks();
     }
 
-    private void LoadChunks() {
+    public void LoadChunks() {
         ChunkSystem.LoadChunks(currentChunk);
     }
 
-    private void UpdateChunks() {
+    public void UpdateChunks() {
         ChunkSystem.UpdateChunks(currentChunk);
     }
 

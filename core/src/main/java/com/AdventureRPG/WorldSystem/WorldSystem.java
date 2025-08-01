@@ -10,7 +10,6 @@ import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
-import com.AdventureRPG.WorldSystem.Grid.Grid;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
@@ -28,7 +27,7 @@ public class WorldSystem {
     public final WorldGenerator WorldGenerator;
     public final BiomeSystem BiomeSystem;
     public final ChunkSystem ChunkSystem;
-    public final Grid Grid;
+    public final WorldGrid WorldGrid;
 
     // Blocks
     public final Block[] blocks;
@@ -54,7 +53,7 @@ public class WorldSystem {
         this.WorldGenerator = new WorldGenerator(this);
         this.BiomeSystem = new BiomeSystem(GameManager);
         this.ChunkSystem = new ChunkSystem(this);
-        this.Grid = new Grid(this);
+        this.WorldGrid = new WorldGrid(this);
     }
 
     public void Update() {
@@ -82,7 +81,13 @@ public class WorldSystem {
     // Movement
 
     public void Move(Vector3 input) {
-        Grid.MoveTo(input);
+        WorldGrid.MoveTo(input);
+    }
+
+    // World Grid
+
+    public void LoadChunks() {
+        WorldGrid.LoadChunks();
     }
 
     // Wrap Logic

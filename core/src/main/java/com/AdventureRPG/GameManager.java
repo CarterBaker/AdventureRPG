@@ -58,6 +58,7 @@ public class GameManager implements Screen {
 
     private void StartGame() {
         UISystem.Open(Menu.Main);
+        WorldSystem.LoadChunks();
     }
 
     @Override

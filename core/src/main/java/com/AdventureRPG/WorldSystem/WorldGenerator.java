@@ -7,6 +7,7 @@ import com.AdventureRPG.WorldSystem.Biomes.Biome;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
+import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.AdventureRPG.Util.OpenSimplex2;
 
 public class WorldGenerator {
@@ -17,6 +18,7 @@ public class WorldGenerator {
     public final UserData UserData;
     public final WorldSystem WorldSystem;
     public final BiomeSystem BiomeSystem;
+    public final ChunkSystem ChunkSystem;
 
     // Data
 
@@ -55,6 +57,7 @@ public class WorldGenerator {
         this.UserData = WorldSystem.SaveSystem.UserData;
         this.WorldSystem = WorldSystem;
         this.BiomeSystem = WorldSystem.BiomeSystem;
+        this.ChunkSystem = WorldSystem.ChunkSystem;
 
         // Data
 
@@ -103,7 +106,7 @@ public class WorldGenerator {
     public Chunk GenerateChunk(Vector3Int position) {
 
         WorldRegion WorldRegion = WorldSystem.WorldReader.WorldRegionFromPosition(position);
-        Chunk chunk = new Chunk(position.x, position.y, position.z, CHUNK_SIZE);
+        Chunk chunk = new Chunk(position.x, position.y, position.z, ChunkSystem);
 
         Block[][][] blocks = new Block[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
 

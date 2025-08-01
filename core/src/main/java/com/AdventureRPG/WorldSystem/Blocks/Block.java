@@ -1,7 +1,5 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
-import com.AdventureRPG.WorldSystem.Biomes.Biome;
-
 public class Block {
 
     public final String name;
