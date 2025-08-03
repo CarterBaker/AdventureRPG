@@ -17,8 +17,8 @@ public class WorldGenerator {
     public final Settings settings;
     public final UserData UserData;
     public final WorldSystem WorldSystem;
-    public final BiomeSystem BiomeSystem;
     public final ChunkSystem ChunkSystem;
+    public final BiomeSystem BiomeSystem;
 
     // Data
 
@@ -56,8 +56,8 @@ public class WorldGenerator {
         this.settings = WorldSystem.settings;
         this.UserData = WorldSystem.SaveSystem.UserData;
         this.WorldSystem = WorldSystem;
-        this.BiomeSystem = WorldSystem.BiomeSystem;
         this.ChunkSystem = WorldSystem.ChunkSystem;
+        this.BiomeSystem = WorldSystem.BiomeSystem;
 
         // Data
 
@@ -103,10 +103,10 @@ public class WorldGenerator {
 
     // Chunk
 
-    public Chunk GenerateChunk(Vector3Int position) {
+    public Chunk GenerateChunk(Vector3Int coordinate, Vector3Int position) {
 
-        WorldRegion WorldRegion = WorldSystem.WorldReader.WorldRegionFromPosition(position);
-        Chunk chunk = new Chunk(position.x, position.y, position.z, ChunkSystem);
+        WorldRegion WorldRegion = WorldSystem.WorldReader.WorldRegionFromPosition(coordinate);
+        Chunk chunk = new Chunk(coordinate, position, ChunkSystem);
 
         Block[][][] blocks = new Block[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
 
@@ -115,7 +115,7 @@ public class WorldGenerator {
                 for (int z = 0; z < CHUNK_SIZE; z++) {
 
                     Vector3Int blockPos = new Vector3Int(x, y, z);
-                    blockPos = blockPos.add(position);
+                    blockPos = blockPos.add(coordinate);
 
                     Block block = GenerateBlock(WorldRegion, blockPos);
                     blocks[x][y][z] = block;

@@ -5,10 +5,12 @@ import java.io.File;
 import com.AdventureRPG.SettingsSystem.*;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.google.gson.Gson;
 
 public class Main extends Game {
-    public SpriteBatch batch;
+    public SpriteBatch spriteBatch;
+    public ModelBatch modelBatch;
 
     private final File GAME_DIRECTORY;
     private final Settings settings;
@@ -22,7 +24,8 @@ public class Main extends Game {
 
     @Override
     public void create() {
-        batch = new SpriteBatch();
+        spriteBatch = new SpriteBatch();
+        modelBatch = new ModelBatch();
         setScreen(new GameManager(this, GAME_DIRECTORY, settings, gson));
     }
 
@@ -32,7 +35,8 @@ public class Main extends Game {
         HandleGameWindow();
         HandleSettingsFile();
 
-        batch.dispose();
+        spriteBatch.dispose();
+        modelBatch.dispose();
         super.dispose();
     }
 

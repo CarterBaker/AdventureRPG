@@ -12,6 +12,21 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         JsonObject obj = json.getAsJsonObject();
         Settings.Builder builder = new Settings.Builder();
 
+        // Window Settings \\
+
+        if (obj.has("FOV"))
+            builder.FOV(obj.get("FOV").getAsFloat());
+        if (obj.has("windowWidth"))
+            builder.windowWidth(obj.get("windowWidth").getAsInt());
+        if (obj.has("windowHeight"))
+            builder.windowHeight(obj.get("windowHeight").getAsInt());
+        if (obj.has("windowX"))
+            builder.windowX(obj.get("windowX").getAsInt());
+        if (obj.has("windowY"))
+            builder.windowY(obj.get("windowY").getAsInt());
+        if (obj.has("fullscreen"))
+            builder.fullscreen(obj.get("fullscreen").getAsBoolean());
+
         // Movement \\
 
         if (obj.has("BASE_SPEED"))

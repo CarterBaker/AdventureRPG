@@ -1,210 +1,309 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import com.AdventureRPG.SaveSystem.ChunkData;
 import com.AdventureRPG.SettingsSystem.Settings;
-import com.AdventureRPG.UISystem.LoadScreen;
-import com.AdventureRPG.UISystem.Menu;
-import com.AdventureRPG.UISystem.UISystem;
+import com.AdventureRPG.Util.Direction;
 import com.AdventureRPG.Util.Vector3Int;
-import com.AdventureRPG.WorldSystem.WorldGenerator;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
 
 public class Loader {
 
     // Chunk System
+    private final WorldSystem WorldSystem;
     private final ChunkData ChunkData;
     private final Settings settings;
-    private final UISystem UISystem;
-    private final WorldSystem WorldSystem;
     private final WorldTick WorldTick;
-    public final WorldGenerator WorldGenerator;
-    private final ChunkSystem ChunkSystem;
 
     // Data
-    private final int LOD_START_DISTANCE;
-    private final int MAX_LOD_DISTANCE;
     private final int MAX_CHUNK_LOADS_PER_FRAME;
     private final int MAX_CHUNK_LOADS_PER_TICK;
 
-    // Loading
-    private LoadScreen loadScreen;
-
-    private boolean loading;
-
-    private final int range;
-    private final int height;
-    private final int size;
-
-    private int totalLoadedChunks;
+    // Chunk System
     private int loadedChunksThisFrame;
     private int loadedChunksThisTick;
-    private final int maxChunks;
 
-    private Chunk[][][] chunks;
-    private Vector3Int[][][] loadedChunks;
-    private Vector3Int[][][] chunkQueue;
+    private final Map<Vector3Int, Chunk> loadedChunks; // (Chunk Position, Chunk)
+    private final List<ModelInstance> chunkModels;
+
+    // Batch
+    private final int indexPerBatch = 32;
+    private final State[] stateCycle;
+    private int cycleIndex;
+
+    // Queue
+    private final Map<Vector3Int, Chunk> moveQueue;
+    private final Map<Vector3Int, Chunk> unloadQueue;
+    private final Map<Vector3Int, Vector3Int> loadQueue;
+
+    // Temp
+    private final Vector3Int nearbyChunk;
+    private final HashSet<Vector3Int> loadedChunkCoordinates;
+    private final Map<Vector3Int, Vector3Int> chunkToGridMap;
+
+    private boolean startedLoading; // [DEBUG] REMOVE!
+
+    // Constructor
 
     public Loader(WorldSystem WorldSystem) {
 
         // Chunk System
+        this.WorldSystem = WorldSystem;
         this.ChunkData = WorldSystem.SaveSystem.ChunkData;
         this.settings = WorldSystem.settings;
-        this.UISystem = WorldSystem.UISystem;
-        this.WorldSystem = WorldSystem;
         this.WorldTick = WorldSystem.WorldTick;
-        this.WorldGenerator = new WorldGenerator(WorldSystem);
-        this.ChunkSystem = WorldSystem.ChunkSystem;
 
         // Data
-        this.LOD_START_DISTANCE = settings.LOD_START_DISTANCE;
-        this.MAX_LOD_DISTANCE = settings.MAX_LOD_DISTANCE;
         this.MAX_CHUNK_LOADS_PER_FRAME = settings.MAX_CHUNK_LOADS_PER_FRAME;
         this.MAX_CHUNK_LOADS_PER_TICK = settings.MAX_CHUNK_LOADS_PER_TICK;
 
-        // Variables
-        this.range = settings.MAX_RENDER_DISTANCE;
-        this.height = settings.MAX_RENDER_HEIGHT;
-        this.size = settings.CHUNK_SIZE;
+        // Chunk System
+        this.loadedChunks = new HashMap<>();
+        this.chunkModels = Collections.synchronizedList(new ArrayList<>());
 
-        this.maxChunks = range * height * range;
+        // Batch
+        this.stateCycle = new State[] { State.Unloading, State.Loading };
 
-        this.chunks = new Chunk[range][height][range];
-        this.loadedChunks = new Vector3Int[range][height][range];
-        this.chunkQueue = new Vector3Int[range][height][range];
-    }
+        // Queue
+        this.moveQueue = new HashMap<>();
+        this.unloadQueue = new HashMap<>();
+        this.loadQueue = new HashMap<>();
 
-    public void Update() {
-
-        if (loading)
-            Load();
-
-        if (WorldTick.Tick())
-            ResetTick();
-    }
-
-    private void ResetTick() {
-
-        loadedChunksThisFrame = 0;
-        loadedChunksThisTick = 0;
-    }
-
-    // Load
-
-    public void LoadChunks(Vector3Int[][][] chunks) {
-
-        this.chunkQueue = chunks;
-
-        loading = true;
-        this.loadScreen = (LoadScreen) UISystem.Open(Menu.LoadScreen);
-        loadScreen.SetMaxProgrss(range * height * range);
-
-    }
-
-    private int currentX = 0;
-    private int currentY = 0;
-    private int currentZ = 0;
-
-    private void Load() {
-
-        if (loadedChunksThisTick == MAX_CHUNK_LOADS_PER_TICK)
-            return;
-
-        for (; currentX < range; currentX++) {
-            for (; currentY < height; currentY++) {
-                for (; currentZ < range; currentZ++) {
-
-                    if (loadedChunksThisFrame == MAX_CHUNK_LOADS_PER_FRAME ||
-                            loadedChunksThisTick == MAX_CHUNK_LOADS_PER_TICK)
-                        return;
-
-                    CheckChunkToLoad(new Vector3Int(currentX, currentY, currentZ));
-                }
-                currentZ = 0;
-            }
-            currentY = 0;
-        }
-
-        FinalizeLoad();
-    }
-
-    private void CheckChunkToLoad(Vector3Int input) {
-
-        int x = input.x;
-        int y = input.y;
-        int z = input.z;
-
-        // 1. Skip if the chunk was already loaded
-        if (loadedChunks[x][y][z] != null)
-            return;
-
-        // 2. Log the loaded chunk into the chunk cache
-        loadedChunks[x][y][z] = chunkQueue[x][y][z];
-
-        // 3. Position should be subtract half the range multiplied by size
-        int posX = (x - (range / 2)) * size;
-        int posY = (y - (height / 2)) * size;
-        int posZ = (z - (range / 2)) * size;
-
-        // 4. Assemble the chunkCoord and the gridPosition to LoadChunk
-        Vector3Int chunkCoord = loadedChunks[x][y][z];
-        Vector3Int gridPosition = new Vector3Int(posX, posY, posZ);
-        LoadChunk(chunkCoord, gridPosition);
-
-        // 5. Log progress to the loading screen
-        loadScreen.IncreaseProgrss(1);
-    }
-
-    private void FinalizeLoad() {
-
-        if (totalLoadedChunks != maxChunks)
-            return;
-
-        UISystem.Close(loadScreen);
-        loading = false;
-
-        // Reset loop state
-        currentX = 0;
-        currentY = 0;
-        currentZ = 0;
+        // Temp
+        this.nearbyChunk = new Vector3Int();
+        this.loadedChunkCoordinates = new HashSet<>();
+        this.chunkToGridMap = new HashMap<>();
     }
 
     // Update
 
-    public void UpdateChunks(Vector3Int chunkShift) {
+    public void Update() {
 
+        loadedChunksThisFrame = 0;
+
+        if (WorldTick.Tick())
+            loadedChunksThisTick = 0;
+
+        if (!HasQueue()) {
+            if (startedLoading == true) { // [DEBUG] REMOVE!
+                startedLoading = false; // [DEBUG] REMOVE!
+                System.out.println("DEBUG: Done loading"); // [DEBUG] REMOVE!
+            } // [DEBUG] REMOVE!
+            return;
+        } // [DEBUG] REMOVE!
+
+        for (int i = 0; i < stateCycle.length; i++) {
+            if (stateCycle[cycleIndex].process(this))
+                return;
+            cycleIndex = (cycleIndex + 1) % stateCycle.length;
+        }
+    }
+
+    // Render
+
+    public void Render(ModelBatch modelBatch) {
+
+        for (ModelInstance model : chunkModels) {
+            if (model != null) {
+                modelBatch.render(model);
+            }
+        }
+    }
+
+    // Main
+
+    public void BuildQueue(ArrayList<Vector3Int> gridCoordinates, ArrayList<Vector3Int> chunkCoordinates) {
+
+        startedLoading = true; // [DEBUG] REMOVE!
+
+        // Prepare new load queue
+        moveQueue.clear();
+        unloadQueue.clear();
+        loadQueue.clear();
+        cycleIndex = 0;
+
+        loadedChunkCoordinates.clear();
+        chunkToGridMap.clear();
+
+        for (int i = 0; i < chunkCoordinates.size(); i++) {
+            chunkToGridMap.put(chunkCoordinates.get(i), gridCoordinates.get(i));
+        }
+
+        for (Map.Entry<Vector3Int, Chunk> entry : loadedChunks.entrySet()) {
+
+            Vector3Int gridCoordinate = entry.getKey();
+            Chunk loadedChunk = entry.getValue();
+            Vector3Int chunkCoordinate = loadedChunk.coordinate;
+            Vector3Int newGridCoord = chunkToGridMap.get(chunkCoordinate);
+
+            // Move Queue
+            if (newGridCoord != null) {
+
+                loadedChunkCoordinates.add(chunkCoordinate);
+
+                if (!newGridCoord.equals(loadedChunk.position))
+                    moveQueue.put(newGridCoord, loadedChunk);
+            }
+
+            // Unload Queue
+            else
+                unloadQueue.put(gridCoordinate, loadedChunk);
+        }
+
+        // Load Queue
+        for (Map.Entry<Vector3Int, Vector3Int> entry : chunkToGridMap.entrySet()) {
+            Vector3Int chunkCoord = entry.getKey();
+            Vector3Int gridCoord = entry.getValue();
+
+            if (!loadedChunkCoordinates.contains(chunkCoord))
+                loadQueue.put(gridCoord, chunkCoord);
+        }
+
+        MoveActiveChunks();
+    }
+
+    // Move
+
+    private void MoveActiveChunks() {
+
+        Iterator<Map.Entry<Vector3Int, Chunk>> iterator = moveQueue.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+
+            Map.Entry<Vector3Int, Chunk> entry = iterator.next();
+            Vector3Int gridCoordinate = entry.getKey();
+            Chunk loadedChunk = entry.getValue();
+
+            loadedChunk.MoveTo(gridCoordinate);
+            loadedChunks.put(gridCoordinate, loadedChunk);
+
+            iterator.remove();
+        }
+
+    }
+
+    // Unload
+
+    private boolean UpdateUnloading() {
+
+        Iterator<Map.Entry<Vector3Int, Chunk>> iterator = unloadQueue.entrySet().iterator();
+        int index = 0;
+
+        while (iterator.hasNext() && index < indexPerBatch &&
+                loadedChunksThisFrame < MAX_CHUNK_LOADS_PER_FRAME &&
+                loadedChunksThisTick < MAX_CHUNK_LOADS_PER_TICK) {
+
+            Map.Entry<Vector3Int, Chunk> entry = iterator.next();
+            Vector3Int gridCoordinate = entry.getKey();
+            Chunk loadedChunk = entry.getValue();
+            ModelInstance mesh = loadedChunk.getMesh();
+
+            if (mesh != null) {
+                chunkModels.remove(mesh);
+                mesh.model.dispose();
+            }
+
+            loadedChunks.remove(gridCoordinate);
+
+            iterator.remove();
+            IncreaseQueueCount();
+            index++;
+        }
+
+        return loadedChunksThisFrame >= MAX_CHUNK_LOADS_PER_FRAME ||
+                loadedChunksThisTick >= MAX_CHUNK_LOADS_PER_TICK;
+    }
+
+    // Load
+
+    private boolean UpdateLoading() {
+
+        Iterator<Map.Entry<Vector3Int, Vector3Int>> iterator = loadQueue.entrySet().iterator();
+        int index = 0;
+
+        while (iterator.hasNext() && index < indexPerBatch &&
+                loadedChunksThisFrame < MAX_CHUNK_LOADS_PER_FRAME &&
+                loadedChunksThisTick < MAX_CHUNK_LOADS_PER_TICK) {
+
+            Map.Entry<Vector3Int, Vector3Int> entry = iterator.next();
+            Vector3Int gridCoordinate = entry.getKey();
+            Vector3Int chunkCoordinate = entry.getValue();
+
+            Chunk chunk = ChunkData.ReadChunk(chunkCoordinate);
+
+            if (chunk == null)
+                chunk = WorldSystem.GenerateChunk(chunkCoordinate, gridCoordinate);
+
+            iterator.remove();
+            IncreaseQueueCount();
+            index++;
+        }
+
+        return loadedChunksThisFrame >= MAX_CHUNK_LOADS_PER_FRAME ||
+                loadedChunksThisTick >= MAX_CHUNK_LOADS_PER_TICK;
     }
 
     // Base
 
-    private void LoadChunk(Vector3Int chunkCoord, Vector3Int gridPosition) {
+    public NeighborChunks GetNearbyChunks(Vector3Int coordinate) {
 
-        Chunk chunk = null;
+        NeighborChunks neighborChunks = new NeighborChunks();
 
-        // 2. After that attempt to load from file
-        chunk = ChunkData.ReadChunk(chunkCoord);
+        neighborChunks = SetNearbyChunks(coordinate, neighborChunks);
 
-        // 3. If the chunk could not be loaded it is null and needs to be generated
-        if (chunk == null)
-            chunk = WorldGenerator.GenerateChunk(chunkCoord);
-
-        // 3. Render each chunk
-        chunk.Render(gridPosition);
-
-        // 4. Increase chunk count after a successful chunk load
-        ChangeChunkCountBy(1);
+        return neighborChunks;
     }
 
-    private void UnloadChunk(Vector3Int chunkToLoad, Vector3Int position) {
+    public NeighborChunks SetNearbyChunks(Vector3Int coordinate, NeighborChunks neighborChunks) {
 
-        ChangeChunkCountBy(-1);
+        for (Direction dir : Direction.values()) {
+
+            int offsetX = coordinate.x + dir.x;
+            int offsetY = coordinate.y + dir.y;
+            int offsetZ = coordinate.z + dir.z;
+
+            nearbyChunk.set(offsetX, offsetY, offsetZ);
+
+            Chunk neighbor = loadedChunks.get(nearbyChunk);
+
+            neighborChunks.set(dir, neighbor);
+        }
+
+        return neighborChunks;
     }
 
-    private void ChangeChunkCountBy(int input) {
+    private boolean HasQueue() {
+        return (unloadQueue.size() > 0 ||
+                loadQueue.size() > 0);
+    }
+
+    private void IncreaseQueueCount() {
 
         loadedChunksThisFrame += 1;
-        loadedChunksThisTick += input;
-        totalLoadedChunks += input;
+        loadedChunksThisTick += 1;
     }
 
+    enum State {
+        Unloading {
+            boolean process(Loader loader) {
+                return loader.UpdateUnloading();
+            }
+        },
+        Loading {
+            boolean process(Loader loader) {
+                return loader.UpdateLoading();
+            }
+        };
+
+        abstract boolean process(Loader loader);
+    }
 }

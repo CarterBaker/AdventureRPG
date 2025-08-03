@@ -17,6 +17,12 @@ public class Vector3Int {
         this.z = z;
     }
 
+    public void set(int x, int y, int z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
     public Vector3Int add(Vector3Int other) {
         return new Vector3Int(this.x + other.x, this.y + other.y, this.z + other.z);
     }
@@ -35,6 +41,39 @@ public class Vector3Int {
 
     public int magnitudeSquared() {
         return this.x * this.x + this.y * this.y + this.z * this.z;
+    }
+
+    public double distance(Vector3Int other) {
+        return Math.sqrt(this.subtract(other).magnitudeSquared());
+    }
+
+    // Signed encode using 3 × 21 bits = 63 bits total
+    public static long encode(Vector3Int key) {
+        return encode(key.x, key.y, key.z);
+    }
+
+    public static long encode(int x, int y, int z) {
+        long xx = zigzag(x) & 0x1FFFFF; // 21 bits
+        long yy = zigzag(y) & 0x1FFFFF;
+        long zz = zigzag(z) & 0x1FFFFF;
+
+        return (xx << 42) | (yy << 21) | zz;
+    }
+
+    public static Vector3Int decode(long key) {
+        int x = unzigzag((key >> 42) & 0x1FFFFF);
+        int y = unzigzag((key >> 21) & 0x1FFFFF);
+        int z = unzigzag(key & 0x1FFFFF);
+        return new Vector3Int(x, y, z);
+    }
+
+    // ZigZag Encoding
+    private static long zigzag(int n) {
+        return (n << 1) ^ (n >> 31);
+    }
+
+    private static int unzigzag(long n) {
+        return (int) ((n >>> 1) ^ -(n & 1));
     }
 
     @Override

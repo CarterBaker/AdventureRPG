@@ -9,7 +9,9 @@ import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
+import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
@@ -24,10 +26,11 @@ public class WorldSystem {
     // World System
     public final WorldTick WorldTick;
     public final WorldReader WorldReader;
+    public final WorldGrid WorldGrid;
     public final WorldGenerator WorldGenerator;
+
     public final BiomeSystem BiomeSystem;
     public final ChunkSystem ChunkSystem;
-    public final WorldGrid WorldGrid;
 
     // Blocks
     public final Block[] blocks;
@@ -50,15 +53,19 @@ public class WorldSystem {
         this.WorldTick = new WorldTick(this);
         this.WorldReader = new WorldReader(this);
         WORLD_Scale = WorldReader.GetWorldScale(); // This needs to be called as soon as possible
-        this.WorldGenerator = new WorldGenerator(this);
-        this.BiomeSystem = new BiomeSystem(GameManager);
         this.ChunkSystem = new ChunkSystem(this);
+        this.BiomeSystem = new BiomeSystem(GameManager);
+        this.WorldGenerator = new WorldGenerator(this);
         this.WorldGrid = new WorldGrid(this);
     }
 
     public void Update() {
         WorldTick.Update();
         ChunkSystem.Update();
+    }
+
+    public void Render(ModelBatch modelBatch) {
+        ChunkSystem.Render(modelBatch);
     }
 
     // Blocks
@@ -88,6 +95,12 @@ public class WorldSystem {
 
     public void LoadChunks() {
         WorldGrid.LoadChunks();
+    }
+
+    // World Generator
+
+    public Chunk GenerateChunk(Vector3Int coordinate, Vector3Int position) {
+        return WorldGenerator.GenerateChunk(coordinate, position);
     }
 
     // Wrap Logic

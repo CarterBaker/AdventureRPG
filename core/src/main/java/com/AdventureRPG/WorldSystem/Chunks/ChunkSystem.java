@@ -1,8 +1,10 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
+import java.util.ArrayList;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.math.Vector3;
 
 public class ChunkSystem {
@@ -12,14 +14,18 @@ public class ChunkSystem {
     private final WorldSystem WorldSystem;
     private final Loader Loader;
 
-    // Rendered Chunks
+    // Settings
     private final int range;
     private final int height;
     private final int size;
-    private final Vector3Int[][][] chunks;
 
-    // Variables
-    private Vector3Int currentChunk;
+    // Rendered Chunks
+    private Vector3Int chunk;
+
+    // Temp values for fast iteration
+    ArrayList<Vector3Int> gridCoordinates;
+    ArrayList<Vector3Int> chunkCoordinates;
+    private Vector3 wrappedValue;
 
     public ChunkSystem(WorldSystem WorldSystem) {
 
@@ -28,52 +34,86 @@ public class ChunkSystem {
         this.WorldSystem = WorldSystem;
         this.Loader = new Loader(WorldSystem);
 
-        // Rendered Chunks
+        // Settings
         this.range = settings.MAX_RENDER_DISTANCE;
         this.height = settings.MAX_RENDER_HEIGHT;
         this.size = settings.CHUNK_SIZE;
-        this.chunks = new Vector3Int[range][height][range];
+
+        // Rendered Chunks
+        this.chunk = new Vector3Int();
+
+        // Temp
+        int total = (range + 1) * (range + 1) * (height + 1);
+
+        gridCoordinates = new ArrayList<>(total);
+        chunkCoordinates = new ArrayList<>(total);
+
+        for (int i = 0; i < total; i++) {
+            gridCoordinates.add(new Vector3Int());
+            chunkCoordinates.add(new Vector3Int());
+        }
+
+        this.wrappedValue = new Vector3();
     }
 
     public void Update() {
-
         Loader.Update();
     }
 
-    public void LoadChunks(Vector3Int currentChunk) {
+    public void Render(ModelBatch modelBatch) {
+        Loader.Render(modelBatch);
+    }
 
-        this.currentChunk = currentChunk;
+    public Vector3Int Center() {
+        return chunk;
+    }
 
-        for (int x = 0; x <= range - 1; x++) {
-            for (int y = 0; y <= height - 1; y++) {
-                for (int z = 0; z <= range - 1; z++) {
-                    int ax = (x - (range / 2)) * size;
-                    int ay = (y - (height / 2)) * size;
-                    int az = (z - (range / 2)) * size;
+    public void LoadChunks(Vector3Int chunk) {
 
-                    int bx = currentChunk.x + ax;
-                    int by = currentChunk.y + ay;
-                    int bz = currentChunk.z + az;
+        if (this.chunk == chunk)
+            return;
 
-                    Vector3 cPosition = new Vector3(bx, by, bz);
-                    chunks[x][y][z] = WorldSystem.WrapChunksAroundWorld(cPosition);
+        this.chunk = chunk;
+
+        RebuildChunksAroundChunk();
+
+        Loader.BuildQueue(gridCoordinates, chunkCoordinates);
+    }
+
+    private void RebuildChunksAroundChunk() {
+
+        int index = 0;
+
+        for (int x = -range / 2; x <= range / 2; x++) {
+            for (int y = -height / 2; y <= height / 2; y++) {
+                for (int z = -range / 2; z <= range / 2; z++) {
+
+                    Vector3Int key = gridCoordinates.get(index);
+                    key.set(x, y, z);
+
+                    int ax = chunk.x + x * size;
+                    int ay = chunk.y + y * size;
+                    int az = chunk.z + z * size;
+
+                    wrappedValue.set(ax, ay, az);
+                    Vector3Int wrapped = WorldSystem.WrapChunksAroundWorld(wrappedValue);
+
+                    Vector3Int value = chunkCoordinates.get(index);
+                    value.set(wrapped.x, wrapped.y, wrapped.z);
+
+                    index++;
                 }
             }
         }
-
-        Loader.LoadChunks(chunks);
     }
 
-    public void UpdateChunks(Vector3Int chunkCoords) {
+    // Accessible
 
-        Vector3Int chunkShift = new Vector3Int(
-                chunkCoords.x - currentChunk.x,
-                chunkCoords.y - currentChunk.y,
-                chunkCoords.z - currentChunk.z);
-
-        this.currentChunk = chunkCoords;
-
-        Loader.UpdateChunks(chunkShift);
+    public NeighborChunks GetNearbyChunks(Vector3Int coordinnate) {
+        return Loader.GetNearbyChunks(coordinnate);
     }
 
+    public NeighborChunks SetNearbyChunks(Vector3Int coordinate, NeighborChunks neighborChunks) {
+        return Loader.SetNearbyChunks(coordinate, neighborChunks);
+    }
 }

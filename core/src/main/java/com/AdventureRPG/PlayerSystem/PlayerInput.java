@@ -5,12 +5,11 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Gdx;
 
 import com.AdventureRPG.Util.Vector3Int;
-import com.AdventureRPG.GameManager;
 
-public class InputHandler extends InputAdapter {
+public class PlayerInput extends InputAdapter {
 
     // Game Manager
-    public final GameManager GameManager;
+    public final Player Player;
 
     private boolean allowInput = true;
 
@@ -22,8 +21,8 @@ public class InputHandler extends InputAdapter {
     private boolean S = false;
     private boolean D = false;
 
-    public InputHandler(GameManager GameManager) {
-        this.GameManager = GameManager;
+    public PlayerInput(Player Player) {
+        this.Player = Player;
         Gdx.input.setInputProcessor(this);
     }
 
@@ -68,7 +67,7 @@ public class InputHandler extends InputAdapter {
     }
 
     public void UpdateMovement() {
-        
+
         if (!allowInput)
             return;
 
@@ -84,7 +83,7 @@ public class InputHandler extends InputAdapter {
             movement = movement.add(new Vector3Int(-1, 0, 0));
 
         if (!movement.equals(new Vector3Int())) {
-            GameManager.Move(movement);
+            Player.Move(movement);
         }
     }
 

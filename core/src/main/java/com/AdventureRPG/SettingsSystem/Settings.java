@@ -8,11 +8,12 @@ public class Settings {
 
     // Window Settings \\
 
-    public int windowWidth = 1280;
-    public int windowHeight = 720;
-    public int windowX = -1;
-    public int windowY = -1;
-    public boolean fullscreen = false;
+    public float FOV;
+    public int windowWidth;
+    public int windowHeight;
+    public int windowX;
+    public int windowY;
+    public boolean fullscreen;
 
     // Movement \\
 
@@ -49,7 +50,7 @@ public class Settings {
 
     // Biome Settings \\
 
-    public final String BIOME_PATH;
+    public final String BIOME_PATH; // Location of all biome files
 
     // World Generation \\
 
@@ -75,6 +76,14 @@ public class Settings {
     // Constructor
 
     public Settings(Builder builder) {
+
+        this.FOV = builder.FOV;
+        this.windowWidth = builder.windowWidth;
+        this.windowHeight = builder.windowHeight;
+        this.windowX = builder.windowX;
+        this.windowY = builder.windowY;
+        this.fullscreen = builder.fullscreen;
+
         this.BASE_SPEED = builder.BASE_SPEED;
         this.REGION_IMAGE_PATH = builder.REGION_IMAGE_PATH;
 
@@ -119,6 +128,13 @@ public class Settings {
 
     public static class Builder {
 
+        public float FOV = 70;
+        public int windowWidth = 1280;
+        public int windowHeight = 720;
+        public int windowX = -1;
+        public int windowY = -1;
+        public boolean fullscreen = false;
+
         private float BASE_SPEED = 1.5f;
 
         private String REGION_IMAGE_PATH = "world/world.png";
@@ -160,6 +176,36 @@ public class Settings {
         private int BIOME_BLEND_OFFSET = 4321;
 
         // Build
+
+        public Builder FOV(float FOV) {
+            this.FOV = FOV;
+            return this;
+        }
+
+        public Builder windowWidth(int windowWidth) {
+            this.windowWidth = windowWidth;
+            return this;
+        }
+
+        public Builder windowHeight(int windowHeight) {
+            this.windowHeight = windowHeight;
+            return this;
+        }
+
+        public Builder windowX(int windowX) {
+            this.windowX = windowX;
+            return this;
+        }
+
+        public Builder windowY(int windowY) {
+            this.windowY = windowY;
+            return this;
+        }
+
+        public Builder fullscreen(boolean fullscreen) {
+            this.fullscreen = fullscreen;
+            return this;
+        }
 
         public Builder BASE_SPEED(float BASE_SPEED) {
             this.BASE_SPEED = BASE_SPEED;

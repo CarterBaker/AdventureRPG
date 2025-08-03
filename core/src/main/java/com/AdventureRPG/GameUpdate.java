@@ -3,20 +3,20 @@ package com.AdventureRPG;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.WorldSystem.WorldSystem;
-import com.AdventureRPG.PlayerSystem.InputHandler;;
+import com.AdventureRPG.PlayerSystem.Player;
 
 public class GameUpdate {
 
     // Main
-    public GameManager GameManager;
+    public final GameManager GameManager;
 
     // Systems
-    public UISystem UISystem;
-    public WorldSystem WorldSystem;
-    public InputHandler InputHandler;
+    public final UISystem UISystem;
+    public final WorldSystem WorldSystem;
+    public final Player Player;
 
     public GameUpdate(GameManager GameManager) {
 
@@ -26,23 +26,32 @@ public class GameUpdate {
         // Systems
         this.UISystem = GameManager.UISystem;
         this.WorldSystem = GameManager.WorldSystem;
-        this.InputHandler = GameManager.InputHandler;
+        this.Player = GameManager.Player;
     }
 
-    public void Draw(SpriteBatch SpriteBatch) {
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+    public void Draw(SpriteBatch spriteBatch, ModelBatch modelBatch) {
 
-        SpriteBatch.begin();
+        Gdx.gl.glClearColor(0, 0, 0, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
+        WorldSystem.Update();
+        Player.Update();
+
+        modelBatch.begin(Player.camera.getCamera());
+
+        WorldSystem.Render(modelBatch);
+        Player.Render();
+
+        modelBatch.end();
+
+        spriteBatch.begin();
 
         Update();
 
-        SpriteBatch.end();
+        spriteBatch.end();
     }
 
     private void Update() {
         UISystem.Update();
-        WorldSystem.Update();
-        InputHandler.Update();
     }
 }

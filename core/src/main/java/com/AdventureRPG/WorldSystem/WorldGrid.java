@@ -17,6 +17,10 @@ public class WorldGrid {
         this.ChunkSystem = WorldSystem.ChunkSystem;
     }
 
+    public Vector3 position() {
+        return position;
+    }
+
     public void SetTo(Vector3 input) {
         position = WorldSystem.WrapAroundChunk(input);
         Vector3Int calculatedChunk = WorldSystem.WrapChunksAroundWorld(input);
@@ -36,15 +40,11 @@ public class WorldGrid {
             return;
 
         currentChunk = calculatedChunk;
-        UpdateChunks();
+        LoadChunks();
     }
 
     public void LoadChunks() {
         ChunkSystem.LoadChunks(currentChunk);
-    }
-
-    public void UpdateChunks() {
-        ChunkSystem.UpdateChunks(currentChunk);
     }
 
 }

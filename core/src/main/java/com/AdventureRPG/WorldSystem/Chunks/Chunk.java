@@ -3,51 +3,54 @@ package com.AdventureRPG.WorldSystem.Chunks;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
+import com.badlogic.gdx.math.Vector3;
 
 public class Chunk {
 
     // Base
-
     private final Settings settings;
     private final ChunkSystem ChunkSystem;
+    private ModelInstance mesh;
+    public Vector3Int position;
 
     // Chunk
-
-    public final int x, y, z;
+    public final Vector3Int coordinate;
     private Block[][][] blocks;
     private boolean isDirty;
 
     // Settings
-
     private final int CHUNK_SIZE;
-    private final int LOD_START_DISTANCE;
-    private final int MAX_LOD_DISTANCE;
 
-    public Chunk(int x, int y, int z, ChunkSystem ChunkSystem) {
+    // Temp
+    private Vector3 newPosition;
+    private NeighborChunks NeighborChunks;
+
+    public Chunk(Vector3Int coordinate, Vector3Int position, ChunkSystem ChunkSystem) {
 
         // Base
-
         this.settings = ChunkSystem.settings;
         this.ChunkSystem = ChunkSystem;
-
-        // Settings
-
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
-        this.LOD_START_DISTANCE = settings.LOD_START_DISTANCE;
-        this.MAX_LOD_DISTANCE = settings.MAX_LOD_DISTANCE;
+        this.position = position;
 
         // Chunk
-
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.blocks = new Block[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
+        this.coordinate = coordinate;
         this.isDirty = false;
 
+        // Temp
+        this.newPosition = new Vector3();
+        this.NeighborChunks = ChunkSystem.GetNearbyChunks(coordinate);
+
+        Build(position);
     }
 
     public void Generate(Block[][][] blocks) {
         this.blocks = blocks;
+    }
+
+    public ModelInstance getMesh() {
+        return mesh;
     }
 
     public Block getBlock(int localX, int localY, int localZ) {
@@ -55,9 +58,9 @@ public class Chunk {
     }
 
     public void setBlock(int x, int y, int z, Block block) {
-
         blocks[x][y][z] = block;
         isDirty = true;
+        Build(position);
     }
 
     public boolean needsSaving() {
@@ -70,13 +73,33 @@ public class Chunk {
 
     // Mesh \\
 
-    public void Render(Vector3Int position) {
+    public boolean Build(Vector3Int position) {
+
+        if (!NeighborChunks.isValid()) {
+
+        }
+
+        mesh = ChunkBuilder.build(this);
 
         MoveTo(position);
+
+        return mesh != null;
+    }
+
+    private void Destroy() {
+        this.mesh = ChunkBuilder.destroy(this);
     }
 
     public void MoveTo(Vector3Int position) {
 
-    }
+        if (mesh == null)
+            return;
 
+        this.position.set(position.x, position.y, position.z);
+        this.newPosition.set(position.x, position.y, position.z);
+
+        mesh.transform.setTranslation(newPosition);
+
+        NeighborChunks = ChunkSystem.SetNearbyChunks(coordinate, NeighborChunks);
+    }
 }

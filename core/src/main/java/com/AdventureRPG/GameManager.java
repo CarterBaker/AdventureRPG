@@ -15,24 +15,29 @@ import com.AdventureRPG.SaveSystem.SaveSystem;
 public class GameManager implements Screen {
 
     // Delta
+
     private float DeltaTime;
 
     // Paths and Settings
+
     public final Main game;
     public final File path;
     public final Settings settings;
     public final Gson gson;
 
     // Game Systems
+
     public final SaveSystem SaveSystem;
     public final UISystem UISystem;
     public final WorldSystem WorldSystem;
     public final Player Player;
-    public final InputHandler InputHandler;
 
     // Main
+
     public final GameUpdate Update;
     public final GameDispose Dispose;
+
+    // Initialization
 
     public GameManager(Main game, File path, Settings settings, Gson gson) {
 
@@ -46,7 +51,6 @@ public class GameManager implements Screen {
         this.SaveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
         this.WorldSystem = new WorldSystem(this);
-        this.InputHandler = new InputHandler(this);
         this.Player = new Player(this);
 
         // Main
@@ -57,9 +61,11 @@ public class GameManager implements Screen {
     }
 
     private void StartGame() {
-        UISystem.Open(Menu.Main);
         WorldSystem.LoadChunks();
+        UISystem.Open(Menu.Main);
     }
+
+    // Main
 
     @Override
     public void show() {
@@ -68,11 +74,12 @@ public class GameManager implements Screen {
     @Override
     public void render(float delta) {
         DeltaTime = delta;
-        Update.Draw(game.batch);
+        Update.Draw(game.spriteBatch, game.modelBatch);
     }
 
     @Override
     public void resize(int width, int height) {
+        Player.camera.updateViewport(width, height);
     }
 
     @Override
@@ -94,11 +101,6 @@ public class GameManager implements Screen {
 
     public float DeltaTime() {
         return DeltaTime;
-    }
-
-    public void Move(Vector3Int input) {
-        Player.Move(input);
-        WorldSystem.Move(Player.Position());
     }
 
     // References \\
@@ -125,11 +127,5 @@ public class GameManager implements Screen {
 
     public Vector3Int WrapAroundWorld(Vector3Int input) {
         return WorldSystem.WrapAroundWorld(input);
-    }
-
-    // Player System
-
-    public void BlockInput(boolean allowInput) {
-        InputHandler.BlockInput(allowInput);
     }
 }
