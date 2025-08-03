@@ -106,7 +106,7 @@ public class WorldGenerator {
     public Chunk GenerateChunk(Vector3Int coordinate, Vector3Int position) {
 
         WorldRegion WorldRegion = WorldSystem.WorldReader.WorldRegionFromPosition(coordinate);
-        Chunk chunk = new Chunk(coordinate, position, ChunkSystem);
+        Chunk chunk = new Chunk(coordinate, position, WorldSystem);
 
         Block[][][] blocks = new Block[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
 

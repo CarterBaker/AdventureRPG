@@ -32,7 +32,7 @@ public class Loader {
     private int loadedChunksThisFrame;
     private int loadedChunksThisTick;
 
-    private final Map<Vector3Int, Chunk> loadedChunks; // (Chunk Position, Chunk)
+    private final Map<Vector3Int, Chunk> loadedChunks;
     private final List<ModelInstance> chunkModels;
 
     // Batch

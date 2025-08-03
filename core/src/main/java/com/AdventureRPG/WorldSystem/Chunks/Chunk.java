@@ -1,15 +1,17 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Util.MeshData;
 import com.AdventureRPG.Util.Vector3Int;
+import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
+import com.AdventureRPG.WorldSystem.Blocks.BlockAtlas;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.Vector3;
 
 public class Chunk {
 
     // Base
-    private final Settings settings;
+    private final BlockAtlas BlockAtlas;
     private final ChunkSystem ChunkSystem;
     private ModelInstance mesh;
     public Vector3Int position;
@@ -19,19 +21,16 @@ public class Chunk {
     private Block[][][] blocks;
     private boolean isDirty;
 
-    // Settings
-    private final int CHUNK_SIZE;
-
     // Temp
+    private MeshData meshData;
     private Vector3 newPosition;
     private NeighborChunks NeighborChunks;
 
-    public Chunk(Vector3Int coordinate, Vector3Int position, ChunkSystem ChunkSystem) {
+    public Chunk(Vector3Int coordinate, Vector3Int position, WorldSystem WorldSystem) {
 
         // Base
-        this.settings = ChunkSystem.settings;
-        this.ChunkSystem = ChunkSystem;
-        this.CHUNK_SIZE = settings.CHUNK_SIZE;
+        this.BlockAtlas = WorldSystem.BlockAtlas;
+        this.ChunkSystem = WorldSystem.ChunkSystem;
         this.position = position;
 
         // Chunk
@@ -39,6 +38,7 @@ public class Chunk {
         this.isDirty = false;
 
         // Temp
+        this.meshData = new MeshData();
         this.newPosition = new Vector3();
         this.NeighborChunks = ChunkSystem.GetNearbyChunks(coordinate);
 
@@ -76,18 +76,21 @@ public class Chunk {
     public boolean Build(Vector3Int position) {
 
         if (!NeighborChunks.isValid()) {
-
+            mesh = null;
+            return false;
         }
 
-        mesh = ChunkBuilder.build(this);
+        meshData = ChunkBuilder.build(BlockAtlas, meshData, this);
+        mesh = buildModelInstanceFromData(meshData);
 
         MoveTo(position);
 
         return mesh != null;
     }
 
-    private void Destroy() {
-        this.mesh = ChunkBuilder.destroy(this);
+    private ModelInstance buildModelInstanceFromData(MeshData data) {
+
+        return null;
     }
 
     public void MoveTo(Vector3Int position) {

@@ -32,6 +32,15 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         if (obj.has("BASE_SPEED"))
             builder.BASE_SPEED(obj.get("BASE_SPEED").getAsFloat());
 
+        // Block Settings \\
+
+        if (obj.has("BLOCK_TEXTURE_PATH"))
+            builder.BLOCK_TEXTURE_PATH(obj.get("BLOCK_TEXTURE_PATH").getAsString());
+        if (obj.has("BLOCK_TEXTURE_SIZE"))
+            builder.BLOCK_TEXTURE_SIZE(obj.get("BLOCK_TEXTURE_SIZE").getAsInt());
+        if (obj.has("BLOCK_ATLAS_PADDING"))
+            builder.BLOCK_ATLAS_PADDING(obj.get("BLOCK_ATLAS_PADDING").getAsInt());
+
         // Region Map Settings \\
 
         if (obj.has("REGION_IMAGE_PATH"))

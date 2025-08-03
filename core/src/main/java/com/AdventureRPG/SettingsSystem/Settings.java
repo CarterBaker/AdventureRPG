@@ -19,6 +19,12 @@ public class Settings {
 
     public final float BASE_SPEED; // Average human walking speed in m/s
 
+    // Block Settings \\
+    
+    public final String BLOCK_TEXTURE_PATH; // The location of all block images
+    public final int BLOCK_TEXTURE_SIZE; // The size of all block images
+    public final int BLOCK_ATLAS_PADDING; // The padding between block faces in the atlas
+
     // Region Map Settings \\
 
     public final String REGION_IMAGE_PATH; // The main image that controls the world
@@ -85,6 +91,11 @@ public class Settings {
         this.fullscreen = builder.fullscreen;
 
         this.BASE_SPEED = builder.BASE_SPEED;
+
+        this.BLOCK_TEXTURE_PATH = builder.BLOCK_TEXTURE_PATH;
+        this.BLOCK_TEXTURE_SIZE = builder.BLOCK_TEXTURE_SIZE;
+        this.BLOCK_ATLAS_PADDING = builder.BLOCK_ATLAS_PADDING;
+
         this.REGION_IMAGE_PATH = builder.REGION_IMAGE_PATH;
 
         this.BLOCK_SIZE = builder.BLOCK_SIZE;
@@ -136,6 +147,10 @@ public class Settings {
         public boolean fullscreen = false;
 
         private float BASE_SPEED = 1.5f;
+
+        private String BLOCK_TEXTURE_PATH = "textures";
+        private int BLOCK_TEXTURE_SIZE = 32;
+        private int BLOCK_ATLAS_PADDING = 0;
 
         private String REGION_IMAGE_PATH = "world/world.png";
 
@@ -209,6 +224,21 @@ public class Settings {
 
         public Builder BASE_SPEED(float BASE_SPEED) {
             this.BASE_SPEED = BASE_SPEED;
+            return this;
+        }
+
+        public Builder BLOCK_TEXTURE_PATH(String BLOCK_TEXTURE_PATH) {
+            this.BLOCK_TEXTURE_PATH = BLOCK_TEXTURE_PATH;
+            return this;
+        }
+
+        public Builder BLOCK_TEXTURE_SIZE(int BLOCK_TEXTURE_SIZE) {
+            this.BLOCK_TEXTURE_SIZE = BLOCK_TEXTURE_SIZE;
+            return this;
+        }
+
+        public Builder BLOCK_ATLAS_PADDING(int BLOCK_ATLAS_PADDING) {
+            this.BLOCK_ATLAS_PADDING = BLOCK_ATLAS_PADDING;
             return this;
         }
 

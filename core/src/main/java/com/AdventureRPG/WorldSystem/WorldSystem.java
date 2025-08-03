@@ -8,6 +8,7 @@ import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
+import com.AdventureRPG.WorldSystem.Blocks.BlockAtlas;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
@@ -16,6 +17,13 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
 public class WorldSystem {
+
+    // Blocks
+    public final Block[] blocks;
+    private final String BLOCK_TEXTURE_PATH;
+    private final int BLOCK_TEXTURE_SIZE;
+    private final int BLOCK_ATLAS_PADDING;
+    public final BlockAtlas BlockAtlas;
 
     // Game
     public final GameManager GameManager;
@@ -32,9 +40,6 @@ public class WorldSystem {
     public final BiomeSystem BiomeSystem;
     public final ChunkSystem ChunkSystem;
 
-    // Blocks
-    public final Block[] blocks;
-
     // Dependencies
     public final Vector2Int WORLD_Scale;
 
@@ -48,6 +53,11 @@ public class WorldSystem {
         this.SaveSystem = GameManager.SaveSystem;
         this.UISystem = GameManager.UISystem;
         this.settings = GameManager.settings;
+
+        this.BLOCK_TEXTURE_PATH = settings.BLOCK_TEXTURE_PATH;
+        this.BLOCK_TEXTURE_SIZE = settings.BLOCK_TEXTURE_SIZE;
+        this.BLOCK_ATLAS_PADDING = settings.BLOCK_ATLAS_PADDING;
+        this.BlockAtlas = new BlockAtlas(BLOCK_TEXTURE_PATH, BLOCK_TEXTURE_SIZE, BLOCK_ATLAS_PADDING, settings.debug);
 
         // World System
         this.WorldTick = new WorldTick(this);
