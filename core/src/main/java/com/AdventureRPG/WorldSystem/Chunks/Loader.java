@@ -50,8 +50,6 @@ public class Loader {
     private final HashSet<Vector3Int> loadedChunkCoordinates;
     private final Map<Vector3Int, Vector3Int> chunkToGridMap;
 
-    private boolean startedLoading; // [DEBUG] REMOVE!
-
     // Constructor
 
     public Loader(WorldSystem WorldSystem) {
@@ -93,13 +91,8 @@ public class Loader {
         if (WorldTick.Tick())
             loadedChunksThisTick = 0;
 
-        if (!HasQueue()) {
-            if (startedLoading == true) { // [DEBUG] REMOVE!
-                startedLoading = false; // [DEBUG] REMOVE!
-                System.out.println("DEBUG: Done loading"); // [DEBUG] REMOVE!
-            } // [DEBUG] REMOVE!
+        if (!HasQueue())
             return;
-        } // [DEBUG] REMOVE!
 
         for (int i = 0; i < stateCycle.length; i++) {
             if (stateCycle[cycleIndex].process(this))
@@ -122,8 +115,6 @@ public class Loader {
     // Main
 
     public void BuildQueue(ArrayList<Vector3Int> gridCoordinates, ArrayList<Vector3Int> chunkCoordinates) {
-
-        startedLoading = true; // [DEBUG] REMOVE!
 
         // Prepare new load queue
         moveQueue.clear();
@@ -281,9 +272,13 @@ public class Loader {
         return neighborChunks;
     }
 
-    private boolean HasQueue() {
+    public boolean HasQueue() {
         return (unloadQueue.size() > 0 ||
                 loadQueue.size() > 0);
+    }
+
+    public int QueueSize() {
+        return unloadQueue.size() + loadQueue.size();
     }
 
     private void IncreaseQueueCount() {

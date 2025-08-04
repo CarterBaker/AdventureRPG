@@ -34,8 +34,11 @@ public class GameManager implements Screen {
 
     // Main
 
+    private GameState gameState;
     public final GameUpdate Update;
     public final GameDispose Dispose;
+
+    private LoadScreen LoadScreen;
 
     // Initialization
 
@@ -54,15 +57,9 @@ public class GameManager implements Screen {
         this.Player = new Player(this);
 
         // Main
+        this.gameState = GameState.INITIALIZATION;
         this.Update = new GameUpdate(this);
         this.Dispose = new GameDispose(this);
-
-        StartGame(); // Run once on game start
-    }
-
-    private void StartGame() {
-        WorldSystem.LoadChunks();
-        UISystem.Open(Menu.Main);
     }
 
     // Main
@@ -73,8 +70,10 @@ public class GameManager implements Screen {
 
     @Override
     public void render(float delta) {
+
         DeltaTime = delta;
         Update.Draw(game.spriteBatch, game.modelBatch);
+        Update();
     }
 
     @Override
@@ -101,6 +100,58 @@ public class GameManager implements Screen {
 
     public float DeltaTime() {
         return DeltaTime;
+    }
+
+    private void Update() {
+        switch (gameState) {
+            case INITIALIZATION:
+                INITIALIZATION();
+                break;
+
+            case Loading:
+                Loading();
+                break;
+
+            case Ready:
+                Ready();
+                break;
+        }
+    }
+
+    private enum GameState {
+        INITIALIZATION,
+        Loading,
+        Ready
+    }
+
+    private void INITIALIZATION() {
+        StartLoading();
+        UISystem.Open(Menu.Main);
+    }
+
+    private void Loading() {
+        if (WorldSystem.ChunkSystem.HasQueue())
+            LoadScreen.SetProgrss(WorldSystem.ChunkSystem.QueueSize());
+        else {
+            LoadScreen.SetProgrss(WorldSystem.ChunkSystem.QueueSize());
+            UISystem.Close(LoadScreen);
+            gameState = GameState.Ready;
+        }
+    }
+
+    private void Ready() {
+
+    }
+
+    public void StartLoading() {
+        WorldSystem.LoadChunks();
+
+        LoadScreen = (LoadScreen) UISystem.Open(Menu.LoadScreen);
+        UISystem.Open(Menu.Main);
+
+        LoadScreen.SetMaxProgrss(WorldSystem.ChunkSystem.QueueSize());
+
+        gameState = GameState.Loading;
     }
 
     // References \\

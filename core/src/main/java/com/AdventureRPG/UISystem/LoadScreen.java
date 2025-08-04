@@ -15,8 +15,8 @@ public class LoadScreen extends MenuType {
         this.maxProgress = input;
     }
 
-    public void IncreaseProgrss(int input) {
-        this.totalProgress += input;
+    public void SetProgrss(int input) {
+        this.totalProgress = maxProgress - input;
 
         if (this.totalProgress >= this.maxProgress) {
 
@@ -59,11 +59,12 @@ public class LoadScreen extends MenuType {
 
     @Override
     public void Close() {
+        if (debug) {
+            if (totalProgress < maxProgress)
+                System.out.print("!!!\n");
 
-        // Tear down or hide UI components
-
-        if (debug)
-            System.out.println("Load Screen closed.                         ");
+            System.out.println("Load Screen closed.");
+        }
     }
 
 }

@@ -43,7 +43,7 @@ public class ChunkSystem {
         this.chunk = new Vector3Int();
 
         // Temp
-        int total = (range + 1) * (range + 1) * (height + 1);
+        int total = range * range * height;
 
         gridCoordinates = new ArrayList<>(total);
         chunkCoordinates = new ArrayList<>(total);
@@ -84,9 +84,9 @@ public class ChunkSystem {
 
         int index = 0;
 
-        for (int x = -range / 2; x <= range / 2; x++) {
-            for (int y = -height / 2; y <= height / 2; y++) {
-                for (int z = -range / 2; z <= range / 2; z++) {
+        for (int x = -range / 2; x < range / 2; x++) {
+            for (int y = -height / 2; y < height / 2; y++) {
+                for (int z = -range / 2; z < range / 2; z++) {
 
                     Vector3Int key = gridCoordinates.get(index);
                     key.set(x, y, z);
@@ -108,6 +108,14 @@ public class ChunkSystem {
     }
 
     // Accessible
+
+    public boolean HasQueue() {
+        return Loader.HasQueue();
+    }
+
+    public int QueueSize() {
+        return Loader.QueueSize();
+    }
 
     public NeighborChunks GetNearbyChunks(Vector3Int coordinnate) {
         return Loader.GetNearbyChunks(coordinnate);
