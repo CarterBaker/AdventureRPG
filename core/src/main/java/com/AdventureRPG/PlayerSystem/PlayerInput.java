@@ -11,9 +11,12 @@ public class PlayerInput extends InputAdapter {
     // Game Manager
     public final Player Player;
 
-    private boolean allowInput = true;
+    private boolean blockInput = false;
 
     // Input
+
+    // Rotation
+    private final float sensitivity = 0.15f; // Adjust as needed
 
     // Movement
     private boolean W = false;
@@ -21,23 +24,34 @@ public class PlayerInput extends InputAdapter {
     private boolean S = false;
     private boolean D = false;
 
+    private boolean SHIFT = false;
+    private boolean SPACE = false;
+
     public PlayerInput(Player Player) {
         this.Player = Player;
         Gdx.input.setInputProcessor(this);
+        Block(blockInput);
     }
 
     public void Update() {
+        UpdateRotation();
         UpdateMovement();
     }
 
-    public void BlockInput(boolean allowInput) {
-        this.allowInput = allowInput;
+    public void Block(boolean block) {
+
+        this.blockInput = block;
+        Gdx.input.setCursorCatched(!block);
+    }
+
+    public boolean isLocked() {
+        return blockInput;
     }
 
     @Override
     public boolean keyDown(int keycode) {
 
-        if (!allowInput)
+        if (blockInput)
             return false;
 
         switch (keycode) {
@@ -45,6 +59,9 @@ public class PlayerInput extends InputAdapter {
             case Input.Keys.A -> A = true;
             case Input.Keys.S -> S = true;
             case Input.Keys.D -> D = true;
+
+            case Input.Keys.SHIFT_LEFT -> SHIFT = true;
+            case Input.Keys.SPACE -> SPACE = true;
         }
 
         return true;
@@ -53,7 +70,7 @@ public class PlayerInput extends InputAdapter {
     @Override
     public boolean keyUp(int keycode) {
 
-        if (!allowInput)
+        if (blockInput)
             return false;
 
         switch (keycode) {
@@ -61,14 +78,28 @@ public class PlayerInput extends InputAdapter {
             case Input.Keys.A -> A = false;
             case Input.Keys.S -> S = false;
             case Input.Keys.D -> D = false;
+
+            case Input.Keys.SHIFT_LEFT -> SHIFT = false;
+            case Input.Keys.SPACE -> SPACE = false;
         }
 
         return true;
     }
 
-    public void UpdateMovement() {
+    private void UpdateRotation() {
 
-        if (!allowInput)
+        if (blockInput)
+            return;
+
+        float deltaX = -Gdx.input.getDeltaX() * sensitivity;
+        float deltaY = -Gdx.input.getDeltaY() * sensitivity;
+
+        Player.camera.rotate(deltaX, deltaY);
+    }
+
+    private void UpdateMovement() {
+
+        if (blockInput)
             return;
 
         Vector3Int movement = new Vector3Int(0, 0, 0);
@@ -81,6 +112,11 @@ public class PlayerInput extends InputAdapter {
             movement = movement.add(new Vector3Int(1, 0, 0));
         if (D)
             movement = movement.add(new Vector3Int(-1, 0, 0));
+
+        if (SHIFT)
+            movement = movement.add(new Vector3Int(0, -1, 0));
+        if (SPACE)
+            movement = movement.add(new Vector3Int(0, 1, 0));
 
         if (!movement.equals(new Vector3Int())) {
             Player.Move(movement);

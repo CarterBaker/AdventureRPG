@@ -104,17 +104,9 @@ public class GameManager implements Screen {
 
     private void Update() {
         switch (gameState) {
-            case INITIALIZATION:
-                INITIALIZATION();
-                break;
-
-            case Loading:
-                Loading();
-                break;
-
-            case Ready:
-                Ready();
-                break;
+            case INITIALIZATION -> INITIALIZATION();
+            case Loading -> Loading();
+            case Ready -> Ready();
         }
     }
 
@@ -125,11 +117,13 @@ public class GameManager implements Screen {
     }
 
     private void INITIALIZATION() {
+
         StartLoading();
-        UISystem.Open(Menu.Main);
+        // UISystem.Open(Menu.Main);
     }
 
     private void Loading() {
+
         if (WorldSystem.ChunkSystem.HasQueue())
             LoadScreen.SetProgrss(WorldSystem.ChunkSystem.QueueSize());
         else {
@@ -144,11 +138,10 @@ public class GameManager implements Screen {
     }
 
     public void StartLoading() {
+
         WorldSystem.LoadChunks();
 
         LoadScreen = (LoadScreen) UISystem.Open(Menu.LoadScreen);
-        UISystem.Open(Menu.Main);
-
         LoadScreen.SetMaxProgrss(WorldSystem.ChunkSystem.QueueSize());
 
         gameState = GameState.Loading;

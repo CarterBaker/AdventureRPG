@@ -16,4 +16,8 @@ public abstract class MenuType {
     public abstract void Open();
 
     public abstract void Close();
+
+    public boolean BlockInput() {
+        return true;
+    }
 }

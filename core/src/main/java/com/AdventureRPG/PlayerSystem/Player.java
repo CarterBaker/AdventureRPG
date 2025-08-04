@@ -1,7 +1,6 @@
 package com.AdventureRPG.PlayerSystem;
 
 import com.badlogic.gdx.math.Vector3;
-
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.GameManager;
@@ -47,7 +46,7 @@ public class Player {
     // Main
 
     public void Update() {
-
+        input.Update();
     }
 
     public void Render() {
@@ -55,6 +54,10 @@ public class Player {
     }
 
     // Movement
+
+    public void BlockInput(boolean allowInput) {
+        input.Block(allowInput);
+    }
 
     public Vector3 Position() {
         return new Vector3(
@@ -84,7 +87,7 @@ public class Player {
 
         // 2. Use the movement engine to calculate how far the player should move based
         // on input
-        position = Movement.Calculate(position, input);
+        position = Movement.Calculate(position, input, camera.Direction());
 
         // 3. Wrap how far the player moved between blocks
         BlockPosition = GameManager.WrapAroundBlock(position);

@@ -31,6 +31,9 @@ public class UISystem {
         openMenus.add(menuInstance);
         menuInstance.Open();
 
+        if (menuInstance.BlockInput())
+            GameManager.Player.BlockInput(true);
+
         return menuInstance;
     }
 
@@ -43,9 +46,25 @@ public class UISystem {
                 iterator.remove(); // Safely remove from list
             }
         }
+
+        UpdateInputBlockState();
     }
 
     public void Close(MenuType Menu) {
         Menu.Close();
+        openMenus.remove(Menu);
+        UpdateInputBlockState();
+    }
+
+    private void UpdateInputBlockState() {
+
+        for (MenuType menu : openMenus) {
+            if (menu.BlockInput()) {
+                GameManager.Player.BlockInput(true);
+                return;
+            }
+        }
+
+        GameManager.Player.BlockInput(false);
     }
 }
