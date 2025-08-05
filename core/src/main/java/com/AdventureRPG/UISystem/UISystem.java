@@ -11,15 +11,16 @@ public class UISystem {
     // Game Manager
     public final GameManager GameManager;
 
+    // UI System
     private final List<MenuType> openMenus = new ArrayList<>();
+
+    // Base \\
 
     public UISystem(GameManager GameManager) {
         this.GameManager = GameManager;
     }
 
-    public void Update() {
-
-    }
+    // UI System \\
 
     public MenuType Open(Menu Menu) {
         MenuType menuInstance = switch (Menu) {
@@ -32,7 +33,7 @@ public class UISystem {
         menuInstance.Open();
 
         if (menuInstance.BlockInput())
-            GameManager.Player.BlockInput(true);
+            GameManager.InputSystem.Block(true);
 
         return menuInstance;
     }
@@ -60,11 +61,11 @@ public class UISystem {
 
         for (MenuType menu : openMenus) {
             if (menu.BlockInput()) {
-                GameManager.Player.BlockInput(true);
+                GameManager.InputSystem.Block(true);
                 return;
             }
         }
 
-        GameManager.Player.BlockInput(false);
+        GameManager.InputSystem.Block(false);
     }
 }

@@ -1,22 +1,23 @@
-package com.AdventureRPG.PlayerSystem;
+package com.AdventureRPG.InputSystem;
 
-import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.Gdx;
-
+import com.AdventureRPG.GameManager;
+import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.Util.Vector3Int;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputAdapter;
 
-public class PlayerInput extends InputAdapter {
+public class InputSystem extends InputAdapter {
 
     // Game Manager
-    public final Player Player;
+    public final PlayerSystem PlayerSystem;
 
     private boolean blockInput = false;
 
-    // Input
+    // Input \\
 
     // Rotation
-    private final float sensitivity = 0.15f; // Adjust as needed
+    private final float sensitivity = 0.15f; // This will need to be added to settings
 
     // Movement
     private boolean W = false;
@@ -27,8 +28,13 @@ public class PlayerInput extends InputAdapter {
     private boolean SHIFT = false;
     private boolean SPACE = false;
 
-    public PlayerInput(Player Player) {
-        this.Player = Player;
+    // Base \\
+
+    public InputSystem(GameManager GameManager) {
+        this.PlayerSystem = GameManager.PlayerSystem;
+    }
+
+    public void Start() {
         Gdx.input.setInputProcessor(this);
         Block(blockInput);
     }
@@ -37,6 +43,8 @@ public class PlayerInput extends InputAdapter {
         UpdateRotation();
         UpdateMovement();
     }
+
+    // Input System \\
 
     public void Block(boolean block) {
 
@@ -94,7 +102,7 @@ public class PlayerInput extends InputAdapter {
         float deltaX = -Gdx.input.getDeltaX() * sensitivity;
         float deltaY = -Gdx.input.getDeltaY() * sensitivity;
 
-        Player.camera.rotate(deltaX, deltaY);
+        PlayerSystem.camera.rotate(deltaX, deltaY);
     }
 
     private void UpdateMovement() {
@@ -119,8 +127,7 @@ public class PlayerInput extends InputAdapter {
             movement = movement.add(new Vector3Int(0, 1, 0));
 
         if (!movement.equals(new Vector3Int())) {
-            Player.Move(movement);
+            PlayerSystem.Move(movement);
         }
     }
-
 }

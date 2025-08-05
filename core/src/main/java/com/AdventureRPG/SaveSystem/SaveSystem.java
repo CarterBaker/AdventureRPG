@@ -14,6 +14,8 @@ public class SaveSystem {
     public final UserData UserData;
     public final ChunkData ChunkData;
 
+    // Base \\
+
     public SaveSystem(GameManager GameManager) {
 
         // Game
@@ -25,7 +27,8 @@ public class SaveSystem {
         this.ChunkData = new ChunkData(this);
     }
 
-    // Save System
+    // Save System \\
+
     private boolean HasNewestSave() {
         return false;
     }

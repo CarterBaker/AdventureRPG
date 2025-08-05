@@ -2,45 +2,43 @@ package com.AdventureRPG;
 
 import java.io.File;
 
-import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.math.Vector3;
-import com.google.gson.Gson;
-import com.AdventureRPG.Util.Vector3Int;
-import com.AdventureRPG.SettingsSystem.*;
-import com.AdventureRPG.UISystem.*;
-import com.AdventureRPG.WorldSystem.WorldSystem;
-import com.AdventureRPG.PlayerSystem.*;
+import com.AdventureRPG.InputSystem.InputSystem;
+import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.SaveSystem.SaveSystem;
+import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.UISystem.LoadScreen;
+import com.AdventureRPG.UISystem.Menu;
+import com.AdventureRPG.UISystem.UISystem;
+import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.badlogic.gdx.Screen;
+import com.google.gson.Gson;
 
 public class GameManager implements Screen {
 
     // Delta
-
     private float DeltaTime;
 
     // Paths and Settings
-
     public final Main game;
     public final File path;
     public final Settings settings;
     public final Gson gson;
 
     // Game Systems
-
     public final SaveSystem SaveSystem;
     public final UISystem UISystem;
     public final WorldSystem WorldSystem;
-    public final Player Player;
+    public final PlayerSystem PlayerSystem;
+    public final InputSystem InputSystem;
 
     // Main
-
     private GameState gameState;
-    public final GameUpdate Update;
-    public final GameDispose Dispose;
+    private final GameRenderer Renderer;
 
+    // Temp
     private LoadScreen LoadScreen;
 
-    // Initialization
+    // Base \\
 
     public GameManager(Main game, File path, Settings settings, Gson gson) {
 
@@ -54,15 +52,19 @@ public class GameManager implements Screen {
         this.SaveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
         this.WorldSystem = new WorldSystem(this);
-        this.Player = new Player(this);
+        this.PlayerSystem = new PlayerSystem(this);
+        this.InputSystem = new InputSystem(this);
 
         // Main
-        this.gameState = GameState.INITIALIZATION;
-        this.Update = new GameUpdate(this);
-        this.Dispose = new GameDispose(this);
-    }
+        this.gameState = GameState.START;
+        this.Renderer = new GameRenderer(this);
 
-    // Main
+        // Temp
+        this.LoadScreen = null;
+
+        // Awake
+        Awake();
+    }
 
     @Override
     public void show() {
@@ -71,14 +73,16 @@ public class GameManager implements Screen {
     @Override
     public void render(float delta) {
 
-        DeltaTime = delta;
-        Update.Draw(game.spriteBatch, game.modelBatch);
-        Update();
+        // First run Update()
+        Update(delta);
+
+        // Then delegate all rendering to the dedicated class
+        Renderer.Draw(game.spriteBatch, game.modelBatch);
     }
 
     @Override
     public void resize(int width, int height) {
-        Player.camera.updateViewport(width, height);
+        PlayerSystem.camera.updateViewport(width, height);
     }
 
     @Override
@@ -95,33 +99,62 @@ public class GameManager implements Screen {
 
     @Override
     public void dispose() {
-        Dispose.cleanup();
+
+    }
+
+    // Game Manager \\
+
+    // Awake is called before the first frame after all constructors finish
+    private void Awake() {
+        PlayerSystem.Awake();
+    }
+
+    // Update is called once per frame before rendering
+    private void Update(float delta) {
+
+        DeltaTime = delta;
+
+        switch (gameState) {
+            case START -> START();
+            case Loading -> Loading();
+            case Ready -> Ready();
+        }
+
+        WorldSystem.Update();
     }
 
     public float DeltaTime() {
         return DeltaTime;
     }
 
-    private void Update() {
-        switch (gameState) {
-            case INITIALIZATION -> INITIALIZATION();
-            case Loading -> Loading();
-            case Ready -> Ready();
-        }
-    }
-
     private enum GameState {
-        INITIALIZATION,
+        START,
         Loading,
         Ready
     }
 
-    private void INITIALIZATION() {
+    // Start is run the very first frame
+    private void START() {
+
+        PlayerSystem.Start();
+        InputSystem.Start();
 
         StartLoading();
         // UISystem.Open(Menu.Main);
     }
 
+    // Created seperate logic so this can be called when loading a save
+    public void StartLoading() {
+
+        WorldSystem.LoadChunks();
+
+        LoadScreen = (LoadScreen) UISystem.Open(Menu.LoadScreen);
+        LoadScreen.SetMaxProgrss(WorldSystem.ChunkSystem.QueueSize());
+
+        gameState = GameState.Loading;
+    }
+
+    // Run once per frame when the game is loading
     private void Loading() {
 
         if (WorldSystem.ChunkSystem.HasQueue())
@@ -133,43 +166,9 @@ public class GameManager implements Screen {
         }
     }
 
+    // Ready can be used as an exclusive Update() when the game is not loading
     private void Ready() {
-
-    }
-
-    public void StartLoading() {
-
-        WorldSystem.LoadChunks();
-
-        LoadScreen = (LoadScreen) UISystem.Open(Menu.LoadScreen);
-        LoadScreen.SetMaxProgrss(WorldSystem.ChunkSystem.QueueSize());
-
-        gameState = GameState.Loading;
-    }
-
-    // References \\
-
-    // UISystem
-
-    public void Open(Menu Menu) {
-        UISystem.Open(Menu);
-    }
-
-    public void Close(Menu Menu) {
-        UISystem.Close(Menu);
-    }
-
-    public void Close(MenuType Menu) {
-        UISystem.Close(Menu);
-    }
-
-    // World System
-
-    public Vector3 WrapAroundBlock(Vector3 input) {
-        return WorldSystem.WrapAroundBlock(input);
-    }
-
-    public Vector3Int WrapAroundWorld(Vector3Int input) {
-        return WorldSystem.WrapAroundWorld(input);
+        PlayerSystem.Update();
+        InputSystem.Update();
     }
 }

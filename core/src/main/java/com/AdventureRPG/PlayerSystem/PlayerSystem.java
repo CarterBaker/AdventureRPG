@@ -1,23 +1,22 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.badlogic.gdx.math.Vector3;
+import com.AdventureRPG.GameManager;
+import com.AdventureRPG.InputSystem.Movement;
+import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
-import com.AdventureRPG.GameManager;
-import com.AdventureRPG.MovementSystem.Movement;
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.badlogic.gdx.math.Vector3;
 
-public class Player {
+public class PlayerSystem {
 
     // Game Manager
     private final Settings settings;
     private final GameManager GameManager;
     private final WorldSystem WorldSystem;
-    private final Movement Movement;
 
     // Player
     public final PlayerCamera camera;
-    public final PlayerInput input;
+    private final Movement Movement;
 
     // Player Position
     private Vector3 BlockPosition = new Vector3();
@@ -26,38 +25,37 @@ public class Player {
     // Stats
     private float PlayerSpeed = 1f; // Later on this will be replaced with it's own class loaded and saved by json
 
-    // Initialization
+    // Base \\
 
-    public Player(GameManager GameManager) {
+    public PlayerSystem(GameManager GameManager) {
 
         // Game Manager
         this.settings = GameManager.settings;
         this.GameManager = GameManager;
         this.WorldSystem = GameManager.WorldSystem;
-        this.Movement = new Movement(GameManager);
-        Movement.SetSpeed(PlayerSpeed);
 
         // Player
         this.camera = new PlayerCamera(settings.FOV, settings.windowWidth, settings.windowHeight);
-        this.input = new PlayerInput(this);
-
+        this.Movement = new Movement(GameManager);
     }
 
-    // Main
+    public void Awake() {
+        camera.Awake();
+    }
+
+    public void Start() {
+        Movement.SetSpeed(PlayerSpeed);
+    }
 
     public void Update() {
-        input.Update();
+
     }
 
     public void Render() {
 
     }
 
-    // Movement
-
-    public void BlockInput(boolean allowInput) {
-        input.Block(allowInput);
-    }
+    // Movement \\
 
     public Vector3 Position() {
         return new Vector3(
@@ -90,7 +88,7 @@ public class Player {
         position = Movement.Calculate(position, input, camera.Direction());
 
         // 3. Wrap how far the player moved between blocks
-        BlockPosition = GameManager.WrapAroundBlock(position);
+        BlockPosition = GameManager.WorldSystem.WrapAroundBlock(position);
 
         // 4. Subtract the block position from the total calculated position
         Vector3Int newPosition = new Vector3Int(
@@ -99,10 +97,10 @@ public class Player {
                 Math.round(position.z - BlockPosition.z));
 
         // 5. Wrap the calculated int position around the world
-        WorldPosition = GameManager.WrapAroundWorld(newPosition);
+        WorldPosition = GameManager.WorldSystem.WrapAroundWorld(newPosition);
 
         // 6. Update the world
-        WorldSystem.Move(Position());
+        WorldSystem.MoveTo(Position());
     }
 
 }

@@ -27,8 +27,6 @@ public class BlockAtlas {
         for (FileHandle file : files) {
             try {
                 String name = file.nameWithoutExtension();
-                int id = Integer.parseInt(name);
-
                 Pixmap pixmap = new Pixmap(file);
                 packer.pack(name, pixmap);
                 pixmap.dispose();

@@ -8,7 +8,6 @@ public class WorldTick {
     // Settings
     private final GameManager GameManager;
     private final Settings settings;
-    private final WorldSystem WorldSystem;
     private final float tickTime;
 
     // Tick
@@ -19,7 +18,6 @@ public class WorldTick {
 
         this.GameManager = WorldSystem.GameManager;
         this.settings = WorldSystem.settings;
-        this.WorldSystem = GameManager.WorldSystem;
         this.tickTime = settings.WORLD_TICK;
     }
 

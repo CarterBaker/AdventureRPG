@@ -34,14 +34,18 @@ public class WorldSystem {
     // World System
     public final WorldTick WorldTick;
     public final WorldReader WorldReader;
-    public final WorldGrid WorldGrid;
+    public final ChunkSystem ChunkSystem;
+    public final BiomeSystem BiomeSystem;
     public final WorldGenerator WorldGenerator;
 
-    public final BiomeSystem BiomeSystem;
-    public final ChunkSystem ChunkSystem;
+    // Position
+    private Vector3 position;
+    private Vector3Int currentChunk;
 
     // Dependencies
     public final Vector2Int WORLD_Scale;
+
+    // Basse \\
 
     public WorldSystem(GameManager GameManager) {
 
@@ -62,11 +66,14 @@ public class WorldSystem {
         // World System
         this.WorldTick = new WorldTick(this);
         this.WorldReader = new WorldReader(this);
-        WORLD_Scale = WorldReader.GetWorldScale(); // This needs to be called as soon as possible
+        WORLD_Scale = WorldReader.GetWorldScale();
         this.ChunkSystem = new ChunkSystem(this);
         this.BiomeSystem = new BiomeSystem(GameManager);
         this.WorldGenerator = new WorldGenerator(this);
-        this.WorldGrid = new WorldGrid(this);
+
+        // Position
+        this.position = new Vector3();
+        this.currentChunk = new Vector3Int();
     }
 
     public void Update() {
@@ -76,6 +83,28 @@ public class WorldSystem {
 
     public void Render(ModelBatch modelBatch) {
         ChunkSystem.Render(modelBatch);
+    }
+
+    // Position
+
+    public Vector3 position() {
+        return position;
+    }
+
+    public void MoveTo(Vector3 input) {
+
+        position = WrapAroundChunk(input);
+        Vector3Int calculatedChunk = WrapChunksAroundWorld(input);
+
+        if (calculatedChunk == currentChunk)
+            return;
+
+        currentChunk = calculatedChunk;
+        LoadChunks();
+    }
+
+    public void LoadChunks() {
+        ChunkSystem.LoadChunks(currentChunk);
     }
 
     // Blocks
@@ -93,18 +122,6 @@ public class WorldSystem {
 
     public Block getBlockByID(int id) {
         return (id >= 0 && id < blocks.length) ? blocks[id] : null;
-    }
-
-    // Movement
-
-    public void Move(Vector3 input) {
-        WorldGrid.MoveTo(input);
-    }
-
-    // World Grid
-
-    public void LoadChunks() {
-        WorldGrid.LoadChunks();
     }
 
     // World Generator

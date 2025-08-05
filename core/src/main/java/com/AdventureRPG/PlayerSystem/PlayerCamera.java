@@ -10,8 +10,10 @@ public class PlayerCamera {
     private float pitch = 0f;
 
     public PlayerCamera(float fov, float viewportWidth, float viewportHeight) {
-
         perspectiveCamera = new PerspectiveCamera(fov, viewportWidth, viewportHeight);
+    }
+
+    public void Awake() {
         perspectiveCamera.near = 0.1f;
         perspectiveCamera.far = 1000f;
 

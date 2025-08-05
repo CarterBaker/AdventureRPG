@@ -1,8 +1,8 @@
-package com.AdventureRPG.MovementSystem;
+package com.AdventureRPG.InputSystem;
 
-import com.badlogic.gdx.math.Vector3;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.Util.Vector3Int;
+import com.badlogic.gdx.math.Vector3;
 
 public class Movement {
 
