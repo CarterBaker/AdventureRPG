@@ -40,7 +40,7 @@ public class WorldSystem {
 
     // Position
     private Vector3 position;
-    private Vector3Int currentChunk;
+    private Vector3Int currentChunkCoordinate;
 
     // Dependencies
     public final Vector2Int WORLD_Scale;
@@ -66,14 +66,14 @@ public class WorldSystem {
         // World System
         this.WorldTick = new WorldTick(this);
         this.WorldReader = new WorldReader(this);
-        WORLD_Scale = WorldReader.GetWorldScale();
+        this.WORLD_Scale = WorldReader.GetWorldScale();
         this.ChunkSystem = new ChunkSystem(this);
         this.BiomeSystem = new BiomeSystem(GameManager);
         this.WorldGenerator = new WorldGenerator(this);
 
         // Position
         this.position = new Vector3();
-        this.currentChunk = new Vector3Int();
+        this.currentChunkCoordinate = new Vector3Int();
     }
 
     public void Update() {
@@ -96,15 +96,17 @@ public class WorldSystem {
         position = WrapAroundChunk(input);
         Vector3Int calculatedChunk = WrapChunksAroundWorld(input);
 
-        if (calculatedChunk == currentChunk)
+        if (calculatedChunk == currentChunkCoordinate)
             return;
 
-        currentChunk = calculatedChunk;
+        currentChunkCoordinate = calculatedChunk;
         LoadChunks();
     }
 
     public void LoadChunks() {
-        ChunkSystem.LoadChunks(currentChunk);
+        System.out.println("Loading chunks around current chunk: " + currentChunkCoordinate.toString()); // TODO: Remove
+                                                                                                         // debug line
+        ChunkSystem.LoadChunks(currentChunkCoordinate);
     }
 
     // Blocks

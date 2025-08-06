@@ -30,6 +30,7 @@ public class SaveSystem {
     // Save System \\
 
     private boolean HasNewestSave() {
+        // TODO: This needs to be configured once we have our save system in place
         return false;
     }
 

@@ -18,6 +18,8 @@ public class BiomeSystem {
     private final Map<Integer, int[]> relatedSubTerrainianBiomes;
     private final Map<Integer, int[]> relatedSurfaceBiomes;
 
+    // Base \\
+
     public BiomeSystem(GameManager gameManager) {
 
         // Biome System
@@ -31,6 +33,8 @@ public class BiomeSystem {
         this.relatedSubTerrainianBiomes = OrganizeSubTerrainianBiomes();
         this.relatedSurfaceBiomes = OrganizeSurfaceBiomes();
     }
+
+    // Biome System \\
 
     private Map<Integer, int[]> OrganizeSimilarBiomes(Biome[] biomes) {
 

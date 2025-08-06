@@ -1,14 +1,24 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.AdventureRPG.Util.Direction;
 
 public class NeighborChunks {
-    public Chunk up;
-    public Chunk down;
-    public Chunk left;
-    public Chunk right;
-    public Chunk front;
-    public Chunk back;
+
+    private Chunk up;
+    private Chunk down;
+    private Chunk left;
+    private Chunk right;
+    private Chunk front;
+    private Chunk back;
+
+    private Set<Chunk> chunks;
+
+    public NeighborChunks() {
+        this.chunks = new HashSet<>();
+    }
 
     public void set(Direction direction, Chunk chunk) {
         switch (direction) {
@@ -19,6 +29,8 @@ public class NeighborChunks {
             case FRONT -> front = chunk;
             case BACK -> back = chunk;
         }
+
+        rebuildSet();
     }
 
     public Chunk get(Direction direction) {
@@ -32,8 +44,18 @@ public class NeighborChunks {
         };
     }
 
+    public void remove(Chunk chunk) {
+        for (Direction dir : Direction.values()) {
+            if (get(dir) == chunk) {
+                set(dir, null);
+                chunks.remove(chunk);
+            }
+        }
+    }
+
     public void clear() {
         up = down = left = right = front = back = null;
+        chunks.clear();
     }
 
     public boolean isValid() {
@@ -43,5 +65,25 @@ public class NeighborChunks {
                 right != null &&
                 front != null &&
                 back != null);
+    }
+
+    private void rebuildSet() {
+        chunks.clear();
+        if (up != null)
+            chunks.add(up);
+        if (down != null)
+            chunks.add(down);
+        if (left != null)
+            chunks.add(left);
+        if (right != null)
+            chunks.add(right);
+        if (front != null)
+            chunks.add(front);
+        if (back != null)
+            chunks.add(back);
+    }
+
+    public Set<Chunk> chunks() {
+        return chunks;
     }
 }

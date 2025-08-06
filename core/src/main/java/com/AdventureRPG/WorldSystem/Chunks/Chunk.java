@@ -1,5 +1,6 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
+import com.AdventureRPG.Util.Direction;
 import com.AdventureRPG.Util.MeshData;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
@@ -18,47 +19,44 @@ import com.badlogic.gdx.math.Vector3;
 
 public class Chunk {
 
-    // Base
-    private final BlockAtlas BlockAtlas;
-    private final ChunkSystem ChunkSystem;
-    private ModelInstance mesh;
-    public Vector3Int position;
-
     // Chunk
     public final Vector3Int coordinate;
     private Block[][][] blocks;
+
+    // Base
+    public final Vector3Int position;
     private boolean isDirty;
 
-    // Temp
+    // Model
+    private final NeighborChunks NeighborChunks;
+    private final BlockAtlas BlockAtlas;
+    private ModelInstance mesh;
     private MeshData meshData;
-    private Vector3 newPosition;
-    private NeighborChunks NeighborChunks;
+
+    // Temp
+    private final Vector3 newPosition;
+
+    // Base \\
 
     public Chunk(Vector3Int coordinate, Vector3Int position, WorldSystem WorldSystem) {
 
-        // Base
-        this.BlockAtlas = WorldSystem.BlockAtlas;
-        this.ChunkSystem = WorldSystem.ChunkSystem;
-        this.position = position;
-
         // Chunk
         this.coordinate = coordinate;
+
+        // Base
+        this.position = position;
         this.isDirty = false;
 
-        // Temp
-        this.meshData = new MeshData();
-        this.newPosition = new Vector3();
-        this.NeighborChunks = ChunkSystem.GetNearbyChunks(coordinate);
+        // Model
+        this.NeighborChunks = new NeighborChunks();
+        this.BlockAtlas = WorldSystem.BlockAtlas;
 
-        Build(position);
+        // Temp
+        this.newPosition = new Vector3();
     }
 
     public void Generate(Block[][][] blocks) {
         this.blocks = blocks;
-    }
-
-    public ModelInstance getMesh() {
-        return mesh;
     }
 
     public Block getBlock(int localX, int localY, int localZ) {
@@ -68,7 +66,20 @@ public class Chunk {
     public void setBlock(int x, int y, int z, Block block) {
         blocks[x][y][z] = block;
         isDirty = true;
-        Build(position);
+        TryBuild(position);
+    }
+
+    public void MoveTo(Vector3Int position) {
+
+        if (mesh == null)
+            return;
+
+        this.position.set(position.x, position.y, position.z);
+        this.newPosition.set(position.x, position.y, position.z);
+
+        mesh.transform.setTranslation(newPosition);
+
+        TryBuild(position);
     }
 
     public boolean needsSaving() {
@@ -81,7 +92,29 @@ public class Chunk {
 
     // Mesh \\
 
-    public boolean Build(Vector3Int position) {
+    public boolean isPendingBuild() {
+        return mesh == null;
+    }
+
+    public ModelInstance getMesh() {
+        return mesh;
+    }
+
+    public NeighborChunks getNeighbors() {
+        return NeighborChunks;
+    }
+
+    public void setNeighbor(Direction direction, Chunk chunk) {
+        NeighborChunks.set(direction, chunk);
+        TryBuild(position);
+    }
+
+    public void clearNeighbor(Direction direction, Chunk chunk) {
+        NeighborChunks.clear();
+        mesh = null;
+    }
+
+    public boolean TryBuild(Vector3Int position) {
 
         if (!NeighborChunks.isValid()) {
             mesh = null;
@@ -97,6 +130,11 @@ public class Chunk {
     }
 
     private ModelInstance buildModelInstanceFromData(MeshData data) {
+
+        System.out.println("Building mesh data...");
+        System.out.println("Vertices: " + data.vertices.size());
+        System.out.println("Indices: " + data.indices.size());
+
         if (data.vertices.isEmpty() || data.indices.isEmpty())
             return null;
 
@@ -131,18 +169,5 @@ public class Chunk {
         Model model = modelBuilder.end();
 
         return new ModelInstance(model);
-    }
-
-    public void MoveTo(Vector3Int position) {
-
-        if (mesh == null)
-            return;
-
-        this.position.set(position.x, position.y, position.z);
-        this.newPosition.set(position.x, position.y, position.z);
-
-        mesh.transform.setTranslation(newPosition);
-
-        NeighborChunks = ChunkSystem.SetNearbyChunks(coordinate, NeighborChunks);
     }
 }

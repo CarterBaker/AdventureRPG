@@ -17,7 +17,7 @@ public class InputSystem extends InputAdapter {
     // Input \\
 
     // Rotation
-    private final float sensitivity = 0.15f; // This will need to be added to settings
+    private final float sensitivity = 0.15f; // TODO: Move this to settings
 
     // Movement
     private boolean W = false;

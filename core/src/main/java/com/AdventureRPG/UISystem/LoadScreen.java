@@ -5,7 +5,7 @@ public class LoadScreen extends MenuType {
     private int maxProgress;
     private int totalProgress;
 
-    private boolean debug = true;
+    private boolean debug = true; // TODO: Remove debug line
 
     public LoadScreen(UISystem UISystem, Menu Menu) {
         super(UISystem, Menu);
@@ -22,7 +22,7 @@ public class LoadScreen extends MenuType {
 
             this.totalProgress = this.maxProgress;
 
-            if (debug) {
+            if (debug) { // TODO: Remove debug line
                 printProgress();
                 System.out.println();
             }
@@ -30,11 +30,11 @@ public class LoadScreen extends MenuType {
             return;
         }
 
-        if (debug)
+        if (debug) // TODO: Remove debug line
             printProgress();
     }
 
-    private void printProgress() {
+    private void printProgress() { // TODO: Remove debug line
         System.out.print("\rLoading progress: " + totalProgress + " / " + maxProgress +
                 " (" + getPercentage() + "%)");
 
@@ -53,13 +53,13 @@ public class LoadScreen extends MenuType {
         // Build or display UI components
         totalProgress = 0;
 
-        if (debug)
+        if (debug) // TODO: Remove debug line
             System.out.println("Load Screen opened.");
     }
 
     @Override
     public void Close() {
-        if (debug) {
+        if (debug) { // TODO: Remove debug line
             if (totalProgress < maxProgress)
                 System.out.print("!!!\n");
 
