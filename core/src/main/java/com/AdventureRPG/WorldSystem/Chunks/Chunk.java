@@ -1,6 +1,5 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
-import com.AdventureRPG.Util.Direction;
 import com.AdventureRPG.Util.MeshData;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
@@ -15,7 +14,6 @@ import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
-import com.badlogic.gdx.math.Vector3;
 
 public class Chunk {
 
@@ -25,7 +23,6 @@ public class Chunk {
 
     // Base
     public final Vector3Int position;
-    private boolean isDirty;
 
     // Model
     private final NeighborChunks NeighborChunks;
@@ -33,8 +30,8 @@ public class Chunk {
     private ModelInstance mesh;
     private MeshData meshData;
 
-    // Temp
-    private final Vector3 newPosition;
+    // Save System
+    private boolean isDirty;
 
     // Base \\
 
@@ -45,18 +42,21 @@ public class Chunk {
 
         // Base
         this.position = position;
-        this.isDirty = false;
 
         // Model
         this.NeighborChunks = new NeighborChunks();
         this.BlockAtlas = WorldSystem.BlockAtlas;
 
-        // Temp
-        this.newPosition = new Vector3();
+        // Save System
+        this.isDirty = false;
     }
 
     public void Generate(Block[][][] blocks) {
         this.blocks = blocks;
+    }
+
+    public void MoveTo(Vector3Int position) {
+        this.position.set(position);
     }
 
     public Block getBlock(int localX, int localY, int localZ) {
@@ -66,35 +66,10 @@ public class Chunk {
     public void setBlock(int x, int y, int z, Block block) {
         blocks[x][y][z] = block;
         isDirty = true;
-        TryBuild(position);
-    }
-
-    public void MoveTo(Vector3Int position) {
-
-        if (mesh == null)
-            return;
-
-        this.position.set(position.x, position.y, position.z);
-        this.newPosition.set(position.x, position.y, position.z);
-
-        mesh.transform.setTranslation(newPosition);
-
-        TryBuild(position);
-    }
-
-    public boolean needsSaving() {
-        return isDirty;
-    }
-
-    public void markClean() {
-        isDirty = false;
+        TryBuild();
     }
 
     // Mesh \\
-
-    public boolean isPendingBuild() {
-        return mesh == null;
-    }
 
     public ModelInstance getMesh() {
         return mesh;
@@ -104,17 +79,7 @@ public class Chunk {
         return NeighborChunks;
     }
 
-    public void setNeighbor(Direction direction, Chunk chunk) {
-        NeighborChunks.set(direction, chunk);
-        TryBuild(position);
-    }
-
-    public void clearNeighbor(Direction direction, Chunk chunk) {
-        NeighborChunks.clear();
-        mesh = null;
-    }
-
-    public boolean TryBuild(Vector3Int position) {
+    public boolean TryBuild() {
 
         if (!NeighborChunks.isValid()) {
             mesh = null;
@@ -124,16 +89,10 @@ public class Chunk {
         meshData = ChunkBuilder.build(BlockAtlas, meshData, this);
         mesh = buildModelInstanceFromData(meshData);
 
-        MoveTo(position);
-
-        return mesh != null;
+        return true;
     }
 
     private ModelInstance buildModelInstanceFromData(MeshData data) {
-
-        System.out.println("Building mesh data...");
-        System.out.println("Vertices: " + data.vertices.size());
-        System.out.println("Indices: " + data.indices.size());
 
         if (data.vertices.isEmpty() || data.indices.isEmpty())
             return null;
@@ -169,5 +128,15 @@ public class Chunk {
         Model model = modelBuilder.end();
 
         return new ModelInstance(model);
+    }
+
+    // Save System \\
+
+    public boolean needsSaving() {
+        return isDirty;
+    }
+
+    public void markClean() {
+        isDirty = false;
     }
 }

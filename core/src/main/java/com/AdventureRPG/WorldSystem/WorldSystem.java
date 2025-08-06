@@ -10,7 +10,6 @@ import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.BlockAtlas;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
-import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.math.Vector2;
@@ -104,8 +103,6 @@ public class WorldSystem {
     }
 
     public void LoadChunks() {
-        System.out.println("Loading chunks around current chunk: " + currentChunkCoordinate.toString()); // TODO: Remove
-                                                                                                         // debug line
         ChunkSystem.LoadChunks(currentChunkCoordinate);
     }
 
@@ -124,12 +121,6 @@ public class WorldSystem {
 
     public Block getBlockByID(int id) {
         return (id >= 0 && id < blocks.length) ? blocks[id] : null;
-    }
-
-    // World Generator
-
-    public Chunk GenerateChunk(Vector3Int coordinate, Vector3Int position) {
-        return WorldGenerator.GenerateChunk(coordinate, position);
     }
 
     // Wrap Logic

@@ -11,6 +11,9 @@ import com.AdventureRPG.UISystem.Menu;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.g3d.Environment;
+import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.google.gson.Gson;
 
 public class GameManager implements Screen {
@@ -34,6 +37,7 @@ public class GameManager implements Screen {
     // Main
     private GameState gameState;
     private final GameRenderer Renderer;
+    public final Environment environment;
 
     // Temp
     private LoadScreen LoadScreen;
@@ -58,6 +62,7 @@ public class GameManager implements Screen {
         // Main
         this.gameState = GameState.START;
         this.Renderer = new GameRenderer(this);
+        this.environment = new Environment();
 
         // Temp
         this.LoadScreen = null;
@@ -106,6 +111,10 @@ public class GameManager implements Screen {
 
     // Awake is called before the first frame after all constructors finish
     private void Awake() {
+
+        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.8f, 0.8f, 0.8f, 1f));
+        environment.add(new DirectionalLight().set(1f, 1f, 1f, -1f, -0.8f, -0.2f));
+
         PlayerSystem.Awake();
     }
 

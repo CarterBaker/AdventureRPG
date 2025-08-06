@@ -37,7 +37,7 @@ public class ChunkSystem {
 
     private final Map<Vector3Int, Chunk> loadedChunks;
     private final Map<Chunk, Set<NeighborChunks>> neighborMap;
-    private final List<ModelInstance> chunkModels;
+    private final Map<Chunk, ModelInstance> chunkModels;
 
     // Batch
     private final int indexPerBatch = 32;
@@ -60,10 +60,10 @@ public class ChunkSystem {
     // Temp
     private final ArrayList<Vector3Int> gridCoordinates;
     private final ArrayList<Vector3Int> chunkCoordinates;
+    private final Map<Vector3Int, Vector3Int> chunkToGridMap;
     private final Vector3 wrappedValue;
     private final HashSet<Vector3Int> loadedChunkCoordinates;
-    private final Map<Vector3Int, Vector3Int> chunkToGridMap;
-    private final Vector3Int nearbyChunk;
+    private final Vector3Int lookupKey;
 
     // Base \\
 
@@ -82,7 +82,7 @@ public class ChunkSystem {
         // Chunk System
         this.loadedChunks = new HashMap<>();
         this.neighborMap = new HashMap<>();
-        this.chunkModels = Collections.synchronizedList(new ArrayList<>());
+        this.chunkModels = new HashMap<>();
 
         // Batch
         this.stateCycle = new State[] { State.Unloading, State.Loading };
@@ -105,6 +105,7 @@ public class ChunkSystem {
 
         gridCoordinates = new ArrayList<>(total);
         chunkCoordinates = new ArrayList<>(total);
+        this.chunkToGridMap = new HashMap<>();
 
         for (int i = 0; i < total; i++) {
             gridCoordinates.add(new Vector3Int());
@@ -114,8 +115,7 @@ public class ChunkSystem {
         this.wrappedValue = new Vector3();
 
         this.loadedChunkCoordinates = new HashSet<>();
-        this.chunkToGridMap = new HashMap<>();
-        this.nearbyChunk = new Vector3Int();
+        this.lookupKey = new Vector3Int();
     }
 
     public void Update() {
@@ -139,10 +139,28 @@ public class ChunkSystem {
 
     public void Render(ModelBatch modelBatch) {
 
-        for (ModelInstance model : chunkModels) {
+        Vector3 worldPosition = WorldSystem.position();
 
-            if (model != null)
-                modelBatch.render(model);
+        for (Map.Entry<Chunk, ModelInstance> entry : chunkModels.entrySet()) {
+
+            Chunk chunk = entry.getKey();
+            ModelInstance model = entry.getValue();
+
+            Vector3Int chunkPosition = chunk.position;
+
+            // Calculate world-relative position
+            float offsetX = (chunkPosition.x * size) - worldPosition.x;
+            float offsetY = (chunkPosition.y * size) - worldPosition.y;
+            float offsetZ = (chunkPosition.z * size) - worldPosition.z;
+
+            // Apply the translation to the chunk's mesh
+            model.transform.setToTranslation(offsetX, offsetY, offsetZ);
+
+            // Render the mesh
+            modelBatch.render(model);
+
+            // TODO: Eventually when I add lighting I need to pass the environment
+            // modelBatch.render(model, WorldSystem.GameManager.environment);
         }
     }
 
@@ -157,7 +175,7 @@ public class ChunkSystem {
 
         RebuildChunksAroundChunk();
 
-        BuildQueue(gridCoordinates, chunkCoordinates);
+        BuildQueue();
     }
 
     private void RebuildChunksAroundChunk() {
@@ -170,18 +188,22 @@ public class ChunkSystem {
 
                 for (int z = -range / 2; z < range / 2; z++) {
 
+                    int ax = x * size;
+                    int ay = y * size;
+                    int az = z * size;
+
                     Vector3Int key = gridCoordinates.get(index);
-                    key.set(x, y, z);
+                    key.set(ax, ay, az);
 
-                    int ax = currentChunkCoordinate.x + x * size;
-                    int ay = currentChunkCoordinate.y + y * size;
-                    int az = currentChunkCoordinate.z + z * size;
+                    int bx = currentChunkCoordinate.x + x * size;
+                    int by = currentChunkCoordinate.y + y * size;
+                    int bz = currentChunkCoordinate.z + z * size;
 
-                    wrappedValue.set(ax, ay, az);
-                    Vector3Int wrapped = WorldSystem.WrapChunksAroundWorld(wrappedValue);
+                    wrappedValue.set(bx, by, bz);
+                    Vector3Int wrappedChunkCoordinate = WorldSystem.WrapChunksAroundWorld(wrappedValue);
 
                     Vector3Int value = chunkCoordinates.get(index);
-                    value.set(wrapped.x, wrapped.y, wrapped.z);
+                    value.set(wrappedChunkCoordinate);
 
                     index++;
                 }
@@ -189,7 +211,7 @@ public class ChunkSystem {
         }
     }
 
-    public void BuildQueue(ArrayList<Vector3Int> gridCoordinates, ArrayList<Vector3Int> chunkCoordinates) {
+    public void BuildQueue() {
 
         // Prepare new load queue
         moveQueue.clear();
@@ -271,12 +293,11 @@ public class ChunkSystem {
             Map.Entry<Vector3Int, Chunk> entry = iterator.next();
             Vector3Int gridCoordinate = entry.getKey();
             Chunk loadedChunk = entry.getValue();
-            ModelInstance mesh = loadedChunk.getMesh();
 
             RemoveFromNeightborMap(loadedChunk);
 
+            ModelInstance mesh = chunkModels.remove(loadedChunk);
             if (mesh != null) {
-                chunkModels.remove(mesh);
                 mesh.model.dispose();
             }
 
@@ -309,7 +330,11 @@ public class ChunkSystem {
             Chunk chunk = ChunkData.ReadChunk(chunkCoordinate);
 
             if (chunk == null)
-                chunk = WorldSystem.GenerateChunk(chunkCoordinate, gridCoordinate);
+                chunk = WorldSystem.WorldGenerator.GenerateChunk(chunkCoordinate, gridCoordinate);
+            else // The world generator handles it's own positioning logic
+                chunk.MoveTo(gridCoordinate);
+
+            loadedChunks.put(gridCoordinate, chunk);
 
             GetNearbyChunks(chunk);
 
@@ -326,39 +351,46 @@ public class ChunkSystem {
 
     private void GetNearbyChunks(Chunk chunk) {
 
-        Vector3Int coordinate = chunk.coordinate;
-        NeighborChunks neighborChunks = chunk.getNeighbors();
+        AssessNeighbors(chunk);
 
-        neighborChunks = SetNearbyChunks(coordinate, neighborChunks);
-
-        for (Chunk nearyChunk : neighborChunks.chunks())
-            AssessNeighbors(nearyChunk);
+        for (Chunk nearbyChunk : chunk.getNeighbors().chunks())
+            AssessNeighbors(nearbyChunk);
     }
 
     private void AssessNeighbors(Chunk chunk) {
-        Vector3Int coordinate = chunk.coordinate;
+
+        if (chunk.getNeighbors().isValid()) {
+
+            if (chunk.getMesh() == null)
+                TryBuild(chunk);
+
+            return;
+        }
+
+        Vector3Int chunkPosition = chunk.position;
         NeighborChunks neighborChunks = chunk.getNeighbors();
 
-        neighborChunks = SetNearbyChunks(coordinate, neighborChunks);
+        SetNearbyChunks(chunkPosition, neighborChunks);
+
+        TryBuild(chunk);
     }
 
-    private NeighborChunks SetNearbyChunks(Vector3Int coordinate, NeighborChunks neighborChunks) {
+    private void SetNearbyChunks(Vector3Int chunkPosition, NeighborChunks neighborChunks) {
 
         for (Direction dir : Direction.values()) {
 
-            int offsetX = coordinate.x + dir.x;
-            int offsetY = coordinate.y + dir.y;
-            int offsetZ = coordinate.z + dir.z;
+            int offsetX = chunkPosition.x + dir.x * size;
+            int offsetY = chunkPosition.y + dir.y * size;
+            int offsetZ = chunkPosition.z + dir.z * size;
 
-            nearbyChunk.set(offsetX, offsetY, offsetZ);
-            Chunk neighbor = loadedChunks.get(nearbyChunk);
+            lookupKey.set(offsetX, offsetY, offsetZ);
+            Chunk neighbor = loadedChunks.get(lookupKey);
 
-            neighborChunks.set(dir, neighbor);
-
-            PutToNeightborMap(neighbor, neighborChunks);
+            if (neighbor != null) {
+                neighborChunks.set(dir, neighbor);
+                PutToNeightborMap(neighbor, neighborChunks);
+            }
         }
-
-        return neighborChunks;
     }
 
     private void PutToNeightborMap(Chunk chunk, NeighborChunks neighborChunks) {
@@ -376,15 +408,27 @@ public class ChunkSystem {
 
         Set<NeighborChunks> neighbors = neighborMap.get(chunk);
 
-        if (neighbors != null) {
+        if (neighbors == null)
+            return;
 
-            for (NeighborChunks neighbor : neighbors) {
+        for (NeighborChunks neighbor : neighbors)
+            if (neighbor != null)
+                neighbor.remove(chunk);
 
-                if (neighbor != null)
-                    neighbor.remove(chunk);
-            }
-            neighborMap.remove(chunk);
-        }
+        neighborMap.remove(chunk);
+    }
+
+    private void TryBuild(Chunk chunk) {
+
+        boolean successfullBuild = chunk.TryBuild();
+
+        if (!successfullBuild)
+            return;
+
+        ModelInstance mesh = chunk.getMesh();
+
+        if (mesh != null)
+            chunkModels.put(chunk, mesh);
     }
 
     // Utility \\

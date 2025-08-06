@@ -23,7 +23,7 @@ public class PlayerSystem {
     private Vector3Int WorldPosition = new Vector3Int();
 
     // Stats
-    private float PlayerSpeed = 1f; // TODO: Move all player statistics to their own class savable by json
+    private float PlayerSpeed = 25f; // TODO: Move all player statistics to their own class savable by json
 
     // Base \\
 

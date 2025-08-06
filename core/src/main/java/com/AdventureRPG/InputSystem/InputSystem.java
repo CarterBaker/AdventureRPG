@@ -99,7 +99,7 @@ public class InputSystem extends InputAdapter {
         if (blockInput)
             return;
 
-        float deltaX = -Gdx.input.getDeltaX() * sensitivity;
+        float deltaX = Gdx.input.getDeltaX() * sensitivity;
         float deltaY = -Gdx.input.getDeltaY() * sensitivity;
 
         PlayerSystem.camera.rotate(deltaX, deltaY);
