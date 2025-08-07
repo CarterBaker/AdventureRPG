@@ -136,8 +136,10 @@ public class ChunkSystem {
     }
 
     public void Render(ModelBatch modelBatch) {
+        RepositionChunks(modelBatch);
+    }
 
-        Vector3 worldPosition = WorldSystem.position();
+    private void RepositionChunks(ModelBatch modelBatch) {
 
         for (Map.Entry<Chunk, ModelInstance> entry : chunkModels.entrySet()) {
 
@@ -147,9 +149,9 @@ public class ChunkSystem {
             Vector3Int chunkPosition = chunk.position;
 
             // Calculate world-relative position
-            float offsetX = chunkPosition.x - worldPosition.x;
-            float offsetY = chunkPosition.y - worldPosition.y;
-            float offsetZ = chunkPosition.z - worldPosition.z;
+            float offsetX = currentChunkCoordinate.x * size - chunkPosition.x;
+            float offsetY = currentChunkCoordinate.y * size - chunkPosition.y;
+            float offsetZ = currentChunkCoordinate.z * size - chunkPosition.z;
 
             // Apply the translation to the chunk's mesh
             model.transform.setToTranslation(offsetX, offsetY, offsetZ);

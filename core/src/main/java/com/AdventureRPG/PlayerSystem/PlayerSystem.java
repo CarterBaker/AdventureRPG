@@ -23,7 +23,7 @@ public class PlayerSystem {
     private Vector3Int WorldPosition = new Vector3Int();
 
     // Stats
-    private float PlayerSpeed = 100f; // TODO: Move all player statistics to their own class savable by json
+    private float PlayerSpeed = 10f; // TODO: Move all player statistics to their own class savable by json
 
     // Base \\
 
@@ -37,6 +37,10 @@ public class PlayerSystem {
         // Player
         this.camera = new PlayerCamera(settings.FOV, settings.windowWidth, settings.windowHeight);
         this.Movement = new Movement(GameManager);
+
+        // Player Position
+        this.BlockPosition = new Vector3();
+        this.WorldPosition = new Vector3Int();
     }
 
     public void Awake() {
@@ -79,13 +83,14 @@ public class PlayerSystem {
 
     public void Move(Vector3Int input) {
 
+        Vector3Int reverseInput = input.multiply(-1);
         // 1. First add up the total world position in tiles and then the float value
         // between those tiles
         Vector3 position = Position();
 
         // 2. Use the movement engine to calculate how far the player should move based
         // on input
-        position = Movement.Calculate(position, input, camera.Direction());
+        position = Movement.Calculate(position, reverseInput, camera.Direction());
 
         // 3. Wrap how far the player moved between blocks
         BlockPosition = GameManager.WorldSystem.WrapAroundBlock(position);
@@ -102,5 +107,4 @@ public class PlayerSystem {
         // 6. Update the world
         WorldSystem.MoveTo(Position());
     }
-
 }
