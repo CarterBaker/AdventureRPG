@@ -1,11 +1,9 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -149,9 +147,9 @@ public class ChunkSystem {
             Vector3Int chunkPosition = chunk.position;
 
             // Calculate world-relative position
-            float offsetX = (chunkPosition.x * size) - worldPosition.x;
-            float offsetY = (chunkPosition.y * size) - worldPosition.y;
-            float offsetZ = (chunkPosition.z * size) - worldPosition.z;
+            float offsetX = chunkPosition.x - worldPosition.x;
+            float offsetY = chunkPosition.y - worldPosition.y;
+            float offsetZ = chunkPosition.z - worldPosition.z;
 
             // Apply the translation to the chunk's mesh
             model.transform.setToTranslation(offsetX, offsetY, offsetZ);
@@ -168,17 +166,14 @@ public class ChunkSystem {
 
     public void LoadChunks(Vector3Int chunkCoordinate) {
 
-        if (this.currentChunkCoordinate.equals(chunkCoordinate))
-            return;
-
         this.currentChunkCoordinate.set(chunkCoordinate);
 
-        RebuildChunksAroundChunk();
+        RebuildChunksAroundActiveChunk();
 
         BuildQueue();
     }
 
-    private void RebuildChunksAroundChunk() {
+    private void RebuildChunksAroundActiveChunk() {
 
         int index = 0;
 

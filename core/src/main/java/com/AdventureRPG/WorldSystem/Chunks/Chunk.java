@@ -1,6 +1,5 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
-import com.AdventureRPG.Util.MeshData;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;

@@ -78,6 +78,11 @@ public class WorldSystem {
     public void Update() {
         WorldTick.Update();
         ChunkSystem.Update();
+
+        if (!ChunkSystem.HasQueue()) {
+            System.out.print("\rActive chunk: " + currentChunkCoordinate);
+            System.out.flush();
+        }
     }
 
     public void Render(ModelBatch modelBatch) {
@@ -99,6 +104,7 @@ public class WorldSystem {
             return;
 
         currentChunkCoordinate = calculatedChunk;
+
         LoadChunks();
     }
 

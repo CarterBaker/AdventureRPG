@@ -59,12 +59,7 @@ public class NeighborChunks {
     }
 
     public boolean isValid() {
-        return (up != null &&
-                down != null &&
-                left != null &&
-                right != null &&
-                front != null &&
-                back != null);
+        return chunks.size() < 6; // Number of adjacent faces to a chunk
     }
 
     private void rebuildSet() {

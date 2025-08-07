@@ -1,7 +1,9 @@
-package com.AdventureRPG.Util;
+package com.AdventureRPG.WorldSystem.Chunks;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.AdventureRPG.Util.Direction;
 
 public class MeshData {
 
