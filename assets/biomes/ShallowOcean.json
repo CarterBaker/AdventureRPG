@@ -1,10 +1,8 @@
 {
-    "name": "Ocean",
-    "ID": 0,
+    "name": "Shallow Ocean",
+    "ID": 7,
     "similarBiomes": [
-        1,
-        4,
-        5
+        0
     ],
     "elevation": -128,
     "elevationBlending": 15,

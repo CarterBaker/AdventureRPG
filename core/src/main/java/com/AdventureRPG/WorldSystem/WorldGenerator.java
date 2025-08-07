@@ -13,7 +13,6 @@ import com.AdventureRPG.Util.OpenSimplex2;
 public class WorldGenerator {
 
     // Region System
-
     public final Settings settings;
     public final UserData UserData;
     public final WorldSystem WorldSystem;
@@ -21,14 +20,12 @@ public class WorldGenerator {
     public final BiomeSystem BiomeSystem;
 
     // Data
-
     private long Seed;
 
     private final Block VACUUM_BLOCK;
     private final Block LAVA_BLOCK;
 
     // Settings
-
     private final int CHUNK_SIZE;
 
     private final int BASE_WORLD_ELEVATION;
@@ -49,10 +46,15 @@ public class WorldGenerator {
 
     private final int BIOME_BLEND_OFFSET;
 
+    // Temp
+    private Biome biome;
+    private int elevation;
+
+    // Base \\
+
     public WorldGenerator(WorldSystem WorldSystem) {
 
         // Region System
-
         this.settings = WorldSystem.settings;
         this.UserData = WorldSystem.SaveSystem.UserData;
         this.WorldSystem = WorldSystem;
@@ -60,14 +62,12 @@ public class WorldGenerator {
         this.BiomeSystem = WorldSystem.BiomeSystem;
 
         // Data
-
         this.Seed = UserData.Seed();
 
         this.VACUUM_BLOCK = WorldSystem.getBlockByName("vacuum");
         this.LAVA_BLOCK = WorldSystem.getBlockByName("lava");
 
         // Settings
-
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
 
         this.BASE_WORLD_ELEVATION = settings.BASE_WORLD_ELEVATION;
@@ -87,9 +87,12 @@ public class WorldGenerator {
         this.SURFACE_BREAK__OFFSET = settings.SURFACE_BREAK__OFFSET;
 
         this.BIOME_BLEND_OFFSET = settings.BIOME_BLEND_OFFSET;
+
+        // Temp
+        this.biome = new Biome();
     }
 
-    // Data
+    // Data \\
 
     public long GetSeed() {
         return Seed;
@@ -99,9 +102,9 @@ public class WorldGenerator {
         this.Seed = Seed;
     }
 
-    // Generator
+    // Generator \\
 
-    // Chunk
+    // Chunk \\
 
     public Chunk GenerateChunk(Vector3Int coordinate, Vector3Int position) {
 
@@ -114,10 +117,10 @@ public class WorldGenerator {
             for (int y = 0; y < CHUNK_SIZE; y++) {
                 for (int z = 0; z < CHUNK_SIZE; z++) {
 
-                    Vector3Int blockPos = new Vector3Int(x, y, z);
-                    blockPos = blockPos.add(coordinate);
+                    Vector3Int blockPos = new Vector3Int(x, y, z).add(coordinate);
 
                     Block block = GenerateBlock(WorldRegion, blockPos);
+
                     blocks[x][y][z] = block;
                 }
             }
@@ -128,10 +131,7 @@ public class WorldGenerator {
         return chunk;
     }
 
-    // Block
-
-    Biome biome = new Biome();
-    private int elevation;
+    // Block \\
 
     private Block GenerateBlock(WorldRegion region, Vector3Int position) {
 
@@ -144,14 +144,17 @@ public class WorldGenerator {
         if (y > MAX_WORLD_ELEVATION)
             return VACUUM_BLOCK;
 
-        biome = GetBiomeAtPosition(region, position);
+        biome = GenerateBiome(region, position);
         Block airBlock = WorldSystem.getBlockByID(biome.airBlock);
         Block waterBlock = WorldSystem.getBlockByID(biome.waterBlock);
 
-        // Ocean biome below ocean level fills with water
-        if (biome.ocean && y < BASE_OCEAN_LEVEL) {
+        // Only fill water if above terrain and below sea level
+        if (biome.ocean && y > elevation && y <= BASE_OCEAN_LEVEL)
             return waterBlock;
-        }
+
+        // Fill air blocks above terrain
+        else if (y > elevation)
+            return airBlock;
 
         // Water noise for variation
         float waterNoiseScaleX = biome.waterNoiseScaleX * x;
@@ -197,9 +200,9 @@ public class WorldGenerator {
         return WorldSystem.getBlockByID(biome.getBlockForElevation(y, MIN_WORLD_ELEVATION, elevation));
     }
 
-    // Biome
+    // Biome \\
 
-    private Biome GetBiomeAtPosition(WorldRegion region, Vector3Int position) {
+    private Biome GenerateBiome(WorldRegion region, Vector3Int position) {
 
         int x = position.x;
         int y = position.y;
@@ -210,8 +213,8 @@ public class WorldGenerator {
         elevation = BlendedElevation(region, baseBiome);
         boolean isUnderground = y < elevation;
 
-        float biomeBlendScaleX = biome.biomeBlendScaleX * x;
-        float biomeBlendScaleY = biome.biomeBlendScaleY * z;
+        float biomeBlendScaleX = baseBiome.biomeBlendScaleX * x;
+        float biomeBlendScaleY = baseBiome.biomeBlendScaleY * z;
         float blendNoise = OpenSimplex2.noise2(Seed + BIOME_BLEND_OFFSET, biomeBlendScaleX, biomeBlendScaleY);
         float blendValue = (blendNoise + 1f) / 2f;
 
@@ -225,10 +228,13 @@ public class WorldGenerator {
         int index = (int) (blendValue * related.length);
         index = Math.min(index, related.length - 1);
 
-        return BiomeSystem.GetBiomeByID(related[index]);
+        Biome generatedBiome = BiomeSystem.GetBiomeByID(related[index]);
+        elevation = BlendedElevation(region, generatedBiome);
+
+        return generatedBiome;
     }
 
-    // Elevation
+    // Elevation \\
 
     private int BlendedElevation(WorldRegion region, Biome biome) {
 

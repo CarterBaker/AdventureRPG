@@ -1,10 +1,8 @@
 {
-    "name": "Ocean",
-    "ID": 0,
+    "name": "New Ocean",
+    "ID": 15,
     "similarBiomes": [
-        1,
-        4,
-        5
+        0
     ],
     "elevation": -128,
     "elevationBlending": 15,

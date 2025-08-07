@@ -1,12 +1,10 @@
 {
-    "name": "Ocean",
-    "ID": 0,
+    "name": "Coral Reef",
+    "ID": 12,
     "similarBiomes": [
-        1,
-        4,
-        5
+        0
     ],
-    "elevation": -128,
+    "elevation": -64,
     "elevationBlending": 15,
     "aquatic": true,
     "ocean": true,

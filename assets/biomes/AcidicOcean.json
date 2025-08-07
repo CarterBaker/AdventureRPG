@@ -1,10 +1,10 @@
 {
-    "name": "Ocean",
-    "ID": 0,
+    "name": "Acidic Ocean",
+    "ID": 1,
     "similarBiomes": [
-        1,
-        4,
-        5
+        0,
+        2,
+        6
     ],
     "elevation": -128,
     "elevationBlending": 15,
