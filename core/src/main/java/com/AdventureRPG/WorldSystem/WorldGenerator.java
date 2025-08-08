@@ -14,10 +14,10 @@ public class WorldGenerator {
 
     // Region System
     public final Settings settings;
-    public final UserData UserData;
-    public final WorldSystem WorldSystem;
-    public final ChunkSystem ChunkSystem;
-    public final BiomeSystem BiomeSystem;
+    public final UserData userData;
+    public final WorldSystem worldSystem;
+    public final ChunkSystem chunkSystem;
+    public final BiomeSystem biomeSystem;
 
     // Data
     private long Seed;
@@ -52,20 +52,20 @@ public class WorldGenerator {
 
     // Base \\
 
-    public WorldGenerator(WorldSystem WorldSystem) {
+    public WorldGenerator(WorldSystem worldSystem) {
 
         // Region System
-        this.settings = WorldSystem.settings;
-        this.UserData = WorldSystem.SaveSystem.UserData;
-        this.WorldSystem = WorldSystem;
-        this.ChunkSystem = WorldSystem.ChunkSystem;
-        this.BiomeSystem = WorldSystem.BiomeSystem;
+        this.settings = worldSystem.settings;
+        this.userData = worldSystem.saveSystem.userData;
+        this.worldSystem = worldSystem;
+        this.chunkSystem = worldSystem.chunkSystem;
+        this.biomeSystem = worldSystem.biomeSystem;
 
         // Data
-        this.Seed = UserData.Seed();
+        this.Seed = userData.Seed();
 
-        this.VACUUM_BLOCK = WorldSystem.getBlockByName("vacuum");
-        this.LAVA_BLOCK = WorldSystem.getBlockByName("lava");
+        this.VACUUM_BLOCK = worldSystem.GetBlockByName("vacuum");
+        this.LAVA_BLOCK = worldSystem.GetBlockByName("lava");
 
         // Settings
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
@@ -108,8 +108,8 @@ public class WorldGenerator {
 
     public Chunk GenerateChunk(Vector3Int coordinate, Vector3Int position) {
 
-        WorldRegion WorldRegion = WorldSystem.WorldReader.WorldRegionFromPosition(coordinate);
-        Chunk chunk = new Chunk(coordinate, position, WorldSystem);
+        WorldRegion WorldRegion = worldSystem.worldReader.WorldRegionFromPosition(coordinate);
+        Chunk chunk = new Chunk(coordinate, position, worldSystem);
 
         Block[][][] blocks = new Block[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
 
@@ -145,8 +145,8 @@ public class WorldGenerator {
             return VACUUM_BLOCK;
 
         biome = GenerateBiome(region, position);
-        Block airBlock = WorldSystem.getBlockByID(biome.airBlock);
-        Block waterBlock = WorldSystem.getBlockByID(biome.waterBlock);
+        Block airBlock = worldSystem.GetBlockByID(biome.airBlock);
+        Block waterBlock = worldSystem.GetBlockByID(biome.waterBlock);
 
         // Only fill water if above terrain and below sea level
         if (biome.ocean && y > elevation && y <= BASE_OCEAN_LEVEL)
@@ -181,7 +181,7 @@ public class WorldGenerator {
                     y * biome.caveNoiseScaleY,
                     z * biome.caveNoiseScaleZ);
 
-            if (biome.isCave(caveNoise)) {
+            if (biome.IsCave(caveNoise)) {
                 return biome.aquatic ? waterBlock : airBlock;
             }
         }
@@ -197,7 +197,7 @@ public class WorldGenerator {
         }
 
         // Terrain
-        return WorldSystem.getBlockByID(biome.getBlockForElevation(y, MIN_WORLD_ELEVATION, elevation));
+        return worldSystem.GetBlockByID(biome.GetBlockForElevation(y, MIN_WORLD_ELEVATION, elevation));
     }
 
     // Biome \\
@@ -208,7 +208,7 @@ public class WorldGenerator {
         int y = position.y;
         int z = position.z;
 
-        Biome baseBiome = BiomeSystem.GetBiomeByID(region.regionID);
+        Biome baseBiome = biomeSystem.GetBiomeByID(region.regionID);
 
         elevation = BlendedElevation(region, baseBiome);
         boolean isUnderground = y < elevation;
@@ -219,8 +219,8 @@ public class WorldGenerator {
         float blendValue = (blendNoise + 1f) / 2f;
 
         int[] related = isUnderground
-                ? BiomeSystem.getRelatedSubTerrainianBiomes(baseBiome.ID)
-                : BiomeSystem.getRelatedSurfaceBiomes(baseBiome.ID);
+                ? biomeSystem.GetRelatedSubTerrainianBiomes(baseBiome.ID)
+                : biomeSystem.GetRelatedSurfaceBiomes(baseBiome.ID);
 
         if (related == null || related.length == 0)
             return baseBiome;
@@ -228,7 +228,7 @@ public class WorldGenerator {
         int index = (int) (blendValue * related.length);
         index = Math.min(index, related.length - 1);
 
-        Biome generatedBiome = BiomeSystem.GetBiomeByID(related[index]);
+        Biome generatedBiome = biomeSystem.GetBiomeByID(related[index]);
         elevation = BlendedElevation(region, generatedBiome);
 
         return generatedBiome;
@@ -246,5 +246,4 @@ public class WorldGenerator {
 
         return (BASE_WORLD_ELEVATION + blendedElevation);
     }
-
 }

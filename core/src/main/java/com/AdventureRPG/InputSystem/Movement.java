@@ -1,36 +1,42 @@
 package com.AdventureRPG.InputSystem;
 
 import com.AdventureRPG.GameManager;
+import com.AdventureRPG.PlayerSystem.Statistics;
 import com.AdventureRPG.Util.Vector3Int;
 import com.badlogic.gdx.math.Vector3;
 
 public class Movement {
 
-    private float MovementSpeed = 1f;
+    // Base
+    private final GameManager gameManager;
+    private final Statistics statistics;
 
-    private final GameManager GameManager;
-
+    // Movement
     private final Vector3 forward;
     private final Vector3 right;
     private final Vector3 localMove;
     private final Vector3 move;
 
-    public Movement(GameManager GameManager) {
-        this.GameManager = GameManager;
+    // Base \\
 
+    public Movement(GameManager gameManager, Statistics statistics) {
+
+        // Base
+        this.gameManager = gameManager;
+        this.statistics = statistics;
+
+        // Movement
         this.forward = new Vector3();
         this.right = new Vector3();
         this.localMove = new Vector3();
         this.move = new Vector3();
     }
 
-    public void SetSpeed(float input) {
-        MovementSpeed = input * GameManager.settings.BASE_SPEED;
-    }
+    // Movement \\
 
     public Vector3 Calculate(Vector3 currentPosition, Vector3Int input, Vector3 cameraDirection) {
 
-        float delta = GameManager.DeltaTime();
+        float delta = gameManager.DeltaTime();
 
         // Calculate horizontal forward vector (XZ plane)
         forward.set(cameraDirection.x, 0f, cameraDirection.z).nor();
@@ -49,7 +55,7 @@ public class Movement {
             localMove.nor();
 
         // Scale by movement speed and delta
-        move.set(localMove).scl(MovementSpeed * delta);
+        move.set(localMove).scl(statistics.movementSpeed * delta);
 
         // Return result without allocating a new Vector3
         return move.add(currentPosition); // returns a new vector, still

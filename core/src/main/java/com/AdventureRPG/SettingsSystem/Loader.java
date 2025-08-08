@@ -1,7 +1,6 @@
 package com.AdventureRPG.SettingsSystem;
 
 import java.io.*;
-
 import com.google.gson.Gson;
 
 public class Loader {

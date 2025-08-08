@@ -1,5 +1,9 @@
 package com.AdventureRPG.SettingsSystem;
 
+// TODO: Settings system is subject to lots of change as most teh game relies on it
+// Eventually I will want to reorganize everything here or atleast assess it closer
+// Including the loader and deserializer
+
 public class Settings {
 
     // Debug Settings \\
@@ -20,7 +24,7 @@ public class Settings {
     public final float BASE_SPEED; // Average human walking speed in m/s
 
     // Block Settings \\
-    
+
     public final String BLOCK_TEXTURE_PATH; // The location of all block images
     public final int BLOCK_TEXTURE_SIZE; // The size of all block images
     public final int BLOCK_ATLAS_PADDING; // The padding between block faces in the atlas

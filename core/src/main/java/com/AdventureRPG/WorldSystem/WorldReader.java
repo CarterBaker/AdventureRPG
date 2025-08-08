@@ -9,15 +9,22 @@ import com.AdventureRPG.SettingsSystem.Settings;
 
 public class WorldReader {
 
-    private final WorldSystem WorldSystem;
+    // Game Manager
+    private final WorldSystem worldSystem;
     private final Settings settings;
     private final Pixmap world;
 
-    public WorldReader(WorldSystem WorldSystem) {
-        this.WorldSystem = WorldSystem;
-        this.settings = WorldSystem.settings;
+    // Base \\
+
+    public WorldReader(WorldSystem worldSystem) {
+
+        // Game Manager
+        this.worldSystem = worldSystem;
+        this.settings = worldSystem.settings;
         this.world = new Pixmap(Gdx.files.internal(settings.REGION_IMAGE_PATH));
     }
+
+    // World Reader \\
 
     public Vector2Int GetWorldScale() {
         int width = world.getWidth();
@@ -39,7 +46,7 @@ public class WorldReader {
 
     public WorldRegion WorldRegionFromPosition(Vector3Int input) {
         Vector2 worldPosition = new Vector2(input.x, input.z);
-        Vector2Int imagePixel = WorldSystem.WrapAroundImageRegion(worldPosition);
+        Vector2Int imagePixel = worldSystem.WrapAroundImageRegion(worldPosition);
 
         int x = imagePixel.x;
         int y = imagePixel.y;

@@ -1,7 +1,6 @@
 package com.AdventureRPG;
 
 import java.io.File;
-
 import com.AdventureRPG.InputSystem.InputSystem;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.SaveSystem.SaveSystem;
@@ -28,44 +27,44 @@ public class GameManager implements Screen {
     public final Gson gson;
 
     // Game Systems
-    public final SaveSystem SaveSystem;
+    public final SaveSystem saveSystem;
     public final UISystem UISystem;
-    public final WorldSystem WorldSystem;
-    public final PlayerSystem PlayerSystem;
-    public final InputSystem InputSystem;
+    public final WorldSystem worldSystem;
+    public final PlayerSystem playerSystem;
+    public final InputSystem inputSystem;
 
-    // Main
+    // UI System
+    private LoadScreen loadScreen;
+
+    // Game Manager
     private GameState gameState;
     private final GameRenderer Renderer;
     public final Environment environment;
-
-    // Temp
-    private LoadScreen LoadScreen;
 
     // Base \\
 
     public GameManager(Main game, File path, Settings settings, Gson gson) {
 
-        // Setup default Paths and Settings
+        // Paths and Settings
         this.game = game;
         this.path = path;
         this.settings = settings;
         this.gson = gson;
 
-        // Setup Game Systems
-        this.SaveSystem = new SaveSystem(this);
+        // Game Systems
+        this.saveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
-        this.WorldSystem = new WorldSystem(this);
-        this.PlayerSystem = new PlayerSystem(this);
-        this.InputSystem = new InputSystem(this);
+        this.worldSystem = new WorldSystem(this);
+        this.playerSystem = new PlayerSystem(this);
+        this.inputSystem = new InputSystem(this);
 
-        // Main
+        // UI System
+        this.loadScreen = null;
+
+        // Game Manager
         this.gameState = GameState.START;
         this.Renderer = new GameRenderer(this);
         this.environment = new Environment();
-
-        // Temp
-        this.LoadScreen = null;
 
         // Awake
         Awake();
@@ -87,7 +86,9 @@ public class GameManager implements Screen {
 
     @Override
     public void resize(int width, int height) {
-        PlayerSystem.camera.updateViewport(width, height);
+
+        // On resize update the main camera
+        playerSystem.camera.UpdateViewport(width, height);
     }
 
     @Override
@@ -115,7 +116,11 @@ public class GameManager implements Screen {
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.8f, 0.8f, 0.8f, 1f));
         environment.add(new DirectionalLight().set(1f, 1f, 1f, -1f, -0.8f, -0.2f));
 
-        PlayerSystem.Awake();
+        saveSystem.Awake();
+        UISystem.Awake();
+        worldSystem.Awake();
+        playerSystem.Awake();
+        inputSystem.Awake();
     }
 
     // Update is called once per frame before rendering
@@ -129,24 +134,21 @@ public class GameManager implements Screen {
             case Ready -> Ready();
         }
 
-        WorldSystem.Update();
+        worldSystem.Update();
     }
 
     public float DeltaTime() {
         return DeltaTime;
     }
 
-    private enum GameState {
-        START,
-        Loading,
-        Ready
-    }
-
     // Start is run the very first frame
     private void START() {
 
-        PlayerSystem.Start();
-        InputSystem.Start();
+        saveSystem.Start();
+        UISystem.Start();
+        worldSystem.Start();
+        playerSystem.Start();
+        inputSystem.Start();
 
         StartLoading();
         // UISystem.Open(Menu.Main);
@@ -155,10 +157,10 @@ public class GameManager implements Screen {
     // Created seperate logic so this can be called when loading a save
     public void StartLoading() {
 
-        WorldSystem.LoadChunks();
+        worldSystem.LoadChunks();
 
-        LoadScreen = (LoadScreen) UISystem.Open(Menu.LoadScreen);
-        LoadScreen.SetMaxProgrss(WorldSystem.ChunkSystem.QueueSize());
+        loadScreen = (LoadScreen) UISystem.Open(Menu.LoadScreen);
+        loadScreen.SetMaxProgrss(worldSystem.chunkSystem.QueueSize());
 
         gameState = GameState.Loading;
     }
@@ -166,18 +168,27 @@ public class GameManager implements Screen {
     // Run once per frame when the game is loading
     private void Loading() {
 
-        if (WorldSystem.ChunkSystem.HasQueue())
-            LoadScreen.SetProgrss(WorldSystem.ChunkSystem.QueueSize());
+        if (worldSystem.chunkSystem.HasQueue())
+            loadScreen.SetProgrss(worldSystem.chunkSystem.QueueSize());
         else {
-            LoadScreen.SetProgrss(WorldSystem.ChunkSystem.QueueSize());
-            UISystem.Close(LoadScreen);
+            loadScreen.SetProgrss(worldSystem.chunkSystem.QueueSize());
+            UISystem.Close(loadScreen);
             gameState = GameState.Ready;
         }
     }
 
     // Ready can be used as an exclusive Update() when the game is not loading
     private void Ready() {
-        PlayerSystem.Update();
-        InputSystem.Update();
+
+        saveSystem.Update();
+        UISystem.Update();
+        playerSystem.Update();
+        inputSystem.Update();
+    }
+
+    private enum GameState {
+        START,
+        Loading,
+        Ready
     }
 }

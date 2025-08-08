@@ -2,7 +2,6 @@ package com.AdventureRPG.SaveSystem;
 
 import java.util.Random;
 import java.io.File;
-
 import com.AdventureRPG.SettingsSystem.Settings;
 
 public class UserData {
@@ -11,19 +10,20 @@ public class UserData {
     private final Settings Settings;
     private final File path;
 
-    // User Data
+    // Seed Management
     private long Seed;
 
-    public UserData(SaveSystem SaveSystem) {
+    public UserData(SaveSystem saveSystem) {
 
         // Save System
-        this.Settings = SaveSystem.GameManager.settings;
-        this.path = SaveSystem.path;
+        this.Settings = saveSystem.settings;
+        this.path = saveSystem.path;
 
+        // Seed Management
         GenerateSeed();
     }
 
-    // Save System
+    // Save System \\
 
     public void LoadUserData(File Save) {
 
@@ -37,8 +37,9 @@ public class UserData {
 
     }
 
-    // User Data
+    // Seed Management
 
+    // TODO: this will need to be assessed later for a potential refactor
     public long Seed() {
         return Seed;
     }

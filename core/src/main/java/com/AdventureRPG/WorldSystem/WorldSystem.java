@@ -17,104 +17,139 @@ import com.badlogic.gdx.math.Vector3;
 
 public class WorldSystem {
 
-    // Blocks
-    public final Block[] blocks;
+    // Game Manager
+    public final GameManager gameManager;
+    public final SaveSystem saveSystem;
+    public final UISystem UISystem;
+    public final Settings settings;
+
+    // Block Management
+    private final Block[] blocks;
     private final String BLOCK_TEXTURE_PATH;
     private final int BLOCK_TEXTURE_SIZE;
     private final int BLOCK_ATLAS_PADDING;
     public final BlockAtlas BlockAtlas;
 
-    // Game
-    public final GameManager GameManager;
-    public final SaveSystem SaveSystem;
-    public final UISystem UISystem;
-    public final Settings settings;
-
     // World System
-    public final WorldTick WorldTick;
-    public final WorldReader WorldReader;
-    public final ChunkSystem ChunkSystem;
-    public final BiomeSystem BiomeSystem;
-    public final WorldGenerator WorldGenerator;
+    public final WorldTick worldTick;
+    public final WorldReader worldReader;
+    public final ChunkSystem chunkSystem;
+    public final BiomeSystem biomeSystem;
+    public final WorldGenerator worldGenerator;
 
     // Position
-    private Vector3 position;
-    private Vector3Int currentChunkCoordinate;
+    private Vector3 currentPosition;
+    private Vector3Int chunkCoordinate;
 
-    // Dependencies
-    public final Vector2Int WORLD_Scale;
+    // Settings
+    private final int CHUNK_SIZE;
+    private final int CHUNKS_PER_PIXEL;
+    public final Vector2Int WORLD_SCALE;
 
-    // Basse \\
+    private final int range;
+    private final int height;
 
-    public WorldSystem(GameManager GameManager) {
+    // Base \\
 
-        // Blocks
-        this.blocks = Loader.LoadBlocks(); // This needs to be called as soon as possible
+    public WorldSystem(GameManager gameManager) {
 
-        // Game
-        this.GameManager = GameManager;
-        this.SaveSystem = GameManager.SaveSystem;
-        this.UISystem = GameManager.UISystem;
-        this.settings = GameManager.settings;
+        // Game Manager
+        this.gameManager = gameManager;
+        this.saveSystem = gameManager.saveSystem;
+        this.UISystem = gameManager.UISystem;
+        this.settings = gameManager.settings;
 
+        // Block Management
+        this.blocks = Loader.LoadBlocks();
         this.BLOCK_TEXTURE_PATH = settings.BLOCK_TEXTURE_PATH;
         this.BLOCK_TEXTURE_SIZE = settings.BLOCK_TEXTURE_SIZE;
         this.BLOCK_ATLAS_PADDING = settings.BLOCK_ATLAS_PADDING;
         this.BlockAtlas = new BlockAtlas(BLOCK_TEXTURE_PATH, BLOCK_TEXTURE_SIZE, BLOCK_ATLAS_PADDING, settings.debug);
 
         // World System
-        this.WorldTick = new WorldTick(this);
-        this.WorldReader = new WorldReader(this);
-        this.WORLD_Scale = WorldReader.GetWorldScale();
-        this.ChunkSystem = new ChunkSystem(this);
-        this.BiomeSystem = new BiomeSystem(GameManager);
-        this.WorldGenerator = new WorldGenerator(this);
+        this.worldTick = new WorldTick(this);
+        this.worldReader = new WorldReader(this);
+        this.chunkSystem = new ChunkSystem(this);
+        this.biomeSystem = new BiomeSystem(gameManager);
+        this.worldGenerator = new WorldGenerator(this);
 
         // Position
-        this.position = new Vector3();
-        this.currentChunkCoordinate = new Vector3Int();
+        this.currentPosition = new Vector3();
+        this.chunkCoordinate = new Vector3Int();
+
+        // Settings
+        this.CHUNK_SIZE = settings.CHUNK_SIZE;
+        this.CHUNKS_PER_PIXEL = settings.CHUNKS_PER_PIXEL;
+        this.WORLD_SCALE = worldReader.GetWorldScale();
+
+        this.range = settings.MAX_RENDER_DISTANCE;
+        this.height = settings.MAX_RENDER_HEIGHT;
+    }
+
+    public void Awake() {
+
+        chunkSystem.Awake();
+        biomeSystem.Awake();
+    }
+
+    public void Start() {
+
+        chunkSystem.Start();
+        biomeSystem.Start();
     }
 
     public void Update() {
-        WorldTick.Update();
-        ChunkSystem.Update();
 
-        if (!ChunkSystem.HasQueue()) {
-            System.out.print("\rActive chunk: " + currentChunkCoordinate);
+        worldTick.Update();
+
+        chunkSystem.Update();
+        biomeSystem.Update();
+
+        if (!chunkSystem.HasQueue()) { // TODO: Remove debug line
+            System.out.print("\rActive chunk: " + chunkCoordinate);
             System.out.flush();
         }
     }
 
     public void Render(ModelBatch modelBatch) {
-        ChunkSystem.Render(modelBatch);
+
+        chunkSystem.Render(modelBatch);
+        biomeSystem.Render();
     }
 
-    // Position
+    // Movement \\
 
-    public Vector3 position() {
-        return position;
+    public Vector3 Position() {
+        return currentPosition;
     }
 
-    public void MoveTo(Vector3 input) {
+    public Vector3Int Chunk() {
+        return chunkCoordinate;
+    }
 
-        position = WrapAroundChunk(input);
-        Vector3Int calculatedChunk = WrapChunksAroundWorld(input);
+    public void UpdatePosition(Vector3 currentPosition, Vector3Int chunkCoordinate) {
 
-        if (calculatedChunk == currentChunkCoordinate)
+        this.currentPosition = currentPosition;
+
+        if (this.chunkCoordinate.equals(chunkCoordinate))
             return;
 
-        currentChunkCoordinate = calculatedChunk;
+        this.chunkCoordinate.set(chunkCoordinate);
 
         LoadChunks();
     }
 
     public void LoadChunks() {
-        ChunkSystem.LoadChunks(currentChunkCoordinate);
+        chunkSystem.LoadChunks(chunkCoordinate);
     }
 
-    // Blocks
+    // Block Management \\
 
-    public Block getBlockByName(String name) {
+    public Block GetBlockByID(int id) {
+        return (id >= 0 && id < blocks.length) ? blocks[id] : null;
+    }
+
+    public Block GetBlockByName(String name) {
 
         for (Block block : blocks) {
             if (block != null && block.name.equalsIgnoreCase(name)) {
@@ -125,63 +160,57 @@ public class WorldSystem {
         throw new RuntimeException("Block not found: " + name);
     }
 
-    public Block getBlockByID(int id) {
-        return (id >= 0 && id < blocks.length) ? blocks[id] : null;
-    }
-
-    // Wrap Logic
-
-    public Vector3 WrapAroundBlock(Vector3 input) {
-        return new Vector3(
-                WrapAxisAroundBlock(input.x),
-                WrapAxisAroundBlock(input.y),
-                WrapAxisAroundBlock(input.z));
-    }
-
-    private float WrapAxisAroundBlock(float value) {
-        value = value % settings.BLOCK_SIZE;
-
-        if (value < 0)
-            value += settings.BLOCK_SIZE;
-
-        return value;
-    }
+    // Wrap Logic \\ //TODO: I am returning a lot of new Vectors here
 
     public Vector3 WrapAroundChunk(Vector3 input) {
-        return new Vector3(
-                WrapAxisAroundChunk(input.x),
-                WrapAxisAroundChunk(input.y),
-                WrapAxisAroundChunk(input.z));
+
+        float x = input.x % CHUNK_SIZE;
+        if (x < 0)
+            x += CHUNK_SIZE;
+
+        float y = input.y % CHUNK_SIZE;
+        if (y < 0)
+            y += CHUNK_SIZE;
+
+        float z = input.z % CHUNK_SIZE;
+        if (z < 0)
+            z += CHUNK_SIZE;
+
+        return new Vector3(x, y, z);
     }
 
-    private float WrapAxisAroundChunk(float value) {
-        value = value % settings.CHUNK_SIZE;
+    public Vector3Int WrapAroundWorld(Vector3Int input) {
 
-        if (value < 0)
-            value += settings.CHUNK_SIZE;
-
-        return value;
-    }
-
-    public Vector3Int WrapChunksAroundWorld(Vector3 input) {
-        int X = (int) Math.floor(input.x);
-        int Y = (int) Math.floor(input.y);
-        int Z = (int) Math.floor(input.z);
-
-        X = X % (WORLD_Scale.x / settings.CHUNK_SIZE);
+        int X = input.x % (WORLD_SCALE.x / CHUNK_SIZE);
         if (X < 0)
-            X += (WORLD_Scale.x / settings.CHUNK_SIZE);
+            X += (WORLD_SCALE.x / CHUNK_SIZE);
 
-        Z = Z % (WORLD_Scale.y / settings.CHUNK_SIZE);
+        int Y = input.y;
+
+        int Z = input.z % (WORLD_SCALE.y / CHUNK_SIZE);
         if (Z < 0)
-            Z += (WORLD_Scale.y / settings.CHUNK_SIZE);
+            Z += (WORLD_SCALE.y / CHUNK_SIZE);
 
         return new Vector3Int(X, Y, Z);
     }
 
+    public Vector3 WrapAroundGrid(Vector3 input) {
+
+        float maxX = range * CHUNK_SIZE;
+        float maxY = height * CHUNK_SIZE;
+        float maxZ = range * CHUNK_SIZE;
+
+        float X = ((input.x + maxX / 2) % maxX + maxX) % maxX - maxX / 2;
+        float Y = ((input.y + maxY / 2) % maxY + maxY) % maxY - maxY / 2;
+        float Z = ((input.z + maxZ / 2) % maxZ + maxZ) % maxZ - maxZ / 2;
+
+        return new Vector3(X, Y, Z);
+    }
+
     public Vector2Int WrapAroundImageRegion(Vector2 input) {
-        int scaleX = (WORLD_Scale.x / settings.CHUNKS_PER_PIXEL / settings.CHUNK_SIZE);
-        int scaleY = (WORLD_Scale.y / settings.CHUNKS_PER_PIXEL / settings.CHUNK_SIZE);
+
+        int scaleX = (WORLD_SCALE.x / CHUNKS_PER_PIXEL / CHUNK_SIZE);
+        int scaleY = (WORLD_SCALE.y / CHUNKS_PER_PIXEL / CHUNK_SIZE);
 
         int wrappedX = (int) Math.floor(input.x) % scaleX;
         if (wrappedX < 0)
@@ -193,17 +222,4 @@ public class WorldSystem {
 
         return new Vector2Int(wrappedX, wrappedZ);
     }
-
-    public Vector3Int WrapAroundWorld(Vector3Int input) {
-        int wrappedX = input.x % WORLD_Scale.x;
-        if (wrappedX < 0)
-            wrappedX += WORLD_Scale.x;
-
-        int wrappedZ = input.z % WORLD_Scale.y;
-        if (wrappedZ < 0)
-            wrappedZ += WORLD_Scale.y;
-
-        return new Vector3Int(wrappedX, input.y, wrappedZ);
-    }
-
 }

@@ -1,30 +1,49 @@
 package com.AdventureRPG.SaveSystem;
 
 import java.io.File;
-
 import com.AdventureRPG.GameManager;
+import com.AdventureRPG.SettingsSystem.Settings;
 
+// TODO: Eventually the whole save system will need a refactor
 public class SaveSystem {
 
     // Game
-    public final GameManager GameManager;
+    public final Settings settings;
+    public final GameManager gameManager;
     public final File path;
 
     // Save System
-    public final UserData UserData;
-    public final ChunkData ChunkData;
+    public final UserData userData;
+    public final ChunkData chunkData;
 
     // Base \\
 
-    public SaveSystem(GameManager GameManager) {
+    public SaveSystem(GameManager gameManager) {
 
         // Game
-        this.GameManager = GameManager;
-        this.path = GameManager.path;
+        this.settings = gameManager.settings;
+        this.gameManager = gameManager;
+        this.path = gameManager.path;
 
         // Save System
-        this.UserData = new UserData(this);
-        this.ChunkData = new ChunkData(this);
+        this.userData = new UserData(this);
+        this.chunkData = new ChunkData(this);
+    }
+
+    public void Awake() {
+
+    }
+
+    public void Start() {
+
+    }
+
+    public void Update() {
+
+    }
+
+    public void Render() {
+
     }
 
     // Save System \\
@@ -34,26 +53,26 @@ public class SaveSystem {
         return false;
     }
 
-    // User Data
+    // User Data \\
 
     public void LoadUserData() {
         if (HasNewestSave())
-            UserData.LoadUserData(path);
+            userData.LoadUserData(path);
     }
 
     public void LoadUserData(File Save) {
-        UserData.LoadUserData(Save);
+        userData.LoadUserData(Save);
     }
 
-    // Chunk Data
+    // Chunk Data \\
 
     public void LoadChunkData() {
         if (HasNewestSave())
-            ChunkData.LoadChunkData(path);
+            chunkData.LoadChunkData(path);
     }
 
     public void LoadChunkData(File Save) {
-        ChunkData.LoadChunkData(Save);
+        chunkData.LoadChunkData(Save);
     }
 
 }

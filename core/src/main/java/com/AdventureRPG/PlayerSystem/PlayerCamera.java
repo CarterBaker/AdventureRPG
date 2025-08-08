@@ -5,15 +5,22 @@ import com.badlogic.gdx.math.Vector3;
 
 public class PlayerCamera {
 
+    // Camera
     private final PerspectiveCamera perspectiveCamera;
     private float yaw = 0f;
     private float pitch = 0f;
 
+    // Base \\
+
     public PlayerCamera(float fov, float viewportWidth, float viewportHeight) {
+
+        // Camera
         perspectiveCamera = new PerspectiveCamera(fov, viewportWidth, viewportHeight);
     }
 
     public void Awake() {
+
+        // Initial camera settings
         perspectiveCamera.near = 0.1f;
         perspectiveCamera.far = 1000f;
 
@@ -24,13 +31,25 @@ public class PlayerCamera {
         perspectiveCamera.update();
     }
 
-    public void updateViewport(float width, float height) {
+    // Camera \\
+
+    public PerspectiveCamera Get() {
+        return perspectiveCamera;
+    }
+
+    public Vector3 Direction() {
+        return perspectiveCamera.direction;
+    }
+
+    // Called when changing window size
+    public void UpdateViewport(float width, float height) {
         perspectiveCamera.viewportWidth = width;
         perspectiveCamera.viewportHeight = height;
         perspectiveCamera.update();
     }
 
-    public void rotate(float deltaYaw, float deltaPitch) {
+    // Called from inputSystem to rotate the camera
+    public void Rotate(float deltaYaw, float deltaPitch) {
         yaw += deltaYaw;
         pitch += deltaPitch;
 
@@ -47,13 +66,5 @@ public class PlayerCamera {
 
         perspectiveCamera.direction.set(direction);
         perspectiveCamera.update();
-    }
-
-    public PerspectiveCamera getCamera() {
-        return perspectiveCamera;
-    }
-
-    public Vector3 Direction() {
-        return perspectiveCamera.direction;
     }
 }

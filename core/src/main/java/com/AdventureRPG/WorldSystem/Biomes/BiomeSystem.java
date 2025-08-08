@@ -22,16 +22,32 @@ public class BiomeSystem {
 
     public BiomeSystem(GameManager gameManager) {
 
-        // Biome System
-        this.biomes = Loader.LoadBiomes(gameManager); // This needs to be called as soon as possible
-
         // Base
         this.settings = gameManager.settings;
+
+        // Biome System
+        this.biomes = Loader.LoadBiomes(gameManager);
 
         // Blending
         this.relatedBiomes = OrganizeSimilarBiomes(biomes);
         this.relatedSubTerrainianBiomes = OrganizeSubTerrainianBiomes();
         this.relatedSurfaceBiomes = OrganizeSurfaceBiomes();
+    }
+
+    public void Awake() {
+
+    }
+
+    public void Start() {
+
+    }
+
+    public void Update() {
+
+    }
+
+    public void Render() {
+
     }
 
     // Biome System \\
@@ -88,16 +104,15 @@ public class BiomeSystem {
         return biomes[ID];
     }
 
-    public int[] getRelatedBiomes(int ID) {
+    public int[] GetRelatedBiomes(int ID) {
         return relatedBiomes.get(ID);
     }
 
-    public int[] getRelatedSubTerrainianBiomes(int ID) {
+    public int[] GetRelatedSubTerrainianBiomes(int ID) {
         return relatedSubTerrainianBiomes.get(ID);
     }
 
-    public int[] getRelatedSurfaceBiomes(int ID) {
+    public int[] GetRelatedSurfaceBiomes(int ID) {
         return relatedSurfaceBiomes.get(ID);
     }
-
 }

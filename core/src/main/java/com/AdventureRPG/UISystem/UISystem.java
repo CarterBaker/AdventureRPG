@@ -9,15 +9,33 @@ import com.AdventureRPG.GameManager;
 public class UISystem {
 
     // Game Manager
-    public final GameManager GameManager;
+    public final GameManager gameManager;
 
     // UI System
     private final List<MenuType> openMenus = new ArrayList<>();
 
     // Base \\
 
-    public UISystem(GameManager GameManager) {
-        this.GameManager = GameManager;
+    public UISystem(GameManager gameManager) {
+
+        // Game Manager
+        this.gameManager = gameManager;
+    }
+
+    public void Awake() {
+
+    }
+
+    public void Start() {
+
+    }
+
+    public void Update() {
+
+    }
+
+    public void Render() {
+
     }
 
     // UI System \\
@@ -33,7 +51,7 @@ public class UISystem {
         menuInstance.Open();
 
         if (menuInstance.BlockInput())
-            GameManager.InputSystem.Block(true);
+            gameManager.inputSystem.Block(true);
 
         return menuInstance;
     }
@@ -61,11 +79,11 @@ public class UISystem {
 
         for (MenuType menu : openMenus) {
             if (menu.BlockInput()) {
-                GameManager.InputSystem.Block(true);
+                gameManager.inputSystem.Block(true);
                 return;
             }
         }
 
-        GameManager.InputSystem.Block(false);
+        gameManager.inputSystem.Block(false);
     }
 }

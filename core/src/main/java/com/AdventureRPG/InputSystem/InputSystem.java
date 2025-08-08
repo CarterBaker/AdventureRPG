@@ -12,26 +12,22 @@ public class InputSystem extends InputAdapter {
     // Game Manager
     public final PlayerSystem PlayerSystem;
 
+    // Input
     private boolean blockInput = false;
 
-    // Input \\
-
     // Rotation
-    private final float sensitivity = 0.15f; // TODO: Move this to settings
-
-    // Movement
-    private boolean W = false;
-    private boolean A = false;
-    private boolean S = false;
-    private boolean D = false;
-
-    private boolean SHIFT = false;
-    private boolean SPACE = false;
+    private final float sensitivity = 0.15f; // TODO: Move sensitivity to Settings()
 
     // Base \\
 
-    public InputSystem(GameManager GameManager) {
-        this.PlayerSystem = GameManager.PlayerSystem;
+    public InputSystem(GameManager gameManager) {
+
+        // Game Manager
+        this.PlayerSystem = gameManager.playerSystem;
+    }
+
+    public void Awake() {
+
     }
 
     public void Start() {
@@ -44,17 +40,22 @@ public class InputSystem extends InputAdapter {
         UpdateMovement();
     }
 
+    public void Render() {
+
+    }
+
+    // Input \\
+
+    // Movement
+    private boolean W = false;
+    private boolean A = false;
+    private boolean S = false;
+    private boolean D = false;
+
+    private boolean SHIFT = false;
+    private boolean SPACE = false;
+
     // Input System \\
-
-    public void Block(boolean block) {
-
-        this.blockInput = block;
-        Gdx.input.setCursorCatched(!block);
-    }
-
-    public boolean isLocked() {
-        return blockInput;
-    }
 
     @Override
     public boolean keyDown(int keycode) {
@@ -94,6 +95,18 @@ public class InputSystem extends InputAdapter {
         return true;
     }
 
+    // Input \\
+
+    public void Block(boolean block) {
+
+        this.blockInput = block;
+        Gdx.input.setCursorCatched(!block);
+    }
+
+    public boolean isLocked() {
+        return blockInput;
+    }
+
     private void UpdateRotation() {
 
         if (blockInput)
@@ -102,7 +115,7 @@ public class InputSystem extends InputAdapter {
         float deltaX = Gdx.input.getDeltaX() * sensitivity;
         float deltaY = -Gdx.input.getDeltaY() * sensitivity;
 
-        PlayerSystem.camera.rotate(deltaX, deltaY);
+        PlayerSystem.camera.Rotate(deltaX, deltaY);
     }
 
     private void UpdateMovement() {
@@ -110,6 +123,7 @@ public class InputSystem extends InputAdapter {
         if (blockInput)
             return;
 
+        // TODO: I need to retrofit this code to use less new Vector3Ints
         Vector3Int movement = new Vector3Int(0, 0, 0);
 
         if (W)
@@ -127,7 +141,7 @@ public class InputSystem extends InputAdapter {
             movement = movement.add(new Vector3Int(0, 1, 0));
 
         if (!movement.equals(new Vector3Int())) {
-            PlayerSystem.Move(movement);
+            PlayerSystem.position.Move(movement);
         }
     }
 }

@@ -20,10 +20,10 @@ import com.badlogic.gdx.math.Vector3;
 public class ChunkSystem {
 
     // Chunk System
-    private final WorldSystem WorldSystem;
-    private final ChunkData ChunkData;
+    private final WorldSystem worldSystem;
+    private final ChunkData chunkData;
     private final Settings settings;
-    private final WorldTick WorldTick;
+    private final WorldTick worldTick;
 
     // Data
     private final int MAX_CHUNK_LOADS_PER_FRAME;
@@ -59,7 +59,7 @@ public class ChunkSystem {
     private final ArrayList<Vector3Int> gridCoordinates;
     private final ArrayList<Vector3Int> chunkCoordinates;
     private final Map<Vector3Int, Vector3Int> chunkToGridMap;
-    private final Vector3 wrappedValue;
+    private final Vector3Int wrappedValue;
     private final HashSet<Vector3Int> loadedChunkCoordinates;
     private final Vector3Int lookupKey;
 
@@ -68,10 +68,10 @@ public class ChunkSystem {
     public ChunkSystem(WorldSystem WorldSystem) {
 
         // Chunk System
-        this.WorldSystem = WorldSystem;
-        this.ChunkData = WorldSystem.SaveSystem.ChunkData;
+        this.worldSystem = WorldSystem;
+        this.chunkData = WorldSystem.saveSystem.chunkData;
         this.settings = WorldSystem.settings;
-        this.WorldTick = WorldSystem.WorldTick;
+        this.worldTick = WorldSystem.worldTick;
 
         // Data
         this.MAX_CHUNK_LOADS_PER_FRAME = settings.MAX_CHUNK_LOADS_PER_FRAME;
@@ -110,17 +110,25 @@ public class ChunkSystem {
             chunkCoordinates.add(new Vector3Int());
         }
 
-        this.wrappedValue = new Vector3();
+        this.wrappedValue = new Vector3Int();
 
         this.loadedChunkCoordinates = new HashSet<>();
         this.lookupKey = new Vector3Int();
+    }
+
+    public void Awake() {
+
+    }
+
+    public void Start() {
+
     }
 
     public void Update() {
 
         loadedChunksThisFrame = 0;
 
-        if (WorldTick.Tick())
+        if (worldTick.Tick())
             loadedChunksThisTick = 0;
 
         if (!HasQueue())
@@ -140,23 +148,28 @@ public class ChunkSystem {
     }
 
     private void RepositionChunks(ModelBatch modelBatch) {
+        Vector3 playerPos = worldSystem.Position(); // Smooth float pos inside the current chunk
+
+        int baseX = currentChunkCoordinate.x * size;
+        int baseY = currentChunkCoordinate.y * size;
+        int baseZ = currentChunkCoordinate.z * size;
+
+        float worldOffsetX = baseX + playerPos.x;
+        float worldOffsetY = baseY + playerPos.y;
+        float worldOffsetZ = baseZ + playerPos.z;
 
         for (Map.Entry<Chunk, ModelInstance> entry : chunkModels.entrySet()) {
 
             Chunk chunk = entry.getKey();
             ModelInstance model = entry.getValue();
 
-            Vector3Int chunkPosition = chunk.position;
+            float X = chunk.position.x - worldOffsetX;
+            float Y = chunk.position.y - worldOffsetY;
+            float Z = chunk.position.z - worldOffsetZ;
 
-            // Calculate world-relative position
-            float offsetX = currentChunkCoordinate.x * size - chunkPosition.x;
-            float offsetY = currentChunkCoordinate.y * size - chunkPosition.y;
-            float offsetZ = currentChunkCoordinate.z * size - chunkPosition.z;
+            Vector3 offset = worldSystem.WrapAroundGrid(new Vector3(X, Y, Z));
 
-            // Apply the translation to the chunk's mesh
-            model.transform.setToTranslation(offsetX, offsetY, offsetZ);
-
-            // Render the mesh
+            model.transform.setToTranslation(offset);
             modelBatch.render(model);
 
             // TODO: Eventually when I add lighting I need to pass the environment
@@ -197,7 +210,7 @@ public class ChunkSystem {
                     int bz = currentChunkCoordinate.z + z * size;
 
                     wrappedValue.set(bx, by, bz);
-                    Vector3Int wrappedChunkCoordinate = WorldSystem.WrapChunksAroundWorld(wrappedValue);
+                    Vector3Int wrappedChunkCoordinate = worldSystem.WrapAroundWorld(wrappedValue);
 
                     Vector3Int value = chunkCoordinates.get(index);
                     value.set(wrappedChunkCoordinate);
@@ -324,10 +337,10 @@ public class ChunkSystem {
             Vector3Int gridCoordinate = entry.getKey();
             Vector3Int chunkCoordinate = entry.getValue();
 
-            Chunk chunk = ChunkData.ReadChunk(chunkCoordinate);
+            Chunk chunk = chunkData.ReadChunk(chunkCoordinate);
 
             if (chunk == null)
-                chunk = WorldSystem.WorldGenerator.GenerateChunk(chunkCoordinate, gridCoordinate);
+                chunk = worldSystem.worldGenerator.GenerateChunk(chunkCoordinate, gridCoordinate);
             else // The world generator handles it's own positioning logic
                 chunk.MoveTo(gridCoordinate);
 

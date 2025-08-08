@@ -4,27 +4,23 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
 import com.AdventureRPG.Util.Vector2Int;
 
+//TODO: Not going to add all the notes this will need to be reassesed later similar to settings
 public class Biome {
 
     // Base
-
     public final String name;
     public final int ID;
 
     // Blending
-
     public final Set<Integer> similarBiomes;
 
     // Elevation
-
     public final int elevation;
     public final int elevationBlending;
 
-    // Water Biomes
-
+    // Aqautic Biomes
     public final boolean aquatic;
     public final boolean ocean;
 
@@ -36,7 +32,6 @@ public class Biome {
     public final float waterHeightScaleY;
 
     // SubTerrainian Biomes
-
     public final boolean allowCaves;
     public final boolean subTerrainian;
     public final boolean allowSurfaceBreak;
@@ -54,23 +49,26 @@ public class Biome {
     public final float biomeBlendScaleY;
 
     // Block Composition
-
     public final int airBlock;
     public final int waterBlock;
     private final Map<Integer, Vector2Int> BiomeComposition;
 
-    // Biome Construction
+    // Base \\
 
     public Biome() {
 
+        // Base
         this.name = "null";
         this.ID = 0;
 
+        // Blending
         this.similarBiomes = new HashSet<>();
 
+        // Elevation
         this.elevation = 0;
         this.elevationBlending = 0;
 
+        // Aqautic Biomes
         this.aquatic = false;
         this.ocean = false;
 
@@ -81,6 +79,7 @@ public class Biome {
         this.waterHeightScaleX = 0;
         this.waterHeightScaleY = 0;
 
+        // SubTerrainian Biomes
         this.allowCaves = false;
         this.subTerrainian = false;
         this.allowSurfaceBreak = false;
@@ -97,6 +96,7 @@ public class Biome {
         this.biomeBlendScaleX = 0f;
         this.biomeBlendScaleY = 0f;
 
+        // Block Composition
         this.airBlock = 0;
         this.waterBlock = 0;
         this.BiomeComposition = new HashMap<>();
@@ -325,7 +325,7 @@ public class Biome {
 
     // Accessible
 
-    public int getBlockForElevation(int blockPosition, int MIN_WORLD_ELEVATION, int elevation) {
+    public int GetBlockForElevation(int blockPosition, int MIN_WORLD_ELEVATION, int elevation) {
 
         // Total height span for this column
         int columnHeight = elevation - MIN_WORLD_ELEVATION;
@@ -363,7 +363,7 @@ public class Biome {
         return selectedBlockID;
     }
 
-    public boolean isCave(float noiseValue) {
+    public boolean IsCave(float noiseValue) {
         return noiseValue > caveThreshold;
     }
 }

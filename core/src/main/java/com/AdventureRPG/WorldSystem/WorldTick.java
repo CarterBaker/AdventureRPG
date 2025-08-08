@@ -5,8 +5,8 @@ import com.AdventureRPG.SettingsSystem.Settings;
 
 public class WorldTick {
 
-    // Settings
-    private final GameManager GameManager;
+    // Game Manager
+    private final GameManager gameManager;
     private final Settings settings;
     private final float tickTime;
 
@@ -14,10 +14,15 @@ public class WorldTick {
     private float currentTime = 0f;
     private boolean Tick;
 
-    public WorldTick(WorldSystem WorldSystem) {
+    // Base \\
 
-        this.GameManager = WorldSystem.GameManager;
-        this.settings = WorldSystem.settings;
+    public WorldTick(WorldSystem worldSystem) {
+
+        // Game Manager
+        this.gameManager = worldSystem.gameManager;
+        this.settings = worldSystem.settings;
+
+        // Tick
         this.tickTime = settings.WORLD_TICK;
     }
 
@@ -28,9 +33,11 @@ public class WorldTick {
             currentTime = 0f;
         } else {
             this.Tick = false;
-            currentTime += GameManager.DeltaTime();
+            currentTime += gameManager.DeltaTime();
         }
     }
+
+    // Tick \\
 
     public boolean Tick() {
         return Tick;
