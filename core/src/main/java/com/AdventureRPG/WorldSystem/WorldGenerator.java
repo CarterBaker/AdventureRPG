@@ -210,7 +210,7 @@ public class WorldGenerator {
 
         Biome baseBiome = biomeSystem.GetBiomeByID(region.regionID);
 
-        elevation = BlendedElevation(region, baseBiome);
+        elevation = BlendedElevation(region, baseBiome, position);
         boolean isUnderground = y < elevation;
 
         float biomeBlendScaleX = baseBiome.biomeBlendScaleX * x;
@@ -229,21 +229,33 @@ public class WorldGenerator {
         index = Math.min(index, related.length - 1);
 
         Biome generatedBiome = biomeSystem.GetBiomeByID(related[index]);
-        elevation = BlendedElevation(region, generatedBiome);
+        elevation = BlendedElevation(region, generatedBiome, position);
 
         return generatedBiome;
     }
 
     // Elevation \\
 
-    private int BlendedElevation(WorldRegion region, Biome biome) {
-
-        int imageElevation = region.elevation;
-        int biomeElevation = biome.elevation;
+    private int BlendedElevation(WorldRegion region, Biome biome, Vector3Int position) {
+        int imageElevation = region.elevation; // from PNG
+        int biomeElevation = biome.elevation; // biome bias
         int biomeBlend = biome.elevationBlending;
 
+        // Base blended elevation from PNG + biome
         int blendedElevation = imageElevation * biomeElevation / (biomeBlend * BASE_ELEVATION_BLENDING);
 
-        return (BASE_WORLD_ELEVATION + blendedElevation);
+        // === Noise variation ===
+        // Low frequency for big hills/mountains
+        float noiseScale = 0.0025f; // smooth variation across world
+        float noiseValue = OpenSimplex2.noise2(
+                Seed,
+                position.x * noiseScale,
+                position.z * noiseScale);
+
+        // Map noise (-1..1) to vertical offset based on total world height range
+        int noiseOffset = (int) (noiseValue * (MAX_WORLD_ELEVATION - MIN_WORLD_ELEVATION) * 0.05f);
+
+        return BASE_WORLD_ELEVATION + blendedElevation + noiseOffset;
     }
+
 }

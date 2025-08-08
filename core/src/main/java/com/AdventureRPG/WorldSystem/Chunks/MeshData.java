@@ -35,11 +35,11 @@ public class MeshData {
 
         // Two triangles (0, 1, 2) and (2, 3, 0)
         indices.add(vertexCount);
+        indices.add(vertexCount + 2);
         indices.add(vertexCount + 1);
-        indices.add(vertexCount + 2);
-        indices.add(vertexCount + 2);
-        indices.add(vertexCount + 3);
         indices.add(vertexCount);
+        indices.add(vertexCount + 3);
+        indices.add(vertexCount + 2);
         vertexCount += 4;
     }
 
