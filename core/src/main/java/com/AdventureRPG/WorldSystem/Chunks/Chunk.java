@@ -4,6 +4,7 @@ import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.BlockAtlas;
+import com.AdventureRPG.WorldSystem.Blocks.BlockData;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.VertexAttribute;
@@ -16,16 +17,17 @@ import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 
 public class Chunk {
 
+    // Game Manager
+    private final WorldSystem worldSystem;
+    private final BlockAtlas BlockAtlas;
+
     // Chunk
     public final Vector3Int coordinate;
-    private Block[][][] blocks;
-
-    // Base
     public final Vector3Int position;
+    private final NeighborChunks NeighborChunks;
+    private BlockData[][][] blocks;
 
     // Model
-    private final NeighborChunks NeighborChunks;
-    private final BlockAtlas BlockAtlas;
     private ModelInstance mesh;
     private MeshData meshData;
 
@@ -34,23 +36,24 @@ public class Chunk {
 
     // Base \\
 
-    public Chunk(Vector3Int coordinate, Vector3Int position, WorldSystem WorldSystem) {
+    public Chunk(WorldSystem worldSystem, Vector3Int coordinate, Vector3Int position) {
+
+        // Game Manager
+        this.worldSystem = worldSystem;
+        this.BlockAtlas = worldSystem.BlockAtlas;
 
         // Chunk
         this.coordinate = coordinate;
-
-        // Base
         this.position = position;
-
-        // Model
         this.NeighborChunks = new NeighborChunks();
-        this.BlockAtlas = WorldSystem.BlockAtlas;
 
         // Save System
         this.isDirty = false;
     }
 
-    public void Generate(Block[][][] blocks) {
+    // Chunk \\
+
+    public void Generate(BlockData[][][] blocks) {
         this.blocks = blocks;
     }
 
@@ -58,17 +61,27 @@ public class Chunk {
         this.position.set(position);
     }
 
-    public Block getBlock(int localX, int localY, int localZ) {
+    public BlockData getBlockData(int localX, int localY, int localZ) {
         return blocks[localX][localY][localZ];
     }
 
-    public void setBlock(int x, int y, int z, Block block) {
-        blocks[x][y][z] = block;
+    public Block getBlock(int localX, int localY, int localZ) {
+        return worldSystem.GetBlockByID(blocks[localX][localY][localZ].blockID);
+    }
+
+    public void PlaceBlock(int x, int y, int z, int blockID) {
+        blocks[x][y][z].PlaceBlock(blockID);
         isDirty = true;
         TryBuild();
     }
 
-    // Mesh \\
+    public void BreakBlock(int x, int y, int z) {
+        blocks[x][y][z].BreakBlock();
+        isDirty = true;
+        TryBuild();
+    }
+
+    // Model \\
 
     public ModelInstance getMesh() {
         return mesh;

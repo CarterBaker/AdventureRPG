@@ -6,6 +6,7 @@ import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.Biomes.Biome;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
+import com.AdventureRPG.WorldSystem.Blocks.BlockData;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.AdventureRPG.Util.OpenSimplex2;
@@ -109,19 +110,21 @@ public class WorldGenerator {
     public Chunk GenerateChunk(Vector3Int coordinate, Vector3Int position) {
 
         WorldRegion WorldRegion = worldSystem.worldReader.WorldRegionFromPosition(coordinate);
-        Chunk chunk = new Chunk(coordinate, position, worldSystem);
+        Chunk chunk = new Chunk(worldSystem, coordinate, position);
 
-        Block[][][] blocks = new Block[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
+        BlockData[][][] blocks = new BlockData[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
 
         for (int x = 0; x < CHUNK_SIZE; x++) {
             for (int y = 0; y < CHUNK_SIZE; y++) {
                 for (int z = 0; z < CHUNK_SIZE; z++) {
 
+                    biome = GenerateBiome(WorldRegion, position);
+
                     Vector3Int blockPos = new Vector3Int(x, y, z).add(coordinate);
+                    int blockID = GenerateBlock(WorldRegion, blockPos);
 
-                    Block block = GenerateBlock(WorldRegion, blockPos);
-
-                    blocks[x][y][z] = block;
+                    blocks[x][y][z] = new BlockData(worldSystem, biome);
+                    blocks[x][y][z].PlaceBlock(blockID);
                 }
             }
         }
@@ -133,28 +136,27 @@ public class WorldGenerator {
 
     // Block \\
 
-    private Block GenerateBlock(WorldRegion region, Vector3Int position) {
+    private int GenerateBlock(WorldRegion region, Vector3Int position) {
 
         int x = position.x;
         int y = position.y;
         int z = position.z;
 
         if (y < MIN_WORLD_ELEVATION)
-            return LAVA_BLOCK;
+            return LAVA_BLOCK.ID;
         if (y > MAX_WORLD_ELEVATION)
-            return VACUUM_BLOCK;
+            return VACUUM_BLOCK.ID;
 
-        biome = GenerateBiome(region, position);
         Block airBlock = worldSystem.GetBlockByID(biome.airBlock);
         Block waterBlock = worldSystem.GetBlockByID(biome.waterBlock);
 
         // Only fill water if above terrain and below sea level
         if (biome.ocean && y > elevation && y <= BASE_OCEAN_LEVEL)
-            return waterBlock;
+            return waterBlock.ID;
 
         // Fill air blocks above terrain
         else if (y > elevation)
-            return airBlock;
+            return airBlock.ID;
 
         // Water noise for variation
         float waterNoiseScaleX = biome.waterNoiseScaleX * x;
@@ -171,7 +173,7 @@ public class WorldGenerator {
                 + waterHeighValue * (MAX_WORLD_ELEVATION - MIN_WORLD_ELEVATION));
 
         if (!biome.ocean && biome.aquatic && y <= localWaterHeight && waterNoise > waterThreshold)
-            return waterBlock;
+            return waterBlock.ID;
 
         // Caves - only apply if under cave elevation and under terrain height
         if (y > MIN_CAVE_ELEVATION && y < elevation && biome.allowCaves) {
@@ -182,7 +184,7 @@ public class WorldGenerator {
                     z * biome.caveNoiseScaleZ);
 
             if (biome.IsCave(caveNoise)) {
-                return biome.aquatic ? waterBlock : airBlock;
+                return biome.aquatic ? waterBlock.ID : airBlock.ID;
             }
         }
 
@@ -193,11 +195,11 @@ public class WorldGenerator {
         float surfaceBreakNoise = OpenSimplex2.noise2(Seed + SURFACE_BREAK__OFFSET, breakNoiseScaleX, breakNoiseScaleY);
 
         if (biome.allowSurfaceBreak && y == elevation && surfaceBreakNoise > breakThreshold) {
-            return airBlock;
+            return airBlock.ID;
         }
 
         // Terrain
-        return worldSystem.GetBlockByID(biome.GetBlockForElevation(y, MIN_WORLD_ELEVATION, elevation));
+        return biome.GetBlockForElevation(y, MIN_WORLD_ELEVATION, elevation);
 
     }
 

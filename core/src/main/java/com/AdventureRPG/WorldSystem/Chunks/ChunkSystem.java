@@ -13,11 +13,15 @@ import com.AdventureRPG.Util.Direction;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
+import com.AdventureRPG.WorldSystem.Blocks.BlockData;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.Vector3;
 
 public class ChunkSystem {
+
+    // Debug
+    private final boolean debug = true;
 
     // Chunk System
     private final WorldSystem worldSystem;
@@ -174,6 +178,9 @@ public class ChunkSystem {
 
             // TODO: Eventually when I add lighting I need to pass the environment
             // modelBatch.render(model, WorldSystem.GameManager.environment);
+
+            if (debug && !HasQueue())
+                Debug();
         }
     }
 
@@ -472,4 +479,32 @@ public class ChunkSystem {
 
         abstract boolean process(ChunkSystem system);
     }
+
+    // Debug \\
+
+    private void Debug() {
+
+        Vector3 currentPosition = worldSystem.Position();
+
+        int blockPositionX = (int) Math.floor(currentPosition.x);
+        int blockPositionY = (int) Math.floor(currentPosition.y);
+        int blockPositionZ = (int) Math.floor(currentPosition.z);
+
+        Chunk chunk = loadedChunks.get(currentChunkCoordinate.multiply(size));
+
+        if (chunk == null)
+            return;
+
+        BlockData data = chunk.getBlockData(blockPositionX, blockPositionY, blockPositionZ);
+
+        if (data == null)
+            return;
+
+        System.out.print("\rChunk Coordinate: " + currentChunkCoordinate.toString() +
+                ", Block Coordinate: " + new Vector3Int(blockPositionX, blockPositionY, blockPositionZ).toString() +
+                ", Biome: " + worldSystem.biomeSystem.GetBiomeByID(data.biomeID).name +
+                ", Block: " + worldSystem.GetBlockByID(data.blockID).name);
+        System.out.flush();
+    }
+
 }
