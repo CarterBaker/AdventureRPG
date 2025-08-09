@@ -104,11 +104,6 @@ public class WorldSystem {
 
         chunkSystem.Update();
         biomeSystem.Update();
-
-        if (!chunkSystem.HasQueue()) { // TODO: Remove debug line
-            System.out.print("\rActive chunk: " + chunkCoordinate);
-            System.out.flush();
-        }
     }
 
     public void Render(ModelBatch modelBatch) {
