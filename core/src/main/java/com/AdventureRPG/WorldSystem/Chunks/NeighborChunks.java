@@ -8,11 +8,11 @@ import com.AdventureRPG.Util.Direction;
 public class NeighborChunks {
 
     private Chunk up;
+    private Chunk north;
+    private Chunk south;
+    private Chunk east;
+    private Chunk west;
     private Chunk down;
-    private Chunk left;
-    private Chunk right;
-    private Chunk front;
-    private Chunk back;
 
     private Set<Chunk> chunks;
 
@@ -23,11 +23,11 @@ public class NeighborChunks {
     public void set(Direction direction, Chunk chunk) {
         switch (direction) {
             case UP -> up = chunk;
+            case NORTH -> north = chunk;
+            case SOUTH -> south = chunk;
+            case EAST -> east = chunk;
+            case WEST -> west = chunk;
             case DOWN -> down = chunk;
-            case LEFT -> left = chunk;
-            case RIGHT -> right = chunk;
-            case FRONT -> front = chunk;
-            case BACK -> back = chunk;
         }
 
         rebuildSet();
@@ -36,11 +36,11 @@ public class NeighborChunks {
     public Chunk get(Direction direction) {
         return switch (direction) {
             case UP -> up;
+            case NORTH -> north;
+            case SOUTH -> south;
+            case EAST -> east;
+            case WEST -> west;
             case DOWN -> down;
-            case LEFT -> left;
-            case RIGHT -> right;
-            case FRONT -> front;
-            case BACK -> back;
         };
     }
 
@@ -54,7 +54,7 @@ public class NeighborChunks {
     }
 
     public void clear() {
-        up = down = left = right = front = back = null;
+        up = north = south = east = west = down = null;
         chunks.clear();
     }
 
@@ -66,16 +66,16 @@ public class NeighborChunks {
         chunks.clear();
         if (up != null)
             chunks.add(up);
+        if (north != null)
+            chunks.add(north);
+        if (south != null)
+            chunks.add(south);
+        if (east != null)
+            chunks.add(east);
+        if (west != null)
+            chunks.add(west);
         if (down != null)
             chunks.add(down);
-        if (left != null)
-            chunks.add(left);
-        if (right != null)
-            chunks.add(right);
-        if (front != null)
-            chunks.add(front);
-        if (back != null)
-            chunks.add(back);
     }
 
     public Set<Chunk> chunks() {

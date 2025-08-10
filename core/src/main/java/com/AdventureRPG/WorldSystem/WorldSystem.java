@@ -17,6 +17,8 @@ import com.badlogic.gdx.math.Vector3;
 
 public class WorldSystem {
 
+    private final boolean debug = true; // TODO: Remove debug line
+
     // Game Manager
     public final GameManager gameManager;
     public final SaveSystem saveSystem;
@@ -124,12 +126,15 @@ public class WorldSystem {
 
     public void UpdatePosition(Vector3 currentPosition, Vector3Int chunkCoordinate) {
 
-        this.currentPosition = currentPosition;
+        this.currentPosition.set(currentPosition);
 
         if (this.chunkCoordinate.equals(chunkCoordinate))
             return;
 
         this.chunkCoordinate.set(chunkCoordinate);
+
+        if (debug) // Remove debug line
+            Debug();
 
         LoadChunks();
     }
@@ -216,5 +221,12 @@ public class WorldSystem {
             wrappedZ += scaleY;
 
         return new Vector2Int(wrappedX, wrappedZ);
+    }
+    // Debug \\
+
+    private void Debug() { // TODO: Remove debug line
+
+        System.out.print("\rCurrect Chunk Coordinate: " + chunkCoordinate.toString());
+        System.out.flush();
     }
 }

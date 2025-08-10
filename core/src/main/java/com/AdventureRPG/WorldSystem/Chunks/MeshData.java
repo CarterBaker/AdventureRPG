@@ -52,40 +52,40 @@ public class MeshData {
                         { x + 1, y + 1, z + 1 },
                         { x, y + 1, z + 1 }
                 };
-            case DOWN:
-                return new float[][] {
-                        { x, y, z },
-                        { x + 1, y, z },
-                        { x + 1, y, z + 1 },
-                        { x, y, z + 1 }
-                };
-            case FRONT:
+            case NORTH:
                 return new float[][] {
                         { x + 1, y, z + 1 },
                         { x + 1, y + 1, z + 1 },
                         { x, y + 1, z + 1 },
                         { x, y, z + 1 }
                 };
-            case BACK:
+            case SOUTH:
                 return new float[][] {
                         { x, y, z },
                         { x, y + 1, z },
                         { x + 1, y + 1, z },
                         { x + 1, y, z }
                 };
-            case RIGHT:
+            case EAST:
+                return new float[][] {
+                        { x, y, z + 1 },
+                        { x, y + 1, z + 1 },
+                        { x, y + 1, z },
+                        { x, y, z }
+                };
+            case WEST:
                 return new float[][] {
                         { x + 1, y, z },
                         { x + 1, y + 1, z },
                         { x + 1, y + 1, z + 1 },
                         { x + 1, y, z + 1 }
                 };
-            case LEFT:
+            case DOWN:
                 return new float[][] {
-                        { x, y, z + 1 },
-                        { x, y + 1, z + 1 },
-                        { x, y + 1, z },
-                        { x, y, z }
+                        { x, y, z },
+                        { x + 1, y, z },
+                        { x + 1, y, z + 1 },
+                        { x, y, z + 1 }
                 };
             default:
                 throw new IllegalArgumentException("Unknown face direction: " + dir);

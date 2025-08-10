@@ -18,12 +18,18 @@ public class InputSystem extends InputAdapter {
     // Rotation
     private final float sensitivity = 0.15f; // TODO: Move sensitivity to Settings()
 
+    // Temp
+    public final Vector3Int movement;
+
     // Base \\
 
     public InputSystem(GameManager gameManager) {
 
         // Game Manager
         this.PlayerSystem = gameManager.playerSystem;
+
+        // Temp
+        movement = new Vector3Int();
     }
 
     public void Awake() {
@@ -123,25 +129,23 @@ public class InputSystem extends InputAdapter {
         if (blockInput)
             return;
 
-        // TODO: I need to retrofit this code to use less new Vector3Ints
-        Vector3Int movement = new Vector3Int(0, 0, 0);
+        movement.set(0, 0, 0);
 
         if (W)
-            movement = movement.add(new Vector3Int(0, 0, 1));
+            movement.z += 1; // forward
         if (S)
-            movement = movement.add(new Vector3Int(0, 0, -1));
+            movement.z -= 1; // backward
         if (A)
-            movement = movement.add(new Vector3Int(1, 0, 0));
+            movement.x -= 1; // left
         if (D)
-            movement = movement.add(new Vector3Int(-1, 0, 0));
+            movement.x += 1; // right
 
-        if (SHIFT)
-            movement = movement.add(new Vector3Int(0, -1, 0));
         if (SPACE)
-            movement = movement.add(new Vector3Int(0, 1, 0));
+            movement.y += 1; // up
+        if (SHIFT)
+            movement.y -= 1; // down
 
-        if (!movement.equals(new Vector3Int())) {
+        if (movement.hasValues())
             PlayerSystem.position.Move(movement);
-        }
     }
 }

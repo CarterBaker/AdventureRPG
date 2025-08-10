@@ -2,11 +2,11 @@ package com.AdventureRPG.Util;
 
 public enum Direction {
     UP(0, 1, 0),
-    DOWN(0, -1, 0),
-    LEFT(-1, 0, 0),
-    RIGHT(1, 0, 0),
-    FRONT(0, 0, 1),
-    BACK(0, 0, -1);
+    NORTH(0, 0, 1),
+    SOUTH(0, 0, -1),
+    EAST(1, 0, 0),
+    WEST(-1, 0, 0),
+    DOWN(0, -1, 0);
 
     public final int x, y, z;
 

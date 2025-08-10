@@ -21,7 +21,7 @@ import com.badlogic.gdx.math.Vector3;
 public class ChunkSystem {
 
     // Debug
-    private final boolean debug = true;
+    private final boolean debug = false; // TODO: Remove debug line
 
     // Chunk System
     private final WorldSystem worldSystem;
@@ -110,6 +110,7 @@ public class ChunkSystem {
         this.chunkToGridMap = new HashMap<>();
 
         for (int i = 0; i < total; i++) {
+
             gridCoordinates.add(new Vector3Int());
             chunkCoordinates.add(new Vector3Int());
         }
@@ -145,46 +146,16 @@ public class ChunkSystem {
 
             cycleIndex = (cycleIndex + 1) % stateCycle.length;
         }
+
+        if (debug) // TODO: Remove debug line
+            Debug();
     }
 
     public void Render(ModelBatch modelBatch) {
         RepositionChunks(modelBatch);
     }
 
-    private void RepositionChunks(ModelBatch modelBatch) {
-        Vector3 playerPos = worldSystem.Position(); // Smooth float pos inside the current chunk
-
-        int baseX = currentChunkCoordinate.x * size;
-        int baseY = currentChunkCoordinate.y * size;
-        int baseZ = currentChunkCoordinate.z * size;
-
-        float worldOffsetX = baseX + playerPos.x;
-        float worldOffsetY = baseY + playerPos.y;
-        float worldOffsetZ = baseZ + playerPos.z;
-
-        for (Map.Entry<Chunk, ModelInstance> entry : chunkModels.entrySet()) {
-
-            Chunk chunk = entry.getKey();
-            ModelInstance model = entry.getValue();
-
-            float X = chunk.position.x - worldOffsetX;
-            float Y = chunk.position.y - worldOffsetY;
-            float Z = chunk.position.z - worldOffsetZ;
-
-            Vector3 offset = worldSystem.WrapAroundGrid(new Vector3(X, Y, Z));
-
-            model.transform.setToTranslation(offset);
-            modelBatch.render(model);
-
-            // TODO: Eventually when I add lighting I need to pass the environment
-            // modelBatch.render(model, WorldSystem.GameManager.environment);
-
-            if (debug && !HasQueue())
-                Debug();
-        }
-    }
-
-    // Main \\
+    // Update \\
 
     public void LoadChunks(Vector3Int chunkCoordinate) {
 
@@ -274,6 +245,39 @@ public class ChunkSystem {
         }
 
         MoveActiveChunks();
+    }
+
+    // Render \\
+
+    private void RepositionChunks(ModelBatch modelBatch) {
+
+        Vector3 playerPos = worldSystem.Position(); // Smooth float pos inside the current chunk
+
+        int baseX = currentChunkCoordinate.x * size;
+        int baseY = currentChunkCoordinate.y * size;
+        int baseZ = currentChunkCoordinate.z * size;
+
+        float worldOffsetX = baseX + playerPos.x;
+        float worldOffsetY = baseY + playerPos.y;
+        float worldOffsetZ = baseZ + playerPos.z;
+
+        for (Map.Entry<Chunk, ModelInstance> entry : chunkModels.entrySet()) {
+
+            Chunk chunk = entry.getKey();
+            ModelInstance model = entry.getValue();
+
+            float X = chunk.position.x - worldOffsetX;
+            float Y = chunk.position.y - worldOffsetY;
+            float Z = chunk.position.z - worldOffsetZ;
+
+            Vector3 offset = worldSystem.WrapAroundGrid(new Vector3(X, Y, Z));
+
+            model.transform.setToTranslation(offset);
+            modelBatch.render(model);
+
+            // TODO: Eventually when I add lighting I need to pass the environment
+            // modelBatch.render(model, WorldSystem.GameManager.environment);
+        }
     }
 
     // Move \\
@@ -482,7 +486,7 @@ public class ChunkSystem {
 
     // Debug \\
 
-    private void Debug() {
+    private void Debug() { // TODO: Remove debug line
 
         Vector3 currentPosition = worldSystem.Position();
 
@@ -506,5 +510,4 @@ public class ChunkSystem {
                 ", Block: " + worldSystem.GetBlockByID(data.blockID).name);
         System.out.flush();
     }
-
 }

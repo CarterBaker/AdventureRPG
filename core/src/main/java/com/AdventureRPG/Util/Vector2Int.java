@@ -9,6 +9,18 @@ public class Vector2Int {
         this.y = y;
     }
 
+    public Vector2Int set(int x, int y) {
+
+        this.x = x;
+        this.y = y;
+
+        return this;
+    }
+
+    public Vector2Int set(Vector2Int input) {
+        return this.set(input.x, input.y);
+    }
+
     public Vector2Int add(Vector2Int other) {
         return new Vector2Int(this.x + other.x, this.y + other.y);
     }
@@ -31,10 +43,13 @@ public class Vector2Int {
 
     @Override
     public boolean equals(Object obj) {
+
         if (obj instanceof Vector2Int) {
+
             Vector2Int v = (Vector2Int) obj;
             return this.x == v.x && this.y == v.y;
         }
+
         return false;
     }
 
@@ -45,6 +60,6 @@ public class Vector2Int {
 
     @Override
     public String toString() {
-        return "Vector2Int(" + x + ", " + y + ")";
+        return "(" + x + ", " + y + ")";
     }
 }

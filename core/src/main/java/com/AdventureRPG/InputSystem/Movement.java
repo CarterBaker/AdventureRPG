@@ -42,7 +42,7 @@ public class Movement {
         forward.set(cameraDirection.x, 0f, cameraDirection.z).nor();
 
         // Right = perpendicular to forward
-        right.set(forward.z, 0f, -forward.x);
+        right.set(-forward.z, 0f, forward.x);
 
         // Build movement vector
         localMove.set(0f, 0f, 0f);

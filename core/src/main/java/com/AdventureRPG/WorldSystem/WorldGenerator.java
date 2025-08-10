@@ -115,7 +115,9 @@ public class WorldGenerator {
         BlockData[][][] blocks = new BlockData[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
 
         for (int x = 0; x < CHUNK_SIZE; x++) {
+
             for (int y = 0; y < CHUNK_SIZE; y++) {
+
                 for (int z = 0; z < CHUNK_SIZE; z++) {
 
                     biome = GenerateBiome(WorldRegion, position);
@@ -144,6 +146,7 @@ public class WorldGenerator {
 
         if (y < MIN_WORLD_ELEVATION)
             return LAVA_BLOCK.ID;
+            
         if (y > MAX_WORLD_ELEVATION)
             return VACUUM_BLOCK.ID;
 
