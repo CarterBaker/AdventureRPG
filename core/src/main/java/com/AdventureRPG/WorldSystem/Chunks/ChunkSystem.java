@@ -47,7 +47,6 @@ public class ChunkSystem {
     private int cycleIndex;
 
     // Queue
-    private final Map<Vector3Int, Chunk> moveQueue;
     private final Map<Vector3Int, Chunk> unloadQueue;
     private final Map<Vector3Int, Vector3Int> loadQueue;
 
@@ -92,7 +91,6 @@ public class ChunkSystem {
         this.stateCycle = new State[] { State.Unloading, State.Loading };
 
         // Queue
-        this.moveQueue = new HashMap<>();
         this.unloadQueue = new HashMap<>();
         this.loadQueue = new HashMap<>();
 
@@ -230,7 +228,7 @@ public class ChunkSystem {
 
     public void LoadChunks(Vector3Int chunkCoordinate) {
 
-        // Triple check in the back end it is safe to trigger a load
+        // Triple check at the back end that it is safe to trigger a load
         if (this.currentChunkCoordinate.equals(chunkCoordinate))
             return;
 
@@ -243,7 +241,7 @@ public class ChunkSystem {
         // Determine which chunks need to be loaded where
         RebuildChunksAroundActiveChunk();
 
-        // Aseemble all queues to handle chunk loading
+        // Assemble all queues to handle chunk loading
         BuildQueue();
     }
 
@@ -284,8 +282,11 @@ public class ChunkSystem {
 
                 loadedChunkCoordinates.add(loadedChunkCoordinate);
 
-                if (!newGridCoordinate.equals(loadedChunk.position))
-                    moveQueue.put(newGridCoordinate, loadedChunk);
+                if (!newGridCoordinate.equals(loadedChunk.position)) {
+
+                    loadedChunk.MoveTo(newGridCoordinate);
+                    loadedChunks.put(newGridCoordinate, loadedChunk);
+                }
             }
 
             else
@@ -301,44 +302,20 @@ public class ChunkSystem {
                 loadQueue.put(gridCoord, chunkCoord);
         }
 
-        System.out.println("Current Chunk: " + currentChunkCoordinate.toString()
-                + "Move Queue: " + moveQueue.size() // TODO: Remove debug line
+        System.out.println("Current Chunk: " + currentChunkCoordinate.toString() // TODO: Remove debug line
                 + ", Unload Queue: " + unloadQueue.size()
                 + ", Load Queue: " + loadQueue.size());
-
-        MoveActiveChunks();
     }
 
     private void PrepareNewQueue() {
 
         cycleIndex = 0;
 
-        moveQueue.clear();
         unloadQueue.clear();
         loadQueue.clear();
 
         loadedChunkCoordinates.clear();
         chunkToGridMap.clear();
-    }
-
-    // Move \\
-
-    private void MoveActiveChunks() {
-
-        Iterator<Map.Entry<Vector3Int, Chunk>> iterator = moveQueue.entrySet().iterator();
-
-        while (iterator.hasNext()) {
-
-            Map.Entry<Vector3Int, Chunk> entry = iterator.next();
-            Vector3Int gridCoordinate = entry.getKey();
-            Chunk loadedChunk = entry.getValue();
-
-            loadedChunk.MoveTo(gridCoordinate);
-            loadedChunks.put(gridCoordinate, loadedChunk);
-
-            iterator.remove();
-        }
-
     }
 
     // Unload \\

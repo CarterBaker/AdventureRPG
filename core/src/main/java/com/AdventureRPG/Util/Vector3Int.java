@@ -26,7 +26,10 @@ public class Vector3Int {
     }
 
     public void set(Vector3Int other) {
-        set(other.x, other.y, other.z);
+
+        this.x = other.x;
+        this.y = other.y;
+        this.z = other.z;
     }
 
     public Vector3Int add(Vector3Int other) {
