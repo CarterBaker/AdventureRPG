@@ -60,6 +60,7 @@ public class ChunkSystem {
     private final Vector3Int currentChunkCoordinate;
 
     // Temp
+    private int total;
     private final ArrayList<Vector3Int> gridCoordinates;
     private final ArrayList<Vector3Int> chunkCoordinates;
     private final Map<Vector3Int, Vector3Int> chunkToGridMap;
@@ -104,8 +105,7 @@ public class ChunkSystem {
         this.currentChunkCoordinate = new Vector3Int(-1, -1, -1); // Initialize ChunkSystem with an invalid chunk
 
         // Temp
-        int total = range * range * height;
-
+        this.total = range * range * height;
         gridCoordinates = new ArrayList<>(total);
         chunkCoordinates = new ArrayList<>(total);
         this.chunkToGridMap = new HashMap<>();
@@ -144,15 +144,17 @@ public class ChunkSystem {
         this.range = settings.MAX_RENDER_DISTANCE;
         this.height = settings.MAX_RENDER_HEIGHT;
 
+        this.total = range * height * range;
+
         // Clear the existing lists just in case
         PrepareNewQueue();
         gridCoordinates.clear();
 
-        // Rebuild the grid
+        // Rebuild the gridVectors in chunk space
         for (int x = -range / 2; x < range / 2; x++)
             for (int y = -height / 2; y < height / 2; y++)
                 for (int z = -range / 2; z < range / 2; z++)
-                    gridCoordinates.add(new Vector3Int(x * size, y * size, z * size));
+                    gridCoordinates.add(new Vector3Int(x, y, z));
 
         // Reload the world
         LoadChunks(currentChunkCoordinate);
@@ -193,7 +195,7 @@ public class ChunkSystem {
         // Smooth float pos inside the current chunk
         Vector3 playerPos = worldSystem.Position();
 
-        // Current chunk coordinates in block space
+        // Calculated current chunk coordinate in block space
         int baseX = currentChunkCoordinate.x * size;
         int baseY = currentChunkCoordinate.y * size;
         int baseZ = currentChunkCoordinate.z * size;
@@ -203,15 +205,15 @@ public class ChunkSystem {
         float worldOffsetY = baseY + playerPos.y;
         float worldOffsetZ = baseZ + playerPos.z;
 
-        // For each chunk with an active model calculate the current position
+        // For each chunk with an active model calculate the render position
         for (Map.Entry<Chunk, ModelInstance> entry : chunkModels.entrySet()) {
 
             Chunk chunk = entry.getKey();
             ModelInstance model = entry.getValue();
 
-            offset.x = chunk.position.x - worldOffsetX;
-            offset.y = chunk.position.y - worldOffsetY;
-            offset.z = chunk.position.z - worldOffsetZ;
+            offset.x = (chunk.position.x * size) - worldOffsetX;
+            offset.y = (chunk.position.y * size) - worldOffsetY;
+            offset.z = (chunk.position.z * size) - worldOffsetZ;
 
             worldSystem.WrapAroundGrid(offset);
 
@@ -227,41 +229,43 @@ public class ChunkSystem {
 
     public void LoadChunks(Vector3Int chunkCoordinate) {
 
+        // Set the current chunk first
         currentChunkCoordinate.set(chunkCoordinate);
 
+        // Prepare new load queue
+        PrepareNewQueue();
+
+        // Determine which chunks need to be loaded where
         RebuildChunksAroundActiveChunk();
 
+        // Aseemble all queues to handle chunk loading
         BuildQueue();
     }
 
     private void RebuildChunksAroundActiveChunk() {
 
-        for (int i = 0; i < gridCoordinates.size(); i++) {
+        for (int i = 0; i < total; i++) {
 
             // We only need to read the key never set
             Vector3Int key = gridCoordinates.get(i);
 
-            // Key is stored in block space so they need to be divided by size
-            int x = currentChunkCoordinate.x + (key.x / size);
-            int y = currentChunkCoordinate.y + (key.y / size);
-            int z = currentChunkCoordinate.z + (key.z / size);
+            // Calculate the chunk to load using the key and current chunk
+            int x = currentChunkCoordinate.x + key.x;
+            int y = currentChunkCoordinate.y + key.y;
+            int z = currentChunkCoordinate.z + key.z;
 
             wrappedValue.set(x, y, z);
             worldSystem.WrapAroundWorld(wrappedValue);
 
             // Set the value to the correct chunks coordinate
             chunkCoordinates.get(i).set(wrappedValue);
+
+            // Assemble the map with grid coordinates and chunk coordinates
+            chunkToGridMap.put(chunkCoordinates.get(i), gridCoordinates.get(i));
         }
     }
 
     private void BuildQueue() {
-
-        // Prepare new load queue
-        PrepareNewQueue();
-
-        // Assemble the map with grid coordinates and chunk coordinates
-        for (int i = 0; i < chunkCoordinates.size(); i++)
-            chunkToGridMap.put(chunkCoordinates.get(i), gridCoordinates.get(i));
 
         // Determine which chunks need to be moved and unloaded
         for (Map.Entry<Vector3Int, Chunk> entry : loadedChunks.entrySet()) {

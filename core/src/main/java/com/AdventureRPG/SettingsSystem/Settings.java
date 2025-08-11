@@ -162,7 +162,7 @@ public class Settings {
         private int CHUNK_SIZE = 16;
         private int CHUNKS_PER_PIXEL = 256;
 
-        private int MAX_RENDER_DISTANCE = 32;
+        private int MAX_RENDER_DISTANCE = 24;
         private int MAX_RENDER_HEIGHT = 16;
 
         private int LOD_START_DISTANCE = 16;
