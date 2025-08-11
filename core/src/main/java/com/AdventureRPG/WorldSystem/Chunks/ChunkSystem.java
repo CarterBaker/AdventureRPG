@@ -47,6 +47,7 @@ public class ChunkSystem {
     private int cycleIndex;
 
     // Queue
+    private final Map<Vector3Int, Chunk> moveQueue;
     private final Map<Vector3Int, Chunk> unloadQueue;
     private final Map<Vector3Int, Vector3Int> loadQueue;
 
@@ -91,6 +92,7 @@ public class ChunkSystem {
         this.stateCycle = new State[] { State.Unloading, State.Loading };
 
         // Queue
+        this.moveQueue = new HashMap<>();
         this.unloadQueue = new HashMap<>();
         this.loadQueue = new HashMap<>();
 
@@ -282,12 +284,8 @@ public class ChunkSystem {
 
                 loadedChunkCoordinates.add(loadedChunkCoordinate);
 
-                if (!newGridCoordinate.equals(loadedChunk.position)) {
-
-                    // Altering the existing map inside this loop will cause issues
-                    loadedChunk.MoveTo(newGridCoordinate);
-                    loadedChunks.put(newGridCoordinate, loadedChunk);
-                }
+                if (!newGridCoordinate.equals(loadedChunk.position))
+                    moveQueue.put(newGridCoordinate, loadedChunk);
             }
 
             else
@@ -306,17 +304,42 @@ public class ChunkSystem {
         System.out.println("Current Chunk: " + currentChunkCoordinate.toString() // TODO: Remove debug line
                 + ", Unload Queue: " + unloadQueue.size()
                 + ", Load Queue: " + loadQueue.size());
+
+        MoveActiveChunks();
     }
 
     private void PrepareNewQueue() {
 
         cycleIndex = 0;
 
+        moveQueue.clear();
         unloadQueue.clear();
         loadQueue.clear();
 
         chunkToGridMap.clear();
         loadedChunkCoordinates.clear();
+    }
+
+    // Move \\
+
+    private void MoveActiveChunks() {
+
+        Iterator<Map.Entry<Vector3Int, Chunk>> iterator = moveQueue.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+
+            Map.Entry<Vector3Int, Chunk> entry = iterator.next();
+            Vector3Int gridCoordinate = entry.getKey();
+
+            Chunk loadedChunk = entry.getValue();
+
+            loadedChunk.MoveTo(gridCoordinate);
+            loadedChunks.put(gridCoordinate, loadedChunk);
+
+            iterator.remove();
+
+        }
+
     }
 
     // Unload \\
