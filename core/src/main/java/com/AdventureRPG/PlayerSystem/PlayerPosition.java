@@ -45,14 +45,15 @@ public class PlayerPosition {
 
         UpdateChunkCoordinateFrom(currentPosition);
 
-        currentPosition = worldSystem.WrapAroundChunk(currentPosition);
-        chunkCoordinate = worldSystem.WrapAroundWorld(chunkCoordinate);
+        worldSystem.WrapAroundChunk(currentPosition);
+        worldSystem.WrapAroundWorld(chunkCoordinate);
 
         worldSystem.UpdatePosition(currentPosition, chunkCoordinate);
     }
 
     // Calculate new chunk from position per axis
     private void UpdateChunkCoordinateFrom(Vector3 position) {
+
         chunkCoordinate.x += CalculateChunkCoordinateAxisFrom(position.x);
         chunkCoordinate.y += CalculateChunkCoordinateAxisFrom(position.y);
         chunkCoordinate.z += CalculateChunkCoordinateAxisFrom(position.z);

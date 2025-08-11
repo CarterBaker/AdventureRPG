@@ -1,10 +1,17 @@
 package com.AdventureRPG.Util;
 
 public class Vector2Int {
-    public int x;
-    public int y;
+
+    public int x, y;
+
+    public Vector2Int() {
+
+        this.x = 0;
+        this.y = 0;
+    }
 
     public Vector2Int(int x, int y) {
+
         this.x = x;
         this.y = y;
     }
@@ -22,23 +29,27 @@ public class Vector2Int {
     }
 
     public Vector2Int add(Vector2Int other) {
-        return new Vector2Int(this.x + other.x, this.y + other.y);
+
+        this.x += other.x;
+        this.y += other.y;
+
+        return this;
     }
 
     public Vector2Int subtract(Vector2Int other) {
-        return new Vector2Int(this.x - other.x, this.y - other.y);
+
+        this.x -= other.x;
+        this.y -= other.y;
+
+        return this;
     }
 
     public Vector2Int multiply(int scalar) {
-        return new Vector2Int(this.x * scalar, this.y * scalar);
-    }
 
-    public int dot(Vector2Int other) {
-        return this.x * other.x + this.y * other.y;
-    }
+        this.x *= scalar;
+        this.y *= scalar;
 
-    public int magnitudeSquared() {
-        return this.x * this.x + this.y * this.y;
+        return this;
     }
 
     @Override
@@ -60,6 +71,6 @@ public class Vector2Int {
 
     @Override
     public String toString() {
-        return "(" + x + ", " + y + ")";
+        return "Vector2Int(" + x + ", " + y + ")";
     }
 }

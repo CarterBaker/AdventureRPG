@@ -52,8 +52,8 @@ public class ChunkSystem {
     private final Map<Vector3Int, Vector3Int> loadQueue;
 
     // Settings
-    private final int range;
-    private final int height;
+    private int range;
+    private int height;
     private final int size;
 
     // Rendered Chunks
@@ -66,6 +66,7 @@ public class ChunkSystem {
     private final Vector3Int wrappedValue;
     private final HashSet<Vector3Int> loadedChunkCoordinates;
     private final Vector3Int lookupKey;
+    private final Vector3 offset;
 
     // Base \\
 
@@ -109,20 +110,18 @@ public class ChunkSystem {
         chunkCoordinates = new ArrayList<>(total);
         this.chunkToGridMap = new HashMap<>();
 
-        for (int i = 0; i < total; i++) {
-
-            gridCoordinates.add(new Vector3Int());
+        for (int i = 0; i < total; i++)
             chunkCoordinates.add(new Vector3Int());
-        }
 
         this.wrappedValue = new Vector3Int();
 
         this.loadedChunkCoordinates = new HashSet<>();
         this.lookupKey = new Vector3Int();
+        this.offset = new Vector3();
     }
 
     public void Awake() {
-
+        RebuildGrid();
     }
 
     public void Start() {
@@ -130,15 +129,51 @@ public class ChunkSystem {
     }
 
     public void Update() {
+        UpdateQueue();
+    }
 
+    public void Render(ModelBatch modelBatch) {
+        RenderChunks(modelBatch);
+    }
+
+    // Initialize \\
+
+    public void RebuildGrid() {
+
+        // Reset render distances
+        this.range = settings.MAX_RENDER_DISTANCE;
+        this.height = settings.MAX_RENDER_HEIGHT;
+
+        // Clear the existing lists just in case
+        PrepareNewQueue();
+        gridCoordinates.clear();
+
+        // Rebuild the grid
+        for (int x = -range / 2; x < range / 2; x++)
+            for (int y = -height / 2; y < height / 2; y++)
+                for (int z = -range / 2; z < range / 2; z++)
+                    gridCoordinates.add(new Vector3Int(x * size, y * size, z * size));
+
+        // Reload the world
+        LoadChunks(currentChunkCoordinate);
+    }
+
+    // Update \\
+
+    private void UpdateQueue() {
+
+        // Reset every frame
         loadedChunksThisFrame = 0;
 
+        // Reset every tick
         if (worldTick.Tick())
             loadedChunksThisTick = 0;
 
+        // If there is no queue we don't need to do anything
         if (!HasQueue())
             return;
 
+        // Alternating queue update
         for (int i = 0; i < stateCycle.length; i++) {
 
             if (stateCycle[cycleIndex].process(this))
@@ -151,15 +186,48 @@ public class ChunkSystem {
             Debug();
     }
 
-    public void Render(ModelBatch modelBatch) {
-        RepositionChunks(modelBatch);
+    // Render \\
+
+    private void RenderChunks(ModelBatch modelBatch) {
+
+        // Smooth float pos inside the current chunk
+        Vector3 playerPos = worldSystem.Position();
+
+        // Current chunk coordinates in block space
+        int baseX = currentChunkCoordinate.x * size;
+        int baseY = currentChunkCoordinate.y * size;
+        int baseZ = currentChunkCoordinate.z * size;
+
+        // Calculated offset for each chunk for smooth movement
+        float worldOffsetX = baseX + playerPos.x;
+        float worldOffsetY = baseY + playerPos.y;
+        float worldOffsetZ = baseZ + playerPos.z;
+
+        // For each chunk with an active model calculate the current position
+        for (Map.Entry<Chunk, ModelInstance> entry : chunkModels.entrySet()) {
+
+            Chunk chunk = entry.getKey();
+            ModelInstance model = entry.getValue();
+
+            offset.x = chunk.position.x - worldOffsetX;
+            offset.y = chunk.position.y - worldOffsetY;
+            offset.z = chunk.position.z - worldOffsetZ;
+
+            worldSystem.WrapAroundGrid(offset);
+
+            model.transform.setToTranslation(offset);
+            modelBatch.render(model);
+
+            // TODO: Eventually when I add lighting I need to pass the environment
+            // modelBatch.render(model, WorldSystem.GameManager.environment);
+        }
     }
 
-    // Update \\
+    // Main \\
 
     public void LoadChunks(Vector3Int chunkCoordinate) {
 
-        this.currentChunkCoordinate.set(chunkCoordinate);
+        currentChunkCoordinate.set(chunkCoordinate);
 
         RebuildChunksAroundActiveChunk();
 
@@ -168,65 +236,50 @@ public class ChunkSystem {
 
     private void RebuildChunksAroundActiveChunk() {
 
-        int index = 0;
+        for (int i = 0; i < gridCoordinates.size(); i++) {
 
-        for (int x = -range / 2; x < range / 2; x++) {
+            // We only need to read the key never set
+            Vector3Int key = gridCoordinates.get(i);
 
-            for (int y = -height / 2; y < height / 2; y++) {
+            // Key is stored in block space so they need to be divided by size
+            int x = currentChunkCoordinate.x + (key.x / size);
+            int y = currentChunkCoordinate.y + (key.y / size);
+            int z = currentChunkCoordinate.z + (key.z / size);
 
-                for (int z = -range / 2; z < range / 2; z++) {
+            wrappedValue.set(x, y, z);
+            worldSystem.WrapAroundWorld(wrappedValue);
 
-                    int ax = x * size;
-                    int ay = y * size;
-                    int az = z * size;
-
-                    Vector3Int key = gridCoordinates.get(index);
-                    key.set(ax, ay, az);
-
-                    int bx = currentChunkCoordinate.x + x * size;
-                    int by = currentChunkCoordinate.y + y * size;
-                    int bz = currentChunkCoordinate.z + z * size;
-
-                    wrappedValue.set(bx, by, bz);
-                    Vector3Int wrappedChunkCoordinate = worldSystem.WrapAroundWorld(wrappedValue);
-
-                    Vector3Int value = chunkCoordinates.get(index);
-                    value.set(wrappedChunkCoordinate);
-
-                    index++;
-                }
-            }
+            // Set the value to the correct chunks coordinate
+            chunkCoordinates.get(i).set(wrappedValue);
         }
     }
 
-    public void BuildQueue() {
+    private void BuildQueue() {
 
         // Prepare new load queue
-        moveQueue.clear();
-        unloadQueue.clear();
-        loadQueue.clear();
-        cycleIndex = 0;
+        PrepareNewQueue();
 
-        loadedChunkCoordinates.clear();
-        chunkToGridMap.clear();
-
+        // Assemble the map with grid coordinates and chunk coordinates
         for (int i = 0; i < chunkCoordinates.size(); i++)
             chunkToGridMap.put(chunkCoordinates.get(i), gridCoordinates.get(i));
 
+        // Determine which chunks need to be moved and unloaded
         for (Map.Entry<Vector3Int, Chunk> entry : loadedChunks.entrySet()) {
 
             Vector3Int gridCoordinate = entry.getKey();
             Chunk loadedChunk = entry.getValue();
-            Vector3Int chunkCoordinate = loadedChunk.coordinate;
-            Vector3Int newGridCoord = chunkToGridMap.get(chunkCoordinate);
+
+            Vector3Int loadedChunkCoordinate = loadedChunk.coordinate;
+            Vector3Int newGridCoordinate = chunkToGridMap.get(loadedChunkCoordinate);
 
             // Move Queue
-            if (newGridCoord != null) {
+            if (newGridCoordinate != null) {
 
-                loadedChunkCoordinates.add(chunkCoordinate);
+                // Keep track of all loaded chunks with a set so we know what to unload
+                loadedChunkCoordinates.add(loadedChunkCoordinate);
 
-                if (!newGridCoord.equals(loadedChunk.position))
-                    moveQueue.put(newGridCoord, loadedChunk);
+                if (!newGridCoordinate.equals(loadedChunk.position))
+                    moveQueue.put(newGridCoordinate, loadedChunk);
             }
 
             // Unload Queue
@@ -244,40 +297,24 @@ public class ChunkSystem {
                 loadQueue.put(gridCoord, chunkCoord);
         }
 
+        System.out.println("Current Chunk: " + currentChunkCoordinate.toString()
+                + "Move Queue: " + moveQueue.size() // TODO: Remove debug line
+                + ", Unload Queue: " + unloadQueue.size()
+                + ", Load Queue: " + loadQueue.size());
+
         MoveActiveChunks();
     }
 
-    // Render \\
+    private void PrepareNewQueue() {
 
-    private void RepositionChunks(ModelBatch modelBatch) {
+        cycleIndex = 0;
 
-        Vector3 playerPos = worldSystem.Position(); // Smooth float pos inside the current chunk
+        moveQueue.clear();
+        unloadQueue.clear();
+        loadQueue.clear();
 
-        int baseX = currentChunkCoordinate.x * size;
-        int baseY = currentChunkCoordinate.y * size;
-        int baseZ = currentChunkCoordinate.z * size;
-
-        float worldOffsetX = baseX + playerPos.x;
-        float worldOffsetY = baseY + playerPos.y;
-        float worldOffsetZ = baseZ + playerPos.z;
-
-        for (Map.Entry<Chunk, ModelInstance> entry : chunkModels.entrySet()) {
-
-            Chunk chunk = entry.getKey();
-            ModelInstance model = entry.getValue();
-
-            float X = chunk.position.x - worldOffsetX;
-            float Y = chunk.position.y - worldOffsetY;
-            float Z = chunk.position.z - worldOffsetZ;
-
-            Vector3 offset = worldSystem.WrapAroundGrid(new Vector3(X, Y, Z));
-
-            model.transform.setToTranslation(offset);
-            modelBatch.render(model);
-
-            // TODO: Eventually when I add lighting I need to pass the environment
-            // modelBatch.render(model, WorldSystem.GameManager.environment);
-        }
+        loadedChunkCoordinates.clear();
+        chunkToGridMap.clear();
     }
 
     // Move \\
@@ -315,12 +352,12 @@ public class ChunkSystem {
             Vector3Int gridCoordinate = entry.getKey();
             Chunk loadedChunk = entry.getValue();
 
-            RemoveFromNeightborMap(loadedChunk);
+            RemoveFromNeighborMap(loadedChunk);
 
             ModelInstance mesh = chunkModels.remove(loadedChunk);
-            if (mesh != null) {
+
+            if (mesh != null)
                 mesh.model.dispose();
-            }
 
             loadedChunks.remove(gridCoordinate);
 
@@ -422,7 +459,7 @@ public class ChunkSystem {
         neighborMap.computeIfAbsent(chunk, k -> new HashSet<>()).add(neighborChunks);
     }
 
-    private void RemoveFromNeightborMap(Chunk chunk) {
+    private void RemoveFromNeighborMap(Chunk chunk) {
 
         if (chunk == null)
             return;

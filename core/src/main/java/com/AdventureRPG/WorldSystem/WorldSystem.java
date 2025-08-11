@@ -12,12 +12,11 @@ import com.AdventureRPG.WorldSystem.Blocks.BlockAtlas;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
 public class WorldSystem {
 
-    private final boolean debug = true; // TODO: Remove debug line
+    private final boolean debug = false; // TODO: Remove debug line
 
     // Game Manager
     public final GameManager gameManager;
@@ -44,12 +43,12 @@ public class WorldSystem {
     private Vector3Int chunkCoordinate;
 
     // Settings
-    private final int CHUNK_SIZE;
     private final int CHUNKS_PER_PIXEL;
     public final Vector2Int WORLD_SCALE;
 
-    private final int range;
-    private final int height;
+    private int range;
+    private int height;
+    private final int size;
 
     // Base \\
 
@@ -80,12 +79,12 @@ public class WorldSystem {
         this.chunkCoordinate = new Vector3Int();
 
         // Settings
-        this.CHUNK_SIZE = settings.CHUNK_SIZE;
         this.CHUNKS_PER_PIXEL = settings.CHUNKS_PER_PIXEL;
         this.WORLD_SCALE = worldReader.GetWorldScale();
 
         this.range = settings.MAX_RENDER_DISTANCE;
         this.height = settings.MAX_RENDER_HEIGHT;
+        this.size = settings.CHUNK_SIZE;
     }
 
     public void Awake() {
@@ -112,6 +111,18 @@ public class WorldSystem {
 
         chunkSystem.Render(modelBatch);
         biomeSystem.Render();
+    }
+
+    // Initialize \\
+
+    public void RebuildGrid() {
+
+        // Reset render distances
+        this.range = settings.MAX_RENDER_DISTANCE;
+        this.height = settings.MAX_RENDER_HEIGHT;
+
+        // Rebuild the grid
+        chunkSystem.RebuildGrid();
     }
 
     // Movement \\
@@ -151,77 +162,94 @@ public class WorldSystem {
 
     public Block GetBlockByName(String name) {
 
-        for (Block block : blocks) {
-            if (block != null && block.name.equalsIgnoreCase(name)) {
+        for (Block block : blocks)
+            if (block != null && block.name.equalsIgnoreCase(name))
                 return block;
-            }
-        }
 
         throw new RuntimeException("Block not found: " + name);
     }
 
-    // Wrap Logic \\ //TODO: I am returning a lot of new Vectors here
+    // Wrap Logic \\
 
     public Vector3 WrapAroundChunk(Vector3 input) {
 
-        float x = input.x % CHUNK_SIZE;
+        float x = input.x % size;
         if (x < 0)
-            x += CHUNK_SIZE;
+            x += size;
 
-        float y = input.y % CHUNK_SIZE;
+        float y = input.y % size;
         if (y < 0)
-            y += CHUNK_SIZE;
+            y += size;
 
-        float z = input.z % CHUNK_SIZE;
+        float z = input.z % size;
         if (z < 0)
-            z += CHUNK_SIZE;
+            z += size;
 
-        return new Vector3(x, y, z);
+        input.x = x;
+        input.y = y;
+        input.z = z;
+
+        return input;
     }
 
     public Vector3Int WrapAroundWorld(Vector3Int input) {
 
-        int X = input.x % (WORLD_SCALE.x / CHUNK_SIZE);
-        if (X < 0)
-            X += (WORLD_SCALE.x / CHUNK_SIZE);
+        int maxX = WORLD_SCALE.x / size;
+        int maxZ = WORLD_SCALE.y / size;
 
-        int Y = input.y;
+        int x = input.x % maxX;
 
-        int Z = input.z % (WORLD_SCALE.y / CHUNK_SIZE);
-        if (Z < 0)
-            Z += (WORLD_SCALE.y / CHUNK_SIZE);
+        if (x < 0)
+            x += maxX;
 
-        return new Vector3Int(X, Y, Z);
+        int y = input.y;
+
+        int z = input.z % maxZ;
+
+        if (z < 0)
+            z += maxZ;
+
+        input.x = x;
+        input.y = y;
+        input.z = z;
+
+        return input;
     }
 
     public Vector3 WrapAroundGrid(Vector3 input) {
 
-        float maxX = range * CHUNK_SIZE;
-        float maxY = height * CHUNK_SIZE;
-        float maxZ = range * CHUNK_SIZE;
+        float maxX = range * size;
+        float maxY = height * size;
+        float maxZ = range * size;
 
-        float X = ((input.x + maxX / 2) % maxX + maxX) % maxX - maxX / 2;
-        float Y = ((input.y + maxY / 2) % maxY + maxY) % maxY - maxY / 2;
-        float Z = ((input.z + maxZ / 2) % maxZ + maxZ) % maxZ - maxZ / 2;
+        input.x = ((input.x + maxX / 2) % maxX + maxX) % maxX - maxX / 2;
+        input.y = ((input.y + maxY / 2) % maxY + maxY) % maxY - maxY / 2;
+        input.z = ((input.z + maxZ / 2) % maxZ + maxZ) % maxZ - maxZ / 2;
 
-        return new Vector3(X, Y, Z);
+        return input;
     }
 
-    public Vector2Int WrapAroundImageRegion(Vector2 input) {
+    public Vector2Int WrapAroundImageRegion(Vector2Int input) {
 
-        int scaleX = (WORLD_SCALE.x / CHUNKS_PER_PIXEL / CHUNK_SIZE);
-        int scaleY = (WORLD_SCALE.y / CHUNKS_PER_PIXEL / CHUNK_SIZE);
+        int maxX = (WORLD_SCALE.x / CHUNKS_PER_PIXEL / size);
+        int maxY = (WORLD_SCALE.y / CHUNKS_PER_PIXEL / size);
 
-        int wrappedX = (int) Math.floor(input.x) % scaleX;
-        if (wrappedX < 0)
-            wrappedX += scaleX;
+        int x = (int) Math.floor(input.x) % maxX;
 
-        int wrappedZ = (int) Math.floor(input.y) % scaleY;
-        if (wrappedZ < 0)
-            wrappedZ += scaleY;
+        if (x < 0)
+            x += maxX;
 
-        return new Vector2Int(wrappedX, wrappedZ);
+        int y = (int) Math.floor(input.y) % maxY;
+
+        if (y < 0)
+            y += maxY;
+
+        input.x = x;
+        input.y = y;
+
+        return input;
     }
+
     // Debug \\
 
     private void Debug() { // TODO: Remove debug line

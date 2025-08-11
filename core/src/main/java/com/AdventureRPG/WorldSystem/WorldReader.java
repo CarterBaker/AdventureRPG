@@ -2,7 +2,6 @@ package com.AdventureRPG.WorldSystem;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.math.Vector2;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.SettingsSystem.Settings;
@@ -14,6 +13,9 @@ public class WorldReader {
     private final Settings settings;
     private final Pixmap world;
 
+    // Temp
+    private final Vector2Int worldPosition;
+
     // Base \\
 
     public WorldReader(WorldSystem worldSystem) {
@@ -22,6 +24,9 @@ public class WorldReader {
         this.worldSystem = worldSystem;
         this.settings = worldSystem.settings;
         this.world = new Pixmap(Gdx.files.internal(settings.REGION_IMAGE_PATH));
+
+        // Temp
+        this.worldPosition = new Vector2Int();
     }
 
     // World Reader \\
@@ -45,7 +50,8 @@ public class WorldReader {
     }
 
     public WorldRegion WorldRegionFromPosition(Vector3Int input) {
-        Vector2 worldPosition = new Vector2(input.x, input.z);
+
+        worldPosition.set(input.x, input.z);
         Vector2Int imagePixel = worldSystem.WrapAroundImageRegion(worldPosition);
 
         int x = imagePixel.x;
