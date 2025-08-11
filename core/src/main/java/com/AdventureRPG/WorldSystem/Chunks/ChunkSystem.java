@@ -104,12 +104,12 @@ public class ChunkSystem {
 
         // Temp
         this.total = range * range * height;
-        gridCoordinates = new ArrayList<>(total);
-        chunkCoordinates = new ArrayList<>(total);
+        this.gridCoordinates = new ArrayList<>(total);
+        this.chunkCoordinates = new ArrayList<>(total);
         this.chunkToGridMap = new HashMap<>();
 
         for (int i = 0; i < total; i++)
-            chunkCoordinates.add(new Vector3Int());
+            this.chunkCoordinates.add(new Vector3Int());
 
         this.wrappedValue = new Vector3Int();
 
@@ -284,6 +284,7 @@ public class ChunkSystem {
 
                 if (!newGridCoordinate.equals(loadedChunk.position)) {
 
+                    // Altering the existing map inside this loop will cause issues
                     loadedChunk.MoveTo(newGridCoordinate);
                     loadedChunks.put(newGridCoordinate, loadedChunk);
                 }
@@ -314,8 +315,8 @@ public class ChunkSystem {
         unloadQueue.clear();
         loadQueue.clear();
 
-        loadedChunkCoordinates.clear();
         chunkToGridMap.clear();
+        loadedChunkCoordinates.clear();
     }
 
     // Unload \\
