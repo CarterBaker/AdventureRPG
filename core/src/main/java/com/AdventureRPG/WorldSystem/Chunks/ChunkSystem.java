@@ -215,7 +215,8 @@ public class ChunkSystem {
             offset.y = (chunk.position.y * size) - worldOffsetY;
             offset.z = (chunk.position.z * size) - worldOffsetZ;
 
-            worldSystem.WrapAroundGrid(offset);
+            // TODO: This will be needed later but for now debugging is easier without
+            // worldSystem.WrapAroundGrid(offset);
 
             model.transform.setToTranslation(offset);
             modelBatch.render(model);
@@ -228,6 +229,10 @@ public class ChunkSystem {
     // Main \\
 
     public void LoadChunks(Vector3Int chunkCoordinate) {
+
+        // Triple check in the back end it is safe to trigger a load
+        if (this.currentChunkCoordinate.equals(chunkCoordinate))
+            return;
 
         // Set the current chunk first
         currentChunkCoordinate.set(chunkCoordinate);
@@ -267,7 +272,6 @@ public class ChunkSystem {
 
     private void BuildQueue() {
 
-        // Determine which chunks need to be moved and unloaded
         for (Map.Entry<Vector3Int, Chunk> entry : loadedChunks.entrySet()) {
 
             Vector3Int gridCoordinate = entry.getKey();
@@ -276,22 +280,18 @@ public class ChunkSystem {
             Vector3Int loadedChunkCoordinate = loadedChunk.coordinate;
             Vector3Int newGridCoordinate = chunkToGridMap.get(loadedChunkCoordinate);
 
-            // Move Queue
             if (newGridCoordinate != null) {
 
-                // Keep track of all loaded chunks with a set so we know what to unload
                 loadedChunkCoordinates.add(loadedChunkCoordinate);
 
                 if (!newGridCoordinate.equals(loadedChunk.position))
                     moveQueue.put(newGridCoordinate, loadedChunk);
             }
 
-            // Unload Queue
             else
                 unloadQueue.put(gridCoordinate, loadedChunk);
         }
 
-        // Load Queue
         for (Map.Entry<Vector3Int, Vector3Int> entry : chunkToGridMap.entrySet()) {
 
             Vector3Int chunkCoord = entry.getKey();
