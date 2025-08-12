@@ -18,6 +18,13 @@ public class Vector3Int {
         this.z = z;
     }
 
+    public Vector3Int(Vector3Int other) {
+
+        this.x = other.x;
+        this.y = other.y;
+        this.z = other.z;
+    }
+
     public void set(int x, int y, int z) {
 
         this.x = x;

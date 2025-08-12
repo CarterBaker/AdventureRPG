@@ -216,7 +216,7 @@ public class ChunkSystem {
             offset.z = (chunk.position.z * size) - worldOffsetZ;
 
             // TODO: This will be needed later but for now debugging is easier without
-            // worldSystem.WrapAroundGrid(offset);
+            worldSystem.WrapAroundGrid(offset);
 
             model.transform.setToTranslation(offset);
             modelBatch.render(model);
@@ -266,7 +266,7 @@ public class ChunkSystem {
             chunkCoordinates.get(i).set(chunkCoordinate);
 
             // Assemble the map with grid coordinates and chunk coordinates
-            chunkToGridMap.put(chunkCoordinates.get(i), gridCoordinates.get(i));
+            chunkToGridMap.put(new Vector3Int(chunkCoordinates.get(i)), gridCoordinates.get(i));
         }
     }
 
