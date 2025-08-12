@@ -48,7 +48,7 @@ public class ChunkSystem {
 
     // Queue
     private final Map<Vector3Int, Chunk> moveQueue;
-    private final Map<Vector3Int, Chunk> unloadQueue;
+    private final ArrayList<Chunk> unloadQueue;
     private final Map<Vector3Int, Vector3Int> loadQueue;
 
     // Settings
@@ -93,7 +93,7 @@ public class ChunkSystem {
 
         // Queue
         this.moveQueue = new HashMap<>();
-        this.unloadQueue = new HashMap<>();
+        this.unloadQueue = new ArrayList<>(total);
         this.loadQueue = new HashMap<>();
 
         // Settings
@@ -272,9 +272,14 @@ public class ChunkSystem {
 
     private void BuildQueue() {
 
-        for (Map.Entry<Vector3Int, Chunk> entry : loadedChunks.entrySet()) {
+        moveQueue.putAll(loadedChunks);
+        Iterator<Map.Entry<Vector3Int, Chunk>> iterator = moveQueue.entrySet().iterator();
 
-            Vector3Int gridCoordinate = entry.getKey();
+        while (iterator.hasNext()) {
+
+            Map.Entry<Vector3Int, Chunk> entry = iterator.next();
+
+            Vector3Int currentGridCoordinate = entry.getKey();
             Chunk loadedChunk = entry.getValue();
 
             Vector3Int loadedChunkCoordinate = loadedChunk.coordinate;
@@ -284,12 +289,21 @@ public class ChunkSystem {
 
                 loadedChunkCoordinates.add(loadedChunkCoordinate);
 
-                if (!newGridCoordinate.equals(loadedChunk.position))
-                    moveQueue.put(newGridCoordinate, loadedChunk);
+                if (!currentGridCoordinate.equals(newGridCoordinate)) {
+
+                    loadedChunks.remove(newGridCoordinate);
+                    loadedChunk.MoveTo(newGridCoordinate);
+                    loadedChunks.put(newGridCoordinate, loadedChunk);
+                }
             }
 
-            else
-                unloadQueue.put(gridCoordinate, loadedChunk);
+            else {
+
+                loadedChunks.remove(currentGridCoordinate);
+                unloadQueue.add(loadedChunk);
+            }
+
+            iterator.remove();
         }
 
         for (Map.Entry<Vector3Int, Vector3Int> entry : chunkToGridMap.entrySet()) {
@@ -304,8 +318,6 @@ public class ChunkSystem {
         System.out.println("Current Chunk: " + currentChunkCoordinate.toString() // TODO: Remove debug line
                 + ", Unload Queue: " + unloadQueue.size()
                 + ", Load Queue: " + loadQueue.size());
-
-        MoveActiveChunks();
     }
 
     private void PrepareNewQueue() {
@@ -320,43 +332,18 @@ public class ChunkSystem {
         loadedChunkCoordinates.clear();
     }
 
-    // Move \\
-
-    private void MoveActiveChunks() {
-
-        Iterator<Map.Entry<Vector3Int, Chunk>> iterator = moveQueue.entrySet().iterator();
-
-        while (iterator.hasNext()) {
-
-            Map.Entry<Vector3Int, Chunk> entry = iterator.next();
-
-            Vector3Int gridCoordinate = entry.getKey();
-            Chunk loadedChunk = entry.getValue();
-
-            loadedChunk.MoveTo(gridCoordinate);
-            loadedChunks.put(gridCoordinate, loadedChunk);
-
-            iterator.remove();
-
-        }
-
-    }
-
     // Unload \\
 
     private boolean UpdateUnloading() {
 
-        Iterator<Map.Entry<Vector3Int, Chunk>> iterator = unloadQueue.entrySet().iterator();
         int index = 0;
+        Iterator<Chunk> iterator = unloadQueue.iterator();
 
         while (iterator.hasNext() && index < indexPerBatch &&
                 loadedChunksThisFrame < MAX_CHUNK_LOADS_PER_FRAME &&
                 loadedChunksThisTick < MAX_CHUNK_LOADS_PER_TICK) {
 
-            Map.Entry<Vector3Int, Chunk> entry = iterator.next();
-
-            Vector3Int gridCoordinate = entry.getKey();
-            Chunk loadedChunk = entry.getValue();
+            Chunk loadedChunk = iterator.next();
 
             RemoveFromNeighborMap(loadedChunk);
 
@@ -364,8 +351,6 @@ public class ChunkSystem {
 
             if (mesh != null)
                 mesh.model.dispose();
-
-            loadedChunks.remove(gridCoordinate);
 
             iterator.remove();
             IncreaseQueueCount();
@@ -380,8 +365,8 @@ public class ChunkSystem {
 
     private boolean UpdateLoading() {
 
-        Iterator<Map.Entry<Vector3Int, Vector3Int>> iterator = loadQueue.entrySet().iterator();
         int index = 0;
+        Iterator<Map.Entry<Vector3Int, Vector3Int>> iterator = loadQueue.entrySet().iterator();
 
         while (iterator.hasNext() && index < indexPerBatch &&
                 loadedChunksThisFrame < MAX_CHUNK_LOADS_PER_FRAME &&
