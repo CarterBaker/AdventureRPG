@@ -64,7 +64,7 @@ public class ChunkSystem {
     private final ArrayList<Vector3Int> gridCoordinates;
     private final ArrayList<Vector3Int> chunkCoordinates;
     private final Map<Vector3Int, Vector3Int> chunkToGridMap;
-    private final Vector3Int wrappedValue;
+    private final Vector3Int chunkCoordinate;
     private final HashSet<Vector3Int> loadedChunkCoordinates;
     private final Vector3Int lookupKey;
     private final Vector3 offset;
@@ -113,7 +113,7 @@ public class ChunkSystem {
         for (int i = 0; i < total; i++)
             this.chunkCoordinates.add(new Vector3Int());
 
-        this.wrappedValue = new Vector3Int();
+        this.chunkCoordinate = new Vector3Int();
 
         this.loadedChunkCoordinates = new HashSet<>();
         this.lookupKey = new Vector3Int();
@@ -252,18 +252,18 @@ public class ChunkSystem {
         for (int i = 0; i < total; i++) {
 
             // We only need to read the key never set
-            Vector3Int key = gridCoordinates.get(i);
+            Vector3Int gridCoordinate = gridCoordinates.get(i);
 
             // Calculate the chunk to load using the key and current chunk
-            int x = currentChunkCoordinate.x + key.x;
-            int y = currentChunkCoordinate.y + key.y;
-            int z = currentChunkCoordinate.z + key.z;
+            int x = currentChunkCoordinate.x + gridCoordinate.x;
+            int y = currentChunkCoordinate.y + gridCoordinate.y;
+            int z = currentChunkCoordinate.z + gridCoordinate.z;
 
-            wrappedValue.set(x, y, z);
-            worldSystem.WrapAroundWorld(wrappedValue);
+            chunkCoordinate.set(x, y, z);
+            worldSystem.WrapAroundWorld(chunkCoordinate);
 
             // Set the value to the correct chunks coordinate
-            chunkCoordinates.get(i).set(wrappedValue);
+            chunkCoordinates.get(i).set(chunkCoordinate);
 
             // Assemble the map with grid coordinates and chunk coordinates
             chunkToGridMap.put(chunkCoordinates.get(i), gridCoordinates.get(i));
@@ -329,8 +329,8 @@ public class ChunkSystem {
         while (iterator.hasNext()) {
 
             Map.Entry<Vector3Int, Chunk> entry = iterator.next();
-            Vector3Int gridCoordinate = entry.getKey();
 
+            Vector3Int gridCoordinate = entry.getKey();
             Chunk loadedChunk = entry.getValue();
 
             loadedChunk.MoveTo(gridCoordinate);
@@ -354,6 +354,7 @@ public class ChunkSystem {
                 loadedChunksThisTick < MAX_CHUNK_LOADS_PER_TICK) {
 
             Map.Entry<Vector3Int, Chunk> entry = iterator.next();
+
             Vector3Int gridCoordinate = entry.getKey();
             Chunk loadedChunk = entry.getValue();
 
@@ -387,6 +388,7 @@ public class ChunkSystem {
                 loadedChunksThisTick < MAX_CHUNK_LOADS_PER_TICK) {
 
             Map.Entry<Vector3Int, Vector3Int> entry = iterator.next();
+
             Vector3Int gridCoordinate = entry.getKey();
             Vector3Int chunkCoordinate = entry.getValue();
 
