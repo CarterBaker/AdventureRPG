@@ -10,35 +10,31 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 
 public class GameRenderer {
 
-    // Main
-    private final GameManager GameManager; // TODO: Leaving some unused variables for now
-
-    // Systems
+    // Game Manager
+    private final GameManager gameManager; // TODO: Leaving some unused variables for now
     private final UISystem UISystem;
     private final WorldSystem worldSystem;
     private final PlayerSystem playerSystem;
 
     public GameRenderer(GameManager GameManager) {
 
-        // Main
-        this.GameManager = GameManager;
-
-        // Systems
+        // Game Manager
+        this.gameManager = GameManager;
         this.UISystem = GameManager.UISystem;
         this.worldSystem = GameManager.worldSystem;
         this.playerSystem = GameManager.playerSystem;
     }
 
     // TODO: This will need to be completely redone to include UI and other elements
-    public void Draw(SpriteBatch spriteBatch, ModelBatch modelBatch) {
+    public void draw(SpriteBatch spriteBatch, ModelBatch modelBatch) {
 
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
-        modelBatch.begin(playerSystem.GetCamera());
+        modelBatch.begin(playerSystem.getCamera());
 
-        worldSystem.Render(modelBatch);
-        playerSystem.Render();
+        worldSystem.render(modelBatch);
+        playerSystem.render();
 
         modelBatch.end();
     }

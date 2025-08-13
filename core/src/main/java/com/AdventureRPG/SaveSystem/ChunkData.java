@@ -1,13 +1,14 @@
 package com.AdventureRPG.SaveSystem;
 
 import java.io.File;
+
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 
 public class ChunkData {
 
-    // Save System
+    // Settings
     private final Settings settings;
     private final File path;
 
@@ -15,7 +16,7 @@ public class ChunkData {
 
     public ChunkData(SaveSystem saveSystem) {
 
-        // Save System
+        // Settings
         this.settings = saveSystem.settings;
         this.path = saveSystem.path;
     }
@@ -23,15 +24,15 @@ public class ChunkData {
     // Save System \\
 
     // TODO: The whole saving and loading of worlds needs to be well thought out
-    public void LoadChunkData(File Save) {
+    public void loadChunkData(File save) {
 
     }
 
-    public void WriteChunk(Chunk chunk) {
+    public void writeChunk(Chunk chunk) {
 
     }
 
-    public Chunk ReadChunk(Vector3Int position) {
+    public Chunk readChunk(Vector3Int chunkCoordinate) {
         return null;
     }
 

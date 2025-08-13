@@ -7,7 +7,7 @@ import com.badlogic.gdx.math.Vector3;
 
 public class Movement {
 
-    // Base
+    // Game Manager
     private final GameManager gameManager;
     private final Statistics statistics;
 
@@ -20,7 +20,7 @@ public class Movement {
 
     public Movement(GameManager gameManager, Statistics statistics) {
 
-        // Base
+        // Game Manager
         this.gameManager = gameManager;
         this.statistics = statistics;
 
@@ -32,9 +32,9 @@ public class Movement {
 
     // Movement \\
 
-    public Vector3 Calculate(Vector3 currentPosition, Vector3Int input, Vector3 cameraDirection) {
+    public Vector3 calculate(Vector3 currentPosition, Vector3Int input, Vector3 cameraDirection) {
 
-        float delta = gameManager.DeltaTime();
+        float delta = gameManager.deltaTime();
 
         // Calculate horizontal forward vector (XZ plane)
         forward.set(cameraDirection.x, 0f, cameraDirection.z).nor();

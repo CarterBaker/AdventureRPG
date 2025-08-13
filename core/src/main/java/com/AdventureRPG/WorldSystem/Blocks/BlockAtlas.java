@@ -1,5 +1,8 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -8,15 +11,16 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.PixmapPacker;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import java.util.HashMap;
-import java.util.Map;
 
 public class BlockAtlas {
+
+    // Debug
+    private final boolean debug = false;
 
     private Texture texture;
     private Map<Integer, TextureRegion> regionMap = new HashMap<>();
 
-    public BlockAtlas(String folderPath, int tileSize, int padding, boolean debug) {
+    public BlockAtlas(String folderPath, int tileSize, int padding) {
         FileHandle folder = Gdx.files.internal(folderPath);
         FileHandle[] files = folder.list((dir, name) -> name.endsWith(".png"));
 
@@ -25,12 +29,16 @@ public class BlockAtlas {
         PixmapPacker packer = new PixmapPacker(estimatedSize, estimatedSize, Pixmap.Format.RGBA8888, padding, false);
 
         for (FileHandle file : files) {
+
             try {
+
                 String name = file.nameWithoutExtension();
                 Pixmap pixmap = new Pixmap(file);
                 packer.pack(name, pixmap);
                 pixmap.dispose();
-            } catch (Exception e) {
+            }
+
+            catch (Exception e) {
                 Gdx.app.error("BlockAtlas", "Failed to load: " + file.name(), e);
             }
         }

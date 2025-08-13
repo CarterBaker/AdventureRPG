@@ -26,7 +26,7 @@ public class BlockData {
         this.block = null;
 
         // Biome
-        this.biomeID = biome.ID;
+        this.biomeID = biome.id;
         this.biome = biome;
     }
 
@@ -38,11 +38,11 @@ public class BlockData {
 
         // Block
         this.blockID = blockID;
-        this.block = worldSystem.GetBlockByID(blockID);
+        this.block = worldSystem.getBlockByID(blockID);
 
         // Biome
         this.biomeID = biomeID;
-        this.biome = worldSystem.biomeSystem.GetBiomeByID(biomeID);
+        this.biome = worldSystem.biomeSystem.getBiomeByID(biomeID);
     }
 
     // Block \\
@@ -50,12 +50,12 @@ public class BlockData {
     public void PlaceBlock(int blockID) {
 
         this.blockID = blockID;
-        this.block = worldSystem.GetBlockByID(blockID);
+        this.block = worldSystem.getBlockByID(blockID);
     }
 
     public void BreakBlock() {
 
         this.blockID = biome.airBlock;
-        this.block = worldSystem.GetBlockByID(biome.airBlock);
+        this.block = worldSystem.getBlockByID(biome.airBlock);
     }
 }

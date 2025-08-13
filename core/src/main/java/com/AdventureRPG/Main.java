@@ -1,7 +1,8 @@
 package com.AdventureRPG;
 
 import java.io.File;
-import com.AdventureRPG.SettingsSystem.*;
+
+import com.AdventureRPG.SettingsSystem.Settings;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
@@ -68,10 +69,11 @@ public class Main extends Game {
         File settingsFile = new File(GAME_DIRECTORY, "settings.json");
 
         if (settingsFile.exists()) {
+
             boolean deleted = settingsFile.delete();
-            if (!deleted) {
+
+            if (!deleted)
                 System.err.println("Failed to delete settings file: " + settingsFile.getAbsolutePath());
-            }
         }
     }
 }

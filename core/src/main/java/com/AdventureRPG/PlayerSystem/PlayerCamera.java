@@ -18,7 +18,7 @@ public class PlayerCamera {
         perspectiveCamera = new PerspectiveCamera(fov, viewportWidth, viewportHeight);
     }
 
-    public void Awake() {
+    public void awake() {
 
         // Initial camera settings
         perspectiveCamera.near = 0.1f;
@@ -33,23 +33,23 @@ public class PlayerCamera {
 
     // Camera \\
 
-    public PerspectiveCamera Get() {
+    public PerspectiveCamera get() {
         return perspectiveCamera;
     }
 
-    public Vector3 Direction() {
+    public Vector3 direction() {
         return perspectiveCamera.direction;
     }
 
     // Called when changing window size
-    public void UpdateViewport(float width, float height) {
+    public void updateViewport(float width, float height) {
         perspectiveCamera.viewportWidth = width;
         perspectiveCamera.viewportHeight = height;
         perspectiveCamera.update();
     }
 
     // Called from inputSystem to rotate the camera
-    public void Rotate(float deltaYaw, float deltaPitch) {
+    public void rotate(float deltaYaw, float deltaPitch) {
         yaw += deltaYaw;
         pitch += deltaPitch;
 
@@ -57,7 +57,7 @@ public class PlayerCamera {
         pitch = Math.max(-89f, Math.min(89f, pitch));
 
         // Calculate direction vector from yaw/pitch
-        Vector3 direction = new Vector3(
+        Vector3 direction = new Vector3( // TODO: Creating a new Vector3Int object
                 (float) Math.cos(Math.toRadians(yaw)) * (float) Math.cos(Math.toRadians(pitch)),
                 (float) Math.sin(Math.toRadians(pitch)),
                 (float) Math.sin(Math.toRadians(yaw)) * (float) Math.cos(Math.toRadians(pitch)));

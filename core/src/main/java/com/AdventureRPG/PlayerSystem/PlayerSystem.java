@@ -27,25 +27,25 @@ public class PlayerSystem {
         this.position = new PlayerPosition(gameManager, this);
     }
 
-    public void Awake() {
-        camera.Awake();
+    public void awake() {
+        camera.awake();
     }
 
-    public void Start() {
-
-    }
-
-    public void Update() {
+    public void start() {
 
     }
 
-    public void Render() {
+    public void update() {
+
+    }
+
+    public void render() {
 
     }
 
     // Camera \\
 
-    public PerspectiveCamera GetCamera() {
-        return camera.Get();
+    public PerspectiveCamera getCamera() {
+        return camera.get();
     }
 }

@@ -1,15 +1,18 @@
 package com.AdventureRPG.SaveSystem;
 
 import java.io.File;
+
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
 
 // TODO: Eventually the whole save system will need a refactor
 public class SaveSystem {
 
-    // Game
+    // Game Manager
     public final Settings settings;
     public final GameManager gameManager;
+
+    // Settings
     public final File path;
 
     // Save System
@@ -30,49 +33,49 @@ public class SaveSystem {
         this.chunkData = new ChunkData(this);
     }
 
-    public void Awake() {
+    public void awake() {
 
     }
 
-    public void Start() {
+    public void start() {
 
     }
 
-    public void Update() {
+    public void update() {
 
     }
 
-    public void Render() {
+    public void render() {
 
     }
 
     // Save System \\
 
-    private boolean HasNewestSave() {
+    private boolean hasNewestSave() {
         // TODO: This needs to be configured once we have our save system in place
         return false;
     }
 
     // User Data \\
 
-    public void LoadUserData() {
-        if (HasNewestSave())
-            userData.LoadUserData(path);
+    public void loadUserData() {
+        if (hasNewestSave())
+            userData.loadUserData(path);
     }
 
-    public void LoadUserData(File Save) {
-        userData.LoadUserData(Save);
+    public void loadUserData(File Save) {
+        userData.loadUserData(Save);
     }
 
     // Chunk Data \\
 
-    public void LoadChunkData() {
-        if (HasNewestSave())
-            chunkData.LoadChunkData(path);
+    public void loadChunkData() {
+        if (hasNewestSave())
+            chunkData.loadChunkData(path);
     }
 
-    public void LoadChunkData(File Save) {
-        chunkData.LoadChunkData(Save);
+    public void loadChunkData(File Save) {
+        chunkData.loadChunkData(Save);
     }
 
 }

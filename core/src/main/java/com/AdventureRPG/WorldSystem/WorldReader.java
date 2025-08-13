@@ -1,10 +1,10 @@
 package com.AdventureRPG.WorldSystem;
 
+import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Util.Coordinate2Int;
+import com.AdventureRPG.Util.Vector2Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
-import com.AdventureRPG.Util.Vector2Int;
-import com.AdventureRPG.Util.Vector3Int;
-import com.AdventureRPG.SettingsSystem.Settings;
 
 public class WorldReader {
 
@@ -12,9 +12,6 @@ public class WorldReader {
     private final WorldSystem worldSystem;
     private final Settings settings;
     private final Pixmap world;
-
-    // Temp
-    private final Vector2Int worldPosition;
 
     // Base \\
 
@@ -24,14 +21,11 @@ public class WorldReader {
         this.worldSystem = worldSystem;
         this.settings = worldSystem.settings;
         this.world = new Pixmap(Gdx.files.internal(settings.REGION_IMAGE_PATH));
-
-        // Temp
-        this.worldPosition = new Vector2Int();
     }
 
     // World Reader \\
 
-    public Vector2Int GetWorldScale() {
+    public Vector2Int getWorldScale() {
         int width = world.getWidth();
         int height = world.getHeight();
 
@@ -49,13 +43,13 @@ public class WorldReader {
         return worldScale;
     }
 
-    public WorldRegion WorldRegionFromPosition(Vector3Int input) {
+    public WorldRegion worldRegionFromPosition(long position) {
 
-        worldPosition.set(input.x, input.z);
-        Vector2Int imagePixel = worldSystem.WrapAroundImageRegion(worldPosition);
+        // TODO: This needs to be verified working correctly
+        worldSystem.wrapAroundImageRegion(position);
 
-        int x = imagePixel.x;
-        int y = imagePixel.y;
+        int x = Coordinate2Int.unpackX(position);
+        int y = Coordinate2Int.unpackY(position);
 
         // Clamp to image boundaries just in case
         x = Math.min(Math.max(x, 0), world.getWidth() - 1);

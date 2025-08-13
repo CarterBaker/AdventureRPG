@@ -1,27 +1,28 @@
 package com.AdventureRPG.WorldSystem.Biomes;
 
-import com.AdventureRPG.GameManager;
-import com.AdventureRPG.SettingsSystem.Settings;
-import com.google.gson.JsonSyntaxException;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.AdventureRPG.GameManager;
+import com.AdventureRPG.SettingsSystem.Settings;
+import com.google.gson.JsonSyntaxException;
+
 public class Loader {
-    public static Biome[] LoadBiomes(GameManager gameManager) {
+
+    public static Biome[] loadBiomes(GameManager gameManager) {
 
         Settings settings = gameManager.settings;
-        File biomeDir = new File(settings.BIOME_PATH);
+        File biomeDir = new File(settings.BIOME_JSON_PATH);
 
         if (!biomeDir.exists() || !biomeDir.isDirectory())
-            throw new RuntimeException("Biome directory not found: " + settings.BIOME_PATH);
+            throw new RuntimeException("Biome directory not found: " + settings.BIOME_JSON_PATH);
 
         File[] jsonFiles = biomeDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
         if (jsonFiles == null || jsonFiles.length == 0)
-            throw new RuntimeException("No biome JSON files found in: " + settings.BIOME_PATH);
+            throw new RuntimeException("No biome JSON files found in: " + settings.BIOME_JSON_PATH);
 
         List<Biome> biomeList = new ArrayList<>();
         for (File file : jsonFiles) {

@@ -2,65 +2,65 @@ package com.AdventureRPG.PlayerSystem;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.InputSystem.Movement;
+import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.badlogic.gdx.math.Vector3;
 
 public class PlayerPosition {
 
-    // Player
+    // Game Manager
     private final WorldSystem worldSystem;
     private final PlayerCamera camera;
     private final Movement movement;
 
-    // Position
-    private Vector3 currentPosition;
-    private Vector3Int chunkCoordinate;
-
     // Settings
     private final int CHUNK_SIZE;
+
+    // Position
+    private Vector3 currentPosition;
+    private Vector2Int chunkCoordinate;
 
     // Base \\
 
     public PlayerPosition(GameManager gameManager, PlayerSystem playerSystem) {
 
-        // Player
+        // Game Manager
         this.worldSystem = gameManager.worldSystem;
         this.camera = playerSystem.camera;
         this.movement = new Movement(gameManager, playerSystem.stats);
 
-        // Position
-        this.currentPosition = new Vector3();
-        this.chunkCoordinate = new Vector3Int();
-
         // Settings
         this.CHUNK_SIZE = gameManager.settings.CHUNK_SIZE;
+
+        // Position
+        this.currentPosition = new Vector3();
+        this.chunkCoordinate = new Vector2Int();
     }
 
     // Movement \\
 
-    public void Move(Vector3Int input) {
+    public void move(Vector3Int input) {
 
-        currentPosition = movement.Calculate(currentPosition, input, camera.Direction());
+        currentPosition = movement.calculate(currentPosition, input, camera.direction());
 
-        UpdateChunkCoordinateFrom(currentPosition);
+        updateChunkCoordinateFrom(currentPosition);
 
-        worldSystem.WrapAroundChunk(currentPosition);
-        worldSystem.WrapAroundWorld(chunkCoordinate);
+        worldSystem.wrapAroundChunk(currentPosition);
+        worldSystem.wrapAroundWorld(chunkCoordinate);
 
-        worldSystem.UpdatePosition(currentPosition, chunkCoordinate);
+        worldSystem.updatePosition(currentPosition, chunkCoordinate);
     }
 
     // Calculate new chunk from position per axis
-    private void UpdateChunkCoordinateFrom(Vector3 position) {
+    private void updateChunkCoordinateFrom(Vector3 position) {
 
-        chunkCoordinate.x += CalculateChunkCoordinateAxisFrom(position.x);
-        chunkCoordinate.y += CalculateChunkCoordinateAxisFrom(position.y);
-        chunkCoordinate.z += CalculateChunkCoordinateAxisFrom(position.z);
+        chunkCoordinate.x += calculateChunkCoordinateAxisFrom(position.x);
+        chunkCoordinate.y += calculateChunkCoordinateAxisFrom(position.z);
     }
 
     // Use the calculated position this frame to calculate the new chunks position
-    private int CalculateChunkCoordinateAxisFrom(float axis) {
+    private int calculateChunkCoordinateAxisFrom(float axis) {
 
         float axisInput = axis;
         int newChunkAxis = 0;

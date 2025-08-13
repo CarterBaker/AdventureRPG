@@ -1,12 +1,12 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
+import java.util.List;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.files.FileHandle;
-
-import java.util.List;
 
 public class Loader {
 
@@ -26,14 +26,14 @@ public class Loader {
         // Allocate based on max ID
         int maxID = 0;
         for (Block b : blockList)
-            if (b.ID > maxID)
-                maxID = b.ID;
+            if (b.id > maxID)
+                maxID = b.id;
 
         Block[] result = new Block[maxID + 1];
         for (Block b : blockList) {
-            if (result[b.ID] != null)
-                throw new RuntimeException("Duplicate block ID detected: " + b.ID + " (" + b.name + ")");
-            result[b.ID] = b;
+            if (result[b.id] != null)
+                throw new RuntimeException("Duplicate block ID detected: " + b.id + " (" + b.name + ")");
+            result[b.id] = b;
         }
 
         return result;

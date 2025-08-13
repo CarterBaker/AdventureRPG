@@ -8,11 +8,13 @@ public class WorldTick {
     // Game Manager
     private final GameManager gameManager;
     private final Settings settings;
-    private final float tickTime;
+
+    // Settings
+    private final float WORLD_TICK;
 
     // Tick
     private float currentTime = 0f;
-    private boolean Tick;
+    private boolean tick;
 
     // Base \\
 
@@ -22,24 +24,24 @@ public class WorldTick {
         this.gameManager = worldSystem.gameManager;
         this.settings = worldSystem.settings;
 
-        // Tick
-        this.tickTime = settings.WORLD_TICK;
+        // Settings
+        this.WORLD_TICK = settings.WORLD_TICK;
     }
 
-    public void Update() {
+    public void update() {
 
-        if (currentTime >= tickTime) {
-            this.Tick = true;
+        if (currentTime >= WORLD_TICK) {
+            this.tick = true;
             currentTime = 0f;
         } else {
-            this.Tick = false;
-            currentTime += gameManager.DeltaTime();
+            this.tick = false;
+            currentTime += gameManager.deltaTime();
         }
     }
 
     // Tick \\
 
-    public boolean Tick() {
-        return Tick;
+    public boolean tick() {
+        return tick;
     }
 }

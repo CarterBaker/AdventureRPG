@@ -2,117 +2,45 @@ package com.AdventureRPG.WorldSystem.Biomes;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
-import java.util.HashMap;
-import java.util.Map;
 
 public class BiomeSystem {
 
-    // Base
+    // Game Manager
     public final Settings settings;
 
     // Biome System
     private final Biome[] biomes;
 
-    // Blending
-    private final Map<Integer, int[]> relatedBiomes;
-    private final Map<Integer, int[]> relatedSubTerrainianBiomes;
-    private final Map<Integer, int[]> relatedSurfaceBiomes;
-
     // Base \\
 
     public BiomeSystem(GameManager gameManager) {
 
-        // Base
+        // Game Manager
         this.settings = gameManager.settings;
 
         // Biome System
-        this.biomes = Loader.LoadBiomes(gameManager);
-
-        // Blending
-        this.relatedBiomes = OrganizeSimilarBiomes(biomes);
-        this.relatedSubTerrainianBiomes = OrganizeSubTerrainianBiomes();
-        this.relatedSurfaceBiomes = OrganizeSurfaceBiomes();
+        this.biomes = Loader.loadBiomes(gameManager);
     }
 
-    public void Awake() {
+    public void awake() {
 
     }
 
-    public void Start() {
+    public void start() {
 
     }
 
-    public void Update() {
+    public void update() {
 
     }
 
-    public void Render() {
+    public void render() {
 
     }
 
     // Biome System \\
 
-    private Map<Integer, int[]> OrganizeSimilarBiomes(Biome[] biomes) {
-
-        Map<Integer, int[]> map = new HashMap<>();
-
-        for (Biome biome : biomes) {
-
-            int[] sortedIDs = biome.similarBiomes.stream().mapToInt(Integer::intValue).sorted().toArray();
-
-            map.put(biome.ID, sortedIDs);
-        }
-
-        return map;
-    }
-
-    private Map<Integer, int[]> OrganizeSubTerrainianBiomes() {
-        Map<Integer, int[]> map = new HashMap<>();
-
-        for (Map.Entry<Integer, int[]> entry : relatedBiomes.entrySet()) {
-            int biomeID = entry.getKey();
-            int[] related = entry.getValue();
-
-            int[] filtered = java.util.Arrays.stream(related)
-                    .filter(id -> biomes[id].subTerrainian)
-                    .toArray();
-
-            map.put(biomeID, filtered);
-        }
-
-        return map;
-    }
-
-    private Map<Integer, int[]> OrganizeSurfaceBiomes() {
-        Map<Integer, int[]> map = new HashMap<>();
-
-        for (Map.Entry<Integer, int[]> entry : relatedBiomes.entrySet()) {
-            int biomeID = entry.getKey();
-            int[] related = entry.getValue();
-
-            int[] filtered = java.util.Arrays.stream(related)
-                    .filter(id -> !biomes[id].subTerrainian)
-                    .toArray();
-
-            map.put(biomeID, filtered);
-        }
-
-        return map;
-    }
-
-    public Biome GetBiomeByID(int ID) {
-        return biomes[ID];
-    }
-
-    public int[] GetRelatedBiomes(int ID) {
-        return relatedBiomes.get(ID);
-    }
-
-    public int[] GetRelatedSubTerrainianBiomes(int ID) {
-        return relatedSubTerrainianBiomes.get(ID);
-    }
-
-    public int[] GetRelatedSurfaceBiomes(int ID) {
-        return relatedSurfaceBiomes.get(ID);
+    public Biome getBiomeByID(int id) {
+        return biomes[id];
     }
 }

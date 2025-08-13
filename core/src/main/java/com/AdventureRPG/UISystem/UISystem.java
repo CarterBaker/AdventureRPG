@@ -22,25 +22,25 @@ public class UISystem {
         this.gameManager = gameManager;
     }
 
-    public void Awake() {
+    public void awake() {
 
     }
 
-    public void Start() {
+    public void start() {
 
     }
 
-    public void Update() {
+    public void update() {
 
     }
 
-    public void Render() {
+    public void render() {
 
     }
 
     // UI System \\
 
-    public MenuType Open(Menu Menu) {
+    public MenuType open(Menu Menu) {
         MenuType menuInstance = switch (Menu) {
             case LoadScreen -> new LoadScreen(this, Menu);
             case Main -> new MainMenu(this, Menu);
@@ -48,42 +48,42 @@ public class UISystem {
         };
 
         openMenus.add(menuInstance);
-        menuInstance.Open();
+        menuInstance.open();
 
-        if (menuInstance.BlockInput())
-            gameManager.inputSystem.Block(true);
+        if (menuInstance.blockInput())
+            gameManager.inputSystem.block(true);
 
         return menuInstance;
     }
 
-    public void Close(Menu Menu) {
+    public void close(Menu Menu) {
         Iterator<MenuType> iterator = openMenus.iterator();
         while (iterator.hasNext()) {
             MenuType openMenu = iterator.next();
-            if (openMenu.GetMenu() == Menu) {
-                Close(openMenu); // Call the close behavior
+            if (openMenu.getMenu() == Menu) {
+                close(openMenu); // Call the close behavior
                 iterator.remove(); // Safely remove from list
             }
         }
 
-        UpdateInputBlockState();
+        updateInputBlockState();
     }
 
-    public void Close(MenuType Menu) {
-        Menu.Close();
+    public void close(MenuType Menu) {
+        Menu.close();
         openMenus.remove(Menu);
-        UpdateInputBlockState();
+        updateInputBlockState();
     }
 
-    private void UpdateInputBlockState() {
+    private void updateInputBlockState() {
 
         for (MenuType menu : openMenus) {
-            if (menu.BlockInput()) {
-                gameManager.inputSystem.Block(true);
+            if (menu.blockInput()) {
+                gameManager.inputSystem.block(true);
                 return;
             }
         }
 
-        gameManager.inputSystem.Block(false);
+        gameManager.inputSystem.block(false);
     }
 }

@@ -2,22 +2,22 @@ package com.AdventureRPG.UISystem;
 
 public abstract class MenuType {
     protected final UISystem UISystem;
-    protected final Menu Menu;
+    protected final Menu menu;
 
-    public MenuType(UISystem UISystem, Menu Menu) {
+    public MenuType(UISystem UISystem, Menu menu) {
         this.UISystem = UISystem;
-        this.Menu = Menu;
+        this.menu = menu;
     }
 
-    public Menu GetMenu() {
-        return Menu;
+    public Menu getMenu() {
+        return menu;
     }
 
-    public abstract void Open();
+    public abstract void open();
 
-    public abstract void Close();
+    public abstract void close();
 
-    public boolean BlockInput() {
+    public boolean blockInput() {
         return true;
     }
 }

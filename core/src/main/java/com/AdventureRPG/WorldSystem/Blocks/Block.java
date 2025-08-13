@@ -3,7 +3,7 @@ package com.AdventureRPG.WorldSystem.Blocks;
 public class Block {
 
     public final String name;
-    public final int ID;
+    public final int id;
 
     public final int top;
     public final int side;
@@ -14,7 +14,7 @@ public class Block {
     public Block(Builder builder) {
 
         this.name = builder.name;
-        this.ID = builder.ID;
+        this.id = builder.id;
         this.top = builder.top;
         this.side = builder.side;
         this.bottom = builder.bottom;
@@ -25,7 +25,7 @@ public class Block {
     public static class Builder {
 
         private String name;
-        private int ID;
+        private int id;
         private int top = -1;
         private int side = -1;
         private int bottom = -1;
@@ -37,8 +37,8 @@ public class Block {
             return this;
         }
 
-        public Builder ID(int ID) {
-            this.ID = ID;
+        public Builder id(int id) {
+            this.id = id;
             return this;
         }
 

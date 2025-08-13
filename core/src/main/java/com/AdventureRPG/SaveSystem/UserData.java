@@ -1,63 +1,66 @@
 package com.AdventureRPG.SaveSystem;
 
-import java.util.Random;
 import java.io.File;
+import java.util.Random;
+
 import com.AdventureRPG.SettingsSystem.Settings;
 
 public class UserData {
 
-    // Save System
+    // Settings
     private final Settings Settings;
     private final File path;
 
     // Seed Management
-    private long Seed;
+    private long seed;
+    private final Random random;
 
     public UserData(SaveSystem saveSystem) {
 
-        // Save System
+        // Settings
         this.Settings = saveSystem.settings;
         this.path = saveSystem.path;
 
         // Seed Management
-        GenerateSeed();
+        this.random = new Random();
+        generateSeed();
     }
 
     // Save System \\
 
-    public void LoadUserData(File Save) {
+    public void loadUserData(File Save) {
 
     }
 
-    public void WriteData() {
+    public void writeData() {
 
     }
 
-    public void ReadData() {
+    public void readData() {
 
     }
 
     // Seed Management
 
     // TODO: this will need to be assessed later for a potential refactor
-    public long Seed() {
-        return Seed;
+    public long getSeed() {
+        return seed;
     }
 
-    public void GenerateSeed() {
-        this.Seed = new Random().nextLong();
+    public void generateSeed() {
+        this.seed = random.nextLong();
     }
 
-    public void GenerateSeed(String Seed) {
-        if (Seed == null || Seed.isEmpty()) {
-            this.Seed = new Random().nextLong();
+    public void generateSeed(String seed) {
+        if (seed == null || seed.isEmpty()) {
+            this.seed = random.nextLong();
         } else {
             try {
                 // Try parsing as number (handles "123", "0xABC", etc.)
-                this.Seed = Long.parseLong(Seed);
+                this.seed = Long.parseLong(seed);
             } catch (NumberFormatException e) {
                 // Use hash if not a valid number
-                this.Seed = Seed.hashCode(); // Or use a better hash if you want full stability
+                this.seed = seed.hashCode(); // Or use a better hash if you want full stability
             }
         }
     }

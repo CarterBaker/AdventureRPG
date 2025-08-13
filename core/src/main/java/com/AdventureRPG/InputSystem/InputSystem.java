@@ -10,13 +10,13 @@ import com.badlogic.gdx.InputAdapter;
 public class InputSystem extends InputAdapter {
 
     // Game Manager
-    public final PlayerSystem PlayerSystem;
+    public final PlayerSystem playerSystem;
 
     // Input
     private boolean blockInput = false;
 
     // Rotation
-    private final float sensitivity = 0.15f; // TODO: Move sensitivity to Settings()
+    private final float sensitivity = 0.15f; // TODO: Move sensitivity to Settings
 
     // Temp
     public final Vector3Int movement;
@@ -26,27 +26,27 @@ public class InputSystem extends InputAdapter {
     public InputSystem(GameManager gameManager) {
 
         // Game Manager
-        this.PlayerSystem = gameManager.playerSystem;
+        this.playerSystem = gameManager.playerSystem;
 
         // Temp
         movement = new Vector3Int();
     }
 
-    public void Awake() {
+    public void awake() {
 
     }
 
-    public void Start() {
+    public void start() {
         Gdx.input.setInputProcessor(this);
-        Block(blockInput);
+        block(blockInput);
     }
 
-    public void Update() {
-        UpdateRotation();
-        UpdateMovement();
+    public void update() {
+        updateRotation();
+        updateMovement();
     }
 
-    public void Render() {
+    public void render() {
 
     }
 
@@ -103,7 +103,7 @@ public class InputSystem extends InputAdapter {
 
     // Input \\
 
-    public void Block(boolean block) {
+    public void block(boolean block) {
 
         this.blockInput = block;
         Gdx.input.setCursorCatched(!block);
@@ -113,7 +113,7 @@ public class InputSystem extends InputAdapter {
         return blockInput;
     }
 
-    private void UpdateRotation() {
+    private void updateRotation() {
 
         if (blockInput)
             return;
@@ -121,10 +121,10 @@ public class InputSystem extends InputAdapter {
         float deltaX = Gdx.input.getDeltaX() * sensitivity;
         float deltaY = -Gdx.input.getDeltaY() * sensitivity;
 
-        PlayerSystem.camera.Rotate(deltaX, deltaY);
+        playerSystem.camera.rotate(deltaX, deltaY);
     }
 
-    private void UpdateMovement() {
+    private void updateMovement() {
 
         if (blockInput)
             return;
@@ -146,6 +146,6 @@ public class InputSystem extends InputAdapter {
             movement.y -= 1; // down
 
         if (movement.hasValues())
-            PlayerSystem.position.Move(movement);
+            playerSystem.position.move(movement);
     }
 }
