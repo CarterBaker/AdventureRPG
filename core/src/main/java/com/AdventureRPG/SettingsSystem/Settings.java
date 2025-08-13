@@ -121,7 +121,7 @@ public class Settings {
         // Scale Settings
         public float BLOCK_SIZE = 1;
         public int CHUNK_SIZE = 16;
-        public int WORLD_HEIGHT = 1024;
+        public int WORLD_HEIGHT = 512;
 
         // World Tick Settings
         public float WORLD_TICK = 1;

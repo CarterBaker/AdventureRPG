@@ -152,7 +152,7 @@ public class GameManager implements Screen {
         inputSystem.start();
 
         startLoading();
-        // UISystem.Open(Menu.Main);
+        // UISystem.Open(Menu.Main); TODO: re add line to final version
     }
 
     // Created seperate logic so this can be called when loading a save

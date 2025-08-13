@@ -71,9 +71,9 @@ public class ChunkSystem {
         this.MAX_CHUNK_LOADS_PER_TICK = settings.MAX_CHUNK_LOADS_PER_TICK;
 
         // Position Tracking
-        this.currentChunk = 0;
-        this.currentChunkX = 0;
-        this.currentChunkY = 0;
+        this.currentChunk = Coordinate2Int.pack(-1, -1);
+        this.currentChunkX = -1;
+        this.currentChunkY = -1;
 
         // Chunk Tracking
         this.totalChunks = maxRenderDistance * maxRenderDistance;
@@ -183,8 +183,13 @@ public class ChunkSystem {
             loadedChunksThisTick = 0;
 
         // If there is no queue we don't need to do anything
-        if (!hasQueue())
+        if (!hasQueue()) {
+
+            if (debug) // TODO: Remove debug line
+                debug();
+
             return;
+        }
 
         // Alternating queue update
         for (int i = 0; i < queueProcess.length; i++) {
@@ -382,16 +387,17 @@ public class ChunkSystem {
     }
 
     public boolean hasQueue() {
-        return false;
+        return unloadQueue.size() > 0 ||
+                loadQueueOrder.size() > 0;
     }
 
     public int totalQueueSize() {
-        return 0;
+        return unloadQueue.size() + loadQueueOrder.size();
     }
 
     // Debug \\
 
     private void debug() { // TODO: Remove debug line
-
+        System.out.println(Coordinate2Int.toString(currentChunk));
     }
 }
