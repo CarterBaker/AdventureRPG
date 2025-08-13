@@ -68,10 +68,13 @@ public class WorldGenerator {
 
     // Chunk \\
 
+    Vector3Int temp = new Vector3Int(); // TODO: temp code
+
     public Chunk generateChunk(long coordinate) {
 
         int coordinateX = Coordinate2Int.unpackX(coordinate);
-        int coordinateY = Coordinate2Int.unpackY(coordinate);
+        int coordinateZ = Coordinate2Int.unpackY(coordinate);
+        temp.set(coordinateX, 0, coordinateZ);
 
         WorldRegion WorldRegion = worldSystem.worldReader.worldRegionFromPosition(coordinate);
         Chunk chunk = new Chunk(coordinate);
@@ -84,7 +87,7 @@ public class WorldGenerator {
 
                 for (int z = 0; z < CHUNK_SIZE; z++) {
 
-                    Vector3Int blockPos = new Vector3Int(x, y, z).add(coordinate);
+                    Vector3Int blockPos = new Vector3Int(x, y, z).add(temp);
                     int blockID = generateBlock(WorldRegion, blockPos);
 
                     blocks[x][y][z] = new BlockData(worldSystem, generateBiome(WorldRegion, blockPos));

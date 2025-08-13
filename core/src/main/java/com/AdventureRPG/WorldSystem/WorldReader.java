@@ -46,7 +46,7 @@ public class WorldReader {
     public WorldRegion worldRegionFromPosition(long position) {
 
         // TODO: This needs to be verified working correctly
-        worldSystem.wrapAroundImageRegion(position);
+        position = worldSystem.wrapAroundImageRegion(position);
 
         int x = Coordinate2Int.unpackX(position);
         int y = Coordinate2Int.unpackY(position);

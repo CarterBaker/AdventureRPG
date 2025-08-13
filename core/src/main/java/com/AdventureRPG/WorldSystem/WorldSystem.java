@@ -199,9 +199,7 @@ public class WorldSystem {
         inputX = x;
         inputY = y;
 
-        input = Coordinate2Int.pack(inputX, inputY);
-
-        return input;
+        return Coordinate2Int.pack(inputX, inputY);
     }
 
     public Vector2Int wrapAroundWorld(Vector2Int input) {
@@ -257,9 +255,7 @@ public class WorldSystem {
         inputX = x;
         inputY = y;
 
-        input = Coordinate2Int.pack(inputX, inputY);
-
-        return input;
+        return Coordinate2Int.pack(inputX, inputY);
     }
 
     // Debug \\

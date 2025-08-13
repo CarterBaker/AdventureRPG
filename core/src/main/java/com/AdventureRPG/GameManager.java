@@ -18,11 +18,6 @@ import com.google.gson.Gson;
 
 public class GameManager implements Screen {
 
-    // Game Manager
-    private GameState gameState;
-    private final GameRenderer renderer;
-    public final Environment environment;
-
     // Paths and Settings
     public final Main game;
     public final File path;
@@ -36,6 +31,11 @@ public class GameManager implements Screen {
     public final PlayerSystem playerSystem;
     public final InputSystem inputSystem;
 
+    // Game Manager
+    private GameState gameState;
+    private final GameRenderer renderer;
+    public final Environment environment;
+
     // UI System
     private LoadScreen loadScreen;
 
@@ -45,11 +45,6 @@ public class GameManager implements Screen {
     // Base \\
 
     public GameManager(Main game, File path, Settings settings, Gson gson) {
-
-        // Game Manager
-        this.gameState = GameState.START;
-        this.renderer = new GameRenderer(this);
-        this.environment = new Environment();
 
         // Paths and Settings
         this.game = game;
@@ -63,6 +58,11 @@ public class GameManager implements Screen {
         this.worldSystem = new WorldSystem(this);
         this.playerSystem = new PlayerSystem(this);
         this.inputSystem = new InputSystem(this);
+
+        // Game Manager
+        this.gameState = GameState.START;
+        this.renderer = new GameRenderer(this);
+        this.environment = new Environment();
 
         // UI System
         this.loadScreen = null;

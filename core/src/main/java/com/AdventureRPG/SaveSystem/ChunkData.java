@@ -3,7 +3,6 @@ package com.AdventureRPG.SaveSystem;
 import java.io.File;
 
 import com.AdventureRPG.SettingsSystem.Settings;
-import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 
 public class ChunkData {
@@ -32,7 +31,7 @@ public class ChunkData {
 
     }
 
-    public Chunk readChunk(Vector3Int chunkCoordinate) {
+    public Chunk readChunk(long chunkCoordinate) {
         return null;
     }
 

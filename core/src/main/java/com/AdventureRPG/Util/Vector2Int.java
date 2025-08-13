@@ -28,6 +28,10 @@ public class Vector2Int {
         return this.set(input.x, input.y);
     }
 
+    public long pack() {
+        return Coordinate2Int.pack(x, y);
+    }
+
     public Vector2Int add(Vector2Int other) {
 
         this.x += other.x;

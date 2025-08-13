@@ -39,6 +39,10 @@ public class Vector3Int {
         this.z = other.z;
     }
 
+    public long pack() {
+        return Coordinate3Int.pack(x, y, z);
+    }
+
     public Vector3Int add(Vector3Int other) {
 
         this.x += other.x;
@@ -48,7 +52,7 @@ public class Vector3Int {
         return this;
     }
 
-    public Vector3Int add(Direction direction) {
+    public Vector3Int add(Direction3Int direction) {
 
         this.x += direction.x;
         this.y += direction.y;

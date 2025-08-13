@@ -40,4 +40,8 @@ public class Chunk {
     public void breakBlock(int x, int y, int z) {
         blocks[x][y][z].BreakBlock();
     }
+
+    public void dispose() {
+
+    }
 }

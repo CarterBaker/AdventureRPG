@@ -1,7 +1,7 @@
 [
     {
         "name": "Air",
-        "ID": 0,
+        "id": 0,
         "top": -1,
         "side": -1,
         "bottom": -1,
@@ -9,7 +9,7 @@
     },
     {
         "name": "Vacuum",
-        "ID": 1,
+        "id": 1,
         "top": -1,
         "side": -1,
         "bottom": -1,
@@ -17,7 +17,7 @@
     },
     {
         "name": "Water",
-        "ID": 2,
+        "id": 2,
         "top": 9,
         "side": 9,
         "bottom": 9,
@@ -25,7 +25,7 @@
     },
     {
         "name": "Lava",
-        "ID": 3,
+        "id": 3,
         "top": 10,
         "side": 10,
         "bottom": 10,
@@ -33,7 +33,7 @@
     },
     {
         "name": "Grass Block",
-        "ID": 4,
+        "id": 4,
         "top": 0,
         "side": 1,
         "bottom": 2,
@@ -41,7 +41,7 @@
     },
     {
         "name": "Dirt Block",
-        "ID": 5,
+        "id": 5,
         "top": 2,
         "side": 2,
         "bottom": 2,
@@ -49,7 +49,7 @@
     },
     {
         "name": "Stone Block",
-        "ID": 6,
+        "id": 6,
         "top": 3,
         "side": 3,
         "bottom": 3,
@@ -57,7 +57,7 @@
     },
     {
         "name": "Copper Ore",
-        "ID": 7,
+        "id": 7,
         "top": 4,
         "side": 4,
         "bottom": 4,
@@ -65,7 +65,7 @@
     },
     {
         "name": "Iron Ore",
-        "ID": 8,
+        "id": 8,
         "top": 5,
         "side": 5,
         "bottom": 5,
@@ -73,7 +73,7 @@
     },
     {
         "name": "Gold Ore",
-        "ID": 9,
+        "id": 9,
         "top": 6,
         "side": 6,
         "bottom": 6,
@@ -81,7 +81,7 @@
     },
     {
         "name": "Coal Ore",
-        "ID": 10,
+        "id": 10,
         "top": 7,
         "side": 7,
         "bottom": 7,
@@ -89,7 +89,7 @@
     },
     {
         "name": "Sand",
-        "ID": 11,
+        "id": 11,
         "top": 8,
         "side": 8,
         "bottom": 8,

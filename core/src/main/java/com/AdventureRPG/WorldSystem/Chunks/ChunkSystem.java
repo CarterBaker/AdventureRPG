@@ -1,5 +1,8 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
+import java.util.Arrays;
+import java.util.Comparator;
+
 import com.AdventureRPG.SaveSystem.ChunkData;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
@@ -10,6 +13,7 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 public class ChunkSystem {
@@ -25,10 +29,6 @@ public class ChunkSystem {
 
     // Settings
     private int maxRenderDistance;
-
-    private final int CHUNK_SIZE;
-    private final int WORLD_HEIGHT;
-
     private final int MAX_CHUNK_LOADS_PER_FRAME;
     private final int MAX_CHUNK_LOADS_PER_TICK;
 
@@ -38,12 +38,18 @@ public class ChunkSystem {
 
     // Chunk Tracking
     private int totalChunks;
-
     private LongOpenHashSet gridCoordinates;
     private Long2ObjectOpenHashMap<Chunk> loadedChunks;
 
+    // Chunk Queue
+    private final QueueProcess[] queueProcess;
+    private long[] loadOrder;
+    private int queueBatch = 0;
+    private int processPerBatch = 32;
     private Long2ObjectOpenHashMap<Chunk> unloadQueue;
+    private final float loadFactor;
     private Long2LongOpenHashMap loadQueue;
+    private LongArrayFIFOQueue loadQueueOrder;
 
     // Queue System
     private int loadedChunksThisFrame;
@@ -61,10 +67,6 @@ public class ChunkSystem {
 
         // Settings
         this.maxRenderDistance = settings.maxRenderDistance;
-
-        this.CHUNK_SIZE = settings.CHUNK_SIZE;
-        this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
-
         this.MAX_CHUNK_LOADS_PER_FRAME = settings.MAX_CHUNK_LOADS_PER_FRAME;
         this.MAX_CHUNK_LOADS_PER_TICK = settings.MAX_CHUNK_LOADS_PER_TICK;
 
@@ -75,12 +77,21 @@ public class ChunkSystem {
 
         // Chunk Tracking
         this.totalChunks = maxRenderDistance * maxRenderDistance;
-
         this.gridCoordinates = new LongOpenHashSet(totalChunks);
         this.loadedChunks = new Long2ObjectOpenHashMap<>(totalChunks);
 
+        // Queue Queue
+        this.queueProcess = new QueueProcess[] {
+                QueueProcess.Unload,
+                QueueProcess.Load,
+                QueueProcess.Render
+        };
+        this.loadOrder = new long[totalChunks];
         this.unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
-        this.loadQueue = new Long2LongOpenHashMap(totalChunks + maxRenderDistance * 2, 1f);
+        this.loadFactor = 0.75f;
+        int initialCapacity = (int) Math.ceil(totalChunks / loadFactor);
+        this.loadQueue = new Long2LongOpenHashMap(initialCapacity, loadFactor);
+        this.loadQueueOrder = new LongArrayFIFOQueue(totalChunks);
 
         // Queue System
         this.loadedChunksThisFrame = 0;
@@ -112,22 +123,52 @@ public class ChunkSystem {
 
         // Chunk Tracking
         this.totalChunks = maxRenderDistance * maxRenderDistance;
-
         this.gridCoordinates = new LongOpenHashSet(totalChunks);
         this.loadedChunks = new Long2ObjectOpenHashMap<>(totalChunks);
 
+        // Queue System
+        this.loadOrder = new long[totalChunks];
         this.unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
-        this.loadQueue = new Long2LongOpenHashMap(totalChunks, 1f);
+        int initialCapacity = (int) Math.ceil(totalChunks / loadFactor);
+        this.loadQueue = new Long2LongOpenHashMap(initialCapacity, loadFactor);
+        this.loadQueueOrder = new LongArrayFIFOQueue(totalChunks);
+
+        // Temporary array to hold coordinates with their distance
+        class ChunkDistance {
+            long coord;
+            int distance; // distance from center
+
+            ChunkDistance(long c, int d) {
+                coord = c;
+                distance = d;
+            }
+        }
+
+        ChunkDistance[] temp = new ChunkDistance[totalChunks];
+        int index = 0;
 
         // Assign the correct keys to the grid
-        for (int x = -(maxRenderDistance / 2); x <= maxRenderDistance / 2; x++) {
+        for (int x = -(maxRenderDistance / 2); x < maxRenderDistance / 2; x++) {
 
-            for (int y = -(maxRenderDistance / 2); y <= maxRenderDistance / 2; y++) {
+            for (int y = -(maxRenderDistance / 2); y < maxRenderDistance / 2; y++) {
 
                 long gridCoordinate = Coordinate2Int.pack(x, y);
                 gridCoordinates.add(gridCoordinate);
+
+                // Compute Manhattan distance from center (0,0)
+                int dist = Math.abs(x) + Math.abs(y);
+                temp[index++] = new ChunkDistance(gridCoordinate, dist);
             }
         }
+
+        // Sort coordinates by distance (closest to center first)
+        Arrays.sort(temp, Comparator.comparingInt(cd -> cd.distance));
+
+        // Fill loadOrder array in priority order
+        for (int i = 0; i < temp.length; i++) {
+            loadOrder[i] = temp[i].coord;
+        }
+
     }
 
     // Update \\
@@ -145,7 +186,37 @@ public class ChunkSystem {
         if (!hasQueue())
             return;
 
-        // TODO: Process the queue
+        // Alternating queue update
+        for (int i = 0; i < queueProcess.length; i++) {
+
+            if (queueProcess[queueBatch].process(this))
+                return;
+
+            queueBatch = (queueBatch + 1) % queueProcess.length;
+        }
+    }
+
+    enum QueueProcess {
+
+        Unload {
+            boolean process(ChunkSystem system) {
+                return system.unloadQueue();
+            }
+        },
+
+        Load {
+            boolean process(ChunkSystem system) {
+                return system.loadQueue();
+            }
+        },
+
+        Render {
+            boolean process(ChunkSystem system) {
+                return system.renderQueue();
+            }
+        };
+
+        abstract boolean process(ChunkSystem system);
     }
 
     // Render \\
@@ -184,6 +255,7 @@ public class ChunkSystem {
         // Clear the queue
         unloadQueue.clear();
         loadQueue.clear();
+        loadQueueOrder.clear();
 
         // Reversely remove all computed Coordinate2Ints from unloadQueue for efficiency
         unloadQueue.putAll(loadedChunks);
@@ -204,7 +276,7 @@ public class ChunkSystem {
 
             // Pack the coordinates into a usable long value and wrap it
             long chunkCoordinate = Coordinate2Int.pack(chunkX, chunkY);
-            worldSystem.wrapAroundWorld(chunkCoordinate);
+            chunkCoordinate = worldSystem.wrapAroundWorld(chunkCoordinate);
 
             // Remove the computed coordinate from the unload queue
             unloadQueue.remove(chunkCoordinate);
@@ -216,35 +288,94 @@ public class ChunkSystem {
             if (loadedChunk != null)
                 loadedChunk.moveTo(gridCoordinate);
 
-            else // If the chunkCoordinate could not be found add it to the queue
+            else { // If the chunkCoordinate could not be found add it to the queue
                 loadQueue.put(gridCoordinate, chunkCoordinate);
+                loadQueueOrder.enqueue(gridCoordinate);
+            }
         }
     }
 
     // Unload \\
 
-    private void UpdateUnloading() {
+    private boolean unloadQueue() {
 
-        increaseQueueCount();
+        int index = 0;
+        var iterator = unloadQueue.long2ObjectEntrySet().fastIterator();
+
+        while (iterator.hasNext() && processIsSafe(index)) {
+
+            var entry = iterator.next();
+            long chunkCoordinate = entry.getLongKey();
+            Chunk loadedChunk = entry.getValue();
+
+            if (loadedChunk == null)
+                continue;
+
+            // Remove from unloadQueue
+            iterator.remove();
+            loadedChunks.remove(chunkCoordinate);
+            loadedChunk.dispose();
+
+            // Increment counters
+            incrementQueueTotal();
+            index++;
+        }
+
+        return checkProcessLimit();
     }
 
     // Load \\
 
-    private void updateLoading() {
+    private boolean loadQueue() {
 
-        increaseQueueCount();
+        // Return early if there is no room for loading new chunks
+        if (loadedChunks.size() == totalChunks)
+            return checkProcessLimit();
+
+        int index = 0;
+
+        while (index < loadQueueOrder.size() && processIsSafe(index)) {
+            long gridCoordinate = loadQueueOrder.dequeueLong();
+            long chunkCoordinate = loadQueue.get(gridCoordinate);
+
+            Chunk loadedChunk = chunkData.readChunk(chunkCoordinate);
+
+            if (loadedChunk == null)
+                loadedChunk = worldSystem.worldGenerator.generateChunk(chunkCoordinate);
+
+            loadedChunk.moveTo(gridCoordinate);
+            loadedChunks.put(chunkCoordinate, loadedChunk);
+
+            // Increment counters
+            incrementQueueTotal();
+            index++;
+
+        }
+
+        return checkProcessLimit();
     }
 
     // Build \\
 
-    private void updateBuilding() {
+    private boolean renderQueue() {
 
-        increaseQueueCount();
+        return checkProcessLimit();
     }
 
     // Utility \\
 
-    private void increaseQueueCount() {
+    private boolean processIsSafe(int index) {
+        return index < processPerBatch &&
+                loadedChunksThisFrame < MAX_CHUNK_LOADS_PER_FRAME &&
+                loadedChunksThisTick < MAX_CHUNK_LOADS_PER_TICK;
+    }
+
+    private boolean checkProcessLimit() {
+        return loadedChunksThisFrame >= MAX_CHUNK_LOADS_PER_FRAME ||
+                loadedChunksThisTick >= MAX_CHUNK_LOADS_PER_TICK;
+    }
+
+    private void incrementQueueTotal() {
 
         loadedChunksThisFrame += 1;
         loadedChunksThisTick += 1;
