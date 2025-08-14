@@ -1,15 +1,16 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
-import java.util.Arrays;
 import java.util.Comparator;
 
 import com.AdventureRPG.SaveSystem.ChunkData;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.ThreadSystem.ThreadManager;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
 
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -19,9 +20,10 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 public class ChunkSystem {
 
     // Debug
-    private final boolean debug = false; // TODO: Remove debug line
+    private final boolean debug = true; // TODO: Remove debug line
 
-    // Chunk System
+    // Game Manager
+    private final ThreadManager threadManager;
     private final Settings settings;
     private final ChunkData chunkData;
     private final WorldSystem worldSystem;
@@ -37,29 +39,39 @@ public class ChunkSystem {
     private int currentChunkX, currentChunkY;
 
     // Chunk Tracking
+    private long[] loadOrder;
+    private final float loadFactor;
     private int totalChunks;
     private LongOpenHashSet gridCoordinates;
+    private LongOpenHashSet chunkCoordinates;
+    private Long2LongOpenHashMap gridToChunkMap;
     private Long2ObjectOpenHashMap<Chunk> loadedChunks;
 
-    // Chunk Queue
-    private final QueueProcess[] queueProcess;
-    private long[] loadOrder;
-    private int queueBatch = 0;
-    private int processPerBatch = 32;
-    private Long2ObjectOpenHashMap<Chunk> unloadQueue;
-    private final float loadFactor;
-    private Long2LongOpenHashMap loadQueue;
-    private LongArrayFIFOQueue loadQueueOrder;
-
     // Queue System
+    private Long2ObjectOpenHashMap<Chunk> unloadQueue;
+    private LongArrayFIFOQueue loadQueue;
+    private LongArrayFIFOQueue generateQueue;
+    private LongArrayFIFOQueue buildQueue;
+
+    private final QueueProcess[] queueProcess;
+    private int queueBatch;
+    private final int processPerBatch;
     private int loadedChunksThisFrame;
     private int loadedChunksThisTick;
 
+    // Model Instance
+    private Long2ObjectOpenHashMap<ModelInstance> modelInstances;
+
+    // Utility
+    private final Chunk[] neighborChunks;
+    private final Chunk[] NEIGHBOR_OUT_OF_GRID;
+
     // Base \\
 
-    public ChunkSystem(WorldSystem WorldSystem) {
+    public ChunkSystem(WorldSystem WorldSystem, ThreadManager threadManager) {
 
         // Chunk System
+        this.threadManager = threadManager;
         this.settings = WorldSystem.settings;
         this.chunkData = WorldSystem.saveSystem.chunkData;
         this.worldSystem = WorldSystem;
@@ -76,26 +88,38 @@ public class ChunkSystem {
         this.currentChunkY = -1;
 
         // Chunk Tracking
+        this.loadFactor = 0.75f;
         this.totalChunks = maxRenderDistance * maxRenderDistance;
+        int initialCapacity = (int) Math.ceil(totalChunks / loadFactor);
+        this.loadOrder = new long[totalChunks];
         this.gridCoordinates = new LongOpenHashSet(totalChunks);
+        this.chunkCoordinates = new LongOpenHashSet(totalChunks);
+        this.gridToChunkMap = new Long2LongOpenHashMap(initialCapacity, loadFactor);
         this.loadedChunks = new Long2ObjectOpenHashMap<>(totalChunks);
 
-        // Queue Queue
+        // Queue System
+        this.unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
+        this.loadQueue = new LongArrayFIFOQueue(totalChunks);
+        this.generateQueue = new LongArrayFIFOQueue(totalChunks);
+        this.buildQueue = new LongArrayFIFOQueue(totalChunks);
+
         this.queueProcess = new QueueProcess[] {
                 QueueProcess.Unload,
                 QueueProcess.Load,
-                QueueProcess.Render
+                QueueProcess.Generate,
+                QueueProcess.Build
         };
-        this.loadOrder = new long[totalChunks];
-        this.unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
-        this.loadFactor = 0.75f;
-        int initialCapacity = (int) Math.ceil(totalChunks / loadFactor);
-        this.loadQueue = new Long2LongOpenHashMap(initialCapacity, loadFactor);
-        this.loadQueueOrder = new LongArrayFIFOQueue(totalChunks);
-
-        // Queue System
+        this.queueBatch = 0;
+        this.processPerBatch = 32;
         this.loadedChunksThisFrame = 0;
         this.loadedChunksThisTick = 0;
+
+        // Model Instance
+        this.neighborChunks = new Chunk[4];
+        this.modelInstances = new Long2ObjectOpenHashMap<>(totalChunks);
+
+        // Utility
+        this.NEIGHBOR_OUT_OF_GRID = new Chunk[0];
     }
 
     public void awake() {
@@ -118,57 +142,64 @@ public class ChunkSystem {
 
     public void rebuildGrid() {
 
-        // Settings
+        // Start with a simple square grid
         this.maxRenderDistance = settings.maxRenderDistance;
 
-        // Chunk Tracking
-        this.totalChunks = maxRenderDistance * maxRenderDistance;
-        this.gridCoordinates = new LongOpenHashSet(totalChunks);
-        this.loadedChunks = new Long2ObjectOpenHashMap<>(totalChunks);
+        // The actual circle radius
+        float radius = maxRenderDistance / 2f;
+        float radiusSquared = radius * radius;
 
-        // Queue System
-        this.loadOrder = new long[totalChunks];
-        this.unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
-        int initialCapacity = (int) Math.ceil(totalChunks / loadFactor);
-        this.loadQueue = new Long2LongOpenHashMap(initialCapacity, loadFactor);
-        this.loadQueueOrder = new LongArrayFIFOQueue(totalChunks);
-
-        // Temporary array to hold coordinates with their distance
+        // Temporary list to hold coordinates and squared distance
         class ChunkDistance {
-            long coord;
-            int distance; // distance from center
 
-            ChunkDistance(long c, int d) {
+            long coord;
+            float distSquared; // no sqrt needed for sorting
+
+            ChunkDistance(long c, float d2) {
                 coord = c;
-                distance = d;
+                distSquared = d2;
             }
         }
 
-        ChunkDistance[] temp = new ChunkDistance[totalChunks];
-        int index = 0;
+        java.util.List<ChunkDistance> tempList = new java.util.ArrayList<>();
 
-        // Assign the correct keys to the grid
+        // Collect all coordinates inside the circle
         for (int x = -(maxRenderDistance / 2); x < maxRenderDistance / 2; x++) {
 
             for (int y = -(maxRenderDistance / 2); y < maxRenderDistance / 2; y++) {
 
-                long gridCoordinate = Coordinate2Int.pack(x, y);
-                gridCoordinates.add(gridCoordinate);
+                float distSquared = (x * x) + (y * y);
 
-                // Compute Manhattan distance from center (0,0)
-                int dist = Math.abs(x) + Math.abs(y);
-                temp[index++] = new ChunkDistance(gridCoordinate, dist);
+                if (distSquared <= radiusSquared) {
+
+                    long gridCoord = Coordinate2Int.pack(x, y);
+                    tempList.add(new ChunkDistance(gridCoord, distSquared));
+                }
             }
         }
 
-        // Sort coordinates by distance (closest to center first)
-        Arrays.sort(temp, Comparator.comparingInt(cd -> cd.distance));
+        // Chunk Tracking
+        this.totalChunks = tempList.size();
+        int initialCapacity = (int) Math.ceil(totalChunks / loadFactor);
+        this.loadOrder = new long[totalChunks];
+        this.gridCoordinates = new LongOpenHashSet(totalChunks);
+        this.chunkCoordinates = new LongOpenHashSet(totalChunks);
+        this.gridToChunkMap = new Long2LongOpenHashMap(initialCapacity, loadFactor);
 
-        // Fill loadOrder array in priority order
-        for (int i = 0; i < temp.length; i++) {
-            loadOrder[i] = temp[i].coord;
-        }
+        // Queue System
+        this.unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
+        this.loadQueue = new LongArrayFIFOQueue(totalChunks);
 
+        // Fill gridCoordinates
+        for (ChunkDistance cd : tempList)
+            gridCoordinates.add(cd.coord);
+
+        // Sort by distance
+        tempList.sort(Comparator.comparingDouble(cd -> cd.distSquared));
+
+        // Assign load order
+        for (int i = 0; i < totalChunks; i++)
+            loadOrder[i] = tempList.get(i).coord;
     }
 
     // Update \\
@@ -183,13 +214,8 @@ public class ChunkSystem {
             loadedChunksThisTick = 0;
 
         // If there is no queue we don't need to do anything
-        if (!hasQueue()) {
-
-            if (debug) // TODO: Remove debug line
-                debug();
-
+        if (!hasQueue())
             return;
-        }
 
         // Alternating queue update
         for (int i = 0; i < queueProcess.length; i++) {
@@ -215,9 +241,15 @@ public class ChunkSystem {
             }
         },
 
-        Render {
+        Generate {
             boolean process(ChunkSystem system) {
-                return system.renderQueue();
+                return system.generateQueue();
+            }
+        },
+
+        Build {
+            boolean process(ChunkSystem system) {
+                return system.buildQueue();
             }
         };
 
@@ -252,21 +284,22 @@ public class ChunkSystem {
         clearQueue();
 
         // Determine which chunks need to be loaded where
-        buildQueue();
+        createQueue();
     }
 
     private void clearQueue() {
 
         // Clear the queue
         unloadQueue.clear();
+
+        gridToChunkMap.clear();
         loadQueue.clear();
-        loadQueueOrder.clear();
 
         // Reversely remove all computed Coordinate2Ints from unloadQueue for efficiency
         unloadQueue.putAll(loadedChunks);
     }
 
-    private void buildQueue() {
+    private void createQueue() {
 
         // The grid is prebuilt and never changes
         for (long gridCoordinate : gridCoordinates) {
@@ -283,6 +316,9 @@ public class ChunkSystem {
             long chunkCoordinate = Coordinate2Int.pack(chunkX, chunkY);
             chunkCoordinate = worldSystem.wrapAroundWorld(chunkCoordinate);
 
+            // Log all active chunk coordinates
+            chunkCoordinates.add(chunkCoordinate);
+
             // Remove the computed coordinate from the unload queue
             unloadQueue.remove(chunkCoordinate);
 
@@ -294,8 +330,8 @@ public class ChunkSystem {
                 loadedChunk.moveTo(gridCoordinate);
 
             else { // If the chunkCoordinate could not be found add it to the queue
-                loadQueue.put(gridCoordinate, chunkCoordinate);
-                loadQueueOrder.enqueue(gridCoordinate);
+                gridToChunkMap.put(gridCoordinate, chunkCoordinate);
+                loadQueue.enqueue(gridCoordinate);
             }
         }
     }
@@ -316,17 +352,18 @@ public class ChunkSystem {
             if (loadedChunk == null)
                 continue;
 
+            modelInstances.remove(chunkCoordinate);
+
             // Remove from unloadQueue
             iterator.remove();
             loadedChunks.remove(chunkCoordinate);
             loadedChunk.dispose();
 
             // Increment counters
-            incrementQueueTotal();
-            index++;
+            index = incrementQueueTotal(index);
         }
 
-        return checkProcessLimit();
+        return totalProcessThisFrame();
     }
 
     // Load \\
@@ -335,39 +372,140 @@ public class ChunkSystem {
 
         // Return early if there is no room for loading new chunks
         if (loadedChunks.size() == totalChunks)
-            return checkProcessLimit();
+            return totalProcessThisFrame();
 
         int index = 0;
 
-        while (index < loadQueueOrder.size() && processIsSafe(index)) {
-            long gridCoordinate = loadQueueOrder.dequeueLong();
-            long chunkCoordinate = loadQueue.get(gridCoordinate);
+        while (index < loadQueue.size() && processIsSafe(index)) {
+
+            long gridCoordinate = loadQueue.dequeueLong();
+            long chunkCoordinate = gridToChunkMap.get(gridCoordinate);
 
             Chunk loadedChunk = chunkData.readChunk(chunkCoordinate);
 
-            if (loadedChunk == null)
-                loadedChunk = worldSystem.worldGenerator.generateChunk(chunkCoordinate);
+            if (loadedChunk == null) {
+
+                loadedChunk = new Chunk(worldSystem, chunkCoordinate);
+                generateQueue.enqueue(chunkCoordinate);
+            } else
+                buildQueue.enqueue(chunkCoordinate);
 
             loadedChunk.moveTo(gridCoordinate);
             loadedChunks.put(chunkCoordinate, loadedChunk);
 
             // Increment counters
-            incrementQueueTotal();
-            index++;
+            index = incrementQueueTotal(index);
 
         }
 
-        return checkProcessLimit();
+        return totalProcessThisFrame();
+    }
+
+    // Generate \\
+
+    private boolean generateQueue() {
+
+        int index = 0;
+
+        while (index < generateQueue.size() && processIsSafe(index)) {
+
+            long chunkCoordinate = generateQueue.dequeueLong();
+            Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
+
+            if (loadedChunk == null) {
+
+                loadedChunks.remove(chunkCoordinate);
+                index = incrementQueueTotal(index);
+
+                continue;
+            }
+
+            worldSystem.worldGenerator.generateChunk(loadedChunk);
+            buildQueue.enqueue(chunkCoordinate);
+
+            // Increment counters
+            index = incrementQueueTotal(index);
+
+        }
+
+        return totalProcessThisFrame();
     }
 
     // Build \\
 
-    private boolean renderQueue() {
+    private boolean buildQueue() {
 
-        return checkProcessLimit();
+        int index = 0;
+
+        while (index < buildQueue.size() && processIsSafe(index)) {
+
+            long chunkCoordinate = buildQueue.dequeueLong();
+            Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
+
+            if (loadedChunk == null) {
+
+                loadedChunks.remove(chunkCoordinate);
+                return totalProcessThisFrame();
+            }
+
+            Chunk[] neighbors = getNeighborsIfLoaded(loadedChunk);
+
+            if (neighbors == NEIGHBOR_OUT_OF_GRID) {
+                index = incrementQueueTotal(index);
+                continue;
+            }
+
+            if (neighbors == null) {
+
+                buildQueue.enqueue(chunkCoordinate);
+
+                index = incrementQueueTotal(index);
+                continue;
+            }
+
+            boolean hasModel = loadedChunk.tryBuild(neighbors);
+
+            if (hasModel)
+                modelInstances.put(chunkCoordinate, loadedChunk.modelInstance);
+
+            index = incrementQueueTotal(index);
+        }
+
+        return totalProcessThisFrame();
     }
 
-    // Utility \\
+    public Chunk[] getNeighborsIfLoaded(Chunk loadedChunk) {
+
+        long north = loadedChunk.north;
+        long south = loadedChunk.south;
+        long east = loadedChunk.east;
+        long west = loadedChunk.west;
+
+        neighborChunks[0] = loadedChunks.get(north);
+        neighborChunks[1] = loadedChunks.get(south);
+        neighborChunks[2] = loadedChunks.get(east);
+        neighborChunks[3] = loadedChunks.get(west);
+
+        if (neighborChunks[0] == null || neighborChunks[1] == null || neighborChunks[2] == null
+                || neighborChunks[3] == null) {
+
+            // If missing neighbor and outside grid → never going to load
+            if (neighborChunks[0] == null && !chunkCoordinates.contains(north))
+                return NEIGHBOR_OUT_OF_GRID;
+            if (neighborChunks[1] == null && !chunkCoordinates.contains(south))
+                return NEIGHBOR_OUT_OF_GRID;
+            if (neighborChunks[2] == null && !chunkCoordinates.contains(east))
+                return NEIGHBOR_OUT_OF_GRID;
+            if (neighborChunks[3] == null && !chunkCoordinates.contains(west))
+                return NEIGHBOR_OUT_OF_GRID;
+
+            return null; // Not all neighbors are loaded
+        }
+
+        return neighborChunks;
+    }
+
+    // Queue Utility \\
 
     private boolean processIsSafe(int index) {
         return index < processPerBatch &&
@@ -375,29 +513,36 @@ public class ChunkSystem {
                 loadedChunksThisTick < MAX_CHUNK_LOADS_PER_TICK;
     }
 
-    private boolean checkProcessLimit() {
+    private boolean totalProcessThisFrame() {
         return loadedChunksThisFrame >= MAX_CHUNK_LOADS_PER_FRAME ||
                 loadedChunksThisTick >= MAX_CHUNK_LOADS_PER_TICK;
     }
 
-    private void incrementQueueTotal() {
+    private int incrementQueueTotal(int index) {
 
-        loadedChunksThisFrame += 1;
-        loadedChunksThisTick += 1;
+        loadedChunksThisFrame++;
+        loadedChunksThisTick++;
+
+        return ++index;
     }
 
     public boolean hasQueue() {
         return unloadQueue.size() > 0 ||
-                loadQueueOrder.size() > 0;
+                loadQueue.size() > 0 ||
+                generateQueue.size() > 0 ||
+                buildQueue.size() > 0;
     }
 
     public int totalQueueSize() {
-        return unloadQueue.size() + loadQueueOrder.size();
+        return unloadQueue.size() +
+                loadQueue.size() +
+                generateQueue.size() +
+                buildQueue.size();
     }
 
     // Debug \\
 
     private void debug() { // TODO: Remove debug line
-        System.out.println(Coordinate2Int.toString(currentChunk));
+
     }
 }

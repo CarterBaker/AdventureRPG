@@ -20,6 +20,9 @@ public class Settings {
 
     // Constant Settings \\
 
+    // Thread Settings
+    public final int AVAILABLE_THREADS; // Maximum available threads to pool off
+
     // Movement Settings
     public final float BASE_WALKING_SPEED; // Average human walking speed in m/s
 
@@ -62,6 +65,9 @@ public class Settings {
 
         // Constant Settings \\
 
+        // Thread Settings
+        this.AVAILABLE_THREADS = builder.AVAILABLE_THREADS;
+
         // Movement Settings
         this.BASE_WALKING_SPEED = builder.BASE_WALKING_SPEED;
 
@@ -101,9 +107,12 @@ public class Settings {
         public boolean fullscreen = false;
 
         // Render Settings
-        public int maxRenderDistance = 32;
+        public int maxRenderDistance = 48;
 
         // Constant Settings \\
+
+        // Thread Settings
+        private int AVAILABLE_THREADS = 3;
 
         // Movement Settings
         private float BASE_WALKING_SPEED = 1.5f;
@@ -121,7 +130,7 @@ public class Settings {
         // Scale Settings
         public float BLOCK_SIZE = 1;
         public int CHUNK_SIZE = 16;
-        public int WORLD_HEIGHT = 512;
+        public int WORLD_HEIGHT = 1024;
 
         // World Tick Settings
         public float WORLD_TICK = 1;
@@ -172,6 +181,13 @@ public class Settings {
         }
 
         // Constant Settings \\
+
+        // Thread Settings \\
+
+        public Builder AVAILABLE_THREADS(int AVAILABLE_THREADS) {
+            this.AVAILABLE_THREADS = AVAILABLE_THREADS;
+            return this;
+        }
 
         // Movement Settings \\
 

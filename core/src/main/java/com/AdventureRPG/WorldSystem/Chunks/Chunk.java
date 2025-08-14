@@ -1,45 +1,76 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
 import com.AdventureRPG.Util.Coordinate2Int;
-import com.AdventureRPG.WorldSystem.Blocks.BlockData;
+import com.AdventureRPG.Util.Direction2Int;
+import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
 
 public class Chunk {
 
     // Chunk
-    public final int CoordinateX, CoordinateY;
+    public final long coordinate;
+    public final int coordinateX, coordinateY;
+
+    // Neighbors
+    public final long north;
+    public final long south;
+    public final long east;
+    public final long west;
+
+    // Data
+    private int[][][] biomes;
+    private int[][][] blocks;
+
+    // Position
+    public long position;
     public int positionX, positionY;
 
-    // Blocks
-    private BlockData[][][] blocks;
+    // Model Instance
+    public ModelInstance modelInstance;
 
     // Base \\
 
-    public Chunk(long coordinate) {
+    public Chunk(WorldSystem worldSystem, long coordinate) {
 
         // Chunk
-        this.CoordinateX = Coordinate2Int.unpackX(coordinate);
-        this.CoordinateY = Coordinate2Int.unpackY(coordinate);
+        this.coordinate = coordinate;
+        this.coordinateX = Coordinate2Int.unpackX(coordinate);
+        this.coordinateY = Coordinate2Int.unpackY(coordinate);
+
+        // Neighbors
+        this.north = Coordinate2Int.add(coordinate, Direction2Int.NORTH.packed);
+        worldSystem.wrapAroundWorld(north);
+        this.south = Coordinate2Int.add(coordinate, Direction2Int.SOUTH.packed);
+        worldSystem.wrapAroundWorld(south);
+        this.east = Coordinate2Int.add(coordinate, Direction2Int.EAST.packed);
+        worldSystem.wrapAroundWorld(east);
+        this.west = Coordinate2Int.add(coordinate, Direction2Int.WEST.packed);
+        worldSystem.wrapAroundWorld(west);
     }
 
-    // Chunk \\
+    // Data \\
 
-    public void generate(BlockData[][][] blocks) {
+    public void generate(int[][][] biomes, int[][][] blocks) {
+        this.biomes = biomes;
         this.blocks = blocks;
     }
 
+    // Position \\
+
     public void moveTo(long position) {
 
+        this.position = position;
         this.positionX = Coordinate2Int.unpackX(position);
         this.positionY = Coordinate2Int.unpackY(position);
     }
 
-    public void placeBlock(int x, int y, int z, int blockID) {
-        blocks[x][y][z].PlaceBlock(blockID);
+    // Model Instance \\
+
+    public boolean tryBuild(Chunk[] neighbors) {
+        return false;
     }
 
-    public void breakBlock(int x, int y, int z) {
-        blocks[x][y][z].BreakBlock();
-    }
+    // Utility \\
 
     public void dispose() {
 

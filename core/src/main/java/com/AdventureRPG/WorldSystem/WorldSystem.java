@@ -3,6 +3,7 @@ package com.AdventureRPG.WorldSystem;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.ThreadSystem.ThreadManager;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Vector2Int;
@@ -21,15 +22,14 @@ public class WorldSystem {
 
     // Game Manager
     public final GameManager gameManager;
+    public final ThreadManager threadManager;
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
     public final Settings settings;
 
     // Settings
     private int maxRenderDistance;
-
     private final int CHUNKS_PER_PIXEL;
-
     private final int CHUNK_SIZE;
 
     // Block Management
@@ -57,15 +57,14 @@ public class WorldSystem {
 
         // Game Manager
         this.gameManager = gameManager;
+        this.threadManager = gameManager.threadManager;
         this.saveSystem = gameManager.saveSystem;
         this.UISystem = gameManager.UISystem;
         this.settings = gameManager.settings;
 
         // Settings
         this.maxRenderDistance = settings.maxRenderDistance;
-
         this.CHUNKS_PER_PIXEL = settings.CHUNKS_PER_PIXEL;
-
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
 
         // Block Management
@@ -78,7 +77,7 @@ public class WorldSystem {
         // World System
         this.worldTick = new WorldTick(this);
         this.worldReader = new WorldReader(this);
-        this.chunkSystem = new ChunkSystem(this);
+        this.chunkSystem = new ChunkSystem(this, threadManager);
         this.biomeSystem = new BiomeSystem(gameManager);
         this.worldGenerator = new WorldGenerator(this);
         this.WORLD_SCALE = worldReader.getWorldScale();

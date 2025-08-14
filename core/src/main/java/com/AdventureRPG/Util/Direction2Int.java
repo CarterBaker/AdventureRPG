@@ -15,8 +15,4 @@ public enum Direction2Int {
         this.y = y;
         this.packed = Coordinate2Int.pack(x, y);
     }
-
-    public long pack() {
-        return packed;
-    }
 }

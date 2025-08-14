@@ -19,8 +19,7 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
 
         // Runtime Settings \\
 
-        // Window Settings \\
-
+        // Window Settings
         if (obj.has("FOV"))
             builder.FOV(obj.get("FOV").getAsFloat());
         if (obj.has("windowWidth"))
@@ -34,20 +33,21 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         if (obj.has("fullscreen"))
             builder.fullscreen(obj.get("fullscreen").getAsBoolean());
 
-        // Render Settings \\
-
+        // Render Settings
         if (obj.has("maxRenderDistance"))
             builder.maxRenderDistance(obj.get("maxRenderDistance").getAsInt());
 
         // Constant Settings \\
 
-        // Movement \\
+        // Thread Settings
+        if (obj.has("AVAILABLE_THREADS"))
+            builder.AVAILABLE_THREADS(obj.get("AVAILABLE_THREADS").getAsInt());
 
+        // Movement
         if (obj.has("BASE_WALKING_SPEED"))
             builder.BASE_WALKING_SPEED(obj.get("BASE_WALKING_SPEED").getAsFloat());
 
-        // Path Settings \\
-
+        // Path Settings
         if (obj.has("BLOCK_TEXTURE_PATH"))
             builder.BLOCK_TEXTURE_PATH(obj.get("BLOCK_TEXTURE_PATH").getAsString());
         if (obj.has("BIOME_JSON_PATH"))
@@ -55,8 +55,7 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         if (obj.has("REGION_IMAGE_PATH"))
             builder.REGION_IMAGE_PATH(obj.get("REGION_IMAGE_PATH").getAsString());
 
-        // Atlas Settings \\
-
+        // Atlas Settings
         if (obj.has("BLOCK_TEXTURE_SIZE"))
             builder.BLOCK_TEXTURE_SIZE(obj.get("BLOCK_TEXTURE_SIZE").getAsInt());
         if (obj.has("BLOCK_ATLAS_PADDING"))
@@ -64,8 +63,7 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         if (obj.has("CHUNKS_PER_PIXEL"))
             builder.CHUNKS_PER_PIXEL(obj.get("CHUNKS_PER_PIXEL").getAsInt());
 
-        // Scale Settings \\
-
+        // Scale Settings
         if (obj.has("BLOCK_SIZE"))
             builder.BLOCK_SIZE(obj.get("BLOCK_SIZE").getAsFloat());
         if (obj.has("CHUNK_SIZE"))
@@ -73,8 +71,7 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         if (obj.has("WORLD_HEIGHT"))
             builder.WORLD_HEIGHT(obj.get("WORLD_HEIGHT").getAsInt());
 
-        // World Tick Settings \\
-
+        // World Tick Settings
         if (obj.has("WORLD_TICK"))
             builder.WORLD_TICK(obj.get("WORLD_TICK").getAsFloat());
         if (obj.has("MAX_CHUNK_LOADS_PER_FRAME"))

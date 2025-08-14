@@ -2,12 +2,9 @@ package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.SaveSystem.UserData;
 import com.AdventureRPG.SettingsSystem.Settings;
-import com.AdventureRPG.Util.Coordinate2Int;
-import com.AdventureRPG.Util.Vector3Int;
-import com.AdventureRPG.WorldSystem.Biomes.Biome;
+import com.AdventureRPG.Util.Coordinate3Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
-import com.AdventureRPG.WorldSystem.Blocks.BlockData;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 
@@ -25,11 +22,15 @@ public class WorldGenerator {
     private final int WORLD_HEIGHT;
 
     // Default Blocks
-    private final Block VACUUM_BLOCK;
-    private final Block LAVA_BLOCK;
+    private final Block VACUUM_BLOCK; // TODO: With 2D chunk coordinates this is
+    private final Block LAVA_BLOCK; // No longer possible
 
     // Data
     private long seed;
+
+    // Generation
+    private int[][][] biomes;
+    private int[][][] blocks;
 
     // Base \\
 
@@ -52,6 +53,10 @@ public class WorldGenerator {
 
         // Data
         this.seed = userData.getSeed();
+
+        // Generation
+        this.biomes = new int[CHUNK_SIZE][WORLD_HEIGHT][CHUNK_SIZE];
+        this.blocks = new int[CHUNK_SIZE][WORLD_HEIGHT][CHUNK_SIZE];
     }
 
     // Data \\
@@ -68,50 +73,53 @@ public class WorldGenerator {
 
     // Chunk \\
 
-    Vector3Int temp = new Vector3Int(); // TODO: temp code
+    public void generateChunk(Chunk chunk) {
 
-    public Chunk generateChunk(long coordinate) {
+        long chunkCoordinate = Coordinate3Int.pack(chunk.coordinateX, 0, chunk.coordinateY);
 
-        int coordinateX = Coordinate2Int.unpackX(coordinate);
-        int coordinateZ = Coordinate2Int.unpackY(coordinate);
-        temp.set(coordinateX, 0, coordinateZ);
+        // TODO: The first step of world generation will be to get the base biome
+        WorldRegion WorldRegion = worldSystem.worldReader.worldRegionFromPosition(chunk.coordinate);
 
-        WorldRegion WorldRegion = worldSystem.worldReader.worldRegionFromPosition(coordinate);
-        Chunk chunk = new Chunk(coordinate);
+        // TODO: I want to blend the base biome around pixels
 
-        BlockData[][][] blocks = new BlockData[CHUNK_SIZE][WORLD_HEIGHT][CHUNK_SIZE];
+        // TODO: I want to get all the related biomes to base and mix them
 
-        for (int x = 0; x < CHUNK_SIZE; x++) { // TODO: I should preallocate this array
+        for (int x = 0; x < CHUNK_SIZE; x++) {
 
-            for (int y = 0; y < CHUNK_SIZE; y++) { // to eliminate nested loops
+            for (int y = 0; y < WORLD_HEIGHT; y++) {
 
                 for (int z = 0; z < CHUNK_SIZE; z++) {
 
-                    Vector3Int blockPos = new Vector3Int(x, y, z).add(temp);
-                    int blockID = generateBlock(WorldRegion, blockPos);
+                    long blockOffset = Coordinate3Int.pack(x, y, z);
+                    long blockCoordinate = Coordinate3Int.add(chunkCoordinate, blockOffset);
 
-                    blocks[x][y][z] = new BlockData(worldSystem, generateBiome(WorldRegion, blockPos));
-                    blocks[x][y][z].PlaceBlock(blockID);
+                    int biomeID = generateBiome(blockCoordinate);
+                    int blockID = generateBlock(blockCoordinate);
+
+                    biomes[x][y][z] = biomeID;
+                    blocks[x][y][z] = blockID;
                 }
             }
         }
 
-        chunk.generate(blocks);
-
-        return chunk;
+        chunk.generate(biomes, blocks);
     }
 
     // Biome \\
 
-    private Biome generateBiome(WorldRegion region, Vector3Int position) {
-        return biomeSystem.getBiomeByID(0);
+    // TODO: This will need a biome
+    private int generateBiome(long blockCoordinate) {
+        return 0;
     }
 
     // Block \\
 
-    private int generateBlock(WorldRegion region, Vector3Int position) {
+    // TODO: This will need a biome
+    private int generateBlock(long blockCoordinate) {
 
-        if (position.y < 5) {
+        int y = Coordinate3Int.unpackY(blockCoordinate);
+
+        if (y < 5) {
             return LAVA_BLOCK.id;
         } else
             return VACUUM_BLOCK.id;

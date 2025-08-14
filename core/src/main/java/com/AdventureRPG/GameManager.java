@@ -6,6 +6,7 @@ import com.AdventureRPG.InputSystem.InputSystem;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.ThreadSystem.ThreadManager;
 import com.AdventureRPG.UISystem.LoadScreen;
 import com.AdventureRPG.UISystem.Menu;
 import com.AdventureRPG.UISystem.UISystem;
@@ -25,6 +26,7 @@ public class GameManager implements Screen {
     public final Gson gson;
 
     // Game Systems
+    public final ThreadManager threadManager;
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
     public final WorldSystem worldSystem;
@@ -53,6 +55,7 @@ public class GameManager implements Screen {
         this.gson = gson;
 
         // Game Systems
+        this.threadManager = new ThreadManager(this);
         this.saveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
         this.worldSystem = new WorldSystem(this);
@@ -106,7 +109,7 @@ public class GameManager implements Screen {
 
     @Override
     public void dispose() {
-
+        threadManager.dispose();
     }
 
     // Game Manager \\

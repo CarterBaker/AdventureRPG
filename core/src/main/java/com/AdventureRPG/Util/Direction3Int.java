@@ -1,7 +1,7 @@
 package com.AdventureRPG.Util;
 
 public enum Direction3Int {
-    
+
     UP(0, 1, 0),
     NORTH(0, 0, 1),
     SOUTH(0, 0, -1),
@@ -18,9 +18,5 @@ public enum Direction3Int {
         this.y = y;
         this.z = z;
         this.packed = Coordinate3Int.pack(x, y, z);
-    }
-
-    public long pack() {
-        return packed;
     }
 }
