@@ -3,6 +3,7 @@ package com.AdventureRPG;
 import java.io.File;
 
 import com.AdventureRPG.InputSystem.InputSystem;
+import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
@@ -27,6 +28,7 @@ public class GameManager implements Screen {
 
     // Game Systems
     public final ThreadManager threadManager;
+    public final MaterialManager materialManager;
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
     public final WorldSystem worldSystem;
@@ -56,6 +58,7 @@ public class GameManager implements Screen {
 
         // Game Systems
         this.threadManager = new ThreadManager(this);
+        this.materialManager = new MaterialManager();
         this.saveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
         this.worldSystem = new WorldSystem(this);
