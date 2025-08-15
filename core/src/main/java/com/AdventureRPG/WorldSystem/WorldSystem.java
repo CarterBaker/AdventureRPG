@@ -12,6 +12,7 @@ import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.BlockAtlas;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
+import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.math.Vector3;
 
@@ -43,6 +44,7 @@ public class WorldSystem {
     public final WorldTick worldTick;
     public final WorldReader worldReader;
     public final ChunkSystem chunkSystem;
+    public final GridSystem gridSystem;
     public final BiomeSystem biomeSystem;
     public final WorldGenerator worldGenerator;
     public final Vector2Int WORLD_SCALE;
@@ -77,7 +79,8 @@ public class WorldSystem {
         // World System
         this.worldTick = new WorldTick(this);
         this.worldReader = new WorldReader(this);
-        this.chunkSystem = new ChunkSystem(this, threadManager);
+        this.chunkSystem = new ChunkSystem(gameManager, this);
+        this.gridSystem = new GridSystem(this);
         this.biomeSystem = new BiomeSystem(gameManager);
         this.worldGenerator = new WorldGenerator(this);
         this.WORLD_SCALE = worldReader.getWorldScale();
@@ -89,13 +92,13 @@ public class WorldSystem {
 
     public void awake() {
 
-        chunkSystem.awake();
+        gridSystem.awake();
         biomeSystem.awake();
     }
 
     public void start() {
 
-        chunkSystem.start();
+        gridSystem.start();
         biomeSystem.start();
     }
 
@@ -103,13 +106,13 @@ public class WorldSystem {
 
         worldTick.update();
 
-        chunkSystem.update();
+        gridSystem.update();
         biomeSystem.update();
     }
 
     public void render(ModelBatch modelBatch) {
 
-        chunkSystem.render(modelBatch);
+        gridSystem.render(modelBatch);
         biomeSystem.render();
     }
 
@@ -139,7 +142,7 @@ public class WorldSystem {
     }
 
     public void loadChunks() {
-        chunkSystem.loadChunks(chunkCoordinate);
+        gridSystem.updateChunksInGrid(chunkCoordinate);
     }
 
     // Block Management \\

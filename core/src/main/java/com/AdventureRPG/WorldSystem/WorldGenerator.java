@@ -6,7 +6,7 @@ import com.AdventureRPG.Util.Coordinate3Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
-import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
+import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 
 public class WorldGenerator {
 
@@ -14,7 +14,7 @@ public class WorldGenerator {
     public final Settings settings;
     public final UserData userData;
     public final WorldSystem worldSystem;
-    public final ChunkSystem chunkSystem;
+    public final GridSystem gridSystem;
     public final BiomeSystem biomeSystem;
 
     // Settings
@@ -40,7 +40,7 @@ public class WorldGenerator {
         this.settings = worldSystem.settings;
         this.userData = worldSystem.saveSystem.userData;
         this.worldSystem = worldSystem;
-        this.chunkSystem = worldSystem.chunkSystem;
+        this.gridSystem = worldSystem.gridSystem;
         this.biomeSystem = worldSystem.biomeSystem;
 
         // Settings

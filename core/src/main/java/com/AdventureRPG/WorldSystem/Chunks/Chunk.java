@@ -18,6 +18,7 @@ public class Chunk {
     public final long west;
 
     // Data
+    private boolean hasData;
     private int[][][] biomes;
     private int[][][] blocks;
 
@@ -50,7 +51,12 @@ public class Chunk {
 
     // Data \\
 
+    public boolean hasData() {
+        return hasData;
+    }
+
     public void generate(int[][][] biomes, int[][][] blocks) {
+        this.hasData = true;
         this.biomes = biomes;
         this.blocks = blocks;
     }
