@@ -4,7 +4,5 @@ public enum State {
     SOLID,
     LIQUID,
     GAS,
-    PLASMA,
-    ENERGY,
-    VACUUM
+    ENERGY
 }

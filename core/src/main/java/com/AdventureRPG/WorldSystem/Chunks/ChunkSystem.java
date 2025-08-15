@@ -23,7 +23,6 @@ public class ChunkSystem {
     private final int MAX_CHUNK_LOADS_PER_FRAME;
 
     // Async System
-
     private final Queue<Long> loadRequests;
     private final Queue<Chunk> generationRequests;
     private final Queue<Chunk> buildRequests;

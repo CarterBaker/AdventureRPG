@@ -22,7 +22,7 @@ public class WorldGenerator {
     private final int WORLD_HEIGHT;
 
     // Default Blocks
-    private final Block VACUUM_BLOCK; // TODO: With 2D chunk coordinates this is
+    private final Block AIR_BLOCK; // TODO: With 2D chunk coordinates this is
     private final Block LAVA_BLOCK; // No longer possible
 
     // Data
@@ -48,7 +48,7 @@ public class WorldGenerator {
         this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
 
         // Default Blocks
-        this.VACUUM_BLOCK = worldSystem.getBlockByName("vacuum");
+        this.AIR_BLOCK = worldSystem.getBlockByName("air");
         this.LAVA_BLOCK = worldSystem.getBlockByName("lava");
 
         // Data
@@ -122,6 +122,6 @@ public class WorldGenerator {
         if (y < 5) {
             return LAVA_BLOCK.id;
         } else
-            return VACUUM_BLOCK.id;
+            return AIR_BLOCK.id;
     }
 }

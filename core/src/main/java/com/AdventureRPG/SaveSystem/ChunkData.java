@@ -34,5 +34,4 @@ public class ChunkData {
     public Chunk readChunk(long chunkCoordinate) {
         return null;
     }
-
 }

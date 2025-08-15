@@ -5,66 +5,27 @@ public class Block {
     public final String name;
     public final int id;
 
-    public final int top;
-    public final int side;
-    public final int bottom;
+    public final int up;
+    public final int north;
+    public final int south;
+    public final int east;
+    public final int west;
+    public final int down;
 
     public final State state;
 
-    public Block(Builder builder) {
+    public Block(BlockAtlas blockAtlas, Builder builder, int id) {
 
         this.name = builder.name;
-        this.id = builder.id;
-        this.top = builder.top;
-        this.side = builder.side;
-        this.bottom = builder.bottom;
+        this.id = id;
+
+        this.up = (blockAtlas != null) ? blockAtlas.getIdByName(builder.up) : -9;
+        this.north = (blockAtlas != null) ? blockAtlas.getIdByName(builder.north) : -9;
+        this.south = (blockAtlas != null) ? blockAtlas.getIdByName(builder.south) : -9;
+        this.east = (blockAtlas != null) ? blockAtlas.getIdByName(builder.east) : -9;
+        this.west = (blockAtlas != null) ? blockAtlas.getIdByName(builder.west) : -9;
+        this.down = (blockAtlas != null) ? blockAtlas.getIdByName(builder.down) : -9;
 
         this.state = builder.state;
     }
-
-    public static class Builder {
-
-        private String name;
-        private int id;
-        private int top = -1;
-        private int side = -1;
-        private int bottom = -1;
-
-        private State state;
-
-        public Builder name(String name) {
-            this.name = name;
-            return this;
-        }
-
-        public Builder id(int id) {
-            this.id = id;
-            return this;
-        }
-
-        public Builder top(int top) {
-            this.top = top;
-            return this;
-        }
-
-        public Builder side(int side) {
-            this.side = side;
-            return this;
-        }
-
-        public Builder bottom(int bottom) {
-            this.bottom = bottom;
-            return this;
-        }
-
-        public Builder state(State state) {
-            this.state = state;
-            return this;
-        }
-
-        public Block build() {
-            return new Block(this);
-        }
-    }
-
 }

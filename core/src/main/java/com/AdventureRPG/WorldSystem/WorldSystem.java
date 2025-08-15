@@ -34,11 +34,11 @@ public class WorldSystem {
     private final int CHUNK_SIZE;
 
     // Block Management
-    private final Block[] blocks;
     private final String BLOCK_TEXTURE_PATH;
     private final int BLOCK_TEXTURE_SIZE;
     private final int BLOCK_ATLAS_PADDING;
     public final BlockAtlas BlockAtlas;
+    private final Block[] blocks;
 
     // World System
     public final WorldTick worldTick;
@@ -70,11 +70,11 @@ public class WorldSystem {
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
 
         // Block Management
-        this.blocks = Loader.LoadBlocks();
         this.BLOCK_TEXTURE_PATH = settings.BLOCK_TEXTURE_PATH;
         this.BLOCK_TEXTURE_SIZE = settings.BLOCK_TEXTURE_SIZE;
         this.BLOCK_ATLAS_PADDING = settings.BLOCK_ATLAS_PADDING;
         this.BlockAtlas = new BlockAtlas(BLOCK_TEXTURE_PATH, BLOCK_TEXTURE_SIZE, BLOCK_ATLAS_PADDING);
+        this.blocks = Loader.LoadBlocks(BlockAtlas);
 
         // World System
         this.worldTick = new WorldTick(this);
@@ -91,7 +91,6 @@ public class WorldSystem {
     }
 
     public void awake() {
-
         gridSystem.awake();
         biomeSystem.awake();
     }

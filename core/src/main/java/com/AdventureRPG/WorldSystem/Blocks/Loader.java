@@ -8,33 +8,44 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
+// TODO: AI largely made most of this. It needs intense scrutiny when I have time
 public class Loader {
 
-    public static Block[] LoadBlocks() {
-        // Load file
+    // debug
+    private static final boolean debug = true; // TODO: Remove debug line
+
+    public static Block[] LoadBlocks(BlockAtlas blockAtlas) {
+
         FileHandle file = Gdx.files.internal("blocks.json");
         String json = file.readString("UTF-8");
 
-        // Use GSON with custom Block deserializer
         Gson gson = new GsonBuilder()
-                .registerTypeAdapter(Block.class, new BlockDeserializer())
+                .registerTypeAdapter(Builder.class, new BlockDeserializer())
                 .create();
 
-        List<Block> blockList = gson.fromJson(json, new TypeToken<List<Block>>() {
+        List<Builder> builders = gson.fromJson(json, new TypeToken<List<Builder>>() {
         }.getType());
 
-        // Allocate based on max ID
-        int maxID = 0;
-        for (Block b : blockList)
-            if (b.id > maxID)
-                maxID = b.id;
+        Block[] result = new Block[builders.size()];
 
-        Block[] result = new Block[maxID + 1];
-        for (Block b : blockList) {
-            if (result[b.id] != null)
-                throw new RuntimeException("Duplicate block ID detected: " + b.id + " (" + b.name + ")");
-            result[b.id] = b;
-        }
+        for (int i = 0; i < builders.size(); i++)
+            result[i] = builders.get(i).build(blockAtlas, i);
+
+        if (debug) // TODO: Remove debug line
+            for (Block block : result) {
+                System.out.println("______________________________");
+                System.out.println(block.name);
+                System.out.println(block.id);
+                System.out.println("");
+                System.out.println(block.up);
+                System.out.println(block.north);
+                System.out.println(block.south);
+                System.out.println(block.east);
+                System.out.println(block.west);
+                System.out.println(block.down);
+                System.out.println("");
+                System.out.println(block.state.toString());
+            }
 
         return result;
     }
