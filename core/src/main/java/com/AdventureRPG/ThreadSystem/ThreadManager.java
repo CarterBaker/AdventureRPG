@@ -86,7 +86,7 @@ public class ThreadManager {
 
                         Thread t = new Thread(r, "General-Thread-" + count++);
                         t.setPriority(Thread.NORM_PRIORITY);
-                        
+
                         return t;
                     }
                 });

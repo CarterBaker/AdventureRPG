@@ -119,7 +119,7 @@ public class Settings {
 
         // Path Settings
         private String BLOCK_TEXTURE_PATH = "textures";
-        private String BIOME_JSON_PATH = "biomes/";
+        private String BIOME_JSON_PATH = "biomes";
         private String REGION_IMAGE_PATH = "world/world.png";
 
         // Atlas Settings

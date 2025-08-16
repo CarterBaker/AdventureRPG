@@ -3,7 +3,6 @@ package com.AdventureRPG.WorldSystem.GridSystem;
 import java.util.Comparator;
 import java.util.List;
 
-import com.AdventureRPG.SaveSystem.ChunkData;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Vector2Int;
@@ -26,7 +25,6 @@ public class GridSystem {
 
     // Game Manager
     private final Settings settings;
-    private final ChunkData chunkData;
     private final WorldSystem worldSystem;
     private final ChunkSystem chunkSystem;
     private final WorldTick worldTick;
@@ -75,7 +73,6 @@ public class GridSystem {
 
         // Chunk System
         this.settings = WorldSystem.settings;
-        this.chunkData = WorldSystem.saveSystem.chunkData;
         this.worldSystem = WorldSystem;
         this.chunkSystem = worldSystem.chunkSystem;
         this.worldTick = WorldSystem.worldTick;

@@ -5,22 +5,22 @@
     },
     {
         "name": "Water",
-        "up": "Water",
-        "north": "Water",
-        "south": "Water",
-        "east": "Water",
-        "west": "Water",
-        "down": "Water",
+        "up": "water",
+        "north": "water",
+        "south": "water",
+        "east": "water",
+        "west": "water",
+        "down": "water",
         "state": "LIQUID"
     },
     {
         "name": "Lava",
-        "up": "Lava",
-        "north": "Lava",
-        "south": "Lava",
-        "east": "Lava",
-        "west": "Lava",
-        "down": "Lava",
+        "up": "lava",
+        "north": "lava",
+        "south": "lava",
+        "east": "lava",
+        "west": "lava",
+        "down": "lava",
         "state": "LIQUID"
     },
     {
@@ -95,12 +95,12 @@
     },
     {
         "name": "Sand",
-        "up": "Sand",
-        "north": "Sand",
-        "south": "Sand",
-        "east": "Sand",
-        "west": "Sand",
-        "down": "Sand",
+        "up": "sand",
+        "north": "sand",
+        "south": "sand",
+        "east": "sand",
+        "west": "sand",
+        "down": "sand",
         "state": "SOLID"
     }
 ]
