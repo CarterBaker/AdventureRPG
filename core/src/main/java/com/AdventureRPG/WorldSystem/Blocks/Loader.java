@@ -2,7 +2,7 @@ package com.AdventureRPG.WorldSystem.Blocks;
 
 import java.util.List;
 
-import com.AdventureRPG.TextureManager.BlockAtlas;
+import com.AdventureRPG.TextureManager.TextureManager;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.google.gson.Gson;
@@ -15,7 +15,7 @@ public class Loader {
     // debug
     private static final boolean debug = true; // TODO: Remove debug line
 
-    public static Block[] LoadBlocks(BlockAtlas blockAtlas) {
+    public static Block[] LoadBlocks(TextureManager textureManager) {
 
         FileHandle file = Gdx.files.internal("blocks.json");
         String json = file.readString("UTF-8");
@@ -30,7 +30,7 @@ public class Loader {
         Block[] result = new Block[builders.size()];
 
         for (int i = 0; i < builders.size(); i++)
-            result[i] = builders.get(i).build(blockAtlas, i);
+            result[i] = builders.get(i).build(textureManager, i);
 
         if (debug) // TODO: Remove debug line
             for (Block block : result) {

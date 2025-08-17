@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
-import com.AdventureRPG.TextureManager.BlockAtlas;
+import com.AdventureRPG.TextureManager.TextureManager;
 
 public class Builder {
 
@@ -60,7 +60,7 @@ public class Builder {
         return this;
     }
 
-    public Block build(BlockAtlas blockAtlas, int id) {
-        return new Block(blockAtlas, this, id);
+    public Block build(TextureManager textureManager, int id) {
+        return new Block(textureManager, this, id);
     }
 }

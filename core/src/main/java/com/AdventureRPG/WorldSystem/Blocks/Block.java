@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
-import com.AdventureRPG.TextureManager.BlockAtlas;
+import com.AdventureRPG.TextureManager.TextureManager;
 
 public class Block {
 
@@ -16,17 +16,17 @@ public class Block {
 
     public final State state;
 
-    public Block(BlockAtlas blockAtlas, Builder builder, int id) {
+    public Block(TextureManager textureManager, Builder builder, int id) {
 
         this.name = builder.name;
         this.id = id;
 
-        this.up = (blockAtlas != null) ? blockAtlas.getIdByName(builder.up) : -9;
-        this.north = (blockAtlas != null) ? blockAtlas.getIdByName(builder.north) : -9;
-        this.south = (blockAtlas != null) ? blockAtlas.getIdByName(builder.south) : -9;
-        this.east = (blockAtlas != null) ? blockAtlas.getIdByName(builder.east) : -9;
-        this.west = (blockAtlas != null) ? blockAtlas.getIdByName(builder.west) : -9;
-        this.down = (blockAtlas != null) ? blockAtlas.getIdByName(builder.down) : -9;
+        this.up = (textureManager != null) ? textureManager.getIDFromTexture(builder.up) : -9;
+        this.north = (textureManager != null) ? textureManager.getIDFromTexture(builder.north) : -9;
+        this.south = (textureManager != null) ? textureManager.getIDFromTexture(builder.south) : -9;
+        this.east = (textureManager != null) ? textureManager.getIDFromTexture(builder.east) : -9;
+        this.west = (textureManager != null) ? textureManager.getIDFromTexture(builder.west) : -9;
+        this.down = (textureManager != null) ? textureManager.getIDFromTexture(builder.down) : -9;
 
         this.state = builder.state;
     }

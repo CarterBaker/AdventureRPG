@@ -3,7 +3,7 @@ package com.AdventureRPG.WorldSystem;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
-import com.AdventureRPG.TextureManager.BlockAtlas;
+import com.AdventureRPG.TextureManager.TextureManager;
 import com.AdventureRPG.ThreadSystem.ThreadManager;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Coordinate2Int;
@@ -24,6 +24,7 @@ public class WorldSystem {
     // Game Manager
     public final GameManager gameManager;
     public final ThreadManager threadManager;
+    public final TextureManager textureManager;
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
     public final Settings settings;
@@ -38,7 +39,6 @@ public class WorldSystem {
     private final String BLOCK_TEXTURE_PATH;
     private final int BLOCK_TEXTURE_SIZE;
     private final int BLOCK_ATLAS_PADDING;
-    public final BlockAtlas BlockAtlas;
     private final Block[] blocks;
 
     // World System
@@ -61,6 +61,7 @@ public class WorldSystem {
         // Game Manager
         this.gameManager = gameManager;
         this.threadManager = gameManager.threadManager;
+        this.textureManager = gameManager.TextureManager;
         this.saveSystem = gameManager.saveSystem;
         this.UISystem = gameManager.UISystem;
         this.settings = gameManager.settings;
@@ -75,8 +76,7 @@ public class WorldSystem {
         this.BLOCK_TEXTURE_PATH = settings.BLOCK_TEXTURE_PATH;
         this.BLOCK_TEXTURE_SIZE = settings.BLOCK_TEXTURE_SIZE;
         this.BLOCK_ATLAS_PADDING = settings.BLOCK_ATLAS_PADDING;
-        this.BlockAtlas = new BlockAtlas(BLOCK_TEXTURE_PATH, BLOCK_TEXTURE_SIZE, BLOCK_ATLAS_PADDING);
-        this.blocks = Loader.LoadBlocks(BlockAtlas);
+        this.blocks = Loader.LoadBlocks(textureManager);
 
         // World System
         this.worldTick = new WorldTick(this);
