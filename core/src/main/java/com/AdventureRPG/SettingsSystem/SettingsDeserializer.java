@@ -54,6 +54,8 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
             builder.BIOME_JSON_PATH(obj.get("BIOME_JSON_PATH").getAsString());
         if (obj.has("REGION_IMAGE_PATH"))
             builder.REGION_IMAGE_PATH(obj.get("REGION_IMAGE_PATH").getAsString());
+        if (obj.has("MATERIAL_JSON_PATH"))
+            builder.MATERIAL_JSON_PATH(obj.get("MATERIAL_JSON_PATH").getAsString());
 
         // PBR Settings
         if (obj.has("NORMAL_MAP_DEFAULT")) {
@@ -75,6 +77,30 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         if (obj.has("METAL_MAP_DEFAULT")) {
             JsonObject colorObj = obj.getAsJsonObject("METAL_MAP_DEFAULT");
             builder.METAL_MAP_DEFAULT(new com.badlogic.gdx.graphics.Color(
+                    colorObj.get("r").getAsFloat(),
+                    colorObj.get("g").getAsFloat(),
+                    colorObj.get("b").getAsFloat(),
+                    colorObj.has("a") ? colorObj.get("a").getAsFloat() : 1f));
+        }
+        if (obj.has("ROUGHNESS_MAP_DEFAULT")) {
+            JsonObject colorObj = obj.getAsJsonObject("ROUGHNESS_MAP_DEFAULT");
+            builder.ROUGHNESS_MAP_DEFAULT(new com.badlogic.gdx.graphics.Color(
+                    colorObj.get("r").getAsFloat(),
+                    colorObj.get("g").getAsFloat(),
+                    colorObj.get("b").getAsFloat(),
+                    colorObj.has("a") ? colorObj.get("a").getAsFloat() : 1f));
+        }
+        if (obj.has("AO_MAP_DEFAULT")) {
+            JsonObject colorObj = obj.getAsJsonObject("AO_MAP_DEFAULT");
+            builder.AO_MAP_DEFAULT(new com.badlogic.gdx.graphics.Color(
+                    colorObj.get("r").getAsFloat(),
+                    colorObj.get("g").getAsFloat(),
+                    colorObj.get("b").getAsFloat(),
+                    colorObj.has("a") ? colorObj.get("a").getAsFloat() : 1f));
+        }
+        if (obj.has("OPACITY_MAP_DEFAULT")) {
+            JsonObject colorObj = obj.getAsJsonObject("OPACITY_MAP_DEFAULT");
+            builder.OPACITY_MAP_DEFAULT(new com.badlogic.gdx.graphics.Color(
                     colorObj.get("r").getAsFloat(),
                     colorObj.get("g").getAsFloat(),
                     colorObj.get("b").getAsFloat(),

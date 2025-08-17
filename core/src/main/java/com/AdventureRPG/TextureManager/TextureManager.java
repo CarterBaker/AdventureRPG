@@ -30,6 +30,9 @@ public class TextureManager {
     private final Color NORMAL_MAP_DEFAULT;
     private final Color HEIGHT_MAP_DEFAULT;
     private final Color METAL_MAP_DEFAULT;
+    private final Color ROUGHNESS_MAP_DEFAULT;
+    private final Color AO_MAP_DEFAULT;
+    private final Color OPACITY_MAP_DEFAULT;
     private final Color CUSTOM_MAP_DEFAULT;
 
     // ID bookkeeping
@@ -58,6 +61,9 @@ public class TextureManager {
         this.NORMAL_MAP_DEFAULT = settings.NORMAL_MAP_DEFAULT;
         this.HEIGHT_MAP_DEFAULT = settings.HEIGHT_MAP_DEFAULT;
         this.METAL_MAP_DEFAULT = settings.METAL_MAP_DEFAULT;
+        this.ROUGHNESS_MAP_DEFAULT = settings.ROUGHNESS_MAP_DEFAULT;
+        this.AO_MAP_DEFAULT = settings.AO_MAP_DEFAULT;
+        this.OPACITY_MAP_DEFAULT = settings.OPACITY_MAP_DEFAULT;
         this.CUSTOM_MAP_DEFAULT = settings.CUSTOM_MAP_DEFAULT;
 
         // Core
@@ -97,6 +103,9 @@ public class TextureManager {
         List<File> normalMaps = new ArrayList<>();
         List<File> metalMaps = new ArrayList<>();
         List<File> heightMaps = new ArrayList<>();
+        List<File> roughnessMaps = new ArrayList<>();
+        List<File> aoMaps = new ArrayList<>();
+        List<File> opacityMaps = new ArrayList<>();
         Map<String, List<File>> customMaps = new HashMap<>();
 
         for (File file : pngFiles) {
@@ -119,9 +128,23 @@ public class TextureManager {
                 case "height":
                     heightMaps.add(file);
                     break;
+                case "r":
+                case "rough":
+                case "roughness":
+                    roughnessMaps.add(file);
+                    break;
+                case "ao":
+                case "ambientocclusion":
+                    aoMaps.add(file);
+                    break;
+                case "o":
+                case "opacity":
+                case "alpha":
+                    opacityMaps.add(file);
+                    break;
                 case "":
                     albedoMaps.add(file);
-                    break; // default → albedo
+                    break;
                 default:
                     customMaps.computeIfAbsent(suffix, k -> new ArrayList<>()).add(file);
                     break;
@@ -149,6 +172,15 @@ public class TextureManager {
 
         group.metal = packType(groupedSets, m -> m.metal, METAL_MAP_DEFAULT);
         registerAtlas(folder + "_metal", group.metal);
+
+        group.roughness = packType(groupedSets, m -> m.roughness, ROUGHNESS_MAP_DEFAULT);
+        registerAtlas(folder + "_roughness", group.roughness);
+
+        group.ao = packType(groupedSets, m -> m.ao, AO_MAP_DEFAULT);
+        registerAtlas(folder + "_ao", group.ao);
+
+        group.opacity = packType(groupedSets, m -> m.opacity, OPACITY_MAP_DEFAULT);
+        registerAtlas(folder + "_opacity", group.opacity);
 
         atlasGroups.put(folder, group);
 
@@ -220,6 +252,9 @@ public class TextureManager {
             set.normal = resolveMap(folderName, textureName, "n", NORMAL_MAP_DEFAULT);
             set.height = resolveMap(folderName, textureName, "h", HEIGHT_MAP_DEFAULT);
             set.metal = resolveMap(folderName, textureName, "m", METAL_MAP_DEFAULT);
+            set.roughness = resolveMap(folderName, textureName, "r", ROUGHNESS_MAP_DEFAULT);
+            set.ao = resolveMap(folderName, textureName, "ao", AO_MAP_DEFAULT);
+            set.opacity = resolveMap(folderName, textureName, "o", OPACITY_MAP_DEFAULT);
 
             groupedSets.put(id, set);
         }
@@ -299,6 +334,9 @@ public class TextureManager {
         String albedo;
         String normal;
         String height;
+        String roughness;
+        String ao;
+        String opacity;
         String metal;
 
         TextureSet(int id, String albedo) {
@@ -314,6 +352,10 @@ public class TextureManager {
         TextureAtlas normal;
         TextureAtlas height;
         TextureAtlas metal;
+        TextureAtlas roughness;
+        TextureAtlas ao;
+        TextureAtlas opacity;
+
         Map<String, TextureAtlas> custom = new HashMap<>();
 
         void dispose() {
@@ -326,6 +368,12 @@ public class TextureManager {
                 height.dispose();
             if (metal != null)
                 metal.dispose();
+            if (roughness != null)
+                roughness.dispose();
+            if (ao != null)
+                ao.dispose();
+            if (opacity != null)
+                opacity.dispose();
 
             for (TextureAtlas atlas : custom.values())
                 atlas.dispose();
