@@ -99,120 +99,124 @@ public class TextureManager {
     private void organizeAtlasLibrary(File atlasFolder) {
 
         File[] pngFiles = atlasFolder.listFiles(f -> f.isFile() && f.getName().toLowerCase().endsWith(".png"));
-
         if (pngFiles == null || pngFiles.length == 0)
             return;
 
-        List<File> albedoMaps = new ArrayList<>();
-        List<File> normalMaps = new ArrayList<>();
-        List<File> metalMaps = new ArrayList<>();
-        List<File> heightMaps = new ArrayList<>();
-        List<File> roughnessMaps = new ArrayList<>();
-        List<File> aoMaps = new ArrayList<>();
-        List<File> opacityMaps = new ArrayList<>();
-        Map<String, List<File>> customMaps = new HashMap<>();
+        Map<String, List<File>> mapsByType = new HashMap<>();
 
+        // Categorize files by suffix
         for (File file : pngFiles) {
-
-            String name = file.getName().toLowerCase().replace(".png", "");
+            String name = file.getName().replace(".png", "");
             int underscoreIdx = name.lastIndexOf("_");
-            String suffix = underscoreIdx > 0 ? name.substring(underscoreIdx + 1) : "";
+            String suffix = underscoreIdx > 0 ? name.substring(underscoreIdx + 1).toLowerCase() : "albedo";
 
+            // Normalize common suffixes
             switch (suffix) {
                 case "n":
                 case "normal":
-                    normalMaps.add(file);
+                    suffix = "normal";
                     break;
                 case "m":
                 case "metal":
                 case "metallic":
-                    metalMaps.add(file);
+                    suffix = "metal";
                     break;
                 case "h":
                 case "height":
-                    heightMaps.add(file);
+                    suffix = "height";
                     break;
                 case "r":
                 case "rough":
                 case "roughness":
-                    roughnessMaps.add(file);
+                    suffix = "roughness";
                     break;
                 case "ao":
                 case "ambientocclusion":
-                    aoMaps.add(file);
+                    suffix = "ao";
                     break;
                 case "o":
                 case "opacity":
                 case "alpha":
-                    opacityMaps.add(file);
+                    suffix = "opacity";
                     break;
                 case "":
-                    albedoMaps.add(file);
-                    break;
-                default:
-                    customMaps.computeIfAbsent(suffix, k -> new ArrayList<>()).add(file);
+                    suffix = "albedo";
                     break;
             }
+
+            mapsByType.computeIfAbsent(suffix, k -> new ArrayList<>()).add(file);
         }
 
-        // Assign IDs for albedos
-        assignUniqueIDs(albedoMaps, atlasFolder);
-
-        // Build grouped sets
-        Map<Integer, TextureSet> groupedSets = assembleAtlasMap(albedoMaps, atlasFolder);
-
-        // Create group for this folder
+        String folderName = atlasFolder.getName();
         AtlasGroup group = new AtlasGroup();
-        String folder = atlasFolder.getName();
 
-        group.albedo = packType(groupedSets, m -> m.albedo, Color.CLEAR, folder, "albedo");
-        group.normal = packType(groupedSets, m -> m.normal, NORMAL_MAP_DEFAULT, folder, "normal");
-        group.height = packType(groupedSets, m -> m.height, HEIGHT_MAP_DEFAULT, folder, "height");
-        group.metal = packType(groupedSets, m -> m.metal, METAL_MAP_DEFAULT, folder, "metal");
-        group.roughness = packType(groupedSets, m -> m.roughness, ROUGHNESS_MAP_DEFAULT, folder, "roughness");
-        group.ao = packType(groupedSets, m -> m.ao, AO_MAP_DEFAULT, folder, "ao");
-        group.opacity = packType(groupedSets, m -> m.opacity, OPACITY_MAP_DEFAULT, folder, "opacity");
+        // Assign IDs based on albedo (required for mapping)
+        List<File> albedoFiles = mapsByType.getOrDefault("albedo", new ArrayList<>());
+        assignUniqueIDs(albedoFiles, atlasFolder);
 
-        atlasGroups.put(folder, group);
-
-        // Pack custom maps
-        for (Map.Entry<String, List<File>> entry : customMaps.entrySet()) {
-            String suffix = entry.getKey(); // e.g., "ao", "rough", "emissive"
+        // Process each type that exists
+        for (Map.Entry<String, List<File>> entry : mapsByType.entrySet()) {
+            String type = entry.getKey(); // albedo, normal, metal, height, etc.
             List<File> files = entry.getValue();
 
-            Map<Integer, TextureSet> customGroupedSets = new HashMap<>();
-
-            for (File file : files) {
-                String textureName = file.getName().replace(".png", "");
-                String key = folder + "/" + textureName;
-
+            Map<Integer, TextureSet> groupedSets = new HashMap<>();
+            for (File f : files) {
+                String textureName = f.getName().replace(".png", "");
+                String key = folderName + "/" + textureName;
                 int id = texturePathToID.getOrDefault(key, nextTextureID++);
                 texturePathToID.putIfAbsent(key, id);
                 idToTexturePath.putIfAbsent(id, key);
 
-                TextureSet set = new TextureSet(id, key);
-                // For now, other maps can remain null; you only care about the custom map
-                // itself
-                customGroupedSets.put(id, set);
+                groupedSets.put(id, new TextureSet(id, key));
             }
 
-            // Pack the atlas for this suffix
-            TextureAtlas customAtlas = packType(
-                    customGroupedSets,
-                    s -> folder + "/" + s.albedo + "_" + suffix,
-                    CUSTOM_MAP_DEFAULT,
-                    folder,
-                    suffix);
+            // Decide default color for missing textures (only used if map is missing in a
+            // set)
+            Color defaultColor = switch (type) {
+                case "normal" -> NORMAL_MAP_DEFAULT;
+                case "metal" -> METAL_MAP_DEFAULT;
+                case "height" -> HEIGHT_MAP_DEFAULT;
+                case "roughness" -> ROUGHNESS_MAP_DEFAULT;
+                case "ao" -> AO_MAP_DEFAULT;
+                case "opacity" -> OPACITY_MAP_DEFAULT;
+                default -> Color.CLEAR;
+            };
 
-            group.custom.put(suffix, customAtlas);
-            registerAtlas(folder + "_" + suffix, customAtlas);
+            TextureAtlas atlas = packType(groupedSets, m -> m.albedo, defaultColor, folderName, type);
 
-            if (debug)
-                System.out.println("Packed custom atlas: " + folder + "_" + suffix);
+            // Assign to group
+            switch (type) {
+                case "albedo":
+                    group.albedo = atlas;
+                    break;
+                case "normal":
+                    group.normal = atlas;
+                    break;
+                case "metal":
+                    group.metal = atlas;
+                    break;
+                case "height":
+                    group.height = atlas;
+                    break;
+                case "roughness":
+                    group.roughness = atlas;
+                    break;
+                case "ao":
+                    group.ao = atlas;
+                    break;
+                case "opacity":
+                    group.opacity = atlas;
+                    break;
+                default:
+                    group.custom.put(type, atlas);
+                    break;
+            }
         }
 
-        if (debug) // TODO: Remove debug line
-            System.out.println("Built atlas group for: " + atlasFolder.getName());
+        atlasGroups.put(folderName, group);
+
+        if (debug)
+            System.out.println("Built atlas group for: " + folderName);
     }
 
     private void assignUniqueIDs(List<File> files, File baseFolder) {
@@ -282,17 +286,26 @@ public class TextureManager {
 
         for (TextureSet set : groupedSets.values()) {
             String path = getter.apply(set);
+
             Pixmap pixmap;
             String regionName;
 
             if (path.startsWith("__DEFAULT__")) {
                 pixmap = createDefaultPixmap(defaultColor);
                 regionName = "id_" + set.id;
-            }
+            } else {
+                if (!path.endsWith(".png")) {
+                    path = path + ".png";
+                }
 
-            else {
                 FileHandle handle = Gdx.files.internal(BLOCK_TEXTURE_PATH + "/" + path);
-                pixmap = new Pixmap(handle);
+                if (handle.exists()) {
+                    pixmap = new Pixmap(handle);
+                } else {
+                    System.err.println("Warning: Missing texture: " + handle.path());
+                    pixmap = createDefaultPixmap(defaultColor);
+                }
+
                 regionName = new File(path).getName().replace(".png", "");
             }
 
@@ -309,14 +322,21 @@ public class TextureManager {
         // Register atlas (assigns index)
         registerAtlas(folder + "_" + suffix, atlas);
 
+        // --- SAFELY resize idToAtlasIndex ---
+        if (idToAtlasIndex == null) {
+            idToAtlasIndex = new int[nextTextureID];
+            Arrays.fill(idToAtlasIndex, -1); // mark unassigned
+        } else if (idToAtlasIndex.length < nextTextureID) {
+            int oldLength = idToAtlasIndex.length;
+            idToAtlasIndex = Arrays.copyOf(idToAtlasIndex, nextTextureID);
+            Arrays.fill(idToAtlasIndex, oldLength, nextTextureID, -1); // fill new slots
+        }
+
         // Fill id→atlasIndex mapping
         int atlasIndex = atlasToIndex.get(atlas);
-
-        if (idToAtlasIndex == null || idToAtlasIndex.length < nextTextureID)
-            idToAtlasIndex = Arrays.copyOf(idToAtlasIndex, nextTextureID);
-
-        for (TextureSet set : groupedSets.values())
+        for (TextureSet set : groupedSets.values()) {
             idToAtlasIndex[set.id] = atlasIndex;
+        }
 
         return atlas;
     }
