@@ -3,11 +3,14 @@ package com.AdventureRPG;
 import java.io.File;
 
 import com.AdventureRPG.InputSystem.InputSystem;
+import com.AdventureRPG.LightingSystem.LightingSystem;
+import com.AdventureRPG.TextureManager.TextureManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ThreadSystem.ThreadManager;
+import com.AdventureRPG.TimeSystem.TimeSystem;
 import com.AdventureRPG.UISystem.LoadScreen;
 import com.AdventureRPG.UISystem.Menu;
 import com.AdventureRPG.UISystem.UISystem;
@@ -28,9 +31,12 @@ public class GameManager implements Screen {
 
     // Game Systems
     public final ThreadManager threadManager;
+    public final TextureManager TextureManager;
     public final MaterialManager materialManager;
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
+    public final TimeSystem timeSystem;
+    public final LightingSystem lightingSystem;
     public final WorldSystem worldSystem;
     public final PlayerSystem playerSystem;
     public final InputSystem inputSystem;
@@ -58,9 +64,12 @@ public class GameManager implements Screen {
 
         // Game Systems
         this.threadManager = new ThreadManager(this);
-        this.materialManager = new MaterialManager();
+        this.TextureManager = new TextureManager(this);
+        this.materialManager = new MaterialManager(this);
         this.saveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
+        this.timeSystem = new TimeSystem(this);
+        this.lightingSystem = new LightingSystem(this);
         this.worldSystem = new WorldSystem(this);
         this.playerSystem = new PlayerSystem(this);
         this.inputSystem = new InputSystem(this);
@@ -113,6 +122,7 @@ public class GameManager implements Screen {
     @Override
     public void dispose() {
         threadManager.dispose();
+        TextureManager.dispose();
     }
 
     // Game Manager \\
@@ -125,6 +135,7 @@ public class GameManager implements Screen {
 
         saveSystem.awake();
         UISystem.awake();
+        timeSystem.awake();
         worldSystem.awake();
         playerSystem.awake();
         inputSystem.awake();
@@ -153,6 +164,7 @@ public class GameManager implements Screen {
 
         saveSystem.start();
         UISystem.start();
+        timeSystem.start();
         worldSystem.start();
         playerSystem.start();
         inputSystem.start();
@@ -189,6 +201,7 @@ public class GameManager implements Screen {
 
         saveSystem.update();
         UISystem.update();
+        timeSystem.update();
         playerSystem.update();
         inputSystem.update();
     }

@@ -3,13 +3,13 @@ package com.AdventureRPG.WorldSystem;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.TextureManager.BlockAtlas;
 import com.AdventureRPG.ThreadSystem.ThreadManager;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
-import com.AdventureRPG.WorldSystem.Blocks.BlockAtlas;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
@@ -34,6 +34,7 @@ public class WorldSystem {
     private final int CHUNK_SIZE;
 
     // Block Management
+    private final String BLOCK_JSON_PATH;
     private final String BLOCK_TEXTURE_PATH;
     private final int BLOCK_TEXTURE_SIZE;
     private final int BLOCK_ATLAS_PADDING;
@@ -70,6 +71,7 @@ public class WorldSystem {
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
 
         // Block Management
+        this.BLOCK_JSON_PATH = settings.BLOCK_JSON_PATH;
         this.BLOCK_TEXTURE_PATH = settings.BLOCK_TEXTURE_PATH;
         this.BLOCK_TEXTURE_SIZE = settings.BLOCK_TEXTURE_SIZE;
         this.BLOCK_ATLAS_PADDING = settings.BLOCK_ATLAS_PADDING;

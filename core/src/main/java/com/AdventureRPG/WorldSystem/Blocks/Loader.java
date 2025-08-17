@@ -2,6 +2,7 @@ package com.AdventureRPG.WorldSystem.Blocks;
 
 import java.util.List;
 
+import com.AdventureRPG.TextureManager.BlockAtlas;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.google.gson.Gson;

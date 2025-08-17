@@ -1,5 +1,7 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
+import com.AdventureRPG.TextureManager.BlockAtlas;
+
 public class Block {
 
     public final String name;

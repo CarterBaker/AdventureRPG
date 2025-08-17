@@ -1,5 +1,7 @@
 package com.AdventureRPG.SettingsSystem;
 
+import com.badlogic.gdx.graphics.Color;
+
 public class Settings {
 
     // Debug Settings
@@ -23,13 +25,33 @@ public class Settings {
     // Thread Settings
     public final int AVAILABLE_THREADS; // Maximum available threads to pool off
 
-    // Movement Settings
-    public final float BASE_WALKING_SPEED; // Average human walking speed in m/s
-
     // Path Settings
+    public final String CALENDAR_JSON_PATH; // The location of the calendar json file
+    public final String BLOCK_JSON_PATH; // The location of the blocks json file
     public final String BLOCK_TEXTURE_PATH; // The location of all block images
     public final String BIOME_JSON_PATH; // Location of all biome files
     public final String REGION_IMAGE_PATH; // The main image that controls the world
+
+    // PBR Settings
+    public final Color NORMAL_MAP_DEFAULT; // Default flat normal color (128,128,255) for missing _N maps
+    public final Color HEIGHT_MAP_DEFAULT; // Default black (0,0,0) for missing _H maps
+    public final Color METAL_MAP_DEFAULT; // Default black (0,0,0) for missing _M maps
+    public final Color CUSTOM_MAP_DEFAULT; // Default black/neutral for missing _custom maps
+
+    // Time Settings
+    public final int MINUTES_PER_HOUR; // How many minutes are in an hour
+    public final int HOURS_PER_DAY; // How many hours are in a day
+    public final int DAYS_PER_DAY; // How many in-game days fit inside a real world day
+    public final float MIDDAY_OFFSET; // The offset of days incomparison to real world days
+
+    public final int STARTING_DAY; // The day the game will start in
+    public final int STARTING_MONTH; // The month the game will start in
+    public final int STARTING_YEAR; // The year the game will start in
+    public final int STARTING_AGE; // The age the game will start in
+    public final int YEARS_PER_AGE; // How many years are there in an age
+
+    // Movement Settings
+    public final float BASE_WALKING_SPEED; // Average human walking speed in m/s
 
     // Atlas Settings
     public final int BLOCK_TEXTURE_SIZE; // The size of all block images
@@ -68,13 +90,33 @@ public class Settings {
         // Thread Settings
         this.AVAILABLE_THREADS = builder.AVAILABLE_THREADS;
 
-        // Movement Settings
-        this.BASE_WALKING_SPEED = builder.BASE_WALKING_SPEED;
-
         // Path Settings
+        this.CALENDAR_JSON_PATH = builder.CALENDAR_JSON_PATH;
+        this.BLOCK_JSON_PATH = builder.BLOCK_JSON_PATH;
         this.BLOCK_TEXTURE_PATH = builder.BLOCK_TEXTURE_PATH;
         this.BIOME_JSON_PATH = builder.BIOME_JSON_PATH;
         this.REGION_IMAGE_PATH = builder.REGION_IMAGE_PATH;
+
+        // PBR Settings
+        this.NORMAL_MAP_DEFAULT = builder.NORMAL_MAP_DEFAULT;
+        this.HEIGHT_MAP_DEFAULT = builder.HEIGHT_MAP_DEFAULT;
+        this.METAL_MAP_DEFAULT = builder.METAL_MAP_DEFAULT;
+        this.CUSTOM_MAP_DEFAULT = builder.CUSTOM_MAP_DEFAULT;
+
+        // Time Settings
+        this.MINUTES_PER_HOUR = builder.MINUTES_PER_HOUR;
+        this.HOURS_PER_DAY = builder.HOURS_PER_DAY;
+        this.DAYS_PER_DAY = builder.DAYS_PER_DAY;
+        this.MIDDAY_OFFSET = builder.MIDDAY_OFFSET;
+
+        this.STARTING_DAY = builder.STARTING_DAY;
+        this.STARTING_MONTH = builder.STARTING_MONTH;
+        this.STARTING_YEAR = builder.STARTING_YEAR;
+        this.STARTING_AGE = builder.STARTING_AGE;
+        this.YEARS_PER_AGE = builder.YEARS_PER_AGE;
+
+        // Movement Settings
+        this.BASE_WALKING_SPEED = builder.BASE_WALKING_SPEED;
 
         // Atlas Settings
         this.BLOCK_TEXTURE_SIZE = builder.BLOCK_TEXTURE_SIZE;
@@ -114,13 +156,33 @@ public class Settings {
         // Thread Settings
         private int AVAILABLE_THREADS = 3;
 
-        // Movement Settings
-        private float BASE_WALKING_SPEED = 1.5f;
-
         // Path Settings
+        private String CALENDAR_JSON_PATH = "calendar.json";
+        private String BLOCK_JSON_PATH = "blocks.json";
         private String BLOCK_TEXTURE_PATH = "textures";
         private String BIOME_JSON_PATH = "biomes";
         private String REGION_IMAGE_PATH = "world/world.png";
+
+        // PBR Settings
+        private Color NORMAL_MAP_DEFAULT = new Color(0.5f, 0.5f, 1f, 1f);
+        private Color HEIGHT_MAP_DEFAULT = new Color(0f, 0f, 0f, 1f);
+        private Color METAL_MAP_DEFAULT = new Color(0f, 0f, 0f, 1f);
+        private Color CUSTOM_MAP_DEFAULT = new Color(0f, 0f, 0f, 1f);
+
+        // Time Settings
+        private int MINUTES_PER_HOUR = 60;
+        private int HOURS_PER_DAY = 24;
+        private int DAYS_PER_DAY = 20;
+        private float MIDDAY_OFFSET = 0.5f;
+
+        private int STARTING_DAY = 15;
+        private int STARTING_MONTH = 6;
+        private int STARTING_YEAR = 1356;
+        private int STARTING_AGE = 3;
+        private int YEARS_PER_AGE = 1500;
+
+        // Movement Settings
+        private float BASE_WALKING_SPEED = 1.5f;
 
         // Atlas Settings
         private int BLOCK_TEXTURE_SIZE = 32;
@@ -189,14 +251,17 @@ public class Settings {
             return this;
         }
 
-        // Movement Settings \\
+        // Paths Settings \\
 
-        public Builder BASE_WALKING_SPEED(float BASE_WALKING_SPEED) {
-            this.BASE_WALKING_SPEED = BASE_WALKING_SPEED;
+        public Builder CALENDAR_JSON_PATH(String CALENDAR_JSON_PATH) {
+            this.CALENDAR_JSON_PATH = CALENDAR_JSON_PATH;
             return this;
         }
 
-        // Paths Settings \\
+        public Builder BLOCK_JSON_PATH(String BLOCK_JSON_PATH) {
+            this.BLOCK_JSON_PATH = BLOCK_JSON_PATH;
+            return this;
+        }
 
         public Builder BLOCK_TEXTURE_PATH(String BLOCK_TEXTURE_PATH) {
             this.BLOCK_TEXTURE_PATH = BLOCK_TEXTURE_PATH;
@@ -210,6 +275,82 @@ public class Settings {
 
         public Builder REGION_IMAGE_PATH(String REGION_IMAGE_PATH) {
             this.REGION_IMAGE_PATH = REGION_IMAGE_PATH;
+            return this;
+        }
+
+        // PBR Settings \\
+
+        public Builder NORMAL_MAP_DEFAULT(Color NORMAL_MAP_DEFAULT) {
+            this.NORMAL_MAP_DEFAULT = NORMAL_MAP_DEFAULT;
+            return this;
+        }
+
+        public Builder HEIGHT_MAP_DEFAULT(Color HEIGHT_MAP_DEFAULT) {
+            this.HEIGHT_MAP_DEFAULT = HEIGHT_MAP_DEFAULT;
+            return this;
+        }
+
+        public Builder METAL_MAP_DEFAULT(Color METAL_MAP_DEFAULT) {
+            this.METAL_MAP_DEFAULT = METAL_MAP_DEFAULT;
+            return this;
+        }
+
+        public Builder CUSTOM_MAP_DEFAULT(Color CUSTOM_MAP_DEFAULT) {
+            this.CUSTOM_MAP_DEFAULT = CUSTOM_MAP_DEFAULT;
+            return this;
+        }
+
+        // Time Settings \\
+
+        public Builder MINUTES_PER_HOUR(int MINUTES_PER_HOUR) {
+            this.MINUTES_PER_HOUR = MINUTES_PER_HOUR;
+            return this;
+        }
+
+        public Builder HOURS_PER_DAY(int HOURS_PER_DAY) {
+            this.HOURS_PER_DAY = HOURS_PER_DAY;
+            return this;
+        }
+
+        public Builder DAYS_PER_DAY(int DAYS_PER_DAY) {
+            this.DAYS_PER_DAY = DAYS_PER_DAY;
+            return this;
+        }
+
+        public Builder MIDDAY_OFFSET(float MIDDAY_OFFSET) {
+            this.MIDDAY_OFFSET = MIDDAY_OFFSET;
+            return this;
+        }
+
+        public Builder STARTING_DAY(int STARTING_DAY) {
+            this.STARTING_DAY = STARTING_DAY;
+            return this;
+        }
+
+        public Builder STARTING_MONTH(int STARTING_MONTH) {
+            this.STARTING_MONTH = STARTING_MONTH;
+            return this;
+        }
+
+        public Builder STARTING_YEAR(int STARTING_YEAR) {
+            this.STARTING_YEAR = STARTING_YEAR;
+            return this;
+        }
+
+        public Builder STARTING_AGE(int STARTING_AGE) {
+            this.STARTING_AGE = STARTING_AGE;
+            return this;
+        }
+
+        public Builder YEARS_PER_AGE(int YEARS_PER_AGE) {
+            this.YEARS_PER_AGE = YEARS_PER_AGE;
+            return this;
+        }
+
+        // Movement Settings \\
+
+        public Builder BASE_WALKING_SPEED(float BASE_WALKING_SPEED) {
+            this.BASE_WALKING_SPEED = BASE_WALKING_SPEED;
             return this;
         }
 

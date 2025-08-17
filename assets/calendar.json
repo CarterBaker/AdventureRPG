@@ -1,0 +1,52 @@
+{
+    "months": [
+        {
+            "name": "Dawnrise",
+            "days": 30
+        },
+        {
+            "name": "Blossomreach",
+            "days": 31
+        },
+        {
+            "name": "Suncrest",
+            "days": 30
+        },
+        {
+            "name": "Highflame",
+            "days": 31
+        },
+        {
+            "name": "Emberfall",
+            "days": 30
+        },
+        {
+            "name": "Duskwane",
+            "days": 31
+        },
+        {
+            "name": "Moonveil",
+            "days": 30
+        },
+        {
+            "name": "Frostwane",
+            "days": 31
+        },
+        {
+            "name": "Deepice",
+            "days": 30
+        },
+        {
+            "name": "Thawmarch",
+            "days": 31
+        },
+        {
+            "name": "Greentide",
+            "days": 30
+        },
+        {
+            "name": "Starseed",
+            "days": 31
+        }
+    ]
+}
