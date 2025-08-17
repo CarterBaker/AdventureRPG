@@ -12,7 +12,6 @@ public class MaterialManager {
 
     // Game Manager
     private final Settings settings;
-    private final GameManager gameManager;
     private final Gson gson;
     private final TextureManager textureManager;
 
@@ -28,13 +27,16 @@ public class MaterialManager {
     // Base \\
     public MaterialManager(GameManager gameManager) {
         this.settings = gameManager.settings;
-        this.gameManager = gameManager;
         this.gson = gameManager.gson;
         this.textureManager = gameManager.TextureManager;
 
         this.MATERIAL_JSON_PATH = settings.MATERIAL_JSON_PATH;
 
         assembleAllMaterials();
+
+        int totalTextureIDs = textureManager.getNextTextureID();
+        textureToMaterial = new int[totalTextureIDs];
+        Arrays.fill(textureToMaterial, -1);
     }
 
     private void assembleAllMaterials() {
@@ -54,6 +56,15 @@ public class MaterialManager {
         def.id = id;
         nameToID.put(def.name, id);
         idToMaterial.put(id, def);
+
+        // Map the albedo texture (if it exists) to this material ID
+        String albedoPath = def.textureRefs.get("albedo"); // may be null
+        if (albedoPath != null) {
+            int textureID = textureManager.getIDFromTexture(albedoPath);
+            if (textureID != -1 && textureToMaterial[textureID] == -1) {
+                textureToMaterial[textureID] = id;
+            }
+        }
     }
 
     // API \\
@@ -67,5 +78,14 @@ public class MaterialManager {
 
     public int getMaterialID(String name) {
         return nameToID.getOrDefault(name, -1);
+    }
+
+    public MaterialDefinition getMaterialFromTextureID(int textureID) {
+
+        if (textureID < 0 || textureID >= textureToMaterial.length)
+            return null;
+
+        int matID = textureToMaterial[textureID];
+        return matID != -1 ? getMaterial(matID) : null;
     }
 }

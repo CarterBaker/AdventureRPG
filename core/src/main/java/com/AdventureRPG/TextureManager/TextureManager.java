@@ -46,6 +46,10 @@ public class TextureManager {
     // Flat lookup: "folder_suffix" to TextureAtlas
     private final Map<String, TextureAtlas> atlasNameMap = new HashMap<>();
 
+    private int[] idToAtlasIndex;
+    private Map<TextureAtlas, Integer> atlasToIndex = new HashMap<>();
+    private List<TextureAtlas> indexToAtlas = new ArrayList<>();
+
     // Base \\
 
     public TextureManager(GameManager gameManager) {
@@ -161,26 +165,13 @@ public class TextureManager {
         AtlasGroup group = new AtlasGroup();
         String folder = atlasFolder.getName();
 
-        group.albedo = packType(groupedSets, m -> m.albedo, Color.CLEAR);
-        registerAtlas(folder + "_albedo", group.albedo);
-
-        group.normal = packType(groupedSets, m -> m.normal, NORMAL_MAP_DEFAULT);
-        registerAtlas(folder + "_normal", group.normal);
-
-        group.height = packType(groupedSets, m -> m.height, HEIGHT_MAP_DEFAULT);
-        registerAtlas(folder + "_height", group.height);
-
-        group.metal = packType(groupedSets, m -> m.metal, METAL_MAP_DEFAULT);
-        registerAtlas(folder + "_metal", group.metal);
-
-        group.roughness = packType(groupedSets, m -> m.roughness, ROUGHNESS_MAP_DEFAULT);
-        registerAtlas(folder + "_roughness", group.roughness);
-
-        group.ao = packType(groupedSets, m -> m.ao, AO_MAP_DEFAULT);
-        registerAtlas(folder + "_ao", group.ao);
-
-        group.opacity = packType(groupedSets, m -> m.opacity, OPACITY_MAP_DEFAULT);
-        registerAtlas(folder + "_opacity", group.opacity);
+        group.albedo = packType(groupedSets, m -> m.albedo, Color.CLEAR, folder, "albedo");
+        group.normal = packType(groupedSets, m -> m.normal, NORMAL_MAP_DEFAULT, folder, "normal");
+        group.height = packType(groupedSets, m -> m.height, HEIGHT_MAP_DEFAULT, folder, "height");
+        group.metal = packType(groupedSets, m -> m.metal, METAL_MAP_DEFAULT, folder, "metal");
+        group.roughness = packType(groupedSets, m -> m.roughness, ROUGHNESS_MAP_DEFAULT, folder, "roughness");
+        group.ao = packType(groupedSets, m -> m.ao, AO_MAP_DEFAULT, folder, "ao");
+        group.opacity = packType(groupedSets, m -> m.opacity, OPACITY_MAP_DEFAULT, folder, "opacity");
 
         atlasGroups.put(folder, group);
 
@@ -206,8 +197,13 @@ public class TextureManager {
             }
 
             // Pack the atlas for this suffix
-            TextureAtlas customAtlas = packType(customGroupedSets, s -> folder + "/" + s.albedo + "_" + suffix,
-                    CUSTOM_MAP_DEFAULT);
+            TextureAtlas customAtlas = packType(
+                    customGroupedSets,
+                    s -> folder + "/" + s.albedo + "_" + suffix,
+                    CUSTOM_MAP_DEFAULT,
+                    folder,
+                    suffix);
+
             group.custom.put(suffix, customAtlas);
             registerAtlas(folder + "_" + suffix, customAtlas);
 
@@ -273,7 +269,9 @@ public class TextureManager {
     private TextureAtlas packType(
             Map<Integer, TextureSet> groupedSets,
             Function<TextureSet, String> getter,
-            Color defaultColor) {
+            Color defaultColor,
+            String folder,
+            String suffix) {
 
         PixmapPacker packer = new PixmapPacker(
                 BLOCK_TEXTURE_SIZE,
@@ -283,32 +281,44 @@ public class TextureManager {
                 false);
 
         for (TextureSet set : groupedSets.values()) {
-
             String path = getter.apply(set);
             Pixmap pixmap;
             String regionName;
 
             if (path.startsWith("__DEFAULT__")) {
                 pixmap = createDefaultPixmap(defaultColor);
-                // fallback region name = id_X
                 regionName = "id_" + set.id;
             }
 
             else {
                 FileHandle handle = Gdx.files.internal(BLOCK_TEXTURE_PATH + "/" + path);
                 pixmap = new Pixmap(handle);
-                // region name = file basename
                 regionName = new File(path).getName().replace(".png", "");
             }
 
             packer.pack(regionName, pixmap);
-            pixmap.dispose(); // prevent leaks
+            pixmap.dispose();
         }
 
-        return packer.generateTextureAtlas(
+        // Build the atlas
+        TextureAtlas atlas = packer.generateTextureAtlas(
                 Texture.TextureFilter.Nearest,
                 Texture.TextureFilter.Nearest,
                 false);
+
+        // Register atlas (assigns index)
+        registerAtlas(folder + "_" + suffix, atlas);
+
+        // Fill id→atlasIndex mapping
+        int atlasIndex = atlasToIndex.get(atlas);
+
+        if (idToAtlasIndex == null || idToAtlasIndex.length < nextTextureID)
+            idToAtlasIndex = Arrays.copyOf(idToAtlasIndex, nextTextureID);
+
+        for (TextureSet set : groupedSets.values())
+            idToAtlasIndex[set.id] = atlasIndex;
+
+        return atlas;
     }
 
     private Pixmap createDefaultPixmap(Color color) {
@@ -324,8 +334,12 @@ public class TextureManager {
 
         atlasNameMap.put(name, atlas);
 
-        if (debug) // TODO: Remove debug line
-            System.out.println("Registered atlas: " + name);
+        int index = indexToAtlas.size();
+        atlasToIndex.put(atlas, index);
+        indexToAtlas.add(atlas);
+
+        if (debug)
+            System.out.println("Registered atlas: " + name + " -> index " + index);
     }
 
     private static class TextureSet {
@@ -398,6 +412,16 @@ public class TextureManager {
 
     public String getTextureFromID(int id) {
         return idToTexturePath.getOrDefault(id, null);
+    }
+
+    public TextureAtlas getAtlasFromID(int id) {
+        if (id < 0 || id >= idToAtlasIndex.length)
+            return null;
+        return indexToAtlas.get(idToAtlasIndex[id]);
+    }
+
+    public int getNextTextureID() {
+        return nextTextureID;
     }
 
     public void dispose() {
