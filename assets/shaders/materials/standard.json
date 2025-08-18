@@ -1,0 +1,7 @@
+{
+    "vertex": "shaders/surface/standard.vert",
+    "fragment": "shaders/surface/standard.frag",
+    "maps": {
+        "albedo": "standard"
+    }
+}

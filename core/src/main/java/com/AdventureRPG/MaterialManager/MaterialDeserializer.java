@@ -1,6 +1,8 @@
 package com.AdventureRPG.MaterialManager;
 
 import com.AdventureRPG.TextureManager.TextureManager;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -9,6 +11,7 @@ import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.utils.TextureDescriptor;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
@@ -21,6 +24,8 @@ import com.google.gson.JsonParser;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -230,6 +235,45 @@ class MaterialDeserializer {
             return new Color(r, g, b, a);
         } else {
             return Color.valueOf(el.getAsString());
+        }
+    }
+
+    static GameMaterial parsePackage(File file, TextureManager texMgr, Gson gson) {
+        try {
+            String json = Files.readString(file.toPath());
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+
+            // 1) Build the LibGDX Material (your current logic)
+            Material mat = parse(file, texMgr, gson);
+
+            // 2) Name/ID
+            String id = root.has("name")
+                    ? root.get("name").getAsString()
+                    : file.getName().replaceFirst("[.][^.]+$", "");
+
+            // 3) Optional shader
+            ShaderProgram shader = null;
+            if (root.has("vertex") && root.has("fragment")) {
+                String vertPath = root.get("vertex").getAsString();
+                String fragPath = root.get("fragment").getAsString();
+
+                // Use LibGDX internal files for proper assets root resolution
+                FileHandle vertFile = Gdx.files.internal(vertPath);
+                FileHandle fragFile = Gdx.files.internal(fragPath);
+
+                String vertSrc = vertFile.readString();
+                String fragSrc = fragFile.readString();
+
+                ShaderProgram.pedantic = false;
+                shader = new ShaderProgram(vertSrc, fragSrc);
+                if (!shader.isCompiled()) {
+                    throw new RuntimeException("Shader compile error (" + id + "):\n" + shader.getLog());
+                }
+            }
+
+            return new GameMaterial(id, mat, shader);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed parsing material JSON " + file.getName(), e);
         }
     }
 

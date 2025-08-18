@@ -9,6 +9,7 @@ import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ThreadSystem.ThreadManager;
 import com.AdventureRPG.TimeSystem.TimeSystem;
 import com.AdventureRPG.UISystem.LoadScreen;
@@ -33,6 +34,7 @@ public class GameManager implements Screen {
     public final ThreadManager threadManager;
     public final TextureManager TextureManager;
     public final MaterialManager materialManager;
+    public final ShaderManager shaderManager;
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
     public final TimeSystem timeSystem;
@@ -66,6 +68,7 @@ public class GameManager implements Screen {
         this.threadManager = new ThreadManager(this);
         this.TextureManager = new TextureManager(this);
         this.materialManager = new MaterialManager(this);
+        this.shaderManager = new ShaderManager(this);
         this.saveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
         this.timeSystem = new TimeSystem(this);
