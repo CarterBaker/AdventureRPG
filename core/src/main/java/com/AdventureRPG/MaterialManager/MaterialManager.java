@@ -3,6 +3,7 @@ package com.AdventureRPG.MaterialManager;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.TextureManager.TextureManager;
+import com.badlogic.gdx.graphics.g3d.Material;
 import com.google.gson.Gson;
 
 import java.io.File;
@@ -10,21 +11,17 @@ import java.util.*;
 
 public class MaterialManager {
 
-    // Game Manager
     private final Settings settings;
     private final Gson gson;
     private final TextureManager textureManager;
 
-    // Settings
     private final String MATERIAL_JSON_PATH;
 
-    // Registries
     private final Map<String, Integer> nameToID = new HashMap<>();
-    private final Map<Integer, MaterialDefinition> idToMaterial = new HashMap<>();
+    private final Map<Integer, Material> idToMaterial = new HashMap<>();
     private int[] textureToMaterial;
     private int nextMaterialID = 0;
 
-    // Base \\
     public MaterialManager(GameManager gameManager) {
         this.settings = gameManager.settings;
         this.gson = gameManager.gson;
@@ -46,33 +43,35 @@ public class MaterialManager {
             return;
 
         for (File file : files) {
-            MaterialDefinition def = MaterialDeserializer.parse(file, textureManager, gson);
-            register(def);
+            Material mat = MaterialDeserializer.parse(file, textureManager, gson);
+            register(file.getName(), mat);
         }
     }
 
-    private void register(MaterialDefinition def) {
+    private void register(String name, Material mat) {
         int id = nextMaterialID++;
-        def.id = id;
-        nameToID.put(def.name, id);
-        idToMaterial.put(id, def);
+        nameToID.put(name, id);
+        idToMaterial.put(id, mat);
 
-        // Map the albedo texture (if it exists) to this material ID
-        String albedoPath = def.textureRefs.get("albedo"); // may be null
-        if (albedoPath != null) {
-            int textureID = textureManager.getIDFromTexture(albedoPath);
+        // Default mapping via albedo → textureID → materialID
+        if (mat.has(com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute.Diffuse)) {
+            com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute albedo = (com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute) mat
+                    .get(com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute.Diffuse);
+
+            int textureID = textureManager.getIDFromTexture(albedo.textureDescription.texture.toString());
             if (textureID != -1 && textureToMaterial[textureID] == -1) {
                 textureToMaterial[textureID] = id;
             }
         }
     }
 
-    // API \\
-    public MaterialDefinition getMaterial(String name) {
-        return idToMaterial.get(nameToID.get(name));
+    // API
+    public Material getMaterial(String name) {
+        Integer id = nameToID.get(name);
+        return id != null ? idToMaterial.get(id) : null;
     }
 
-    public MaterialDefinition getMaterial(int id) {
+    public Material getMaterial(int id) {
         return idToMaterial.get(id);
     }
 
@@ -80,11 +79,9 @@ public class MaterialManager {
         return nameToID.getOrDefault(name, -1);
     }
 
-    public MaterialDefinition getMaterialFromTextureID(int textureID) {
-
+    public Material getMaterialFromTextureID(int textureID) {
         if (textureID < 0 || textureID >= textureToMaterial.length)
             return null;
-
         int matID = textureToMaterial[textureID];
         return matID != -1 ? getMaterial(matID) : null;
     }
