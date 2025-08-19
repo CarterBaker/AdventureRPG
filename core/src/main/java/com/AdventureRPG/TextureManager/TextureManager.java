@@ -2,7 +2,6 @@ package com.AdventureRPG.TextureManager;
 
 import java.io.File;
 import java.util.*;
-import java.util.function.Function;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
@@ -10,14 +9,14 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.PixmapPacker;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.PixmapIO;
+import com.badlogic.gdx.graphics.TextureArray;
+import com.badlogic.gdx.graphics.Pixmap.Format;
 
 public class TextureManager {
 
     // Debug
-    private final boolean debug = true; // TODO: Remove debug line
+    private final boolean debug = false; // TODO: Remove debug line
 
     // Game Manager
     private final Settings settings;
@@ -32,23 +31,28 @@ public class TextureManager {
     private final Color METAL_MAP_DEFAULT;
     private final Color ROUGHNESS_MAP_DEFAULT;
     private final Color AO_MAP_DEFAULT;
-    private final Color OPACITY_MAP_DEFAULT;
     private final Color CUSTOM_MAP_DEFAULT;
 
-    // ID bookkeeping
-    private final Map<Integer, String> idToTexturePath = new HashMap<>();
-    private final Map<String, Integer> texturePathToID = new HashMap<>();
-    private int nextTextureID = 0;
+    // ID maps
+    private final Map<Integer, String> idToTexturePath;
+    private final Map<String, Integer> texturePathToID;
+    private int nextTextureID;
 
-    // Main: folderName to AtlasGroup
-    private final Map<String, AtlasGroup> atlasGroups = new HashMap<>();
+    // Lookup
+    private final String BASE_ALIAS;
+    private final String NORMAL_ALIAS;
+    private final String METAL_ALIAS;
+    private final String ROUGH_ALIAS;
+    private final String HEIGHT_ALIAS;
+    private final String AO_ALIAS;
+    private final Map<String, String> TYPE_ALIASES;
+    private final Map<String, Color> ALIAS_COLORS;
 
-    // Flat lookup: "folder_suffix" to TextureAtlas
-    private final Map<String, TextureAtlas> atlasNameMap = new HashMap<>();
+    // Folder to ArrayGroup
+    private final Map<String, ArrayGroup> arrayGroups;
 
-    private int[] idToAtlasIndex;
-    private Map<TextureAtlas, Integer> atlasToIndex = new HashMap<>();
-    private List<TextureAtlas> indexToAtlas = new ArrayList<>();
+    // UVs per ID (normalized)
+    private final Map<Integer, UVRect> idToUV;
 
     // Base \\
 
@@ -57,402 +61,568 @@ public class TextureManager {
         // Game Manager
         this.settings = gameManager.settings;
 
-        // Settings
-        BLOCK_TEXTURE_PATH = settings.BLOCK_TEXTURE_PATH;
-        BLOCK_TEXTURE_SIZE = settings.BLOCK_TEXTURE_SIZE;
-        BLOCK_ATLAS_PADDING = settings.BLOCK_ATLAS_PADDING;
+        // Game Manager
+        this.BLOCK_TEXTURE_PATH = settings.BLOCK_TEXTURE_PATH;
+        this.BLOCK_TEXTURE_SIZE = settings.BLOCK_TEXTURE_SIZE;
+        this.BLOCK_ATLAS_PADDING = settings.BLOCK_ATLAS_PADDING;
 
         this.NORMAL_MAP_DEFAULT = settings.NORMAL_MAP_DEFAULT;
         this.HEIGHT_MAP_DEFAULT = settings.HEIGHT_MAP_DEFAULT;
         this.METAL_MAP_DEFAULT = settings.METAL_MAP_DEFAULT;
         this.ROUGHNESS_MAP_DEFAULT = settings.ROUGHNESS_MAP_DEFAULT;
         this.AO_MAP_DEFAULT = settings.AO_MAP_DEFAULT;
-        this.OPACITY_MAP_DEFAULT = settings.OPACITY_MAP_DEFAULT;
         this.CUSTOM_MAP_DEFAULT = settings.CUSTOM_MAP_DEFAULT;
 
-        // Core
-        File texturePath = new File(BLOCK_TEXTURE_PATH);
-        compileTextures(texturePath);
+        // ID maps
+        this.idToTexturePath = new HashMap<>();
+        this.texturePathToID = new HashMap<>();
+        this.nextTextureID = 0;
+
+        // Lookup
+        this.BASE_ALIAS = "Albedo";
+        this.NORMAL_ALIAS = "Normal";
+        this.METAL_ALIAS = "Metal";
+        this.ROUGH_ALIAS = "Roughness";
+        this.HEIGHT_ALIAS = "Height";
+        this.AO_ALIAS = "AO";
+        this.TYPE_ALIASES = TYPE_ALIASES();
+        this.ALIAS_COLORS = ALIAS_COLORS();
+
+        // Folder to ArrayGroup
+        this.arrayGroups = new HashMap<>();
+
+        // UVs per ID (normalized)
+        this.idToUV = new HashMap<>();
+
+        // Core Logic \\
+
+        compileArrays(new File(BLOCK_TEXTURE_PATH));
+
+        // Memory Preservation \\
+
+        freeMemory();
     }
 
-    // Core \\
+    private Map<String, String> TYPE_ALIASES() {
 
-    private void compileTextures(File texturePath) {
+        Map<String, String> output = new HashMap<>();
 
-        if (!texturePath.exists() || !texturePath.isDirectory())
-            throw new RuntimeException("Base folder not found: " + texturePath.getAbsolutePath());
+        // Normals
+        output.put("n", NORMAL_ALIAS);
+        output.put("norm", NORMAL_ALIAS);
+        output.put("nor", NORMAL_ALIAS);
+        output.put("normal", NORMAL_ALIAS);
 
-        File[] subfolders = texturePath.listFiles(File::isDirectory);
+        // Metal
+        output.put("m", METAL_ALIAS);
+        output.put("met", METAL_ALIAS);
+        output.put("metal", METAL_ALIAS);
+        output.put("metallic", METAL_ALIAS);
+
+        // Roughness
+        output.put("r", ROUGH_ALIAS);
+        output.put("rough", ROUGH_ALIAS);
+        output.put("roughness", ROUGH_ALIAS);
+
+        // Height
+        output.put("h", HEIGHT_ALIAS);
+        output.put("height", HEIGHT_ALIAS);
+
+        // Ambient Occlusion
+        output.put("ao", AO_ALIAS);
+        output.put("amboc", AO_ALIAS);
+        output.put("ambientocclusion", AO_ALIAS);
+        output.put("occlusion", AO_ALIAS);
+
+        return output;
+    }
+
+    private Map<String, Color> ALIAS_COLORS() {
+
+        Map<String, Color> output = new HashMap<>();
+
+        output.put(BASE_ALIAS, NORMAL_MAP_DEFAULT);
+        output.put(NORMAL_ALIAS, NORMAL_MAP_DEFAULT);
+        output.put(METAL_ALIAS, METAL_MAP_DEFAULT);
+        output.put(ROUGH_ALIAS, ROUGHNESS_MAP_DEFAULT);
+        output.put(HEIGHT_ALIAS, HEIGHT_MAP_DEFAULT);
+        output.put(AO_ALIAS, AO_MAP_DEFAULT);
+
+        return output;
+    }
+
+    // Dispose all texture arrays.
+    public void dispose() {
+
+        for (ArrayGroup group : arrayGroups.values())
+            if (group.array != null)
+                group.array.dispose();
+
+        arrayGroups.clear();
+    }
+
+    // Core Logic \\
+
+    // Assemble each folder from root
+    private void compileArrays(File root) {
+
+        if (!root.exists() || !root.isDirectory())
+            throw new RuntimeException("Root folder not found: " + root.getAbsolutePath());
+
+        File[] subfolders = root.listFiles(File::isDirectory);
 
         if (subfolders == null || subfolders.length == 0) {
 
-            if (debug) // TODO: Remove debug line
-                System.out.println("No subfolders found in " + texturePath.getAbsolutePath());
+            // TODO: Remove debug line
+            log("No subfolders in " + root.getAbsolutePath());
 
             return;
         }
 
-        for (File atlasFolder : subfolders)
-            organizeAtlasLibrary(atlasFolder);
+        for (File folder : subfolders)
+            process(folder);
     }
 
-    private void organizeAtlasLibrary(File atlasFolder) {
+    // Process each folder individually
+    private void process(File folder) {
 
-        File[] pngFiles = atlasFolder.listFiles(f -> f.isFile() && f.getName().toLowerCase().endsWith(".png"));
-        if (pngFiles == null || pngFiles.length == 0)
+        String folderName = folder.getName();
+        Map<String, List<File>> byType = categorizePNG(folder);
+
+        if (byType.isEmpty()) {
+
+            // TODO: Remove debug line
+            log("Skipped empty folder: " + folderName);
+
             return;
-
-        Map<String, List<File>> mapsByType = new HashMap<>();
-
-        // Categorize files by suffix
-        for (File file : pngFiles) {
-            String name = file.getName().replace(".png", "");
-            int underscoreIdx = name.lastIndexOf("_");
-            String suffix = underscoreIdx > 0 ? name.substring(underscoreIdx + 1).toLowerCase() : "albedo";
-
-            // Normalize common suffixes
-            switch (suffix) {
-                case "n":
-                case "normal":
-                    suffix = "normal";
-                    break;
-                case "m":
-                case "metal":
-                case "metallic":
-                    suffix = "metal";
-                    break;
-                case "h":
-                case "height":
-                    suffix = "height";
-                    break;
-                case "r":
-                case "rough":
-                case "roughness":
-                    suffix = "roughness";
-                    break;
-                case "ao":
-                case "ambientocclusion":
-                    suffix = "ao";
-                    break;
-                case "o":
-                case "opacity":
-                case "alpha":
-                    suffix = "opacity";
-                    break;
-                case "":
-                    suffix = "albedo";
-                    break;
-            }
-
-            mapsByType.computeIfAbsent(suffix, k -> new ArrayList<>()).add(file);
         }
 
-        String folderName = atlasFolder.getName();
-        AtlasGroup group = new AtlasGroup();
+        // Assign global IDs from albedo files in this folder
+        List<File> albedoFiles = byType.getOrDefault(BASE_ALIAS, Collections.emptyList());
+        assignIDs(albedoFiles, folderName);
 
-        // Assign IDs based on albedo (required for mapping)
-        List<File> albedoFiles = mapsByType.getOrDefault("albedo", new ArrayList<>());
-        assignUniqueIDs(albedoFiles, atlasFolder);
+        // Build a layout (grid) for this folder, based on the IDs present from albedo
+        FolderLayout layout = computeLayout(folderName, albedoFiles);
 
-        // Process each type that exists
-        for (Map.Entry<String, List<File>> entry : mapsByType.entrySet()) {
-            String type = entry.getKey(); // albedo, normal, metal, height, etc.
-            List<File> files = entry.getValue();
+        // Build a stitched atlas pixmap per type using the SAME layout (keeps UVs in
+        // sync)
+        Map<String, FileHandle> typeToTempFile = new LinkedHashMap<>();
+        LinkedHashMap<String, Integer> layerMap = new LinkedHashMap<>();
 
-            Map<Integer, TextureSet> groupedSets = new HashMap<>();
-            for (File f : files) {
-                String textureName = f.getName().replace(".png", "");
-                String key = folderName + "/" + textureName;
-                int id = texturePathToID.getOrDefault(key, nextTextureID++);
-                texturePathToID.putIfAbsent(key, id);
-                idToTexturePath.putIfAbsent(id, key);
+        // Standard order for stable layer indices
+        String[] stdTypes = new String[] {
+                BASE_ALIAS,
+                NORMAL_ALIAS,
+                METAL_ALIAS,
+                ROUGH_ALIAS,
+                HEIGHT_ALIAS,
+                AO_ALIAS
+        };
+        int nextLayer = 0;
 
-                groupedSets.put(id, new TextureSet(id, key));
-            }
+        for (String type : stdTypes) {
 
-            // Decide default color for missing textures (only used if map is missing in a
-            // set)
-            Color defaultColor = switch (type) {
-                case "normal" -> NORMAL_MAP_DEFAULT;
-                case "metal" -> METAL_MAP_DEFAULT;
-                case "height" -> HEIGHT_MAP_DEFAULT;
-                case "roughness" -> ROUGHNESS_MAP_DEFAULT;
-                case "ao" -> AO_MAP_DEFAULT;
-                case "opacity" -> OPACITY_MAP_DEFAULT;
-                default -> Color.CLEAR;
-            };
+            FileHandle png = buildLayerPNG(folderName, type, byType.get(type), layout, getDefaultColor(type));
+            typeToTempFile.put(type, png);
+            layerMap.put(type, nextLayer++);
+        }
 
-            TextureAtlas atlas = packType(groupedSets, m -> m.albedo, defaultColor, folderName, type);
+        // Custom types come after standard ones
+        for (Map.Entry<String, List<File>> e : byType.entrySet()) {
 
-            // Assign to group
-            switch (type) {
-                case "albedo":
-                    group.albedo = atlas;
-                    break;
-                case "normal":
-                    group.normal = atlas;
-                    break;
-                case "metal":
-                    group.metal = atlas;
-                    break;
-                case "height":
-                    group.height = atlas;
-                    break;
-                case "roughness":
-                    group.roughness = atlas;
-                    break;
-                case "ao":
-                    group.ao = atlas;
-                    break;
-                case "opacity":
-                    group.opacity = atlas;
-                    break;
-                default:
-                    group.custom.put(type, atlas);
-                    break;
+            String type = e.getKey();
+
+            if (!layerMap.containsKey(type)) {
+                FileHandle png = buildLayerPNG(folderName, type, e.getValue(), layout, CUSTOM_MAP_DEFAULT);
+                typeToTempFile.put(type, png);
+                layerMap.put(type, nextLayer++);
             }
         }
 
-        atlasGroups.put(folderName, group);
+        // Create TextureArray layer order matches insertion order of typeToTempFile
+        TextureArray array = new TextureArray(typeToTempFile.values().toArray(new FileHandle[0]));
+        arrayGroups.put(folderName, new ArrayGroup(array, layerMap));
 
-        if (debug)
-            System.out.println("Built atlas group for: " + folderName);
+        // We can delete temp PNGs after upload (TextureArray has already read them)
+        cleanupTempFiles(typeToTempFile.values());
+
+        // TODO: Remove debug line
+        log("Built TextureArray for folder: " + folderName + " with " + typeToTempFile.size() + " layers");
     }
 
-    private void assignUniqueIDs(List<File> files, File baseFolder) {
-        String folderName = baseFolder.getName();
+    // Categorization & Suffix logic \\
+
+    // Categorize all png files in folder
+    private Map<String, List<File>> categorizePNG(File folder) {
+
+        File[] files = folder.listFiles(f -> f.isFile() && f.getName().toLowerCase().endsWith(".png"));
+
+        if (files == null)
+            return Collections.emptyMap();
+
+        Map<String, List<File>> output = new HashMap<>();
 
         for (File file : files) {
-            String textureName = file.getName().replace(".png", "");
-            String key = folderName + "/" + textureName;
+
+            String type = suffixOf(file.getName());
+            output.computeIfAbsent(type, k -> new ArrayList<>()).add(file);
+        }
+
+        return output;
+    }
+
+    private String suffixOf(String filename) {
+
+        String base = filename.endsWith(".png") ? filename.substring(0, filename.length() - 4) : filename;
+        int i = base.lastIndexOf('_');
+
+        if (i < 0)// no suffix at all
+            return BASE_ALIAS;
+
+        String suffix = base.substring(i + 1).toLowerCase();
+
+        return TYPE_ALIASES.getOrDefault(suffix, BASE_ALIAS);
+    }
+
+    // ID Handling \\
+
+    private void assignIDs(List<File> albedoFiles, String folderName) {
+
+        for (File f : albedoFiles) {
+
+            String key = folderName + "/" + stripExtension(f.getName());
 
             if (!texturePathToID.containsKey(key)) {
+
                 int id = nextTextureID++;
+
                 texturePathToID.put(key, id);
                 idToTexturePath.put(id, key);
 
-                if (debug) // TODO: Remove debug line
-                    System.out.println("Assigned ID " + id + " → " + key);
+                log("ID " + id + " ← " + key);// TODO: Remove debug line
             }
         }
     }
 
-    private Map<Integer, TextureSet> assembleAtlasMap(List<File> albedoMaps, File baseFolder) {
+    // Layout \\
 
-        Map<Integer, TextureSet> groupedSets = new HashMap<>();
-        String folderName = baseFolder.getName();
+    private FolderLayout computeLayout(String folderName, List<File> albedoFiles) {
 
-        for (File file : albedoMaps) {
+        // Collect sorted keys for stability
+        List<String> keys = new ArrayList<>();
 
-            String textureName = file.getName().replace(".png", "");
-            String key = folderName + "/" + textureName;
-            int id = texturePathToID.get(key);
+        for (File file : albedoFiles)
+            keys.add(folderName + "/" + stripExtension(file.getName()));
 
-            TextureSet set = new TextureSet(id, key);
-            set.normal = resolveMap(folderName, textureName, "n", NORMAL_MAP_DEFAULT);
-            set.height = resolveMap(folderName, textureName, "h", HEIGHT_MAP_DEFAULT);
-            set.metal = resolveMap(folderName, textureName, "m", METAL_MAP_DEFAULT);
-            set.roughness = resolveMap(folderName, textureName, "r", ROUGHNESS_MAP_DEFAULT);
-            set.ao = resolveMap(folderName, textureName, "ao", AO_MAP_DEFAULT);
-            set.opacity = resolveMap(folderName, textureName, "o", OPACITY_MAP_DEFAULT);
+        Collections.sort(keys); // deterministic order
 
-            groupedSets.put(id, set);
+        int count = keys.size();
+
+        if (count == 0)
+            return new FolderLayout(folderName, new HashMap<>(),
+                    BLOCK_TEXTURE_SIZE + 2 * BLOCK_ATLAS_PADDING,
+                    BLOCK_TEXTURE_SIZE + 2 * BLOCK_ATLAS_PADDING);
+
+        // Simple square-ish grid
+        int columns = (int) Math.ceil(Math.sqrt(count));
+        int rows = (int) Math.ceil((double) count / columns);
+
+        int cell = BLOCK_TEXTURE_SIZE + 2 * BLOCK_ATLAS_PADDING;
+        int atlasWidth = columns * cell;
+        int atlasHeight = rows * cell;
+
+        Map<Integer, Slot> idToSlot = new HashMap<>();
+
+        for (int i = 0; i < count; i++) {
+
+            int row = i / columns;
+            int col = i % columns;
+
+            int x = col * cell + BLOCK_ATLAS_PADDING;
+            int y = row * cell + BLOCK_ATLAS_PADDING;
+
+            String key = keys.get(i);
+            Integer id = texturePathToID.get(key);
+
+            if (id != null)
+                idToSlot.put(id, new Slot(x, y, BLOCK_TEXTURE_SIZE, BLOCK_TEXTURE_SIZE, atlasWidth, atlasHeight));
         }
 
-        return groupedSets;
+        // Store normalized UVs for every ID in this folder
+        for (Map.Entry<Integer, Slot> e : idToSlot.entrySet()) {
+
+            Slot s = e.getValue();
+
+            float u0 = s.x / (float) s.atlasW;
+            float v0 = s.y / (float) s.atlasH;
+            float u1 = (s.x + s.w) / (float) s.atlasW;
+            float v1 = (s.y + s.h) / (float) s.atlasH;
+
+            idToUV.put(e.getKey(), new UVRect(u0, v0, u1, v1));
+        }
+
+        return new FolderLayout(folderName, idToSlot, atlasWidth, atlasHeight);
     }
 
-    private String resolveMap(String folder, String textureName, String suffix, Color defaultColor) {
+    // Layer construction \\
 
-        String candidate = folder + "/" + textureName + "_" + suffix + ".png";
-        File f = new File(BLOCK_TEXTURE_PATH, candidate);
+    private FileHandle buildLayerPNG(String folderName,
+            String type,
+            List<File> filesOfType,
+            FolderLayout layout,
+            Color defaultColor) {
 
-        return f.exists() ? candidate : "__DEFAULT__:" + suffix;
-    }
+        Map<String, File> nameToFile = new HashMap<>();
 
-    private TextureAtlas packType(
-            Map<Integer, TextureSet> groupedSets,
-            Function<TextureSet, String> getter,
-            Color defaultColor,
-            String folder,
-            String suffix) {
+        if (filesOfType != null) {
 
-        PixmapPacker packer = new PixmapPacker(
-                BLOCK_TEXTURE_SIZE,
-                BLOCK_TEXTURE_SIZE,
-                Pixmap.Format.RGBA8888,
-                BLOCK_ATLAS_PADDING,
-                false);
+            for (File f : filesOfType) {
 
-        for (TextureSet set : groupedSets.values()) {
-            String path = getter.apply(set);
+                // remove explicit suffix if present (_n/_normal etc.)
+                String base = stripExtension(f.getName());
+                String logicalName = stripSuffix(base);
 
-            Pixmap pixmap;
-            String regionName;
-
-            if (path.startsWith("__DEFAULT__")) {
-                pixmap = createDefaultPixmap(defaultColor);
-                regionName = "id_" + set.id;
-            } else {
-                if (!path.endsWith(".png")) {
-                    path = path + ".png";
-                }
-
-                FileHandle handle = Gdx.files.internal(BLOCK_TEXTURE_PATH + "/" + path);
-                if (handle.exists()) {
-                    pixmap = new Pixmap(handle);
-                } else {
-                    System.err.println("Warning: Missing texture: " + handle.path());
-                    pixmap = createDefaultPixmap(defaultColor);
-                }
-
-                regionName = new File(path).getName().replace(".png", "");
+                nameToFile.put(logicalName, f);
             }
-
-            packer.pack(regionName, pixmap);
-            pixmap.dispose();
         }
 
-        // Build the atlas
-        TextureAtlas atlas = packer.generateTextureAtlas(
-                Texture.TextureFilter.Nearest,
-                Texture.TextureFilter.Nearest,
-                false);
+        // Create atlas pixmap for this layer
+        Pixmap atlas = new Pixmap(layout.atlasW, layout.atlasH, Format.RGBA8888);
+        fillPixmap(atlas, defaultColor);
 
-        // Register atlas (assigns index)
-        registerAtlas(folder + "_" + suffix, atlas);
+        // Draw each tile at its assigned slot
+        for (Map.Entry<Integer, Slot> e : layout.idToSlot.entrySet()) {
 
-        // --- SAFELY resize idToAtlasIndex ---
-        if (idToAtlasIndex == null) {
-            idToAtlasIndex = new int[nextTextureID];
-            Arrays.fill(idToAtlasIndex, -1); // mark unassigned
-        } else if (idToAtlasIndex.length < nextTextureID) {
-            int oldLength = idToAtlasIndex.length;
-            idToAtlasIndex = Arrays.copyOf(idToAtlasIndex, nextTextureID);
-            Arrays.fill(idToAtlasIndex, oldLength, nextTextureID, -1); // fill new slots
+            int id = e.getKey();
+            Slot s = e.getValue();
+
+            String key = idToTexturePath.get(id); // folder/nameOriginal
+            String nameWithinFolder = key.substring(key.indexOf('/') + 1); // nameOriginal
+            String logical = stripSuffix(nameWithinFolder);
+
+            Pixmap tile = loadTilePixmap(folderName, nameToFile.get(logical), type, defaultColor);
+            atlas.drawPixmap(tile, s.x, s.y, 0, 0, Math.min(tile.getWidth(), s.w), Math.min(tile.getHeight(), s.h));
+            tile.dispose();
         }
 
-        // Fill id→atlasIndex mapping
-        int atlasIndex = atlasToIndex.get(atlas);
-        for (TextureSet set : groupedSets.values()) {
-            idToAtlasIndex[set.id] = atlasIndex;
-        }
+        // Save as temp PNG, return handle
+        FileHandle out = tempHandle(folderName + "_" + type + ".png");
+        PixmapIO.writePNG(out, atlas);
+        atlas.dispose();
 
-        return atlas;
+        return out;
     }
 
-    private Pixmap createDefaultPixmap(Color color) {
+    private Pixmap loadTilePixmap(String folderName, File fileOrNull, String type, Color defaultColor) {
 
-        Pixmap pixmap = new Pixmap(BLOCK_TEXTURE_SIZE, BLOCK_TEXTURE_SIZE, Pixmap.Format.RGBA8888);
-        pixmap.setColor(color);
-        pixmap.fill();
+        if (fileOrNull != null) {
 
-        return pixmap;
-    }
+            FileHandle fh = Gdx.files.internal(fileOrNull.getPath());
 
-    private void registerAtlas(String name, TextureAtlas atlas) {
+            if (fh.exists()) {
 
-        atlasNameMap.put(name, atlas);
+                try {
 
-        int index = indexToAtlas.size();
-        atlasToIndex.put(atlas, index);
-        indexToAtlas.add(atlas);
+                    Pixmap p = new Pixmap(fh);
 
-        if (debug)
-            System.out.println("Registered atlas: " + name + " -> index " + index);
-    }
+                    if (p.getWidth() == BLOCK_TEXTURE_SIZE && p.getHeight() == BLOCK_TEXTURE_SIZE)
+                        return p;
 
-    private static class TextureSet {
+                    // Resize if needed (keeps pipeline robust)
+                    Pixmap resized = new Pixmap(BLOCK_TEXTURE_SIZE, BLOCK_TEXTURE_SIZE, Format.RGBA8888);
 
-        int id;
-        String albedo;
-        String normal;
-        String height;
-        String roughness;
-        String ao;
-        String opacity;
-        String metal;
+                    resized.drawPixmap(p, 0, 0, p.getWidth(), p.getHeight(),
+                            0, 0,
+                            BLOCK_TEXTURE_SIZE, BLOCK_TEXTURE_SIZE);
 
-        TextureSet(int id, String albedo) {
+                    p.dispose();
 
-            this.id = id;
-            this.albedo = albedo;
+                    return resized;
+                }
+
+                catch (Throwable throwable) {
+                    // fall through to default
+                }
+            }
         }
-    }
 
-    private static class AtlasGroup {
-
-        TextureAtlas albedo;
-        TextureAtlas normal;
-        TextureAtlas height;
-        TextureAtlas metal;
-        TextureAtlas roughness;
-        TextureAtlas ao;
-        TextureAtlas opacity;
-
-        Map<String, TextureAtlas> custom = new HashMap<>();
-
-        void dispose() {
-
-            if (albedo != null)
-                albedo.dispose();
-            if (normal != null)
-                normal.dispose();
-            if (height != null)
-                height.dispose();
-            if (metal != null)
-                metal.dispose();
-            if (roughness != null)
-                roughness.dispose();
-            if (ao != null)
-                ao.dispose();
-            if (opacity != null)
-                opacity.dispose();
-
-            for (TextureAtlas atlas : custom.values())
-                atlas.dispose();
-
-            custom.clear();
-        }
+        // Missing/bad → default tile
+        return createDefaultTile(defaultColor);
     }
 
     // Utility \\
 
-    public TextureAtlas getAtlas(String folder, String type) {
-        return atlasGroups.containsKey(folder) ? atlasNameMap.get(folder + "_" + type) : null;
+    private String stripExtension(String fileName) {
+        return fileName.endsWith(".png") ? fileName.substring(0, fileName.length() - 4) : fileName;
     }
 
-    public TextureAtlas getAtlasByName(String atlasName) {
-        return atlasNameMap.get(atlasName);
+    private void fillPixmap(Pixmap pm, Color color) {
+
+        pm.setColor(color);
+        pm.fill();
     }
 
+    private Pixmap createDefaultTile(Color color) {
+
+        Pixmap tile = new Pixmap(BLOCK_TEXTURE_SIZE, BLOCK_TEXTURE_SIZE, Format.RGBA8888);
+
+        tile.setColor(color);
+        tile.fill();
+
+        return tile;
+    }
+
+    private String stripSuffix(String baseName) {
+
+        int i = baseName.lastIndexOf('_');
+
+        if (i < 0)
+            return baseName;
+
+        String suf = baseName.substring(i + 1).toLowerCase();
+
+        if (TYPE_ALIASES.containsKey(suf))
+            return baseName.substring(0, i); // remove suffix
+
+        return baseName; // unknown suffix, treat as part of name
+    }
+
+    private Color getDefaultColor(String type) {
+        return ALIAS_COLORS.getOrDefault(type, CUSTOM_MAP_DEFAULT);
+    }
+
+    private FileHandle tempHandle(String fileName) {
+
+        // Put temp atlases under local writable dir
+        FileHandle dir = Gdx.files.local("temp_texture_arrays");
+
+        if (!dir.exists())
+            dir.mkdirs();
+
+        return dir.child(fileName);
+    }
+
+    private void cleanupTempFiles(Collection<FileHandle> files) {
+
+        for (FileHandle f : files) {
+
+            try {
+                if (f.exists())
+                    f.delete();
+            }
+
+            catch (Exception exception) {
+
+            }
+        }
+    }
+
+    private void log(String msg) { // TODO: Remove debug line
+
+        if (debug)
+            System.out.println("[TextureManager] " + msg);
+    }
+
+    // Memory Preservation \\
+
+    // To keep things as light as possible
+    private void freeMemory() {
+
+        TYPE_ALIASES.clear();
+        ALIAS_COLORS.clear();
+    }
+
+    // Private data types \\
+
+    public static class UVRect {
+
+        public final float u0, v0, u1, v1; // [0..1] in atlas space for that folder
+
+        public UVRect(float u0, float v0, float u1, float v1) {
+
+            this.u0 = u0;
+            this.v0 = v0;
+            this.u1 = u1;
+            this.v1 = v1;
+        }
+    }
+
+    private static class ArrayGroup {
+
+        final TextureArray array;
+        final Map<String, Integer> layerMap; // type to layer index
+
+        ArrayGroup(TextureArray array, Map<String, Integer> layerMap) {
+
+            this.array = array;
+            this.layerMap = layerMap;
+        }
+    }
+
+    private static class Slot {
+
+        final int x, y, w, h;
+        final int atlasW, atlasH;
+
+        Slot(int x, int y, int w, int h, int atlasW, int atlasH) {
+
+            this.x = x;
+            this.y = y;
+            this.w = w;
+            this.h = h;
+            this.atlasW = atlasW;
+            this.atlasH = atlasH;
+        }
+    }
+
+    private static class FolderLayout {
+
+        final String folder;
+        final Map<Integer, Slot> idToSlot;
+        final int atlasW, atlasH;
+
+        FolderLayout(String folder, Map<Integer, Slot> idToSlot, int atlasW, int atlasH) {
+
+            this.folder = folder;
+            this.idToSlot = idToSlot;
+            this.atlasW = atlasW;
+            this.atlasH = atlasH;
+        }
+    }
+
+    // Accessible \\
+
+    // Returns the TextureArray for a folder, or null if none.
+    public TextureArray getArray(String folder) {
+
+        ArrayGroup g = arrayGroups.get(folder);
+        return (g != null) ? g.array : null;
+    }
+
+    // Returns the layer index within the folder’s TextureArray for a given type
+    public int getLayerIndex(String folder, String type) {
+
+        ArrayGroup g = arrayGroups.get(folder);
+        return (g != null) ? g.layerMap.getOrDefault(type, -1) : -1;
+    }
+
+    // Global: get ID from "folder/name" (without .png).
     public int getIDFromTexture(String texturePath) {
         return texturePathToID.getOrDefault(texturePath, -1);
     }
 
+    // Global: get "folder/name" from ID.
     public String getTextureFromID(int id) {
         return idToTexturePath.getOrDefault(id, null);
     }
 
-    public TextureAtlas getAtlasFromID(int id) {
-        if (id < 0 || id >= idToAtlasIndex.length)
-            return null;
-        return indexToAtlas.get(idToAtlasIndex[id]);
+    // Global: normalized UVs for this ID within its folder atlas.
+    public UVRect getUVRect(int id) {
+        return idToUV.get(id);
     }
 
+    // Highest assigned ID + 1.
     public int getNextTextureID() {
         return nextTextureID;
-    }
-
-    public void dispose() {
-
-        for (AtlasGroup group : atlasGroups.values())
-            group.dispose();
-        atlasGroups.clear();
-
-        for (TextureAtlas atlas : atlasNameMap.values())
-            atlas.dispose();
-
-        atlasNameMap.clear();
     }
 }

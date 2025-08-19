@@ -53,6 +53,9 @@ public class Lwjgl3Launcher {
 
     private static Lwjgl3ApplicationConfiguration getConfigurationFromSettings(Settings settings) {
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
+
+        config.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 3, 2);
+
         config.setTitle("AdventureRPG");
 
         if (settings.fullscreen) {

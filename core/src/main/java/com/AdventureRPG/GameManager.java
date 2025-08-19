@@ -20,6 +20,8 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
+import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider;
 import com.google.gson.Gson;
 
 public class GameManager implements Screen {
@@ -29,6 +31,10 @@ public class GameManager implements Screen {
     public final File path;
     public final Settings settings;
     public final Gson gson;
+
+    // Essential Systems
+    public final ShaderProvider defaultShaderProvider;
+    public final Environment environment;
 
     // Game Systems
     public final ThreadManager threadManager;
@@ -46,7 +52,6 @@ public class GameManager implements Screen {
     // Game Manager
     private GameState gameState;
     private final GameRenderer renderer;
-    public final Environment environment;
 
     // UI System
     private LoadScreen loadScreen;
@@ -64,11 +69,15 @@ public class GameManager implements Screen {
         this.settings = settings;
         this.gson = gson;
 
+        // Essential Systems
+        this.defaultShaderProvider = new DefaultShaderProvider();
+        this.environment = new Environment();
+
         // Game Systems
         this.threadManager = new ThreadManager(this);
         this.TextureManager = new TextureManager(this);
-        this.materialManager = new MaterialManager(this);
         this.shaderManager = new ShaderManager(this);
+        this.materialManager = new MaterialManager(this);
         this.saveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
         this.timeSystem = new TimeSystem(this);
@@ -80,7 +89,6 @@ public class GameManager implements Screen {
         // Game Manager
         this.gameState = GameState.START;
         this.renderer = new GameRenderer(this);
-        this.environment = new Environment();
 
         // UI System
         this.loadScreen = null;
@@ -124,6 +132,8 @@ public class GameManager implements Screen {
 
     @Override
     public void dispose() {
+        defaultShaderProvider.dispose();
+        shaderManager.dispose();
         threadManager.dispose();
         TextureManager.dispose();
     }
@@ -136,6 +146,7 @@ public class GameManager implements Screen {
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.8f, 0.8f, 0.8f, 1f));
         environment.add(new DirectionalLight().set(1f, 1f, 1f, -1f, -0.8f, -0.2f));
 
+        materialManager.awake();
         saveSystem.awake();
         UISystem.awake();
         timeSystem.awake();

@@ -2,132 +2,183 @@ package com.AdventureRPG.MaterialManager;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.ShaderManager.ShaderManager;
+import com.AdventureRPG.ShaderManager.UniformAttribute;
 import com.AdventureRPG.TextureManager.TextureManager;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g3d.Material;
-import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
-
 import com.google.gson.Gson;
 
-import java.io.File;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
+/**
+ * Manages materials loaded from JSON, per-material uniforms, and texture array references.
+ */
 public class MaterialManager {
 
     private final Settings settings;
     private final Gson gson;
     private final TextureManager textureManager;
-
+    private final ShaderManager shaderManager;
     private final String MATERIAL_JSON_PATH;
 
-    private final Map<String, Integer> nameToID = new HashMap<>();
-    private final Map<Integer, GameMaterial> idToGM = new HashMap<>();
-    private final IdentityHashMap<Material, ShaderProgram> materialToShader = new IdentityHashMap<>();
+    // Material storage
+    private final Map<Integer, MaterialData> materialsById = new HashMap<>();
+    private final Map<String, Integer> idByName = new HashMap<>();
 
-    private int[] textureToMaterial;
-    private int nextMaterialID = 0;
+    // Map of Material -> ShaderProgram for O(1) lookup
+    private final Map<Material, ShaderProgram> shaderByMaterial = new HashMap<>();
+
+    private int nextId = 0;
 
     public MaterialManager(GameManager gameManager) {
         this.settings = gameManager.settings;
         this.gson = gameManager.gson;
         this.textureManager = gameManager.TextureManager;
-
+        this.shaderManager = gameManager.shaderManager;
         this.MATERIAL_JSON_PATH = settings.MATERIAL_JSON_PATH;
-
-        assembleAllMaterials();
-
-        int totalTextureIDs = textureManager.getNextTextureID();
-        textureToMaterial = new int[totalTextureIDs];
-        Arrays.fill(textureToMaterial, -1);
     }
 
-    private void assembleAllMaterials() {
-        File folder = new File(MATERIAL_JSON_PATH);
-        File[] files = folder.listFiles((dir, name) -> name.endsWith(".json"));
-        if (files == null)
-            return;
-
-        for (File file : files) {
-            GameMaterial gm = MaterialDeserializer.parsePackage(file, textureManager, gson);
-            register(gm);
-        }
+    /** Load all materials from JSON */
+    public void awake() {
+        compileMaterials();
     }
 
-    private void register(GameMaterial gm) {
-        int id = nextMaterialID++;
-        nameToID.put(gm.id, id);
-        idToGM.put(id, gm);
+    /** Parse all JSONs in the folder and build MaterialData */
+    private void compileMaterials() {
+        FileHandle folder = Gdx.files.internal(MATERIAL_JSON_PATH);
+        for (FileHandle file : folder.list("json")) {
+            try {
+                MaterialDefinition def = gson.fromJson(file.reader(), MaterialDefinition.class);
 
-        if (gm.shader != null) {
-            materialToShader.put(gm.material, gm.shader);
-        }
+                // Map shader
+                int shaderID = shaderManager.getShaderID(def.shader);
+                ShaderProgram shaderProgram = shaderManager.getShaderByID(shaderID);
 
-        // Optional: auto map by the albedo/diffuse texture
-        if (gm.material.has(TextureAttribute.Diffuse)) {
-            TextureAttribute albedo = (TextureAttribute) gm.material.get(TextureAttribute.Diffuse);
-            Texture tex = albedo.textureDescription.texture;
-            int textureID = textureManager.getIDFromTexture(tex.toString());
-            // ^ If your TextureManager expects region/atlas names, adapt accordingly.
-            if (textureID != -1) {
-                ensureTextureToMaterialCapacity(textureID + 1);
-                if (textureToMaterial[textureID] == -1) {
-                    textureToMaterial[textureID] = id;
+                // Map texture arrays
+                Map<String, Integer> textureIDs = new HashMap<>();
+                if (def.textureArrays != null) {
+                    for (String texRef : def.textureArrays) {
+                        int texID = textureManager.getIDFromTexture(texRef);
+                        if (texID != -1) textureIDs.put(texRef, texID);
+                    }
                 }
+
+                int id = nextId++;
+                String name = file.nameWithoutExtension();
+
+                // Build default LibGDX Material
+                Material libgdxMaterial = new Material();
+
+                // Build per-material uniforms map
+                Map<String, UniformAttribute> uniforms = new HashMap<>();
+                if (def.uniforms != null) {
+                    for (UniformDefinition u : def.uniforms) {
+                        uniforms.put(u.name, new UniformAttribute(u.name, u.type, u.defaultValue));
+                    }
+                }
+
+                MaterialData data = new MaterialData(id, name, shaderID, libgdxMaterial, uniforms, textureIDs);
+
+                // Store
+                materialsById.put(id, data);
+                idByName.put(name, id);
+
+                if (shaderProgram != null)
+                    shaderByMaterial.put(libgdxMaterial, shaderProgram);
+
+            } catch (Exception e) {
+                Gdx.app.log("MaterialManager", "Failed to load material: " + file.name() + " - " + e.getMessage());
             }
         }
     }
 
-    private void ensureTextureToMaterialCapacity(int min) {
-        if (textureToMaterial.length < min) {
-            int[] n = Arrays.copyOf(textureToMaterial, min);
-            Arrays.fill(n, textureToMaterial.length, n.length, -1);
-            textureToMaterial = n;
+    /** Retrieve material by ID or name */
+    public MaterialData getById(int id) {
+        return materialsById.get(id);
+    }
+
+    public MaterialData getByName(String name) {
+        Integer id = idByName.get(name);
+        return id != null ? materialsById.get(id) : null;
+    }
+
+    /** Set uniform for a material by ID */
+    public void setUniform(int matId, String uniformName, Object value, boolean pushNow) {
+        MaterialData data = materialsById.get(matId);
+        if (data == null) return;
+        UniformAttribute attr = data.uniforms.get(uniformName);
+        if (attr != null) {
+            attr.value = value;
+            if (pushNow) pushUniforms(data);
         }
     }
 
-    // -------- API (Unity-like convenience) --------
-
-    public Material getMaterial(String name) {
-        Integer id = nameToID.get(name);
-        return (id != null) ? idToGM.get(id).material : null;
+    /** Convenience: set uniform by material name */
+    public void setUniform(String materialName, String uniformName, Object value, boolean pushNow) {
+        MaterialData data = getByName(materialName);
+        if (data != null) setUniform(data.id, uniformName, value, pushNow);
     }
 
-    public ShaderProgram getShader(String name) {
-        Integer id = nameToID.get(name);
-        return (id != null) ? idToGM.get(id).shader : null;
+    /** Push uniforms of one material to its shader */
+    public void pushUniforms(MaterialData data) {
+        ShaderProgram shader = shaderByMaterial.get(data.material);
+        if (shader == null) return;
+
+        for (UniformAttribute ua : data.uniforms.values()) {
+            switch (ua.uniformType) {
+                case FLOAT -> shader.setUniformf(ua.name, (float) ua.value);
+                case INT -> shader.setUniformi(ua.name, (int) ua.value);
+                case BOOL -> shader.setUniformi(ua.name, ((boolean) ua.value) ? 1 : 0);
+                case VEC2 -> shader.setUniformf(ua.name, (com.badlogic.gdx.math.Vector2) ua.value);
+                case VEC3 -> shader.setUniformf(ua.name, (com.badlogic.gdx.math.Vector3) ua.value);
+                case VEC4 -> shader.setUniformf(ua.name, (com.badlogic.gdx.math.Vector4) ua.value);
+                case COLOR -> shader.setUniformf(ua.name, (com.badlogic.gdx.graphics.Color) ua.value);
+                case MATRIX4 -> shader.setUniformMatrix(ua.name, (com.badlogic.gdx.math.Matrix4) ua.value);
+            }
+        }
     }
 
-    public Material getMaterial(int id) {
-        GameMaterial gm = idToGM.get(id);
-        return gm != null ? gm.material : null;
+    /** Retrieve the shader for a material */
+    public ShaderProgram getShaderForMaterial(Material material) {
+        return shaderByMaterial.get(material);
     }
 
-    public ShaderProgram getShaderFromID(int id) {
-        GameMaterial gm = idToGM.get(id);
-        return gm != null ? gm.shader : null;
+    /** Log all loaded materials */
+    public void logAllMaterials() {
+        for (MaterialData data : materialsById.values()) {
+            Gdx.app.log("MaterialManager",
+                    "Material[" + data.id + "] name=" + data.name +
+                            " shaderID=" + data.shaderID +
+                            " textures=" + data.textureIDs.keySet());
+        }
     }
 
-    public int getMaterialID(String name) {
-        return nameToID.getOrDefault(name, -1);
+    /** Clear all loaded materials and shaders */
+    public void dispose() {
+        materialsById.clear();
+        idByName.clear();
+        shaderByMaterial.clear();
     }
 
-    public Material getMaterialFromTextureID(int textureID) {
-        if (textureID < 0 || textureID >= textureToMaterial.length)
-            return null;
-        int matID = textureToMaterial[textureID];
-        return matID != -1 ? getMaterial(matID) : null;
+    // ======================
+    // Internal helper types
+    // ======================
+
+    /** JSON structure for materials */
+    private static class MaterialDefinition {
+        public String shader;
+        public String[] textureArrays;
+        public UniformDefinition[] uniforms;
     }
 
-    /** Used by the ShaderProvider during rendering. */
-    public ShaderProgram getShaderForMaterial(Material mat) {
-        return materialToShader.get(mat); // null means "use default shader"
-    }
-
-    /** Call on shutdown to release shader programs compiled from JSON. */
-    public void disposeShaders() {
-        HashSet<ShaderProgram> unique = new HashSet<>(materialToShader.values());
-        unique.forEach(ShaderProgram::dispose);
-        materialToShader.clear();
+    /** JSON structure for a uniform */
+    private static class UniformDefinition {
+        public String name;
+        public UniformAttribute.UniformType type;
+        public Object defaultValue;
     }
 }

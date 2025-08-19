@@ -31,6 +31,7 @@ public class Settings {
     public final String BLOCK_TEXTURE_PATH; // The location of all block images
     public final String BIOME_JSON_PATH; // Location of all biome files
     public final String REGION_IMAGE_PATH; // The main image that controls the world
+    public final String SHADER_JSON_PATH; // The location of all shader json files
     public final String MATERIAL_JSON_PATH; // The location of all material json files
 
     // PBR Settings
@@ -39,7 +40,6 @@ public class Settings {
     public final Color METAL_MAP_DEFAULT; // Default black (0,0,0) for missing _M maps
     public final Color ROUGHNESS_MAP_DEFAULT; // Default white (255,255,255) for missing _R maps
     public final Color AO_MAP_DEFAULT; // Default white (255,255,255) for missing _AO maps
-    public final Color OPACITY_MAP_DEFAULT; // Default white (255,255,255) for missing _O maps
     public final Color CUSTOM_MAP_DEFAULT; // Default black/neutral for missing _custom maps
 
     // Time Settings
@@ -100,6 +100,7 @@ public class Settings {
         this.BLOCK_TEXTURE_PATH = builder.BLOCK_TEXTURE_PATH;
         this.BIOME_JSON_PATH = builder.BIOME_JSON_PATH;
         this.REGION_IMAGE_PATH = builder.REGION_IMAGE_PATH;
+        this.SHADER_JSON_PATH = builder.SHADER_JSON_PATH;
         this.MATERIAL_JSON_PATH = builder.MATERIAL_JSON_PATH;
 
         // PBR Settings
@@ -108,7 +109,6 @@ public class Settings {
         this.METAL_MAP_DEFAULT = builder.METAL_MAP_DEFAULT;
         this.ROUGHNESS_MAP_DEFAULT = builder.ROUGHNESS_MAP_DEFAULT;
         this.AO_MAP_DEFAULT = builder.AO_MAP_DEFAULT;
-        this.OPACITY_MAP_DEFAULT = builder.OPACITY_MAP_DEFAULT;
         this.CUSTOM_MAP_DEFAULT = builder.CUSTOM_MAP_DEFAULT;
 
         // Time Settings
@@ -170,7 +170,8 @@ public class Settings {
         private String BLOCK_TEXTURE_PATH = "textures";
         private String BIOME_JSON_PATH = "biomes";
         private String REGION_IMAGE_PATH = "world/world.png";
-        private String MATERIAL_JSON_PATH = "shaders/materials";
+        private String SHADER_JSON_PATH = "shaders";
+        private String MATERIAL_JSON_PATH = "materials";
 
         // PBR Settings
         private Color NORMAL_MAP_DEFAULT = new Color(0.5f, 0.5f, 1f, 1f); // 128,128,255
@@ -178,7 +179,6 @@ public class Settings {
         private Color METAL_MAP_DEFAULT = new Color(0f, 0f, 0f, 1f); // black
         private Color ROUGHNESS_MAP_DEFAULT = new Color(1f, 1f, 1f, 1f); // white
         private Color AO_MAP_DEFAULT = new Color(1f, 1f, 1f, 1f); // white
-        private Color OPACITY_MAP_DEFAULT = new Color(1f, 1f, 1f, 1f); // white
         private Color CUSTOM_MAP_DEFAULT = new Color(0f, 0f, 0f, 1f); // black
 
         // Time Settings
@@ -290,6 +290,11 @@ public class Settings {
             return this;
         }
 
+        public Builder SHADER_JSON_PATH(String SHADER_JSON_PATH) {
+            this.SHADER_JSON_PATH = SHADER_JSON_PATH;
+            return this;
+        }
+
         public Builder MATERIAL_JSON_PATH(String MATERIAL_JSON_PATH) {
             this.MATERIAL_JSON_PATH = MATERIAL_JSON_PATH;
             return this;
@@ -319,11 +324,6 @@ public class Settings {
 
         public Builder AO_MAP_DEFAULT(Color AO_MAP_DEFAULT) {
             this.AO_MAP_DEFAULT = AO_MAP_DEFAULT;
-            return this;
-        }
-
-        public Builder OPACITY_MAP_DEFAULT(Color OPACITY_MAP_DEFAULT) {
-            this.OPACITY_MAP_DEFAULT = OPACITY_MAP_DEFAULT;
             return this;
         }
 

@@ -1,0 +1,4 @@
+{
+    "vertex": "surface/standard.vert",
+    "fragment": "surface/standard.frag"
+}

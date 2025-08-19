@@ -1,66 +1,193 @@
-// com.AdventureRPG.ShaderManager.ShaderManager
 package com.AdventureRPG.ShaderManager;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
+import com.AdventureRPG.SettingsSystem.Settings;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g3d.Shader;
 import com.badlogic.gdx.graphics.g3d.Renderable;
 import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider;
 import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
 import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.google.gson.Gson;
 
 import java.util.*;
 
 public class ShaderManager implements ShaderProvider {
 
+    // Debug
+    private final boolean debug = false; // TODO: Remove debug line
+
+    // Game Manager
+    private final Settings settings;
+    private final Gson gson;
+    private final ShaderProvider defaultShaderProvider;
     private final MaterialManager materialManager;
-    private final ShaderProvider fallback;
-    // One pool per ShaderProgram; each pool keeps multiple DefaultShaders for
-    // differing attribute combos.
-    private final IdentityHashMap<ShaderProgram, List<Shader>> pools = new IdentityHashMap<>();
+
+    // Settings
+    private final String SHADER_JSON_PATH;
+
+    // Shader maps
+    private final Map<String, ShaderProgram> nameToProgram;
+    private final Map<Integer, ShaderProgram> idToProgram;
+    private final Map<String, Integer> nameToID;
+    private int nextShaderID;
+
+    // Base \\
 
     public ShaderManager(GameManager gameManager) {
-        this(gameManager.materialManager, new DefaultShaderProvider());
+
+        // Game Manager
+        this.settings = gameManager.settings;
+        this.gson = gameManager.gson;
+        this.defaultShaderProvider = gameManager.defaultShaderProvider;
+        this.materialManager = gameManager.materialManager;
+
+        // Settings
+        this.SHADER_JSON_PATH = settings.SHADER_JSON_PATH;
+
+        // Shader maps
+        this.nameToProgram = new LinkedHashMap<>();
+        this.idToProgram = new LinkedHashMap<>();
+        this.nameToID = new HashMap<>();
+        this.nextShaderID = 0;
+
+        // Core Logic \\
+
+        compileShaders();
     }
 
-    public ShaderManager(MaterialManager materialManager, ShaderProvider fallback) {
-        this.materialManager = materialManager;
-        this.fallback = fallback;
+    public void dispose() {
+
+        for (ShaderProgram program : nameToProgram.values())
+            program.dispose();
     }
 
     @Override
     public Shader getShader(Renderable renderable) {
-        ShaderProgram prog = materialManager.getShaderForMaterial(renderable.material);
-        if (prog == null) {
-            return fallback.getShader(renderable); // use LibGDX default shader
-        }
 
-        List<Shader> list = pools.computeIfAbsent(prog, k -> new ArrayList<>());
+        ShaderProgram shader = materialManager.getShaderForMaterial(renderable.material);
 
-        // Reuse a shader instance that canRender this renderable (matches
-        // attributes/bones/etc.)
-        for (Shader s : list) {
-            if (s.canRender(renderable))
-                return s;
-        }
+        if (shader == null)
+            return defaultShaderProvider.getShader(renderable);
 
-        // Otherwise, build a new DefaultShader bound to this ShaderProgram for this
-        // attribute combination
-        DefaultShader.Config cfg = new DefaultShader.Config();
-        DefaultShader s = new DefaultShader(renderable, cfg, prog);
-        s.init();
-        list.add(s);
-        return s;
+        return new DefaultShader(renderable, new DefaultShader.Config(), shader);
     }
 
-    @Override
-    public void dispose() {
-        for (List<Shader> list : pools.values()) {
-            for (Shader s : list)
-                s.dispose();
+    // Core Logic \\
+
+    // Assemble each shader
+    private void compileShaders() {
+
+        FileHandle directory = Gdx.files.internal(SHADER_JSON_PATH);
+
+        if (!directory.exists() || !directory.isDirectory())
+            throw new RuntimeException("Shader folder not found: " + SHADER_JSON_PATH);
+
+        // Iterate JSON files in folder
+        for (FileHandle file : directory.list("json")) {
+
+            try {
+
+                ShaderDefinition definition = gson.fromJson(file.readString(), ShaderDefinition.class);
+                ShaderProgram program = compileShader(definition);
+
+                // Name = JSON filename without .json
+                String name = stripExtension(file.name());
+
+                nameToProgram.put(name, program);
+                idToProgram.put(nextShaderID, program);
+                nameToID.put(name, nextShaderID);
+
+                nextShaderID++;
+            }
+
+            catch (Exception exception) {
+
+                // TODO: Remove debug line
+                log("Failed to load shader: " + file.name() + " - " + exception.getMessage());
+            }
         }
-        pools.clear();
-        fallback.dispose();
+    }
+
+    // Compile ShaderProgram from includes and main source
+    private ShaderProgram compileShader(ShaderDefinition def) {
+
+        String vertexSource = assembleShaderSource(def.vertexIncludes, def.vertexCode);
+        String fragmentSource = assembleShaderSource(def.fragmentIncludes, def.fragmentCode);
+
+        ShaderProgram program = new ShaderProgram(vertexSource, fragmentSource);
+
+        if (!program.isCompiled())
+            throw new RuntimeException("Shader compile error: " + program.getLog());
+
+        return program;
+    }
+
+    // Assemble shader code from include files + main code
+    private String assembleShaderSource(List<String> includes, String mainCode) {
+
+        StringBuilder stringBuilder = new StringBuilder();
+
+        if (includes != null) {
+
+            for (String include : includes) {
+
+                FileHandle fileHandle = Gdx.files.internal(SHADER_JSON_PATH + "/includes/" + include);
+
+                if (fileHandle.exists())
+                    stringBuilder.append(fileHandle.readString()).append("\n");
+
+                else// TODO: Remove debug line
+                    log("Include not found: " + include);
+            }
+        }
+
+        stringBuilder.append(mainCode);
+
+        return stringBuilder.toString();
+    }
+
+    // Utility \\
+
+    // Remove .json extension
+    private String stripExtension(String fileName) {
+        return fileName.endsWith(".json") ? fileName.substring(0, fileName.length() - 5) : fileName;
+    }
+
+    private void log(String msg) { // TODO: Remove debug line
+
+        if (debug)
+            System.out.println("[ShaderManager] " + msg);
+    }
+
+    // Private data types \\
+
+    // Internal representation of a shader for Gson
+    private static class ShaderDefinition {
+
+        List<String> vertexIncludes;
+        List<String> fragmentIncludes;
+        String vertexCode;
+        String fragmentCode;
+    }
+
+    // Accessible \\
+
+    // Get shader by JSON filename
+    public ShaderProgram getShaderByName(String name) {
+        return nameToProgram.get(name);
+    }
+
+    // Get shader by unique ID
+    public ShaderProgram getShaderByID(int id) {
+        return idToProgram.get(id);
+    }
+
+    // Get unique shader ID from name
+    public int getShaderID(String name) {
+        return nameToID.getOrDefault(name, -1);
     }
 }
