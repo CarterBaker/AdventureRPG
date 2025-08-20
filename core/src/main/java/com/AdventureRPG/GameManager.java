@@ -7,6 +7,7 @@ import com.AdventureRPG.LightingSystem.LightingSystem;
 import com.AdventureRPG.TextureManager.TextureManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
+import com.AdventureRPG.RenderManager.RenderManager;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
@@ -38,9 +39,10 @@ public class GameManager implements Screen {
 
     // Game Systems
     public final ThreadManager threadManager;
-    public final TextureManager TextureManager;
+    public final TextureManager textureManager;
     public final MaterialManager materialManager;
     public final ShaderManager shaderManager;
+
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
     public final TimeSystem timeSystem;
@@ -49,9 +51,10 @@ public class GameManager implements Screen {
     public final PlayerSystem playerSystem;
     public final InputSystem inputSystem;
 
+    public final RenderManager renderManager;
+
     // Game Manager
     private GameState gameState;
-    private final GameRenderer renderer;
 
     // UI System
     private LoadScreen loadScreen;
@@ -75,9 +78,10 @@ public class GameManager implements Screen {
 
         // Game Systems
         this.threadManager = new ThreadManager(this);
-        this.TextureManager = new TextureManager(this);
+        this.textureManager = new TextureManager(this);
         this.shaderManager = new ShaderManager(this);
         this.materialManager = new MaterialManager(this);
+
         this.saveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
         this.timeSystem = new TimeSystem(this);
@@ -86,9 +90,10 @@ public class GameManager implements Screen {
         this.playerSystem = new PlayerSystem(this);
         this.inputSystem = new InputSystem(this);
 
+        this.renderManager = new RenderManager(this);
+
         // Game Manager
         this.gameState = GameState.START;
-        this.renderer = new GameRenderer(this);
 
         // UI System
         this.loadScreen = null;
@@ -108,7 +113,7 @@ public class GameManager implements Screen {
         update(delta);
 
         // Then delegate all rendering to the dedicated class
-        renderer.draw(game.spriteBatch, game.modelBatch);
+        renderManager.draw(game.spriteBatch, game.modelBatch, delta);
     }
 
     @Override
@@ -132,10 +137,14 @@ public class GameManager implements Screen {
 
     @Override
     public void dispose() {
+
+        // Essential Systems
         defaultShaderProvider.dispose();
-        shaderManager.dispose();
+
+        // Game Systems
         threadManager.dispose();
-        TextureManager.dispose();
+        textureManager.dispose();
+        shaderManager.dispose();
     }
 
     // Game Manager \\
@@ -143,16 +152,44 @@ public class GameManager implements Screen {
     // Awake is called before the first frame after all constructors finish
     private void awake() {
 
+        // Essential Systems
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.8f, 0.8f, 0.8f, 1f));
         environment.add(new DirectionalLight().set(1f, 1f, 1f, -1f, -0.8f, -0.2f));
 
+        // Game Systems
+        threadManager.awake();
+        textureManager.awake();
+        shaderManager.awake();
         materialManager.awake();
+
         saveSystem.awake();
         UISystem.awake();
         timeSystem.awake();
+        lightingSystem.awake();
         worldSystem.awake();
         playerSystem.awake();
         inputSystem.awake();
+    }
+
+    // Start is run the very first frame
+    private void start() {
+
+        // Game Systems
+        threadManager.start();
+        textureManager.start();
+        shaderManager.start();
+        materialManager.start();
+
+        saveSystem.start();
+        UISystem.start();
+        timeSystem.start();
+        lightingSystem.start();
+        worldSystem.start();
+        playerSystem.start();
+        inputSystem.start();
+
+        startLoading();
+        UISystem.open(Menu.Main); // TODO: Remove this line for future debugging
     }
 
     // Update is called once per frame before rendering
@@ -166,25 +203,25 @@ public class GameManager implements Screen {
             case Ready -> ready();
         }
 
+        // Game Systems
+        threadManager.update();
         worldSystem.update();
     }
 
-    public float deltaTime() {
-        return deltaTime;
-    }
+    // Ready can be used as an exclusive Update() when the game is not loading
+    private void ready() {
 
-    // Start is run the very first frame
-    private void start() {
+        // Game Systems
+        textureManager.update();
+        shaderManager.update();
+        materialManager.update();
 
-        saveSystem.start();
-        UISystem.start();
-        timeSystem.start();
-        worldSystem.start();
-        playerSystem.start();
-        inputSystem.start();
-
-        startLoading();
-        // UISystem.Open(Menu.Main); TODO: re add line to final version
+        saveSystem.update();
+        UISystem.update();
+        timeSystem.update();
+        lightingSystem.update();
+        playerSystem.update();
+        inputSystem.update();
     }
 
     // Created seperate logic so this can be called when loading a save
@@ -203,26 +240,26 @@ public class GameManager implements Screen {
 
         if (worldSystem.gridSystem.hasQueue())
             loadScreen.setProgrss(worldSystem.gridSystem.totalQueueSize());
+
         else {
+
             loadScreen.setProgrss(worldSystem.gridSystem.totalQueueSize());
             UISystem.close(loadScreen);
             gameState = GameState.Ready;
         }
     }
 
-    // Ready can be used as an exclusive Update() when the game is not loading
-    private void ready() {
-
-        saveSystem.update();
-        UISystem.update();
-        timeSystem.update();
-        playerSystem.update();
-        inputSystem.update();
-    }
+    // Utility \\
 
     private enum GameState {
         START,
         Loading,
         Ready
+    }
+
+    // Accessible \\
+
+    public float deltaTime() {
+        return deltaTime;
     }
 }

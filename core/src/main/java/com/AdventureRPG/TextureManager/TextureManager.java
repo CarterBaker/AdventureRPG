@@ -151,6 +151,18 @@ public class TextureManager {
         return output;
     }
 
+    public void awake() {
+
+    }
+
+    public void start() {
+
+    }
+
+    public void update() {
+
+    }
+
     // Dispose all texture arrays.
     public void dispose() {
 
@@ -494,12 +506,12 @@ public class TextureManager {
     private FileHandle tempHandle(String fileName) {
 
         // Put temp atlases under local writable dir
-        FileHandle dir = Gdx.files.local("temp_texture_arrays");
+        FileHandle directory = Gdx.files.local("temp"); // TODO: Look into removing temp folder on close
 
-        if (!dir.exists())
-            dir.mkdirs();
+        if (!directory.exists())
+            directory.mkdirs();
 
-        return dir.child(fileName);
+        return directory.child(fileName);
     }
 
     private void cleanupTempFiles(Collection<FileHandle> files) {

@@ -33,6 +33,7 @@ public class Settings {
     public final String REGION_IMAGE_PATH; // The main image that controls the world
     public final String SHADER_JSON_PATH; // The location of all shader json files
     public final String MATERIAL_JSON_PATH; // The location of all material json files
+    public final String PASS_JSON_PATH; // The location of all pass json files
 
     // PBR Settings
     public final Color NORMAL_MAP_DEFAULT; // Default flat normal color (128,128,255) for missing _N maps
@@ -102,6 +103,7 @@ public class Settings {
         this.REGION_IMAGE_PATH = builder.REGION_IMAGE_PATH;
         this.SHADER_JSON_PATH = builder.SHADER_JSON_PATH;
         this.MATERIAL_JSON_PATH = builder.MATERIAL_JSON_PATH;
+        this.PASS_JSON_PATH = builder.PASS_JSON_PATH;
 
         // PBR Settings
         this.NORMAL_MAP_DEFAULT = builder.NORMAL_MAP_DEFAULT;
@@ -172,6 +174,7 @@ public class Settings {
         private String REGION_IMAGE_PATH = "world/world.png";
         private String SHADER_JSON_PATH = "shaders";
         private String MATERIAL_JSON_PATH = "materials";
+        private String PASS_JSON_PATH = "renderPasses";
 
         // PBR Settings
         private Color NORMAL_MAP_DEFAULT = new Color(0.5f, 0.5f, 1f, 1f); // 128,128,255
@@ -297,6 +300,11 @@ public class Settings {
 
         public Builder MATERIAL_JSON_PATH(String MATERIAL_JSON_PATH) {
             this.MATERIAL_JSON_PATH = MATERIAL_JSON_PATH;
+            return this;
+        }
+
+        public Builder PASS_JSON_PATH(String PASS_JSON_PATH) {
+            this.PASS_JSON_PATH = PASS_JSON_PATH;
             return this;
         }
 

@@ -35,10 +35,6 @@ public class WorldSystem {
     private final int CHUNK_SIZE;
 
     // Block Management
-    private final String BLOCK_JSON_PATH;
-    private final String BLOCK_TEXTURE_PATH;
-    private final int BLOCK_TEXTURE_SIZE;
-    private final int BLOCK_ATLAS_PADDING;
     private final Block[] blocks;
 
     // World System
@@ -61,7 +57,7 @@ public class WorldSystem {
         // Game Manager
         this.gameManager = gameManager;
         this.threadManager = gameManager.threadManager;
-        this.textureManager = gameManager.TextureManager;
+        this.textureManager = gameManager.textureManager;
         this.saveSystem = gameManager.saveSystem;
         this.UISystem = gameManager.UISystem;
         this.settings = gameManager.settings;
@@ -72,10 +68,6 @@ public class WorldSystem {
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
 
         // Block Management
-        this.BLOCK_JSON_PATH = settings.BLOCK_JSON_PATH;
-        this.BLOCK_TEXTURE_PATH = settings.BLOCK_TEXTURE_PATH;
-        this.BLOCK_TEXTURE_SIZE = settings.BLOCK_TEXTURE_SIZE;
-        this.BLOCK_ATLAS_PADDING = settings.BLOCK_ATLAS_PADDING;
         this.blocks = Loader.LoadBlocks(textureManager);
 
         // World System

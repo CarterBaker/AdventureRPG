@@ -6,9 +6,11 @@ import com.AdventureRPG.SettingsSystem.Settings;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g3d.Shader;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.Renderable;
 import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider;
-import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
 import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.google.gson.Gson;
@@ -35,6 +37,8 @@ public class ShaderManager implements ShaderProvider {
     private final Map<String, Integer> nameToID;
     private int nextShaderID;
 
+    private final Texture whitePixelTexture;
+
     // Base \\
 
     public ShaderManager(GameManager gameManager) {
@@ -54,9 +58,27 @@ public class ShaderManager implements ShaderProvider {
         this.nameToID = new HashMap<>();
         this.nextShaderID = 0;
 
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(1f, 1f, 1f, 1f); // white
+        pixmap.fill();
+        whitePixelTexture = new Texture(pixmap);
+        pixmap.dispose();
+
         // Core Logic \\
 
         compileShaders();
+    }
+
+    public void awake() {
+
+    }
+
+    public void start() {
+
+    }
+
+    public void update() {
+
     }
 
     public void dispose() {
@@ -189,5 +211,31 @@ public class ShaderManager implements ShaderProvider {
     // Get unique shader ID from name
     public int getShaderID(String name) {
         return nameToID.getOrDefault(name, -1);
+    }
+
+    public void bindShader(int id) {
+        ShaderProgram program = getShaderByID(id);
+        if (program != null)
+            program.bind();
+    }
+
+    public void setUniforms(int id, Map<String, Object> uniforms) {
+        ShaderProgram program = getShaderByID(id);
+        if (program == null || uniforms == null)
+            return;
+
+        for (Map.Entry<String, Object> entry : uniforms.entrySet()) {
+            String name = entry.getKey();
+            Object value = entry.getValue();
+            if (value instanceof Float f)
+                program.setUniformf(name, f);
+            else if (value instanceof Integer i)
+                program.setUniformi(name, i);
+            // add more types as needed
+        }
+    }
+
+    public void renderFullScreenQuad(SpriteBatch batch) {
+        batch.draw(whitePixelTexture, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
     }
 }

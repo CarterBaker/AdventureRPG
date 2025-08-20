@@ -92,6 +92,18 @@ public class ThreadManager {
                 });
     }
 
+    public void awake() {
+
+    }
+
+    public void start() {
+
+    }
+
+    public void update() {
+
+    }
+
     public void dispose() {
 
         shutdownExecutor(aiExecutor);

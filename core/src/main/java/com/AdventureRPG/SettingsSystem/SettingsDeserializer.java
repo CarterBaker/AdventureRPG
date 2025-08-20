@@ -58,6 +58,8 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
             builder.SHADER_JSON_PATH(obj.get("SHADER_JSON_PATH").getAsString());
         if (obj.has("MATERIAL_JSON_PATH"))
             builder.MATERIAL_JSON_PATH(obj.get("MATERIAL_JSON_PATH").getAsString());
+        if (obj.has("PASS_JSON_PATH"))
+            builder.PASS_JSON_PATH(obj.get("PASS_JSON_PATH").getAsString());
 
         // PBR Settings
         if (obj.has("NORMAL_MAP_DEFAULT")) {

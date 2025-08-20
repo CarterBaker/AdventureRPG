@@ -21,4 +21,16 @@ public class LightingSystem {
         // Lighting
         this.sun = new Sun();
     }
+
+    public void awake() {
+
+    }
+
+    public void start() {
+
+    }
+
+    public void update() {
+
+    }
 }
