@@ -6,9 +6,10 @@ import com.AdventureRPG.SettingsSystem.Settings;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g3d.Shader;
-import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Mesh;
+import com.badlogic.gdx.graphics.VertexAttribute;
+import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.Renderable;
 import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider;
 import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader;
@@ -20,7 +21,7 @@ import java.util.*;
 public class ShaderManager implements ShaderProvider {
 
     // Debug
-    private final boolean debug = false; // TODO: Remove debug line
+    private final boolean debug = true; // TODO: Remove debug line
 
     // Game Manager
     private final Settings settings;
@@ -37,7 +38,7 @@ public class ShaderManager implements ShaderProvider {
     private final Map<String, Integer> nameToID;
     private int nextShaderID;
 
-    private final Texture whitePixelTexture;
+    private Mesh fullScreenQuad;
 
     // Base \\
 
@@ -58,15 +59,29 @@ public class ShaderManager implements ShaderProvider {
         this.nameToID = new HashMap<>();
         this.nextShaderID = 0;
 
-        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(1f, 1f, 1f, 1f); // white
-        pixmap.fill();
-        whitePixelTexture = new Texture(pixmap);
-        pixmap.dispose();
+        createFullScreenQuad();
 
         // Core Logic \\
 
         compileShaders();
+    }
+
+    private void createFullScreenQuad() {
+        fullScreenQuad = new Mesh(true, 4, 6,
+                new VertexAttribute(VertexAttributes.Usage.Position, 2, "a_position"),
+                new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, "a_texCoord0"));
+
+        float[] verts = new float[] {
+                -1, -1, 0f, 0f,
+                1, -1, 1f, 0f,
+                1, 1, 1f, 1f,
+                -1, 1, 0f, 1f
+        };
+
+        short[] indices = new short[] { 0, 1, 2, 2, 3, 0 };
+
+        fullScreenQuad.setVertices(verts);
+        fullScreenQuad.setIndices(indices);
     }
 
     public void awake() {
@@ -81,12 +96,6 @@ public class ShaderManager implements ShaderProvider {
 
     }
 
-    public void dispose() {
-
-        for (ShaderProgram program : nameToProgram.values())
-            program.dispose();
-    }
-
     @Override
     public Shader getShader(Renderable renderable) {
 
@@ -96,6 +105,15 @@ public class ShaderManager implements ShaderProvider {
             return defaultShaderProvider.getShader(renderable);
 
         return new DefaultShader(renderable, new DefaultShader.Config(), shader);
+    }
+
+    public void dispose() {
+
+        for (ShaderProgram program : nameToProgram.values())
+            program.dispose();
+
+        if (fullScreenQuad != null)
+            fullScreenQuad.dispose();
     }
 
     // Core Logic \\
@@ -137,8 +155,26 @@ public class ShaderManager implements ShaderProvider {
     // Compile ShaderProgram from includes and main source
     private ShaderProgram compileShader(ShaderDefinition def) {
 
-        String vertexSource = assembleShaderSource(def.vertexIncludes, def.vertexCode);
-        String fragmentSource = assembleShaderSource(def.fragmentIncludes, def.fragmentCode);
+        if (def.vertex == null || def.fragment == null)
+            throw new RuntimeException("Shader JSON missing 'vertex' or 'fragment' field.");
+
+        FileHandle vertFile = Gdx.files.internal(SHADER_JSON_PATH + "/" + def.vertex);
+
+        if (!vertFile.exists())
+            throw new RuntimeException("Vertex shader file not found: " + def.vertex);
+
+        String vertexSource = vertFile.readString();
+
+        FileHandle fragFile = Gdx.files.internal(SHADER_JSON_PATH + "/" + def.fragment);
+
+        if (!fragFile.exists())
+            throw new RuntimeException("Fragment shader file not found: " + def.fragment);
+
+        String fragmentSource = fragFile.readString();
+
+        // Assemble with includes + fix #version
+        vertexSource = assembleShaderSource(def.vertexIncludes, vertexSource);
+        fragmentSource = assembleShaderSource(def.fragmentIncludes, fragmentSource);
 
         ShaderProgram program = new ShaderProgram(vertexSource, fragmentSource);
 
@@ -151,7 +187,7 @@ public class ShaderManager implements ShaderProvider {
     // Assemble shader code from include files + main code
     private String assembleShaderSource(List<String> includes, String mainCode) {
 
-        StringBuilder stringBuilder = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
 
         if (includes != null) {
 
@@ -160,16 +196,34 @@ public class ShaderManager implements ShaderProvider {
                 FileHandle fileHandle = Gdx.files.internal(SHADER_JSON_PATH + "/includes/" + include);
 
                 if (fileHandle.exists())
-                    stringBuilder.append(fileHandle.readString()).append("\n");
-
-                else// TODO: Remove debug line
+                    sb.append(fileHandle.readString()).append("\n");
+                else
                     log("Include not found: " + include);
             }
         }
 
-        stringBuilder.append(mainCode);
+        sb.append(mainCode);
 
-        return stringBuilder.toString();
+        // Ensure #version is first line
+        String[] lines = sb.toString().split("\\R");
+        StringBuilder finalSrc = new StringBuilder();
+        StringBuilder rest = new StringBuilder();
+        String versionLine = null;
+
+        for (String line : lines) {
+
+            if (line.trim().startsWith("#version"))
+                versionLine = line.trim();
+            else
+                rest.append(line).append("\n");
+        }
+
+        if (versionLine != null)
+            finalSrc.append(versionLine).append("\n");
+
+        finalSrc.append(rest);
+
+        return finalSrc.toString();
     }
 
     // Utility \\
@@ -190,10 +244,10 @@ public class ShaderManager implements ShaderProvider {
     // Internal representation of a shader for Gson
     private static class ShaderDefinition {
 
+        String vertex;
+        String fragment;
         List<String> vertexIncludes;
         List<String> fragmentIncludes;
-        String vertexCode;
-        String fragmentCode;
     }
 
     // Accessible \\
@@ -213,29 +267,8 @@ public class ShaderManager implements ShaderProvider {
         return nameToID.getOrDefault(name, -1);
     }
 
-    public void bindShader(int id) {
-        ShaderProgram program = getShaderByID(id);
-        if (program != null)
-            program.bind();
+    public void renderFullScreenQuad(ShaderProgram shader) {
+        fullScreenQuad.render(shader, GL20.GL_TRIANGLES);
     }
 
-    public void setUniforms(int id, Map<String, Object> uniforms) {
-        ShaderProgram program = getShaderByID(id);
-        if (program == null || uniforms == null)
-            return;
-
-        for (Map.Entry<String, Object> entry : uniforms.entrySet()) {
-            String name = entry.getKey();
-            Object value = entry.getValue();
-            if (value instanceof Float f)
-                program.setUniformf(name, f);
-            else if (value instanceof Integer i)
-                program.setUniformi(name, i);
-            // add more types as needed
-        }
-    }
-
-    public void renderFullScreenQuad(SpriteBatch batch) {
-        batch.draw(whitePixelTexture, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-    }
 }

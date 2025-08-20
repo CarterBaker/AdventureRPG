@@ -2,13 +2,17 @@ package com.AdventureRPG.RenderManager;
 
 import java.util.*;
 
+import com.AdventureRPG.GameManager;
+import com.AdventureRPG.ShaderManager.ShaderManager;
+
 public class RenderQueue {
 
+    private final ShaderManager shaderManager;
     private final Map<Integer, Queue<RenderPass>> passes;
 
-    public RenderQueue() {
-        // Use LinkedHashMap to preserve insertion order within keys
-        this.passes = new TreeMap<>(); // TreeMap = sorted by key
+    public RenderQueue(GameManager gameManager) {
+        this.shaderManager = gameManager.shaderManager;
+        this.passes = new TreeMap<>();
     }
 
     // Add a pass into the queue
@@ -34,7 +38,7 @@ public class RenderQueue {
 
             // Render remaining passes
             for (RenderPass pass : queue) {
-                pass.render(context);
+                pass.render(context, shaderManager);
             }
 
             if (queue.isEmpty()) {

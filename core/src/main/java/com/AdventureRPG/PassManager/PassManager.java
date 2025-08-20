@@ -5,9 +5,9 @@ import com.AdventureRPG.RenderManager.RenderManager;
 import com.AdventureRPG.RenderManager.RenderPass;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
+import com.AdventureRPG.ShaderManager.UniformAttribute;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.google.gson.Gson;
 
 import java.util.HashMap;
@@ -19,8 +19,9 @@ public class PassManager {
     // Game Manager
     private final Settings settings;
     private final Gson gson;
+    private final GameManager gameManager;
     private final ShaderManager shaderManager;
-    private final RenderManager renderManager;
+    private RenderManager renderManager;
 
     // Settings
     private final String PASS_JSON_PATH;
@@ -37,14 +38,20 @@ public class PassManager {
         // Game Manager
         this.settings = gameManager.settings;
         this.gson = gameManager.gson;
+        this.gameManager = gameManager;
         this.shaderManager = gameManager.shaderManager;
-        this.renderManager = gameManager.renderManager;
 
         // Settings
         this.PASS_JSON_PATH = settings.PASS_JSON_PATH;
     }
 
     public void awake() {
+
+        // Game Manager
+        this.renderManager = gameManager.renderManager;
+
+        // Core Logic \\
+
         compilePasses();
     }
 
@@ -68,61 +75,77 @@ public class PassManager {
         for (FileHandle file : dir.list("json")) {
 
             try {
-
-                PassJson def = gson.fromJson(file.readString(), PassJson.class);
-
-                // Shader reference as int ID
-                int shaderID = shaderManager.getShaderID(def.shader);
-
-                // Name from filename (strip .json)
-                String name = stripExtension(file.name());
-
-                RenderPass pass = new RenderPass(
-                        nextPassID,
-                        name,
-                        shaderID,
-                        def.textures != null ? def.textures : new HashMap<>(),
-                        def.uniforms != null ? def.uniforms : new HashMap<>(),
-                        context -> {
-
-                            ShaderProgram shader = shaderManager.getShaderByID(shaderID);
-
-                            if (shader != null) {
-
-                                shader.bind();
-
-                                // set uniforms
-                                if (def.uniforms != null) {
-
-                                    for (var entry : def.uniforms.entrySet()) {
-
-                                        Object value = entry.getValue();
-
-                                        if (value instanceof Float f)
-                                            shader.setUniformf(entry.getKey(), f);
-
-                                        else if (value instanceof Integer i)
-                                            shader.setUniformi(entry.getKey(), i);
-                                    }
-                                }
-
-                                // draw fullscreen quad
-                                context.spriteBatch.begin();
-                                shaderManager.renderFullScreenQuad(context.spriteBatch);
-                                context.spriteBatch.end();
-                            }
-                        });
-
-                idToPass.put(nextPassID, pass);
-                nameToID.put(name, nextPassID);
-
-                nextPassID++;
+                PassJson json = gson.fromJson(file.readString(), PassJson.class);
+                RenderPass passTemplate = createPassTemplate(file, json);
+                registerPass(passTemplate);
             }
 
-            catch (Exception exception) {
-                System.err.println("Failed to load pass: " + file.name() + " - " + exception.getMessage());
+            catch (Exception e) {
+                System.err.println("Failed to load pass: " + file.name() + " - " + e.getMessage());
             }
         }
+    }
+
+    private RenderPass createPassTemplate(FileHandle file, PassJson json) {
+
+        int shaderID = shaderManager.getShaderID(json.shader);
+        Map<String, UniformAttribute> uniforms = parseUniforms(json.uniforms);
+        String name = stripExtension(file.name());
+
+        return new RenderPass(nextPassID, name, shaderID, json.textures, uniforms, null);
+    }
+
+    private Map<String, UniformAttribute> parseUniforms(Map<String, Object> rawUniforms) {
+
+        Map<String, UniformAttribute> uniforms = new HashMap<>();
+
+        if (rawUniforms == null)
+            return uniforms;
+
+        for (Map.Entry<String, Object> entry : rawUniforms.entrySet()) {
+
+            String name = entry.getKey();
+            Object obj = entry.getValue();
+
+            if (obj instanceof Map<?, ?> map) {
+
+                String typeStr = (String) map.get("type");
+                Object value = map.get("value");
+
+                UniformAttribute.UniformType type = UniformAttribute.UniformType.valueOf(typeStr);
+
+                // If value is null, assign default
+                value = getDefaultValueForType(type, value);
+
+                uniforms.put(name, new UniformAttribute(name, type, value));
+            }
+
+            else
+                throw new RuntimeException("Uniform " + name + " must be an object with 'type' and 'value'");
+        }
+
+        return uniforms;
+    }
+
+    private Object getDefaultValueForType(UniformAttribute.UniformType type, Object value) {
+        if (value != null)
+            return value;
+
+        return switch (type) {
+            case FLOAT -> 0f;
+            case INT -> 0;
+            case BOOL -> false;
+            case VEC2 -> new com.badlogic.gdx.math.Vector2(0f, 0f);
+            case VEC3 -> new com.badlogic.gdx.math.Vector3(0f, 0f, 0f);
+            case VEC4, COLOR -> new com.badlogic.gdx.math.Vector4(0f, 0f, 0f, 0f);
+            case MATRIX4 -> new com.badlogic.gdx.math.Matrix4().idt();
+        };
+    }
+
+    private void registerPass(RenderPass pass) {
+        idToPass.put(nextPassID, pass);
+        nameToID.put(pass.name, nextPassID);
+        nextPassID++;
     }
 
     // Utility \\
@@ -186,5 +209,4 @@ public class PassManager {
 
         return renderPass;
     }
-
 }

@@ -13,7 +13,7 @@ import com.google.gson.reflect.TypeToken;
 public class Loader {
 
     // debug
-    private static final boolean debug = true; // TODO: Remove debug line
+    private static final boolean debug = false; // TODO: Remove debug line
 
     public static Block[] LoadBlocks(TextureManager textureManager) {
 

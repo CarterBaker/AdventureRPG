@@ -1,5 +1,14 @@
 package com.AdventureRPG.RenderManager;
 
+import com.AdventureRPG.ShaderManager.ShaderManager;
+import com.AdventureRPG.ShaderManager.UniformAttribute;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.Vector4;
+import com.badlogic.gdx.graphics.Color;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,7 +19,7 @@ public class RenderPass {
     public final String name;
     public final int shaderID;
     public final Map<String, String> texturePaths;
-    public final Map<String, Object> defaultUniforms;
+    public final Map<String, UniformAttribute> uniforms = new HashMap<>();
     private final RenderAction action;
     public float lifetime;
 
@@ -21,42 +30,72 @@ public class RenderPass {
             String name,
             int shaderID,
             Map<String, String> texturePaths,
-            Map<String, Object> defaultUniforms,
+            Map<String, UniformAttribute> initialUniforms,
             RenderAction action) {
-
-        // Pass
         this.id = id;
         this.name = name;
         this.shaderID = shaderID;
-        this.texturePaths = texturePaths;
-        this.defaultUniforms = defaultUniforms;
+        this.texturePaths = texturePaths != null ? texturePaths : new HashMap<>();
+        if (initialUniforms != null)
+            this.uniforms.putAll(initialUniforms);
         this.action = action;
         this.lifetime = 0f;
     }
 
-    public RenderPass(RenderPass other) {
-        this.id = other.id;
-        this.name = other.name;
-        this.shaderID = other.shaderID;
-        this.texturePaths = new HashMap<>(other.texturePaths);
-        this.defaultUniforms = new HashMap<>(other.defaultUniforms);
-        this.action = other.action;
-        this.lifetime = other.lifetime;
+    // Clone constructor
+    public RenderPass(RenderPass template) {
+        this.id = template.id;
+        this.name = template.name;
+        this.shaderID = template.shaderID;
+        this.texturePaths = new HashMap<>(template.texturePaths);
+        this.uniforms.putAll(template.uniforms); // copy uniforms
+        this.action = template.action;
+        this.lifetime = template.lifetime;
     }
 
-    public RenderPass(RenderPass other, float lifetime) {
-        this.id = other.id;
-        this.name = other.name;
-        this.shaderID = other.shaderID;
-        this.texturePaths = new HashMap<>(other.texturePaths);
-        this.defaultUniforms = new HashMap<>(other.defaultUniforms);
-        this.action = other.action;
+    public RenderPass(RenderPass template, float lifetime) {
+        this(template);
         this.lifetime = lifetime;
     }
 
-    public void render(RenderContext context) {
-        if (action != null) {
-            action.render(context);
+    // Dynamically update uniform at runtime
+    public void setUniform(String name, Object value) {
+        UniformAttribute ua = uniforms.get(name);
+
+        if (ua != null)
+            ua.value = value;
+    }
+
+    // Render method called by RenderQueue
+    public void render(RenderContext context, ShaderManager shaderManager) {
+
+        ShaderProgram shader = shaderManager.getShaderByID(shaderID);
+
+        if (shader == null)
+            return;
+
+        shader.bind();
+
+        // Push all uniforms
+        for (UniformAttribute ua : uniforms.values()) {
+
+            switch (ua.uniformType) {
+                case FLOAT -> shader.setUniformf(ua.name, (float) ua.value);
+                case INT -> shader.setUniformi(ua.name, (int) ua.value);
+                case BOOL -> shader.setUniformi(ua.name, ((boolean) ua.value) ? 1 : 0);
+                case VEC2 -> shader.setUniformf(ua.name, (Vector2) ua.value);
+                case VEC3 -> shader.setUniformf(ua.name, (Vector3) ua.value);
+                case VEC4 -> shader.setUniformf(ua.name, (Vector4) ua.value);
+                case COLOR -> shader.setUniformf(ua.name, (Color) ua.value);
+                case MATRIX4 -> shader.setUniformMatrix(ua.name, (Matrix4) ua.value);
+            }
         }
+
+        // Call action if exists (optional extra rendering logic)
+        if (action != null)
+            action.render(context);
+        else
+            // Default: draw fullscreen quad
+            shaderManager.renderFullScreenQuad(shader);
     }
 }

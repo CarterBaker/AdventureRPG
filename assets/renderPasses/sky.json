@@ -1,0 +1,17 @@
+{
+    "shader": "sky",
+    "uniforms": {
+        "u_inverseView": {
+            "type": "MATRIX4",
+            "value": null
+        },
+        "u_inverseProjection": {
+            "type": "MATRIX4",
+            "value": null
+        },
+        "u_timeOfDay": {
+            "type": "FLOAT",
+            "value": 0.0
+        }
+    }
+}

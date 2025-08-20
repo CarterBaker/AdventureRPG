@@ -9,6 +9,7 @@ public class LightingSystem {
     public final Settings settings;
 
     // Lighting
+    public final Sky sky;
     public final Sun sun;
 
     // Base \\
@@ -19,18 +20,19 @@ public class LightingSystem {
         this.settings = gameManager.settings;
 
         // Lighting
+        this.sky = new Sky(gameManager);
         this.sun = new Sun();
     }
 
     public void awake() {
-
+        sky.awake();
     }
 
     public void start() {
-
+        sky.start();
     }
 
     public void update() {
-
+        sky.update();
     }
 }

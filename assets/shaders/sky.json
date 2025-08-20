@@ -1,0 +1,4 @@
+{
+    "vertex": "sky/sky.vert",
+    "fragment": "sky/sky.frag"
+}

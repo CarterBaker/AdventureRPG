@@ -12,8 +12,4 @@ public class RenderContext {
         this.spriteBatch = spriteBatch;
         this.modelBatch = modelBatch;
     }
-
-    public void renderPass(RenderPass pass) {
-        pass.render(this);
-    }
 }

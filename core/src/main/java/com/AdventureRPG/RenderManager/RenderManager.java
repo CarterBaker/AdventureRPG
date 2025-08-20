@@ -17,7 +17,7 @@ public class RenderManager {
     private final PlayerSystem playerSystem;
 
     // Render Queue
-    private final RenderQueue renderQueue = new RenderQueue();
+    private final RenderQueue renderQueue;
 
     // Base \\
 
@@ -27,6 +27,8 @@ public class RenderManager {
         this.UISystem = GameManager.UISystem;
         this.worldSystem = GameManager.worldSystem;
         this.playerSystem = GameManager.playerSystem;
+
+        this.renderQueue = new RenderQueue(GameManager);
 
         // Core passes
         renderQueue.addPass(new RenderPass(

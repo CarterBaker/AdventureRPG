@@ -6,6 +6,7 @@ import com.AdventureRPG.InputSystem.InputSystem;
 import com.AdventureRPG.LightingSystem.LightingSystem;
 import com.AdventureRPG.TextureManager.TextureManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
+import com.AdventureRPG.PassManager.PassManager;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.RenderManager.RenderManager;
 import com.AdventureRPG.SaveSystem.SaveSystem;
@@ -42,6 +43,7 @@ public class GameManager implements Screen {
     public final TextureManager textureManager;
     public final MaterialManager materialManager;
     public final ShaderManager shaderManager;
+    public final PassManager passManager;
 
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
@@ -81,6 +83,7 @@ public class GameManager implements Screen {
         this.textureManager = new TextureManager(this);
         this.shaderManager = new ShaderManager(this);
         this.materialManager = new MaterialManager(this);
+        this.passManager = new PassManager(this);
 
         this.saveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
@@ -161,6 +164,7 @@ public class GameManager implements Screen {
         textureManager.awake();
         shaderManager.awake();
         materialManager.awake();
+        passManager.awake();
 
         saveSystem.awake();
         UISystem.awake();
@@ -179,6 +183,7 @@ public class GameManager implements Screen {
         textureManager.start();
         shaderManager.start();
         materialManager.start();
+        passManager.start();
 
         saveSystem.start();
         UISystem.start();
@@ -189,7 +194,7 @@ public class GameManager implements Screen {
         inputSystem.start();
 
         startLoading();
-        UISystem.open(Menu.Main); // TODO: Remove this line for future debugging
+        // UISystem.open(Menu.Main); // TODO: Remove this line for future debugging
     }
 
     // Update is called once per frame before rendering
@@ -215,6 +220,7 @@ public class GameManager implements Screen {
         textureManager.update();
         shaderManager.update();
         materialManager.update();
+        passManager.update();
 
         saveSystem.update();
         UISystem.update();
