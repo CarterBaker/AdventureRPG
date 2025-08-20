@@ -7,6 +7,7 @@ uniform mat4 u_inverseProjection;
 uniform mat4 u_inverseView;
 
 void main() {
+    
     // Convert from clip space to view space ray
     vec4 clip = vec4(a_position, 0.0, 1.0);
     vec4 view = u_inverseProjection * clip;

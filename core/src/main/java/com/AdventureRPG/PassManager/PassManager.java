@@ -128,8 +128,33 @@ public class PassManager {
     }
 
     private Object getDefaultValueForType(UniformAttribute.UniformType type, Object value) {
-        if (value != null)
-            return value;
+
+        if (value != null) {
+
+            // Convert JSON numbers to correct types
+            switch (type) {
+
+                case FLOAT:
+                    if (value instanceof Number n)
+                        return n.floatValue();
+                    break;
+
+                case INT:
+                    if (value instanceof Number n)
+                        return n.intValue();
+                    break;
+
+                case BOOL:
+                    if (value instanceof Boolean b)
+                        return b;
+                    break;
+
+                default:
+                    break; // all other types
+            }
+
+            return value; // fallback
+        }
 
         return switch (type) {
             case FLOAT -> 0f;
@@ -170,33 +195,33 @@ public class PassManager {
         return nameToID.getOrDefault(name, -1);
     }
 
-    public RenderPass createPassInstance(String name) {
+    public RenderPass createPassInstance(String name, int sortOrder) {
 
         Integer id = nameToID.get(name);
 
         if (id == null)
             return null;
 
-        return createPassInstance(id, 0f);
+        return createPassInstance(id, sortOrder, 0f);
     }
 
-    public RenderPass createPassInstance(String name, float lifeTime) {
+    public RenderPass createPassInstance(String name, int sortOrder, float lifeTime) {
 
         Integer id = nameToID.get(name);
 
         if (id == null)
             return null;
 
-        return createPassInstance(id, lifeTime);
+        return createPassInstance(id, sortOrder, lifeTime);
     }
 
-    public RenderPass createPassInstance(int id) {
+    public RenderPass createPassInstance(int id, int sortOrder) {
 
-        RenderPass renderPass = createPassInstance(id, 0f);
+        RenderPass renderPass = createPassInstance(id, sortOrder, 0f);
         return renderPass;
     }
 
-    public RenderPass createPassInstance(int id, float lifeTime) {
+    public RenderPass createPassInstance(int id, int sortOrder, float lifeTime) {
 
         RenderPass template = idToPass.get(id);
 
@@ -205,7 +230,7 @@ public class PassManager {
 
         RenderPass renderPass = new RenderPass(template);
 
-        renderManager.enqueue(renderPass);
+        renderManager.enqueue(renderPass, sortOrder);
 
         return renderPass;
     }

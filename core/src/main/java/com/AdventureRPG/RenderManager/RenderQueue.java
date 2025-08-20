@@ -16,8 +16,8 @@ public class RenderQueue {
     }
 
     // Add a pass into the queue
-    public void addPass(RenderPass pass) {
-        passes.computeIfAbsent(pass.id, k -> new LinkedList<>()).add(pass);
+    public void addPass(RenderPass pass, int sortOrder) {
+        passes.computeIfAbsent(sortOrder, k -> new LinkedList<>()).add(pass);
     }
 
     // Render in order: sorted by ID, FIFO within same ID

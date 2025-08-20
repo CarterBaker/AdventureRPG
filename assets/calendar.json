@@ -1,4 +1,13 @@
 {
+    "daysOfWeek": [
+        "Onesday",
+        "Ensday",
+        "Moorday",
+        "Startday",
+        "Farsday",
+        "Teraday",
+        "Lunaday"
+    ],
     "months": [
         {
             "name": "Dawnrise",

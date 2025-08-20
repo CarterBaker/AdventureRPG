@@ -38,7 +38,7 @@ public class RenderManager {
                     worldSystem.render(ctx.modelBatch);
                     playerSystem.render();
                     ctx.modelBatch.end();
-                }));
+                }), 0);
 
         renderQueue.addPass(new RenderPass(
                 0, "2D_PASS", -1, null, null,
@@ -46,7 +46,7 @@ public class RenderManager {
                     ctx.spriteBatch.begin();
                     UISystem.render();
                     ctx.spriteBatch.end();
-                }));
+                }), 0);
     }
 
     // Core Logic \\
@@ -64,7 +64,7 @@ public class RenderManager {
 
     // Accessible \\
 
-    public void enqueue(RenderPass pass) {
-        renderQueue.addPass(pass);
+    public void enqueue(RenderPass pass, int sortOrder) {
+        renderQueue.addPass(pass, sortOrder);
     }
 }

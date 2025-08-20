@@ -9,14 +9,16 @@ import java.io.Reader;
 public class Loader {
 
     public static Calendar load(File file, Gson gson) {
-        if (!file.exists()) {
+
+        if (!file.exists())
             throw new RuntimeException("Calendar file not found: " + file.getAbsolutePath());
-        }
 
         try (Reader reader = new FileReader(file)) {
-            return gson.fromJson(reader, Calendar.class);
-        } catch (IOException e) {
-            e.printStackTrace();
+            CalendarData dto = gson.fromJson(reader, CalendarData.class);
+            return new Calendar(dto.months, dto.daysOfWeek);
+        }
+
+        catch (IOException e) {
             throw new RuntimeException("Failed to load calendar from: " + file.getAbsolutePath(), e);
         }
     }

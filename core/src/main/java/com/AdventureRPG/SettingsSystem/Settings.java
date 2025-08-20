@@ -185,8 +185,8 @@ public class Settings {
         private Color CUSTOM_MAP_DEFAULT = new Color(0f, 0f, 0f, 1f); // black
 
         // Time Settings
-        private int MINUTES_PER_HOUR = 60;
-        private int HOURS_PER_DAY = 24;
+        private int MINUTES_PER_HOUR = 60; // DO NOT CHANGE!!!
+        private int HOURS_PER_DAY = 24; // DO NOT CHANGE!!!
         private int DAYS_PER_DAY = 20;
         private float MIDDAY_OFFSET = 0.5f;
 

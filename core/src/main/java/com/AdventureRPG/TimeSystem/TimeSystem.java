@@ -9,6 +9,9 @@ import com.AdventureRPG.SettingsSystem.Settings;
 
 public class TimeSystem {
 
+    // Debug
+    private boolean debug = true; // TODO: Remove debug line
+
     // Game Manager
     public final Settings settings;
 
@@ -24,28 +27,42 @@ public class TimeSystem {
     private final int STARTING_AGE;
     private final int YEARS_PER_AGE;
 
-    // Calender
+    // Calendar
     private final File calendarFile;
     private final Calendar calendar;
 
     private final int totalMonths;
     private final int[] daysPerMonth;
+    private final int totalDaysInYear; // linear fraction of current day
 
-    // Time Cache
-    private double totalDaysElapsed;
-    private long totalYearsElapsed;
+    // Time State
+    private long totalDaysElapsed; // total whole days elapsed
+    private double dayProgress;
 
-    // Real-world time tracking
-    private long lastUpdateEpochMilli;
+    private double visualTimeOfDay; // 0..1, warped for visuals (sun, shaders)
 
-    // Base \\
+    private int currentMinute;
+    private int currentHour;
+    private int currentDayOfWeek;
+    private int currentDayOfMonth;
+    private int currentMonth;
+    private int currentYear;
+    private int currentAge;
 
+    // Time Tracking
+    private long lastMinute;
+    private long lastHour;
+    private long lastDay;
+    private long lastMonth;
+    private long lastYear;
+
+    // Constructor
     public TimeSystem(GameManager gameManager) {
 
         // Game manager
         this.settings = gameManager.settings;
 
-        // Setting
+        // Settings
         this.MINUTES_PER_HOUR = settings.MINUTES_PER_HOUR;
         this.HOURS_PER_DAY = settings.HOURS_PER_DAY;
         this.DAYS_PER_DAY = settings.DAYS_PER_DAY;
@@ -57,16 +74,24 @@ public class TimeSystem {
         this.STARTING_AGE = settings.STARTING_AGE;
         this.YEARS_PER_AGE = settings.YEARS_PER_AGE;
 
-        // Calender
+        // Calendar
         this.calendarFile = new File(settings.CALENDAR_JSON_PATH);
-        calendar = Loader.load(calendarFile, gameManager.gson);
+        this.calendar = Loader.load(calendarFile, gameManager.gson);
 
-        totalMonths = calendar.getTotalMonths();
-        daysPerMonth = calendar.getDaysPerMonth();
+        this.totalMonths = calendar.getTotalMonths();
+        this.daysPerMonth = calendar.getDaysPerMonth();
+        this.totalDaysInYear = calendar.getTotalDaysInYear();
+
+        // Time Tracking
+        this.lastMinute = -1;
+        this.lastHour = -1;
+        this.lastDay = -1;
+        this.lastMonth = -1;
+        this.lastYear = -1;
     }
 
     public void awake() {
-        startGame();
+
     }
 
     public void start() {
@@ -74,135 +99,279 @@ public class TimeSystem {
     }
 
     public void update() {
-        updateTime();
-    }
-
-    // Awake \\
-
-    private void startGame() {
-
-        // Base days from starting month/day
-        totalDaysElapsed = 0.0;
-
-        for (int i = 0; i < STARTING_MONTH - 1; i++)
-            totalDaysElapsed += daysPerMonth[i];
-
-        totalDaysElapsed += (STARTING_DAY - 1);
-
-        // Add fractional day based on real-world clock
-        long now = Instant.now().toEpochMilli();
-        long millisInDay = now % 86400000L; // milliseconds since midnight
-        double realDayFraction = millisInDay / 86400000.0;
-        double gameDayFraction = realDayFraction * DAYS_PER_DAY;
-
-        // Align noon
-        totalDaysElapsed += gameDayFraction - MIDDAY_OFFSET;
-
-        if (totalDaysElapsed < 0)
-            totalDaysElapsed += totalDaysInYear();
-
-        // Total years elapsed
-        totalYearsElapsed = (long) ((STARTING_YEAR - 1) + (STARTING_AGE - 1) * YEARS_PER_AGE);
-
-        // Save real-world timestamp for updates
-        lastUpdateEpochMilli = now;
+        updateFromSystemClock();
     }
 
     // Save System \\
 
     public void setTime(UserData userData) {
-
+        // to implement later
     }
 
     public void getTime(UserData userData) {
-
+        // to implement later
     }
 
     // Time \\
 
-    private void updateTime() {
+    private void updateFromSystemClock() {
 
+        // 1. Current system millis
         long now = Instant.now().toEpochMilli();
-        double deltaRealDays = (now - lastUpdateEpochMilli) / 86400000.0;
-        lastUpdateEpochMilli = now;
 
-        double deltaGameDays = deltaRealDays * DAYS_PER_DAY;
-        advanceTime(deltaGameDays);
+        // 2. Real-world days elapsed since midnight UTC
+        double realDaysElapsed = (now % 86400000L) / 86400000.0;
+
+        // 3. Scale into game time
+        double gameDaysElapsed = realDaysElapsed * DAYS_PER_DAY;
+
+        // 4. Extract the fractional part for today
+        dayProgress = gameDaysElapsed % 1.0;
+
+        // 5. Offset to align noon
+        double rawTimeOfDay = (dayProgress + MIDDAY_OFFSET) % 1.0;
+        if (rawTimeOfDay < 0)
+            rawTimeOfDay += 1.0;
+
+        // 6. Visual bending
+        visualTimeOfDay = bendTimeOfDay(rawTimeOfDay, getDayOfYear());
+
+        // 7. Update calendar
+        updateMinutes(rawTimeOfDay);
+
+        if (debug)
+            logTimeState();
     }
 
-    // Time Advancement \\
+    // Seasonal bending \\
 
-    private void advanceTime(double deltaDays) {
-        totalDaysElapsed += deltaDays;
+    private double bendTimeOfDay(double raw, int dayOfYear) {
 
-        while (totalDaysElapsed >= totalDaysInYear()) {
-            totalDaysElapsed -= totalDaysInYear();
-            totalYearsElapsed++;
-        }
+        double yearProgress = (double) dayOfYear / totalDaysInYear;
+
+        // sine wave → summer = +1, winter = -1
+        double seasonEffect = Math.sin(yearProgress * 2 * Math.PI);
+
+        // max effect strength (fraction of bending)
+        double amplitude = 0.25; // later can move to Settings
+
+        // warp curve around noon/midnight
+        double warped = raw + seasonEffect * amplitude * Math.sin(raw * Math.PI * 2);
+
+        // normalize
+        if (warped < 0)
+            warped += 1.0;
+
+        if (warped >= 1)
+            warped -= 1.0;
+
+        return warped;
     }
 
-    private int totalDaysInYear() {
+    private int getDayOfYear() {
+
         int sum = 0;
-        for (int d : daysPerMonth)
-            sum += d;
-        return sum;
+
+        for (int i = 0; i < currentMonth - 1; i++)
+            sum += daysPerMonth[i];
+
+        return sum + (currentDayOfMonth - 1);
+    }
+
+    // Minutes \\
+
+    private void updateMinutes(double rawTimeOfDay) {
+
+        currentMinute = calculateMinutes(rawTimeOfDay);
+
+        if (lastMinute == currentMinute)
+            return;
+
+        lastMinute = currentMinute;
+
+        updateHours(rawTimeOfDay);
+    }
+
+    private int calculateMinutes(double rawTimeOfDay) {
+        return (int) ((rawTimeOfDay * HOURS_PER_DAY * MINUTES_PER_HOUR) % MINUTES_PER_HOUR);
+    }
+
+    // Hours \\
+
+    private void updateHours(double rawTimeOfDay) {
+
+        currentHour = calculateHours(rawTimeOfDay);
+
+        if (lastHour == currentHour)
+            return;
+
+        lastHour = currentHour;
+
+        handleDays(rawTimeOfDay);
+    }
+
+    private int calculateHours(double rawTimeOfDay) {
+        return currentHour = (int) (rawTimeOfDay * HOURS_PER_DAY);
+    }
+
+    // Days \\
+
+    private void handleDays(double rawTimeOfDay) {
+
+        if (lastDay == totalDaysElapsed)
+            return;
+
+        lastDay = totalDaysElapsed;
+
+        long totalDaysWithOffset = calculateTotalDaysWithOffset();
+        long dayOfAge = totalDaysWithOffset % (YEARS_PER_AGE * totalDaysInYear);
+
+        calculateDayOfWeek(totalDaysWithOffset);
+        calculateDayOfMonth(totalDaysWithOffset, dayOfAge);
+    }
+
+    private long calculateTotalDaysWithOffset() {
+
+        long dayOfAgeOffset = STARTING_YEAR * totalDaysInYear + getDayOfYearFromStart();
+
+        return totalDaysElapsed + dayOfAgeOffset;
+    }
+
+    private int getDayOfYearFromStart() {
+
+        int dayOfYear = 0;
+
+        for (int i = 0; i < STARTING_MONTH - 1; i++)
+            dayOfYear += daysPerMonth[i];
+
+        dayOfYear += STARTING_DAY - 1;
+
+        return dayOfYear;
+    }
+
+    private void calculateDayOfWeek(long totalDaysWithOffset) {
+        currentDayOfWeek = (int) ((totalDaysWithOffset % calendar.getTotalDaysInWeek()) + 1);
+    }
+
+    private void calculateDayOfMonth(long totalDaysWithOffset, long dayOfAge) {
+
+        long dayOfYear = dayOfAge % totalDaysInYear;
+
+        int dayOfMonth = (int) dayOfYear + 1;
+        int month = 0;
+
+        for (int i = 0; i < totalMonths; i++) {
+
+            if (dayOfMonth <= daysPerMonth[i]) {
+
+                month = i + 1;
+                break;
+            }
+
+            dayOfMonth -= daysPerMonth[i];
+        }
+
+        currentDayOfMonth = dayOfMonth;
+        currentMonth = month;
+
+        handleYear(totalDaysWithOffset, dayOfAge);
+    }
+
+    // Years \\
+
+    private void handleYear(long totalDaysWithOffset, long dayOfAge) {
+
+        if (lastMonth == currentMonth)
+            return;
+
+        lastMonth = currentMonth;
+
+        calculateYear(dayOfAge);
+
+        handleAge(totalDaysWithOffset);
+    }
+
+    private void calculateYear(long dayOfAge) {
+        currentYear = (int) (dayOfAge / totalDaysInYear) + STARTING_YEAR;
+    }
+
+    // Ages \\
+
+    private void handleAge(long totalDaysWithOffset) {
+
+        if (lastYear == currentYear)
+            return;
+
+        lastYear = currentYear;
+
+        calculateAge(totalDaysWithOffset);
+
+    }
+
+    private void calculateAge(long totalDaysWithOffset) {
+        currentAge = (int) (totalDaysWithOffset / (YEARS_PER_AGE * totalDaysInYear)) + STARTING_AGE;
     }
 
     // Utility \\
 
+    // Getters \\
+
     public double getTimeOfDay() {
+        return visualTimeOfDay; // bent value for shaders
+    }
 
-        double adjustedTime = totalDaysElapsed % 1.0 + MIDDAY_OFFSET;
-
-        if (adjustedTime >= 1.0)
-            adjustedTime -= 1.0;
-
-        return adjustedTime;
+    public double getRawTimeOfDay() {
+        return dayProgress; // linear internal clock
     }
 
     public int getMinute() {
-        return (int) ((getTimeOfDay() * HOURS_PER_DAY * MINUTES_PER_HOUR) % MINUTES_PER_HOUR);
+        return currentMinute;
     }
 
     public int getHour() {
-        return (int) (getTimeOfDay() * HOURS_PER_DAY);
+        return currentHour;
     }
 
-    public int getCurrentDay() {
-
-        int remainingDays = (int) totalDaysElapsed;
-
-        for (int i = 0; i < totalMonths; i++) {
-
-            if (remainingDays < daysPerMonth[i])
-                return remainingDays + 1;
-
-            remainingDays -= daysPerMonth[i];
-        }
-
-        return remainingDays + 1; // fallback
+    public String getCurrentDayOfWeek() {
+        return calendar.getDayOfWeek(currentDayOfWeek);
     }
 
-    public int getCurrentMonth() {
+    public String getCurrentMonth() {
+        return calendar.getMonth(currentMonth).name;
+    }
 
-        int remainingDays = (int) totalDaysElapsed;
-
-        for (int i = 0; i < totalMonths; i++) {
-
-            if (remainingDays < daysPerMonth[i])
-                return i + 1;
-
-            remainingDays -= daysPerMonth[i];
-        }
-
-        return totalMonths; // fallback
+    public int getCurrentDayOfMonth() {
+        return currentDayOfMonth;
     }
 
     public int getCurrentYear() {
-        return (int) (totalYearsElapsed % YEARS_PER_AGE + 1);
+        return currentYear;
     }
 
     public int getCurrentAge() {
-        return (int) (totalYearsElapsed / YEARS_PER_AGE + 1);
+        return currentAge;
+    }
+
+    // Debug \\
+
+    // Debug log function
+    private void log(String msg) { // TODO: Remove debug line
+        if (debug) {
+            System.out.println("[TimeSystem] " + msg);
+        }
+    }
+
+    // Call this method to output the full current time state
+    public void logTimeState() {
+        log("Time State -> " +
+                "Minute: " + currentMinute + ", " +
+                "Hour: " + currentHour + ", " +
+                "Day: " + currentDayOfMonth + ", " +
+                "Month: " + currentMonth + " (" + getCurrentMonth() + "), " +
+                "Year: " + currentYear + ", " +
+                "Age: " + currentAge + ", " +
+                "Day of Week: " + getCurrentDayOfWeek() + ", " +
+                "Day Progress: " + String.format("%.4f", dayProgress) + ", " +
+                "Visual Time of Day: " + String.format("%.4f", visualTimeOfDay));
     }
 }
