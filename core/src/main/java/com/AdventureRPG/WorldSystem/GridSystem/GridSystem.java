@@ -1,5 +1,6 @@
 package com.AdventureRPG.WorldSystem.GridSystem;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -10,6 +11,7 @@ import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
+import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 
@@ -61,7 +63,8 @@ public class GridSystem {
     private int loadedChunksThisTick;
 
     // Model Instance
-    private Long2ObjectOpenHashMap<ModelInstance> modelInstances;
+    private Long2ObjectOpenHashMap<Model> chunkModels;
+    private Long2ObjectOpenHashMap<ModelInstance> chunkInstances;
 
     // Utility
     private final Chunk[] neighborChunks;
@@ -116,10 +119,11 @@ public class GridSystem {
         this.loadedChunksThisTick = 0;
 
         // Model Instance
-        this.neighborChunks = new Chunk[4];
-        this.modelInstances = new Long2ObjectOpenHashMap<>(totalChunks);
+        this.chunkModels = new Long2ObjectOpenHashMap<>(totalChunks);
+        this.chunkInstances = new Long2ObjectOpenHashMap<>(totalChunks);
 
         // Utility
+        this.neighborChunks = new Chunk[4];
         this.NEIGHBOR_OUT_OF_GRID = new Chunk[0];
     }
 
@@ -141,67 +145,111 @@ public class GridSystem {
 
     // Awake \\
 
+    // Main rebuild method
     public void rebuildGrid() {
 
-        // Start with a simple square grid
-        this.maxRenderDistance = settings.maxRenderDistance;
+        maxRenderDistance = settings.maxRenderDistance;
+        float radius = calculateRadius();
 
-        // The actual circle radius
-        float radius = maxRenderDistance / 2f;
+        List<ChunkDistance> tempList = collectChunkDistances(radius);
+
+        totalChunks = tempList.size();
+        initializeDataStructures(totalChunks);
+        fillGridCoordinates(tempList);
+        assignLoadOrder(tempList);
+        createModels();
+    }
+
+    // Calculate radius
+    private float calculateRadius() {
+        return settings.maxRenderDistance / 2f;
+    }
+
+    // Collect all coordinates inside a circle
+    private List<ChunkDistance> collectChunkDistances(float radius) {
         float radiusSquared = radius * radius;
+        List<ChunkDistance> list = new ArrayList<>();
 
-        // Temporary list to hold coordinates and squared distance
-        class ChunkDistance {
-
-            long coord;
-            float distSquared; // no sqrt needed for sorting
-
-            ChunkDistance(long c, float d2) {
-                coord = c;
-                distSquared = d2;
-            }
-        }
-
-        List<ChunkDistance> tempList = new java.util.ArrayList<>();
-
-        // Collect all coordinates inside the circle
         for (int x = -(maxRenderDistance / 2); x < maxRenderDistance / 2; x++) {
 
             for (int y = -(maxRenderDistance / 2); y < maxRenderDistance / 2; y++) {
 
                 float distSquared = (x * x) + (y * y);
 
-                if (distSquared <= radiusSquared) {
-
-                    long gridCoord = Coordinate2Int.pack(x, y);
-                    tempList.add(new ChunkDistance(gridCoord, distSquared));
-                }
+                if (distSquared <= radiusSquared)
+                    list.add(new ChunkDistance(Coordinate2Int.pack(x, y), distSquared));
             }
         }
 
-        // Chunk Tracking
-        this.totalChunks = tempList.size();
+        return list;
+    }
+
+    // Inner class
+    private static class ChunkDistance {
+
+        long coord;
+        float distSquared;
+
+        ChunkDistance(long c, float d2) {
+
+            coord = c;
+            distSquared = d2;
+        }
+    }
+
+    // Initialize all data structures
+    private void initializeDataStructures(int totalChunks) {
+
         int initialCapacity = (int) Math.ceil(totalChunks / loadFactor);
-        this.loadOrder = new long[totalChunks];
-        this.gridCoordinates = new LongOpenHashSet(totalChunks);
-        this.chunkCoordinates = new LongOpenHashSet(totalChunks);
-        this.gridToChunkMap = new Long2LongOpenHashMap(initialCapacity, loadFactor);
-        this.chunkToGridMap = new Long2LongOpenHashMap(initialCapacity, loadFactor);
 
-        // Queue System
-        this.unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
-        this.loadQueue = new LongArrayFIFOQueue(totalChunks);
+        loadOrder = new long[totalChunks];
+        gridCoordinates = new LongOpenHashSet(totalChunks);
+        chunkCoordinates = new LongOpenHashSet(totalChunks);
+        gridToChunkMap = new Long2LongOpenHashMap(initialCapacity, loadFactor);
+        chunkToGridMap = new Long2LongOpenHashMap(initialCapacity, loadFactor);
+        unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
+        loadQueue = new LongArrayFIFOQueue(totalChunks);
+        chunkModels = new Long2ObjectOpenHashMap<>(totalChunks);
+        chunkInstances = new Long2ObjectOpenHashMap<>(totalChunks);
+    }
 
-        // Fill gridCoordinates
+    // Fill gridCoordinates set
+    private void fillGridCoordinates(List<ChunkDistance> tempList) {
+
         for (ChunkDistance cd : tempList)
             gridCoordinates.add(cd.coord);
+    }
 
-        // Sort by distance
+    // Sort by distance and assign load order
+    private void assignLoadOrder(List<ChunkDistance> tempList) {
+
         tempList.sort(Comparator.comparingDouble(cd -> cd.distSquared));
 
-        // Assign load order
-        for (int i = 0; i < totalChunks; i++)
+        for (int i = 0; i < tempList.size(); i++)
             loadOrder[i] = tempList.get(i).coord;
+    }
+
+    // Sort and assign grid coordinates to the model Batch
+    private void createModels() {
+
+        for (int i = 0; i < loadOrder.length; i++) {
+
+            long gridCoordinate = loadOrder[i];
+
+            int x = Coordinate2Int.unpackX(gridCoordinate);
+            int z = Coordinate2Int.unpackY(gridCoordinate);
+
+            Model model = new Model();
+            ModelInstance modelInstance = new ModelInstance(model);
+
+            modelInstance.transform.setToTranslation(
+                    x * settings.CHUNK_SIZE,
+                    0f,
+                    z * settings.CHUNK_SIZE);
+
+            chunkModels.put(gridCoordinate, model);
+            chunkInstances.put(gridCoordinate, modelInstance);
+        }
     }
 
     // Update \\
@@ -219,6 +267,7 @@ public class GridSystem {
 
         // Alternating queue update
         if (hasQueue())
+
             for (int i = 0; i < queueProcess.length; i++) {
 
                 if (queueProcess[queueBatch].process(this))
@@ -264,6 +313,8 @@ public class GridSystem {
 
     private void renderChunks(ModelBatch modelBatch) {
 
+        for (int i = 0; i < totalChunks; i++)
+            modelBatch.render(chunkInstances.get(i));
     }
 
     // Main \\
@@ -289,6 +340,9 @@ public class GridSystem {
 
         // Determine which chunks need to be loaded where
         createQueue();
+
+        // Reorganize model batches
+        reorganizeModelBatches();
     }
 
     private void clearQueue() {
@@ -335,10 +389,29 @@ public class GridSystem {
                 loadedChunk.moveTo(gridCoordinate);
 
             else { // If the chunkCoordinate could not be found add it to the queue
+
                 gridToChunkMap.put(gridCoordinate, chunkCoordinate);
                 chunkToGridMap.put(chunkCoordinate, gridCoordinate);
                 loadQueue.enqueue(gridCoordinate);
             }
+        }
+    }
+
+    private void reorganizeModelBatches() {
+
+        for (int i = 0; i < totalChunks; i++) {
+
+            long gridCoordinate = loadOrder[i];
+
+            Model model = chunkModels.get(gridCoordinate);
+            model.meshParts.clear();
+
+            Chunk loadedChunk = loadedChunks.get(gridCoordinate);
+
+            if (loadedChunk == null)
+                continue;
+
+            model.meshParts.add(loadedChunk.meshPart);
         }
     }
 
@@ -357,8 +430,6 @@ public class GridSystem {
 
             if (loadedChunk == null)
                 continue;
-
-            modelInstances.remove(chunkCoordinate);
 
             // Remove from unloadQueue
             iterator.remove();
@@ -447,6 +518,7 @@ public class GridSystem {
             Chunk[] neighbors = getNeighborsIfLoaded(loadedChunk);
 
             if (neighbors == NEIGHBOR_OUT_OF_GRID) {
+
                 index = incrementQueueTotal(index);
                 continue;
             }
@@ -460,9 +532,6 @@ public class GridSystem {
             }
 
             boolean hasModel = loadedChunk.tryBuild(neighbors);
-
-            if (hasModel)
-                modelInstances.put(chunkCoordinate, loadedChunk.modelInstance);
 
             index = incrementQueueTotal(index);
         }
@@ -526,6 +595,9 @@ public class GridSystem {
 
             loadedChunk.moveTo(gridCoordinate);
             loadedChunks.put(chunkCoordinate, loadedChunk);
+
+            Model model = chunkModels.get(gridCoordinate);
+            model.meshParts.add(loadedChunk.meshPart);
 
             index++;
         }

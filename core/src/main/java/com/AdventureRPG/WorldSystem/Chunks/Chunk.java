@@ -3,7 +3,8 @@ package com.AdventureRPG.WorldSystem.Chunks;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
-import com.badlogic.gdx.graphics.g3d.ModelInstance;
+import com.badlogic.gdx.graphics.Mesh;
+import com.badlogic.gdx.graphics.g3d.model.MeshPart;
 
 public class Chunk {
 
@@ -27,7 +28,8 @@ public class Chunk {
     public int positionX, positionY;
 
     // Model Instance
-    public ModelInstance modelInstance;
+    public final MeshPart meshPart;
+    public Mesh mesh;
 
     // Base \\
 
@@ -47,6 +49,8 @@ public class Chunk {
         worldSystem.wrapAroundWorld(east);
         this.west = Coordinate2Int.add(coordinate, Direction2Int.WEST.packed);
         worldSystem.wrapAroundWorld(west);
+
+        meshPart = new MeshPart();
     }
 
     // Data \\
