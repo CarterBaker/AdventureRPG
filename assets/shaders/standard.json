@@ -1,4 +1,4 @@
 {
-    "vertex": "surface/standard.vert",
-    "fragment": "surface/standard.frag"
+    "vertex": "surface/standard.vsh",
+    "fragment": "surface/standard.fsh"
 }

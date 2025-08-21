@@ -4,16 +4,19 @@ import java.io.File;
 import java.time.Instant;
 
 import com.AdventureRPG.GameManager;
+import com.AdventureRPG.LightingSystem.LightingSystem;
 import com.AdventureRPG.SaveSystem.UserData;
 import com.AdventureRPG.SettingsSystem.Settings;
 
 public class TimeSystem {
 
     // Debug
-    private boolean debug = true; // TODO: Remove debug line
+    private boolean debug = false; // TODO: Remove debug line
 
     // Game Manager
     public final Settings settings;
+    public final GameManager gameManager;
+    private LightingSystem lightingSystem;
 
     // Settings
     private final int MINUTES_PER_HOUR;
@@ -61,6 +64,7 @@ public class TimeSystem {
 
         // Game manager
         this.settings = gameManager.settings;
+        this.gameManager = gameManager;
 
         // Settings
         this.MINUTES_PER_HOUR = settings.MINUTES_PER_HOUR;
@@ -91,7 +95,7 @@ public class TimeSystem {
     }
 
     public void awake() {
-
+        this.lightingSystem = gameManager.lightingSystem;
     }
 
     public void start() {
@@ -225,6 +229,8 @@ public class TimeSystem {
 
         long totalDaysWithOffset = calculateTotalDaysWithOffset();
         long dayOfAge = totalDaysWithOffset % (YEARS_PER_AGE * totalDaysInYear);
+
+        lightingSystem.sky.generateRandomOffsetFromDay(totalDaysWithOffset);
 
         calculateDayOfWeek(totalDaysWithOffset);
         calculateDayOfMonth(totalDaysWithOffset, dayOfAge);

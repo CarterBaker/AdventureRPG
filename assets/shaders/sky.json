@@ -1,4 +1,4 @@
 {
-    "vertex": "sky/sky.vert",
-    "fragment": "sky/sky.frag"
+    "vertex": "sky/sky.vsh",
+    "fragment": "sky/sky.fsh"
 }

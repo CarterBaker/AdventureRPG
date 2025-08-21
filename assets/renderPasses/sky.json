@@ -12,6 +12,18 @@
         "u_timeOfDay": {
             "type": "FLOAT",
             "value": 0
+        },
+        "u_randomNoiseFromDay": {
+            "type": "FLOAT",
+            "value": 0
+        },
+        "u_time": {
+            "type": "FLOAT",
+            "value": 0
+        },
+        "u_overcast": {
+            "type": "FLOAT",
+            "value": 0
         }
     }
 }
