@@ -17,7 +17,7 @@ public class ChunkSystem {
     private final ThreadManager threadManager;
     private final ChunkData chunkData;
     private final WorldSystem worldSystem;
-    private final WorldGenerator worldGenerator;
+    private WorldGenerator worldGenerator;
 
     // Settings
     private final int MAX_CHUNK_LOADS_PER_FRAME;
@@ -28,7 +28,7 @@ public class ChunkSystem {
     private final Queue<Chunk> buildRequests;
 
     private final Queue<Chunk> loadedResults;
-    private final Queue<ChunkModel> buildResults;
+    private final Queue<Chunk> builtResults;
 
     // Queue System
     private final QueueProcess[] queueProcess;
@@ -45,7 +45,6 @@ public class ChunkSystem {
         this.threadManager = gameManager.threadManager;
         this.chunkData = gameManager.saveSystem.chunkData;
         this.worldSystem = worldSystem;
-        this.worldGenerator = worldSystem.worldGenerator;
 
         // Settings
         this.MAX_CHUNK_LOADS_PER_FRAME = settings.MAX_CHUNK_LOADS_PER_FRAME;
@@ -56,7 +55,7 @@ public class ChunkSystem {
         this.buildRequests = new ConcurrentLinkedQueue<>();
 
         this.loadedResults = new ConcurrentLinkedQueue<>();
-        this.buildResults = new ConcurrentLinkedQueue<>();
+        this.builtResults = new ConcurrentLinkedQueue<>();
 
         // Queue System
         this.queueProcess = new QueueProcess[] {
@@ -67,6 +66,10 @@ public class ChunkSystem {
         this.queueBatch = 0;
         this.processPerBatch = 32;
         this.loadedChunksThisFrame = 0;
+    }
+
+    public void awake() {
+        this.worldGenerator = worldSystem.worldGenerator;
     }
 
     // Async System \\
@@ -85,6 +88,10 @@ public class ChunkSystem {
 
     public Chunk pollLoadedChunk() {
         return loadedResults.poll();
+    }
+
+    public Chunk pollBuiltChunk() {
+        return builtResults.poll();
     }
 
     // Queue System \\
@@ -177,6 +184,7 @@ public class ChunkSystem {
 
             // Run load in another thread
             threadManager.submitGeneration(() -> {
+
                 worldGenerator.generateChunk(loadedChunk);
             });
         }
@@ -196,7 +204,9 @@ public class ChunkSystem {
 
             // Run load in another thread
             threadManager.submitGeneral(() -> {
-                
+
+                loadedChunk.build();
+                builtResults.add(loadedChunk);
             });
 
             // Increment counters on main thread

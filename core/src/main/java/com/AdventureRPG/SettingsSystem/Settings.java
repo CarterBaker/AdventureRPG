@@ -47,7 +47,7 @@ public class Settings {
     public final int MINUTES_PER_HOUR; // How many minutes are in an hour
     public final int HOURS_PER_DAY; // How many hours are in a day
     public final int DAYS_PER_DAY; // How many in-game days fit inside a real world day
-    public final float MIDDAY_OFFSET; // The offset of days incomparison to real world days
+    public final float MIDDAY_OFFSET; // The offset of days in comparison to real world days
 
     public final int STARTING_DAY; // The day the game will start in
     public final int STARTING_MONTH; // The month the game will start in
@@ -72,6 +72,9 @@ public class Settings {
     public final float WORLD_TICK; // Internal clock used to throttle world load
     public final int MAX_CHUNK_LOADS_PER_FRAME; // 256 chunks per frame
     public final int MAX_CHUNK_LOADS_PER_TICK; // 120 frames per second
+
+    // Mesh Build Settings
+    public final int CHUNK_VERT_BUFFER;
 
     // Base \\
 
@@ -142,6 +145,9 @@ public class Settings {
         this.WORLD_TICK = builder.WORLD_TICK;
         this.MAX_CHUNK_LOADS_PER_FRAME = builder.MAX_CHUNK_LOADS_PER_FRAME;
         this.MAX_CHUNK_LOADS_PER_TICK = builder.MAX_CHUNK_LOADS_PER_TICK;
+
+        // Mesh Build Settings
+        this.CHUNK_VERT_BUFFER = builder.CHUNK_VERT_BUFFER;
     }
 
     // Builder \\
@@ -207,12 +213,15 @@ public class Settings {
         // Scale Settings
         public float BLOCK_SIZE = 1;
         public int CHUNK_SIZE = 16;
-        public int WORLD_HEIGHT = 1024;
+        public int WORLD_HEIGHT = 64;
 
         // World Tick Settings
         public float WORLD_TICK = 1;
         public int MAX_CHUNK_LOADS_PER_FRAME = 256;
         public int MAX_CHUNK_LOADS_PER_TICK = 16384;
+
+        // Mesh Build Settings
+        public int CHUNK_VERT_BUFFER = 128;
 
         // Base \\
 
@@ -442,6 +451,13 @@ public class Settings {
 
         public Builder MAX_CHUNK_LOADS_PER_TICK(int MAX_CHUNK_LOADS_PER_TICK) {
             this.MAX_CHUNK_LOADS_PER_TICK = MAX_CHUNK_LOADS_PER_TICK;
+            return this;
+        }
+
+        // Mesh Build Settings \\
+
+        public Builder CHUNK_VERT_BUFFER(int CHUNK_VERT_BUFFER) {
+            this.CHUNK_VERT_BUFFER = CHUNK_VERT_BUFFER;
             return this;
         }
 

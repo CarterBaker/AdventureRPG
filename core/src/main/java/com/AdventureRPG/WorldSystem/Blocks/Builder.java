@@ -1,22 +1,35 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
+import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.TextureManager.TextureManager;
 
 public class Builder {
 
     // Reference
-    public String name = "";
+    public String name = null;
 
     // Texture
-    public String up = "";
-    public String north = "";
-    public String south = "";
-    public String east = "";
-    public String west = "";
-    public String down = "";
+    public String texture = null;
+
+    public String upTex = null;
+    public String northTex = null;
+    public String southTex = null;
+    public String eastTex = null;
+    public String westTex = null;
+    public String downTex = null;
+
+    // Texture
+    public String material = null;
+
+    public String upMat = null;
+    public String northMat = null;
+    public String southMat = null;
+    public String eastMat = null;
+    public String westMat = null;
+    public String downMat = null;
 
     // State
-    public State state;
+    public Type type;
 
     // Base \\
 
@@ -25,42 +38,82 @@ public class Builder {
         return this;
     }
 
-    public Builder up(String up) {
-        this.up = up;
+    public Builder texture(String texture) {
+        this.texture = texture;
         return this;
     }
 
-    public Builder north(String north) {
-        this.north = north;
+    public Builder upTex(String upTex) {
+        this.upTex = upTex;
         return this;
     }
 
-    public Builder south(String south) {
-        this.south = south;
+    public Builder northTex(String northTex) {
+        this.northTex = northTex;
         return this;
     }
 
-    public Builder east(String east) {
-        this.east = east;
+    public Builder southTex(String southTex) {
+        this.southTex = southTex;
         return this;
     }
 
-    public Builder west(String west) {
-        this.west = west;
+    public Builder eastTex(String eastTex) {
+        this.eastTex = eastTex;
         return this;
     }
 
-    public Builder down(String down) {
-        this.down = down;
+    public Builder westTex(String westTex) {
+        this.westTex = westTex;
         return this;
     }
 
-    public Builder state(State state) {
-        this.state = state;
+    public Builder downTex(String downTex) {
+        this.downTex = downTex;
         return this;
     }
 
-    public Block build(TextureManager textureManager, int id) {
-        return new Block(textureManager, this, id);
+    public Builder material(String material) {
+        this.material = material;
+        return this;
+    }
+
+    public Builder upMat(String upMat) {
+        this.upMat = upMat;
+        return this;
+    }
+
+    public Builder northMat(String northMat) {
+        this.northMat = northMat;
+        return this;
+    }
+
+    public Builder southMat(String southMat) {
+        this.southMat = southMat;
+        return this;
+    }
+
+    public Builder eastMat(String eastMat) {
+        this.eastMat = eastMat;
+        return this;
+    }
+
+    public Builder westMat(String westMat) {
+        this.westMat = westMat;
+        return this;
+    }
+
+    public Builder downMat(String downMat) {
+        this.downMat = downMat;
+        return this;
+    }
+
+    public Builder type(Type type) {
+        this.type = type;
+        return this;
+    }
+
+    public Block build(TextureManager textureManager, MaterialManager materialManager, int id) {
+        return new Block(textureManager, materialManager, this, id);
     }
 }

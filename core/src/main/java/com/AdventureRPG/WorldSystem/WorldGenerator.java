@@ -5,6 +5,7 @@ import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate3Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
+import com.AdventureRPG.WorldSystem.Blocks.BlockCoordinateEncryptor;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 
@@ -21,6 +22,9 @@ public class WorldGenerator {
     private final int CHUNK_SIZE;
     private final int WORLD_HEIGHT;
 
+    // Block Management
+    private final BlockCoordinateEncryptor blockCoordinateEncryptor;
+
     // Default Blocks
     private final Block AIR_BLOCK; // TODO: With 2D chunk coordinates this is
     private final Block LAVA_BLOCK; // No longer possible
@@ -29,8 +33,10 @@ public class WorldGenerator {
     private long seed;
 
     // Generation
-    private int[][][] biomes;
-    private int[][][] blocks;
+    private final int subChunkSize;
+
+    private int[] biomes;
+    private int[] blocks;
 
     // Base \\
 
@@ -47,6 +53,9 @@ public class WorldGenerator {
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
         this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
 
+        // Block Management
+        this.blockCoordinateEncryptor = worldSystem.blockCoordinateEncryptor;
+
         // Default Blocks
         this.AIR_BLOCK = worldSystem.getBlockByName("air");
         this.LAVA_BLOCK = worldSystem.getBlockByName("lava");
@@ -55,8 +64,10 @@ public class WorldGenerator {
         this.seed = userData.getSeed();
 
         // Generation
-        this.biomes = new int[CHUNK_SIZE][WORLD_HEIGHT][CHUNK_SIZE];
-        this.blocks = new int[CHUNK_SIZE][WORLD_HEIGHT][CHUNK_SIZE];
+        this.subChunkSize = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+
+        this.biomes = new int[subChunkSize];
+        this.blocks = new int[subChunkSize];
     }
 
     // Data \\
@@ -84,11 +95,9 @@ public class WorldGenerator {
 
         // TODO: I want to get all the related biomes to base and mix them
 
-        for (int x = 0; x < CHUNK_SIZE; x++) {
-
-            for (int y = 0; y < WORLD_HEIGHT; y++) {
-
-                for (int z = 0; z < CHUNK_SIZE; z++) {
+        for (int blockCoordinate : blockCoordinateEncryptor.) {
+            
+        }
 
                     long blockOffset = Coordinate3Int.pack(x, y, z);
                     long blockCoordinate = Coordinate3Int.add(chunkCoordinate, blockOffset);
@@ -98,9 +107,7 @@ public class WorldGenerator {
 
                     biomes[x][y][z] = biomeID;
                     blocks[x][y][z] = blockID;
-                }
-            }
-        }
+
 
         chunk.generate(biomes, blocks);
     }

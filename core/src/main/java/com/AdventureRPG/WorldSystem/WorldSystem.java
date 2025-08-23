@@ -1,6 +1,7 @@
 package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.GameManager;
+import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.TextureManager.TextureManager;
@@ -10,6 +11,7 @@ import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
+import com.AdventureRPG.WorldSystem.Blocks.BlockCoordinateEncryptor;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
@@ -25,6 +27,7 @@ public class WorldSystem {
     public final GameManager gameManager;
     public final ThreadManager threadManager;
     public final TextureManager textureManager;
+    public final MaterialManager materialManager;
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
     public final Settings settings;
@@ -33,9 +36,11 @@ public class WorldSystem {
     private int maxRenderDistance;
     private final int CHUNKS_PER_PIXEL;
     private final int CHUNK_SIZE;
+    private final int WORLD_HEIGHT;
 
     // Block Management
     private final Block[] blocks;
+    public final BlockCoordinateEncryptor blockCoordinateEncryptor;
 
     // World System
     public final WorldTick worldTick;
@@ -58,6 +63,7 @@ public class WorldSystem {
         this.gameManager = gameManager;
         this.threadManager = gameManager.threadManager;
         this.textureManager = gameManager.textureManager;
+        this.materialManager = gameManager.materialManager;
         this.saveSystem = gameManager.saveSystem;
         this.UISystem = gameManager.UISystem;
         this.settings = gameManager.settings;
@@ -66,9 +72,11 @@ public class WorldSystem {
         this.maxRenderDistance = settings.maxRenderDistance;
         this.CHUNKS_PER_PIXEL = settings.CHUNKS_PER_PIXEL;
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
+        this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
 
         // Block Management
-        this.blocks = Loader.LoadBlocks(textureManager);
+        this.blocks = Loader.LoadBlocks(textureManager, materialManager);
+        this.blockCoordinateEncryptor = new BlockCoordinateEncryptor(settings);
 
         // World System
         this.worldTick = new WorldTick(this);
@@ -85,6 +93,7 @@ public class WorldSystem {
     }
 
     public void awake() {
+        chunkSystem.awake();
         gridSystem.awake();
         biomeSystem.awake();
     }
@@ -107,6 +116,11 @@ public class WorldSystem {
 
         gridSystem.render(modelBatch);
         biomeSystem.render();
+    }
+
+    // TODO: I will need to dispose all systems here
+    public void dispose() {
+
     }
 
     // Movement \\

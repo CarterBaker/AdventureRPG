@@ -2,6 +2,7 @@ package com.AdventureRPG.WorldSystem.Blocks;
 
 import java.util.List;
 
+import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.TextureManager.TextureManager;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
@@ -12,10 +13,7 @@ import com.google.gson.reflect.TypeToken;
 // TODO: AI largely made most of this. It needs intense scrutiny when I have time
 public class Loader {
 
-    // debug
-    private static final boolean debug = false; // TODO: Remove debug line
-
-    public static Block[] LoadBlocks(TextureManager textureManager) {
+    public static Block[] LoadBlocks(TextureManager textureManager, MaterialManager materialManager) {
 
         FileHandle file = Gdx.files.internal("blocks.json");
         String json = file.readString("UTF-8");
@@ -30,23 +28,7 @@ public class Loader {
         Block[] result = new Block[builders.size()];
 
         for (int i = 0; i < builders.size(); i++)
-            result[i] = builders.get(i).build(textureManager, i);
-
-        if (debug) // TODO: Remove debug line
-            for (Block block : result) {
-                System.out.println("______________________________");
-                System.out.println(block.name);
-                System.out.println(block.id);
-                System.out.println("");
-                System.out.println(block.up);
-                System.out.println(block.north);
-                System.out.println(block.south);
-                System.out.println(block.east);
-                System.out.println(block.west);
-                System.out.println(block.down);
-                System.out.println("");
-                System.out.println(block.state.toString());
-            }
+            result[i] = builders.get(i).build(textureManager, materialManager, i);
 
         return result;
     }

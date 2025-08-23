@@ -1,106 +1,58 @@
 [
     {
         "name": "Air",
-        "state": "GAS"
+        "type": "GAS"
     },
     {
         "name": "Water",
-        "up": "standard/water",
-        "north": "standard/water",
-        "south": "standard/water",
-        "east": "standard/water",
-        "west": "standard/water",
-        "down": "standard/water",
-        "state": "LIQUID"
+        "texture": "standard/water",
+        "type": "LIQUID"
     },
     {
         "name": "Lava",
-        "up": "standard/lava",
-        "north": "standard/lava",
-        "south": "standard/lava",
-        "east": "standard/lava",
-        "west": "standard/lava",
-        "down": "standard/lava",
-        "state": "LIQUID"
+        "texture": "standard/lava",
+        "type": "LIQUID"
     },
     {
         "name": "Grass Block",
-        "up": "standard/grassBlockUp",
-        "north": "standard/grassBlockNorth",
-        "south": "standard/grassBlockNorth",
-        "east": "standard/grassBlockNorth",
-        "west": "standard/grassBlockNorth",
-        "down": "standard/dirt",
-        "state": "SOLID"
+        "upTex": "standard/grassBlockUp",
+        "northTex": "standard/grassBlockNorth",
+        "downTex": "standard/dirt",
+        "type": "SOLID"
     },
     {
         "name": "Dirt Block",
-        "up": "standard/dirt",
-        "north": "standard/dirt",
-        "south": "standard/dirt",
-        "east": "standard/dirt",
-        "west": "standard/dirt",
-        "down": "standard/dirt",
-        "state": "SOLID"
+        "texture": "standard/dirt",
+        "type": "SOLID"
     },
     {
         "name": "Stone Block",
-        "up": "standard/stone",
-        "north": "standard/stone",
-        "south": "standard/stone",
-        "east": "standard/stone",
-        "west": "standard/stone",
-        "down": "standard/stone",
-        "state": "SOLID"
+        "texture": "standard/stone",
+        "type": "SOLID"
     },
     {
         "name": "Copper Ore",
-        "up": "standard/copperOre",
-        "north": "standard/copperOre",
-        "south": "standard/copperOre",
-        "east": "standard/copperOre",
-        "west": "standard/copperOre",
-        "down": "standard/copperOre",
-        "state": "SOLID"
+        "texture": "standard/copperOre",
+        "type": "SOLID"
     },
     {
         "name": "Iron Ore",
-        "up": "standard/ironOre",
-        "north": "standard/ironOre",
-        "south": "standard/ironOre",
-        "east": "standard/ironOre",
-        "west": "standard/ironOre",
-        "down": "standard/ironOre",
-        "state": "SOLID"
+        "texture": "standard/ironOre",
+        "type": "SOLID"
     },
     {
         "name": "Gold Ore",
-        "up": "standard/goldOre",
-        "north": "standard/goldOre",
-        "south": "standard/goldOre",
-        "east": "standard/goldOre",
-        "west": "standard/goldOre",
-        "down": "standard/goldOre",
-        "state": "SOLID"
+        "texture": "standard/goldOre",
+        "type": "SOLID"
     },
     {
         "name": "Coal Ore",
-        "up": "standard/coalOre",
-        "north": "standard/coalOre",
-        "south": "standard/coalOre",
-        "east": "standard/coalOre",
-        "west": "standard/coalOre",
-        "down": "standard/coalOre",
-        "state": "SOLID"
+        "texture": "standard/coalOre",
+        "type": "SOLID"
     },
     {
         "name": "Sand",
-        "up": "standard/sand",
-        "north": "standard/sand",
-        "south": "standard/sand",
-        "east": "standard/sand",
-        "west": "standard/sand",
-        "down": "standard/sand",
-        "state": "SOLID"
+        "texture": "standard/sand",
+        "type": "SOLID"
     }
 ]

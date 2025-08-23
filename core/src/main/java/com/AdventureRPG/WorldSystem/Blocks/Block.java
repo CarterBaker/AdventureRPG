@@ -1,5 +1,6 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
+import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.TextureManager.TextureManager;
 
 public class Block {
@@ -7,27 +8,63 @@ public class Block {
     public final String name;
     public final int id;
 
-    public final int up;
-    public final int north;
-    public final int south;
-    public final int east;
-    public final int west;
-    public final int down;
+    public final int upTex;
+    public final int northTex;
+    public final int southTex;
+    public final int eastTex;
+    public final int westTex;
+    public final int downTex;
 
-    public final State state;
+    public final int upMat;
+    public final int northMat;
+    public final int southMat;
+    public final int eastMat;
+    public final int westMat;
+    public final int downMat;
 
-    public Block(TextureManager textureManager, Builder builder, int id) {
+    public final Type type;
+
+    public Block(TextureManager textureManager, MaterialManager materialManager, Builder builder, int id) {
 
         this.name = builder.name;
         this.id = id;
 
-        this.up = (textureManager != null) ? textureManager.getIDFromTexture(builder.up) : -9;
-        this.north = (textureManager != null) ? textureManager.getIDFromTexture(builder.north) : -9;
-        this.south = (textureManager != null) ? textureManager.getIDFromTexture(builder.south) : -9;
-        this.east = (textureManager != null) ? textureManager.getIDFromTexture(builder.east) : -9;
-        this.west = (textureManager != null) ? textureManager.getIDFromTexture(builder.west) : -9;
-        this.down = (textureManager != null) ? textureManager.getIDFromTexture(builder.down) : -9;
+        if (builder.texture != null) {
+            this.upTex = textureManager.getIDFromTexture(builder.texture);
+            this.northTex = textureManager.getIDFromTexture(builder.texture);
+            this.southTex = textureManager.getIDFromTexture(builder.texture);
+            this.eastTex = textureManager.getIDFromTexture(builder.texture);
+            this.westTex = textureManager.getIDFromTexture(builder.texture);
+            this.downTex = textureManager.getIDFromTexture(builder.texture);
+        }
 
-        this.state = builder.state;
+        else {
+            this.upTex = textureManager.getIDFromTexture(builder.upTex);
+            this.northTex = (builder.northTex != null) ? textureManager.getIDFromTexture(builder.northTex) : this.upTex;
+            this.southTex = (builder.southTex != null) ? textureManager.getIDFromTexture(builder.southTex) : this.northTex;
+            this.eastTex = (builder.eastTex != null) ? textureManager.getIDFromTexture(builder.eastTex) : this.southTex;
+            this.westTex = (builder.westTex != null) ? textureManager.getIDFromTexture(builder.westTex) : this.eastTex;
+            this.downTex = (builder.downTex != null) ? textureManager.getIDFromTexture(builder.downTex) : this.westTex;
+        }
+
+        if (builder.material != null) {
+            this.upMat = textureManager.getIDFromTexture(builder.material);
+            this.northMat = textureManager.getIDFromTexture(builder.material);
+            this.southMat = textureManager.getIDFromTexture(builder.material);
+            this.eastMat = textureManager.getIDFromTexture(builder.material);
+            this.westMat = textureManager.getIDFromTexture(builder.material);
+            this.downMat = textureManager.getIDFromTexture(builder.material);
+        }
+
+        else {
+            this.upMat = (builder.upMat != null) ? textureManager.getIDFromTexture(builder.upMat) : this.upTex;
+            this.northMat = (builder.northMat != null) ? textureManager.getIDFromTexture(builder.northMat) : this.upMat;
+            this.southMat = (builder.southMat != null) ? textureManager.getIDFromTexture(builder.southMat) : this.northMat;
+            this.eastMat = (builder.eastMat != null) ? textureManager.getIDFromTexture(builder.eastMat) : this.southMat;
+            this.westMat = (builder.westMat != null) ? textureManager.getIDFromTexture(builder.westMat) : this.eastMat;
+            this.downMat = (builder.downMat != null) ? textureManager.getIDFromTexture(builder.downMat) : this.westMat;
+        }
+
+        this.type = builder.type;
     }
 }

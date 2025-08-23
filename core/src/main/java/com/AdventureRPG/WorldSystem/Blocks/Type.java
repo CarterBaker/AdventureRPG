@@ -1,8 +1,7 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
-public enum State {
+public enum Type {
     SOLID,
     LIQUID,
-    GAS,
-    ENERGY
+    GAS
 }

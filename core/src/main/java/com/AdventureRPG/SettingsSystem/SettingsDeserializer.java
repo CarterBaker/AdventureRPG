@@ -160,6 +160,10 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         if (obj.has("MAX_CHUNK_LOADS_PER_TICK"))
             builder.MAX_CHUNK_LOADS_PER_TICK(obj.get("MAX_CHUNK_LOADS_PER_TICK").getAsInt());
 
+        // Mesh Build Settings
+        if (obj.has("CHUNK_VERT_BUFFER"))
+            builder.CHUNK_VERT_BUFFER(obj.get("CHUNK_VERT_BUFFER").getAsInt());
+
         return builder.build();
     }
 }
