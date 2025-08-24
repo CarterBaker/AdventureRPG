@@ -11,22 +11,27 @@ import com.badlogic.gdx.utils.IntArray;
 
 public class ChunkModel {
 
+    // Data
+    int[] biomes, blocks;
+
     // Neighbors
     private Chunk north, south, east, west;
+    public int[] northBiomes, southBiomes, eastBiomes, westBiomes;
+    public int[] northBlocks, southBlocks, eastBlocks, westBlocks;
 
     // Mesh
     private List<MeshPart> meshPart;
     private List<Mesh> mesh;
     private List<Material> material;
 
-    // Data
+    // Qauds
     private volatile IntArray[] quadData;
 
     // Base \\
 
     public ChunkModel(Settings settings) {
 
-        // Data
+        // Qauds
         this.quadData = new IntArray[settings.WORLD_HEIGHT];
     }
 
@@ -34,7 +39,22 @@ public class ChunkModel {
 
     }
 
+    // Data \\
+
+    public int getBiome(int xyz) {
+        return biomes[xyz];
+    }
+
+    public int getBlock(int xyz) {
+        return blocks[xyz];
+    }
+
     // Neighbors \\
+
+    public void assignData(int[] biomes, int[] blocks) {
+        this.biomes = biomes;
+        this.blocks = blocks;
+    }
 
     public void assignNeighbors(Chunk[] neighbors) {
 
@@ -42,6 +62,16 @@ public class ChunkModel {
         south = neighbors[1];
         east = neighbors[2];
         west = neighbors[3];
+
+        northBiomes = north.getBiomes();
+        southBiomes = south.getBiomes();
+        eastBiomes = east.getBiomes();
+        westBiomes = west.getBiomes();
+
+        northBlocks = north.getBlocks();
+        southBlocks = south.getBlocks();
+        eastBlocks = east.getBlocks();
+        westBlocks = west.getBlocks();
     }
 
     Chunk getNorthNeighbor() {

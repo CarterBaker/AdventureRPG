@@ -5,8 +5,8 @@ import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate3Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
-import com.AdventureRPG.WorldSystem.Blocks.BlockCoordinateEncryptor;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
+import com.AdventureRPG.WorldSystem.Chunks.ChunkCoordinates;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 
 public class WorldGenerator {
@@ -23,7 +23,7 @@ public class WorldGenerator {
     private final int WORLD_HEIGHT;
 
     // Block Management
-    private final BlockCoordinateEncryptor blockCoordinateEncryptor;
+    private final ChunkCoordinates chunkCoordinates;
 
     // Default Blocks
     private final Block AIR_BLOCK; // TODO: With 2D chunk coordinates this is
@@ -31,12 +31,6 @@ public class WorldGenerator {
 
     // Data
     private long seed;
-
-    // Generation
-    private final int subChunkSize;
-
-    private int[] biomes;
-    private int[] blocks;
 
     // Base \\
 
@@ -54,7 +48,7 @@ public class WorldGenerator {
         this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
 
         // Block Management
-        this.blockCoordinateEncryptor = worldSystem.blockCoordinateEncryptor;
+        this.chunkCoordinates = worldSystem.chunkCoordinates;
 
         // Default Blocks
         this.AIR_BLOCK = worldSystem.getBlockByName("air");
@@ -62,12 +56,6 @@ public class WorldGenerator {
 
         // Data
         this.seed = userData.getSeed();
-
-        // Generation
-        this.subChunkSize = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-
-        this.biomes = new int[subChunkSize];
-        this.blocks = new int[subChunkSize];
     }
 
     // Data \\
@@ -88,6 +76,10 @@ public class WorldGenerator {
 
         long chunkCoordinate = Coordinate3Int.pack(chunk.coordinateX, 0, chunk.coordinateY);
 
+        int chunkSize = chunkCoordinates.chunkSize;
+        int[] biomes = new int[chunkSize];
+        int[] blocks = new int[chunkSize];
+
         // TODO: The first step of world generation will be to get the base biome
         WorldRegion WorldRegion = worldSystem.worldReader.worldRegionFromPosition(chunk.coordinate);
 
@@ -95,21 +87,20 @@ public class WorldGenerator {
 
         // TODO: I want to get all the related biomes to base and mix them
 
-        for (int blockCoordinate : blockCoordinateEncryptor.) {
-            
+        for (int index = 0; index < chunkSize; index++) {
+
+            int xyz = chunkCoordinates.getCoordinates(index);
+            long blockOffset = chunkCoordinates.convertToCoordinate3Int(xyz);
+            long blockCoordinate = Coordinate3Int.add(chunkCoordinate, blockOffset);
+
+            int biomeID = generateBiome(blockCoordinate);
+            int blockID = generateBlock(blockCoordinate);
+
+            biomes[xyz] = biomeID;
+            blocks[xyz] = blockID;
+
+            chunk.generate(biomes, blocks);
         }
-
-                    long blockOffset = Coordinate3Int.pack(x, y, z);
-                    long blockCoordinate = Coordinate3Int.add(chunkCoordinate, blockOffset);
-
-                    int biomeID = generateBiome(blockCoordinate);
-                    int blockID = generateBlock(blockCoordinate);
-
-                    biomes[x][y][z] = biomeID;
-                    blocks[x][y][z] = blockID;
-
-
-        chunk.generate(biomes, blocks);
     }
 
     // Biome \\

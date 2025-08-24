@@ -1,5 +1,6 @@
 {
     "name": "Ocean",
     "ID": 0,
+    "biomeColor": "#228B22",
     "airBlock": 0
 }

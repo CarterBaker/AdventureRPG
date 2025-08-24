@@ -11,8 +11,9 @@ import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
-import com.AdventureRPG.WorldSystem.Blocks.BlockCoordinateEncryptor;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
+import com.AdventureRPG.WorldSystem.Blocks.Type;
+import com.AdventureRPG.WorldSystem.Chunks.ChunkCoordinates;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
@@ -21,7 +22,7 @@ import com.badlogic.gdx.math.Vector3;
 public class WorldSystem {
 
     // Debug
-    private final boolean debug = false; // TODO: Remove debug line
+    private final boolean debug = true; // TODO: Remove debug line
 
     // Game Manager
     public final GameManager gameManager;
@@ -36,13 +37,12 @@ public class WorldSystem {
     private int maxRenderDistance;
     private final int CHUNKS_PER_PIXEL;
     private final int CHUNK_SIZE;
-    private final int WORLD_HEIGHT;
 
     // Block Management
     private final Block[] blocks;
-    public final BlockCoordinateEncryptor blockCoordinateEncryptor;
 
     // World System
+    public final ChunkCoordinates chunkCoordinates;
     public final WorldTick worldTick;
     public final WorldReader worldReader;
     public final ChunkSystem chunkSystem;
@@ -72,11 +72,10 @@ public class WorldSystem {
         this.maxRenderDistance = settings.maxRenderDistance;
         this.CHUNKS_PER_PIXEL = settings.CHUNKS_PER_PIXEL;
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
-        this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
 
         // Block Management
         this.blocks = Loader.LoadBlocks(textureManager, materialManager);
-        this.blockCoordinateEncryptor = new BlockCoordinateEncryptor(settings);
+        this.chunkCoordinates = new ChunkCoordinates(settings);
 
         // World System
         this.worldTick = new WorldTick(this);
@@ -165,6 +164,10 @@ public class WorldSystem {
                 return block;
 
         throw new RuntimeException("Block not found: " + name);
+    }
+
+    public Type getBlockType(int id) {
+        return (id >= 0 && id < blocks.length) ? blocks[id].type : null;
     }
 
     // Wrap Logic \\

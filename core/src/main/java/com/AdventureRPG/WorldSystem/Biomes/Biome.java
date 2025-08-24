@@ -1,10 +1,13 @@
 package com.AdventureRPG.WorldSystem.Biomes;
 
+import com.badlogic.gdx.graphics.Color;
+
 public class Biome {
 
     // Base
     public final String name;
     public final int id;
+    public final Color biomeColor;
 
     // Composition
     public final int airBlock;
@@ -16,6 +19,7 @@ public class Biome {
         // Base
         this.name = "null";
         this.id = 0;
+        this.biomeColor = Color.WHITE;
 
         // Composition
         this.airBlock = 0;
@@ -26,6 +30,7 @@ public class Biome {
         // Base
         this.name = builder.name;
         this.id = builder.id;
+        this.biomeColor = builder.biomeColor;
 
         // Composition
         this.airBlock = builder.airBlock;
@@ -36,6 +41,7 @@ public class Biome {
         // Base
         private String name;
         private int id;
+        private Color biomeColor;
 
         // Composition
         private int airBlock;
@@ -49,6 +55,11 @@ public class Biome {
 
         public Builder id(int id) {
             this.id = id;
+            return this;
+        }
+
+        public Builder biomeColor(Color biomeColor) {
+            this.biomeColor = biomeColor;
             return this;
         }
 

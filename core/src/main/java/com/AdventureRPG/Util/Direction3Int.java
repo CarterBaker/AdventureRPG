@@ -19,4 +19,13 @@ public enum Direction3Int {
         this.z = z;
         this.packed = Coordinate3Int.pack(x, y, z);
     }
+
+    public static final Direction3Int[] DIRECTIONS = {
+            Direction3Int.UP,
+            Direction3Int.NORTH,
+            Direction3Int.SOUTH,
+            Direction3Int.EAST,
+            Direction3Int.WEST,
+            Direction3Int.DOWN
+    };
 }

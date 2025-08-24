@@ -8,9 +8,14 @@ import com.AdventureRPG.WorldSystem.Biomes.Biome;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.badlogic.gdx.graphics.g3d.Model;
-import com.badlogic.gdx.utils.IntArray;
 
 public class Chunk {
+
+    // Game Manager
+    public final WorldSystem worldSystem;
+    public final ChunkCoordinates chunkCoordinates;
+    private final GridSystem gridSystem;
+    private final BiomeSystem biomeSystem;
 
     // Settings
     public final Settings settings;
@@ -18,10 +23,6 @@ public class Chunk {
     public final int WORLD_HEIGHT;
 
     // Chunk
-    private final WorldSystem worldSystem;
-    private final GridSystem gridSystem;
-    private final BiomeSystem biomeSystem;
-
     public final long coordinate;
     public final int coordinateX, coordinateY;
 
@@ -30,7 +31,7 @@ public class Chunk {
 
     // Data
     private boolean hasData;
-    private IntArray[] biomes, blocks;
+    private int[] biomes, blocks;
 
     // Position
     public long position;
@@ -43,16 +44,17 @@ public class Chunk {
 
     public Chunk(WorldSystem worldSystem, long coordinate) {
 
+        // Game Manager
+        this.worldSystem = worldSystem;
+        this.chunkCoordinates = worldSystem.chunkCoordinates;
+        this.gridSystem = worldSystem.gridSystem;
+        this.biomeSystem = worldSystem.biomeSystem;
         // Settings
         this.settings = worldSystem.settings;
         this.CHUNK_SIZE = worldSystem.settings.CHUNK_SIZE;
         this.WORLD_HEIGHT = worldSystem.settings.WORLD_HEIGHT;
 
         // Chunk
-        this.worldSystem = worldSystem;
-        this.gridSystem = worldSystem.gridSystem;
-        this.biomeSystem = worldSystem.biomeSystem;
-
         this.coordinate = coordinate;
         this.coordinateX = Coordinate2Int.unpackX(coordinate);
         this.coordinateY = Coordinate2Int.unpackY(coordinate);
@@ -82,31 +84,13 @@ public class Chunk {
         return hasData;
     }
 
-    public void generate(int[][][] biomes, int[][][] blocks) {
+    public void generate(int[] biomes, int[] blocks) {
 
         this.hasData = true;
-        this.biomes = new IntArray[WORLD_HEIGHT];
-        this.blocks = new IntArray[WORLD_HEIGHT];
+        this.biomes = biomes;
+        this.blocks = blocks;
 
-        for (int subChunk = 0; subChunk < WORLD_HEIGHT; subChunk++) {
-
-            this.biomes[subChunk] = new IntArray();
-            this.blocks[subChunk] = new IntArray();
-
-            int subChunkOffset = subChunk * CHUNK_SIZE;
-
-            for (int x = 0; x < CHUNK_SIZE; x++) {
-
-                for (int y = subChunkOffset; y < subChunkOffset + CHUNK_SIZE; y++) {
-
-                    for (int z = 0; z < CHUNK_SIZE; z++) {
-
-                        this.biomes[subChunk].add(biomes[x][y][z]);
-                        this.blocks[subChunk].add(blocks[x][y][z]);
-                    }
-                }
-            }
-        }
+        chunkModel.assignData(biomes, blocks);
     }
 
     // Position \\
@@ -138,22 +122,22 @@ public class Chunk {
         ChunkBuilder.build(this, subChunk);
     }
 
-    public IntArray getBiomes(int subChunk) {
-        return biomes[subChunk];
+    public int[] getBiomes() {
+        return biomes;
     }
 
-    public IntArray getBlocks(int subChunk) {
-        return blocks[subChunk];
+    public int[] getBlocks() {
+        return blocks;
     }
 
     // Gameplay \\
 
     public void placeBlock(int x, int y, int z, int blockID) {
 
-        int subChunk = worldSystem.getSubChunkFromAxis(y);
-        int index = worldSystem.getFlattenedArrayIndex(x, y, z);
+        int xyz = chunkCoordinates.pack(x, y, z);
+        blocks[xyz] = blockID;
 
-        blocks[subChunk].set(index, blockID);
+        int subChunk = chunkCoordinates.getSubChunk(y);
 
         build(subChunk);
 
@@ -162,13 +146,14 @@ public class Chunk {
 
     public void breakBlock(int x, int y, int z) {
 
-        int subChunk = worldSystem.getSubChunkFromAxis(y);
-        int index = worldSystem.getFlattenedArrayIndex(x, y, z);
+        int xyz = chunkCoordinates.pack(x, y, z);
 
-        int biomeID = biomes[subChunk].get(index);
+        int biomeID = biomes[xyz];
         Biome biome = biomeSystem.getBiomeByID(biomeID);
 
-        blocks[subChunk].set(index, biome.airBlock);
+        blocks[xyz] = biome.airBlock;
+
+        int subChunk = chunkCoordinates.getSubChunk(y);
 
         build(subChunk);
 
