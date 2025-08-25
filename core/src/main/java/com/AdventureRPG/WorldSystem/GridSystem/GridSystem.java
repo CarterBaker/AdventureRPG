@@ -54,21 +54,15 @@ public class GridSystem {
     private Long2ObjectOpenHashMap<Chunk> unloadQueue;
     private LongArrayFIFOQueue loadQueue;
     private LongArrayFIFOQueue generateQueue;
+    private LongArrayFIFOQueue assessmentQueue;
     private LongArrayFIFOQueue buildQueue;
 
-    private final QueueProcess[] queueProcess;
-    private int queueBatch;
-    private final int processPerBatch;
     private int loadedChunksThisFrame;
     private int loadedChunksThisTick;
 
     // Model Instance
     private Long2ObjectOpenHashMap<Model> chunkModels;
     private Long2ObjectOpenHashMap<ModelInstance> chunkInstances;
-
-    // Utility
-    private final Chunk[] neighborChunks;
-    private final Chunk[] NEIGHBOR_OUT_OF_GRID;
 
     // Base \\
 
@@ -105,26 +99,15 @@ public class GridSystem {
         this.unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
         this.loadQueue = new LongArrayFIFOQueue(totalChunks);
         this.generateQueue = new LongArrayFIFOQueue(totalChunks);
+        this.assessmentQueue = new LongArrayFIFOQueue(totalChunks);
         this.buildQueue = new LongArrayFIFOQueue(totalChunks);
 
-        this.queueProcess = new QueueProcess[] {
-                QueueProcess.Unload,
-                QueueProcess.Load,
-                QueueProcess.Generate,
-                QueueProcess.Build
-        };
-        this.queueBatch = 0;
-        this.processPerBatch = 32;
         this.loadedChunksThisFrame = 0;
         this.loadedChunksThisTick = 0;
 
         // Model Instance
         this.chunkModels = new Long2ObjectOpenHashMap<>(totalChunks);
         this.chunkInstances = new Long2ObjectOpenHashMap<>(totalChunks);
-
-        // Utility
-        this.neighborChunks = new Chunk[4];
-        this.NEIGHBOR_OUT_OF_GRID = new Chunk[0];
     }
 
     public void awake() {
@@ -279,48 +262,45 @@ public class GridSystem {
 
         ReceiveData();
 
-        // Alternating queue update
-        if (hasQueue())
+        while (!totalProcessThisFrame() && hasQueue()) {
 
-            for (int i = 0; i < queueProcess.length; i++) {
+            QueueProcess next = pickNextQueue();
 
-                if (queueProcess[queueBatch].process(this))
-                    return;
+            if (next == null)
+                break;
 
-                queueBatch = (queueBatch + 1) % queueProcess.length;
-            }
-
-        // Return data from other threads
-        chunkSystem.processData();
+            while (!totalProcessThisFrame() && getQueueSize(next) > 0)
+                if (!next.process(this))
+                    break;
+        }
     }
 
-    enum QueueProcess {
+    private QueueProcess pickNextQueue() {
 
-        Unload {
-            boolean process(GridSystem system) {
-                return system.unloadQueue();
+        QueueProcess priorityQueue = null;
+        int priorityScore = 0;
+
+        for (QueueProcess queue : QueueProcess.values()) {
+
+            int queueScore = getQueueScore(queue);
+
+            if (queueScore > priorityScore) {
+                priorityQueue = queue;
+                priorityScore = queueScore;
             }
-        },
+        }
 
-        Load {
-            boolean process(GridSystem system) {
-                return system.loadQueue();
-            }
-        },
+        return priorityQueue;
+    }
 
-        Generate {
-            boolean process(GridSystem system) {
-                return system.generateQueue();
-            }
-        },
+    private int getQueueScore(QueueProcess process) {
 
-        Build {
-            boolean process(GridSystem system) {
-                return system.buildQueue();
-            }
-        };
+        int queueSize = getQueueSize(process);
 
-        abstract boolean process(GridSystem system);
+        if (queueSize == 0)
+            return 0;
+
+        return queueSize + process.getPriority() * 100;
     }
 
     // Render \\
@@ -370,6 +350,7 @@ public class GridSystem {
         gridToChunkMap.clear();
         chunkToGridMap.clear();
         loadQueue.clear();
+        assessmentQueue.clear();
 
         // Reversely remove all computed Coordinate2Ints from unloadQueue for efficiency
         unloadQueue.putAll(loadedChunks);
@@ -402,8 +383,14 @@ public class GridSystem {
             Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
 
             // If the chunk was loaded we move it to the new grid position
-            if (loadedChunk != null)
+            if (loadedChunk != null) {
+
                 loadedChunk.moveTo(gridCoordinate);
+
+                // Assign the chunk to be assessed for existing neighbors if it exists
+                if (!loadedChunk.hasAllNeighbors())
+                    assessmentQueue.enqueue(chunkCoordinate);
+            }
 
             else { // If the chunkCoordinate could not be found add it to the queue
 
@@ -522,6 +509,34 @@ public class GridSystem {
         return totalProcessThisFrame();
     }
 
+    // Assessment \\
+
+    private boolean assessmentQueue() {
+
+        int index = 0;
+
+        while (index < assessmentQueue.size() && processIsSafe(index)) {
+
+            long chunkCoordinate = assessmentQueue.dequeueLong();
+            Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
+
+            if (loadedChunk == null) {
+
+                loadedChunks.remove(chunkCoordinate);
+                continue;
+            }
+
+            boolean foundAllNeighbors = loadedChunk.assessNeighbors();
+
+            if (!foundAllNeighbors)
+                assessmentQueue.enqueue(chunkCoordinate);
+
+            index = incrementQueueTotal(index);
+        }
+
+        return totalProcessThisFrame();
+    }
+
     // Build \\
 
     private boolean buildQueue() {
@@ -536,65 +551,19 @@ public class GridSystem {
             if (loadedChunk == null) {
 
                 loadedChunks.remove(chunkCoordinate);
-                return totalProcessThisFrame();
-            }
-
-            Chunk[] neighbors = getNeighborsIfLoaded(loadedChunk);
-
-            if (neighbors == NEIGHBOR_OUT_OF_GRID) {
-
-                index = incrementQueueTotal(index);
                 continue;
             }
 
-            if (neighbors == null) {
+            if (loadedChunk.hasCardinalNeighbors())
+                chunkSystem.requestBuild(loadedChunk);
 
-                buildQueue.enqueue(chunkCoordinate);
-
-                index = incrementQueueTotal(index);
-                continue;
-            }
-
-            loadedChunk.assignNeighbors(neighbors);
-            chunkSystem.requestBuild(loadedChunk);
+            if (!loadedChunk.hasCardinalNeighbors())
+                assessmentQueue.enqueue(chunkCoordinate);
 
             index = incrementQueueTotal(index);
         }
 
         return totalProcessThisFrame();
-    }
-
-    public Chunk[] getNeighborsIfLoaded(Chunk loadedChunk) {
-
-        long north = loadedChunk.north;
-        long south = loadedChunk.south;
-        long east = loadedChunk.east;
-        long west = loadedChunk.west;
-
-        neighborChunks[0] = loadedChunks.get(north);
-        neighborChunks[1] = loadedChunks.get(south);
-        neighborChunks[2] = loadedChunks.get(east);
-        neighborChunks[3] = loadedChunks.get(west);
-
-        if ((neighborChunks[0] == null || !neighborChunks[0].hasData())
-                || (neighborChunks[1] == null || !neighborChunks[1].hasData())
-                || (neighborChunks[2] == null || !neighborChunks[2].hasData())
-                || (neighborChunks[3] == null || !neighborChunks[3].hasData())) {
-
-            // If missing neighbor and outside grid → never going to load
-            if (neighborChunks[0] == null && !chunkCoordinates.contains(north))
-                return NEIGHBOR_OUT_OF_GRID;
-            if (neighborChunks[1] == null && !chunkCoordinates.contains(south))
-                return NEIGHBOR_OUT_OF_GRID;
-            if (neighborChunks[2] == null && !chunkCoordinates.contains(east))
-                return NEIGHBOR_OUT_OF_GRID;
-            if (neighborChunks[3] == null && !chunkCoordinates.contains(west))
-                return NEIGHBOR_OUT_OF_GRID;
-
-            return null; // Not all neighbors are loaded
-        }
-
-        return neighborChunks;
     }
 
     // Thread Queue \\
@@ -607,9 +576,7 @@ public class GridSystem {
 
     private void receiveLoadedChunks() {
 
-        int index = 0;
-
-        while (index < processPerBatch && chunkSystem.hasReturnData()) {
+        while (chunkSystem.hasReturnData()) {
 
             Chunk loadedChunk = chunkSystem.pollLoadedChunk();
 
@@ -627,19 +594,14 @@ public class GridSystem {
                 loadedChunks.put(chunkCoordinate, loadedChunk);
             }
 
-            else {
+            else
                 loadedChunk.dispose();
-            }
-
-            index++;
         }
     }
 
     private void receiveBuiltChunks() {
 
-        int index = 0;
-
-        while (index < processPerBatch && chunkSystem.hasReturnData()) {
+        while (chunkSystem.hasReturnData()) {
 
             Chunk loadedChunk = chunkSystem.pollBuiltChunk();
 
@@ -652,19 +614,15 @@ public class GridSystem {
                 loadedChunk.rebuildModel(model);
             }
 
-            else {
+            else
                 loadedChunk.dispose();
-            }
-
-            index++;
         }
     }
 
     // Queue Utility \\
 
     private boolean processIsSafe(int index) {
-        return index < processPerBatch &&
-                loadedChunksThisFrame < MAX_CHUNK_LOADS_PER_FRAME &&
+        return loadedChunksThisFrame < MAX_CHUNK_LOADS_PER_FRAME &&
                 loadedChunksThisTick < MAX_CHUNK_LOADS_PER_TICK;
     }
 
@@ -695,7 +653,66 @@ public class GridSystem {
                 buildQueue.size();
     }
 
+    public int getQueueSize(QueueProcess process) {
+        return switch (process) {
+            case Unload -> unloadQueue.size();
+            case Load -> loadQueue.size();
+            case Generate -> generateQueue.size();
+            case Assessment -> assessmentQueue.size();
+            case Build -> buildQueue.size();
+        };
+    }
+
+    enum QueueProcess {
+
+        Unload(5) {
+            boolean process(GridSystem system) {
+                return system.unloadQueue();
+            }
+        },
+
+        Load(4) {
+            boolean process(GridSystem system) {
+                return system.loadQueue();
+            }
+        },
+
+        Generate(3) {
+            boolean process(GridSystem system) {
+                return system.generateQueue();
+            }
+        },
+
+        Assessment(2) {
+            boolean process(GridSystem system) {
+                return system.assessmentQueue();
+            }
+        },
+
+        Build(1) {
+            boolean process(GridSystem system) {
+                return system.buildQueue();
+            }
+        };
+
+        private final int priority;
+
+        abstract boolean process(GridSystem system);
+
+        QueueProcess(int priority) {
+            this.priority = priority;
+        }
+
+        public int getPriority() {
+            return priority;
+        }
+    }
+
     // Accessible \\
+
+    public Chunk getChunkFromCoordinate(long chunkCoordinate) {
+        return loadedChunks.get(chunkCoordinate);
+    }
 
     public void rebuildModel(long gridCoordinate) {
 

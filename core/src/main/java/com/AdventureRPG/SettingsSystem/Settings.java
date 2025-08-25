@@ -65,6 +65,7 @@ public class Settings {
 
     // Scale Settings
     public final float BLOCK_SIZE; // 1x1x1 block scale
+    public final int BIOME_SIZE; // The width of the biomes within a chunk
     public final int CHUNK_SIZE; // The width of a chunk in blocks
     public final int WORLD_HEIGHT; // The height of the world in blocks
 
@@ -78,6 +79,7 @@ public class Settings {
 
     // Base \\
 
+    // TODO: I will need to add system wide safety rails here
     public Settings(Builder builder) {
 
         // Runtime Settings \\
@@ -138,6 +140,7 @@ public class Settings {
 
         // Scale Settings
         this.BLOCK_SIZE = builder.BLOCK_SIZE;
+        this.BIOME_SIZE = (builder.BIOME_SIZE < builder.CHUNK_SIZE) ? builder.BIOME_SIZE : 1;
         this.CHUNK_SIZE = builder.CHUNK_SIZE;
         this.WORLD_HEIGHT = builder.WORLD_HEIGHT;
 
@@ -165,7 +168,7 @@ public class Settings {
         public boolean fullscreen = false;
 
         // Render Settings
-        public int maxRenderDistance = 16;
+        public int maxRenderDistance = 64;
 
         // Constant Settings \\
 
@@ -212,6 +215,7 @@ public class Settings {
 
         // Scale Settings
         public float BLOCK_SIZE = 1;
+        public int BIOME_SIZE = 4;
         public int CHUNK_SIZE = 16;
         public int WORLD_HEIGHT = 64;
 
@@ -424,6 +428,11 @@ public class Settings {
 
         public Builder BLOCK_SIZE(float BLOCK_SIZE) {
             this.BLOCK_SIZE = BLOCK_SIZE;
+            return this;
+        }
+
+        public Builder BIOME_SIZE(int BIOME_SIZE) {
+            this.BIOME_SIZE = BIOME_SIZE;
             return this;
         }
 

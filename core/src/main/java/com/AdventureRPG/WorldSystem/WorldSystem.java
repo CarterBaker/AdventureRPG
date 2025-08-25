@@ -13,7 +13,6 @@ import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
-import com.AdventureRPG.WorldSystem.Chunks.ChunkCoordinates;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
@@ -42,13 +41,13 @@ public class WorldSystem {
     private final Block[] blocks;
 
     // World System
-    public final ChunkCoordinates chunkCoordinates;
     public final WorldTick worldTick;
     public final WorldReader worldReader;
     public final ChunkSystem chunkSystem;
     public final GridSystem gridSystem;
     public final BiomeSystem biomeSystem;
     public final WorldGenerator worldGenerator;
+    public final PackedCoordinate3Int packedCoordinate3Int;
     public final Vector2Int WORLD_SCALE;
 
     // Position
@@ -75,7 +74,6 @@ public class WorldSystem {
 
         // Block Management
         this.blocks = Loader.LoadBlocks(textureManager, materialManager);
-        this.chunkCoordinates = new ChunkCoordinates(settings);
 
         // World System
         this.worldTick = new WorldTick(this);
@@ -84,6 +82,7 @@ public class WorldSystem {
         this.gridSystem = new GridSystem(this);
         this.biomeSystem = new BiomeSystem(gameManager);
         this.worldGenerator = new WorldGenerator(this);
+        this.packedCoordinate3Int = new PackedCoordinate3Int(this);
         this.WORLD_SCALE = worldReader.getWorldScale();
 
         // Position

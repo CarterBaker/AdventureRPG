@@ -4,38 +4,38 @@ import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
-import com.AdventureRPG.WorldSystem.Biomes.Biome;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.badlogic.gdx.graphics.g3d.Model;
 
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+
 public class Chunk {
 
     // Game Manager
-    public final WorldSystem worldSystem;
-    public final ChunkCoordinates chunkCoordinates;
-    private final GridSystem gridSystem;
-    private final BiomeSystem biomeSystem;
-
-    // Settings
     public final Settings settings;
-    public final int CHUNK_SIZE;
-    public final int WORLD_HEIGHT;
+    public final WorldSystem worldSystem;
+    public final GridSystem gridSystem;
+    public final BiomeSystem biomeSystem;
 
     // Chunk
     public final long coordinate;
     public final int coordinateX, coordinateY;
 
-    // Neighbors
-    public final long north, south, east, west;
-
-    // Data
-    private boolean hasData;
-    private int[] biomes, blocks;
-
     // Position
     public long position;
     public int positionX, positionY;
+
+    // Neighbors
+    private boolean hasCardinalNeighbors;
+    private boolean hasAllNeighbors;
+    private final Long2IntOpenHashMap coordToIndex;
+    public final long[] neighborCoordinates;
+    private Chunk[] neighbors;
+
+    // Data
+    private boolean hasData;
+    public SubChunk[] subChunks;
 
     // Mesh
     public final ChunkModel chunkModel;
@@ -45,14 +45,10 @@ public class Chunk {
     public Chunk(WorldSystem worldSystem, long coordinate) {
 
         // Game Manager
+        this.settings = worldSystem.settings;
         this.worldSystem = worldSystem;
-        this.chunkCoordinates = worldSystem.chunkCoordinates;
         this.gridSystem = worldSystem.gridSystem;
         this.biomeSystem = worldSystem.biomeSystem;
-        // Settings
-        this.settings = worldSystem.settings;
-        this.CHUNK_SIZE = worldSystem.settings.CHUNK_SIZE;
-        this.WORLD_HEIGHT = worldSystem.settings.WORLD_HEIGHT;
 
         // Chunk
         this.coordinate = coordinate;
@@ -60,37 +56,34 @@ public class Chunk {
         this.coordinateY = Coordinate2Int.unpackY(coordinate);
 
         // Neighbors
-        this.north = Coordinate2Int.add(coordinate, Direction2Int.NORTH.packed);
-        worldSystem.wrapAroundWorld(north);
-        this.south = Coordinate2Int.add(coordinate, Direction2Int.SOUTH.packed);
-        worldSystem.wrapAroundWorld(south);
-        this.east = Coordinate2Int.add(coordinate, Direction2Int.EAST.packed);
-        worldSystem.wrapAroundWorld(east);
-        this.west = Coordinate2Int.add(coordinate, Direction2Int.WEST.packed);
-        worldSystem.wrapAroundWorld(west);
+        this.hasCardinalNeighbors = false;
+        this.hasAllNeighbors = false;
+        coordToIndex = new Long2IntOpenHashMap(8);
+        neighborCoordinates = new long[8];
+        neighbors = new Chunk[8];
+
+        for (Direction2Int direction : Direction2Int.values()) {
+            long neighborCoordinate = getWrappedNeighborCoordinate(direction);
+            neighborCoordinates[direction.index] = neighborCoordinate;
+            coordToIndex.put(neighborCoordinate, direction.index);
+        }
+
+        // Data
+        this.hasData = false;
 
         // Mesh
-        this.chunkModel = new ChunkModel(worldSystem.settings);
+        this.chunkModel = new ChunkModel(this);
+    }
+
+    private long getWrappedNeighborCoordinate(Direction2Int direction) {
+
+        long neighborCoordinate = Coordinate2Int.add(coordinate, direction.packed);
+        worldSystem.wrapAroundWorld(neighborCoordinate);
+
+        return neighborCoordinate;
     }
 
     public void dispose() {
-
-        chunkModel.dispose();
-    }
-
-    // Data \\
-
-    public boolean hasData() {
-        return hasData;
-    }
-
-    public void generate(int[] biomes, int[] blocks) {
-
-        this.hasData = true;
-        this.biomes = biomes;
-        this.blocks = blocks;
-
-        chunkModel.assignData(biomes, blocks);
     }
 
     // Position \\
@@ -102,61 +95,85 @@ public class Chunk {
         this.positionY = Coordinate2Int.unpackY(position);
     }
 
+    // Data \\
+
+    public void generate(SubChunk[] subChunks) {
+
+        this.subChunks = subChunks;
+        hasData = true;
+    }
+
+    public boolean hasData() {
+        return hasData;
+    }
+
     // Mesh \\
-
-    public void rebuildModel(Model model) {
-        chunkModel.rebuildModel(model);
-    }
-
-    public void assignNeighbors(Chunk[] neighbors) {
-        chunkModel.assignNeighbors(neighbors);
-    }
 
     public void build() {
 
-        for (int i = 0; i < WORLD_HEIGHT; i++)
-            ChunkBuilder.build(this, i);
     }
 
-    public void build(int subChunk) {
-        ChunkBuilder.build(this, subChunk);
+    public void rebuildModel(Model model) {
+
     }
 
-    public int[] getBiomes() {
-        return biomes;
+    // Neighbors \\
+
+    public boolean hasCardinalNeighbors() {
+        return hasCardinalNeighbors;
     }
 
-    public int[] getBlocks() {
-        return blocks;
+    public boolean hasAllNeighbors() {
+        return hasAllNeighbors;
+    }
+
+    public long getNeighbor(Direction2Int direction) {
+        return neighborCoordinates[direction.index];
+    }
+
+    public boolean assessNeighbors() {
+
+        for (Direction2Int direction : Direction2Int.values()) {
+
+            long neighborCoordinate = neighborCoordinates[direction.index];
+            Chunk neighbor = gridSystem.getChunkFromCoordinate(neighborCoordinate);
+
+            if (neighbor != null)
+                neighbors[direction.index] = neighbor;
+        }
+
+        updateNeighborStatus();
+
+        return hasAllNeighbors;
+    }
+
+    private void updateNeighborStatus() {
+
+        if (!hasCardinalNeighbors) {
+
+            for (int i = 0; i < 4; i++)
+                if (neighbors[i] == null)
+                    return;
+
+            hasCardinalNeighbors = true;
+        }
+
+        if (!hasAllNeighbors) {
+
+            for (int i = 4; i < 8; i++)
+                if (neighbors[i] == null)
+                    return;
+            hasAllNeighbors = true;
+        }
     }
 
     // Gameplay \\
 
-    public void placeBlock(int x, int y, int z, int blockID) {
+    public void placeBlock() {
 
-        int xyz = chunkCoordinates.pack(x, y, z);
-        blocks[xyz] = blockID;
-
-        int subChunk = chunkCoordinates.getSubChunk(y);
-
-        build(subChunk);
-
-        gridSystem.rebuildModel(position);
     }
 
-    public void breakBlock(int x, int y, int z) {
+    public void breakBlock() {
 
-        int xyz = chunkCoordinates.pack(x, y, z);
-
-        int biomeID = biomes[xyz];
-        Biome biome = biomeSystem.getBiomeByID(biomeID);
-
-        blocks[xyz] = biome.airBlock;
-
-        int subChunk = chunkCoordinates.getSubChunk(y);
-
-        build(subChunk);
-
-        gridSystem.rebuildModel(position);
     }
 }

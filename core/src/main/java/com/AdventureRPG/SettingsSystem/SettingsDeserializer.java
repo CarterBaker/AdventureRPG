@@ -147,6 +147,8 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         // Scale Settings
         if (obj.has("BLOCK_SIZE"))
             builder.BLOCK_SIZE(obj.get("BLOCK_SIZE").getAsFloat());
+        if (obj.has("BIOME_SIZE"))
+            builder.BIOME_SIZE(obj.get("BIOME_SIZE").getAsInt());
         if (obj.has("CHUNK_SIZE"))
             builder.CHUNK_SIZE(obj.get("CHUNK_SIZE").getAsInt());
         if (obj.has("WORLD_HEIGHT"))

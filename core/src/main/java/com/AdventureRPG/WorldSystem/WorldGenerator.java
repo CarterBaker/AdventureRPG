@@ -6,24 +6,23 @@ import com.AdventureRPG.Util.Coordinate3Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
-import com.AdventureRPG.WorldSystem.Chunks.ChunkCoordinates;
+import com.AdventureRPG.WorldSystem.Chunks.SubChunk;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 
 public class WorldGenerator {
 
     // Game Manager
-    public final Settings settings;
-    public final UserData userData;
-    public final WorldSystem worldSystem;
-    public final GridSystem gridSystem;
-    public final BiomeSystem biomeSystem;
+    private final Settings settings;
+    private final UserData userData;
+    private final WorldSystem worldSystem;
+    private final GridSystem gridSystem;
+    private final BiomeSystem biomeSystem;
+    private final PackedCoordinate3Int packedCoordinate3Int;
 
     // Settings
+    private final int BIOME_SIZE;
     private final int CHUNK_SIZE;
     private final int WORLD_HEIGHT;
-
-    // Block Management
-    private final ChunkCoordinates chunkCoordinates;
 
     // Default Blocks
     private final Block AIR_BLOCK; // TODO: With 2D chunk coordinates this is
@@ -42,13 +41,12 @@ public class WorldGenerator {
         this.worldSystem = worldSystem;
         this.gridSystem = worldSystem.gridSystem;
         this.biomeSystem = worldSystem.biomeSystem;
+        this.packedCoordinate3Int = worldSystem.packedCoordinate3Int;
 
         // Settings
+        this.BIOME_SIZE = settings.BIOME_SIZE;
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
         this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
-
-        // Block Management
-        this.chunkCoordinates = worldSystem.chunkCoordinates;
 
         // Default Blocks
         this.AIR_BLOCK = worldSystem.getBlockByName("air");
@@ -76,9 +74,8 @@ public class WorldGenerator {
 
         long chunkCoordinate = Coordinate3Int.pack(chunk.coordinateX, 0, chunk.coordinateY);
 
-        int chunkSize = chunkCoordinates.chunkSize;
-        int[] biomes = new int[chunkSize];
-        int[] blocks = new int[chunkSize];
+        int biomeSize = packedCoordinate3Int.biomeSize;
+        int chunkSize = packedCoordinate3Int.chunkSize;
 
         // TODO: The first step of world generation will be to get the base biome
         WorldRegion WorldRegion = worldSystem.worldReader.worldRegionFromPosition(chunk.coordinate);
@@ -87,26 +84,52 @@ public class WorldGenerator {
 
         // TODO: I want to get all the related biomes to base and mix them
 
-        for (int index = 0; index < chunkSize; index++) {
+        SubChunk[] subChunks = new SubChunk[WORLD_HEIGHT];
 
-            int xyz = chunkCoordinates.getCoordinates(index);
-            long blockOffset = chunkCoordinates.convertToCoordinate3Int(xyz);
-            long blockCoordinate = Coordinate3Int.add(chunkCoordinate, blockOffset);
+        for (int subChunkIndex = 0; subChunkIndex < WORLD_HEIGHT; subChunkIndex++) {
 
-            int biomeID = generateBiome(blockCoordinate);
-            int blockID = generateBlock(blockCoordinate);
+            SubChunk subChunk = subChunks[subChunkIndex] = new SubChunk(chunk);
 
-            biomes[xyz] = biomeID;
-            blocks[xyz] = blockID;
+            for (int index = 0; index < biomeSize; index++) {
 
-            chunk.generate(biomes, blocks);
+                int xyz = packedCoordinate3Int.getPackedBiomeCoordinates(index);
+
+                int x = packedCoordinate3Int.unpackX(xyz);
+                int y = packedCoordinate3Int.unpackY(xyz);
+                int z = packedCoordinate3Int.unpackZ(xyz);
+
+                int biomeX = x * (CHUNK_SIZE / BIOME_SIZE);
+                int biomeY = y * (CHUNK_SIZE / BIOME_SIZE);
+                int biomeZ = z * (CHUNK_SIZE / BIOME_SIZE);
+
+                long biomeCoordinate = packedCoordinate3Int.addCoordinate3Int(biomeX, biomeY, biomeZ, chunkCoordinate);
+
+                short biomeID = (short) generateBiome(biomeCoordinate);
+
+                subChunk.setBiome(x, y, z, biomeID);
+            }
+
+            for (int index = 0; index < chunkSize; index++) {
+
+                int xyz = packedCoordinate3Int.getPackedBlockCoordinate(index);
+
+                int x = packedCoordinate3Int.unpackX(xyz);
+                int y = packedCoordinate3Int.unpackY(xyz);
+                int z = packedCoordinate3Int.unpackZ(xyz);
+
+                long blockCoordinate = packedCoordinate3Int.addCoordinate3Int(x, y, z, chunkCoordinate);
+
+                short blockID = (short) generateBlock(blockCoordinate);
+
+                subChunk.setBlock(x, y, z, blockID);
+            }
         }
     }
 
     // Biome \\
 
     // TODO: This will need a biome
-    private int generateBiome(long blockCoordinate) {
+    private int generateBiome(long biomeCoordinate) {
         return 0;
     }
 
