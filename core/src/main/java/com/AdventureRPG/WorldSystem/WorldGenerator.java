@@ -89,6 +89,7 @@ public class WorldGenerator {
         for (int subChunkIndex = 0; subChunkIndex < WORLD_HEIGHT; subChunkIndex++) {
 
             SubChunk subChunk = subChunks[subChunkIndex] = new SubChunk(chunk);
+            int subChunkOffset = (subChunkIndex + 1) * WORLD_HEIGHT;
 
             for (int index = 0; index < biomeSize; index++) {
 
@@ -99,7 +100,7 @@ public class WorldGenerator {
                 int z = packedCoordinate3Int.unpackZ(xyz);
 
                 int biomeX = x * (CHUNK_SIZE / BIOME_SIZE);
-                int biomeY = y * (CHUNK_SIZE / BIOME_SIZE);
+                int biomeY = y * (CHUNK_SIZE / BIOME_SIZE) + subChunkOffset;
                 int biomeZ = z * (CHUNK_SIZE / BIOME_SIZE);
 
                 long biomeCoordinate = packedCoordinate3Int.addCoordinate3Int(biomeX, biomeY, biomeZ, chunkCoordinate);
@@ -117,7 +118,9 @@ public class WorldGenerator {
                 int y = packedCoordinate3Int.unpackY(xyz);
                 int z = packedCoordinate3Int.unpackZ(xyz);
 
-                long blockCoordinate = packedCoordinate3Int.addCoordinate3Int(x, y, z, chunkCoordinate);
+                int blockY = y + subChunkOffset;
+
+                long blockCoordinate = packedCoordinate3Int.addCoordinate3Int(x, blockY, z, chunkCoordinate);
 
                 short blockID = (short) generateBlock(blockCoordinate);
 

@@ -28,6 +28,9 @@ import com.google.gson.Gson;
 
 public class GameManager implements Screen {
 
+    // Debug
+    private final boolean debug = true; // TODO: Remove debug line
+
     // Paths and Settings
     public final Main game;
     public final File path;
@@ -252,6 +255,9 @@ public class GameManager implements Screen {
             loadScreen.setProgrss(worldSystem.gridSystem.totalQueueSize());
             UISystem.close(loadScreen);
             gameState = GameState.Ready;
+
+            if (debug) // TODO: Remove debug line
+                debug();
         }
     }
 
@@ -267,5 +273,22 @@ public class GameManager implements Screen {
 
     public float deltaTime() {
         return deltaTime;
+    }
+
+    // Debug \\
+
+    private void debug() { // TODO: Remove debug line
+
+        // Print memory usage
+        Runtime runtime = Runtime.getRuntime();
+        long totalMemory = runtime.totalMemory(); // Total memory currently allocated to JVM
+        long freeMemory = runtime.freeMemory(); // Free memory within the allocated memory
+        long usedMemory = totalMemory - freeMemory; // Used memory
+        long maxMemory = runtime.maxMemory(); // Maximum memory JVM can allocate
+
+        System.out.println("Used Memory: " + (usedMemory / 1024 / 1024) + " MB");
+        System.out.println("Free Memory: " + (freeMemory / 1024 / 1024) + " MB");
+        System.out.println("Total Allocated Memory: " + (totalMemory / 1024 / 1024) + " MB");
+        System.out.println("Max JVM Memory: " + (maxMemory / 1024 / 1024) + " MB");
     }
 }
