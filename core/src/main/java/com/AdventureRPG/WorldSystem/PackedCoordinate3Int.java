@@ -1,6 +1,7 @@
 package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.Util.Coordinate3Int;
+import com.AdventureRPG.Util.Direction3Int;
 
 public class PackedCoordinate3Int {
 
@@ -109,6 +110,24 @@ public class PackedCoordinate3Int {
     }
 
     // Accessible \\
+
+    public boolean isOverEdge(int x, int y, int z, Direction3Int dir) {
+
+        if (dir.x != 0)
+            return (x == 0 && dir.x < 0) || (x == xMask && dir.x > 0);
+
+        if (dir.y != 0)
+            return (y == 0 && dir.y < 0) || (y == yMask && dir.y > 0);
+
+        if (dir.z != 0)
+            return (z == 0 && dir.z < 0) || (z == zMask && dir.z > 0);
+
+        return false;
+    }
+
+    public int addAndWrapAxis(int axisA, int axisB) {
+        return (axisA + axisB) & (CHUNK_SIZE - 1);
+    }
 
     public long addCoordinate3Int(int x, int y, int z, long coordinate3Int) {
 

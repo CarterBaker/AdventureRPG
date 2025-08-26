@@ -530,6 +530,8 @@ public class GridSystem {
 
             if (!foundAllNeighbors)
                 assessmentQueue.enqueue(chunkCoordinate);
+            else
+                buildQueue.enqueue(chunkCoordinate);
 
             index = incrementQueueTotal(index);
         }

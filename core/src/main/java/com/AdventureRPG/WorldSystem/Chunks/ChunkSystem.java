@@ -22,6 +22,9 @@ public class ChunkSystem {
     // Settings
     private final int MAX_CHUNK_LOADS_PER_FRAME;
 
+    // Chunk System
+    public final ChunkBuilder chunkBuilder;
+
     // Async System
     private final Queue<Long> loadRequests;
     private final Queue<Chunk> generationRequests;
@@ -48,6 +51,9 @@ public class ChunkSystem {
 
         // Settings
         this.MAX_CHUNK_LOADS_PER_FRAME = settings.MAX_CHUNK_LOADS_PER_FRAME;
+
+        // Chunk System
+        this.chunkBuilder = new ChunkBuilder(worldSystem);
 
         // Queue System
         this.loadRequests = new ConcurrentLinkedQueue<>();

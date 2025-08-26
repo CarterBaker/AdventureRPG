@@ -4,7 +4,6 @@ import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
-import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.badlogic.gdx.graphics.g3d.Model;
 
@@ -15,8 +14,8 @@ public class Chunk {
     // Game Manager
     public final Settings settings;
     public final WorldSystem worldSystem;
+    public final ChunkSystem chunkSystem;
     public final GridSystem gridSystem;
-    public final BiomeSystem biomeSystem;
 
     // Chunk
     public final long coordinate;
@@ -47,8 +46,8 @@ public class Chunk {
         // Game Manager
         this.settings = worldSystem.settings;
         this.worldSystem = worldSystem;
+        this.chunkSystem = worldSystem.chunkSystem;
         this.gridSystem = worldSystem.gridSystem;
-        this.biomeSystem = worldSystem.biomeSystem;
 
         // Chunk
         this.coordinate = coordinate;
@@ -107,10 +106,20 @@ public class Chunk {
         return hasData;
     }
 
+    public SubChunk getSubChunk(int index) {
+        return subChunks[index];
+    }
+
     // Mesh \\
 
     public void build() {
 
+        for (int subChunkIndex = 0; subChunkIndex < settings.WORLD_HEIGHT; subChunkIndex++)
+            rebuild(subChunkIndex);
+    }
+
+    public void rebuild(int subChunkIndex) {
+        chunkSystem.chunkBuilder.build(this, subChunkIndex);
     }
 
     public void rebuildModel(Model model) {
@@ -127,8 +136,12 @@ public class Chunk {
         return hasAllNeighbors;
     }
 
-    public long getNeighbor(Direction2Int direction) {
+    public long getNeighborCoordinate(Direction2Int direction) {
         return neighborCoordinates[direction.index];
+    }
+
+    public Chunk getNeighborChunk(Direction2Int direction) {
+        return neighbors[direction.index];
     }
 
     public boolean assessNeighbors() {
