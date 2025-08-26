@@ -43,11 +43,11 @@ public class WorldSystem {
     // World System
     public final WorldTick worldTick;
     public final WorldReader worldReader;
+    public final PackedCoordinate3Int packedCoordinate3Int;
     public final ChunkSystem chunkSystem;
     public final GridSystem gridSystem;
     public final BiomeSystem biomeSystem;
     public final WorldGenerator worldGenerator;
-    public final PackedCoordinate3Int packedCoordinate3Int;
     public final Vector2Int WORLD_SCALE;
 
     // Position
@@ -78,11 +78,11 @@ public class WorldSystem {
         // World System
         this.worldTick = new WorldTick(this);
         this.worldReader = new WorldReader(this);
+        this.packedCoordinate3Int = new PackedCoordinate3Int(this);
         this.chunkSystem = new ChunkSystem(gameManager, this);
         this.gridSystem = new GridSystem(this);
         this.biomeSystem = new BiomeSystem(gameManager);
         this.worldGenerator = new WorldGenerator(this);
-        this.packedCoordinate3Int = new PackedCoordinate3Int(this);
         this.WORLD_SCALE = worldReader.getWorldScale();
 
         // Position
