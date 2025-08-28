@@ -422,7 +422,6 @@ public class GridSystem {
     private void clearModel(Model model) {
 
         model.meshes.clear();
-        model.meshParts.clear();
         model.materials.clear();
     }
 
