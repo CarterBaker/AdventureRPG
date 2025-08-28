@@ -6,40 +6,52 @@ import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.Util.Direction3Int;
 import com.AdventureRPG.WorldSystem.PackedCoordinate3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.utils.IntArray;
 
 public class ChunkBuilder {
 
     // Game Manager
     private final WorldSystem worldSystem;
     private final PackedCoordinate3Int packedCoordinate3Int;
+    private final BiomeSystem biomeSystem;
 
     // Settings
     private final int CHUNK_SIZE;
     private final int WORLD_HEIGHT;
 
-    // Coordinate Tracking
-    BitSet passedCoordinates;
-    BitSet batchedBlocks;
+    // Data
+    private BitSet passedCoordinates;
+    private BitSet batchedBlocks;
+    private Color[] blendColors;
+
+    // Base \\
 
     public ChunkBuilder(WorldSystem worldSystem) {
 
         // Game Manager
         this.worldSystem = worldSystem;
         this.packedCoordinate3Int = worldSystem.packedCoordinate3Int;
+        this.biomeSystem = worldSystem.biomeSystem;
 
         // Settings
         this.CHUNK_SIZE = worldSystem.settings.CHUNK_SIZE;
         this.WORLD_HEIGHT = worldSystem.settings.WORLD_HEIGHT;
 
-        // Coordinate Tracking
+        // Data
         this.passedCoordinates = new BitSet(packedCoordinate3Int.chunkSize);
         this.batchedBlocks = new BitSet(packedCoordinate3Int.chunkSize);
+        this.blendColors = new Color[8];
     }
+
+    // Data \\
 
     public void build(Chunk chunk, int subChunkIndex) {
 
         SubChunk subChunk = chunk.getSubChunk(subChunkIndex);
+        IntArray quads = new IntArray(worldSystem.settings.CHUNK_VERT_BUFFER);
 
         for (int axisIndex = 0; axisIndex < Axis.values().length; axisIndex++) {
 
@@ -69,8 +81,8 @@ public class ChunkBuilder {
                     Direction3Int direction = axis.getDirection(directionIndex);
 
                     assembleFace(
-                            chunk,
-                            subChunk,
+                            quads,
+                            chunk, subChunk,
                             subChunkIndex,
                             aX, aY, aZ,
                             axis, direction,
@@ -80,12 +92,13 @@ public class ChunkBuilder {
             }
         }
 
+        chunk.chunkModel.build(subChunkIndex, quads);
         batchedBlocks.clear();
     }
 
     private void assembleFace(
-            Chunk chunk,
-            SubChunk subChunk,
+            IntArray quads,
+            Chunk chunk, SubChunk subChunk,
             int subChunkIndex,
             int aX, int aY, int aZ,
             Axis axis, Direction3Int direction,
@@ -112,108 +125,102 @@ public class ChunkBuilder {
         do {
 
             // expand along A
-            if (checkA && sizeA <= CHUNK_SIZE) {
+            if (checkA) {
 
-                int nextAX = aX + comparativeDirectionA.x * sizeA;
-                int nextAY = aY + comparativeDirectionA.y * sizeA;
-                int nextAZ = aZ + comparativeDirectionA.z * sizeA;
-
-                if (coordinatesOutOfBounds(nextAX, nextAY, nextAZ)) {
-
-                    checkA = false;
-                    continue;
-                }
-
-                for (int b = 0; b < sizeB; b++) {
-
-                    int checkX = nextAX + comparativeDirectionB.x * b;
-                    int checkY = nextAY + comparativeDirectionB.y * b;
-                    int checkZ = nextAZ + comparativeDirectionB.z * b;
-
-                    int xyz = packedCoordinate3Int.pack(checkX, checkY, checkZ);
-
-                    int comparativeBiomeID = subChunk.getBiome(checkX, checkY, checkZ);
-                    int comparativeBlockID = subChunk.getBlock(checkX, checkY, checkZ);
-
-                    if (biomeID != comparativeBiomeID ||
-                            blockID != comparativeBlockID ||
-                            batchedBlocks.get(xyz) ||
-                            !blockFaceCheck(
-                                    chunk,
-                                    subChunkIndex,
-                                    checkX, checkY, checkZ,
-                                    axis, direction,
-                                    type)) {
-
-                        checkA = false;
-                        break;
-                    }
-
-                    passedCoordinates.set(xyz);
-                }
-
-                if (checkA) {
-
-                    batchedBlocks.or(passedCoordinates);
+                if (tryExpand(
+                        chunk, subChunk,
+                        subChunkIndex,
+                        aX, aY, aZ,
+                        sizeA, sizeB,
+                        comparativeDirectionA, comparativeDirectionB,
+                        biomeID, blockID,
+                        axis, direction,
+                        type))
                     sizeA++;
-                }
 
-                passedCoordinates.clear();
+                else
+                    checkA = false;
             }
 
             // expand along B
-            if (checkB && sizeB <= CHUNK_SIZE) {
+            if (checkB) {
 
-                int nextBX = aX + comparativeDirectionB.x * sizeB;
-                int nextBY = aY + comparativeDirectionB.y * sizeB;
-                int nextBZ = aZ + comparativeDirectionB.z * sizeB;
-
-                if (coordinatesOutOfBounds(nextBX, nextBY, nextBZ)) {
-
-                    checkB = false;
-                    continue;
-                }
-
-                for (int a = 0; a < sizeA; a++) {
-
-                    int checkX = nextBX + comparativeDirectionA.x * a;
-                    int checkY = nextBY + comparativeDirectionA.y * a;
-                    int checkZ = nextBZ + comparativeDirectionA.z * a;
-
-                    int xyz = packedCoordinate3Int.pack(checkX, checkY, checkZ);
-
-                    int comparativeBiomeID = subChunk.getBiome(checkX, checkY, checkZ);
-                    int comparativeBlockID = subChunk.getBlock(checkX, checkY, checkZ);
-
-                    if (biomeID != comparativeBiomeID ||
-                            blockID != comparativeBlockID ||
-                            batchedBlocks.get(xyz) ||
-                            !blockFaceCheck(
-                                    chunk,
-                                    subChunkIndex,
-                                    checkX, checkY, checkZ,
-                                    axis, direction,
-                                    type)) {
-
-                        checkB = false;
-                        break;
-                    }
-
-                    passedCoordinates.set(xyz);
-                }
-
-                if (checkB) {
-
-                    batchedBlocks.or(passedCoordinates);
+                if (tryExpand(
+                        chunk, subChunk,
+                        subChunkIndex,
+                        aX, aY, aZ,
+                        sizeB, sizeA,
+                        comparativeDirectionB, comparativeDirectionA,
+                        biomeID, blockID,
+                        axis, direction,
+                        type))
                     sizeB++;
-                }
 
-                passedCoordinates.clear();
+                else
+                    checkB = false;
             }
+
         }
 
         while (checkA || checkB);
 
+        prepareFace(
+                quads,
+                chunk, subChunk,
+                subChunkIndex,
+                aX, aY, aZ,
+                sizeA, sizeB,
+                axis, direction,
+                biomeID, blockID);
+    }
+
+    private boolean tryExpand(
+            Chunk chunk, SubChunk subChunk,
+            int subChunkIndex,
+            int aX, int aY, int aZ,
+            int currentSize, int otherSize,
+            Direction3Int expandDir, Direction3Int otherDir,
+            int biomeID, int blockID,
+            Axis axis, Direction3Int direction,
+            Type type) {
+
+        if (currentSize > CHUNK_SIZE)
+            return false;
+
+        // Calculate next base coordinate along expandDir
+        int nextX = aX + expandDir.x * currentSize;
+        int nextY = aY + expandDir.y * currentSize;
+        int nextZ = aZ + expandDir.z * currentSize;
+
+        if (coordinatesOutOfBounds(nextX, nextY, nextZ))
+            return false;
+
+        // Loop across the perpendicular dimension
+        for (int i = 0; i < otherSize; i++) {
+
+            int checkX = nextX + otherDir.x * i;
+            int checkY = nextY + otherDir.y * i;
+            int checkZ = nextZ + otherDir.z * i;
+
+            int xyz = packedCoordinate3Int.pack(checkX, checkY, checkZ);
+
+            int comparativeBiomeID = subChunk.getBiome(checkX, checkY, checkZ);
+            int comparativeBlockID = subChunk.getBlock(checkX, checkY, checkZ);
+
+            if (biomeID != comparativeBiomeID ||
+                    blockID != comparativeBlockID ||
+                    batchedBlocks.get(xyz) ||
+                    !blockFaceCheck(chunk, subChunkIndex, checkX, checkY, checkZ, axis, direction, type)) {
+                return false;
+            }
+
+            passedCoordinates.set(xyz);
+        }
+
+        batchedBlocks.or(passedCoordinates);
+        passedCoordinates.clear();
+
+        return true;
     }
 
     private boolean coordinatesOutOfBounds(int x, int y, int z) {
@@ -263,6 +270,7 @@ public class ChunkBuilder {
 
             if (outputSubChunk > 0 && outputSubChunk < WORLD_HEIGHT)
                 return chunk.getSubChunk(outputSubChunk);
+
             else
                 return null;
         }
@@ -275,6 +283,240 @@ public class ChunkBuilder {
 
             return outputSubChunk;
         }
+    }
+
+    private void prepareFace(
+            IntArray quads,
+            Chunk chunk, SubChunk subChunk,
+            int subChunkIndex,
+            int aX, int aY, int aZ,
+            int width, int height,
+            Axis axis, Direction3Int direction,
+            int biomeID, int blockID) {
+
+        int xyz = packedCoordinate3Int.pack(aX, aY, aZ);
+
+        int directionIndex = direction.index;
+
+        Direction3Int dirA = axis.getComparativeDirection(0);
+        Direction3Int dirB = axis.getComparativeDirection(1);
+
+        // base
+        int vert0X = aX;
+        int vert0Y = aY;
+        int vert0Z = aZ;
+
+        // base + width
+        int vert1X = aX + dirA.x * width;
+        int vert1Y = aY + dirA.y * width;
+        int vert1Z = aZ + dirA.z * width;
+
+        // base + width + height
+        int vert2X = vert1X + dirB.x * height;
+        int vert2Y = vert1Y + dirB.y * height;
+        int vert2Z = vert1Z + dirB.z * height;
+
+        // base + height
+        int vert3X = aX + dirB.x * height;
+        int vert3Y = aY + dirB.y * height;
+        int vert3Z = aZ + dirB.z * height;
+
+        int color0 = getVertColor(chunk, subChunk, subChunkIndex, vert0X, vert0Y, vert0Z);
+        int color1 = getVertColor(chunk, subChunk, subChunkIndex, vert1X, vert1Y, vert1Z);
+        int color2 = getVertColor(chunk, subChunk, subChunkIndex, vert2X, vert2Y, vert2Z);
+        int color3 = getVertColor(chunk, subChunk, subChunkIndex, vert3X, vert3Y, vert3Z);
+
+        packQuad(
+                quads,
+                xyz,
+                width,
+                height,
+                directionIndex,
+                blockID,
+                color0,
+                color1,
+                color2,
+                color3);
+    }
+
+    private int getVertColor(
+            Chunk chunk, SubChunk subChunk,
+            int subChunkIndex,
+            int vertX, int vertY, int vertZ) {
+
+        for (int index = 0; index < 8; index++) {
+
+            NeighborBlockDirection direction = NeighborBlockDirection.VALUES[index];
+
+            int offsetX = vertX + direction.x;
+            int offsetY = vertY + direction.y;
+            int offsetZ = vertZ + direction.z;
+
+            int blockX = convertToBlockSpace(offsetX);
+            int blockY = convertToBlockSpace(offsetY);
+            int blockZ = convertToBlockSpace(offsetZ);
+
+            int biomeID = 0;
+
+            SubChunk neighborSubChunk = getNeighborSubChunk(
+                    chunk, subChunk,
+                    subChunkIndex,
+                    blockX, blockY, blockZ,
+                    offsetX, offsetY, offsetZ,
+                    direction);
+
+            if (neighborSubChunk != null) {
+
+                biomeID = neighborSubChunk.getBiome(blockX, blockY, blockZ);
+                blendColors[index] = biomeSystem.getBiomeByID(biomeID).biomeColor;
+            }
+
+            else
+                blendColors[index] = blendColors[0];
+        }
+
+        return blendColors();
+    }
+
+    public int convertToBlockSpace(int vertAxis) {
+
+        int output = vertAxis;
+
+        if (output < 0)
+            return CHUNK_SIZE - 1;
+
+        if (output >= CHUNK_SIZE)
+            return 0;
+
+        return output;
+    }
+
+    private SubChunk getNeighborSubChunk(
+            Chunk chunk, SubChunk subChunk,
+            int subChunkIndex,
+            int blockX, int blockY, int blockZ,
+            int offsetX, int offsetY, int offsetZ,
+            NeighborBlockDirection direction) {
+
+        if (isOverEdge(offsetX, offsetY, offsetZ))
+            return subChunk;
+
+        // Handle vertical movement
+        if (offsetY < 0) {
+
+            if (subChunkIndex == 0)
+                return null;
+
+            subChunkIndex -= 1;
+        }
+
+        if (offsetY >= CHUNK_SIZE) {
+
+            if (subChunkIndex == WORLD_HEIGHT - 1)
+                return null;
+
+            subChunkIndex += 1;
+        }
+
+        Direction2Int direction2Int = getDirection2Int(offsetX, offsetZ);
+
+        if (direction2Int == null)
+            return chunk.getSubChunk(subChunkIndex);
+
+        Chunk neighborChunk = chunk.getNeighborChunk(direction2Int);
+
+        if (neighborChunk != null)
+            return neighborChunk.getSubChunk(subChunkIndex);
+
+        return null;
+    }
+
+    private boolean isOverEdge(int offsetX, int offsetY, int offsetZ) {
+
+        if (offsetX < 0 || offsetX >= CHUNK_SIZE ||
+                offsetY < 0 || offsetY >= CHUNK_SIZE ||
+                offsetZ < 0 || offsetZ >= CHUNK_SIZE)
+            return true;
+
+        return false;
+    }
+
+    private Direction2Int getDirection2Int(int offsetX, int offsetZ) {
+
+        boolean north = (offsetZ <= CHUNK_SIZE);
+        boolean south = (offsetZ > 0);
+        boolean east = (offsetX <= CHUNK_SIZE);
+        boolean west = (offsetX > 0);
+
+        if (north && east)
+            return Direction2Int.NORTHEAST;
+        if (north && west)
+            return Direction2Int.NORTHWEST;
+        if (south && east)
+            return Direction2Int.SOUTHEAST;
+        if (south && west)
+            return Direction2Int.SOUTHWEST;
+
+        if (north)
+            return Direction2Int.NORTH;
+        if (south)
+            return Direction2Int.SOUTH;
+        if (east)
+            return Direction2Int.EAST;
+        if (west)
+            return Direction2Int.WEST;
+
+        return null;
+    }
+
+    private int blendColors() {
+
+        float r = 0, g = 0, b = 0, a = 0;
+        int count = 0;
+
+        for (Color c : blendColors) {
+            if (c != null) {
+                r += c.r;
+                g += c.g;
+                b += c.b;
+                a += c.a;
+                count++;
+            }
+        }
+
+        if (count == 0)
+            return Color.rgba8888(Color.WHITE);
+
+        r /= count;
+        g /= count;
+        b /= count;
+        a /= count;
+
+        // Pack back into int (LibGDX uses ABGR by default for rgba8888).
+        return Color.rgba8888(r, g, b, a);
+    }
+
+    private void packQuad(
+            IntArray quads,
+            int xyz,
+            int width,
+            int height,
+            int directionIndex,
+            int blockID,
+            int color0,
+            int color1,
+            int color2,
+            int color3) {
+
+        quads.add(xyz);
+        quads.add(width);
+        quads.add(height);
+        quads.add(directionIndex);
+        quads.add(blockID);
+        quads.add(color0);
+        quads.add(color1);
+        quads.add(color2);
+        quads.add(color3);
     }
 
     // Utility \\
@@ -303,5 +545,37 @@ public class ChunkBuilder {
         }
 
         public static final Axis[] VALUES = { X, Y, Z };
+    }
+
+    private enum NeighborBlockDirection {
+
+        UPPER_NORTH_EAST(0, 0, 0),
+        UPPER_NORTH_WEST(-1, 0, 0),
+        UPPER_SOUTH_EAST(0, 0, -1),
+        UPPER_SOUTH_WEST(-1, 0, -1),
+        LOWER_NORTH_EAST(0, -1, 0),
+        LOWER_NORTH_WEST(-1, -1, 0),
+        LOWER_SOUTH_EAST(0, -1, -1),
+        LOWER_SOUTH_WEST(-1, -1, -1);
+
+        public final int x, y, z;
+
+        NeighborBlockDirection(int x, int y, int z) {
+
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        public static final NeighborBlockDirection[] VALUES = {
+                UPPER_NORTH_EAST,
+                UPPER_NORTH_WEST,
+                UPPER_SOUTH_EAST,
+                UPPER_SOUTH_WEST,
+                LOWER_NORTH_EAST,
+                LOWER_NORTH_WEST,
+                LOWER_SOUTH_EAST,
+                LOWER_SOUTH_WEST
+        };
     }
 }

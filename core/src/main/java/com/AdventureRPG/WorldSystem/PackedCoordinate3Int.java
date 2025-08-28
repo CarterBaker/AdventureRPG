@@ -2,6 +2,7 @@ package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.Util.Coordinate3Int;
 import com.AdventureRPG.Util.Direction3Int;
+import com.AdventureRPG.WorldSystem.Chunks.ChunkBuilder;
 
 public class PackedCoordinate3Int {
 
@@ -134,5 +135,4 @@ public class PackedCoordinate3Int {
         long local3Int = Coordinate3Int.pack(x, y, z);
         return Coordinate3Int.add(local3Int, coordinate3Int);
     }
-
 }

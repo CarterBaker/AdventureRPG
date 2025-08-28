@@ -6,6 +6,7 @@ import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.utils.IntArray;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 
