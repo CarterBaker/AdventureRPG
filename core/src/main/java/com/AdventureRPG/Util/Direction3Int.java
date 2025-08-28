@@ -32,4 +32,25 @@ public enum Direction3Int {
             Direction3Int.WEST,
             Direction3Int.DOWN
     };
+
+    public static Direction3Int[] getTangents(Direction3Int normal) {
+
+        switch (normal) {
+
+            case UP:
+            case DOWN:
+                return new Direction3Int[] { EAST, NORTH };
+
+            case NORTH:
+            case SOUTH:
+                return new Direction3Int[] { EAST, UP };
+
+            case EAST:
+            case WEST:
+                return new Direction3Int[] { NORTH, UP };
+
+            default:
+                throw new IllegalStateException("Unexpected normal: " + normal);
+        }
+    }
 }

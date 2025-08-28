@@ -525,12 +525,7 @@ public class GridSystem {
                 continue;
             }
 
-            boolean foundAllNeighbors = loadedChunk.assessNeighbors();
-
-            if (!foundAllNeighbors)
-                assessmentQueue.enqueue(chunkCoordinate);
-            else
-                buildQueue.enqueue(chunkCoordinate);
+            loadedChunk.assessNeighbors();
 
             index = incrementQueueTotal(index);
         }
@@ -543,6 +538,8 @@ public class GridSystem {
     private boolean buildQueue() {
 
         int index = 0;
+
+        System.out.println(buildQueue.size());
 
         while (index < buildQueue.size() && processIsSafe(index)) {
 
@@ -557,9 +554,6 @@ public class GridSystem {
 
             if (loadedChunk.hasCardinalNeighbors())
                 chunkSystem.requestBuild(loadedChunk);
-
-            if (!loadedChunk.hasCardinalNeighbors())
-                assessmentQueue.enqueue(chunkCoordinate);
 
             index = incrementQueueTotal(index);
         }
@@ -577,7 +571,7 @@ public class GridSystem {
 
     private void receiveLoadedChunks() {
 
-        while (chunkSystem.hasReturnData()) {
+        while (chunkSystem.hasLoadedData()) {
 
             Chunk loadedChunk = chunkSystem.pollLoadedChunk();
 
@@ -602,7 +596,9 @@ public class GridSystem {
 
     private void receiveBuiltChunks() {
 
-        while (chunkSystem.hasReturnData()) {
+        while (chunkSystem.hasBuiltData()) {
+
+            System.out.print("Made it here");
 
             Chunk loadedChunk = chunkSystem.pollBuiltChunk();
 
@@ -707,6 +703,20 @@ public class GridSystem {
         public int getPriority() {
             return priority;
         }
+    }
+
+    // External Queueing \\
+
+    public void addToAssessmentQueue(Chunk chunk) {
+
+        long chunkCoordinate = chunk.coordinate;
+        assessmentQueue.enqueue(chunkCoordinate);
+    }
+
+    public void addToBuildQueue(Chunk chunk) {
+
+        long chunkCoordinate = chunk.coordinate;
+        buildQueue.enqueue(chunkCoordinate);
     }
 
     // Accessible \\

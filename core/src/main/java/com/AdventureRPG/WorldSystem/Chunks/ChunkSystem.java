@@ -246,7 +246,11 @@ public class ChunkSystem {
                 buildRequests.size() > 0;
     }
 
-    public boolean hasReturnData() {
+    public boolean hasLoadedData() {
         return loadedResults.size() > 0;
+    }
+
+    public boolean hasBuiltData() {
+        return builtResults.size() > 0;
     }
 }

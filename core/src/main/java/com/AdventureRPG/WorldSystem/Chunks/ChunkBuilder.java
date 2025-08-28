@@ -2,18 +2,25 @@ package com.AdventureRPG.WorldSystem.Chunks;
 
 import java.util.BitSet;
 
+import com.AdventureRPG.MaterialManager.MaterialManager;
+import com.AdventureRPG.TextureManager.TextureManager;
+import com.AdventureRPG.TextureManager.TextureManager.UVRect;
 import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.Util.Direction3Int;
 import com.AdventureRPG.WorldSystem.PackedCoordinate3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
+import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.utils.IntArray;
 
 public class ChunkBuilder {
 
     // Game Manager
+    private final TextureManager textureManager;
+    private final MaterialManager materialManager;
     private final WorldSystem worldSystem;
     private final PackedCoordinate3Int packedCoordinate3Int;
     private final BiomeSystem biomeSystem;
@@ -23,6 +30,8 @@ public class ChunkBuilder {
     private final int WORLD_HEIGHT;
 
     // Data
+    private IntArray quads;
+    private final int QUAD_SIZE = 9;
     private BitSet passedCoordinates;
     private BitSet batchedBlocks;
     private Color[] blendColors;
@@ -32,6 +41,8 @@ public class ChunkBuilder {
     public ChunkBuilder(WorldSystem worldSystem) {
 
         // Game Manager
+        this.textureManager = worldSystem.textureManager;
+        this.materialManager = worldSystem.materialManager;
         this.worldSystem = worldSystem;
         this.packedCoordinate3Int = worldSystem.packedCoordinate3Int;
         this.biomeSystem = worldSystem.biomeSystem;
@@ -41,6 +52,7 @@ public class ChunkBuilder {
         this.WORLD_HEIGHT = worldSystem.settings.WORLD_HEIGHT;
 
         // Data
+        this.quads = new IntArray(worldSystem.settings.CHUNK_VERT_BUFFER);
         this.passedCoordinates = new BitSet(packedCoordinate3Int.chunkSize);
         this.batchedBlocks = new BitSet(packedCoordinate3Int.chunkSize);
         this.blendColors = new Color[8];
@@ -51,7 +63,6 @@ public class ChunkBuilder {
     public void build(Chunk chunk, int subChunkIndex) {
 
         SubChunk subChunk = chunk.getSubChunk(subChunkIndex);
-        IntArray quads = new IntArray(worldSystem.settings.CHUNK_VERT_BUFFER);
 
         for (int axisIndex = 0; axisIndex < Axis.values().length; axisIndex++) {
 
@@ -92,7 +103,10 @@ public class ChunkBuilder {
             }
         }
 
-        chunk.chunkModel.build(subChunkIndex, quads);
+        if (quads.size > 0)
+            buildFromQuads(subChunk.chunkMesh, subChunkIndex);
+
+        quads.clear();
         batchedBlocks.clear();
     }
 
@@ -119,8 +133,9 @@ public class ChunkBuilder {
         int sizeA = 1;
         int sizeB = 1;
 
-        Direction3Int comparativeDirectionA = axis.getComparativeDirection(0);
-        Direction3Int comparativeDirectionB = axis.getComparativeDirection(1);
+        Direction3Int[] tangents = Direction3Int.getTangents(direction);
+        Direction3Int comparativeDirectionA = tangents[0];
+        Direction3Int comparativeDirectionB = tangents[1];
 
         do {
 
@@ -170,7 +185,7 @@ public class ChunkBuilder {
                 subChunkIndex,
                 aX, aY, aZ,
                 sizeA, sizeB,
-                axis, direction,
+                direction,
                 biomeID, blockID);
     }
 
@@ -291,15 +306,16 @@ public class ChunkBuilder {
             int subChunkIndex,
             int aX, int aY, int aZ,
             int width, int height,
-            Axis axis, Direction3Int direction,
+            Direction3Int direction,
             int biomeID, int blockID) {
 
         int xyz = packedCoordinate3Int.pack(aX, aY, aZ);
 
         int directionIndex = direction.index;
 
-        Direction3Int dirA = axis.getComparativeDirection(0);
-        Direction3Int dirB = axis.getComparativeDirection(1);
+        Direction3Int[] tangents = Direction3Int.getTangents(direction);
+        Direction3Int dirA = tangents[0];
+        Direction3Int dirB = tangents[1];
 
         // base
         int vert0X = aX;
@@ -519,29 +535,136 @@ public class ChunkBuilder {
         quads.add(color3);
     }
 
+    // Mesh \\
+
+    private void buildFromQuads(ChunkMesh chunkMesh, int subChunkIndex) {
+
+        chunkMesh.clear();
+
+        // temporary color object to unpack rgba8888 ints -> floats
+        com.badlogic.gdx.graphics.Color tmpColor = new com.badlogic.gdx.graphics.Color();
+
+        for (int i = 0; i < quads.size; i += QUAD_SIZE) {
+
+            // Quad
+            int xyz = quads.get(i);
+            int width = quads.get(i + 1);
+            int height = quads.get(i + 2);
+            int directionIndex = quads.get(i + 3);
+            int blockID = quads.get(i + 4);
+
+            int c0 = quads.get(i + 5);
+            int c1 = quads.get(i + 6);
+            int c2 = quads.get(i + 7);
+            int c3 = quads.get(i + 8);
+
+            // Unpack
+            Direction3Int direction = Direction3Int.DIRECTIONS[directionIndex];
+            Direction3Int[] tangents = Direction3Int.getTangents(direction);
+
+            Direction3Int dirA = tangents[0];
+            Direction3Int dirB = tangents[1];
+
+            int baseX = packedCoordinate3Int.unpackX(xyz);
+            // convert subchunk-local Y into world Y (so the mesh is continuous vertically)
+            int baseY = packedCoordinate3Int.unpackY(xyz) + (subChunkIndex * CHUNK_SIZE);
+            int baseZ = packedCoordinate3Int.unpackZ(xyz);
+
+            // base
+            int vert0X = baseX;
+            int vert0Y = baseY;
+            int vert0Z = baseZ;
+
+            // base + width
+            int vert1X = baseX + dirA.x * width;
+            int vert1Y = baseY + dirA.y * width;
+            int vert1Z = baseZ + dirA.z * width;
+
+            // base + width + height
+            int vert2X = vert1X + dirB.x * height;
+            int vert2Y = vert1Y + dirB.y * height;
+            int vert2Z = vert1Z + dirB.z * height;
+
+            // base + height
+            int vert3X = baseX + dirB.x * height;
+            int vert3Y = baseY + dirB.y * height;
+            int vert3Z = baseZ + dirB.z * height;
+
+            Block block = worldSystem.getBlockByID(blockID);
+
+            UVRect uv = block.getUVForSide(direction, textureManager);
+            int material = block.getMatIDForSide(direction);
+
+            // normal vector (direction points outwards)
+            float nx = direction.x;
+            float ny = direction.y;
+            float nz = direction.z;
+
+            // base index before we add these 4 vertices
+            int baseIndex = chunkMesh.getVertexCount();
+
+            // Vertex 0 (vert0) -> use uv.u0, uv.v0
+            com.badlogic.gdx.graphics.Color.rgba8888ToColor(tmpColor, c0);
+            chunkMesh.addVertex(
+                    (float) vert0X, (float) vert0Y, (float) vert0Z,
+                    nx, ny, nz,
+                    uv.u0, uv.v0,
+                    tmpColor.r, tmpColor.g, tmpColor.b, tmpColor.a);
+
+            // Vertex 1 (vert1) -> uv.u1, uv.v0
+            com.badlogic.gdx.graphics.Color.rgba8888ToColor(tmpColor, c1);
+            chunkMesh.addVertex(
+                    (float) vert1X, (float) vert1Y, (float) vert1Z,
+                    nx, ny, nz,
+                    uv.u1, uv.v0,
+                    tmpColor.r, tmpColor.g, tmpColor.b, tmpColor.a);
+
+            // Vertex 2 (vert2) -> uv.u1, uv.v1
+            com.badlogic.gdx.graphics.Color.rgba8888ToColor(tmpColor, c2);
+            chunkMesh.addVertex(
+                    (float) vert2X, (float) vert2Y, (float) vert2Z,
+                    nx, ny, nz,
+                    uv.u1, uv.v1,
+                    tmpColor.r, tmpColor.g, tmpColor.b, tmpColor.a);
+
+            // Vertex 3 (vert3) -> uv.u0, uv.v1
+            com.badlogic.gdx.graphics.Color.rgba8888ToColor(tmpColor, c3);
+            chunkMesh.addVertex(
+                    (float) vert3X, (float) vert3Y, (float) vert3Z,
+                    nx, ny, nz,
+                    uv.u0, uv.v1,
+                    tmpColor.r, tmpColor.g, tmpColor.b, tmpColor.a);
+
+            // Indices: two triangles (0,1,2) and (2,3,0)
+            // NOTE: If you observe some faces being culled incorrectly due to winding,
+            // flip the order for specific directions (swap 1 & 2, etc).
+            chunkMesh.addIndex(material, (short) (baseIndex + 0));
+            chunkMesh.addIndex(material, (short) (baseIndex + 1));
+            chunkMesh.addIndex(material, (short) (baseIndex + 2));
+
+            chunkMesh.addIndex(material, (short) (baseIndex + 2));
+            chunkMesh.addIndex(material, (short) (baseIndex + 3));
+            chunkMesh.addIndex(material, (short) (baseIndex + 0));
+        }
+    }
+
     // Utility \\
 
     private enum Axis {
 
-        X(Direction3Int.EAST, Direction3Int.WEST, Direction3Int.UP, Direction3Int.NORTH),
-        Y(Direction3Int.UP, Direction3Int.DOWN, Direction3Int.NORTH, Direction3Int.EAST),
-        Z(Direction3Int.NORTH, Direction3Int.SOUTH, Direction3Int.UP, Direction3Int.EAST);
+        X(Direction3Int.EAST, Direction3Int.WEST),
+        Y(Direction3Int.UP, Direction3Int.DOWN),
+        Z(Direction3Int.NORTH, Direction3Int.SOUTH);
 
         private final Direction3Int[] directions;
-        private final Direction3Int[] comparativeDirections;
 
-        Axis(Direction3Int pos, Direction3Int neg, Direction3Int a, Direction3Int b) {
+        Axis(Direction3Int pos, Direction3Int neg) {
 
             this.directions = new Direction3Int[] { pos, neg };
-            this.comparativeDirections = new Direction3Int[] { a, b };
         }
 
         public Direction3Int getDirection(int directionIndex) {
             return directions[directionIndex];
-        }
-
-        public Direction3Int getComparativeDirection(int index) {
-            return comparativeDirections[index];
         }
 
         public static final Axis[] VALUES = { X, Y, Z };

@@ -21,7 +21,7 @@ import com.badlogic.gdx.math.Vector3;
 public class WorldSystem {
 
     // Debug
-    private final boolean debug = true; // TODO: Remove debug line
+    private final boolean debug = false; // TODO: Remove debug line
 
     // Game Manager
     public final GameManager gameManager;

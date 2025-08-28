@@ -36,9 +36,6 @@ public class Chunk {
     private boolean hasData;
     public SubChunk[] subChunks;
 
-    // Mesh
-    public final ChunkModel chunkModel;
-
     // Base \\
 
     public Chunk(WorldSystem worldSystem, long coordinate) {
@@ -69,9 +66,6 @@ public class Chunk {
 
         // Data
         this.hasData = false;
-
-        // Mesh
-        this.chunkModel = new ChunkModel(this);
     }
 
     private long getWrappedNeighborCoordinate(Direction2Int direction) {
@@ -124,6 +118,12 @@ public class Chunk {
 
     public void rebuildModel(Model model) {
 
+        System.out.println("Made it here too");
+
+        model.meshes.clear();
+
+        for (int subChunkIndex = 0; subChunkIndex < settings.WORLD_HEIGHT; subChunkIndex++)
+            subChunks[subChunkIndex].build(model);
     }
 
     // Neighbors \\
@@ -165,19 +165,30 @@ public class Chunk {
         if (!hasCardinalNeighbors) {
 
             for (int i = 0; i < 4; i++)
+
                 if (neighbors[i] == null)
                     return;
 
             hasCardinalNeighbors = true;
+            gridSystem.addToBuildQueue(this);
         }
+
+        else
+            gridSystem.addToAssessmentQueue(this);
 
         if (!hasAllNeighbors) {
 
             for (int i = 4; i < 8; i++)
+
                 if (neighbors[i] == null)
                     return;
+
             hasAllNeighbors = true;
+            gridSystem.addToBuildQueue(this);
         }
+
+        else
+            gridSystem.addToAssessmentQueue(this);
     }
 
     // Gameplay \\
