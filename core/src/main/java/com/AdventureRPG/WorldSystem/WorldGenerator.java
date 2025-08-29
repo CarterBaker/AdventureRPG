@@ -127,6 +127,8 @@ public class WorldGenerator {
                 subChunk.setBlock(x, y, z, blockID);
             }
         }
+
+        chunk.generate(subChunks);
     }
 
     // Biome \\

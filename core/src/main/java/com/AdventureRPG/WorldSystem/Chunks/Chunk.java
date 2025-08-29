@@ -36,6 +36,9 @@ public class Chunk {
     private boolean hasData;
     public SubChunk[] subChunks;
 
+    // Mesh
+    public Model model;
+
     // Base \\
 
     public Chunk(WorldSystem worldSystem, long coordinate) {
@@ -113,17 +116,22 @@ public class Chunk {
     }
 
     public void rebuild(int subChunkIndex) {
+
         chunkSystem.chunkBuilder.build(this, subChunkIndex);
     }
 
-    public void rebuildModel(Model model) {
+    public void buildChunkMesh(Model model) {
 
-        System.out.println("Made it here too");
+        assignModel(model);
+    }
 
-        model.meshes.clear();
+    public void shiftChunkMesh(Model model) {
 
-        for (int subChunkIndex = 0; subChunkIndex < settings.WORLD_HEIGHT; subChunkIndex++)
-            subChunks[subChunkIndex].build(model);
+        assignModel(model);
+    }
+
+    private void assignModel(Model model) {
+        this.model = model;
     }
 
     // Neighbors \\

@@ -31,6 +31,7 @@ public class ChunkSystem {
     private final Queue<Chunk> buildRequests;
 
     private final Queue<Chunk> loadedResults;
+    private final Queue<Chunk> generatedResults;
     private final Queue<Chunk> builtResults;
 
     // Queue System
@@ -61,6 +62,7 @@ public class ChunkSystem {
         this.buildRequests = new ConcurrentLinkedQueue<>();
 
         this.loadedResults = new ConcurrentLinkedQueue<>();
+        this.generatedResults = new ConcurrentLinkedQueue<>();
         this.builtResults = new ConcurrentLinkedQueue<>();
 
         // Queue System
@@ -76,6 +78,10 @@ public class ChunkSystem {
 
     public void awake() {
         this.worldGenerator = worldSystem.worldGenerator;
+    }
+
+    public void update() {
+        processData();
     }
 
     // Async System \\
@@ -94,6 +100,10 @@ public class ChunkSystem {
 
     public Chunk pollLoadedChunk() {
         return loadedResults.poll();
+    }
+
+    public Chunk pollGeneratedChunk() {
+        return generatedResults.poll();
     }
 
     public Chunk pollBuiltChunk() {
@@ -192,6 +202,7 @@ public class ChunkSystem {
             threadManager.submitGeneration(() -> {
 
                 worldGenerator.generateChunk(loadedChunk);
+                generatedResults.add(loadedChunk);
             });
         }
 
@@ -248,6 +259,10 @@ public class ChunkSystem {
 
     public boolean hasLoadedData() {
         return loadedResults.size() > 0;
+    }
+
+    public boolean hasGeneratedData() {
+        return generatedResults.size() > 0;
     }
 
     public boolean hasBuiltData() {

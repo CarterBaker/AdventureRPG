@@ -2,8 +2,6 @@ package com.AdventureRPG.WorldSystem.Chunks;
 
 import com.AdventureRPG.WorldSystem.Biomes.BiomeContainer;
 import com.AdventureRPG.WorldSystem.Blocks.BlockContainer;
-import com.badlogic.gdx.graphics.Mesh;
-import com.badlogic.gdx.graphics.g3d.Model;
 
 public final class SubChunk {
 
@@ -12,8 +10,7 @@ public final class SubChunk {
     private final BlockContainer blocks;
 
     // Mesh
-    public final ChunkMesh chunkMesh;
-    private Mesh mesh;
+    public final SubChunkMesh subChunkMesh;
 
     // Utility
     private final int biomeShift;
@@ -30,7 +27,8 @@ public final class SubChunk {
         this.biomes = new BiomeContainer(CHUNK_SIZE / BIOME_SIZE);
         this.blocks = new BlockContainer(CHUNK_SIZE);
 
-        this.chunkMesh = new ChunkMesh();
+        // Mesh
+        this.subChunkMesh = new SubChunkMesh();
 
         // Utility
         this.biomeShift = Integer.numberOfTrailingZeros(CHUNK_SIZE / BIOME_SIZE);
@@ -54,14 +52,5 @@ public final class SubChunk {
 
     public void setBiome(int x, int y, int z, short id) {
         biomes.set(x, y, z, id);
-    }
-
-    // Mesh
-    public void build(Model model) {
-
-        if (mesh == null)
-            chunkMesh.build(mesh);
-
-        model.meshes.add(mesh);
     }
 }

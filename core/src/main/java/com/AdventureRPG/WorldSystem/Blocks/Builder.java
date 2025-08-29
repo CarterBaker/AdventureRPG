@@ -2,6 +2,7 @@ package com.AdventureRPG.WorldSystem.Blocks;
 
 import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.TextureManager.TextureManager;
+import com.AdventureRPG.WorldSystem.WorldSystem;
 
 public class Builder {
 
@@ -113,7 +114,7 @@ public class Builder {
         return this;
     }
 
-    public Block build(TextureManager textureManager, MaterialManager materialManager, int id) {
-        return new Block(textureManager, materialManager, this, id);
+    public Block build(WorldSystem worldSystem, int id) {
+        return new Block(worldSystem, this, id);
     }
 }

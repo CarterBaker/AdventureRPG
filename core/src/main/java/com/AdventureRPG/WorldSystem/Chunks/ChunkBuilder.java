@@ -2,7 +2,9 @@ package com.AdventureRPG.WorldSystem.Chunks;
 
 import java.util.BitSet;
 
+import com.AdventureRPG.MaterialManager.MaterialData;
 import com.AdventureRPG.MaterialManager.MaterialManager;
+import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.TextureManager.TextureManager;
 import com.AdventureRPG.TextureManager.TextureManager.UVRect;
 import com.AdventureRPG.Util.Direction2Int;
@@ -14,12 +16,15 @@ import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g3d.Material;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.utils.IntArray;
+import com.badlogic.gdx.utils.IntSet;
 
 public class ChunkBuilder {
 
     // Game Manager
     private final TextureManager textureManager;
+    private final ShaderManager shaderManager;
     private final MaterialManager materialManager;
     private final WorldSystem worldSystem;
     private final PackedCoordinate3Int packedCoordinate3Int;
@@ -35,6 +40,7 @@ public class ChunkBuilder {
     private BitSet passedCoordinates;
     private BitSet batchedBlocks;
     private Color[] blendColors;
+    private IntSet materials;
 
     // Base \\
 
@@ -42,6 +48,7 @@ public class ChunkBuilder {
 
         // Game Manager
         this.textureManager = worldSystem.textureManager;
+        this.shaderManager = worldSystem.shaderManager;
         this.materialManager = worldSystem.materialManager;
         this.worldSystem = worldSystem;
         this.packedCoordinate3Int = worldSystem.packedCoordinate3Int;
@@ -56,6 +63,7 @@ public class ChunkBuilder {
         this.passedCoordinates = new BitSet(packedCoordinate3Int.chunkSize);
         this.batchedBlocks = new BitSet(packedCoordinate3Int.chunkSize);
         this.blendColors = new Color[8];
+        this.materials = new IntSet(3);
     }
 
     // Data \\
@@ -64,47 +72,43 @@ public class ChunkBuilder {
 
         SubChunk subChunk = chunk.getSubChunk(subChunkIndex);
 
-        for (int axisIndex = 0; axisIndex < Axis.values().length; axisIndex++) {
+        for (int index = 0; index < packedCoordinate3Int.chunkSize; index++) {
 
-            Axis axis = Axis.VALUES[axisIndex];
+            int xyz = packedCoordinate3Int.getPackedBlockCoordinate(index);
 
-            for (int index = 0; index < packedCoordinate3Int.chunkSize; index++) {
+            if (batchedBlocks.get(xyz))
+                continue;
 
-                int xyz = packedCoordinate3Int.getPackedBlockCoordinate(index);
+            int aX = packedCoordinate3Int.unpackX(xyz);
+            int aY = packedCoordinate3Int.unpackY(xyz);
+            int aZ = packedCoordinate3Int.unpackZ(xyz);
 
-                if (batchedBlocks.get(xyz))
-                    continue;
+            int blockID = subChunk.getBlock(aX, aY, aZ);
+            Type type = worldSystem.getBlockType(blockID);
 
-                int aX = packedCoordinate3Int.unpackX(xyz);
-                int aY = packedCoordinate3Int.unpackY(xyz);
-                int aZ = packedCoordinate3Int.unpackZ(xyz);
+            if (type == Type.NULL)
+                continue;
 
-                int blockID = subChunk.getBlock(aX, aY, aZ);
-                Type type = worldSystem.getBlockType(blockID);
+            int biomeID = subChunk.getBiome(aX, aY, aZ);
 
-                if (type == Type.NULL)
-                    continue;
+            for (int directionIndex = 0; directionIndex < 6; directionIndex++) {
 
-                int biomeID = subChunk.getBiome(aX, aY, aZ);
+                Direction3Int direction = Direction3Int.DIRECTIONS[directionIndex];
 
-                for (int directionIndex = 0; directionIndex < 2; directionIndex++) {
-
-                    Direction3Int direction = axis.getDirection(directionIndex);
-
-                    assembleFace(
-                            quads,
-                            chunk, subChunk,
-                            subChunkIndex,
-                            aX, aY, aZ,
-                            axis, direction,
-                            biomeID, blockID,
-                            type);
-                }
+                assembleFace(
+                        quads,
+                        chunk, subChunk,
+                        subChunkIndex,
+                        aX, aY, aZ,
+                        direction,
+                        biomeID, blockID,
+                        type);
             }
         }
 
         if (quads.size > 0)
-            buildFromQuads(subChunk.chunkMesh, subChunkIndex);
+
+            buildFromQuads(subChunk.subChunkMesh, subChunkIndex);
 
         quads.clear();
         batchedBlocks.clear();
@@ -115,7 +119,7 @@ public class ChunkBuilder {
             Chunk chunk, SubChunk subChunk,
             int subChunkIndex,
             int aX, int aY, int aZ,
-            Axis axis, Direction3Int direction,
+            Direction3Int direction,
             int biomeID, int blockID,
             Type type) {
 
@@ -123,7 +127,7 @@ public class ChunkBuilder {
                 chunk,
                 subChunkIndex,
                 aX, aY, aZ,
-                axis, direction,
+                direction,
                 type))
             return;
 
@@ -149,7 +153,7 @@ public class ChunkBuilder {
                         sizeA, sizeB,
                         comparativeDirectionA, comparativeDirectionB,
                         biomeID, blockID,
-                        axis, direction,
+                        direction,
                         type))
                     sizeA++;
 
@@ -167,7 +171,7 @@ public class ChunkBuilder {
                         sizeB, sizeA,
                         comparativeDirectionB, comparativeDirectionA,
                         biomeID, blockID,
-                        axis, direction,
+                        direction,
                         type))
                     sizeB++;
 
@@ -196,7 +200,7 @@ public class ChunkBuilder {
             int currentSize, int otherSize,
             Direction3Int expandDir, Direction3Int otherDir,
             int biomeID, int blockID,
-            Axis axis, Direction3Int direction,
+            Direction3Int direction,
             Type type) {
 
         if (currentSize > CHUNK_SIZE)
@@ -225,7 +229,12 @@ public class ChunkBuilder {
             if (biomeID != comparativeBiomeID ||
                     blockID != comparativeBlockID ||
                     batchedBlocks.get(xyz) ||
-                    !blockFaceCheck(chunk, subChunkIndex, checkX, checkY, checkZ, axis, direction, type)) {
+                    !blockFaceCheck(
+                            chunk,
+                            subChunkIndex,
+                            checkX, checkY, checkZ,
+                            direction,
+                            type)) {
                 return false;
             }
 
@@ -249,7 +258,7 @@ public class ChunkBuilder {
             Chunk chunk,
             int subChunkIndex,
             int aX, int aY, int aZ,
-            Axis axis, Direction3Int direction,
+            Direction3Int direction,
             Type type) {
 
         int bX = packedCoordinate3Int.addAndWrapAxis(direction.x, aX);
@@ -537,28 +546,22 @@ public class ChunkBuilder {
 
     // Mesh \\
 
-    private void buildFromQuads(ChunkMesh chunkMesh, int subChunkIndex) {
-
-        chunkMesh.clear();
-
-        // temporary color object to unpack rgba8888 ints -> floats
-        com.badlogic.gdx.graphics.Color tmpColor = new com.badlogic.gdx.graphics.Color();
+    private void buildFromQuads(SubChunkMesh subChunkMesh, int subChunkIndex) {
 
         for (int i = 0; i < quads.size; i += QUAD_SIZE) {
 
-            // Quad
+            // Quad data
             int xyz = quads.get(i);
             int width = quads.get(i + 1);
             int height = quads.get(i + 2);
             int directionIndex = quads.get(i + 3);
             int blockID = quads.get(i + 4);
 
-            int c0 = quads.get(i + 5);
-            int c1 = quads.get(i + 6);
-            int c2 = quads.get(i + 7);
-            int c3 = quads.get(i + 8);
+            int color0 = quads.get(i + 5);
+            int color1 = quads.get(i + 6);
+            int color2 = quads.get(i + 7);
+            int color3 = quads.get(i + 8);
 
-            // Unpack
             Direction3Int direction = Direction3Int.DIRECTIONS[directionIndex];
             Direction3Int[] tangents = Direction3Int.getTangents(direction);
 
@@ -566,109 +569,112 @@ public class ChunkBuilder {
             Direction3Int dirB = tangents[1];
 
             int baseX = packedCoordinate3Int.unpackX(xyz);
-            // convert subchunk-local Y into world Y (so the mesh is continuous vertically)
             int baseY = packedCoordinate3Int.unpackY(xyz) + (subChunkIndex * CHUNK_SIZE);
             int baseZ = packedCoordinate3Int.unpackZ(xyz);
 
-            // base
+            // Quad verts
             int vert0X = baseX;
             int vert0Y = baseY;
             int vert0Z = baseZ;
 
-            // base + width
             int vert1X = baseX + dirA.x * width;
             int vert1Y = baseY + dirA.y * width;
             int vert1Z = baseZ + dirA.z * width;
 
-            // base + width + height
             int vert2X = vert1X + dirB.x * height;
             int vert2Y = vert1Y + dirB.y * height;
             int vert2Z = vert1Z + dirB.z * height;
 
-            // base + height
             int vert3X = baseX + dirB.x * height;
             int vert3Y = baseY + dirB.y * height;
             int vert3Z = baseZ + dirB.z * height;
 
             Block block = worldSystem.getBlockByID(blockID);
+            MaterialData materialData = block.getMaterialDataForSide(direction);
 
-            UVRect uv = block.getUVForSide(direction, textureManager);
-            int material = block.getMatIDForSide(direction);
+            // get or create batch
+            SubChunkMesh.MeshBatch batch = null;
+            for (SubChunkMesh.MeshBatch b : subChunkMesh.getBatches()) {
+                if (b.materialId == materialData.id) {
+                    batch = b;
+                    break;
+                }
+            }
+            if (batch == null) {
+                // estimate: 4 verts, 6 indices per quad
+                batch = subChunkMesh.beginBatch(materialData.id, 4, 6);
+            }
 
-            // normal vector (direction points outwards)
-            float nx = direction.x;
-            float ny = direction.y;
-            float nz = direction.z;
+            // UV rect for block side
+            UVRect uv = block.getUVForSide(direction);
 
-            // base index before we add these 4 vertices
-            int baseIndex = chunkMesh.getVertexCount();
+            float u0 = uv.u0;
+            float v0 = uv.v0;
+            float u1 = uv.u1;
+            float v1 = uv.v1;
 
-            // Vertex 0 (vert0) -> use uv.u0, uv.v0
-            com.badlogic.gdx.graphics.Color.rgba8888ToColor(tmpColor, c0);
-            chunkMesh.addVertex(
-                    (float) vert0X, (float) vert0Y, (float) vert0Z,
-                    nx, ny, nz,
-                    uv.u0, uv.v0,
-                    tmpColor.r, tmpColor.g, tmpColor.b, tmpColor.a);
+            // normal
+            int nx = direction.x;
+            int ny = direction.y;
+            int nz = direction.z;
 
-            // Vertex 1 (vert1) -> uv.u1, uv.v0
-            com.badlogic.gdx.graphics.Color.rgba8888ToColor(tmpColor, c1);
-            chunkMesh.addVertex(
-                    (float) vert1X, (float) vert1Y, (float) vert1Z,
-                    nx, ny, nz,
-                    uv.u1, uv.v0,
-                    tmpColor.r, tmpColor.g, tmpColor.b, tmpColor.a);
+            // build 4 verts
+            int baseVertex = batch.vertexCount;
 
-            // Vertex 2 (vert2) -> uv.u1, uv.v1
-            com.badlogic.gdx.graphics.Color.rgba8888ToColor(tmpColor, c2);
-            chunkMesh.addVertex(
-                    (float) vert2X, (float) vert2Y, (float) vert2Z,
-                    nx, ny, nz,
-                    uv.u1, uv.v1,
-                    tmpColor.r, tmpColor.g, tmpColor.b, tmpColor.a);
+            pushVertex(batch, vert0X, vert0Y, vert0Z, nx, ny, nz, color0, u0, v0);
+            pushVertex(batch, vert1X, vert1Y, vert1Z, nx, ny, nz, color1, u1, v0);
+            pushVertex(batch, vert2X, vert2Y, vert2Z, nx, ny, nz, color2, u1, v1);
+            pushVertex(batch, vert3X, vert3Y, vert3Z, nx, ny, nz, color3, u0, v1);
 
-            // Vertex 3 (vert3) -> uv.u0, uv.v1
-            com.badlogic.gdx.graphics.Color.rgba8888ToColor(tmpColor, c3);
-            chunkMesh.addVertex(
-                    (float) vert3X, (float) vert3Y, (float) vert3Z,
-                    nx, ny, nz,
-                    uv.u0, uv.v1,
-                    tmpColor.r, tmpColor.g, tmpColor.b, tmpColor.a);
+            // indices (two triangles, CCW)
+            batch.indices[batch.indexCount++] = (short) (baseVertex);
+            batch.indices[batch.indexCount++] = (short) (baseVertex + 1);
+            batch.indices[batch.indexCount++] = (short) (baseVertex + 2);
 
-            // Indices: two triangles (0,1,2) and (2,3,0)
-            // NOTE: If you observe some faces being culled incorrectly due to winding,
-            // flip the order for specific directions (swap 1 & 2, etc).
-            chunkMesh.addIndex(material, (short) (baseIndex + 0));
-            chunkMesh.addIndex(material, (short) (baseIndex + 1));
-            chunkMesh.addIndex(material, (short) (baseIndex + 2));
-
-            chunkMesh.addIndex(material, (short) (baseIndex + 2));
-            chunkMesh.addIndex(material, (short) (baseIndex + 3));
-            chunkMesh.addIndex(material, (short) (baseIndex + 0));
+            batch.indices[batch.indexCount++] = (short) (baseVertex);
+            batch.indices[batch.indexCount++] = (short) (baseVertex + 2);
+            batch.indices[batch.indexCount++] = (short) (baseVertex + 3);
         }
+
+        materials.clear();
+    }
+
+    // Helper to push interleaved vertex into batch
+    private void pushVertex(SubChunkMesh.MeshBatch batch,
+            float x, float y, float z,
+            float nx, float ny, float nz,
+            int packedColor,
+            float u, float v) {
+
+        int offset = batch.vertexCount * SubChunkMesh.FLOATS_PER_VERTEX;
+        float[] verts = batch.vertices;
+
+        verts[offset] = x;
+        verts[offset + 1] = y;
+        verts[offset + 2] = z;
+
+        verts[offset + 3] = nx;
+        verts[offset + 4] = ny;
+        verts[offset + 5] = nz;
+
+        // unpack ABGR int into floats
+        float r = ((packedColor & 0xff)) / 255f;
+        float g = ((packedColor >>> 8) & 0xff) / 255f;
+        float b = ((packedColor >>> 16) & 0xff) / 255f;
+        float a = ((packedColor >>> 24) & 0xff) / 255f;
+
+        verts[offset + 6] = r;
+        verts[offset + 7] = g;
+        verts[offset + 8] = b;
+        verts[offset + 9] = a;
+
+        verts[offset + 10] = u;
+        verts[offset + 11] = v;
+
+        batch.vertexCount++;
     }
 
     // Utility \\
-
-    private enum Axis {
-
-        X(Direction3Int.EAST, Direction3Int.WEST),
-        Y(Direction3Int.UP, Direction3Int.DOWN),
-        Z(Direction3Int.NORTH, Direction3Int.SOUTH);
-
-        private final Direction3Int[] directions;
-
-        Axis(Direction3Int pos, Direction3Int neg) {
-
-            this.directions = new Direction3Int[] { pos, neg };
-        }
-
-        public Direction3Int getDirection(int directionIndex) {
-            return directions[directionIndex];
-        }
-
-        public static final Axis[] VALUES = { X, Y, Z };
-    }
 
     private enum NeighborBlockDirection {
 

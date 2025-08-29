@@ -5,10 +5,15 @@ import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.TextureManager.TextureManager;
 import com.AdventureRPG.TextureManager.TextureManager.UVRect;
 import com.AdventureRPG.Util.Direction3Int;
-import com.badlogic.gdx.graphics.g3d.Material;
+import com.AdventureRPG.WorldSystem.WorldSystem;
 
 public class Block {
 
+    // Game Manager
+    private final TextureManager textureManager;
+    private final MaterialManager materialManager;
+
+    // Data
     public final String name;
     public final int id;
 
@@ -46,8 +51,13 @@ public class Block {
 
     public final Type type;
 
-    public Block(TextureManager textureManager, MaterialManager materialManager, Builder builder, int id) {
+    public Block(WorldSystem worldSystem, Builder builder, int id) {
 
+        // Game Manager
+        this.textureManager = worldSystem.textureManager;
+        this.materialManager = worldSystem.materialManager;
+
+        // Data
         this.name = builder.name;
         this.id = id;
 
@@ -111,6 +121,7 @@ public class Block {
     }
 
     public int getTexIDForSide(Direction3Int side) {
+
         return switch (side) {
             case UP -> upTex;
             case DOWN -> downTex;
@@ -121,7 +132,8 @@ public class Block {
         };
     }
 
-    public UVRect getUVForSide(Direction3Int side, TextureManager textureManager) {
+    public UVRect getUVForSide(Direction3Int side) {
+
         int texID = switch (side) {
             case UP -> upTex;
             case DOWN -> downTex;
@@ -130,10 +142,12 @@ public class Block {
             case EAST -> eastTex;
             case WEST -> westTex;
         };
+
         return textureManager.getUVRect(texID);
     }
 
     public int getMatIDForSide(Direction3Int side) {
+
         return switch (side) {
             case UP -> upMat;
             case DOWN -> downMat;
@@ -144,7 +158,8 @@ public class Block {
         };
     }
 
-    public Material getMaterialForSide(Direction3Int side, MaterialManager materialManager) {
+    public MaterialData getMaterialDataForSide(Direction3Int side) {
+
         int matID = switch (side) {
             case UP -> upMat;
             case DOWN -> downMat;
@@ -153,7 +168,7 @@ public class Block {
             case EAST -> eastMat;
             case WEST -> westMat;
         };
-        MaterialData data = materialManager.getById(matID);
-        return data != null ? data.material : null;
+
+        return materialManager.getById(matID);
     }
 }

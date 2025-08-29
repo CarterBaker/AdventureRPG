@@ -4,6 +4,7 @@ import com.AdventureRPG.GameManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.TextureManager.TextureManager;
 import com.AdventureRPG.ThreadSystem.ThreadManager;
 import com.AdventureRPG.UISystem.UISystem;
@@ -27,6 +28,7 @@ public class WorldSystem {
     public final GameManager gameManager;
     public final ThreadManager threadManager;
     public final TextureManager textureManager;
+    public final ShaderManager shaderManager;
     public final MaterialManager materialManager;
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
@@ -62,6 +64,7 @@ public class WorldSystem {
         this.gameManager = gameManager;
         this.threadManager = gameManager.threadManager;
         this.textureManager = gameManager.textureManager;
+        this.shaderManager = gameManager.shaderManager;
         this.materialManager = gameManager.materialManager;
         this.saveSystem = gameManager.saveSystem;
         this.UISystem = gameManager.UISystem;
@@ -73,7 +76,7 @@ public class WorldSystem {
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
 
         // Block Management
-        this.blocks = Loader.LoadBlocks(textureManager, materialManager);
+        this.blocks = Loader.LoadBlocks(this);
 
         // World System
         this.worldTick = new WorldTick(this);
@@ -105,7 +108,7 @@ public class WorldSystem {
     public void update() {
 
         worldTick.update();
-
+        chunkSystem.update();
         gridSystem.update();
         biomeSystem.update();
     }

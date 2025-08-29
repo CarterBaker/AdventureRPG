@@ -413,7 +413,7 @@ public class GridSystem {
             Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
 
             if (loadedChunk != null)
-                loadedChunk.rebuildModel(model);
+                loadedChunk.shiftChunkMesh(model);
             else
                 clearModel(model);
         }
@@ -539,8 +539,6 @@ public class GridSystem {
 
         int index = 0;
 
-        System.out.println(buildQueue.size());
-
         while (index < buildQueue.size() && processIsSafe(index)) {
 
             long chunkCoordinate = buildQueue.dequeueLong();
@@ -566,6 +564,7 @@ public class GridSystem {
     private void ReceiveData() {
 
         receiveLoadedChunks();
+        receiveGeneratedChunks();
         receiveBuiltChunks();
     }
 
@@ -581,7 +580,7 @@ public class GridSystem {
             if (gridCoordinate != -1) {
 
                 if (loadedChunk.hasData())
-                    buildQueue.enqueue(chunkCoordinate);
+                    assessmentQueue.enqueue(chunkCoordinate);
                 else
                     generateQueue.enqueue(chunkCoordinate);
 
@@ -594,11 +593,26 @@ public class GridSystem {
         }
     }
 
+    private void receiveGeneratedChunks() {
+
+        while (chunkSystem.hasGeneratedData()) {
+
+            Chunk loadedChunk = chunkSystem.pollGeneratedChunk();
+
+            long chunkCoordinate = loadedChunk.coordinate;
+            long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, -1);
+
+            if (gridCoordinate != -1)
+                assessmentQueue.enqueue(chunkCoordinate);
+
+            else
+                loadedChunk.dispose();
+        }
+    }
+
     private void receiveBuiltChunks() {
 
         while (chunkSystem.hasBuiltData()) {
-
-            System.out.print("Made it here");
 
             Chunk loadedChunk = chunkSystem.pollBuiltChunk();
 
@@ -608,7 +622,7 @@ public class GridSystem {
             if (gridCoordinate != -1) {
 
                 Model model = chunkModels.get(gridCoordinate);
-                loadedChunk.rebuildModel(model);
+                loadedChunk.buildChunkMesh(model);
             }
 
             else
@@ -723,15 +737,6 @@ public class GridSystem {
 
     public Chunk getChunkFromCoordinate(long chunkCoordinate) {
         return loadedChunks.get(chunkCoordinate);
-    }
-
-    public void rebuildModel(long gridCoordinate) {
-
-        long chunkCoordinate = gridToChunkMap.get(gridCoordinate);
-        Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
-        Model model = chunkModels.get(gridCoordinate);
-
-        loadedChunk.rebuildModel(model);
     }
 
     // Debug \\

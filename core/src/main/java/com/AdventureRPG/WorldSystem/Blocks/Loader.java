@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.TextureManager.TextureManager;
+import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.google.gson.Gson;
@@ -13,7 +14,7 @@ import com.google.gson.reflect.TypeToken;
 // TODO: AI largely made most of this. It needs intense scrutiny when I have time
 public class Loader {
 
-    public static Block[] LoadBlocks(TextureManager textureManager, MaterialManager materialManager) {
+    public static Block[] LoadBlocks(WorldSystem worldSystem) {
 
         FileHandle file = Gdx.files.internal("blocks.json");
         String json = file.readString("UTF-8");
@@ -28,7 +29,7 @@ public class Loader {
         Block[] result = new Block[builders.size()];
 
         for (int i = 0; i < builders.size(); i++)
-            result[i] = builders.get(i).build(textureManager, materialManager, i);
+            result[i] = builders.get(i).build(worldSystem, i);
 
         return result;
     }
