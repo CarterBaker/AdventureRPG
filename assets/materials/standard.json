@@ -1,4 +1,4 @@
 {
-    "material": "standard",
-    "array": "standard"
+    "shader": "standard",
+    "texture": "standard"
 }

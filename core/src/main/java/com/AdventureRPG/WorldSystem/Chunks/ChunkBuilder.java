@@ -15,17 +15,11 @@ import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g3d.Material;
-import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.utils.IntArray;
-import com.badlogic.gdx.utils.IntSet;
 
 public class ChunkBuilder {
 
     // Game Manager
-    private final TextureManager textureManager;
-    private final ShaderManager shaderManager;
-    private final MaterialManager materialManager;
     private final WorldSystem worldSystem;
     private final PackedCoordinate3Int packedCoordinate3Int;
     private final BiomeSystem biomeSystem;
@@ -37,19 +31,20 @@ public class ChunkBuilder {
     // Data
     private IntArray quads;
     private final int QUAD_SIZE = 9;
-    private BitSet passedCoordinates;
-    private BitSet batchedBlocks;
     private Color[] blendColors;
-    private IntSet materials;
+
+    private BitSet batchedBlocksUp;
+    private BitSet batchedBlocksNorth;
+    private BitSet batchedBlocksSouth;
+    private BitSet batchedBlocksEast;
+    private BitSet batchedBlocksWest;
+    private BitSet batchedBlocksDown;
 
     // Base \\
 
     public ChunkBuilder(WorldSystem worldSystem) {
 
         // Game Manager
-        this.textureManager = worldSystem.textureManager;
-        this.shaderManager = worldSystem.shaderManager;
-        this.materialManager = worldSystem.materialManager;
         this.worldSystem = worldSystem;
         this.packedCoordinate3Int = worldSystem.packedCoordinate3Int;
         this.biomeSystem = worldSystem.biomeSystem;
@@ -60,10 +55,14 @@ public class ChunkBuilder {
 
         // Data
         this.quads = new IntArray(worldSystem.settings.CHUNK_VERT_BUFFER);
-        this.passedCoordinates = new BitSet(packedCoordinate3Int.chunkSize);
-        this.batchedBlocks = new BitSet(packedCoordinate3Int.chunkSize);
         this.blendColors = new Color[8];
-        this.materials = new IntSet(3);
+
+        this.batchedBlocksUp = new BitSet(packedCoordinate3Int.chunkSize);
+        this.batchedBlocksNorth = new BitSet(packedCoordinate3Int.chunkSize);
+        this.batchedBlocksSouth = new BitSet(packedCoordinate3Int.chunkSize);
+        this.batchedBlocksEast = new BitSet(packedCoordinate3Int.chunkSize);
+        this.batchedBlocksWest = new BitSet(packedCoordinate3Int.chunkSize);
+        this.batchedBlocksDown = new BitSet(packedCoordinate3Int.chunkSize);
     }
 
     // Data \\
@@ -75,9 +74,6 @@ public class ChunkBuilder {
         for (int index = 0; index < packedCoordinate3Int.chunkSize; index++) {
 
             int xyz = packedCoordinate3Int.getPackedBlockCoordinate(index);
-
-            if (batchedBlocks.get(xyz))
-                continue;
 
             int aX = packedCoordinate3Int.unpackX(xyz);
             int aY = packedCoordinate3Int.unpackY(xyz);
@@ -95,8 +91,13 @@ public class ChunkBuilder {
 
                 Direction3Int direction = Direction3Int.DIRECTIONS[directionIndex];
 
+                BitSet batchedSet = getBatchedSet(direction);
+
+                if (batchedSet.get(xyz))
+                    continue;
+
                 assembleFace(
-                        quads,
+                        quads, batchedSet,
                         chunk, subChunk,
                         subChunkIndex,
                         aX, aY, aZ,
@@ -107,15 +108,32 @@ public class ChunkBuilder {
         }
 
         if (quads.size > 0)
-
             buildFromQuads(subChunk.subChunkMesh, subChunkIndex);
 
         quads.clear();
-        batchedBlocks.clear();
+
+        batchedBlocksUp.clear();
+        batchedBlocksNorth.clear();
+        batchedBlocksSouth.clear();
+        batchedBlocksEast.clear();
+        batchedBlocksWest.clear();
+        batchedBlocksDown.clear();
+    }
+
+    private BitSet getBatchedSet(Direction3Int direction3Int) {
+
+        return switch (direction3Int) {
+            case UP -> batchedBlocksUp;
+            case DOWN -> batchedBlocksDown;
+            case NORTH -> batchedBlocksNorth;
+            case SOUTH -> batchedBlocksSouth;
+            case EAST -> batchedBlocksEast;
+            case WEST -> batchedBlocksWest;
+        };
     }
 
     private void assembleFace(
-            IntArray quads,
+            IntArray quads, BitSet batchedSet,
             Chunk chunk, SubChunk subChunk,
             int subChunkIndex,
             int aX, int aY, int aZ,
@@ -147,6 +165,7 @@ public class ChunkBuilder {
             if (checkA) {
 
                 if (tryExpand(
+                        batchedSet,
                         chunk, subChunk,
                         subChunkIndex,
                         aX, aY, aZ,
@@ -165,6 +184,7 @@ public class ChunkBuilder {
             if (checkB) {
 
                 if (tryExpand(
+                        batchedSet,
                         chunk, subChunk,
                         subChunkIndex,
                         aX, aY, aZ,
@@ -194,6 +214,7 @@ public class ChunkBuilder {
     }
 
     private boolean tryExpand(
+            BitSet batchedSet,
             Chunk chunk, SubChunk subChunk,
             int subChunkIndex,
             int aX, int aY, int aZ,
@@ -228,7 +249,7 @@ public class ChunkBuilder {
 
             if (biomeID != comparativeBiomeID ||
                     blockID != comparativeBlockID ||
-                    batchedBlocks.get(xyz) ||
+                    batchedSet.get(xyz) ||
                     !blockFaceCheck(
                             chunk,
                             subChunkIndex,
@@ -238,11 +259,8 @@ public class ChunkBuilder {
                 return false;
             }
 
-            passedCoordinates.set(xyz);
+            batchedSet.set(xyz);
         }
-
-        batchedBlocks.or(passedCoordinates);
-        passedCoordinates.clear();
 
         return true;
     }
@@ -589,21 +607,24 @@ public class ChunkBuilder {
             int vert3Y = baseY + dirB.y * height;
             int vert3Z = baseZ + dirB.z * height;
 
+            // Block Data
             Block block = worldSystem.getBlockByID(blockID);
             MaterialData materialData = block.getMaterialDataForSide(direction);
 
             // get or create batch
             SubChunkMesh.MeshBatch batch = null;
-            for (SubChunkMesh.MeshBatch b : subChunkMesh.getBatches()) {
+
+            for (SubChunkMesh.MeshBatch b : subChunkMesh.getBatches())
                 if (b.materialId == materialData.id) {
+
                     batch = b;
                     break;
                 }
-            }
-            if (batch == null) {
-                // estimate: 4 verts, 6 indices per quad
-                batch = subChunkMesh.beginBatch(materialData.id, 4, 6);
-            }
+
+            if (batch == null) // estimate: 4 verts, 6 indices per quad
+                batch = subChunkMesh.beginBatch(
+                        materialData,
+                        4, 6);
 
             // UV rect for block side
             UVRect uv = block.getUVForSide(direction);
@@ -635,8 +656,6 @@ public class ChunkBuilder {
             batch.indices[batch.indexCount++] = (short) (baseVertex + 2);
             batch.indices[batch.indexCount++] = (short) (baseVertex + 3);
         }
-
-        materials.clear();
     }
 
     // Helper to push interleaved vertex into batch

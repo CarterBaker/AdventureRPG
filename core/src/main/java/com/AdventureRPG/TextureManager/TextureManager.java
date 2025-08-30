@@ -637,4 +637,14 @@ public class TextureManager {
     public int getNextTextureID() {
         return nextTextureID;
     }
+
+    public TextureArray getArrayFromID(int id) {
+        String path = idToTexturePath.get(id);
+        if (path == null)
+            return null;
+
+        String folder = path.substring(0, path.indexOf('/'));
+        ArrayGroup g = arrayGroups.get(folder);
+        return (g != null) ? g.array : null;
+    }
 }

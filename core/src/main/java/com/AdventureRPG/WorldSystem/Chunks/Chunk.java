@@ -123,15 +123,27 @@ public class Chunk {
     public void buildChunkMesh(Model model) {
 
         assignModel(model);
+
+        for (int i = 0; i < settings.WORLD_HEIGHT; i++) {
+            rebuildSubChunk(i);
+            subChunks[i].assignMeshToModel(model);
+        }
     }
 
     public void shiftChunkMesh(Model model) {
 
         assignModel(model);
+
+        for (int i = 0; i < settings.WORLD_HEIGHT; i++)
+            subChunks[i].assignMeshToModel(model);
     }
 
     private void assignModel(Model model) {
         this.model = model;
+    }
+
+    private void rebuildSubChunk(int subChunkIndex) {
+        subChunks[subChunkIndex].build();
     }
 
     // Neighbors \\

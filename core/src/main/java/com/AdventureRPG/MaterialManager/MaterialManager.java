@@ -9,6 +9,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.badlogic.gdx.graphics.TextureArray;
 import com.google.gson.Gson;
 
 import java.util.HashMap;
@@ -51,11 +52,9 @@ public class MaterialManager {
     }
 
     public void start() {
-
     }
 
     public void update() {
-
     }
 
     public void dispose() {
@@ -75,23 +74,23 @@ public class MaterialManager {
             try {
 
                 MaterialDefinition def = gson.fromJson(file.reader(), MaterialDefinition.class);
+                if (def == null)
+                    continue; // safety
 
                 // Map shader
                 int shaderID = shaderManager.getShaderID(def.shader);
                 ShaderProgram shaderProgram = shaderManager.getShaderByID(shaderID);
 
-                // Map texture arrays
-                Map<String, Integer> textureIDs = new HashMap<>();
+                // --- IMPORTANT: use folder name only (def.texture is folder name) ---
+                if (def.texture == null || def.texture.isEmpty()) {
+                    throw new RuntimeException("Material JSON missing 'texture' (folder name): " + file.name());
+                }
 
-                if (def.textureArrays != null) {
-
-                    for (String texRef : def.textureArrays) {
-
-                        int texID = textureManager.getIDFromTexture(texRef);
-
-                        if (texID != -1)
-                            textureIDs.put(texRef, texID);
-                    }
+                // Get the TextureArray using ONLY the folder name
+                TextureArray textureArray = textureManager.getArray(def.texture);
+                if (textureArray == null) {
+                    throw new RuntimeException("TextureArray not found for folder: " + def.texture + " (referenced in "
+                            + file.name() + ")");
                 }
 
                 int id = nextId++;
@@ -100,16 +99,23 @@ public class MaterialManager {
                 // Build default LibGDX Material
                 Material libgdxMaterial = new Material();
 
-                // Build per-material uniforms map
+                // Build per-material uniforms map (always create a map; empty if none)
                 Map<String, UniformAttribute> uniforms = new HashMap<>();
-
                 if (def.uniforms != null) {
-
-                    for (UniformDefinition u : def.uniforms)
+                    for (UniformDefinition u : def.uniforms) {
+                        if (u == null || u.name == null)
+                            continue;
                         uniforms.put(u.name, new UniformAttribute(u.name, u.type, u.defaultValue));
+                    }
                 }
 
-                MaterialData data = new MaterialData(id, name, shaderID, libgdxMaterial, uniforms, textureIDs);
+                MaterialData data = new MaterialData(
+                        id,
+                        name,
+                        libgdxMaterial,
+                        textureArray,
+                        shaderProgram,
+                        uniforms);
 
                 // Store
                 materialsById.put(id, data);
@@ -118,10 +124,8 @@ public class MaterialManager {
                 if (shaderProgram != null)
                     shaderByMaterial.put(libgdxMaterial, shaderProgram);
 
-            }
-
-            catch (Exception exception) {
-
+            } catch (Exception exception) {
+                exception.printStackTrace();
             }
         }
     }
@@ -130,8 +134,8 @@ public class MaterialManager {
 
     private static class MaterialDefinition {
         public String shader;
-        public String[] textureArrays;
-        public UniformDefinition[] uniforms;
+        public String texture; // folder name ONLY
+        public UniformDefinition[] uniforms; // optional; can be omitted in JSON
     }
 
     private static class UniformDefinition {

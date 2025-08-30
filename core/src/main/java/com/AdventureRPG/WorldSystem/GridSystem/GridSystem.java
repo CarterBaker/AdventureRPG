@@ -423,6 +423,7 @@ public class GridSystem {
 
         model.meshes.clear();
         model.materials.clear();
+        model.nodes.clear();
     }
 
     // Unload \\
