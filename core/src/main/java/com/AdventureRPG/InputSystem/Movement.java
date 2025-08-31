@@ -3,6 +3,7 @@ package com.AdventureRPG.InputSystem;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.PlayerSystem.Statistics;
 import com.AdventureRPG.Util.Vector3Int;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector3;
 
 public class Movement {
@@ -34,8 +35,6 @@ public class Movement {
 
     public Vector3 calculate(Vector3 currentPosition, Vector3Int input, Vector3 cameraDirection) {
 
-        float delta = gameManager.deltaTime();
-
         // Calculate horizontal forward vector (XZ plane)
         forward.set(cameraDirection.x, 0f, cameraDirection.z).nor();
 
@@ -53,7 +52,7 @@ public class Movement {
             localMove.nor();
 
         // Scale by movement speed and delta time
-        localMove.scl(statistics.movementSpeed * delta);
+        localMove.scl(statistics.movementSpeed * Gdx.graphics.getDeltaTime());
 
         // Add the movement to current position in place
         currentPosition.add(localMove);

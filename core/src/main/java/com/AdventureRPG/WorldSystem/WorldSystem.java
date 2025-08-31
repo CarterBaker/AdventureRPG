@@ -6,7 +6,7 @@ import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.TextureManager.TextureManager;
-import com.AdventureRPG.ThreadSystem.ThreadManager;
+import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Vector2Int;
@@ -22,7 +22,7 @@ import com.badlogic.gdx.math.Vector3;
 public class WorldSystem {
 
     // Debug
-    private final boolean debug = false; // TODO: Remove debug line
+    private final boolean debug = false; // TODO: Debug line
 
     // Game Manager
     public final GameManager gameManager;
@@ -274,7 +274,7 @@ public class WorldSystem {
 
     // Debug \\
 
-    private void debug() { // TODO: Remove debug line
+    private void debug() { // TODO: Debug line
 
         System.out.print("\rCurrect Chunk Coordinate: " + chunkCoordinate.toString());
         System.out.flush();

@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SaveSystem.ChunkData;
 import com.AdventureRPG.SettingsSystem.Settings;
-import com.AdventureRPG.ThreadSystem.ThreadManager;
+import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.WorldSystem.WorldGenerator;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 
@@ -166,6 +166,7 @@ public class ChunkSystem {
 
             // Run load in another thread
             threadManager.submitGeneral(() -> {
+                
                 Chunk chunk = chunkData.readChunk(chunkCoordinate);
 
                 if (chunk == null)

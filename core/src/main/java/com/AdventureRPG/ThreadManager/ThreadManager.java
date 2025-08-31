@@ -1,4 +1,4 @@
-package com.AdventureRPG.ThreadSystem;
+package com.AdventureRPG.ThreadManager;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -15,13 +15,15 @@ public class ThreadManager {
     private final Settings settings;
 
     // Settings
-    private final int AVAILABLE_THREADS;
+    private final int AI_AVAILABLE_THREADS;
+    private final int GENERATION_AVAILABLE_THREADS;
+    private final int GENERAL_AVAILABLE_THREADS;
 
-    // Threads
     public final boolean hasAiThread;
     public final boolean hasGenerationThread;
     public final boolean hasGeneralPurposeThread;
 
+    // Threads
     private ExecutorService aiExecutor;
     private ExecutorService generationExecutor;
     private ExecutorService generalPurposeExecutor;
@@ -34,48 +36,70 @@ public class ThreadManager {
         this.settings = gameManager.settings;
 
         // Settings
-        this.AVAILABLE_THREADS = settings.AVAILABLE_THREADS;
+        this.AI_AVAILABLE_THREADS = settings.AI_AVAILABLE_THREADS;
+        this.GENERATION_AVAILABLE_THREADS = settings.GENERATION_AVAILABLE_THREADS;
+        this.GENERAL_AVAILABLE_THREADS = settings.GENERAL_AVAILABLE_THREADS;
 
-        this.hasAiThread = AVAILABLE_THREADS > 0;
-        this.hasGenerationThread = AVAILABLE_THREADS > 1;
-        this.hasGeneralPurposeThread = AVAILABLE_THREADS > 2;
+        this.hasAiThread = AI_AVAILABLE_THREADS > 0;
+        this.hasGenerationThread = GENERATION_AVAILABLE_THREADS > 0;
+        this.hasGeneralPurposeThread = GENERAL_AVAILABLE_THREADS > 0;
 
         dedicateThreads();
     }
 
     private void dedicateThreads() {
 
-        // Dedicated AI thread
-        if (AVAILABLE_THREADS < 1)
+        // AI threads
+        if (!hasAiThread)
             return;
 
-        this.aiExecutor = Executors.newSingleThreadExecutor(r -> {
+        this.aiExecutor = Executors.newFixedThreadPool(
 
-            Thread t = new Thread(r, "AI-Thread");
-            t.setPriority(Thread.NORM_PRIORITY);
+                AI_AVAILABLE_THREADS,
 
-            return t;
-        });
+                new java.util.concurrent.ThreadFactory() {
 
-        // Dedicated generation thread
-        if (AVAILABLE_THREADS < 2)
+                    private int count = 1;
+
+                    @Override
+                    public Thread newThread(Runnable r) {
+
+                        Thread t = new Thread(r, "AI-Thread-" + count++);
+                        t.setPriority(Thread.NORM_PRIORITY);
+
+                        return t;
+                    }
+                });
+
+        // Generation threads
+        if (!hasGenerationThread)
             return;
 
-        this.generationExecutor = Executors.newSingleThreadExecutor(r -> {
+        this.generationExecutor = Executors.newFixedThreadPool(
 
-            Thread t = new Thread(r, "Generation-Thread");
-            t.setPriority(Thread.NORM_PRIORITY);
+                GENERATION_AVAILABLE_THREADS,
 
-            return t;
-        });
+                new java.util.concurrent.ThreadFactory() {
+
+                    private int count = 1;
+
+                    @Override
+                    public Thread newThread(Runnable r) {
+
+                        Thread t = new Thread(r, "Generation-Thread-" + count++);
+                        t.setPriority(Thread.NORM_PRIORITY);
+
+                        return t;
+                    }
+                });
 
         // General-purpose threads
-        if (AVAILABLE_THREADS < 3)
+        if (!hasGeneralPurposeThread)
             return;
 
         this.generalPurposeExecutor = Executors.newFixedThreadPool(
 
-                settings.AVAILABLE_THREADS - 2,
+                GENERAL_AVAILABLE_THREADS,
 
                 new java.util.concurrent.ThreadFactory() {
 
@@ -148,7 +172,8 @@ public class ThreadManager {
         return submitTask(hasGeneralPurposeThread, generalPurposeExecutor, task);
     }
 
-    // Centralized Fallback Logic
+    // Utility \\
+
     private Future<?> submitTask(boolean hasThread, ExecutorService executor, Runnable task) {
 
         if (!isExecutorAvailable(hasThread, executor)) {
@@ -159,8 +184,6 @@ public class ThreadManager {
 
         return executor.submit(task);
     }
-
-    // Utility \\
 
     private boolean isExecutorAvailable(boolean hasThreadFlag, ExecutorService executor) {
         return hasThreadFlag && executor != null && !executor.isShutdown() && !executor.isTerminated();

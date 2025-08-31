@@ -1,18 +1,18 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
 import com.AdventureRPG.MaterialManager.MaterialData;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.VertexAttribute;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g3d.Material;
+import com.badlogic.gdx.graphics.g3d.model.MeshPart;
+import com.badlogic.gdx.graphics.g3d.model.Node;
+import com.badlogic.gdx.graphics.g3d.model.NodePart;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.TextureArray;
 import com.badlogic.gdx.utils.Array;
 
-/**
- * Holds prebuilt subchunk mesh data and can build GPU-ready meshes
- * on the render thread.
- */
 public final class SubChunkMesh {
 
     public static final int VERTEX_SIZE = 3 + 3 + 4 + 2;
@@ -71,9 +71,12 @@ public final class SubChunkMesh {
         return renderBatches;
     }
 
-    public void build() {
+    public Node build() {
 
         dispose();
+
+        Node node = new Node();
+        node.id = "subchunk_" + hashCode();
 
         for (MeshBatch batch : batches) {
             if (batch.vertexCount == 0 || batch.indexCount == 0)
@@ -97,23 +100,37 @@ public final class SubChunkMesh {
             mesh.setVertices(verts);
             mesh.setIndices(inds);
 
+            // store GPU-ready data if needed
             RenderBatch renderBatch = new RenderBatch();
             renderBatch.mesh = mesh;
             renderBatch.material = batch.material;
             renderBatch.shaderProgram = batch.shaderProgram;
             renderBatch.textureArray = batch.textureArray;
-
             renderBatches.add(renderBatch);
+
+            // --- NEW: turn this into a NodePart ---
+            MeshPart meshPart = new MeshPart();
+            meshPart.mesh = mesh;
+            meshPart.offset = 0;
+            meshPart.size = inds.length;
+            meshPart.primitiveType = GL20.GL_TRIANGLES;
+
+            NodePart nodePart = new NodePart(meshPart, batch.material);
+            node.parts.add(nodePart);
         }
 
         batches.clear();
+
+        return node;
     }
 
     public void dispose() {
+
         for (RenderBatch rb : renderBatches) {
             if (rb.mesh != null)
                 rb.mesh.dispose();
         }
+
         renderBatches.clear();
     }
 

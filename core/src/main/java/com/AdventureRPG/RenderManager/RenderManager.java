@@ -1,6 +1,7 @@
 package com.AdventureRPG.RenderManager;
 
 import com.AdventureRPG.GameManager;
+import com.AdventureRPG.PassManager.PassData;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.WorldSystem.WorldSystem;
@@ -31,7 +32,7 @@ public class RenderManager {
         this.renderQueue = new RenderQueue(GameManager);
 
         // Core passes
-        renderQueue.addPass(new RenderPass(
+        renderQueue.addPass(new PassData(
                 0, "3D_PASS", -1, null, null,
                 ctx -> {
                     ctx.modelBatch.begin(playerSystem.getCamera());
@@ -40,7 +41,7 @@ public class RenderManager {
                     ctx.modelBatch.end();
                 }), 0);
 
-        renderQueue.addPass(new RenderPass(
+        renderQueue.addPass(new PassData(
                 0, "2D_PASS", -1, null, null,
                 ctx -> {
                     ctx.spriteBatch.begin();
@@ -64,7 +65,7 @@ public class RenderManager {
 
     // Accessible \\
 
-    public void enqueue(RenderPass pass, int sortOrder) {
+    public void enqueue(PassData pass, int sortOrder) {
         renderQueue.addPass(pass, sortOrder);
     }
 }

@@ -10,7 +10,9 @@ import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
+import com.AdventureRPG.WorldSystem.Chunks.ChunkState;
 import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
+import com.AdventureRPG.WorldSystem.Chunks.NeighborStatus;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
@@ -23,7 +25,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 public class GridSystem {
 
     // Debug
-    private final boolean debug = true; // TODO: Remove debug line
+    private final boolean debug = true; // TODO: Debug line
 
     // Game Manager
     private final Settings settings;
@@ -337,9 +339,6 @@ public class GridSystem {
 
         // Determine which chunks need to be loaded where
         createQueue();
-
-        // Reorganize model batches
-        reorganizeModelBatches();
     }
 
     private void clearQueue() {
@@ -359,7 +358,9 @@ public class GridSystem {
     private void createQueue() {
 
         // The grid is prebuilt and never changes
-        for (long gridCoordinate : gridCoordinates) {
+        for (int i = 0; i < totalChunks; i++) {
+
+            long gridCoordinate = loadOrder[i];
 
             // Use the position in grid as an offset
             int offsetX = Coordinate2Int.unpackX(gridCoordinate);
@@ -381,14 +382,19 @@ public class GridSystem {
 
             // Attempt to use the chunk coordinate to retrieve a loaded chunk
             Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
+            Model model = chunkModels.get(gridCoordinate);
+            clearModel(model);
 
             // If the chunk was loaded we move it to the new grid position
             if (loadedChunk != null) {
 
                 loadedChunk.moveTo(gridCoordinate);
 
+                if (loadedChunk.getState() == ChunkState.FINALIZED)
+                    loadedChunk.shiftChunkMesh(model);
+
                 // Assign the chunk to be assessed for existing neighbors if it exists
-                if (!loadedChunk.hasAllNeighbors())
+                if (loadedChunk.getNeighborStatus() != NeighborStatus.COMPLETE)
                     assessmentQueue.enqueue(chunkCoordinate);
             }
 
@@ -398,24 +404,6 @@ public class GridSystem {
                 chunkToGridMap.put(chunkCoordinate, gridCoordinate);
                 loadQueue.enqueue(gridCoordinate);
             }
-        }
-    }
-
-    private void reorganizeModelBatches() {
-
-        for (int i = 0; i < totalChunks; i++) {
-
-            long gridCoordinate = loadOrder[i];
-
-            Model model = chunkModels.get(gridCoordinate);
-
-            long chunkCoordinate = gridToChunkMap.get(gridCoordinate);
-            Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
-
-            if (loadedChunk != null)
-                loadedChunk.shiftChunkMesh(model);
-            else
-                clearModel(model);
         }
     }
 
@@ -499,7 +487,6 @@ public class GridSystem {
             }
 
             chunkSystem.requestGenerate(loadedChunk);
-            buildQueue.enqueue(chunkCoordinate);
 
             // Increment counters
             index = incrementQueueTotal(index);
@@ -551,7 +538,7 @@ public class GridSystem {
                 continue;
             }
 
-            if (loadedChunk.hasCardinalNeighbors())
+            if (loadedChunk.getNeighborStatus() != NeighborStatus.INCOMPLETE)
                 chunkSystem.requestBuild(loadedChunk);
 
             index = incrementQueueTotal(index);
@@ -580,11 +567,7 @@ public class GridSystem {
 
             if (gridCoordinate != -1) {
 
-                if (loadedChunk.hasData())
-                    assessmentQueue.enqueue(chunkCoordinate);
-                else
-                    generateQueue.enqueue(chunkCoordinate);
-
+                loadedChunk.enqueue();
                 loadedChunk.moveTo(gridCoordinate);
                 loadedChunks.put(chunkCoordinate, loadedChunk);
             }
@@ -614,6 +597,8 @@ public class GridSystem {
     private void receiveBuiltChunks() {
 
         while (chunkSystem.hasBuiltData()) {
+
+            System.out.println("Yay");
 
             Chunk loadedChunk = chunkSystem.pollBuiltChunk();
 
@@ -722,6 +707,12 @@ public class GridSystem {
 
     // External Queueing \\
 
+    public void addToGenerateQueue(Chunk chunk) {
+
+        long chunkCoordinate = chunk.coordinate;
+        generateQueue.enqueue(chunkCoordinate);
+    }
+
     public void addToAssessmentQueue(Chunk chunk) {
 
         long chunkCoordinate = chunk.coordinate;
@@ -742,7 +733,7 @@ public class GridSystem {
 
     // Debug \\
 
-    private void debug() { // TODO: Remove debug line
+    private void debug() { // TODO: Debug line
 
     }
 }

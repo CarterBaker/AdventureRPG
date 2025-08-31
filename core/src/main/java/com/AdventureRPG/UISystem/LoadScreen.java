@@ -1,8 +1,8 @@
 package com.AdventureRPG.UISystem;
 
-public class LoadScreen extends MenuType {
+public class LoadScreen extends MenuInstance {
 
-    private boolean debug = true; // TODO: Remove debug line
+    private boolean debug = true; // TODO: Debug line
 
     private int maxProgress;
     private int totalProgress;
@@ -22,7 +22,7 @@ public class LoadScreen extends MenuType {
 
             this.totalProgress = this.maxProgress;
 
-            if (debug) { // TODO: Remove debug line
+            if (debug) { // TODO: Debug line
                 printProgress();
                 System.out.println();
             }
@@ -30,11 +30,11 @@ public class LoadScreen extends MenuType {
             return;
         }
 
-        if (debug) // TODO: Remove debug line
+        if (debug) // TODO: Debug line
             printProgress();
     }
 
-    private void printProgress() { // TODO: Remove debug line
+    private void printProgress() { // TODO: Debug line
         System.out.print("\rLoading progress: " + totalProgress + " / " + maxProgress +
                 " (" + getPercentage() + "%)");
 
@@ -53,13 +53,13 @@ public class LoadScreen extends MenuType {
         // Build or display UI components
         totalProgress = 0;
 
-        if (debug) // TODO: Remove debug line
+        if (debug) // TODO: Debug line
             System.out.println("Load Screen opened.");
     }
 
     @Override
     public void close() {
-        if (debug) { // TODO: Remove debug line
+        if (debug) { // TODO: Debug line
             if (totalProgress < maxProgress)
                 System.out.print("!!!\n");
 

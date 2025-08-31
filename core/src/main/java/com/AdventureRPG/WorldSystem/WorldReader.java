@@ -38,7 +38,7 @@ public class WorldReader {
         Vector2Int worldScale = new Vector2Int(worldWidth, worldHeight);
 
         if (settings.debug)
-            System.out.println("World Scale: " + worldScale); // TODO: Remove debug line
+            System.out.println("World Scale: " + worldScale); // TODO: Debug line
 
         return worldScale;
     }

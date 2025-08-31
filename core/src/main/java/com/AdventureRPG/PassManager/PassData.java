@@ -1,5 +1,7 @@
-package com.AdventureRPG.RenderManager;
+package com.AdventureRPG.PassManager;
 
+import com.AdventureRPG.RenderManager.RenderAction;
+import com.AdventureRPG.RenderManager.RenderContext;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
@@ -12,7 +14,7 @@ import com.badlogic.gdx.graphics.Color;
 import java.util.HashMap;
 import java.util.Map;
 
-public class RenderPass {
+public class PassData {
 
     // Pass
     public final int id;
@@ -25,7 +27,7 @@ public class RenderPass {
 
     // Base \\
 
-    public RenderPass(
+    public PassData(
             int id,
             String name,
             int shaderID,
@@ -43,7 +45,7 @@ public class RenderPass {
     }
 
     // Clone constructor
-    public RenderPass(RenderPass template) {
+    public PassData(PassData template) {
         this.id = template.id;
         this.name = template.name;
         this.shaderID = template.shaderID;
@@ -53,7 +55,7 @@ public class RenderPass {
         this.lifetime = template.lifetime;
     }
 
-    public RenderPass(RenderPass template, float lifetime) {
+    public PassData(PassData template, float lifetime) {
         this(template);
         this.lifetime = lifetime;
     }

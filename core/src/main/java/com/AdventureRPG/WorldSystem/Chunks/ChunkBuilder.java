@@ -3,9 +3,6 @@ package com.AdventureRPG.WorldSystem.Chunks;
 import java.util.BitSet;
 
 import com.AdventureRPG.MaterialManager.MaterialData;
-import com.AdventureRPG.MaterialManager.MaterialManager;
-import com.AdventureRPG.ShaderManager.ShaderManager;
-import com.AdventureRPG.TextureManager.TextureManager;
 import com.AdventureRPG.TextureManager.TextureManager.UVRect;
 import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.Util.Direction3Int;

@@ -12,7 +12,7 @@ public class UISystem {
     public final GameManager gameManager;
 
     // UI System
-    private final List<MenuType> openMenus = new ArrayList<>();
+    private final List<MenuInstance> openMenus = new ArrayList<>();
 
     // Base \\
 
@@ -38,10 +38,14 @@ public class UISystem {
 
     }
 
+    public void dispose() {
+
+    }
+
     // UI System \\
 
-    public MenuType open(Menu Menu) {
-        MenuType menuInstance = switch (Menu) {
+    public MenuInstance open(Menu Menu) {
+        MenuInstance menuInstance = switch (Menu) {
             case LoadScreen -> new LoadScreen(this, Menu);
             case Main -> new MainMenu(this, Menu);
             default -> throw new IllegalArgumentException("Unknown menu type: " + Menu);
@@ -57,9 +61,9 @@ public class UISystem {
     }
 
     public void close(Menu Menu) {
-        Iterator<MenuType> iterator = openMenus.iterator();
+        Iterator<MenuInstance> iterator = openMenus.iterator();
         while (iterator.hasNext()) {
-            MenuType openMenu = iterator.next();
+            MenuInstance openMenu = iterator.next();
             if (openMenu.getMenu() == Menu) {
                 close(openMenu); // Call the close behavior
                 iterator.remove(); // Safely remove from list
@@ -69,7 +73,7 @@ public class UISystem {
         updateInputBlockState();
     }
 
-    public void close(MenuType Menu) {
+    public void close(MenuInstance Menu) {
         Menu.close();
         openMenus.remove(Menu);
         updateInputBlockState();
@@ -77,7 +81,7 @@ public class UISystem {
 
     private void updateInputBlockState() {
 
-        for (MenuType menu : openMenus) {
+        for (MenuInstance menu : openMenus) {
             if (menu.blockInput()) {
                 gameManager.inputSystem.block(true);
                 return;

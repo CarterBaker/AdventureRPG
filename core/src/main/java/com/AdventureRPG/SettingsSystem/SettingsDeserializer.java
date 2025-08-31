@@ -40,8 +40,12 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         // Constant Settings \\
 
         // Thread Settings
-        if (obj.has("AVAILABLE_THREADS"))
-            builder.AVAILABLE_THREADS(obj.get("AVAILABLE_THREADS").getAsInt());
+        if (obj.has("AI_AVAILABLE_THREADS"))
+            builder.AI_AVAILABLE_THREADS(obj.get("AI_AVAILABLE_THREADS").getAsInt());
+        if (obj.has("GENERATION_AVAILABLE_THREADS"))
+            builder.GENERATION_AVAILABLE_THREADS(obj.get("GENERATION_AVAILABLE_THREADS").getAsInt());
+        if (obj.has("GENERAL_AVAILABLE_THREADS"))
+            builder.GENERAL_AVAILABLE_THREADS(obj.get("GENERAL_AVAILABLE_THREADS").getAsInt());
 
         // Path Settings
         if (obj.has("CALENDAR_JSON_PATH"))

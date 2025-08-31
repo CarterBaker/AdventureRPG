@@ -49,6 +49,10 @@ public class SaveSystem {
 
     }
 
+    public void dispose() {
+
+    }
+
     // Save System \\
 
     private boolean hasNewestSave() {

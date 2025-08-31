@@ -2,11 +2,8 @@ package com.AdventureRPG.WorldSystem.Chunks;
 
 import com.AdventureRPG.WorldSystem.Biomes.BiomeContainer;
 import com.AdventureRPG.WorldSystem.Blocks.BlockContainer;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g3d.Model;
-import com.badlogic.gdx.graphics.g3d.model.MeshPart;
 import com.badlogic.gdx.graphics.g3d.model.Node;
-import com.badlogic.gdx.graphics.g3d.model.NodePart;
 
 public final class SubChunk {
 
@@ -16,6 +13,7 @@ public final class SubChunk {
 
     // Mesh
     public final SubChunkMesh subChunkMesh;
+    private Node node;
 
     // Utility
     private final int biomeShift;
@@ -37,6 +35,10 @@ public final class SubChunk {
 
         // Utility
         this.biomeShift = Integer.numberOfTrailingZeros(CHUNK_SIZE / BIOME_SIZE);
+    }
+
+    public void dispose() {
+        subChunkMesh.dispose();
     }
 
     // Data\\
@@ -65,40 +67,17 @@ public final class SubChunk {
         subChunkMesh.build();
     }
 
-    public void assignMeshToModel(Model model) {
+    public void build(Model model) {
 
-        int nodeIndex = 0;
+        // dispose old node if it exists
+        if (node != null)
+            model.nodes.removeValue(node, true);
 
-        for (SubChunkMesh.RenderBatch batch : subChunkMesh.getRenderBatches()) {
+        // ask SubChunkMesh to build and give us a ready Node
+        node = subChunkMesh.build();
+        model.nodes.add(node);
 
-            if (batch.mesh == null)
-                continue;
-
-            // Create MeshPart
-            MeshPart meshPart = new MeshPart();
-            meshPart.id = "subchunk_part_" + nodeIndex++;
-            meshPart.mesh = batch.mesh;
-            meshPart.offset = 0;
-            meshPart.size = batch.mesh.getNumIndices();
-            meshPart.primitiveType = GL20.GL_TRIANGLES;
-
-            // Create NodePart
-            NodePart nodePart = new NodePart(meshPart, batch.material);
-
-            // Hook shader/texture array if your pipeline uses them outside Material
-            // (LibGDX's default Renderable pipeline usually only needs Material+MeshPart)
-            // If you need custom ShaderProgram, you'd handle it in your own
-            // RenderableProvider.
-
-            // Create Node and attach
-            Node node = new Node();
-            node.id = "subchunk_node_" + nodeIndex;
-            node.parts.add(nodePart);
-
-            model.nodes.add(node);
-        }
-
-        // Rebuild model's internal references
+        // refresh transforms
         model.calculateTransforms();
     }
 

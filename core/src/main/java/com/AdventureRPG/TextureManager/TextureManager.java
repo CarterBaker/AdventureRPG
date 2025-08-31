@@ -16,7 +16,7 @@ import com.badlogic.gdx.graphics.Pixmap.Format;
 public class TextureManager {
 
     // Debug
-    private final boolean debug = false; // TODO: Remove debug line
+    private final boolean debug = false; // TODO: Debug line
 
     // Game Manager
     private final Settings settings;
@@ -185,7 +185,7 @@ public class TextureManager {
 
         if (subfolders == null || subfolders.length == 0) {
 
-            // TODO: Remove debug line
+            // TODO: Debug line
             log("No subfolders in " + root.getAbsolutePath());
 
             return;
@@ -203,7 +203,7 @@ public class TextureManager {
 
         if (byType.isEmpty()) {
 
-            // TODO: Remove debug line
+            // TODO: Debug line
             log("Skipped empty folder: " + folderName);
 
             return;
@@ -258,7 +258,7 @@ public class TextureManager {
         // We can delete temp PNGs after upload (TextureArray has already read them)
         cleanupTempFiles(typeToTempFile.values());
 
-        // TODO: Remove debug line
+        // TODO: Debug line
         log("Built TextureArray for folder: " + folderName + " with " + typeToTempFile.size() + " layers");
     }
 
@@ -311,7 +311,7 @@ public class TextureManager {
                 texturePathToID.put(key, id);
                 idToTexturePath.put(id, key);
 
-                log("ID " + id + " ← " + key);// TODO: Remove debug line
+                log("ID " + id + " ← " + key); // TODO: Debug line
             }
         }
     }
@@ -529,7 +529,7 @@ public class TextureManager {
         }
     }
 
-    private void log(String msg) { // TODO: Remove debug line
+    private void log(String msg) { // TODO: Debug line
 
         if (debug)
             System.out.println("[TextureManager] " + msg);

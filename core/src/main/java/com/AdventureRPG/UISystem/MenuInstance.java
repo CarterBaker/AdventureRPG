@@ -1,10 +1,10 @@
 package com.AdventureRPG.UISystem;
 
-public abstract class MenuType {
+public abstract class MenuInstance {
     protected final UISystem UISystem;
     protected final Menu menu;
 
-    public MenuType(UISystem UISystem, Menu menu) {
+    public MenuInstance(UISystem UISystem, Menu menu) {
         this.UISystem = UISystem;
         this.menu = menu;
     }

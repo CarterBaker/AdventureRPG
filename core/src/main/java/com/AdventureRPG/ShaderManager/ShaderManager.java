@@ -21,7 +21,7 @@ import java.util.*;
 public class ShaderManager implements ShaderProvider {
 
     // Debug
-    private final boolean debug = true; // TODO: Remove debug line
+    private final boolean debug = true; // TODO: Debug line
 
     // Game Manager
     private final Settings settings;
@@ -146,7 +146,7 @@ public class ShaderManager implements ShaderProvider {
 
             catch (Exception exception) {
 
-                // TODO: Remove debug line
+                // TODO: Debug line
                 log("Failed to load shader: " + file.name() + " - " + exception.getMessage());
             }
         }
@@ -233,7 +233,7 @@ public class ShaderManager implements ShaderProvider {
         return fileName.endsWith(".json") ? fileName.substring(0, fileName.length() - 5) : fileName;
     }
 
-    private void log(String msg) { // TODO: Remove debug line
+    private void log(String msg) { // TODO: Debug line
 
         if (debug)
             System.out.println("[ShaderManager] " + msg);

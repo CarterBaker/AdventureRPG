@@ -2,7 +2,6 @@ package com.AdventureRPG.PassManager;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.RenderManager.RenderManager;
-import com.AdventureRPG.RenderManager.RenderPass;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
@@ -27,7 +26,7 @@ public class PassManager {
     private final String PASS_JSON_PATH;
 
     // Data
-    private final Map<Integer, RenderPass> idToPass = new LinkedHashMap<>();
+    private final Map<Integer, PassData> idToPass = new LinkedHashMap<>();
     private final Map<String, Integer> nameToID = new HashMap<>();
     private int nextPassID = 0;
 
@@ -63,6 +62,10 @@ public class PassManager {
 
     }
 
+    public void dispose() {
+
+    }
+
     // Core Logic \\
 
     private void compilePasses() {
@@ -76,7 +79,7 @@ public class PassManager {
 
             try {
                 PassJson json = gson.fromJson(file.readString(), PassJson.class);
-                RenderPass passTemplate = createPassTemplate(file, json);
+                PassData passTemplate = createPassTemplate(file, json);
                 registerPass(passTemplate);
             }
 
@@ -86,13 +89,13 @@ public class PassManager {
         }
     }
 
-    private RenderPass createPassTemplate(FileHandle file, PassJson json) {
+    private PassData createPassTemplate(FileHandle file, PassJson json) {
 
         int shaderID = shaderManager.getShaderID(json.shader);
         Map<String, UniformAttribute> uniforms = parseUniforms(json.uniforms);
         String name = stripExtension(file.name());
 
-        return new RenderPass(nextPassID, name, shaderID, json.textures, uniforms, null);
+        return new PassData(nextPassID, name, shaderID, json.textures, uniforms, null);
     }
 
     private Map<String, UniformAttribute> parseUniforms(Map<String, Object> rawUniforms) {
@@ -167,7 +170,7 @@ public class PassManager {
         };
     }
 
-    private void registerPass(RenderPass pass) {
+    private void registerPass(PassData pass) {
         idToPass.put(nextPassID, pass);
         nameToID.put(pass.name, nextPassID);
         nextPassID++;
@@ -187,7 +190,7 @@ public class PassManager {
 
     // Accessible \\S
 
-    public RenderPass getPassByID(int id) {
+    public PassData getPassByID(int id) {
         return idToPass.get(id);
     }
 
@@ -195,7 +198,7 @@ public class PassManager {
         return nameToID.getOrDefault(name, -1);
     }
 
-    public RenderPass createPassInstance(String name, int sortOrder) {
+    public PassData createPassInstance(String name, int sortOrder) {
 
         Integer id = nameToID.get(name);
 
@@ -205,7 +208,7 @@ public class PassManager {
         return createPassInstance(id, sortOrder, 0f);
     }
 
-    public RenderPass createPassInstance(String name, int sortOrder, float lifeTime) {
+    public PassData createPassInstance(String name, int sortOrder, float lifeTime) {
 
         Integer id = nameToID.get(name);
 
@@ -215,20 +218,20 @@ public class PassManager {
         return createPassInstance(id, sortOrder, lifeTime);
     }
 
-    public RenderPass createPassInstance(int id, int sortOrder) {
+    public PassData createPassInstance(int id, int sortOrder) {
 
-        RenderPass renderPass = createPassInstance(id, sortOrder, 0f);
+        PassData renderPass = createPassInstance(id, sortOrder, 0f);
         return renderPass;
     }
 
-    public RenderPass createPassInstance(int id, int sortOrder, float lifeTime) {
+    public PassData createPassInstance(int id, int sortOrder, float lifeTime) {
 
-        RenderPass template = idToPass.get(id);
+        PassData template = idToPass.get(id);
 
         if (template == null)
             return null;
 
-        RenderPass renderPass = new RenderPass(template);
+        PassData renderPass = new PassData(template);
 
         renderManager.enqueue(renderPass, sortOrder);
 

@@ -23,7 +23,9 @@ public class Settings {
     // Constant Settings \\
 
     // Thread Settings
-    public final int AVAILABLE_THREADS; // Maximum available threads to pool off
+    public final int AI_AVAILABLE_THREADS; // Maximum available threads to pool off
+    public final int GENERATION_AVAILABLE_THREADS; // Maximum available threads to pool off
+    public final int GENERAL_AVAILABLE_THREADS; // Maximum available threads to pool off
 
     // Path Settings
     public final String CALENDAR_JSON_PATH; // The location of the calendar json file
@@ -98,7 +100,9 @@ public class Settings {
         // Constant Settings \\
 
         // Thread Settings
-        this.AVAILABLE_THREADS = builder.AVAILABLE_THREADS;
+        this.AI_AVAILABLE_THREADS = builder.AI_AVAILABLE_THREADS;
+        this.GENERATION_AVAILABLE_THREADS = builder.GENERATION_AVAILABLE_THREADS;
+        this.GENERAL_AVAILABLE_THREADS = builder.GENERAL_AVAILABLE_THREADS;
 
         // Path Settings
         this.CALENDAR_JSON_PATH = builder.CALENDAR_JSON_PATH;
@@ -173,7 +177,9 @@ public class Settings {
         // Constant Settings \\
 
         // Thread Settings
-        private int AVAILABLE_THREADS = 3;
+        private int AI_AVAILABLE_THREADS = 2;
+        private int GENERATION_AVAILABLE_THREADS = 2;
+        private int GENERAL_AVAILABLE_THREADS = 2;
 
         // Path Settings
         private String CALENDAR_JSON_PATH = "calendar.json";
@@ -274,8 +280,18 @@ public class Settings {
 
         // Thread Settings \\
 
-        public Builder AVAILABLE_THREADS(int AVAILABLE_THREADS) {
-            this.AVAILABLE_THREADS = AVAILABLE_THREADS;
+        public Builder AI_AVAILABLE_THREADS(int AI_AVAILABLE_THREADS) {
+            this.AI_AVAILABLE_THREADS = AI_AVAILABLE_THREADS;
+            return this;
+        }
+
+        public Builder GENERATION_AVAILABLE_THREADS(int GENERATION_AVAILABLE_THREADS) {
+            this.GENERATION_AVAILABLE_THREADS = GENERATION_AVAILABLE_THREADS;
+            return this;
+        }
+
+        public Builder GENERAL_AVAILABLE_THREADS(int GENERAL_AVAILABLE_THREADS) {
+            this.GENERAL_AVAILABLE_THREADS = GENERAL_AVAILABLE_THREADS;
             return this;
         }
 

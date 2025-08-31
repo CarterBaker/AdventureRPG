@@ -2,7 +2,7 @@ package com.AdventureRPG.LightingSystem;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.PassManager.PassManager;
-import com.AdventureRPG.RenderManager.RenderPass;
+import com.AdventureRPG.PassManager.PassData;
 import com.AdventureRPG.TimeSystem.TimeSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
@@ -16,7 +16,7 @@ public class Sky {
     private Camera camera;
     private int skyPassID;
 
-    private RenderPass skyPass;
+    private PassData skyPass;
 
     private float elapsedTime;
     private float u_overcast;

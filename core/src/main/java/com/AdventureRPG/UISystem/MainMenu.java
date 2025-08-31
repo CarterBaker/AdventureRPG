@@ -1,6 +1,6 @@
 package com.AdventureRPG.UISystem;
 
-public class MainMenu extends MenuType {
+public class MainMenu extends MenuInstance {
 
     public MainMenu(UISystem UISystem, Menu Menu) {
         super(UISystem, Menu);
@@ -9,12 +9,12 @@ public class MainMenu extends MenuType {
     @Override
     public void open() {
         // Build or display UI components
-        System.out.println("Main Menu opened."); // TODO: Remove debug line
+        System.out.println("Main Menu opened."); // TODO: Debug line
     }
 
     @Override
     public void close() {
         // Tear down or hide UI components
-        System.out.println("Main Menu closed."); // TODO: Remove debug line
+        System.out.println("Main Menu closed."); // TODO: Debug line
     }
 }

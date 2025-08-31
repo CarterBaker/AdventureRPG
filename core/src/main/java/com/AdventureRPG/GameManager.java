@@ -5,6 +5,7 @@ import java.io.File;
 import com.AdventureRPG.InputSystem.InputSystem;
 import com.AdventureRPG.LightingSystem.LightingSystem;
 import com.AdventureRPG.TextureManager.TextureManager;
+import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.PassManager.PassManager;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
@@ -12,7 +13,6 @@ import com.AdventureRPG.RenderManager.RenderManager;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
-import com.AdventureRPG.ThreadSystem.ThreadManager;
 import com.AdventureRPG.TimeSystem.TimeSystem;
 import com.AdventureRPG.UISystem.LoadScreen;
 import com.AdventureRPG.UISystem.Menu;
@@ -29,7 +29,7 @@ import com.google.gson.Gson;
 public class GameManager implements Screen {
 
     // Debug
-    private final boolean debug = true; // TODO: Remove debug line
+    private final boolean debug = true; // TODO: Debug line
 
     // Paths and Settings
     public final Main game;
@@ -37,17 +37,16 @@ public class GameManager implements Screen {
     public final Settings settings;
     public final Gson gson;
 
-    // Essential Systems
+    // Core Systems
     public final ShaderProvider defaultShaderProvider;
     public final Environment environment;
 
     // Game Systems
     public final ThreadManager threadManager;
     public final TextureManager textureManager;
-    public final MaterialManager materialManager;
     public final ShaderManager shaderManager;
+    public final MaterialManager materialManager;
     public final PassManager passManager;
-
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
     public final TimeSystem timeSystem;
@@ -55,7 +54,6 @@ public class GameManager implements Screen {
     public final WorldSystem worldSystem;
     public final PlayerSystem playerSystem;
     public final InputSystem inputSystem;
-
     public final RenderManager renderManager;
 
     // Game Manager
@@ -63,9 +61,6 @@ public class GameManager implements Screen {
 
     // UI System
     private LoadScreen loadScreen;
-
-    // Delta
-    private float deltaTime;
 
     // Base \\
 
@@ -77,7 +72,7 @@ public class GameManager implements Screen {
         this.settings = settings;
         this.gson = gson;
 
-        // Essential Systems
+        // Core Systems
         this.defaultShaderProvider = new DefaultShaderProvider();
         this.environment = new Environment();
 
@@ -87,7 +82,6 @@ public class GameManager implements Screen {
         this.shaderManager = new ShaderManager(this);
         this.materialManager = new MaterialManager(this);
         this.passManager = new PassManager(this);
-
         this.saveSystem = new SaveSystem(this);
         this.UISystem = new UISystem(this);
         this.timeSystem = new TimeSystem(this);
@@ -95,7 +89,6 @@ public class GameManager implements Screen {
         this.worldSystem = new WorldSystem(this);
         this.playerSystem = new PlayerSystem(this);
         this.inputSystem = new InputSystem(this);
-
         this.renderManager = new RenderManager(this);
 
         // Game Manager
@@ -144,13 +137,18 @@ public class GameManager implements Screen {
     @Override
     public void dispose() {
 
-        // Essential Systems
+        // Core Systems
         defaultShaderProvider.dispose();
 
         // Game Systems
         threadManager.dispose();
         textureManager.dispose();
         shaderManager.dispose();
+        materialManager.dispose();
+        passManager.dispose();
+        saveSystem.dispose();
+        UISystem.dispose();
+        timeSystem.dispose();
     }
 
     // Game Manager \\
@@ -158,7 +156,7 @@ public class GameManager implements Screen {
     // Awake is called before the first frame after all constructors finish
     private void awake() {
 
-        // Essential Systems
+        // Core Systems
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.8f, 0.8f, 0.8f, 1f));
         environment.add(new DirectionalLight().set(1f, 1f, 1f, -1f, -0.8f, -0.2f));
 
@@ -168,7 +166,6 @@ public class GameManager implements Screen {
         shaderManager.awake();
         materialManager.awake();
         passManager.awake();
-
         saveSystem.awake();
         UISystem.awake();
         timeSystem.awake();
@@ -187,7 +184,6 @@ public class GameManager implements Screen {
         shaderManager.start();
         materialManager.start();
         passManager.start();
-
         saveSystem.start();
         UISystem.start();
         timeSystem.start();
@@ -197,13 +193,11 @@ public class GameManager implements Screen {
         inputSystem.start();
 
         startLoading();
-        // UISystem.open(Menu.Main); // TODO: Remove this line for future debugging
+        // UISystem.open(Menu.Main); // TODO: Commented out for debugging
     }
 
     // Update is called once per frame before rendering
     private void update(float delta) {
-
-        deltaTime = delta;
 
         switch (gameState) {
             case START -> start();
@@ -213,6 +207,8 @@ public class GameManager implements Screen {
 
         // Game Systems
         threadManager.update();
+        saveSystem.update();
+        UISystem.update();
         worldSystem.update();
     }
 
@@ -224,9 +220,6 @@ public class GameManager implements Screen {
         shaderManager.update();
         materialManager.update();
         passManager.update();
-
-        saveSystem.update();
-        UISystem.update();
         timeSystem.update();
         lightingSystem.update();
         playerSystem.update();
@@ -256,7 +249,7 @@ public class GameManager implements Screen {
             UISystem.close(loadScreen);
             gameState = GameState.Ready;
 
-            if (debug) // TODO: Remove debug line
+            if (debug) // TODO: Debug line
                 debug();
         }
     }
@@ -269,15 +262,9 @@ public class GameManager implements Screen {
         Ready
     }
 
-    // Accessible \\
-
-    public float deltaTime() {
-        return deltaTime;
-    }
-
     // Debug \\
 
-    private void debug() { // TODO: Remove debug line
+    private void debug() { // TODO: Debug line
 
         // Print memory usage
         Runtime runtime = Runtime.getRuntime();

@@ -20,28 +20,31 @@ public class Chunk {
     // Chunk
     public final long coordinate;
     public final int coordinateX, coordinateY;
+    private ChunkState state;
 
     // Position
     public long position;
     public int positionX, positionY;
 
     // Neighbors
-    private boolean hasCardinalNeighbors;
-    private boolean hasAllNeighbors;
+    private NeighborStatus neighborStatus;
     private final Long2IntOpenHashMap coordToIndex;
     public final long[] neighborCoordinates;
     private Chunk[] neighbors;
 
     // Data
-    private boolean hasData;
     public SubChunk[] subChunks;
 
     // Mesh
-    public Model model;
+    private Model model;
 
     // Base \\
 
     public Chunk(WorldSystem worldSystem, long coordinate) {
+        this(worldSystem, coordinate, ChunkState.NEEDS_GENERATION_DATA);
+    }
+
+    public Chunk(WorldSystem worldSystem, long coordinate, ChunkState state) {
 
         // Game Manager
         this.settings = worldSystem.settings;
@@ -53,10 +56,10 @@ public class Chunk {
         this.coordinate = coordinate;
         this.coordinateX = Coordinate2Int.unpackX(coordinate);
         this.coordinateY = Coordinate2Int.unpackY(coordinate);
+        this.state = state;
 
         // Neighbors
-        this.hasCardinalNeighbors = false;
-        this.hasAllNeighbors = false;
+        this.neighborStatus = NeighborStatus.INCOMPLETE;
         coordToIndex = new Long2IntOpenHashMap(8);
         neighborCoordinates = new long[8];
         neighbors = new Chunk[8];
@@ -66,9 +69,6 @@ public class Chunk {
             neighborCoordinates[direction.index] = neighborCoordinate;
             coordToIndex.put(neighborCoordinate, direction.index);
         }
-
-        // Data
-        this.hasData = false;
     }
 
     private long getWrappedNeighborCoordinate(Direction2Int direction) {
@@ -80,6 +80,22 @@ public class Chunk {
     }
 
     public void dispose() {
+
+        if (subChunks != null)
+            for (int i = 0; i < settings.WORLD_HEIGHT; i++)
+                subChunks[i].dispose();
+    }
+
+    // Chunk \\
+
+    public ChunkState getState() {
+        return state;
+    }
+
+    private void setState(ChunkState state) {
+
+        this.state = state;
+        enqueue();
     }
 
     // Position \\
@@ -96,11 +112,7 @@ public class Chunk {
     public void generate(SubChunk[] subChunks) {
 
         this.subChunks = subChunks;
-        hasData = true;
-    }
-
-    public boolean hasData() {
-        return hasData;
+        setState(ChunkState.NEEDS_ASSESSMENT_DATA);
     }
 
     public SubChunk getSubChunk(int index) {
@@ -113,6 +125,8 @@ public class Chunk {
 
         for (int subChunkIndex = 0; subChunkIndex < settings.WORLD_HEIGHT; subChunkIndex++)
             rebuild(subChunkIndex);
+
+        setState(ChunkState.FINALIZED);
     }
 
     public void rebuild(int subChunkIndex) {
@@ -122,24 +136,20 @@ public class Chunk {
 
     public void buildChunkMesh(Model model) {
 
-        assignModel(model);
+        this.model = model;
 
         for (int i = 0; i < settings.WORLD_HEIGHT; i++) {
             rebuildSubChunk(i);
-            subChunks[i].assignMeshToModel(model);
+            subChunks[i].build(model);
         }
     }
 
     public void shiftChunkMesh(Model model) {
 
-        assignModel(model);
+        this.model = model;
 
         for (int i = 0; i < settings.WORLD_HEIGHT; i++)
-            subChunks[i].assignMeshToModel(model);
-    }
-
-    private void assignModel(Model model) {
-        this.model = model;
+            subChunks[i].build(model);
     }
 
     private void rebuildSubChunk(int subChunkIndex) {
@@ -148,12 +158,8 @@ public class Chunk {
 
     // Neighbors \\
 
-    public boolean hasCardinalNeighbors() {
-        return hasCardinalNeighbors;
-    }
-
-    public boolean hasAllNeighbors() {
-        return hasAllNeighbors;
+    public NeighborStatus getNeighborStatus() {
+        return neighborStatus;
     }
 
     public long getNeighborCoordinate(Direction2Int direction) {
@@ -177,38 +183,66 @@ public class Chunk {
 
         updateNeighborStatus();
 
-        return hasAllNeighbors;
+        return neighborStatus == NeighborStatus.COMPLETE;
     }
 
     private void updateNeighborStatus() {
 
-        if (!hasCardinalNeighbors) {
+        if (neighborStatus == NeighborStatus.INCOMPLETE) {
 
             for (int i = 0; i < 4; i++)
 
                 if (neighbors[i] == null)
                     return;
 
-            hasCardinalNeighbors = true;
-            gridSystem.addToBuildQueue(this);
+            neighborStatus = NeighborStatus.PARTIAL;
+            setState(ChunkState.NEEDS_BUILD_DATA);
         }
 
-        else
-            gridSystem.addToAssessmentQueue(this);
-
-        if (!hasAllNeighbors) {
+        if (neighborStatus == NeighborStatus.PARTIAL) {
 
             for (int i = 4; i < 8; i++)
 
                 if (neighbors[i] == null)
                     return;
 
-            hasAllNeighbors = true;
-            gridSystem.addToBuildQueue(this);
+            neighborStatus = NeighborStatus.COMPLETE;
         }
+    }
 
-        else
-            gridSystem.addToAssessmentQueue(this);
+    // Accessible \\
+
+    public void enqueue() {
+
+        switch (state) {
+
+            case NEEDS_GENERATION_DATA:
+
+                gridSystem.addToGenerateQueue(this);
+
+                break;
+
+            case NEEDS_ASSESSMENT_DATA:
+
+                gridSystem.addToAssessmentQueue(this);
+
+                break;
+
+            case NEEDS_BUILD_DATA:
+
+                gridSystem.addToBuildQueue(this);
+
+                if (neighborStatus != NeighborStatus.COMPLETE)
+                    gridSystem.addToAssessmentQueue(this);
+
+                break;
+
+            case FINALIZED:
+                break;
+
+            default:
+                break;
+        }
     }
 
     // Gameplay \\

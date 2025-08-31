@@ -3,12 +3,13 @@ package com.AdventureRPG.RenderManager;
 import java.util.*;
 
 import com.AdventureRPG.GameManager;
+import com.AdventureRPG.PassManager.PassData;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 
 public class RenderQueue {
 
     private final ShaderManager shaderManager;
-    private final Map<Integer, Queue<RenderPass>> passes;
+    private final Map<Integer, Queue<PassData>> passes;
 
     public RenderQueue(GameManager gameManager) {
         this.shaderManager = gameManager.shaderManager;
@@ -16,17 +17,17 @@ public class RenderQueue {
     }
 
     // Add a pass into the queue
-    public void addPass(RenderPass pass, int sortOrder) {
+    public void addPass(PassData pass, int sortOrder) {
         passes.computeIfAbsent(sortOrder, k -> new LinkedList<>()).add(pass);
     }
 
     // Render in order: sorted by ID, FIFO within same ID
     public void renderAll(RenderContext context) {
-        Iterator<Map.Entry<Integer, Queue<RenderPass>>> mapIter = passes.entrySet().iterator();
+        Iterator<Map.Entry<Integer, Queue<PassData>>> mapIter = passes.entrySet().iterator();
 
         while (mapIter.hasNext()) {
-            Map.Entry<Integer, Queue<RenderPass>> entry = mapIter.next();
-            Queue<RenderPass> queue = entry.getValue();
+            Map.Entry<Integer, Queue<PassData>> entry = mapIter.next();
+            Queue<PassData> queue = entry.getValue();
 
             queue.removeIf(pass -> {
                 if (pass.lifetime > 0f) {
@@ -37,7 +38,7 @@ public class RenderQueue {
             });
 
             // Render remaining passes
-            for (RenderPass pass : queue) {
+            for (PassData pass : queue) {
                 pass.render(context, shaderManager);
             }
 

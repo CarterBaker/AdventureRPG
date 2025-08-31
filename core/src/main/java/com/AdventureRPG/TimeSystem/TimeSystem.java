@@ -11,7 +11,7 @@ import com.AdventureRPG.SettingsSystem.Settings;
 public class TimeSystem {
 
     // Debug
-    private boolean debug = false; // TODO: Remove debug line
+    private boolean debug = false; // TODO: Debug line
 
     // Game Manager
     public final Settings settings;
@@ -104,6 +104,10 @@ public class TimeSystem {
 
     public void update() {
         updateFromSystemClock();
+    }
+
+    public void dispose() {
+
     }
 
     // Save System \\
@@ -361,7 +365,7 @@ public class TimeSystem {
     // Debug \\
 
     // Debug log function
-    private void log(String msg) { // TODO: Remove debug line
+    private void log(String msg) { // TODO: Debug line
         if (debug) {
             System.out.println("[TimeSystem] " + msg);
         }

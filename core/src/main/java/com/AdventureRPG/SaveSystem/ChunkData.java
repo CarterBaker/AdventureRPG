@@ -32,6 +32,9 @@ public class ChunkData {
     }
 
     public Chunk readChunk(long chunkCoordinate) {
+
+        // TODO: When I add the load system make sure to return the chunk with
+        // ChunkState.generated
         return null;
     }
 }

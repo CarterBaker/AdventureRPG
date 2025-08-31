@@ -2,6 +2,7 @@ package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.badlogic.gdx.Gdx;
 
 public class WorldTick {
 
@@ -35,7 +36,7 @@ public class WorldTick {
             currentTime = 0f;
         } else {
             this.tick = false;
-            currentTime += gameManager.deltaTime();
+            currentTime += Gdx.graphics.getDeltaTime();
         }
     }
 
