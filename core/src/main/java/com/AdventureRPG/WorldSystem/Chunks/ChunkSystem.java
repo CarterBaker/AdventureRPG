@@ -164,9 +164,9 @@ public class ChunkSystem {
 
             Long chunkCoordinate = loadRequests.poll();
 
-            // Run load in another thread
+            // Run load in General-Thread
             threadManager.submitGeneral(() -> {
-                
+
                 Chunk chunk = chunkData.readChunk(chunkCoordinate);
 
                 if (chunk == null)
@@ -176,7 +176,7 @@ public class ChunkSystem {
                 loadedResults.add(chunk);
             });
 
-            // Increment counters on main thread
+            // Increment counters
             index = incrementQueueTotal(index);
         }
 
@@ -193,18 +193,18 @@ public class ChunkSystem {
 
             Chunk loadedChunk = generationRequests.poll();
 
-            // Increment counters on main thread
-            index = incrementQueueTotal(index);
-
             if (loadedChunk == null)
                 continue;
 
-            // Run load in another thread
+            // Run load in dedicated Generation-Thread
             threadManager.submitGeneration(() -> {
 
                 worldGenerator.generateChunk(loadedChunk);
                 generatedResults.add(loadedChunk);
             });
+
+            // Increment counters
+            index = incrementQueueTotal(index);
         }
 
         return totalProcessThisFrame();

@@ -32,6 +32,7 @@ public final class SubChunk {
 
         // Mesh
         this.subChunkMesh = new SubChunkMesh();
+        this.node = new Node();
 
         // Utility
         this.biomeShift = Integer.numberOfTrailingZeros(CHUNK_SIZE / BIOME_SIZE);
@@ -63,22 +64,13 @@ public final class SubChunk {
 
     // Mesh \\
 
-    public void build() {
-        subChunkMesh.build();
-    }
-
     public void build(Model model) {
 
-        // dispose old node if it exists
-        if (node != null)
-            model.nodes.removeValue(node, true);
-
-        // ask SubChunkMesh to build and give us a ready Node
-        node = subChunkMesh.build();
+        rebuild();
         model.nodes.add(node);
-
-        // refresh transforms
-        model.calculateTransforms();
     }
 
+    public void rebuild() {
+        subChunkMesh.build(node);
+    }
 }

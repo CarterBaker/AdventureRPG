@@ -26,7 +26,7 @@ public final class SubChunkMesh {
         public ShaderProgram shaderProgram;
         public TextureArray textureArray;
 
-        public float[] vertices; // interleaved
+        public float[] vertices;
         public short[] indices;
         public int vertexCount;
         public int indexCount;
@@ -71,12 +71,12 @@ public final class SubChunkMesh {
         return renderBatches;
     }
 
-    public Node build() {
+    public void build(Node node) {
+
+        if (batches.size == 0)
+            return;
 
         dispose();
-
-        Node node = new Node();
-        node.id = "subchunk_" + hashCode();
 
         for (MeshBatch batch : batches) {
             if (batch.vertexCount == 0 || batch.indexCount == 0)
@@ -120,8 +120,6 @@ public final class SubChunkMesh {
         }
 
         batches.clear();
-
-        return node;
     }
 
     public void dispose() {

@@ -79,4 +79,8 @@ public class PlayerPosition {
 
         return newChunkAxis;
     }
+
+    public Vector3 currentPosition() {
+        return currentPosition;
+    }
 }

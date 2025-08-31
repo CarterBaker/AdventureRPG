@@ -37,11 +37,13 @@ public class InputSystem extends InputAdapter {
     }
 
     public void start() {
+        
         Gdx.input.setInputProcessor(this);
         block(blockInput);
     }
 
     public void update() {
+
         updateRotation();
         updateMovement();
     }

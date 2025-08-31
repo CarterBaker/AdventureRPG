@@ -29,7 +29,7 @@ import com.google.gson.Gson;
 public class GameManager implements Screen {
 
     // Debug
-    private final boolean debug = true; // TODO: Debug line
+    private final boolean debug = false; // TODO: Debug line
 
     // Paths and Settings
     public final Main game;

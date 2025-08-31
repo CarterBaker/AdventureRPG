@@ -6,6 +6,7 @@ import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 
@@ -36,6 +37,7 @@ public class Chunk {
     public SubChunk[] subChunks;
 
     // Mesh
+    private ModelInstance modelInstance;
     private Model model;
 
     // Base \\
@@ -65,6 +67,7 @@ public class Chunk {
         neighbors = new Chunk[8];
 
         for (Direction2Int direction : Direction2Int.values()) {
+
             long neighborCoordinate = getWrappedNeighborCoordinate(direction);
             neighborCoordinates[direction.index] = neighborCoordinate;
             coordToIndex.put(neighborCoordinate, direction.index);
@@ -74,16 +77,24 @@ public class Chunk {
     private long getWrappedNeighborCoordinate(Direction2Int direction) {
 
         long neighborCoordinate = Coordinate2Int.add(coordinate, direction.packed);
-        worldSystem.wrapAroundWorld(neighborCoordinate);
+        neighborCoordinate = worldSystem.wrapAroundWorld(neighborCoordinate);
 
         return neighborCoordinate;
     }
 
     public void dispose() {
 
-        if (subChunks != null)
-            for (int i = 0; i < settings.WORLD_HEIGHT; i++)
+        if (modelInstance != null)
+            gridSystem.removeFromModelInstances(coordinate);
+
+        if (subChunks == null)
+            return;
+
+        for (int i = 0; i < settings.WORLD_HEIGHT; i++) {
+
+            if (subChunks[i] != null)
                 subChunks[i].dispose();
+        }
     }
 
     // Chunk \\
@@ -105,6 +116,9 @@ public class Chunk {
         this.position = position;
         this.positionX = Coordinate2Int.unpackX(position);
         this.positionY = Coordinate2Int.unpackY(position);
+
+        if (modelInstance != null)
+            modelInstance.transform.setToTranslation(positionX, 0, positionY);
     }
 
     // Data \\
@@ -112,6 +126,10 @@ public class Chunk {
     public void generate(SubChunk[] subChunks) {
 
         this.subChunks = subChunks;
+
+        if (subChunkCheck())
+            return;
+
         setState(ChunkState.NEEDS_ASSESSMENT_DATA);
     }
 
@@ -119,41 +137,81 @@ public class Chunk {
         return subChunks[index];
     }
 
-    // Mesh \\
+    private boolean subChunkCheck() {
 
-    public void build() {
+        if (subChunks == null) {
 
-        for (int subChunkIndex = 0; subChunkIndex < settings.WORLD_HEIGHT; subChunkIndex++)
-            rebuild(subChunkIndex);
+            setState(ChunkState.NEEDS_GENERATION_DATA);
+            enqueue();
 
-        setState(ChunkState.FINALIZED);
+            return true;
+        }
+
+        return false;
     }
 
-    public void rebuild(int subChunkIndex) {
+    // Mesh \\
+
+    // Called from separate thread
+    public void build() {
+
+        if (subChunkCheck())
+            return;
+
+        for (int subChunkIndex = 0; subChunkIndex < settings.WORLD_HEIGHT; subChunkIndex++)
+            buildSubChunk(subChunkIndex);
+    }
+
+    private void buildSubChunk(int subChunkIndex) {
 
         chunkSystem.chunkBuilder.build(this, subChunkIndex);
     }
 
-    public void buildChunkMesh(Model model) {
+    // Called from main thread
+    public void buildChunkMesh() {
 
-        this.model = model;
+        clearExistingModelData();
+
+        if (subChunkCheck())
+            return;
+
+        model = new Model();
 
         for (int i = 0; i < settings.WORLD_HEIGHT; i++) {
             rebuildSubChunk(i);
             subChunks[i].build(model);
         }
-    }
 
-    public void shiftChunkMesh(Model model) {
+        modelInstance = new ModelInstance(model);
+        modelInstance.transform.setToTranslation(positionX, 0, positionY);
+        gridSystem.addToModelInstances(coordinate, modelInstance);
 
-        this.model = model;
+        if (neighborStatus != NeighborStatus.COMPLETE)
+            setState(ChunkState.NEEDS_ASSESSMENT_DATA);
 
-        for (int i = 0; i < settings.WORLD_HEIGHT; i++)
-            subChunks[i].build(model);
+        else
+            setState(ChunkState.FINALIZED);
     }
 
     private void rebuildSubChunk(int subChunkIndex) {
-        subChunks[subChunkIndex].build();
+
+        if (subChunks[subChunkIndex] != null)
+            subChunks[subChunkIndex].rebuild();
+    }
+
+    private void clearExistingModelData() {
+
+        if (model != null) {
+
+            model.dispose();
+            model = null;
+        }
+
+        if (modelInstance != null) {
+
+            gridSystem.removeFromModelInstances(coordinate);
+            modelInstance = null;
+        }
     }
 
     // Neighbors \\
@@ -170,7 +228,7 @@ public class Chunk {
         return neighbors[direction.index];
     }
 
-    public boolean assessNeighbors() {
+    public void assessNeighbors() {
 
         for (Direction2Int direction : Direction2Int.values()) {
 
@@ -182,32 +240,35 @@ public class Chunk {
         }
 
         updateNeighborStatus();
-
-        return neighborStatus == NeighborStatus.COMPLETE;
     }
 
     private void updateNeighborStatus() {
 
+        // Keep track so there is no chance of calling setState() twice
+        boolean needsBuildData = false;
+
         if (neighborStatus == NeighborStatus.INCOMPLETE) {
 
             for (int i = 0; i < 4; i++)
-
                 if (neighbors[i] == null)
                     return;
 
             neighborStatus = NeighborStatus.PARTIAL;
-            setState(ChunkState.NEEDS_BUILD_DATA);
+            needsBuildData = true;
         }
 
         if (neighborStatus == NeighborStatus.PARTIAL) {
 
             for (int i = 4; i < 8; i++)
-
                 if (neighbors[i] == null)
                     return;
 
             neighborStatus = NeighborStatus.COMPLETE;
+            needsBuildData = true;
         }
+
+        if (needsBuildData)
+            setState(ChunkState.NEEDS_BUILD_DATA);
     }
 
     // Accessible \\
@@ -218,22 +279,19 @@ public class Chunk {
 
             case NEEDS_GENERATION_DATA:
 
-                gridSystem.addToGenerateQueue(this);
+                gridSystem.addToGenerateQueue(coordinate);
 
                 break;
 
             case NEEDS_ASSESSMENT_DATA:
 
-                gridSystem.addToAssessmentQueue(this);
+                gridSystem.addToAssessmentQueue(coordinate);
 
                 break;
 
             case NEEDS_BUILD_DATA:
 
-                gridSystem.addToBuildQueue(this);
-
-                if (neighborStatus != NeighborStatus.COMPLETE)
-                    gridSystem.addToAssessmentQueue(this);
+                gridSystem.addToBuildQueue(coordinate);
 
                 break;
 
