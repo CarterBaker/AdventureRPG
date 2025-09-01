@@ -1,5 +1,7 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Direction2Int;
@@ -22,6 +24,10 @@ public class Chunk {
     public final long coordinate;
     public final int coordinateX, coordinateY;
     private ChunkState state;
+    private final ChunkBuilder chunkBuilder;
+    private final AtomicBoolean enqueueGenerate;
+    private final AtomicBoolean enqueueAssessment;
+    private final AtomicBoolean enqueueBuild;
 
     // Position
     public long position;
@@ -59,6 +65,10 @@ public class Chunk {
         this.coordinateX = Coordinate2Int.unpackX(coordinate);
         this.coordinateY = Coordinate2Int.unpackY(coordinate);
         this.state = state;
+        this.chunkBuilder = new ChunkBuilder(worldSystem, this);
+        this.enqueueGenerate = new AtomicBoolean(false);
+        this.enqueueAssessment = new AtomicBoolean(false);
+        this.enqueueBuild = new AtomicBoolean(false);
 
         // Neighbors
         this.neighborStatus = NeighborStatus.INCOMPLETE;
@@ -127,6 +137,8 @@ public class Chunk {
 
         this.subChunks = subChunks;
 
+        enqueueGenerate.set(false);
+
         if (subChunkCheck())
             return;
 
@@ -142,7 +154,6 @@ public class Chunk {
         if (subChunks == null) {
 
             setState(ChunkState.NEEDS_GENERATION_DATA);
-            enqueue();
 
             return true;
         }
@@ -164,7 +175,7 @@ public class Chunk {
 
     private void buildSubChunk(int subChunkIndex) {
 
-        chunkSystem.chunkBuilder.build(this, subChunkIndex);
+        chunkBuilder.build(subChunkIndex);
     }
 
     // Called from main thread
@@ -185,6 +196,8 @@ public class Chunk {
         modelInstance = new ModelInstance(model);
         modelInstance.transform.setToTranslation(positionX, 0, positionY);
         gridSystem.addToModelInstances(coordinate, modelInstance);
+
+        enqueueBuild.set(false);
 
         if (neighborStatus != NeighborStatus.COMPLETE)
             setState(ChunkState.NEEDS_ASSESSMENT_DATA);
@@ -235,11 +248,34 @@ public class Chunk {
             long neighborCoordinate = neighborCoordinates[direction.index];
             Chunk neighbor = gridSystem.getChunkFromCoordinate(neighborCoordinate);
 
-            if (neighbor != null)
+            if (neighbor == null)
+                continue;
+
+            if (neighbors[direction.index] != neighbor) {
                 neighbors[direction.index] = neighbor;
+                neighbor.assessChunk(this);
+            }
         }
 
+        enqueueAssessment.set(false);
+
         updateNeighborStatus();
+    }
+
+    public void assessChunk(Chunk chunk) {
+
+        if (neighborStatus == NeighborStatus.COMPLETE)
+            return;
+
+        int index = coordToIndex.getOrDefault(chunk.coordinate, -1);
+
+        if (index == -1)
+            return;
+
+        if (neighbors[index] != chunk) {
+            neighbors[index] = chunk;
+            updateNeighborStatus();
+        }
     }
 
     private void updateNeighborStatus() {
@@ -253,8 +289,8 @@ public class Chunk {
                 if (neighbors[i] == null)
                     return;
 
-            neighborStatus = NeighborStatus.PARTIAL;
             needsBuildData = true;
+            neighborStatus = NeighborStatus.PARTIAL;
         }
 
         if (neighborStatus == NeighborStatus.PARTIAL) {
@@ -263,8 +299,8 @@ public class Chunk {
                 if (neighbors[i] == null)
                     return;
 
-            neighborStatus = NeighborStatus.COMPLETE;
             needsBuildData = true;
+            neighborStatus = NeighborStatus.COMPLETE;
         }
 
         if (needsBuildData)
@@ -279,23 +315,23 @@ public class Chunk {
 
             case NEEDS_GENERATION_DATA:
 
-                gridSystem.addToGenerateQueue(coordinate);
+                if (enqueueGenerate.compareAndSet(false, true))
+                    gridSystem.addToGenerateQueue(coordinate);
 
                 break;
 
             case NEEDS_ASSESSMENT_DATA:
 
-                gridSystem.addToAssessmentQueue(coordinate);
+                if (enqueueAssessment.compareAndSet(false, true))
+                    gridSystem.addToAssessmentQueue(coordinate);
 
                 break;
 
             case NEEDS_BUILD_DATA:
 
-                gridSystem.addToBuildQueue(coordinate);
+                if (enqueueBuild.compareAndSet(false, true))
+                    gridSystem.addToBuildQueue(coordinate);
 
-                break;
-
-            case FINALIZED:
                 break;
 
             default:

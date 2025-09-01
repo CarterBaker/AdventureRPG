@@ -8,7 +8,7 @@ public enum Direction2Int {
     WEST(3, -1, 0),
 
     NORTHEAST(4, 1, 1),
-    NORTHWEST(5, -1, -1),
+    NORTHWEST(5, -1, 1),
     SOUTHEAST(6, 1, -1),
     SOUTHWEST(7, -1, -1);
 

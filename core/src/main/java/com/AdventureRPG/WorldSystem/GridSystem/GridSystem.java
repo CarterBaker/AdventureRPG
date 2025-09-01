@@ -55,8 +55,11 @@ public class GridSystem {
     private Long2ObjectOpenHashMap<Chunk> unloadQueue;
     private LongArrayFIFOQueue loadQueue;
     private LongArrayFIFOQueue generateQueue;
+    private LongOpenHashSet generateQueueCheck;
     private LongArrayFIFOQueue assessmentQueue;
+    private LongOpenHashSet assessmentQueueCheck;
     private LongArrayFIFOQueue buildQueue;
+    private LongOpenHashSet buildQueueCheck;
 
     private int loadedChunksThisFrame;
     private int loadedChunksThisTick;
@@ -97,8 +100,11 @@ public class GridSystem {
         this.unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
         this.loadQueue = new LongArrayFIFOQueue(totalChunks);
         this.generateQueue = new LongArrayFIFOQueue(totalChunks);
+        this.generateQueueCheck = new LongOpenHashSet(totalChunks);
         this.assessmentQueue = new LongArrayFIFOQueue(totalChunks);
+        this.assessmentQueueCheck = new LongOpenHashSet(totalChunks);
         this.buildQueue = new LongArrayFIFOQueue(totalChunks);
+        this.buildQueueCheck = new LongOpenHashSet(totalChunks);
 
         this.loadedChunksThisFrame = 0;
         this.loadedChunksThisTick = 0;
@@ -205,8 +211,11 @@ public class GridSystem {
         this.unloadQueue = new Long2ObjectOpenHashMap<>(totalChunks);
         this.loadQueue = new LongArrayFIFOQueue(totalChunks);
         this.generateQueue = new LongArrayFIFOQueue(totalChunks);
+        this.generateQueueCheck = new LongOpenHashSet(totalChunks);
         this.assessmentQueue = new LongArrayFIFOQueue(totalChunks);
+        this.assessmentQueueCheck = new LongOpenHashSet(totalChunks);
         this.buildQueue = new LongArrayFIFOQueue(totalChunks);
+        this.buildQueueCheck = new LongOpenHashSet(totalChunks);
     }
 
     // Fill gridCoordinates set
@@ -283,10 +292,20 @@ public class GridSystem {
 
     private void renderChunks(ModelBatch modelBatch) {
 
+        // TODO: I feel I can do this better
+
         for (int i = 0; i < totalChunks; i++) {
 
             long gridCoordinate = loadOrder[i];
-            modelBatch.render(modelInstances.get(gridCoordinate));
+            long chunkCoordinate = gridToChunkMap.getOrDefault(gridCoordinate, -1L);
+
+            if (chunkCoordinate != -1L) {
+
+                ModelInstance instance = modelInstances.get(chunkCoordinate);
+
+                if (instance != null)
+                    modelBatch.render(instance);
+            }
         }
     }
 
@@ -327,8 +346,11 @@ public class GridSystem {
         // Clear all primitive queues
         loadQueue.clear();
         generateQueue.clear();
+        generateQueueCheck.clear();
         assessmentQueue.clear();
+        assessmentQueueCheck.clear();
         buildQueue.clear();
+        buildQueueCheck.clear();
 
         // Reversely remove all computed Coordinate2Ints from unloadQueue for efficiency
         unloadQueue.putAll(loadedChunks);
@@ -353,6 +375,10 @@ public class GridSystem {
             long chunkCoordinate = Coordinate2Int.pack(chunkX, chunkY);
             chunkCoordinate = worldSystem.wrapAroundWorld(chunkCoordinate);
 
+            // The very first step is to remap all the chunks to the correct position
+            gridToChunkMap.put(gridCoordinate, chunkCoordinate);
+            chunkToGridMap.put(chunkCoordinate, gridCoordinate);
+
             // Log all active chunk coordinates
             chunkCoordinates.add(chunkCoordinate);
 
@@ -369,12 +395,8 @@ public class GridSystem {
                 loadedChunk.enqueue();
             }
 
-            else { // If the chunkCoordinate could not be found add it to the queue
-
-                gridToChunkMap.put(gridCoordinate, chunkCoordinate);
-                chunkToGridMap.put(chunkCoordinate, gridCoordinate);
+            else // If the chunkCoordinate could not be found add it to the queue
                 loadQueue.enqueue(gridCoordinate);
-            }
         }
     }
 
@@ -442,7 +464,7 @@ public class GridSystem {
 
         while (index < qSize && processIsSafe(index)) {
 
-            long chunkCoordinate = generateQueue.dequeueLong();
+            long chunkCoordinate = dequeueGenerateQueue();
             Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
 
             if (loadedChunk == null) {
@@ -473,7 +495,7 @@ public class GridSystem {
 
         while (index < qSize && processIsSafe(index)) {
 
-            long chunkCoordinate = assessmentQueue.dequeueLong();
+            long chunkCoordinate = dequeueAssessmentQueue();
             Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
 
             if (loadedChunk == null) {
@@ -502,7 +524,7 @@ public class GridSystem {
 
         while (index < qSize && processIsSafe(index)) {
 
-            long chunkCoordinate = buildQueue.dequeueLong();
+            long chunkCoordinate = dequeueBuildQueue();
             Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
 
             if (loadedChunk == null) {
@@ -562,7 +584,7 @@ public class GridSystem {
             long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, -1);
 
             if (gridCoordinate != -1)
-                assessmentQueue.enqueue(chunkCoordinate);
+                loadedChunk.enqueue();
 
             else
                 loadedChunk.dispose();
@@ -677,21 +699,48 @@ public class GridSystem {
         }
     }
 
+    private long dequeueGenerateQueue() {
+
+        long chunkCoordinate = generateQueue.dequeueLong();
+        generateQueueCheck.remove(chunkCoordinate);
+
+        return chunkCoordinate;
+    }
+
+    private long dequeueAssessmentQueue() {
+
+        long chunkCoordinate = assessmentQueue.dequeueLong();
+        assessmentQueueCheck.remove(chunkCoordinate);
+
+        return chunkCoordinate;
+    }
+
+    private long dequeueBuildQueue() {
+
+        long chunkCoordinate = buildQueue.dequeueLong();
+        buildQueueCheck.remove(chunkCoordinate);
+
+        return chunkCoordinate;
+    }
+
     // External Queueing \\
 
     public void addToGenerateQueue(long chunkCoordinate) {
 
-        generateQueue.enqueue(chunkCoordinate);
+        if (generateQueueCheck.add(chunkCoordinate))
+            generateQueue.enqueue(chunkCoordinate);
     }
 
     public void addToAssessmentQueue(long chunkCoordinate) {
 
-        assessmentQueue.enqueue(chunkCoordinate);
+        if (assessmentQueueCheck.add(chunkCoordinate))
+            assessmentQueue.enqueue(chunkCoordinate);
     }
 
     public void addToBuildQueue(long chunkCoordinate) {
 
-        buildQueue.enqueue(chunkCoordinate);
+        if (buildQueueCheck.add(chunkCoordinate))
+            buildQueue.enqueue(chunkCoordinate);
     }
 
     // Accessible \\
