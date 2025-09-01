@@ -18,12 +18,7 @@ public class Block {
     public final int id;
 
     // Texture IDs
-    public final int upTex;
-    public final int northTex;
-    public final int southTex;
-    public final int eastTex;
-    public final int westTex;
-    public final int downTex;
+    public final int upTex, northTex, southTex, eastTex, westTex, downTex;
 
     // Cached UVRects (pre-fetched, avoids runtime lookups)
     public final UVRect upUV;
@@ -34,12 +29,7 @@ public class Block {
     public final UVRect downUV;
 
     // Material IDs
-    public final int upMat;
-    public final int northMat;
-    public final int southMat;
-    public final int eastMat;
-    public final int westMat;
-    public final int downMat;
+    public final int upMat, northMat, southMat, eastMat, westMat, downMat;
 
     // Cached MaterialData (pre-fetched, avoids runtime lookups)
     public final MaterialData upMaterialData;
@@ -91,84 +81,97 @@ public class Block {
 
         // Materials
         if (builder.material != null) {
-            this.upMat = textureManager.getIDFromTexture(builder.material);
-            this.northMat = textureManager.getIDFromTexture(builder.material);
-            this.southMat = textureManager.getIDFromTexture(builder.material);
-            this.eastMat = textureManager.getIDFromTexture(builder.material);
-            this.westMat = textureManager.getIDFromTexture(builder.material);
-            this.downMat = textureManager.getIDFromTexture(builder.material);
+            this.upMat = materialManager.getByName(builder.material).id;
+            this.northMat = materialManager.getByName(builder.material).id;
+            this.southMat = materialManager.getByName(builder.material).id;
+            this.eastMat = materialManager.getByName(builder.material).id;
+            this.westMat = materialManager.getByName(builder.material).id;
+            this.downMat = materialManager.getByName(builder.material).id;
+
+            this.upMaterialData = materialManager.getById(upMat);
+            this.northMaterialData = materialManager.getById(northMat);
+            this.southMaterialData = materialManager.getById(southMat);
+            this.eastMaterialData = materialManager.getById(eastMat);
+            this.westMaterialData = materialManager.getById(westMat);
+            this.downMaterialData = materialManager.getById(downMat);
         }
 
         else {
-            this.upMat = (builder.upMat != null) ? textureManager.getIDFromTexture(builder.upMat) : this.upTex;
-            this.northMat = (builder.northMat != null) ? textureManager.getIDFromTexture(builder.northMat) : this.upMat;
-            this.southMat = (builder.southMat != null) ? textureManager.getIDFromTexture(builder.southMat)
-                    : this.northMat;
-            this.eastMat = (builder.eastMat != null) ? textureManager.getIDFromTexture(builder.eastMat) : this.southMat;
-            this.westMat = (builder.westMat != null) ? textureManager.getIDFromTexture(builder.westMat) : this.eastMat;
-            this.downMat = (builder.downMat != null) ? textureManager.getIDFromTexture(builder.downMat) : this.westMat;
-        }
 
-        // Cache MaterialData
-        this.upMaterialData = materialManager.getById(upMat);
-        this.northMaterialData = materialManager.getById(northMat);
-        this.southMaterialData = materialManager.getById(southMat);
-        this.eastMaterialData = materialManager.getById(eastMat);
-        this.westMaterialData = materialManager.getById(westMat);
-        this.downMaterialData = materialManager.getById(downMat);
+            if (builder.upMat != null) {
+                this.upMat = materialManager.getByName(builder.upMat).id;
+                this.upMaterialData = materialManager.getById(upMat);
+            } else {
+                this.upMat = this.upTex;
+                this.upMaterialData = materialManager.getFirstMaterialUsingID(upMat);
+            }
+
+            if (builder.northMat != null) {
+                this.northMat = materialManager.getByName(builder.northMat).id;
+                this.northMaterialData = materialManager.getById(northMat);
+            } else {
+                this.northMat = this.northTex;
+                this.northMaterialData = materialManager.getFirstMaterialUsingID(northMat);
+            }
+
+            if (builder.southMat != null) {
+                this.southMat = materialManager.getByName(builder.southMat).id;
+                this.southMaterialData = materialManager.getById(southMat);
+            } else {
+                this.southMat = this.southTex;
+                this.southMaterialData = materialManager.getFirstMaterialUsingID(southMat);
+            }
+
+            if (builder.eastMat != null) {
+                this.eastMat = materialManager.getByName(builder.eastMat).id;
+                this.eastMaterialData = materialManager.getById(eastMat);
+            } else {
+                this.eastMat = this.eastTex;
+                this.eastMaterialData = materialManager.getFirstMaterialUsingID(eastMat);
+            }
+
+            if (builder.westMat != null) {
+                this.westMat = materialManager.getByName(builder.westMat).id;
+                this.westMaterialData = materialManager.getById(westMat);
+            } else {
+                this.westMat = this.westTex;
+                this.westMaterialData = materialManager.getFirstMaterialUsingID(westMat);
+            }
+
+            if (builder.downMat != null) {
+                this.downMat = materialManager.getByName(builder.downMat).id;
+                this.downMaterialData = materialManager.getById(downMat);
+            } else {
+                this.downMat = this.downTex;
+                this.downMaterialData = materialManager.getFirstMaterialUsingID(downMat);
+            }
+        }
 
         this.type = builder.type;
     }
 
-    public int getTexIDForSide(Direction3Int side) {
-
-        return switch (side) {
-            case UP -> upTex;
-            case DOWN -> downTex;
-            case NORTH -> northTex;
-            case SOUTH -> southTex;
-            case EAST -> eastTex;
-            case WEST -> westTex;
-        };
-    }
-
     public UVRect getUVForSide(Direction3Int side) {
 
-        int texID = switch (side) {
-            case UP -> upTex;
-            case DOWN -> downTex;
-            case NORTH -> northTex;
-            case SOUTH -> southTex;
-            case EAST -> eastTex;
-            case WEST -> westTex;
-        };
-
-        return textureManager.getUVRect(texID);
-    }
-
-    public int getMatIDForSide(Direction3Int side) {
-
         return switch (side) {
-            case UP -> upMat;
-            case DOWN -> downMat;
-            case NORTH -> northMat;
-            case SOUTH -> southMat;
-            case EAST -> eastMat;
-            case WEST -> westMat;
+            case UP -> upUV;
+            case DOWN -> downUV;
+            case NORTH -> northUV;
+            case SOUTH -> southUV;
+            case EAST -> eastUV;
+            case WEST -> westUV;
         };
     }
 
     public MaterialData getMaterialDataForSide(Direction3Int side) {
 
-        int matID = switch (side) {
-            case UP -> upMat;
-            case DOWN -> downMat;
-            case NORTH -> northMat;
-            case SOUTH -> southMat;
-            case EAST -> eastMat;
-            case WEST -> westMat;
+        return switch (side) {
+            case UP -> upMaterialData;
+            case DOWN -> downMaterialData;
+            case NORTH -> northMaterialData;
+            case SOUTH -> southMaterialData;
+            case EAST -> eastMaterialData;
+            case WEST -> westMaterialData;
         };
-
-        return materialManager.getById(matID);
     }
+
 }

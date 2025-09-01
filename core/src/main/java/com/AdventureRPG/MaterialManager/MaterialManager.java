@@ -17,6 +17,9 @@ import java.util.Map;
 
 public class MaterialManager {
 
+    // Debug
+    private final boolean debug = false; // TODO: Debug line
+
     // Game Manager
     private final Settings settings;
     private final Gson gson;
@@ -31,6 +34,7 @@ public class MaterialManager {
     private final Map<String, Integer> idByName = new HashMap<>();
 
     // Map of Material to ShaderProgram for O(1) lookup
+    private final Map<TextureArray, MaterialData> arrayToFirstMaterial = new HashMap<>();
     private final Map<Material, ShaderProgram> shaderByMaterial = new HashMap<>();
 
     private int nextId = 0;
@@ -45,10 +49,12 @@ public class MaterialManager {
 
         // Settings
         this.MATERIAL_JSON_PATH = settings.MATERIAL_JSON_PATH;
+
+        compileMaterials();
     }
 
     public void awake() {
-        compileMaterials();
+
     }
 
     public void start() {
@@ -124,10 +130,16 @@ public class MaterialManager {
                 if (shaderProgram != null)
                     shaderByMaterial.put(libgdxMaterial, shaderProgram);
 
-            } catch (Exception exception) {
+                arrayToFirstMaterial.putIfAbsent(textureArray, data);
+            }
+
+            catch (Exception exception) {
                 exception.printStackTrace();
             }
         }
+
+        if (debug)
+            debug();
     }
 
     // Utility \\
@@ -158,6 +170,16 @@ public class MaterialManager {
     // Retrieve the shader for a material
     public ShaderProgram getShaderForMaterial(Material material) {
         return shaderByMaterial.get(material);
+    }
+
+    public MaterialData getFirstMaterialUsingID(int textureID) {
+
+        if (textureID < 0)
+            return null;
+
+        TextureArray array = textureManager.getArrayFromID(textureID);
+
+        return arrayToFirstMaterial.get(array);
     }
 
     // Set uniform for a material by ID
@@ -198,5 +220,21 @@ public class MaterialManager {
                 case MATRIX4 -> shader.setUniformMatrix(ua.name, (com.badlogic.gdx.math.Matrix4) ua.value);
             }
         }
+    }
+
+    // Debug \\
+
+    private void debug() {
+        System.out.println("=== Debug: arrayToFirstMaterial contents ===");
+        for (Map.Entry<TextureArray, MaterialData> entry : arrayToFirstMaterial.entrySet()) {
+            TextureArray textureArray = entry.getKey();
+            MaterialData materialData = entry.getValue();
+
+            String texInfo = (textureArray != null) ? textureArray.toString() : "null";
+            String matName = (materialData != null) ? materialData.name : "null";
+
+            System.out.println("TextureArray: " + texInfo + " -> Material: " + matName);
+        }
+        System.out.println("===========================================");
     }
 }
