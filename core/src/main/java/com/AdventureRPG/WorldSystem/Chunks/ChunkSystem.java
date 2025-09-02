@@ -219,7 +219,6 @@ public class ChunkSystem {
 
                 loadedChunk.build();
                 builtResults.add(loadedChunk);
-                System.out.println("Fixed it");
             });
 
             // Increment counters on main thread

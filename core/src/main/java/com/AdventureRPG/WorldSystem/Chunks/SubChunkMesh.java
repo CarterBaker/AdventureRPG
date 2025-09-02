@@ -30,6 +30,27 @@ public final class SubChunkMesh {
         public short[] indices;
         public int vertexCount;
         public int indexCount;
+
+        // --- NEW METHODS ---
+        public void ensureVertexCapacity(int extraVerts) {
+            int required = (vertexCount + extraVerts) * FLOATS_PER_VERTEX;
+            if (vertices.length < required) {
+                int newLen = Math.max(vertices.length * 2, required);
+                float[] newVerts = new float[newLen];
+                System.arraycopy(vertices, 0, newVerts, 0, vertices.length);
+                vertices = newVerts;
+            }
+        }
+
+        public void ensureIndexCapacity(int extraIndices) {
+            int required = indexCount + extraIndices;
+            if (indices.length < required) {
+                int newLen = Math.max(indices.length * 2, required);
+                short[] newInds = new short[newLen];
+                System.arraycopy(indices, 0, newInds, 0, indices.length);
+                indices = newInds;
+            }
+        }
     }
 
     // Final GPU-ready object

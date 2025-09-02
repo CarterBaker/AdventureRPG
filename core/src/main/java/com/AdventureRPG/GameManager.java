@@ -135,7 +135,7 @@ public class GameManager implements Screen {
     }
 
     @Override
-    public void dispose() {
+    public void dispose() { // TODO: Add a dispose for all main systems
 
         // Core Systems
         defaultShaderProvider.dispose();

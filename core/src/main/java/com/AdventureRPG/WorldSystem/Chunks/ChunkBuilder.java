@@ -70,55 +70,64 @@ public class ChunkBuilder {
 
     public void build(int subChunkIndex) {
 
-        SubChunk subChunk = chunk.getSubChunk(subChunkIndex);
+        try {
 
-        for (int index = 0; index < packedCoordinate3Int.chunkSize; index++) {
+            SubChunk subChunk = chunk.getSubChunk(subChunkIndex);
 
-            int xyz = packedCoordinate3Int.getPackedBlockCoordinate(index);
+            for (int index = 0; index < packedCoordinate3Int.chunkSize; index++) {
 
-            int aX = packedCoordinate3Int.unpackX(xyz);
-            int aY = packedCoordinate3Int.unpackY(xyz);
-            int aZ = packedCoordinate3Int.unpackZ(xyz);
+                int xyz = packedCoordinate3Int.getPackedBlockCoordinate(index);
 
-            int blockID = subChunk.getBlock(aX, aY, aZ);
-            Type type = worldSystem.getBlockType(blockID);
+                int aX = packedCoordinate3Int.unpackX(xyz);
+                int aY = packedCoordinate3Int.unpackY(xyz);
+                int aZ = packedCoordinate3Int.unpackZ(xyz);
 
-            if (type == Type.NULL)
-                continue;
+                int blockID = subChunk.getBlock(aX, aY, aZ);
+                Type type = worldSystem.getBlockType(blockID);
 
-            int biomeID = subChunk.getBiome(aX, aY, aZ);
-
-            for (int directionIndex = 0; directionIndex < 6; directionIndex++) {
-
-                Direction3Int direction = Direction3Int.DIRECTIONS[directionIndex];
-
-                BitSet batchedSet = getBatchedSet(direction);
-
-                if (batchedSet.get(xyz))
+                if (type == Type.NULL)
                     continue;
 
-                assembleFace(
-                        quads, batchedSet,
-                        subChunk,
-                        subChunkIndex,
-                        aX, aY, aZ,
-                        direction,
-                        biomeID, blockID,
-                        type);
+                int biomeID = subChunk.getBiome(aX, aY, aZ);
+
+                for (int directionIndex = 0; directionIndex < 6; directionIndex++) {
+
+                    Direction3Int direction = Direction3Int.DIRECTIONS[directionIndex];
+
+                    BitSet batchedSet = getBatchedSet(direction);
+
+                    if (batchedSet.get(xyz))
+                        continue;
+
+                    assembleFace(
+                            quads, batchedSet,
+                            subChunk,
+                            subChunkIndex,
+                            aX, aY, aZ,
+                            direction,
+                            biomeID, blockID,
+                            type);
+                }
             }
+
+            if (quads.size > 0)
+                buildFromQuads(subChunk.subChunkMesh, subChunkIndex);
+
+            quads.clear();
+
+            batchedBlocksUp.clear();
+            batchedBlocksNorth.clear();
+            batchedBlocksSouth.clear();
+            batchedBlocksEast.clear();
+            batchedBlocksWest.clear();
+            batchedBlocksDown.clear();
+
         }
 
-        if (quads.size > 0)
-            buildFromQuads(subChunk.subChunkMesh, subChunkIndex);
+        catch (Exception e) {
 
-        quads.clear();
-
-        batchedBlocksUp.clear();
-        batchedBlocksNorth.clear();
-        batchedBlocksSouth.clear();
-        batchedBlocksEast.clear();
-        batchedBlocksWest.clear();
-        batchedBlocksDown.clear();
+            e.printStackTrace();
+        }
     }
 
     private BitSet getBatchedSet(Direction3Int direction3Int) {
@@ -224,7 +233,7 @@ public class ChunkBuilder {
             Direction3Int direction,
             Type type) {
 
-        if (currentSize > CHUNK_SIZE)
+        if (currentSize >= CHUNK_SIZE)
             return false;
 
         tempBatchedBlocks.clear();
@@ -403,8 +412,6 @@ public class ChunkBuilder {
             int blockY = convertToBlockSpace(offsetY);
             int blockZ = convertToBlockSpace(offsetZ);
 
-            int biomeID = 0;
-
             SubChunk neighborSubChunk = getNeighborSubChunk(
                     subChunk,
                     subChunkIndex,
@@ -414,12 +421,17 @@ public class ChunkBuilder {
 
             if (neighborSubChunk != null) {
 
-                biomeID = neighborSubChunk.getBiome(blockX, blockY, blockZ);
+                int biomeID = neighborSubChunk.getBiome(blockX, blockY, blockZ);
                 blendColors[index] = biomeSystem.getBiomeByID(biomeID).biomeColor;
             }
 
-            else
-                blendColors[index] = blendColors[0];
+            else {
+
+                if (blendColors[0] != null)
+                    blendColors[index] = blendColors[0];
+                else
+                    blendColors[index] = Color.WHITE;
+            }
         }
 
         return blendColors();
@@ -445,7 +457,7 @@ public class ChunkBuilder {
             int offsetX, int offsetY, int offsetZ,
             NeighborBlockDirection direction) {
 
-        if (isOverEdge(offsetX, offsetY, offsetZ))
+        if (!isOverEdge(offsetX, offsetY, offsetZ))
             return subChunk;
 
         // Handle vertical movement
@@ -480,16 +492,16 @@ public class ChunkBuilder {
 
     private boolean isOverEdge(int offsetX, int offsetY, int offsetZ) {
 
-        return (offsetX < 0 || offsetX >= CHUNK_SIZE ||
-                offsetY < 0 || offsetY >= CHUNK_SIZE ||
-                offsetZ < 0 || offsetZ >= CHUNK_SIZE);
+        return (offsetX < 0 || offsetX > CHUNK_SIZE ||
+                offsetY < 0 || offsetY > CHUNK_SIZE ||
+                offsetZ < 0 || offsetZ > CHUNK_SIZE);
     }
 
     private Direction2Int getDirection2Int(int offsetX, int offsetZ) {
 
-        boolean north = (offsetZ >= CHUNK_SIZE);
+        boolean north = (offsetZ > CHUNK_SIZE);
         boolean south = (offsetZ < 0);
-        boolean east = (offsetX >= CHUNK_SIZE);
+        boolean east = (offsetX > CHUNK_SIZE);
         boolean west = (offsetX < 0);
 
         if (north && east)
@@ -643,6 +655,9 @@ public class ChunkBuilder {
             // build 4 verts
             int baseVertex = batch.vertexCount;
 
+            batch.ensureVertexCapacity(4);
+            batch.ensureIndexCapacity(6);
+
             pushVertex(batch, vert0X, vert0Y, vert0Z, nx, ny, nz, color0, u0, v0);
             pushVertex(batch, vert1X, vert1Y, vert1Z, nx, ny, nz, color1, u1, v0);
             pushVertex(batch, vert2X, vert2Y, vert2Z, nx, ny, nz, color2, u1, v1);
@@ -660,7 +675,8 @@ public class ChunkBuilder {
     }
 
     // Helper to push interleaved vertex into batch
-    private void pushVertex(SubChunkMesh.MeshBatch batch,
+    private void pushVertex(
+            SubChunkMesh.MeshBatch batch,
             float x, float y, float z,
             float nx, float ny, float nz,
             int packedColor,

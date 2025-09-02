@@ -335,9 +335,6 @@ public class Chunk {
                 break;
 
             case FINALIZED:
-
-                System.out.println("YAY!!!");
-
                 break;
 
             default:
