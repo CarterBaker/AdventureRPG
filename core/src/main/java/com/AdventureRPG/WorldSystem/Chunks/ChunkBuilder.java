@@ -121,25 +121,36 @@ public class ChunkBuilder {
                 }
             }
 
-            if (quads.size > 0)
-                buildFromQuads(subChunk.subChunkMesh, subChunkIndex);
-
-            quads.clear();
-            quadCounts.clear();
-
-            batchedBlocksUp.clear();
-            batchedBlocksNorth.clear();
-            batchedBlocksSouth.clear();
-            batchedBlocksEast.clear();
-            batchedBlocksWest.clear();
-            batchedBlocksDown.clear();
-
+            buildFromData(subChunk.subChunkMesh, subChunkIndex);
         }
 
-        catch (Exception e) {
-
-            e.printStackTrace();
+        catch (AbortBuildException endEarly) {
+            clearData();
         }
+
+        finally {
+            clearData();
+        }
+
+    }
+
+    private void buildFromData(SubChunkMesh subChunkMesh, int subChunkIndex) {
+
+        if (quads.size > 0)
+            buildFromQuads(subChunkMesh, subChunkIndex);
+    }
+
+    private void clearData() {
+
+        quads.clear();
+        quadCounts.clear();
+
+        batchedBlocksUp.clear();
+        batchedBlocksNorth.clear();
+        batchedBlocksSouth.clear();
+        batchedBlocksEast.clear();
+        batchedBlocksWest.clear();
+        batchedBlocksDown.clear();
     }
 
     private BitSet getBatchedSet(Direction3Int direction3Int) {
@@ -347,6 +358,9 @@ public class ChunkBuilder {
 
             if (neighborChunk == null)
                 return null;
+
+            if (neighborChunk.getState() == ChunkState.NEEDS_GENERATION_DATA)
+                throw new AbortBuildException();
 
             return neighborChunk.getSubChunk(subChunkIndex);
         }
@@ -706,7 +720,10 @@ public class ChunkBuilder {
             for (int ii = 0; ii < writer.indPos; ii++)
                 indsFA.add(writer.inds[ii]);
 
-            batches.put(matId, new SubChunkPacket.MaterialBatch(matId, vertsFA, indsFA));
+            batches.putIfAbsent(matId, new SubChunkPacket.MaterialBatch(
+                    matId,
+                    writer.verts, writer.vertPos,
+                    writer.inds, writer.indPos));
         });
 
         // Create and submit packet
@@ -726,7 +743,7 @@ public class ChunkBuilder {
 
         BatchWriter(int quadCount) {
 
-            verts = new float[quadCount * 4 * 11]; // 11 floats per vert
+            verts = new float[quadCount * 4 * SubChunkMesh.VERT_STRIDE];
             inds = new short[quadCount * 6];
         }
 
@@ -806,5 +823,8 @@ public class ChunkBuilder {
                 LOWER_SOUTH_EAST,
                 LOWER_SOUTH_WEST
         };
+    }
+
+    public class AbortBuildException extends RuntimeException {
     }
 }

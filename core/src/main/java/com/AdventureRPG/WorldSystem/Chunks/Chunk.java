@@ -248,7 +248,7 @@ public class Chunk {
             long neighborCoordinate = neighborCoordinates[direction.index];
             Chunk neighbor = gridSystem.getChunkFromCoordinate(neighborCoordinate);
 
-            if (neighbor == null)
+            if (neighbor == null || neighbor.state == ChunkState.NEEDS_GENERATION_DATA)
                 continue;
 
             if (neighbors[direction.index] != neighbor) {

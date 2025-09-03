@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.VertexAttribute;
 import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.Material;
+import com.badlogic.gdx.graphics.g3d.model.MeshPart;
 import com.badlogic.gdx.graphics.g3d.model.Node;
 import com.badlogic.gdx.graphics.g3d.model.NodePart;
 
@@ -19,16 +20,13 @@ public final class SubChunkMesh {
     public static final int VERT_NOR = 3;
     public static final int VERT_COL = 1;
     public static final int VERT_UV0 = 2;
-    public static final int VERT_UV1 = 2;
-    public static final int VERT_STRIDE = VERT_POS + VERT_NOR + VERT_COL + VERT_UV0 + VERT_UV1;
+    public static final int VERT_STRIDE = VERT_POS + VERT_NOR + VERT_COL + VERT_UV0;
 
     private static final VertexAttributes ATTRS = new VertexAttributes(
-
             new VertexAttribute(VertexAttributes.Usage.Position, 3, "a_position"),
             new VertexAttribute(VertexAttributes.Usage.Normal, 3, "a_normal"),
-            new VertexAttribute(VertexAttributes.Usage.ColorUnpacked, 4, "a_color"),
-            new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, "a_texCoord0"),
-            new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, "a_texCoord1"));
+            new VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, "a_color"),
+            new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, "a_texCoord0"));
 
     private final AtomicReference<SubChunkPacket> pending = new AtomicReference<>(null);
 
@@ -69,9 +67,12 @@ public final class SubChunkMesh {
         // For each material batch: create Mesh, upload, make NodePart
         packet.batches.forEach((matId, batch) -> {
 
-            Mesh mesh = new Mesh(true, batch.vertexCount, batch.indexCount, ATTRS);
-            mesh.setVertices(batch.vertices);
-            mesh.setIndices(batch.indices);
+            int numVerts = batch.getVertexCount();
+            Mesh mesh = new Mesh(true, numVerts, batch.indexCount, ATTRS);
+
+            // Upload exactly the written portion, not whole backing array
+            mesh.setVertices(batch.vertices, 0, batch.vertexFloatCount);
+            mesh.setIndices(batch.indices, 0, batch.indexCount);
 
             meshes.add(mesh);
 
@@ -80,6 +81,7 @@ public final class SubChunkMesh {
             Material mat = (md != null) ? md.material : new Material(); // fallback
 
             NodePart np = new NodePart();
+            np.meshPart = new MeshPart();
             np.meshPart.set("", mesh, 0, batch.indexCount, com.badlogic.gdx.graphics.GL20.GL_TRIANGLES);
             np.material = mat;
 

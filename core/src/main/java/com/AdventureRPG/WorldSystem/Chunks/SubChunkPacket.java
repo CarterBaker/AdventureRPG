@@ -16,20 +16,23 @@ public final class SubChunkPacket {
     }
 
     public static final class MaterialBatch {
-
         public final int materialId;
         public final float[] vertices;
+        public final int vertexFloatCount;
         public final short[] indices;
-        public final int vertexCount;
         public final int indexCount;
 
-        MaterialBatch(int materialId, FloatArray v, ShortArray i) {
+        MaterialBatch(int materialId, float[] vertices, int vertexFloatCount, short[] indices, int indexCount) {
 
             this.materialId = materialId;
-            this.vertices = v.toArray();
-            this.indices = i.toArray();
-            this.vertexCount = this.vertices.length / SubChunkMesh.VERT_STRIDE;
-            this.indexCount = this.indices.length;
+            this.vertices = vertices;
+            this.vertexFloatCount = vertexFloatCount;
+            this.indices = indices;
+            this.indexCount = indexCount;
+        }
+
+        public int getVertexCount() {
+            return vertexFloatCount / SubChunkMesh.VERT_STRIDE;
         }
     }
 }
