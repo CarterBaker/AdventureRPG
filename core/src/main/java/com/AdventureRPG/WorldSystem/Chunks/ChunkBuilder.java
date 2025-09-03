@@ -121,7 +121,8 @@ public class ChunkBuilder {
                 }
             }
 
-            buildFromData(subChunk.subChunkMesh, subChunkIndex);
+            if (quads.size > 0)
+                buildFromQuads(subChunk.subChunkMesh, subChunkIndex);
         }
 
         catch (AbortBuildException endEarly) {
@@ -132,12 +133,6 @@ public class ChunkBuilder {
             clearData();
         }
 
-    }
-
-    private void buildFromData(SubChunkMesh subChunkMesh, int subChunkIndex) {
-
-        if (quads.size > 0)
-            buildFromQuads(subChunkMesh, subChunkIndex);
     }
 
     private void clearData() {
