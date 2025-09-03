@@ -1,159 +1,110 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.AdventureRPG.MaterialManager.MaterialData;
-import com.badlogic.gdx.graphics.GL20;
+import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.VertexAttribute;
-import com.badlogic.gdx.graphics.VertexAttributes.Usage;
+import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.Material;
-import com.badlogic.gdx.graphics.g3d.model.MeshPart;
 import com.badlogic.gdx.graphics.g3d.model.Node;
 import com.badlogic.gdx.graphics.g3d.model.NodePart;
-import com.badlogic.gdx.graphics.glutils.ShaderProgram;
-import com.badlogic.gdx.graphics.TextureArray;
-import com.badlogic.gdx.utils.Array;
 
 public final class SubChunkMesh {
 
-    public static final int VERTEX_SIZE = 3 + 3 + 4 + 2;
-    public static final int FLOATS_PER_VERTEX = VERTEX_SIZE;
+    public static final int VERT_POS = 3;
+    public static final int VERT_NOR = 3;
+    public static final int VERT_COL = 1;
+    public static final int VERT_UV0 = 2;
+    public static final int VERT_UV1 = 2;
+    public static final int VERT_STRIDE = VERT_POS + VERT_NOR + VERT_COL + VERT_UV0 + VERT_UV1;
 
-    // Raw batch built on worker thread
-    public static class MeshBatch {
+    private static final VertexAttributes ATTRS = new VertexAttributes(
 
-        public int materialId;
-        public Material material;
-        public ShaderProgram shaderProgram;
-        public TextureArray textureArray;
+            new VertexAttribute(VertexAttributes.Usage.Position, 3, "a_position"),
+            new VertexAttribute(VertexAttributes.Usage.Normal, 3, "a_normal"),
+            new VertexAttribute(VertexAttributes.Usage.ColorUnpacked, 4, "a_color"),
+            new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, "a_texCoord0"),
+            new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, "a_texCoord1"));
 
-        public float[] vertices;
-        public short[] indices;
-        public int vertexCount;
-        public int indexCount;
+    private final AtomicReference<SubChunkPacket> pending = new AtomicReference<>(null);
 
-        // --- NEW METHODS ---
-        public void ensureVertexCapacity(int extraVerts) {
-            int required = (vertexCount + extraVerts) * FLOATS_PER_VERTEX;
-            if (vertices.length < required) {
-                int newLen = Math.max(vertices.length * 2, required);
-                float[] newVerts = new float[newLen];
-                System.arraycopy(vertices, 0, newVerts, 0, vertices.length);
-                vertices = newVerts;
-            }
-        }
+    // GPU resources for current build
+    private final List<Mesh> meshes = new ArrayList<>();
+    private final List<NodePart> nodeParts = new ArrayList<>();
 
-        public void ensureIndexCapacity(int extraIndices) {
-            int required = indexCount + extraIndices;
-            if (indices.length < required) {
-                int newLen = Math.max(indices.length * 2, required);
-                short[] newInds = new short[newLen];
-                System.arraycopy(indices, 0, newInds, 0, indices.length);
-                indices = newInds;
-            }
-        }
+    private final WorldSystem world;
+
+    // Base \\
+
+    public SubChunkMesh(WorldSystem world) {
+
+        this.world = world;
     }
 
-    // Final GPU-ready object
-    public static class RenderBatch {
-        public Mesh mesh;
-        public Material material;
-        public ShaderProgram shaderProgram;
-        public TextureArray textureArray;
+    public void dispose() {
+        clearGPU();
     }
 
-    private final Array<MeshBatch> batches = new Array<>(4);
-    private final Array<RenderBatch> renderBatches = new Array<>(4);
+    // Build \\
 
-    public MeshBatch beginBatch(
-            MaterialData materialData,
-            int estimatedVerts, int estimatedIndices) {
-
-        MeshBatch batch = new MeshBatch();
-
-        batch.materialId = materialData.id;
-        batch.material = materialData.material;
-        batch.shaderProgram = materialData.shaderProgram;
-        batch.textureArray = materialData.textureArray;
-        batch.vertices = new float[estimatedVerts * FLOATS_PER_VERTEX];
-        batch.indices = new short[estimatedIndices];
-        batch.vertexCount = 0;
-        batch.indexCount = 0;
-
-        batches.add(batch);
-
-        return batch;
-    }
-
-    public Array<MeshBatch> getBatches() {
-        return batches;
-    }
-
-    public Array<RenderBatch> getRenderBatches() {
-        return renderBatches;
+    public void submit(SubChunkPacket packet) {
+        pending.set(packet);
     }
 
     public void build(Node node) {
 
-        if (batches.size == 0)
+        SubChunkPacket packet = pending.getAndSet(null);
+
+        if (packet == null)
             return;
 
-        dispose();
+        // Rebuild fresh GPU resources
+        clearGPU();
+        node.parts.clear();
 
-        for (MeshBatch batch : batches) {
-            if (batch.vertexCount == 0 || batch.indexCount == 0)
-                continue;
+        // For each material batch: create Mesh, upload, make NodePart
+        packet.batches.forEach((matId, batch) -> {
 
-            Mesh mesh = new Mesh(
-                    true,
-                    batch.vertexCount,
-                    batch.indexCount,
-                    new VertexAttribute(Usage.Position, 3, "a_position"),
-                    new VertexAttribute(Usage.Normal, 3, "a_normal"),
-                    new VertexAttribute(Usage.ColorUnpacked, 4, "a_color"),
-                    new VertexAttribute(Usage.TextureCoordinates, 2, "a_texCoord0"));
+            Mesh mesh = new Mesh(true, batch.vertexCount, batch.indexCount, ATTRS);
+            mesh.setVertices(batch.vertices);
+            mesh.setIndices(batch.indices);
 
-            float[] verts = new float[batch.vertexCount * FLOATS_PER_VERTEX];
-            System.arraycopy(batch.vertices, 0, verts, 0, verts.length);
+            meshes.add(mesh);
 
-            short[] inds = new short[batch.indexCount];
-            System.arraycopy(batch.indices, 0, inds, 0, inds.length);
+            // Resolve material from materialId (Option B).
+            MaterialData md = world.materialManager.getById(matId);
+            Material mat = (md != null) ? md.material : new Material(); // fallback
 
-            mesh.setVertices(verts);
-            mesh.setIndices(inds);
+            NodePart np = new NodePart();
+            np.meshPart.set("", mesh, 0, batch.indexCount, com.badlogic.gdx.graphics.GL20.GL_TRIANGLES);
+            np.material = mat;
 
-            // store GPU-ready data if needed
-            RenderBatch renderBatch = new RenderBatch();
-            renderBatch.mesh = mesh;
-            renderBatch.material = batch.material;
-            renderBatch.shaderProgram = batch.shaderProgram;
-            renderBatch.textureArray = batch.textureArray;
-            renderBatches.add(renderBatch);
-
-            // --- NEW: turn this into a NodePart ---
-            MeshPart meshPart = new MeshPart();
-            meshPart.mesh = mesh;
-            meshPart.offset = 0;
-            meshPart.size = inds.length;
-            meshPart.primitiveType = GL20.GL_TRIANGLES;
-
-            NodePart nodePart = new NodePart(meshPart, batch.material);
-            node.parts.add(nodePart);
-        }
-
-        batches.clear();
+            node.parts.add(np);
+            nodeParts.add(np);
+        });
     }
 
-    public void dispose() {
+    private void clearGPU() {
 
-        for (RenderBatch rb : renderBatches) {
-            if (rb.mesh != null)
-                rb.mesh.dispose();
+        for (NodePart np : nodeParts)
+            np.meshPart.mesh = null;
+
+        nodeParts.clear();
+
+        for (Mesh m : meshes) {
+
+            try {
+                m.dispose();
+            }
+
+            catch (Exception ignored) {
+            }
         }
 
-        renderBatches.clear();
-    }
-
-    public void clearRaw() {
-        batches.clear();
+        meshes.clear();
     }
 }

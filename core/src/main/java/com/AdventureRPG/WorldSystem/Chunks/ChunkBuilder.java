@@ -12,7 +12,12 @@ import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.IntArray;
+import com.badlogic.gdx.utils.ShortArray;
+
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class ChunkBuilder {
 
@@ -28,6 +33,7 @@ public class ChunkBuilder {
     // Data
     private final Chunk chunk;
     private IntArray quads;
+    Int2IntOpenHashMap quadCounts;
     private final int QUAD_SIZE = 9;
     private Color[] blendColors;
 
@@ -38,6 +44,8 @@ public class ChunkBuilder {
     private BitSet batchedBlocksEast;
     private BitSet batchedBlocksWest;
     private BitSet batchedBlocksDown;
+
+    private Color tmpColor;
 
     // Base \\
 
@@ -55,6 +63,7 @@ public class ChunkBuilder {
         // Data
         this.chunk = chunk;
         this.quads = new IntArray(worldSystem.settings.CHUNK_VERT_BUFFER);
+        this.quadCounts = new Int2IntOpenHashMap();
         this.blendColors = new Color[8];
 
         this.tempBatchedBlocks = new BitSet(packedCoordinate3Int.chunkSize);
@@ -64,6 +73,8 @@ public class ChunkBuilder {
         this.batchedBlocksEast = new BitSet(packedCoordinate3Int.chunkSize);
         this.batchedBlocksWest = new BitSet(packedCoordinate3Int.chunkSize);
         this.batchedBlocksDown = new BitSet(packedCoordinate3Int.chunkSize);
+
+        this.tmpColor = new Color();
     }
 
     // Data \\
@@ -114,6 +125,7 @@ public class ChunkBuilder {
                 buildFromQuads(subChunk.subChunkMesh, subChunkIndex);
 
             quads.clear();
+            quadCounts.clear();
 
             batchedBlocksUp.clear();
             batchedBlocksNorth.clear();
@@ -382,6 +394,8 @@ public class ChunkBuilder {
         int color2 = getVertColor(subChunk, subChunkIndex, vert2X, vert2Y, vert2Z);
         int color3 = getVertColor(subChunk, subChunkIndex, vert3X, vert3Y, vert3Z);
 
+        int materialDataID = worldSystem.getBlockByID(blockID).getMaterialDataForSide(direction).id;
+
         packQuad(
                 quads,
                 xyz,
@@ -392,7 +406,8 @@ public class ChunkBuilder {
                 color0,
                 color1,
                 color2,
-                color3);
+                color3,
+                materialDataID);
     }
 
     private int getVertColor(
@@ -562,7 +577,8 @@ public class ChunkBuilder {
             int color0,
             int color1,
             int color2,
-            int color3) {
+            int color3,
+            int materialDataID) {
 
         quads.add(xyz);
         quads.add(width);
@@ -573,11 +589,16 @@ public class ChunkBuilder {
         quads.add(color1);
         quads.add(color2);
         quads.add(color3);
+
+        quadCounts.addTo(materialDataID, 1);
     }
 
     // Mesh \\
 
     private void buildFromQuads(SubChunkMesh subChunkMesh, int subChunkIndex) {
+
+        // Prepare map of materialID -> BatchWriter
+        Int2ObjectOpenHashMap<BatchWriter> writers = new Int2ObjectOpenHashMap<>();
 
         for (int i = 0; i < quads.size; i += QUAD_SIZE) {
 
@@ -622,95 +643,137 @@ public class ChunkBuilder {
 
             // Block Data
             Block block = worldSystem.getBlockByID(blockID);
-            MaterialData materialData = block.getMaterialDataForSide(direction);
-
-            // get or create batch
-            SubChunkMesh.MeshBatch batch = null;
-
-            for (SubChunkMesh.MeshBatch b : subChunkMesh.getBatches())
-                if (b.materialId == materialData.id) {
-
-                    batch = b;
-                    break;
-                }
-
-            if (batch == null) // estimate: 4 verts, 6 indices per quad
-                batch = subChunkMesh.beginBatch(
-                        materialData,
-                        4, 6);
-
-            // UV rect for block side
             UVRect uv = block.getUVForSide(direction);
+            MaterialData materialData = block.getMaterialDataForSide(direction);
+            int matId = materialData.id;
 
-            float u0 = uv.u0;
-            float v0 = uv.v0;
-            float u1 = uv.u1;
-            float v1 = uv.v1;
+            // Ensure writer exists for this material
+            BatchWriter writer = writers.get(matId);
 
-            // normal
-            int nx = direction.x;
-            int ny = direction.y;
-            int nz = direction.z;
+            if (writer == null) {
 
-            // build 4 verts
-            int baseVertex = batch.vertexCount;
+                int quadCount = quadCounts.get(matId);
+                writer = new BatchWriter(quadCount);
+                writers.put(matId, writer);
+            }
 
-            batch.ensureVertexCapacity(4);
-            batch.ensureIndexCapacity(6);
+            // Normal
+            float nx = direction.x;
+            float ny = direction.y;
+            float nz = direction.z;
 
-            pushVertex(batch, vert0X, vert0Y, vert0Z, nx, ny, nz, color0, u0, v0);
-            pushVertex(batch, vert1X, vert1Y, vert1Z, nx, ny, nz, color1, u1, v0);
-            pushVertex(batch, vert2X, vert2Y, vert2Z, nx, ny, nz, color2, u1, v1);
-            pushVertex(batch, vert3X, vert3Y, vert3Z, nx, ny, nz, color3, u0, v1);
+            // Colors: convert packed int (rgba8888) -> Color -> packed float
+            Color.rgba8888ToColor(tmpColor, color0);
+            float c0 = tmpColor.toFloatBits();
+            Color.rgba8888ToColor(tmpColor, color1);
+            float c1 = tmpColor.toFloatBits();
+            Color.rgba8888ToColor(tmpColor, color2);
+            float c2 = tmpColor.toFloatBits();
+            Color.rgba8888ToColor(tmpColor, color3);
+            float c3 = tmpColor.toFloatBits();
 
-            // indices (two triangles, CCW)
-            batch.indices[batch.indexCount++] = (short) (baseVertex);
-            batch.indices[batch.indexCount++] = (short) (baseVertex + 1);
-            batch.indices[batch.indexCount++] = (short) (baseVertex + 2);
+            // UVs from UVRect
+            float u0 = uv.u0, v0 = uv.v0;
+            float u1 = uv.u1, v1 = uv.v0;
+            float u2 = uv.u1, v2 = uv.v1;
+            float u3 = uv.u0, v3 = uv.v1;
 
-            batch.indices[batch.indexCount++] = (short) (baseVertex);
-            batch.indices[batch.indexCount++] = (short) (baseVertex + 2);
-            batch.indices[batch.indexCount++] = (short) (baseVertex + 3);
+            // Push quad into writer
+            writer.addQuad(
+                    vert0X, vert0Y, vert0Z,
+                    vert1X, vert1Y, vert1Z,
+                    vert2X, vert2Y, vert2Z,
+                    vert3X, vert3Y, vert3Z,
+                    nx, ny, nz,
+                    c0, c1, c2, c3,
+                    u0, v0,
+                    u1, v1,
+                    u2, v2,
+                    u3, v3);
         }
-    }
 
-    // Helper to push interleaved vertex into batch
-    private void pushVertex(
-            SubChunkMesh.MeshBatch batch,
-            float x, float y, float z,
-            float nx, float ny, float nz,
-            int packedColor,
-            float u, float v) {
+        // Convert writers into MaterialBatches
+        Int2ObjectOpenHashMap<SubChunkPacket.MaterialBatch> batches = new Int2ObjectOpenHashMap<>();
+        writers.forEach((matId, writer) -> {
 
-        int offset = batch.vertexCount * SubChunkMesh.FLOATS_PER_VERTEX;
-        float[] verts = batch.vertices;
+            FloatArray vertsFA = new FloatArray(writer.vertPos);
 
-        verts[offset] = x;
-        verts[offset + 1] = y;
-        verts[offset + 2] = z;
+            for (int vi = 0; vi < writer.vertPos; vi++)
+                vertsFA.add(writer.verts[vi]);
 
-        verts[offset + 3] = nx;
-        verts[offset + 4] = ny;
-        verts[offset + 5] = nz;
+            ShortArray indsFA = new ShortArray(writer.indPos);
 
-        // unpack ABGR int into floats
-        float r = ((packedColor & 0xff)) / 255f;
-        float g = ((packedColor >>> 8) & 0xff) / 255f;
-        float b = ((packedColor >>> 16) & 0xff) / 255f;
-        float a = ((packedColor >>> 24) & 0xff) / 255f;
+            for (int ii = 0; ii < writer.indPos; ii++)
+                indsFA.add(writer.inds[ii]);
 
-        verts[offset + 6] = r;
-        verts[offset + 7] = g;
-        verts[offset + 8] = b;
-        verts[offset + 9] = a;
+            batches.put(matId, new SubChunkPacket.MaterialBatch(matId, vertsFA, indsFA));
+        });
 
-        verts[offset + 10] = u;
-        verts[offset + 11] = v;
-
-        batch.vertexCount++;
+        // Create and submit packet
+        SubChunkPacket packet = new SubChunkPacket(subChunkIndex, batches);
+        subChunkMesh.submit(packet);
     }
 
     // Utility \\
+
+    private static final class BatchWriter {
+
+        final float[] verts;
+        final short[] inds;
+        int vertPos = 0;
+        int indPos = 0;
+        short baseIndex = 0;
+
+        BatchWriter(int quadCount) {
+
+            verts = new float[quadCount * 4 * 11]; // 11 floats per vert
+            inds = new short[quadCount * 6];
+        }
+
+        void addQuad(
+                float x0, float y0, float z0,
+                float x1, float y1, float z1,
+                float x2, float y2, float z2,
+                float x3, float y3, float z3,
+                float nx, float ny, float nz,
+                float c0, float c1, float c2, float c3,
+                float u0, float v0,
+                float u1, float v1,
+                float u2, float v2,
+                float u3, float v3) {
+
+            pushVertex(x0, y0, z0, nx, ny, nz, c0, u0, v0);
+            pushVertex(x1, y1, z1, nx, ny, nz, c1, u1, v1);
+            pushVertex(x2, y2, z2, nx, ny, nz, c2, u2, v2);
+            pushVertex(x3, y3, z3, nx, ny, nz, c3, u3, v3);
+
+            // two triangles
+            inds[indPos++] = (short) (baseIndex + 0);
+            inds[indPos++] = (short) (baseIndex + 1);
+            inds[indPos++] = (short) (baseIndex + 2);
+            inds[indPos++] = (short) (baseIndex + 2);
+            inds[indPos++] = (short) (baseIndex + 3);
+            inds[indPos++] = (short) (baseIndex + 0);
+
+            baseIndex += 4;
+        }
+
+        private void pushVertex(float x, float y, float z,
+                float nx, float ny, float nz,
+                float c,
+                float u, float v) {
+
+            verts[vertPos++] = x;
+            verts[vertPos++] = y;
+            verts[vertPos++] = z;
+            verts[vertPos++] = nx;
+            verts[vertPos++] = ny;
+            verts[vertPos++] = nz;
+            verts[vertPos++] = c;
+            verts[vertPos++] = u;
+            verts[vertPos++] = v;
+        }
+    }
 
     private enum NeighborBlockDirection {
 
@@ -733,6 +796,7 @@ public class ChunkBuilder {
         }
 
         public static final NeighborBlockDirection[] VALUES = {
+
                 UPPER_NORTH_EAST,
                 UPPER_NORTH_WEST,
                 UPPER_SOUTH_EAST,

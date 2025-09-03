@@ -31,7 +31,7 @@ public final class SubChunk {
         this.blocks = new BlockContainer(CHUNK_SIZE);
 
         // Mesh
-        this.subChunkMesh = new SubChunkMesh();
+        this.subChunkMesh = new SubChunkMesh(chunk.worldSystem);
         this.node = new Node();
 
         // Utility
