@@ -88,7 +88,7 @@ public class WorldGenerator {
 
         for (int subChunkIndex = 0; subChunkIndex < WORLD_HEIGHT; subChunkIndex++) {
 
-            SubChunk subChunk = subChunks[subChunkIndex] = new SubChunk(chunk);
+            SubChunk subChunk = subChunks[subChunkIndex] = new SubChunk(chunk, subChunkIndex);
             int subChunkOffset = subChunkIndex * CHUNK_SIZE;
 
             for (int index = 0; index < biomeSize; index++) {

@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g3d.model.Node;
 public final class SubChunk {
 
     // Data
+    public final int subChunkIndex;
     private final BiomeContainer biomes;
     private final BlockContainer blocks;
 
@@ -17,12 +18,14 @@ public final class SubChunk {
 
     // Utility
     private final int biomeShift;
+    private boolean addedToModel;
 
     // Base \\
 
-    public SubChunk(Chunk chunk) {
+    public SubChunk(Chunk chunk, int subChunkIndex) {
 
         // Settings
+        this.subChunkIndex = subChunkIndex;
         int CHUNK_SIZE = chunk.settings.CHUNK_SIZE;
         int BIOME_SIZE = chunk.settings.BIOME_SIZE;
 
@@ -33,9 +36,12 @@ public final class SubChunk {
         // Mesh
         this.subChunkMesh = new SubChunkMesh(chunk.worldSystem);
         this.node = new Node();
+        this.node.id = "subchunk_" + subChunkIndex; // give it a name for debugging
+        this.node.translation.set(0, subChunkIndex * chunk.settings.CHUNK_SIZE, 0);
 
         // Utility
         this.biomeShift = Integer.numberOfTrailingZeros(CHUNK_SIZE / BIOME_SIZE);
+        this.addedToModel = false;
     }
 
     public void dispose() {
@@ -66,11 +72,15 @@ public final class SubChunk {
 
     public void build(Model model) {
 
-        rebuild();
-        model.nodes.add(node);
+        buildMesh();
+
+        if (!addedToModel) {
+            model.nodes.add(node);
+            addedToModel = true;
+        }
     }
 
-    public void rebuild() {
+    public void buildMesh() {
         subChunkMesh.build(node);
     }
 }

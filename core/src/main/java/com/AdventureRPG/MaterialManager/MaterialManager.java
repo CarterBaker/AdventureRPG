@@ -12,7 +12,9 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.TextureArray;
 import com.google.gson.Gson;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MaterialManager {
@@ -34,6 +36,7 @@ public class MaterialManager {
     private final Map<String, Integer> idByName = new HashMap<>();
 
     // Map of Material to ShaderProgram for O(1) lookup
+    private final List<MaterialData> materials = new ArrayList<>();
     private final Map<TextureArray, MaterialData> arrayToFirstMaterial = new HashMap<>();
     private final Map<Material, ShaderProgram> shaderByMaterial = new HashMap<>();
 
@@ -61,6 +64,10 @@ public class MaterialManager {
     }
 
     public void update() {
+
+        for (int i = 0, n = materials.size(); i < n; i++) {
+            materials.get(i).updateUniversalUniforms();
+        }
     }
 
     public void dispose() {
@@ -121,16 +128,17 @@ public class MaterialManager {
                         libgdxMaterial,
                         textureArray,
                         shaderProgram,
-                        uniforms);
+                        uniforms,
+                        shaderManager.universalUniform);
 
                 // Store
+                materials.add(data);
+                arrayToFirstMaterial.putIfAbsent(textureArray, data);
                 materialsById.put(id, data);
                 idByName.put(name, id);
 
                 if (shaderProgram != null)
                     shaderByMaterial.put(libgdxMaterial, shaderProgram);
-
-                arrayToFirstMaterial.putIfAbsent(textureArray, data);
             }
 
             catch (Exception exception) {

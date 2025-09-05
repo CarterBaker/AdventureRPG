@@ -3,6 +3,7 @@ package com.AdventureRPG.RenderManager;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.PassManager.PassData;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
+import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.badlogic.gdx.Gdx;
@@ -13,6 +14,7 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 public class RenderManager {
 
     // Game Manager
+    private final ShaderManager shaderManager;
     private final UISystem UISystem;
     private final WorldSystem worldSystem;
     private final PlayerSystem playerSystem;
@@ -22,18 +24,20 @@ public class RenderManager {
 
     // Base \\
 
-    public RenderManager(GameManager GameManager) {
+    public RenderManager(GameManager gameManager) {
 
         // Game Manager
-        this.UISystem = GameManager.UISystem;
-        this.worldSystem = GameManager.worldSystem;
-        this.playerSystem = GameManager.playerSystem;
+        this.shaderManager = gameManager.shaderManager;
+        this.UISystem = gameManager.UISystem;
+        this.worldSystem = gameManager.worldSystem;
+        this.playerSystem = gameManager.playerSystem;
 
-        this.renderQueue = new RenderQueue(GameManager);
+        this.renderQueue = new RenderQueue(gameManager);
 
         // Core passes
         renderQueue.addPass(new PassData(
                 0, "3D_PASS", -1, null, null,
+                shaderManager.universalUniform,
                 ctx -> {
                     ctx.modelBatch.begin(playerSystem.getCamera());
                     worldSystem.render(ctx.modelBatch);
@@ -43,6 +47,7 @@ public class RenderManager {
 
         renderQueue.addPass(new PassData(
                 0, "2D_PASS", -1, null, null,
+                shaderManager.universalUniform,
                 ctx -> {
                     ctx.spriteBatch.begin();
                     UISystem.render();

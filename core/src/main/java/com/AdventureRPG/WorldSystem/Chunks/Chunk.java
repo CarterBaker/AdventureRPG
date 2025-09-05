@@ -127,8 +127,7 @@ public class Chunk {
         this.positionX = Coordinate2Int.unpackX(position);
         this.positionY = Coordinate2Int.unpackY(position);
 
-        if (modelInstance != null)
-            modelInstance.transform.setToTranslation(positionX, 0, positionY);
+        positionChunk();
     }
 
     // Data \\
@@ -186,15 +185,19 @@ public class Chunk {
         if (subChunkCheck())
             return;
 
-        model = new Model();
+        if (model == null)
+            model = new Model();
 
-        for (int i = 0; i < settings.WORLD_HEIGHT; i++) {
-            rebuildSubChunk(i);
+        for (int i = 0; i < settings.WORLD_HEIGHT; i++)
             subChunks[i].build(model);
-        }
 
-        modelInstance = new ModelInstance(model);
-        modelInstance.transform.setToTranslation(positionX, 0, positionY);
+        model.calculateTransforms();
+
+        if (modelInstance == null)
+            modelInstance = new ModelInstance(model);
+
+        positionChunk();
+
         gridSystem.addToModelInstances(coordinate, modelInstance);
 
         enqueueBuild.set(false);
@@ -206,10 +209,10 @@ public class Chunk {
             setState(ChunkState.FINALIZED);
     }
 
-    private void rebuildSubChunk(int subChunkIndex) {
+    private void buildSubChunkMesh(int subChunkIndex) {
 
         if (subChunks[subChunkIndex] != null)
-            subChunks[subChunkIndex].rebuild();
+            subChunks[subChunkIndex].buildMesh();
     }
 
     private void clearExistingModelData() {
@@ -225,6 +228,15 @@ public class Chunk {
             gridSystem.removeFromModelInstances(coordinate);
             modelInstance = null;
         }
+    }
+
+    private void positionChunk() {
+
+        if (modelInstance != null)
+            modelInstance.transform.setToTranslation(
+                    positionX * settings.CHUNK_SIZE,
+                    0,
+                    positionY * settings.CHUNK_SIZE);
     }
 
     // Neighbors \\

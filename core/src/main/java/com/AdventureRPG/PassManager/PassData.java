@@ -2,8 +2,11 @@ package com.AdventureRPG.PassManager;
 
 import com.AdventureRPG.RenderManager.RenderAction;
 import com.AdventureRPG.RenderManager.RenderContext;
+import com.AdventureRPG.ShaderManager.ShaderData;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
+import com.AdventureRPG.ShaderManager.UniversalUniform;
+import com.AdventureRPG.ShaderManager.UniversalUniformType;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
@@ -14,7 +17,7 @@ import com.badlogic.gdx.graphics.Color;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PassData {
+public class PassData implements ShaderData {
 
     // Pass
     public final int id;
@@ -22,6 +25,7 @@ public class PassData {
     public final int shaderID;
     public final Map<String, String> texturePaths;
     public final Map<String, UniformAttribute> uniforms = new HashMap<>();
+    public final UniversalUniform universalUniform;
     private final RenderAction action;
     public float lifetime;
 
@@ -33,6 +37,7 @@ public class PassData {
             int shaderID,
             Map<String, String> texturePaths,
             Map<String, UniformAttribute> initialUniforms,
+            UniversalUniform universalUniform,
             RenderAction action) {
         this.id = id;
         this.name = name;
@@ -40,6 +45,7 @@ public class PassData {
         this.texturePaths = texturePaths != null ? texturePaths : new HashMap<>();
         if (initialUniforms != null)
             this.uniforms.putAll(initialUniforms);
+        this.universalUniform = universalUniform;
         this.action = action;
         this.lifetime = 0f;
     }
@@ -50,7 +56,8 @@ public class PassData {
         this.name = template.name;
         this.shaderID = template.shaderID;
         this.texturePaths = new HashMap<>(template.texturePaths);
-        this.uniforms.putAll(template.uniforms); // copy uniforms
+        this.uniforms.putAll(template.uniforms);
+        this.universalUniform = template.universalUniform;
         this.action = template.action;
         this.lifetime = template.lifetime;
     }
@@ -58,14 +65,6 @@ public class PassData {
     public PassData(PassData template, float lifetime) {
         this(template);
         this.lifetime = lifetime;
-    }
-
-    // Dynamically update uniform at runtime
-    public void setUniform(String name, Object value) {
-        UniformAttribute ua = uniforms.get(name);
-
-        if (ua != null)
-            ua.value = value;
     }
 
     // Render method called by RenderQueue
@@ -99,5 +98,14 @@ public class PassData {
         else
             // Default: draw fullscreen quad
             shaderManager.renderFullScreenQuad(shader);
+    }
+
+    public void setUniversalUniform(UniversalUniformType type) {
+        universalUniform.setUniversalUniform(this, type);
+    }
+
+    @Override
+    public Map<String, UniformAttribute> getUniforms() {
+        return uniforms;
     }
 }

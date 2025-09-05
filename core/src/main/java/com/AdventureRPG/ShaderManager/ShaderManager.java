@@ -3,6 +3,7 @@ package com.AdventureRPG.ShaderManager;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g3d.Shader;
@@ -32,6 +33,9 @@ public class ShaderManager implements ShaderProvider {
     // Settings
     private final String SHADER_JSON_PATH;
 
+    // Shader Manager
+    public final UniversalUniform universalUniform;
+
     // Shader maps
     private final Map<String, ShaderProgram> nameToProgram;
     private final Map<Integer, ShaderProgram> idToProgram;
@@ -52,6 +56,9 @@ public class ShaderManager implements ShaderProvider {
 
         // Settings
         this.SHADER_JSON_PATH = settings.SHADER_JSON_PATH;
+
+        // Shader Manager
+        this.universalUniform = new UniversalUniform(gameManager);
 
         // Shader maps
         this.nameToProgram = new LinkedHashMap<>();
@@ -86,6 +93,7 @@ public class ShaderManager implements ShaderProvider {
 
     public void awake() {
 
+        universalUniform.awake();
     }
 
     public void start() {
@@ -94,6 +102,7 @@ public class ShaderManager implements ShaderProvider {
 
     public void update() {
 
+        universalUniform.update();
     }
 
     @Override

@@ -95,7 +95,7 @@ public class PassManager {
         Map<String, UniformAttribute> uniforms = parseUniforms(json.uniforms);
         String name = stripExtension(file.name());
 
-        return new PassData(nextPassID, name, shaderID, json.textures, uniforms, null);
+        return new PassData(nextPassID, name, shaderID, json.textures, uniforms, shaderManager.universalUniform, null);
     }
 
     private Map<String, UniformAttribute> parseUniforms(Map<String, Object> rawUniforms) {

@@ -630,7 +630,7 @@ public class ChunkBuilder {
             Direction3Int dirB = tangents[1];
 
             int baseX = packedCoordinate3Int.unpackX(xyz);
-            int baseY = packedCoordinate3Int.unpackY(xyz) + (subChunkIndex * CHUNK_SIZE);
+            int baseY = packedCoordinate3Int.unpackY(xyz);
             int baseZ = packedCoordinate3Int.unpackZ(xyz);
 
             // Quad verts
