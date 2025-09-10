@@ -1,15 +1,13 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
-import com.badlogic.gdx.utils.FloatArray;
-import com.badlogic.gdx.utils.ShortArray;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-public final class SubChunkPacket {
+public final class MeshPacket {
 
     public final Int2ObjectOpenHashMap<MaterialBatch> batches;
     public final int subChunkIndex;
 
-    SubChunkPacket(int subChunkIndex, Int2ObjectOpenHashMap<MaterialBatch> batches) {
+    MeshPacket(int subChunkIndex, Int2ObjectOpenHashMap<MaterialBatch> batches) {
 
         this.subChunkIndex = subChunkIndex;
         this.batches = batches;

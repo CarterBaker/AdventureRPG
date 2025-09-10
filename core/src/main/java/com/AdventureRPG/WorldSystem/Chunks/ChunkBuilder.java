@@ -702,7 +702,8 @@ public class ChunkBuilder {
         }
 
         // Convert writers into MaterialBatches
-        Int2ObjectOpenHashMap<SubChunkPacket.MaterialBatch> batches = new Int2ObjectOpenHashMap<>();
+        Int2ObjectOpenHashMap<MeshPacket.MaterialBatch> batches = new Int2ObjectOpenHashMap<>();
+
         writers.forEach((matId, writer) -> {
 
             FloatArray vertsFA = new FloatArray(writer.vertPos);
@@ -715,14 +716,14 @@ public class ChunkBuilder {
             for (int ii = 0; ii < writer.indPos; ii++)
                 indsFA.add(writer.inds[ii]);
 
-            batches.putIfAbsent(matId, new SubChunkPacket.MaterialBatch(
+            batches.putIfAbsent(matId, new MeshPacket.MaterialBatch(
                     matId,
                     writer.verts, writer.vertPos,
                     writer.inds, writer.indPos));
         });
 
         // Create and submit packet
-        SubChunkPacket packet = new SubChunkPacket(subChunkIndex, batches);
+        MeshPacket packet = new MeshPacket(subChunkIndex, batches);
         subChunkMesh.submit(packet);
     }
 

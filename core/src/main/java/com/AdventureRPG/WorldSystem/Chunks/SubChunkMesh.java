@@ -28,7 +28,7 @@ public final class SubChunkMesh {
             new VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, "a_color"),
             new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, "a_texCoord0"));
 
-    private final AtomicReference<SubChunkPacket> pending = new AtomicReference<>(null);
+    private final AtomicReference<MeshPacket> pending = new AtomicReference<>(null);
 
     // GPU resources for current build
     private final List<Mesh> meshes = new ArrayList<>();
@@ -49,13 +49,13 @@ public final class SubChunkMesh {
 
     // Build \\
 
-    public void submit(SubChunkPacket packet) {
+    public void submit(MeshPacket packet) {
         pending.set(packet);
     }
 
     public void build(Node node) {
 
-        SubChunkPacket packet = pending.getAndSet(null);
+        MeshPacket packet = pending.getAndSet(null);
 
         if (packet == null)
             return;
