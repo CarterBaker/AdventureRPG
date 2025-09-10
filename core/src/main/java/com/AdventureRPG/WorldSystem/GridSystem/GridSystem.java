@@ -292,7 +292,7 @@ public class GridSystem {
 
     private void renderChunks(ModelBatch modelBatch) {
 
-        // TODO: I feel I can do this better
+        System.out.println(gridToChunkMap.size());
 
         for (int i = 0; i < totalChunks; i++) {
 

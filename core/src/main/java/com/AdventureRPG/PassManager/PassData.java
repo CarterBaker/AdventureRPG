@@ -72,8 +72,13 @@ public class PassData implements ShaderData {
 
         ShaderProgram shader = shaderManager.getShaderByID(shaderID);
 
-        if (shader == null)
+        if (shader == null) {
+
+            if (action != null)
+                action.render(context);
+
             return;
+        }
 
         shader.bind();
 

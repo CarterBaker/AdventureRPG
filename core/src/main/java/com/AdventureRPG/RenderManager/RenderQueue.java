@@ -12,6 +12,7 @@ public class RenderQueue {
     private final Map<Integer, Queue<PassData>> passes;
 
     public RenderQueue(GameManager gameManager) {
+
         this.shaderManager = gameManager.shaderManager;
         this.passes = new TreeMap<>();
     }
@@ -23,9 +24,11 @@ public class RenderQueue {
 
     // Render in order: sorted by ID, FIFO within same ID
     public void renderAll(RenderContext context) {
+
         Iterator<Map.Entry<Integer, Queue<PassData>>> mapIter = passes.entrySet().iterator();
 
         while (mapIter.hasNext()) {
+
             Map.Entry<Integer, Queue<PassData>> entry = mapIter.next();
             Queue<PassData> queue = entry.getValue();
 

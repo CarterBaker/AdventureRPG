@@ -1,5 +1,6 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
+import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeContainer;
 import com.AdventureRPG.WorldSystem.Blocks.BlockContainer;
 import com.badlogic.gdx.graphics.g3d.Model;
@@ -36,7 +37,7 @@ public final class SubChunk {
         // Mesh
         this.subChunkMesh = new SubChunkMesh(chunk.worldSystem);
         this.node = new Node();
-        this.node.id = "subchunk_" + subChunkIndex; // give it a name for debugging
+        this.node.id = "Chunk_[" + chunk.coordinateX + "_" + chunk.coordinateY + "]_subchunk_[" + subChunkIndex + "]";
         this.node.translation.set(0, subChunkIndex * chunk.settings.CHUNK_SIZE, 0);
 
         // Utility

@@ -60,11 +60,9 @@ public final class SubChunkMesh {
         if (packet == null)
             return;
 
-        // Rebuild fresh GPU resources
         clearGPU();
         node.parts.clear();
 
-        // For each material batch: create Mesh, upload, make NodePart
         packet.batches.forEach((matId, batch) -> {
 
             int numVerts = batch.getVertexCount();
@@ -76,9 +74,8 @@ public final class SubChunkMesh {
 
             meshes.add(mesh);
 
-            // Resolve material from materialId (Option B).
             MaterialData md = world.materialManager.getById(matId);
-            Material mat = (md != null) ? md.material : new Material(); // fallback
+            Material mat = (md != null) ? md.material : new Material();
 
             NodePart np = new NodePart();
             np.meshPart = new MeshPart();
