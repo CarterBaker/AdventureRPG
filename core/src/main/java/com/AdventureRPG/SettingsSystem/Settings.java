@@ -172,7 +172,7 @@ public class Settings {
         public boolean fullscreen = false;
 
         // Render Settings
-        public int maxRenderDistance = 64;
+        public int maxRenderDistance = 32;
 
         // Constant Settings \\
 
@@ -202,7 +202,7 @@ public class Settings {
         // Time Settings
         private int MINUTES_PER_HOUR = 60;
         private int HOURS_PER_DAY = 24;
-        private int DAYS_PER_DAY = 20;
+        private int DAYS_PER_DAY = 40;
         private float MIDDAY_OFFSET = 0.f;
 
         private int STARTING_DAY = 15;
@@ -223,7 +223,7 @@ public class Settings {
         public float BLOCK_SIZE = 1;
         public int BIOME_SIZE = 4;
         public int CHUNK_SIZE = 16;
-        public int WORLD_HEIGHT = 64;
+        public int WORLD_HEIGHT = 32;
 
         // World Tick Settings
         public float WORLD_TICK = 1;
