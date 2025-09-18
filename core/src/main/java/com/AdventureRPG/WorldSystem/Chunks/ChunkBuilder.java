@@ -83,33 +83,43 @@ public class ChunkBuilder {
 
         try {
 
+            // Get the sub chunk from the input index
             SubChunk subChunk = chunk.getSubChunk(subChunkIndex);
 
+            // Go through each and every pre-packed coordinate inside the chunk
             for (int index = 0; index < packedCoordinate3Int.chunkSize; index++) {
 
+                // Grab the pre-packed coordinate
                 int xyz = packedCoordinate3Int.getPackedBlockCoordinate(index);
 
+                // Unpack x, y and z
                 int aX = packedCoordinate3Int.unpackX(xyz);
                 int aY = packedCoordinate3Int.unpackY(xyz);
                 int aZ = packedCoordinate3Int.unpackZ(xyz);
 
+                // Get the block and block type for the pre-packed coordinate
                 int blockID = subChunk.getBlock(aX, aY, aZ);
                 Type type = worldSystem.getBlockType(blockID);
 
+                // Early exit for anything set to type NULL
                 if (type == Type.NULL)
                     continue;
 
+                // Get the biome type for the pre-packed coordinate
                 int biomeID = subChunk.getBiome(aX, aY, aZ);
 
+                // For this coordinate go through each direction
                 for (int directionIndex = 0; directionIndex < 6; directionIndex++) {
 
+                    // Grab the direction and batched set for the index
                     Direction3Int direction = Direction3Int.DIRECTIONS[directionIndex];
-
                     BitSet batchedSet = getBatchedSet(direction);
 
+                    // If the block has already been combines with another block face skip
                     if (batchedSet.get(xyz))
                         continue;
 
+                    // Assemble the face using the data so far
                     assembleFace(
                             quads, batchedSet,
                             subChunk,
@@ -121,20 +131,24 @@ public class ChunkBuilder {
                 }
             }
 
+            // If there is data build the mesh
             if (quads.size > 0)
                 buildFromQuads(subChunk.subChunkMesh, subChunkIndex);
         }
 
+        // Exit early and clear the lists if anything went wrong
         catch (AbortBuildException endEarly) {
             clearData();
         }
 
+        // Clear the data after a successful build
         finally {
             clearData();
         }
 
     }
 
+    // Clear all the lists for the next build
     private void clearData() {
 
         quads.clear();
@@ -148,6 +162,7 @@ public class ChunkBuilder {
         batchedBlocksDown.clear();
     }
 
+    // Grab the correct batched set to compare against
     private BitSet getBatchedSet(Direction3Int direction3Int) {
 
         return switch (direction3Int) {
@@ -160,6 +175,7 @@ public class ChunkBuilder {
         };
     }
 
+    // Assemble the face and combine like blocks into the same quad
     private void assembleFace(
             IntArray quads, BitSet batchedSet,
             SubChunk subChunk,
@@ -169,6 +185,7 @@ public class ChunkBuilder {
             int biomeID, int blockID,
             Type type) {
 
+        // If this block does not need a quad for this face skip
         if (!blockFaceCheck(
                 subChunkIndex,
                 aX, aY, aZ,
@@ -176,6 +193,7 @@ public class ChunkBuilder {
                 type))
             return;
 
+        // First step start with default values for the check
         boolean checkA = true;
         boolean checkB = true;
 
@@ -230,6 +248,7 @@ public class ChunkBuilder {
 
         while (checkA || checkB);
 
+        // Pack the face using the data accumulated
         prepareFace(
                 quads,
                 subChunk,
@@ -240,6 +259,7 @@ public class ChunkBuilder {
                 biomeID, blockID);
     }
 
+    // The main method to stretch the face
     private boolean tryExpand(
             BitSet batchedSet,
             SubChunk subChunk,
@@ -251,6 +271,7 @@ public class ChunkBuilder {
             Direction3Int direction,
             Type type) {
 
+        // First step is to make sure we are within the same chunk
         if (currentSize >= CHUNK_SIZE)
             return false;
 
@@ -261,6 +282,7 @@ public class ChunkBuilder {
         int nextY = aY + expandDir.y * currentSize;
         int nextZ = aZ + expandDir.z * currentSize;
 
+        // Used to keep the coordinates within a single chunk
         if (coordinatesOutOfBounds(nextX, nextY, nextZ))
             return false;
 
@@ -296,6 +318,7 @@ public class ChunkBuilder {
         return true;
     }
 
+    // Used to keep the coordinates within a single chunk
     private boolean coordinatesOutOfBounds(int x, int y, int z) {
 
         return (x >= CHUNK_SIZE ||
@@ -303,38 +326,51 @@ public class ChunkBuilder {
                 z >= CHUNK_SIZE);
     }
 
+    // The main check to see if this block should have a face
     private boolean blockFaceCheck(
             int subChunkIndex,
             int aX, int aY, int aZ,
             Direction3Int direction,
             Type type) {
 
+        // Get the correct values always wrapped within a single chunk
         int bX = packedCoordinate3Int.addAndWrapAxis(direction.x, aX);
         int bY = packedCoordinate3Int.addAndWrapAxis(direction.y, aY);
         int bZ = packedCoordinate3Int.addAndWrapAxis(direction.z, aZ);
 
+        // Get raw coordinates to compare against
+        int cX = aX + direction.x;
+        int cY = aY + direction.y;
+        int cZ = aZ + direction.z;
+
+        // Get the correct sub chunk to compare against
         SubChunk comparativeSubChunk = getComparativeSubChunk(
                 subChunkIndex,
-                bX, bY, bZ,
+                cX, cY, cZ,
                 direction);
 
+        // If the sub chunk is null return true
         if (comparativeSubChunk == null)
             return true;
 
+        // Get the type of the neighbor block to compare against
         int blockID = comparativeSubChunk.getBlock(bX, bY, bZ);
         Type comparativeType = worldSystem.getBlockType(blockID);
 
         return comparativeType != type;
     }
 
+    // Method to grab the neighbor sub chunk
     private SubChunk getComparativeSubChunk(
             int subChunkIndex,
-            int bX, int bY, int bZ,
+            int cX, int cY, int cZ,
             Direction3Int direction) {
 
-        if (!packedCoordinate3Int.isOverEdge(bX, bY, bZ, direction))
+        // If the current coordinates are not over the edge return the same sub chunk
+        if (!isBlockOverEdge(cX, cY, cZ))
             return chunk.getSubChunk(subChunkIndex);
 
+        // If the direction is vertical return within the same chunk
         if (direction == Direction3Int.UP || direction == Direction3Int.DOWN) {
 
             int outputSubChunk = subChunkIndex + direction.y;
@@ -346,7 +382,11 @@ public class ChunkBuilder {
                 return null;
         }
 
+        // Otherwise grab the correct neighbor subchunk
         else {
+
+            if (direction == Direction3Int.NORTH)
+                System.out.println("Fixed it");
 
             Direction2Int direction2Int = direction.direction2Int;
             Chunk neighborChunk = chunk.getNeighborChunk(direction2Int);
@@ -359,6 +399,14 @@ public class ChunkBuilder {
 
             return neighborChunk.getSubChunk(subChunkIndex);
         }
+    }
+
+    private boolean isBlockOverEdge(
+            int cX, int cY, int cZ) {
+
+        return (cX < 0 || cX >= CHUNK_SIZE ||
+                cY < 0 || cY >= CHUNK_SIZE ||
+                cZ < 0 || cZ >= CHUNK_SIZE);
     }
 
     private void prepareFace(
@@ -481,7 +529,7 @@ public class ChunkBuilder {
             int offsetX, int offsetY, int offsetZ,
             NeighborBlockDirection direction) {
 
-        if (!isOverEdge(offsetX, offsetY, offsetZ))
+        if (!isVertOverEdge(offsetX, offsetY, offsetZ))
             return subChunk;
 
         // Handle vertical movement
@@ -514,7 +562,7 @@ public class ChunkBuilder {
         return null;
     }
 
-    private boolean isOverEdge(int offsetX, int offsetY, int offsetZ) {
+    private boolean isVertOverEdge(int offsetX, int offsetY, int offsetZ) {
 
         return (offsetX < 0 || offsetX > CHUNK_SIZE ||
                 offsetY < 0 || offsetY > CHUNK_SIZE ||

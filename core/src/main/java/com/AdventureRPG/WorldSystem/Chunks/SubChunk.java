@@ -1,6 +1,5 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
-import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeContainer;
 import com.AdventureRPG.WorldSystem.Blocks.BlockContainer;
 import com.badlogic.gdx.graphics.g3d.Model;
@@ -9,6 +8,7 @@ import com.badlogic.gdx.graphics.g3d.model.Node;
 public final class SubChunk {
 
     // Data
+    public final Chunk chunk;
     public final int subChunkIndex;
     private final BiomeContainer biomes;
     private final BlockContainer blocks;
@@ -26,6 +26,7 @@ public final class SubChunk {
     public SubChunk(Chunk chunk, int subChunkIndex) {
 
         // Settings
+        this.chunk = chunk;
         this.subChunkIndex = subChunkIndex;
         int CHUNK_SIZE = chunk.settings.CHUNK_SIZE;
         int BIOME_SIZE = chunk.settings.BIOME_SIZE;

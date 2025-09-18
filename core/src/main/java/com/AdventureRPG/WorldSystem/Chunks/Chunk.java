@@ -209,12 +209,6 @@ public class Chunk {
             setState(ChunkState.FINALIZED);
     }
 
-    private void buildSubChunkMesh(int subChunkIndex) {
-
-        if (subChunks[subChunkIndex] != null)
-            subChunks[subChunkIndex].buildMesh();
-    }
-
     private void clearExistingModelData() {
 
         if (model != null) {
