@@ -1,14 +1,12 @@
 package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.Util.Coordinate3Int;
-import com.AdventureRPG.Util.Direction3Int;
 
 public class PackedCoordinate3Int {
 
     // Settings
     private final int BIOME_SIZE;
     private final int CHUNK_SIZE;
-    private final int WORLD_HEIGHT;
 
     public final int biomeSize;
     public final int chunkSize;
@@ -29,15 +27,18 @@ public class PackedCoordinate3Int {
         // Settings
         this.BIOME_SIZE = worldSystem.settings.BIOME_SIZE;
         this.CHUNK_SIZE = worldSystem.settings.CHUNK_SIZE;
-        this.WORLD_HEIGHT = worldSystem.settings.WORLD_HEIGHT;
 
-        this.biomeSize = (CHUNK_SIZE / BIOME_SIZE) * (CHUNK_SIZE / BIOME_SIZE) * (CHUNK_SIZE / BIOME_SIZE);
-        this.chunkSize = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+        this.biomeSize = (CHUNK_SIZE / BIOME_SIZE) *
+                (CHUNK_SIZE / BIOME_SIZE) *
+                (CHUNK_SIZE / BIOME_SIZE);
+        this.chunkSize = CHUNK_SIZE *
+                CHUNK_SIZE *
+                CHUNK_SIZE;
 
         // Bit sizes
         this.xBits = bitsNeeded(CHUNK_SIZE);
+        this.yBits = bitsNeeded(CHUNK_SIZE);
         this.zBits = bitsNeeded(CHUNK_SIZE);
-        this.yBits = bitsNeeded(CHUNK_SIZE * WORLD_HEIGHT);
 
         this.xMask = (1 << xBits) - 1;
         this.yMask = (1 << yBits) - 1;
@@ -61,7 +62,9 @@ public class PackedCoordinate3Int {
         int i = 0;
 
         for (int x = 0; x < (CHUNK_SIZE / BIOME_SIZE); x++)
+
             for (int y = 0; y < (CHUNK_SIZE / BIOME_SIZE); y++)
+
                 for (int z = 0; z < (CHUNK_SIZE / BIOME_SIZE); z++) {
 
                     packedBiomeCoordinates[i] = pack(x, y, z);
@@ -71,7 +74,9 @@ public class PackedCoordinate3Int {
         i = 0;
 
         for (int x = 0; x < CHUNK_SIZE; x++)
+
             for (int y = 0; y < CHUNK_SIZE; y++)
+
                 for (int z = 0; z < CHUNK_SIZE; z++) {
 
                     packedBlockCoordinates[i] = pack(x, y, z);

@@ -77,7 +77,7 @@ public class ChunkBuilder {
         this.tmpColor = new Color();
     }
 
-    // Data \\
+    // Build \\
 
     public void build(int subChunkIndex) {
 
@@ -93,12 +93,12 @@ public class ChunkBuilder {
                 int xyz = packedCoordinate3Int.getPackedBlockCoordinate(index);
 
                 // Unpack x, y and z
-                int aX = packedCoordinate3Int.unpackX(xyz);
-                int aY = packedCoordinate3Int.unpackY(xyz);
-                int aZ = packedCoordinate3Int.unpackZ(xyz);
+                int x = packedCoordinate3Int.unpackX(xyz);
+                int y = packedCoordinate3Int.unpackY(xyz);
+                int z = packedCoordinate3Int.unpackZ(xyz);
 
                 // Get the block and block type for the pre-packed coordinate
-                int blockID = subChunk.getBlock(aX, aY, aZ);
+                int blockID = subChunk.getBlock(x, y, z);
                 Type type = worldSystem.getBlockType(blockID);
 
                 // Early exit for anything set to type NULL
@@ -106,7 +106,7 @@ public class ChunkBuilder {
                     continue;
 
                 // Get the biome type for the pre-packed coordinate
-                int biomeID = subChunk.getBiome(aX, aY, aZ);
+                int biomeID = subChunk.getBiome(x, y, z);
 
                 // For this coordinate go through each direction
                 for (int directionIndex = 0; directionIndex < 6; directionIndex++) {
@@ -124,7 +124,7 @@ public class ChunkBuilder {
                             quads, batchedSet,
                             subChunk,
                             subChunkIndex,
-                            aX, aY, aZ,
+                            x, y, z,
                             direction,
                             biomeID, blockID,
                             type);
@@ -180,7 +180,7 @@ public class ChunkBuilder {
             IntArray quads, BitSet batchedSet,
             SubChunk subChunk,
             int subChunkIndex,
-            int aX, int aY, int aZ,
+            int x, int y, int z,
             Direction3Int direction,
             int biomeID, int blockID,
             Type type) {
@@ -188,7 +188,7 @@ public class ChunkBuilder {
         // If this block does not need a quad for this face skip
         if (!blockFaceCheck(
                 subChunkIndex,
-                aX, aY, aZ,
+                x, y, z,
                 direction,
                 type))
             return;
@@ -213,7 +213,7 @@ public class ChunkBuilder {
                         batchedSet,
                         subChunk,
                         subChunkIndex,
-                        aX, aY, aZ,
+                        x, y, z,
                         sizeA, sizeB,
                         comparativeDirectionA, comparativeDirectionB,
                         biomeID, blockID,
@@ -232,7 +232,7 @@ public class ChunkBuilder {
                         batchedSet,
                         subChunk,
                         subChunkIndex,
-                        aX, aY, aZ,
+                        x, y, z,
                         sizeB, sizeA,
                         comparativeDirectionB, comparativeDirectionA,
                         biomeID, blockID,
@@ -253,7 +253,7 @@ public class ChunkBuilder {
                 quads,
                 subChunk,
                 subChunkIndex,
-                aX, aY, aZ,
+                x, y, z,
                 sizeA, sizeB,
                 direction,
                 biomeID, blockID);
@@ -264,7 +264,7 @@ public class ChunkBuilder {
             BitSet batchedSet,
             SubChunk subChunk,
             int subChunkIndex,
-            int aX, int aY, int aZ,
+            int x, int y, int z,
             int currentSize, int otherSize,
             Direction3Int expandDir, Direction3Int otherDir,
             int biomeID, int blockID,
@@ -278,9 +278,9 @@ public class ChunkBuilder {
         tempBatchedBlocks.clear();
 
         // Calculate next base coordinate along expandDir
-        int nextX = aX + expandDir.x * currentSize;
-        int nextY = aY + expandDir.y * currentSize;
-        int nextZ = aZ + expandDir.z * currentSize;
+        int nextX = x + expandDir.x * currentSize;
+        int nextY = y + expandDir.y * currentSize;
+        int nextZ = z + expandDir.z * currentSize;
 
         // Used to keep the coordinates within a single chunk
         if (coordinatesOutOfBounds(nextX, nextY, nextZ))
@@ -289,21 +289,21 @@ public class ChunkBuilder {
         // Loop across the perpendicular dimension
         for (int i = 0; i < otherSize; i++) {
 
-            int checkX = nextX + otherDir.x * i;
-            int checkY = nextY + otherDir.y * i;
-            int checkZ = nextZ + otherDir.z * i;
+            int xCheck = nextX + otherDir.x * i;
+            int yCheck = nextY + otherDir.y * i;
+            int zCheck = nextZ + otherDir.z * i;
 
-            int xyz = packedCoordinate3Int.pack(checkX, checkY, checkZ);
+            int xyz = packedCoordinate3Int.pack(xCheck, yCheck, zCheck);
 
-            int comparativeBiomeID = subChunk.getBiome(checkX, checkY, checkZ);
-            int comparativeBlockID = subChunk.getBlock(checkX, checkY, checkZ);
+            int comparativeBiomeID = subChunk.getBiome(xCheck, yCheck, zCheck);
+            int comparativeBlockID = subChunk.getBlock(xCheck, yCheck, zCheck);
 
             if (biomeID != comparativeBiomeID ||
                     blockID != comparativeBlockID ||
                     batchedSet.get(xyz) ||
                     !blockFaceCheck(
                             subChunkIndex,
-                            checkX, checkY, checkZ,
+                            xCheck, yCheck, zCheck,
                             direction,
                             type)) {
                 return false;
@@ -329,25 +329,25 @@ public class ChunkBuilder {
     // The main check to see if this block should have a face
     private boolean blockFaceCheck(
             int subChunkIndex,
-            int aX, int aY, int aZ,
+            int x, int y, int z,
             Direction3Int direction,
             Type type) {
 
-        // Get the correct values always wrapped within a single chunk
-        int bX = packedCoordinate3Int.addAndWrapAxis(direction.x, aX);
-        int bY = packedCoordinate3Int.addAndWrapAxis(direction.y, aY);
-        int bZ = packedCoordinate3Int.addAndWrapAxis(direction.z, aZ);
-
         // Get raw coordinates to compare against
-        int cX = aX + direction.x;
-        int cY = aY + direction.y;
-        int cZ = aZ + direction.z;
+        int aX = x + direction.x;
+        int aY = y + direction.y;
+        int aZ = z + direction.z;
 
         // Get the correct sub chunk to compare against
         SubChunk comparativeSubChunk = getComparativeSubChunk(
                 subChunkIndex,
-                cX, cY, cZ,
+                aX, aY, aZ,
                 direction);
+
+        // Get the correct values always wrapped within a single chunk
+        int bX = packedCoordinate3Int.addAndWrapAxis(direction.x, x);
+        int bY = packedCoordinate3Int.addAndWrapAxis(direction.y, y);
+        int bZ = packedCoordinate3Int.addAndWrapAxis(direction.z, z);
 
         // If the sub chunk is null return true
         if (comparativeSubChunk == null)
@@ -363,11 +363,11 @@ public class ChunkBuilder {
     // Method to grab the neighbor sub chunk
     private SubChunk getComparativeSubChunk(
             int subChunkIndex,
-            int cX, int cY, int cZ,
+            int aX, int aY, int aZ,
             Direction3Int direction) {
 
         // If the current coordinates are not over the edge return the same sub chunk
-        if (!isBlockOverEdge(cX, cY, cZ))
+        if (!isBlockOverEdge(aX, aY, aZ))
             return chunk.getSubChunk(subChunkIndex);
 
         // If the direction is vertical return within the same chunk
@@ -385,9 +385,6 @@ public class ChunkBuilder {
         // Otherwise grab the correct neighbor subchunk
         else {
 
-            if (direction == Direction3Int.NORTH)
-                System.out.println("Fixed it");
-
             Direction2Int direction2Int = direction.direction2Int;
             Chunk neighborChunk = chunk.getNeighborChunk(direction2Int);
 
@@ -402,23 +399,25 @@ public class ChunkBuilder {
     }
 
     private boolean isBlockOverEdge(
-            int cX, int cY, int cZ) {
+            int aX, int aY, int aZ) {
 
-        return (cX < 0 || cX >= CHUNK_SIZE ||
-                cY < 0 || cY >= CHUNK_SIZE ||
-                cZ < 0 || cZ >= CHUNK_SIZE);
+        return (aX < 0 || aX >= CHUNK_SIZE ||
+                aY < 0 || aY >= CHUNK_SIZE ||
+                aZ < 0 || aZ >= CHUNK_SIZE);
     }
+
+    // Finalize \\
 
     private void prepareFace(
             IntArray quads,
             SubChunk subChunk,
             int subChunkIndex,
-            int aX, int aY, int aZ,
+            int x, int y, int z,
             int width, int height,
             Direction3Int direction,
             int biomeID, int blockID) {
 
-        int xyz = packedCoordinate3Int.pack(aX, aY, aZ);
+        int xyz = packedCoordinate3Int.pack(x, y, z);
 
         int directionIndex = direction.index;
 
@@ -427,14 +426,14 @@ public class ChunkBuilder {
         Direction3Int dirB = tangents[1];
 
         // base
-        int vert0X = aX;
-        int vert0Y = aY;
-        int vert0Z = aZ;
+        int vert0X = x;
+        int vert0Y = y;
+        int vert0Z = z;
 
         // base + width
-        int vert1X = aX + dirA.x * width;
-        int vert1Y = aY + dirA.y * width;
-        int vert1Z = aZ + dirA.z * width;
+        int vert1X = x + dirA.x * width;
+        int vert1Y = y + dirA.y * width;
+        int vert1Z = z + dirA.z * width;
 
         // base + width + height
         int vert2X = vert1X + dirB.x * height;
@@ -442,9 +441,9 @@ public class ChunkBuilder {
         int vert2Z = vert1Z + dirB.z * height;
 
         // base + height
-        int vert3X = aX + dirB.x * height;
-        int vert3Y = aY + dirB.y * height;
-        int vert3Z = aZ + dirB.z * height;
+        int vert3X = x + dirB.x * height;
+        int vert3Y = y + dirB.y * height;
+        int vert3Z = z + dirB.z * height;
 
         int color0 = getVertColor(subChunk, subChunkIndex, vert0X, vert0Y, vert0Z);
         int color1 = getVertColor(subChunk, subChunkIndex, vert1X, vert1Y, vert1Z);
