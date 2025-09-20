@@ -72,7 +72,8 @@ public class WorldGenerator {
 
     public void generateChunk(Chunk chunk) {
 
-        long chunkCoordinate = Coordinate3Int.pack(chunk.coordinateX, 0, chunk.coordinateY);
+        int offsetX = chunk.coordinateX * CHUNK_SIZE;
+        int offsetZ = chunk.coordinateY * CHUNK_SIZE;
 
         int biomeSize = packedCoordinate3Int.biomeSize;
         int chunkSize = packedCoordinate3Int.chunkSize;
@@ -89,7 +90,7 @@ public class WorldGenerator {
         for (int subChunkIndex = 0; subChunkIndex < WORLD_HEIGHT; subChunkIndex++) {
 
             SubChunk subChunk = subChunks[subChunkIndex] = new SubChunk(chunk, subChunkIndex);
-            int subChunkOffset = subChunkIndex * CHUNK_SIZE;
+            int offsetY = subChunkIndex * CHUNK_SIZE;
 
             for (int index = 0; index < biomeSize; index++) {
 
@@ -103,9 +104,11 @@ public class WorldGenerator {
                 int biomeY = y * (CHUNK_SIZE / BIOME_SIZE);
                 int biomeZ = z * (CHUNK_SIZE / BIOME_SIZE);
 
-                long biomeCoordinate = packedCoordinate3Int.addCoordinate3Int(
-                        biomeX, biomeY + subChunkOffset, biomeZ,
-                        chunkCoordinate);
+                biomeX += offsetX;
+                biomeY += offsetY;
+                biomeZ += offsetZ;
+
+                long biomeCoordinate = Coordinate3Int.pack(biomeX, biomeY, biomeZ);
 
                 short biomeID = (short) generateBiome(biomeCoordinate);
 
@@ -120,11 +123,13 @@ public class WorldGenerator {
                 int y = packedCoordinate3Int.unpackY(xyz);
                 int z = packedCoordinate3Int.unpackZ(xyz);
 
-                long blockCoordinate = packedCoordinate3Int.addCoordinate3Int(
-                        x, y + subChunkOffset, z,
-                        chunkCoordinate);
+                x += offsetX;
+                y += offsetY;
+                z += offsetZ;
 
-                short blockID = (short) generateBlock(blockCoordinate);
+                long blockCoordinate = Coordinate3Int.pack(x, y, z);
+
+                short blockID = (short) generateBlock(blockCoordinate, subChunkIndex);
 
                 subChunk.setBlock(x, y, z, blockID);
             }
@@ -143,9 +148,11 @@ public class WorldGenerator {
     // Block \\
 
     // TODO: This will need a biome
-    private int generateBlock(long blockCoordinate) {
+    private int generateBlock(long blockCoordinate, int subChunkIndex) {
 
+        int x = Coordinate3Int.unpackX(blockCoordinate);
         int y = Coordinate3Int.unpackY(blockCoordinate);
+        int z = Coordinate3Int.unpackZ(blockCoordinate);
 
         if (y < 5)
             return LAVA_BLOCK.id;

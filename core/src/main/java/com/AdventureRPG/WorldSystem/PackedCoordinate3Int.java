@@ -1,7 +1,5 @@
 package com.AdventureRPG.WorldSystem;
 
-import com.AdventureRPG.Util.Coordinate3Int;
-
 public class PackedCoordinate3Int {
 
     // Settings
@@ -116,20 +114,8 @@ public class PackedCoordinate3Int {
 
     // Accessible \\
 
+    // TODO: I'd like to remove this
     public int addAndWrapAxis(int axisA, int axisB) {
         return (axisA + axisB) & (CHUNK_SIZE - 1);
-    }
-
-    public long addCoordinate3Int(int x, int y, int z, long coordinate3Int) {
-
-        int aX = Coordinate3Int.unpackX(coordinate3Int);
-        int aY = Coordinate3Int.unpackY(coordinate3Int);
-        int aZ = Coordinate3Int.unpackZ(coordinate3Int);
-
-        int bX = aX + x;
-        int bY = aY + y;
-        int bZ = aZ + z;
-
-        return Coordinate3Int.pack(bX, bY, bZ);
     }
 }
