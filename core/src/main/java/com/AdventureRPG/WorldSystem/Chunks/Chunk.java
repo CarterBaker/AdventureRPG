@@ -100,11 +100,9 @@ public class Chunk {
         if (subChunks == null)
             return;
 
-        for (int i = 0; i < settings.WORLD_HEIGHT; i++) {
-
+        for (int i = 0; i < settings.WORLD_HEIGHT; i++)
             if (subChunks[i] != null)
                 subChunks[i].dispose();
-        }
     }
 
     // Chunk \\
@@ -258,6 +256,7 @@ public class Chunk {
                 continue;
 
             if (neighbors[direction.index] != neighbor) {
+
                 neighbors[direction.index] = neighbor;
                 neighbor.assessChunk(this);
             }
@@ -279,6 +278,7 @@ public class Chunk {
             return;
 
         if (neighbors[index] != chunk) {
+
             neighbors[index] = chunk;
             updateNeighborStatus();
         }
