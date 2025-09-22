@@ -22,7 +22,7 @@ import com.badlogic.gdx.math.Vector3;
 public class WorldSystem {
 
     // Debug
-    private final boolean debug = false; // TODO: Debug line
+    private final boolean debug = true; // TODO: Debug line
 
     // Game Manager
     public final GameManager gameManager;

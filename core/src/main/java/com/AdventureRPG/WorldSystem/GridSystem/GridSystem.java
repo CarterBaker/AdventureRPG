@@ -629,8 +629,6 @@ public class GridSystem {
 
             Chunk loadedChunk = chunkSystem.pollGeneratedChunk();
 
-            System.out.println(Coordinate2Int.toString(loadedChunk.coordinate));
-
             long chunkCoordinate = loadedChunk.coordinate;
             long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, -1);
 

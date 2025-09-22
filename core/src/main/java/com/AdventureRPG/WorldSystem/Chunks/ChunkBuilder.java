@@ -81,8 +81,6 @@ public class ChunkBuilder {
 
     public void build(int subChunkIndex) {
 
-        System.out.println(subChunkIndex);
-
         try {
 
             // Get the sub chunk from the input index
