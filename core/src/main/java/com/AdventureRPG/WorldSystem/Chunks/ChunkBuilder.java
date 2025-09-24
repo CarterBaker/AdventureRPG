@@ -802,10 +802,29 @@ public class ChunkBuilder {
                 float u2, float v2,
                 float u3, float v3) {
 
-            pushVertex(x0, y0, z0, nx, ny, nz, c0, u0, v0);
-            pushVertex(x1, y1, z1, nx, ny, nz, c1, u1, v1);
-            pushVertex(x2, y2, z2, nx, ny, nz, c2, u2, v2);
-            pushVertex(x3, y3, z3, nx, ny, nz, c3, u3, v3);
+            pushVertex(
+                    x0, y0, z0,
+                    nx, ny, nz,
+                    c0,
+                    u0, v0);
+
+            pushVertex(
+                    x1, y1, z1,
+                    nx, ny, nz,
+                    c1,
+                    u1, v1);
+
+            pushVertex(
+                    x2, y2, z2,
+                    nx, ny, nz,
+                    c2,
+                    u2, v2);
+
+            pushVertex(
+                    x3, y3, z3,
+                    nx, ny, nz,
+                    c3,
+                    u3, v3);
 
             // two triangles
             inds[indPos++] = (short) (baseIndex + 0);
@@ -818,7 +837,8 @@ public class ChunkBuilder {
             baseIndex += 4;
         }
 
-        private void pushVertex(float x, float y, float z,
+        private void pushVertex(
+                float x, float y, float z,
                 float nx, float ny, float nz,
                 float c,
                 float u, float v) {

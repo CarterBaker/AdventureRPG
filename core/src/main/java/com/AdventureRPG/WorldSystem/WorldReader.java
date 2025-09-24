@@ -8,6 +8,9 @@ import com.badlogic.gdx.graphics.Pixmap;
 
 public class WorldReader {
 
+    // Debug
+    private final boolean debug = false; // TODO: Debug line
+
     // Game Manager
     private final WorldSystem worldSystem;
     private final Settings settings;
@@ -37,7 +40,7 @@ public class WorldReader {
 
         Vector2Int worldScale = new Vector2Int(worldWidth, worldHeight);
 
-        if (settings.debug)
+        if (debug)
             System.out.println("World Scale: " + worldScale); // TODO: Debug line
 
         return worldScale;

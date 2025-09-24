@@ -7,6 +7,7 @@ import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.Chunks.SubChunk;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
+import com.AdventureRPG.Util.OpenSimplex2;
 
 public class WorldGenerator {
 
@@ -25,7 +26,7 @@ public class WorldGenerator {
 
     // Default Blocks
     private final Block AIR_BLOCK; // TODO: With 2D chunk coordinates this is
-    private final Block LAVA_BLOCK; // No longer possible
+    private final Block GRASS_BLOCK; // No longer possible
 
     // Data
     private long seed;
@@ -48,8 +49,8 @@ public class WorldGenerator {
         this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
 
         // Default Blocks
-        this.AIR_BLOCK = worldSystem.getBlockByName("air");
-        this.LAVA_BLOCK = worldSystem.getBlockByName("lava");
+        this.AIR_BLOCK = worldSystem.getBlockByName("Air");
+        this.GRASS_BLOCK = worldSystem.getBlockByName("Grass Block");
 
         // Data
         this.seed = userData.getSeed();
@@ -145,11 +146,23 @@ public class WorldGenerator {
 
     // TODO: This will need a biome
     private int generateBlock(long x, long y, long z) {
+        // Noise setup
+        double scale = 0.05; // lower = bigger hills
+        double amplitude = 8.0; // height variation
+        double baseHeight = 8.0; // average terrain height
 
-        if (y < 5)
-            return LAVA_BLOCK.id;
+        // Get 2D noise based on X/Z
+        double n = OpenSimplex2.noise2(this.seed, x * scale, z * scale);
+        int groundHeight = (int) (baseHeight + n * amplitude);
 
-        else
+        // Clamp to 0–16 for grass test
+        groundHeight = Math.max(0, Math.min(16, groundHeight));
+
+        // Block decision
+        if (y <= groundHeight) {
+            return GRASS_BLOCK.id;
+        } else {
             return AIR_BLOCK.id;
+        }
     }
 }

@@ -172,7 +172,7 @@ public class Settings {
         public boolean fullscreen = false;
 
         // Render Settings
-        public int maxRenderDistance = 32;
+        public int maxRenderDistance = 64;
 
         // Constant Settings \\
 
