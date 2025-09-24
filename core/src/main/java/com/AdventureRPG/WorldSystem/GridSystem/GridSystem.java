@@ -69,6 +69,8 @@ public class GridSystem {
     private int loadedChunksThisFrame;
     private int loadedChunksThisTick;
 
+    private final long nullMapping;
+
     // Base \\
 
     public GridSystem(WorldSystem WorldSystem) {
@@ -114,6 +116,8 @@ public class GridSystem {
 
         this.loadedChunksThisFrame = 0;
         this.loadedChunksThisTick = 0;
+
+        this.nullMapping = Long.MAX_VALUE;
     }
 
     public void awake() {
@@ -335,9 +339,9 @@ public class GridSystem {
         for (int i = 0; i < totalChunks; i++) {
 
             long gridCoordinate = loadOrder[i];
-            long chunkCoordinate = gridToChunkMap.getOrDefault(gridCoordinate, -1L);
+            long chunkCoordinate = gridToChunkMap.getOrDefault(gridCoordinate, nullMapping);
 
-            if (chunkCoordinate != -1L) {
+            if (chunkCoordinate != nullMapping) {
 
                 ModelInstance instance = modelInstances.get(chunkCoordinate);
 
@@ -609,9 +613,9 @@ public class GridSystem {
             Chunk loadedChunk = chunkSystem.pollLoadedChunk();
 
             long chunkCoordinate = loadedChunk.coordinate;
-            long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, -1);
+            long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, nullMapping);
 
-            if (gridCoordinate != -1) {
+            if (gridCoordinate != nullMapping) {
 
                 loadedChunk.moveTo(gridCoordinate);
                 loadedChunks.put(chunkCoordinate, loadedChunk);
@@ -630,9 +634,9 @@ public class GridSystem {
             Chunk loadedChunk = chunkSystem.pollGeneratedChunk();
 
             long chunkCoordinate = loadedChunk.coordinate;
-            long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, -1);
+            long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, nullMapping);
 
-            if (gridCoordinate != -1)
+            if (gridCoordinate != nullMapping)
                 loadedChunk.enqueue();
 
             else
@@ -647,9 +651,9 @@ public class GridSystem {
             Chunk loadedChunk = chunkSystem.pollBuiltChunk();
 
             long chunkCoordinate = loadedChunk.coordinate;
-            long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, -1);
+            long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, nullMapping);
 
-            if (gridCoordinate != -1)
+            if (gridCoordinate != nullMapping)
                 loadedChunk.buildChunkMesh();
 
             else

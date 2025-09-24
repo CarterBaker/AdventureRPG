@@ -28,7 +28,17 @@ allprojects {
 
 configure(subprojects) {
   apply plugin: 'java-library'
-  sourceCompatibility = 17
+  // Use Java 21 (latest LTS) for compilation. Gradle toolchains will be used to download a matching JDK
+  sourceCompatibility = 21
+
+  // Configure the Gradle Java toolchain so the foojay resolver (applied in settings.gradle)
+  // can download and provide a JDK 21 when the build runs.
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(21)
+      // vendor is optional; leave unset to allow any compatible JDK from the resolver.
+    }
+  }
 
   // From https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/
   // The article can be helpful when using assets.txt in your project.

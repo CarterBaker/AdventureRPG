@@ -292,7 +292,7 @@ public class Chunk {
         if (neighborStatus == NeighborStatus.INCOMPLETE) {
 
             for (int i = 0; i < 4; i++)
-                if (neighbors[i] == null)
+                if (neighbors[i] == null || neighbors[i].getState() == ChunkState.NEEDS_GENERATION_DATA)
                     return;
 
             needsBuildData = true;
@@ -302,7 +302,7 @@ public class Chunk {
         if (neighborStatus == NeighborStatus.PARTIAL) {
 
             for (int i = 4; i < 8; i++)
-                if (neighbors[i] == null)
+                if (neighbors[i] == null || neighbors[i].getState() == ChunkState.NEEDS_GENERATION_DATA)
                     return;
 
             needsBuildData = true;

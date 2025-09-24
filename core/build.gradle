@@ -1,6 +1,15 @@
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 eclipse.project.name = appName + '-core'
 
+// Ensure this module uses Java 21 via Gradle toolchains
+java {
+  sourceCompatibility = JavaVersion.toVersion(21)
+  targetCompatibility = JavaVersion.toVersion(21)
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}
+
 repositories {
     mavenCentral()
 }

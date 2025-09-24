@@ -2,7 +2,7 @@ package com.AdventureRPG.UISystem;
 
 public class LoadScreen extends MenuInstance {
 
-    private boolean debug = true; // TODO: Debug line
+    private boolean debug = false; // TODO: Debug line
 
     private int maxProgress;
     private int totalProgress;
