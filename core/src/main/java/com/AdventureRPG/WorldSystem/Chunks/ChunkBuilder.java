@@ -417,6 +417,11 @@ public class ChunkBuilder {
             Direction3Int direction,
             int biomeID, int blockID) {
 
+        // Offsett all positive directions
+        x += (direction.x > 0 ? 1 : 0);
+        y += (direction.y > 0 ? 1 : 0);
+        z += (direction.z > 0 ? 1 : 0);
+
         int xyz = packedCoordinate3Int.pack(x, y, z);
 
         int directionIndex = direction.index;
@@ -802,29 +807,73 @@ public class ChunkBuilder {
                 float u2, float v2,
                 float u3, float v3) {
 
-            pushVertex(
-                    x0, y0, z0,
-                    nx, ny, nz,
-                    c0,
-                    u0, v0);
+            // compute geometric normal from tri (v0, v1, v2)
+            float e1x = x1 - x0, e1y = y1 - y0, e1z = z1 - z0;
+            float e2x = x2 - x0, e2y = y2 - y0, e2z = z2 - z0;
 
-            pushVertex(
-                    x1, y1, z1,
-                    nx, ny, nz,
-                    c1,
-                    u1, v1);
+            float cx = e1y * e2z - e1z * e2y;
+            float cy = e1z * e2x - e1x * e2z;
+            float cz = e1x * e2y - e1y * e2x;
 
-            pushVertex(
-                    x2, y2, z2,
-                    nx, ny, nz,
-                    c2,
-                    u2, v2);
+            // dot with desired normal
+            float dot = cx * nx + cy * ny + cz * nz;
+            boolean flip = dot < 0f;
 
-            pushVertex(
-                    x3, y3, z3,
-                    nx, ny, nz,
-                    c3,
-                    u3, v3);
+            if (!flip) {
+
+                // original winding: 0,1,2,3
+                pushVertex(
+                        x0, y0, z0,
+                        nx, ny, nz,
+                        c0,
+                        u0, v0);
+
+                pushVertex(
+                        x1, y1, z1,
+                        nx, ny, nz,
+                        c1,
+                        u1, v1);
+
+                pushVertex(
+                        x2, y2, z2,
+                        nx, ny, nz,
+                        c2,
+                        u2, v2);
+
+                pushVertex(
+                        x3, y3, z3,
+                        nx, ny, nz,
+                        c3,
+                        u3, v3);
+            }
+
+            else {
+
+                // reversed winding: 0,3,2,1 (swap v1<->v3)
+                pushVertex(
+                        x0, y0, z0,
+                        nx, ny, nz,
+                        c0,
+                        u0, v0);
+
+                pushVertex(
+                        x3, y3, z3,
+                        nx, ny, nz,
+                        c3,
+                        u3, v3);
+
+                pushVertex(
+                        x2, y2, z2,
+                        nx, ny, nz,
+                        c2,
+                        u2, v2);
+
+                pushVertex(
+                        x1, y1, z1,
+                        nx, ny, nz,
+                        c1,
+                        u1, v1);
+            }
 
             // two triangles
             inds[indPos++] = (short) (baseIndex + 0);
