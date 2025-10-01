@@ -38,6 +38,7 @@ public class MaterialManager {
     // Map of Material to ShaderProgram for O(1) lookup
     private final List<MaterialData> materials = new ArrayList<>();
     private final Map<TextureArray, MaterialData> arrayToFirstMaterial = new HashMap<>();
+    private final Map<Material, MaterialData> dataByMaterial = new HashMap<>();
     private final Map<Material, ShaderProgram> shaderByMaterial = new HashMap<>();
 
     private int nextId = 0;
@@ -137,6 +138,8 @@ public class MaterialManager {
                 materialsById.put(id, data);
                 idByName.put(name, id);
 
+                dataByMaterial.put(libgdxMaterial, data);
+
                 if (shaderProgram != null)
                     shaderByMaterial.put(libgdxMaterial, shaderProgram);
             }
@@ -175,11 +178,6 @@ public class MaterialManager {
         return id != null ? materialsById.get(id) : null;
     }
 
-    // Retrieve the shader for a material
-    public ShaderProgram getShaderForMaterial(Material material) {
-        return shaderByMaterial.get(material);
-    }
-
     public MaterialData getFirstMaterialUsingID(int textureID) {
 
         if (textureID < 0)
@@ -188,6 +186,15 @@ public class MaterialManager {
         TextureArray array = textureManager.getArrayFromID(textureID);
 
         return arrayToFirstMaterial.get(array);
+    }
+
+    public MaterialData getDataForMaterial(Material material) {
+        return dataByMaterial.get(material);
+    }
+
+    // Retrieve the shader for a material
+    public ShaderProgram getShaderForMaterial(Material material) {
+        return shaderByMaterial.get(material);
     }
 
     // Set uniform for a material by ID

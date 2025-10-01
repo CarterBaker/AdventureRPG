@@ -17,7 +17,6 @@ public class Chunk {
     // Game Manager
     public final Settings settings;
     public final WorldSystem worldSystem;
-    public final ChunkSystem chunkSystem;
     public final GridSystem gridSystem;
 
     // Chunk
@@ -57,7 +56,6 @@ public class Chunk {
         // Game Manager
         this.settings = worldSystem.settings;
         this.worldSystem = worldSystem;
-        this.chunkSystem = worldSystem.chunkSystem;
         this.gridSystem = worldSystem.gridSystem;
 
         // Chunk

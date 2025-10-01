@@ -1,7 +1,5 @@
 package com.AdventureRPG.WorldSystem.Blocks;
 
-import com.AdventureRPG.MaterialManager.MaterialManager;
-import com.AdventureRPG.TextureManager.TextureManager;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 
 public class Builder {

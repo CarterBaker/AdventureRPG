@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldSystem.Chunks;
+package com.AdventureRPG.WorldSystem.GridSystem;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -9,8 +9,9 @@ import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.WorldSystem.WorldGenerator;
 import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 
-public class ChunkSystem {
+public class Loader {
 
     // Game Manager
     private final Settings settings;
@@ -39,7 +40,7 @@ public class ChunkSystem {
 
     // Base \\
 
-    public ChunkSystem(GameManager gameManager, WorldSystem worldSystem) {
+    public Loader(GameManager gameManager, WorldSystem worldSystem) {
 
         // Game Manager
         this.settings = gameManager.settings;
@@ -128,24 +129,24 @@ public class ChunkSystem {
     enum QueueProcess {
 
         Load {
-            boolean process(ChunkSystem system) {
-                return system.processLoadData();
+            boolean process(Loader loader) {
+                return loader.processLoadData();
             }
         },
 
         Generate {
-            boolean process(ChunkSystem system) {
-                return system.processGenerationData();
+            boolean process(Loader loader) {
+                return loader.processGenerationData();
             }
         },
 
         Build {
-            boolean process(ChunkSystem system) {
-                return system.processBuildData();
+            boolean process(Loader loader) {
+                return loader.processBuildData();
             }
         };
 
-        abstract boolean process(ChunkSystem system);
+        abstract boolean process(Loader loader);
     }
 
     // Load \\

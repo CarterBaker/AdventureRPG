@@ -34,9 +34,9 @@ public class PackedCoordinate3Int {
                 CHUNK_SIZE;
 
         // Bit sizes
-        this.xBits = bitsNeeded(CHUNK_SIZE);
-        this.yBits = bitsNeeded(CHUNK_SIZE);
-        this.zBits = bitsNeeded(CHUNK_SIZE);
+        this.xBits = bitsNeeded(CHUNK_SIZE * 2);
+        this.yBits = bitsNeeded(CHUNK_SIZE * 2);
+        this.zBits = bitsNeeded(CHUNK_SIZE * 2);
 
         this.xMask = (1 << xBits) - 1;
         this.yMask = (1 << yBits) - 1;

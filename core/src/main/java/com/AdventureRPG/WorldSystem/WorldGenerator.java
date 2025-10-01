@@ -2,11 +2,9 @@ package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.SaveSystem.UserData;
 import com.AdventureRPG.SettingsSystem.Settings;
-import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.Chunks.SubChunk;
-import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.AdventureRPG.Util.OpenSimplex2;
 
 public class WorldGenerator {
@@ -15,8 +13,6 @@ public class WorldGenerator {
     private final Settings settings;
     private final UserData userData;
     private final WorldSystem worldSystem;
-    private final GridSystem gridSystem;
-    private final BiomeSystem biomeSystem;
     private final PackedCoordinate3Int packedCoordinate3Int;
 
     // Settings
@@ -39,8 +35,6 @@ public class WorldGenerator {
         this.settings = worldSystem.settings;
         this.userData = worldSystem.saveSystem.userData;
         this.worldSystem = worldSystem;
-        this.gridSystem = worldSystem.gridSystem;
-        this.biomeSystem = worldSystem.biomeSystem;
         this.packedCoordinate3Int = worldSystem.packedCoordinate3Int;
 
         // Settings

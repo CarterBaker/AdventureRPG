@@ -77,6 +77,7 @@ public final class SubChunk {
         buildMesh();
 
         if (!addedToModel) {
+
             model.nodes.add(node);
             addedToModel = true;
         }

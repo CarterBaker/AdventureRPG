@@ -305,9 +305,8 @@ public class ChunkBuilder {
                             subChunkIndex,
                             xCheck, yCheck, zCheck,
                             direction,
-                            type)) {
+                            type))
                 return false;
-            }
 
             tempBatchedBlocks.set(xyz);
         }
@@ -418,9 +417,9 @@ public class ChunkBuilder {
             int biomeID, int blockID) {
 
         // Offsett all positive directions
-        x += (direction.x > 0 ? 1 : 0);
-        y += (direction.y > 0 ? 1 : 0);
-        z += (direction.z > 0 ? 1 : 0);
+        x = convertToVertSpace(x, direction.x);
+        y = convertToVertSpace(y, direction.y);
+        z = convertToVertSpace(z, direction.z);
 
         int xyz = packedCoordinate3Int.pack(x, y, z);
 
@@ -471,6 +470,10 @@ public class ChunkBuilder {
                 materialDataID);
     }
 
+    public int convertToVertSpace(int blockAxis, int direction3IntAxis) {
+        return blockAxis += (direction3IntAxis > 0 ? 1 : 0);
+    }
+
     private int getVertColor(
             SubChunk subChunk,
             int subChunkIndex,
@@ -505,6 +508,7 @@ public class ChunkBuilder {
 
                 if (blendColors[0] != null)
                     blendColors[index] = blendColors[0];
+
                 else
                     blendColors[index] = Color.WHITE;
             }
@@ -515,15 +519,13 @@ public class ChunkBuilder {
 
     public int convertToBlockSpace(int vertAxis) {
 
-        int output = vertAxis;
-
-        if (output < 0)
+        if (vertAxis < 0)
             return CHUNK_SIZE - 1;
 
-        if (output >= CHUNK_SIZE)
+        if (vertAxis >= CHUNK_SIZE)
             return 0;
 
-        return output;
+        return vertAxis;
     }
 
     private SubChunk getNeighborSubChunk(
@@ -681,26 +683,26 @@ public class ChunkBuilder {
             Direction3Int dirA = tangents[0];
             Direction3Int dirB = tangents[1];
 
-            int baseX = packedCoordinate3Int.unpackX(xyz);
-            int baseY = packedCoordinate3Int.unpackY(xyz);
-            int baseZ = packedCoordinate3Int.unpackZ(xyz);
+            int x = packedCoordinate3Int.unpackX(xyz);
+            int y = packedCoordinate3Int.unpackY(xyz);
+            int z = packedCoordinate3Int.unpackZ(xyz);
 
             // Quad verts
-            int vert0X = baseX;
-            int vert0Y = baseY;
-            int vert0Z = baseZ;
+            int vert0X = x;
+            int vert0Y = y;
+            int vert0Z = z;
 
-            int vert1X = baseX + dirA.x * width;
-            int vert1Y = baseY + dirA.y * width;
-            int vert1Z = baseZ + dirA.z * width;
+            int vert1X = x + dirA.x * width;
+            int vert1Y = y + dirA.y * width;
+            int vert1Z = z + dirA.z * width;
 
             int vert2X = vert1X + dirB.x * height;
             int vert2Y = vert1Y + dirB.y * height;
             int vert2Z = vert1Z + dirB.z * height;
 
-            int vert3X = baseX + dirB.x * height;
-            int vert3Y = baseY + dirB.y * height;
-            int vert3Z = baseZ + dirB.z * height;
+            int vert3X = x + dirB.x * height;
+            int vert3Y = y + dirB.y * height;
+            int vert3Z = z + dirB.z * height;
 
             // Block Data
             Block block = worldSystem.getBlockByID(blockID);

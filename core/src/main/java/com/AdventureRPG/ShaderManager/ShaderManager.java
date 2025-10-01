@@ -3,7 +3,6 @@ package com.AdventureRPG.ShaderManager;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.SettingsSystem.Settings;
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g3d.Shader;

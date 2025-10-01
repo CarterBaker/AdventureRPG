@@ -7,6 +7,7 @@ public class PlayerCamera {
 
     // Camera
     private final PerspectiveCamera perspectiveCamera;
+    private final Vector3 direction;
     private float yaw = 0f;
     private float pitch = 0f;
 
@@ -16,6 +17,7 @@ public class PlayerCamera {
 
         // Camera
         perspectiveCamera = new PerspectiveCamera(fov, viewportWidth, viewportHeight);
+        direction = new Vector3();
     }
 
     public void awake() {
@@ -57,11 +59,9 @@ public class PlayerCamera {
         pitch = Math.max(-89f, Math.min(89f, pitch));
 
         // Calculate direction vector from yaw/pitch
-        Vector3 direction = new Vector3( // TODO: Creating a new Vector3Int object
-                (float) Math.cos(Math.toRadians(yaw)) * (float) Math.cos(Math.toRadians(pitch)),
-                (float) Math.sin(Math.toRadians(pitch)),
-                (float) Math.sin(Math.toRadians(yaw)) * (float) Math.cos(Math.toRadians(pitch)));
-
+        direction.x = (float) Math.cos(Math.toRadians(yaw)) * (float) Math.cos(Math.toRadians(pitch));
+        direction.y = (float) Math.sin(Math.toRadians(pitch));
+        direction.z = (float) Math.sin(Math.toRadians(yaw)) * (float) Math.cos(Math.toRadians(pitch));
         direction.nor(); // normalize
 
         perspectiveCamera.direction.set(direction);

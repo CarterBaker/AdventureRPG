@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
-import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.AdventureRPG.WorldSystem.Chunks.NeighborStatus;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
@@ -30,10 +30,11 @@ public class GridSystem {
 
     // Game Manager
     private final Settings settings;
+    private final GameManager gameManager;
     private final WorldSystem worldSystem;
-    private final ChunkSystem chunkSystem;
     private final WorldTick worldTick;
     private Camera camera;
+    private final Loader loader;
 
     // Settings
     private int maxRenderDistance;
@@ -73,13 +74,14 @@ public class GridSystem {
 
     // Base \\
 
-    public GridSystem(WorldSystem WorldSystem) {
+    public GridSystem(GameManager gameManager, WorldSystem worldSystem) {
 
         // Chunk System
-        this.settings = WorldSystem.settings;
-        this.worldSystem = WorldSystem;
-        this.chunkSystem = worldSystem.chunkSystem;
-        this.worldTick = WorldSystem.worldTick;
+        this.settings = gameManager.settings;
+        this.gameManager = gameManager;
+        this.worldSystem = worldSystem;
+        this.worldTick = worldSystem.worldTick;
+        this.loader = new Loader(gameManager, worldSystem);
 
         // Settings
         this.maxRenderDistance = settings.maxRenderDistance;
@@ -122,8 +124,9 @@ public class GridSystem {
 
     public void awake() {
 
-        this.camera = worldSystem.gameManager.playerSystem.camera.get();
+        this.camera = gameManager.playerSystem.camera.get();
         rebuildGrid();
+        loader.awake();
     }
 
     public void start() {
@@ -132,6 +135,7 @@ public class GridSystem {
 
     public void update() {
         updateQueue();
+        loader.update();
     }
 
     public void render(ModelBatch modelBatch) {
@@ -499,7 +503,7 @@ public class GridSystem {
             long gridCoordinate = loadQueue.dequeueLong();
             long chunkCoordinate = gridToChunkMap.get(gridCoordinate);
 
-            chunkSystem.requestLoad(chunkCoordinate);
+            loader.requestLoad(chunkCoordinate);
 
             index = incrementQueueTotal(index);
         }
@@ -528,7 +532,7 @@ public class GridSystem {
                 continue;
             }
 
-            chunkSystem.requestGenerate(loadedChunk);
+            loader.requestGenerate(loadedChunk);
 
             // Increment counters
             index = incrementQueueTotal(index);
@@ -589,7 +593,7 @@ public class GridSystem {
             }
 
             if (loadedChunk.getNeighborStatus() != NeighborStatus.INCOMPLETE)
-                chunkSystem.requestBuild(loadedChunk);
+                loader.requestBuild(loadedChunk);
 
             index = incrementQueueTotal(index);
         }
@@ -608,9 +612,9 @@ public class GridSystem {
 
     private void receiveLoadedChunks() {
 
-        while (chunkSystem.hasLoadedData()) {
+        while (loader.hasLoadedData()) {
 
-            Chunk loadedChunk = chunkSystem.pollLoadedChunk();
+            Chunk loadedChunk = loader.pollLoadedChunk();
 
             long chunkCoordinate = loadedChunk.coordinate;
             long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, nullMapping);
@@ -629,9 +633,9 @@ public class GridSystem {
 
     private void receiveGeneratedChunks() {
 
-        while (chunkSystem.hasGeneratedData()) {
+        while (loader.hasGeneratedData()) {
 
-            Chunk loadedChunk = chunkSystem.pollGeneratedChunk();
+            Chunk loadedChunk = loader.pollGeneratedChunk();
 
             long chunkCoordinate = loadedChunk.coordinate;
             long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, nullMapping);
@@ -646,9 +650,9 @@ public class GridSystem {
 
     private void receiveBuiltChunks() {
 
-        while (chunkSystem.hasBuiltData()) {
+        while (loader.hasBuiltData()) {
 
-            Chunk loadedChunk = chunkSystem.pollBuiltChunk();
+            Chunk loadedChunk = loader.pollBuiltChunk();
 
             long chunkCoordinate = loadedChunk.coordinate;
             long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, nullMapping);

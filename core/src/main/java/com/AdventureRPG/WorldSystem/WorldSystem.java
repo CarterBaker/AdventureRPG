@@ -14,7 +14,6 @@ import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
-import com.AdventureRPG.WorldSystem.Chunks.ChunkSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.math.Vector3;
@@ -43,13 +42,12 @@ public class WorldSystem {
     private final Block[] blocks;
 
     // World System
+    public final PackedCoordinate3Int packedCoordinate3Int;
+    public final WorldGenerator worldGenerator;
     public final WorldTick worldTick;
     public final WorldReader worldReader;
-    public final PackedCoordinate3Int packedCoordinate3Int;
-    public final ChunkSystem chunkSystem;
     public final GridSystem gridSystem;
     public final BiomeSystem biomeSystem;
-    public final WorldGenerator worldGenerator;
     public final Vector2Int WORLD_SCALE;
 
     // Position
@@ -76,16 +74,15 @@ public class WorldSystem {
         this.CHUNK_SIZE = settings.CHUNK_SIZE;
 
         // Block Management
-        this.blocks = Loader.LoadBlocks(this);
+        this.blocks = Loader.LoadBlocks(gameManager, this);
 
         // World System
+        this.packedCoordinate3Int = new PackedCoordinate3Int(this);
+        this.worldGenerator = new WorldGenerator(this);
         this.worldTick = new WorldTick(this);
         this.worldReader = new WorldReader(this);
-        this.packedCoordinate3Int = new PackedCoordinate3Int(this);
-        this.chunkSystem = new ChunkSystem(gameManager, this);
-        this.gridSystem = new GridSystem(this);
+        this.gridSystem = new GridSystem(gameManager, this);
         this.biomeSystem = new BiomeSystem(gameManager);
-        this.worldGenerator = new WorldGenerator(this);
         this.WORLD_SCALE = worldReader.getWorldScale();
 
         // Position
@@ -94,7 +91,6 @@ public class WorldSystem {
     }
 
     public void awake() {
-        chunkSystem.awake();
         gridSystem.awake();
         biomeSystem.awake();
     }
@@ -108,7 +104,6 @@ public class WorldSystem {
     public void update() {
 
         worldTick.update();
-        chunkSystem.update();
         gridSystem.update();
         biomeSystem.update();
     }
