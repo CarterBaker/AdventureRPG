@@ -3,7 +3,6 @@ package com.AdventureRPG.WorldSystem.GridSystem;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SaveSystem.ChunkData;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ThreadManager.ThreadManager;
@@ -40,12 +39,12 @@ public class Loader {
 
     // Base \\
 
-    public Loader(GameManager gameManager, WorldSystem worldSystem) {
+    public Loader(WorldSystem worldSystem) {
 
         // Game Manager
-        this.settings = gameManager.settings;
-        this.threadManager = gameManager.threadManager;
-        this.chunkData = gameManager.saveSystem.chunkData;
+        this.settings = worldSystem.settings;
+        this.threadManager = worldSystem.threadManager;
+        this.chunkData = worldSystem.saveSystem.chunkData;
         this.worldSystem = worldSystem;
 
         // Settings

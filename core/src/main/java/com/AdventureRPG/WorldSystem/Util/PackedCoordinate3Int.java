@@ -1,4 +1,6 @@
-package com.AdventureRPG.WorldSystem;
+package com.AdventureRPG.WorldSystem.Util;
+
+import com.AdventureRPG.WorldSystem.WorldSystem;
 
 public class PackedCoordinate3Int {
 

@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldSystem.Biomes;
 
-import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.WorldSystem.WorldSystem;
 
 public class BiomeSystem {
 
@@ -13,13 +13,13 @@ public class BiomeSystem {
 
     // Base \\
 
-    public BiomeSystem(GameManager gameManager) {
+    public BiomeSystem(WorldSystem worldSystem) {
 
         // Game Manager
-        this.settings = gameManager.settings;
+        this.settings = worldSystem.settings;
 
         // Biome System
-        this.biomes = Loader.loadBiomes(gameManager);
+        this.biomes = Loader.loadBiomes(worldSystem);
     }
 
     public void awake() {

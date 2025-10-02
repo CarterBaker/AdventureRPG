@@ -16,8 +16,10 @@ import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
+import com.AdventureRPG.WorldSystem.Util.PackedCoordinate3Int;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.math.Vector3;
+import com.google.gson.Gson;
 
 public class WorldSystem {
 
@@ -33,6 +35,7 @@ public class WorldSystem {
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
     public final Settings settings;
+    public final Gson gson;
 
     // Settings
     private int maxRenderDistance;
@@ -69,6 +72,7 @@ public class WorldSystem {
         this.saveSystem = gameManager.saveSystem;
         this.UISystem = gameManager.UISystem;
         this.settings = gameManager.settings;
+        this.gson = gameManager.gson;
 
         // Settings
         this.maxRenderDistance = settings.maxRenderDistance;
@@ -84,8 +88,8 @@ public class WorldSystem {
         this.worldTick = new WorldTick(this);
         this.worldReader = new WorldReader(this);
         this.batchSystem = new BatchSystem(this);
-        this.gridSystem = new GridSystem(gameManager, this);
-        this.biomeSystem = new BiomeSystem(gameManager);
+        this.gridSystem = new GridSystem(this);
+        this.biomeSystem = new BiomeSystem(this);
         this.WORLD_SCALE = worldReader.getWorldScale();
 
         // Position
@@ -94,12 +98,17 @@ public class WorldSystem {
     }
 
     public void awake() {
+
+        worldTick.awake();
+        batchSystem.awake();
         gridSystem.awake();
         biomeSystem.awake();
     }
 
     public void start() {
 
+        worldTick.start();
+        batchSystem.start();
         gridSystem.start();
         biomeSystem.start();
     }
@@ -107,13 +116,16 @@ public class WorldSystem {
     public void update() {
 
         worldTick.update();
+        batchSystem.update();
         gridSystem.update();
         biomeSystem.update();
     }
 
     public void render(ModelBatch modelBatch) {
 
-        gridSystem.render(modelBatch);
+        worldTick.render();
+        batchSystem.render();
+        gridSystem.render();
         biomeSystem.render();
     }
 

@@ -6,15 +6,15 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.google.gson.JsonSyntaxException;
 
 public class Loader {
 
-    public static Biome[] loadBiomes(GameManager gameManager) {
+    public static Biome[] loadBiomes(WorldSystem worldSystem) {
 
-        Settings settings = gameManager.settings;
+        Settings settings = worldSystem.settings;
         File biomeDir = new File(settings.BIOME_JSON_PATH);
 
         if (!biomeDir.exists() || !biomeDir.isDirectory())
@@ -28,7 +28,7 @@ public class Loader {
         for (File file : jsonFiles) {
             try {
                 String content = Files.readString(file.toPath());
-                Biome biome = gameManager.gson.fromJson(content, Biome.class);
+                Biome biome = worldSystem.gson.fromJson(content, Biome.class);
                 biomeList.add(biome);
             } catch (IOException | JsonSyntaxException e) {
                 throw new RuntimeException("Failed to load or parse biome: " + file.getName(), e);

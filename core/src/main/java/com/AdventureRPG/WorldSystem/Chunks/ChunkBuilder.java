@@ -6,17 +6,21 @@ import com.AdventureRPG.MaterialManager.MaterialData;
 import com.AdventureRPG.TextureManager.TextureManager.UVRect;
 import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.Util.Direction3Int;
-import com.AdventureRPG.WorldSystem.PackedCoordinate3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
+import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
+import com.AdventureRPG.WorldSystem.SubChunks.SubChunkMesh;
+import com.AdventureRPG.WorldSystem.Util.MeshPacket;
+import com.AdventureRPG.WorldSystem.Util.PackedCoordinate3Int;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.ShortArray;
 
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class ChunkBuilder {
@@ -762,27 +766,37 @@ public class ChunkBuilder {
         // Convert writers into MaterialBatches
         Int2ObjectOpenHashMap<MeshPacket.MaterialBatch> batches = new Int2ObjectOpenHashMap<>();
 
-        writers.forEach((matId, writer) -> {
+        for (Int2ObjectMap.Entry<BatchWriter> entry : writers.int2ObjectEntrySet()) {
+            int matId = entry.getIntKey();
+            BatchWriter writer = entry.getValue();
 
-            FloatArray vertsFA = new FloatArray(writer.vertPos);
+            // Create a fresh dynamic MaterialBatch for this material
+            MeshPacket.MaterialBatch batch = new MeshPacket.MaterialBatch(matId);
 
-            for (int vi = 0; vi < writer.vertPos; vi++)
-                vertsFA.add(writer.verts[vi]);
+            final int stride = SubChunkMesh.VERT_STRIDE;
 
-            ShortArray indsFA = new ShortArray(writer.indPos);
+            // Walk through verts in strides and add them
+            for (int vi = 0; vi < writer.vertPos; vi += stride) {
+                batch.addVertex(
+                        writer.verts[vi + 0], // x
+                        writer.verts[vi + 1], // y
+                        writer.verts[vi + 2], // z
+                        writer.verts[vi + 3], // nx
+                        writer.verts[vi + 4], // ny
+                        writer.verts[vi + 5], // nz
+                        writer.verts[vi + 6], // packed color
+                        writer.verts[vi + 7], // u
+                        writer.verts[vi + 8] // v
+                );
+            }
 
-            for (int ii = 0; ii < writer.indPos; ii++)
-                indsFA.add(writer.inds[ii]);
+            // Add indices directly
+            for (int ii = 0; ii < writer.indPos; ii++) {
+                batch.addIndex(writer.inds[ii]);
+            }
 
-            batches.putIfAbsent(matId, new MeshPacket.MaterialBatch(
-                    matId,
-                    writer.verts, writer.vertPos,
-                    writer.inds, writer.indPos));
-        });
-
-        // Create and submit packet
-        MeshPacket packet = new MeshPacket(subChunkIndex, batches);
-        subChunkMesh.submit(packet);
+            batches.put(matId, batch);
+        }
     }
 
     // Utility \\

@@ -29,6 +29,14 @@ public class WorldTick {
         this.WORLD_TICK = settings.WORLD_TICK;
     }
 
+    public void awake() {
+
+    }
+
+    public void start() {
+
+    }
+
     public void update() {
 
         if (currentTime >= WORLD_TICK) {
@@ -38,6 +46,10 @@ public class WorldTick {
             this.tick = false;
             currentTime += Gdx.graphics.getDeltaTime();
         }
+    }
+
+    public void render() {
+
     }
 
     // Tick \\

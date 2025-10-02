@@ -7,8 +7,8 @@ import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
-import com.badlogic.gdx.graphics.g3d.Model;
-import com.badlogic.gdx.graphics.g3d.ModelInstance;
+import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
+import com.AdventureRPG.WorldSystem.Util.MeshPacket;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 
@@ -19,11 +19,19 @@ public class Chunk {
     public final WorldSystem worldSystem;
     public final GridSystem gridSystem;
 
+    // Settings
+    private final int WORLD_HEIGHT;
+
+    // Build
+    private final ChunkBuilder chunkBuilder;
+    private final ChunkMesh chunkMesh;
+
     // Chunk
     public final long coordinate;
     public final int coordinateX, coordinateY;
+
     private ChunkState state;
-    private final ChunkBuilder chunkBuilder;
+
     private final AtomicBoolean enqueueGenerate;
     private final AtomicBoolean enqueueAssessment;
     private final AtomicBoolean enqueueBuild;
@@ -41,10 +49,6 @@ public class Chunk {
     // Data
     public SubChunk[] subChunks;
 
-    // Mesh
-    private ModelInstance modelInstance;
-    private Model model;
-
     // Base \\
 
     public Chunk(WorldSystem worldSystem, long coordinate) {
@@ -58,12 +62,20 @@ public class Chunk {
         this.worldSystem = worldSystem;
         this.gridSystem = worldSystem.gridSystem;
 
+        // Settings
+        this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
+
+        // Build
+        this.chunkBuilder = new ChunkBuilder(worldSystem, this);
+        this.chunkMesh = new ChunkMesh();
+
         // Chunk
         this.coordinate = coordinate;
         this.coordinateX = Coordinate2Int.unpackX(coordinate);
         this.coordinateY = Coordinate2Int.unpackY(coordinate);
+
         this.state = state;
-        this.chunkBuilder = new ChunkBuilder(worldSystem, this);
+
         this.enqueueGenerate = new AtomicBoolean(false);
         this.enqueueAssessment = new AtomicBoolean(false);
         this.enqueueBuild = new AtomicBoolean(false);
@@ -92,9 +104,6 @@ public class Chunk {
 
     public void dispose() {
 
-        if (modelInstance != null)
-            gridSystem.removeFromModelInstances(coordinate);
-
         if (subChunks == null)
             return;
 
@@ -122,8 +131,6 @@ public class Chunk {
         this.position = position;
         this.positionX = Coordinate2Int.unpackX(position);
         this.positionY = Coordinate2Int.unpackY(position);
-
-        positionChunk();
     }
 
     // Data \\
@@ -134,7 +141,7 @@ public class Chunk {
 
         enqueueGenerate.set(false);
 
-        if (subChunkCheck())
+        if (needsGenerationData())
             return;
 
         setState(ChunkState.NEEDS_ASSESSMENT_DATA);
@@ -144,7 +151,7 @@ public class Chunk {
         return subChunks[index];
     }
 
-    private boolean subChunkCheck() {
+    private boolean needsGenerationData() {
 
         if (subChunks == null) {
 
@@ -156,16 +163,17 @@ public class Chunk {
         return false;
     }
 
-    // Mesh \\
+    // Build \\
 
-    // Called from separate thread
     public void build() {
 
-        if (subChunkCheck())
+        if (needsGenerationData())
             return;
 
         for (int subChunkIndex = 0; subChunkIndex < settings.WORLD_HEIGHT; subChunkIndex++)
             buildSubChunk(subChunkIndex);
+
+        batch();
     }
 
     private void buildSubChunk(int subChunkIndex) {
@@ -173,60 +181,17 @@ public class Chunk {
         chunkBuilder.build(subChunkIndex);
     }
 
-    // Called from main thread
-    public void buildChunkMesh() {
+    private void batch() {
 
-        clearExistingModelData();
+        chunkMesh.clear();
 
-        if (subChunkCheck())
+        if (needsGenerationData())
             return;
 
-        if (model == null)
-            model = new Model();
-
-        for (int i = 0; i < settings.WORLD_HEIGHT; i++)
-            subChunks[i].build(model);
-
-        model.calculateTransforms();
-
-        if (modelInstance == null)
-            modelInstance = new ModelInstance(model);
-
-        positionChunk();
-
-        gridSystem.addToModelInstances(coordinate, modelInstance);
-
-        enqueueBuild.set(false);
-
-        if (neighborStatus != NeighborStatus.COMPLETE)
-            setState(ChunkState.NEEDS_ASSESSMENT_DATA);
-
-        else
-            setState(ChunkState.FINALIZED);
-    }
-
-    private void clearExistingModelData() {
-
-        if (model != null) {
-
-            model.dispose();
-            model = null;
+        for (int i = 0; i < WORLD_HEIGHT; i++) {
+            for (MeshPacket.MaterialBatch batch : subChunks[i].getMeshBatches())
+                chunkMesh.addBatch(batch);
         }
-
-        if (modelInstance != null) {
-
-            gridSystem.removeFromModelInstances(coordinate);
-            modelInstance = null;
-        }
-    }
-
-    private void positionChunk() {
-
-        if (modelInstance != null)
-            modelInstance.transform.setToTranslation(
-                    positionX * settings.CHUNK_SIZE,
-                    0,
-                    positionY * settings.CHUNK_SIZE);
     }
 
     // Neighbors \\
@@ -309,6 +274,12 @@ public class Chunk {
 
         if (needsBuildData)
             setState(ChunkState.NEEDS_BUILD_DATA);
+    }
+
+    public enum NeighborStatus {
+        INCOMPLETE,
+        PARTIAL,
+        COMPLETE
     }
 
     // Accessible \\

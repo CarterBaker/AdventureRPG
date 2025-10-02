@@ -4,7 +4,8 @@ import com.AdventureRPG.SaveSystem.UserData;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
-import com.AdventureRPG.WorldSystem.Chunks.SubChunk;
+import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
+import com.AdventureRPG.WorldSystem.Util.PackedCoordinate3Int;
 import com.AdventureRPG.Util.OpenSimplex2;
 
 public class WorldGenerator {

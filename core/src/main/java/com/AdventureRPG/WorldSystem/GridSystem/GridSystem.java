@@ -1,6 +1,5 @@
 package com.AdventureRPG.WorldSystem.GridSystem;
 
-import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Vector2Int;
@@ -8,11 +7,6 @@ import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
 import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
-import com.AdventureRPG.WorldSystem.Chunks.NeighborStatus;
-import com.badlogic.gdx.graphics.Camera;
-import com.badlogic.gdx.graphics.g3d.ModelBatch;
-import com.badlogic.gdx.graphics.g3d.ModelInstance;
-import com.badlogic.gdx.math.collision.BoundingBox;
 
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -26,11 +20,9 @@ public class GridSystem {
 
     // Game Manager
     public final Settings settings;
-    private final GameManager gameManager;
     private final WorldSystem worldSystem;
     private final WorldTick worldTick;
     private final BatchSystem batchSystem;
-    private Camera camera;
     private final Loader loader;
 
     // Grid
@@ -50,7 +42,6 @@ public class GridSystem {
     private Long2LongOpenHashMap gridToChunkMap;
     private Long2LongOpenHashMap chunkToGridMap;
     private Long2ObjectOpenHashMap<Chunk> loadedChunks;
-    private Long2ObjectOpenHashMap<ModelInstance> modelInstances;
 
     // Queue System
     private Long2ObjectOpenHashMap<Chunk> unloadQueue;
@@ -69,15 +60,14 @@ public class GridSystem {
 
     // Base \\
 
-    public GridSystem(GameManager gameManager, WorldSystem worldSystem) {
+    public GridSystem(WorldSystem worldSystem) {
 
         // Chunk System
-        this.settings = gameManager.settings;
-        this.gameManager = gameManager;
+        this.settings = worldSystem.settings;
         this.worldSystem = worldSystem;
         this.worldTick = worldSystem.worldTick;
         this.batchSystem = worldSystem.batchSystem;
-        this.loader = new Loader(gameManager, worldSystem);
+        this.loader = new Loader(worldSystem);
 
         // Grid
         this.grid = new Grid(this);
@@ -99,7 +89,6 @@ public class GridSystem {
         this.gridToChunkMap = new Long2LongOpenHashMap(initialCapacity, loadFactor);
         this.chunkToGridMap = new Long2LongOpenHashMap(initialCapacity, loadFactor);
         this.loadedChunks = new Long2ObjectOpenHashMap<>(grid.totalChunks());
-        this.modelInstances = new Long2ObjectOpenHashMap<>(grid.totalChunks());
 
         // Queue System
         this.unloadQueue = new Long2ObjectOpenHashMap<>(grid.totalChunks());
@@ -119,7 +108,6 @@ public class GridSystem {
 
     public void awake() {
 
-        this.camera = gameManager.playerSystem.camera.get();
         loader.awake();
     }
 
@@ -128,12 +116,13 @@ public class GridSystem {
     }
 
     public void update() {
+
         updateQueue();
         loader.update();
     }
 
-    public void render(ModelBatch modelBatch) {
-        renderChunks(modelBatch);
+    public void render() {
+
     }
 
     public void dispose() {
@@ -202,38 +191,6 @@ public class GridSystem {
             return 0;
 
         return queueSize + process.getPriority() * 100;
-    }
-
-    // Render \\
-
-    private void renderChunks(ModelBatch modelBatch) {
-
-        int skipped = 0;
-
-        for (int i = 0; i < grid.totalChunks(); i++) {
-
-            long gridCoordinate = grid.loadOrder(i);
-            long chunkCoordinate = gridToChunkMap.getOrDefault(gridCoordinate, nullMapping);
-
-            if (chunkCoordinate != nullMapping) {
-
-                ModelInstance instance = modelInstances.get(chunkCoordinate);
-
-                if (instance != null) {
-
-                    BoundingBox bounds = grid.getChunkBounds(gridCoordinate);
-
-                    if (bounds != null && camera.frustum.boundsInFrustum(bounds))
-                        modelBatch.render(instance);
-
-                    else
-                        skipped++;
-                }
-            }
-        }
-
-        if (debug)
-            System.out.println("Culled " + skipped + " chunks this frame");
     }
 
     // Main \\
@@ -345,6 +302,7 @@ public class GridSystem {
 
             // Remove from unloadQueue
             iterator.remove();
+            batchSystem.removeChunk(chunkCoordinate);
             loadedChunks.remove(chunkCoordinate);
             loadedChunk.dispose();
 
@@ -462,7 +420,7 @@ public class GridSystem {
                 continue;
             }
 
-            if (loadedChunk.getNeighborStatus() != NeighborStatus.INCOMPLETE)
+            if (loadedChunk.getNeighborStatus() != Chunk.NeighborStatus.INCOMPLETE)
                 loader.requestBuild(loadedChunk);
 
             index = incrementQueueTotal(index);
@@ -528,7 +486,7 @@ public class GridSystem {
             long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, nullMapping);
 
             if (gridCoordinate != nullMapping)
-                loadedChunk.buildChunkMesh();
+                batchSystem.addChunk(chunkCoordinate);
 
             else
                 loadedChunk.dispose();
@@ -644,15 +602,7 @@ public class GridSystem {
             buildQueue.enqueue(chunkCoordinate);
     }
 
-    // Accessible \\\
-
-    public void addToModelInstances(long chunkCoordinate, ModelInstance modelInstance) {
-        modelInstances.put(chunkCoordinate, modelInstance);
-    }
-
-    public void removeFromModelInstances(long chunkCoordinate) {
-        modelInstances.remove(chunkCoordinate);
-    }
+    // Accessible \\
 
     public Chunk getChunkFromCoordinate(long chunkCoordinate) {
         return loadedChunks.get(chunkCoordinate);

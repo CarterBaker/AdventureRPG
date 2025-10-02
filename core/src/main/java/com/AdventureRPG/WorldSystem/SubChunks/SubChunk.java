@@ -1,9 +1,9 @@
-package com.AdventureRPG.WorldSystem.Chunks;
+package com.AdventureRPG.WorldSystem.SubChunks;
 
 import com.AdventureRPG.WorldSystem.Biomes.BiomeContainer;
 import com.AdventureRPG.WorldSystem.Blocks.BlockContainer;
-import com.badlogic.gdx.graphics.g3d.Model;
-import com.badlogic.gdx.graphics.g3d.model.Node;
+import com.AdventureRPG.WorldSystem.Chunks.Chunk;
+import com.AdventureRPG.WorldSystem.Util.MeshPacket;
 
 public final class SubChunk {
 
@@ -13,13 +13,11 @@ public final class SubChunk {
     private final BiomeContainer biomes;
     private final BlockContainer blocks;
 
-    // Mesh
+    // Build
     public final SubChunkMesh subChunkMesh;
-    private Node node;
 
     // Utility
     private final int biomeShift;
-    private boolean addedToModel;
 
     // Base \\
 
@@ -35,15 +33,11 @@ public final class SubChunk {
         this.biomes = new BiomeContainer(CHUNK_SIZE / BIOME_SIZE);
         this.blocks = new BlockContainer(CHUNK_SIZE);
 
-        // Mesh
+        // Build
         this.subChunkMesh = new SubChunkMesh(chunk.worldSystem);
-        this.node = new Node();
-        this.node.id = "Chunk_[" + chunk.coordinateX + "_" + chunk.coordinateY + "]_subchunk_[" + subChunkIndex + "]";
-        this.node.translation.set(0, subChunkIndex * chunk.settings.CHUNK_SIZE, 0);
 
         // Utility
         this.biomeShift = Integer.numberOfTrailingZeros(CHUNK_SIZE / BIOME_SIZE);
-        this.addedToModel = false;
     }
 
     public void dispose() {
@@ -70,20 +64,9 @@ public final class SubChunk {
         biomes.set(x, y, z, id);
     }
 
-    // Mesh \\
+    // Accessible \\
 
-    public void build(Model model) {
-
-        buildMesh();
-
-        if (!addedToModel) {
-
-            model.nodes.add(node);
-            addedToModel = true;
-        }
-    }
-
-    public void buildMesh() {
-        subChunkMesh.build(node);
+    public Iterable<MeshPacket.MaterialBatch> getMeshBatches() {
+        return subChunkMesh.getBatches();
     }
 }
