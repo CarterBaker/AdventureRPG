@@ -344,9 +344,9 @@ public class ChunkBuilder {
                 direction);
 
         // Get the correct values always wrapped within a single chunk
-        int bX = packedCoordinate3Int.addAndWrapAxis(direction.x, x);
-        int bY = packedCoordinate3Int.addAndWrapAxis(direction.y, y);
-        int bZ = packedCoordinate3Int.addAndWrapAxis(direction.z, z);
+        int bX = addAndWrapAxis(direction.x, x);
+        int bY = addAndWrapAxis(direction.y, y);
+        int bZ = addAndWrapAxis(direction.z, z);
 
         // If the sub chunk is null return true
         if (comparativeSubChunk == null)
@@ -403,6 +403,10 @@ public class ChunkBuilder {
         return (aX < 0 || aX >= CHUNK_SIZE ||
                 aY < 0 || aY >= CHUNK_SIZE ||
                 aZ < 0 || aZ >= CHUNK_SIZE);
+    }
+
+    public int addAndWrapAxis(int axisA, int axisB) {
+        return (axisA + axisB) & (CHUNK_SIZE - 1);
     }
 
     // Finalize \\

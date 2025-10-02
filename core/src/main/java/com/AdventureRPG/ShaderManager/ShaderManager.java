@@ -18,6 +18,7 @@ import com.google.gson.Gson;
 
 import java.util.*;
 
+//TODO: I need to refactor how the includes work so they are directly in teh vert and frag shaders instead
 public class ShaderManager implements ShaderProvider {
 
     // Debug

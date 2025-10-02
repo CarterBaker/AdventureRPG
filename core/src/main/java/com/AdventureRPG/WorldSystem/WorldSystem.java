@@ -10,6 +10,7 @@ import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Vector2Int;
+import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
@@ -46,6 +47,7 @@ public class WorldSystem {
     public final WorldGenerator worldGenerator;
     public final WorldTick worldTick;
     public final WorldReader worldReader;
+    public final BatchSystem batchSystem;
     public final GridSystem gridSystem;
     public final BiomeSystem biomeSystem;
     public final Vector2Int WORLD_SCALE;
@@ -81,6 +83,7 @@ public class WorldSystem {
         this.worldGenerator = new WorldGenerator(this);
         this.worldTick = new WorldTick(this);
         this.worldReader = new WorldReader(this);
+        this.batchSystem = new BatchSystem(this);
         this.gridSystem = new GridSystem(gameManager, this);
         this.biomeSystem = new BiomeSystem(gameManager);
         this.WORLD_SCALE = worldReader.getWorldScale();

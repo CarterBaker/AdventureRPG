@@ -111,11 +111,4 @@ public class PackedCoordinate3Int {
     public int getPackedBlockCoordinate(int index) {
         return packedBlockCoordinates[index];
     }
-
-    // Accessible \\
-
-    // TODO: I'd like to remove this
-    public int addAndWrapAxis(int axisA, int axisB) {
-        return (axisA + axisB) & (CHUNK_SIZE - 1);
-    }
 }
