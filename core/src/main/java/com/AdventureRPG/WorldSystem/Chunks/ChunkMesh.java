@@ -1,46 +1,43 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
+import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
 import com.AdventureRPG.WorldSystem.Util.MeshPacket;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public final class ChunkMesh {
 
-    private final Int2ObjectOpenHashMap<MeshPacket.MaterialBatch> batches;
+    // Chunk
+    private final Chunk chunk;
 
-    public ChunkMesh() {
+    // Data
+    private final MeshPacket meshPacket;
 
-        this.batches = new Int2ObjectOpenHashMap<>();
+    // Base \\
+
+    public ChunkMesh(Chunk chunk) {
+
+        // Chunk
+        this.chunk = chunk;
+
+        // Data
+        this.meshPacket = new MeshPacket();
     }
 
-    public void clear() {
+    // Accessible \\
 
-        batches.clear();
+    public void Clear() {
+
+        meshPacket.clear();
     }
 
-    public void addBatch(MeshPacket.MaterialBatch batch) {
+    public void merge(int subChunkIndex) {
 
-        batches.compute(batch.materialId, (mat, existing) -> {
+        SubChunk subChunk = chunk.getSubChunk(subChunkIndex);
+        MeshPacket other = subChunk.subChunkMesh.meshPacket();
 
-            if (existing == null)
-                return new MeshPacket.MaterialBatch(batch);
-
-            existing.append(batch);
-
-            return existing;
-        });
+        meshPacket.merge(other);
     }
 
-    public void merge(MeshPacket packet) {
-
-        for (MeshPacket.MaterialBatch batch : packet.batches.values())
-            addBatch(batch);
-    }
-
-    public Int2ObjectOpenHashMap<MeshPacket.MaterialBatch> getBatches() {
-        return batches;
-    }
-
-    public boolean isEmpty() {
-        return batches.isEmpty();
+    public MeshPacket meshPacket() {
+        return meshPacket;
     }
 }

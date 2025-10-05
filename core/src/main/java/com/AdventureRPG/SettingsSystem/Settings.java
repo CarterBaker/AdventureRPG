@@ -2,6 +2,7 @@ package com.AdventureRPG.SettingsSystem;
 
 import com.badlogic.gdx.graphics.Color;
 
+// TODO: I will need to move some things to the GlobalConstant class
 public class Settings {
 
     // Debug Settings

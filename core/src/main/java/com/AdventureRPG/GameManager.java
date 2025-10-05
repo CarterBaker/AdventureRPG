@@ -51,8 +51,8 @@ public class GameManager implements Screen {
     public final UISystem UISystem;
     public final TimeSystem timeSystem;
     public final LightingSystem lightingSystem;
-    public final WorldSystem worldSystem;
     public final PlayerSystem playerSystem;
+    public final WorldSystem worldSystem;
     public final InputSystem inputSystem;
     public final RenderManager renderManager;
 
@@ -86,8 +86,8 @@ public class GameManager implements Screen {
         this.UISystem = new UISystem(this);
         this.timeSystem = new TimeSystem(this);
         this.lightingSystem = new LightingSystem(this);
-        this.worldSystem = new WorldSystem(this);
         this.playerSystem = new PlayerSystem(this);
+        this.worldSystem = new WorldSystem(this);
         this.inputSystem = new InputSystem(this);
         this.renderManager = new RenderManager(this);
 
@@ -170,8 +170,8 @@ public class GameManager implements Screen {
         UISystem.awake();
         timeSystem.awake();
         lightingSystem.awake();
-        worldSystem.awake();
         playerSystem.awake();
+        worldSystem.awake();
         inputSystem.awake();
     }
 
@@ -188,8 +188,8 @@ public class GameManager implements Screen {
         UISystem.start();
         timeSystem.start();
         lightingSystem.start();
-        worldSystem.start();
         playerSystem.start();
+        worldSystem.start();
         inputSystem.start();
 
         startLoading();

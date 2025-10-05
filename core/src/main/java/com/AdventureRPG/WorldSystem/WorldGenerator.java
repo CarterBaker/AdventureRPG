@@ -144,7 +144,7 @@ public class WorldGenerator {
         // Noise setup
         double scale = 0.05; // lower = bigger hills
         double amplitude = 8.0; // height variation
-        double baseHeight = 8.0; // average terrain height
+        double baseHeight = 28.0; // average terrain height
 
         // Get 2D noise based on X/Z
         double n = OpenSimplex2.noise2(this.seed, x * scale, z * scale);

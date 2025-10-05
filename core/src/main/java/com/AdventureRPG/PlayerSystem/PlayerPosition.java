@@ -83,4 +83,8 @@ public class PlayerPosition {
     public Vector3 currentPosition() {
         return currentPosition;
     }
+
+    public Vector2Int chunkCoordinate() {
+        return chunkCoordinate;
+    }
 }

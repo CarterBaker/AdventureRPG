@@ -3,7 +3,6 @@ package com.AdventureRPG.WorldSystem.SubChunks;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeContainer;
 import com.AdventureRPG.WorldSystem.Blocks.BlockContainer;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
-import com.AdventureRPG.WorldSystem.Util.MeshPacket;
 
 public final class SubChunk {
 
@@ -34,14 +33,14 @@ public final class SubChunk {
         this.blocks = new BlockContainer(CHUNK_SIZE);
 
         // Build
-        this.subChunkMesh = new SubChunkMesh(chunk.worldSystem);
+        this.subChunkMesh = new SubChunkMesh();
 
         // Utility
         this.biomeShift = Integer.numberOfTrailingZeros(CHUNK_SIZE / BIOME_SIZE);
     }
 
     public void dispose() {
-        subChunkMesh.dispose();
+
     }
 
     // Data\\
@@ -62,11 +61,5 @@ public final class SubChunk {
 
     public void setBiome(int x, int y, int z, short id) {
         biomes.set(x, y, z, id);
-    }
-
-    // Accessible \\
-
-    public Iterable<MeshPacket.MaterialBatch> getMeshBatches() {
-        return subChunkMesh.getBatches();
     }
 }

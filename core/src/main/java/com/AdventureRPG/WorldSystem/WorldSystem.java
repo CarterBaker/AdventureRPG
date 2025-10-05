@@ -2,6 +2,7 @@ package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
+import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.SaveSystem.SaveSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
@@ -34,6 +35,7 @@ public class WorldSystem {
     public final MaterialManager materialManager;
     public final SaveSystem saveSystem;
     public final UISystem UISystem;
+    public final PlayerSystem playerSystem;
     public final Settings settings;
     public final Gson gson;
 
@@ -71,6 +73,7 @@ public class WorldSystem {
         this.materialManager = gameManager.materialManager;
         this.saveSystem = gameManager.saveSystem;
         this.UISystem = gameManager.UISystem;
+        this.playerSystem = gameManager.playerSystem;
         this.settings = gameManager.settings;
         this.gson = gameManager.gson;
 
@@ -280,6 +283,14 @@ public class WorldSystem {
         inputY = y;
 
         return Coordinate2Int.pack(inputX, inputY);
+    }
+
+    // Accessible \\
+
+    public void rebuildGrid() {
+
+        batchSystem.rebuildGrid();
+        gridSystem.rebuildGrid();
     }
 
     // Debug \\

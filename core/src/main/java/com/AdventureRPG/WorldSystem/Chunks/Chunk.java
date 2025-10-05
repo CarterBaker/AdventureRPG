@@ -67,7 +67,7 @@ public class Chunk {
 
         // Build
         this.chunkBuilder = new ChunkBuilder(worldSystem, this);
-        this.chunkMesh = new ChunkMesh();
+        this.chunkMesh = new ChunkMesh(this);
 
         // Chunk
         this.coordinate = coordinate;
@@ -170,28 +170,18 @@ public class Chunk {
         if (needsGenerationData())
             return;
 
-        for (int subChunkIndex = 0; subChunkIndex < settings.WORLD_HEIGHT; subChunkIndex++)
-            buildSubChunk(subChunkIndex);
+        chunkMesh.Clear();
 
-        batch();
+        for (int subChunkIndex = 0; subChunkIndex < settings.WORLD_HEIGHT; subChunkIndex++) {
+
+            buildSubChunk(subChunkIndex);
+            chunkMesh.merge(subChunkIndex);
+        }
     }
 
     private void buildSubChunk(int subChunkIndex) {
 
         chunkBuilder.build(subChunkIndex);
-    }
-
-    private void batch() {
-
-        chunkMesh.clear();
-
-        if (needsGenerationData())
-            return;
-
-        for (int i = 0; i < WORLD_HEIGHT; i++) {
-            for (MeshPacket.MaterialBatch batch : subChunks[i].getMeshBatches())
-                chunkMesh.addBatch(batch);
-        }
     }
 
     // Neighbors \\
@@ -315,6 +305,10 @@ public class Chunk {
             default:
                 break;
         }
+    }
+
+    public MeshPacket meshPacket() {
+        return chunkMesh.meshPacket();
     }
 
     // Gameplay \\

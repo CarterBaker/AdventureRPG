@@ -277,6 +277,8 @@ public class GridSystem {
 
                 loadedChunk.moveTo(gridCoordinate);
                 loadedChunk.enqueue();
+
+                batchSystem.assessChunk(loadedChunk);
             }
 
             else // If the chunkCoordinate could not be found add it to the queue
@@ -302,7 +304,7 @@ public class GridSystem {
 
             // Remove from unloadQueue
             iterator.remove();
-            batchSystem.removeChunk(chunkCoordinate);
+            batchSystem.removeChunk(loadedChunk);
             loadedChunks.remove(chunkCoordinate);
             loadedChunk.dispose();
 
@@ -486,9 +488,9 @@ public class GridSystem {
             long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, nullMapping);
 
             if (gridCoordinate != nullMapping)
-                batchSystem.addChunk(chunkCoordinate);
+                batchSystem.addChunk(loadedChunk);
 
-            else
+            else // TODO: May want to add a small pool to hold older chunks for easy re-access
                 loadedChunk.dispose();
         }
     }

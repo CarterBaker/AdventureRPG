@@ -2,9 +2,9 @@ package com.AdventureRPG.PlayerSystem;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Util.Vector2Int;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
-import com.badlogic.gdx.graphics.g3d.Model;
-import com.badlogic.gdx.graphics.g3d.ModelInstance;
+import com.badlogic.gdx.math.Vector3;
 
 public class PlayerSystem {
 
@@ -19,9 +19,6 @@ public class PlayerSystem {
     public final PlayerCamera camera;
     public final PlayerPosition position;
 
-    // Model
-    private final ModelInstance modelInstance;
-
     // Base \\
 
     public PlayerSystem(GameManager gameManager) {
@@ -33,9 +30,6 @@ public class PlayerSystem {
         this.stats = new Statistics();
         this.camera = new PlayerCamera(settings.FOV, settings.windowWidth, settings.windowHeight);
         this.position = new PlayerPosition(gameManager, this);
-
-        // Model
-        this.modelInstance = new ModelInstance(new Model());
     }
 
     public void awake() {
@@ -47,8 +41,6 @@ public class PlayerSystem {
     }
 
     public void update() {
-        positionPlayer();
-        positionCamera();
 
         if (debug) // TODO: Debug line
             debug();
@@ -64,15 +56,14 @@ public class PlayerSystem {
         return camera.get();
     }
 
-    // Position \\
+    // Accessible \\
 
-    public void positionPlayer() {
-        modelInstance.transform.setToTranslation(position.currentPosition());
+    public Vector3 currentPosition() {
+        return position.currentPosition();
     }
 
-    private void positionCamera() {
-        camera.get().position.set(position.currentPosition());
-        camera.get().update();
+    public Vector2Int chunkCoordinate() {
+        return position.chunkCoordinate();
     }
 
     // Debug \\
