@@ -20,9 +20,10 @@ public final class DrawCall {
     private final Int2ObjectOpenHashMap<GpuBatch> gpuBatches = new Int2ObjectOpenHashMap<>();
     private final ObjectArrayList<RenderPacket.RenderKey> keys = new ObjectArrayList<>();
 
-    private boolean uploaded = false; // <-- lazy upload marker
+    private boolean uploaded = false;
 
     public DrawCall(MaterialManager materialManager, MegaChunk megaChunk, RenderPacket renderPacket) {
+
         this.materialManager = materialManager;
         this.megaChunk = megaChunk;
         this.renderPacket = renderPacket;
@@ -36,6 +37,7 @@ public final class DrawCall {
         GL30 gl = Gdx.gl30;
 
         for (RenderPacket.RenderBatch batch : renderPacket.batches) {
+
             RenderPacket.RenderKey key = renderPacket.keys.get(batch.keyId);
             keys.add(key);
 

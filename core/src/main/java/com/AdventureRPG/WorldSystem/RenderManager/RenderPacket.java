@@ -1,6 +1,7 @@
 package com.AdventureRPG.WorldSystem.RenderManager;
 
 import com.AdventureRPG.MaterialManager.MaterialData;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.graphics.TextureArray;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -79,7 +80,7 @@ public final class RenderPacket {
             this.keyId = keyId;
             this.vertices = vertices;
             this.indices = indices;
-            this.vertexCount = vertices.length;
+            this.vertexCount = vertices.length / GlobalConstant.VERT_STRIDE;
             this.indexCount = indices.length;
         }
     }
