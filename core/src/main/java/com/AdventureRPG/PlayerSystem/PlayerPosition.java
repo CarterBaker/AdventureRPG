@@ -2,6 +2,7 @@ package com.AdventureRPG.PlayerSystem;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.InputSystem.Movement;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
@@ -10,9 +11,11 @@ import com.badlogic.gdx.math.Vector3;
 public class PlayerPosition {
 
     // Game Manager
-    private final WorldSystem worldSystem;
+    private final GameManager gameManager;
     private final PlayerCamera camera;
     private final Movement movement;
+
+    private WorldSystem worldSystem;
 
     // Settings
     private final int CHUNK_SIZE;
@@ -26,16 +29,21 @@ public class PlayerPosition {
     public PlayerPosition(GameManager gameManager, PlayerSystem playerSystem) {
 
         // Game Manager
-        this.worldSystem = gameManager.worldSystem;
+        this.gameManager = gameManager;
         this.camera = playerSystem.camera;
         this.movement = new Movement(gameManager, playerSystem.stats);
 
         // Settings
-        this.CHUNK_SIZE = gameManager.settings.CHUNK_SIZE;
+        this.CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
 
         // Position
         this.currentPosition = new Vector3();
         this.chunkCoordinate = new Vector2Int();
+    }
+
+    public void awake() {
+
+        this.worldSystem = gameManager.worldSystem;
     }
 
     // Movement \\

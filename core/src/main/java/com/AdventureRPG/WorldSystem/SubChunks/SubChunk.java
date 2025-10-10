@@ -1,5 +1,6 @@
 package com.AdventureRPG.WorldSystem.SubChunks;
 
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeContainer;
 import com.AdventureRPG.WorldSystem.Blocks.BlockContainer;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
@@ -25,8 +26,8 @@ public final class SubChunk {
         // Settings
         this.chunk = chunk;
         this.subChunkIndex = subChunkIndex;
-        int CHUNK_SIZE = chunk.settings.CHUNK_SIZE;
-        int BIOME_SIZE = chunk.settings.BIOME_SIZE;
+        int CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
+        int BIOME_SIZE = GlobalConstant.BIOME_SIZE;
 
         // Data
         this.biomes = new BiomeContainer(CHUNK_SIZE / BIOME_SIZE);

@@ -2,6 +2,7 @@ package com.AdventureRPG.WorldSystem.GridSystem;
 
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
@@ -74,8 +75,8 @@ public class GridSystem {
         grid.buildGrid();
 
         // Settings
-        this.MAX_CHUNK_LOADS_PER_FRAME = settings.MAX_CHUNK_LOADS_PER_FRAME;
-        this.MAX_CHUNK_LOADS_PER_TICK = settings.MAX_CHUNK_LOADS_PER_TICK;
+        this.MAX_CHUNK_LOADS_PER_FRAME = GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
+        this.MAX_CHUNK_LOADS_PER_TICK = GlobalConstant.MAX_CHUNK_LOADS_PER_TICK;
 
         // Position Tracking
         this.currentChunk = Coordinate2Int.pack(-1, -1);

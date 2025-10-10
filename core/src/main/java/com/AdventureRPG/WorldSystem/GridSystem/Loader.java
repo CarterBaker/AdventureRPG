@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.AdventureRPG.SaveSystem.ChunkData;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ThreadManager.ThreadManager;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldGenerator;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
@@ -13,7 +14,6 @@ import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 public class Loader {
 
     // Game Manager
-    private final Settings settings;
     private final ThreadManager threadManager;
     private final ChunkData chunkData;
     private final WorldSystem worldSystem;
@@ -42,13 +42,12 @@ public class Loader {
     public Loader(WorldSystem worldSystem) {
 
         // Game Manager
-        this.settings = worldSystem.settings;
         this.threadManager = worldSystem.threadManager;
         this.chunkData = worldSystem.saveSystem.chunkData;
         this.worldSystem = worldSystem;
 
         // Settings
-        this.MAX_CHUNK_LOADS_PER_FRAME = settings.MAX_CHUNK_LOADS_PER_FRAME;
+        this.MAX_CHUNK_LOADS_PER_FRAME = GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
 
         // Queue System
         this.loadRequests = new ConcurrentLinkedQueue<>();

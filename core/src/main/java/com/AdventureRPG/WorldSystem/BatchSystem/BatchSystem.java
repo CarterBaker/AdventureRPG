@@ -3,22 +3,29 @@ package com.AdventureRPG.WorldSystem.BatchSystem;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
-import com.AdventureRPG.SettingsSystem.GlobalConstant;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.Util.Coordinate2Int;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
+import com.AdventureRPG.WorldSystem.MegaChunk.MegaChunk;
+import com.AdventureRPG.WorldSystem.MegaChunk.MegaState;
+import com.AdventureRPG.WorldSystem.RenderManager.RenderManager;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 public class BatchSystem {
 
     // Game Manager
-    private final Settings settings;
-    private final ThreadManager threadManager;
-    private final PlayerSystem playerSystem;
+    public final Settings settings;
+    public final ThreadManager threadManager;
+    public final MaterialManager materialManager;
+    public final PlayerSystem playerSystem;
+    public final RenderManager renderManager;
 
     // Settings
     private int maxRenderDistance;
@@ -39,7 +46,9 @@ public class BatchSystem {
         // Game Manager
         this.settings = worldSystem.settings;
         this.threadManager = worldSystem.threadManager;
+        this.materialManager = worldSystem.materialManager;
         this.playerSystem = worldSystem.playerSystem;
+        this.renderManager = worldSystem.renderManager;
 
         // Settings
         this.maxRenderDistance = settings.maxRenderDistance;
@@ -65,6 +74,8 @@ public class BatchSystem {
     public void update() {
 
         processAsyncRequests();
+        updateLoadedmegas();
+        renderManager.update();
     }
 
     public void render() {
@@ -115,6 +126,20 @@ public class BatchSystem {
         }
     }
 
+    private void updateLoadedmegas() {
+
+        for (ObjectIterator<MegaChunk> it = loadedMegas.values().iterator(); it.hasNext();) {
+
+            MegaChunk mega = it.next();
+
+            if (mega.state() != MegaState.COMPLETE)
+                continue;
+
+            mega.update();
+            renderManager.assessMega(mega);
+        }
+    }
+
     // Main \\
 
     private void addChunkInternal(Chunk chunk) {
@@ -134,7 +159,6 @@ public class BatchSystem {
 
                 megaChunk = new MegaChunk(
                         this,
-                        playerSystem,
                         megaCoordinate,
                         megaX, megaY);
 
@@ -151,8 +175,11 @@ public class BatchSystem {
 
             MegaChunk megaChunk = getMegaChunk(chunk);
 
-            if (megaChunk != null)
-                megaChunk.removeChunk(chunk);
+            if (megaChunk == null)
+                return;
+
+            megaChunk.removeChunk(chunk);
+            renderManager.removeMega(megaChunk);
         }
     }
 

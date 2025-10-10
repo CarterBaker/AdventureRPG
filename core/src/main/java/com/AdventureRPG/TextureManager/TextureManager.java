@@ -5,6 +5,7 @@ import java.util.*;
 
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
@@ -17,9 +18,6 @@ public class TextureManager {
 
     // Debug
     private final boolean debug = false; // TODO: Debug line
-
-    // Game Manager
-    private final Settings settings;
 
     // Settings
     private final String BLOCK_TEXTURE_PATH;
@@ -59,19 +57,16 @@ public class TextureManager {
     public TextureManager(GameManager gameManager) {
 
         // Game Manager
-        this.settings = gameManager.settings;
+        this.BLOCK_TEXTURE_PATH = GlobalConstant.BLOCK_TEXTURE_PATH;
+        this.BLOCK_TEXTURE_SIZE = GlobalConstant.BLOCK_TEXTURE_SIZE;
+        this.BLOCK_ATLAS_PADDING = GlobalConstant.BLOCK_ATLAS_PADDING;
 
-        // Game Manager
-        this.BLOCK_TEXTURE_PATH = settings.BLOCK_TEXTURE_PATH;
-        this.BLOCK_TEXTURE_SIZE = settings.BLOCK_TEXTURE_SIZE;
-        this.BLOCK_ATLAS_PADDING = settings.BLOCK_ATLAS_PADDING;
-
-        this.NORMAL_MAP_DEFAULT = settings.NORMAL_MAP_DEFAULT;
-        this.HEIGHT_MAP_DEFAULT = settings.HEIGHT_MAP_DEFAULT;
-        this.METAL_MAP_DEFAULT = settings.METAL_MAP_DEFAULT;
-        this.ROUGHNESS_MAP_DEFAULT = settings.ROUGHNESS_MAP_DEFAULT;
-        this.AO_MAP_DEFAULT = settings.AO_MAP_DEFAULT;
-        this.CUSTOM_MAP_DEFAULT = settings.CUSTOM_MAP_DEFAULT;
+        this.NORMAL_MAP_DEFAULT = GlobalConstant.NORMAL_MAP_DEFAULT;
+        this.HEIGHT_MAP_DEFAULT = GlobalConstant.HEIGHT_MAP_DEFAULT;
+        this.METAL_MAP_DEFAULT = GlobalConstant.METAL_MAP_DEFAULT;
+        this.ROUGHNESS_MAP_DEFAULT = GlobalConstant.ROUGHNESS_MAP_DEFAULT;
+        this.AO_MAP_DEFAULT = GlobalConstant.AO_MAP_DEFAULT;
+        this.CUSTOM_MAP_DEFAULT = GlobalConstant.CUSTOM_MAP_DEFAULT;
 
         // ID maps
         this.idToTexturePath = new HashMap<>();

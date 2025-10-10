@@ -5,6 +5,7 @@ import com.AdventureRPG.RenderManager.RenderManager;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.google.gson.Gson;
@@ -16,7 +17,6 @@ import java.util.Map;
 public class PassManager {
 
     // Game Manager
-    private final Settings settings;
     private final Gson gson;
     private final GameManager gameManager;
     private final ShaderManager shaderManager;
@@ -35,13 +35,12 @@ public class PassManager {
     public PassManager(GameManager gameManager) {
 
         // Game Manager
-        this.settings = gameManager.settings;
         this.gson = gameManager.gson;
         this.gameManager = gameManager;
         this.shaderManager = gameManager.shaderManager;
 
         // Settings
-        this.PASS_JSON_PATH = settings.PASS_JSON_PATH;
+        this.PASS_JSON_PATH = GlobalConstant.PASS_JSON_PATH;
     }
 
     public void awake() {

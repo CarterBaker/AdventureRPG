@@ -1,10 +1,15 @@
-package com.AdventureRPG.WorldSystem.BatchSystem;
+package com.AdventureRPG.WorldSystem.MegaChunk;
 
-import com.AdventureRPG.PlayerSystem.PlayerSystem;
-import com.AdventureRPG.SettingsSystem.GlobalConstant;
+import com.AdventureRPG.MaterialManager.MaterialManager;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
+import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
+import com.AdventureRPG.WorldSystem.RenderManager.RenderManager;
+import com.AdventureRPG.WorldSystem.RenderManager.RenderPacket;
 import com.AdventureRPG.WorldSystem.Util.MeshPacket;
+import com.AdventureRPG.WorldSystem.Util.RenderConversion;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -13,6 +18,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public class MegaChunk {
 
     // Game Manager
+    private final MaterialManager materialManager;
     private final BatchSystem batchSystem;
 
     // Mega
@@ -23,24 +29,26 @@ public class MegaChunk {
     private final int offsetX, offsetY;
     private final Vector3 currentPosition;
     private final Vector2Int chunkCoordinate;
-    private final Vector3 renderPosition;
+    private final Matrix4 renderPosition;
 
     // Chunk Tracking
     private final int totalChunks;
     private Long2ObjectOpenHashMap<Chunk> combinedChunks;
+    private volatile MegaState state;
 
     // Data
     private final MeshPacket megaPacket;
+    private RenderPacket renderPacket;
 
     // Base \\
 
     public MegaChunk(
             BatchSystem batchSystem,
-            PlayerSystem playerSystem,
             long megaCoordinate,
             int megaX, int megaY) {
 
         // Game Manager
+        this.materialManager = batchSystem.materialManager;
         this.batchSystem = batchSystem;
 
         // Mega
@@ -51,26 +59,34 @@ public class MegaChunk {
         // Position
         this.offsetX = megaX * GlobalConstant.MEGA_CHUNK_SIZE;
         this.offsetY = megaY * GlobalConstant.MEGA_CHUNK_SIZE;
-        this.currentPosition = playerSystem.currentPosition();
-        this.chunkCoordinate = playerSystem.chunkCoordinate();
-        this.renderPosition = new Vector3();
+        this.currentPosition = batchSystem.playerSystem.currentPosition();
+        this.chunkCoordinate = batchSystem.playerSystem.chunkCoordinate();
+        this.renderPosition = new Matrix4();
 
         // Chunk Tracking
         int size = GlobalConstant.MEGA_CHUNK_SIZE;
         this.totalChunks = size * size;
         this.combinedChunks = new Long2ObjectOpenHashMap<>(totalChunks);
+        this.state = MegaState.INCOMPLETE;
 
         // Data
         this.megaPacket = new MeshPacket();
     }
 
-    public void render() {
+    public void update() {
+
+        if (state != MegaState.COMPLETE)
+            return;
 
         calculateRenderPosition();
-        renderMega();
     }
 
-    // Position \\
+    public void dispose() {
+
+        batchSystem.removeMegaChunk(megaCoordinate);
+    }
+
+    // Render \\
 
     private void calculateRenderPosition() {
 
@@ -81,15 +97,7 @@ public class MegaChunk {
         float bY = currentPosition.y;
         float bZ = aY + currentPosition.z;
 
-        renderPosition.x = bX;
-        renderPosition.y = bY;
-        renderPosition.z = bZ;
-    }
-
-    // Render \\
-
-    private void renderMega() {
-
+        renderPosition.idt().translate(bX, bY, bZ);
     }
 
     // Batching \\
@@ -104,8 +112,11 @@ public class MegaChunk {
         MeshPacket other = chunk.meshPacket();
         megaPacket.merge(other);
 
-        if (combinedChunks.size() == totalChunks)
-            combinedChunks();
+        if (combinedChunks.size() != totalChunks)
+            return;
+
+        state = MegaState.COMPLETE;
+        combinedChunks();
     }
 
     public void removeChunk(Chunk chunk) {
@@ -115,8 +126,10 @@ public class MegaChunk {
 
         combinedChunks.remove(chunk.coordinate);
 
-        if (combinedChunks.size() < 1)
-            batchSystem.removeMegaChunk(megaCoordinate);
+        if (combinedChunks.size() > 0)
+            return;
+
+        dispose();
     }
 
     public void assessChunk(Chunk chunk) {
@@ -141,6 +154,8 @@ public class MegaChunk {
             MeshPacket other = chunk.meshPacket();
             megaPacket.merge(other);
         }
+
+        renderPacket = RenderConversion.convert(megaPacket, materialManager);
     }
 
     // Utility \\
@@ -158,5 +173,19 @@ public class MegaChunk {
             return false;
 
         return true;
+    }
+
+    // Accessible \\
+
+    public MegaState state() {
+        return state;
+    }
+
+    public Matrix4 renderPosition() {
+        return renderPosition;
+    }
+
+    public RenderPacket renderPacket() {
+        return renderPacket;
     }
 }

@@ -1,12 +1,13 @@
 package com.AdventureRPG.WorldSystem.Util;
 
-import com.AdventureRPG.SettingsSystem.GlobalConstant;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.AdventureRPG.Util.GlobalConstant;
 
 public final class MeshPacket {
 

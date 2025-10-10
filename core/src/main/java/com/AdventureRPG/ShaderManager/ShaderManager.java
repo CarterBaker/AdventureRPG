@@ -3,6 +3,7 @@ package com.AdventureRPG.ShaderManager;
 import com.AdventureRPG.GameManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g3d.Shader;
@@ -25,7 +26,6 @@ public class ShaderManager implements ShaderProvider {
     private final boolean debug = true; // TODO: Debug line
 
     // Game Manager
-    private final Settings settings;
     private final Gson gson;
     private final ShaderProvider defaultShaderProvider;
     private final MaterialManager materialManager;
@@ -49,13 +49,12 @@ public class ShaderManager implements ShaderProvider {
     public ShaderManager(GameManager gameManager) {
 
         // Game Manager
-        this.settings = gameManager.settings;
         this.gson = gameManager.gson;
         this.defaultShaderProvider = gameManager.defaultShaderProvider;
         this.materialManager = gameManager.materialManager;
 
         // Settings
-        this.SHADER_JSON_PATH = settings.SHADER_JSON_PATH;
+        this.SHADER_JSON_PATH = GlobalConstant.SHADER_JSON_PATH;
 
         // Shader Manager
         this.universalUniform = new UniversalUniform(gameManager);

@@ -34,6 +34,7 @@ public class PlayerSystem {
 
     public void awake() {
         camera.awake();
+        position.awake();
     }
 
     public void start() {

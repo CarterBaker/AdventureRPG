@@ -7,6 +7,7 @@ import com.AdventureRPG.GameManager;
 import com.AdventureRPG.LightingSystem.LightingSystem;
 import com.AdventureRPG.SaveSystem.UserData;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Util.GlobalConstant;
 
 public class TimeSystem {
 
@@ -14,7 +15,6 @@ public class TimeSystem {
     private boolean debug = false; // TODO: Debug line
 
     // Game Manager
-    public final Settings settings;
     public final GameManager gameManager;
     private LightingSystem lightingSystem;
 
@@ -63,23 +63,22 @@ public class TimeSystem {
     public TimeSystem(GameManager gameManager) {
 
         // Game manager
-        this.settings = gameManager.settings;
         this.gameManager = gameManager;
 
         // Settings
-        this.MINUTES_PER_HOUR = settings.MINUTES_PER_HOUR;
-        this.HOURS_PER_DAY = settings.HOURS_PER_DAY;
-        this.DAYS_PER_DAY = settings.DAYS_PER_DAY;
-        this.MIDDAY_OFFSET = settings.MIDDAY_OFFSET;
+        this.MINUTES_PER_HOUR = GlobalConstant.MINUTES_PER_HOUR;
+        this.HOURS_PER_DAY = GlobalConstant.HOURS_PER_DAY;
+        this.DAYS_PER_DAY = GlobalConstant.DAYS_PER_DAY;
+        this.MIDDAY_OFFSET = GlobalConstant.MIDDAY_OFFSET;
 
-        this.STARTING_DAY = settings.STARTING_DAY;
-        this.STARTING_MONTH = settings.STARTING_MONTH;
-        this.STARTING_YEAR = settings.STARTING_YEAR;
-        this.STARTING_AGE = settings.STARTING_AGE;
-        this.YEARS_PER_AGE = settings.YEARS_PER_AGE;
+        this.STARTING_DAY = GlobalConstant.STARTING_DAY;
+        this.STARTING_MONTH = GlobalConstant.STARTING_MONTH;
+        this.STARTING_YEAR = GlobalConstant.STARTING_YEAR;
+        this.STARTING_AGE = GlobalConstant.STARTING_AGE;
+        this.YEARS_PER_AGE = GlobalConstant.YEARS_PER_AGE;
 
         // Calendar
-        this.calendarFile = new File(settings.CALENDAR_JSON_PATH);
+        this.calendarFile = new File(GlobalConstant.CALENDAR_JSON_PATH);
         this.calendar = Loader.load(calendarFile, gameManager.gson);
 
         this.totalMonths = calendar.getTotalMonths();

@@ -2,17 +2,16 @@ package com.AdventureRPG.WorldSystem.Chunks;
 
 import java.util.BitSet;
 import com.AdventureRPG.MaterialManager.MaterialData;
-import com.AdventureRPG.SettingsSystem.GlobalConstant;
 import com.AdventureRPG.TextureManager.TextureManager.UVRect;
 import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.Util.Direction3Int;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
 import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
 import com.AdventureRPG.WorldSystem.SubChunks.SubChunkMesh;
-import com.AdventureRPG.WorldSystem.Util.MeshPacket;
 import com.AdventureRPG.WorldSystem.Util.PackedCoordinate3Int;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.IntArray;
@@ -56,12 +55,12 @@ public class ChunkBuilder {
         this.biomeSystem = worldSystem.biomeSystem;
 
         // Settings
-        this.CHUNK_SIZE = worldSystem.settings.CHUNK_SIZE;
-        this.WORLD_HEIGHT = worldSystem.settings.WORLD_HEIGHT;
+        this.CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
+        this.WORLD_HEIGHT = GlobalConstant.WORLD_HEIGHT;
 
         // Data
         this.chunk = chunk;
-        this.quads = new IntArray(worldSystem.settings.CHUNK_VERT_BUFFER);
+        this.quads = new IntArray(GlobalConstant.CHUNK_VERT_BUFFER);
         this.quadCounts = new Int2IntOpenHashMap();
         this.blendColors = new Color[8];
 

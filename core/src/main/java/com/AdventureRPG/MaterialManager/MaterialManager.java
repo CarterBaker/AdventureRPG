@@ -5,6 +5,7 @@ import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
 import com.AdventureRPG.TextureManager.TextureManager;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g3d.Material;
@@ -23,7 +24,6 @@ public class MaterialManager {
     private final boolean debug = false; // TODO: Debug line
 
     // Game Manager
-    private final Settings settings;
     private final Gson gson;
     private final TextureManager textureManager;
     private final ShaderManager shaderManager;
@@ -46,13 +46,12 @@ public class MaterialManager {
     public MaterialManager(GameManager gameManager) {
 
         // Game Manager
-        this.settings = gameManager.settings;
         this.gson = gameManager.gson;
         this.textureManager = gameManager.textureManager;
         this.shaderManager = gameManager.shaderManager;
 
         // Settings
-        this.MATERIAL_JSON_PATH = settings.MATERIAL_JSON_PATH;
+        this.MATERIAL_JSON_PATH = GlobalConstant.MATERIAL_JSON_PATH;
 
         compileMaterials();
     }

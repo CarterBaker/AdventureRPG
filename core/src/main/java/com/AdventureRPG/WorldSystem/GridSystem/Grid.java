@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 
@@ -138,8 +139,8 @@ public class Grid {
 
     private void createBoundingBoxes() {
 
-        int CHUNK_SIZE = settings.CHUNK_SIZE;
-        int WORLD_HEIGHT = settings.WORLD_HEIGHT;
+        int CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
+        int WORLD_HEIGHT = GlobalConstant.WORLD_HEIGHT;
 
         for (Long gridCoordinate : gridCoordinates) {
 

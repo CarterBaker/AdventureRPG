@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldSystem;
 
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -13,7 +13,6 @@ public class WorldReader {
 
     // Game Manager
     private final WorldSystem worldSystem;
-    private final Settings settings;
     private final Pixmap world;
 
     // Base \\
@@ -22,8 +21,7 @@ public class WorldReader {
 
         // Game Manager
         this.worldSystem = worldSystem;
-        this.settings = worldSystem.settings;
-        this.world = new Pixmap(Gdx.files.internal(settings.REGION_IMAGE_PATH));
+        this.world = new Pixmap(Gdx.files.internal(GlobalConstant.REGION_IMAGE_PATH));
     }
 
     // World Reader \\
@@ -32,8 +30,8 @@ public class WorldReader {
         int width = world.getWidth();
         int height = world.getHeight();
 
-        int chunksPerPixel = settings.CHUNKS_PER_PIXEL;
-        int chunkSize = settings.CHUNK_SIZE;
+        int chunksPerPixel = GlobalConstant.CHUNKS_PER_PIXEL;
+        int chunkSize = GlobalConstant.CHUNK_SIZE;
 
         int worldWidth = width * chunksPerPixel * chunkSize;
         int worldHeight = height * chunksPerPixel * chunkSize;

@@ -1,5 +1,6 @@
 package com.AdventureRPG.WorldSystem.Util;
 
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 
 public class PackedCoordinate3Int {
@@ -25,8 +26,8 @@ public class PackedCoordinate3Int {
     public PackedCoordinate3Int(WorldSystem worldSystem) {
 
         // Settings
-        this.BIOME_SIZE = worldSystem.settings.BIOME_SIZE;
-        this.CHUNK_SIZE = worldSystem.settings.CHUNK_SIZE;
+        this.BIOME_SIZE = GlobalConstant.BIOME_SIZE;
+        this.CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
 
         this.biomeSize = (CHUNK_SIZE / BIOME_SIZE) *
                 (CHUNK_SIZE / BIOME_SIZE) *

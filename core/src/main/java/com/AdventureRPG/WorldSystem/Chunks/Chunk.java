@@ -2,9 +2,9 @@ package com.AdventureRPG.WorldSystem.Chunks;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Direction2Int;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
 import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
@@ -15,7 +15,6 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 public class Chunk {
 
     // Game Manager
-    public final Settings settings;
     public final WorldSystem worldSystem;
     public final GridSystem gridSystem;
 
@@ -58,12 +57,11 @@ public class Chunk {
     public Chunk(WorldSystem worldSystem, long coordinate, ChunkState state) {
 
         // Game Manager
-        this.settings = worldSystem.settings;
         this.worldSystem = worldSystem;
         this.gridSystem = worldSystem.gridSystem;
 
         // Settings
-        this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
+        this.WORLD_HEIGHT = GlobalConstant.WORLD_HEIGHT;
 
         // Build
         this.chunkBuilder = new ChunkBuilder(worldSystem, this);
@@ -107,7 +105,7 @@ public class Chunk {
         if (subChunks == null)
             return;
 
-        for (int i = 0; i < settings.WORLD_HEIGHT; i++)
+        for (int i = 0; i < WORLD_HEIGHT; i++)
             if (subChunks[i] != null)
                 subChunks[i].dispose();
     }
@@ -172,7 +170,7 @@ public class Chunk {
 
         chunkMesh.Clear();
 
-        for (int subChunkIndex = 0; subChunkIndex < settings.WORLD_HEIGHT; subChunkIndex++) {
+        for (int subChunkIndex = 0; subChunkIndex < WORLD_HEIGHT; subChunkIndex++) {
 
             buildSubChunk(subChunkIndex);
             chunkMesh.merge(subChunkIndex);

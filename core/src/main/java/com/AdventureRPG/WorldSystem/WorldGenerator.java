@@ -1,17 +1,16 @@
 package com.AdventureRPG.WorldSystem;
 
 import com.AdventureRPG.SaveSystem.UserData;
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
 import com.AdventureRPG.WorldSystem.Util.PackedCoordinate3Int;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.OpenSimplex2;
 
 public class WorldGenerator {
 
     // Game Manager
-    private final Settings settings;
     private final UserData userData;
     private final WorldSystem worldSystem;
     private final PackedCoordinate3Int packedCoordinate3Int;
@@ -33,15 +32,14 @@ public class WorldGenerator {
     public WorldGenerator(WorldSystem worldSystem) {
 
         // Game Manager
-        this.settings = worldSystem.settings;
         this.userData = worldSystem.saveSystem.userData;
         this.worldSystem = worldSystem;
         this.packedCoordinate3Int = worldSystem.packedCoordinate3Int;
 
         // Settings
-        this.BIOME_SIZE = settings.BIOME_SIZE;
-        this.CHUNK_SIZE = settings.CHUNK_SIZE;
-        this.WORLD_HEIGHT = settings.WORLD_HEIGHT;
+        this.BIOME_SIZE = GlobalConstant.BIOME_SIZE;
+        this.CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
+        this.WORLD_HEIGHT = GlobalConstant.WORLD_HEIGHT;
 
         // Default Blocks
         this.AIR_BLOCK = worldSystem.getBlockByName("Air");

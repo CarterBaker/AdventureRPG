@@ -10,6 +10,7 @@ import com.AdventureRPG.TextureManager.TextureManager;
 import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Coordinate2Int;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
@@ -17,6 +18,7 @@ import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
+import com.AdventureRPG.WorldSystem.RenderManager.RenderManager;
 import com.AdventureRPG.WorldSystem.Util.PackedCoordinate3Int;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.math.Vector3;
@@ -48,6 +50,7 @@ public class WorldSystem {
     private final Block[] blocks;
 
     // World System
+    public final RenderManager renderManager;
     public final PackedCoordinate3Int packedCoordinate3Int;
     public final WorldGenerator worldGenerator;
     public final WorldTick worldTick;
@@ -79,16 +82,17 @@ public class WorldSystem {
 
         // Settings
         this.maxRenderDistance = settings.maxRenderDistance;
-        this.CHUNKS_PER_PIXEL = settings.CHUNKS_PER_PIXEL;
-        this.CHUNK_SIZE = settings.CHUNK_SIZE;
+        this.CHUNKS_PER_PIXEL = GlobalConstant.CHUNKS_PER_PIXEL;
+        this.CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
 
         // Block Management
         this.blocks = Loader.LoadBlocks(gameManager, this);
 
         // World System
+        this.renderManager = new RenderManager(this);
         this.packedCoordinate3Int = new PackedCoordinate3Int(this);
         this.worldGenerator = new WorldGenerator(this);
-        this.worldTick = new WorldTick(this);
+        this.worldTick = new WorldTick();
         this.worldReader = new WorldReader(this);
         this.batchSystem = new BatchSystem(this);
         this.gridSystem = new GridSystem(this);

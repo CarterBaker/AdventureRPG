@@ -1,14 +1,9 @@
 package com.AdventureRPG.WorldSystem;
 
-import com.AdventureRPG.GameManager;
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 
 public class WorldTick {
-
-    // Game Manager
-    private final GameManager gameManager;
-    private final Settings settings;
 
     // Settings
     private final float WORLD_TICK;
@@ -19,14 +14,10 @@ public class WorldTick {
 
     // Base \\
 
-    public WorldTick(WorldSystem worldSystem) {
-
-        // Game Manager
-        this.gameManager = worldSystem.gameManager;
-        this.settings = worldSystem.settings;
+    public WorldTick() {
 
         // Settings
-        this.WORLD_TICK = settings.WORLD_TICK;
+        this.WORLD_TICK = GlobalConstant.WORLD_TICK;
     }
 
     public void awake() {
