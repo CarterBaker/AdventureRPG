@@ -1,8 +1,8 @@
-package com.AdventureRPG.WorldSystem.Util;
+package com.AdventureRPG.WorldSystem.RenderManager;
 
 import com.AdventureRPG.MaterialManager.MaterialData;
 import com.AdventureRPG.MaterialManager.MaterialManager;
-import com.AdventureRPG.WorldSystem.RenderManager.RenderPacket;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.util.List;

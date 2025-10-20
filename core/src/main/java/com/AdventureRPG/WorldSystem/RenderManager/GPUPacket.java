@@ -11,18 +11,18 @@ import java.nio.*;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public final class DrawCall {
+public final class GPUPacket {
 
     private final MaterialManager materialManager;
     private final MegaChunk megaChunk;
     private final RenderPacket renderPacket;
 
-    private final Int2ObjectOpenHashMap<GpuBatch> gpuBatches = new Int2ObjectOpenHashMap<>();
+    private final Int2ObjectOpenHashMap<ObjectArrayList<DrawCall>> drawCalls = new Int2ObjectOpenHashMap<>();
     private final ObjectArrayList<RenderPacket.RenderKey> keys = new ObjectArrayList<>();
 
     private boolean uploaded = false;
 
-    public DrawCall(MaterialManager materialManager, MegaChunk megaChunk, RenderPacket renderPacket) {
+    public GPUPacket(MaterialManager materialManager, MegaChunk megaChunk, RenderPacket renderPacket) {
 
         this.materialManager = materialManager;
         this.megaChunk = megaChunk;
@@ -39,11 +39,21 @@ public final class DrawCall {
         for (RenderPacket.RenderBatch batch : renderPacket.batches) {
 
             RenderPacket.RenderKey key = renderPacket.keys.get(batch.keyId);
-            keys.add(key);
 
-            if (gpuBatches.containsKey(batch.keyId))
-                continue;
+            // Ensure key appears only once in keys list
+            if (!keys.contains(key))
+                keys.add(key);
 
+            // Fetch or create the list of GPU batches for this key id
+            ObjectArrayList<DrawCall> list = drawCalls.get(batch.keyId);
+
+            if (list == null) {
+
+                list = new ObjectArrayList<>();
+                drawCalls.put(batch.keyId, list);
+            }
+
+            // Create and upload a new GpuBatch for every RenderBatch (no skipping)
             FloatBuffer vBuf = ByteBuffer
                     .allocateDirect(batch.vertices.length * Float.BYTES)
                     .order(ByteOrder.nativeOrder())
@@ -60,7 +70,7 @@ public final class DrawCall {
 
             IntBuffer tmp = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder()).asIntBuffer();
 
-            GpuBatch gpu = new GpuBatch();
+            DrawCall gpu = new DrawCall();
             gpu.indexCount = batch.indexCount;
 
             gl.glGenVertexArrays(1, tmp);
@@ -81,35 +91,48 @@ public final class DrawCall {
 
             int stride = GlobalConstant.VERT_STRIDE * Float.BYTES;
             int offset = 0;
+
+            // Position (x, y, z)
             gl.glEnableVertexAttribArray(0);
             gl.glVertexAttribPointer(0, 3, GL20.GL_FLOAT, false, stride, offset);
             offset += 3 * Float.BYTES;
 
+            // Normal / direction (x, y, z)
             gl.glEnableVertexAttribArray(1);
             gl.glVertexAttribPointer(1, 3, GL20.GL_FLOAT, false, stride, offset);
             offset += 3 * Float.BYTES;
 
+            // Color (packed as single float)
             gl.glEnableVertexAttribArray(2);
-            gl.glVertexAttribPointer(2, 2, GL20.GL_FLOAT, false, stride, offset);
+            gl.glVertexAttribPointer(2, 1, GL20.GL_FLOAT, false, stride, offset);
+            offset += 1 * Float.BYTES;
+
+            // UV (u, v)
+            gl.glEnableVertexAttribArray(3);
+            gl.glVertexAttribPointer(3, 2, GL20.GL_FLOAT, false, stride, offset);
 
             gl.glBindVertexArray(0);
-            gpuBatches.put(batch.keyId, gpu);
+
+            // store gpu batch into list for this keyId
+            list.add(gpu);
         }
 
         uploaded = true;
     }
 
     public void render() {
+
         // Lazy initialization on the render thread
-        if (!uploaded) {
+        if (!uploaded)
             uploadToGPU();
-        }
 
         GL30 gl = Gdx.gl30;
 
         for (RenderPacket.RenderKey key : keys) {
-            GpuBatch gpu = gpuBatches.get(key.id);
-            if (gpu == null)
+
+            ObjectArrayList<DrawCall> list = drawCalls.get(key.id);
+
+            if (list == null || list.isEmpty())
                 continue;
 
             materialManager.setUniform(
@@ -121,8 +144,16 @@ public final class DrawCall {
             key.shaderProgram.bind();
             key.textureArray.bind();
 
-            gl.glBindVertexArray(gpu.vao);
-            gl.glDrawElements(GL20.GL_TRIANGLES, gpu.indexCount, GL20.GL_UNSIGNED_SHORT, 0);
+            // draw all GPU batches for this material
+            for (DrawCall gpu : list) {
+
+                if (gpu == null)
+                    continue;
+
+                gl.glBindVertexArray(gpu.vao);
+                gl.glDrawElements(GL20.GL_TRIANGLES, gpu.indexCount, GL20.GL_UNSIGNED_SHORT, 0);
+            }
+
             gl.glBindVertexArray(0);
         }
 
@@ -130,33 +161,49 @@ public final class DrawCall {
     }
 
     public void dispose() {
+
         if (!uploaded)
-            return; // nothing to delete yet
+            return;
 
         GL30 gl = Gdx.gl30;
         IntBuffer tmp = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder()).asIntBuffer();
 
-        for (GpuBatch gpu : gpuBatches.values()) {
-            if (gpu.vbo != 0) {
-                tmp.put(0, gpu.vbo);
-                gl.glDeleteBuffers(1, tmp);
-            }
-            if (gpu.ibo != 0) {
-                tmp.put(0, gpu.ibo);
-                gl.glDeleteBuffers(1, tmp);
-            }
-            if (gpu.vao != 0) {
-                tmp.put(0, gpu.vao);
-                gl.glDeleteVertexArrays(1, tmp);
+        // iterate over lists of GPU batches per material
+        for (ObjectArrayList<DrawCall> list : drawCalls.values()) {
+
+            if (list == null)
+                continue;
+
+            for (DrawCall gpu : list) {
+
+                if (gpu == null)
+                    continue;
+
+                if (gpu.vbo != 0) {
+                    tmp.put(0, gpu.vbo);
+                    gl.glDeleteBuffers(1, tmp);
+                }
+
+                if (gpu.ibo != 0) {
+                    tmp.put(0, gpu.ibo);
+                    gl.glDeleteBuffers(1, tmp);
+                }
+
+                if (gpu.vao != 0) {
+                    tmp.put(0, gpu.vao);
+                    gl.glDeleteVertexArrays(1, tmp);
+                }
             }
         }
 
-        gpuBatches.clear();
+        drawCalls.clear();
         keys.clear();
+
         uploaded = false;
     }
 
-    private static final class GpuBatch {
+    private static final class DrawCall {
+
         int vao, vbo, ibo;
         int indexCount;
     }

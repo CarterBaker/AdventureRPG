@@ -10,7 +10,7 @@ public class RenderManager {
 
     private final MaterialManager materialManager;
 
-    private Long2ObjectOpenHashMap<DrawCall> drawCalls;
+    private Long2ObjectOpenHashMap<GPUPacket> gpuPackets;
     private Long2ObjectOpenHashMap<MegaChunk> removalQueue;
 
     // Base \\
@@ -19,7 +19,7 @@ public class RenderManager {
 
         this.materialManager = worldSystem.materialManager;
 
-        this.drawCalls = new Long2ObjectOpenHashMap<>();
+        this.gpuPackets = new Long2ObjectOpenHashMap<>();
         this.removalQueue = new Long2ObjectOpenHashMap<>();
     }
 
@@ -30,14 +30,14 @@ public class RenderManager {
 
     public void render() {
 
-        processDrawCalls();
+        processGPUPackets();
     }
 
     // Render \\
 
-    private void processDrawCalls() {
+    private void processGPUPackets() {
 
-        for (Long2ObjectOpenHashMap.Entry<DrawCall> entry : drawCalls.long2ObjectEntrySet())
+        for (Long2ObjectOpenHashMap.Entry<GPUPacket> entry : gpuPackets.long2ObjectEntrySet())
             entry.getValue().render();
     }
 
@@ -50,12 +50,12 @@ public class RenderManager {
 
             long megaCoord = entry.getLongKey();
 
-            // Retrieve and remove the corresponding DrawCall
-            DrawCall drawCall = drawCalls.remove(megaCoord);
+            // Retrieve and remove the corresponding gpuPacket
+            GPUPacket gpuPacket = gpuPackets.remove(megaCoord);
 
             // If it exists, dispose it properly
-            if (drawCall != null)
-                drawCall.dispose();
+            if (gpuPacket != null)
+                gpuPacket.dispose();
         }
 
         // Clear the queue after processing
@@ -65,8 +65,8 @@ public class RenderManager {
 
     public void assessMega(MegaChunk megaChunk) {
 
-        // Check if a DrawCall already exists
-        DrawCall existing = drawCalls.get(megaChunk.megaCoordinate);
+        // Check if a gpuPacket already exists
+        GPUPacket existing = gpuPackets.get(megaChunk.megaCoordinate);
 
         if (existing == null)
             addMega(megaChunk);
@@ -74,19 +74,19 @@ public class RenderManager {
 
     public void addMega(MegaChunk megaChunk) {
 
-        // Check if a DrawCall already exists
-        DrawCall existing = drawCalls.get(megaChunk.megaCoordinate);
+        // Check if a gpuPacket already exists
+        GPUPacket existing = gpuPackets.get(megaChunk.megaCoordinate);
 
         if (existing != null)
             existing.dispose();
 
-        // Create and insert the new DrawCall
-        DrawCall drawCall = new DrawCall(
+        // Create and insert the new gpuPacket
+        GPUPacket gpuPacket = new GPUPacket(
                 materialManager,
                 megaChunk,
                 megaChunk.renderPacket());
 
-        drawCalls.put(megaChunk.megaCoordinate, drawCall);
+        gpuPackets.put(megaChunk.megaCoordinate, gpuPacket);
     }
 
     public void removeMega(MegaChunk megaChunk) {

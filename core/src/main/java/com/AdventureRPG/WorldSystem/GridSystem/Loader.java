@@ -4,7 +4,6 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.AdventureRPG.SaveSystem.ChunkData;
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldGenerator;
@@ -26,10 +25,12 @@ public class Loader {
     private final Queue<Long> loadRequests;
     private final Queue<Chunk> generationRequests;
     private final Queue<Chunk> buildRequests;
+    private final Queue<Chunk> batchRequests;
 
     private final Queue<Chunk> loadedResults;
     private final Queue<Chunk> generatedResults;
     private final Queue<Chunk> builtResults;
+    private final Queue<Chunk> batchResults;
 
     // Queue System
     private final QueueProcess[] queueProcess;
@@ -53,16 +54,19 @@ public class Loader {
         this.loadRequests = new ConcurrentLinkedQueue<>();
         this.generationRequests = new ConcurrentLinkedQueue<>();
         this.buildRequests = new ConcurrentLinkedQueue<>();
+        this.batchRequests = new ConcurrentLinkedQueue<>();
 
         this.loadedResults = new ConcurrentLinkedQueue<>();
         this.generatedResults = new ConcurrentLinkedQueue<>();
         this.builtResults = new ConcurrentLinkedQueue<>();
+        this.batchResults = new ConcurrentLinkedQueue<>();
 
         // Queue System
         this.queueProcess = new QueueProcess[] {
                 QueueProcess.Load,
                 QueueProcess.Generate,
-                QueueProcess.Build
+                QueueProcess.Build,
+                QueueProcess.Batch
         };
         this.queueBatch = 0;
         this.processPerBatch = 32;
@@ -91,6 +95,10 @@ public class Loader {
         buildRequests.add(chunk);
     }
 
+    public void requestBatch(Chunk chunk) {
+        batchRequests.add(chunk);
+    }
+
     public Chunk pollLoadedChunk() {
         return loadedResults.poll();
     }
@@ -101,6 +109,10 @@ public class Loader {
 
     public Chunk pollBuiltChunk() {
         return builtResults.poll();
+    }
+
+    public Chunk pollBatchChunk() {
+        return batchResults.poll();
     }
 
     // Queue System \\
@@ -141,6 +153,12 @@ public class Loader {
         Build {
             boolean process(Loader loader) {
                 return loader.processBuildData();
+            }
+        },
+
+        Batch {
+            boolean process(Loader loader) {
+                return loader.processBatchData();
             }
         };
 
@@ -227,6 +245,30 @@ public class Loader {
         return totalProcessThisFrame();
     }
 
+    // Batch \\
+
+    private boolean processBatchData() {
+
+        int index = 0;
+
+        while (!batchRequests.isEmpty() && processIsSafe(index)) {
+
+            Chunk loadedChunk = batchRequests.poll();
+
+            // Run load in another thread
+            threadManager.submitGeneral(() -> {
+
+                loadedChunk.batch();
+                batchResults.add(loadedChunk);
+            });
+
+            // Increment counters on main thread
+            index = incrementQueueTotal(index);
+        }
+
+        return totalProcessThisFrame();
+    }
+
     // Queue Utility \\
 
     private boolean processIsSafe(int index) {
@@ -261,5 +303,9 @@ public class Loader {
 
     public boolean hasBuiltData() {
         return builtResults.size() > 0;
+    }
+
+    public boolean hasBatchData() {
+        return batchResults.size() > 0;
     }
 }

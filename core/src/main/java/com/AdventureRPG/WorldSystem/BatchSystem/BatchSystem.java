@@ -75,6 +75,7 @@ public class BatchSystem {
 
         processAsyncRequests();
         updateLoadedmegas();
+
         renderManager.update();
     }
 
@@ -95,7 +96,7 @@ public class BatchSystem {
                 continue;
 
             threadManager.submitGeneral(() -> {
-                addChunkInternal(chunk);
+                addQueue(chunk);
             });
         }
 
@@ -108,7 +109,7 @@ public class BatchSystem {
                 continue;
 
             threadManager.submitGeneral(() -> {
-                removeChunkInternal(chunk);
+                removalQueue(chunk);
             });
         }
 
@@ -121,7 +122,7 @@ public class BatchSystem {
                 continue;
 
             threadManager.submitGeneral(() -> {
-                assessChunkInternal(chunk);
+                assessmentQueue(chunk);
             });
         }
     }
@@ -142,7 +143,7 @@ public class BatchSystem {
 
     // Main \\
 
-    private void addChunkInternal(Chunk chunk) {
+    private void addQueue(Chunk chunk) {
 
         synchronized (megaLock) {
 
@@ -169,7 +170,7 @@ public class BatchSystem {
         }
     }
 
-    private void removeChunkInternal(Chunk chunk) {
+    private void removalQueue(Chunk chunk) {
 
         synchronized (megaLock) {
 
@@ -183,7 +184,7 @@ public class BatchSystem {
         }
     }
 
-    private void assessChunkInternal(Chunk chunk) {
+    private void assessmentQueue(Chunk chunk) {
 
         synchronized (megaLock) {
 

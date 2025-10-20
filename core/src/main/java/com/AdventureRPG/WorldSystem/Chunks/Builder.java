@@ -17,7 +17,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.IntArray;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
-public class ChunkBuilder {
+public class Builder {
 
     // Game Manager
     private final WorldSystem worldSystem;
@@ -47,7 +47,7 @@ public class ChunkBuilder {
 
     // Base \\
 
-    public ChunkBuilder(WorldSystem worldSystem, Chunk chunk) {
+    public Builder(WorldSystem worldSystem, Chunk chunk) {
 
         // Game Manager
         this.worldSystem = worldSystem;

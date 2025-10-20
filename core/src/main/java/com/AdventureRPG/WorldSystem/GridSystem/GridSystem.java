@@ -8,6 +8,7 @@ import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
 import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
+import com.AdventureRPG.WorldSystem.Chunks.ChunkState;
 
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -53,6 +54,8 @@ public class GridSystem {
     private LongOpenHashSet assessmentQueueCheck;
     private LongArrayFIFOQueue buildQueue;
     private LongOpenHashSet buildQueueCheck;
+    private LongArrayFIFOQueue batchQueue;
+    private LongOpenHashSet batchQueueCheck;
 
     private int loadedChunksThisFrame;
     private int loadedChunksThisTick;
@@ -100,6 +103,8 @@ public class GridSystem {
         this.assessmentQueueCheck = new LongOpenHashSet(grid.totalChunks());
         this.buildQueue = new LongArrayFIFOQueue(grid.totalChunks());
         this.buildQueueCheck = new LongOpenHashSet(grid.totalChunks());
+        this.batchQueue = new LongArrayFIFOQueue(grid.totalChunks());
+        this.batchQueueCheck = new LongOpenHashSet(grid.totalChunks());
 
         this.loadedChunksThisFrame = 0;
         this.loadedChunksThisTick = 0;
@@ -236,6 +241,8 @@ public class GridSystem {
         assessmentQueueCheck.clear();
         buildQueue.clear();
         buildQueueCheck.clear();
+        batchQueue.clear();
+        batchQueueCheck.clear();
 
         // Reversely remove all computed Coordinate2Ints from unloadQueue for efficiency
         unloadQueue.putAll(loadedChunks);
@@ -432,6 +439,36 @@ public class GridSystem {
         return totalProcessThisFrame();
     }
 
+    // Batch \\
+
+    private boolean batchQueue() {
+
+        int index = 0;
+
+        int qSize = batchQueue.size();
+
+        while (index < qSize && processIsSafe(index)) {
+
+            long chunkCoordinate = dequeueBatchQueue();
+            Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
+
+            if (loadedChunk == null) {
+
+                loadedChunks.remove(chunkCoordinate);
+                index = incrementQueueTotal(index);
+
+                continue;
+            }
+
+            if (loadedChunk.getState() == ChunkState.NEEDS_BATCH_DATA)
+                loader.requestBatch(loadedChunk);
+
+            index = incrementQueueTotal(index);
+        }
+
+        return totalProcessThisFrame();
+    }
+
     // Thread Queue \\
 
     private void ReceiveData() {
@@ -439,6 +476,7 @@ public class GridSystem {
         receiveLoadedChunks();
         receiveGeneratedChunks();
         receiveBuiltChunks();
+        receiveBatchChunks();
     }
 
     private void receiveLoadedChunks() {
@@ -496,6 +534,23 @@ public class GridSystem {
         }
     }
 
+    private void receiveBatchChunks() {
+
+        while (loader.hasBatchData()) {
+
+            Chunk loadedChunk = loader.pollBatchChunk();
+
+            long chunkCoordinate = loadedChunk.coordinate;
+            long gridCoordinate = chunkToGridMap.getOrDefault(chunkCoordinate, nullMapping);
+
+            if (gridCoordinate != nullMapping)
+                batchSystem.addChunk(loadedChunk);
+
+            else // TODO: May want to add a small pool to hold older chunks for easy re-access
+                loadedChunk.dispose();
+        }
+    }
+
     // Queue Utility \\
 
     private boolean processIsSafe(int index) {
@@ -518,33 +573,39 @@ public class GridSystem {
 
     enum QueueProcess {
 
-        Unload(5) {
+        Unload(6) {
             boolean process(GridSystem system) {
                 return system.unloadQueue();
             }
         },
 
-        Load(4) {
+        Load(5) {
             boolean process(GridSystem system) {
                 return system.loadQueue();
             }
         },
 
-        Generate(3) {
+        Generate(4) {
             boolean process(GridSystem system) {
                 return system.generateQueue();
             }
         },
 
-        Assessment(2) {
+        Assessment(3) {
             boolean process(GridSystem system) {
                 return system.assessmentQueue();
             }
         },
 
-        Build(1) {
+        Build(2) {
             boolean process(GridSystem system) {
                 return system.buildQueue();
+            }
+        },
+
+        Batch(1) {
+            boolean process(GridSystem system) {
+                return system.batchQueue();
             }
         };
 
@@ -585,6 +646,14 @@ public class GridSystem {
         return chunkCoordinate;
     }
 
+    private long dequeueBatchQueue() {
+
+        long chunkCoordinate = batchQueue.dequeueLong();
+        batchQueueCheck.remove(chunkCoordinate);
+
+        return chunkCoordinate;
+    }
+
     // External Queueing \\
 
     public void addToGenerateQueue(long chunkCoordinate) {
@@ -605,6 +674,12 @@ public class GridSystem {
             buildQueue.enqueue(chunkCoordinate);
     }
 
+    public void addToBatchQueue(long chunkCoordinate) {
+
+        if (batchQueueCheck.add(chunkCoordinate))
+            batchQueue.enqueue(chunkCoordinate);
+    }
+
     // Accessible \\
 
     public Chunk getChunkFromCoordinate(long chunkCoordinate) {
@@ -616,7 +691,8 @@ public class GridSystem {
                 loadQueue.size() > 0 ||
                 assessmentQueue.size() > 0 ||
                 generateQueue.size() > 0 ||
-                buildQueue.size() > 0;
+                buildQueue.size() > 0 ||
+                batchQueue.size() > 0;
     }
 
     public int totalQueueSize() {
@@ -624,7 +700,8 @@ public class GridSystem {
                 loadQueue.size() +
                 assessmentQueue.size() +
                 generateQueue.size() +
-                buildQueue.size();
+                buildQueue.size() +
+                batchQueue.size();
     }
 
     public int getQueueSize(QueueProcess process) {
@@ -634,6 +711,7 @@ public class GridSystem {
             case Generate -> generateQueue.size();
             case Assessment -> assessmentQueue.size();
             case Build -> buildQueue.size();
+            case Batch -> batchQueue.size();
         };
     }
 

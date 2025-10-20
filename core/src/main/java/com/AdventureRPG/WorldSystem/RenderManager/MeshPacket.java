@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldSystem.Util;
+package com.AdventureRPG.WorldSystem.RenderManager;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;

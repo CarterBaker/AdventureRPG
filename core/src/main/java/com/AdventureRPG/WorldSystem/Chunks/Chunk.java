@@ -7,8 +7,8 @@ import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
+import com.AdventureRPG.WorldSystem.RenderManager.MeshPacket;
 import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
-import com.AdventureRPG.WorldSystem.Util.MeshPacket;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 
@@ -22,7 +22,7 @@ public class Chunk {
     private final int WORLD_HEIGHT;
 
     // Build
-    private final ChunkBuilder chunkBuilder;
+    private final Builder chunkBuilder;
     private final ChunkMesh chunkMesh;
 
     // Chunk
@@ -34,6 +34,7 @@ public class Chunk {
     private final AtomicBoolean enqueueGenerate;
     private final AtomicBoolean enqueueAssessment;
     private final AtomicBoolean enqueueBuild;
+    private final AtomicBoolean enqueueBatch;
 
     // Position
     public long position;
@@ -64,7 +65,7 @@ public class Chunk {
         this.WORLD_HEIGHT = GlobalConstant.WORLD_HEIGHT;
 
         // Build
-        this.chunkBuilder = new ChunkBuilder(worldSystem, this);
+        this.chunkBuilder = new Builder(worldSystem, this);
         this.chunkMesh = new ChunkMesh(this);
 
         // Chunk
@@ -77,6 +78,7 @@ public class Chunk {
         this.enqueueGenerate = new AtomicBoolean(false);
         this.enqueueAssessment = new AtomicBoolean(false);
         this.enqueueBuild = new AtomicBoolean(false);
+        this.enqueueBatch = new AtomicBoolean(false);
 
         // Neighbors
         this.neighborStatus = NeighborStatus.INCOMPLETE;
@@ -151,14 +153,12 @@ public class Chunk {
 
     private boolean needsGenerationData() {
 
-        if (subChunks == null) {
+        if (subChunks != null)
+            return false;
 
-            setState(ChunkState.NEEDS_GENERATION_DATA);
+        setState(ChunkState.NEEDS_GENERATION_DATA);
 
-            return true;
-        }
-
-        return false;
+        return true;
     }
 
     // Build \\
@@ -168,18 +168,25 @@ public class Chunk {
         if (needsGenerationData())
             return;
 
-        chunkMesh.Clear();
-
-        for (int subChunkIndex = 0; subChunkIndex < WORLD_HEIGHT; subChunkIndex++) {
-
+        for (int subChunkIndex = 0; subChunkIndex < WORLD_HEIGHT; subChunkIndex++)
             buildSubChunk(subChunkIndex);
-            chunkMesh.merge(subChunkIndex);
-        }
+
+        setState(ChunkState.NEEDS_BATCH_DATA);
     }
 
     private void buildSubChunk(int subChunkIndex) {
 
         chunkBuilder.build(subChunkIndex);
+    }
+
+    // Batch \\
+
+    public void batch() {
+
+        chunkMesh.Clear();
+
+        for (int subChunkIndex = 0; subChunkIndex < WORLD_HEIGHT; subChunkIndex++)
+            chunkMesh.merge(subChunkIndex);
     }
 
     // Neighbors \\
@@ -294,6 +301,13 @@ public class Chunk {
 
                 if (enqueueBuild.compareAndSet(false, true))
                     gridSystem.addToBuildQueue(coordinate);
+
+                break;
+
+            case NEEDS_BATCH_DATA:
+
+                if (enqueueBatch.compareAndSet(false, true))
+                    gridSystem.addToBatchQueue(coordinate);
 
                 break;
 
