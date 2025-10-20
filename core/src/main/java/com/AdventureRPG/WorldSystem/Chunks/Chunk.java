@@ -89,6 +89,7 @@ public class Chunk {
         for (Direction2Int direction : Direction2Int.values()) {
 
             long neighborCoordinate = getWrappedNeighborCoordinate(direction);
+
             neighborCoordinates[direction.index] = neighborCoordinate;
             coordToIndex.put(neighborCoordinate, direction.index);
         }
@@ -97,6 +98,7 @@ public class Chunk {
     private long getWrappedNeighborCoordinate(Direction2Int direction) {
 
         long neighborCoordinate = Coordinate2Int.add(coordinate, direction.packed);
+
         neighborCoordinate = worldSystem.wrapAroundWorld(neighborCoordinate);
 
         return neighborCoordinate;
@@ -187,6 +189,8 @@ public class Chunk {
 
         for (int subChunkIndex = 0; subChunkIndex < WORLD_HEIGHT; subChunkIndex++)
             chunkMesh.merge(subChunkIndex);
+
+        setState(ChunkState.FINALIZED);
     }
 
     // Neighbors \\
