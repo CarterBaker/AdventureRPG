@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-// TODO: AI Created, needs scrutin
 public final class RenderPacket {
 
     public final Int2ObjectOpenHashMap<RenderKey> keys = new Int2ObjectOpenHashMap<>();

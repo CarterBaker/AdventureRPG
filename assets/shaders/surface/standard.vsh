@@ -1,10 +1,9 @@
-#version 330
+#version 330 core
 
-in vec3 a_position;
-in float a_colorPacked;
-in vec3 a_normal;
-in vec3 a_tangent;
-in vec2 a_texCoord0;
+layout(location = 0) in vec3 a_position;
+layout(location = 1) in vec3 a_normal;
+layout(location = 2) in float a_colorPacked;
+layout(location = 3) in vec2 a_texCoord0;
 
 uniform mat4 u_model;
 uniform mat4 u_view;
@@ -32,7 +31,9 @@ void main() {
 
     mat3 normalMatrix = transpose(inverse(mat3(u_model * u_transform)));
     v_normal = normalize(normalMatrix * a_normal);
-    v_tangent = normalize(normalMatrix * a_tangent);
+
+    // Since cube world, tangent == normal is perfectly fine
+    v_tangent = v_normal;
 
     v_uv = a_texCoord0;
     v_color = unpackColor(a_colorPacked);
