@@ -162,6 +162,8 @@ public class MegaChunk {
 
     private void combineChunks() {
 
+        boolean zero = (megaCoordinate == Coordinate2Int.pack(0, 0)); // TODO: Debug line
+
         megaPacket.clear();
 
         for (Long2ObjectMap.Entry<Chunk> entry : combinedChunks.long2ObjectEntrySet()) {
@@ -170,15 +172,19 @@ public class MegaChunk {
 
             MeshPacket other = chunk.meshPacket();
             megaPacket.merge(other);
+
+            if (debug && zero)
+                debug("Merging " + Coordinate2Int.toString(chunk.coordinate) + " to mega: " +
+                        " total batches: " + megaPacket.getTotalBatchCount() +
+                        ", total verts: " + megaPacket.getTotalVertexCount());
         }
 
         renderPacket = RenderConversion.convert(megaPacket, materialManager);
 
-        if (debug)
-            System.out.println(
-                    Coordinate2Int.toString(megaCoordinate) +
-                            " total batches: " + renderPacket.getTotalBatchCount() +
-                            ", total verts: " + renderPacket.getTotalVertexCount());
+        if (debug && zero)
+            debug("Mega Coordinate: " + Coordinate2Int.toString(megaCoordinate) +
+                    ", total batches: " + renderPacket.getTotalBatchCount() +
+                    ", total verts: " + renderPacket.getTotalVertexCount());
     }
 
     // Utility \\
@@ -210,5 +216,12 @@ public class MegaChunk {
 
     public RenderPacket renderPacket() {
         return renderPacket;
+    }
+
+    // Debug \\
+
+    private void debug(String input) {
+
+        System.out.println("[MegaChunk] " + input);
     }
 }

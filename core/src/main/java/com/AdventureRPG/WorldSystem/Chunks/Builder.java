@@ -23,7 +23,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 public class Builder {
 
     // Debug
-    private final boolean debug = true; // TODO: Debug line
+    private final boolean debug = false; // TODO: Debug line
 
     // Game Manager
     private final WorldSystem worldSystem;

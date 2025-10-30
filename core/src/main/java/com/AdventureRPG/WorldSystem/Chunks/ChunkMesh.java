@@ -7,7 +7,7 @@ import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
 public final class ChunkMesh {
 
     // Debug
-    private final boolean debug = true; // TODO: Debug line
+    private final boolean debug = false; // TODO: Debug line
 
     // Chunk
     private final Chunk chunk;

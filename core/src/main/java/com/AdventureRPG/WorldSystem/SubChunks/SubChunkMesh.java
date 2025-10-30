@@ -41,7 +41,7 @@ public final class SubChunkMesh {
         if (debug && subChunkIndex == 0 && subChunk.chunk.coordinate == Coordinate2Int.pack(0, 0))
             debug("Added to chunk: " + Coordinate2Int.toString(subChunk.chunk.coordinate) +
                     " at index " + subChunkIndex +
-                    " adding : " + verts.length / 9 + " verts," +
+                    " adding : " + verts.length + " floats," +
                     " total verts: " + meshPacket.getTotalVertexCount());
     }
 
