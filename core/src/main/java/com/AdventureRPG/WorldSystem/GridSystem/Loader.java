@@ -9,6 +9,7 @@ import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldGenerator;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
+import com.AdventureRPG.WorldSystem.Chunks.ChunkState;
 
 public class Loader {
 
@@ -204,7 +205,7 @@ public class Loader {
 
             Chunk loadedChunk = generationRequests.poll();
 
-            if (loadedChunk == null)
+            if (loadedChunk == null || !loadedChunk.verifyState(ChunkState.NEEDS_GENERATION_DATA))
                 continue;
 
             // Run load in dedicated Generation-Thread
@@ -234,8 +235,14 @@ public class Loader {
             // Run load in another thread
             threadManager.submitGeneral(() -> {
 
-                loadedChunk.build();
-                builtResults.add(loadedChunk);
+                if (!loadedChunk.verifyState(ChunkState.NEEDS_BUILD_DATA))
+                    return;
+
+                if (!loadedChunk.build())
+                    requestBuild(loadedChunk);
+
+                else
+                    builtResults.add(loadedChunk);
             });
 
             // Increment counters on main thread
@@ -257,6 +264,9 @@ public class Loader {
 
             // Run load in another thread
             threadManager.submitGeneral(() -> {
+
+                if (!loadedChunk.verifyState(ChunkState.NEEDS_BATCH_DATA))
+                    return;
 
                 loadedChunk.batch();
                 batchResults.add(loadedChunk);

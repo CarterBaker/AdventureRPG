@@ -34,7 +34,7 @@ public final class SubChunk {
         this.blocks = new BlockContainer(CHUNK_SIZE);
 
         // Build
-        this.subChunkMesh = new SubChunkMesh();
+        this.subChunkMesh = new SubChunkMesh(this, subChunkIndex);
 
         // Utility
         this.biomeShift = Integer.numberOfTrailingZeros(CHUNK_SIZE / BIOME_SIZE);

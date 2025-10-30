@@ -1,6 +1,9 @@
 package com.AdventureRPG.WorldSystem.MegaChunk;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.AdventureRPG.MaterialManager.MaterialManager;
+import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
@@ -15,6 +18,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 public class MegaChunk {
+
+    // Debug
+    private final boolean debug = false; // TODO: Debug line
 
     // Game Manager
     private final MaterialManager materialManager;
@@ -38,6 +44,9 @@ public class MegaChunk {
     // Data
     private final MeshPacket megaPacket;
     private RenderPacket renderPacket;
+
+    // Multi-Thread
+    private final AtomicBoolean threadSafety;
 
     // Base \\
 
@@ -70,6 +79,9 @@ public class MegaChunk {
 
         // Data
         this.megaPacket = new MeshPacket();
+
+        // Multi-Thread
+        this.threadSafety = new AtomicBoolean(false);
     }
 
     public void update() {
@@ -108,14 +120,20 @@ public class MegaChunk {
 
         combinedChunks.putIfAbsent(chunk.coordinate, chunk);
 
-        MeshPacket other = chunk.meshPacket();
-        megaPacket.merge(other);
-
         if (combinedChunks.size() != totalChunks)
             return;
 
-        state = MegaState.COMPLETE;
-        combinedChunks();
+        if (threadSafety.compareAndSet(false, true)) {
+
+            synchronized (this) {
+
+                if (state != MegaState.COMPLETE) {
+
+                    state = MegaState.COMPLETE;
+                    combineChunks();
+                }
+            }
+        }
     }
 
     public void removeChunk(Chunk chunk) {
@@ -142,7 +160,7 @@ public class MegaChunk {
 
     // Data \\
 
-    private void combinedChunks() {
+    private void combineChunks() {
 
         megaPacket.clear();
 
@@ -155,6 +173,12 @@ public class MegaChunk {
         }
 
         renderPacket = RenderConversion.convert(megaPacket, materialManager);
+
+        if (debug)
+            System.out.println(
+                    Coordinate2Int.toString(megaCoordinate) +
+                            " total batches: " + renderPacket.getTotalBatchCount() +
+                            ", total verts: " + renderPacket.getTotalVertexCount());
     }
 
     // Utility \\

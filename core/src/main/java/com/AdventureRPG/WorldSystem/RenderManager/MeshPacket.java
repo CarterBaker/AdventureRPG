@@ -118,94 +118,87 @@ public final class MeshPacket {
         }
 
         public MaterialBatch addVerticesSafe(float... newVertices) {
+            final int stride = GlobalConstant.VERT_STRIDE;
+            final int vertsPerQuad = 4;
+            final int vertsToAdd = newVertices.length / stride;
 
-            int vertsToAdd = newVertices.length / GlobalConstant.VERT_STRIDE;
-
-            if (vertsToAdd % 4 != 0)
+            if (vertsToAdd % vertsPerQuad != 0)
                 throw new IllegalArgumentException("Vertices must be quad-aligned (multiples of 4 verts)");
 
-            // If adding exceeds limit
-            if (vertexCount + vertsToAdd > GlobalConstant.MESH_VERT_LIMIT) {
+            // How many quads are in the input
+            final int quadsToAdd = vertsToAdd / vertsPerQuad;
 
-                int spaceLeft = GlobalConstant.MESH_VERT_LIMIT - vertexCount;
+            // How many vertices fit in this batch
+            int spaceLeft = GlobalConstant.MESH_VERT_LIMIT - vertexCount;
 
-                // Round down to nearest multiple of 4
-                spaceLeft = (spaceLeft / 4) * 4;
+            // How many quads *actually* fit without splitting
+            int quadsThatFit = Math.min(spaceLeft / vertsPerQuad, quadsToAdd);
 
-                if (spaceLeft > 0) {
-
-                    // Add only quads that fit
-                    int floatsToAdd = spaceLeft * GlobalConstant.VERT_STRIDE;
-                    vertices.addElements(vertices.size(), newVertices, 0, floatsToAdd);
-
-                    int quadsToAdd = spaceLeft / 4;
-
-                    for (int q = 0; q < quadsToAdd; q++) {
-
-                        int base = vertexCount + q * 4;
-                        // Two triangles per quad
-                        indices.add((short) base);
-                        indices.add((short) (base + 1));
-                        indices.add((short) (base + 2));
-
-                        indices.add((short) base);
-                        indices.add((short) (base + 2));
-                        indices.add((short) (base + 3));
-                    }
-
-                    vertexCount += spaceLeft;
-                }
-
-                int remainingVerts = vertsToAdd - spaceLeft;
-
-                if (remainingVerts <= 0)
-                    return null;
-
+            // If nothing fits, early overflow
+            if (quadsThatFit <= 0) {
+                // Create overflow batch for all new vertices
                 MaterialBatch overflow = new MaterialBatch(materialId);
-                int floatsRemaining = remainingVerts * GlobalConstant.VERT_STRIDE;
-                overflow.vertices.addElements(0, newVertices,
-                        spaceLeft * GlobalConstant.VERT_STRIDE, floatsRemaining);
-                overflow.vertexCount = remainingVerts;
+                overflow.vertices.addElements(0, newVertices);
+                overflow.vertexCount = vertsToAdd;
 
-                int quadsRemaining = remainingVerts / 4;
-
-                for (int q = 0; q < quadsRemaining; q++) {
-
-                    int base = q * 4;
+                // Build indices for overflow
+                for (int q = 0; q < quadsToAdd; q++) {
+                    int base = q * vertsPerQuad;
                     overflow.indices.add((short) base);
                     overflow.indices.add((short) (base + 1));
                     overflow.indices.add((short) (base + 2));
-
                     overflow.indices.add((short) base);
                     overflow.indices.add((short) (base + 2));
                     overflow.indices.add((short) (base + 3));
                 }
-
                 return overflow;
             }
 
-            else {
+            // Number of vertices we can safely add
+            int vertsToActuallyAdd = quadsThatFit * vertsPerQuad;
+            int floatsToAdd = vertsToActuallyAdd * stride;
 
-                // Fits entirely
-                vertices.addElements(vertices.size(), newVertices);
-                int quadsToAdd = vertsToAdd / 4;
+            // Add the vertices that fit in this batch
+            vertices.addElements(vertices.size(), newVertices, 0, floatsToAdd);
 
-                for (int q = 0; q < quadsToAdd; q++) {
-                    int base = vertexCount + q * 4;
-                    // Two triangles per quad
-                    indices.add((short) base);
-                    indices.add((short) (base + 1));
-                    indices.add((short) (base + 2));
-
-                    indices.add((short) base);
-                    indices.add((short) (base + 2));
-                    indices.add((short) (base + 3));
-                }
-
-                vertexCount += vertsToAdd;
-
-                return null;
+            // Generate indices for those quads
+            for (int q = 0; q < quadsThatFit; q++) {
+                int base = vertexCount + q * vertsPerQuad;
+                indices.add((short) base);
+                indices.add((short) (base + 1));
+                indices.add((short) (base + 2));
+                indices.add((short) base);
+                indices.add((short) (base + 2));
+                indices.add((short) (base + 3));
             }
+
+            vertexCount += vertsToActuallyAdd;
+
+            // If everything fit, done
+            if (quadsThatFit == quadsToAdd)
+                return null;
+
+            // Otherwise, create overflow with remaining quads
+            int remainingQuads = quadsToAdd - quadsThatFit;
+            int floatsRemaining = remainingQuads * vertsPerQuad * stride;
+            int start = floatsToAdd;
+
+            MaterialBatch overflow = new MaterialBatch(materialId);
+            overflow.vertices.addElements(0, newVertices, start, floatsRemaining);
+            overflow.vertexCount = remainingQuads * vertsPerQuad;
+
+            // Build indices for overflow
+            for (int q = 0; q < remainingQuads; q++) {
+                int base = q * vertsPerQuad;
+                overflow.indices.add((short) base);
+                overflow.indices.add((short) (base + 1));
+                overflow.indices.add((short) (base + 2));
+                overflow.indices.add((short) base);
+                overflow.indices.add((short) (base + 2));
+                overflow.indices.add((short) (base + 3));
+            }
+
+            return overflow;
         }
 
         public MaterialBatch append(MaterialBatch other) {
@@ -213,4 +206,24 @@ public final class MeshPacket {
         }
     }
 
+    public int getTotalVertexCount() {
+
+        int total = 0;
+
+        for (List<MaterialBatch> list : batches.values())
+            for (MaterialBatch batch : list)
+                total += batch.getVertexCount();
+
+        return total;
+    }
+
+    public int getTotalBatchCount() {
+
+        int total = 0;
+
+        for (List<MaterialBatch> list : batches.values())
+            total += list.size();
+
+        return total;
+    }
 }

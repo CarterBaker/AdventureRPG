@@ -1,8 +1,11 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
 import java.util.BitSet;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.AdventureRPG.MaterialManager.MaterialData;
 import com.AdventureRPG.TextureManager.TextureManager.UVRect;
+import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.Util.Direction3Int;
 import com.AdventureRPG.Util.GlobalConstant;
@@ -18,6 +21,9 @@ import com.badlogic.gdx.utils.IntArray;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
 public class Builder {
+
+    // Debug
+    private final boolean debug = true; // TODO: Debug line
 
     // Game Manager
     private final WorldSystem worldSystem;
@@ -44,6 +50,9 @@ public class Builder {
     private BitSet batchedBlocksDown;
 
     private Color tmpColor;
+
+    // Multi-Thread
+    private final AtomicBoolean threadSafety;
 
     // Base \\
 
@@ -73,11 +82,20 @@ public class Builder {
         this.batchedBlocksDown = new BitSet(packedCoordinate3Int.chunkSize);
 
         this.tmpColor = new Color();
+
+        // Multi-Thread
+        this.threadSafety = new AtomicBoolean(false);
     }
 
     // Build \\
 
-    public void build(int subChunkIndex) {
+    public boolean build(int subChunkIndex) {
+
+        boolean output = false;
+
+        // Attempt to lock
+        if (!threadSafety.compareAndSet(false, true))
+            throw new AbortBuildException();
 
         try {
 
@@ -119,7 +137,7 @@ public class Builder {
 
                     // Assemble the face using the data so far
                     assembleFace(
-                            quads, batchedSet,
+                            batchedSet,
                             subChunk,
                             subChunkIndex,
                             x, y, z,
@@ -132,18 +150,22 @@ public class Builder {
             // If there is data build the mesh
             if (quads.size > 0)
                 buildFromQuads(subChunk.subChunkMesh);
+
+            output = true;
         }
 
         // Exit early and clear the lists if anything went wrong
         catch (AbortBuildException endEarly) {
-            clearData();
         }
 
         // Clear the data after a successful build
         finally {
+
             clearData();
+            threadSafety.set(false);
         }
 
+        return output;
     }
 
     // Clear all the lists for the next build
@@ -175,7 +197,7 @@ public class Builder {
 
     // Assemble the face and combine like blocks into the same quad
     private void assembleFace(
-            IntArray quads, BitSet batchedSet,
+            BitSet batchedSet,
             SubChunk subChunk,
             int subChunkIndex,
             int x, int y, int z,
@@ -248,7 +270,6 @@ public class Builder {
 
         // Pack the face using the data accumulated
         prepareFace(
-                quads,
                 subChunk,
                 subChunkIndex,
                 x, y, z,
@@ -410,7 +431,6 @@ public class Builder {
     // Finalize \\
 
     private void prepareFace(
-            IntArray quads,
             SubChunk subChunk,
             int subChunkIndex,
             int x, int y, int z,
@@ -459,7 +479,6 @@ public class Builder {
         int materialDataID = worldSystem.getBlockByID(blockID).getMaterialDataForSide(direction).id;
 
         packQuad(
-                quads,
                 xyz,
                 width,
                 height,
@@ -633,7 +652,6 @@ public class Builder {
     }
 
     private void packQuad(
-            IntArray quads,
             int xyz,
             int width,
             int height,
@@ -741,6 +759,9 @@ public class Builder {
 
             subChunkMesh.addVertices(matId, quadVertices);
         }
+
+        if (debug && chunk.coordinate == Coordinate2Int.pack(0, 0) && quads.size > 0)
+            debug("Sub Chunk Index: " + subChunkMesh.subChunkIndex + ", total verts: " + (quads.size * 4 / 9));
     }
 
     private enum NeighborBlockDirection {
@@ -777,5 +798,19 @@ public class Builder {
     }
 
     public class AbortBuildException extends RuntimeException {
+
+    }
+
+    // Accessible \\
+
+    public boolean isRunning() {
+        return threadSafety.get();
+    }
+
+    // Debug \\
+
+    private void debug(String input) {
+
+        System.out.println("[Builder] " + input);
     }
 }

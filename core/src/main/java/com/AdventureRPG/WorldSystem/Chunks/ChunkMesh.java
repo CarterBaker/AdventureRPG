@@ -1,9 +1,13 @@
 package com.AdventureRPG.WorldSystem.Chunks;
 
+import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.WorldSystem.RenderManager.MeshPacket;
 import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
 
 public final class ChunkMesh {
+
+    // Debug
+    private final boolean debug = true; // TODO: Debug line
 
     // Chunk
     private final Chunk chunk;
@@ -35,9 +39,24 @@ public final class ChunkMesh {
         MeshPacket other = subChunk.subChunkMesh.meshPacket();
 
         meshPacket.merge(other);
+
+        if (debug && chunk.coordinate == Coordinate2Int.pack(0, 0))
+            if (subChunk.subChunkMesh.hasData())
+                debug(
+                        "(Chunk " + Coordinate2Int.toString(chunk.coordinate) +
+                                " adding subChunk: " + subChunkIndex +
+                                ") total batches: " + meshPacket.getTotalBatchCount() +
+                                ", total verts: " + meshPacket.getTotalVertexCount());
     }
 
     public MeshPacket meshPacket() {
         return meshPacket;
+    }
+
+    // Debug \\
+
+    private void debug(String input) {
+
+        System.out.println("[ChunkMesh] " + input);
     }
 }

@@ -1,7 +1,6 @@
 package com.AdventureRPG.MaterialManager;
 
 import com.AdventureRPG.GameManager;
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
 import com.AdventureRPG.TextureManager.TextureManager;
@@ -65,9 +64,8 @@ public class MaterialManager {
 
     public void update() {
 
-        for (int i = 0, n = materials.size(); i < n; i++) {
+        for (int i = 0, n = materials.size(); i < n; i++)
             materials.get(i).updateUniversalUniforms();
-        }
     }
 
     public void dispose() {

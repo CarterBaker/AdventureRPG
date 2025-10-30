@@ -126,6 +126,16 @@ public class Chunk {
         enqueue();
     }
 
+    public boolean verifyState(ChunkState chunkState) {
+
+        if (state == chunkState)
+            return true;
+
+        enqueue();
+
+        return false;
+    }
+
     // Position \\
 
     public void moveTo(long position) {
@@ -165,20 +175,19 @@ public class Chunk {
 
     // Build \\
 
-    public void build() {
-
-        if (needsGenerationData())
-            return;
+    public boolean build() {
 
         for (int subChunkIndex = 0; subChunkIndex < WORLD_HEIGHT; subChunkIndex++)
-            buildSubChunk(subChunkIndex);
+            if (!buildSubChunk(subChunkIndex))
+                return false;
 
         setState(ChunkState.NEEDS_BATCH_DATA);
+
+        return true;
     }
 
-    private void buildSubChunk(int subChunkIndex) {
-
-        chunkBuilder.build(subChunkIndex);
+    private boolean buildSubChunk(int subChunkIndex) {
+        return chunkBuilder.build(subChunkIndex);
     }
 
     // Batch \\
@@ -248,36 +257,23 @@ public class Chunk {
 
     private void updateNeighborStatus() {
 
-        // Keep track so there is no chance of calling setState() twice
-        boolean needsBuildData = false;
+        for (int i = 0; i < 8; i++) {
 
-        if (neighborStatus == NeighborStatus.INCOMPLETE) {
+            Chunk neighbor = neighbors[i];
 
-            for (int i = 0; i < 4; i++)
-                if (neighbors[i] == null || neighbors[i].getState() == ChunkState.NEEDS_GENERATION_DATA)
-                    return;
+            if (neighbor == null || neighbor.getState() == ChunkState.NEEDS_GENERATION_DATA) {
 
-            needsBuildData = true;
-            neighborStatus = NeighborStatus.PARTIAL;
+                neighborStatus = NeighborStatus.INCOMPLETE;
+                return;
+            }
         }
 
-        if (neighborStatus == NeighborStatus.PARTIAL) {
-
-            for (int i = 4; i < 8; i++)
-                if (neighbors[i] == null || neighbors[i].getState() == ChunkState.NEEDS_GENERATION_DATA)
-                    return;
-
-            needsBuildData = true;
-            neighborStatus = NeighborStatus.COMPLETE;
-        }
-
-        if (needsBuildData)
-            setState(ChunkState.NEEDS_BUILD_DATA);
+        neighborStatus = NeighborStatus.COMPLETE;
+        setState(ChunkState.NEEDS_BUILD_DATA);
     }
 
     public enum NeighborStatus {
         INCOMPLETE,
-        PARTIAL,
         COMPLETE
     }
 

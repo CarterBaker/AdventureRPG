@@ -55,9 +55,9 @@ public class Main extends Game {
 
     // Close the main window on game close
     private void HandleGameWindow() {
-        if (getScreen() != null) {
+
+        if (getScreen() != null)
             getScreen().dispose();
-        }
     }
 
     // Save the window size to the settings file

@@ -7,7 +7,7 @@ import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g3d.Shader;
-import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.VertexAttribute;
 import com.badlogic.gdx.graphics.VertexAttributes;
@@ -276,7 +276,7 @@ public class ShaderManager implements ShaderProvider {
     }
 
     public void renderFullScreenQuad(ShaderProgram shader) {
-        fullScreenQuad.render(shader, GL20.GL_TRIANGLES);
+        fullScreenQuad.render(shader, GL30.GL_TRIANGLES);
     }
 
 }

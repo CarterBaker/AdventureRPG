@@ -83,4 +83,18 @@ public final class RenderPacket {
             this.indexCount = indices.length;
         }
     }
+
+    public int getTotalVertexCount() {
+
+        int total = 0;
+
+        for (RenderBatch batch : batches)
+            total += batch.vertexCount;
+
+        return total;
+    }
+
+    public int getTotalBatchCount() {
+        return batches.size();
+    }
 }

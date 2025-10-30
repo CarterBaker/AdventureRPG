@@ -4,7 +4,6 @@ import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.MegaChunk.MegaChunk;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 
 import java.nio.*;
@@ -80,36 +79,36 @@ public final class GPUPacket {
             tmp.clear();
             gl.glGenBuffers(1, tmp);
             gpu.vbo = tmp.get(0);
-            gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, gpu.vbo);
-            gl.glBufferData(GL20.GL_ARRAY_BUFFER, vBuf.capacity() * Float.BYTES, vBuf, GL20.GL_STATIC_DRAW);
+            gl.glBindBuffer(GL30.GL_ARRAY_BUFFER, gpu.vbo);
+            gl.glBufferData(GL30.GL_ARRAY_BUFFER, vBuf.capacity() * Float.BYTES, vBuf, GL30.GL_STATIC_DRAW);
 
             tmp.clear();
             gl.glGenBuffers(1, tmp);
             gpu.ibo = tmp.get(0);
-            gl.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, gpu.ibo);
-            gl.glBufferData(GL20.GL_ELEMENT_ARRAY_BUFFER, iBuf.capacity() * Short.BYTES, iBuf, GL20.GL_STATIC_DRAW);
+            gl.glBindBuffer(GL30.GL_ELEMENT_ARRAY_BUFFER, gpu.ibo);
+            gl.glBufferData(GL30.GL_ELEMENT_ARRAY_BUFFER, iBuf.capacity() * Short.BYTES, iBuf, GL30.GL_STATIC_DRAW);
 
             int stride = GlobalConstant.VERT_STRIDE * Float.BYTES;
             int offset = 0;
 
             // Position (x, y, z)
             gl.glEnableVertexAttribArray(0);
-            gl.glVertexAttribPointer(0, 3, GL20.GL_FLOAT, false, stride, offset);
+            gl.glVertexAttribPointer(0, 3, GL30.GL_FLOAT, false, stride, offset);
             offset += 3 * Float.BYTES;
 
             // Normal / direction (x, y, z)
             gl.glEnableVertexAttribArray(1);
-            gl.glVertexAttribPointer(1, 3, GL20.GL_FLOAT, false, stride, offset);
+            gl.glVertexAttribPointer(1, 3, GL30.GL_FLOAT, false, stride, offset);
             offset += 3 * Float.BYTES;
 
             // Color (packed as single float)
             gl.glEnableVertexAttribArray(2);
-            gl.glVertexAttribPointer(2, 1, GL20.GL_FLOAT, false, stride, offset);
+            gl.glVertexAttribPointer(2, 1, GL30.GL_FLOAT, false, stride, offset);
             offset += 1 * Float.BYTES;
 
             // UV (u, v)
             gl.glEnableVertexAttribArray(3);
-            gl.glVertexAttribPointer(3, 2, GL20.GL_FLOAT, false, stride, offset);
+            gl.glVertexAttribPointer(3, 2, GL30.GL_FLOAT, false, stride, offset);
 
             gl.glBindVertexArray(0);
 
@@ -135,14 +134,14 @@ public final class GPUPacket {
             if (list == null || list.isEmpty())
                 continue;
 
+            key.shaderProgram.bind();
+            key.textureArray.bind();
+
             materialManager.setUniform(
                     key.id,
                     "u_transform",
                     megaChunk.renderPosition(),
                     true);
-
-            key.shaderProgram.bind();
-            key.textureArray.bind();
 
             // draw all GPU batches for this material
             for (DrawCall gpu : list) {
@@ -151,7 +150,7 @@ public final class GPUPacket {
                     continue;
 
                 gl.glBindVertexArray(gpu.vao);
-                gl.glDrawElements(GL20.GL_TRIANGLES, gpu.indexCount, GL20.GL_UNSIGNED_SHORT, 0);
+                gl.glDrawElements(GL30.GL_TRIANGLES, gpu.indexCount, GL30.GL_UNSIGNED_SHORT, 0);
             }
 
             gl.glBindVertexArray(0);
