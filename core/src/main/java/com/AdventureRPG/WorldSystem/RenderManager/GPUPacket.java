@@ -91,6 +91,8 @@ public final class GPUPacket {
             int stride = GlobalConstant.VERT_STRIDE * Float.BYTES;
             int offset = 0;
 
+            key.shaderProgram.bind();
+
             // Position (x, y, z)
             gl.glEnableVertexAttribArray(0);
             gl.glVertexAttribPointer(0, 3, GL30.GL_FLOAT, false, stride, offset);
@@ -150,6 +152,7 @@ public final class GPUPacket {
                     continue;
 
                 gl.glBindVertexArray(gpu.vao);
+                gl.glBindBuffer(GL30.GL_ELEMENT_ARRAY_BUFFER, gpu.ibo);
                 gl.glDrawElements(GL30.GL_TRIANGLES, gpu.indexCount, GL30.GL_UNSIGNED_SHORT, 0);
             }
 
