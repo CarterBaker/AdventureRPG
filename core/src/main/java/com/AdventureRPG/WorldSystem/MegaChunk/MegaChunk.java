@@ -3,7 +3,6 @@ package com.AdventureRPG.WorldSystem.MegaChunk;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.AdventureRPG.MaterialManager.MaterialManager;
-import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
@@ -162,29 +161,17 @@ public class MegaChunk {
 
     private void combineChunks() {
 
-        boolean zero = (megaCoordinate == Coordinate2Int.pack(0, 0)); // TODO: Debug line
-
         megaPacket.clear();
 
         for (Long2ObjectMap.Entry<Chunk> entry : combinedChunks.long2ObjectEntrySet()) {
 
             Chunk chunk = entry.getValue();
 
-            MeshPacket other = chunk.meshPacket();
+            MeshPacket other = chunk.chunkMesh.getMeshPacket();
             megaPacket.merge(other);
-
-            if (debug && zero)
-                debug("Merging " + Coordinate2Int.toString(chunk.coordinate) + " to mega: " +
-                        " total batches: " + megaPacket.getTotalBatchCount() +
-                        ", total verts: " + megaPacket.getTotalVertexCount());
         }
 
         renderPacket = RenderConversion.convert(megaPacket, materialManager);
-
-        if (debug && zero)
-            debug("Mega Coordinate: " + Coordinate2Int.toString(megaCoordinate) +
-                    ", total batches: " + renderPacket.getTotalBatchCount() +
-                    ", total verts: " + renderPacket.getTotalVertexCount());
     }
 
     // Utility \\

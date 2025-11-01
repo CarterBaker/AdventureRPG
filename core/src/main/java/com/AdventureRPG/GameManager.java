@@ -232,7 +232,7 @@ public class GameManager implements Screen {
         worldSystem.loadChunks();
 
         loadScreen = (LoadScreen) UISystem.open(Menu.LoadScreen);
-        loadScreen.setMaxProgrss(worldSystem.gridSystem.totalQueueSize());
+        loadScreen.setMaxProgrss(worldSystem.queueSystem.totalQueueSize());
 
         gameState = GameState.Loading;
     }
@@ -240,12 +240,12 @@ public class GameManager implements Screen {
     // Run once per frame when the game is loading
     private void loading() {
 
-        if (worldSystem.gridSystem.hasQueue())
-            loadScreen.setProgrss(worldSystem.gridSystem.totalQueueSize());
+        if (worldSystem.queueSystem.hasQueue())
+            loadScreen.setProgrss(worldSystem.queueSystem.totalQueueSize());
 
         else {
 
-            loadScreen.setProgrss(worldSystem.gridSystem.totalQueueSize());
+            loadScreen.setProgrss(worldSystem.queueSystem.totalQueueSize());
             UISystem.close(loadScreen);
             gameState = GameState.Ready;
 

@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldSystem.GridSystem;
+package com.AdventureRPG.WorldSystem.QueueSystem;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -6,10 +6,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.AdventureRPG.SaveSystem.ChunkData;
 import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.Util.GlobalConstant;
-import com.AdventureRPG.WorldSystem.WorldGenerator;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
-import com.AdventureRPG.WorldSystem.Chunks.ChunkState;
+import com.AdventureRPG.WorldSystem.QueueSystem.Queue.QueueProcess;
 
 public class Loader {
 
@@ -17,24 +16,16 @@ public class Loader {
     private final ThreadManager threadManager;
     private final ChunkData chunkData;
     private final WorldSystem worldSystem;
-    private WorldGenerator worldGenerator;
-
-    // Settings
-    private final int MAX_CHUNK_LOADS_PER_FRAME;
 
     // Async System
     private final Queue<Long> loadRequests;
     private final Queue<Chunk> generationRequests;
+    private final Queue<Chunk> assessmentRequests;
     private final Queue<Chunk> buildRequests;
     private final Queue<Chunk> batchRequests;
 
-    private final Queue<Chunk> loadedResults;
-    private final Queue<Chunk> generatedResults;
-    private final Queue<Chunk> builtResults;
-    private final Queue<Chunk> batchResults;
-
     // Queue System
-    private final QueueProcess[] queueProcess;
+    private final InternalQueueProcess[] queueProcess;
     private int queueBatch;
     private final int processPerBatch;
     private int loadedChunksThisFrame;
@@ -48,34 +39,24 @@ public class Loader {
         this.chunkData = worldSystem.saveSystem.chunkData;
         this.worldSystem = worldSystem;
 
-        // Settings
-        this.MAX_CHUNK_LOADS_PER_FRAME = GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
-
         // Queue System
         this.loadRequests = new ConcurrentLinkedQueue<>();
         this.generationRequests = new ConcurrentLinkedQueue<>();
+        this.assessmentRequests = new ConcurrentLinkedQueue<>();
         this.buildRequests = new ConcurrentLinkedQueue<>();
         this.batchRequests = new ConcurrentLinkedQueue<>();
 
-        this.loadedResults = new ConcurrentLinkedQueue<>();
-        this.generatedResults = new ConcurrentLinkedQueue<>();
-        this.builtResults = new ConcurrentLinkedQueue<>();
-        this.batchResults = new ConcurrentLinkedQueue<>();
-
         // Queue System
-        this.queueProcess = new QueueProcess[] {
-                QueueProcess.Load,
-                QueueProcess.Generate,
-                QueueProcess.Build,
-                QueueProcess.Batch
+        this.queueProcess = new InternalQueueProcess[] {
+                InternalQueueProcess.Load,
+                InternalQueueProcess.Generate,
+                InternalQueueProcess.Assessment,
+                InternalQueueProcess.Build,
+                InternalQueueProcess.Batch
         };
         this.queueBatch = 0;
         this.processPerBatch = 32;
         this.loadedChunksThisFrame = 0;
-    }
-
-    public void awake() {
-        this.worldGenerator = worldSystem.worldGenerator;
     }
 
     public void update() {
@@ -92,28 +73,16 @@ public class Loader {
         generationRequests.add(chunk);
     }
 
+    public void requestAssessment(Chunk chunk) {
+        assessmentRequests.add(chunk);
+    }
+
     public void requestBuild(Chunk chunk) {
         buildRequests.add(chunk);
     }
 
     public void requestBatch(Chunk chunk) {
         batchRequests.add(chunk);
-    }
-
-    public Chunk pollLoadedChunk() {
-        return loadedResults.poll();
-    }
-
-    public Chunk pollGeneratedChunk() {
-        return generatedResults.poll();
-    }
-
-    public Chunk pollBuiltChunk() {
-        return builtResults.poll();
-    }
-
-    public Chunk pollBatchChunk() {
-        return batchResults.poll();
     }
 
     // Queue System \\
@@ -137,7 +106,13 @@ public class Loader {
         }
     }
 
-    enum QueueProcess {
+    private boolean hasQueueData() {
+        return loadRequests.size() > 0 ||
+                generationRequests.size() > 0 ||
+                buildRequests.size() > 0;
+    }
+
+    enum InternalQueueProcess {
 
         Load {
             boolean process(Loader loader) {
@@ -148,6 +123,12 @@ public class Loader {
         Generate {
             boolean process(Loader loader) {
                 return loader.processGenerationData();
+            }
+        },
+
+        Assessment {
+            boolean process(Loader loader) {
+                return loader.processAssessmentData();
             }
         },
 
@@ -183,9 +164,6 @@ public class Loader {
 
                 if (chunk == null)
                     chunk = new Chunk(worldSystem, chunkCoordinate);
-
-                // Thread-safe add to results
-                loadedResults.add(chunk);
             });
 
             // Increment counters
@@ -205,14 +183,37 @@ public class Loader {
 
             Chunk loadedChunk = generationRequests.poll();
 
-            if (loadedChunk == null || !loadedChunk.verifyState(ChunkState.NEEDS_GENERATION_DATA))
+            if (loadedChunk == null)
                 continue;
 
             // Run load in dedicated Generation-Thread
             threadManager.submitGeneration(() -> {
+                loadedChunk.queueProcess(QueueProcess.Generate);
+            });
 
-                worldGenerator.generateChunk(loadedChunk);
-                generatedResults.add(loadedChunk);
+            // Increment counters
+            index = incrementQueueTotal(index);
+        }
+
+        return totalProcessThisFrame();
+    }
+
+    // Assessment \\
+
+    private boolean processAssessmentData() {
+
+        int index = 0;
+
+        while (!assessmentRequests.isEmpty() && processIsSafe(index)) {
+
+            Chunk loadedChunk = assessmentRequests.poll();
+
+            if (loadedChunk == null)
+                continue;
+
+            // Run load in dedicated Generation-Thread
+            threadManager.submitGeneral(() -> {
+                loadedChunk.queueProcess(QueueProcess.Assessment);
             });
 
             // Increment counters
@@ -232,17 +233,12 @@ public class Loader {
 
             Chunk loadedChunk = buildRequests.poll();
 
+            if (loadedChunk == null)
+                continue;
+
             // Run load in another thread
             threadManager.submitGeneral(() -> {
-
-                if (!loadedChunk.verifyState(ChunkState.NEEDS_BUILD_DATA))
-                    return;
-
-                if (!loadedChunk.build())
-                    requestBuild(loadedChunk);
-
-                else
-                    builtResults.add(loadedChunk);
+                loadedChunk.queueProcess(QueueProcess.Build);
             });
 
             // Increment counters on main thread
@@ -262,14 +258,12 @@ public class Loader {
 
             Chunk loadedChunk = batchRequests.poll();
 
+            if (loadedChunk == null)
+                continue;
+
             // Run load in another thread
             threadManager.submitGeneral(() -> {
-
-                if (!loadedChunk.verifyState(ChunkState.NEEDS_BATCH_DATA))
-                    return;
-
-                loadedChunk.batch();
-                batchResults.add(loadedChunk);
+                loadedChunk.queueProcess(QueueProcess.Batch);
             });
 
             // Increment counters on main thread
@@ -283,11 +277,11 @@ public class Loader {
 
     private boolean processIsSafe(int index) {
         return index < processPerBatch &&
-                loadedChunksThisFrame < MAX_CHUNK_LOADS_PER_FRAME;
+                loadedChunksThisFrame < GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
     }
 
     private boolean totalProcessThisFrame() {
-        return loadedChunksThisFrame >= MAX_CHUNK_LOADS_PER_FRAME;
+        return loadedChunksThisFrame >= GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
     }
 
     private int incrementQueueTotal(int index) {
@@ -295,27 +289,5 @@ public class Loader {
         loadedChunksThisFrame++;
 
         return ++index;
-    }
-
-    public boolean hasQueueData() {
-        return loadRequests.size() > 0 ||
-                generationRequests.size() > 0 ||
-                buildRequests.size() > 0;
-    }
-
-    public boolean hasLoadedData() {
-        return loadedResults.size() > 0;
-    }
-
-    public boolean hasGeneratedData() {
-        return generatedResults.size() > 0;
-    }
-
-    public boolean hasBuiltData() {
-        return builtResults.size() > 0;
-    }
-
-    public boolean hasBatchData() {
-        return batchResults.size() > 0;
     }
 }

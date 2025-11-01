@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldSystem.GridSystem;
+package com.AdventureRPG.WorldSystem.QueueSystem;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -20,7 +20,7 @@ public class Grid {
 
     // Game Manager
     private final Settings settings;
-    private final GridSystem gridSystem;
+    private final QueueSystem gridSystem;
 
     // Settings
     private int maxRenderDistance;
@@ -36,7 +36,7 @@ public class Grid {
 
     // Base \\
 
-    public Grid(GridSystem gridSystem) {
+    public Grid(QueueSystem gridSystem) {
 
         // Chunk System
         this.settings = gridSystem.settings;

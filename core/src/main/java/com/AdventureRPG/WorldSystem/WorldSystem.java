@@ -17,7 +17,7 @@ import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
-import com.AdventureRPG.WorldSystem.GridSystem.GridSystem;
+import com.AdventureRPG.WorldSystem.QueueSystem.QueueSystem;
 import com.AdventureRPG.WorldSystem.RenderManager.RenderManager;
 import com.AdventureRPG.WorldSystem.Util.PackedCoordinate3Int;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
@@ -56,7 +56,7 @@ public class WorldSystem {
     public final WorldTick worldTick;
     public final WorldReader worldReader;
     public final BatchSystem batchSystem;
-    public final GridSystem gridSystem;
+    public final QueueSystem queueSystem;
     public final BiomeSystem biomeSystem;
     public final Vector2Int WORLD_SCALE;
 
@@ -95,7 +95,7 @@ public class WorldSystem {
         this.worldTick = new WorldTick();
         this.worldReader = new WorldReader(this);
         this.batchSystem = new BatchSystem(this);
-        this.gridSystem = new GridSystem(this);
+        this.queueSystem = new QueueSystem(this);
         this.biomeSystem = new BiomeSystem(this);
         this.WORLD_SCALE = worldReader.getWorldScale();
 
@@ -108,7 +108,6 @@ public class WorldSystem {
 
         worldTick.awake();
         batchSystem.awake();
-        gridSystem.awake();
         biomeSystem.awake();
     }
 
@@ -116,7 +115,7 @@ public class WorldSystem {
 
         worldTick.start();
         batchSystem.start();
-        gridSystem.start();
+        queueSystem.start();
         biomeSystem.start();
     }
 
@@ -124,7 +123,7 @@ public class WorldSystem {
 
         worldTick.update();
         batchSystem.update();
-        gridSystem.update();
+        queueSystem.update();
         biomeSystem.update();
     }
 
@@ -132,7 +131,7 @@ public class WorldSystem {
 
         worldTick.render();
         batchSystem.render();
-        gridSystem.render();
+        queueSystem.render();
         biomeSystem.render();
     }
 
@@ -167,7 +166,7 @@ public class WorldSystem {
     }
 
     public void loadChunks() {
-        gridSystem.updateChunksInGrid(chunkCoordinate);
+        queueSystem.updateChunksInGrid(chunkCoordinate);
     }
 
     // Block Management \\
@@ -294,7 +293,7 @@ public class WorldSystem {
     public void rebuildGrid() {
 
         batchSystem.rebuildGrid();
-        gridSystem.rebuildGrid();
+        queueSystem.rebuildGrid();
     }
 
     // Debug \\

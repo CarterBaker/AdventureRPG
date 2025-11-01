@@ -219,22 +219,18 @@ public class BatchSystem {
     // Accessible \\
 
     public void addChunk(Chunk chunk) {
-
         addRequests.add(chunk);
     }
 
     public void removeChunk(Chunk chunk) {
-
         removeRequests.add(chunk);
     }
 
     public void assessChunk(Chunk chunk) {
-
         assessRequests.add(chunk);
     }
 
     public void rebuildGrid() {
-
         this.maxRenderDistance = settings.maxRenderDistance;
         this.loadedMegas = new Long2ObjectOpenHashMap<>(maxRenderDistance * maxRenderDistance);
     }
