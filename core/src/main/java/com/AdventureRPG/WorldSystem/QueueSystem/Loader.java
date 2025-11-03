@@ -8,7 +8,6 @@ import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
-import com.AdventureRPG.WorldSystem.QueueSystem.Queue.QueueProcess;
 
 public class Loader {
 
@@ -19,6 +18,7 @@ public class Loader {
 
     // Async System
     private final Queue<Long> loadRequests;
+    private final Queue<Chunk> addRequests;
     private final Queue<Chunk> generationRequests;
     private final Queue<Chunk> assessmentRequests;
     private final Queue<Chunk> buildRequests;
@@ -39,8 +39,9 @@ public class Loader {
         this.chunkData = worldSystem.saveSystem.chunkData;
         this.worldSystem = worldSystem;
 
-        // Queue System
+        // Async System
         this.loadRequests = new ConcurrentLinkedQueue<>();
+        this.addRequests = new ConcurrentLinkedQueue<>();
         this.generationRequests = new ConcurrentLinkedQueue<>();
         this.assessmentRequests = new ConcurrentLinkedQueue<>();
         this.buildRequests = new ConcurrentLinkedQueue<>();
@@ -49,6 +50,7 @@ public class Loader {
         // Queue System
         this.queueProcess = new InternalQueueProcess[] {
                 InternalQueueProcess.Load,
+                InternalQueueProcess.Add,
                 InternalQueueProcess.Generate,
                 InternalQueueProcess.Assessment,
                 InternalQueueProcess.Build,
@@ -107,9 +109,12 @@ public class Loader {
     }
 
     private boolean hasQueueData() {
-        return loadRequests.size() > 0 ||
-                generationRequests.size() > 0 ||
-                buildRequests.size() > 0;
+        return !loadRequests.isEmpty() ||
+                !addRequests.isEmpty() ||
+                !generationRequests.isEmpty() ||
+                !assessmentRequests.isEmpty() ||
+                !buildRequests.isEmpty() ||
+                !batchRequests.isEmpty();
     }
 
     enum InternalQueueProcess {
@@ -117,6 +122,12 @@ public class Loader {
         Load {
             boolean process(Loader loader) {
                 return loader.processLoadData();
+            }
+        },
+
+        Add {
+            boolean process(Loader loader) {
+                return loader.processAddData();
             }
         },
 
@@ -164,7 +175,31 @@ public class Loader {
 
                 if (chunk == null)
                     chunk = new Chunk(worldSystem, chunkCoordinate);
+
+                addRequests.add(chunk);
             });
+
+            // Increment counters
+            index = incrementQueueTotal(index);
+        }
+
+        return totalProcessThisFrame();
+    }
+
+    // Add \\
+
+    private boolean processAddData() {
+
+        int index = 0;
+
+        while (!addRequests.isEmpty() && processIsSafe(index)) {
+
+            Chunk loadedChunk = addRequests.poll();
+
+            if (loadedChunk == null)
+                continue;
+
+            loadedChunk.addChunkToQueue();
 
             // Increment counters
             index = incrementQueueTotal(index);

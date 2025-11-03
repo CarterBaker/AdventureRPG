@@ -37,15 +37,6 @@ public class RenderManager {
         // Core passes
 
         renderQueue.addPass(new PassData(
-                0, "WORLD_PASS", -1, null, null,
-                shaderManager.universalUniform,
-                ctx -> {
-                    ctx.modelBatch.begin(playerSystem.getCamera());
-                    worldSystem.renderManager.render();
-                    ctx.modelBatch.end();
-                }), 0);
-
-        renderQueue.addPass(new PassData(
                 0, "3D_PASS", -1, null, null,
                 shaderManager.universalUniform,
                 ctx -> {

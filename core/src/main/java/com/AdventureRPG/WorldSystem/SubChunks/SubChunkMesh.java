@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldSystem.SubChunks;
 
 import com.AdventureRPG.Util.Coordinate2Int;
-import com.AdventureRPG.WorldSystem.RenderManager.MeshPacket;
+import com.AdventureRPG.WorldSystem.Util.MeshPacket;
 
 public final class SubChunkMesh {
 

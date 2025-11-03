@@ -7,9 +7,8 @@ import com.AdventureRPG.Util.Direction2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldGenerator;
 import com.AdventureRPG.WorldSystem.WorldSystem;
-import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
+import com.AdventureRPG.WorldSystem.QueueSystem.QueueProcess;
 import com.AdventureRPG.WorldSystem.QueueSystem.QueueSystem;
-import com.AdventureRPG.WorldSystem.QueueSystem.Queue.QueueProcess;
 import com.AdventureRPG.WorldSystem.SubChunks.SubChunk;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
@@ -19,7 +18,6 @@ public class Chunk {
     // Game Manager
     public final WorldSystem worldSystem;
     public final WorldGenerator worldGenerator;
-    private final BatchSystem batchSystem;
     public final QueueSystem queueSystem;
 
     // Settings
@@ -51,6 +49,10 @@ public class Chunk {
     // Data
     public SubChunk[] subChunks;
 
+    // Validation
+    private boolean validSubChunks;
+    private boolean validNeighbors;
+
     // Base \\
 
     public Chunk(WorldSystem worldSystem, long coordinate) {
@@ -62,7 +64,6 @@ public class Chunk {
         // Game Manager
         this.worldSystem = worldSystem;
         this.worldGenerator = worldSystem.worldGenerator;
-        this.batchSystem = worldSystem.batchSystem;
         this.queueSystem = worldSystem.queueSystem;
 
         // Settings
@@ -100,7 +101,9 @@ public class Chunk {
             coordToIndex.put(neighborCoordinate, direction.index);
         }
 
-        enqueue();
+        // Validation
+        this.validSubChunks = false;
+        this.validNeighbors = false;
     }
 
     private long getWrappedNeighborCoordinate(Direction2Int direction) {
@@ -129,6 +132,12 @@ public class Chunk {
         this.position = position;
         this.positionX = Coordinate2Int.unpackX(position);
         this.positionY = Coordinate2Int.unpackY(position);
+    }
+
+    // Main \\
+
+    public void addChunkToQueue() {
+        queueSystem.addChunkToQueue(this);
     }
 
     // Queue \\
@@ -175,14 +184,16 @@ public class Chunk {
     private void finalizeQueue(boolean successful, QueueProcess process, AtomicBoolean lock) {
 
         if (successful)
-            setState(process.nextState);
+            chunkState = process.nextState;
 
         enqueue();
 
         lock.set(false);
     }
 
-    private void enqueue() {
+    public void enqueue() {
+
+        chunkState = validatedState();
 
         switch (chunkState) {
 
@@ -203,11 +214,51 @@ public class Chunk {
                 break;
 
             case FINALIZED:
-                batchSystem.addChunk(this);
+                if (verify())
+                    queueSystem.requestBatch(this);
                 break;
 
             default:
                 break;
+        }
+    }
+
+    private ChunkState validatedState() {
+
+        switch (chunkState) {
+
+            case NEEDS_ASSESSMENT_DATA:
+
+                if (!verifySubchunks())
+                    return ChunkState.NEEDS_GENERATION_DATA;
+
+                return chunkState;
+
+            case NEEDS_BUILD_DATA:
+
+                if (!verifySubchunks())
+                    return ChunkState.NEEDS_GENERATION_DATA;
+
+                if (!verifyNeighbors())
+                    return ChunkState.NEEDS_ASSESSMENT_DATA;
+
+                return chunkState;
+
+            case NEEDS_BATCH_DATA:
+
+                if (!verifySubchunks())
+                    return ChunkState.NEEDS_GENERATION_DATA;
+
+                if (!verifyNeighbors())
+                    return ChunkState.NEEDS_ASSESSMENT_DATA;
+
+                return chunkState;
+
+            case FINALIZED:
+                return chunkState;
+
+            default:
+                return chunkState;
         }
     }
 
@@ -230,9 +281,17 @@ public class Chunk {
 
     public boolean verifySubchunks() {
 
+        if (validSubChunks)
+            return true;
+
+        if (subChunks == null || subChunks.length != WORLD_HEIGHT)
+            return false;
+
         for (int i = 0; i < GlobalConstant.WORLD_HEIGHT; i++)
             if (subChunks[i] == null)
                 return false;
+
+        validSubChunks = true;
 
         return true;
     }
@@ -240,6 +299,10 @@ public class Chunk {
     // Assessment \\
 
     private boolean processAssessmentData() {
+
+        // Since we assess neighbors as we find them some may be completed already
+        if (neighborStatus == NeighborStatus.COMPLETE)
+            return true;
 
         for (Direction2Int direction : Direction2Int.values()) {
 
@@ -251,7 +314,7 @@ public class Chunk {
 
             if (neighbors[direction.index] != neighbor) {
                 neighbors[direction.index] = neighbor;
-                neighbor.assessChunk(this);
+                neighbor.assessNeighborChunk(this);
             }
         }
 
@@ -260,24 +323,7 @@ public class Chunk {
         return neighborStatus == NeighborStatus.COMPLETE;
     }
 
-    private void updateNeighborStatus() {
-
-        for (int i = 0; i < 8; i++) {
-
-            Chunk neighbor = neighbors[i];
-
-            if (neighbor == null || neighbor.getState() == ChunkState.NEEDS_GENERATION_DATA) {
-
-                neighborStatus = NeighborStatus.INCOMPLETE;
-                return;
-            }
-        }
-
-        neighborStatus = NeighborStatus.COMPLETE;
-        setState(ChunkState.NEEDS_BUILD_DATA);
-    }
-
-    public void assessChunk(Chunk chunk) {
+    public void assessNeighborChunk(Chunk chunk) {
 
         if (neighborStatus == NeighborStatus.COMPLETE)
             return;
@@ -291,6 +337,36 @@ public class Chunk {
             neighbors[index] = chunk;
             updateNeighborStatus();
         }
+    }
+
+    private void updateNeighborStatus() {
+
+        if (verifyNeighbors())
+            neighborStatus = NeighborStatus.COMPLETE;
+    }
+
+    private boolean verifyNeighbors() {
+
+        if (validNeighbors)
+            return true;
+
+        if (neighbors == null || neighbors.length != 8)
+            return false;
+
+        for (int i = 0; i < 8; i++) {
+
+            Chunk neighbor = neighbors[i];
+
+            if (neighbor == null)
+                return false;
+
+            if (!neighbor.verifySubchunks())
+                return false;
+        }
+
+        validNeighbors = true;
+
+        return true;
     }
 
     // Build \\
@@ -348,7 +424,14 @@ public class Chunk {
         return chunkState;
     }
 
-    private void setState(ChunkState chunkState) {
-        this.chunkState = chunkState;
+    public boolean verify() {
+
+        if (!verifySubchunks())
+            chunkState = ChunkState.NEEDS_GENERATION_DATA;
+
+        if (!verifyNeighbors())
+            chunkState = ChunkState.NEEDS_ASSESSMENT_DATA;
+
+        return chunkState == ChunkState.FINALIZED;
     }
 }

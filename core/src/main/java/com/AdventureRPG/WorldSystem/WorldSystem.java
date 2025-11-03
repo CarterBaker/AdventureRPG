@@ -12,13 +12,11 @@ import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
-import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
 import com.AdventureRPG.WorldSystem.QueueSystem.QueueSystem;
-import com.AdventureRPG.WorldSystem.RenderManager.RenderManager;
 import com.AdventureRPG.WorldSystem.Util.PackedCoordinate3Int;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.math.Vector3;
@@ -50,12 +48,10 @@ public class WorldSystem {
     private final Block[] blocks;
 
     // World System
-    public final RenderManager renderManager;
     public final PackedCoordinate3Int packedCoordinate3Int;
     public final WorldGenerator worldGenerator;
     public final WorldTick worldTick;
     public final WorldReader worldReader;
-    public final BatchSystem batchSystem;
     public final QueueSystem queueSystem;
     public final BiomeSystem biomeSystem;
     public final Vector2Int WORLD_SCALE;
@@ -89,12 +85,10 @@ public class WorldSystem {
         this.blocks = Loader.LoadBlocks(gameManager, this);
 
         // World System
-        this.renderManager = new RenderManager(this);
         this.packedCoordinate3Int = new PackedCoordinate3Int(this);
         this.worldGenerator = new WorldGenerator(this);
         this.worldTick = new WorldTick();
         this.worldReader = new WorldReader(this);
-        this.batchSystem = new BatchSystem(this);
         this.queueSystem = new QueueSystem(this);
         this.biomeSystem = new BiomeSystem(this);
         this.WORLD_SCALE = worldReader.getWorldScale();
@@ -107,14 +101,12 @@ public class WorldSystem {
     public void awake() {
 
         worldTick.awake();
-        batchSystem.awake();
         biomeSystem.awake();
     }
 
     public void start() {
 
         worldTick.start();
-        batchSystem.start();
         queueSystem.start();
         biomeSystem.start();
     }
@@ -122,7 +114,6 @@ public class WorldSystem {
     public void update() {
 
         worldTick.update();
-        batchSystem.update();
         queueSystem.update();
         biomeSystem.update();
     }
@@ -130,7 +121,6 @@ public class WorldSystem {
     public void render(ModelBatch modelBatch) {
 
         worldTick.render();
-        batchSystem.render();
         queueSystem.render();
         biomeSystem.render();
     }
@@ -292,7 +282,6 @@ public class WorldSystem {
 
     public void rebuildGrid() {
 
-        batchSystem.rebuildGrid();
         queueSystem.rebuildGrid();
     }
 

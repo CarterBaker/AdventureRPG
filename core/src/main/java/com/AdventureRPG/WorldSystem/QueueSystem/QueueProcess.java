@@ -1,7 +1,6 @@
-package com.AdventureRPG.WorldSystem.QueueSystem.Queue;
+package com.AdventureRPG.WorldSystem.QueueSystem;
 
 import com.AdventureRPG.WorldSystem.Chunks.ChunkState;
-import com.AdventureRPG.WorldSystem.QueueSystem.QueueSystem;
 
 public enum QueueProcess {
 
@@ -61,9 +60,11 @@ public enum QueueProcess {
 
                 return switch (this) {
 
-                        case Unload -> gridSystem.unloadQueue();
+                        case Unload ->
+                                gridSystem.unloadQueue();
 
-                        default -> gridSystem.processQueue(this);
+                        default ->
+                                gridSystem.processQueue(this);
                 };
         }
 }

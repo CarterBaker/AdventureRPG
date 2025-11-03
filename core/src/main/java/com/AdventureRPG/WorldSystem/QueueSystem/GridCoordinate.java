@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldSystem.QueueSystem.Queue;
+package com.AdventureRPG.WorldSystem.QueueSystem;
 
 public class GridCoordinate extends QueueBundle {
 

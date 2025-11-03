@@ -6,9 +6,8 @@ import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
-import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
-import com.AdventureRPG.WorldSystem.QueueSystem.Queue.*;
+import com.AdventureRPG.WorldSystem.QueueSystem.BatchSystem.BatchSystem;
 
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -23,11 +22,9 @@ public class QueueSystem {
     public final Settings settings;
     private final WorldSystem worldSystem;
     private final WorldTick worldTick;
-    private final BatchSystem batchSystem;
-    private final Loader loader;
-
-    // Grid
     private final Grid grid;
+    private final Loader loader;
+    private final BatchSystem batchSystem;
 
     // Settings
     private final int MAX_CHUNK_LOADS_PER_FRAME;
@@ -54,16 +51,14 @@ public class QueueSystem {
 
     public QueueSystem(WorldSystem worldSystem) {
 
-        // Chunk System
+        // Game Manager
         this.settings = worldSystem.settings;
         this.worldSystem = worldSystem;
         this.worldTick = worldSystem.worldTick;
-        this.batchSystem = worldSystem.batchSystem;
-        this.loader = new Loader(worldSystem);
-
-        // Grid
         this.grid = new Grid(this);
         grid.buildGrid();
+        this.loader = new Loader(worldSystem);
+        this.batchSystem = new BatchSystem(worldSystem, this);
 
         // Settings
         this.MAX_CHUNK_LOADS_PER_FRAME = GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
@@ -250,44 +245,26 @@ public class QueueSystem {
             Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
 
             // If the chunk was loaded we move it to the new grid position
-            if (loadedChunk != null) {
-
+            if (loadedChunk != null)
                 loadedChunk.moveTo(gridCoordinate);
-                batchSystem.assessChunk(loadedChunk);
-            }
 
             else // If the chunkCoordinate could not be found add it to the queue
                 queue(QueueProcess.Load).enqueue(gridCoordinate);
         }
     }
 
-    // Unload \\
+    public void addChunkToQueue(Chunk chunk) {
 
-    public boolean unloadQueue() {
+        loadedChunks.put(chunk.coordinate, chunk);
 
-        int index = 0;
-        var iterator = unloadQueue.long2ObjectEntrySet().fastIterator();
+        unloadQueue.remove(chunk.coordinate);
 
-        while (iterator.hasNext() && processIsSafe(index)) {
+        long gridCoordinate = chunkToGridMap.getOrDefault(chunk.coordinate, -1);
 
-            var entry = iterator.next();
-            long chunkCoordinate = entry.getLongKey();
-            Chunk loadedChunk = entry.getValue();
+        if (gridCoordinate != -1)
+            chunk.moveTo(gridCoordinate);
 
-            if (loadedChunk == null)
-                continue;
-
-            // Remove from unloadQueue
-            iterator.remove();
-            batchSystem.removeChunk(loadedChunk);
-            loadedChunks.remove(chunkCoordinate);
-            loadedChunk.dispose();
-
-            // Increment counters
-            index = incrementQueueTotal(index);
-        }
-
-        return totalProcessThisFrame();
+        chunk.enqueue();
     }
 
     // Queue \\
@@ -297,7 +274,7 @@ public class QueueSystem {
         int index = 0;
         int size = queue.bundle.size();
 
-        while (index < size && processIsSafe(index)) {
+        while (index < size && processIsSafe()) {
 
             long key = queue.bundle.dequeue();
 
@@ -311,6 +288,12 @@ public class QueueSystem {
 
     private void dispatchQueueWork(QueueProcess queue, long chunkCoordinate) {
 
+        if (queue == QueueProcess.Load) {
+
+            loader.requestLoad(chunkCoordinate);
+            return;
+        }
+
         Chunk loadedChunk = loadedChunks.get(chunkCoordinate);
 
         if (loadedChunk == null) {
@@ -320,9 +303,6 @@ public class QueueSystem {
         }
 
         switch (queue) {
-
-            case Load ->
-                loader.requestLoad(chunkCoordinate);
 
             case Generate ->
                 loader.requestGenerate(loadedChunk);
@@ -337,14 +317,15 @@ public class QueueSystem {
                 loader.requestBatch(loadedChunk);
 
             default -> {
-                // Unload queue is handled seperate
+                // Unload is handled separate
             }
         }
+
     }
 
     // Queue Utility \\
 
-    private boolean processIsSafe(int index) {
+    private boolean processIsSafe() {
         return loadedChunksThisFrame < MAX_CHUNK_LOADS_PER_FRAME &&
                 loadedChunksThisTick < MAX_CHUNK_LOADS_PER_TICK;
     }
@@ -378,6 +359,34 @@ public class QueueSystem {
 
     public void addToBatchQueue(long chunkCoordinate) {
         queue(QueueProcess.Batch).enqueue(chunkCoordinate);
+    }
+
+    // Unload \\
+
+    public boolean unloadQueue() {
+
+        int index = 0;
+        var iterator = unloadQueue.long2ObjectEntrySet().fastIterator();
+
+        while (iterator.hasNext() && processIsSafe()) {
+
+            var entry = iterator.next();
+            long chunkCoordinate = entry.getLongKey();
+            Chunk loadedChunk = entry.getValue();
+
+            if (loadedChunk == null)
+                continue;
+
+            // Remove from unloadQueue
+            iterator.remove();
+            loadedChunks.remove(chunkCoordinate);
+            loadedChunk.dispose();
+
+            // Increment counters
+            index = incrementQueueTotal(index);
+        }
+
+        return totalProcessThisFrame();
     }
 
     // Accessible \\
@@ -450,6 +459,18 @@ public class QueueSystem {
 
         // Finally act as if the player crossed a chunk boundary
         updateChunksInGrid(worldSystem.chunk());
+    }
+
+    // Grid Access \\
+
+    public int totalChunks() {
+        return grid.totalChunks();
+    }
+
+    // Batch System \\
+
+    public void requestBatch(Chunk chunk) {
+        batchSystem.requestBatch(chunk);
     }
 
     // Debug \\

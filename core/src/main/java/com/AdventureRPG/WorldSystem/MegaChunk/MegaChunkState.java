@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldSystem.MegaChunk;
 
-public enum MegaState {
+public enum MegaChunkState {
     INCOMPLETE,
     COMPLETE,
 }
