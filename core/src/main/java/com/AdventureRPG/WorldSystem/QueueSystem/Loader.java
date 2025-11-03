@@ -65,28 +65,6 @@ public class Loader {
         processData();
     }
 
-    // Async System \\
-
-    public void requestLoad(long chunkCoordinate) {
-        loadRequests.add(chunkCoordinate);
-    }
-
-    public void requestGenerate(Chunk chunk) {
-        generationRequests.add(chunk);
-    }
-
-    public void requestAssessment(Chunk chunk) {
-        assessmentRequests.add(chunk);
-    }
-
-    public void requestBuild(Chunk chunk) {
-        buildRequests.add(chunk);
-    }
-
-    public void requestBatch(Chunk chunk) {
-        batchRequests.add(chunk);
-    }
-
     // Queue System \\
 
     public void processData() {
@@ -156,6 +134,46 @@ public class Loader {
         };
 
         abstract boolean process(Loader loader);
+    }
+
+    // Queue Utility \\
+
+    private boolean processIsSafe(int index) {
+        return index < processPerBatch &&
+                loadedChunksThisFrame < GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
+    }
+
+    private boolean totalProcessThisFrame() {
+        return loadedChunksThisFrame >= GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
+    }
+
+    private int incrementQueueTotal(int index) {
+
+        loadedChunksThisFrame++;
+
+        return ++index;
+    }
+
+    // External Queueing \\
+
+    public void requestLoad(long chunkCoordinate) {
+        loadRequests.add(chunkCoordinate);
+    }
+
+    public void requestGenerate(Chunk chunk) {
+        generationRequests.add(chunk);
+    }
+
+    public void requestAssessment(Chunk chunk) {
+        assessmentRequests.add(chunk);
+    }
+
+    public void requestBuild(Chunk chunk) {
+        buildRequests.add(chunk);
+    }
+
+    public void requestBatch(Chunk chunk) {
+        batchRequests.add(chunk);
     }
 
     // Load \\
@@ -306,23 +324,5 @@ public class Loader {
         }
 
         return totalProcessThisFrame();
-    }
-
-    // Queue Utility \\
-
-    private boolean processIsSafe(int index) {
-        return index < processPerBatch &&
-                loadedChunksThisFrame < GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
-    }
-
-    private boolean totalProcessThisFrame() {
-        return loadedChunksThisFrame >= GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
-    }
-
-    private int incrementQueueTotal(int index) {
-
-        loadedChunksThisFrame++;
-
-        return ++index;
     }
 }

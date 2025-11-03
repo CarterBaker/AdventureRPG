@@ -6,8 +6,8 @@ import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
+import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
-import com.AdventureRPG.WorldSystem.QueueSystem.BatchSystem.BatchSystem;
 
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -20,11 +20,11 @@ public class QueueSystem {
 
     // Game Manager
     public final Settings settings;
-    private final WorldSystem worldSystem;
-    private final WorldTick worldTick;
-    private final Grid grid;
-    private final Loader loader;
-    private final BatchSystem batchSystem;
+    public final WorldSystem worldSystem;
+    public final WorldTick worldTick;
+    public final Grid grid;
+    public final Loader loader;
+    public final BatchSystem batchSystem;
 
     // Settings
     private final int MAX_CHUNK_LOADS_PER_FRAME;
@@ -87,6 +87,10 @@ public class QueueSystem {
 
         this.loadedChunksThisFrame = 0;
         this.loadedChunksThisTick = 0;
+    }
+
+    public void awake() {
+
     }
 
     public void start() {
@@ -423,26 +427,11 @@ public class QueueSystem {
 
     public int getQueueSize(QueueProcess process) {
 
-        return switch (process) {
+        // Special case for unload queue
+        if (process == QueueProcess.Unload)
+            return unloadQueue.size();
 
-            case Unload ->
-                unloadQueue.size();
-
-            case Load ->
-                QueueProcess.Load.bundle.size();
-
-            case Generate ->
-                QueueProcess.Generate.bundle.size();
-
-            case Assessment ->
-                QueueProcess.Assessment.bundle.size();
-
-            case Build ->
-                QueueProcess.Build.bundle.size();
-
-            case Batch ->
-                QueueProcess.Batch.bundle.size();
-        };
+        return (process.bundle != null) ? process.bundle.size() : 0;
     }
 
     // Intended to be called after changing the render distance

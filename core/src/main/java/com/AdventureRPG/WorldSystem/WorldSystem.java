@@ -12,6 +12,7 @@ import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
+import com.AdventureRPG.WorldSystem.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldSystem.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Blocks.Loader;
@@ -53,6 +54,7 @@ public class WorldSystem {
     public final WorldTick worldTick;
     public final WorldReader worldReader;
     public final QueueSystem queueSystem;
+    public final BatchSystem batchSystem;
     public final BiomeSystem biomeSystem;
     public final Vector2Int WORLD_SCALE;
 
@@ -90,6 +92,7 @@ public class WorldSystem {
         this.worldTick = new WorldTick();
         this.worldReader = new WorldReader(this);
         this.queueSystem = new QueueSystem(this);
+        this.batchSystem = queueSystem.batchSystem;
         this.biomeSystem = new BiomeSystem(this);
         this.WORLD_SCALE = worldReader.getWorldScale();
 
@@ -101,6 +104,8 @@ public class WorldSystem {
     public void awake() {
 
         worldTick.awake();
+        queueSystem.awake();
+        batchSystem.awake();
         biomeSystem.awake();
     }
 
@@ -108,6 +113,7 @@ public class WorldSystem {
 
         worldTick.start();
         queueSystem.start();
+        batchSystem.start();
         biomeSystem.start();
     }
 
@@ -115,6 +121,7 @@ public class WorldSystem {
 
         worldTick.update();
         queueSystem.update();
+        batchSystem.update();
         biomeSystem.update();
     }
 
@@ -122,6 +129,7 @@ public class WorldSystem {
 
         worldTick.render();
         queueSystem.render();
+        batchSystem.render();
         biomeSystem.render();
     }
 

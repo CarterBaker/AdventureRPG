@@ -1,7 +1,4 @@
-package com.AdventureRPG.WorldSystem.QueueSystem.BatchSystem;
-
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+package com.AdventureRPG.WorldSystem.BatchSystem;
 
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldSystem;
@@ -25,9 +22,6 @@ public class BatchSystem {
     private final int MAX_CHUNK_LOADS_PER_FRAME;
     private final int MAX_CHUNK_LOADS_PER_TICK;
 
-    // Async System
-    private final Queue<Chunk> batchRequests;
-
     // Chunk Tracking
     private Long2ObjectOpenHashMap<Chunk> loadedChunks;
 
@@ -47,9 +41,6 @@ public class BatchSystem {
         // Settings
         this.MAX_CHUNK_LOADS_PER_FRAME = GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
         this.MAX_CHUNK_LOADS_PER_TICK = GlobalConstant.MAX_CHUNK_LOADS_PER_TICK;
-
-        // Async System
-        this.batchRequests = new ConcurrentLinkedQueue<>();
 
         // Chunk Tracking
         this.loadedChunks = new Long2ObjectOpenHashMap<>(queueSystem.totalChunks());
@@ -136,10 +127,10 @@ public class BatchSystem {
     // Main \\
 
     public void requestBatch(Chunk chunk) {
-        batchRequests.add(chunk);
+        loader.requestAdd(chunk);
     }
 
-    public void addToLoadedChunks(Chunk chunk) {
+    public void addChunkToBatch(Chunk chunk) {
         loadedChunks.putIfAbsent(chunk.coordinate, chunk);
     }
 
@@ -173,9 +164,6 @@ public class BatchSystem {
         }
 
         switch (batchProcess) {
-
-            case Add ->
-                System.out.println("Working 2");
 
             default -> {
                 // Unload queue is handled seperate
@@ -218,15 +206,7 @@ public class BatchSystem {
     }
 
     public int getQueueSize(BatchProcess process) {
-
-        return switch (process) {
-
-            case Add ->
-                BatchProcess.Add.bundle.size();
-
-            case Batch ->
-                BatchProcess.Batch.bundle.size();
-        };
+        return (process.bundle != null) ? process.bundle.size() : 0;
     }
 
     // Debug \\

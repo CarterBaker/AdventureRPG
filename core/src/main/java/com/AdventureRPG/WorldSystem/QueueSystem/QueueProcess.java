@@ -56,15 +56,15 @@ public enum QueueProcess {
                 this.nextState = nextState;
         }
 
-        public boolean process(QueueSystem gridSystem) {
+        public boolean process(QueueSystem queueSystem) {
 
                 return switch (this) {
 
                         case Unload ->
-                                gridSystem.unloadQueue();
+                                queueSystem.unloadQueue();
 
                         default ->
-                                gridSystem.processQueue(this);
+                                queueSystem.processQueue(this);
                 };
         }
 }

@@ -193,8 +193,6 @@ public class Chunk {
 
     public void enqueue() {
 
-        chunkState = validatedState();
-
         switch (chunkState) {
 
             case NEEDS_GENERATION_DATA:
@@ -214,51 +212,11 @@ public class Chunk {
                 break;
 
             case FINALIZED:
-                if (verify())
-                    queueSystem.requestBatch(this);
+                queueSystem.requestBatch(this);
                 break;
 
             default:
                 break;
-        }
-    }
-
-    private ChunkState validatedState() {
-
-        switch (chunkState) {
-
-            case NEEDS_ASSESSMENT_DATA:
-
-                if (!verifySubchunks())
-                    return ChunkState.NEEDS_GENERATION_DATA;
-
-                return chunkState;
-
-            case NEEDS_BUILD_DATA:
-
-                if (!verifySubchunks())
-                    return ChunkState.NEEDS_GENERATION_DATA;
-
-                if (!verifyNeighbors())
-                    return ChunkState.NEEDS_ASSESSMENT_DATA;
-
-                return chunkState;
-
-            case NEEDS_BATCH_DATA:
-
-                if (!verifySubchunks())
-                    return ChunkState.NEEDS_GENERATION_DATA;
-
-                if (!verifyNeighbors())
-                    return ChunkState.NEEDS_ASSESSMENT_DATA;
-
-                return chunkState;
-
-            case FINALIZED:
-                return chunkState;
-
-            default:
-                return chunkState;
         }
     }
 
@@ -422,16 +380,5 @@ public class Chunk {
 
     public ChunkState getState() {
         return chunkState;
-    }
-
-    public boolean verify() {
-
-        if (!verifySubchunks())
-            chunkState = ChunkState.NEEDS_GENERATION_DATA;
-
-        if (!verifyNeighbors())
-            chunkState = ChunkState.NEEDS_ASSESSMENT_DATA;
-
-        return chunkState == ChunkState.FINALIZED;
     }
 }
