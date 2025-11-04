@@ -1,18 +1,35 @@
 package com.AdventureRPG.Frame;
 
-public interface GameSystem {
+public abstract class GameSystem {
 
-    void awake();
+    // Debug \\
 
-    void start();
+    private final String systemName = getClass().getSimpleName();
 
-    void update();
+    protected final void debug(String input) {
+        System.out.println("[" + systemName + "] " + input);
+    }
 
-    void fixedUpdate();
+    // Base \\
 
-    void lateUpdate();
+    protected void awake() {
+    }
 
-    void render();
+    protected void start() {
+    }
 
-    void dispose();
+    protected void update() {
+    }
+
+    protected void fixedUpdate() {
+    }
+
+    protected void lateUpdate() {
+    }
+
+    protected void render() {
+    }
+
+    protected void dispose() {
+    }
 }
