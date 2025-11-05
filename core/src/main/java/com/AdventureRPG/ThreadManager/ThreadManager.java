@@ -6,34 +6,26 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import com.AdventureRPG.GameManager;
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Core.Framework.GameSystem;
 
-public class ThreadManager {
-
-    // Game Manager
-    private final Settings settings;
+public class ThreadManager extends GameSystem {
 
     // Settings
-    private final int AI_AVAILABLE_THREADS;
-    private final int GENERATION_AVAILABLE_THREADS;
-    private final int GENERAL_AVAILABLE_THREADS;
+    private int AI_AVAILABLE_THREADS;
+    private int GENERATION_AVAILABLE_THREADS;
+    private int GENERAL_AVAILABLE_THREADS;
 
-    public final boolean hasAiThread;
-    public final boolean hasGenerationThread;
-    public final boolean hasGeneralPurposeThread;
+    private boolean hasAiThread;
+    private boolean hasGenerationThread;
+    private boolean hasGeneralPurposeThread;
 
     // Threads
     private ExecutorService aiExecutor;
     private ExecutorService generationExecutor;
     private ExecutorService generalPurposeExecutor;
 
-    // Base \\
-
-    public ThreadManager(GameManager gameManager) {
-
-        // Game Manager
-        this.settings = gameManager.settings;
+    @Override
+    public void init() {
 
         // Settings
         this.AI_AVAILABLE_THREADS = settings.AI_AVAILABLE_THREADS;
@@ -43,91 +35,67 @@ public class ThreadManager {
         this.hasAiThread = AI_AVAILABLE_THREADS > 0;
         this.hasGenerationThread = GENERATION_AVAILABLE_THREADS > 0;
         this.hasGeneralPurposeThread = GENERAL_AVAILABLE_THREADS > 0;
-
-        dedicateThreads();
     }
 
-    private void dedicateThreads() {
+    @Override
+    public void awake() {
 
-        // AI threads
+        // Threads
+        initAIExecutor();
+        initGenerationExecutor();
+        initGeneralExecutor();
+    }
+
+    private void initAIExecutor() {
+
         if (!hasAiThread)
             return;
 
         this.aiExecutor = Executors.newFixedThreadPool(
-
                 AI_AVAILABLE_THREADS,
+                new NamedThreadFactory("AI-Thread-"));
+    }
 
-                new java.util.concurrent.ThreadFactory() {
+    private void initGenerationExecutor() {
 
-                    private int count = 1;
-
-                    @Override
-                    public Thread newThread(Runnable r) {
-
-                        Thread t = new Thread(r, "AI-Thread-" + count++);
-                        t.setPriority(Thread.NORM_PRIORITY);
-
-                        return t;
-                    }
-                });
-
-        // Generation threads
         if (!hasGenerationThread)
             return;
 
         this.generationExecutor = Executors.newFixedThreadPool(
-
                 GENERATION_AVAILABLE_THREADS,
+                new NamedThreadFactory("Generation-Thread-"));
+    }
 
-                new java.util.concurrent.ThreadFactory() {
+    private void initGeneralExecutor() {
 
-                    private int count = 1;
-
-                    @Override
-                    public Thread newThread(Runnable r) {
-
-                        Thread t = new Thread(r, "Generation-Thread-" + count++);
-                        t.setPriority(Thread.NORM_PRIORITY);
-
-                        return t;
-                    }
-                });
-
-        // General-purpose threads
         if (!hasGeneralPurposeThread)
             return;
 
         this.generalPurposeExecutor = Executors.newFixedThreadPool(
-
                 GENERAL_AVAILABLE_THREADS,
-
-                new java.util.concurrent.ThreadFactory() {
-
-                    private int count = 1;
-
-                    @Override
-                    public Thread newThread(Runnable r) {
-
-                        Thread t = new Thread(r, "General-Thread-" + count++);
-                        t.setPriority(Thread.NORM_PRIORITY);
-
-                        return t;
-                    }
-                });
+                new NamedThreadFactory("General-Thread-"));
     }
 
-    public void awake() {
+    static class NamedThreadFactory implements java.util.concurrent.ThreadFactory {
 
+        private final String baseName;
+        private int count = 1;
+
+        NamedThreadFactory(String baseName) {
+            this.baseName = baseName;
+        }
+
+        @Override
+        public Thread newThread(Runnable r) {
+
+            Thread t = new Thread(r, baseName + count++);
+            t.setPriority(Thread.NORM_PRIORITY);
+
+            return t;
+        }
     }
 
-    public void start() {
-
-    }
-
-    public void update() {
-
-    }
-
+    @Override
     public void dispose() {
 
         shutdownExecutor(aiExecutor);
@@ -155,7 +123,7 @@ public class ThreadManager {
         }
     }
 
-    // Threads \\
+    // Accessible \\
 
     // AI tasks
     public Future<?> submitAI(Runnable task) {
@@ -171,8 +139,6 @@ public class ThreadManager {
     public Future<?> submitGeneral(Runnable task) {
         return submitTask(hasGeneralPurposeThread, generalPurposeExecutor, task);
     }
-
-    // Utility \\
 
     private Future<?> submitTask(boolean hasThread, ExecutorService executor, Runnable task) {
 

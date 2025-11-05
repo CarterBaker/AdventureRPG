@@ -2,22 +2,21 @@ package com.AdventureRPG.SaveSystem;
 
 import java.io.File;
 
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Core.Framework.GameSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 
-public class ChunkData {
+public class ChunkData extends GameSystem {
 
     // Settings
-    private final Settings settings;
-    private final File path;
+    private File path;
 
     // Base \\
 
-    public ChunkData(SaveSystem saveSystem) {
+    @Override
+    public void init() {
 
         // Settings
-        this.settings = saveSystem.settings;
-        this.path = saveSystem.path;
+        this.path = rootManager.path;
     }
 
     // Save System \\

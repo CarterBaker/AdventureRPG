@@ -3,8 +3,8 @@ package com.AdventureRPG.TextureManager;
 import java.io.File;
 import java.util.*;
 
-import com.AdventureRPG.GameManager;
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Core.Exceptions.FileException;
+import com.AdventureRPG.Core.Framework.GameSystem;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
@@ -14,49 +14,49 @@ import com.badlogic.gdx.graphics.PixmapIO;
 import com.badlogic.gdx.graphics.TextureArray;
 import com.badlogic.gdx.graphics.Pixmap.Format;
 
-public class TextureManager {
-
-    // Debug
-    private final boolean debug = false; // TODO: Debug line
+// TODO: Needs to be studied for accuracy and refactored into multiple classes for clarity
+public class TextureManager extends GameSystem {
 
     // Settings
-    private final String BLOCK_TEXTURE_PATH;
-    private final int BLOCK_TEXTURE_SIZE;
-    private final int BLOCK_ATLAS_PADDING;
+    private String BLOCK_TEXTURE_PATH;
+    private int BLOCK_TEXTURE_SIZE;
+    private int BLOCK_ATLAS_PADDING;
 
-    private final Color NORMAL_MAP_DEFAULT;
-    private final Color HEIGHT_MAP_DEFAULT;
-    private final Color METAL_MAP_DEFAULT;
-    private final Color ROUGHNESS_MAP_DEFAULT;
-    private final Color AO_MAP_DEFAULT;
-    private final Color CUSTOM_MAP_DEFAULT;
+    private Color NORMAL_MAP_DEFAULT;
+    private Color HEIGHT_MAP_DEFAULT;
+    private Color METAL_MAP_DEFAULT;
+    private Color ROUGHNESS_MAP_DEFAULT;
+    private Color AO_MAP_DEFAULT;
+    private Color CUSTOM_MAP_DEFAULT;
 
     // ID maps
-    private final Map<Integer, String> idToTexturePath;
-    private final Map<String, Integer> texturePathToID;
+    private Map<Integer, String> idToTexturePath;
+    private Map<String, Integer> texturePathToID;
     private int nextTextureID;
 
     // Lookup
-    private final String BASE_ALIAS;
-    private final String NORMAL_ALIAS;
-    private final String METAL_ALIAS;
-    private final String ROUGH_ALIAS;
-    private final String HEIGHT_ALIAS;
-    private final String AO_ALIAS;
-    private final Map<String, String> TYPE_ALIASES;
-    private final Map<String, Color> ALIAS_COLORS;
+    private String BASE_ALIAS;
+    private String NORMAL_ALIAS;
+    private String METAL_ALIAS;
+    private String ROUGH_ALIAS;
+    private String HEIGHT_ALIAS;
+    private String AO_ALIAS;
+
+    private Map<String, String> TYPE_ALIASES;
+    private Map<String, Color> ALIAS_COLORS;
 
     // Folder to ArrayGroup
-    private final Map<String, ArrayGroup> arrayGroups;
+    private Map<String, ArrayGroup> arrayGroups;
 
     // UVs per ID (normalized)
-    private final Map<Integer, UVRect> idToUV;
+    private Map<Integer, UVRect> idToUV;
 
     // Base \\
 
-    public TextureManager(GameManager gameManager) {
+    @Override
+    public void init() {
 
-        // Game Manager
+        // Settings
         this.BLOCK_TEXTURE_PATH = GlobalConstant.BLOCK_TEXTURE_PATH;
         this.BLOCK_TEXTURE_SIZE = GlobalConstant.BLOCK_TEXTURE_SIZE;
         this.BLOCK_ATLAS_PADDING = GlobalConstant.BLOCK_ATLAS_PADDING;
@@ -80,6 +80,7 @@ public class TextureManager {
         this.ROUGH_ALIAS = "Roughness";
         this.HEIGHT_ALIAS = "Height";
         this.AO_ALIAS = "AO";
+
         this.TYPE_ALIASES = TYPE_ALIASES();
         this.ALIAS_COLORS = ALIAS_COLORS();
 
@@ -89,13 +90,12 @@ public class TextureManager {
         // UVs per ID (normalized)
         this.idToUV = new HashMap<>();
 
-        // Core Logic \\
-
+        // Texture Manager
         compileArrays(new File(BLOCK_TEXTURE_PATH));
 
-        // Memory Preservation \\
-
-        freeMemory();
+        // Clear memory
+        TYPE_ALIASES.clear();
+        ALIAS_COLORS.clear();
     }
 
     private Map<String, String> TYPE_ALIASES() {
@@ -146,19 +146,7 @@ public class TextureManager {
         return output;
     }
 
-    public void awake() {
-
-    }
-
-    public void start() {
-
-    }
-
-    public void update() {
-
-    }
-
-    // Dispose all texture arrays.
+    @Override
     public void dispose() {
 
         for (ArrayGroup group : arrayGroups.values())
@@ -174,17 +162,12 @@ public class TextureManager {
     private void compileArrays(File root) {
 
         if (!root.exists() || !root.isDirectory())
-            throw new RuntimeException("Root folder not found: " + root.getAbsolutePath());
+            throw new FileException.FileNotFoundException(root);
 
         File[] subfolders = root.listFiles(File::isDirectory);
 
-        if (subfolders == null || subfolders.length == 0) {
-
-            // TODO: Debug line
-            log("No subfolders in " + root.getAbsolutePath());
-
+        if (subfolders == null || subfolders.length == 0)
             return;
-        }
 
         for (File folder : subfolders)
             process(folder);
@@ -196,13 +179,8 @@ public class TextureManager {
         String folderName = folder.getName();
         Map<String, List<File>> byType = categorizePNG(folder);
 
-        if (byType.isEmpty()) {
-
-            // TODO: Debug line
-            log("Skipped empty folder: " + folderName);
-
+        if (byType.isEmpty())
             return;
-        }
 
         // Assign global IDs from albedo files in this folder
         List<File> albedoFiles = byType.getOrDefault(BASE_ALIAS, Collections.emptyList());
@@ -252,9 +230,6 @@ public class TextureManager {
 
         // We can delete temp PNGs after upload (TextureArray has already read them)
         cleanupTempFiles(typeToTempFile.values());
-
-        // TODO: Debug line
-        log("Built TextureArray for folder: " + folderName + " with " + typeToTempFile.size() + " layers");
     }
 
     // Categorization & Suffix logic \\
@@ -305,8 +280,6 @@ public class TextureManager {
 
                 texturePathToID.put(key, id);
                 idToTexturePath.put(id, key);
-
-                log("ID " + id + " ← " + key); // TODO: Debug line
             }
         }
     }
@@ -523,23 +496,6 @@ public class TextureManager {
             }
         }
     }
-
-    private void log(String msg) { // TODO: Debug line
-
-        if (debug)
-            System.out.println("[TextureManager] " + msg);
-    }
-
-    // Memory Preservation \\
-
-    // To keep things as light as possible
-    private void freeMemory() {
-
-        TYPE_ALIASES.clear();
-        ALIAS_COLORS.clear();
-    }
-
-    // Private data types \\
 
     public static class UVRect {
 

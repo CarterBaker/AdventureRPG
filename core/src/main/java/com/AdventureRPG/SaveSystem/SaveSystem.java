@@ -2,55 +2,29 @@ package com.AdventureRPG.SaveSystem;
 
 import java.io.File;
 
-import com.AdventureRPG.GameManager;
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Core.Framework.GameManager;
 
 // TODO: Eventually the whole save system will need a refactor
-public class SaveSystem {
-
-    // Game Manager
-    public final Settings settings;
-    public final GameManager gameManager;
+public class SaveSystem extends GameManager {
 
     // Settings
-    public final File path;
+    public File path;
 
     // Save System
-    public final UserData userData;
-    public final ChunkData chunkData;
+    public UserData userData;
+    public ChunkData chunkData;
 
     // Base \\
 
-    public SaveSystem(GameManager gameManager) {
+    @Override
+    public void init() {
 
-        // Game
-        this.settings = gameManager.settings;
-        this.gameManager = gameManager;
-        this.path = gameManager.path;
+        // Settings
+        this.path = rootManager.path;
 
         // Save System
-        this.userData = new UserData(this);
-        this.chunkData = new ChunkData(this);
-    }
-
-    public void awake() {
-
-    }
-
-    public void start() {
-
-    }
-
-    public void update() {
-
-    }
-
-    public void render() {
-
-    }
-
-    public void dispose() {
-
+        this.userData = (UserData) register(new UserData());
+        this.chunkData = (ChunkData) register(new ChunkData());
     }
 
     // Save System \\

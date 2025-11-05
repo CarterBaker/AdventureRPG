@@ -20,6 +20,9 @@ public class Settings {
 
     // Constant Settings \\
 
+    // Phsyics Settings
+    public final float FIXED_TIME_STEP;
+
     // Thread Settings
     public final int AI_AVAILABLE_THREADS; // Maximum available threads to pool off
     public final int GENERATION_AVAILABLE_THREADS; // Maximum available threads to pool off
@@ -45,6 +48,9 @@ public class Settings {
 
         // Constant Settings \\
 
+        // Phsyics Settings
+        this.FIXED_TIME_STEP = builder.FIXED_TIME_STEP;
+
         // Thread Settings
         this.AI_AVAILABLE_THREADS = builder.AI_AVAILABLE_THREADS;
         this.GENERATION_AVAILABLE_THREADS = builder.GENERATION_AVAILABLE_THREADS;
@@ -69,6 +75,9 @@ public class Settings {
         public int maxRenderDistance = 64;
 
         // Constant Settings \\
+
+        // Physics Settings
+        private float FIXED_TIME_STEP = 1 / 60;
 
         // Thread Settings
         private int AI_AVAILABLE_THREADS = 2;
@@ -119,6 +128,13 @@ public class Settings {
         }
 
         // Constant Settings \\
+
+        // Physics Settings \\
+
+        public Builder FIXED_TIME_STEP(float FIXED_TIME_STEP) {
+            this.FIXED_TIME_STEP = FIXED_TIME_STEP;
+            return this;
+        }
 
         // Thread Settings \\
 

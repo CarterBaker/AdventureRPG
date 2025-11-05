@@ -1,5 +1,6 @@
 package com.AdventureRPG.TimeSystem;
 
+import com.AdventureRPG.Core.Exceptions.FileException;
 import com.google.gson.Gson;
 import java.io.File;
 import java.io.FileReader;
@@ -11,7 +12,7 @@ public class Loader {
     public static Calendar load(File file, Gson gson) {
 
         if (!file.exists())
-            throw new RuntimeException("Calendar file not found: " + file.getAbsolutePath());
+            throw new FileException.FileNotFoundException(file);
 
         try (Reader reader = new FileReader(file)) {
             CalendarData dto = gson.fromJson(reader, CalendarData.class);
@@ -19,7 +20,7 @@ public class Loader {
         }
 
         catch (IOException e) {
-            throw new RuntimeException("Failed to load calendar from: " + file.getAbsolutePath(), e);
+            throw new FileException.FileLoadException(file, e);
         }
     }
 }

@@ -3,23 +3,22 @@ package com.AdventureRPG.SaveSystem;
 import java.io.File;
 import java.util.Random;
 
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Core.Framework.GameSystem;
 
-public class UserData {
+public class UserData extends GameSystem {
 
     // Settings
-    private final Settings Settings;
-    private final File path;
+    private File path;
 
     // Seed Management
     private long seed;
-    private final Random random;
+    private Random random;
 
-    public UserData(SaveSystem saveSystem) {
+    @Override
+    public void init() {
 
         // Settings
-        this.Settings = saveSystem.settings;
-        this.path = saveSystem.path;
+        this.path = rootManager.path;
 
         // Seed Management
         this.random = new Random();

@@ -1,41 +1,41 @@
 package com.AdventureRPG.ShaderManager;
 
-import com.AdventureRPG.GameManager;
+import com.AdventureRPG.Core.Framework.GameSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.math.Matrix4;
 
-public class UniversalUniform {
-
-    // Game Manager
-    private final GameManager gameManager;
-
-    // Camera
-    private Camera camera;
+public class UniversalUniform extends GameSystem {
 
     // Time
     private float u_time;
 
+    // Camera
+    private Camera camera;
+
     // Base \\
 
-    public UniversalUniform(GameManager gameManager) {
-
-        // Game Manager
-        this.gameManager = gameManager;
+    @Override
+    public void init() {
 
         // Time
         this.u_time = 0.0f;
     }
 
+    @Override
     public void awake() {
 
-        this.camera = gameManager.playerSystem.camera.get();
+        // Camera
+        this.camera = rootManager.playerSystem.camera.get();
     }
 
+    @Override
     public void update() {
 
         u_time += Gdx.graphics.getDeltaTime();
     }
+
+    // Universal Uniform \\
 
     public void setUniversalUniform(ShaderData data, UniversalUniformType uniform) {
 

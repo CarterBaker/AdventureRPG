@@ -3,40 +3,35 @@ package com.AdventureRPG.TimeSystem;
 import java.io.File;
 import java.time.Instant;
 
-import com.AdventureRPG.GameManager;
+import com.AdventureRPG.Core.Framework.GameSystem;
 import com.AdventureRPG.LightingSystem.LightingSystem;
 import com.AdventureRPG.SaveSystem.UserData;
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.GlobalConstant;
 
-public class TimeSystem {
+public class TimeSystem extends GameSystem {
 
-    // Debug
-    private boolean debug = false; // TODO: Debug line
-
-    // Game Manager
-    public final GameManager gameManager;
+    // Root
     private LightingSystem lightingSystem;
 
     // Settings
-    private final int MINUTES_PER_HOUR;
-    private final int HOURS_PER_DAY;
-    private final int DAYS_PER_DAY;
-    private final float MIDDAY_OFFSET;
+    private int MINUTES_PER_HOUR;
+    private int HOURS_PER_DAY;
+    private int DAYS_PER_DAY;
+    private float MIDDAY_OFFSET;
 
-    private final int STARTING_DAY;
-    private final int STARTING_MONTH;
-    private final int STARTING_YEAR;
-    private final int STARTING_AGE;
-    private final int YEARS_PER_AGE;
+    private int STARTING_DAY;
+    private int STARTING_MONTH;
+    private int STARTING_YEAR;
+    private int STARTING_AGE;
+    private int YEARS_PER_AGE;
 
     // Calendar
-    private final File calendarFile;
-    private final Calendar calendar;
+    private File calendarFile;
+    private Calendar calendar;
 
-    private final int totalMonths;
-    private final int[] daysPerMonth;
-    private final int totalDaysInYear; // linear fraction of current day
+    private int totalMonths;
+    private int[] daysPerMonth;
+    private int totalDaysInYear; // linear fraction of current day
 
     // Time State
     private long totalDaysElapsed; // total whole days elapsed
@@ -59,11 +54,10 @@ public class TimeSystem {
     private long lastMonth;
     private long lastYear;
 
-    // Constructor
-    public TimeSystem(GameManager gameManager) {
+    // Base \\
 
-        // Game manager
-        this.gameManager = gameManager;
+    @Override
+    public void init() {
 
         // Settings
         this.MINUTES_PER_HOUR = GlobalConstant.MINUTES_PER_HOUR;
@@ -79,7 +73,7 @@ public class TimeSystem {
 
         // Calendar
         this.calendarFile = new File(GlobalConstant.CALENDAR_JSON_PATH);
-        this.calendar = Loader.load(calendarFile, gameManager.gson);
+        this.calendar = Loader.load(calendarFile, rootManager.gson);
 
         this.totalMonths = calendar.getTotalMonths();
         this.daysPerMonth = calendar.getDaysPerMonth();
@@ -93,30 +87,24 @@ public class TimeSystem {
         this.lastYear = -1;
     }
 
+    @Override
     public void awake() {
-        this.lightingSystem = gameManager.lightingSystem;
+        this.lightingSystem = rootManager.lightingSystem;
     }
 
-    public void start() {
-
-    }
-
+    @Override
     public void update() {
         updateFromSystemClock();
-    }
-
-    public void dispose() {
-
     }
 
     // Save System \\
 
     public void setTime(UserData userData) {
-        // to implement later
+        // TOTO: Implement later
     }
 
     public void getTime(UserData userData) {
-        // to implement later
+        // TOTO: Implement later
     }
 
     // Time \\
@@ -137,6 +125,7 @@ public class TimeSystem {
 
         // 5. Offset to align noon
         double rawTimeOfDay = (dayProgress + MIDDAY_OFFSET) % 1.0;
+
         if (rawTimeOfDay < 0)
             rawTimeOfDay += 1.0;
 
@@ -145,9 +134,6 @@ public class TimeSystem {
 
         // 7. Update calendar
         updateMinutes(rawTimeOfDay);
-
-        if (debug)
-            logTimeState();
     }
 
     // Seasonal bending \\
@@ -321,9 +307,7 @@ public class TimeSystem {
         currentAge = (int) (totalDaysWithOffset / (YEARS_PER_AGE * totalDaysInYear)) + STARTING_AGE;
     }
 
-    // Utility \\
-
-    // Getters \\
+    // Accessible \\
 
     public double getTimeOfDay() {
         return visualTimeOfDay; // bent value for shaders
@@ -359,28 +343,5 @@ public class TimeSystem {
 
     public int getCurrentAge() {
         return currentAge;
-    }
-
-    // Debug \\
-
-    // Debug log function
-    private void log(String msg) { // TODO: Debug line
-        if (debug) {
-            System.out.println("[TimeSystem] " + msg);
-        }
-    }
-
-    // Call this method to output the full current time state
-    public void logTimeState() {
-        log("Time State -> " +
-                "Minute: " + currentMinute + ", " +
-                "Hour: " + currentHour + ", " +
-                "Day: " + currentDayOfMonth + ", " +
-                "Month: " + currentMonth + " (" + getCurrentMonth() + "), " +
-                "Year: " + currentYear + ", " +
-                "Age: " + currentAge + ", " +
-                "Day of Week: " + getCurrentDayOfWeek() + ", " +
-                "Day Progress: " + String.format("%.4f", dayProgress) + ", " +
-                "Visual Time of Day: " + String.format("%.4f", visualTimeOfDay));
     }
 }

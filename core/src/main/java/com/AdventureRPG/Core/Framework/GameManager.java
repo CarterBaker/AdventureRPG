@@ -1,4 +1,4 @@
-package com.AdventureRPG.Frame;
+package com.AdventureRPG.Core.Framework;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -7,7 +7,7 @@ import java.util.Map;
 
 public abstract class GameManager extends GameSystem {
 
-    // Internal \\
+    // Internal
     private final List<GameSystem> subSystems = new ArrayList<>();
     private final Map<Class<? extends GameSystem>, GameSystem> subsystemsTypeMap = new IdentityHashMap<>();
     private GameSystem[] internalSubsystems = new GameSystem[0];
@@ -15,10 +15,12 @@ public abstract class GameManager extends GameSystem {
 
     // Constructor \\
 
-    protected final void register(GameSystem gameBehavior) {
+    protected final GameSystem register(GameSystem systemFramework) {
 
-        subSystems.add(gameBehavior);
-        subsystemsTypeMap.put(gameBehavior.getClass(), gameBehavior);
+        subSystems.add(systemFramework);
+        subsystemsTypeMap.put(systemFramework.getClass(), systemFramework);
+
+        return systemFramework;
     }
 
     @SuppressWarnings("unchecked")
@@ -36,11 +38,31 @@ public abstract class GameManager extends GameSystem {
             managerCache[i] = internalSubsystems[i] instanceof GameManager;
     }
 
-    // Awake \\
+    // Create \\
 
-    private final void internalAwake() {
+    public final void internalInit() {
+
+        rootInit(
+                settings,
+                rootManager);
 
         cacheSubSystems();
+
+        init();
+
+        for (int i = 0; i < internalSubsystems.length; i++) {
+
+            if (managerCache[i])
+                ((GameManager) internalSubsystems[i]).internalInit();
+
+            else
+                internalSubsystems[i].init();
+        }
+    }
+
+    // Awake \\
+
+    public final void internalAwake() {
 
         awake();
 
@@ -56,7 +78,7 @@ public abstract class GameManager extends GameSystem {
 
     // Start \\
 
-    private final void internalStart() {
+    public final void internalStart() {
 
         start();
 
@@ -70,9 +92,41 @@ public abstract class GameManager extends GameSystem {
         }
     }
 
+    // Menu Exclusive Update \\
+
+    public final void internalMenuExclusiveUpdate() {
+
+        menuExclusiveUpdate();
+
+        for (int i = 0; i < internalSubsystems.length; i++) {
+
+            if (managerCache[i])
+                ((GameManager) internalSubsystems[i]).internalMenuExclusiveUpdate();
+
+            else
+                internalSubsystems[i].menuExclusiveUpdate();
+        }
+    }
+
+    // Game Exclusive Update \\
+
+    public final void internalGameExclusiveUpdate() {
+
+        gameExclusiveUpdate();
+
+        for (int i = 0; i < internalSubsystems.length; i++) {
+
+            if (managerCache[i])
+                ((GameManager) internalSubsystems[i]).internalGameExclusiveUpdate();
+
+            else
+                internalSubsystems[i].gameExclusiveUpdate();
+        }
+    }
+
     // Update \\
 
-    private final void internalUpdate() {
+    public final void internalUpdate() {
 
         update();
 
@@ -88,7 +142,7 @@ public abstract class GameManager extends GameSystem {
 
     // Fixed Update \\
 
-    private final void internalFixedUpdate() {
+    public final void internalFixedUpdate() {
 
         fixedUpdate();
 
@@ -104,7 +158,7 @@ public abstract class GameManager extends GameSystem {
 
     // Late Update \\
 
-    private final void internalLateUpdate() {
+    public final void internalLateUpdate() {
 
         lateUpdate();
 
@@ -120,7 +174,7 @@ public abstract class GameManager extends GameSystem {
 
     // Render \\
 
-    private final void internalRender() {
+    public final void internalRender() {
 
         render();
 
@@ -136,7 +190,7 @@ public abstract class GameManager extends GameSystem {
 
     // Dispose \\
 
-    private final void internalDispose() {
+    public final void internalDispose() {
 
         dispose();
 

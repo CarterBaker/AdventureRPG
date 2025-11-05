@@ -1,8 +1,10 @@
 package com.AdventureRPG.PassManager;
 
-import com.AdventureRPG.GameManager;
+import com.AdventureRPG.Core.RootManager;
+import com.AdventureRPG.Core.Exceptions.FileException;
+import com.AdventureRPG.Core.Exceptions.GraphicException;
+import com.AdventureRPG.Core.Framework.GameSystem;
 import com.AdventureRPG.RenderManager.RenderManager;
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
 import com.AdventureRPG.Util.GlobalConstant;
@@ -14,71 +16,65 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class PassManager {
+public class PassManager extends GameSystem {
 
-    // Game Manager
-    private final Gson gson;
-    private final GameManager gameManager;
-    private final ShaderManager shaderManager;
+    // Root
+    private Gson gson;
+    private ShaderManager shaderManager;
     private RenderManager renderManager;
 
     // Settings
-    private final String PASS_JSON_PATH;
+    private String PASS_JSON_PATH;
 
     // Data
-    private final Map<Integer, PassData> idToPass = new LinkedHashMap<>();
-    private final Map<String, Integer> nameToID = new HashMap<>();
-    private int nextPassID = 0;
+    private Map<Integer, PassData> idToPass;
+    private Map<String, Integer> nameToID;
+    private int nextPassID;
 
     // Base \\
 
-    public PassManager(GameManager gameManager) {
+    @Override
+    public void init() {
 
-        // Game Manager
-        this.gson = gameManager.gson;
-        this.gameManager = gameManager;
-        this.shaderManager = gameManager.shaderManager;
+        // Root
+        this.gson = rootManager.gson;
+        this.shaderManager = rootManager.shaderManager;
 
         // Settings
         this.PASS_JSON_PATH = GlobalConstant.PASS_JSON_PATH;
+
+        // Data
+        this.idToPass = new LinkedHashMap<>();
+        this.nameToID = new HashMap<>();
+        this.nextPassID = 0;
     }
 
+    @Override
     public void awake() {
 
-        // Game Manager
-        this.renderManager = gameManager.renderManager;
+        // Root
+        this.renderManager = rootManager.renderManager;
 
-        // Core Logic \\
-
+        // Pass ManagerS
         compilePasses();
-    }
-
-    public void start() {
-
-    }
-
-    public void update() {
-
-    }
-
-    public void dispose() {
-
     }
 
     // Core Logic \\
 
     private void compilePasses() {
 
-        FileHandle dir = Gdx.files.internal(PASS_JSON_PATH);
+        FileHandle directory = Gdx.files.internal(PASS_JSON_PATH);
 
-        if (!dir.exists() || !dir.isDirectory())
-            throw new RuntimeException("Pass folder not found: " + PASS_JSON_PATH);
+        if (!directory.exists() || !directory.isDirectory())
+            throw new FileException.FileNotFoundException(directory.file());
 
-        for (FileHandle file : dir.list("json")) {
+        for (FileHandle file : directory.list("json")) {
 
             try {
+
                 PassJson json = gson.fromJson(file.readString(), PassJson.class);
                 PassData passTemplate = createPassTemplate(file, json);
+
                 registerPass(passTemplate);
             }
 
@@ -123,7 +119,8 @@ public class PassManager {
             }
 
             else
-                throw new RuntimeException("Uniform " + name + " must be an object with 'type' and 'value'");
+                throw new GraphicException.PassDefinitionException(name);
+
         }
 
         return uniforms;
@@ -187,7 +184,7 @@ public class PassManager {
         Map<String, Object> uniforms;
     }
 
-    // Accessible \\S
+    // Accessible \\
 
     public PassData getPassByID(int id) {
         return idToPass.get(id);

@@ -1,6 +1,8 @@
 package com.AdventureRPG.RenderManager;
 
-import com.AdventureRPG.GameManager;
+import java.sql.Time;
+
+import com.AdventureRPG.Core.MainManager;
 import com.AdventureRPG.PassManager.PassData;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.ShaderManager.ShaderManager;
@@ -24,15 +26,15 @@ public class RenderManager {
 
     // Base \\
 
-    public RenderManager(GameManager gameManager) {
+    public RenderManager(MainManager mainManager) {
 
         // Game Manager
-        this.shaderManager = gameManager.shaderManager;
-        this.UISystem = gameManager.UISystem;
-        this.worldSystem = gameManager.worldSystem;
-        this.playerSystem = gameManager.playerSystem;
+        this.shaderManager = mainManager.shaderManager;
+        this.UISystem = mainManager.UISystem;
+        this.worldSystem = mainManager.worldSystem;
+        this.playerSystem = mainManager.playerSystem;
 
-        this.renderQueue = new RenderQueue(gameManager);
+        this.renderQueue = new RenderQueue(mainManager);
 
         // Core passes
 
@@ -58,14 +60,14 @@ public class RenderManager {
 
     // Core Logic \\
 
-    public void draw(SpriteBatch spriteBatch, ModelBatch modelBatch, float deltaTime) {
+    public void draw(SpriteBatch spriteBatch, ModelBatch modelBatch) {
 
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
 
         RenderContext context = new RenderContext(spriteBatch, modelBatch);
 
-        context.deltaTime = deltaTime;
+        context.deltaTime = Gdx.graphics.getDeltaTime();
         renderQueue.renderAll(context);
     }
 

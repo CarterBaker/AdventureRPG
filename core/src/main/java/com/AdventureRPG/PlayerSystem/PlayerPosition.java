@@ -1,6 +1,6 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.AdventureRPG.GameManager;
+import com.AdventureRPG.Core.Framework.GameManager;
 import com.AdventureRPG.InputSystem.Movement;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
@@ -8,17 +8,15 @@ import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.badlogic.gdx.math.Vector3;
 
-public class PlayerPosition {
+public class PlayerPosition extends GameManager {
 
-    // Game Manager
-    private final GameManager gameManager;
-    private final PlayerCamera camera;
-    private final Movement movement;
-
+    // Root
+    private PlayerCamera camera;
+    private Movement movement;
     private WorldSystem worldSystem;
 
     // Settings
-    private final int CHUNK_SIZE;
+    private int CHUNK_SIZE;
 
     // Position
     private Vector3 currentPosition;
@@ -26,12 +24,15 @@ public class PlayerPosition {
 
     // Base \\
 
-    public PlayerPosition(GameManager gameManager, PlayerSystem playerSystem) {
+    public PlayerPosition(PlayerSystem playerSystem) {
 
-        // Game Manager
-        this.gameManager = gameManager;
+        // Root
         this.camera = playerSystem.camera;
-        this.movement = new Movement(gameManager, playerSystem.stats);
+        this.movement = (Movement) register(new Movement(playerSystem.stats));
+    }
+
+    @Override
+    public void init() {
 
         // Settings
         this.CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
@@ -41,9 +42,11 @@ public class PlayerPosition {
         this.chunkCoordinate = new Vector2Int();
     }
 
+    @Override
     public void awake() {
 
-        this.worldSystem = gameManager.worldSystem;
+        // Root
+        this.worldSystem = rootManager.worldSystem;
     }
 
     // Movement \\

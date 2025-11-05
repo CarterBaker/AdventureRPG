@@ -1,29 +1,31 @@
 package com.AdventureRPG.InputSystem;
 
-import com.AdventureRPG.GameManager;
+import com.AdventureRPG.Core.Framework.GameSystem;
 import com.AdventureRPG.PlayerSystem.Statistics;
 import com.AdventureRPG.Util.Vector3Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector3;
 
-public class Movement {
+public class Movement extends GameSystem {
 
     // Game Manager
-    private final GameManager gameManager;
-    private final Statistics statistics;
+    private Statistics statistics;
 
     // Temp
-    private final Vector3 forward;
-    private final Vector3 right;
-    private final Vector3 localMove;
+    private Vector3 forward;
+    private Vector3 right;
+    private Vector3 localMove;
 
     // Base \\
 
-    public Movement(GameManager gameManager, Statistics statistics) {
+    public Movement(Statistics statistics) {
 
         // Game Manager
-        this.gameManager = gameManager;
         this.statistics = statistics;
+    }
+
+    @Override
+    public void init() {
 
         // Temp
         this.forward = new Vector3();

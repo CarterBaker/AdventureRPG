@@ -1,41 +1,55 @@
 package com.AdventureRPG.LightingSystem;
 
-import com.AdventureRPG.GameManager;
 import com.AdventureRPG.PassManager.PassManager;
 import com.AdventureRPG.ShaderManager.UniversalUniformType;
+import com.AdventureRPG.Core.Framework.GameSystem;
 import com.AdventureRPG.PassManager.PassData;
 import com.AdventureRPG.TimeSystem.TimeSystem;
 
-public class Sky {
+public class Sky extends GameSystem {
 
-    private final PassManager passManager;
-    private final TimeSystem timeSystem;
+    // Root
+    private PassManager passManager;
+    private TimeSystem timeSystem;
+
+    // Shader
     private int skyPassID;
-
     private PassData skyPass;
 
+    // Uniforms
     private float u_overcast;
 
-    public Sky(GameManager gameManager) {
+    // Base \\
 
-        this.passManager = gameManager.passManager;
-        this.timeSystem = gameManager.timeSystem;
+    @Override
+    public void init() {
 
+        // Root
+        this.passManager = rootManager.passManager;
+        this.timeSystem = rootManager.timeSystem;
+
+        // Uniforms
         this.u_overcast = 0;
     }
 
+    @Override
     public void awake() {
 
+        // Shader
         skyPassID = passManager.getPassID("sky");
     }
 
+    @Override
     public void start() {
 
+        // Shader
         skyPass = passManager.createPassInstance(skyPassID, -5);
         skyPass.setUniform("u_overcast", u_overcast);
     }
 
+    @Override
     public void update() {
+
         skyPass.setUniversalUniform(UniversalUniformType.u_inverseView);
         skyPass.setUniversalUniform(UniversalUniformType.u_inverseProjection);
         skyPass.setUniform("u_timeOfDay", (float) timeSystem.getTimeOfDay());

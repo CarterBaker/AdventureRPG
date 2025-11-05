@@ -39,6 +39,10 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
 
         // Constant Settings \\
 
+        // Physics Settings
+        if (obj.has("FIXED_TIME_STEP"))
+            builder.FIXED_TIME_STEP(obj.get("FIXED_TIME_STEP").getAsFloat());
+
         // Thread Settings
         if (obj.has("AI_AVAILABLE_THREADS"))
             builder.AI_AVAILABLE_THREADS(obj.get("AI_AVAILABLE_THREADS").getAsInt());

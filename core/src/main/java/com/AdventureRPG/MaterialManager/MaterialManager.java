@@ -1,6 +1,8 @@
 package com.AdventureRPG.MaterialManager;
 
-import com.AdventureRPG.GameManager;
+import com.AdventureRPG.Core.Exceptions.FileException;
+import com.AdventureRPG.Core.Exceptions.GraphicException;
+import com.AdventureRPG.Core.Framework.GameSystem;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
 import com.AdventureRPG.TextureManager.TextureManager;
@@ -17,74 +19,87 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MaterialManager {
-
-    // Debug
-    private final boolean debug = false; // TODO: Debug line
+// TODO: This class needs to be examined closely
+public class MaterialManager extends GameSystem {
 
     // Game Manager
-    private final Gson gson;
-    private final TextureManager textureManager;
-    private final ShaderManager shaderManager;
+    private Gson gson;
+    private TextureManager textureManager;
+    private ShaderManager shaderManager;
 
     // Settings
-    private final String MATERIAL_JSON_PATH;
+    private String MATERIAL_JSON_PATH;
 
-    // Material storage
-    private final Map<Integer, MaterialData> materialsById = new HashMap<>();
-    private final Map<String, Integer> idByName = new HashMap<>();
+    // Material Reference
+    private Map<Integer, MaterialData> materialsById;
+    private Map<String, Integer> idByName;;
 
-    // Map of Material to ShaderProgram for O(1) lookup
-    private final List<MaterialData> materials = new ArrayList<>();
-    private final Map<TextureArray, MaterialData> arrayToFirstMaterial = new HashMap<>();
-    private final Map<Material, MaterialData> dataByMaterial = new HashMap<>();
-    private final Map<Material, ShaderProgram> shaderByMaterial = new HashMap<>();
+    // Data Lookup
+    private List<MaterialData> materials;
 
-    private int nextId = 0;
+    private Map<TextureArray, MaterialData> arrayToFirstMaterial;
+    private Map<Material, MaterialData> dataByMaterial;
+    private Map<Material, ShaderProgram> shaderByMaterial;
 
-    public MaterialManager(GameManager gameManager) {
+    private int nextId;
+
+    @Override
+    public void init() {
 
         // Game Manager
-        this.gson = gameManager.gson;
-        this.textureManager = gameManager.textureManager;
-        this.shaderManager = gameManager.shaderManager;
+        this.gson = rootManager.gson;
+        this.textureManager = rootManager.textureManager;
+        this.shaderManager = rootManager.shaderManager;
 
         // Settings
         this.MATERIAL_JSON_PATH = GlobalConstant.MATERIAL_JSON_PATH;
 
+        // Material Reference
+        this.materialsById = new HashMap<>();
+        this.idByName = new HashMap<>();
+
+        // Data Lookup
+        this.materials = new ArrayList<>();
+
+        this.arrayToFirstMaterial = new HashMap<>();
+        this.dataByMaterial = new HashMap<>();
+        this.shaderByMaterial = new HashMap<>();
+
+        this.nextId = 0;
+
         compileMaterials();
     }
 
-    public void awake() {
-
-    }
-
-    public void start() {
-    }
-
+    @Override
     public void update() {
 
         for (int i = 0, n = materials.size(); i < n; i++)
             materials.get(i).updateUniversalUniforms();
     }
 
+    @Override
     public void dispose() {
+
         materialsById.clear();
         idByName.clear();
         shaderByMaterial.clear();
     }
 
-    // Core Logic \\
+    // Material Manager \\
 
     private void compileMaterials() {
 
-        FileHandle folder = Gdx.files.internal(MATERIAL_JSON_PATH);
+        FileHandle directory = Gdx.files.internal(MATERIAL_JSON_PATH);
 
-        for (FileHandle file : folder.list("json")) {
+        if (!directory.exists() || !directory.isDirectory())
+            throw new FileException.FileNotFoundException(directory.file());
+
+        for (FileHandle file : directory.list("json")) {
 
             try {
 
                 MaterialDefinition def = gson.fromJson(file.reader(), MaterialDefinition.class);
+
                 if (def == null)
                     continue; // safety
 
@@ -93,16 +108,13 @@ public class MaterialManager {
                 ShaderProgram shaderProgram = shaderManager.getShaderByID(shaderID);
 
                 // --- IMPORTANT: use folder name only (def.texture is folder name) ---
-                if (def.texture == null || def.texture.isEmpty()) {
-                    throw new RuntimeException("Material JSON missing 'texture' (folder name): " + file.name());
-                }
+                if (def.texture == null || def.texture.isEmpty())
+                    throw new GraphicException.MissingTextureFieldException(file.name());
 
                 // Get the TextureArray using ONLY the folder name
                 TextureArray textureArray = textureManager.getArray(def.texture);
-                if (textureArray == null) {
-                    throw new RuntimeException("TextureArray not found for folder: " + def.texture + " (referenced in "
-                            + file.name() + ")");
-                }
+                if (textureArray == null)
+                    throw new GraphicException.TextureArrayNotFoundException(def.texture, file.name());
 
                 int id = nextId++;
                 String name = file.nameWithoutExtension();
@@ -112,13 +124,15 @@ public class MaterialManager {
 
                 // Build per-material uniforms map (always create a map; empty if none)
                 Map<String, UniformAttribute> uniforms = new HashMap<>();
-                if (def.uniforms != null) {
+
+                if (def.uniforms != null)
                     for (UniformDefinition u : def.uniforms) {
+
                         if (u == null || u.name == null)
                             continue;
+
                         uniforms.put(u.name, new UniformAttribute(u.name, u.type, u.defaultValue));
                     }
-                }
 
                 MaterialData data = new MaterialData(
                         id,
@@ -141,13 +155,10 @@ public class MaterialManager {
                     shaderByMaterial.put(libgdxMaterial, shaderProgram);
             }
 
-            catch (Exception exception) {
-                exception.printStackTrace();
+            catch (Exception e) {
+                throw new GraphicException.MaterialDefinitionException(file.name(), e);
             }
         }
-
-        if (debug)
-            debug();
     }
 
     // Utility \\
@@ -232,21 +243,5 @@ public class MaterialManager {
                 case MATRIX4 -> shader.setUniformMatrix(ua.name, (com.badlogic.gdx.math.Matrix4) ua.value);
             }
         }
-    }
-
-    // Debug \\
-
-    private void debug() {
-        System.out.println("=== Debug: arrayToFirstMaterial contents ===");
-        for (Map.Entry<TextureArray, MaterialData> entry : arrayToFirstMaterial.entrySet()) {
-            TextureArray textureArray = entry.getKey();
-            MaterialData materialData = entry.getValue();
-
-            String texInfo = (textureArray != null) ? textureArray.toString() : "null";
-            String matName = (materialData != null) ? materialData.name : "null";
-
-            System.out.println("TextureArray: " + texInfo + " -> Material: " + matName);
-        }
-        System.out.println("===========================================");
     }
 }

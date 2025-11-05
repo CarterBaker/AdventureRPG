@@ -1,8 +1,9 @@
 package com.AdventureRPG.ShaderManager;
 
-import com.AdventureRPG.GameManager;
+import com.AdventureRPG.Core.Framework.GameManager;
+import com.AdventureRPG.Core.Exceptions.FileException;
+import com.AdventureRPG.Core.Exceptions.GraphicException;
 import com.AdventureRPG.MaterialManager.MaterialManager;
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
@@ -19,45 +20,43 @@ import com.google.gson.Gson;
 
 import java.util.*;
 
-//TODO: I need to refactor how the includes work so they are directly in teh vert and frag shaders instead
-public class ShaderManager implements ShaderProvider {
+//TODO: I need to refactor how the includes work so they are directly in the vert and frag shaders instead
+public class ShaderManager extends GameManager implements ShaderProvider {
 
-    // Debug
-    private final boolean debug = true; // TODO: Debug line
-
-    // Game Manager
-    private final Gson gson;
-    private final ShaderProvider defaultShaderProvider;
-    private final MaterialManager materialManager;
+    // Root
+    private Gson gson;
+    private ShaderProvider defaultShaderProvider;
+    private MaterialManager materialManager;
 
     // Settings
-    private final String SHADER_JSON_PATH;
+    private String SHADER_JSON_PATH;
 
     // Shader Manager
-    public final UniversalUniform universalUniform;
+    public UniversalUniform universalUniform;
 
     // Shader maps
-    private final Map<String, ShaderProgram> nameToProgram;
-    private final Map<Integer, ShaderProgram> idToProgram;
-    private final Map<String, Integer> nameToID;
+    private Map<String, ShaderProgram> nameToProgram;
+    private Map<Integer, ShaderProgram> idToProgram;
+    private Map<String, Integer> nameToID;
     private int nextShaderID;
 
     private Mesh fullScreenQuad;
 
     // Base \\
 
-    public ShaderManager(GameManager gameManager) {
+    @Override
+    public void init() {
 
-        // Game Manager
-        this.gson = gameManager.gson;
-        this.defaultShaderProvider = gameManager.defaultShaderProvider;
-        this.materialManager = gameManager.materialManager;
+        // Root
+        this.gson = rootManager.gson;
+        this.defaultShaderProvider = rootManager.defaultShaderProvider;
+        this.materialManager = rootManager.materialManager;
 
         // Settings
         this.SHADER_JSON_PATH = GlobalConstant.SHADER_JSON_PATH;
 
         // Shader Manager
-        this.universalUniform = new UniversalUniform(gameManager);
+        this.universalUniform = (UniversalUniform) register(new UniversalUniform());
 
         // Shader maps
         this.nameToProgram = new LinkedHashMap<>();
@@ -73,6 +72,7 @@ public class ShaderManager implements ShaderProvider {
     }
 
     private void createFullScreenQuad() {
+
         fullScreenQuad = new Mesh(true, 4, 6,
                 new VertexAttribute(VertexAttributes.Usage.Position, 2, "a_position"),
                 new VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, "a_texCoord0"));
@@ -83,26 +83,13 @@ public class ShaderManager implements ShaderProvider {
                 1, 1, 1f, 1f,
                 -1, 1, 0f, 1f
         };
-
         short[] indices = new short[] { 0, 1, 2, 2, 3, 0 };
 
         fullScreenQuad.setVertices(verts);
         fullScreenQuad.setIndices(indices);
     }
 
-    public void awake() {
-
-        universalUniform.awake();
-    }
-
-    public void start() {
-
-    }
-
-    public void update() {
-
-        universalUniform.update();
-    }
+    // Shader Provider \\
 
     @Override
     public Shader getShader(Renderable renderable) {
@@ -124,7 +111,7 @@ public class ShaderManager implements ShaderProvider {
             fullScreenQuad.dispose();
     }
 
-    // Core Logic \\
+    // Shader Manager \\
 
     // Assemble each shader
     private void compileShaders() {
@@ -132,18 +119,18 @@ public class ShaderManager implements ShaderProvider {
         FileHandle directory = Gdx.files.internal(SHADER_JSON_PATH);
 
         if (!directory.exists() || !directory.isDirectory())
-            throw new RuntimeException("Shader folder not found: " + SHADER_JSON_PATH);
+            throw new FileException.FileNotFoundException(directory.file());
 
         // Iterate JSON files in folder
-        for (FileHandle file : directory.list("json")) {
+        for (FileHandle fileHandle : directory.list("json")) {
 
             try {
 
-                ShaderDefinition definition = gson.fromJson(file.readString(), ShaderDefinition.class);
+                ShaderDefinition definition = gson.fromJson(fileHandle.readString(), ShaderDefinition.class);
                 ShaderProgram program = compileShader(definition);
 
                 // Name = JSON filename without .json
-                String name = stripExtension(file.name());
+                String name = stripExtension(fileHandle.name());
 
                 nameToProgram.put(name, program);
                 idToProgram.put(nextShaderID, program);
@@ -152,10 +139,8 @@ public class ShaderManager implements ShaderProvider {
                 nextShaderID++;
             }
 
-            catch (Exception exception) {
-
-                // TODO: Debug line
-                log("Failed to load shader: " + file.name() + " - " + exception.getMessage());
+            catch (Exception e) {
+                throw new FileException.FileNotFoundException(fileHandle.file());
             }
         }
     }
@@ -164,19 +149,19 @@ public class ShaderManager implements ShaderProvider {
     private ShaderProgram compileShader(ShaderDefinition def) {
 
         if (def.vertex == null || def.fragment == null)
-            throw new RuntimeException("Shader JSON missing 'vertex' or 'fragment' field.");
+            throw new GraphicException.ShaderDefinitionException("Unknown Shader JSON");
 
         FileHandle vertFile = Gdx.files.internal(SHADER_JSON_PATH + "/" + def.vertex);
 
         if (!vertFile.exists())
-            throw new RuntimeException("Vertex shader file not found: " + def.vertex);
+            throw new GraphicException.ShaderFileNotFoundException(def.vertex);
 
         String vertexSource = vertFile.readString();
 
         FileHandle fragFile = Gdx.files.internal(SHADER_JSON_PATH + "/" + def.fragment);
 
         if (!fragFile.exists())
-            throw new RuntimeException("Fragment shader file not found: " + def.fragment);
+            throw new GraphicException.ShaderFileNotFoundException(def.fragment);
 
         String fragmentSource = fragFile.readString();
 
@@ -187,7 +172,7 @@ public class ShaderManager implements ShaderProvider {
         ShaderProgram program = new ShaderProgram(vertexSource, fragmentSource);
 
         if (!program.isCompiled())
-            throw new RuntimeException("Shader compile error: " + program.getLog());
+            throw new GraphicException.ShaderCompilationException("Unnamed Shader", program.getLog());
 
         return program;
     }
@@ -206,7 +191,8 @@ public class ShaderManager implements ShaderProvider {
                 if (fileHandle.exists())
                     sb.append(fileHandle.readString()).append("\n");
                 else
-                    log("Include not found: " + include);
+                    throw new GraphicException.ShaderFileNotFoundException(fileHandle.path());
+
             }
         }
 
@@ -236,20 +222,10 @@ public class ShaderManager implements ShaderProvider {
 
     // Utility \\
 
-    // Remove .json extension
     private String stripExtension(String fileName) {
         return fileName.endsWith(".json") ? fileName.substring(0, fileName.length() - 5) : fileName;
     }
 
-    private void log(String msg) { // TODO: Debug line
-
-        if (debug)
-            System.out.println("[ShaderManager] " + msg);
-    }
-
-    // Private data types \\
-
-    // Internal representation of a shader for Gson
     private static class ShaderDefinition {
 
         String vertex;
@@ -275,6 +251,7 @@ public class ShaderManager implements ShaderProvider {
         return nameToID.getOrDefault(name, -1);
     }
 
+    // Used for post processing effects
     public void renderFullScreenQuad(ShaderProgram shader) {
         fullScreenQuad.render(shader, GL30.GL_TRIANGLES);
     }

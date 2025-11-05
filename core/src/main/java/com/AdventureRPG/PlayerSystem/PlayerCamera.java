@@ -1,25 +1,39 @@
 package com.AdventureRPG.PlayerSystem;
 
+import com.AdventureRPG.Core.Framework.GameSystem;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
 
-public class PlayerCamera {
+public class PlayerCamera extends GameSystem {
 
     // Camera
-    private final PerspectiveCamera perspectiveCamera;
-    private final Vector3 direction;
+    private PerspectiveCamera perspectiveCamera;
+    private Vector3 direction;
     private float yaw = 0f;
     private float pitch = 0f;
 
     // Base \\
 
-    public PlayerCamera(float fov, float viewportWidth, float viewportHeight) {
+    public PlayerCamera(
+            float fov,
+            float viewportWidth,
+            float viewportHeight) {
 
         // Camera
-        perspectiveCamera = new PerspectiveCamera(fov, viewportWidth, viewportHeight);
+        perspectiveCamera = new PerspectiveCamera(
+                fov,
+                viewportWidth,
+                viewportHeight);
+    }
+
+    @Override
+    public void init() {
+
+        // Camera
         direction = new Vector3();
     }
 
+    @Override
     public void awake() {
 
         // Initial camera settings
