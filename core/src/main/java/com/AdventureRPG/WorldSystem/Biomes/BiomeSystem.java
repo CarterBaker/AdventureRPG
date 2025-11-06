@@ -1,25 +1,19 @@
 package com.AdventureRPG.WorldSystem.Biomes;
 
-import com.AdventureRPG.SettingsSystem.Settings;
-import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.AdventureRPG.Core.GameSystem;
 
-public class BiomeSystem {
-
-    // Game Manager
-    public final Settings settings;
+public class BiomeSystem extends GameSystem {
 
     // Biome System
-    private final Biome[] biomes;
+    private Biome[] biomes;
 
     // Base \\
 
-    public BiomeSystem(WorldSystem worldSystem) {
-
-        // Game Manager
-        this.settings = worldSystem.settings;
+    @Override
+    public void init() {
 
         // Biome System
-        this.biomes = Loader.loadBiomes(worldSystem);
+        this.biomes = Loader.loadBiomes(rootManager.worldSystem);
     }
 
     public void awake() {

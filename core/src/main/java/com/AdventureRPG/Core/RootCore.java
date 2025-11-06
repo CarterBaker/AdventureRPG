@@ -1,9 +1,43 @@
-package com.AdventureRPG.Core.Framework;
+package com.AdventureRPG.Core;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
-public abstract class DebugFramework {
+import com.AdventureRPG.SettingsSystem.Settings;
+
+abstract class RootCore {
+
+    void internalInit(
+            Settings settings,
+            RootManager rootManager) {
+    }
+
+    void internalAwake() {
+    }
+
+    void internalStart() {
+    }
+
+    void internalMenuExclusiveUpdate() {
+    }
+
+    void internalGameExclusiveUpdate() {
+    }
+
+    void internalUpdate() {
+    }
+
+    void internalFixedUpdate() {
+    }
+
+    void internalLateUpdate() {
+    }
+
+    void internalRender() {
+    }
+
+    void internalDispose() {
+    }
 
     // Debug \\
 

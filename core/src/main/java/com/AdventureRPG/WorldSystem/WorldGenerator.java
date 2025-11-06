@@ -1,5 +1,6 @@
 package com.AdventureRPG.WorldSystem;
 
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.SaveSystem.UserData;
 import com.AdventureRPG.WorldSystem.Blocks.Block;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
@@ -8,32 +9,32 @@ import com.AdventureRPG.WorldSystem.Util.PackedCoordinate3Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.OpenSimplex2;
 
-public class WorldGenerator {
+public class WorldGenerator extends GameSystem {
 
     // Game Manager
-    private final UserData userData;
-    private final WorldSystem worldSystem;
-    private final PackedCoordinate3Int packedCoordinate3Int;
+    private UserData userData;
+    private WorldSystem worldSystem;
+    private PackedCoordinate3Int packedCoordinate3Int;
 
     // Settings
-    private final int BIOME_SIZE;
-    private final int CHUNK_SIZE;
-    private final int WORLD_HEIGHT;
+    private int BIOME_SIZE;
+    private int CHUNK_SIZE;
+    private int WORLD_HEIGHT;
 
     // Default Blocks
-    private final Block AIR_BLOCK; // TODO: With 2D chunk coordinates this is
-    private final Block GRASS_BLOCK; // No longer possible
+    private Block AIR_BLOCK; // TODO: With 2D chunk coordinates this is
+    private Block GRASS_BLOCK; // No longer possible
 
     // Data
     private long seed;
 
     // Base \\
 
-    public WorldGenerator(WorldSystem worldSystem) {
+    public void init() {
 
         // Game Manager
-        this.userData = worldSystem.saveSystem.userData;
-        this.worldSystem = worldSystem;
+        this.userData = rootManager.saveSystem.userData;
+        this.worldSystem = rootManager.worldSystem;
         this.packedCoordinate3Int = worldSystem.packedCoordinate3Int;
 
         // Settings

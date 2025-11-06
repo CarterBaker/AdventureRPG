@@ -2,7 +2,7 @@ package com.AdventureRPG.SaveSystem;
 
 import java.io.File;
 
-import com.AdventureRPG.Core.Framework.GameManager;
+import com.AdventureRPG.Core.GameManager;
 
 // TODO: Eventually the whole save system will need a refactor
 public class SaveSystem extends GameManager {

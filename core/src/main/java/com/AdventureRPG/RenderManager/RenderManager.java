@@ -1,8 +1,6 @@
 package com.AdventureRPG.RenderManager;
 
-import java.sql.Time;
-
-import com.AdventureRPG.Core.MainManager;
+import com.AdventureRPG.Core.GameManager;
 import com.AdventureRPG.PassManager.PassData;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.ShaderManager.ShaderManager;
@@ -13,28 +11,26 @@ import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 
-public class RenderManager {
+public class RenderManager extends GameManager {
 
-    // Game Manager
-    private final ShaderManager shaderManager;
-    private final UISystem UISystem;
-    private final WorldSystem worldSystem;
-    private final PlayerSystem playerSystem;
-
-    // Render Queue
-    private final RenderQueue renderQueue;
+    // Root
+    private ShaderManager shaderManager;
+    private UISystem UISystem;
+    private WorldSystem worldSystem;
+    private PlayerSystem playerSystem;
+    private RenderQueue renderQueue;
 
     // Base \\
 
-    public RenderManager(MainManager mainManager) {
+    @Override
+    public void init() {
 
-        // Game Manager
-        this.shaderManager = mainManager.shaderManager;
-        this.UISystem = mainManager.UISystem;
-        this.worldSystem = mainManager.worldSystem;
-        this.playerSystem = mainManager.playerSystem;
-
-        this.renderQueue = new RenderQueue(mainManager);
+        // Root
+        this.shaderManager = rootManager.shaderManager;
+        this.UISystem = rootManager.UISystem;
+        this.worldSystem = rootManager.worldSystem;
+        this.playerSystem = rootManager.playerSystem;
+        this.renderQueue = (RenderQueue) register(new RenderQueue());
 
         // Core passes
 
@@ -43,7 +39,7 @@ public class RenderManager {
                 shaderManager.universalUniform,
                 ctx -> {
                     ctx.modelBatch.begin(playerSystem.getCamera());
-                    worldSystem.render(ctx.modelBatch);
+                    worldSystem.render();
                     playerSystem.render();
                     ctx.modelBatch.end();
                 }), 0);

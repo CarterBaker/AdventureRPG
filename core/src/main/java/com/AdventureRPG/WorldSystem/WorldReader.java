@@ -1,32 +1,37 @@
 package com.AdventureRPG.WorldSystem;
 
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
 
-public class WorldReader {
+public class WorldReader extends GameSystem {
 
-    // Debug
-    private final boolean debug = false; // TODO: Debug line
-
-    // Game Manager
-    private final WorldSystem worldSystem;
-    private final Pixmap world;
+    // Root
+    private WorldSystem worldSystem;
+    private Pixmap world;
 
     // Base \\
 
-    public WorldReader(WorldSystem worldSystem) {
+    @Override
+    public void init() {
 
-        // Game Manager
-        this.worldSystem = worldSystem;
+        // Root
         this.world = new Pixmap(Gdx.files.internal(GlobalConstant.REGION_IMAGE_PATH));
+    }
+
+    public void awake() {
+
+        // Root
+        worldSystem = rootManager.worldSystem;
     }
 
     // World Reader \\
 
     public Vector2Int getWorldScale() {
+
         int width = world.getWidth();
         int height = world.getHeight();
 
@@ -37,9 +42,6 @@ public class WorldReader {
         int worldHeight = height * chunksPerPixel * chunkSize;
 
         Vector2Int worldScale = new Vector2Int(worldWidth, worldHeight);
-
-        if (debug)
-            System.out.println("World Scale: " + worldScale); // TODO: Debug line
 
         return worldScale;
     }

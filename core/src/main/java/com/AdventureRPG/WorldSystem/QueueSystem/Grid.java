@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.math.Vector3;
@@ -13,14 +13,7 @@ import com.badlogic.gdx.math.collision.BoundingBox;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
-public class Grid {
-
-    // Debug
-    private final boolean debug = false; // TODO: Debug line
-
-    // Game Manager
-    private final Settings settings;
-    private final QueueSystem gridSystem;
+public class Grid extends GameSystem {
 
     // Settings
     private int maxRenderDistance;
@@ -36,11 +29,8 @@ public class Grid {
 
     // Base \\
 
-    public Grid(QueueSystem gridSystem) {
-
-        // Chunk System
-        this.settings = gridSystem.settings;
-        this.gridSystem = gridSystem;
+    @Override
+    public void init() {
 
         // Settings
         this.maxRenderDistance = settings.maxRenderDistance;
@@ -53,6 +43,8 @@ public class Grid {
 
         // Temp
         this.list = new ArrayList<>();
+
+        buildGrid();
     }
 
     // Grid \\
@@ -176,11 +168,5 @@ public class Grid {
 
     public BoundingBox getChunkBounds(long gridCoordinate) {
         return chunkBounds.get(gridCoordinate);
-    }
-
-    // Debug \\
-
-    private void debug() { // TODO: Debug line
-
     }
 }

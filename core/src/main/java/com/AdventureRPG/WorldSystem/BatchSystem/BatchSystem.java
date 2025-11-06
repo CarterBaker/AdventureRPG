@@ -1,26 +1,23 @@
 package com.AdventureRPG.WorldSystem.BatchSystem;
 
+import com.AdventureRPG.Core.GameManager;
 import com.AdventureRPG.Util.GlobalConstant;
-import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.WorldTick;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 import com.AdventureRPG.WorldSystem.QueueSystem.QueueSystem;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-public class BatchSystem {
+public class BatchSystem extends GameManager {
 
-    // Debug
-    private final boolean debug = false; // TODO: Debug line
-
-    // Game Manager
-    private final WorldTick worldTick;
-    private final Loader loader;
-    private final QueueSystem queueSystem;
+    // Root
+    private WorldTick worldTick;
+    private Loader loader;
+    private QueueSystem queueSystem;
 
     // Settings
-    private final int MAX_CHUNK_LOADS_PER_FRAME;
-    private final int MAX_CHUNK_LOADS_PER_TICK;
+    private int MAX_CHUNK_LOADS_PER_FRAME;
+    private int MAX_CHUNK_LOADS_PER_TICK;
 
     // Chunk Tracking
     private Long2ObjectOpenHashMap<Chunk> loadedChunks;
@@ -31,12 +28,12 @@ public class BatchSystem {
 
     // Base \\
 
-    public BatchSystem(WorldSystem worldSystem, QueueSystem queueSystem) {
+    @Override
+    public void init() {
 
-        // Game Manager
-        this.worldTick = worldSystem.worldTick;
-        this.loader = new Loader(worldSystem, this);
-        this.queueSystem = queueSystem;
+        // Root
+        this.worldTick = rootManager.worldSystem.worldTick;
+        this.loader = (Loader) register(new Loader());
 
         // Settings
         this.MAX_CHUNK_LOADS_PER_FRAME = GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
@@ -50,26 +47,18 @@ public class BatchSystem {
         this.loadedChunksThisTick = 0;
     }
 
+    @Override
     public void awake() {
 
+        // Root
+        this.queueSystem = rootManager.worldSystem.queueSystem;
     }
 
-    public void start() {
-
-    }
-
+    @Override
     public void update() {
 
         updateQueue();
         loader.update();
-    }
-
-    public void render() {
-
-    }
-
-    public void dispose() {
-
     }
 
     // Update \\
@@ -207,11 +196,5 @@ public class BatchSystem {
 
     public int getQueueSize(BatchProcess process) {
         return (process.bundle != null) ? process.bundle.size() : 0;
-    }
-
-    // Debug \\
-
-    private void debug(String input) {
-        System.out.println("[BatchSystem] " + input);
     }
 }

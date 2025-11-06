@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldSystem;
 
-import com.AdventureRPG.GameManager;
+import com.AdventureRPG.Core.GameManager;
 import com.AdventureRPG.MaterialManager.MaterialManager;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.SaveSystem.SaveSystem;
@@ -19,44 +19,38 @@ import com.AdventureRPG.WorldSystem.Blocks.Loader;
 import com.AdventureRPG.WorldSystem.Blocks.Type;
 import com.AdventureRPG.WorldSystem.QueueSystem.QueueSystem;
 import com.AdventureRPG.WorldSystem.Util.PackedCoordinate3Int;
-import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.math.Vector3;
 import com.google.gson.Gson;
 
-public class WorldSystem {
+public class WorldSystem extends GameManager {
 
-    // Debug
-    private final boolean debug = false; // TODO: Debug line
-
-    // Game Manager
-    public final GameManager gameManager;
-    public final ThreadManager threadManager;
-    public final TextureManager textureManager;
-    public final ShaderManager shaderManager;
-    public final MaterialManager materialManager;
-    public final SaveSystem saveSystem;
-    public final UISystem UISystem;
-    public final PlayerSystem playerSystem;
-    public final Settings settings;
-    public final Gson gson;
+    // Root
+    public ThreadManager threadManager;
+    public TextureManager textureManager;
+    public ShaderManager shaderManager;
+    public MaterialManager materialManager;
+    public SaveSystem saveSystem;
+    public UISystem UISystem;
+    public PlayerSystem playerSystem;
+    public Gson gson;
 
     // Settings
     private int maxRenderDistance;
-    private final int CHUNKS_PER_PIXEL;
-    private final int CHUNK_SIZE;
+    private int CHUNKS_PER_PIXEL;
+    private int CHUNK_SIZE;
+    public Vector2Int WORLD_SCALE;
 
     // Block Management
-    private final Block[] blocks;
+    private Block[] blocks;
 
     // World System
-    public final PackedCoordinate3Int packedCoordinate3Int;
-    public final WorldGenerator worldGenerator;
-    public final WorldTick worldTick;
-    public final WorldReader worldReader;
-    public final QueueSystem queueSystem;
-    public final BatchSystem batchSystem;
-    public final BiomeSystem biomeSystem;
-    public final Vector2Int WORLD_SCALE;
+    public PackedCoordinate3Int packedCoordinate3Int;
+    public WorldGenerator worldGenerator;
+    public WorldTick worldTick;
+    public WorldReader worldReader;
+    public QueueSystem queueSystem;
+    public BatchSystem batchSystem;
+    public BiomeSystem biomeSystem;
 
     // Position
     private Vector3 currentPosition;
@@ -64,78 +58,44 @@ public class WorldSystem {
 
     // Base \\
 
-    public WorldSystem(GameManager gameManager) {
+    @Override
+    public void init() {
 
-        // Game Manager
-        this.gameManager = gameManager;
-        this.threadManager = gameManager.threadManager;
-        this.textureManager = gameManager.textureManager;
-        this.shaderManager = gameManager.shaderManager;
-        this.materialManager = gameManager.materialManager;
-        this.saveSystem = gameManager.saveSystem;
-        this.UISystem = gameManager.UISystem;
-        this.playerSystem = gameManager.playerSystem;
-        this.settings = gameManager.settings;
-        this.gson = gameManager.gson;
+        // Root
+        this.threadManager = rootManager.threadManager;
+        this.textureManager = rootManager.textureManager;
+        this.shaderManager = rootManager.shaderManager;
+        this.materialManager = rootManager.materialManager;
+        this.saveSystem = rootManager.saveSystem;
+        this.UISystem = rootManager.UISystem;
+        this.playerSystem = rootManager.playerSystem;
+        this.gson = rootManager.gson;
 
         // Settings
         this.maxRenderDistance = settings.maxRenderDistance;
         this.CHUNKS_PER_PIXEL = GlobalConstant.CHUNKS_PER_PIXEL;
         this.CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
 
-        // Block Management
-        this.blocks = Loader.LoadBlocks(gameManager, this);
-
         // World System
-        this.packedCoordinate3Int = new PackedCoordinate3Int(this);
-        this.worldGenerator = new WorldGenerator(this);
-        this.worldTick = new WorldTick();
-        this.worldReader = new WorldReader(this);
-        this.queueSystem = new QueueSystem(this);
+        this.blocks = Loader.LoadBlocks(rootManager.gson, this); // TODO: Add block system
+        this.packedCoordinate3Int = (PackedCoordinate3Int) register(new PackedCoordinate3Int());
+        this.worldGenerator = (WorldGenerator) register(new WorldGenerator());
+        this.worldTick = (WorldTick) register(new WorldTick());
+        this.worldReader = (WorldReader) register(new WorldReader());
+        this.queueSystem = (QueueSystem) register(new QueueSystem());
         this.batchSystem = queueSystem.batchSystem;
-        this.biomeSystem = new BiomeSystem(this);
-        this.WORLD_SCALE = worldReader.getWorldScale();
+        this.biomeSystem = (BiomeSystem) register(new BiomeSystem());
 
         // Position
         this.currentPosition = new Vector3();
         this.chunkCoordinate = new Vector2Int();
     }
 
-    public void awake() {
-
-        worldTick.awake();
-        queueSystem.awake();
-        batchSystem.awake();
-        biomeSystem.awake();
-    }
-
+    @Override
     public void start() {
 
-        worldTick.start();
-        queueSystem.start();
-        batchSystem.start();
-        biomeSystem.start();
-    }
-
-    public void update() {
-
-        worldTick.update();
-        queueSystem.update();
-        batchSystem.update();
-        biomeSystem.update();
-    }
-
-    public void render(ModelBatch modelBatch) {
-
-        worldTick.render();
-        queueSystem.render();
-        batchSystem.render();
-        biomeSystem.render();
-    }
-
-    // TODO: I will need to dispose all systems here
-    public void dispose() {
-
+        // Settings
+        this.WORLD_SCALE = worldReader.getWorldScale();
     }
 
     // Movement \\
@@ -156,9 +116,6 @@ public class WorldSystem {
             return;
 
         this.chunkCoordinate.set(chunkCoordinate);
-
-        if (debug) // Remove debug line
-            debug();
 
         loadChunks();
     }
@@ -291,13 +248,5 @@ public class WorldSystem {
     public void rebuildGrid() {
 
         queueSystem.rebuildGrid();
-    }
-
-    // Debug \\
-
-    private void debug() { // TODO: Debug line
-
-        System.out.print("\rCurrect Chunk Coordinate: " + chunkCoordinate.toString());
-        System.out.flush();
     }
 }

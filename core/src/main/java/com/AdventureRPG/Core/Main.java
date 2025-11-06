@@ -65,13 +65,10 @@ public class Main extends Game {
         this.elapsedTime = 0.0f;
         this.maxSteps = 5;
 
-        // rootInit
-        rootManager.rootInit(
-                settings,
-                rootManager);
-
         // init()
-        rootManager.internalInit();
+        rootManager.internalInit(
+                this.settings,
+                this.rootManager);
 
         mainAwake();
     }

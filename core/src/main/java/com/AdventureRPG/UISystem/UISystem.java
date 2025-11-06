@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.Core.Exceptions.UIException;
-import com.AdventureRPG.Core.Framework.GameSystem;
 
 public class UISystem extends GameSystem {
 

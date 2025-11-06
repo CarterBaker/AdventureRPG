@@ -3,7 +3,7 @@ package com.AdventureRPG.SaveSystem;
 import java.io.File;
 import java.util.Random;
 
-import com.AdventureRPG.Core.Framework.GameSystem;
+import com.AdventureRPG.Core.GameSystem;
 
 public class UserData extends GameSystem {
 

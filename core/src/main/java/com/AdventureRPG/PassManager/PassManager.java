@@ -1,9 +1,9 @@
 package com.AdventureRPG.PassManager;
 
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.Core.RootManager;
 import com.AdventureRPG.Core.Exceptions.FileException;
 import com.AdventureRPG.Core.Exceptions.GraphicException;
-import com.AdventureRPG.Core.Framework.GameSystem;
 import com.AdventureRPG.RenderManager.RenderManager;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;

@@ -2,7 +2,6 @@ package com.AdventureRPG.Core;
 
 import java.io.File;
 
-import com.AdventureRPG.Core.Framework.GameManager;
 import com.AdventureRPG.InputSystem.InputSystem;
 import com.AdventureRPG.LightingSystem.LightingSystem;
 import com.AdventureRPG.TextureManager.TextureManager;
@@ -12,7 +11,6 @@ import com.AdventureRPG.PassManager.PassManager;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.RenderManager.RenderManager;
 import com.AdventureRPG.SaveSystem.SaveSystem;
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.TimeSystem.TimeSystem;
 import com.AdventureRPG.UISystem.LoadScreen;
@@ -67,10 +65,6 @@ public class RootManager extends GameManager implements Screen {
         this.game = game;
         this.path = path;
         this.gson = gson;
-    }
-
-    @Override
-    public void init() {
 
         // LibGDX
         this.defaultShaderProvider = new DefaultShaderProvider();
@@ -90,6 +84,10 @@ public class RootManager extends GameManager implements Screen {
         worldSystem = (WorldSystem) register(new WorldSystem());
         inputSystem = (InputSystem) register(new InputSystem());
         renderManager = (RenderManager) register(new RenderManager());
+    }
+
+    @Override
+    public void init() {
 
         // UI
         this.loadScreen = null;
@@ -135,11 +133,13 @@ public class RootManager extends GameManager implements Screen {
 
     @Override
     public void render() {
+
         renderManager.draw(game.spriteBatch, game.modelBatch);
     }
 
     @Override
     public void dispose() {
+
         defaultShaderProvider.dispose();
     }
 
@@ -156,6 +156,7 @@ public class RootManager extends GameManager implements Screen {
 
     @Override
     public void resize(int width, int height) {
+
         playerSystem.camera.updateViewport(width, height);
     }
 

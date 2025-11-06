@@ -1,8 +1,8 @@
 package com.AdventureRPG.MaterialManager;
 
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.Core.Exceptions.FileException;
 import com.AdventureRPG.Core.Exceptions.GraphicException;
-import com.AdventureRPG.Core.Framework.GameSystem;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
 import com.AdventureRPG.TextureManager.TextureManager;

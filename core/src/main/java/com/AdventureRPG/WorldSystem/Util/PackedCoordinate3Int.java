@@ -1,29 +1,30 @@
 package com.AdventureRPG.WorldSystem.Util;
 
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.Util.GlobalConstant;
-import com.AdventureRPG.WorldSystem.WorldSystem;
 
-public class PackedCoordinate3Int {
+public class PackedCoordinate3Int extends GameSystem {
 
     // Settings
-    private final int BIOME_SIZE;
-    private final int CHUNK_SIZE;
+    private int BIOME_SIZE;
+    private int CHUNK_SIZE;
 
-    public final int biomeSize;
-    public final int chunkSize;
+    public int biomeSize;
+    public int chunkSize;
 
     // Bit sizes
-    private final int xBits, yBits, zBits;
-    private final int xMask, yMask, zMask;
-    private final int yShift, zShift;
+    private int xBits, yBits, zBits;
+    private int xMask, yMask, zMask;
+    private int yShift, zShift;
 
     // Utility
-    private final int[] packedBiomeCoordinates;
-    private final int[] packedBlockCoordinates;
+    private int[] packedBiomeCoordinates;
+    private int[] packedBlockCoordinates;
 
     // Base \\
 
-    public PackedCoordinate3Int(WorldSystem worldSystem) {
+    @Override
+    public void init() {
 
         // Settings
         this.BIOME_SIZE = GlobalConstant.BIOME_SIZE;
@@ -51,6 +52,7 @@ public class PackedCoordinate3Int {
         // Utility
         this.packedBiomeCoordinates = new int[biomeSize];
         this.packedBlockCoordinates = new int[chunkSize];
+
         prePackCoordinates();
     }
 

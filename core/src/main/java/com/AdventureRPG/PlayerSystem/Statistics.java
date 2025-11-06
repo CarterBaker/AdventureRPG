@@ -1,6 +1,6 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.AdventureRPG.Core.Framework.GameSystem;
+import com.AdventureRPG.Core.GameSystem;
 
 public class Statistics extends GameSystem { // TODO: Eventually this will be used by all entities individually
 

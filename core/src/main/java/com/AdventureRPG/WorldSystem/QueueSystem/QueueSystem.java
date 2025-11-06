@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldSystem.QueueSystem;
 
-import com.AdventureRPG.SettingsSystem.Settings;
+import com.AdventureRPG.Core.GameManager;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
@@ -13,29 +13,25 @@ import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
-public class QueueSystem {
-
-    // Debug
-    private final boolean debug = false; // TODO: Debug line
+public class QueueSystem extends GameManager {
 
     // Game Manager
-    public final Settings settings;
-    public final WorldSystem worldSystem;
-    public final WorldTick worldTick;
-    public final Grid grid;
-    public final Loader loader;
-    public final BatchSystem batchSystem;
+    public WorldSystem worldSystem;
+    public WorldTick worldTick;
+    public Grid grid;
+    public Loader loader;
+    public BatchSystem batchSystem;
 
     // Settings
-    private final int MAX_CHUNK_LOADS_PER_FRAME;
-    private final int MAX_CHUNK_LOADS_PER_TICK;
+    private int MAX_CHUNK_LOADS_PER_FRAME;
+    private int MAX_CHUNK_LOADS_PER_TICK;
 
     // Position Tracking
     private long currentChunk;
     private int currentChunkX, currentChunkY;
 
     // Chunk Tracking
-    private final float loadFactor;
+    private float loadFactor;
     private LongOpenHashSet chunkCoordinates;
     private Long2LongOpenHashMap gridToChunkMap;
     private Long2LongOpenHashMap chunkToGridMap;
@@ -49,16 +45,15 @@ public class QueueSystem {
 
     // Base \\
 
-    public QueueSystem(WorldSystem worldSystem) {
+    @Override
+    public void init() {
 
         // Game Manager
-        this.settings = worldSystem.settings;
-        this.worldSystem = worldSystem;
+        this.worldSystem = rootManager.worldSystem;
         this.worldTick = worldSystem.worldTick;
-        this.grid = new Grid(this);
-        grid.buildGrid();
-        this.loader = new Loader(worldSystem);
-        this.batchSystem = new BatchSystem(worldSystem, this);
+        this.grid = (Grid) register(new Grid());
+        this.loader = (Loader) register(new Loader());
+        this.batchSystem = (BatchSystem) register(new BatchSystem());
 
         // Settings
         this.MAX_CHUNK_LOADS_PER_FRAME = GlobalConstant.MAX_CHUNK_LOADS_PER_FRAME;
@@ -89,24 +84,14 @@ public class QueueSystem {
         this.loadedChunksThisTick = 0;
     }
 
-    public void awake() {
-
-    }
-
-    public void start() {
-
-    }
-
+    @Override
     public void update() {
 
         updateQueue();
         loader.update();
     }
 
-    public void render() {
-
-    }
-
+    @Override
     public void dispose() {
 
         for (int i = 0; i < grid.totalChunks(); i++) {
@@ -460,11 +445,5 @@ public class QueueSystem {
 
     public void requestBatch(Chunk chunk) {
         batchSystem.requestBatch(chunk);
-    }
-
-    // Debug \\
-
-    private void debug(String input) {
-        System.out.println("[GridSystem] " + input);
     }
 }

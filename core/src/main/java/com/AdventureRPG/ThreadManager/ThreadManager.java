@@ -6,7 +6,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import com.AdventureRPG.Core.Framework.GameSystem;
+import com.AdventureRPG.Core.GameSystem;
 
 public class ThreadManager extends GameSystem {
 

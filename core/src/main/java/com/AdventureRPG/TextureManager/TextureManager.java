@@ -3,8 +3,8 @@ package com.AdventureRPG.TextureManager;
 import java.io.File;
 import java.util.*;
 
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.Core.Exceptions.FileException;
-import com.AdventureRPG.Core.Framework.GameSystem;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;

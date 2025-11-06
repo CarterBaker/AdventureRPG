@@ -1,55 +1,50 @@
 package com.AdventureRPG.InputSystem;
 
-import com.AdventureRPG.GameManager;
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.PlayerSystem.PlayerSystem;
 import com.AdventureRPG.Util.Vector3Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputProcessor;
 
-public class InputSystem extends InputAdapter {
+// TODO: Extending my own class means I needed to implement InputProcessor instead of extending official class
+// This change needs scrutiny. Overrides for new implimentation are at the bottom under // Input Processor \\
+public class InputSystem extends GameSystem implements InputProcessor {
 
-    // Game Manager
-    public final PlayerSystem playerSystem;
+    // Root
+    public PlayerSystem playerSystem;
 
     // Input
     private boolean blockInput = false;
 
-    // Rotation
-    private final float sensitivity = 0.15f; // TODO: Move sensitivity to Settings
-
     // Temp
-    public final Vector3Int movement;
+    public Vector3Int movement;
+    private float sensitivity = 0.15f; // TODO: Move sensitivity to Settings
 
     // Base \\
 
-    public InputSystem(GameManager gameManager) {
+    @Override
+    public void init() {
 
         // Game Manager
-        this.playerSystem = gameManager.playerSystem;
+        this.playerSystem = rootManager.playerSystem;
 
         // Temp
         movement = new Vector3Int();
     }
 
-    public void awake() {
-
-    }
-
+    @Override
     public void start() {
-        
+
         Gdx.input.setInputProcessor(this);
         block(blockInput);
     }
 
+    @Override
     public void update() {
 
         updateRotation();
         updateMovement();
-    }
-
-    public void render() {
-
     }
 
     // Input \\
@@ -149,5 +144,42 @@ public class InputSystem extends InputAdapter {
 
         if (movement.hasValues())
             playerSystem.position.move(movement);
+    }
+
+    // Input Processor \\
+
+    @Override
+    public boolean keyTyped(char character) {
+        return false;
+    }
+
+    @Override
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
+    @Override
+    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
+    @Override
+    public boolean touchDragged(int screenX, int screenY, int pointer) {
+        return false;
+    }
+
+    @Override
+    public boolean mouseMoved(int screenX, int screenY) {
+        return false;
+    }
+
+    @Override
+    public boolean scrolled(float amountX, float amountY) {
+        return false;
+    }
+
+    @Override
+    public boolean touchCancelled(int screenX, int screenY, int pointer, int button) {
+        return false;
     }
 }

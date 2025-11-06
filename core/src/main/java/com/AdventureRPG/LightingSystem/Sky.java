@@ -2,7 +2,7 @@ package com.AdventureRPG.LightingSystem;
 
 import com.AdventureRPG.PassManager.PassManager;
 import com.AdventureRPG.ShaderManager.UniversalUniformType;
-import com.AdventureRPG.Core.Framework.GameSystem;
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.PassManager.PassData;
 import com.AdventureRPG.TimeSystem.TimeSystem;
 

@@ -1,6 +1,6 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.AdventureRPG.Core.Framework.GameManager;
+import com.AdventureRPG.Core.GameManager;
 import com.AdventureRPG.InputSystem.Movement;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;

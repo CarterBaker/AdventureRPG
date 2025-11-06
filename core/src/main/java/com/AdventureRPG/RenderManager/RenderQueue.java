@@ -2,18 +2,19 @@ package com.AdventureRPG.RenderManager;
 
 import java.util.*;
 
-import com.AdventureRPG.GameManager;
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.PassManager.PassData;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 
-public class RenderQueue {
+// TODO: This class needs to be closely examined
+public class RenderQueue extends GameSystem {
 
     private final ShaderManager shaderManager;
     private final Map<Integer, Queue<PassData>> passes;
 
-    public RenderQueue(GameManager gameManager) {
+    public RenderQueue() {
 
-        this.shaderManager = gameManager.shaderManager;
+        this.shaderManager = rootManager.shaderManager;
         this.passes = new TreeMap<>();
     }
 

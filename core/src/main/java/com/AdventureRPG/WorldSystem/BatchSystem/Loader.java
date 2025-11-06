@@ -3,37 +3,37 @@ package com.AdventureRPG.WorldSystem.BatchSystem;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.Util.GlobalConstant;
-import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 
-public class Loader {
+public class Loader extends GameSystem {
 
     // Game Manager
-    private final ThreadManager threadManager;
-    private final BatchSystem batchSystem;
+    private ThreadManager threadManager;
+    private BatchSystem batchSystem;
 
     // Async System
-    private final Queue<Chunk> addRequests;
-    private final Queue<Chunk> creationRequests;
-    private final Queue<Chunk> assessmentRequests;
-    private final Queue<Chunk> batchRequests;
-    private final Queue<Chunk> renderRequests;
+    private Queue<Chunk> addRequests;
+    private Queue<Chunk> creationRequests;
+    private Queue<Chunk> assessmentRequests;
+    private Queue<Chunk> batchRequests;
+    private Queue<Chunk> renderRequests;
 
     // Queue System
-    private final InternalBatchProcess[] batchProcess;
+    private InternalBatchProcess[] batchProcess;
     private int queueBatch;
-    private final int processPerBatch;
+    private int processPerBatch;
     private int loadedChunksThisFrame;
 
     // Base \\
 
-    public Loader(WorldSystem worldSystem, BatchSystem batchSystem) {
+    @Override
+    public void init() {
 
         // Game Manager
-        this.threadManager = worldSystem.threadManager;
-        this.batchSystem = batchSystem;
+        this.threadManager = rootManager.worldSystem.threadManager;
 
         // Async System
         this.addRequests = new ConcurrentLinkedQueue<>();
@@ -55,7 +55,16 @@ public class Loader {
         this.loadedChunksThisFrame = 0;
     }
 
+    @Override
+    public void awake() {
+
+        // Root
+        this.batchSystem = rootManager.worldSystem.queueSystem.batchSystem;
+    }
+
+    @Override
     public void update() {
+
         processData();
     }
 

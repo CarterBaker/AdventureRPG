@@ -1,6 +1,6 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.AdventureRPG.Core.Framework.GameManager;
+import com.AdventureRPG.Core.GameManager;
 import com.AdventureRPG.Util.Vector2Int;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
@@ -24,12 +24,6 @@ public class PlayerSystem extends GameManager {
                 settings.windowWidth,
                 settings.windowHeight));
         this.position = (PlayerPosition) register(new PlayerPosition(this));
-    }
-
-    @Override
-    public void awake() {
-        camera.awake();
-        position.awake();
     }
 
     // Camera \\

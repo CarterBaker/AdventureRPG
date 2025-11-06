@@ -2,7 +2,7 @@ package com.AdventureRPG.SaveSystem;
 
 import java.io.File;
 
-import com.AdventureRPG.Core.Framework.GameSystem;
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 
 public class ChunkData extends GameSystem {

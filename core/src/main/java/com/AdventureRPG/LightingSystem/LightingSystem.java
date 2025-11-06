@@ -1,6 +1,6 @@
 package com.AdventureRPG.LightingSystem;
 
-import com.AdventureRPG.Core.Framework.GameManager;
+import com.AdventureRPG.Core.GameManager;
 import com.AdventureRPG.SettingsSystem.Settings;
 
 public class LightingSystem extends GameManager {

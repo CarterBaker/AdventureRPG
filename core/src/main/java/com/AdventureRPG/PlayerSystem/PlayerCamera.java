@@ -1,6 +1,6 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.AdventureRPG.Core.Framework.GameSystem;
+import com.AdventureRPG.Core.GameSystem;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
 
@@ -58,14 +58,20 @@ public class PlayerCamera extends GameSystem {
     }
 
     // Called when changing window size
-    public void updateViewport(float width, float height) {
+    public void updateViewport(
+            float width,
+            float height) {
+
         perspectiveCamera.viewportWidth = width;
         perspectiveCamera.viewportHeight = height;
         perspectiveCamera.update();
     }
 
     // Called from inputSystem to rotate the camera
-    public void rotate(float deltaYaw, float deltaPitch) {
+    public void rotate(
+            float deltaYaw,
+            float deltaPitch) {
+
         yaw += deltaYaw;
         pitch += deltaPitch;
 

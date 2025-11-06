@@ -3,41 +3,43 @@ package com.AdventureRPG.WorldSystem.QueueSystem;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.AdventureRPG.Core.GameSystem;
 import com.AdventureRPG.SaveSystem.ChunkData;
 import com.AdventureRPG.ThreadManager.ThreadManager;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldSystem.WorldSystem;
 import com.AdventureRPG.WorldSystem.Chunks.Chunk;
 
-public class Loader {
+public class Loader extends GameSystem {
 
     // Game Manager
-    private final ThreadManager threadManager;
-    private final ChunkData chunkData;
-    private final WorldSystem worldSystem;
+    private ThreadManager threadManager;
+    private ChunkData chunkData;
+    private WorldSystem worldSystem;
 
     // Async System
-    private final Queue<Long> loadRequests;
-    private final Queue<Chunk> addRequests;
-    private final Queue<Chunk> generationRequests;
-    private final Queue<Chunk> assessmentRequests;
-    private final Queue<Chunk> buildRequests;
-    private final Queue<Chunk> batchRequests;
+    private Queue<Long> loadRequests;
+    private Queue<Chunk> addRequests;
+    private Queue<Chunk> generationRequests;
+    private Queue<Chunk> assessmentRequests;
+    private Queue<Chunk> buildRequests;
+    private Queue<Chunk> batchRequests;
 
     // Queue System
-    private final InternalQueueProcess[] queueProcess;
+    private InternalQueueProcess[] queueProcess;
     private int queueBatch;
-    private final int processPerBatch;
+    private int processPerBatch;
     private int loadedChunksThisFrame;
 
     // Base \\
 
-    public Loader(WorldSystem worldSystem) {
+    @Override
+    public void init() {
 
         // Game Manager
-        this.threadManager = worldSystem.threadManager;
-        this.chunkData = worldSystem.saveSystem.chunkData;
-        this.worldSystem = worldSystem;
+        this.threadManager = rootManager.threadManager;
+        this.chunkData = rootManager.saveSystem.chunkData;
+        this.worldSystem = rootManager.worldSystem;
 
         // Async System
         this.loadRequests = new ConcurrentLinkedQueue<>();
@@ -61,7 +63,9 @@ public class Loader {
         this.loadedChunksThisFrame = 0;
     }
 
+    @Override
     public void update() {
+
         processData();
     }
 
