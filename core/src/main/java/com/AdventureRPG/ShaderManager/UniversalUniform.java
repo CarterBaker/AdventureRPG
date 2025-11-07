@@ -1,11 +1,12 @@
 package com.AdventureRPG.ShaderManager;
 
-import com.AdventureRPG.Core.GameSystem;
+import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.PlayerSystem.PlayerManager;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.math.Matrix4;
 
-public class UniversalUniform extends GameSystem {
+public class UniversalUniform extends SystemFrame {
 
     // Time
     private float u_time;
@@ -16,17 +17,18 @@ public class UniversalUniform extends GameSystem {
     // Base \\
 
     @Override
-    public void init() {
+    public void create() {
 
         // Time
         this.u_time = 0.0f;
     }
 
     @Override
-    public void awake() {
+    public void init() {
 
         // Camera
-        this.camera = rootManager.playerSystem.camera.get();
+        PlayerManager playerManager = rootManager.get(PlayerManager.class);
+        this.camera = playerManager.getCamera();
     }
 
     @Override

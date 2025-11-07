@@ -11,8 +11,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.AdventureRPG.Core.Main;
 import com.AdventureRPG.SettingsSystem.*;
-import com.AdventureRPG.WorldSystem.Biomes.Biome;
-import com.AdventureRPG.WorldSystem.Biomes.BiomeDeserializer;
+import com.AdventureRPG.WorldManager.Biomes.Biome;
+import com.AdventureRPG.WorldManager.Biomes.BiomeDeserializer;
 
 public class Lwjgl3Launcher {
     private static final String GAME_DIRECTORY = "AdventureRPG";

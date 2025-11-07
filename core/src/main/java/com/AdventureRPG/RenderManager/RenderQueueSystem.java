@@ -1,0 +1,60 @@
+package com.AdventureRPG.RenderManager;
+
+import java.util.*;
+
+import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.PassSystem.PassData;
+import com.AdventureRPG.ShaderManager.ShaderManager;
+
+// TODO: This class needs to be closely examined
+public class RenderQueueSystem extends SystemFrame {
+
+    private ShaderManager shaderManager;
+    private Map<Integer, Queue<PassData>> passes;
+
+    @Override
+    public void init() {
+
+        this.shaderManager = rootManager.get(ShaderManager.class);
+        this.passes = new TreeMap<>();
+    }
+
+    // Add a pass into the queue
+    public void addPass(PassData pass, int sortOrder) {
+        passes.computeIfAbsent(sortOrder, k -> new LinkedList<>()).add(pass);
+    }
+
+    // Render in order: sorted by ID, FIFO within same ID
+    public void renderAll(RenderContext context) {
+
+        Iterator<Map.Entry<Integer, Queue<PassData>>> mapIter = passes.entrySet().iterator();
+
+        while (mapIter.hasNext()) {
+
+            Map.Entry<Integer, Queue<PassData>> entry = mapIter.next();
+            Queue<PassData> queue = entry.getValue();
+
+            queue.removeIf(pass -> {
+                if (pass.lifetime > 0f) {
+                    pass.lifetime -= context.deltaTime;
+                    return pass.lifetime <= 0f; // remove if expired
+                }
+                return false; // permanent pass
+            });
+
+            // Render remaining passes
+            for (PassData pass : queue) {
+                pass.render(context, shaderManager);
+            }
+
+            if (queue.isEmpty()) {
+                mapIter.remove(); // remove empty queue
+            }
+        }
+    }
+
+    // Clear queue after rendering (if you want one-shot passes)
+    public void clear() {
+        passes.clear();
+    }
+}

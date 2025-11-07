@@ -4,13 +4,24 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import com.AdventureRPG.Core.GameSystem;
+import com.AdventureRPG.Core.SystemFrame;
 import com.AdventureRPG.Core.Exceptions.UIException;
+import com.AdventureRPG.InputSystem.InputSystem;
 
-public class UISystem extends GameSystem {
+public class UISystem extends SystemFrame {
+
+    // Root
+    private InputSystem inputSystem;
 
     // UI System
     private final List<MenuInstance> openMenus = new ArrayList<>();
+
+    // Base \\
+
+    @Override
+    public void init() {
+        inputSystem = rootManager.get(InputSystem.class);
+    }
 
     // UI System \\
 
@@ -28,7 +39,7 @@ public class UISystem extends GameSystem {
         menuInstance.open();
 
         if (menuInstance.blockInput())
-            rootManager.inputSystem.block(true);
+            inputSystem.block(true);
 
         return menuInstance;
     }
@@ -64,10 +75,10 @@ public class UISystem extends GameSystem {
         for (MenuInstance menu : openMenus)
             if (menu.blockInput()) {
 
-                rootManager.inputSystem.block(true);
+                inputSystem.block(true);
                 return;
             }
 
-        rootManager.inputSystem.block(false);
+        inputSystem.block(false);
     }
 }

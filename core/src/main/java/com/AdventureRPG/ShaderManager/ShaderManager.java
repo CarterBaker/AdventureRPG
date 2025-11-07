@@ -1,9 +1,9 @@
 package com.AdventureRPG.ShaderManager;
 
-import com.AdventureRPG.Core.GameManager;
+import com.AdventureRPG.Core.ManagerFrame;
 import com.AdventureRPG.Core.Exceptions.FileException;
 import com.AdventureRPG.Core.Exceptions.GraphicException;
-import com.AdventureRPG.MaterialManager.MaterialManager;
+import com.AdventureRPG.MaterialSystem.MaterialSystem;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
@@ -21,12 +21,12 @@ import com.google.gson.Gson;
 import java.util.*;
 
 //TODO: I need to refactor how the includes work so they are directly in the vert and frag shaders instead
-public class ShaderManager extends GameManager implements ShaderProvider {
+public class ShaderManager extends ManagerFrame implements ShaderProvider {
 
     // Root
     private Gson gson;
-    private ShaderProvider defaultShaderProvider;
-    private MaterialManager materialManager;
+    private ShaderProvider shaderProvider;
+    private MaterialSystem materialSystem;
 
     // Settings
     private String SHADER_JSON_PATH;
@@ -45,12 +45,7 @@ public class ShaderManager extends GameManager implements ShaderProvider {
     // Base \\
 
     @Override
-    public void init() {
-
-        // Root
-        this.gson = rootManager.gson;
-        this.defaultShaderProvider = rootManager.defaultShaderProvider;
-        this.materialManager = rootManager.materialManager;
+    public void create() {
 
         // Settings
         this.SHADER_JSON_PATH = GlobalConstant.SHADER_JSON_PATH;
@@ -63,11 +58,23 @@ public class ShaderManager extends GameManager implements ShaderProvider {
         this.idToProgram = new LinkedHashMap<>();
         this.nameToID = new HashMap<>();
         this.nextShaderID = 0;
+    }
+
+    @Override
+    public void init() {
+
+        // Root
+        this.gson = rootManager.gson;
+        this.shaderProvider = rootManager.shaderProvider;
+        this.materialSystem = rootManager.get(MaterialSystem.class);
+    }
+
+    @Override
+    public void awake() {
+
+        // Shader Manager \\
 
         createFullScreenQuad();
-
-        // Core Logic \\
-
         compileShaders();
     }
 
@@ -94,14 +101,15 @@ public class ShaderManager extends GameManager implements ShaderProvider {
     @Override
     public Shader getShader(Renderable renderable) {
 
-        ShaderProgram shader = materialManager.getShaderForMaterial(renderable.material);
+        ShaderProgram shader = materialSystem.getShaderForMaterial(renderable.material);
 
         if (shader == null)
-            return defaultShaderProvider.getShader(renderable);
+            return shaderProvider.getShader(renderable);
 
         return new DefaultShader(renderable, new DefaultShader.Config(), shader);
     }
 
+    @Override
     public void dispose() {
 
         for (ShaderProgram program : nameToProgram.values())

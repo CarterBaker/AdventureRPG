@@ -3,15 +3,15 @@ package com.AdventureRPG.TimeSystem;
 import java.io.File;
 import java.time.Instant;
 
-import com.AdventureRPG.Core.GameSystem;
-import com.AdventureRPG.LightingSystem.LightingSystem;
-import com.AdventureRPG.SaveSystem.UserData;
+import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.LightingSystem.LightingManager;
+import com.AdventureRPG.SaveManager.UserData;
 import com.AdventureRPG.Util.GlobalConstant;
 
-public class TimeSystem extends GameSystem {
+public class TimeSystem extends SystemFrame {
 
     // Root
-    private LightingSystem lightingSystem;
+    private LightingManager lightingManager;
 
     // Settings
     private int MINUTES_PER_HOUR;
@@ -57,7 +57,7 @@ public class TimeSystem extends GameSystem {
     // Base \\
 
     @Override
-    public void init() {
+    protected void create() {
 
         // Settings
         this.MINUTES_PER_HOUR = GlobalConstant.MINUTES_PER_HOUR;
@@ -88,12 +88,13 @@ public class TimeSystem extends GameSystem {
     }
 
     @Override
-    public void awake() {
-        this.lightingSystem = rootManager.lightingSystem;
+    protected void init() {
+        this.lightingManager = rootManager.get(LightingManager.class);
     }
 
     @Override
-    public void update() {
+    protected void update() {
+
         updateFromSystemClock();
     }
 
@@ -219,7 +220,7 @@ public class TimeSystem extends GameSystem {
         long totalDaysWithOffset = calculateTotalDaysWithOffset();
         long dayOfAge = totalDaysWithOffset % (YEARS_PER_AGE * totalDaysInYear);
 
-        lightingSystem.sky.generateRandomOffsetFromDay(totalDaysWithOffset);
+        lightingManager.sky.generateRandomOffsetFromDay(totalDaysWithOffset);
 
         calculateDayOfWeek(totalDaysWithOffset);
         calculateDayOfMonth(totalDaysWithOffset, dayOfAge);

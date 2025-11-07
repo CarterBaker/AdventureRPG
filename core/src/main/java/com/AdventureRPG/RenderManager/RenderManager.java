@@ -1,55 +1,60 @@
 package com.AdventureRPG.RenderManager;
 
-import com.AdventureRPG.Core.GameManager;
-import com.AdventureRPG.PassManager.PassData;
-import com.AdventureRPG.PlayerSystem.PlayerSystem;
+import com.AdventureRPG.Core.ManagerFrame;
+import com.AdventureRPG.PassSystem.PassData;
+import com.AdventureRPG.PlayerSystem.PlayerManager;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.UISystem.UISystem;
-import com.AdventureRPG.WorldSystem.WorldSystem;
+import com.AdventureRPG.WorldManager.WorldManager;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 
-public class RenderManager extends GameManager {
+public class RenderManager extends ManagerFrame {
 
     // Root
     private ShaderManager shaderManager;
     private UISystem UISystem;
-    private WorldSystem worldSystem;
-    private PlayerSystem playerSystem;
-    private RenderQueue renderQueue;
+    private WorldManager worldManager;
+    private PlayerManager playerManager;
+    private RenderQueueSystem renderQueueSystem;
 
     // Base \\
+
+    @Override
+    public void create() {
+
+        this.renderQueueSystem = (RenderQueueSystem) register(new RenderQueueSystem());
+    }
 
     @Override
     public void init() {
 
         // Root
-        this.shaderManager = rootManager.shaderManager;
-        this.UISystem = rootManager.UISystem;
-        this.worldSystem = rootManager.worldSystem;
-        this.playerSystem = rootManager.playerSystem;
-        this.renderQueue = (RenderQueue) register(new RenderQueue());
+        this.shaderManager = rootManager.get(ShaderManager.class);
+        this.UISystem = rootManager.get(UISystem.class);
+        this.worldManager = rootManager.get(WorldManager.class);
+        this.playerManager = rootManager.get(PlayerManager.class);
+    }
+
+    @Override
+    public void awake() {
 
         // Core passes
-
-        renderQueue.addPass(new PassData(
+        renderQueueSystem.addPass(new PassData(
                 0, "3D_PASS", -1, null, null,
                 shaderManager.universalUniform,
                 ctx -> {
-                    ctx.modelBatch.begin(playerSystem.getCamera());
-                    worldSystem.render();
-                    playerSystem.render();
+                    ctx.modelBatch.begin(playerManager.getCamera());
                     ctx.modelBatch.end();
                 }), 0);
 
-        renderQueue.addPass(new PassData(
+        renderQueueSystem.addPass(new PassData(
                 0, "2D_PASS", -1, null, null,
                 shaderManager.universalUniform,
                 ctx -> {
                     ctx.spriteBatch.begin();
-                    UISystem.render();
                     ctx.spriteBatch.end();
                 }), 0);
     }
@@ -64,12 +69,12 @@ public class RenderManager extends GameManager {
         RenderContext context = new RenderContext(spriteBatch, modelBatch);
 
         context.deltaTime = Gdx.graphics.getDeltaTime();
-        renderQueue.renderAll(context);
+        renderQueueSystem.renderAll(context);
     }
 
     // Accessible \\
 
     public void enqueue(PassData pass, int sortOrder) {
-        renderQueue.addPass(pass, sortOrder);
+        renderQueueSystem.addPass(pass, sortOrder);
     }
 }

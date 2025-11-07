@@ -1,7 +1,9 @@
 package com.AdventureRPG.InputSystem;
 
-import com.AdventureRPG.Core.GameSystem;
-import com.AdventureRPG.PlayerSystem.PlayerSystem;
+import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.PlayerSystem.PlayerCamera;
+import com.AdventureRPG.PlayerSystem.PlayerManager;
+import com.AdventureRPG.PlayerSystem.PositionManager;
 import com.AdventureRPG.Util.Vector3Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -9,28 +11,36 @@ import com.badlogic.gdx.InputProcessor;
 
 // TODO: Extending my own class means I needed to implement InputProcessor instead of extending official class
 // This change needs scrutiny. Overrides for new implimentation are at the bottom under // Input Processor \\
-public class InputSystem extends GameSystem implements InputProcessor {
+public class InputSystem extends SystemFrame implements InputProcessor {
 
     // Root
-    public PlayerSystem playerSystem;
+    private PlayerManager playerManager;
+    private PlayerCamera playerCamera;
+    private PositionManager positionManager;
 
     // Input
     private boolean blockInput = false;
 
     // Temp
-    public Vector3Int movement;
+    private Vector3Int movement;
     private float sensitivity = 0.15f; // TODO: Move sensitivity to Settings
 
     // Base \\
 
     @Override
-    public void init() {
-
-        // Game Manager
-        this.playerSystem = rootManager.playerSystem;
+    public void create() {
 
         // Temp
         movement = new Vector3Int();
+    }
+
+    @Override
+    public void init() {
+
+        // Game Manager
+        this.playerManager = rootManager.get(PlayerManager.class);
+        this.playerCamera = playerManager.get(PlayerCamera.class);
+        this.positionManager = playerManager.get(PositionManager.class);
     }
 
     @Override
@@ -118,7 +128,7 @@ public class InputSystem extends GameSystem implements InputProcessor {
         float deltaX = Gdx.input.getDeltaX() * sensitivity;
         float deltaY = -Gdx.input.getDeltaY() * sensitivity;
 
-        playerSystem.camera.rotate(deltaX, deltaY);
+        playerCamera.rotate(deltaX, deltaY);
     }
 
     private void updateMovement() {
@@ -143,7 +153,7 @@ public class InputSystem extends GameSystem implements InputProcessor {
             movement.y -= 1; // down
 
         if (movement.hasValues())
-            playerSystem.position.move(movement);
+            positionManager.move(movement);
     }
 
     // Input Processor \\

@@ -1,10 +1,10 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.AdventureRPG.Core.GameSystem;
+import com.AdventureRPG.Core.SystemFrame;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
 
-public class PlayerCamera extends GameSystem {
+public class PlayerCamera extends SystemFrame {
 
     // Camera
     private PerspectiveCamera perspectiveCamera;
@@ -27,14 +27,10 @@ public class PlayerCamera extends GameSystem {
     }
 
     @Override
-    public void init() {
+    public void create() {
 
         // Camera
         direction = new Vector3();
-    }
-
-    @Override
-    public void awake() {
 
         // Initial camera settings
         perspectiveCamera.near = 0.1f;
@@ -48,10 +44,6 @@ public class PlayerCamera extends GameSystem {
     }
 
     // Camera \\
-
-    public PerspectiveCamera get() {
-        return perspectiveCamera;
-    }
 
     public Vector3 direction() {
         return perspectiveCamera.direction;
@@ -86,5 +78,11 @@ public class PlayerCamera extends GameSystem {
 
         perspectiveCamera.direction.set(direction);
         perspectiveCamera.update();
+    }
+
+    // Accessible \\
+
+    public PerspectiveCamera get() {
+        return perspectiveCamera;
     }
 }

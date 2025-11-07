@@ -3,32 +3,34 @@ package com.AdventureRPG.Core;
 import java.io.File;
 
 import com.AdventureRPG.Core.Exceptions.FileException;
-import com.AdventureRPG.Core.Exceptions.GeneralException;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
+import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider;
 import com.google.gson.Gson;
 
 public class Main extends Game {
 
-    // Settings
+    // Root
     private final File GAME_DIRECTORY;
     private final Settings settings;
     private final Gson gson;
 
     // Rendering
-    public SpriteBatch spriteBatch;
-    public ModelBatch modelBatch;
+    private ShaderProvider shaderProvider;
+    private Environment environment;
+    private SpriteBatch spriteBatch;
+    private ModelBatch modelBatch;
 
-    // Main
+    // Core
     private RootManager rootManager;
-    private GameState gameState;
 
     // fixed interval
     private float fixedInterval;
-
     private float elapsedTime;
     private int maxSteps;
 
@@ -49,6 +51,8 @@ public class Main extends Game {
     public void create() {
 
         // Rendering
+        this.shaderProvider = new DefaultShaderProvider();
+        this.environment = new Environment();
         this.spriteBatch = new SpriteBatch();
         this.modelBatch = new ModelBatch();
 
@@ -56,19 +60,22 @@ public class Main extends Game {
         this.rootManager = new RootManager(
                 this,
                 GAME_DIRECTORY,
-                gson);
-        this.gameState = GameState.START;
+                gson,
+                shaderProvider,
+                environment,
+                spriteBatch,
+                modelBatch);
 
         // fixed interval
         this.fixedInterval = settings.FIXED_TIME_STEP;
-
         this.elapsedTime = 0.0f;
         this.maxSteps = 5;
 
+        // create()
+        rootManager.internalCreate(this.settings, this.rootManager);
+
         // init()
-        rootManager.internalInit(
-                this.settings,
-                this.rootManager);
+        rootManager.internalInit();
 
         mainAwake();
     }
@@ -88,16 +95,22 @@ public class Main extends Game {
 
     private void stateSwitch() {
 
-        switch (gameState) {
+        switch (rootManager.getInternalState()) {
 
-            case START ->
+            case CONSTRUCTOR -> {
+            }
+
+            case FIRST_FRAME ->
                 mainStart();
 
-            case MENU ->
+            case MENU_EXCLUSIVE ->
                 mainMenuExclusiveUpdate();
 
-            case GAME ->
+            case GAME_EXCLIVE ->
                 mainGameExclusiveUpdate();
+
+            case EXIT -> {
+            }
         }
     }
 
@@ -109,14 +122,12 @@ public class Main extends Game {
         setScreen(rootManager);
 
         // awake()
-        rootManager.awake();
+        rootManager.internalAwake();
     }
 
     // Start \\
 
     private void mainStart() {
-
-        gameState = GameState.MENU;
 
         // start()
         rootManager.start();
@@ -210,15 +221,5 @@ public class Main extends Game {
             if (!deleted)
                 throw new FileException.FileNotFoundException(settingsFile);
         }
-    }
-
-    // Accessible \\
-
-    public void setGameState(GameState gameState) {
-
-        if (gameState == GameState.START)
-            throw new GeneralException.GameStateException(gameState);
-
-        this.gameState = gameState;
     }
 }

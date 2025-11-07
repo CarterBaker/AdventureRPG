@@ -1,15 +1,15 @@
 package com.AdventureRPG.LightingSystem;
 
-import com.AdventureRPG.PassManager.PassManager;
 import com.AdventureRPG.ShaderManager.UniversalUniformType;
-import com.AdventureRPG.Core.GameSystem;
-import com.AdventureRPG.PassManager.PassData;
+import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.PassSystem.PassData;
+import com.AdventureRPG.PassSystem.PassSystem;
 import com.AdventureRPG.TimeSystem.TimeSystem;
 
-public class Sky extends GameSystem {
+public class Sky extends SystemFrame {
 
     // Root
-    private PassManager passManager;
+    private PassSystem passSystem;
     private TimeSystem timeSystem;
 
     // Shader
@@ -22,33 +22,30 @@ public class Sky extends GameSystem {
     // Base \\
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Root
-        this.passManager = rootManager.passManager;
-        this.timeSystem = rootManager.timeSystem;
+        this.passSystem = rootManager.get(PassSystem.class);
+        this.timeSystem = rootManager.get(TimeSystem.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Shader
+        skyPassID = passSystem.getPassID("sky");
+        skyPass = passSystem.createPassInstance(skyPassID, -5);
+        skyPass.setUniform("u_overcast", u_overcast);
 
         // Uniforms
         this.u_overcast = 0;
     }
 
     @Override
-    public void awake() {
+    protected void update() {
 
-        // Shader
-        skyPassID = passManager.getPassID("sky");
-    }
-
-    @Override
-    public void start() {
-
-        // Shader
-        skyPass = passManager.createPassInstance(skyPassID, -5);
-        skyPass.setUniform("u_overcast", u_overcast);
-    }
-
-    @Override
-    public void update() {
+        if (skyPass == null)
+            return;
 
         skyPass.setUniversalUniform(UniversalUniformType.u_inverseView);
         skyPass.setUniversalUniform(UniversalUniformType.u_inverseProjection);
@@ -69,6 +66,8 @@ public class Sky extends GameSystem {
         double normalized = (mixed & 0xFFFFFFL) / (double) (1 << 24);
 
         float noise = (float) Math.max(0.001, normalized);
-        skyPass.setUniform("u_randomNoiseFromDay", noise);
+
+        if (skyPass != null)
+            skyPass.setUniform("u_randomNoiseFromDay", noise);
     }
 }

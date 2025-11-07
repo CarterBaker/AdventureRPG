@@ -1,12 +1,13 @@
 package com.AdventureRPG.InputSystem;
 
-import com.AdventureRPG.Core.GameSystem;
+import com.AdventureRPG.Core.SystemFrame;
 import com.AdventureRPG.PlayerSystem.Statistics;
 import com.AdventureRPG.Util.Vector3Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector3;
 
-public class Movement extends GameSystem {
+// TODO: This needs to be decoupled from requireing statistics and converted to singleton
+public class Movement extends SystemFrame {
 
     // Game Manager
     private Statistics statistics;
