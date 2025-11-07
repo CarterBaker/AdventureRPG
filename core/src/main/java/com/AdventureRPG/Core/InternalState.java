@@ -1,9 +1,16 @@
 package com.AdventureRPG.Core;
 
 public enum InternalState {
-    CONSTRUCTOR,
-    FIRST_FRAME,
-    MENU_EXCLUSIVE,
-    GAME_EXCLIVE,
-    EXIT
+
+    CONSTRUCTOR(false),
+    FIRST_FRAME(false),
+    MENU_EXCLUSIVE(true),
+    GAME_EXCLUSIVE(true),
+    EXIT(false);
+
+    public final boolean accessible;
+
+    InternalState(boolean accessible) {
+        this.accessible = accessible;
+    }
 }

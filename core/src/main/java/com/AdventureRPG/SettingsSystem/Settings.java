@@ -77,7 +77,7 @@ public class Settings {
         // Constant Settings \\
 
         // Physics Settings
-        private float FIXED_TIME_STEP = 1 / 60;
+        private float FIXED_TIME_STEP = 0.02f;
 
         // Thread Settings
         private int AI_AVAILABLE_THREADS = 2;

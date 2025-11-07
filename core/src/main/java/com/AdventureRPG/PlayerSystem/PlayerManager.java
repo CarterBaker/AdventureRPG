@@ -23,7 +23,7 @@ public class PlayerManager extends ManagerFrame {
                 settings.FOV,
                 settings.windowWidth,
                 settings.windowHeight));
-        this.positionManager = (PositionManager) register(new PositionManager());
+        this.positionManager = (PositionManager) register(new PositionManager(statistics));
     }
 
     // Accessible \\

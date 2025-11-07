@@ -1,43 +1,78 @@
 package com.AdventureRPG.Core;
 
-import com.AdventureRPG.Core.Exceptions.GeneralException;
+import com.AdventureRPG.Core.Exceptions.CoreException;
 import com.AdventureRPG.SettingsSystem.Settings;
 
 public abstract class SystemFrame extends MainFrame {
 
     // Internal
-    private InternalProcess internalProcess;
-    private InternalState internalState;
+    private InternalProcess internalProcess = InternalProcess.CREATE;
+    private InternalState internalState = InternalState.CONSTRUCTOR;
     protected Settings settings;
     protected RootManager rootManager;
     protected ManagerFrame localManager;
+
+    // Root \\
 
     protected final void registerLocalManager(ManagerFrame localManager) {
         this.localManager = localManager;
     }
 
+    // Internal Process \\
+
+    // Get
     protected final InternalProcess getInternalProcess() {
+        return getInternalRootProcess();
+    }
+
+    final InternalProcess getInternalRootProcess() {
+        return rootManager.internalProcess();
+    }
+
+    final InternalProcess internalProcess() {
         return internalProcess;
     }
 
+    // Set
+    final void setInternalRootProcess(InternalProcess internalProcess) {
+        rootManager.setInternalProcess(internalProcess);
+    }
+
+    final void setInternalProcess(InternalProcess internalProcess) {
+        this.internalProcess = internalProcess;
+    }
+
+    // Internal State \\
+
+    // Get
     protected final InternalState getInternalState() {
+        return rootManager.getInternalRootState();
+    }
+
+    final InternalState getInternalRootState() {
         return internalState;
     }
 
-    protected final void setInternalState(InternalState internalState) {
+    // Set
+    protected final void requestInternalState(InternalState internalState) {
 
-        if (internalState != InternalState.MENU_EXCLUSIVE || internalState != InternalState.GAME_EXCLIVE)
-            throw new GeneralException.GameStateException(internalState);
+        if (!internalState.accessible)
+            throw new CoreException.GameStateException(internalState);
 
+        rootManager.setInternalRootState(internalState);
+    }
+
+    final void setInternalRootState(InternalState internalState) {
+        rootManager.setInternalState(internalState);
+    }
+
+    final void setInternalState(InternalState internalState) {
         this.internalState = internalState;
     }
 
     // Create \\
 
     void internalCreate(Settings settings, RootManager rootManager) {
-
-        internalProcess = InternalProcess.CREATE;
-        internalState = InternalState.CONSTRUCTOR;
 
         // Root
         this.settings = settings;
@@ -53,21 +88,23 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalInit() {
 
-        internalProcess = InternalProcess.INIT;
+        setInternalRootProcess(InternalProcess.INIT);
+
         init();
     }
-
-    // Init \\
 
     protected void init() {
     }
 
-    // Awake
+    // Awake \\
 
     void internalAwake() {
 
-        internalProcess = InternalProcess.AWAKE;
+        setInternalRootProcess(InternalProcess.AWAKE);
+
         awake();
+
+        internalState = InternalState.FIRST_FRAME;
     }
 
     protected void awake() {
@@ -77,7 +114,8 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalStart() {
 
-        internalProcess = InternalProcess.START;
+        setInternalRootProcess(InternalProcess.START);
+
         start();
     }
 
@@ -88,8 +126,7 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalMenuExclusiveUpdate() {
 
-        internalProcess = InternalProcess.MENU_EXCLUSIVE;
-        internalState = InternalState.FIRST_FRAME;
+        setInternalRootProcess(InternalProcess.MENU_EXCLUSIVE);
 
         menuExclusiveUpdate();
     }
@@ -101,7 +138,8 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalGameExclusiveUpdate() {
 
-        internalProcess = InternalProcess.GAME_EXCLUSIVE;
+        setInternalRootProcess(InternalProcess.GAME_EXCLUSIVE);
+
         gameExclusiveUpdate();
     }
 
@@ -112,7 +150,8 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalUpdate() {
 
-        internalProcess = InternalProcess.UPDATE;
+        setInternalRootProcess(InternalProcess.UPDATE);
+
         update();
     }
 
@@ -123,7 +162,8 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalFixedUpdate() {
 
-        internalProcess = InternalProcess.FIXED_UPDATE;
+        setInternalRootProcess(InternalProcess.FIXED_UPDATE);
+
         fixedUpdate();
     }
 
@@ -134,7 +174,8 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalLateUpdate() {
 
-        internalProcess = InternalProcess.LATE_UPDATE;
+        setInternalRootProcess(InternalProcess.LATE_UPDATE);
+
         lateUpdate();
     }
 
@@ -145,7 +186,8 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalRender() {
 
-        internalProcess = InternalProcess.RENDER;
+        setInternalRootProcess(InternalProcess.RENDER);
+
         render();
     }
 
@@ -156,7 +198,7 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalDispose() {
 
-        internalProcess = InternalProcess.DISPOSE;
+        setInternalRootProcess(InternalProcess.DISPOSE);
         internalState = InternalState.EXIT;
 
         dispose();

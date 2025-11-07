@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
 import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider;
 import com.google.gson.Gson;
 
+// TODO: This needs to be cleaned but is functional for now
 public class Main extends Game {
 
     // Root
@@ -106,7 +107,7 @@ public class Main extends Game {
             case MENU_EXCLUSIVE ->
                 mainMenuExclusiveUpdate();
 
-            case GAME_EXCLIVE ->
+            case GAME_EXCLUSIVE ->
                 mainGameExclusiveUpdate();
 
             case EXIT -> {
@@ -130,7 +131,7 @@ public class Main extends Game {
     private void mainStart() {
 
         // start()
-        rootManager.start();
+        rootManager.internalStart();
     }
 
     // Menu Exclusive Update \\

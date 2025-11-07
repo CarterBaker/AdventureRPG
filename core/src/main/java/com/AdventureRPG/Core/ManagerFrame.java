@@ -3,7 +3,8 @@ package com.AdventureRPG.Core;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.AdventureRPG.Core.Exceptions.GeneralException.DuplicateSystemFrameDetected;
+import com.AdventureRPG.Core.Exceptions.CoreException;
+import com.AdventureRPG.Core.Exceptions.CoreException.DuplicateSystemFrameDetected;
 import com.AdventureRPG.SettingsSystem.Settings;
 
 public abstract class ManagerFrame extends SystemFrame {
@@ -14,6 +15,9 @@ public abstract class ManagerFrame extends SystemFrame {
     private SystemFrame[] systemIterator = new SystemFrame[0];
 
     protected final SystemFrame register(SystemFrame subSystem) {
+
+        if (getInternalProcess() != InternalProcess.CREATE)
+            throw new CoreException.OutOfOrderException(getInternalProcess());
 
         if (systemTree.contains(subSystem))
             throw new DuplicateSystemFrameDetected(subSystem);
@@ -28,6 +32,9 @@ public abstract class ManagerFrame extends SystemFrame {
 
     @SuppressWarnings("unchecked")
     public final <T> T get(Class<T> type) {
+
+        if (getInternalProcess() != InternalProcess.INIT)
+            throw new CoreException.OutOfOrderException(getInternalProcess());
 
         for (SystemFrame frame : systemTree) {
 

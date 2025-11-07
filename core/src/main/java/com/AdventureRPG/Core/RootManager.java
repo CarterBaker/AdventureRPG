@@ -24,6 +24,7 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider;
+import com.badlogic.gdx.scenes.scene2d.ui.Table.Debug;
 import com.google.gson.Gson;
 
 public class RootManager extends ManagerFrame implements Screen {
@@ -120,7 +121,7 @@ public class RootManager extends ManagerFrame implements Screen {
         loadScreen = (LoadScreen) UISystem.open(Menu.LoadScreen);
         loadScreen.setMaxProgrss(worldManager.queueSystem.totalQueueSize());
 
-        setInternalState(InternalState.MENU_EXCLUSIVE);
+        requestInternalState(InternalState.MENU_EXCLUSIVE);
     }
 
     @Override
@@ -134,7 +135,7 @@ public class RootManager extends ManagerFrame implements Screen {
             loadScreen.setProgrss(worldManager.queueSystem.totalQueueSize());
             UISystem.close(loadScreen);
 
-            setInternalState(InternalState.GAME_EXCLIVE);
+            requestInternalState(InternalState.GAME_EXCLUSIVE);
         }
     }
 

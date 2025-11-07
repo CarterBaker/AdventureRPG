@@ -11,6 +11,7 @@ import com.badlogic.gdx.math.Vector3;
 public class PositionManager extends ManagerFrame {
 
     // Root
+    private Statistics statistics; // TODO: This can be removed when movement is refactored
     private PlayerCamera playerCamera;
     private Movement movement;
     private WorldManager worldManager;
@@ -24,10 +25,14 @@ public class PositionManager extends ManagerFrame {
 
     // Base \\
 
+    public PositionManager(Statistics statistcs) {
+        this.statistics = statistcs;
+    }
+
     public void create() {
 
         // Root
-        this.movement = (Movement) register(new Movement(rootManager.get(PlayerManager.class).get(Statistics.class)));
+        this.movement = (Movement) register(new Movement(statistics));
 
         // Settings
         this.CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;

@@ -59,12 +59,6 @@ public class Loader extends SystemFrame {
 
         // Root
         this.threadSystem = rootManager.get(WorldManager.class).get(ThreadSystem.class);
-    }
-
-    @Override
-    public void awake() {
-
-        // Root
         this.batchSystem = rootManager.get(WorldManager.class).get(QueueSystem.class).get(BatchSystem.class);
     }
 
