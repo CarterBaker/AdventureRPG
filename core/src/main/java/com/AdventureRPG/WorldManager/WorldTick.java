@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 
@@ -16,7 +16,7 @@ public class WorldTick extends SystemFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Settings
         this.WORLD_TICK = GlobalConstant.WORLD_TICK;
@@ -27,7 +27,7 @@ public class WorldTick extends SystemFrame {
     }
 
     @Override
-    public void update() {
+    protected void update() {
 
         tickCOunter();
     }

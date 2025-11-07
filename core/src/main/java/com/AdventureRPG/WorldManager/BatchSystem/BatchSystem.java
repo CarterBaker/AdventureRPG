@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.BatchSystem;
 
-import com.AdventureRPG.Core.ManagerFrame;
+import com.AdventureRPG.Core.Root.ManagerFrame;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.WorldTick;
@@ -31,7 +31,7 @@ public class BatchSystem extends ManagerFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Root
         this.loader = (Loader) register(new Loader());
@@ -46,7 +46,7 @@ public class BatchSystem extends ManagerFrame {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Root
         this.worldManager = rootManager.get(WorldManager.class);
@@ -58,10 +58,9 @@ public class BatchSystem extends ManagerFrame {
     }
 
     @Override
-    public void update() {
+    protected void update() {
 
         updateQueue();
-        loader.update();
     }
 
     // Update \\

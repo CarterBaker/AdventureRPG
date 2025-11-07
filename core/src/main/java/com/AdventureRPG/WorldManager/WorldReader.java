@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
@@ -16,7 +16,7 @@ public class WorldReader extends SystemFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Root
         this.world = new Pixmap(Gdx.files.internal(GlobalConstant.REGION_IMAGE_PATH));

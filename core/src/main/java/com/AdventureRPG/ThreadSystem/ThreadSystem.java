@@ -6,7 +6,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 
 public class ThreadSystem extends SystemFrame {
 
@@ -38,7 +38,7 @@ public class ThreadSystem extends SystemFrame {
     }
 
     @Override
-    public void awake() {
+    protected void awake() {
 
         // Threads
         initAIExecutor();
@@ -96,7 +96,7 @@ public class ThreadSystem extends SystemFrame {
     }
 
     @Override
-    public void dispose() {
+    protected void dispose() {
 
         shutdownExecutor(aiExecutor);
         shutdownExecutor(generationExecutor);

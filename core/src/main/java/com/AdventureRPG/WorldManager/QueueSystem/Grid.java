@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.math.Vector3;
@@ -30,7 +30,7 @@ public class Grid extends SystemFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Settings
         this.maxRenderDistance = settings.maxRenderDistance;

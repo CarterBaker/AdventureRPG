@@ -1,8 +1,8 @@
 package com.AdventureRPG.ShaderManager;
 
-import com.AdventureRPG.Core.ManagerFrame;
 import com.AdventureRPG.Core.Exceptions.FileException;
 import com.AdventureRPG.Core.Exceptions.GraphicException;
+import com.AdventureRPG.Core.Root.ManagerFrame;
 import com.AdventureRPG.MaterialSystem.MaterialSystem;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
@@ -45,7 +45,7 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Settings
         this.SHADER_JSON_PATH = GlobalConstant.SHADER_JSON_PATH;
@@ -61,7 +61,7 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Root
         this.gson = rootManager.gson;
@@ -70,7 +70,7 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
     }
 
     @Override
-    public void awake() {
+    protected void awake() {
 
         // Shader Manager \\
 

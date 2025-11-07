@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.Biomes;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.WorldManager.WorldManager;
 
 public class BiomeSystem extends SystemFrame {
@@ -11,7 +11,7 @@ public class BiomeSystem extends SystemFrame {
     // Base \\
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Biome System
         this.biomes = Loader.loadBiomes(rootManager.get(WorldManager.class));

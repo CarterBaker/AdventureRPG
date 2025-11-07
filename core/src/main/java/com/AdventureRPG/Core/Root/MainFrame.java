@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core;
+package com.AdventureRPG.Core.Root;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;

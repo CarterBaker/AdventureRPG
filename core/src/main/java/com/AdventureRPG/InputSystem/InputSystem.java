@@ -1,6 +1,6 @@
 package com.AdventureRPG.InputSystem;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.PlayerSystem.PlayerCamera;
 import com.AdventureRPG.PlayerSystem.PlayerManager;
 import com.AdventureRPG.PlayerSystem.PositionManager;
@@ -28,14 +28,14 @@ public class InputSystem extends SystemFrame implements InputProcessor {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Temp
         movement = new Vector3Int();
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Game Manager
         this.playerManager = rootManager.get(PlayerManager.class);
@@ -44,14 +44,14 @@ public class InputSystem extends SystemFrame implements InputProcessor {
     }
 
     @Override
-    public void start() {
+    protected void start() {
 
         Gdx.input.setInputProcessor(this);
         block(blockInput);
     }
 
     @Override
-    public void update() {
+    protected void update() {
 
         updateRotation();
         updateMovement();

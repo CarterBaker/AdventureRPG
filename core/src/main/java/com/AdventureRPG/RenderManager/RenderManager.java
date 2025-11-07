@@ -1,6 +1,6 @@
 package com.AdventureRPG.RenderManager;
 
-import com.AdventureRPG.Core.ManagerFrame;
+import com.AdventureRPG.Core.Root.ManagerFrame;
 import com.AdventureRPG.PassSystem.PassData;
 import com.AdventureRPG.PlayerSystem.PlayerManager;
 import com.AdventureRPG.ShaderManager.ShaderManager;
@@ -23,13 +23,13 @@ public class RenderManager extends ManagerFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         this.renderQueueSystem = (RenderQueueSystem) register(new RenderQueueSystem());
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Root
         this.shaderManager = rootManager.get(ShaderManager.class);
@@ -39,7 +39,7 @@ public class RenderManager extends ManagerFrame {
     }
 
     @Override
-    public void awake() {
+    protected void awake() {
 
         // Core passes
         renderQueueSystem.addPass(new PassData(

@@ -3,7 +3,7 @@ package com.AdventureRPG.SaveManager;
 import java.io.File;
 import java.util.Random;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 
 public class UserData extends SystemFrame {
 
@@ -15,21 +15,21 @@ public class UserData extends SystemFrame {
     private Random random;
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Seed Management
         this.random = new Random();
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Settings
         this.path = rootManager.path;
     }
 
     @Override
-    public void awake() {
+    protected void awake() {
 
         // Seed Management
         generateSeed();

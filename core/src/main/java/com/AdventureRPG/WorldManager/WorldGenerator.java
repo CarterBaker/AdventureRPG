@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.SaveManager.SaveManager;
 import com.AdventureRPG.SaveManager.UserData;
 import com.AdventureRPG.Util.GlobalConstant;
@@ -32,7 +32,7 @@ public class WorldGenerator extends SystemFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Settings
         this.BIOME_SIZE = GlobalConstant.BIOME_SIZE;
@@ -41,7 +41,7 @@ public class WorldGenerator extends SystemFrame {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Root
         this.userData = rootManager.get(SaveManager.class).get(UserData.class);

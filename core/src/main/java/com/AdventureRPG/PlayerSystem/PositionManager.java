@@ -1,6 +1,6 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.AdventureRPG.Core.ManagerFrame;
+import com.AdventureRPG.Core.Root.ManagerFrame;
 import com.AdventureRPG.InputSystem.Movement;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
@@ -29,7 +29,8 @@ public class PositionManager extends ManagerFrame {
         this.statistics = statistcs;
     }
 
-    public void create() {
+    @Override
+    protected void create() {
 
         // Root
         this.movement = (Movement) register(new Movement(statistics));
@@ -43,7 +44,7 @@ public class PositionManager extends ManagerFrame {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Root
         this.playerCamera = localManager.get(PlayerCamera.class);

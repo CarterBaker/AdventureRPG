@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.QueueSystem;
 
-import com.AdventureRPG.Core.ManagerFrame;
+import com.AdventureRPG.Core.Root.ManagerFrame;
 import com.AdventureRPG.Util.Coordinate2Int;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.Util.Vector2Int;
@@ -46,7 +46,7 @@ public class QueueSystem extends ManagerFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Root
         this.grid = (Grid) register(new Grid());
@@ -71,7 +71,7 @@ public class QueueSystem extends ManagerFrame {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Root
         this.worldManager = rootManager.get(WorldManager.class);
@@ -94,13 +94,13 @@ public class QueueSystem extends ManagerFrame {
     }
 
     @Override
-    public void update() {
+    protected void update() {
 
         updateQueue();
     }
 
     @Override
-    public void dispose() {
+    protected void dispose() {
 
         for (int i = 0; i < grid.totalChunks(); i++) {
 

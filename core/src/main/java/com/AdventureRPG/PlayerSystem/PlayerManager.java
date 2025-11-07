@@ -1,6 +1,6 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.AdventureRPG.Core.ManagerFrame;
+import com.AdventureRPG.Core.Root.ManagerFrame;
 import com.AdventureRPG.Util.Vector2Int;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
@@ -15,7 +15,7 @@ public class PlayerManager extends ManagerFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Player
         this.statistics = (Statistics) register(new Statistics());

@@ -1,6 +1,6 @@
 package com.AdventureRPG.LightingSystem;
 
-import com.AdventureRPG.Core.ManagerFrame;
+import com.AdventureRPG.Core.Root.ManagerFrame;
 
 public class LightingManager extends ManagerFrame {
 
@@ -11,7 +11,7 @@ public class LightingManager extends ManagerFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Lighting
         this.sky = (Sky) register(new Sky());

@@ -1,8 +1,8 @@
 package com.AdventureRPG.MaterialSystem;
 
-import com.AdventureRPG.Core.SystemFrame;
 import com.AdventureRPG.Core.Exceptions.FileException;
 import com.AdventureRPG.Core.Exceptions.GraphicException;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
 import com.AdventureRPG.TextureSystem.TextureSystem;
@@ -46,7 +46,7 @@ public class MaterialSystem extends SystemFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Settings
         this.MATERIAL_JSON_PATH = GlobalConstant.MATERIAL_JSON_PATH;
@@ -66,7 +66,7 @@ public class MaterialSystem extends SystemFrame {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Root
         this.gson = rootManager.gson;
@@ -75,20 +75,20 @@ public class MaterialSystem extends SystemFrame {
     }
 
     @Override
-    public void awake() {
+    protected void awake() {
 
         compileMaterials();
     }
 
     @Override
-    public void update() {
+    protected void update() {
 
         for (int i = 0, n = materials.size(); i < n; i++)
             materials.get(i).updateUniversalUniforms();
     }
 
     @Override
-    public void dispose() {
+    protected void dispose() {
 
         materialsById.clear();
         idByName.clear();

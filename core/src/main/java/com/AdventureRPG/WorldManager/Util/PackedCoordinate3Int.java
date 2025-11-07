@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.Util;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.Util.GlobalConstant;
 
 public class PackedCoordinate3Int extends SystemFrame {
@@ -24,7 +24,7 @@ public class PackedCoordinate3Int extends SystemFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Settings
         this.BIOME_SIZE = GlobalConstant.BIOME_SIZE;

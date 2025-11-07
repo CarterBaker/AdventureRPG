@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager;
 
-import com.AdventureRPG.Core.ManagerFrame;
+import com.AdventureRPG.Core.Root.ManagerFrame;
 import com.AdventureRPG.MaterialSystem.MaterialSystem;
 import com.AdventureRPG.PlayerSystem.PlayerManager;
 import com.AdventureRPG.SaveManager.SaveManager;
@@ -58,7 +58,7 @@ public class WorldManager extends ManagerFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Settings
         this.maxRenderDistance = settings.maxRenderDistance;
@@ -71,7 +71,7 @@ public class WorldManager extends ManagerFrame {
         this.worldTick = (WorldTick) register(new WorldTick());
         this.worldReader = (WorldReader) register(new WorldReader());
         this.queueSystem = (QueueSystem) register(new QueueSystem());
-        this.batchSystem = queueSystem.batchSystem;
+        this.batchSystem = queueSystem.batchSystem; // TODO: Needs to be updated
         this.biomeSystem = (BiomeSystem) register(new BiomeSystem());
 
         // Position
@@ -80,7 +80,7 @@ public class WorldManager extends ManagerFrame {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Settings
         this.WORLD_SCALE = worldReader.getWorldScale();

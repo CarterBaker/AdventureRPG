@@ -1,6 +1,6 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
 
@@ -27,7 +27,7 @@ public class PlayerCamera extends SystemFrame {
     }
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Camera
         direction = new Vector3();

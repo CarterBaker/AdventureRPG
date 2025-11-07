@@ -1,9 +1,9 @@
 package com.AdventureRPG.PassSystem;
 
-import com.AdventureRPG.Core.RootManager;
-import com.AdventureRPG.Core.SystemFrame;
 import com.AdventureRPG.Core.Exceptions.FileException;
 import com.AdventureRPG.Core.Exceptions.GraphicException;
+import com.AdventureRPG.Core.Root.RootManager;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.RenderManager.RenderManager;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 import com.AdventureRPG.ShaderManager.UniformAttribute;
@@ -34,7 +34,7 @@ public class PassSystem extends SystemFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Settings
         this.PASS_JSON_PATH = GlobalConstant.PASS_JSON_PATH;
@@ -46,7 +46,7 @@ public class PassSystem extends SystemFrame {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Root
         this.gson = rootManager.gson;
@@ -55,7 +55,7 @@ public class PassSystem extends SystemFrame {
     }
 
     @Override
-    public void awake() {
+    protected void awake() {
 
         // Pass ManagerS
         compilePasses();

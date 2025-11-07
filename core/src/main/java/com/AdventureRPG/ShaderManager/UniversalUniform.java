@@ -1,6 +1,6 @@
 package com.AdventureRPG.ShaderManager;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.PlayerSystem.PlayerManager;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
@@ -17,14 +17,14 @@ public class UniversalUniform extends SystemFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Time
         this.u_time = 0.0f;
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Camera
         PlayerManager playerManager = rootManager.get(PlayerManager.class);
@@ -32,7 +32,7 @@ public class UniversalUniform extends SystemFrame {
     }
 
     @Override
-    public void update() {
+    protected void update() {
 
         u_time += Gdx.graphics.getDeltaTime();
     }

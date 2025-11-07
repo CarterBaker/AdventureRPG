@@ -3,7 +3,7 @@ package com.AdventureRPG.WorldManager.BatchSystem;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.ThreadSystem.ThreadSystem;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldManager;
@@ -32,7 +32,7 @@ public class Loader extends SystemFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Async System
         this.addRequests = new ConcurrentLinkedQueue<>();
@@ -55,7 +55,7 @@ public class Loader extends SystemFrame {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Root
         this.threadSystem = rootManager.get(WorldManager.class).get(ThreadSystem.class);
@@ -63,7 +63,7 @@ public class Loader extends SystemFrame {
     }
 
     @Override
-    public void update() {
+    protected void update() {
 
         processData();
     }

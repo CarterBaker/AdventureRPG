@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core;
+package com.AdventureRPG.Core.Root;
 
 import com.AdventureRPG.Core.Exceptions.CoreException;
 import com.AdventureRPG.SettingsSystem.Settings;

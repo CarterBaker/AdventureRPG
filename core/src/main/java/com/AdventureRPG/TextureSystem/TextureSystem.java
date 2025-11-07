@@ -3,8 +3,8 @@ package com.AdventureRPG.TextureSystem;
 import java.io.File;
 import java.util.*;
 
-import com.AdventureRPG.Core.SystemFrame;
 import com.AdventureRPG.Core.Exceptions.FileException;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
@@ -54,7 +54,7 @@ public class TextureSystem extends SystemFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Settings
         this.BLOCK_TEXTURE_PATH = GlobalConstant.BLOCK_TEXTURE_PATH;
@@ -94,7 +94,7 @@ public class TextureSystem extends SystemFrame {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Texture Manager
         compileArrays(new File(BLOCK_TEXTURE_PATH));
@@ -153,7 +153,7 @@ public class TextureSystem extends SystemFrame {
     }
 
     @Override
-    public void dispose() {
+    protected void dispose() {
 
         for (ArrayGroup group : arrayGroups.values())
             if (group.array != null)

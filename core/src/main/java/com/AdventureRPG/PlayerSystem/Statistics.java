@@ -1,6 +1,6 @@
 package com.AdventureRPG.PlayerSystem;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 
 public class Statistics extends SystemFrame { // TODO: Eventually this will be used by all entities individually
 

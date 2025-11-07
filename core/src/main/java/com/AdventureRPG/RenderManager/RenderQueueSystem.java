@@ -2,7 +2,7 @@ package com.AdventureRPG.RenderManager;
 
 import java.util.*;
 
-import com.AdventureRPG.Core.SystemFrame;
+import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.PassSystem.PassData;
 import com.AdventureRPG.ShaderManager.ShaderManager;
 
@@ -13,7 +13,7 @@ public class RenderQueueSystem extends SystemFrame {
     private Map<Integer, Queue<PassData>> passes;
 
     @Override
-    public void init() {
+    protected void init() {
 
         this.shaderManager = rootManager.get(ShaderManager.class);
         this.passes = new TreeMap<>();

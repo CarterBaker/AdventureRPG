@@ -2,7 +2,7 @@ package com.AdventureRPG.SaveManager;
 
 import java.io.File;
 
-import com.AdventureRPG.Core.ManagerFrame;
+import com.AdventureRPG.Core.Root.ManagerFrame;
 
 // TODO: Eventually the whole save system will need a refactor
 public class SaveManager extends ManagerFrame {
@@ -17,7 +17,7 @@ public class SaveManager extends ManagerFrame {
     // Base \\
 
     @Override
-    public void create() {
+    protected void create() {
 
         // Save System
         this.userData = (UserData) register(new UserData());
@@ -25,7 +25,7 @@ public class SaveManager extends ManagerFrame {
     }
 
     @Override
-    public void init() {
+    protected void init() {
 
         // Settings
         this.path = rootManager.path;

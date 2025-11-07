@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core;
+package com.AdventureRPG.Core.Root;
 
 public enum InternalProcess {
     CREATE,
