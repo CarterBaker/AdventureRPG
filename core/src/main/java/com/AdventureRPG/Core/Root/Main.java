@@ -22,7 +22,7 @@ public class Main extends Game {
     private final Gson gson;
 
     // Rendering
-    private ShaderProvider shaderProvider;
+    private ShaderProvider shaderProvider; // TODO: Need to remove these 4 references
     private Environment environment;
     private SpriteBatch spriteBatch;
     private ModelBatch modelBatch;

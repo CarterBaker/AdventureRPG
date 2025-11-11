@@ -7,7 +7,7 @@ import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.AdventureRPG.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.GlobalConstant;
 
 public final class MeshPacket {
 

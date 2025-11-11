@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.SubChunks;
 
-import com.AdventureRPG.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.Biomes.BiomeContainer;
 import com.AdventureRPG.WorldManager.Blocks.BlockContainer;
 import com.AdventureRPG.WorldManager.Chunks.Chunk;

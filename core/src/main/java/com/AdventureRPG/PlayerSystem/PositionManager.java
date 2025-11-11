@@ -1,10 +1,10 @@
 package com.AdventureRPG.PlayerSystem;
 
 import com.AdventureRPG.Core.Root.ManagerFrame;
+import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.Vector2Int;
+import com.AdventureRPG.Core.Util.Vector3Int;
 import com.AdventureRPG.InputSystem.Movement;
-import com.AdventureRPG.Util.GlobalConstant;
-import com.AdventureRPG.Util.Vector2Int;
-import com.AdventureRPG.Util.Vector3Int;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.badlogic.gdx.math.Vector3;
 

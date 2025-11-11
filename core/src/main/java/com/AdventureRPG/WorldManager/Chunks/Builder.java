@@ -3,14 +3,15 @@ package com.AdventureRPG.WorldManager.Chunks;
 import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.AdventureRPG.MaterialSystem.MaterialData;
-import com.AdventureRPG.TextureSystem.TextureSystem.UVRect;
-import com.AdventureRPG.Util.Direction2Int;
-import com.AdventureRPG.Util.Direction3Int;
-import com.AdventureRPG.Util.GlobalConstant;
+import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialData;
+import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem.UVRect;
+import com.AdventureRPG.Core.Util.Direction2Int;
+import com.AdventureRPG.Core.Util.Direction3Int;
+import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldManager.Blocks.Block;
+import com.AdventureRPG.WorldManager.Blocks.BlockSystem;
 import com.AdventureRPG.WorldManager.Blocks.Type;
 import com.AdventureRPG.WorldManager.SubChunks.SubChunk;
 import com.AdventureRPG.WorldManager.SubChunks.SubChunkMesh;
@@ -23,6 +24,7 @@ public class Builder {
 
     // Game Manager
     private final WorldManager worldManager;
+    private final BlockSystem blockSystem;
     private final PackedCoordinate3Int packedCoordinate3Int;
     private final BiomeSystem biomeSystem;
 
@@ -56,6 +58,7 @@ public class Builder {
 
         // Game Manager
         this.worldManager = worldManager;
+        this.blockSystem = worldManager.blockSystem;
         this.packedCoordinate3Int = worldManager.packedCoordinate3Int;
         this.biomeSystem = worldManager.biomeSystem;
 
@@ -111,7 +114,7 @@ public class Builder {
 
                 // Get the block and block type for the pre-packed coordinate
                 int blockID = subChunk.getBlock(x, y, z);
-                Type type = worldManager.getBlockType(blockID);
+                Type type = blockSystem.getBlockTypeByID(blockID); // TODO: Grab block instead?
 
                 // Early exit for anything set to type NULL
                 if (type == Type.NULL)
@@ -141,6 +144,8 @@ public class Builder {
                             biomeID, blockID,
                             type);
                 }
+
+                System.out.println("This does not print");
             }
 
             // If there is data build the mesh
@@ -152,6 +157,7 @@ public class Builder {
 
         // Exit early and clear the lists if anything went wrong
         catch (AbortBuildException endEarly) {
+            // TODO: Redo entire build error section
         }
 
         // Clear the data after a successful build
@@ -161,6 +167,7 @@ public class Builder {
             threadSafety.set(false);
         }
 
+        System.out.println(output);
         return output;
     }
 
@@ -169,7 +176,6 @@ public class Builder {
 
         quads.clear();
         quadCounts.clear();
-
         batchedBlocksUp.clear();
         batchedBlocksNorth.clear();
         batchedBlocksSouth.clear();
@@ -369,7 +375,7 @@ public class Builder {
 
         // Get the type of the neighbor block to compare against
         int blockID = comparativeSubChunk.getBlock(bX, bY, bZ);
-        Type comparativeType = worldManager.getBlockType(blockID);
+        Type comparativeType = blockSystem.getBlockTypeByID(blockID);
 
         return comparativeType != type;
     }
@@ -414,7 +420,6 @@ public class Builder {
 
     private boolean isBlockOverEdge(
             int aX, int aY, int aZ) {
-
         return (aX < 0 || aX >= CHUNK_SIZE ||
                 aY < 0 || aY >= CHUNK_SIZE ||
                 aZ < 0 || aZ >= CHUNK_SIZE);
@@ -472,7 +477,9 @@ public class Builder {
         int color2 = getVertColor(subChunk, subChunkIndex, vert2X, vert2Y, vert2Z);
         int color3 = getVertColor(subChunk, subChunkIndex, vert3X, vert3Y, vert3Z);
 
-        int materialDataID = worldManager.getBlockByID(blockID).getMaterialDataForSide(direction).id;
+        int materialDataID = blockSystem.getBlockByID(blockID).getMaterialDataForSide(direction).id;
+
+        System.out.println("This don't");
 
         packQuad(
                 xyz,
@@ -586,7 +593,6 @@ public class Builder {
     }
 
     private boolean isVertOverEdge(int offsetX, int offsetY, int offsetZ) {
-
         return (offsetX < 0 || offsetX > CHUNK_SIZE ||
                 offsetY < 0 || offsetY > CHUNK_SIZE ||
                 offsetZ < 0 || offsetZ > CHUNK_SIZE);
@@ -712,7 +718,7 @@ public class Builder {
             verts[3] = new int[] { x + dirB.x * height, y + dirB.y * height, z + dirB.z * height };
 
             // Block data
-            Block block = worldManager.getBlockByID(blockID);
+            Block block = blockSystem.getBlockByID(blockID);
             UVRect uv = block.getUVForSide(direction);
             MaterialData materialData = block.getMaterialDataForSide(direction);
             int matId = materialData.id;
@@ -752,6 +758,8 @@ public class Builder {
                 quadVertices[base + 7] = uvs[vi][0];
                 quadVertices[base + 8] = uvs[vi][1];
             }
+
+            System.out.println("This does not print");
 
             subChunkMesh.addVertices(matId, quadVertices);
         }

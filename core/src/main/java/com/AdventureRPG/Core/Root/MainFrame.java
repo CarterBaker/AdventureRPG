@@ -5,9 +5,11 @@ import java.time.format.DateTimeFormatter;
 
 abstract class MainFrame {
 
-    // Debug \\
+    // Core \\
 
     private final String systemName = getClass().getSimpleName();
+
+    // Debug \\
 
     protected final void debug() {
         debug("");
@@ -17,6 +19,12 @@ abstract class MainFrame {
         System.out.println("[" + systemName + "] " + input);
     }
 
+    protected final void timeStampDebug(String input) {
+        System.out.println("[" + systemName + "]" + timeStamp() + input);
+    }
+
+    // Log \\
+
     protected final void log(String input) {
         System.out.println(input);
     }
@@ -25,12 +33,16 @@ abstract class MainFrame {
         System.err.println(input);
     }
 
-    protected final void timeStamp(String input) {
-        String time = LocalTime.now().format(TIME_FORMAT);
-        System.out.println("[" + time + "] " + input);
+    protected final void timeStampLog(String input) {
+        System.out.println(timeStamp() + input);
     }
 
     // Utility \\
+
+    protected final String timeStamp() {
+        String time = LocalTime.now().format(TIME_FORMAT);
+        return "[" + time + "] ";
+    }
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 }

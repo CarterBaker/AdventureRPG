@@ -1,10 +1,10 @@
 package com.AdventureRPG.WorldManager.Blocks;
 
-import com.AdventureRPG.MaterialSystem.MaterialData;
-import com.AdventureRPG.MaterialSystem.MaterialSystem;
-import com.AdventureRPG.TextureSystem.TextureSystem;
-import com.AdventureRPG.TextureSystem.TextureSystem.UVRect;
-import com.AdventureRPG.Util.Direction3Int;
+import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialData;
+import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
+import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
+import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem.UVRect;
+import com.AdventureRPG.Core.Util.Direction3Int;
 import com.AdventureRPG.WorldManager.WorldManager;
 
 public class Block {

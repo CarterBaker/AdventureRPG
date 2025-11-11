@@ -1,9 +1,9 @@
 package com.AdventureRPG.WorldManager.QueueSystem;
 
 import com.AdventureRPG.Core.Root.ManagerFrame;
-import com.AdventureRPG.Util.Coordinate2Int;
-import com.AdventureRPG.Util.GlobalConstant;
-import com.AdventureRPG.Util.Vector2Int;
+import com.AdventureRPG.Core.Util.Coordinate2Int;
+import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.Vector2Int;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.WorldTick;
 import com.AdventureRPG.WorldManager.BatchSystem.BatchSystem;
@@ -343,18 +343,22 @@ public class QueueSystem extends ManagerFrame {
     // External Queueing \\
 
     public void addToGenerateQueue(long chunkCoordinate) {
+        // TODO: debug("This prints");
         queue(QueueProcess.Generate).enqueue(chunkCoordinate);
     }
 
     public void addToAssessmentQueue(long chunkCoordinate) {
+        // TODO: debug("This prints");
         queue(QueueProcess.Assessment).enqueue(chunkCoordinate);
     }
 
     public void addToBuildQueue(long chunkCoordinate) {
+        // TODO: debug("This prints");
         queue(QueueProcess.Build).enqueue(chunkCoordinate);
     }
 
     public void addToBatchQueue(long chunkCoordinate) {
+        debug("This does not print");
         queue(QueueProcess.Batch).enqueue(chunkCoordinate);
     }
 

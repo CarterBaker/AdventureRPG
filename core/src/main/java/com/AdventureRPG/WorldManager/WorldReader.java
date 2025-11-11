@@ -1,9 +1,9 @@
 package com.AdventureRPG.WorldManager;
 
 import com.AdventureRPG.Core.Root.SystemFrame;
-import com.AdventureRPG.Util.Coordinate2Int;
-import com.AdventureRPG.Util.GlobalConstant;
-import com.AdventureRPG.Util.Vector2Int;
+import com.AdventureRPG.Core.Util.Coordinate2Int;
+import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.Vector2Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
 

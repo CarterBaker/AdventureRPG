@@ -1,21 +1,19 @@
 package com.AdventureRPG.WorldManager;
 
+import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
+import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
+import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
 import com.AdventureRPG.Core.Root.ManagerFrame;
-import com.AdventureRPG.MaterialSystem.MaterialSystem;
+import com.AdventureRPG.Core.ThreadSystem.ThreadSystem;
+import com.AdventureRPG.Core.Util.Coordinate2Int;
+import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.Vector2Int;
 import com.AdventureRPG.PlayerSystem.PlayerManager;
 import com.AdventureRPG.SaveManager.SaveManager;
-import com.AdventureRPG.ShaderManager.ShaderManager;
-import com.AdventureRPG.TextureSystem.TextureSystem;
-import com.AdventureRPG.ThreadSystem.ThreadSystem;
 import com.AdventureRPG.UISystem.UISystem;
-import com.AdventureRPG.Util.Coordinate2Int;
-import com.AdventureRPG.Util.GlobalConstant;
-import com.AdventureRPG.Util.Vector2Int;
 import com.AdventureRPG.WorldManager.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldManager.Biomes.BiomeSystem;
-import com.AdventureRPG.WorldManager.Blocks.Block;
-import com.AdventureRPG.WorldManager.Blocks.Loader;
-import com.AdventureRPG.WorldManager.Blocks.Type;
+import com.AdventureRPG.WorldManager.Blocks.BlockSystem;
 import com.AdventureRPG.WorldManager.QueueSystem.QueueSystem;
 import com.AdventureRPG.WorldManager.Util.PackedCoordinate3Int;
 import com.badlogic.gdx.math.Vector3;
@@ -39,10 +37,8 @@ public class WorldManager extends ManagerFrame {
     private int CHUNK_SIZE;
     public Vector2Int WORLD_SCALE;
 
-    // Block Management
-    private Block[] blocks;
-
     // World System
+    public BlockSystem blockSystem;
     public PackedCoordinate3Int packedCoordinate3Int;
     public WorldGenerator worldGenerator;
     public WorldTick worldTick;
@@ -66,12 +62,12 @@ public class WorldManager extends ManagerFrame {
         this.CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
 
         // World System
+        this.blockSystem = (BlockSystem) register(new BlockSystem());
         this.packedCoordinate3Int = (PackedCoordinate3Int) register(new PackedCoordinate3Int());
         this.worldGenerator = (WorldGenerator) register(new WorldGenerator());
         this.worldTick = (WorldTick) register(new WorldTick());
         this.worldReader = (WorldReader) register(new WorldReader());
         this.queueSystem = (QueueSystem) register(new QueueSystem());
-        this.batchSystem = queueSystem.batchSystem; // TODO: Needs to be updated
         this.biomeSystem = (BiomeSystem) register(new BiomeSystem());
 
         // Position
@@ -94,9 +90,7 @@ public class WorldManager extends ManagerFrame {
         this.saveManager = rootManager.get(SaveManager.class);
         this.UISystem = rootManager.get(UISystem.class);
         this.playerManager = rootManager.get(PlayerManager.class);
-
-        // Block Management
-        this.blocks = Loader.LoadBlocks(rootManager.gson, this); // TODO: Add block system
+        this.batchSystem = rootManager.get(BatchSystem.class);
     }
 
     // Movement \\
@@ -123,25 +117,6 @@ public class WorldManager extends ManagerFrame {
 
     public void loadChunks() {
         queueSystem.updateChunksInGrid(chunkCoordinate);
-    }
-
-    // Block Management \\
-
-    public Block getBlockByID(int id) {
-        return (id >= 0 && id < blocks.length) ? blocks[id] : null;
-    }
-
-    public Block getBlockByName(String name) {
-
-        for (Block block : blocks)
-            if (block != null && block.name.equalsIgnoreCase(name))
-                return block;
-
-        throw new RuntimeException("Block not found: " + name);
-    }
-
-    public Type getBlockType(int id) {
-        return (id >= 0 && id < blocks.length) ? blocks[id].type : null;
     }
 
     // Wrap Logic \\

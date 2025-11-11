@@ -1,7 +1,7 @@
 package com.AdventureRPG.PlayerSystem;
 
 import com.AdventureRPG.Core.Root.ManagerFrame;
-import com.AdventureRPG.Util.Vector2Int;
+import com.AdventureRPG.Core.Util.Vector2Int;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
 

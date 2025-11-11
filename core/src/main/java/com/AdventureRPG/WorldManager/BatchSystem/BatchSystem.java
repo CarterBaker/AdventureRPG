@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldManager.BatchSystem;
 
 import com.AdventureRPG.Core.Root.ManagerFrame;
-import com.AdventureRPG.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.WorldTick;
 import com.AdventureRPG.WorldManager.Chunks.Chunk;
@@ -118,10 +118,12 @@ public class BatchSystem extends ManagerFrame {
     // Main \\
 
     public void requestBatch(Chunk chunk) {
+        debug("Working");
         loader.requestAdd(chunk);
     }
 
     public void addChunkToBatch(Chunk chunk) {
+        debug("Working");
         loadedChunks.putIfAbsent(chunk.coordinate, chunk);
     }
 

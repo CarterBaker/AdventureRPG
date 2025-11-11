@@ -1,11 +1,12 @@
 package com.AdventureRPG.WorldManager;
 
 import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.OpenSimplex2;
 import com.AdventureRPG.SaveManager.SaveManager;
 import com.AdventureRPG.SaveManager.UserData;
-import com.AdventureRPG.Util.GlobalConstant;
-import com.AdventureRPG.Util.OpenSimplex2;
 import com.AdventureRPG.WorldManager.Blocks.Block;
+import com.AdventureRPG.WorldManager.Blocks.BlockSystem;
 import com.AdventureRPG.WorldManager.Chunks.Chunk;
 import com.AdventureRPG.WorldManager.SubChunks.SubChunk;
 import com.AdventureRPG.WorldManager.Util.PackedCoordinate3Int;
@@ -15,12 +16,15 @@ public class WorldGenerator extends SystemFrame {
     // Root
     private UserData userData;
     private WorldManager worldManager;
-    private PackedCoordinate3Int packedCoordinate3Int;
 
     // Settings
     private int BIOME_SIZE;
     private int CHUNK_SIZE;
     private int WORLD_HEIGHT;
+
+    // World Manager
+    private PackedCoordinate3Int packedCoordinate3Int;
+    private BlockSystem blockSystem;
 
     // Default Blocks
     private Block AIR_BLOCK; // TODO: With 2D chunk coordinates this is
@@ -46,11 +50,14 @@ public class WorldGenerator extends SystemFrame {
         // Root
         this.userData = rootManager.get(SaveManager.class).get(UserData.class);
         this.worldManager = rootManager.get(WorldManager.class);
+
+        // World Manager
         this.packedCoordinate3Int = worldManager.get(PackedCoordinate3Int.class);
+        this.blockSystem = worldManager.get(BlockSystem.class);
 
         // Default Blocks
-        this.AIR_BLOCK = worldManager.getBlockByName("Air");
-        this.GRASS_BLOCK = worldManager.getBlockByName("Grass Block");
+        this.AIR_BLOCK = blockSystem.getBlockByName("Air");
+        this.GRASS_BLOCK = blockSystem.getBlockByName("Grass Block");
 
         // Data
         this.seed = userData.getSeed();

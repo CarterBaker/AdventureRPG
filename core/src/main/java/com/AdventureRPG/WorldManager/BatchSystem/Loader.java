@@ -4,8 +4,9 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.AdventureRPG.Core.Root.SystemFrame;
-import com.AdventureRPG.ThreadSystem.ThreadSystem;
-import com.AdventureRPG.Util.GlobalConstant;
+import com.AdventureRPG.Core.ThreadSystem.ThreadSystem;
+import com.AdventureRPG.Core.Util.Coordinate2Int;
+import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.Chunks.Chunk;
 import com.AdventureRPG.WorldManager.QueueSystem.QueueSystem;
@@ -153,6 +154,9 @@ public class Loader extends SystemFrame {
     // External Queueing \\
 
     public void requestAdd(Chunk chunk) {
+
+        debug("adding:" + Coordinate2Int.toString(chunk.coordinate));
+
         addRequests.add(chunk);
     }
 
@@ -175,6 +179,8 @@ public class Loader extends SystemFrame {
     // Add \\
 
     private boolean processAddData() {
+
+        debug("processAddData()");
 
         int processed = 0;
 

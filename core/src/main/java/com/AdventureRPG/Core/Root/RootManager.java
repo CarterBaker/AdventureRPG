@@ -2,16 +2,16 @@ package com.AdventureRPG.Core.Root;
 
 import java.io.File;
 
+import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
+import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassSystem;
+import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
+import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
+import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
+import com.AdventureRPG.Core.ThreadSystem.ThreadSystem;
 import com.AdventureRPG.InputSystem.InputSystem;
 import com.AdventureRPG.LightingSystem.LightingManager;
-import com.AdventureRPG.MaterialSystem.MaterialSystem;
-import com.AdventureRPG.PassSystem.PassSystem;
 import com.AdventureRPG.PlayerSystem.PlayerManager;
-import com.AdventureRPG.RenderManager.RenderManager;
 import com.AdventureRPG.SaveManager.SaveManager;
-import com.AdventureRPG.ShaderManager.ShaderManager;
-import com.AdventureRPG.TextureSystem.TextureSystem;
-import com.AdventureRPG.ThreadSystem.ThreadSystem;
 import com.AdventureRPG.TimeSystem.TimeSystem;
 import com.AdventureRPG.UISystem.LoadScreen;
 import com.AdventureRPG.UISystem.Menu;
@@ -24,17 +24,16 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider;
-import com.badlogic.gdx.scenes.scene2d.ui.Table.Debug;
 import com.google.gson.Gson;
 
-public class RootManager extends ManagerFrame implements Screen {
+public class RootManager extends RootFrame implements Screen {
 
     // Root
     public final Main game;
     public final File path;
     public final Gson gson;
 
-    /// Rendering
+    // Rendering
     public final ShaderProvider shaderProvider;
     public final Environment environment;
     public final SpriteBatch spriteBatch;

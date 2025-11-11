@@ -2,9 +2,9 @@ package com.AdventureRPG.WorldManager.Chunks;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.AdventureRPG.Util.Coordinate2Int;
-import com.AdventureRPG.Util.Direction2Int;
-import com.AdventureRPG.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.Coordinate2Int;
+import com.AdventureRPG.Core.Util.Direction2Int;
+import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldGenerator;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.QueueSystem.QueueProcess;
@@ -82,10 +82,9 @@ public class Chunk {
 
         // Queue
         this.processLocks = new AtomicBoolean[ChunkState.values().length];
-        processLocks[ChunkState.NEEDS_GENERATION_DATA.ordinal()] = new AtomicBoolean(false);
-        processLocks[ChunkState.NEEDS_ASSESSMENT_DATA.ordinal()] = new AtomicBoolean(false);
-        processLocks[ChunkState.NEEDS_BUILD_DATA.ordinal()] = new AtomicBoolean(false);
-        processLocks[ChunkState.NEEDS_BATCH_DATA.ordinal()] = new AtomicBoolean(false);
+
+        for (int i = 0; i < processLocks.length; i++)
+            processLocks[i] = new AtomicBoolean(false);
 
         // Neighbors
         this.neighborStatus = NeighborStatus.INCOMPLETE;
@@ -196,22 +195,27 @@ public class Chunk {
         switch (chunkState) {
 
             case NEEDS_GENERATION_DATA:
+                // TODO: System.out.println("NEEDS_GENERATION_DATA");
                 queueSystem.addToGenerateQueue(coordinate);
                 break;
 
             case NEEDS_ASSESSMENT_DATA:
+                // TODO: System.out.println("NEEDS_ASSESSMENT_DATA");
                 queueSystem.addToAssessmentQueue(coordinate);
                 break;
 
             case NEEDS_BUILD_DATA:
+                // TODO: System.out.println("NEEDS_BUILD_DATA");
                 queueSystem.addToBuildQueue(coordinate);
                 break;
 
             case NEEDS_BATCH_DATA:
+                System.out.println("NEEDS_BATCH_DATA");
                 queueSystem.addToBatchQueue(coordinate);
                 break;
 
             case FINALIZED:
+                System.out.println("FINALIZED");
                 queueSystem.requestBatch(this);
                 break;
 

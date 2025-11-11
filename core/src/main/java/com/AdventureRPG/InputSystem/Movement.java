@@ -1,8 +1,8 @@
 package com.AdventureRPG.InputSystem;
 
 import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Util.Vector3Int;
 import com.AdventureRPG.PlayerSystem.Statistics;
-import com.AdventureRPG.Util.Vector3Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector3;
 

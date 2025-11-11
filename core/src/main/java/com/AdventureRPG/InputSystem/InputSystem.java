@@ -1,10 +1,10 @@
 package com.AdventureRPG.InputSystem;
 
 import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Util.Vector3Int;
 import com.AdventureRPG.PlayerSystem.PlayerCamera;
 import com.AdventureRPG.PlayerSystem.PlayerManager;
 import com.AdventureRPG.PlayerSystem.PositionManager;
-import com.AdventureRPG.Util.Vector3Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
