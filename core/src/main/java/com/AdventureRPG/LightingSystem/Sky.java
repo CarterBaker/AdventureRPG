@@ -25,8 +25,8 @@ public class Sky extends SystemFrame {
     protected void init() {
 
         // Root
-        this.passSystem = rootManager.get(PassSystem.class);
-        this.timeSystem = rootManager.get(TimeSystem.class);
+        this.passSystem = engineManager.get(PassSystem.class);
+        this.timeSystem = engineManager.get(TimeSystem.class);
     }
 
     @Override

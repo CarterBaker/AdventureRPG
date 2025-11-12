@@ -5,7 +5,6 @@ import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
 import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
 import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem.UVRect;
 import com.AdventureRPG.Core.Util.Direction3Int;
-import com.AdventureRPG.WorldManager.WorldManager;
 
 public class Block {
 
@@ -41,11 +40,15 @@ public class Block {
 
     public final Type type;
 
-    public Block(WorldManager worldManager, Builder builder, int id) {
+    public Block(
+            TextureSystem textureSystem,
+            MaterialSystem materialSystem,
+            Builder builder,
+            int id) {
 
         // Game Manager
-        this.textureSystem = worldManager.textureSystem;
-        this.materialSystem = worldManager.materialSystem;
+        this.textureSystem = textureSystem;
+        this.materialSystem = materialSystem;
 
         // Data
         this.name = builder.name;

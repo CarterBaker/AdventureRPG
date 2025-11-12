@@ -73,7 +73,7 @@ public class TimeSystem extends SystemFrame {
 
         // Calendar
         this.calendarFile = new File(GlobalConstant.CALENDAR_JSON_PATH);
-        this.calendar = Loader.load(calendarFile, rootManager.gson);
+        this.calendar = Loader.load(calendarFile, engineManager.gson);
 
         this.totalMonths = calendar.getTotalMonths();
         this.daysPerMonth = calendar.getDaysPerMonth();
@@ -89,7 +89,7 @@ public class TimeSystem extends SystemFrame {
 
     @Override
     protected void init() {
-        this.lightingManager = rootManager.get(LightingManager.class);
+        this.lightingManager = engineManager.get(LightingManager.class);
     }
 
     @Override

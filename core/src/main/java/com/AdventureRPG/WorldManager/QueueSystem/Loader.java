@@ -4,8 +4,9 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.AdventureRPG.Core.Root.SystemFrame;
-import com.AdventureRPG.Core.ThreadSystem.ThreadSystem;
+import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
 import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.SaveManager.ChunkData;
 import com.AdventureRPG.SaveManager.SaveManager;
 import com.AdventureRPG.WorldManager.WorldManager;
@@ -16,6 +17,7 @@ public class Loader extends SystemFrame {
     // Root
     private ThreadSystem threadSystem;
     private ChunkData chunkData;
+    private WorldEngineSystem worldEngineSystem;
     private WorldManager worldManager;
 
     // Async System
@@ -63,9 +65,10 @@ public class Loader extends SystemFrame {
     protected void init() {
 
         // Root
-        this.threadSystem = rootManager.get(ThreadSystem.class);
-        this.chunkData = rootManager.get(SaveManager.class).get(ChunkData.class);
-        this.worldManager = rootManager.get(WorldManager.class);
+        this.threadSystem = engineManager.get(ThreadSystem.class);
+        this.chunkData = engineManager.get(ChunkData.class);
+        this.worldEngineSystem = engineManager.get(WorldEngineSystem.class);
+        this.worldManager = engineManager.get(WorldManager.class);
     }
 
     @Override
@@ -203,7 +206,10 @@ public class Loader extends SystemFrame {
                 Chunk chunk = chunkData.readChunk(chunkCoordinate);
 
                 if (chunk == null)
-                    chunk = new Chunk(worldManager, chunkCoordinate);
+                    chunk = new Chunk(
+                            worldEngineSystem,
+                            worldManager,
+                            chunkCoordinate);
 
                 addRequests.add(chunk);
             });

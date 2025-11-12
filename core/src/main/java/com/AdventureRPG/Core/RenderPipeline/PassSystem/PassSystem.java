@@ -5,7 +5,6 @@ import com.AdventureRPG.Core.Exceptions.GraphicException;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformAttribute;
-import com.AdventureRPG.Core.Root.RootManager;
 import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
@@ -49,9 +48,9 @@ public class PassSystem extends SystemFrame {
     protected void init() {
 
         // Root
-        this.gson = rootManager.gson;
-        this.shaderManager = rootManager.get(ShaderManager.class);
-        this.renderManager = rootManager.get(RenderManager.class);
+        this.gson = engineManager.gson;
+        this.shaderManager = engineManager.get(ShaderManager.class);
+        this.renderManager = engineManager.get(RenderManager.class);
     }
 
     @Override

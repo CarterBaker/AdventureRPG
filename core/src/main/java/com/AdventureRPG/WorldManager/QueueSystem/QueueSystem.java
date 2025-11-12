@@ -4,6 +4,7 @@ import com.AdventureRPG.Core.Root.ManagerFrame;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
 import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Vector2Int;
+import com.AdventureRPG.Core.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.WorldTick;
 import com.AdventureRPG.WorldManager.BatchSystem.BatchSystem;
@@ -16,11 +17,12 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 public class QueueSystem extends ManagerFrame {
 
     // Root
-    public WorldManager worldManager;
-    public WorldTick worldTick;
-    public Grid grid;
-    public Loader loader;
-    public BatchSystem batchSystem;
+    private WorldEngineSystem worldEngineSystem;
+    private WorldManager worldManager;
+    private WorldTick worldTick;
+    private Grid grid;
+    private Loader loader;
+    private BatchSystem batchSystem;
 
     // Settings
     private int MAX_CHUNK_LOADS_PER_FRAME;
@@ -74,7 +76,8 @@ public class QueueSystem extends ManagerFrame {
     protected void init() {
 
         // Root
-        this.worldManager = rootManager.get(WorldManager.class);
+        this.worldEngineSystem = engineManager.get(WorldEngineSystem.class);
+        this.worldManager = engineManager.get(WorldManager.class);
         this.worldTick = worldManager.get(WorldTick.class);
 
         // Chunk Tracking
@@ -226,7 +229,7 @@ public class QueueSystem extends ManagerFrame {
 
             // Pack the coordinates into a usable long value and wrap it
             long chunkCoordinate = Coordinate2Int.pack(chunkX, chunkY);
-            chunkCoordinate = worldManager.wrapAroundWorld(chunkCoordinate);
+            chunkCoordinate = worldEngineSystem.wrapAroundWorld(chunkCoordinate);
 
             // The very first step is to remap all the chunks to the correct position
             gridToChunkMap.put(gridCoordinate, chunkCoordinate);

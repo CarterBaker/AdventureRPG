@@ -6,14 +6,9 @@ import com.AdventureRPG.Core.Exceptions.FileException;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g3d.Environment;
-import com.badlogic.gdx.graphics.g3d.ModelBatch;
-import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
-import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider;
 import com.google.gson.Gson;
 
-// TODO: This needs to be cleaned but is functional for now
+// TODO: This needs to be cleaned
 public class Main extends Game {
 
     // Root
@@ -21,14 +16,8 @@ public class Main extends Game {
     private final Settings settings;
     private final Gson gson;
 
-    // Rendering
-    private ShaderProvider shaderProvider; // TODO: Need to remove these 4 references
-    private Environment environment;
-    private SpriteBatch spriteBatch;
-    private ModelBatch modelBatch;
-
     // Core
-    private RootManager rootManager;
+    private EngineManager engineManager;
 
     // fixed interval
     private float fixedInterval;
@@ -42,7 +31,7 @@ public class Main extends Game {
             Settings settings,
             Gson gson) {
 
-        // Settings
+        // Root
         this.GAME_DIRECTORY = GAME_DIRECTORY;
         this.settings = settings;
         this.gson = gson;
@@ -51,21 +40,14 @@ public class Main extends Game {
     @Override
     public void create() {
 
-        // Rendering
-        this.shaderProvider = new DefaultShaderProvider();
-        this.environment = new Environment();
-        this.spriteBatch = new SpriteBatch();
-        this.modelBatch = new ModelBatch();
-
         // Main
-        this.rootManager = new RootManager(
+        this.engineManager = new EngineManager();
+
+        engineManager.bootKernel(
+                settings,
                 this,
                 GAME_DIRECTORY,
-                gson,
-                shaderProvider,
-                environment,
-                spriteBatch,
-                modelBatch);
+                gson);
 
         // fixed interval
         this.fixedInterval = settings.FIXED_TIME_STEP;
@@ -73,10 +55,10 @@ public class Main extends Game {
         this.maxSteps = 5;
 
         // create()
-        rootManager.internalCreate(this.settings, this.rootManager);
+        engineManager.internalCreate(settings, engineManager);
 
         // init()
-        rootManager.internalInit();
+        engineManager.internalInit();
 
         mainAwake();
     }
@@ -91,12 +73,12 @@ public class Main extends Game {
         mainLateUpdate();
 
         // render()
-        rootManager.internalRender();
+        engineManager.internalRender();
     }
 
     private void stateSwitch() {
 
-        switch (rootManager.getInternalState()) {
+        switch (engineManager.getInternalState()) {
 
             case CONSTRUCTOR -> {
             }
@@ -120,10 +102,10 @@ public class Main extends Game {
     private void mainAwake() {
 
         // Start the game
-        setScreen(rootManager);
+        setScreen(engineManager);
 
         // awake()
-        rootManager.internalAwake();
+        engineManager.internalAwake();
     }
 
     // Start \\
@@ -131,7 +113,7 @@ public class Main extends Game {
     private void mainStart() {
 
         // start()
-        rootManager.internalStart();
+        engineManager.internalStart();
     }
 
     // Menu Exclusive Update \\
@@ -139,7 +121,7 @@ public class Main extends Game {
     private void mainMenuExclusiveUpdate() {
 
         // menuExclusiveUpdate()
-        rootManager.internalMenuExclusiveUpdate();
+        engineManager.internalMenuExclusiveUpdate();
     }
 
     // Game Exclusive Update \\
@@ -147,7 +129,7 @@ public class Main extends Game {
     private void mainGameExclusiveUpdate() {
 
         // gameExcusiveUpdate()
-        rootManager.internalGameExclusiveUpdate();
+        engineManager.internalGameExclusiveUpdate();
     }
 
     // update \\
@@ -155,7 +137,7 @@ public class Main extends Game {
     private void mainUpdate() {
 
         // update()
-        rootManager.internalUpdate();
+        engineManager.internalUpdate();
     }
 
     // Fixed Update \\
@@ -170,7 +152,7 @@ public class Main extends Game {
             elapsedTime -= fixedInterval;
             steps++;
 
-            rootManager.internalFixedUpdate();
+            engineManager.internalFixedUpdate();
         }
     }
 
@@ -179,7 +161,7 @@ public class Main extends Game {
     private void mainLateUpdate() {
 
         // lateUpdate()
-        rootManager.internalLateUpdate();
+        engineManager.internalLateUpdate();
     }
 
     // Dispose \\
@@ -188,15 +170,13 @@ public class Main extends Game {
     public void dispose() {
 
         // dispse()
-        rootManager.internalDispose();
+        engineManager.internalDispose();
 
         // Settings
         HandleGameWindow();
         HandleSettingsFile();
 
         // Game
-        spriteBatch.dispose();
-        modelBatch.dispose();
         super.dispose();
     }
 

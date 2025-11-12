@@ -3,14 +3,14 @@ package com.AdventureRPG.WorldManager;
 import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
 import com.AdventureRPG.Core.Util.GlobalConstant;
-import com.AdventureRPG.Core.Util.Vector2Int;
+import com.AdventureRPG.Core.WorldEngineSystem.WorldEngineSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
 
 public class WorldReader extends SystemFrame {
 
     // Root
-    private WorldManager worldManager;
+    private WorldEngineSystem worldEngineSystem;
     private Pixmap world;
 
     // Base \\
@@ -25,31 +25,16 @@ public class WorldReader extends SystemFrame {
     public void init() {
 
         // Root
-        worldManager = rootManager.get(WorldManager.class);
+        worldEngineSystem = engineManager.get(WorldEngineSystem.class);
+        world = engineManager.get(WorldEngineSystem.class).getWorld();
     }
 
     // World Reader \\
 
-    public Vector2Int getWorldScale() {
-
-        int width = world.getWidth();
-        int height = world.getHeight();
-
-        int chunksPerPixel = GlobalConstant.CHUNKS_PER_PIXEL;
-        int chunkSize = GlobalConstant.CHUNK_SIZE;
-
-        int worldWidth = width * chunksPerPixel * chunkSize;
-        int worldHeight = height * chunksPerPixel * chunkSize;
-
-        Vector2Int worldScale = new Vector2Int(worldWidth, worldHeight);
-
-        return worldScale;
-    }
-
     public WorldRegion worldRegionFromPosition(long position) {
 
         // TODO: This needs to be verified working correctly
-        position = worldManager.wrapAroundImageRegion(position);
+        position = worldEngineSystem.wrapAroundImageRegion(position);
 
         int x = Coordinate2Int.unpackX(position);
         int y = Coordinate2Int.unpackY(position);

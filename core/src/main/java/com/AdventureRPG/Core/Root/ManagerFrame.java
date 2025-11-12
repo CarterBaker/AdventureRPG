@@ -14,6 +14,8 @@ public abstract class ManagerFrame extends SystemFrame {
     private final List<SystemFrame> subSystems = new ArrayList<>();
     private SystemFrame[] systemIterator = new SystemFrame[0];
 
+    // Register \\
+
     protected final SystemFrame register(SystemFrame subSystem) {
 
         if (getInternalProcess() != InternalProcess.CREATE)
@@ -62,14 +64,14 @@ public abstract class ManagerFrame extends SystemFrame {
     // Create \\
 
     @Override
-    void internalCreate(Settings settings, RootManager rootManager) {
+    void internalCreate(Settings settings, EngineFrame engineManager) {
 
-        super.internalCreate(settings, rootManager);
+        super.internalCreate(settings, engineManager);
 
         cacheSubSystems();
 
         for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalCreate(settings, rootManager);
+            systemIterator[i].internalCreate(settings, engineManager);
     }
 
     // Init \\

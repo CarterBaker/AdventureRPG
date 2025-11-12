@@ -1,10 +1,11 @@
-package com.AdventureRPG.PlayerSystem;
+package com.AdventureRPG.Core.RenderPipeline.CameraSystem;
 
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Root.InstanceFrame;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
-public class PlayerCamera extends SystemFrame {
+public class CameraInstance extends InstanceFrame {
 
     // Camera
     private PerspectiveCamera perspectiveCamera;
@@ -14,7 +15,7 @@ public class PlayerCamera extends SystemFrame {
 
     // Base \\
 
-    public PlayerCamera(
+    public CameraInstance(
             float fov,
             float viewportWidth,
             float viewportHeight) {
@@ -24,12 +25,6 @@ public class PlayerCamera extends SystemFrame {
                 fov,
                 viewportWidth,
                 viewportHeight);
-    }
-
-    @Override
-    protected void create() {
-
-        // Camera
         direction = new Vector3();
 
         // Initial camera settings
@@ -49,7 +44,6 @@ public class PlayerCamera extends SystemFrame {
         return perspectiveCamera.direction;
     }
 
-    // Called when changing window size
     public void updateViewport(
             float width,
             float height) {
@@ -59,13 +53,10 @@ public class PlayerCamera extends SystemFrame {
         perspectiveCamera.update();
     }
 
-    // Called from inputSystem to rotate the camera
-    public void rotate(
-            float deltaYaw,
-            float deltaPitch) {
+    public void setRotation(Vector2 input) {
 
-        yaw += deltaYaw;
-        pitch += deltaPitch;
+        yaw += input.x;
+        pitch += input.y;
 
         // Clamp pitch to avoid flipping
         pitch = Math.max(-89f, Math.min(89f, pitch));
@@ -80,9 +71,15 @@ public class PlayerCamera extends SystemFrame {
         perspectiveCamera.update();
     }
 
+    public void setPosition(Vector3 input) {
+
+        perspectiveCamera.position.set(input.x, input.y, input.z);
+        perspectiveCamera.update();
+    }
+
     // Accessible \\
 
-    public PerspectiveCamera get() {
+    public PerspectiveCamera getPerspectiveCamera() {
         return perspectiveCamera;
     }
 }

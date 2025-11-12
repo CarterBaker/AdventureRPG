@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
 import com.AdventureRPG.Core.Util.Direction2Int;
 import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.WorldManager.WorldGenerator;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.QueueSystem.QueueProcess;
@@ -16,6 +17,7 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 public class Chunk {
 
     // Game Manager
+    public final WorldEngineSystem worldEngineSystem;
     public final WorldManager worldManager;
     public final WorldGenerator worldGenerator;
     public final QueueSystem queueSystem;
@@ -55,13 +57,25 @@ public class Chunk {
 
     // Base \\
 
-    public Chunk(WorldManager worldManager, long coordinate) {
-        this(worldManager, coordinate, ChunkState.NEEDS_GENERATION_DATA);
+    public Chunk(
+            WorldEngineSystem worldEngineSystem,
+            WorldManager worldManager,
+            long coordinate) {
+        this(
+                worldEngineSystem,
+                worldManager,
+                coordinate,
+                ChunkState.NEEDS_GENERATION_DATA);
     }
 
-    public Chunk(WorldManager worldManager, long coordinate, ChunkState chunkState) {
+    public Chunk(
+            WorldEngineSystem worldEngineSystem,
+            WorldManager worldManager,
+            long coordinate,
+            ChunkState chunkState) {
 
         // Game Manager
+        this.worldEngineSystem = worldEngineSystem;
         this.worldManager = worldManager;
         this.worldGenerator = worldManager.worldGenerator;
         this.queueSystem = worldManager.queueSystem;
@@ -109,7 +123,7 @@ public class Chunk {
 
         long neighborCoordinate = Coordinate2Int.add(coordinate, direction.packed);
 
-        neighborCoordinate = worldManager.wrapAroundWorld(neighborCoordinate);
+        neighborCoordinate = worldEngineSystem.wrapAroundWorld(neighborCoordinate);
 
         return neighborCoordinate;
     }

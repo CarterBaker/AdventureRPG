@@ -25,7 +25,7 @@ public class UserData extends SystemFrame {
     protected void init() {
 
         // Settings
-        this.path = rootManager.path;
+        this.path = engineManager.path;
     }
 
     @Override

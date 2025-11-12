@@ -1,11 +1,9 @@
 package com.AdventureRPG.Core.RenderPipeline.RenderManager;
 
+import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
 import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassData;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
 import com.AdventureRPG.Core.Root.ManagerFrame;
-import com.AdventureRPG.PlayerSystem.PlayerManager;
-import com.AdventureRPG.UISystem.UISystem;
-import com.AdventureRPG.WorldManager.WorldManager;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -15,9 +13,7 @@ public class RenderManager extends ManagerFrame {
 
     // Root
     private ShaderManager shaderManager;
-    private UISystem UISystem;
-    private WorldManager worldManager;
-    private PlayerManager playerManager;
+    private CameraSystem cameraSystem;
     private RenderQueueSystem renderQueueSystem;
 
     // Base \\
@@ -32,10 +28,8 @@ public class RenderManager extends ManagerFrame {
     protected void init() {
 
         // Root
-        this.shaderManager = rootManager.get(ShaderManager.class);
-        this.UISystem = rootManager.get(UISystem.class);
-        this.worldManager = rootManager.get(WorldManager.class);
-        this.playerManager = rootManager.get(PlayerManager.class);
+        this.shaderManager = engineManager.get(ShaderManager.class);
+        this.cameraSystem = engineManager.get(CameraSystem.class);
     }
 
     @Override
@@ -46,7 +40,7 @@ public class RenderManager extends ManagerFrame {
                 0, "3D_PASS", -1, null, null,
                 shaderManager.universalUniform,
                 ctx -> {
-                    ctx.modelBatch.begin(playerManager.getCamera());
+                    ctx.modelBatch.begin(cameraSystem.mainCamera().getPerspectiveCamera());
                     ctx.modelBatch.end();
                 }), 0);
 

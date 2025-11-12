@@ -1,7 +1,7 @@
 package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 
+import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
 import com.AdventureRPG.Core.Root.SystemFrame;
-import com.AdventureRPG.PlayerSystem.PlayerManager;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.math.Matrix4;
@@ -27,8 +27,8 @@ public class UniversalUniform extends SystemFrame {
     protected void init() {
 
         // Camera
-        PlayerManager playerManager = rootManager.get(PlayerManager.class);
-        this.camera = playerManager.getCamera();
+        CameraSystem cameraSystem = engineManager.get(CameraSystem.class);
+        this.camera = cameraSystem.mainCamera().getPerspectiveCamera();
     }
 
     @Override

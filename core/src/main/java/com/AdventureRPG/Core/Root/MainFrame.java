@@ -20,7 +20,7 @@ abstract class MainFrame {
     }
 
     protected final void timeStampDebug(String input) {
-        System.out.println("[" + systemName + "]" + timeStamp() + input);
+        debug(timeStamp() + input);
     }
 
     // Log \\

@@ -69,9 +69,9 @@ public class MaterialSystem extends SystemFrame {
     protected void init() {
 
         // Root
-        this.gson = rootManager.gson;
-        this.textureSystem = rootManager.get(TextureSystem.class);
-        this.shaderManager = rootManager.get(ShaderManager.class);
+        this.gson = engineManager.gson;
+        this.textureSystem = engineManager.get(TextureSystem.class);
+        this.shaderManager = engineManager.get(ShaderManager.class);
     }
 
     @Override

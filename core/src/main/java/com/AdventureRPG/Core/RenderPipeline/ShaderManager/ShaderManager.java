@@ -25,7 +25,6 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
 
     // Root
     private Gson gson;
-    private ShaderProvider shaderProvider;
     private MaterialSystem materialSystem;
 
     // Settings
@@ -64,9 +63,8 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
     protected void init() {
 
         // Root
-        this.gson = rootManager.gson;
-        this.shaderProvider = rootManager.shaderProvider;
-        this.materialSystem = rootManager.get(MaterialSystem.class);
+        this.gson = engineManager.gson;
+        this.materialSystem = engineManager.get(MaterialSystem.class);
     }
 
     @Override
@@ -102,9 +100,6 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
     public Shader getShader(Renderable renderable) {
 
         ShaderProgram shader = materialSystem.getShaderForMaterial(renderable.material);
-
-        if (shader == null)
-            return shaderProvider.getShader(renderable);
 
         return new DefaultShader(renderable, new DefaultShader.Config(), shader);
     }

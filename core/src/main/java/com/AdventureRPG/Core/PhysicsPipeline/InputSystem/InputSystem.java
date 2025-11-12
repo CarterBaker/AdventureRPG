@@ -1,29 +1,21 @@
-package com.AdventureRPG.InputSystem;
+package com.AdventureRPG.Core.PhysicsPipeline.InputSystem;
 
 import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.Core.Util.Vector3Int;
-import com.AdventureRPG.PlayerSystem.PlayerCamera;
-import com.AdventureRPG.PlayerSystem.PlayerManager;
-import com.AdventureRPG.PlayerSystem.PositionManager;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.math.Vector2;
 
-// TODO: Extending my own class means I needed to implement InputProcessor instead of extending official class
-// This change needs scrutiny. Overrides for new implimentation are at the bottom under // Input Processor \\
 public class InputSystem extends SystemFrame implements InputProcessor {
-
-    // Root
-    private PlayerManager playerManager;
-    private PlayerCamera playerCamera;
-    private PositionManager positionManager;
 
     // Input
     private boolean blockInput = false;
 
     // Temp
-    private Vector3Int movement;
+    private Vector2 rotation;
     private float sensitivity = 0.15f; // TODO: Move sensitivity to Settings
+    private Vector3Int input;
 
     // Base \\
 
@@ -31,16 +23,8 @@ public class InputSystem extends SystemFrame implements InputProcessor {
     protected void create() {
 
         // Temp
-        movement = new Vector3Int();
-    }
-
-    @Override
-    protected void init() {
-
-        // Game Manager
-        this.playerManager = rootManager.get(PlayerManager.class);
-        this.playerCamera = playerManager.get(PlayerCamera.class);
-        this.positionManager = playerManager.get(PositionManager.class);
+        rotation = new Vector2();
+        input = new Vector3Int();
     }
 
     @Override
@@ -122,38 +106,37 @@ public class InputSystem extends SystemFrame implements InputProcessor {
 
     private void updateRotation() {
 
+        rotation.set(0, 0);
+
         if (blockInput)
             return;
 
         float deltaX = Gdx.input.getDeltaX() * sensitivity;
         float deltaY = -Gdx.input.getDeltaY() * sensitivity;
 
-        playerCamera.rotate(deltaX, deltaY);
+        rotation.set(deltaX, deltaY);
     }
 
     private void updateMovement() {
 
+        input.set(0, 0, 0);
+
         if (blockInput)
             return;
 
-        movement.set(0, 0, 0);
-
         if (W)
-            movement.z += 1; // forward
+            input.z += 1; // forward
         if (S)
-            movement.z -= 1; // backward
+            input.z -= 1; // backward
         if (A)
-            movement.x -= 1; // left
+            input.x -= 1; // left
         if (D)
-            movement.x += 1; // right
+            input.x += 1; // right
 
         if (SPACE)
-            movement.y += 1; // up
+            input.y += 1; // up
         if (SHIFT)
-            movement.y -= 1; // down
-
-        if (movement.hasValues())
-            positionManager.move(movement);
+            input.y -= 1; // down
     }
 
     // Input Processor \\
@@ -191,5 +174,15 @@ public class InputSystem extends SystemFrame implements InputProcessor {
     @Override
     public boolean touchCancelled(int screenX, int screenY, int pointer, int button) {
         return false;
+    }
+
+    // Accessible \\
+
+    public Vector2 getRotation() {
+        return rotation;
+    }
+
+    public Vector3Int getInput() {
+        return input;
     }
 }

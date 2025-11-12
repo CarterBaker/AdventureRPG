@@ -48,8 +48,8 @@ public class WorldGenerator extends SystemFrame {
     protected void init() {
 
         // Root
-        this.userData = rootManager.get(SaveManager.class).get(UserData.class);
-        this.worldManager = rootManager.get(WorldManager.class);
+        this.userData = engineManager.get(SaveManager.class).get(UserData.class);
+        this.worldManager = engineManager.get(WorldManager.class);
 
         // World Manager
         this.packedCoordinate3Int = worldManager.get(PackedCoordinate3Int.class);

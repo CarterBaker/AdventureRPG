@@ -9,7 +9,7 @@ public abstract class SystemFrame extends MainFrame {
     InternalProcess internalProcess = InternalProcess.CREATE;
     InternalState internalState = InternalState.CONSTRUCTOR;
     protected Settings settings;
-    protected RootManager rootManager;
+    protected EngineFrame engineManager;
     protected ManagerFrame localManager;
 
     // Root \\
@@ -21,17 +21,36 @@ public abstract class SystemFrame extends MainFrame {
     // Internal Process \\
 
     protected final InternalProcess getInternalProcess() {
-        return rootManager.getInternalRootProcess();
+
+        return engineManager.getInternalRootProcess();
     }
 
     final void setInternalProcess(InternalProcess internalProcess) {
-        rootManager.setInternalRootProcess(internalProcess);
+        this.internalProcess = internalProcess;
+        engineManager.setInternalRootProcess(internalProcess);
+    }
+
+    final boolean verifyProcess(InternalProcess target) {
+
+        InternalProcess current = getInternalProcess();
+
+        if (target.isUpdateProcess()) {
+
+            setInternalProcess(target);
+            return true;
+        }
+
+        if (target.order < current.order)
+            return false;
+
+        setInternalProcess(target);
+        return true;
     }
 
     // Internal State \\
 
     protected final InternalState getInternalState() {
-        return rootManager.getInternalRootState();
+        return engineManager.getInternalRootState();
     }
 
     protected final void requestInternalState(InternalState internalState) {
@@ -39,17 +58,21 @@ public abstract class SystemFrame extends MainFrame {
         if (!internalState.accessible)
             throw new CoreException.GameStateException(internalState);
 
-        rootManager.setInternalRootState(internalState);
+        engineManager.setInternalRootState(internalState);
     }
 
     // Create \\
 
-    void internalCreate(Settings settings, RootManager rootManager) {
+    void internalCreate(Settings settings, EngineFrame engineManager) {
 
         // Root
         this.settings = settings;
-        this.rootManager = rootManager;
+        this.engineManager = engineManager;
 
+        if (!verifyProcess(InternalProcess.CREATE))
+            return;
+
+        debugProcess();
         create();
     }
 
@@ -60,8 +83,10 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalInit() {
 
-        setInternalProcess(InternalProcess.INIT);
+        if (!verifyProcess(InternalProcess.INIT))
+            return;
 
+        debugProcess();
         init();
     }
 
@@ -72,8 +97,10 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalAwake() {
 
-        setInternalProcess(InternalProcess.AWAKE);
+        if (!verifyProcess(InternalProcess.AWAKE))
+            return;
 
+        debugProcess();
         awake();
 
         internalState = InternalState.FIRST_FRAME;
@@ -86,8 +113,10 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalStart() {
 
-        setInternalProcess(InternalProcess.START);
+        if (!verifyProcess(InternalProcess.START))
+            return;
 
+        debugProcess();
         start();
     }
 
@@ -98,8 +127,10 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalMenuExclusiveUpdate() {
 
-        setInternalProcess(InternalProcess.MENU_EXCLUSIVE);
+        if (!verifyProcess(InternalProcess.MENU_EXCLUSIVE))
+            return;
 
+        debugProcess();
         menuExclusiveUpdate();
     }
 
@@ -110,8 +141,10 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalGameExclusiveUpdate() {
 
-        setInternalProcess(InternalProcess.GAME_EXCLUSIVE);
+        if (!verifyProcess(InternalProcess.GAME_EXCLUSIVE))
+            return;
 
+        debugProcess();
         gameExclusiveUpdate();
     }
 
@@ -122,8 +155,10 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalUpdate() {
 
-        setInternalProcess(InternalProcess.UPDATE);
+        if (!verifyProcess(InternalProcess.UPDATE))
+            return;
 
+        debugProcess();
         update();
     }
 
@@ -134,8 +169,10 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalFixedUpdate() {
 
-        setInternalProcess(InternalProcess.FIXED_UPDATE);
+        if (!verifyProcess(InternalProcess.FIXED_UPDATE))
+            return;
 
+        debugProcess();
         fixedUpdate();
     }
 
@@ -146,8 +183,10 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalLateUpdate() {
 
-        setInternalProcess(InternalProcess.LATE_UPDATE);
+        if (!verifyProcess(InternalProcess.LATE_UPDATE))
+            return;
 
+        debugProcess();
         lateUpdate();
     }
 
@@ -158,8 +197,10 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalRender() {
 
-        setInternalProcess(InternalProcess.RENDER);
+        if (!verifyProcess(InternalProcess.RENDER))
+            return;
 
+        debugProcess();
         render();
     }
 
@@ -170,12 +211,25 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalDispose() {
 
-        setInternalProcess(InternalProcess.DISPOSE);
+        if (!verifyProcess(InternalProcess.DISPOSE))
+            return;
+
         internalState = InternalState.EXIT;
 
+        debugProcess();
         dispose();
     }
 
     protected void dispose() {
+    }
+
+    // Debug \\
+
+    protected final void debugProcess() {
+        debugProcess("");
+    }
+
+    protected final void debugProcess(String input) {
+        debug("[" + internalProcess.toString() + "] " + input);
     }
 }

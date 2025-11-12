@@ -1,14 +1,14 @@
 package com.AdventureRPG.WorldManager.Blocks;
 
+import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
+import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
 import com.AdventureRPG.Core.Root.SystemFrame;
-import com.AdventureRPG.WorldManager.WorldManager;
 import com.google.gson.Gson;
 
 public class BlockSystem extends SystemFrame {
 
     // Root
     private Gson gson;
-    private WorldManager worldManager;
 
     // Block System
     private Block[] blocks;
@@ -19,11 +19,15 @@ public class BlockSystem extends SystemFrame {
     protected void init() {
 
         // Root
-        this.gson = rootManager.gson;
-        this.worldManager = rootManager.get(WorldManager.class);
+        this.gson = engineManager.gson;
 
         // Block System
-        this.blocks = Loader.LoadBlocks(rootManager.gson, worldManager);
+        TextureSystem textureSystem = engineManager.get(TextureSystem.class);
+        MaterialSystem MaterialSystem = engineManager.get(MaterialSystem.class);
+        this.blocks = Loader.LoadBlocks(
+                engineManager.gson,
+                textureSystem,
+                MaterialSystem);
     }
 
     // Accessible \\

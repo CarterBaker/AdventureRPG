@@ -5,8 +5,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.AdventureRPG.Core.Exceptions.UIException;
+import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
 import com.AdventureRPG.Core.Root.SystemFrame;
-import com.AdventureRPG.InputSystem.InputSystem;
 
 public class UISystem extends SystemFrame {
 
@@ -20,7 +20,7 @@ public class UISystem extends SystemFrame {
 
     @Override
     protected void init() {
-        inputSystem = rootManager.get(InputSystem.class);
+        inputSystem = engineManager.get(InputSystem.class);
     }
 
     // UI System \\

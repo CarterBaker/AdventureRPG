@@ -4,7 +4,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.AdventureRPG.Core.Root.SystemFrame;
-import com.AdventureRPG.Core.ThreadSystem.ThreadSystem;
+import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
 import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldManager;
@@ -59,8 +59,8 @@ public class Loader extends SystemFrame {
     protected void init() {
 
         // Root
-        this.threadSystem = rootManager.get(WorldManager.class).get(ThreadSystem.class);
-        this.batchSystem = rootManager.get(WorldManager.class).get(QueueSystem.class).get(BatchSystem.class);
+        this.threadSystem = engineManager.get(WorldManager.class).get(ThreadSystem.class);
+        this.batchSystem = engineManager.get(WorldManager.class).get(QueueSystem.class).get(BatchSystem.class);
     }
 
     @Override

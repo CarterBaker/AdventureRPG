@@ -1,16 +1,13 @@
-package com.AdventureRPG.InputSystem;
+package com.AdventureRPG.Core.PhysicsPipeline.MovementManager;
 
 import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.Core.Util.Vector3Int;
-import com.AdventureRPG.PlayerSystem.Statistics;
+import com.AdventureRPG.PlayerManager.StatisticsInstance;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector3;
 
 // TODO: This needs to be decoupled from requireing statistics and converted to singleton
-public class Movement extends SystemFrame {
-
-    // Game Manager
-    private Statistics statistics;
+public class MovementCalculationSystem extends SystemFrame {
 
     // Temp
     private Vector3 forward;
@@ -18,12 +15,6 @@ public class Movement extends SystemFrame {
     private Vector3 localMove;
 
     // Base \\
-
-    public Movement(Statistics statistics) {
-
-        // Game Manager
-        this.statistics = statistics;
-    }
 
     @Override
     public void init() {
@@ -36,7 +27,11 @@ public class Movement extends SystemFrame {
 
     // Movement \\
 
-    public Vector3 calculate(Vector3 currentPosition, Vector3Int input, Vector3 cameraDirection) {
+    public Vector3 calculate(
+            StatisticsInstance statisticsInstance,
+            Vector3 currentPosition,
+            Vector3Int input,
+            Vector3 cameraDirection) {
 
         // Calculate horizontal forward vector (XZ plane)
         forward.set(cameraDirection.x, 0f, cameraDirection.z).nor();
@@ -55,7 +50,7 @@ public class Movement extends SystemFrame {
             localMove.nor();
 
         // Scale by movement speed and delta time
-        localMove.scl(statistics.movementSpeed * Gdx.graphics.getDeltaTime());
+        localMove.scl(statisticsInstance.movementSpeed * Gdx.graphics.getDeltaTime());
 
         // Add the movement to current position in place
         currentPosition.add(localMove);
