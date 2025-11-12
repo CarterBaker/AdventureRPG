@@ -13,6 +13,7 @@ import com.AdventureRPG.Core.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.google.gson.Gson;
 
+// TODO: Needs to be cleaned a bit. The whole framework needs a look over
 public class EngineFrame extends ManagerFrame {
 
     // Root
