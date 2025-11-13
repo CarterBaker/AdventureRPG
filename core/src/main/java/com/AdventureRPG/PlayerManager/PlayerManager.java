@@ -6,8 +6,10 @@ import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraInstance;
 import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
 import com.AdventureRPG.Core.Root.ManagerFrame;
 import com.AdventureRPG.Core.Util.Vector2Int;
+import com.AdventureRPG.WorldManager.WorldManager;
 import com.badlogic.gdx.math.Vector3;
 
+// TODO: This needs to be abstracted to generic NPC like class
 public class PlayerManager extends ManagerFrame {
 
     // Player
@@ -15,12 +17,13 @@ public class PlayerManager extends ManagerFrame {
     private InputSystem inputSystem;
     private CameraSystem cameraSystem;
     private MovementManager movementManager;
+    private WorldManager worldManager;
 
     // Camera
     private CameraInstance cameraInstance;
 
     // Position
-    private Vector3 currentPosition;
+    private Vector3 currentPosition; // TODO: These are very special they should be built into the engine itself
     private Vector2Int currentChunk;
 
     // Base \\
@@ -43,6 +46,7 @@ public class PlayerManager extends ManagerFrame {
         this.inputSystem = engineManager.get(InputSystem.class);
         this.cameraSystem = engineManager.get(CameraSystem.class);
         this.movementManager = engineManager.get(MovementManager.class);
+        this.worldManager = engineManager.get(WorldManager.class);
 
         // Camera
         this.cameraInstance = cameraSystem.mainCamera();
@@ -61,7 +65,7 @@ public class PlayerManager extends ManagerFrame {
         cameraSystem.rotateCamera(cameraInstance, inputSystem.getRotation());
         cameraSystem.moveCamera(cameraInstance, currentPosition);
 
-        debug("Current position: " + currentPosition.toString() + " Current chunk" + currentChunk.toString());
+        worldManager.updatePosition(currentPosition, currentChunk);
     }
 
     // Accessible \\

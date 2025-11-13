@@ -32,7 +32,7 @@ public abstract class SystemFrame extends MainFrame {
 
     final boolean verifyProcess(InternalProcess target) {
 
-        InternalProcess current = getInternalProcess();
+        InternalProcess rootProcess = getInternalProcess();
 
         if (target.isUpdateProcess()) {
 
@@ -40,7 +40,7 @@ public abstract class SystemFrame extends MainFrame {
             return true;
         }
 
-        if (target.order < current.order)
+        if (target.order < rootProcess.order || target.order < internalProcess.order)
             return false;
 
         setInternalProcess(target);
@@ -72,7 +72,6 @@ public abstract class SystemFrame extends MainFrame {
         if (!verifyProcess(InternalProcess.CREATE))
             return;
 
-        debugProcess();
         create();
     }
 
@@ -86,7 +85,6 @@ public abstract class SystemFrame extends MainFrame {
         if (!verifyProcess(InternalProcess.INIT))
             return;
 
-        debugProcess();
         init();
     }
 
@@ -100,7 +98,6 @@ public abstract class SystemFrame extends MainFrame {
         if (!verifyProcess(InternalProcess.AWAKE))
             return;
 
-        debugProcess();
         awake();
 
         internalState = InternalState.FIRST_FRAME;
@@ -116,7 +113,6 @@ public abstract class SystemFrame extends MainFrame {
         if (!verifyProcess(InternalProcess.START))
             return;
 
-        debugProcess();
         start();
     }
 
@@ -130,7 +126,6 @@ public abstract class SystemFrame extends MainFrame {
         if (!verifyProcess(InternalProcess.MENU_EXCLUSIVE))
             return;
 
-        debugProcess();
         menuExclusiveUpdate();
     }
 
@@ -144,7 +139,6 @@ public abstract class SystemFrame extends MainFrame {
         if (!verifyProcess(InternalProcess.GAME_EXCLUSIVE))
             return;
 
-        debugProcess();
         gameExclusiveUpdate();
     }
 
@@ -158,7 +152,6 @@ public abstract class SystemFrame extends MainFrame {
         if (!verifyProcess(InternalProcess.UPDATE))
             return;
 
-        debugProcess();
         update();
     }
 
@@ -172,7 +165,6 @@ public abstract class SystemFrame extends MainFrame {
         if (!verifyProcess(InternalProcess.FIXED_UPDATE))
             return;
 
-        debugProcess();
         fixedUpdate();
     }
 
@@ -186,7 +178,6 @@ public abstract class SystemFrame extends MainFrame {
         if (!verifyProcess(InternalProcess.LATE_UPDATE))
             return;
 
-        debugProcess();
         lateUpdate();
     }
 
@@ -200,7 +191,6 @@ public abstract class SystemFrame extends MainFrame {
         if (!verifyProcess(InternalProcess.RENDER))
             return;
 
-        debugProcess();
         render();
     }
 
@@ -216,7 +206,6 @@ public abstract class SystemFrame extends MainFrame {
 
         internalState = InternalState.EXIT;
 
-        debugProcess();
         dispose();
     }
 

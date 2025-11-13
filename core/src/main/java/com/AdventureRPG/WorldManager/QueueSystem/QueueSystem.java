@@ -346,22 +346,18 @@ public class QueueSystem extends ManagerFrame {
     // External Queueing \\
 
     public void addToGenerateQueue(long chunkCoordinate) {
-        // TODO: debug("This prints");
         queue(QueueProcess.Generate).enqueue(chunkCoordinate);
     }
 
     public void addToAssessmentQueue(long chunkCoordinate) {
-        // TODO: debug("This prints");
         queue(QueueProcess.Assessment).enqueue(chunkCoordinate);
     }
 
     public void addToBuildQueue(long chunkCoordinate) {
-        // TODO: debug("This prints");
         queue(QueueProcess.Build).enqueue(chunkCoordinate);
     }
 
     public void addToBatchQueue(long chunkCoordinate) {
-        debug("This does not print");
         queue(QueueProcess.Batch).enqueue(chunkCoordinate);
     }
 

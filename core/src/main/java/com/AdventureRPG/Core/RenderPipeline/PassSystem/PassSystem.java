@@ -229,7 +229,6 @@ public class PassSystem extends SystemFrame {
             return null;
 
         PassData renderPass = new PassData(template);
-
         renderManager.enqueue(renderPass, sortOrder);
 
         return renderPass;

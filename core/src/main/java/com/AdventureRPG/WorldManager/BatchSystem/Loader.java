@@ -154,9 +154,6 @@ public class Loader extends SystemFrame {
     // External Queueing \\
 
     public void requestAdd(Chunk chunk) {
-
-        debug("adding:" + Coordinate2Int.toString(chunk.coordinate));
-
         addRequests.add(chunk);
     }
 
@@ -179,8 +176,6 @@ public class Loader extends SystemFrame {
     // Add \\
 
     private boolean processAddData() {
-
-        debug("processAddData()");
 
         int processed = 0;
 

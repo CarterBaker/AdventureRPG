@@ -2,6 +2,7 @@ package com.AdventureRPG.Core.Root;
 
 import java.io.File;
 
+import com.AdventureRPG.Core.PhysicsPipeline.MovementManager.MovementManager;
 import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
 import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
 import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassSystem;
@@ -24,6 +25,7 @@ public class EngineFrame extends ManagerFrame {
     protected ThreadSystem threadSystem;
     protected WorldEngineSystem worldEngineSystem;
     protected CameraSystem cameraSystem;
+    protected MovementManager movementManager;
     protected TextureSystem textureSystem;
     protected ShaderManager shaderManager;
     protected PassSystem passSystem;
@@ -31,7 +33,7 @@ public class EngineFrame extends ManagerFrame {
     protected RenderManager renderManager;
 
     // Internal
-    private SystemFrame[] engineSystems = new SystemFrame[8];
+    private SystemFrame[] engineSystems = new SystemFrame[9];
 
     // Base \\
 
@@ -80,6 +82,7 @@ public class EngineFrame extends ManagerFrame {
         threadSystem = (ThreadSystem) register(new ThreadSystem());
         worldEngineSystem = (WorldEngineSystem) register(new WorldEngineSystem());
         cameraSystem = (CameraSystem) register(new CameraSystem());
+        movementManager = (MovementManager) register(new MovementManager());
         textureSystem = (TextureSystem) register(new TextureSystem());
         shaderManager = (ShaderManager) register(new ShaderManager());
         passSystem = (PassSystem) register(new PassSystem());
@@ -89,11 +92,12 @@ public class EngineFrame extends ManagerFrame {
         engineSystems[0] = threadSystem;
         engineSystems[1] = worldEngineSystem;
         engineSystems[2] = cameraSystem;
-        engineSystems[3] = textureSystem;
-        engineSystems[4] = shaderManager;
-        engineSystems[5] = passSystem;
-        engineSystems[6] = materialSystem;
-        engineSystems[7] = renderManager;
+        engineSystems[3] = movementManager;
+        engineSystems[4] = textureSystem;
+        engineSystems[5] = shaderManager;
+        engineSystems[6] = passSystem;
+        engineSystems[7] = materialSystem;
+        engineSystems[8] = renderManager;
 
         preCreate();
         preInit();

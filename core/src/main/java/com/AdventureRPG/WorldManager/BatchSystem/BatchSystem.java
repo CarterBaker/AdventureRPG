@@ -118,12 +118,10 @@ public class BatchSystem extends ManagerFrame {
     // Main \\
 
     public void requestBatch(Chunk chunk) {
-        debug("Working");
         loader.requestAdd(chunk);
     }
 
     public void addChunkToBatch(Chunk chunk) {
-        debug("Working");
         loadedChunks.putIfAbsent(chunk.coordinate, chunk);
     }
 

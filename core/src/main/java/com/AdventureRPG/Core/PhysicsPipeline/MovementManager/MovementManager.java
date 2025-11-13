@@ -14,7 +14,6 @@ public class MovementManager extends ManagerFrame {
     // Root
     private MovementCalculationSystem movementCalculationSystem;
     private WorldEngineSystem worldEngineSystem;
-    private WorldManager worldManager;
 
     // Settings
     private int CHUNK_SIZE;
@@ -36,7 +35,6 @@ public class MovementManager extends ManagerFrame {
 
         // Root
         this.worldEngineSystem = engineManager.get(WorldEngineSystem.class);
-        this.worldManager = engineManager.get(WorldManager.class);
     }
 
     // Movement \\
@@ -60,8 +58,6 @@ public class MovementManager extends ManagerFrame {
 
         worldEngineSystem.wrapAroundChunk(currentPosition);
         worldEngineSystem.wrapAroundWorld(currentChunk);
-
-        worldManager.updatePosition(currentPosition, currentChunk);
     }
 
     // Calculate new chunk from position per axis

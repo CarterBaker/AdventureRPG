@@ -3,16 +3,17 @@ package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
 import com.AdventureRPG.Core.Root.SystemFrame;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.math.Matrix4;
 
+// TODO: I refactored this a bit and it is not verified working
 public class UniversalUniform extends SystemFrame {
 
     // Time
     private float u_time;
 
     // Camera
-    private Camera camera;
+    private CameraSystem cameraSystem;
+    private Matrix4 cameraMatrix;
 
     // Base \\
 
@@ -27,8 +28,8 @@ public class UniversalUniform extends SystemFrame {
     protected void init() {
 
         // Camera
-        CameraSystem cameraSystem = engineManager.get(CameraSystem.class);
-        this.camera = cameraSystem.mainCamera().getPerspectiveCamera();
+        this.cameraSystem = engineManager.get(CameraSystem.class);
+        this.cameraMatrix = new Matrix4();
     }
 
     @Override
@@ -43,11 +44,21 @@ public class UniversalUniform extends SystemFrame {
 
         switch (uniform) {
 
-            case u_inverseView ->
-                data.setUniform("u_inverseView", new Matrix4(camera.view).inv());
+            case u_inverseView -> {
 
-            case u_inverseProjection ->
-                data.setUniform("u_inverseProjection", new Matrix4(camera.projection).inv());
+                cameraMatrix.set(cameraSystem.mainCamera().getPerspectiveCamera().view);
+                cameraMatrix.inv();
+
+                data.setUniform("u_inverseView", cameraMatrix);
+            }
+
+            case u_inverseProjection -> {
+
+                cameraMatrix.set(cameraSystem.mainCamera().getPerspectiveCamera().projection);
+                cameraMatrix.inv();
+
+                data.setUniform("u_inverseProjection", cameraMatrix);
+            }
 
             case u_time ->
                 data.setUniform("u_time", u_time);

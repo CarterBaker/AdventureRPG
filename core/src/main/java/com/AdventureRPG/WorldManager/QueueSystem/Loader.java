@@ -201,8 +201,6 @@ public class Loader extends SystemFrame {
             // Run load in General-Thread
             threadSystem.submitGeneral(() -> {
 
-                // TODO: debug("Working");
-
                 Chunk chunk = chunkData.readChunk(chunkCoordinate);
 
                 if (chunk == null)
@@ -229,8 +227,6 @@ public class Loader extends SystemFrame {
 
         while (!addRequests.isEmpty() && processIsSafe(index)) {
 
-            // TODO: debug("Working");
-
             Chunk loadedChunk = addRequests.poll();
 
             if (loadedChunk == null)
@@ -252,8 +248,6 @@ public class Loader extends SystemFrame {
         int index = 0;
 
         while (!generationRequests.isEmpty() && processIsSafe(index)) {
-
-            // TODO: debug("Working");
 
             Chunk loadedChunk = generationRequests.poll();
 
@@ -280,8 +274,6 @@ public class Loader extends SystemFrame {
 
         while (!assessmentRequests.isEmpty() && processIsSafe(index)) {
 
-            // TODO: debug("Working");
-
             Chunk loadedChunk = assessmentRequests.poll();
 
             if (loadedChunk == null)
@@ -307,8 +299,6 @@ public class Loader extends SystemFrame {
 
         while (!buildRequests.isEmpty() && processIsSafe(index)) {
 
-            // TODO: debug("Working");
-
             Chunk loadedChunk = buildRequests.poll();
 
             if (loadedChunk == null)
@@ -333,8 +323,6 @@ public class Loader extends SystemFrame {
         int index = 0;
 
         while (!batchRequests.isEmpty() && processIsSafe(index)) {
-
-            debug("This does not print");
 
             Chunk loadedChunk = batchRequests.poll();
 

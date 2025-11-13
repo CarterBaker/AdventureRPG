@@ -209,27 +209,22 @@ public class Chunk {
         switch (chunkState) {
 
             case NEEDS_GENERATION_DATA:
-                // TODO: System.out.println("NEEDS_GENERATION_DATA");
                 queueSystem.addToGenerateQueue(coordinate);
                 break;
 
             case NEEDS_ASSESSMENT_DATA:
-                // TODO: System.out.println("NEEDS_ASSESSMENT_DATA");
                 queueSystem.addToAssessmentQueue(coordinate);
                 break;
 
             case NEEDS_BUILD_DATA:
-                // TODO: System.out.println("NEEDS_BUILD_DATA");
                 queueSystem.addToBuildQueue(coordinate);
                 break;
 
             case NEEDS_BATCH_DATA:
-                System.out.println("NEEDS_BATCH_DATA");
                 queueSystem.addToBatchQueue(coordinate);
                 break;
 
             case FINALIZED:
-                System.out.println("FINALIZED");
                 queueSystem.requestBatch(this);
                 break;
 

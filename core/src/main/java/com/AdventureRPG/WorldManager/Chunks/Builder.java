@@ -144,8 +144,6 @@ public class Builder {
                             biomeID, blockID,
                             type);
                 }
-
-                System.out.println("This does not print");
             }
 
             // If there is data build the mesh
@@ -167,7 +165,6 @@ public class Builder {
             threadSafety.set(false);
         }
 
-        System.out.println(output);
         return output;
     }
 
@@ -479,8 +476,6 @@ public class Builder {
 
         int materialDataID = blockSystem.getBlockByID(blockID).getMaterialDataForSide(direction).id;
 
-        System.out.println("This don't");
-
         packQuad(
                 xyz,
                 width,
@@ -758,8 +753,6 @@ public class Builder {
                 quadVertices[base + 7] = uvs[vi][0];
                 quadVertices[base + 8] = uvs[vi][1];
             }
-
-            System.out.println("This does not print");
 
             subChunkMesh.addVertices(matId, quadVertices);
         }
