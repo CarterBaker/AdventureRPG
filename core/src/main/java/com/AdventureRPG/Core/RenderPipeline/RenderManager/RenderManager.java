@@ -1,27 +1,37 @@
 package com.AdventureRPG.Core.RenderPipeline.RenderManager;
 
+import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
 import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassData;
+import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.MeshPacket;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
-import com.AdventureRPG.Core.Root.ManagerFrame;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL30;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.AdventureRPG.Core.RenderPipeline.Util.GPUCall;
 
 public class RenderManager extends ManagerFrame {
 
     // Root
     private ShaderManager shaderManager;
     private CameraSystem cameraSystem;
+
+    private UHandleSystem uHandleSystem;
     private RenderQueueSystem renderQueueSystem;
+
+    private SpriteBatch spriteBatch;
+    private ModelBatch modelBatch;
 
     // Base \\
 
     @Override
     protected void create() {
 
+        // Root
+        this.uHandleSystem = (UHandleSystem) register(new UHandleSystem());
         this.renderQueueSystem = (RenderQueueSystem) register(new RenderQueueSystem());
+
+        this.spriteBatch = (SpriteBatch) create(new SpriteBatch());
+        this.modelBatch = (ModelBatch) create(new ModelBatch());
+
+        GPUCall.enableDepth();
     }
 
     @Override
@@ -32,38 +42,30 @@ public class RenderManager extends ManagerFrame {
         this.cameraSystem = engineManager.get(CameraSystem.class);
     }
 
-    @Override
-    protected void awake() {
+    public void draw() {
 
-        // Core passes
-        renderQueueSystem.addPass(new PassData(
-                0, "3D_PASS", -1, null, null,
-                shaderManager.universalUniform,
-                ctx -> {
-                    ctx.modelBatch.begin(cameraSystem.mainCamera().getPerspectiveCamera());
-                    ctx.modelBatch.end();
-                }), 0);
-
-        renderQueueSystem.addPass(new PassData(
-                0, "2D_PASS", -1, null, null,
-                shaderManager.universalUniform,
-                ctx -> {
-                    ctx.spriteBatch.begin();
-                    ctx.spriteBatch.end();
-                }), 0);
+        GPUCall.clearBuffer();
+        renderQueueSystem.renderAll();
     }
 
-    // Core Logic \\
+    // U Handle System \\
 
-    public void draw(SpriteBatch spriteBatch, ModelBatch modelBatch) {
+    public int createUniqueHandle() {
+        return uHandleSystem.createKey();
+    }
 
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
+    public void releaseHandle(int key) {
+        uHandleSystem.removeKey(key);
+    }
 
-        RenderContext context = new RenderContext(spriteBatch, modelBatch);
+    // Model Batch
 
-        context.deltaTime = Gdx.graphics.getDeltaTime();
-        renderQueueSystem.renderAll(context);
+    public void addModel(MeshPacket meshPacket) {
+        modelBatch.addModel(meshPacket);
+    }
+
+    public void removeModel(MeshPacket meshPacket) {
+        modelBatch.removeModel(meshPacket);
     }
 
     // Accessible \\

@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.BatchSystem;
 
-import com.AdventureRPG.Core.Root.ManagerFrame;
+import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.WorldTick;

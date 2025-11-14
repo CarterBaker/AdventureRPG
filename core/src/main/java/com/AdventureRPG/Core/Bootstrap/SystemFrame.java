@@ -1,6 +1,6 @@
-package com.AdventureRPG.Core.Root;
+package com.AdventureRPG.Core.Bootstrap;
 
-import com.AdventureRPG.Core.Exceptions.CoreException;
+import com.AdventureRPG.Core.Util.Exceptions.CoreException;
 import com.AdventureRPG.SettingsSystem.Settings;
 
 public abstract class SystemFrame extends MainFrame {
@@ -13,6 +13,15 @@ public abstract class SystemFrame extends MainFrame {
     protected ManagerFrame localManager;
 
     // Root \\
+
+    protected final InstanceFrame create(InstanceFrame instanceFrame) {
+
+        instanceFrame.registerLocalManager(
+                engineManager,
+                localManager);
+
+        return instanceFrame;
+    }
 
     protected final void registerLocalManager(ManagerFrame localManager) {
         this.localManager = localManager;

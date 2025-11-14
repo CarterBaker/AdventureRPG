@@ -1,9 +1,9 @@
 package com.AdventureRPG.LightingSystem;
 
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassData;
 import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassSystem;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniformType;
-import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.TimeSystem.TimeSystem;
 
 public class Sky extends SystemFrame {

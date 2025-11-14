@@ -1,6 +1,6 @@
 package com.AdventureRPG.TimeSystem;
 
-import com.AdventureRPG.Core.Exceptions.FileException;
+import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.google.gson.Gson;
 import java.io.File;
 import java.io.FileReader;

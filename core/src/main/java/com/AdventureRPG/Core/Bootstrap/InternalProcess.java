@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Root;
+package com.AdventureRPG.Core.Bootstrap;
 
 public enum InternalProcess {
 

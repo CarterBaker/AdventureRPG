@@ -5,7 +5,7 @@ import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.Vector4;
-import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderAction;
+import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderContext;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderData;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
@@ -17,7 +17,7 @@ import com.badlogic.gdx.graphics.Color;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PassData implements ShaderData {
+public class PassData extends InstanceFrame implements ShaderData {
 
     // Pass
     public final int id;
@@ -26,7 +26,6 @@ public class PassData implements ShaderData {
     public final Map<String, String> texturePaths;
     public final Map<String, UniformAttribute> uniforms = new HashMap<>();
     public final UniversalUniform universalUniform;
-    private final RenderAction action;
     public float lifetime;
 
     // Base \\
@@ -37,8 +36,8 @@ public class PassData implements ShaderData {
             int shaderID,
             Map<String, String> texturePaths,
             Map<String, UniformAttribute> initialUniforms,
-            UniversalUniform universalUniform,
-            RenderAction action) {
+            UniversalUniform universalUniform) {
+
         this.id = id;
         this.name = name;
         this.shaderID = shaderID;
@@ -46,7 +45,6 @@ public class PassData implements ShaderData {
         if (initialUniforms != null)
             this.uniforms.putAll(initialUniforms);
         this.universalUniform = universalUniform;
-        this.action = action;
         this.lifetime = 0f;
     }
 
@@ -58,7 +56,6 @@ public class PassData implements ShaderData {
         this.texturePaths = new HashMap<>(template.texturePaths);
         this.uniforms.putAll(template.uniforms);
         this.universalUniform = template.universalUniform;
-        this.action = template.action;
         this.lifetime = template.lifetime;
     }
 
@@ -71,14 +68,6 @@ public class PassData implements ShaderData {
     public void render(RenderContext context, ShaderManager shaderManager) {
 
         ShaderProgram shader = shaderManager.getShaderByID(shaderID);
-
-        if (shader == null) {
-
-            if (action != null)
-                action.render(context);
-
-            return;
-        }
 
         shader.bind();
 
@@ -97,12 +86,8 @@ public class PassData implements ShaderData {
             }
         }
 
-        // Call action if exists (optional extra rendering logic)
-        if (action != null)
-            action.render(context);
-        else
-            // Default: draw fullscreen quad
-            shaderManager.renderFullScreenQuad(shader);
+        // Default: draw fullscreen quad
+        shaderManager.renderFullScreenQuad(shader);
     }
 
     public void setUniversalUniform(UniversalUniformType type) {

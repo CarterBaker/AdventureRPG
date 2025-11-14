@@ -3,7 +3,7 @@ package com.AdventureRPG.WorldManager.BatchSystem;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
 import com.AdventureRPG.Core.Util.GlobalConstant;

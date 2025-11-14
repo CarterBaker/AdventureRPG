@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager;
 
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 

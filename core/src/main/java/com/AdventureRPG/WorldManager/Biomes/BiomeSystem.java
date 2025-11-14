@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.Biomes;
 
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 
 public class BiomeSystem extends SystemFrame {
 

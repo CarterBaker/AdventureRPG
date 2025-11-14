@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Exceptions;
+package com.AdventureRPG.Core.Util.Exceptions;
 
 public class GraphicException {
 

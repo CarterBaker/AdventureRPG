@@ -3,7 +3,7 @@ package com.AdventureRPG.SaveManager;
 import java.io.File;
 import java.util.Random;
 
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 
 public class UserData extends SystemFrame {
 

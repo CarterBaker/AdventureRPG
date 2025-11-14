@@ -1,6 +1,6 @@
 package com.AdventureRPG.LightingSystem;
 
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 
 public class Sun extends SystemFrame {
 

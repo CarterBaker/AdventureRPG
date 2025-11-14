@@ -1,6 +1,6 @@
 package com.AdventureRPG.Core.PhysicsPipeline.InputSystem;
 
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.Util.Vector3Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;

@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.Util;
 
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.Util.GlobalConstant;
 
 public class PackedCoordinate3Int extends SystemFrame {

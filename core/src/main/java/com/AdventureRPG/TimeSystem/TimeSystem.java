@@ -3,7 +3,7 @@ package com.AdventureRPG.TimeSystem;
 import java.io.File;
 import java.time.Instant;
 
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.LightingSystem.LightingManager;
 import com.AdventureRPG.SaveManager.UserData;

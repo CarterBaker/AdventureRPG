@@ -1,8 +1,8 @@
-package com.AdventureRPG.Core.Exceptions;
+package com.AdventureRPG.Core.Util.Exceptions;
 
-import com.AdventureRPG.Core.Root.InternalProcess;
-import com.AdventureRPG.Core.Root.InternalState;
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Bootstrap.InternalProcess;
+import com.AdventureRPG.Core.Bootstrap.InternalState;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 
 public class CoreException {
 

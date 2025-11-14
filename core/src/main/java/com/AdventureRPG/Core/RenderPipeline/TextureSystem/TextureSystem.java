@@ -3,9 +3,9 @@ package com.AdventureRPG.Core.RenderPipeline.TextureSystem;
 import java.io.File;
 import java.util.*;
 
-import com.AdventureRPG.Core.Exceptions.FileException;
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;

@@ -2,11 +2,11 @@ package com.AdventureRPG.Core.RenderPipeline.RenderManager;
 
 import java.util.*;
 
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassData;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
-import com.AdventureRPG.Core.Root.SystemFrame;
+import com.badlogic.gdx.Gdx;
 
-// TODO: This class needs to be closely examined
 public class RenderQueueSystem extends SystemFrame {
 
     private ShaderManager shaderManager;
@@ -25,8 +25,9 @@ public class RenderQueueSystem extends SystemFrame {
     }
 
     // Render in order: sorted by ID, FIFO within same ID
-    public void renderAll(RenderContext context) {
+    public void renderAll() {
 
+        debug();
         Iterator<Map.Entry<Integer, Queue<PassData>>> mapIter = passes.entrySet().iterator();
 
         while (mapIter.hasNext()) {
@@ -36,7 +37,7 @@ public class RenderQueueSystem extends SystemFrame {
 
             queue.removeIf(pass -> {
                 if (pass.lifetime > 0f) {
-                    pass.lifetime -= context.deltaTime;
+                    pass.lifetime -= engineManager.getDeltaTime();
                     return pass.lifetime <= 0f; // remove if expired
                 }
                 return false; // permanent pass
@@ -44,12 +45,12 @@ public class RenderQueueSystem extends SystemFrame {
 
             // Render remaining passes
             for (PassData pass : queue) {
+                debug(pass.name);
                 pass.render(context, shaderManager);
             }
 
-            if (queue.isEmpty()) {
-                mapIter.remove(); // remove empty queue
-            }
+            if (queue.isEmpty())
+                mapIter.remove(); // remove empty queu
         }
     }
 

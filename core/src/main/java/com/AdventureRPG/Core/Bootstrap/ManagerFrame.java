@@ -1,10 +1,10 @@
-package com.AdventureRPG.Core.Root;
+package com.AdventureRPG.Core.Bootstrap;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.AdventureRPG.Core.Exceptions.CoreException;
-import com.AdventureRPG.Core.Exceptions.CoreException.DuplicateSystemFrameDetected;
+import com.AdventureRPG.Core.Util.Exceptions.CoreException;
+import com.AdventureRPG.Core.Util.Exceptions.CoreException.DuplicateSystemFrameDetected;
 import com.AdventureRPG.SettingsSystem.Settings;
 
 public abstract class ManagerFrame extends SystemFrame {

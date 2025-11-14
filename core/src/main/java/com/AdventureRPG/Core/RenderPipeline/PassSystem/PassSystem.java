@@ -1,12 +1,12 @@
 package com.AdventureRPG.Core.RenderPipeline.PassSystem;
 
-import com.AdventureRPG.Core.Exceptions.FileException;
-import com.AdventureRPG.Core.Exceptions.GraphicException;
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformAttribute;
-import com.AdventureRPG.Core.Root.SystemFrame;
 import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.google.gson.Gson;
@@ -91,7 +91,7 @@ public class PassSystem extends SystemFrame {
         Map<String, UniformAttribute> uniforms = parseUniforms(json.uniforms);
         String name = stripExtension(file.name());
 
-        return new PassData(nextPassID, name, shaderID, json.textures, uniforms, shaderManager.universalUniform, null);
+        return new PassData(nextPassID, name, shaderID, json.textures, uniforms, shaderManager.universalUniform);
     }
 
     private Map<String, UniformAttribute> parseUniforms(Map<String, Object> rawUniforms) {

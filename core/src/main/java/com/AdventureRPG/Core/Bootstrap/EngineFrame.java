@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Root;
+package com.AdventureRPG.Core.Bootstrap;
 
 import java.io.File;
 
@@ -9,9 +9,10 @@ import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassSystem;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
 import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
+import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
-import com.AdventureRPG.Core.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.SettingsSystem.Settings;
+import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
 
 // TODO: Needs to be cleaned a bit. The whole framework needs a look over
@@ -128,5 +129,21 @@ public class EngineFrame extends ManagerFrame {
 
         for (int i = 0; i < engineSystems.length; i++)
             engineSystems[i].internalAwake();
+    }
+
+    // Render \\
+
+    @Override
+    void internalRender() {
+
+        super.internalRender();
+
+        renderManager.draw();
+    }
+
+    // Accessible \\
+
+    public float getDeltaTime() {
+        return Gdx.graphics.getDeltaTime();
     }
 }

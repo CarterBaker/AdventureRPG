@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Root;
+package com.AdventureRPG.Core.Bootstrap;
 
 import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
 import com.AdventureRPG.LightingSystem.LightingManager;

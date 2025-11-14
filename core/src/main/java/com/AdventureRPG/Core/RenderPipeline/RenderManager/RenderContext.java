@@ -1,15 +1,8 @@
 package com.AdventureRPG.Core.RenderPipeline.RenderManager;
 
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
 
-public class RenderContext {
-    public final SpriteBatch spriteBatch;
-    public final ModelBatch modelBatch;
-    public float deltaTime;
+public abstract class RenderContext extends InstanceFrame {
 
-    public RenderContext(SpriteBatch spriteBatch, ModelBatch modelBatch) {
-        this.spriteBatch = spriteBatch;
-        this.modelBatch = modelBatch;
-    }
+    protected String name;
 }
