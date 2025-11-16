@@ -7,22 +7,31 @@ import java.util.List;
 import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
 import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.badlogic.gdx.math.Matrix4;
 
 public final class MeshPacket extends InstanceFrame {
 
     private final RenderManager renderManager;
 
     public final Int2ObjectOpenHashMap<List<MeshData>> packet;
+    private final UniformPacket uniformPacket;
+
     public final int stride;
     public final int vertsPerQuad;
+
+    private Matrix4 transform;
 
     public MeshPacket() {
 
         this.renderManager = engineManager.get(RenderManager.class);
 
         this.packet = new Int2ObjectOpenHashMap<>();
+        this.uniformPacket = new UniformPacket();
+
         this.stride = GlobalConstant.VERT_STRIDE;
         this.vertsPerQuad = 4;
+
+        this.transform = new Matrix4();
     }
 
     public void addVertices(
@@ -118,5 +127,17 @@ public final class MeshPacket extends InstanceFrame {
             total += list.size();
 
         return total;
+    }
+
+    public Matrix4 getTransform() {
+        return transform;
+    }
+
+    public void setTransform(Matrix4 transform) {
+        this.transform = transform;
+    }
+
+    public UniformPacket getUniformPacket() {
+        return uniformPacket;
     }
 }

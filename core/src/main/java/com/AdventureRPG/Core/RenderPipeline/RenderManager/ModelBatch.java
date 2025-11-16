@@ -2,27 +2,39 @@ package com.AdventureRPG.Core.RenderPipeline.RenderManager;
 
 import java.util.List;
 
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialData;
+import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
 import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.MeshData;
 import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.MeshPacket;
 import com.AdventureRPG.Core.RenderPipeline.Util.GPUCall;
 import com.AdventureRPG.Core.RenderPipeline.Util.GPUHandle;
-
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-public class ModelBatch extends RenderContext {
+public class ModelBatch extends SystemFrame {
 
     // Internal
-    private final Int2ObjectMap<GPUHandle> models;
-    private final Int2ObjectMap<MeshData> modelData;
+    private MaterialSystem materialSystem;
+    private Int2ObjectMap<GPUHandle> models;
+    private Int2ObjectMap<MeshData> modelData;
 
     // Base \\
 
-    public ModelBatch() {
+    @Override
+    protected void create() {
 
         // Internal
         this.models = new Int2ObjectOpenHashMap<>();
         this.modelData = new Int2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    protected void init() {
+
+        // Internal
+        this.materialSystem = engineManager.get(MaterialSystem.class);
     }
 
     // Add \\
@@ -30,15 +42,15 @@ public class ModelBatch extends RenderContext {
     public void addModel(MeshPacket meshPacket) {
         for (List<MeshData> list : meshPacket.packet.values())
             for (MeshData meshData : list)
-                addModel(meshData);
+                addMesh(meshData);
     }
 
-    private void addModel(MeshData meshData) {
+    private void addMesh(MeshData meshData) {
 
         int cpuHandle = meshData.handle;
 
         if (models.containsKey(cpuHandle))
-            removeModel(meshData);
+            removeMesh(meshData);
 
         GPUHandle handle = GPUCall.pushData(meshData);
 
@@ -51,10 +63,10 @@ public class ModelBatch extends RenderContext {
     public void removeModel(MeshPacket meshPacket) {
         for (List<MeshData> list : meshPacket.packet.values())
             for (MeshData meshData : list)
-                removeModel(meshData);
+                removeMesh(meshData);
     }
 
-    private void removeModel(MeshData meshData) {
+    private void removeMesh(MeshData meshData) {
 
         int cpuHandle = meshData.handle;
 
@@ -69,8 +81,32 @@ public class ModelBatch extends RenderContext {
     }
 
     // Draw \\
-
     public void draw() {
+        for (Int2ObjectMap.Entry<MeshData> entry : modelData.int2ObjectEntrySet()) {
+            MeshData meshData = entry.getValue();
+            MaterialData matData = materialSystem.getById(meshData.materialId);
+            if (matData == null)
+                continue;
 
+            ShaderProgram shader = materialSystem.getShaderForMaterial(matData.material);
+            if (shader == null)
+                continue;
+
+            shader.bind();
+
+            // Only push per-instance uniforms (MeshPacket)
+            materialSystem.pushUniforms(matData, meshData.getMeshPacket().getUniformPacket());
+
+            // Always push transform separately if needed
+            shader.setUniformMatrix("u_ModelMatrix", meshData.getTransform());
+
+            GPUHandle handle = models.get(meshData.handle);
+            if (handle == null)
+                continue;
+
+            GPUCall.bind(handle);
+            GPUCall.draw(handle, meshData.getVertexCount());
+            GPUCall.unbind(handle);
+        }
     }
 }

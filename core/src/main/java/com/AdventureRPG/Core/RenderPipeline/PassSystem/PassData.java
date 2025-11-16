@@ -6,6 +6,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.Vector4;
 import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
+import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderAction;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderContext;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderData;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
@@ -26,6 +27,7 @@ public class PassData extends InstanceFrame implements ShaderData {
     public final Map<String, String> texturePaths;
     public final Map<String, UniformAttribute> uniforms = new HashMap<>();
     public final UniversalUniform universalUniform;
+    private final RenderAction action;
     public float lifetime;
 
     // Base \\
@@ -36,8 +38,8 @@ public class PassData extends InstanceFrame implements ShaderData {
             int shaderID,
             Map<String, String> texturePaths,
             Map<String, UniformAttribute> initialUniforms,
-            UniversalUniform universalUniform) {
-
+            UniversalUniform universalUniform,
+            RenderAction action) {
         this.id = id;
         this.name = name;
         this.shaderID = shaderID;
@@ -45,6 +47,7 @@ public class PassData extends InstanceFrame implements ShaderData {
         if (initialUniforms != null)
             this.uniforms.putAll(initialUniforms);
         this.universalUniform = universalUniform;
+        this.action = action;
         this.lifetime = 0f;
     }
 
@@ -56,6 +59,7 @@ public class PassData extends InstanceFrame implements ShaderData {
         this.texturePaths = new HashMap<>(template.texturePaths);
         this.uniforms.putAll(template.uniforms);
         this.universalUniform = template.universalUniform;
+        this.action = template.action;
         this.lifetime = template.lifetime;
     }
 
@@ -65,7 +69,7 @@ public class PassData extends InstanceFrame implements ShaderData {
     }
 
     // Render method called by RenderQueue
-    public void render(RenderContext context, ShaderManager shaderManager) {
+    public void draw(RenderContext context, ShaderManager shaderManager) {
 
         ShaderProgram shader = shaderManager.getShaderByID(shaderID);
 

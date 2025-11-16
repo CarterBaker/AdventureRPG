@@ -16,9 +16,9 @@ public abstract class SystemFrame extends MainFrame {
 
     protected final InstanceFrame create(InstanceFrame instanceFrame) {
 
-        instanceFrame.registerLocalManager(
+        instanceFrame.create(
                 engineManager,
-                localManager);
+                this);
 
         return instanceFrame;
     }

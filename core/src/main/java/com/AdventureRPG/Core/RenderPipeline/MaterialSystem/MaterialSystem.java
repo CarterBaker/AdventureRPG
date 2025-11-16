@@ -1,6 +1,7 @@
 package com.AdventureRPG.Core.RenderPipeline.MaterialSystem;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.UniformPacket;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformAttribute;
 import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
@@ -254,4 +255,30 @@ public class MaterialSystem extends SystemFrame {
             }
         }
     }
+
+    // Push only the per-mesh/instance uniforms from a packet
+    public void pushUniforms(MaterialData data, UniformPacket packet) {
+        ShaderProgram shader = shaderByMaterial.get(data.material);
+        if (shader == null || packet == null)
+            return;
+
+        for (UniformAttribute ua : packet.getAll().values()) {
+            pushInstanceUniform(shader, ua);
+        }
+    }
+
+    // Internal helper stays the same
+    private void pushInstanceUniform(ShaderProgram shader, UniformAttribute ua) {
+        switch (ua.uniformType) {
+            case FLOAT -> shader.setUniformf(ua.name, (float) ua.value);
+            case INT -> shader.setUniformi(ua.name, (int) ua.value);
+            case BOOL -> shader.setUniformi(ua.name, ((boolean) ua.value) ? 1 : 0);
+            case VEC2 -> shader.setUniformf(ua.name, (com.badlogic.gdx.math.Vector2) ua.value);
+            case VEC3 -> shader.setUniformf(ua.name, (com.badlogic.gdx.math.Vector3) ua.value);
+            case VEC4 -> shader.setUniformf(ua.name, (com.badlogic.gdx.math.Vector4) ua.value);
+            case COLOR -> shader.setUniformf(ua.name, (com.badlogic.gdx.graphics.Color) ua.value);
+            case MATRIX4 -> shader.setUniformMatrix(ua.name, (com.badlogic.gdx.math.Matrix4) ua.value);
+        }
+    }
+
 }

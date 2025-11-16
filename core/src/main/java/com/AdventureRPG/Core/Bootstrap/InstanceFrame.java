@@ -3,15 +3,15 @@ package com.AdventureRPG.Core.Bootstrap;
 public abstract class InstanceFrame extends MainFrame {
 
     protected EngineFrame engineManager;
-    protected ManagerFrame localManager;
+    protected SystemFrame owner;
 
     // Root \\
 
-    public final void registerLocalManager(
+    public final void create(
             EngineFrame engineManager,
-            ManagerFrame localManager) {
+            SystemFrame owner) {
 
         this.engineManager = engineManager;
-        this.localManager = localManager;
+        this.owner = owner;
     }
 }

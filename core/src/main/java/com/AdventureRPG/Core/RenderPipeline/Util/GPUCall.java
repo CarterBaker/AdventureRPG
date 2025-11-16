@@ -1,6 +1,7 @@
 package com.AdventureRPG.Core.RenderPipeline.Util;
 
 import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.MeshData;
+import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
@@ -109,4 +110,54 @@ public final class GPUCall {
         tmp.put(bufferHandle).flip();
         Gdx.gl.glDeleteBuffers(1, tmp);
     }
+
+    // Render \\
+
+    public static void bind(GPUHandle handle) {
+        if (handle == null)
+            return;
+
+        // Bind buffers
+        Gdx.gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, handle.vbo);
+        Gdx.gl.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, handle.ibo);
+
+        int stride = GlobalConstant.VERT_STRIDE * 4; // bytes
+
+        // Position (location 0)
+        Gdx.gl.glEnableVertexAttribArray(0);
+        Gdx.gl.glVertexAttribPointer(0, 3, GL20.GL_FLOAT, false, stride, 0);
+
+        // Normal (location 1)
+        Gdx.gl.glEnableVertexAttribArray(1);
+        Gdx.gl.glVertexAttribPointer(1, 3, GL20.GL_FLOAT, false, stride, 3 * 4);
+
+        // Color (location 2)
+        Gdx.gl.glEnableVertexAttribArray(2);
+        Gdx.gl.glVertexAttribPointer(2, 3, GL20.GL_FLOAT, false, stride, 6 * 4);
+
+        // UV (location 3) – if you have u,v stored as last two floats
+        Gdx.gl.glEnableVertexAttribArray(3);
+        Gdx.gl.glVertexAttribPointer(3, 2, GL20.GL_FLOAT, false, stride, 9 * 4);
+    }
+
+    public static void unbind(GPUHandle handle) {
+        if (handle == null)
+            return;
+
+        Gdx.gl.glDisableVertexAttribArray(0);
+        Gdx.gl.glDisableVertexAttribArray(1);
+        Gdx.gl.glDisableVertexAttribArray(2);
+        Gdx.gl.glDisableVertexAttribArray(3);
+
+        Gdx.gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+        Gdx.gl.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+
+    public static void draw(GPUHandle handle, int vertexCount) {
+        if (handle == null || vertexCount <= 0)
+            return;
+
+        Gdx.gl.glDrawElements(GL20.GL_TRIANGLES, vertexCount, GL20.GL_UNSIGNED_SHORT, 0);
+    }
+
 }

@@ -4,13 +4,12 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.badlogic.gdx.math.Matrix4;
 
 public final class MeshData extends RenderableInstance {
 
     private final MeshPacket meshPacket;
     public final int materialId;
-
-    public final int handle;
 
     private final FloatArrayList vertices;
     private final ShortArrayList indices;
@@ -25,8 +24,6 @@ public final class MeshData extends RenderableInstance {
 
         this.meshPacket = meshPacket;
         this.materialId = materialId;
-
-        this.handle = handle;
 
         this.vertices = new FloatArrayList();
         this.indices = new ShortArrayList();
@@ -143,5 +140,13 @@ public final class MeshData extends RenderableInstance {
 
     public boolean hasRoomForQuads(int quadCount) {
         return vertexCount + quadCount * 4 <= GlobalConstant.MESH_VERT_LIMIT;
+    }
+
+    public MeshPacket getMeshPacket() {
+        return meshPacket;
+    }
+
+    public Matrix4 getTransform() {
+        return meshPacket.getTransform();
     }
 }

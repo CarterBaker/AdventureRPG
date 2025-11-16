@@ -29,8 +29,8 @@ public class EngineFrame extends ManagerFrame {
     protected MovementManager movementManager;
     protected TextureSystem textureSystem;
     protected ShaderManager shaderManager;
-    protected PassSystem passSystem;
     protected MaterialSystem materialSystem;
+    protected PassSystem passSystem;
     protected RenderManager renderManager;
 
     // Internal
@@ -86,8 +86,8 @@ public class EngineFrame extends ManagerFrame {
         movementManager = (MovementManager) register(new MovementManager());
         textureSystem = (TextureSystem) register(new TextureSystem());
         shaderManager = (ShaderManager) register(new ShaderManager());
-        passSystem = (PassSystem) register(new PassSystem());
         materialSystem = (MaterialSystem) register(new MaterialSystem());
+        passSystem = (PassSystem) register(new PassSystem());
         renderManager = (RenderManager) register(new RenderManager());
 
         engineSystems[0] = threadSystem;
@@ -96,8 +96,8 @@ public class EngineFrame extends ManagerFrame {
         engineSystems[3] = movementManager;
         engineSystems[4] = textureSystem;
         engineSystems[5] = shaderManager;
-        engineSystems[6] = passSystem;
-        engineSystems[7] = materialSystem;
+        engineSystems[6] = materialSystem;
+        engineSystems[7] = passSystem;
         engineSystems[8] = renderManager;
 
         preCreate();

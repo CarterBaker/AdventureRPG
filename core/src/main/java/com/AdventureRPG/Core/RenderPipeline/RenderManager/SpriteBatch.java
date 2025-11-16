@@ -1,12 +1,10 @@
 package com.AdventureRPG.Core.RenderPipeline.RenderManager;
 
-public class SpriteBatch extends RenderContext {
+import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+
+public class SpriteBatch extends SystemFrame {
 
     public SpriteBatch() {
-        this("SpriteBatch");
-    }
 
-    public SpriteBatch(String name) {
-        this.name = name;
     }
 }

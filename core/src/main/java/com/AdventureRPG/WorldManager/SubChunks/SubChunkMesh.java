@@ -36,6 +36,6 @@ public final class SubChunkMesh {
     }
 
     public boolean hasData() {
-        return meshPacket.getTotalBatchCount() != 0;
+        return meshPacket.getTotalVertexCount() > 0;
     }
 }

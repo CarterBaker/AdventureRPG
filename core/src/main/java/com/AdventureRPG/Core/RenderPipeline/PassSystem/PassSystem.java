@@ -91,7 +91,15 @@ public class PassSystem extends SystemFrame {
         Map<String, UniformAttribute> uniforms = parseUniforms(json.uniforms);
         String name = stripExtension(file.name());
 
-        return new PassData(nextPassID, name, shaderID, json.textures, uniforms, shaderManager.universalUniform);
+        return (PassData) create(
+                new PassData(
+                        nextPassID,
+                        name,
+                        shaderID,
+                        json.textures,
+                        uniforms,
+                        shaderManager.universalUniform,
+                        null));
     }
 
     private Map<String, UniformAttribute> parseUniforms(Map<String, Object> rawUniforms) {
@@ -228,7 +236,7 @@ public class PassSystem extends SystemFrame {
         if (template == null)
             return null;
 
-        PassData renderPass = new PassData(template);
+        PassData renderPass = (PassData) create(new PassData(template));
         renderManager.enqueue(renderPass, sortOrder);
 
         return renderPass;

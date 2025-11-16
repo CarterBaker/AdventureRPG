@@ -4,7 +4,7 @@ import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
 
 public abstract class RenderableInstance extends InstanceFrame {
 
-    protected final int handle;
+    public final int handle;
 
     public RenderableInstance(int handle) {
 

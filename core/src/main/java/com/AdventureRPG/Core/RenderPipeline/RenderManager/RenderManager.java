@@ -19,6 +19,8 @@ public class RenderManager extends ManagerFrame {
     private SpriteBatch spriteBatch;
     private ModelBatch modelBatch;
 
+    private RenderContext renderContext;
+
     // Base \\
 
     @Override
@@ -28,8 +30,10 @@ public class RenderManager extends ManagerFrame {
         this.uHandleSystem = (UHandleSystem) register(new UHandleSystem());
         this.renderQueueSystem = (RenderQueueSystem) register(new RenderQueueSystem());
 
-        this.spriteBatch = (SpriteBatch) create(new SpriteBatch());
-        this.modelBatch = (ModelBatch) create(new ModelBatch());
+        this.spriteBatch = (SpriteBatch) register(new SpriteBatch());
+        this.modelBatch = (ModelBatch) register(new ModelBatch());
+
+        this.renderContext = (RenderContext) register(new RenderContext());
 
         GPUCall.enableDepth();
     }
@@ -42,10 +46,34 @@ public class RenderManager extends ManagerFrame {
         this.cameraSystem = engineManager.get(CameraSystem.class);
     }
 
+    @Override
+    protected void awake() {
+
+        // Core passes
+        renderQueueSystem.addPass(new PassData(
+                0, "3D_PASS", -1, null, null,
+                shaderManager.universalUniform,
+                ctx -> {
+                    modelBatch.draw();
+                }), 0);
+
+        renderQueueSystem.addPass(new PassData(
+                0, "2D_PASS", -1, null, null,
+                shaderManager.universalUniform,
+                ctx -> {
+                }), 0);
+    }
+
     public void draw() {
 
         GPUCall.clearBuffer();
-        renderQueueSystem.renderAll();
+        renderQueueSystem.draw(renderContext);
+    }
+
+    // Pass System \\
+
+    public void enqueue(PassData pass, int sortOrder) {
+        renderQueueSystem.addPass(pass, sortOrder);
     }
 
     // U Handle System \\
@@ -66,11 +94,5 @@ public class RenderManager extends ManagerFrame {
 
     public void removeModel(MeshPacket meshPacket) {
         modelBatch.removeModel(meshPacket);
-    }
-
-    // Accessible \\
-
-    public void enqueue(PassData pass, int sortOrder) {
-        renderQueueSystem.addPass(pass, sortOrder);
     }
 }
