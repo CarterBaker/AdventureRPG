@@ -70,9 +70,9 @@ public class MaterialSystem extends SystemFrame {
     protected void init() {
 
         // Root
-        this.gson = engineManager.gson;
-        this.textureSystem = engineManager.get(TextureSystem.class);
-        this.shaderManager = engineManager.get(ShaderManager.class);
+        this.gson = gameEngine.gson;
+        this.textureSystem = gameEngine.get(TextureSystem.class);
+        this.shaderManager = gameEngine.get(ShaderManager.class);
     }
 
     @Override
@@ -152,7 +152,7 @@ public class MaterialSystem extends SystemFrame {
                         textureArray,
                         shaderProgram,
                         uniforms,
-                        shaderManager.universalUniform);
+                        shaderManager.universalUniformSystem);
 
                 // Store
                 materials.add(data);

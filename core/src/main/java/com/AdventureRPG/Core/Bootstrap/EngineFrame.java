@@ -2,6 +2,7 @@ package com.AdventureRPG.Core.Bootstrap;
 
 import java.io.File;
 
+import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
 import com.AdventureRPG.Core.PhysicsPipeline.MovementManager.MovementManager;
 import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
 import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
@@ -11,11 +12,11 @@ import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
 import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
+import com.AdventureRPG.Core.Util.Exceptions.CoreException;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
 
-// TODO: Needs to be cleaned a bit. The whole framework needs a look over
 public class EngineFrame extends ManagerFrame {
 
     // Root
@@ -26,43 +27,44 @@ public class EngineFrame extends ManagerFrame {
     protected ThreadSystem threadSystem;
     protected WorldEngineSystem worldEngineSystem;
     protected CameraSystem cameraSystem;
+    protected InputSystem inputSystem;
     protected MovementManager movementManager;
     protected TextureSystem textureSystem;
     protected ShaderManager shaderManager;
-    protected MaterialSystem materialSystem;
     protected PassSystem passSystem;
+    protected MaterialSystem materialSystem;
     protected RenderManager renderManager;
 
+    InternalState internalState = InternalState.CONSTRUCTOR;
+
     // Internal
-    private SystemFrame[] engineSystems = new SystemFrame[9];
+    private SystemFrame[] engineSystems = new SystemFrame[10];
 
     // Base \\
 
     public EngineFrame() {
 
         // Root
-        this.engineManager = this;
+        this.gameEngine = this;
         this.localManager = this;
-    }
-
-    // Internal Process \\
-
-    final InternalProcess getInternalRootProcess() {
-        return internalProcess;
-    }
-
-    final void setInternalRootProcess(InternalProcess internalProcess) {
-        this.internalProcess = internalProcess;
     }
 
     // Internal State \\
 
-    final InternalState getInternalRootState() {
+    final InternalState getInternalState() {
         return internalState;
     }
 
-    final void setInternalRootState(InternalState internalState) {
-        this.internalState = internalState;
+    final void setInternalState(InternalState target) {
+        this.internalState = target;
+    }
+
+    public final void requestInternalState(InternalState target) {
+
+        if (!target.accessible)
+            throw new CoreException.GameStateException(target);
+
+        this.setInternalState(target);
     }
 
     // Create \\
@@ -80,55 +82,154 @@ public class EngineFrame extends ManagerFrame {
         this.gson = gson;
 
         // Engine
-        threadSystem = (ThreadSystem) register(new ThreadSystem());
-        worldEngineSystem = (WorldEngineSystem) register(new WorldEngineSystem());
-        cameraSystem = (CameraSystem) register(new CameraSystem());
-        movementManager = (MovementManager) register(new MovementManager());
-        textureSystem = (TextureSystem) register(new TextureSystem());
-        shaderManager = (ShaderManager) register(new ShaderManager());
-        materialSystem = (MaterialSystem) register(new MaterialSystem());
-        passSystem = (PassSystem) register(new PassSystem());
-        renderManager = (RenderManager) register(new RenderManager());
+        this.threadSystem = (ThreadSystem) register(new ThreadSystem());
+        this.worldEngineSystem = (WorldEngineSystem) register(new WorldEngineSystem());
+        this.cameraSystem = (CameraSystem) register(new CameraSystem());
+        this.inputSystem = (InputSystem) register(new InputSystem());
+        this.movementManager = (MovementManager) register(new MovementManager());
+        this.textureSystem = (TextureSystem) register(new TextureSystem());
+        this.shaderManager = (ShaderManager) register(new ShaderManager());
+        this.passSystem = (PassSystem) register(new PassSystem());
+        this.materialSystem = (MaterialSystem) register(new MaterialSystem());
+        this.renderManager = (RenderManager) register(new RenderManager());
 
-        engineSystems[0] = threadSystem;
-        engineSystems[1] = worldEngineSystem;
-        engineSystems[2] = cameraSystem;
-        engineSystems[3] = movementManager;
-        engineSystems[4] = textureSystem;
-        engineSystems[5] = shaderManager;
-        engineSystems[6] = materialSystem;
-        engineSystems[7] = passSystem;
-        engineSystems[8] = renderManager;
+        this.engineSystems[0] = threadSystem;
+        this.engineSystems[1] = worldEngineSystem;
+        this.engineSystems[2] = cameraSystem;
+        this.engineSystems[3] = inputSystem;
+        this.engineSystems[4] = movementManager;
+        this.engineSystems[5] = textureSystem;
+        this.engineSystems[6] = shaderManager;
+        this.engineSystems[7] = passSystem;
+        this.engineSystems[8] = materialSystem;
+        this.engineSystems[9] = renderManager;
 
-        preCreate();
-        preInit();
-        preAwake();
+        this.preCreate();
+        this.preInit();
+        this.preAwake();
 
-        setInternalRootProcess(InternalProcess.CREATE);
+        internalProcess = InternalProcess.CREATE;
     }
 
     private void preCreate() {
-
-        setInternalRootProcess(InternalProcess.CREATE);
-
-        for (int i = 0; i < engineSystems.length; i++)
-            engineSystems[i].internalCreate(settings, engineManager);
+        for (int i = 0; i < this.engineSystems.length; i++)
+            this.engineSystems[i].internalCreate(this.settings, this.gameEngine);
     }
 
     private void preInit() {
 
-        setInternalRootProcess(InternalProcess.INIT);
+        internalProcess = InternalProcess.INIT;
 
-        for (int i = 0; i < engineSystems.length; i++)
-            engineSystems[i].internalInit();
+        for (int i = 0; i < this.engineSystems.length; i++)
+            this.engineSystems[i].internalInit();
     }
 
     private void preAwake() {
 
-        setInternalRootProcess(InternalProcess.AWAKE);
+        internalProcess = InternalProcess.AWAKE;
 
-        for (int i = 0; i < engineSystems.length; i++)
-            engineSystems[i].internalAwake();
+        for (int i = 0; i < this.engineSystems.length; i++)
+            this.engineSystems[i].internalAwake();
+    }
+
+    // Create \\
+
+    @Override
+    void internalCreate(Settings settings, EngineFrame gameEngine) {
+
+        internalProcess = InternalProcess.CREATE;
+
+        super.internalCreate(settings, gameEngine);
+    }
+
+    // Init \\
+
+    @Override
+    void internalInit() {
+
+        internalProcess = InternalProcess.INIT;
+
+        super.internalInit();
+    }
+
+    // Awake \\
+
+    @Override
+    void internalAwake() {
+
+        internalProcess = InternalProcess.AWAKE;
+
+        super.internalAwake();
+    }
+
+    // Start \\
+
+    @Override
+    void internalStart() {
+
+        internalProcess = InternalProcess.START;
+
+        super.internalStart();
+    }
+
+    // Menu Exclusive Update \\
+
+    @Override
+    void internalMenuExclusiveUpdate() {
+
+        internalProcess = InternalProcess.MENU_EXCLUSIVE;
+
+        super.internalMenuExclusiveUpdate();
+    }
+
+    // Game Exclusive Update \\
+
+    @Override
+    void internalGameExclusiveUpdate() {
+
+        internalProcess = InternalProcess.GAME_EXCLUSIVE;
+
+        super.internalGameExclusiveUpdate();
+    }
+
+    // Update \\
+
+    @Override
+    void internalUpdate() {
+
+        internalProcess = InternalProcess.UPDATE;
+
+        super.internalUpdate();
+    }
+
+    // Fixed Update \\
+
+    @Override
+    void internalFixedUpdate() {
+
+        internalProcess = InternalProcess.FIXED_UPDATE;
+
+        super.internalFixedUpdate();
+    }
+
+    // Late Update \\
+
+    @Override
+    void internalLateUpdate() {
+
+        internalProcess = InternalProcess.LATE_UPDATE;
+
+        super.internalLateUpdate();
+    }
+
+    // Dispose \\
+
+    @Override
+    void internalDispose() {
+
+        internalProcess = InternalProcess.DISPOSE;
+
+        super.internalDispose();
     }
 
     // Render \\
@@ -136,9 +237,11 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalRender() {
 
+        internalProcess = InternalProcess.RENDER;
+
         super.internalRender();
 
-        renderManager.draw();
+        this.renderManager.draw();
     }
 
     // Accessible \\

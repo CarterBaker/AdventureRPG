@@ -65,10 +65,10 @@ public class Loader extends SystemFrame {
     protected void init() {
 
         // Root
-        this.threadSystem = engineManager.get(ThreadSystem.class);
-        this.chunkData = engineManager.get(ChunkData.class);
-        this.worldEngineSystem = engineManager.get(WorldEngineSystem.class);
-        this.worldManager = engineManager.get(WorldManager.class);
+        this.threadSystem = gameEngine.get(ThreadSystem.class);
+        this.chunkData = gameEngine.get(ChunkData.class);
+        this.worldEngineSystem = gameEngine.get(WorldEngineSystem.class);
+        this.worldManager = gameEngine.get(WorldManager.class);
     }
 
     @Override

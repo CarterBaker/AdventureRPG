@@ -69,12 +69,16 @@ public class CameraInstance extends InstanceFrame {
 
         perspectiveCamera.direction.set(direction);
         perspectiveCamera.update();
+
+        debug("Rotation set - yaw: " + yaw + ", pitch: " + pitch);
     }
 
     public void setPosition(Vector3 input) {
 
         perspectiveCamera.position.set(input.x, input.y, input.z);
         perspectiveCamera.update();
+
+        debug("Position set - pos: " + perspectiveCamera.position);
     }
 
     // Accessible \\

@@ -76,8 +76,8 @@ public class QueueSystem extends ManagerFrame {
     protected void init() {
 
         // Root
-        this.worldEngineSystem = engineManager.get(WorldEngineSystem.class);
-        this.worldManager = engineManager.get(WorldManager.class);
+        this.worldEngineSystem = gameEngine.get(WorldEngineSystem.class);
+        this.worldManager = gameEngine.get(WorldManager.class);
         this.worldTick = worldManager.get(WorldTick.class);
 
         // Chunk Tracking

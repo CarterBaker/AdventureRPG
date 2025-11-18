@@ -3,7 +3,6 @@ package com.AdventureRPG.PlayerManager;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
 import com.AdventureRPG.Core.PhysicsPipeline.MovementManager.MovementManager;
-import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraInstance;
 import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
 import com.AdventureRPG.Core.Util.Vector2Int;
 import com.AdventureRPG.WorldManager.WorldManager;
@@ -18,9 +17,6 @@ public class PlayerManager extends ManagerFrame {
     private CameraSystem cameraSystem;
     private MovementManager movementManager;
     private WorldManager worldManager;
-
-    // Camera
-    private CameraInstance cameraInstance;
 
     // Position
     private Vector3 currentPosition; // TODO: These are very special they should be built into the engine itself
@@ -43,13 +39,10 @@ public class PlayerManager extends ManagerFrame {
     protected void init() {
 
         // Player
-        this.inputSystem = engineManager.get(InputSystem.class);
-        this.cameraSystem = engineManager.get(CameraSystem.class);
-        this.movementManager = engineManager.get(MovementManager.class);
-        this.worldManager = engineManager.get(WorldManager.class);
-
-        // Camera
-        this.cameraInstance = cameraSystem.mainCamera();
+        this.inputSystem = gameEngine.get(InputSystem.class);
+        this.cameraSystem = gameEngine.get(CameraSystem.class);
+        this.movementManager = gameEngine.get(MovementManager.class);
+        this.worldManager = gameEngine.get(WorldManager.class);
     }
 
     @Override
@@ -62,8 +55,8 @@ public class PlayerManager extends ManagerFrame {
                 currentPosition,
                 currentChunk);
 
-        cameraSystem.rotateCamera(cameraInstance, inputSystem.getRotation());
-        cameraSystem.moveCamera(cameraInstance, currentPosition);
+        cameraSystem.rotateCamera(inputSystem.getRotation());
+        cameraSystem.moveCamera(currentPosition);
 
         worldManager.updatePosition(currentPosition, currentChunk);
     }

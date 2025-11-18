@@ -25,8 +25,8 @@ public class WorldReader extends SystemFrame {
     public void init() {
 
         // Root
-        worldEngineSystem = engineManager.get(WorldEngineSystem.class);
-        world = engineManager.get(WorldEngineSystem.class).getWorld();
+        worldEngineSystem = gameEngine.get(WorldEngineSystem.class);
+        world = gameEngine.get(WorldEngineSystem.class).getWorld();
     }
 
     // World Reader \\

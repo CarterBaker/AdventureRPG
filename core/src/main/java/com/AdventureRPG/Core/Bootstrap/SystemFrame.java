@@ -1,27 +1,16 @@
 package com.AdventureRPG.Core.Bootstrap;
 
-import com.AdventureRPG.Core.Util.Exceptions.CoreException;
 import com.AdventureRPG.SettingsSystem.Settings;
 
 public abstract class SystemFrame extends MainFrame {
 
     // Internal
     InternalProcess internalProcess = InternalProcess.CREATE;
-    InternalState internalState = InternalState.CONSTRUCTOR;
     protected Settings settings;
-    protected EngineFrame engineManager;
+    protected EngineFrame gameEngine;
     protected ManagerFrame localManager;
 
     // Root \\
-
-    protected final InstanceFrame create(InstanceFrame instanceFrame) {
-
-        instanceFrame.create(
-                engineManager,
-                this);
-
-        return instanceFrame;
-    }
 
     protected final void registerLocalManager(ManagerFrame localManager) {
         this.localManager = localManager;
@@ -29,56 +18,35 @@ public abstract class SystemFrame extends MainFrame {
 
     // Internal Process \\
 
-    protected final InternalProcess getInternalProcess() {
-
-        return engineManager.getInternalRootProcess();
+    final InternalProcess getInternalProcess() {
+        return internalProcess;
     }
 
-    final void setInternalProcess(InternalProcess internalProcess) {
-        this.internalProcess = internalProcess;
-        engineManager.setInternalRootProcess(internalProcess);
+    final void setInternalProcess(InternalProcess target) {
+        this.internalProcess = target;
     }
 
     final boolean verifyProcess(InternalProcess target) {
 
-        InternalProcess rootProcess = getInternalProcess();
+        InternalProcess rootProcess = gameEngine.getInternalProcess();
 
-        if (target.isUpdateProcess()) {
-
-            setInternalProcess(target);
-            return true;
-        }
-
-        if (target.order < rootProcess.order || target.order < internalProcess.order)
+        if (!target.isUpdateProcess() &&
+                (target.order < rootProcess.order || target.order < internalProcess.order))
             return false;
 
         setInternalProcess(target);
         return true;
     }
 
-    // Internal State \\
-
-    protected final InternalState getInternalState() {
-        return engineManager.getInternalRootState();
-    }
-
-    protected final void requestInternalState(InternalState internalState) {
-
-        if (!internalState.accessible)
-            throw new CoreException.GameStateException(internalState);
-
-        engineManager.setInternalRootState(internalState);
-    }
-
     // Create \\
 
-    void internalCreate(Settings settings, EngineFrame engineManager) {
+    void internalCreate(Settings settings, EngineFrame gameEngine) {
 
         // Root
         this.settings = settings;
-        this.engineManager = engineManager;
+        this.gameEngine = gameEngine;
 
-        if (!verifyProcess(InternalProcess.CREATE))
+        if (!this.verifyProcess(InternalProcess.CREATE))
             return;
 
         create();
@@ -91,7 +59,7 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalInit() {
 
-        if (!verifyProcess(InternalProcess.INIT))
+        if (!this.verifyProcess(InternalProcess.INIT))
             return;
 
         init();
@@ -104,12 +72,10 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalAwake() {
 
-        if (!verifyProcess(InternalProcess.AWAKE))
+        if (!this.verifyProcess(InternalProcess.AWAKE))
             return;
 
         awake();
-
-        internalState = InternalState.FIRST_FRAME;
     }
 
     protected void awake() {
@@ -119,7 +85,7 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalStart() {
 
-        if (!verifyProcess(InternalProcess.START))
+        if (!this.verifyProcess(InternalProcess.START))
             return;
 
         start();
@@ -132,7 +98,7 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalMenuExclusiveUpdate() {
 
-        if (!verifyProcess(InternalProcess.MENU_EXCLUSIVE))
+        if (!this.verifyProcess(InternalProcess.MENU_EXCLUSIVE))
             return;
 
         menuExclusiveUpdate();
@@ -145,7 +111,7 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalGameExclusiveUpdate() {
 
-        if (!verifyProcess(InternalProcess.GAME_EXCLUSIVE))
+        if (!this.verifyProcess(InternalProcess.GAME_EXCLUSIVE))
             return;
 
         gameExclusiveUpdate();
@@ -158,7 +124,7 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalUpdate() {
 
-        if (!verifyProcess(InternalProcess.UPDATE))
+        if (!this.verifyProcess(InternalProcess.UPDATE))
             return;
 
         update();
@@ -171,7 +137,7 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalFixedUpdate() {
 
-        if (!verifyProcess(InternalProcess.FIXED_UPDATE))
+        if (!this.verifyProcess(InternalProcess.FIXED_UPDATE))
             return;
 
         fixedUpdate();
@@ -184,7 +150,7 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalLateUpdate() {
 
-        if (!verifyProcess(InternalProcess.LATE_UPDATE))
+        if (!this.verifyProcess(InternalProcess.LATE_UPDATE))
             return;
 
         lateUpdate();
@@ -197,7 +163,7 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalRender() {
 
-        if (!verifyProcess(InternalProcess.RENDER))
+        if (!this.verifyProcess(InternalProcess.RENDER))
             return;
 
         render();
@@ -210,15 +176,24 @@ public abstract class SystemFrame extends MainFrame {
 
     void internalDispose() {
 
-        if (!verifyProcess(InternalProcess.DISPOSE))
+        if (!this.verifyProcess(InternalProcess.DISPOSE))
             return;
-
-        internalState = InternalState.EXIT;
 
         dispose();
     }
 
     protected void dispose() {
+    }
+
+    // Accessible \\
+
+    protected final InstanceFrame create(InstanceFrame instanceFrame) {
+
+        instanceFrame.create(
+                gameEngine,
+                this);
+
+        return instanceFrame;
     }
 
     // Debug \\
@@ -227,7 +202,7 @@ public abstract class SystemFrame extends MainFrame {
         debugProcess("");
     }
 
-    protected final void debugProcess(String input) {
-        debug("[" + internalProcess.toString() + "] " + input);
+    protected final void debugProcess(Object input) {
+        debug("[" + internalProcess.toString() + "] " + String.valueOf(input));
     }
 }

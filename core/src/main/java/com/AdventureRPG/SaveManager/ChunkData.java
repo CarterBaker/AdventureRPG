@@ -16,7 +16,7 @@ public class ChunkData extends SystemFrame {
     protected void init() {
 
         // Settings
-        this.path = engineManager.path;
+        this.path = gameEngine.path;
     }
 
     // Save System \\

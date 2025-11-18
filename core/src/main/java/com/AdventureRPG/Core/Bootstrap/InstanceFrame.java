@@ -2,16 +2,16 @@ package com.AdventureRPG.Core.Bootstrap;
 
 public abstract class InstanceFrame extends MainFrame {
 
-    protected EngineFrame engineManager;
+    protected EngineFrame gameEngine;
     protected SystemFrame owner;
 
     // Root \\
 
     public final void create(
-            EngineFrame engineManager,
+            EngineFrame gameEngine,
             SystemFrame owner) {
 
-        this.engineManager = engineManager;
+        this.gameEngine = gameEngine;
         this.owner = owner;
     }
 }

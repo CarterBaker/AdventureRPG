@@ -14,7 +14,7 @@ public class RenderQueueSystem extends SystemFrame {
     @Override
     protected void init() {
 
-        this.shaderManager = engineManager.get(ShaderManager.class);
+        this.shaderManager = gameEngine.get(ShaderManager.class);
         this.passes = new TreeMap<>();
     }
 

@@ -19,13 +19,13 @@ public class BlockSystem extends SystemFrame {
     protected void init() {
 
         // Root
-        this.gson = engineManager.gson;
+        this.gson = gameEngine.gson;
 
         // Block System
-        TextureSystem textureSystem = engineManager.get(TextureSystem.class);
-        MaterialSystem MaterialSystem = engineManager.get(MaterialSystem.class);
+        TextureSystem textureSystem = gameEngine.get(TextureSystem.class);
+        MaterialSystem MaterialSystem = gameEngine.get(MaterialSystem.class);
         this.blocks = Loader.LoadBlocks(
-                engineManager.gson,
+                gameEngine.gson,
                 textureSystem,
                 MaterialSystem);
     }

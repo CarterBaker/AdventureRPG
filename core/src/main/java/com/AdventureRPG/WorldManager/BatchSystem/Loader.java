@@ -59,8 +59,8 @@ public class Loader extends SystemFrame {
     protected void init() {
 
         // Root
-        this.threadSystem = engineManager.get(WorldManager.class).get(ThreadSystem.class);
-        this.batchSystem = engineManager.get(WorldManager.class).get(QueueSystem.class).get(BatchSystem.class);
+        this.threadSystem = gameEngine.get(WorldManager.class).get(ThreadSystem.class);
+        this.batchSystem = gameEngine.get(WorldManager.class).get(QueueSystem.class).get(BatchSystem.class);
     }
 
     @Override

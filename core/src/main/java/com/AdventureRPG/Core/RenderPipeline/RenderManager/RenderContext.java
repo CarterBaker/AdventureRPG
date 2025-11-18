@@ -26,7 +26,7 @@ public class RenderContext extends SystemFrame {
     protected void init() {
 
         // Camera
-        this.cameraSystem = engineManager.get(CameraSystem.class);
+        this.cameraSystem = gameEngine.get(CameraSystem.class);
     }
 
     @Override

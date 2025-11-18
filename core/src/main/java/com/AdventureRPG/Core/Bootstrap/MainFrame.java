@@ -15,26 +15,26 @@ abstract class MainFrame {
         debug("");
     }
 
-    protected final void debug(String input) {
-        System.out.println("[" + systemName + "] " + input);
+    protected final void debug(Object input) {
+        System.out.println("[" + systemName + "] " + String.valueOf(input));
     }
 
-    protected final void timeStampDebug(String input) {
-        debug(timeStamp() + input);
+    protected final void timeStampDebug(Object input) {
+        debug(timeStamp() + String.valueOf(input));
     }
 
     // Log \\
 
-    protected final void log(String input) {
-        System.out.println(input);
+    protected final void log(Object input) {
+        System.out.println(String.valueOf(input));
     }
 
-    protected final void error(String input) {
-        System.err.println(input);
+    protected final void error(Object input) {
+        System.err.println(String.valueOf(input));
     }
 
-    protected final void timeStampLog(String input) {
-        System.out.println(timeStamp() + input);
+    protected final void timeStampLog(Object input) {
+        System.out.println(timeStamp() + String.valueOf(input));
     }
 
     // Utility \\

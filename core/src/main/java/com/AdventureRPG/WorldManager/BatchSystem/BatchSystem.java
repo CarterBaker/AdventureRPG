@@ -49,7 +49,7 @@ public class BatchSystem extends ManagerFrame {
     protected void init() {
 
         // Root
-        this.worldManager = engineManager.get(WorldManager.class);
+        this.worldManager = gameEngine.get(WorldManager.class);
         this.worldTick = worldManager.get(WorldTick.class);
         this.queueSystem = worldManager.get(QueueSystem.class);
 

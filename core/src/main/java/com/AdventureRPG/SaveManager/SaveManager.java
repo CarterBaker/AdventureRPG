@@ -28,7 +28,7 @@ public class SaveManager extends ManagerFrame {
     protected void init() {
 
         // Settings
-        this.path = engineManager.path;
+        this.path = gameEngine.path;
     }
 
     // Save System \\

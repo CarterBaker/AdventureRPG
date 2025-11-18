@@ -13,7 +13,7 @@ public class BiomeSystem extends SystemFrame {
     protected void init() {
 
         // Biome System
-        this.biomes = Loader.loadBiomes(engineManager.gson);
+        this.biomes = Loader.loadBiomes(gameEngine.gson);
     }
 
     // Biome System \\

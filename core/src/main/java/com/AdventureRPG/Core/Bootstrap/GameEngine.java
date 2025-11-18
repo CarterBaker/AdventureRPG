@@ -1,6 +1,5 @@
 package com.AdventureRPG.Core.Bootstrap;
 
-import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
 import com.AdventureRPG.LightingSystem.LightingManager;
 import com.AdventureRPG.PlayerManager.PlayerManager;
 import com.AdventureRPG.SaveManager.SaveManager;
@@ -11,7 +10,7 @@ import com.AdventureRPG.UISystem.UISystem;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.badlogic.gdx.Screen;
 
-public class EngineManager extends EngineFrame implements Screen {
+public class GameEngine extends EngineFrame implements Screen {
 
     // Core
     private SaveManager saveManager;
@@ -20,7 +19,6 @@ public class EngineManager extends EngineFrame implements Screen {
     private TimeSystem timeSystem;
     private PlayerManager playerManager;
     private WorldManager worldManager;
-    private InputSystem inputSystem;
 
     // UI
     private LoadScreen loadScreen;
@@ -37,7 +35,6 @@ public class EngineManager extends EngineFrame implements Screen {
         timeSystem = (TimeSystem) register(new TimeSystem());
         playerManager = (PlayerManager) register(new PlayerManager());
         worldManager = (WorldManager) register(new WorldManager());
-        inputSystem = (InputSystem) register(new InputSystem());
     }
 
     @Override
@@ -58,7 +55,10 @@ public class EngineManager extends EngineFrame implements Screen {
     }
 
     @Override
-    protected void menuExclusiveUpdate() {
+    protected void menuExclusiveUpdate() { // TODO: This whole thing needs a rework
+        // Game should be the natural state and these things should just sort of work
+        // dynamically
+        // Goes with the todo in main classS
 
         if (worldManager.queueSystem.hasQueue())
             loadScreen.setProgrss(worldManager.queueSystem.totalQueueSize());

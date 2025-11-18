@@ -11,21 +11,21 @@ public abstract class ManagerFrame extends SystemFrame {
 
     // Internal
     private List<SystemFrame> systemTree = new ArrayList<>();
-    private final List<SystemFrame> subSystems = new ArrayList<>();
-    private SystemFrame[] systemIterator = new SystemFrame[0];
+    private List<SystemFrame> subSystems = new ArrayList<>();
+    private SystemFrame[] gameSystems = new SystemFrame[0];
 
     // Register \\
 
     protected final SystemFrame register(SystemFrame subSystem) {
 
-        if (getInternalProcess() != InternalProcess.CREATE)
-            throw new CoreException.OutOfOrderException(getInternalProcess());
+        if (this.getInternalProcess() != InternalProcess.CREATE)
+            throw new CoreException.OutOfOrderException(this.getInternalProcess());
 
-        if (systemTree.contains(subSystem))
+        if (this.systemTree.contains(subSystem))
             throw new DuplicateSystemFrameDetected(subSystem);
 
-        systemTree.add(subSystem);
-        subSystems.add(subSystem);
+        this.systemTree.add(subSystem);
+        this.subSystems.add(subSystem);
 
         subSystem.registerLocalManager(this);
 
@@ -35,10 +35,10 @@ public abstract class ManagerFrame extends SystemFrame {
     @SuppressWarnings("unchecked")
     public final <T> T get(Class<T> type) {
 
-        if (getInternalProcess() != InternalProcess.INIT)
-            throw new CoreException.OutOfOrderException(getInternalProcess());
+        if (this.gameEngine.getInternalProcess() != InternalProcess.INIT)
+            throw new CoreException.OutOfOrderException(this.getInternalProcess());
 
-        for (SystemFrame frame : systemTree) {
+        for (SystemFrame frame : this.systemTree) {
 
             if (type.isAssignableFrom(frame.getClass()))
                 return (T) frame;
@@ -57,21 +57,21 @@ public abstract class ManagerFrame extends SystemFrame {
 
     private final void cacheSubSystems() {
 
-        systemIterator = subSystems.toArray(new SystemFrame[0]);
-        subSystems.clear();
+        this.gameSystems = this.subSystems.toArray(new SystemFrame[0]);
+        this.subSystems.clear();
     }
 
     // Create \\
 
     @Override
-    void internalCreate(Settings settings, EngineFrame engineManager) {
+    void internalCreate(Settings settings, EngineFrame gameEngine) {
 
-        super.internalCreate(settings, engineManager);
+        super.internalCreate(settings, gameEngine);
 
-        cacheSubSystems();
+        this.cacheSubSystems();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalCreate(settings, engineManager);
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalCreate(this.settings, this.gameEngine);
     }
 
     // Init \\
@@ -81,8 +81,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalInit();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalInit();
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalInit();
     }
 
     // Awake \\
@@ -92,8 +92,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalAwake();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalAwake();
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalAwake();
     }
 
     // Start \\
@@ -103,8 +103,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalStart();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalStart();
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalStart();
     }
 
     // Menu Exclusive Update \\
@@ -114,8 +114,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalMenuExclusiveUpdate();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalMenuExclusiveUpdate();
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalMenuExclusiveUpdate();
     }
 
     // Game Exclusive Update \\
@@ -125,8 +125,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalGameExclusiveUpdate();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalGameExclusiveUpdate();
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalGameExclusiveUpdate();
     }
 
     // Update \\
@@ -136,8 +136,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalUpdate();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalUpdate();
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalUpdate();
     }
 
     // Fixed Update \\
@@ -147,8 +147,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalFixedUpdate();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalFixedUpdate();
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalFixedUpdate();
     }
 
     // Late Update \\
@@ -158,8 +158,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalLateUpdate();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalLateUpdate();
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalLateUpdate();
     }
 
     // Render \\
@@ -169,8 +169,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalRender();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalRender();
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalRender();
     }
 
     // Dispose \\
@@ -180,7 +180,7 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalDispose();
 
-        for (int i = 0; i < systemIterator.length; i++)
-            systemIterator[i].internalDispose();
+        for (int i = 0; i < this.gameSystems.length; i++)
+            this.gameSystems[i].internalDispose();
     }
 }

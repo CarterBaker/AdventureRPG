@@ -11,7 +11,7 @@ import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderContext;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderData;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformAttribute;
-import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniform;
+import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniformSystem;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniformType;
 import com.badlogic.gdx.graphics.Color;
 
@@ -26,7 +26,7 @@ public class PassData extends InstanceFrame implements ShaderData {
     public final int shaderID;
     public final Map<String, String> texturePaths;
     public final Map<String, UniformAttribute> uniforms = new HashMap<>();
-    public final UniversalUniform universalUniform;
+    public final UniversalUniformSystem universalUniformSystem;
     private final RenderAction action;
     public float lifetime;
 
@@ -38,7 +38,7 @@ public class PassData extends InstanceFrame implements ShaderData {
             int shaderID,
             Map<String, String> texturePaths,
             Map<String, UniformAttribute> initialUniforms,
-            UniversalUniform universalUniform,
+            UniversalUniformSystem universalUniformSystem,
             RenderAction action) {
         this.id = id;
         this.name = name;
@@ -46,7 +46,7 @@ public class PassData extends InstanceFrame implements ShaderData {
         this.texturePaths = texturePaths != null ? texturePaths : new HashMap<>();
         if (initialUniforms != null)
             this.uniforms.putAll(initialUniforms);
-        this.universalUniform = universalUniform;
+        this.universalUniformSystem = universalUniformSystem;
         this.action = action;
         this.lifetime = 0f;
     }
@@ -58,7 +58,7 @@ public class PassData extends InstanceFrame implements ShaderData {
         this.shaderID = template.shaderID;
         this.texturePaths = new HashMap<>(template.texturePaths);
         this.uniforms.putAll(template.uniforms);
-        this.universalUniform = template.universalUniform;
+        this.universalUniformSystem = template.universalUniformSystem;
         this.action = template.action;
         this.lifetime = template.lifetime;
     }
@@ -72,6 +72,14 @@ public class PassData extends InstanceFrame implements ShaderData {
     public void draw(RenderContext context, ShaderManager shaderManager) {
 
         ShaderProgram shader = shaderManager.getShaderByID(shaderID);
+
+        if (shader == null) {
+
+            if (action != null)
+                action.render(context);
+
+            return;
+        }
 
         shader.bind();
 
@@ -95,7 +103,7 @@ public class PassData extends InstanceFrame implements ShaderData {
     }
 
     public void setUniversalUniform(UniversalUniformType type) {
-        universalUniform.setUniversalUniform(this, type);
+        universalUniformSystem.setUniversalUniform(this, type);
     }
 
     @Override

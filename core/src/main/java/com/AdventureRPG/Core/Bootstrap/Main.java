@@ -8,7 +8,6 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
 
-// TODO: This needs to be cleaned
 public class Main extends Game {
 
     // Root
@@ -17,7 +16,7 @@ public class Main extends Game {
     private final Gson gson;
 
     // Core
-    private EngineManager engineManager;
+    private GameEngine gameEngine;
 
     // fixed interval
     private float fixedInterval;
@@ -41,108 +40,162 @@ public class Main extends Game {
     public void create() {
 
         // Main
-        this.engineManager = new EngineManager();
-
-        engineManager.bootKernel(
-                settings,
-                this,
-                GAME_DIRECTORY,
-                gson);
+        this.gameEngine = new GameEngine();
 
         // fixed interval
         this.fixedInterval = settings.FIXED_TIME_STEP;
         this.elapsedTime = 0.0f;
         this.maxSteps = 5;
 
-        // create()
-        engineManager.internalCreate(settings, engineManager);
-
-        // init()
-        engineManager.internalInit();
-
-        mainAwake();
+        stateSwitch();
     }
 
     @Override
     public void render() {
-
         stateSwitch();
-
-        mainUpdate();
-        mainFixedUpdate();
-        mainLateUpdate();
-
-        // render()
-        engineManager.internalRender();
     }
+
+    // State Management \\
 
     private void stateSwitch() {
 
-        switch (engineManager.getInternalState()) {
+        switch (gameEngine.getInternalState()) {
 
             case CONSTRUCTOR -> {
+                bootCycle();
             }
 
             case FIRST_FRAME ->
-                mainStart();
+                startCycle();
 
             case MENU_EXCLUSIVE ->
-                mainMenuExclusiveUpdate();
+                menuCycle();
 
             case GAME_EXCLUSIVE ->
-                mainGameExclusiveUpdate();
+                gameCycle();
 
             case EXIT -> {
+                exitCycle();
             }
         }
     }
 
-    // Awake \\
+    // Boot Cycle \\
 
-    private void mainAwake() {
+    private void bootCycle() {
 
         // Start the game
-        setScreen(engineManager);
+        gameEngine.bootKernel(
+                settings,
+                this,
+                GAME_DIRECTORY,
+                gson);
 
-        // awake()
-        engineManager.internalAwake();
+        setScreen(gameEngine);
+
+        internalCreate();
+        internalInit();
+        internalAwake();
+
+        gameEngine.setInternalState(InternalState.FIRST_FRAME);
+    }
+
+    // Start Cycle \\
+
+    private void startCycle() {
+
+        internalStart();
+
+        // TODO: I want the game to start on game and work dynamically.
+        gameEngine.setInternalState(InternalState.MENU_EXCLUSIVE);
+    }
+
+    // Menu Cycle \\
+
+    private void menuCycle() {
+
+        internalMenuExclusiveUpdate();
+
+        updateCycle();
+    }
+
+    // Game Cycle \\
+
+    private void gameCycle() {
+
+        internalGameExclusiveUpdate();
+
+        updateCycle();
+    }
+
+    // Update Cycle \\
+
+    private void updateCycle() {
+
+        internalUpdate();
+        internalFixedUpdate();
+        internalLateUpdate();
+        internalRender();
+    }
+
+    // Exit Cycle \\
+
+    private void exitCycle() {
+    }
+
+    // Create \\
+
+    private void internalCreate() {
+        gameEngine.internalCreate(settings, gameEngine);
+    }
+
+    // Init \\
+
+    private void internalInit() {
+        gameEngine.internalInit();
+    }
+
+    // Awake \\
+
+    private void internalAwake() {
+        gameEngine.internalAwake();
     }
 
     // Start \\
 
-    private void mainStart() {
+    private void internalStart() {
 
         // start()
-        engineManager.internalStart();
+        gameEngine.internalStart();
     }
 
     // Menu Exclusive Update \\
 
-    private void mainMenuExclusiveUpdate() {
+    private void internalMenuExclusiveUpdate() {
 
         // menuExclusiveUpdate()
-        engineManager.internalMenuExclusiveUpdate();
+        gameEngine.internalMenuExclusiveUpdate();
     }
 
     // Game Exclusive Update \\
 
-    private void mainGameExclusiveUpdate() {
+    private void internalGameExclusiveUpdate() {
 
         // gameExcusiveUpdate()
-        engineManager.internalGameExclusiveUpdate();
+        gameEngine.internalGameExclusiveUpdate();
     }
 
     // update \\
 
-    private void mainUpdate() {
+    private void internalUpdate() {
 
         // update()
-        engineManager.internalUpdate();
+        gameEngine.internalUpdate();
     }
 
     // Fixed Update \\
 
-    private void mainFixedUpdate() {
+    private void internalFixedUpdate() {
 
         elapsedTime += Gdx.graphics.getDeltaTime();
         int steps = 0;
@@ -152,16 +205,20 @@ public class Main extends Game {
             elapsedTime -= fixedInterval;
             steps++;
 
-            engineManager.internalFixedUpdate();
+            gameEngine.internalFixedUpdate();
         }
     }
 
     // Late Update \\
 
-    private void mainLateUpdate() {
+    private void internalLateUpdate() {
+        gameEngine.internalLateUpdate();
+    }
 
-        // lateUpdate()
-        engineManager.internalLateUpdate();
+    // Render \\
+
+    private void internalRender() {
+        gameEngine.internalRender();
     }
 
     // Dispose \\
@@ -170,7 +227,7 @@ public class Main extends Game {
     public void dispose() {
 
         // dispse()
-        engineManager.internalDispose();
+        gameEngine.internalDispose();
 
         // Settings
         HandleGameWindow();

@@ -42,26 +42,38 @@ public class RenderManager extends ManagerFrame {
     protected void init() {
 
         // Root
-        this.shaderManager = engineManager.get(ShaderManager.class);
-        this.cameraSystem = engineManager.get(CameraSystem.class);
+        this.shaderManager = gameEngine.get(ShaderManager.class);
+        this.cameraSystem = gameEngine.get(CameraSystem.class);
     }
 
     @Override
     protected void awake() {
 
         // Core passes
-        renderQueueSystem.addPass(new PassData(
-                0, "3D_PASS", -1, null, null,
-                shaderManager.universalUniform,
-                ctx -> {
-                    modelBatch.draw();
-                }), 0);
+        renderQueueSystem.addPass(
+                new PassData(
+                        0,
+                        "3D_PASS",
+                        -1,
+                        null,
+                        null,
+                        shaderManager.universalUniformSystem,
+                        ctx -> {
+                            modelBatch.draw();
+                        }),
+                0);
 
-        renderQueueSystem.addPass(new PassData(
-                0, "2D_PASS", -1, null, null,
-                shaderManager.universalUniform,
-                ctx -> {
-                }), 0);
+        renderQueueSystem.addPass(
+                new PassData(
+                        0,
+                        "2D_PASS",
+                        -1,
+                        null,
+                        null,
+                        shaderManager.universalUniformSystem,
+                        ctx -> {
+                        }),
+                0);
     }
 
     public void draw() {

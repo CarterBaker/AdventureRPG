@@ -48,9 +48,9 @@ public class PassSystem extends SystemFrame {
     protected void init() {
 
         // Root
-        this.gson = engineManager.gson;
-        this.shaderManager = engineManager.get(ShaderManager.class);
-        this.renderManager = engineManager.get(RenderManager.class);
+        this.gson = gameEngine.gson;
+        this.shaderManager = gameEngine.get(ShaderManager.class);
+        this.renderManager = gameEngine.get(RenderManager.class);
     }
 
     @Override
@@ -98,7 +98,7 @@ public class PassSystem extends SystemFrame {
                         shaderID,
                         json.textures,
                         uniforms,
-                        shaderManager.universalUniform,
+                        shaderManager.universalUniformSystem,
                         null));
     }
 

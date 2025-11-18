@@ -23,7 +23,7 @@ public final class MeshPacket extends InstanceFrame {
 
     public MeshPacket() {
 
-        this.renderManager = engineManager.get(RenderManager.class);
+        this.renderManager = gameEngine.get(RenderManager.class);
 
         this.packet = new Int2ObjectOpenHashMap<>();
         this.uniformPacket = new UniformPacket();

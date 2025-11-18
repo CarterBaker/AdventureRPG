@@ -2,7 +2,7 @@ package com.AdventureRPG.Core.RenderPipeline.MaterialSystem;
 
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderData;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformAttribute;
-import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniform;
+import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniformSystem;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniformType;
 import com.badlogic.gdx.graphics.TextureArray;
 import com.badlogic.gdx.graphics.g3d.Material;
@@ -22,7 +22,7 @@ public class MaterialData implements ShaderData {
 
     public final Map<String, UniformAttribute> uniforms;
 
-    public final UniversalUniform universalUniform;
+    public final UniversalUniformSystem universalUniformSystem;
 
     public MaterialData(
             int id,
@@ -31,7 +31,7 @@ public class MaterialData implements ShaderData {
             TextureArray textureArray,
             ShaderProgram shaderProgram,
             Map<String, UniformAttribute> uniforms,
-            UniversalUniform universalUniform) {
+            UniversalUniformSystem universalUniformSystem) {
 
         this.id = id;
         this.name = name;
@@ -42,12 +42,12 @@ public class MaterialData implements ShaderData {
 
         this.uniforms = uniforms != null ? uniforms : new HashMap<>();
 
-        this.universalUniform = universalUniform;
+        this.universalUniformSystem = universalUniformSystem;
     }
 
     public void setUniversalUniform(UniversalUniformType type) {
 
-        universalUniform.setUniversalUniform(this, type);
+        universalUniformSystem.setUniversalUniform(this, type);
     }
 
     public void updateUniversalUniforms() {

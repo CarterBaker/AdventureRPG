@@ -6,7 +6,6 @@ import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Vector2Int;
 import com.AdventureRPG.Core.Util.Vector3Int;
 import com.AdventureRPG.PlayerManager.StatisticsInstance;
-import com.AdventureRPG.WorldManager.WorldManager;
 import com.badlogic.gdx.math.Vector3;
 
 public class MovementManager extends ManagerFrame {
@@ -34,7 +33,7 @@ public class MovementManager extends ManagerFrame {
     protected void init() {
 
         // Root
-        this.worldEngineSystem = engineManager.get(WorldEngineSystem.class);
+        this.worldEngineSystem = gameEngine.get(WorldEngineSystem.class);
     }
 
     // Movement \\

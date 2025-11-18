@@ -34,7 +34,7 @@ public class ModelBatch extends SystemFrame {
     protected void init() {
 
         // Internal
-        this.materialSystem = engineManager.get(MaterialSystem.class);
+        this.materialSystem = gameEngine.get(MaterialSystem.class);
     }
 
     // Add \\

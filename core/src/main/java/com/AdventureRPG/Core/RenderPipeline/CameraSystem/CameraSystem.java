@@ -58,6 +58,14 @@ public class CameraSystem extends SystemFrame {
         mainCamera.updateViewport(width, height);
     }
 
+    public void rotateCamera(Vector2 input) {
+        rotateCamera(mainCamera, input);
+    }
+
+    public void moveCamera(Vector3 input) {
+        moveCamera(mainCamera, input);
+    }
+
     public void rotateCamera(CameraInstance cameraInstance, Vector2 input) {
         cameraInstance.setRotation(input);
     }

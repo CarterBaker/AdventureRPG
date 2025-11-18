@@ -6,7 +6,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Matrix4;
 
 // TODO: I refactored this a bit and it is not verified working
-public class UniversalUniform extends SystemFrame {
+public class UniversalUniformSystem extends SystemFrame {
 
     // Time
     private float u_time;
@@ -28,7 +28,7 @@ public class UniversalUniform extends SystemFrame {
     protected void init() {
 
         // Camera
-        this.cameraSystem = engineManager.get(CameraSystem.class);
+        this.cameraSystem = gameEngine.get(CameraSystem.class);
         this.cameraMatrix = new Matrix4();
     }
 

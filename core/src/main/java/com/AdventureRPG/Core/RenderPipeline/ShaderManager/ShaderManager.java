@@ -31,7 +31,7 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
     private String SHADER_JSON_PATH;
 
     // Shader Manager
-    public UniversalUniform universalUniform;
+    public UniversalUniformSystem universalUniformSystem;
 
     // Shader maps
     private Map<String, ShaderProgram> nameToProgram;
@@ -50,7 +50,7 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
         this.SHADER_JSON_PATH = GlobalConstant.SHADER_JSON_PATH;
 
         // Shader Manager
-        this.universalUniform = (UniversalUniform) register(new UniversalUniform());
+        this.universalUniformSystem = (UniversalUniformSystem) register(new UniversalUniformSystem());
 
         // Shader maps
         this.nameToProgram = new LinkedHashMap<>();
@@ -63,8 +63,8 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
     protected void init() {
 
         // Root
-        this.gson = engineManager.gson;
-        this.materialSystem = engineManager.get(MaterialSystem.class);
+        this.gson = gameEngine.gson;
+        this.materialSystem = gameEngine.get(MaterialSystem.class);
     }
 
     @Override
@@ -258,5 +258,4 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
     public void renderFullScreenQuad(ShaderProgram shader) {
         fullScreenQuad.render(shader, GL30.GL_TRIANGLES);
     }
-
 }

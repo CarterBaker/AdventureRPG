@@ -20,7 +20,7 @@ public class UISystem extends SystemFrame {
 
     @Override
     protected void init() {
-        inputSystem = engineManager.get(InputSystem.class);
+        inputSystem = gameEngine.get(InputSystem.class);
     }
 
     // UI System \\
