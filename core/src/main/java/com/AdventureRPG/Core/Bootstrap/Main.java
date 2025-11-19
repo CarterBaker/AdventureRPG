@@ -141,6 +141,8 @@ public class Main extends Game {
     // Exit Cycle \\
 
     private void exitCycle() {
+
+        internalDispose();
     }
 
     // Create \\
@@ -164,32 +166,24 @@ public class Main extends Game {
     // Start \\
 
     private void internalStart() {
-
-        // start()
         gameEngine.internalStart();
     }
 
     // Menu Exclusive Update \\
 
     private void internalMenuExclusiveUpdate() {
-
-        // menuExclusiveUpdate()
         gameEngine.internalMenuExclusiveUpdate();
     }
 
     // Game Exclusive Update \\
 
     private void internalGameExclusiveUpdate() {
-
-        // gameExcusiveUpdate()
         gameEngine.internalGameExclusiveUpdate();
     }
 
     // update \\
 
     private void internalUpdate() {
-
-        // update()
         gameEngine.internalUpdate();
     }
 
@@ -197,6 +191,8 @@ public class Main extends Game {
 
     private void internalFixedUpdate() {
 
+        // TODO: Micro optimiztion read and cache the delta and then send it through to
+        // the gameEngine per frame instead of reading it twice.
         elapsedTime += Gdx.graphics.getDeltaTime();
         int steps = 0;
 
@@ -223,11 +219,15 @@ public class Main extends Game {
 
     // Dispose \\
 
+    private void internalDispose() {
+        gameEngine.internalDispose();
+    }
+
     @Override
     public void dispose() {
 
-        // dispse()
-        gameEngine.internalDispose();
+        // Internal Engine
+        gameEngine.setInternalState(InternalState.EXIT);
 
         // Settings
         HandleGameWindow();

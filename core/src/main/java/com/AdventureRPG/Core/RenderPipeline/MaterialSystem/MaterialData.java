@@ -45,14 +45,14 @@ public class MaterialData implements ShaderData {
         this.universalUniformSystem = universalUniformSystem;
     }
 
-    public void setUniversalUniform(UniversalUniformType type) {
-        universalUniformSystem.setUniversalUniform(this, type);
-    }
-
     public void updateUniversalUniforms() {
         setUniversalUniform(UniversalUniformType.u_inverseView);
         setUniversalUniform(UniversalUniformType.u_inverseProjection);
         setUniversalUniform(UniversalUniformType.u_time);
+    }
+
+    public void setUniversalUniform(UniversalUniformType type) {
+        universalUniformSystem.setUniversalUniform(this, type);
     }
 
     @Override

@@ -62,6 +62,7 @@ public class CameraSystem extends SystemFrame {
         rotateCamera(mainCamera, input);
     }
 
+    // TODO: Not sure I want to be doing this
     public void moveCamera(Vector3 input) {
         moveCamera(mainCamera, input);
     }

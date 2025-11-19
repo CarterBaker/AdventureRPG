@@ -33,7 +33,7 @@ public class CameraInstance extends InstanceFrame {
 
         // Initial position & direction setup
         perspectiveCamera.position.set(0, 0, 0);
-        perspectiveCamera.lookAt(0f, 0f, 0f);
+        perspectiveCamera.lookAt(0f, 0f, 1f);
         perspectiveCamera.up.set(Vector3.Y);
         perspectiveCamera.update();
     }

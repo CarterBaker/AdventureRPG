@@ -46,6 +46,11 @@ public class PlayerManager extends ManagerFrame {
     }
 
     @Override
+    protected void update() {
+        cameraSystem.rotateCamera(inputSystem.getRotation());
+    }
+
+    @Override
     protected void fixedUpdate() {
 
         movementManager.move(
@@ -55,7 +60,7 @@ public class PlayerManager extends ManagerFrame {
                 currentPosition,
                 currentChunk);
 
-        cameraSystem.rotateCamera(inputSystem.getRotation());
+        // TODO: Along with the camera system not sure I want ot be doing this
         cameraSystem.moveCamera(currentPosition);
 
         worldManager.updatePosition(currentPosition, currentChunk);

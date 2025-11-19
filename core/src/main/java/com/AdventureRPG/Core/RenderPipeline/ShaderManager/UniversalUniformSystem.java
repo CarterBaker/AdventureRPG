@@ -21,6 +21,9 @@ public class UniversalUniformSystem extends SystemFrame {
 
         // Time
         this.u_time = 0.0f;
+
+        // Camera
+        this.cameraMatrix = new Matrix4();
     }
 
     @Override
@@ -28,13 +31,10 @@ public class UniversalUniformSystem extends SystemFrame {
 
         // Camera
         this.cameraSystem = gameEngine.get(CameraSystem.class);
-        this.cameraMatrix = new Matrix4();
     }
 
     @Override
     protected void update() {
-
-        debug();
         u_time += gameEngine.getDeltaTime();
     }
 
@@ -42,12 +42,13 @@ public class UniversalUniformSystem extends SystemFrame {
 
     public void setUniversalUniform(ShaderData data, UniversalUniformType uniform) {
 
+        // TODO: Do not like the switch statement, we can do better
         switch (uniform) {
 
             case u_inverseView -> {
 
                 cameraMatrix.set(cameraSystem.mainCamera().getPerspectiveCamera().view);
-                cameraMatrix.inv();
+                // cameraMatrix.inv(); TODO: Not sure why I'd do this
 
                 data.setUniform("u_inverseView", cameraMatrix);
             }

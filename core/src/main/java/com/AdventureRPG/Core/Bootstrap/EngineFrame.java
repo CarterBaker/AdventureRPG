@@ -21,8 +21,7 @@ public class EngineFrame extends ManagerFrame {
     InternalState internalState = InternalState.CONSTRUCTOR;
 
     private List<SystemFrame> kernelTree = new ArrayList<>();
-    private List<SystemFrame> kernelSystems = new ArrayList<>();
-    private SystemFrame[] engineSystems = new SystemFrame[0];
+    private SystemFrame[] kernelArray = new SystemFrame[0];
 
     // Base \\
 
@@ -59,7 +58,7 @@ public class EngineFrame extends ManagerFrame {
         this.setInternalState(target);
     }
 
-    // Boot Kernel \\
+    // Kernel Registry \\
 
     @Override
     SystemFrame internalRegister(SystemFrame subSystem) {
@@ -75,28 +74,41 @@ public class EngineFrame extends ManagerFrame {
             throw new DuplicateSystemFrameDetected(subSystem);
 
         this.kernelTree.add(subSystem);
-        this.kernelSystems.add(subSystem);
 
-        subSystem.registerCoreSystems(
-                settings,
-                gameEngine,
-                this);
+        registerToInternalManager(subSystem);
 
         return subSystem;
     }
 
+    private final void registerToInternalManager(SystemFrame subSystem) {
+
+        this.setInternalProcess(InternalProcess.CREATE);
+
+        super.internalRegister(subSystem);
+
+        this.setInternalProcess(InternalProcess.BOOT_KERNEL);
+    }
+
+    // Kernel \\
+
     void internalBootKernel() {
 
-        internalProcess = InternalProcess.BOOT_KERNEL;
-
-        this.bootKernel();
-        this.cacheSubSystems();
+        this.beginBoot();
 
         this.kernelCreate();
         this.kernelInit();
         this.kernelAwake();
 
-        internalProcess = InternalProcess.CREATE;
+        this.finalizeBoot();
+    }
+
+    // Begin
+    private final void beginBoot() {
+
+        this.setInternalProcess(InternalProcess.BOOT_KERNEL);
+
+        this.bootKernel();
+        this.cacheSubSystems();
     }
 
     protected void bootKernel() {
@@ -104,35 +116,44 @@ public class EngineFrame extends ManagerFrame {
 
     private final void cacheSubSystems() {
 
-        this.engineSystems = this.kernelSystems.toArray(new SystemFrame[0]);
-        this.kernelSystems.clear();
+        this.kernelArray = this.kernelTree.toArray(new SystemFrame[0]);
+        this.kernelTree.clear();
     }
 
+    // Create
     private final void kernelCreate() {
 
-        internalProcess = InternalProcess.CREATE;
+        this.setInternalProcess(InternalProcess.CREATE);
 
-        for (int i = 0; i < this.engineSystems.length; i++) {
-
-            this.register(engineSystems[i]);
-            this.engineSystems[i].internalCreate();
-        }
+        for (int i = 0; i < this.kernelArray.length; i++)
+            this.kernelArray[i].internalCreate();
     }
 
+    // Init
     private final void kernelInit() {
 
-        internalProcess = InternalProcess.INIT;
+        this.setInternalProcess(InternalProcess.INIT);
 
-        for (int i = 0; i < this.engineSystems.length; i++)
-            this.engineSystems[i].internalInit();
+        for (int i = 0; i < this.kernelArray.length; i++)
+            this.kernelArray[i].internalInit();
     }
 
+    // Awake
     private final void kernelAwake() {
 
-        internalProcess = InternalProcess.AWAKE;
+        this.setInternalProcess(InternalProcess.AWAKE);
 
-        for (int i = 0; i < this.engineSystems.length; i++)
-            this.engineSystems[i].internalAwake();
+        for (int i = 0; i < this.kernelArray.length; i++)
+            this.kernelArray[i].internalAwake();
+    }
+
+    // Finalize
+    private final void finalizeBoot() {
+
+        this.kernelTree.clear();
+        this.kernelArray = new SystemFrame[0];
+
+        this.setInternalProcess(InternalProcess.CREATE);
     }
 
     // Create \\
@@ -140,7 +161,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalCreate() {
 
-        internalProcess = InternalProcess.CREATE;
+        this.setInternalProcess(InternalProcess.CREATE);
 
         super.internalCreate();
     }
@@ -150,7 +171,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalInit() {
 
-        internalProcess = InternalProcess.INIT;
+        this.setInternalProcess(InternalProcess.INIT);
 
         super.internalInit();
     }
@@ -160,7 +181,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalAwake() {
 
-        internalProcess = InternalProcess.AWAKE;
+        this.setInternalProcess(InternalProcess.AWAKE);
 
         super.internalAwake();
     }
@@ -170,7 +191,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalStart() {
 
-        internalProcess = InternalProcess.START;
+        this.setInternalProcess(InternalProcess.START);
 
         super.internalStart();
     }
@@ -180,7 +201,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalMenuExclusiveUpdate() {
 
-        internalProcess = InternalProcess.MENU_EXCLUSIVE;
+        this.setInternalProcess(InternalProcess.MENU_EXCLUSIVE);
 
         super.internalMenuExclusiveUpdate();
     }
@@ -190,7 +211,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalGameExclusiveUpdate() {
 
-        internalProcess = InternalProcess.GAME_EXCLUSIVE;
+        this.setInternalProcess(InternalProcess.GAME_EXCLUSIVE);
 
         super.internalGameExclusiveUpdate();
     }
@@ -200,7 +221,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalUpdate() {
 
-        internalProcess = InternalProcess.UPDATE;
+        this.setInternalProcess(InternalProcess.UPDATE);
 
         super.internalUpdate();
     }
@@ -210,7 +231,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalFixedUpdate() {
 
-        internalProcess = InternalProcess.FIXED_UPDATE;
+        this.setInternalProcess(InternalProcess.FIXED_UPDATE);
 
         super.internalFixedUpdate();
     }
@@ -220,7 +241,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalLateUpdate() {
 
-        internalProcess = InternalProcess.LATE_UPDATE;
+        this.setInternalProcess(InternalProcess.LATE_UPDATE);
 
         super.internalLateUpdate();
     }
@@ -230,7 +251,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalDispose() {
 
-        internalProcess = InternalProcess.DISPOSE;
+        this.setInternalProcess(InternalProcess.DISPOSE);
 
         super.internalDispose();
     }
@@ -240,7 +261,7 @@ public class EngineFrame extends ManagerFrame {
     @Override
     void internalRender() {
 
-        internalProcess = InternalProcess.RENDER;
+        this.setInternalProcess(InternalProcess.RENDER);
 
         super.internalRender();
     }

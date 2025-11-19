@@ -10,10 +10,9 @@ public abstract class ManagerFrame extends SystemFrame {
 
     // Internal
     private List<SystemFrame> systemTree = new ArrayList<>();
-    private List<SystemFrame> subSystems = new ArrayList<>();
-    private SystemFrame[] gameSystems = new SystemFrame[0];
+    private SystemFrame[] systemArray = new SystemFrame[0];
 
-    // Register \\
+    // System Registry \\
 
     protected final SystemFrame register(SystemFrame subSystem) {
         return internalRegister(subSystem);
@@ -31,9 +30,8 @@ public abstract class ManagerFrame extends SystemFrame {
             throw new DuplicateSystemFrameDetected(subSystem);
 
         this.systemTree.add(subSystem);
-        this.subSystems.add(subSystem);
 
-        subSystem.registerCoreSystems(
+        subSystem.register(
                 settings,
                 gameEngine,
                 this);
@@ -65,9 +63,7 @@ public abstract class ManagerFrame extends SystemFrame {
     }
 
     private final void cacheSubSystems() {
-
-        this.gameSystems = this.subSystems.toArray(new SystemFrame[0]);
-        this.subSystems.clear();
+        this.systemArray = this.systemTree.toArray(new SystemFrame[0]);
     }
 
     // Create \\
@@ -79,8 +75,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         this.cacheSubSystems();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalCreate();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalCreate();
     }
 
     // Init \\
@@ -90,8 +86,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalInit();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalInit();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalInit();
     }
 
     // Awake \\
@@ -101,8 +97,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalAwake();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalAwake();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalAwake();
     }
 
     // Start \\
@@ -112,8 +108,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalStart();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalStart();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalStart();
     }
 
     // Menu Exclusive Update \\
@@ -123,8 +119,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalMenuExclusiveUpdate();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalMenuExclusiveUpdate();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalMenuExclusiveUpdate();
     }
 
     // Game Exclusive Update \\
@@ -134,8 +130,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalGameExclusiveUpdate();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalGameExclusiveUpdate();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalGameExclusiveUpdate();
     }
 
     // Update \\
@@ -145,8 +141,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalUpdate();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalUpdate();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalUpdate();
     }
 
     // Fixed Update \\
@@ -156,8 +152,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalFixedUpdate();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalFixedUpdate();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalFixedUpdate();
     }
 
     // Late Update \\
@@ -167,8 +163,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalLateUpdate();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalLateUpdate();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalLateUpdate();
     }
 
     // Render \\
@@ -178,8 +174,8 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalRender();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalRender();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalRender();
     }
 
     // Dispose \\
@@ -189,7 +185,7 @@ public abstract class ManagerFrame extends SystemFrame {
 
         super.internalDispose();
 
-        for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalDispose();
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalDispose();
     }
 }

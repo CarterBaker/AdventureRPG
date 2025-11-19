@@ -12,7 +12,7 @@ public abstract class SystemFrame extends MainFrame {
 
     // Root \\
 
-    protected final void registerCoreSystems(
+    final void register(
             Settings settings,
             EngineFrame gameEngine,
             ManagerFrame localManager) {
@@ -37,10 +37,10 @@ public abstract class SystemFrame extends MainFrame {
         InternalProcess rootProcess = gameEngine.getInternalProcess();
 
         if (!target.isUpdateProcess() &&
-                (target.order < rootProcess.order || target.order < internalProcess.order))
+                (target.order < rootProcess.order || target.order < this.internalProcess.order))
             return false;
 
-        setInternalProcess(target);
+        this.setInternalProcess(target);
         return true;
     }
 
