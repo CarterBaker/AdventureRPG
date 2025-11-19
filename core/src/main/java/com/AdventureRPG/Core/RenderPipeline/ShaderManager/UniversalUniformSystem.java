@@ -2,7 +2,6 @@ package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Matrix4;
 
 // TODO: I refactored this a bit and it is not verified working
@@ -35,7 +34,8 @@ public class UniversalUniformSystem extends SystemFrame {
     @Override
     protected void update() {
 
-        u_time += Gdx.graphics.getDeltaTime();
+        debug();
+        u_time += gameEngine.getDeltaTime();
     }
 
     // Universal Uniform \\

@@ -12,7 +12,13 @@ public abstract class SystemFrame extends MainFrame {
 
     // Root \\
 
-    protected final void registerLocalManager(ManagerFrame localManager) {
+    protected final void registerCoreSystems(
+            Settings settings,
+            EngineFrame gameEngine,
+            ManagerFrame localManager) {
+
+        this.settings = settings;
+        this.gameEngine = gameEngine;
         this.localManager = localManager;
     }
 
@@ -40,11 +46,7 @@ public abstract class SystemFrame extends MainFrame {
 
     // Create \\
 
-    void internalCreate(Settings settings, EngineFrame gameEngine) {
-
-        // Root
-        this.settings = settings;
-        this.gameEngine = gameEngine;
+    void internalCreate() {
 
         if (!this.verifyProcess(InternalProcess.CREATE))
             return;

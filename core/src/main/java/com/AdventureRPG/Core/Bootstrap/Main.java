@@ -40,7 +40,11 @@ public class Main extends Game {
     public void create() {
 
         // Main
-        this.gameEngine = new GameEngine();
+        this.gameEngine = new GameEngine(
+                settings,
+                this,
+                GAME_DIRECTORY,
+                gson);
 
         // fixed interval
         this.fixedInterval = settings.FIXED_TIME_STEP;
@@ -85,11 +89,7 @@ public class Main extends Game {
     private void bootCycle() {
 
         // Start the game
-        gameEngine.bootKernel(
-                settings,
-                this,
-                GAME_DIRECTORY,
-                gson);
+        gameEngine.internalBootKernel();
 
         setScreen(gameEngine);
 
@@ -146,7 +146,7 @@ public class Main extends Game {
     // Create \\
 
     private void internalCreate() {
-        gameEngine.internalCreate(settings, gameEngine);
+        gameEngine.internalCreate();
     }
 
     // Init \\

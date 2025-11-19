@@ -1,18 +1,11 @@
 package com.AdventureRPG.Core.Bootstrap;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
-import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
-import com.AdventureRPG.Core.PhysicsPipeline.MovementManager.MovementManager;
-import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
-import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
-import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassSystem;
-import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
-import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
-import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
-import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
 import com.AdventureRPG.Core.Util.Exceptions.CoreException;
+import com.AdventureRPG.Core.Util.Exceptions.CoreException.DuplicateSystemFrameDetected;
 import com.AdventureRPG.SettingsSystem.Settings;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
@@ -24,29 +17,28 @@ public class EngineFrame extends ManagerFrame {
     public File path;
     public Gson gson;
 
-    protected ThreadSystem threadSystem;
-    protected WorldEngineSystem worldEngineSystem;
-    protected CameraSystem cameraSystem;
-    protected InputSystem inputSystem;
-    protected MovementManager movementManager;
-    protected TextureSystem textureSystem;
-    protected ShaderManager shaderManager;
-    protected PassSystem passSystem;
-    protected MaterialSystem materialSystem;
-    protected RenderManager renderManager;
-
+    // Internal
     InternalState internalState = InternalState.CONSTRUCTOR;
 
-    // Internal
-    private SystemFrame[] engineSystems = new SystemFrame[10];
+    private List<SystemFrame> kernelTree = new ArrayList<>();
+    private List<SystemFrame> kernelSystems = new ArrayList<>();
+    private SystemFrame[] engineSystems = new SystemFrame[0];
 
     // Base \\
 
-    public EngineFrame() {
+    public EngineFrame(
+            Settings setting,
+            Main main,
+            File path,
+            Gson gson) {
 
         // Root
+        this.settings = setting;
         this.gameEngine = this;
         this.localManager = this;
+        this.main = main;
+        this.path = path;
+        this.gson = gson;
     }
 
     // Internal State \\
@@ -67,56 +59,67 @@ public class EngineFrame extends ManagerFrame {
         this.setInternalState(target);
     }
 
-    // Create \\
+    // Boot Kernel \\
 
-    void bootKernel(
-            Settings setting,
-            Main main,
-            File path,
-            Gson gson) {
+    @Override
+    SystemFrame internalRegister(SystemFrame subSystem) {
 
-        // Root
-        this.settings = setting;
-        this.main = main;
-        this.path = path;
-        this.gson = gson;
+        if (this.getInternalProcess() != InternalProcess.BOOT_KERNEL &&
+                this.getInternalProcess() != InternalProcess.CREATE)
+            throw new CoreException.OutOfOrderException(this.getInternalProcess());
 
-        // Engine
-        this.threadSystem = (ThreadSystem) register(new ThreadSystem());
-        this.worldEngineSystem = (WorldEngineSystem) register(new WorldEngineSystem());
-        this.cameraSystem = (CameraSystem) register(new CameraSystem());
-        this.inputSystem = (InputSystem) register(new InputSystem());
-        this.movementManager = (MovementManager) register(new MovementManager());
-        this.textureSystem = (TextureSystem) register(new TextureSystem());
-        this.shaderManager = (ShaderManager) register(new ShaderManager());
-        this.passSystem = (PassSystem) register(new PassSystem());
-        this.materialSystem = (MaterialSystem) register(new MaterialSystem());
-        this.renderManager = (RenderManager) register(new RenderManager());
+        if (this.getInternalProcess() == InternalProcess.CREATE)
+            return super.internalRegister(subSystem);
 
-        this.engineSystems[0] = threadSystem;
-        this.engineSystems[1] = worldEngineSystem;
-        this.engineSystems[2] = cameraSystem;
-        this.engineSystems[3] = inputSystem;
-        this.engineSystems[4] = movementManager;
-        this.engineSystems[5] = textureSystem;
-        this.engineSystems[6] = shaderManager;
-        this.engineSystems[7] = passSystem;
-        this.engineSystems[8] = materialSystem;
-        this.engineSystems[9] = renderManager;
+        if (this.kernelTree.contains(subSystem))
+            throw new DuplicateSystemFrameDetected(subSystem);
 
-        this.preCreate();
-        this.preInit();
-        this.preAwake();
+        this.kernelTree.add(subSystem);
+        this.kernelSystems.add(subSystem);
+
+        subSystem.registerCoreSystems(
+                settings,
+                gameEngine,
+                this);
+
+        return subSystem;
+    }
+
+    void internalBootKernel() {
+
+        internalProcess = InternalProcess.BOOT_KERNEL;
+
+        this.bootKernel();
+        this.cacheSubSystems();
+
+        this.kernelCreate();
+        this.kernelInit();
+        this.kernelAwake();
 
         internalProcess = InternalProcess.CREATE;
     }
 
-    private void preCreate() {
-        for (int i = 0; i < this.engineSystems.length; i++)
-            this.engineSystems[i].internalCreate(this.settings, this.gameEngine);
+    protected void bootKernel() {
     }
 
-    private void preInit() {
+    private final void cacheSubSystems() {
+
+        this.engineSystems = this.kernelSystems.toArray(new SystemFrame[0]);
+        this.kernelSystems.clear();
+    }
+
+    private final void kernelCreate() {
+
+        internalProcess = InternalProcess.CREATE;
+
+        for (int i = 0; i < this.engineSystems.length; i++) {
+
+            this.register(engineSystems[i]);
+            this.engineSystems[i].internalCreate();
+        }
+    }
+
+    private final void kernelInit() {
 
         internalProcess = InternalProcess.INIT;
 
@@ -124,7 +127,7 @@ public class EngineFrame extends ManagerFrame {
             this.engineSystems[i].internalInit();
     }
 
-    private void preAwake() {
+    private final void kernelAwake() {
 
         internalProcess = InternalProcess.AWAKE;
 
@@ -135,11 +138,11 @@ public class EngineFrame extends ManagerFrame {
     // Create \\
 
     @Override
-    void internalCreate(Settings settings, EngineFrame gameEngine) {
+    void internalCreate() {
 
         internalProcess = InternalProcess.CREATE;
 
-        super.internalCreate(settings, gameEngine);
+        super.internalCreate();
     }
 
     // Init \\
@@ -240,8 +243,6 @@ public class EngineFrame extends ManagerFrame {
         internalProcess = InternalProcess.RENDER;
 
         super.internalRender();
-
-        this.renderManager.draw();
     }
 
     // Accessible \\

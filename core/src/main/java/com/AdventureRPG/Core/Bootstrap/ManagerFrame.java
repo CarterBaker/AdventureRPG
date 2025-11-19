@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.AdventureRPG.Core.Util.Exceptions.CoreException;
 import com.AdventureRPG.Core.Util.Exceptions.CoreException.DuplicateSystemFrameDetected;
-import com.AdventureRPG.SettingsSystem.Settings;
 
 public abstract class ManagerFrame extends SystemFrame {
 
@@ -17,8 +16,15 @@ public abstract class ManagerFrame extends SystemFrame {
     // Register \\
 
     protected final SystemFrame register(SystemFrame subSystem) {
+        return internalRegister(subSystem);
+    }
+
+    SystemFrame internalRegister(SystemFrame subSystem) {
 
         if (this.getInternalProcess() != InternalProcess.CREATE)
+            throw new CoreException.OutOfOrderException(this.getInternalProcess());
+
+        if (subSystem instanceof EngineFrame) // TODO: This will need a specialized error
             throw new CoreException.OutOfOrderException(this.getInternalProcess());
 
         if (this.systemTree.contains(subSystem))
@@ -27,7 +33,10 @@ public abstract class ManagerFrame extends SystemFrame {
         this.systemTree.add(subSystem);
         this.subSystems.add(subSystem);
 
-        subSystem.registerLocalManager(this);
+        subSystem.registerCoreSystems(
+                settings,
+                gameEngine,
+                this);
 
         return subSystem;
     }
@@ -64,14 +73,14 @@ public abstract class ManagerFrame extends SystemFrame {
     // Create \\
 
     @Override
-    void internalCreate(Settings settings, EngineFrame gameEngine) {
+    void internalCreate() {
 
-        super.internalCreate(settings, gameEngine);
+        super.internalCreate();
 
         this.cacheSubSystems();
 
         for (int i = 0; i < this.gameSystems.length; i++)
-            this.gameSystems[i].internalCreate(this.settings, this.gameEngine);
+            this.gameSystems[i].internalCreate();
     }
 
     // Init \\

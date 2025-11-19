@@ -2,19 +2,21 @@ package com.AdventureRPG.Core.Bootstrap;
 
 public enum InternalProcess {
 
-    CREATE(0, false),
-    INIT(1, false),
-    AWAKE(2, false),
-    START(3, false),
+    BOOT_KERNEL(0, false),
 
-    MENU_EXCLUSIVE(4, true),
-    GAME_EXCLUSIVE(5, true),
-    UPDATE(6, true),
-    FIXED_UPDATE(7, true),
-    LATE_UPDATE(8, true),
-    RENDER(9, true),
+    CREATE(1, false),
+    INIT(2, false),
+    AWAKE(3, false),
+    START(4, false),
 
-    DISPOSE(10, false);
+    MENU_EXCLUSIVE(5, true),
+    GAME_EXCLUSIVE(6, true),
+    UPDATE(7, true),
+    FIXED_UPDATE(8, true),
+    LATE_UPDATE(9, true),
+    RENDER(10, true),
+
+    DISPOSE(11, false);
 
     final int order;
     final boolean updateProcess;
