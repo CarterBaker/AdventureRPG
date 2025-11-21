@@ -4,9 +4,9 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
-import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.SaveManager.ChunkData;
 import com.AdventureRPG.SaveManager.SaveManager;
 import com.AdventureRPG.WorldManager.WorldManager;

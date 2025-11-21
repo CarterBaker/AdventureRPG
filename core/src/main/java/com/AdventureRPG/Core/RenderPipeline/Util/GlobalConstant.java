@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Util;
+package com.AdventureRPG.Core.RenderPipeline.Util;
 
 import com.badlogic.gdx.graphics.Color;
 
@@ -13,6 +13,7 @@ public class GlobalConstant {
     public static final String CALENDAR_JSON_PATH = "calendar.json"; // The location of the calendar json file
     public static final String BLOCK_JSON_PATH = "blocks.json"; // The location of the blocks json file
     public static final String BLOCK_TEXTURE_PATH = "textures"; // The location of all block images
+    public static final String BLOCK_TEXTURE_ALIAS_PATH = "texturesAliases"; // Location of alias definitions
     public static final String BIOME_JSON_PATH = "biomes"; // Location of all biome files
     public static final String REGION_IMAGE_PATH = "world/world.png"; // The main image that controls the world
     public static final String SHADER_JSON_PATH = "shaders"; // The location of all shader json files

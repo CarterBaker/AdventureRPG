@@ -48,7 +48,7 @@ public class UniversalUniformSystem extends SystemFrame {
             case u_inverseView -> {
 
                 cameraMatrix.set(cameraSystem.mainCamera().getPerspectiveCamera().view);
-                // cameraMatrix.inv(); TODO: Not sure why I'd do this
+                cameraMatrix.inv();
 
                 data.setUniform("u_inverseView", cameraMatrix);
             }

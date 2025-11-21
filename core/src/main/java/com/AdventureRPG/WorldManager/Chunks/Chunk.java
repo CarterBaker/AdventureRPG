@@ -2,10 +2,10 @@ package com.AdventureRPG.WorldManager.Chunks;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
 import com.AdventureRPG.Core.Util.Direction2Int;
-import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldGenerator;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.QueueSystem.QueueProcess;

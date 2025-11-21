@@ -1,0 +1,10 @@
+{
+    "defaultColor": [0.0, 0.0, 0.0],
+    "aliases": [
+        "emit",
+        "emission",
+        "emissive",
+        "glow",
+        "light"
+    ]
+}

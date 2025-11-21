@@ -4,8 +4,8 @@ import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.UniformPacket;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformAttribute;
-import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
-import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 import com.badlogic.gdx.Gdx;
@@ -25,7 +25,7 @@ public class MaterialSystem extends SystemFrame {
 
     // Root
     private Gson gson;
-    private TextureSystem textureSystem;
+    private TextureManager textureManager;
     private ShaderManager shaderManager;
 
     // Settings
@@ -71,7 +71,7 @@ public class MaterialSystem extends SystemFrame {
 
         // Root
         this.gson = gameEngine.gson;
-        this.textureSystem = gameEngine.get(TextureSystem.class);
+        this.textureManager = gameEngine.get(TextureManager.class);
         this.shaderManager = gameEngine.get(ShaderManager.class);
     }
 
@@ -123,7 +123,7 @@ public class MaterialSystem extends SystemFrame {
                     throw new GraphicException.MissingTextureFieldException(file.name());
 
                 // Get the TextureArray using ONLY the folder name
-                TextureArray textureArray = textureSystem.getArray(def.texture);
+                TextureArray textureArray = textureManager.getArray(def.texture);
                 if (textureArray == null)
                     throw new GraphicException.TextureArrayNotFoundException(def.texture, file.name());
 
@@ -202,7 +202,7 @@ public class MaterialSystem extends SystemFrame {
         if (textureID < 0)
             return null;
 
-        TextureArray array = textureSystem.getArrayFromID(textureID);
+        TextureArray array = textureManager.getArrayFromID(textureID);
 
         return arrayToFirstMaterial.get(array);
     }

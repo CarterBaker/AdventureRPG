@@ -1,10 +1,10 @@
-package com.AdventureRPG.Core.RenderPipeline.TextureSystem;
+package com.AdventureRPG.Core.RenderPipeline.TextureManager;
 
 import java.io.File;
 import java.util.*;
 
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
@@ -14,8 +14,10 @@ import com.badlogic.gdx.graphics.PixmapIO;
 import com.badlogic.gdx.graphics.TextureArray;
 import com.badlogic.gdx.graphics.Pixmap.Format;
 
-// TODO: Needs to be studied for accuracy and refactored into multiple classes for clarity
-public class TextureSystem extends SystemFrame {
+public class TextureManager extends ManagerFrame {
+
+    // Internal
+    private InternalLoadManager internalLoadManager;
 
     // Settings
     private String BLOCK_TEXTURE_PATH;
@@ -55,6 +57,9 @@ public class TextureSystem extends SystemFrame {
 
     @Override
     protected void create() {
+
+        // Root
+        this.internalLoadManager = (InternalLoadManager) register(new InternalLoadManager());
 
         // Settings
         this.BLOCK_TEXTURE_PATH = GlobalConstant.BLOCK_TEXTURE_PATH;
@@ -150,6 +155,11 @@ public class TextureSystem extends SystemFrame {
         output.put(AO_ALIAS, AO_MAP_DEFAULT);
 
         return output;
+    }
+
+    @Override
+    protected void awake() {
+        internalLoadManager.compileTextureArrays();
     }
 
     @Override

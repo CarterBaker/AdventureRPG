@@ -4,7 +4,7 @@ import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformAttribute;
-import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 import com.badlogic.gdx.Gdx;

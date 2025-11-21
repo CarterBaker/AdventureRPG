@@ -3,7 +3,7 @@ package com.AdventureRPG.Core.RenderPipeline.RenderableInstance;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
-import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.badlogic.gdx.math.Matrix4;
 
 public final class MeshData extends RenderableInstance {

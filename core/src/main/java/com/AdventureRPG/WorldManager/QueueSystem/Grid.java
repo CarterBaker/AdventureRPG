@@ -5,8 +5,8 @@ import java.util.Comparator;
 import java.util.List;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
-import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 

@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldManager.Blocks;
 
 import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
-import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
+import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
 import com.AdventureRPG.WorldManager.WorldManager;
 
 public class Builder {
@@ -115,11 +115,11 @@ public class Builder {
     }
 
     public Block build(
-            TextureSystem textureSystem,
+            TextureManager textureManager,
             MaterialSystem materialSystem,
             int id) {
         return new Block(
-                textureSystem,
+                textureManager,
                 materialSystem,
                 this,
                 id);

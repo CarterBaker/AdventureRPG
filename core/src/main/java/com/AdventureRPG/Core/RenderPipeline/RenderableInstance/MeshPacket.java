@@ -6,7 +6,7 @@ import java.util.List;
 
 import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
-import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.badlogic.gdx.math.Matrix4;
 
 public final class MeshPacket extends InstanceFrame {

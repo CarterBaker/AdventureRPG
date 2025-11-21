@@ -1,8 +1,8 @@
 package com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
-import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Vector2Int;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.math.Vector3;

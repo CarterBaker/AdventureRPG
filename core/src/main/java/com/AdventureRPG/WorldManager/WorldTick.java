@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldManager;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 
 public class WorldTick extends SystemFrame {

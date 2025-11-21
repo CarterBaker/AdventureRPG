@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldManager.BatchSystem;
 
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.WorldTick;
 import com.AdventureRPG.WorldManager.Chunks.Chunk;

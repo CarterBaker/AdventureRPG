@@ -2,7 +2,7 @@ package com.AdventureRPG.WorldManager.Blocks;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
-import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
+import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
 import com.google.gson.Gson;
 
 public class BlockSystem extends SystemFrame {
@@ -22,11 +22,11 @@ public class BlockSystem extends SystemFrame {
         this.gson = gameEngine.gson;
 
         // Block System
-        TextureSystem textureSystem = gameEngine.get(TextureSystem.class);
+        TextureManager textureManager = gameEngine.get(TextureManager.class);
         MaterialSystem MaterialSystem = gameEngine.get(MaterialSystem.class);
         this.blocks = Loader.LoadBlocks(
                 gameEngine.gson,
-                textureSystem,
+                textureManager,
                 MaterialSystem);
     }
 

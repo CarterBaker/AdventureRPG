@@ -2,14 +2,14 @@ package com.AdventureRPG.WorldManager.Blocks;
 
 import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialData;
 import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
-import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
-import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem.UVRect;
+import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
+import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager.UVRect;
 import com.AdventureRPG.Core.Util.Direction3Int;
 
 public class Block {
 
     // Game Manager
-    private final TextureSystem textureSystem;
+    private final TextureManager textureManager;
     private final MaterialSystem materialSystem;
 
     // Data
@@ -41,13 +41,13 @@ public class Block {
     public final Type type;
 
     public Block(
-            TextureSystem textureSystem,
+            TextureManager textureManager,
             MaterialSystem materialSystem,
             Builder builder,
             int id) {
 
         // Game Manager
-        this.textureSystem = textureSystem;
+        this.textureManager = textureManager;
         this.materialSystem = materialSystem;
 
         // Data
@@ -56,31 +56,31 @@ public class Block {
 
         // Textures
         if (builder.texture != null) {
-            this.upTex = textureSystem.getIDFromTexture(builder.texture);
-            this.northTex = textureSystem.getIDFromTexture(builder.texture);
-            this.southTex = textureSystem.getIDFromTexture(builder.texture);
-            this.eastTex = textureSystem.getIDFromTexture(builder.texture);
-            this.westTex = textureSystem.getIDFromTexture(builder.texture);
-            this.downTex = textureSystem.getIDFromTexture(builder.texture);
+            this.upTex = textureManager.getIDFromTexture(builder.texture);
+            this.northTex = textureManager.getIDFromTexture(builder.texture);
+            this.southTex = textureManager.getIDFromTexture(builder.texture);
+            this.eastTex = textureManager.getIDFromTexture(builder.texture);
+            this.westTex = textureManager.getIDFromTexture(builder.texture);
+            this.downTex = textureManager.getIDFromTexture(builder.texture);
         }
 
         else {
-            this.upTex = textureSystem.getIDFromTexture(builder.upTex);
-            this.northTex = (builder.northTex != null) ? textureSystem.getIDFromTexture(builder.northTex) : this.upTex;
-            this.southTex = (builder.southTex != null) ? textureSystem.getIDFromTexture(builder.southTex)
+            this.upTex = textureManager.getIDFromTexture(builder.upTex);
+            this.northTex = (builder.northTex != null) ? textureManager.getIDFromTexture(builder.northTex) : this.upTex;
+            this.southTex = (builder.southTex != null) ? textureManager.getIDFromTexture(builder.southTex)
                     : this.northTex;
-            this.eastTex = (builder.eastTex != null) ? textureSystem.getIDFromTexture(builder.eastTex) : this.southTex;
-            this.westTex = (builder.westTex != null) ? textureSystem.getIDFromTexture(builder.westTex) : this.eastTex;
-            this.downTex = (builder.downTex != null) ? textureSystem.getIDFromTexture(builder.downTex) : this.westTex;
+            this.eastTex = (builder.eastTex != null) ? textureManager.getIDFromTexture(builder.eastTex) : this.southTex;
+            this.westTex = (builder.westTex != null) ? textureManager.getIDFromTexture(builder.westTex) : this.eastTex;
+            this.downTex = (builder.downTex != null) ? textureManager.getIDFromTexture(builder.downTex) : this.westTex;
         }
 
         // Cache UVRects
-        this.upUV = textureSystem.getUVRect(upTex);
-        this.northUV = textureSystem.getUVRect(northTex);
-        this.southUV = textureSystem.getUVRect(southTex);
-        this.eastUV = textureSystem.getUVRect(eastTex);
-        this.westUV = textureSystem.getUVRect(westTex);
-        this.downUV = textureSystem.getUVRect(downTex);
+        this.upUV = textureManager.getUVRect(upTex);
+        this.northUV = textureManager.getUVRect(northTex);
+        this.southUV = textureManager.getUVRect(southTex);
+        this.eastUV = textureManager.getUVRect(eastTex);
+        this.westUV = textureManager.getUVRect(westTex);
+        this.downUV = textureManager.getUVRect(downTex);
 
         // Materials
         if (builder.material != null) {

@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldManager.Util;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 
 public class PackedCoordinate3Int extends SystemFrame {
 

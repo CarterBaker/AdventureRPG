@@ -1,0 +1,9 @@
+{
+    "defaultColor": [0.0, 0.0, 0.0],
+    "aliases": [
+        "metal",
+        "metallic",
+        "metalness",
+        "mtl"
+    ]
+}

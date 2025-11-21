@@ -9,7 +9,7 @@ import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
 import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassSystem;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
-import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem;
+import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
 import com.AdventureRPG.LightingSystem.LightingManager;
@@ -32,7 +32,7 @@ public class GameEngine extends EngineFrame implements Screen {
     private CameraSystem cameraSystem;
     private InputSystem inputSystem;
     private MovementManager movementManager;
-    private TextureSystem textureSystem;
+    private TextureManager textureManager;
     private ShaderManager shaderManager;
     private PassSystem passSystem;
     private MaterialSystem materialSystem;
@@ -72,7 +72,7 @@ public class GameEngine extends EngineFrame implements Screen {
         this.cameraSystem = (CameraSystem) register(new CameraSystem());
         this.inputSystem = (InputSystem) register(new InputSystem());
         this.movementManager = (MovementManager) register(new MovementManager());
-        this.textureSystem = (TextureSystem) register(new TextureSystem());
+        this.textureManager = (TextureManager) register(new TextureManager());
         this.shaderManager = (ShaderManager) register(new ShaderManager());
         this.passSystem = (PassSystem) register(new PassSystem());
         this.materialSystem = (MaterialSystem) register(new MaterialSystem());

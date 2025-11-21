@@ -4,10 +4,10 @@ import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialData;
-import com.AdventureRPG.Core.RenderPipeline.TextureSystem.TextureSystem.UVRect;
+import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager.UVRect;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Direction2Int;
 import com.AdventureRPG.Core.Util.Direction3Int;
-import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldManager.Blocks.Block;

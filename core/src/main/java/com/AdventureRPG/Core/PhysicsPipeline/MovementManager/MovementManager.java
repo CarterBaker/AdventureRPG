@@ -1,8 +1,8 @@
 package com.AdventureRPG.Core.PhysicsPipeline.MovementManager;
 
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Vector2Int;
 import com.AdventureRPG.Core.Util.Vector3Int;
 import com.AdventureRPG.PlayerManager.StatisticsInstance;

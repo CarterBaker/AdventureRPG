@@ -4,7 +4,7 @@ import java.io.File;
 import java.time.Instant;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.Util.GlobalConstant;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.LightingSystem.LightingManager;
 import com.AdventureRPG.SaveManager.UserData;
 

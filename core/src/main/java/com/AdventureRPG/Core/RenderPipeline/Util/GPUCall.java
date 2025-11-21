@@ -1,7 +1,6 @@
 package com.AdventureRPG.Core.RenderPipeline.Util;
 
 import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.MeshData;
-import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;

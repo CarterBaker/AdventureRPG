@@ -1,9 +1,9 @@
 package com.AdventureRPG.WorldManager.QueueSystem;
 
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
+import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
-import com.AdventureRPG.Core.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Vector2Int;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.WorldTick;
