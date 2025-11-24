@@ -12,6 +12,9 @@ public abstract class ManagerFrame extends SystemFrame {
     private List<SystemFrame> systemTree = new ArrayList<>();
     private SystemFrame[] systemArray = new SystemFrame[0];
 
+    // Memory Management
+    private List<SystemFrame> garbageCollection = new ArrayList<>();
+
     // System Registry \\
 
     protected final SystemFrame register(SystemFrame subSystem) {
@@ -38,6 +41,29 @@ public abstract class ManagerFrame extends SystemFrame {
 
         return subSystem;
     }
+
+    protected final SystemFrame release(SystemFrame subSystem) {
+        internalRelease(subSystem);
+        return null;
+    }
+
+    void internalRelease(SystemFrame subSystem) {
+
+        if (this.getInternalProcess() != InternalProcess.FREE_MEMORY)
+            throw new CoreException.OutOfOrderException(this.getInternalProcess());
+
+        if (subSystem instanceof EngineFrame) // TODO: This will need a specialized error
+            throw new CoreException.OutOfOrderException(this.getInternalProcess());
+
+        if (this.garbageCollection.contains(subSystem))
+            return;
+
+        this.garbageCollection.add(subSystem);
+
+        return;
+    }
+
+    // System Retrieval \\
 
     @SuppressWarnings("unchecked")
     public final <T> T get(Class<T> type) {
@@ -99,6 +125,32 @@ public abstract class ManagerFrame extends SystemFrame {
 
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalAwake();
+    }
+
+    // Free Memory \\
+
+    @Override
+    void internalFreeMemory() {
+
+        super.internalFreeMemory();
+
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalFreeMemory();
+
+        clearGarbage();
+    }
+
+    private void clearGarbage() {
+
+        if (garbageCollection.isEmpty())
+            return;
+
+        for (SystemFrame target : garbageCollection)
+            systemTree.remove(target);
+
+        garbageCollection.clear();
+
+        cacheSubSystems();
     }
 
     // Start \\

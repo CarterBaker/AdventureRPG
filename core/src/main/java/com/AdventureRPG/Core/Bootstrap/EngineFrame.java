@@ -98,6 +98,7 @@ public class EngineFrame extends ManagerFrame {
         this.kernelCreate();
         this.kernelInit();
         this.kernelAwake();
+        this.kernelFreeMemory();
 
         this.finalizeBoot();
     }
@@ -147,6 +148,15 @@ public class EngineFrame extends ManagerFrame {
             this.kernelArray[i].internalAwake();
     }
 
+    // Awake
+    private final void kernelFreeMemory() {
+
+        this.setInternalProcess(InternalProcess.FREE_MEMORY);
+
+        for (int i = 0; i < this.kernelArray.length; i++)
+            this.kernelArray[i].internalFreeMemory();
+    }
+
     // Finalize
     private final void finalizeBoot() {
 
@@ -184,6 +194,16 @@ public class EngineFrame extends ManagerFrame {
         this.setInternalProcess(InternalProcess.AWAKE);
 
         super.internalAwake();
+    }
+
+    // Free Memory \\
+
+    @Override
+    void internalFreeMemory() {
+
+        this.setInternalProcess(InternalProcess.FREE_MEMORY);
+
+        super.internalFreeMemory();
     }
 
     // Start \\

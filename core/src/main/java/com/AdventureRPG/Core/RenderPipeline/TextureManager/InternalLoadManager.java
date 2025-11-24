@@ -6,16 +6,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
+import com.AdventureRPG.Core.Bootstrap.EngineConstant;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
+import com.AdventureRPG.Core.Util.FileUtility;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
+
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 class InternalLoadManager extends ManagerFrame {
 
     // Internal
-    private InternalBuildSystem internalBuildSystem;
     private AliasLibrarySystem aliasLibrarySystem;
+    private InternalBuildSystem internalBuildSystem;
+    private Int2ObjectOpenHashMap<TextureArrayInstance> arrayMap;
     private File root;
 
     // Base \\
@@ -24,15 +29,24 @@ class InternalLoadManager extends ManagerFrame {
     protected void create() {
 
         // Internal
-        this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
         this.aliasLibrarySystem = (AliasLibrarySystem) register(new AliasLibrarySystem());
-        this.root = new File(GlobalConstant.BLOCK_TEXTURE_PATH);
+        this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
+        this.arrayMap = new Int2ObjectOpenHashMap<TextureArrayInstance>();
+        this.root = new File(EngineConstant.BLOCK_TEXTURE_PATH);
+    }
+
+    @Override
+    protected void freeMemory() {
+        aliasLibrarySystem = (AliasLibrarySystem) release(aliasLibrarySystem);
+        internalBuildSystem = (InternalBuildSystem) release(internalBuildSystem);
     }
 
     // File Navigation \\
 
     // The main method that delegates logic to helpers to return texture arrays
-    void compileTextureArrays() {
+    Int2ObjectOpenHashMap<TextureArrayInstance> loadTextureArrays() {
+
+        aliasLibrarySystem.loadAliases();
 
         if (!root.exists() || !root.isDirectory()) // TODO: move to static helper class.
             throw new FileException.FileNotFoundException(root);
@@ -43,38 +57,44 @@ class InternalLoadManager extends ManagerFrame {
             stream
                     .filter(Files::isDirectory)
                     .filter(folder -> !folder.equals(rootPath)) // exclude root itself
-                    .forEach(folder -> categorizeTextureFiles(folder.toFile()));
+                    .forEach(folder -> createArrayFromFolder(folder.toFile()));
         }
 
-        catch (IOException e) {
+        catch (IOException e) { // TODO: Make my own error
             throw new RuntimeException(e);
         }
+
+        return arrayMap;
     }
 
-    // Categorization & Suffix logic \\
+    // Categorization logic \\
 
-    private void categorizeTextureFiles(File directory) {
+    private void createArrayFromFolder(File directory) {
 
+        Set<String> validExtensions = Set.of(EngineConstant.TEXTURE_FILE_EXTENSIONS);
         List<File> imageFiles = new ArrayList<>();
         File[] files = directory.listFiles();
 
         if (files == null)
             return;
 
-        for (File file : files) {
-            if (file.isFile() && isValidImageFile(file))
+        for (File file : files)
+            if (file.isFile() && validExtensions.contains(FileUtility.getExtension(file)))
                 imageFiles.add(file);
 
-        if (!imageFiles.isEmpty())
-            categorizeTextureArrayInstances(imageFiles, directory);
+        if (imageFiles.isEmpty())
+            return;
+
+        createTextureArray(internalBuildSystem.buildTextureArray(imageFiles, directory));
     }
 
-    private boolean isValidImageFile(File file) {
-        String name = file.getName().toLowerCase();
-        return name.endsWith(".png");
+    private void createTextureArray(TextureArrayInstance textureArray) {
+        arrayMap.put(textureArray.id, textureArray);
     }
 
-    private void categorizeTextureArrayInstances(List<File> imageFiles, File sourceDirectory) {
-        // Your texture array building logic here
+    // Accessbile \\
+
+    AliasInstance[] getAllAliases() {
+        return aliasLibrarySystem.getAllAliases();
     }
 }

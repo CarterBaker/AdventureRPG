@@ -3,7 +3,7 @@ package com.AdventureRPG.Core.RenderPipeline.RenderableInstance;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
-import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineConstant;
 import com.badlogic.gdx.math.Matrix4;
 
 public final class MeshData extends RenderableInstance {
@@ -45,7 +45,7 @@ public final class MeshData extends RenderableInstance {
             throw new IllegalArgumentException("Vertex array not quad-aligned.");
 
         int quadsToAdd = length / (stride * vertsPerQuad);
-        int quadsFit = Math.min((GlobalConstant.MESH_VERT_LIMIT - vertexCount) / vertsPerQuad, quadsToAdd);
+        int quadsFit = Math.min((EngineConstant.MESH_VERT_LIMIT - vertexCount) / vertsPerQuad, quadsToAdd);
 
         if (quadsFit <= 0) {
 
@@ -139,7 +139,7 @@ public final class MeshData extends RenderableInstance {
     }
 
     public boolean hasRoomForQuads(int quadCount) {
-        return vertexCount + quadCount * 4 <= GlobalConstant.MESH_VERT_LIMIT;
+        return vertexCount + quadCount * 4 <= EngineConstant.MESH_VERT_LIMIT;
     }
 
     public MeshPacket getMeshPacket() {

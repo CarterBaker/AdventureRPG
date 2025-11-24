@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineConstant;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
@@ -14,14 +14,14 @@ public class Loader {
 
     public static Biome[] loadBiomes(Gson gson) {
 
-        File biomeDir = new File(GlobalConstant.BIOME_JSON_PATH);
+        File biomeDir = new File(EngineConstant.BIOME_JSON_PATH);
 
         if (!biomeDir.exists() || !biomeDir.isDirectory())
-            throw new RuntimeException("Biome directory not found: " + GlobalConstant.BIOME_JSON_PATH);
+            throw new RuntimeException("Biome directory not found: " + EngineConstant.BIOME_JSON_PATH);
 
         File[] jsonFiles = biomeDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
         if (jsonFiles == null || jsonFiles.length == 0)
-            throw new RuntimeException("No biome JSON files found in: " + GlobalConstant.BIOME_JSON_PATH);
+            throw new RuntimeException("No biome JSON files found in: " + EngineConstant.BIOME_JSON_PATH);
 
         List<Biome> biomeList = new ArrayList<>();
         for (File file : jsonFiles) {

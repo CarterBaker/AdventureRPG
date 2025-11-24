@@ -3,9 +3,9 @@ package com.AdventureRPG.WorldManager.Chunks;
 import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.AdventureRPG.Core.Bootstrap.EngineConstant;
 import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialData;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager.UVRect;
-import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Direction2Int;
 import com.AdventureRPG.Core.Util.Direction3Int;
 import com.AdventureRPG.WorldManager.WorldManager;
@@ -63,12 +63,12 @@ public class Builder {
         this.biomeSystem = worldManager.biomeSystem;
 
         // Settings
-        this.CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
-        this.WORLD_HEIGHT = GlobalConstant.WORLD_HEIGHT;
+        this.CHUNK_SIZE = EngineConstant.CHUNK_SIZE;
+        this.WORLD_HEIGHT = EngineConstant.WORLD_HEIGHT;
 
         // Data
         this.chunk = chunk;
-        this.quads = new IntArray(GlobalConstant.CHUNK_VERT_BUFFER);
+        this.quads = new IntArray(EngineConstant.CHUNK_VERT_BUFFER);
         this.quadCounts = new Int2IntOpenHashMap();
         this.blendColors = new Color[8];
 
@@ -679,7 +679,7 @@ public class Builder {
     private void buildFromQuads(SubChunkMesh subChunkMesh) {
 
         subChunkMesh.clear();
-        final int stride = GlobalConstant.VERT_STRIDE;
+        final int stride = EngineConstant.VERT_STRIDE;
 
         for (int i = 0; i < quads.size; i += QUAD_SIZE) {
 

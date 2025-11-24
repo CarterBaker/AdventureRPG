@@ -1,11 +1,11 @@
 package com.AdventureRPG.Core.RenderPipeline.MaterialSystem;
 
+import com.AdventureRPG.Core.Bootstrap.EngineConstant;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.UniformPacket;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformAttribute;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
-import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 import com.badlogic.gdx.Gdx;
@@ -50,7 +50,7 @@ public class MaterialSystem extends SystemFrame {
     protected void create() {
 
         // Settings
-        this.MATERIAL_JSON_PATH = GlobalConstant.MATERIAL_JSON_PATH;
+        this.MATERIAL_JSON_PATH = EngineConstant.MATERIAL_JSON_PATH;
 
         // Material Reference
         this.materialsById = new HashMap<>();

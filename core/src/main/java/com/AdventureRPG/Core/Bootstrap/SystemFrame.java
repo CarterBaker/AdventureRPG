@@ -37,7 +37,7 @@ public abstract class SystemFrame extends MainFrame {
         InternalProcess rootProcess = gameEngine.getInternalProcess();
 
         if (!target.isUpdateProcess() &&
-                (target.order < rootProcess.order || target.order < this.internalProcess.order))
+                (target.getOrder() < rootProcess.getOrder() || target.getOrder() < this.internalProcess.getOrder()))
             return false;
 
         this.setInternalProcess(target);
@@ -81,6 +81,19 @@ public abstract class SystemFrame extends MainFrame {
     }
 
     protected void awake() {
+    }
+
+    // FreeMemory \\
+
+    void internalFreeMemory() {
+
+        if (!this.verifyProcess(InternalProcess.FREE_MEMORY))
+            return;
+
+        freeMemory();
+    }
+
+    protected void freeMemory() {
     }
 
     // Start \\

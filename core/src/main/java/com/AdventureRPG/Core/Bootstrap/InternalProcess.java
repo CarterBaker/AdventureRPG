@@ -2,28 +2,33 @@ package com.AdventureRPG.Core.Bootstrap;
 
 public enum InternalProcess {
 
-    BOOT_KERNEL(0, false),
+    BOOT_KERNEL(false),
 
-    CREATE(1, false),
-    INIT(2, false),
-    AWAKE(3, false),
-    START(4, false),
+    CREATE(false),
+    INIT(false),
+    AWAKE(false),
+    FREE_MEMORY(false),
+    START(false),
 
-    MENU_EXCLUSIVE(5, true),
-    GAME_EXCLUSIVE(6, true),
-    UPDATE(7, true),
-    FIXED_UPDATE(8, true),
-    LATE_UPDATE(9, true),
-    RENDER(10, true),
+    MENU_EXCLUSIVE(true),
+    GAME_EXCLUSIVE(true),
+    UPDATE(true),
+    FIXED_UPDATE(true),
+    LATE_UPDATE(true),
+    RENDER(true),
 
-    DISPOSE(11, false);
+    DISPOSE(false);
 
-    final int order;
-    final boolean updateProcess;
+    private final int order;
+    private final boolean updateProcess;
 
-    InternalProcess(int order, boolean loopState) {
-        this.order = order;
+    InternalProcess(boolean loopState) {
+        this.order = this.ordinal();
         this.updateProcess = loopState;
+    }
+
+    public int getOrder() {
+        return order;
     }
 
     public boolean isUpdateProcess() {

@@ -3,8 +3,8 @@ package com.AdventureRPG.TimeSystem;
 import java.io.File;
 import java.time.Instant;
 
+import com.AdventureRPG.Core.Bootstrap.EngineConstant;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.LightingSystem.LightingManager;
 import com.AdventureRPG.SaveManager.UserData;
 
@@ -60,19 +60,19 @@ public class TimeSystem extends SystemFrame {
     protected void create() {
 
         // Settings
-        this.MINUTES_PER_HOUR = GlobalConstant.MINUTES_PER_HOUR;
-        this.HOURS_PER_DAY = GlobalConstant.HOURS_PER_DAY;
-        this.DAYS_PER_DAY = GlobalConstant.DAYS_PER_DAY;
-        this.MIDDAY_OFFSET = GlobalConstant.MIDDAY_OFFSET;
+        this.MINUTES_PER_HOUR = EngineConstant.MINUTES_PER_HOUR;
+        this.HOURS_PER_DAY = EngineConstant.HOURS_PER_DAY;
+        this.DAYS_PER_DAY = EngineConstant.DAYS_PER_DAY;
+        this.MIDDAY_OFFSET = EngineConstant.MIDDAY_OFFSET;
 
-        this.STARTING_DAY = GlobalConstant.STARTING_DAY;
-        this.STARTING_MONTH = GlobalConstant.STARTING_MONTH;
-        this.STARTING_YEAR = GlobalConstant.STARTING_YEAR;
-        this.STARTING_AGE = GlobalConstant.STARTING_AGE;
-        this.YEARS_PER_AGE = GlobalConstant.YEARS_PER_AGE;
+        this.STARTING_DAY = EngineConstant.STARTING_DAY;
+        this.STARTING_MONTH = EngineConstant.STARTING_MONTH;
+        this.STARTING_YEAR = EngineConstant.STARTING_YEAR;
+        this.STARTING_AGE = EngineConstant.STARTING_AGE;
+        this.YEARS_PER_AGE = EngineConstant.YEARS_PER_AGE;
 
         // Calendar
-        this.calendarFile = new File(GlobalConstant.CALENDAR_JSON_PATH);
+        this.calendarFile = new File(EngineConstant.CALENDAR_JSON_PATH);
         this.calendar = Loader.load(calendarFile, gameEngine.gson);
 
         this.totalMonths = calendar.getTotalMonths();

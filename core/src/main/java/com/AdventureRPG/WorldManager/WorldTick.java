@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldManager;
 
+import com.AdventureRPG.Core.Bootstrap.EngineConstant;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.badlogic.gdx.Gdx;
 
 public class WorldTick extends SystemFrame {
@@ -19,7 +19,7 @@ public class WorldTick extends SystemFrame {
     protected void create() {
 
         // Settings
-        this.WORLD_TICK = GlobalConstant.WORLD_TICK;
+        this.WORLD_TICK = EngineConstant.WORLD_TICK;
 
         // Tick
         this.currentTime = 0f;

@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import com.AdventureRPG.Core.Bootstrap.EngineConstant;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
@@ -131,8 +131,8 @@ public class Grid extends SystemFrame {
 
     private void createBoundingBoxes() {
 
-        int CHUNK_SIZE = GlobalConstant.CHUNK_SIZE;
-        int WORLD_HEIGHT = GlobalConstant.WORLD_HEIGHT;
+        int CHUNK_SIZE = EngineConstant.CHUNK_SIZE;
+        int WORLD_HEIGHT = EngineConstant.WORLD_HEIGHT;
 
         for (Long gridCoordinate : gridCoordinates) {
 

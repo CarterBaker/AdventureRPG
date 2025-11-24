@@ -1,8 +1,6 @@
-package com.AdventureRPG.Core.RenderPipeline.Util;
+package com.AdventureRPG.Core.Bootstrap;
 
-import com.badlogic.gdx.graphics.Color;
-
-public class GlobalConstant {
+public class EngineConstant {
 
     // World Tick Settings
     public static final float WORLD_TICK = 1; // Internal clock used to throttle world load
@@ -20,13 +18,10 @@ public class GlobalConstant {
     public static final String MATERIAL_JSON_PATH = "materials"; // The location of all material json files
     public static final String PASS_JSON_PATH = "renderPasses"; // The location of all pass json files
 
-    // PBR Settings
-    public static final Color NORMAL_MAP_DEFAULT = new Color(0.5f, 0.5f, 1f, 1f); // Default flat normal color
-    public static final Color HEIGHT_MAP_DEFAULT = new Color(0f, 0f, 0f, 1f); // Default black (0,0,0)
-    public static final Color METAL_MAP_DEFAULT = new Color(0f, 0f, 0f, 1f); // Default black (0,0,0)
-    public static final Color ROUGHNESS_MAP_DEFAULT = new Color(1f, 1f, 1f, 1f); // Default white (255,255,255)
-    public static final Color AO_MAP_DEFAULT = new Color(1f, 1f, 1f, 1f); // Default white (255,255,255)
-    public static final Color CUSTOM_MAP_DEFAULT = new Color(0f, 0f, 0f, 1f); // Default black (0,0,0)
+    // File Extension Settings
+    public static final String[] TEXTURE_FILE_EXTENSIONS = {
+            "png", "jpg", "jpeg", "tga", "bmp"
+    };
 
     // Atlas Settings
     public static final int BLOCK_TEXTURE_SIZE = 32; // The size of all block images

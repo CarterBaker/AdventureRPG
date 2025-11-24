@@ -1,8 +1,8 @@
 package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 
+import com.AdventureRPG.Core.Bootstrap.EngineConstant;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
-import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 import com.badlogic.gdx.Gdx;
@@ -47,7 +47,7 @@ public class ShaderManager extends ManagerFrame implements ShaderProvider {
     protected void create() {
 
         // Settings
-        this.SHADER_JSON_PATH = GlobalConstant.SHADER_JSON_PATH;
+        this.SHADER_JSON_PATH = EngineConstant.SHADER_JSON_PATH;
 
         // Shader Manager
         this.universalUniformSystem = (UniversalUniformSystem) register(new UniversalUniformSystem());

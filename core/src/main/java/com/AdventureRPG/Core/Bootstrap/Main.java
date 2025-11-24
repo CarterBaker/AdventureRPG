@@ -96,6 +96,7 @@ public class Main extends Game {
         internalCreate();
         internalInit();
         internalAwake();
+        internalFreeMemory();
 
         gameEngine.setInternalState(InternalState.FIRST_FRAME);
     }
@@ -161,6 +162,12 @@ public class Main extends Game {
 
     private void internalAwake() {
         gameEngine.internalAwake();
+    }
+
+    // Free Memory \\
+
+    private void internalFreeMemory() {
+        gameEngine.internalFreeMemory();
     }
 
     // Start \\

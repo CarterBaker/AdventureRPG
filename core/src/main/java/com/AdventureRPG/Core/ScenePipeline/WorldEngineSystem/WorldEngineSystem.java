@@ -1,7 +1,7 @@
 package com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem;
 
+import com.AdventureRPG.Core.Bootstrap.EngineConstant;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.RenderPipeline.Util.GlobalConstant;
 import com.AdventureRPG.Core.Util.Coordinate2Int;
 import com.AdventureRPG.Core.Util.Vector2Int;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -19,7 +19,7 @@ public class WorldEngineSystem extends SystemFrame {
     public WorldEngineSystem() {
 
         // Root
-        world = new Pixmap(Gdx.files.internal(GlobalConstant.REGION_IMAGE_PATH));
+        world = new Pixmap(Gdx.files.internal(EngineConstant.REGION_IMAGE_PATH));
         WORLD_SCALE = getWorldScale(world);
     }
 
@@ -28,8 +28,8 @@ public class WorldEngineSystem extends SystemFrame {
         int width = pixMap.getWidth();
         int height = pixMap.getHeight();
 
-        int chunksPerPixel = GlobalConstant.CHUNKS_PER_PIXEL;
-        int chunkSize = GlobalConstant.CHUNK_SIZE;
+        int chunksPerPixel = EngineConstant.CHUNKS_PER_PIXEL;
+        int chunkSize = EngineConstant.CHUNK_SIZE;
 
         int worldWidth = width * chunksPerPixel * chunkSize;
         int worldHeight = height * chunksPerPixel * chunkSize;
@@ -41,15 +41,15 @@ public class WorldEngineSystem extends SystemFrame {
 
     public Vector3 wrapAroundChunk(Vector3 input) {
 
-        float x = input.x % GlobalConstant.CHUNK_SIZE;
+        float x = input.x % EngineConstant.CHUNK_SIZE;
 
         if (x < 0)
-            x += GlobalConstant.CHUNK_SIZE;
+            x += EngineConstant.CHUNK_SIZE;
 
-        float z = input.z % GlobalConstant.CHUNK_SIZE;
+        float z = input.z % EngineConstant.CHUNK_SIZE;
 
         if (z < 0)
-            z += GlobalConstant.CHUNK_SIZE;
+            z += EngineConstant.CHUNK_SIZE;
 
         input.x = x;
         input.z = z;
@@ -59,8 +59,8 @@ public class WorldEngineSystem extends SystemFrame {
 
     public long wrapAroundWorld(long input) {
 
-        int maxX = WORLD_SCALE.x / GlobalConstant.CHUNK_SIZE;
-        int maxY = WORLD_SCALE.y / GlobalConstant.CHUNK_SIZE;
+        int maxX = WORLD_SCALE.x / EngineConstant.CHUNK_SIZE;
+        int maxY = WORLD_SCALE.y / EngineConstant.CHUNK_SIZE;
 
         int inputX = Coordinate2Int.unpackX(input);
         int inputY = Coordinate2Int.unpackY(input);
@@ -83,8 +83,8 @@ public class WorldEngineSystem extends SystemFrame {
 
     public Vector2Int wrapAroundWorld(Vector2Int input) {
 
-        int maxX = WORLD_SCALE.x / GlobalConstant.CHUNK_SIZE;
-        int maxY = WORLD_SCALE.y / GlobalConstant.CHUNK_SIZE;
+        int maxX = WORLD_SCALE.x / EngineConstant.CHUNK_SIZE;
+        int maxY = WORLD_SCALE.y / EngineConstant.CHUNK_SIZE;
 
         int x = input.x % maxX;
 
@@ -104,8 +104,8 @@ public class WorldEngineSystem extends SystemFrame {
 
     public Vector3 wrapAroundGrid(Vector3 input) {
 
-        float maxX = settings.maxRenderDistance * GlobalConstant.CHUNK_SIZE;
-        float maxZ = settings.maxRenderDistance * GlobalConstant.CHUNK_SIZE;
+        float maxX = settings.maxRenderDistance * EngineConstant.CHUNK_SIZE;
+        float maxZ = settings.maxRenderDistance * EngineConstant.CHUNK_SIZE;
 
         input.x = ((input.x + maxX / 2) % maxX + maxX) % maxX - maxX / 2;
         input.z = ((input.z + maxZ / 2) % maxZ + maxZ) % maxZ - maxZ / 2;
@@ -115,8 +115,8 @@ public class WorldEngineSystem extends SystemFrame {
 
     public long wrapAroundImageRegion(long input) {
 
-        int maxX = (WORLD_SCALE.x / GlobalConstant.CHUNKS_PER_PIXEL / GlobalConstant.CHUNK_SIZE);
-        int maxY = (WORLD_SCALE.y / GlobalConstant.CHUNKS_PER_PIXEL / GlobalConstant.CHUNK_SIZE);
+        int maxX = (WORLD_SCALE.x / EngineConstant.CHUNKS_PER_PIXEL / EngineConstant.CHUNK_SIZE);
+        int maxY = (WORLD_SCALE.y / EngineConstant.CHUNKS_PER_PIXEL / EngineConstant.CHUNK_SIZE);
 
         int inputX = Coordinate2Int.unpackX(input);
         int inputY = Coordinate2Int.unpackY(input);
