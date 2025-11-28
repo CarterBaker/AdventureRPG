@@ -2,8 +2,8 @@ package com.AdventureRPG.Core.Bootstrap;
 
 import java.io.File;
 
+import com.AdventureRPG.Core.Settings.Settings;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;

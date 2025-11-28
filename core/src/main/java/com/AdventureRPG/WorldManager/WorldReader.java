@@ -1,9 +1,9 @@
 package com.AdventureRPG.WorldManager;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.Util.Coordinate2Int;
+import com.AdventureRPG.Core.Util.Methematics.Extras.Coordinate2Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
 
@@ -19,7 +19,7 @@ public class WorldReader extends SystemFrame {
     protected void create() {
 
         // Root
-        this.world = new Pixmap(Gdx.files.internal(EngineConstant.REGION_IMAGE_PATH));
+        this.world = new Pixmap(Gdx.files.internal(EngineSetting.REGION_IMAGE_PATH));
     }
 
     public void init() {

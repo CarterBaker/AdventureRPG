@@ -4,9 +4,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.AdventureRPG.Core.Settings.Settings;
 import com.AdventureRPG.Core.Util.Exceptions.CoreException;
 import com.AdventureRPG.Core.Util.Exceptions.CoreException.DuplicateSystemFrameDetected;
-import com.AdventureRPG.SettingsSystem.Settings;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
 

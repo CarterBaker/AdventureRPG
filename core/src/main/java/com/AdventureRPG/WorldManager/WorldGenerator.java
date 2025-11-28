@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.Util.OpenSimplex2;
 import com.AdventureRPG.SaveManager.SaveManager;
@@ -39,9 +39,9 @@ public class WorldGenerator extends SystemFrame {
     protected void create() {
 
         // Settings
-        this.BIOME_SIZE = EngineConstant.BIOME_SIZE;
-        this.CHUNK_SIZE = EngineConstant.CHUNK_SIZE;
-        this.WORLD_HEIGHT = EngineConstant.WORLD_HEIGHT;
+        this.BIOME_SIZE = EngineSetting.BIOME_SIZE;
+        this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
+        this.WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT;
     }
 
     @Override

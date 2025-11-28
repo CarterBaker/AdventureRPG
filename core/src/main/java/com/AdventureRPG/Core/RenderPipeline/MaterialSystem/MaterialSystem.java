@@ -1,6 +1,6 @@
 package com.AdventureRPG.Core.RenderPipeline.MaterialSystem;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.UniformPacket;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
@@ -50,7 +50,7 @@ public class MaterialSystem extends SystemFrame {
     protected void create() {
 
         // Settings
-        this.MATERIAL_JSON_PATH = EngineConstant.MATERIAL_JSON_PATH;
+        this.MATERIAL_JSON_PATH = EngineSetting.MATERIAL_JSON_PATH;
 
         // Material Reference
         this.materialsById = new HashMap<>();
@@ -182,7 +182,7 @@ public class MaterialSystem extends SystemFrame {
 
     private static class UniformDefinition {
         public String name;
-        public UniformAttribute.UniformType type;
+        public com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformType type;
         public Object defaultValue;
     }
 

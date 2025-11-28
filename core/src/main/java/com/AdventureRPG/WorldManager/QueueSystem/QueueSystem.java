@@ -1,10 +1,10 @@
 package com.AdventureRPG.WorldManager.QueueSystem;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.Util.Coordinate2Int;
-import com.AdventureRPG.Core.Util.Vector2Int;
+import com.AdventureRPG.Core.Util.Methematics.Extras.Coordinate2Int;
+import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector2Int;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.WorldTick;
 import com.AdventureRPG.WorldManager.BatchSystem.BatchSystem;
@@ -56,8 +56,8 @@ public class QueueSystem extends ManagerFrame {
         this.batchSystem = (BatchSystem) register(new BatchSystem());
 
         // Settings
-        this.MAX_CHUNK_LOADS_PER_FRAME = EngineConstant.MAX_CHUNK_LOADS_PER_FRAME;
-        this.MAX_CHUNK_LOADS_PER_TICK = EngineConstant.MAX_CHUNK_LOADS_PER_TICK;
+        this.MAX_CHUNK_LOADS_PER_FRAME = EngineSetting.MAX_CHUNK_LOADS_PER_FRAME;
+        this.MAX_CHUNK_LOADS_PER_TICK = EngineSetting.MAX_CHUNK_LOADS_PER_TICK;
 
         // Position Tracking
         this.currentChunk = Coordinate2Int.pack(-1, -1);

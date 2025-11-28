@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.SubChunks;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.WorldManager.Biomes.BiomeContainer;
 import com.AdventureRPG.WorldManager.Blocks.BlockContainer;
 import com.AdventureRPG.WorldManager.Chunks.Chunk;
@@ -26,8 +26,8 @@ public final class SubChunk {
         // Settings
         this.chunk = chunk;
         this.subChunkIndex = subChunkIndex;
-        int CHUNK_SIZE = EngineConstant.CHUNK_SIZE;
-        int BIOME_SIZE = EngineConstant.BIOME_SIZE;
+        int CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
+        int BIOME_SIZE = EngineSetting.BIOME_SIZE;
 
         // Data
         this.biomes = new BiomeContainer(CHUNK_SIZE / BIOME_SIZE);

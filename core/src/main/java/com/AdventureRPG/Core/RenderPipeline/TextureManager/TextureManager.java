@@ -2,15 +2,16 @@ package com.AdventureRPG.Core.RenderPipeline.TextureManager;
 
 import java.util.Map;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.Util.GPUCall;
+import com.AdventureRPG.Core.RenderPipeline.Util.GLSLUtility;
 import com.AdventureRPG.Core.RenderPipeline.Util.UVCoordinate;
 
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
+// TODO: Make sure we are using appropriate fast util collections
 public class TextureManager extends ManagerFrame {
 
     // Internal
@@ -64,7 +65,7 @@ public class TextureManager extends ManagerFrame {
     private void pushTextureToGPU(AliasInstance[] aliases, TextureArrayInstance textureArray) {
 
         // First and foremost push the array to the gpu and return the handle
-        int gpuHandle = GPUCall.pushTextureArray(textureArray.getRawImageArray());
+        int gpuHandle = GLSLUtility.pushTextureArray(textureArray.getRawImageArray());
 
         // Next step retrieve the tile data
         Map<String, TextureTileInstance> tileCoordinateMap = textureArray.getTileCoordinateMap();
@@ -86,8 +87,8 @@ public class TextureManager extends ManagerFrame {
 
     private UVCoordinate computeUV(int atlasX, int atlasY, int atlasSize) {
 
-        float u = (atlasX * EngineConstant.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
-        float v = (atlasY * EngineConstant.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
+        float u = (atlasX * EngineSetting.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
+        float v = (atlasY * EngineSetting.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
 
         return new UVCoordinate(u, v);
     }

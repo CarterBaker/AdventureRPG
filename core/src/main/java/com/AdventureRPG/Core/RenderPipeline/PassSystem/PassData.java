@@ -8,17 +8,13 @@ import com.badlogic.gdx.math.Vector4;
 import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderAction;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderContext;
-import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderData;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
-import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformAttribute;
-import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniformSystem;
-import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniformType;
 import com.badlogic.gdx.graphics.Color;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class PassData extends InstanceFrame implements ShaderData {
+public class PassData extends InstanceFrame implements ShaderDataInstance {
 
     // Pass
     public final int id;

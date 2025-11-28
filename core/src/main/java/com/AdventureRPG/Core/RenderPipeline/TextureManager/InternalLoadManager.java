@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.Util.FileUtility;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
@@ -32,11 +32,13 @@ class InternalLoadManager extends ManagerFrame {
         this.aliasLibrarySystem = (AliasLibrarySystem) register(new AliasLibrarySystem());
         this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
         this.arrayMap = new Int2ObjectOpenHashMap<TextureArrayInstance>();
-        this.root = new File(EngineConstant.BLOCK_TEXTURE_PATH);
+        this.root = new File(EngineSetting.BLOCK_TEXTURE_PATH);
     }
 
     @Override
     protected void freeMemory() {
+
+        // Internal
         aliasLibrarySystem = (AliasLibrarySystem) release(aliasLibrarySystem);
         internalBuildSystem = (InternalBuildSystem) release(internalBuildSystem);
     }
@@ -71,7 +73,6 @@ class InternalLoadManager extends ManagerFrame {
 
     private void createArrayFromFolder(File directory) {
 
-        Set<String> validExtensions = Set.of(EngineConstant.TEXTURE_FILE_EXTENSIONS);
         List<File> imageFiles = new ArrayList<>();
         File[] files = directory.listFiles();
 
@@ -79,7 +80,7 @@ class InternalLoadManager extends ManagerFrame {
             return;
 
         for (File file : files)
-            if (file.isFile() && validExtensions.contains(FileUtility.getExtension(file)))
+            if (file.isFile() && EngineSetting.TEXTURE_FILE_EXTENSIONS.contains(FileUtility.getExtension(file)))
                 imageFiles.add(file);
 
         if (imageFiles.isEmpty())

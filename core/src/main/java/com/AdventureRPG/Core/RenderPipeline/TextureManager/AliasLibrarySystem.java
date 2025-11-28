@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Set;
 import java.awt.Color;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
@@ -15,7 +16,7 @@ import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 
 public class AliasLibrarySystem extends SystemFrame {
 
@@ -40,7 +41,7 @@ public class AliasLibrarySystem extends SystemFrame {
         this.aliasLookup = new HashMap<>();
         this.aliases = new AliasInstance[16];
         this.aliasCount = 0;
-        this.root = new File(EngineConstant.BLOCK_TEXTURE_ALIAS_PATH);
+        this.root = new File(EngineSetting.BLOCK_TEXTURE_ALIAS_PATH);
     }
 
     // File Extraction \\
@@ -60,7 +61,7 @@ public class AliasLibrarySystem extends SystemFrame {
 
                         File file = p.toFile();
 
-                        if (!FileUtility.hasExtension(file, "json"))
+                        if (!FileUtility.hasExtension(file, EngineSetting.JSON_FILE_EXTENSIONS))
                             return;
 
                         loadAliasFile(file);

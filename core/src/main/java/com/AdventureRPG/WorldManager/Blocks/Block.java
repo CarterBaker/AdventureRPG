@@ -4,7 +4,7 @@ import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialData;
 import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager.UVRect;
-import com.AdventureRPG.Core.Util.Direction3Int;
+import com.AdventureRPG.Core.Util.Methematics.Extras.Direction3Int;
 
 public class Block {
 

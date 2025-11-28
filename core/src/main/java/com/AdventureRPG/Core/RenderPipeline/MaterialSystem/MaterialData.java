@@ -1,6 +1,6 @@
 package com.AdventureRPG.Core.RenderPipeline.MaterialSystem;
 
-import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderData;
+import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderDataInstance;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniformAttribute;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniformSystem;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.UniversalUniformType;
@@ -11,7 +11,7 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MaterialData implements ShaderData {
+public class MaterialData implements ShaderDataInstance {
 
     public final int id;
     public final String name;

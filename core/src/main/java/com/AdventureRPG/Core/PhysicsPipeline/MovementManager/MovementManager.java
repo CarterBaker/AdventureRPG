@@ -1,10 +1,10 @@
 package com.AdventureRPG.Core.PhysicsPipeline.MovementManager;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.Util.Vector2Int;
-import com.AdventureRPG.Core.Util.Vector3Int;
+import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector2Int;
+import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector3Int;
 import com.AdventureRPG.PlayerManager.StatisticsInstance;
 import com.badlogic.gdx.math.Vector3;
 
@@ -26,7 +26,7 @@ public class MovementManager extends ManagerFrame {
         this.movementCalculationSystem = (MovementCalculationSystem) register(new MovementCalculationSystem());
 
         // Settings
-        this.CHUNK_SIZE = EngineConstant.CHUNK_SIZE;
+        this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
     }
 
     @Override

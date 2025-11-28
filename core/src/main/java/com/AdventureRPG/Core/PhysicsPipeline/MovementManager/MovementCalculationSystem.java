@@ -1,7 +1,7 @@
 package com.AdventureRPG.Core.PhysicsPipeline.MovementManager;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.Util.Vector3Int;
+import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector3Int;
 import com.AdventureRPG.PlayerManager.StatisticsInstance;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector3;

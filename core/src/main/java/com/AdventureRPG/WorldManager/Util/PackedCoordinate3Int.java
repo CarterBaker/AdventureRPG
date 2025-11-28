@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.Util;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 
 public class PackedCoordinate3Int extends SystemFrame {
@@ -27,8 +27,8 @@ public class PackedCoordinate3Int extends SystemFrame {
     protected void create() {
 
         // Settings
-        this.BIOME_SIZE = EngineConstant.BIOME_SIZE;
-        this.CHUNK_SIZE = EngineConstant.CHUNK_SIZE;
+        this.BIOME_SIZE = EngineSetting.BIOME_SIZE;
+        this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
 
         this.biomeSize = (CHUNK_SIZE / BIOME_SIZE) *
                 (CHUNK_SIZE / BIOME_SIZE) *

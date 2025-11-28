@@ -10,7 +10,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.AdventureRPG.Core.Bootstrap.Main;
-import com.AdventureRPG.SettingsSystem.*;
+import com.AdventureRPG.Core.Settings.*;
 import com.AdventureRPG.WorldManager.Biomes.Biome;
 import com.AdventureRPG.WorldManager.Biomes.BiomeDeserializer;
 

@@ -1,0 +1,24 @@
+package com.AdventureRPG.Core.RenderPipeline.Uniforms.Vectors;
+
+import com.AdventureRPG.Core.RenderPipeline.Uniforms.UniformAttribute;
+import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector2Boolean;
+
+public class Vector2BooleanUniform extends UniformAttribute<Vector2Boolean> {
+
+    // Base \\
+
+    public Vector2BooleanUniform() {
+        super(new Vector2Boolean());
+    }
+
+    public Vector2BooleanUniform(Vector2Boolean value) {
+        super(value);
+    }
+
+    // Utility \\
+
+    @Override
+    protected void push(int handle, Vector2Boolean value) {
+
+    }
+}

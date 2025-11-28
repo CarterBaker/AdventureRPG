@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldManager;
 
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.Util.Vector2Int;
+import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector2Int;
 import com.AdventureRPG.WorldManager.BatchSystem.BatchSystem;
 import com.AdventureRPG.WorldManager.Biomes.BiomeSystem;
 import com.AdventureRPG.WorldManager.Blocks.BlockSystem;

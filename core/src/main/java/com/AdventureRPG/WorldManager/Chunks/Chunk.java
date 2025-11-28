@@ -2,10 +2,10 @@ package com.AdventureRPG.WorldManager.Chunks;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.Util.Coordinate2Int;
-import com.AdventureRPG.Core.Util.Direction2Int;
+import com.AdventureRPG.Core.Util.Methematics.Extras.Coordinate2Int;
+import com.AdventureRPG.Core.Util.Methematics.Extras.Direction2Int;
 import com.AdventureRPG.WorldManager.WorldGenerator;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.QueueSystem.QueueProcess;
@@ -81,7 +81,7 @@ public class Chunk {
         this.queueSystem = worldManager.queueSystem;
 
         // Settings
-        this.WORLD_HEIGHT = EngineConstant.WORLD_HEIGHT;
+        this.WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT;
 
         // Build
         this.chunkBuilder = new Builder(worldManager, this);
@@ -258,7 +258,7 @@ public class Chunk {
         if (subChunks == null || subChunks.length != WORLD_HEIGHT)
             return false;
 
-        for (int i = 0; i < EngineConstant.WORLD_HEIGHT; i++)
+        for (int i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
             if (subChunks[i] == null)
                 return false;
 

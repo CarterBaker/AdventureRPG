@@ -4,7 +4,7 @@ import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
 import com.AdventureRPG.Core.PhysicsPipeline.MovementManager.MovementManager;
 import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
-import com.AdventureRPG.Core.Util.Vector2Int;
+import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector2Int;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.badlogic.gdx.math.Vector3;
 

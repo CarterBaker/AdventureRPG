@@ -4,7 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
 import com.badlogic.gdx.math.Matrix4;
@@ -28,7 +28,7 @@ public final class MeshPacket extends InstanceFrame {
         this.packet = new Int2ObjectOpenHashMap<>();
         this.uniformPacket = new UniformPacket();
 
-        this.stride = EngineConstant.VERT_STRIDE;
+        this.stride = EngineSetting.VERT_STRIDE;
         this.vertsPerQuad = 4;
 
         this.transform = new Matrix4();

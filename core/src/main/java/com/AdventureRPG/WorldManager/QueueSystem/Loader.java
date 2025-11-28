@@ -3,7 +3,7 @@ package com.AdventureRPG.WorldManager.QueueSystem;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
 import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
@@ -152,11 +152,11 @@ public class Loader extends SystemFrame {
 
     private boolean processIsSafe(int index) {
         return index < processPerBatch &&
-                loadedChunksThisFrame < EngineConstant.MAX_CHUNK_LOADS_PER_FRAME;
+                loadedChunksThisFrame < EngineSetting.MAX_CHUNK_LOADS_PER_FRAME;
     }
 
     private boolean totalProcessThisFrame() {
-        return loadedChunksThisFrame >= EngineConstant.MAX_CHUNK_LOADS_PER_FRAME;
+        return loadedChunksThisFrame >= EngineSetting.MAX_CHUNK_LOADS_PER_FRAME;
     }
 
     private int incrementQueueTotal(int index) {

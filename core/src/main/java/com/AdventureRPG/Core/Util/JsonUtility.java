@@ -1,8 +1,12 @@
 package com.AdventureRPG.Core.Util;
 
+import java.io.File;
+import java.io.FileReader;
+
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class JsonUtility {
 
@@ -19,4 +23,16 @@ public class JsonUtility {
 
         return array;
     }
+
+    public static JsonObject loadJsonObject(File file) {
+
+        try (FileReader reader = new FileReader(file)) {
+            return JsonParser.parseReader(reader).getAsJsonObject();
+        }
+
+        catch (Exception e) {
+            throw new FileException.FileNotFoundException(null); // TODO: Not the best error
+        }
+    }
+
 }

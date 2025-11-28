@@ -9,7 +9,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.Util.FileUtility;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
@@ -144,8 +144,8 @@ class InternalBuildSystem extends SystemFrame {
             LinkedHashMap<String, TextureTileInstance> textureTiles) {
 
         // Create the atlas image
-        int atlasPixelWidth = atlasSize * EngineConstant.BLOCK_TEXTURE_SIZE;
-        int atlasPixelHeight = atlasSize * EngineConstant.BLOCK_TEXTURE_SIZE;
+        int atlasPixelWidth = atlasSize * EngineSetting.BLOCK_TEXTURE_SIZE;
+        int atlasPixelHeight = atlasSize * EngineSetting.BLOCK_TEXTURE_SIZE;
 
         BufferedImage atlasImage = new BufferedImage(
                 atlasPixelWidth,
@@ -160,8 +160,8 @@ class InternalBuildSystem extends SystemFrame {
         // Fill each tile position
         for (TextureTileInstance tile : textureTiles.values()) {
 
-            int x = tile.getAtlasX() * EngineConstant.BLOCK_TEXTURE_SIZE;
-            int y = tile.getAtlasY() * EngineConstant.BLOCK_TEXTURE_SIZE;
+            int x = tile.getAtlasX() * EngineSetting.BLOCK_TEXTURE_SIZE;
+            int y = tile.getAtlasY() * EngineSetting.BLOCK_TEXTURE_SIZE;
 
             BufferedImage tileImage = tile.getImage(alias);
 
@@ -176,7 +176,7 @@ class InternalBuildSystem extends SystemFrame {
                         defaultColor.getGreen(),
                         defaultColor.getBlue(),
                         defaultColor.getAlpha()));
-                graphic.fillRect(x, y, EngineConstant.BLOCK_TEXTURE_SIZE, EngineConstant.BLOCK_TEXTURE_SIZE);
+                graphic.fillRect(x, y, EngineSetting.BLOCK_TEXTURE_SIZE, EngineSetting.BLOCK_TEXTURE_SIZE);
             }
         }
 

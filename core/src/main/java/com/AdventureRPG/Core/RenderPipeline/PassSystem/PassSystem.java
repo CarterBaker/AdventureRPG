@@ -1,6 +1,6 @@
 package com.AdventureRPG.Core.RenderPipeline.PassSystem;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
@@ -36,7 +36,7 @@ public class PassSystem extends SystemFrame {
     protected void create() {
 
         // Settings
-        this.PASS_JSON_PATH = EngineConstant.PASS_JSON_PATH;
+        this.PASS_JSON_PATH = EngineSetting.PASS_JSON_PATH;
 
         // Data
         this.idToPass = new LinkedHashMap<>();

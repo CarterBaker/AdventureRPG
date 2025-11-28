@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.BatchSystem;
 
-import com.AdventureRPG.Core.Bootstrap.EngineConstant;
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.WorldManager.WorldManager;
 import com.AdventureRPG.WorldManager.WorldTick;
@@ -37,8 +37,8 @@ public class BatchSystem extends ManagerFrame {
         this.loader = (Loader) register(new Loader());
 
         // Settings
-        this.MAX_CHUNK_LOADS_PER_FRAME = EngineConstant.MAX_CHUNK_LOADS_PER_FRAME;
-        this.MAX_CHUNK_LOADS_PER_TICK = EngineConstant.MAX_CHUNK_LOADS_PER_TICK;
+        this.MAX_CHUNK_LOADS_PER_FRAME = EngineSetting.MAX_CHUNK_LOADS_PER_FRAME;
+        this.MAX_CHUNK_LOADS_PER_TICK = EngineSetting.MAX_CHUNK_LOADS_PER_TICK;
 
         // Queue System
         this.loadedChunksThisFrame = 0;

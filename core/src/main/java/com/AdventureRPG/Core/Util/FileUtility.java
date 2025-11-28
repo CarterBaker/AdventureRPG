@@ -1,6 +1,9 @@
 package com.AdventureRPG.Core.Util;
 
 import java.io.File;
+import java.util.Set;
+
+import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 public class FileUtility {
 
@@ -52,7 +55,22 @@ public class FileUtility {
         return getExtension(new File(path));
     }
 
-    // Checks if a file has the specified extension (case-insensitive)
+    // Checks if a file has the specified extensions
+    public static boolean hasExtension(File file, ObjectArraySet<String> extensions) {
+
+        if (extensions == null)
+            return false;
+
+        String fileType = getExtension(file);
+
+        for (String extension : extensions)
+            if (fileType.equals(extension.toLowerCase()))
+                return true;
+
+        return false;
+    }
+
+    // Checks if a file has the specified extension
     public static boolean hasExtension(File file, String extension) {
 
         if (extension == null)
