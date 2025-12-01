@@ -10,10 +10,6 @@ public class DoubleUniform extends UniformAttribute<Double> {
         super(0.0);
     }
 
-    public DoubleUniform(Double value) {
-        super(value);
-    }
-
     // Utility \\
 
     @Override

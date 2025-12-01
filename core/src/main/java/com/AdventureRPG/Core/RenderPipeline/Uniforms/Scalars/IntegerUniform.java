@@ -10,10 +10,6 @@ public class IntegerUniform extends UniformAttribute<Integer> {
         super(0);
     }
 
-    public IntegerUniform(Integer value) {
-        super(value);
-    }
-
     // Utility \\
 
     @Override

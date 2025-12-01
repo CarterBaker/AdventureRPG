@@ -264,7 +264,8 @@ public class Main extends Game {
             boolean deleted = settingsFile.delete();
 
             if (!deleted)
-                throw new FileException.FileNotFoundException(settingsFile);
+                throw new FileException.FileNotFoundException(
+                        "File: " + settingsFile.getName() + ", Failed to delete on game close");
         }
     }
 }

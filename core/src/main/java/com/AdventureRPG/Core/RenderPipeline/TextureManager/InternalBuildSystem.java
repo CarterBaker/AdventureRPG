@@ -12,7 +12,7 @@ import javax.imageio.ImageIO;
 import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 
 class InternalBuildSystem extends SystemFrame {
 
@@ -44,6 +44,7 @@ class InternalBuildSystem extends SystemFrame {
 
         return createTextureArray(
                 textureTiles,
+                sourceDirectory.getName(),
                 textureAtlases);
     }
 
@@ -61,8 +62,10 @@ class InternalBuildSystem extends SystemFrame {
 
             try {
                 img = ImageIO.read(file);
-            } catch (Exception e) { // TODO: Add my own error
-                throw new FileException.FileNotFoundException(file);
+            }
+
+            catch (Exception e) {
+                throw new GraphicException.ImageReadException("File: " + file + ", could not be read as an image");
             }
 
             String fileName = FileUtility.getFileName(file);
@@ -74,7 +77,8 @@ class InternalBuildSystem extends SystemFrame {
             int aliasId = aliasLibrarySystem.getOrDefault(aliasType);
 
             if (aliasId == -1)
-                throw new FileException.FileNotFoundException(file);
+                throw new GraphicException.TextureAliasNotFoundException(
+                        "Alias: " + aliasType + ", could not be found in the system");
 
             TextureTileInstance textureTile = textureTiles.get(instanceName);
 
@@ -194,11 +198,13 @@ class InternalBuildSystem extends SystemFrame {
 
     private TextureArrayInstance createTextureArray(
             LinkedHashMap<String, TextureTileInstance> textureTiles,
+            String textureArrayName,
             TextureAtlasInstance[] textureAtlases) {
 
         TextureArrayInstance textureArray = (TextureArrayInstance) create(
                 new TextureArrayInstance(
                         arrayCount++,
+                        textureArrayName,
                         textureAtlases[0].atlasSize,
                         textureAtlases));
 

@@ -9,7 +9,6 @@ import java.util.Set;
 import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.RenderPipeline.Shaders.Shader;
-import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
 import com.AdventureRPG.Core.RenderPipeline.Uniforms.Uniform;
 import com.AdventureRPG.Core.RenderPipeline.Uniforms.UniformAttribute;
 import com.AdventureRPG.Core.RenderPipeline.Uniforms.Matrices.*;
@@ -17,8 +16,8 @@ import com.AdventureRPG.Core.RenderPipeline.Uniforms.Samplers.*;
 import com.AdventureRPG.Core.RenderPipeline.Uniforms.Scalars.*;
 import com.AdventureRPG.Core.RenderPipeline.Uniforms.Vectors.*;
 import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.Methematics.Matrices.*;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.*;
+import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -27,7 +26,6 @@ class InternalLoadManager extends ManagerFrame {
 
     // Internal
     private File root;
-    private TextureManager textureManager;
     private ShaderManager shaderManager;
     private InternalBuildSystem internalBuildSystem;
 
@@ -61,7 +59,6 @@ class InternalLoadManager extends ManagerFrame {
     protected void init() {
 
         // Internal
-        this.textureManager = gameEngine.get(TextureManager.class);
         this.shaderManager = gameEngine.get(ShaderManager.class);
     }
 
@@ -84,8 +81,8 @@ class InternalLoadManager extends ManagerFrame {
 
     private void loadAllFiles() {
 
-        if (!root.exists() || !root.isDirectory()) // TODO: Write my own error here
-            throw new RuntimeException("Shader directory not found: " + root.getAbsolutePath());
+        if (!root.exists() || !root.isDirectory())
+            throw new FileException.FileNotFoundException("Shader directory not found: " + root.getAbsolutePath());
 
         Path base = root.toPath();
 
@@ -122,7 +119,8 @@ class InternalLoadManager extends ManagerFrame {
             shaderType = ShaderType.INCLUDE;
 
         if (shaderType == null)
-            return; // TODO: custom error later
+            throw new GraphicException.ShaderProgramException(
+                    "Shader: " + file.getName() + ", Has an unrecognized exception");
 
         ShaderDataInstance shaderDataInstance = (ShaderDataInstance) create(
                 new ShaderDataInstance(
@@ -143,7 +141,7 @@ class InternalLoadManager extends ManagerFrame {
 
     private void compileShaders() {
         for (int i = 0; i < jsonFiles.size(); i++)
-            shaderManager.compileShader(
+            shaderManager.addShader(
                     assembleShader(
                             internalBuildSystem.compileShader(jsonFiles.get(i))));
     }
@@ -206,60 +204,43 @@ class InternalLoadManager extends ManagerFrame {
 
     private UniformAttribute<?> createUniformAttribute(UniformDataInstance uniformData) {
 
-        Object value = uniformData.uniformType.parse(uniformData.uniformData);
-
         return switch (uniformData.uniformType) {
 
             // Scalars
-            case FLOAT -> new FloatUniform((Float) value);
-            case DOUBLE -> new DoubleUniform((Double) value);
-            case INT -> new IntegerUniform((Integer) value);
-            case BOOL -> new BooleanUniform((Boolean) value);
+            case FLOAT -> new FloatUniform();
+            case DOUBLE -> new DoubleUniform();
+            case INT -> new IntegerUniform();
+            case BOOL -> new BooleanUniform();
 
             // Vectors
-            case VECTOR2 -> new Vector2Uniform((Vector2) value);
-            case VECTOR3 -> new Vector3Uniform((Vector3) value);
-            case VECTOR4 -> new Vector4Uniform((Vector4) value);
-            case VECTOR2_DOUBLE -> new Vector2DoubleUniform((Vector2Double) value);
-            case VECTOR3_DOUBLE -> new Vector3DoubleUniform((Vector3Double) value);
-            case VECTOR4_DOUBLE -> new Vector4DoubleUniform((Vector4Double) value);
-            case VECTOR2_INT -> new Vector2IntUniform((Vector2Int) value);
-            case VECTOR3_INT -> new Vector3IntUniform((Vector3Int) value);
-            case VECTOR4_INT -> new Vector4IntUniform((Vector4Int) value);
-            case VECTOR2_BOOLEAN -> new Vector2BooleanUniform((Vector2Boolean) value);
-            case VECTOR3_BOOLEAN -> new Vector3BooleanUniform((Vector3Boolean) value);
-            case VECTOR4_BOOLEAN -> new Vector4BooleanUniform((Vector4Boolean) value);
+            case VECTOR2 -> new Vector2Uniform();
+            case VECTOR3 -> new Vector3Uniform();
+            case VECTOR4 -> new Vector4Uniform();
+            case VECTOR2_DOUBLE -> new Vector2DoubleUniform();
+            case VECTOR3_DOUBLE -> new Vector3DoubleUniform();
+            case VECTOR4_DOUBLE -> new Vector4DoubleUniform();
+            case VECTOR2_INT -> new Vector2IntUniform();
+            case VECTOR3_INT -> new Vector3IntUniform();
+            case VECTOR4_INT -> new Vector4IntUniform();
+            case VECTOR2_BOOLEAN -> new Vector2BooleanUniform();
+            case VECTOR3_BOOLEAN -> new Vector3BooleanUniform();
+            case VECTOR4_BOOLEAN -> new Vector4BooleanUniform();
 
             // Matrices
-            case MATRIX2 -> new Matrix2Uniform((Matrix2) value);
-            case MATRIX3 -> new Matrix3Uniform((Matrix3) value);
-            case MATRIX4 -> new Matrix4Uniform((Matrix4) value);
-            case MATRIX2_DOUBLE -> new Matrix2DoubleUniform((Matrix2Double) value);
-            case MATRIX3_DOUBLE -> new Matrix3DoubleUniform((Matrix3Double) value);
-            case MATRIX4_DOUBLE -> new Matrix4DoubleUniform((Matrix4Double) value);
+            case MATRIX2 -> new Matrix2Uniform();
+            case MATRIX3 -> new Matrix3Uniform();
+            case MATRIX4 -> new Matrix4Uniform();
+            case MATRIX2_DOUBLE -> new Matrix2DoubleUniform();
+            case MATRIX3_DOUBLE -> new Matrix3DoubleUniform();
+            case MATRIX4_DOUBLE -> new Matrix4DoubleUniform();
 
             // Samplers
-            case SAMPLE_IMAGE_2D -> getSampleImage2DUniform((String) value);
-            case SAMPLE_IMAGE_2D_ARRAY -> getSampleImage2DArrayUniform((String) value);
+            case SAMPLE_IMAGE_2D -> new SampleImage2DUniform();
+            case SAMPLE_IMAGE_2D_ARRAY -> new SampleImage2DArrayUniform();
 
-            default -> throw new IllegalStateException("Unsupported uniform type: " + uniformData.uniformType);
+            default -> throw new GraphicException.ShaderProgramException(
+                    "Unsupported uniform type: " + uniformData.uniformType);
         };
-    }
-
-    private SampleImage2DUniform getSampleImage2DUniform(String value) {
-
-        int textureID = textureManager.getTileIDFromTextureName(value);
-        int textureArrayID = textureManager.getTextureArrayIDFromTileID(textureID);
-
-        return new SampleImage2DUniform(textureManager.getGPUHandleFromTextureArrayID(textureArrayID));
-    }
-
-    private SampleImage2DUniform getSampleImage2DArrayUniform(String value) {
-
-        int textureID = textureManager.getTileIDFromTextureName(value);
-        int textureArrayID = textureManager.getTextureArrayIDFromTileID(textureID);
-
-        return new SampleImage2DUniform(textureManager.getGPUHandleFromTextureArrayID(textureArrayID));
     }
 
     // Utility \\
@@ -279,7 +260,8 @@ class InternalLoadManager extends ManagerFrame {
                 return inst;
         }
 
-        return null; // TODO: custom exception
+        throw new GraphicException.ShaderProgramException(
+                "Shader data for key: " + key + ", Could not be found");
     }
 
 }

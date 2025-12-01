@@ -10,10 +10,6 @@ public class BooleanUniform extends UniformAttribute<Boolean> {
         super(false);
     }
 
-    public BooleanUniform(Boolean value) {
-        super(value);
-    }
-
     // Utility \\
 
     @Override

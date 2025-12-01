@@ -3,8 +3,8 @@ package com.AdventureRPG.Core.RenderPipeline.RenderManager;
 import java.util.List;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialData;
-import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
+import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialData;
+import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialSystem;
 import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.MeshData;
 import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.MeshPacket;
 import com.AdventureRPG.Core.RenderPipeline.Util.GPUCall;

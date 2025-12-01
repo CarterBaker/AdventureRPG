@@ -10,10 +10,6 @@ public class FloatUniform extends UniformAttribute<Float> {
         super(0f);
     }
 
-    public FloatUniform(Float value) {
-        super(value);
-    }
-
     // Utility \\
 
     @Override

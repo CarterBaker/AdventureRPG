@@ -11,10 +11,6 @@ public class Vector4BooleanUniform extends UniformAttribute<Vector4Boolean> {
         super(new Vector4Boolean());
     }
 
-    public Vector4BooleanUniform(Vector4Boolean value) {
-        super(value);
-    }
-
     // Utility \\
 
     @Override

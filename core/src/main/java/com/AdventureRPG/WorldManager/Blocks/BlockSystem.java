@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldManager.Blocks;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
+import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialSystem;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
 import com.google.gson.Gson;
 

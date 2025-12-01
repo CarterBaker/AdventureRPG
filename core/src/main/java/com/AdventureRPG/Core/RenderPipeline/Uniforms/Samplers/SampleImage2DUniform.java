@@ -10,10 +10,6 @@ public class SampleImage2DUniform extends UniformAttribute<Integer> {
         super(0);
     }
 
-    public SampleImage2DUniform(int value) {
-        super(value);
-    }
-
     // Utility \\
 
     @Override

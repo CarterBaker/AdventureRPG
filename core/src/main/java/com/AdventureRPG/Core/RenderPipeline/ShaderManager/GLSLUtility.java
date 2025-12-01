@@ -4,8 +4,9 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.IntBuffer;
 
-import com.AdventureRPG.Core.Util.Methematics.Vectors.*;
-import com.AdventureRPG.Core.Util.Methematics.Matrices.*;
+import com.AdventureRPG.Core.Util.FileUtility;
+import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.utils.BufferUtils;
@@ -31,8 +32,8 @@ class GLSLUtility {
             return Files.readString(file.toPath());
         }
 
-        catch (Exception e) { // TODO: Add my own error
-            throw new IllegalStateException("Failed to read file: " + file, e);
+        catch (Exception e) {
+            throw new FileException.FileReadException("Failed to read file: " + file, e);
         }
     }
 
@@ -80,6 +81,76 @@ class GLSLUtility {
         return lines;
     }
 
+    static ObjectArrayList<String> extractBracketBlock(File file, String startingLine) {
+
+        ObjectArrayList<String> lines = new ObjectArrayList<>(FileUtility.readAllLines(file));
+        ObjectArrayList<String> result = new ObjectArrayList<>();
+
+        int startIndex = -1;
+
+        // 1. Locate header line
+        for (int i = 0; i < lines.size(); i++)
+            if (lines.get(i).trim().equals(startingLine.trim())) {
+                startIndex = i;
+                break;
+            }
+
+        if (startIndex == -1)
+            return result;
+
+        // 2. Find first '{' after starting line
+        int openBraceLine = -1;
+
+        for (int i = startIndex; i < lines.size(); i++) {
+            String ln = lines.get(i);
+            if (ln.indexOf('{') != -1) {
+                openBraceLine = i;
+                break;
+            }
+        }
+
+        if (openBraceLine == -1)
+            return result;
+
+        // 3. Parse block contents
+        int depth = 0;
+        boolean inside = false;
+
+        for (int i = openBraceLine; i < lines.size(); i++) {
+
+            String raw = lines.get(i);
+            String clean = stripSingleLineComments(raw);
+
+            int len = clean.length();
+            for (int c = 0; c < len; c++) {
+                char ch = clean.charAt(c);
+
+                if (ch == '{') {
+                    depth++;
+                    if (!inside) {
+                        inside = true;
+                        continue;
+                    }
+                } else if (ch == '}') {
+                    depth--;
+                    if (depth == 0)
+                        return result;
+                }
+            }
+
+            // Only include internal block lines
+            if (inside && depth >= 1 && i > openBraceLine)
+                result.add(raw);
+        }
+
+        return result;
+    }
+
+    private static String stripSingleLineComments(String line) {
+        int idx = line.indexOf("//");
+        return idx >= 0 ? line.substring(0, idx) : line;
+    }
+
     // Shader Program Construction
     static int createShaderProgram(ShaderDefinitionInstance shaderDef) {
 
@@ -90,8 +161,9 @@ class GLSLUtility {
         int fragShader = compileShader(frag);
 
         int program = Gdx.gl.glCreateProgram();
-        if (program == 0) // TODO: Add my own error
-            throw new IllegalStateException("glCreateProgram returned 0");
+        if (program == 0)
+            throw new GraphicException.ShaderProgramException(
+                    "Failed to return a valid gpu handle for shader: " + shaderDef.shaderName);
 
         Gdx.gl.glAttachShader(program, vertShader);
         Gdx.gl.glAttachShader(program, fragShader);
@@ -112,7 +184,7 @@ class GLSLUtility {
         if (statusBuf.get(0) == 0) {
             String log = Gdx.gl.glGetProgramInfoLog(program);
             Gdx.gl.glDeleteProgram(program);
-            throw new IllegalStateException("Failed to link program: " + log);
+            throw new GraphicException.ShaderProgramException("Failed to link shader program: " + log);
         }
 
         // Cleanup
@@ -133,7 +205,8 @@ class GLSLUtility {
 
         int shaderID = Gdx.gl.glCreateShader(type);
         if (shaderID == 0)
-            throw new IllegalStateException("glCreateShader returned 0 for " + shader.shaderName());
+            throw new GraphicException.ShaderProgramException(
+                    "Shader: " + shader.shaderName() + ", Contains an invalid shader ID");
 
         String source = readShaderSource(shader);
         Gdx.gl.glShaderSource(shaderID, source);
@@ -149,7 +222,8 @@ class GLSLUtility {
             Gdx.gl.glDeleteShader(shaderID);
 
             // TODO: Add my own error
-            throw new IllegalStateException("Failed to compile shader " + shader.shaderName() + ": " + log);
+            throw new GraphicException.ShaderProgramException(
+                    "Failed to compile shader " + shader.shaderName() + ": " + log);
         }
 
         return shaderID;
@@ -164,7 +238,8 @@ class GLSLUtility {
         }
 
         catch (Exception e) { // TODO: Add my own error
-            throw new IllegalStateException("Failed to read shader source: " + shader.shaderFile(), e);
+            throw new GraphicException.ShaderProgramException("Failed to read shader source: " + shader.shaderFile(),
+                    e);
         }
     }
 
@@ -173,204 +248,8 @@ class GLSLUtility {
         int handle = Gdx.gl.glGetUniformLocation(programHandle, uniformName);
 
         if (handle == -1) // TODO: Make my own error
-            throw new IllegalStateException("Uniform not found in shader program: " + uniformName);
+            throw new GraphicException.ShaderProgramException("Uniform not found in shader program: " + uniformName);
 
         return handle;
     }
-
-    // Utilities for parsing uniform values
-    private static String extractValue(String line) {
-        int equalsIndex = line.indexOf('=');
-        if (equalsIndex == -1)
-            throw new IllegalArgumentException("Uniform line does not contain '=': " + line);
-        String value = line.substring(equalsIndex + 1).trim();
-        // Remove trailing semicolon
-        if (value.endsWith(";"))
-            value = value.substring(0, value.length() - 1).trim();
-        return value;
-    }
-
-    private static String[] splitComponents(String value) {
-        value = value.replaceAll("[()]", ""); // remove parentheses
-        return value.split("\\s*,\\s*"); // split by commas
-    }
-
-    // --- Scalar Parsers ---
-    static Float parseFloatUniform(String input) {
-        String val = extractValue(input);
-        return Float.parseFloat(val);
-    }
-
-    static Double parseDoubleUniform(String input) {
-        String val = extractValue(input);
-        return Double.parseDouble(val);
-    }
-
-    static Integer parseIntegerUniform(String input) {
-        String val = extractValue(input);
-        return Integer.parseInt(val);
-    }
-
-    static Boolean parseBooleanUniform(String input) {
-        String val = extractValue(input);
-        return val.equals("true") || val.equals("1");
-    }
-
-    // --- Vector Parsers ---
-    static Vector2 parseVector2Uniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 2)
-            throw new IllegalArgumentException("Expected 2 components: " + input);
-        return new Vector2(Float.parseFloat(comps[0]), Float.parseFloat(comps[1]));
-    }
-
-    static Vector3 parseVector3Uniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 3)
-            throw new IllegalArgumentException("Expected 3 components: " + input);
-        return new Vector3(Float.parseFloat(comps[0]), Float.parseFloat(comps[1]), Float.parseFloat(comps[2]));
-    }
-
-    static Vector4 parseVector4Uniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 4)
-            throw new IllegalArgumentException("Expected 4 components: " + input);
-        return new Vector4(Float.parseFloat(comps[0]), Float.parseFloat(comps[1]), Float.parseFloat(comps[2]),
-                Float.parseFloat(comps[3]));
-    }
-
-    // Double precision vectors
-    static Vector2Double parseVector2DoubleUniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 2)
-            throw new IllegalArgumentException("Expected 2 components: " + input);
-        return new Vector2Double(Double.parseDouble(comps[0]), Double.parseDouble(comps[1]));
-    }
-
-    static Vector3Double parseVector3DoubleUniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 3)
-            throw new IllegalArgumentException("Expected 3 components: " + input);
-        return new Vector3Double(Double.parseDouble(comps[0]), Double.parseDouble(comps[1]),
-                Double.parseDouble(comps[2]));
-    }
-
-    static Vector4Double parseVector4DoubleUniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 4)
-            throw new IllegalArgumentException("Expected 4 components: " + input);
-        return new Vector4Double(Double.parseDouble(comps[0]), Double.parseDouble(comps[1]),
-                Double.parseDouble(comps[2]), Double.parseDouble(comps[3]));
-    }
-
-    // Integer vectors
-    static Vector2Int parseVector2IntUniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 2)
-            throw new IllegalArgumentException("Expected 2 components: " + input);
-        return new Vector2Int(Integer.parseInt(comps[0]), Integer.parseInt(comps[1]));
-    }
-
-    static Vector3Int parseVector3IntUniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 3)
-            throw new IllegalArgumentException("Expected 3 components: " + input);
-        return new Vector3Int(Integer.parseInt(comps[0]), Integer.parseInt(comps[1]), Integer.parseInt(comps[2]));
-    }
-
-    static Vector4Int parseVector4IntUniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 4)
-            throw new IllegalArgumentException("Expected 4 components: " + input);
-        return new Vector4Int(Integer.parseInt(comps[0]), Integer.parseInt(comps[1]), Integer.parseInt(comps[2]),
-                Integer.parseInt(comps[3]));
-    }
-
-    // Boolean vectors
-    static Vector2Boolean parseVector2BooleanUniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 2)
-            throw new IllegalArgumentException("Expected 2 components: " + input);
-        return new Vector2Boolean(Boolean.parseBoolean(comps[0]), Boolean.parseBoolean(comps[1]));
-    }
-
-    static Vector3Boolean parseVector3BooleanUniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 3)
-            throw new IllegalArgumentException("Expected 3 components: " + input);
-        return new Vector3Boolean(Boolean.parseBoolean(comps[0]), Boolean.parseBoolean(comps[1]),
-                Boolean.parseBoolean(comps[2]));
-    }
-
-    static Vector4Boolean parseVector4BooleanUniform(String input) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != 4)
-            throw new IllegalArgumentException("Expected 4 components: " + input);
-        return new Vector4Boolean(Boolean.parseBoolean(comps[0]), Boolean.parseBoolean(comps[1]),
-                Boolean.parseBoolean(comps[2]), Boolean.parseBoolean(comps[3]));
-    }
-
-    // --- Matrix Parsers ---
-    private static float[] parseFloatArray(String input, int expectedLength) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != expectedLength)
-            throw new IllegalArgumentException("Expected " + expectedLength + " components: " + input);
-        float[] arr = new float[expectedLength];
-        for (int i = 0; i < expectedLength; i++)
-            arr[i] = Float.parseFloat(comps[i]);
-        return arr;
-    }
-
-    static Matrix2 parseMatrix2Uniform(String input) {
-        float[] arr = parseFloatArray(input, 4);
-        return new Matrix2(arr);
-    }
-
-    static Matrix3 parseMatrix3Uniform(String input) {
-        float[] arr = parseFloatArray(input, 9);
-        return new Matrix3(arr);
-    }
-
-    static Matrix4 parseMatrix4Uniform(String input) {
-        float[] arr = parseFloatArray(input, 16);
-        return new Matrix4(arr);
-    }
-
-    // Double matrices
-    private static double[] parseDoubleArray(String input, int expectedLength) {
-        String[] comps = splitComponents(extractValue(input));
-        if (comps.length != expectedLength)
-            throw new IllegalArgumentException("Expected " + expectedLength + " components: " + input);
-        double[] arr = new double[expectedLength];
-        for (int i = 0; i < expectedLength; i++)
-            arr[i] = Double.parseDouble(comps[i]);
-        return arr;
-    }
-
-    static Matrix2Double parseMatrix2DoubleUniform(String input) {
-        double[] arr = parseDoubleArray(input, 4);
-        return new Matrix2Double(arr);
-    }
-
-    static Matrix3Double parseMatrix3DoubleUniform(String input) {
-        double[] arr = parseDoubleArray(input, 9);
-        return new Matrix3Double(arr);
-    }
-
-    static Matrix4Double parseMatrix4DoubleUniform(String input) {
-        double[] arr = parseDoubleArray(input, 16);
-        return new Matrix4Double(arr);
-    }
-
-    // --- Sampler / Image Parsers ---
-    static String parseSampleImage2DUniform(String input) {
-        String val = extractValue(input);
-        return val.replaceAll("[\"']", "");
-    }
-
-    static String parseSampleImage2DArrayUniform(String input) {
-        String val = extractValue(input);
-        return val.replaceAll("[\"']", "");
-    }
-
 }

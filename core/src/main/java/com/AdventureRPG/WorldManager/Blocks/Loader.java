@@ -2,7 +2,7 @@ package com.AdventureRPG.WorldManager.Blocks;
 
 import java.util.List;
 
-import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
+import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialSystem;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;

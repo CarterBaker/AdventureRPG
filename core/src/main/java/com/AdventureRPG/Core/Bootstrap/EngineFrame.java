@@ -6,7 +6,6 @@ import java.util.List;
 
 import com.AdventureRPG.Core.Settings.Settings;
 import com.AdventureRPG.Core.Util.Exceptions.CoreException;
-import com.AdventureRPG.Core.Util.Exceptions.CoreException.DuplicateSystemFrameDetected;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
 
@@ -53,7 +52,8 @@ public class EngineFrame extends ManagerFrame {
     public final void requestInternalState(InternalState target) {
 
         if (!target.accessible)
-            throw new CoreException.GameStateException(target);
+            throw new CoreException.GameStateException(
+                    "Cannot switch to the target state: " + target.toString() + ", From the requested location");
 
         this.setInternalState(target);
     }
@@ -65,13 +65,15 @@ public class EngineFrame extends ManagerFrame {
 
         if (this.getInternalProcess() != InternalProcess.BOOT_KERNEL &&
                 this.getInternalProcess() != InternalProcess.CREATE)
-            throw new CoreException.OutOfOrderException(this.getInternalProcess());
+            throw new CoreException.OutOfOrderException(
+                    "Game engine error, a process was attempted to be called out of order");
 
         if (this.getInternalProcess() == InternalProcess.CREATE)
             return super.internalRegister(subSystem);
 
         if (this.kernelTree.contains(subSystem))
-            throw new DuplicateSystemFrameDetected(subSystem);
+            throw new CoreException.DuplicateSystemFrameDetected("Subsystem: " + subSystem.getClass().getSimpleName()
+                    + ", Already exists within the engine frame. Only one instance of any given system can exist at a time");
 
         this.kernelTree.add(subSystem);
 

@@ -4,7 +4,7 @@ import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialData;
+import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialData;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager.UVRect;
 import com.AdventureRPG.Core.Util.Methematics.Extras.Direction2Int;
 import com.AdventureRPG.Core.Util.Methematics.Extras.Direction3Int;

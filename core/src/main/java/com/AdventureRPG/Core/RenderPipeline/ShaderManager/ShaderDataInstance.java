@@ -14,6 +14,7 @@ public class ShaderDataInstance extends InstanceFrame {
     private final File shaderFile;
 
     private int version;
+    private final ObjectArrayList<LayoutDataInstance> layoutBlocks;
     private final ObjectArrayList<ShaderDataInstance> includes;
     private final ObjectArrayList<UniformDataInstance> uniforms;
 
@@ -28,6 +29,7 @@ public class ShaderDataInstance extends InstanceFrame {
         this.shaderFile = shaderFile;
 
         this.version = 0;
+        this.layoutBlocks = new ObjectArrayList<>();
         this.uniforms = new ObjectArrayList<>();
         this.includes = new ObjectArrayList<>();
     }
@@ -55,6 +57,15 @@ public class ShaderDataInstance extends InstanceFrame {
 
     void setVersion(int version) {
         this.version = version;
+    }
+
+    // Layouts
+    public void addLayoutBlock(LayoutDataInstance block) {
+        layoutBlocks.add(block);
+    }
+
+    public ObjectArrayList<LayoutDataInstance> getLayoutBlocks() {
+        return layoutBlocks;
     }
 
     // Includes

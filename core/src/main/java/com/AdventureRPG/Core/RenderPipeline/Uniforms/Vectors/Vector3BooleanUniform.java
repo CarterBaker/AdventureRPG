@@ -11,10 +11,6 @@ public class Vector3BooleanUniform extends UniformAttribute<Vector3Boolean> {
         super(new Vector3Boolean());
     }
 
-    public Vector3BooleanUniform(Vector3Boolean value) {
-        super(value);
-    }
-
     // Utility \\
 
     @Override

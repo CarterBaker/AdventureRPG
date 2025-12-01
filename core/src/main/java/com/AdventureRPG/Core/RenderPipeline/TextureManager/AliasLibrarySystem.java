@@ -5,8 +5,6 @@ import java.io.FileReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Set;
 import java.awt.Color;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
@@ -16,6 +14,9 @@ import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+
 import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 
 public class AliasLibrarySystem extends SystemFrame {
@@ -25,7 +26,7 @@ public class AliasLibrarySystem extends SystemFrame {
 
     // Internal
     private AliasInstance[] aliases;
-    private HashMap<String, Integer> aliasLookup;
+    private Object2IntOpenHashMap<String> aliasLookup;
     private int aliasCount;
     private File root;
 
@@ -38,7 +39,7 @@ public class AliasLibrarySystem extends SystemFrame {
         this.gson = gameEngine.gson;
 
         // Internal
-        this.aliasLookup = new HashMap<>();
+        this.aliasLookup = new Object2IntOpenHashMap<>();
         this.aliases = new AliasInstance[16];
         this.aliasCount = 0;
         this.root = new File(EngineSetting.BLOCK_TEXTURE_ALIAS_PATH);
@@ -48,8 +49,7 @@ public class AliasLibrarySystem extends SystemFrame {
 
     void loadAliases() {
 
-        if (!root.exists() || !root.isDirectory()) // TODO: move to static helper class.
-            throw new FileException.FileNotFoundException(root);
+        FileUtility.verifyDirectory(root, "[AliasLibraarySystem] The root folder could not be verified");
 
         Path directory = root.toPath();
 
@@ -69,8 +69,9 @@ public class AliasLibrarySystem extends SystemFrame {
 
         }
 
-        catch (Exception e) { // TODO: Not the best error
-            throw new FileException.FileNotFoundException(root);
+        catch (Exception e) {
+            throw new FileException.FileNotFoundException(
+                    "One or more json alias definitions could not be loaded", e);
         }
     }
 
@@ -112,8 +113,9 @@ public class AliasLibrarySystem extends SystemFrame {
             aliasLookup.put(aliasType.toLowerCase(), aliasId);
         }
 
-        catch (Exception e) { // TODO: Make my own error
-            throw new FileException.FileNotFoundException(file);
+        catch (Exception e) {
+            throw new FileException.FileNotFoundException(
+                    "One or more json alias definitions could not be loaded", e);
         }
     }
 

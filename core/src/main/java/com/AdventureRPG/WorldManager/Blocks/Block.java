@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldManager.Blocks;
 
-import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialData;
-import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
+import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialData;
+import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialSystem;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager.UVRect;
 import com.AdventureRPG.Core.Util.Methematics.Extras.Direction3Int;

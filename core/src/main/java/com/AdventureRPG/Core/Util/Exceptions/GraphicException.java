@@ -1,72 +1,74 @@
 package com.AdventureRPG.Core.Util.Exceptions;
 
-public class GraphicException {
+public final class GraphicException {
 
-    private GraphicException() {
-    } // prevents instantiation
+    // OpenGL \\
 
-    // Shader file missing (JSON, .vert, .frag, include)
-    public static class ShaderFileNotFoundException extends RuntimeException {
-        public ShaderFileNotFoundException(String fileName) {
-            super("Graphic Exception: Shader file not found: " + fileName);
+    public static class OpenGLException extends ExceptionEngine {
+
+        public OpenGLException(String message) {
+            super(message);
+        }
+
+        public OpenGLException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
-    // Shader JSON missing required fields (vertex/fragment)
-    public static class ShaderDefinitionException extends RuntimeException {
-        public ShaderDefinitionException(String jsonName) {
-            super("Graphic Exception: Shader definition invalid in: " + jsonName +
-                    " (missing vertex or fragment field)");
+    // Texture Manager \\
+
+    public static class ImageReadException extends ExceptionEngine {
+
+        public ImageReadException(String message) {
+            super(message);
+        }
+
+        public ImageReadException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
-    // GLSL compile or link failure
-    public static class ShaderCompilationException extends RuntimeException {
-        public ShaderCompilationException(String shaderName, String log) {
-            super("Graphic Exception: Shader compile error in: " + shaderName +
-                    "\nLog:\n" + log);
+    public static class ImageSizeException extends ExceptionEngine {
+
+        public ImageSizeException(String message) {
+            super(message);
+        }
+
+        public ImageSizeException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
-    // Pass JSON malformed (uniform missing type/value, invalid field structure)
-    public static class PassDefinitionException extends RuntimeException {
-        public PassDefinitionException(String jsonName) {
-            super("Graphic Exception: Pass definition invalid in: " + jsonName +
-                    " (missing or invalid fields)");
+    public static class TextureAliasNotFoundException extends ExceptionEngine {
+
+        public TextureAliasNotFoundException(String message) {
+            super(message);
+        }
+
+        public TextureAliasNotFoundException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
-    // JSON file parsed but missing required "texture" entry
-    public static class MissingTextureFieldException extends RuntimeException {
-        public MissingTextureFieldException(String jsonName) {
-            super("Graphic Exception: Missing required 'texture' field in material JSON: " + jsonName);
+    public static class TextureAliasException extends ExceptionEngine {
+
+        public TextureAliasException(String message) {
+            super(message);
+        }
+
+        public TextureAliasException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
-    // JSON references a folder/texture array that does not exist or failed to load
-    public static class TextureArrayNotFoundException extends RuntimeException {
-        public TextureArrayNotFoundException(String folderName, String jsonName) {
-            super("Graphic Exception: TextureArray not found for folder '" + folderName +
-                    "' referenced in material JSON: " + jsonName);
-        }
-    }
+    public static class ShaderProgramException extends ExceptionEngine {
 
-    // JSON structure invalid
-    public static class MaterialDefinitionException extends RuntimeException {
-        public MaterialDefinitionException(String jsonName, Throwable cause) {
-            super("Graphic Exception: Invalid material definition in: " + jsonName, cause);
+        public ShaderProgramException(String message) {
+            super(message);
         }
 
-        public MaterialDefinitionException(String jsonName) {
-            super("Graphic Exception: Invalid material definition in: " + jsonName);
-        }
-    }
-
-    // Shader reference in material JSON not resolvable via ShaderManager
-    public static class ShaderNotFoundForMaterialException extends RuntimeException {
-        public ShaderNotFoundForMaterialException(String shaderName, String jsonName) {
-            super("Graphic Exception: Shader '" + shaderName +
-                    "' not found for material JSON: " + jsonName);
+        public ShaderProgramException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 }

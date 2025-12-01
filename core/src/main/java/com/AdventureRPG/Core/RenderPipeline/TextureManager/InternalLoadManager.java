@@ -6,12 +6,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
@@ -50,8 +49,7 @@ class InternalLoadManager extends ManagerFrame {
 
         aliasLibrarySystem.loadAliases();
 
-        if (!root.exists() || !root.isDirectory()) // TODO: move to static helper class.
-            throw new FileException.FileNotFoundException(root);
+        FileUtility.verifyDirectory(root, "[TextureManager] The root folder could not be verified");
 
         Path rootPath = root.toPath();
 
@@ -62,8 +60,10 @@ class InternalLoadManager extends ManagerFrame {
                     .forEach(folder -> createArrayFromFolder(folder.toFile()));
         }
 
-        catch (IOException e) { // TODO: Make my own error
-            throw new RuntimeException(e);
+        catch (IOException e) {
+            throw new GraphicException.ImageReadException(
+                    "There was an issue loading one or more files from the source directory",
+                    e);
         }
 
         return arrayMap;

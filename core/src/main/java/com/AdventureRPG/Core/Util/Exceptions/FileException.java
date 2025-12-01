@@ -1,23 +1,37 @@
 package com.AdventureRPG.Core.Util.Exceptions;
 
-import java.io.File;
-
 public final class FileException {
 
-    private FileException() {
-    } // prevents instantiation
+    public static class FileNotFoundException extends ExceptionEngine {
 
-    // Generic missing file exception
-    public static class FileNotFoundException extends RuntimeException {
-        public FileNotFoundException(File file) {
-            super("File Exception: Could not find the file at: " + file.getAbsolutePath());
+        public FileNotFoundException(String message) {
+            super(message);
+        }
+
+        public FileNotFoundException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
-    // File failed to load exception
-    public static class FileLoadException extends RuntimeException {
-        public FileLoadException(File file, Throwable cause) {
-            super("File Exception: Failed to load file at: " + file.getAbsolutePath(), cause);
+    public static class FileReadException extends ExceptionEngine {
+
+        public FileReadException(String message) {
+            super(message);
+        }
+
+        public FileReadException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    public static class InvalidDirectoryException extends ExceptionEngine {
+
+        public InvalidDirectoryException(String message) {
+            super(message);
+        }
+
+        public InvalidDirectoryException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 }

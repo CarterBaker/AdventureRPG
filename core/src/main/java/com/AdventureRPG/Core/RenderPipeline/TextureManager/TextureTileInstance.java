@@ -3,7 +3,7 @@ package com.AdventureRPG.Core.RenderPipeline.TextureManager;
 import java.awt.image.BufferedImage;
 
 import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 
 class TextureTileInstance extends InstanceFrame {
 
@@ -39,7 +39,8 @@ class TextureTileInstance extends InstanceFrame {
     void setImage(BufferedImage image, int layer) {
 
         if (layer < 0 || layer >= imageLayers.length || imageLayers[layer] != null)
-            throw new FileException.FileNotFoundException(null); // TODO: Add new exception
+            throw new GraphicException.TextureAliasException(
+                    "There was a problem trying to set an image to later " + layer);
 
         imageLayers[layer] = image;
     }

@@ -1,17 +1,15 @@
 package com.AdventureRPG.Core.RenderPipeline.TextureManager;
 
-import java.util.Map;
-
 import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.Util.GLSLUtility;
 import com.AdventureRPG.Core.RenderPipeline.Util.UVCoordinate;
 
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-// TODO: Make sure we are using appropriate fast util collections
 public class TextureManager extends ManagerFrame {
 
     // Internal
@@ -21,6 +19,7 @@ public class TextureManager extends ManagerFrame {
     private Object2IntOpenHashMap<String> textureName2TileID;
     private Int2IntArrayMap tileID2textureArrayID;
     private Int2ObjectOpenHashMap<UVCoordinate> tileID2textureArrayUV;
+    private Object2IntOpenHashMap<String> textureArrayName2GPUHandle;
     private Int2IntArrayMap textureArrayID2GPUHandle;
 
     // Base \\
@@ -35,6 +34,7 @@ public class TextureManager extends ManagerFrame {
         this.textureName2TileID = new Object2IntOpenHashMap<>();
         this.tileID2textureArrayID = new Int2IntArrayMap();
         this.tileID2textureArrayUV = new Int2ObjectOpenHashMap<>();
+        this.textureArrayName2GPUHandle = new Object2IntOpenHashMap<>();
         this.textureArrayID2GPUHandle = new Int2IntArrayMap();
     }
 
@@ -56,6 +56,7 @@ public class TextureManager extends ManagerFrame {
 
     private void pushTexturesToGPU(Int2ObjectOpenHashMap<TextureArrayInstance> textureArrays) {
 
+        // Alias files are loaded from json and define albedo, normal ect.
         AliasInstance[] aliases = internalLoadManager.getAllAliases();
 
         for (int i = 0; i < textureArrays.size(); i++)
@@ -68,9 +69,10 @@ public class TextureManager extends ManagerFrame {
         int gpuHandle = GLSLUtility.pushTextureArray(textureArray.getRawImageArray());
 
         // Next step retrieve the tile data
-        Map<String, TextureTileInstance> tileCoordinateMap = textureArray.getTileCoordinateMap();
+        Object2ObjectOpenHashMap<String, TextureTileInstance> tileCoordinateMap = textureArray.getTileCoordinateMap();
 
-        for (Map.Entry<String, TextureTileInstance> tile : tileCoordinateMap.entrySet()) {
+        // For each tile int he texture array map the appropriate data
+        for (Object2ObjectMap.Entry<String, TextureTileInstance> tile : tileCoordinateMap.object2ObjectEntrySet()) {
 
             UVCoordinate uvCoordinate = computeUV(
                     tile.getValue().getAtlasX(),
@@ -82,9 +84,13 @@ public class TextureManager extends ManagerFrame {
             tileID2textureArrayUV.put(tile.getValue().id, uvCoordinate);
         }
 
+        // For each array map the appropriate data
+        textureArrayName2GPUHandle.put(textureArray.name, gpuHandle);
         textureArrayID2GPUHandle.put(textureArray.id, gpuHandle);
     }
 
+    // Use global image size settigns to calculate UVs for any given texture using
+    // known x and y coordinate values stored internally per tile
     private UVCoordinate computeUV(int atlasX, int atlasY, int atlasSize) {
 
         float u = (atlasX * EngineSetting.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
@@ -105,6 +111,10 @@ public class TextureManager extends ManagerFrame {
 
     public UVCoordinate getTextureArrayUVfromTileID(int tileID) {
         return tileID2textureArrayUV.get(tileID);
+    }
+
+    public int getGPUHandlefromTextureArrayName(String textureArrayName) {
+        return textureArrayName2GPUHandle.getInt(textureArrayName);
     }
 
     public int getGPUHandleFromTextureArrayID(int textureArrayID) {

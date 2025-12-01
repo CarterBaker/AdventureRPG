@@ -11,10 +11,6 @@ public class Vector4Uniform extends UniformAttribute<Vector4> {
         super(new Vector4());
     }
 
-    public Vector4Uniform(Vector4 value) {
-        super(value);
-    }
-
     // Utility \\
 
     @Override

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.AdventureRPG.Core.Util.Exceptions.CoreException;
-import com.AdventureRPG.Core.Util.Exceptions.CoreException.DuplicateSystemFrameDetected;
 
 public abstract class ManagerFrame extends SystemFrame {
 
@@ -24,13 +23,16 @@ public abstract class ManagerFrame extends SystemFrame {
     SystemFrame internalRegister(SystemFrame subSystem) {
 
         if (this.getInternalProcess() != InternalProcess.CREATE)
-            throw new CoreException.OutOfOrderException(this.getInternalProcess());
+            throw new CoreException.OutOfOrderException(
+                    "Register method was called from a process other than create. Current process: "
+                            + this.getInternalProcess());
 
         if (subSystem instanceof EngineFrame) // TODO: This will need a specialized error
-            throw new CoreException.OutOfOrderException(this.getInternalProcess());
+            throw new CoreException.DuplicateEngineFrameDetected("Only one engine frame is allowed at any given time");
 
         if (this.systemTree.contains(subSystem))
-            throw new DuplicateSystemFrameDetected(subSystem);
+            throw new CoreException.DuplicateSystemFrameDetected("Subsystem: " + subSystem.getClass().getSimpleName()
+                    + ", Already exists within the engine frame. Only one instance of any given system can exist at a time");
 
         this.systemTree.add(subSystem);
 
@@ -50,10 +52,13 @@ public abstract class ManagerFrame extends SystemFrame {
     void internalRelease(SystemFrame subSystem) {
 
         if (this.getInternalProcess() != InternalProcess.FREE_MEMORY)
-            throw new CoreException.OutOfOrderException(this.getInternalProcess());
+            throw new CoreException.OutOfOrderException(
+                    "Release method was called from a process other than free memory. Current process: "
+                            + this.getInternalProcess());
 
-        if (subSystem instanceof EngineFrame) // TODO: This will need a specialized error
-            throw new CoreException.OutOfOrderException(this.getInternalProcess());
+        if (subSystem instanceof EngineFrame)
+            throw new CoreException.FatalErrorDetected(
+                    "Release call was attempted on the game engine itself. This is not allowed under any circumstance");
 
         if (this.garbageCollection.contains(subSystem))
             return;
@@ -69,7 +74,9 @@ public abstract class ManagerFrame extends SystemFrame {
     public final <T> T get(Class<T> type) {
 
         if (this.gameEngine.getInternalProcess() != InternalProcess.INIT)
-            throw new CoreException.OutOfOrderException(this.getInternalProcess());
+            throw new CoreException.OutOfOrderException(
+                    "Get method was called from a process other than initialization. Current process: "
+                            + this.getInternalProcess());
 
         for (SystemFrame frame : this.systemTree) {
 

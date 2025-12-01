@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldManager.Blocks;
 
-import com.AdventureRPG.Core.RenderPipeline.MaterialSystem.MaterialSystem;
+import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialSystem;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
 import com.AdventureRPG.WorldManager.WorldManager;
 

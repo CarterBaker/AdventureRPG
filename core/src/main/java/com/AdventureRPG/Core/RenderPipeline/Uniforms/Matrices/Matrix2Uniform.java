@@ -11,10 +11,6 @@ public class Matrix2Uniform extends UniformAttribute<Matrix2> {
         super(new Matrix2());
     }
 
-    public Matrix2Uniform(Matrix2 value) {
-        super(value);
-    }
-
     // Utility \\
 
     @Override

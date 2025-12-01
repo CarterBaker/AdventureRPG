@@ -1,33 +1,36 @@
 package com.AdventureRPG.Core.RenderPipeline.TextureManager;
 
 import java.awt.image.BufferedImage;
-import java.util.HashMap;
-import java.util.Map;
 
 import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
+
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class TextureArrayInstance extends InstanceFrame {
 
     // Internal
     final int id;
+    final String name;
     final int atlasSize;
     private final TextureAtlasInstance[] textureArray;
 
     // Tiles
-    private final Map<String, TextureTileInstance> tileCoordinateMap;
+    private final Object2ObjectOpenHashMap<String, TextureTileInstance> tileCoordinateMap;
 
     TextureArrayInstance(
             int id,
+            String name,
             int atlasSize,
             TextureAtlasInstance[] textureArray) {
 
         // Internal
         this.id = id;
+        this.name = name;
         this.atlasSize = atlasSize;
         this.textureArray = textureArray;
 
         // Tiles
-        this.tileCoordinateMap = new HashMap<>();
+        this.tileCoordinateMap = new Object2ObjectOpenHashMap<>();
     }
 
     // Tiles \\
@@ -42,7 +45,7 @@ class TextureArrayInstance extends InstanceFrame {
         return tileCoordinateMap.get(key);
     }
 
-    Map<String, TextureTileInstance> getTileCoordinateMap() {
+    Object2ObjectOpenHashMap<String, TextureTileInstance> getTileCoordinateMap() {
         return tileCoordinateMap;
     }
 
