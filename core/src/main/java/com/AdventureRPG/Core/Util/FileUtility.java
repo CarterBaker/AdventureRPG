@@ -1,11 +1,8 @@
 package com.AdventureRPG.Core.Util;
 
 import java.io.File;
-import java.io.IOException;
-
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 public class FileUtility {
@@ -114,14 +111,4 @@ public class FileUtility {
                 fileName.substring(firstUnderscore + 1)
         };
     }
-
-    // Read all lines in a file and return them as strings
-    public static ObjectArrayList<String> readAllLines(File file) {
-        try {
-            return new ObjectArrayList<>(java.nio.file.Files.readAllLines(file.toPath()));
-        } catch (IOException e) {
-            throw new FileException.FileReadException("Failed reading file: " + file, e);
-        }
-    }
-
 }

@@ -2,13 +2,13 @@ package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 
 import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class LayoutDataInstance extends InstanceFrame {
 
     private final String blockName;
     private final int binding;
-    private final Int2ObjectOpenHashMap<UniformDataInstance> uniforms;
+    private final ObjectArrayList<UniformDataInstance> uniforms;
 
     public LayoutDataInstance(
             String blockName,
@@ -16,22 +16,26 @@ public class LayoutDataInstance extends InstanceFrame {
 
         this.blockName = blockName;
         this.binding = binding;
-        this.uniforms = new Int2ObjectOpenHashMap<>();
+        this.uniforms = new ObjectArrayList<>();
     }
 
-    public void addUniform(int index, UniformDataInstance u) {
-        uniforms.put(index, u);
-    }
+    // Accessible \\
 
-    public String getBlockName() {
+    // Data
+    public String blockName() {
         return blockName;
     }
 
-    public int getBinding() {
+    public int binding() {
         return binding;
     }
 
-    public Int2ObjectOpenHashMap<UniformDataInstance> getUniforms() {
+    // Uniforms
+    public void addUniform(UniformDataInstance uniform) {
+        uniforms.add(uniform);
+    }
+
+    public ObjectArrayList<UniformDataInstance> getUniforms() {
         return uniforms;
     }
 }

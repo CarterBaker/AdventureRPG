@@ -1,14 +1,17 @@
 package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 
 import java.io.File;
-import java.util.List;
+import java.util.Set;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+import com.AdventureRPG.Core.Util.FileParserUtility;
 import com.AdventureRPG.Core.Util.FileUtility;
 import com.AdventureRPG.Core.Util.JsonUtility;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 import com.google.gson.JsonObject;
+
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class InternalBuildSystem extends SystemFrame {
 
@@ -25,131 +28,274 @@ public class InternalBuildSystem extends SystemFrame {
     // Compile \\
 
     void parseShaderFile(ShaderDataInstance shaderDataInstance) {
-        parseVersionInfo(shaderDataInstance);
-        parseLayouts(shaderDataInstance);
-        parseIncludes(shaderDataInstance);
-        parseUniforms(shaderDataInstance);
+
+        String rawText = FileParserUtility.convertFileToRawText(shaderDataInstance.shaderFile());
+        ObjectArrayList<String> textArray = FileParserUtility.convertRawTextToArray(rawText);
+
+        shaderDataInstance.setVersion(parseVersionInfo(textArray));
+
+        parseUniforms(
+                shaderDataInstance,
+                textArray);
+
+        parseIncludes(
+                shaderDataInstance,
+                textArray);
     }
 
     // Version \\
 
-    private void parseVersionInfo(ShaderDataInstance shaderDataInstance) {
+    private String parseVersionInfo(
+            ObjectArrayList<String> textArray) {
 
-        File shaderFile = shaderDataInstance.shaderFile();
-        var versionLines = GLSLUtility.findLinesStartingWith(shaderFile, "#version");
+        for (String line : textArray)
+            if (FileParserUtility.lineStartsWith(line, "#version"))
+                return line;
 
-        if (versionLines.isEmpty()) {
-            shaderDataInstance.setVersion(0);
-            return;
-        }
-
-        String[] parts = splitLine(versionLines.get(0));
-        int version = (parts.length >= 2) ? parseIntSafe(parts[1], 0) : 0;
-        shaderDataInstance.setVersion(version);
-    }
-
-    // Layouts \\
-
-    private void parseLayouts(ShaderDataInstance shaderDataInstance) {
-
-        File shaderFile = shaderDataInstance.shaderFile();
-        var allLines = FileUtility.readAllLines(shaderFile);
-
-        int i = 0;
-
-        while (i < allLines.size()) {
-
-            if (!allLines.get(i).trim().contains("layout")) {
-                i++;
-                continue;
-            }
-
-            int binding = extractBindingValue(allLines, i);
-            i = findLineAfter(allLines, i, ")");
-
-            String blockName = extractBlockName(allLines, i);
-            if (blockName == null) {
-                i++;
-                continue;
-            }
-
-            int braceIndex = findLineAfter(allLines, i, "{");
-            if (braceIndex == -1) {
-                i++;
-                continue;
-            }
-
-            var blockLines = GLSLUtility.extractBracketBlock(shaderFile, allLines.get(braceIndex));
-            LayoutDataInstance block = buildLayoutBlock(blockName, binding, blockLines);
-            shaderDataInstance.addLayoutBlock(block);
-
-            i = braceIndex + 1;
-        }
-    }
-
-    private LayoutDataInstance buildLayoutBlock(String blockName, int binding, List<String> blockLines) {
-
-        LayoutDataInstance block = new LayoutDataInstance(blockName, binding);
-        int index = 0;
-
-        for (String line : blockLines) {
-
-            String trimmed = trimAndRemoveSemicolon(line);
-            if (trimmed.isEmpty() || trimmed.startsWith("//"))
-                continue;
-
-            String[] parts = splitLine(trimmed);
-            if (parts.length < 2)
-                continue;
-
-            UniformType utype = UniformType.fromString(parts[0]);
-            if (utype != null)
-                block.addUniform(index++, new UniformDataInstance(utype, parts[1]));
-        }
-
-        return block;
-    }
-
-    // Includes \\
-
-    private void parseIncludes(ShaderDataInstance shaderDataInstance) {
-
-        File shaderFile = shaderDataInstance.shaderFile();
-        var includeLines = GLSLUtility.findLinesStartingWith(shaderFile, "#include");
-
-        for (String line : includeLines) {
-            String includeName = extractIncludePath(line);
-
-            if (includeName != null && !includeName.isEmpty()) {
-
-                ShaderDataInstance includeShader = internalLoadManager.getShaderData(includeName);
-                if (includeShader != null)
-                    shaderDataInstance.addIncludes(includeShader);
-            }
-        }
+        return null;
     }
 
     // Uniforms \\
 
-    private void parseUniforms(ShaderDataInstance shaderDataInstance) {
+    private void parseUniforms(
+            ShaderDataInstance shaderDataInstance,
+            ObjectArrayList<String> textArray) {
 
-        File shaderFile = shaderDataInstance.shaderFile();
-        var uniformLines = GLSLUtility.findLinesStartingWith(shaderFile, "uniform");
+        boolean insideBlock = false;
+        LayoutDataInstance currentLayout = null;
+        int braceDepth = 0;
 
-        for (String line : uniformLines) {
+        for (int i = 0; i < textArray.size(); i++) {
+            String line = textArray.get(i).trim();
 
-            String trimmed = trimAndRemoveSemicolon(line);
-            String[] parts = splitLine(trimmed);
-
-            if (parts.length < 3)
+            // Skip empty lines
+            if (line.isEmpty())
                 continue;
 
-            UniformType type = UniformType.fromString(parts[1]);
-            if (type == null)
-                throw new GraphicException.ShaderProgramException(
-                        "There was a problem retrieving the uniform type. Uniform type not found");
+            // Check for uniform block start (with or without layout)
+            if (isUniformBlockStart(line)) {
 
-            shaderDataInstance.addUniform(new UniformDataInstance(type, parts[2]));
+                currentLayout = parseUniformBlockStart(line);
+
+                if (currentLayout != null) {
+
+                    insideBlock = true;
+                    braceDepth = FileParserUtility.countCharInString(line, '{') -
+                            FileParserUtility.countCharInString(line, '}');
+                }
+
+                continue;
+            }
+
+            // Track brace depth when inside block
+            if (insideBlock) {
+
+                braceDepth += FileParserUtility.countCharInString(line, '{') -
+                        FileParserUtility.countCharInString(line, '}');
+
+                // Block ended - add it to shader data
+                if (braceDepth <= 0) {
+
+                    if (currentLayout != null)
+                        shaderDataInstance.addLayoutBlock(currentLayout);
+
+                    currentLayout = null;
+                    insideBlock = false;
+
+                    continue;
+                }
+            }
+
+            // Parse uniform declarations (both standalone and inside blocks)
+            if (line.contains("uniform") || (insideBlock && !line.equals("}"))) {
+
+                // Handle multi-line declarations
+                String fullDeclaration = line;
+                while (!fullDeclaration.endsWith(";") && i + 1 < textArray.size()) {
+
+                    i++;
+                    String nextLine = textArray.get(i).trim();
+
+                    if (!nextLine.isEmpty())
+                        fullDeclaration += " " + nextLine;
+                }
+
+                // Parse and add uniforms
+                parseUniformDeclaration(fullDeclaration, currentLayout, shaderDataInstance);
+            }
+        }
+    }
+
+    private boolean isUniformBlockStart(String line) {
+        // Matches: "layout(...) uniform BlockName {" or "uniform BlockName {"
+        return line.contains("uniform") &&
+                line.contains("{") &&
+                !line.contains(";") &&
+                !line.matches(".*\\buniform\\s+\\w+\\s+\\w+.*"); // Not "uniform type name"
+    }
+
+    private LayoutDataInstance parseUniformBlockStart(String line) {
+
+        try {
+
+            int binding = 0;
+
+            // Extract binding if layout exists
+            if (line.contains("layout"))
+                binding = FileParserUtility.extractLayoutBinding(line);
+
+            // Extract block name (text between "uniform" and "{")
+            int uniformIdx = line.indexOf("uniform");
+            int braceIdx = line.indexOf("{");
+
+            if (uniformIdx != -1 && braceIdx != -1) {
+
+                String blockName = line.substring(uniformIdx + 7, braceIdx).trim();
+                // Remove any layout qualifiers that might be in the name
+                blockName = blockName.replaceAll("\\(.*?\\)", "").trim();
+
+                return new LayoutDataInstance(blockName, binding);
+            }
+
+        }
+
+        catch (Exception e) {
+            throw new GraphicException.ShaderProgramException(
+                    "Failed to parse uniform block: " + line);
+        }
+        return null;
+    }
+
+    private void parseUniformDeclaration(
+            String declaration,
+            LayoutDataInstance currentLayout,
+            ShaderDataInstance shaderDataInstance) {
+
+        // Clean up declaration
+        declaration = declaration.replace(";", "").trim();
+
+        // Skip empty, closing braces, or struct definitions
+        if (declaration.isEmpty() ||
+                declaration.equals("}") ||
+                declaration.startsWith("struct"))
+            return;
+
+        // Skip if not a uniform declaration (when outside layout blocks)
+        if (currentLayout == null && !declaration.contains("uniform"))
+            return;
+
+        // Remove "uniform" keyword
+        declaration = declaration.replaceFirst("\\buniform\\b", "").trim();
+
+        // Split into type and variable names (handle spaces in type names)
+        int lastSpaceBeforeNames = FileParserUtility.findLastTypeDelimiter(declaration);
+        if (lastSpaceBeforeNames == -1)
+            return;
+
+        String typeStr = declaration.substring(0, lastSpaceBeforeNames).trim();
+        String namesStr = declaration.substring(lastSpaceBeforeNames).trim();
+
+        // Parse uniform type
+        UniformType uniformType = parseUniformType(typeStr);
+        if (uniformType == null)
+            return;
+
+        // Parse all variable names
+        parseVariableNames(namesStr, uniformType, currentLayout, shaderDataInstance);
+    }
+
+    private void parseVariableNames(
+            String namesStr,
+            UniformType uniformType,
+            LayoutDataInstance currentLayout,
+            ShaderDataInstance shaderDataInstance) {
+
+        String[] names = namesStr.split(",");
+
+        for (String name : names) {
+
+            name = name.trim();
+            if (name.isEmpty())
+                continue;
+
+            // Parse array syntax
+            int arrayCount = 1;
+            String variableName = name;
+
+            if (name.contains("[")) {
+                int bracketStart = name.indexOf("[");
+                int bracketEnd = name.indexOf("]");
+
+                if (bracketStart != -1 && bracketEnd != -1 && bracketEnd > bracketStart) {
+
+                    String countStr = name.substring(bracketStart + 1, bracketEnd).trim();
+
+                    if (countStr.isEmpty()) // Handle empty brackets: uniform vec4 values[];
+                        arrayCount = 0; // Mark as dynamic/unsized
+
+                    else // Try to parse as integer, default to 0 for macros/constants
+                        arrayCount = FileParserUtility.parseIntOrDefault(countStr, 0);
+
+                    variableName = name.substring(0, bracketStart).trim();
+                }
+            }
+
+            if (arrayCount == 0)
+                throw new GraphicException.ShaderProgramException(
+                        "Unsized arrays not supported: " + variableName);
+
+            // Create uniform instance
+            UniformDataInstance uniform = new UniformDataInstance(uniformType, variableName, arrayCount);
+
+            // Add to appropriate container
+            if (currentLayout != null)
+                currentLayout.addUniform(uniform);
+            else
+                shaderDataInstance.addUniform(uniform);
+        }
+    }
+
+    private UniformType parseUniformType(String typeStr) {
+
+        try {
+            // Try standard GLSL types first
+            return UniformType.valueOf(typeStr.toUpperCase());
+        }
+
+        catch (IllegalArgumentException e) {
+
+            // Fall back to custom parser (handles user types, structs, etc.)
+            try {
+                return UniformType.fromString(typeStr);
+            }
+
+            catch (Exception ex) {
+                // Unknown type - you could return a default or null
+                return null;
+            }
+        }
+    }
+
+    // Includes \\
+
+    private void parseIncludes(
+            ShaderDataInstance shaderDataInstance,
+            ObjectArrayList<String> textArray) {
+
+        for (String line : textArray) {
+
+            if (FileParserUtility.lineStartsWith(line, "#include")) {
+
+                String includePath = FileParserUtility.extractPayloadAfterToken(line, "#include");
+
+                if (includePath != null && !includePath.isEmpty()) {
+
+                    ShaderDataInstance includeShader = internalLoadManager.getShaderData(includePath);
+
+                    if (includeShader != null)
+                        shaderDataInstance.addIncludes(includeShader);
+                }
+            }
         }
     }
 
@@ -176,103 +322,35 @@ public class InternalBuildSystem extends SystemFrame {
 
     private ShaderDefinitionInstance sortIncludes(ShaderDefinitionInstance shaderDefinition) {
 
-        collectRecursiveIncludes(shaderDefinition, shaderDefinition.vert);
-        collectRecursiveIncludes(shaderDefinition, shaderDefinition.frag);
+        ObjectArrayList<ShaderDataInstance> visited = new ObjectArrayList<>();
+
+        collectRecursiveIncludes(
+                shaderDefinition,
+                shaderDefinition.vert,
+                visited);
+        collectRecursiveIncludes(
+                shaderDefinition,
+                shaderDefinition.frag,
+                visited);
 
         return shaderDefinition;
     }
 
-    private void collectRecursiveIncludes(ShaderDefinitionInstance shaderDefinition, ShaderDataInstance shaderData) {
+    private void collectRecursiveIncludes(
+            ShaderDefinitionInstance shaderDefinition,
+            ShaderDataInstance shaderData,
+            ObjectArrayList<ShaderDataInstance> visited) {
 
-        if (shaderData.shaderType() == ShaderType.INCLUDE && !shaderDefinition.getIncludes().contains(shaderData))
+        if (visited.contains(shaderData))
+            return; // Cycle detected
+
+        visited.add(shaderData);
+
+        if (shaderData.shaderType() == ShaderType.INCLUDE &&
+                !shaderDefinition.getIncludes().contains(shaderData))
             shaderDefinition.addInclude(shaderData);
 
         for (ShaderDataInstance include : shaderData.getIncludes())
-            collectRecursiveIncludes(shaderDefinition, include);
-    }
-
-    // Utility \\
-
-    private String[] splitLine(String line) {
-        return line.trim().split("\\s+");
-    }
-
-    private String trimAndRemoveSemicolon(String line) {
-        String trimmed = line.trim();
-        return trimmed.endsWith(";") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
-    }
-
-    private int parseIntSafe(String value, int defaultValue) {
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            return defaultValue;
-        }
-    }
-
-    private int findLineAfter(List<String> lines, int startIndex, String token) {
-        for (int i = startIndex; i < lines.size(); i++) {
-            if (lines.get(i).contains(token))
-                return i;
-        }
-        return -1;
-    }
-
-    private int extractBindingValue(List<String> lines, int startIndex) {
-        StringBuilder header = new StringBuilder();
-        int i = startIndex;
-
-        while (i < lines.size()) {
-            String line = lines.get(i).trim();
-            header.append(" ").append(line);
-            if (line.contains(")"))
-                break;
-            i++;
-        }
-
-        String text = header.toString();
-        int open = text.indexOf("(");
-        int close = text.indexOf(")");
-
-        if (open != -1 && close != -1) {
-            String inside = text.substring(open + 1, close);
-            for (String token : inside.split(",")) {
-                token = token.trim();
-                if (token.startsWith("binding")) {
-                    int eq = token.indexOf('=');
-                    if (eq != -1)
-                        return parseIntSafe(token.substring(eq + 1).trim(), -1);
-                }
-            }
-        }
-
-        return -1;
-    }
-
-    private String extractBlockName(List<String> lines, int startIndex) {
-        for (int i = startIndex; i < lines.size(); i++) {
-            String line = lines.get(i).trim();
-            if (line.startsWith("uniform")) {
-                String[] parts = splitLine(line);
-                if (parts.length >= 2)
-                    return parts[1].replace("{", "").trim();
-                break;
-            }
-        }
-        return null;
-    }
-
-    private String extractIncludePath(String line) {
-        line = line.trim();
-        if (!line.startsWith("#include"))
-            return null;
-
-        String remainder = line.substring(8).trim();
-
-        if ((remainder.startsWith("<") && remainder.endsWith(">")) ||
-                (remainder.startsWith("\"") && remainder.endsWith("\"")))
-            return remainder.substring(1, remainder.length() - 1);
-
-        return remainder;
+            collectRecursiveIncludes(shaderDefinition, include, visited);
     }
 }

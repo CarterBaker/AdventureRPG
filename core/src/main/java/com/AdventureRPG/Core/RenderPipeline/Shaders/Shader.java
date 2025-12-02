@@ -1,5 +1,6 @@
 package com.AdventureRPG.Core.RenderPipeline.Shaders;
 
+import com.AdventureRPG.Core.RenderPipeline.LayoutBlock.LayoutBlock;
 import com.AdventureRPG.Core.RenderPipeline.Uniforms.Uniform;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -11,6 +12,7 @@ public class Shader {
     public final int shaderID;
     public final int shaderHandle;
 
+    private final Object2ObjectOpenHashMap<String, LayoutBlock> layouts;
     private final Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
 
     public Shader(
@@ -23,20 +25,27 @@ public class Shader {
         this.shaderID = shaderID;
         this.shaderHandle = shaderHandle;
 
+        this.layouts = new Object2ObjectOpenHashMap<>();
         this.uniforms = new Object2ObjectOpenHashMap<>();
     }
 
     // Utility \\
 
+    // Layouts
+    public void addLayout(String layoutName, LayoutBlock layout) {
+        layouts.put(layoutName, layout);
+    }
+
+    public LayoutBlock getLayout(String layoutName) {
+        return layouts.get(layoutName);
+    }
+
+    // Uniforms
     public void addUniform(String uniformName, Uniform<?> uniform) {
         uniforms.put(uniformName, uniform);
     }
 
     public Uniform<?> getUniform(String uniformName) {
         return uniforms.get(uniformName);
-    }
-
-    public Object2ObjectOpenHashMap<String, Uniform<?>> getUniforms() {
-        return uniforms;
     }
 }

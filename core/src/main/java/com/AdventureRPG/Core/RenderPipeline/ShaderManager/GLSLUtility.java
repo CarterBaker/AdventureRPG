@@ -1,155 +1,17 @@
 package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.IntBuffer;
 
-import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.utils.BufferUtils;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 class GLSLUtility {
-
-    // Line Search Utilities
-    static ObjectArrayList<String> findLinesStartingWith(File file, String prefix) {
-        String text = readFileToString(file);
-        return findLinesStartingWith(text, prefix);
-    }
-
-    static ObjectArrayList<String> findLinesContaining(File file, String needle) {
-        String text = readFileToString(file);
-        return findLinesContaining(text, needle);
-    }
-
-    static String readFileToString(File file) {
-
-        try {
-            return Files.readString(file.toPath());
-        }
-
-        catch (Exception e) {
-            throw new FileException.FileReadException("Failed to read file: " + file, e);
-        }
-    }
-
-    static ObjectArrayList<String> findLinesStartingWith(String text, String prefix) {
-
-        ObjectArrayList<String> lines = new ObjectArrayList<>();
-        int start = 0;
-        int len = text.length();
-
-        while (start < len) {
-
-            int end = text.indexOf('\n', start);
-            if (end == -1)
-                end = len;
-
-            String line = text.substring(start, end).trim();
-            if (line.startsWith(prefix))
-                lines.add(line);
-
-            start = end + 1;
-        }
-
-        return lines;
-    }
-
-    static ObjectArrayList<String> findLinesContaining(String text, String needle) {
-
-        ObjectArrayList<String> lines = new ObjectArrayList<>();
-        int start = 0;
-        int len = text.length();
-
-        while (start < len) {
-
-            int end = text.indexOf('\n', start);
-            if (end == -1)
-                end = len;
-
-            String line = text.substring(start, end).trim();
-            if (line.contains(needle))
-                lines.add(line);
-
-            start = end + 1;
-        }
-
-        return lines;
-    }
-
-    static ObjectArrayList<String> extractBracketBlock(File file, String startingLine) {
-
-        ObjectArrayList<String> lines = new ObjectArrayList<>(FileUtility.readAllLines(file));
-        ObjectArrayList<String> result = new ObjectArrayList<>();
-
-        int startIndex = -1;
-
-        // 1. Locate header line
-        for (int i = 0; i < lines.size(); i++)
-            if (lines.get(i).trim().equals(startingLine.trim())) {
-                startIndex = i;
-                break;
-            }
-
-        if (startIndex == -1)
-            return result;
-
-        // 2. Find first '{' after starting line
-        int openBraceLine = -1;
-
-        for (int i = startIndex; i < lines.size(); i++) {
-            String ln = lines.get(i);
-            if (ln.indexOf('{') != -1) {
-                openBraceLine = i;
-                break;
-            }
-        }
-
-        if (openBraceLine == -1)
-            return result;
-
-        // 3. Parse block contents
-        int depth = 0;
-        boolean inside = false;
-
-        for (int i = openBraceLine; i < lines.size(); i++) {
-
-            String raw = lines.get(i);
-            String clean = stripSingleLineComments(raw);
-
-            int len = clean.length();
-            for (int c = 0; c < len; c++) {
-                char ch = clean.charAt(c);
-
-                if (ch == '{') {
-                    depth++;
-                    if (!inside) {
-                        inside = true;
-                        continue;
-                    }
-                } else if (ch == '}') {
-                    depth--;
-                    if (depth == 0)
-                        return result;
-                }
-            }
-
-            // Only include internal block lines
-            if (inside && depth >= 1 && i > openBraceLine)
-                result.add(raw);
-        }
-
-        return result;
-    }
-
-    private static String stripSingleLineComments(String line) {
-        int idx = line.indexOf("//");
-        return idx >= 0 ? line.substring(0, idx) : line;
-    }
 
     // Shader Program Construction
     static int createShaderProgram(ShaderDefinitionInstance shaderDef) {
@@ -168,10 +30,14 @@ class GLSLUtility {
         Gdx.gl.glAttachShader(program, vertShader);
         Gdx.gl.glAttachShader(program, fragShader);
 
+        // Track include shaders for cleanup
+        IntArrayList includeShaders = new IntArrayList();
+
         // Attach included shader snippets
         for (ShaderDataInstance include : shaderDef.getIncludes()) {
             int includeShader = compileShader(include);
             Gdx.gl.glAttachShader(program, includeShader);
+            includeShaders.add(includeShader);
         }
 
         Gdx.gl.glLinkProgram(program);
@@ -187,9 +53,18 @@ class GLSLUtility {
             throw new GraphicException.ShaderProgramException("Failed to link shader program: " + log);
         }
 
-        // Cleanup
+        // Cleanup - detach and delete all shaders
         Gdx.gl.glDetachShader(program, vertShader);
         Gdx.gl.glDetachShader(program, fragShader);
+        Gdx.gl.glDeleteShader(vertShader);
+        Gdx.gl.glDeleteShader(fragShader);
+
+        // Cleanup includes
+        for (int i = 0; i < includeShaders.size(); i++) {
+            int includeShader = includeShaders.getInt(i);
+            Gdx.gl.glDetachShader(program, includeShader);
+            Gdx.gl.glDeleteShader(includeShader);
+        }
 
         return program;
     }
@@ -251,5 +126,38 @@ class GLSLUtility {
             throw new GraphicException.ShaderProgramException("Uniform not found in shader program: " + uniformName);
 
         return handle;
+    }
+
+    // Create a uniform buffer object
+    static int createUniformBuffer() {
+        IntBuffer buffer = BufferUtils.newIntBuffer(1);
+        Gdx.gl30.glGenBuffers(1, buffer);
+        buffer.rewind();
+        return buffer.get(0);
+    }
+
+    // Bind uniform buffer to a binding point
+    static void bindUniformBuffer(int bufferHandle, int bindingPoint) {
+        Gdx.gl30.glBindBufferBase(GL30.GL_UNIFORM_BUFFER, bindingPoint, bufferHandle);
+    }
+
+    static void allocateUniformBuffer(int bufferHandle, int sizeInBytes) {
+        Gdx.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, bufferHandle);
+        Gdx.gl30.glBufferData(GL30.GL_UNIFORM_BUFFER, sizeInBytes, null, GL30.GL_DYNAMIC_DRAW);
+        Gdx.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, 0);
+    }
+
+    static void deleteShaderProgram(int programHandle) {
+        if (programHandle != 0) {
+            Gdx.gl.glDeleteProgram(programHandle);
+        }
+    }
+
+    static void deleteUniformBuffer(int bufferHandle) {
+        if (bufferHandle != 0) {
+            IntBuffer buffer = BufferUtils.newIntBuffer(1);
+            buffer.put(0, bufferHandle);
+            Gdx.gl30.glDeleteBuffers(1, buffer);
+        }
     }
 }
