@@ -1,6 +1,6 @@
 package com.AdventureRPG.Core.RenderPipeline.Shaders;
 
-import com.AdventureRPG.Core.RenderPipeline.LayoutBlock.LayoutBlock;
+import com.AdventureRPG.Core.RenderPipeline.LayoutBlocks.LayoutBlock;
 import com.AdventureRPG.Core.RenderPipeline.Uniforms.Uniform;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -36,16 +36,12 @@ public class Shader {
         layouts.put(layoutName, layout);
     }
 
-    public LayoutBlock getLayout(String layoutName) {
-        return layouts.get(layoutName);
-    }
-
     // Uniforms
     public void addUniform(String uniformName, Uniform<?> uniform) {
         uniforms.put(uniformName, uniform);
     }
 
-    public Uniform<?> getUniform(String uniformName) {
-        return uniforms.get(uniformName);
+    public Object2ObjectOpenHashMap<String, Uniform<?>> getUniforms() {
+        return uniforms;
     }
 }

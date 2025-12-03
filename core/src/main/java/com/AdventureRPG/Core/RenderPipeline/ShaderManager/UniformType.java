@@ -2,7 +2,7 @@ package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-public enum UniformType {
+enum UniformType {
 
     // Scalars
     FLOAT("float"),

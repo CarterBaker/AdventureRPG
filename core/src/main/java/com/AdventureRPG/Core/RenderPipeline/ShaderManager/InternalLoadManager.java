@@ -4,11 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Set;
 
 import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.LayoutBlock.LayoutBlock;
+import com.AdventureRPG.Core.RenderPipeline.LayoutBlocks.LayoutBlock;
 import com.AdventureRPG.Core.RenderPipeline.Shaders.Shader;
 import com.AdventureRPG.Core.RenderPipeline.Uniforms.Uniform;
 import com.AdventureRPG.Core.RenderPipeline.Uniforms.UniformAttribute;
@@ -99,7 +98,7 @@ class InternalLoadManager extends ManagerFrame {
         }
 
         catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new FileException.FileReadException("ShaderManager failed to load one or more files: ", e);
         }
     }
 

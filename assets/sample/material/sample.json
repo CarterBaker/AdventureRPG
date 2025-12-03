@@ -1,0 +1,120 @@
+{
+  "shader": "SampleShader",
+  
+  "albedoSample": {
+    "type": "SAMPLE_IMAGE_2D",
+    "value": "SampleImage2D_Albedo"
+  },
+  
+  "normalSample": {
+    "type": "SAMPLE_IMAGE_2D",
+    "value": "SampleImage2D_Normal"
+  },
+  
+  "layerSampleArray": {
+    "type": "SAMPLE_IMAGE_2D_ARRAY",
+    "value": "SampleImageArray_Layers"
+  },
+  
+  "sampleTintColor": {
+    "type": "VECTOR4",
+    "value": [1.0, 1.0, 1.0, 1.0]
+  },
+  
+  "sampleRoughness": {
+    "type": "FLOAT",
+    "value": 0.5
+  },
+  
+  "sampleMetallic": {
+    "type": "FLOAT",
+    "value": 0.0
+  },
+  
+  "sampleNormalMapToggle": {
+    "type": "BOOL",
+    "value": true
+  },
+  
+  "sampleVector3_A": {
+    "type": "VECTOR3",
+    "value": [1.0, 1.0, 1.0]
+  },
+  
+  "sampleMatrix4_View": {
+    "type": "MATRIX4",
+    "value": [
+      1.0, 0.0, 0.0, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      0.0, 0.0, 0.0, 1.0
+    ]
+  },
+  
+  "sampleMatrixArray": {
+    "type": "MATRIX4",
+    "count": 3,
+    "value": [
+      [
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0
+      ],
+      [
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        1.0, 0.0, 0.0, 1.0
+      ],
+      [
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0, 1.0
+      ]
+    ]
+  },
+  
+  "sampleColorArray": {
+    "type": "VECTOR3",
+    "count": 4,
+    "value": [
+      [1.0, 1.0, 1.0],
+      [1.0, 1.0, 1.0],
+      [1.0, 1.0, 1.0],
+      [1.0, 1.0, 1.0]
+    ]
+  },
+  
+  "sampleFloatArray": {
+    "type": "FLOAT",
+    "count": 4,
+    "value": [0.25, 0.25, 0.25, 0.25]
+  },
+  
+  "sampleBoolArray": {
+    "type": "BOOL",
+    "count": 3,
+    "value": [true, true, true]
+  },
+  
+  "sampleVector2Array": {
+    "type": "VECTOR2",
+    "count": 2,
+    "value": [
+      [1.0, 1.0],
+      [1.0, 1.0]
+    ]
+  },
+  
+  "sampleUVOffset": {
+    "type": "VECTOR2_INT",
+    "value": [0, 0]
+  },
+  
+  "sampleEmissive": {
+    "type": "VECTOR3_DOUBLE",
+    "value": [0.0, 0.0, 0.0]
+  }
+}

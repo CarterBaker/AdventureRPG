@@ -35,4 +35,10 @@ public class JsonUtility {
         }
     }
 
+    public static String validateString(JsonObject json, String key) {
+        if (!json.has(key)) {
+            throw new IllegalArgumentException("Missing required field: " + key);
+        }
+        return json.get(key).getAsString();
+    }
 }

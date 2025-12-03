@@ -1,7 +1,7 @@
 package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.LayoutBlock.LayoutBlock;
+import com.AdventureRPG.Core.RenderPipeline.LayoutBlocks.LayoutBlock;
 import com.AdventureRPG.Core.RenderPipeline.Shaders.Shader;
 import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 

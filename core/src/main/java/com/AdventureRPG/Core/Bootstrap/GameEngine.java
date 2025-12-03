@@ -5,7 +5,7 @@ import java.io.File;
 import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
 import com.AdventureRPG.Core.PhysicsPipeline.MovementManager.MovementManager;
 import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
-import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialSystem;
+import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialManager;
 import com.AdventureRPG.Core.RenderPipeline.PassSystem.PassSystem;
 import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
@@ -34,7 +34,7 @@ public class GameEngine extends EngineFrame implements Screen {
     private MovementManager movementManager;
     private TextureManager textureManager;
     private ShaderManager shaderManager;
-    private MaterialSystem materialSystem;
+    private MaterialManager materialManager;
     private PassSystem passSystem;
     private RenderManager renderManager;
 
@@ -74,7 +74,7 @@ public class GameEngine extends EngineFrame implements Screen {
         this.movementManager = (MovementManager) register(new MovementManager());
         this.textureManager = (TextureManager) register(new TextureManager());
         this.shaderManager = (ShaderManager) register(new ShaderManager());
-        this.materialSystem = (MaterialSystem) register(new MaterialSystem());
+        this.materialManager = (MaterialManager) register(new MaterialManager());
         this.passSystem = (PassSystem) register(new PassSystem());
         this.renderManager = (RenderManager) register(new RenderManager());
     }

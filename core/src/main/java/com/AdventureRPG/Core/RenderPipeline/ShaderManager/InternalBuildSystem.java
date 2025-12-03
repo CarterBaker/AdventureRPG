@@ -1,11 +1,11 @@
 package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 
 import java.io.File;
-import java.util.Set;
+import java.nio.file.Path;
 
+import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
 import com.AdventureRPG.Core.Util.FileParserUtility;
-import com.AdventureRPG.Core.Util.FileUtility;
 import com.AdventureRPG.Core.Util.JsonUtility;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
 import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
@@ -17,12 +17,14 @@ public class InternalBuildSystem extends SystemFrame {
 
     // Internal
     private InternalLoadManager internalLoadManager;
+    private File root;
 
     // Base \\
 
     @Override
     protected void init() {
         this.internalLoadManager = gameEngine.get(InternalLoadManager.class);
+        this.root = new File(EngineSetting.SHADER_PATH);
     }
 
     // Compile \\
@@ -303,7 +305,17 @@ public class InternalBuildSystem extends SystemFrame {
 
     ShaderDefinitionInstance compileShader(File jsonFile) {
 
-        String shaderName = FileUtility.getFileName(jsonFile);
+        // Extract relative path from root shader directory
+        Path rootPath = root.toPath();
+        Path jsonPath = jsonFile.toPath();
+        String relativePath = rootPath.relativize(jsonPath).toString().replace("\\", "/");
+
+        // Remove the .json extension to get the shader name with path
+        String shaderName = relativePath;
+        if (shaderName.endsWith(".json")) {
+            shaderName = shaderName.substring(0, shaderName.length() - 5);
+        }
+
         JsonObject obj = JsonUtility.loadJsonObject(jsonFile);
         ShaderDataInstance vertData = internalLoadManager.getShaderData(obj.get("vert").getAsString());
         ShaderDataInstance fragData = internalLoadManager.getShaderData(obj.get("frag").getAsString());

@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.RenderPipeline.LayoutBlock;
+package com.AdventureRPG.Core.RenderPipeline.LayoutBlocks;
 
 import com.AdventureRPG.Core.RenderPipeline.Uniforms.Uniform;
 
