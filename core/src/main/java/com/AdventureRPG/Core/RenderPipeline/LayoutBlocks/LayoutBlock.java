@@ -1,6 +1,6 @@
 package com.AdventureRPG.Core.RenderPipeline.LayoutBlocks;
 
-import com.AdventureRPG.Core.RenderPipeline.Uniforms.Uniform;
+import com.AdventureRPG.Core.RenderPipeline.Uniform.Uniform;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 

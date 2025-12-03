@@ -2,7 +2,7 @@ package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
 
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.RenderPipeline.LayoutBlocks.LayoutBlock;
-import com.AdventureRPG.Core.RenderPipeline.Shaders.Shader;
+import com.AdventureRPG.Core.RenderPipeline.Shader.Shader;
 import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;

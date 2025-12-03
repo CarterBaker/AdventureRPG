@@ -1,14 +1,11 @@
 package com.AdventureRPG.Core.RenderPipeline.TextureManager;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
 import com.AdventureRPG.Core.RenderPipeline.Util.UVCoordinate;
 
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class TextureManager extends ManagerFrame {
 
@@ -48,55 +45,40 @@ public class TextureManager extends ManagerFrame {
         internalLoadManager = (InternalLoadManager) release(internalLoadManager);
     }
 
-    // Array Management \\
+    @Override
+    public void dispose() {
+        disposeAllGPUResources();
+    }
+
+    // Texture Management \\
 
     private void compileTextureArrays() {
-        pushTexturesToGPU(internalLoadManager.loadTextureArrays());
+        internalLoadManager.loadTextureArrays();
     }
 
-    private void pushTexturesToGPU(Int2ObjectOpenHashMap<TextureArrayInstance> textureArrays) {
-
-        // Alias files are loaded from json and define albedo, normal ect.
-        AliasInstance[] aliases = internalLoadManager.getAllAliases();
-
-        for (int i = 0; i < textureArrays.size(); i++)
-            pushTextureToGPU(aliases, textureArrays.get(i));
+    void addTextureTile(TextureTileInstance textureTileInstance, UVCoordinate uvCoordinate) {
+        textureName2TileID.put(textureTileInstance.name, textureTileInstance.id);
+        tileID2textureArrayID.put(textureTileInstance.id, textureTileInstance.id);
+        tileID2textureArrayUV.put(textureTileInstance.id, uvCoordinate);
     }
 
-    private void pushTextureToGPU(AliasInstance[] aliases, TextureArrayInstance textureArray) {
-
-        // First and foremost push the array to the gpu and return the handle
-        int gpuHandle = GLSLUtility.pushTextureArray(textureArray.getRawImageArray());
-
-        // Next step retrieve the tile data
-        Object2ObjectOpenHashMap<String, TextureTileInstance> tileCoordinateMap = textureArray.getTileCoordinateMap();
-
-        // For each tile int he texture array map the appropriate data
-        for (Object2ObjectMap.Entry<String, TextureTileInstance> tile : tileCoordinateMap.object2ObjectEntrySet()) {
-
-            UVCoordinate uvCoordinate = computeUV(
-                    tile.getValue().getAtlasX(),
-                    tile.getValue().getAtlasY(),
-                    textureArray.atlasSize);
-
-            textureName2TileID.put(tile.getKey(), tile.getValue().id);
-            tileID2textureArrayID.put(tile.getValue().id, textureArray.id);
-            tileID2textureArrayUV.put(tile.getValue().id, uvCoordinate);
-        }
-
-        // For each array map the appropriate data
-        textureArrayName2GPUHandle.put(textureArray.name, gpuHandle);
-        textureArrayID2GPUHandle.put(textureArray.id, gpuHandle);
+    void addTextureArray(TextureArrayInstance textureArrayInstance, int gpuHandle) {
+        textureArrayName2GPUHandle.put(textureArrayInstance.name, gpuHandle);
+        textureArrayID2GPUHandle.put(textureArrayInstance.id, gpuHandle);
     }
 
-    // Use global image size settigns to calculate UVs for any given texture using
-    // known x and y coordinate values stored internally per tile
-    private UVCoordinate computeUV(int atlasX, int atlasY, int atlasSize) {
+    // Disposal \\
 
-        float u = (atlasX * EngineSetting.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
-        float v = (atlasY * EngineSetting.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
+    private void disposeAllGPUResources() {
 
-        return new UVCoordinate(u, v);
+        for (int gpuHandle : textureArrayID2GPUHandle.values())
+            GLSLUtility.deleteTextureArray(gpuHandle);
+
+        textureName2TileID.clear();
+        tileID2textureArrayID.clear();
+        tileID2textureArrayUV.clear();
+        textureArrayName2GPUHandle.clear();
+        textureArrayID2GPUHandle.clear();
     }
 
     // Accessible \\

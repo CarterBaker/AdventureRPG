@@ -1,7 +1,7 @@
 package com.AdventureRPG.Core.RenderPipeline.MaterialManager;
 
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.Materials.Material;
+import com.AdventureRPG.Core.RenderPipeline.Material.Material;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;

@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.RenderPipeline.MaterialManager;
+package com.AdventureRPG.Core.RenderPipeline.PassManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,7 +7,7 @@ import java.nio.file.Path;
 
 import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.Material.Material;
+import com.AdventureRPG.Core.RenderPipeline.ProcessingPass.ProcessingPass;
 import com.AdventureRPG.Core.Util.FileUtility;
 import com.AdventureRPG.Core.Util.Exceptions.FileException;
 
@@ -15,10 +15,10 @@ class InternalLoadManager extends ManagerFrame {
 
     // Internal
     private File root;
-    private MaterialManager materialManager;
+    private PassManager passManager;
     private InternalBuildSystem internalBuildSystem;
 
-    private int materialCount;
+    private int passCount;
 
     // Base \\
 
@@ -29,14 +29,14 @@ class InternalLoadManager extends ManagerFrame {
         this.root = new File(EngineSetting.MATERIAL_JSON_PATH);
         this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
 
-        this.materialCount = 0;
+        this.passCount = 0;
     }
 
     @Override
     protected void init() {
 
         // Internal
-        this.materialManager = gameEngine.get(MaterialManager.class);
+        this.passManager = gameEngine.get(PassManager.class);
     }
 
     @Override
@@ -44,9 +44,9 @@ class InternalLoadManager extends ManagerFrame {
         this.internalBuildSystem = (InternalBuildSystem) release(internalBuildSystem);
     }
 
-    // Material Management \\
+    // Pass Management \\
 
-    void loadMaterials() {
+    void loadPasses() {
         loadAllFiles();
     }
 
@@ -62,21 +62,21 @@ class InternalLoadManager extends ManagerFrame {
         try (var stream = Files.walk(base)) {
             stream
                     .filter(Files::isRegularFile)
-                    .forEach(path -> buildMaterialFromFile(path.toFile()));
+                    .forEach(path -> buildPassFromFile(path.toFile()));
         }
 
         catch (IOException e) {
-            throw new FileException.FileReadException("MaterialManager failed to load one or more files: ", e);
+            throw new FileException.FileReadException("PassManager failed to load one or more files: ", e);
         }
     }
 
-    private void buildMaterialFromFile(File file) {
+    private void buildPassFromFile(File file) {
 
         if (EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(file)))
-            compileMaterial(internalBuildSystem.buildMaterial(file, materialCount++));
+            compilePass(internalBuildSystem.buildPass(file, passCount++));
     }
 
-    private void compileMaterial(Material material) {
-        materialManager.addMaterial(material);
+    private void compilePass(ProcessingPass processingPass) {
+        passManager.addPass(processingPass);
     }
 }

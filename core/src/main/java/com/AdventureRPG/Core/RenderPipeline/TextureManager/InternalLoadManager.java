@@ -9,14 +9,18 @@ import java.util.List;
 
 import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
+import com.AdventureRPG.Core.RenderPipeline.Util.UVCoordinate;
 import com.AdventureRPG.Core.Util.FileUtility;
 import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoadManager extends ManagerFrame {
 
     // Internal
+    private TextureManager textureManager;
     private AliasLibrarySystem aliasLibrarySystem;
     private InternalBuildSystem internalBuildSystem;
     private Int2ObjectOpenHashMap<TextureArrayInstance> arrayMap;
@@ -35,6 +39,13 @@ class InternalLoadManager extends ManagerFrame {
     }
 
     @Override
+    protected void init() {
+
+        // Internal
+        this.textureManager = gameEngine.get(TextureManager.class);
+    }
+
+    @Override
     protected void freeMemory() {
 
         // Internal
@@ -45,7 +56,7 @@ class InternalLoadManager extends ManagerFrame {
     // File Navigation \\
 
     // The main method that delegates logic to helpers to return texture arrays
-    Int2ObjectOpenHashMap<TextureArrayInstance> loadTextureArrays() {
+    void loadTextureArrays() {
 
         aliasLibrarySystem.loadAliases();
 
@@ -66,7 +77,7 @@ class InternalLoadManager extends ManagerFrame {
                     e);
         }
 
-        return arrayMap;
+        pushTexturesToGPU(arrayMap);
     }
 
     // Categorization logic \\
@@ -93,9 +104,41 @@ class InternalLoadManager extends ManagerFrame {
         arrayMap.put(textureArray.id, textureArray);
     }
 
-    // Accessbile \\
+    private void pushTexturesToGPU(Int2ObjectOpenHashMap<TextureArrayInstance> textureArrays) {
+        for (int i = 0; i < textureArrays.size(); i++)
+            pushTextureToGPU(textureArrays.get(i));
+    }
 
-    AliasInstance[] getAllAliases() {
-        return aliasLibrarySystem.getAllAliases();
+    private void pushTextureToGPU(TextureArrayInstance textureArray) {
+
+        // First and foremost push the array to the gpu and return the handle
+        int gpuHandle = GLSLUtility.pushTextureArray(textureArray.getRawImageArray());
+
+        // Next step retrieve the tile data
+        Object2ObjectOpenHashMap<String, TextureTileInstance> tileCoordinateMap = textureArray.getTileCoordinateMap();
+
+        // For each tile int he texture array map the appropriate data
+        for (Object2ObjectMap.Entry<String, TextureTileInstance> tile : tileCoordinateMap.object2ObjectEntrySet()) {
+
+            UVCoordinate uvCoordinate = computeUV(
+                    tile.getValue().getAtlasX(),
+                    tile.getValue().getAtlasY(),
+                    textureArray.atlasSize);
+
+            textureManager.addTextureTile(tile.getValue(), uvCoordinate);
+        }
+
+        // For each array map the appropriate data
+        textureManager.addTextureArray(textureArray, gpuHandle);
+    }
+
+    // Use global image size settigns to calculate UVs for any given texture using
+    // known x and y coordinate values stored internally per tile
+    private UVCoordinate computeUV(int atlasX, int atlasY, int atlasSize) {
+
+        float u = (atlasX * EngineSetting.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
+        float v = (atlasY * EngineSetting.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
+
+        return new UVCoordinate(u, v);
     }
 }

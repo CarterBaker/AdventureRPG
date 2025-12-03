@@ -1,0 +1,20 @@
+package com.AdventureRPG.Core.RenderPipeline.Uniform.Matrices;
+
+import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
+import com.AdventureRPG.Core.Util.Methematics.Matrices.Matrix4;
+
+public class Matrix4Uniform extends UniformAttribute<Matrix4> {
+
+    // Base \\
+
+    public Matrix4Uniform() {
+        super(new Matrix4());
+    }
+
+    // Utility \\
+
+    @Override
+    protected void push(int handle, Matrix4 value) {
+
+    }
+}

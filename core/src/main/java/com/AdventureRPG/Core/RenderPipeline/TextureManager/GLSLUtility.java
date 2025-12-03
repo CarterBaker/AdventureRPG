@@ -137,4 +137,16 @@ class GLSLUtility {
 
         return pix;
     }
+
+    static void deleteTextureArray(int handle) {
+
+        if (handle == 0)
+            return;
+
+        // Unbind first for safety
+        Gdx.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
+
+        // Delete GPU side
+        Gdx.gl.glDeleteTexture(handle);
+    }
 }

@@ -3,12 +3,12 @@ package com.AdventureRPG.Core.RenderPipeline.MaterialManager;
 import java.io.File;
 
 import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.RenderPipeline.Materials.Material;
+import com.AdventureRPG.Core.RenderPipeline.Material.Material;
+import com.AdventureRPG.Core.RenderPipeline.Shader.Shader;
 import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
-import com.AdventureRPG.Core.RenderPipeline.Shaders.Shader;
 import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
-import com.AdventureRPG.Core.RenderPipeline.Uniforms.Uniform;
-import com.AdventureRPG.Core.RenderPipeline.Uniforms.UniformAttribute;
+import com.AdventureRPG.Core.RenderPipeline.Uniform.Uniform;
+import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
 import com.AdventureRPG.Core.Util.FileUtility;
 import com.AdventureRPG.Core.Util.JsonUtility;
 import com.AdventureRPG.Core.Util.Methematics.Matrices.*;
