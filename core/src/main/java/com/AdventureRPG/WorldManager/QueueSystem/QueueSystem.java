@@ -1,14 +1,14 @@
-package com.AdventureRPG.WorldManager.QueueSystem;
+package com.AdventureRPG.worldmanager.queuesystem;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.Util.Methematics.Extras.Coordinate2Int;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector2Int;
-import com.AdventureRPG.WorldManager.WorldManager;
-import com.AdventureRPG.WorldManager.WorldTick;
-import com.AdventureRPG.WorldManager.BatchSystem.BatchSystem;
-import com.AdventureRPG.WorldManager.Chunks.Chunk;
+import com.AdventureRPG.core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.util.Methematics.Extras.Coordinate2Int;
+import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
+import com.AdventureRPG.worldmanager.WorldManager;
+import com.AdventureRPG.worldmanager.WorldTick;
+import com.AdventureRPG.worldmanager.batchsystem.BatchSystem;
+import com.AdventureRPG.worldmanager.chunks.Chunk;
 
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;

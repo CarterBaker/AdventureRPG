@@ -1,8 +1,8 @@
-package com.AdventureRPG.Core.RenderPipeline.TextureManager;
+package com.AdventureRPG.core.renderpipeline.texturemanager;
 
 import java.awt.image.BufferedImage;
 
-import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
+import com.AdventureRPG.core.kernel.InstanceFrame;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 

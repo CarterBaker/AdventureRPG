@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.RenderPipeline.PassManager;
+package com.AdventureRPG.core.renderpipeline.passmanager;
 
-import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.ProcessingPass.ProcessingPass;
+import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.renderpipeline.processingpass.ProcessingPass;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -30,7 +30,7 @@ public class PassManager extends ManagerFrame {
 
     @Override
     protected void awake() {
-        compilePasss();
+        compilePasses();
     }
 
     @Override
@@ -40,7 +40,7 @@ public class PassManager extends ManagerFrame {
 
     // Pass Management \\
 
-    private void compilePasss() {
+    private void compilePasses() {
         internalLoadManager.loadPasses();
     }
 

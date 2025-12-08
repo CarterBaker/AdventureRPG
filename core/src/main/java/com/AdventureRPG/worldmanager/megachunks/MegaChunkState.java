@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldManager.MegaChunk;
+package com.AdventureRPG.worldmanager.megachunks;
 
 public enum MegaChunkState {
     INCOMPLETE,

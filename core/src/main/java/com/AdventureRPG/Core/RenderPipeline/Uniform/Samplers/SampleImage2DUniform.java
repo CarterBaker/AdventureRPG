@@ -1,6 +1,6 @@
-package com.AdventureRPG.Core.RenderPipeline.Uniform.Samplers;
+package com.AdventureRPG.core.renderpipeline.uniform.samplers;
 
-import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
+import com.AdventureRPG.core.renderpipeline.uniform.UniformAttribute;
 
 public class SampleImage2DUniform extends UniformAttribute<Integer> {
 

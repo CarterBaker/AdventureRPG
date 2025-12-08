@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.RenderPipeline.Util;
+package com.AdventureRPG.core.renderpipeline.util;
 
 public class UVCoordinate {
 

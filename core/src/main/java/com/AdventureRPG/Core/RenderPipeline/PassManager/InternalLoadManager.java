@@ -1,15 +1,15 @@
-package com.AdventureRPG.Core.RenderPipeline.PassManager;
+package com.AdventureRPG.core.renderpipeline.passmanager;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.ProcessingPass.ProcessingPass;
-import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.renderpipeline.processingpass.ProcessingPass;
+import com.AdventureRPG.core.util.FileUtility;
+import com.AdventureRPG.core.util.Exceptions.FileException;
 
 class InternalLoadManager extends ManagerFrame {
 

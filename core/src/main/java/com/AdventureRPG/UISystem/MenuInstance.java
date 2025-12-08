@@ -1,4 +1,4 @@
-package com.AdventureRPG.UISystem;
+package com.AdventureRPG.uisystem;
 
 public abstract class MenuInstance {
     protected final UISystem UISystem;

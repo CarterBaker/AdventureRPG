@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.RenderPipeline.Uniform.Vectors;
+package com.AdventureRPG.core.renderpipeline.uniform.vectors;
 
-import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector2Int;
+import com.AdventureRPG.core.renderpipeline.uniform.UniformAttribute;
+import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
 
 public class Vector2IntUniform extends UniformAttribute<Vector2Int> {
 

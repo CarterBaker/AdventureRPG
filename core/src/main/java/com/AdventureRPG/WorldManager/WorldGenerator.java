@@ -1,15 +1,15 @@
-package com.AdventureRPG.WorldManager;
+package com.AdventureRPG.worldmanager;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.Util.OpenSimplex2;
-import com.AdventureRPG.SaveManager.SaveManager;
-import com.AdventureRPG.SaveManager.UserData;
-import com.AdventureRPG.WorldManager.Blocks.Block;
-import com.AdventureRPG.WorldManager.Blocks.BlockSystem;
-import com.AdventureRPG.WorldManager.Chunks.Chunk;
-import com.AdventureRPG.WorldManager.SubChunks.SubChunk;
-import com.AdventureRPG.WorldManager.Util.PackedCoordinate3Int;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.util.OpenSimplex2;
+import com.AdventureRPG.savemanager.SaveManager;
+import com.AdventureRPG.savemanager.UserData;
+import com.AdventureRPG.worldmanager.blocks.Block;
+import com.AdventureRPG.worldmanager.blocks.BlockSystem;
+import com.AdventureRPG.worldmanager.chunks.Chunk;
+import com.AdventureRPG.worldmanager.subchunks.SubChunk;
+import com.AdventureRPG.worldmanager.util.PackedCoordinate3Int;
 
 public class WorldGenerator extends SystemFrame {
 

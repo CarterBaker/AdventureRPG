@@ -1,7 +1,7 @@
-package com.AdventureRPG.WorldManager.Chunks;
+package com.AdventureRPG.worldmanager.chunks;
 
-import com.AdventureRPG.Core.RenderPipeline.RenderableInstance.MeshPacket;
-import com.AdventureRPG.WorldManager.SubChunks.SubChunk;
+import com.AdventureRPG.core.renderpipeline.RenderableInstance.MeshPacket;
+import com.AdventureRPG.worldmanager.subchunks.SubChunk;
 
 public final class ChunkMesh {
 

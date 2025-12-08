@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldManager.Chunks;
+package com.AdventureRPG.worldmanager.chunks;
 
 public enum NeighborStatus {
     INCOMPLETE,

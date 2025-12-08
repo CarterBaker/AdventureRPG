@@ -1,9 +1,9 @@
-package com.AdventureRPG.Core.Bootstrap;
+package com.AdventureRPG.core.kernel;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.AdventureRPG.Core.Util.Exceptions.CoreException;
+import com.AdventureRPG.core.util.Exceptions.CoreException;
 
 public abstract class ManagerFrame extends SystemFrame {
 

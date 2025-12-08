@@ -1,6 +1,6 @@
-package com.AdventureRPG.Core.RenderPipeline.ProcessingPass;
+package com.AdventureRPG.core.renderpipeline.processingpass;
 
-import com.AdventureRPG.Core.RenderPipeline.Material.Material;
+import com.AdventureRPG.core.renderpipeline.material.Material;
 
 public class ProcessingPass {
 

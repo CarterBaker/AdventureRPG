@@ -1,6 +1,6 @@
-package com.AdventureRPG.Core.RenderPipeline.Material;
+package com.AdventureRPG.core.renderpipeline.material;
 
-import com.AdventureRPG.Core.RenderPipeline.Uniform.Uniform;
+import com.AdventureRPG.core.renderpipeline.uniform.Uniform;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 

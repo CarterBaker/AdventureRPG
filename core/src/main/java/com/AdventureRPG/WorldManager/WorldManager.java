@@ -1,12 +1,12 @@
-package com.AdventureRPG.WorldManager;
+package com.AdventureRPG.worldmanager;
 
-import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector2Int;
-import com.AdventureRPG.WorldManager.BatchSystem.BatchSystem;
-import com.AdventureRPG.WorldManager.Biomes.BiomeSystem;
-import com.AdventureRPG.WorldManager.Blocks.BlockSystem;
-import com.AdventureRPG.WorldManager.QueueSystem.QueueSystem;
-import com.AdventureRPG.WorldManager.Util.PackedCoordinate3Int;
+import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
+import com.AdventureRPG.worldmanager.batchsystem.BatchSystem;
+import com.AdventureRPG.worldmanager.biomes.BiomeSystem;
+import com.AdventureRPG.worldmanager.blocks.BlockSystem;
+import com.AdventureRPG.worldmanager.queuesystem.QueueSystem;
+import com.AdventureRPG.worldmanager.util.PackedCoordinate3Int;
 import com.badlogic.gdx.math.Vector3;
 
 public class WorldManager extends ManagerFrame {

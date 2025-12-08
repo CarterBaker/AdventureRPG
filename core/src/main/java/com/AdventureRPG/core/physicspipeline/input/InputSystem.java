@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.PhysicsPipeline.InputSystem;
+package com.AdventureRPG.core.physicspipeline.input;
 
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector3Int;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.util.Methematics.Vectors.Vector3Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;

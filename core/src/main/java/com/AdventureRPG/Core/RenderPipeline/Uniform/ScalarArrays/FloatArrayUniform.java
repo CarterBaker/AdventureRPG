@@ -1,6 +1,6 @@
-package com.AdventureRPG.Core.RenderPipeline.Uniform.ScalarArrays;
+package com.AdventureRPG.core.renderpipeline.uniform.scalarArrays;
 
-import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
+import com.AdventureRPG.core.renderpipeline.uniform.UniformAttribute;
 
 public class FloatArrayUniform extends UniformAttribute<Float[]> {
 

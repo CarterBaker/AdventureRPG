@@ -1,11 +1,11 @@
-package com.AdventureRPG.Core.PhysicsPipeline.MovementManager;
+package com.AdventureRPG.core.physicspipeline.movement;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector2Int;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector3Int;
-import com.AdventureRPG.PlayerManager.StatisticsInstance;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
+import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
+import com.AdventureRPG.core.util.Methematics.Vectors.Vector3Int;
+import com.AdventureRPG.playermanager.StatisticsInstance;
 import com.badlogic.gdx.math.Vector3;
 
 public class MovementManager extends ManagerFrame {

@@ -1,11 +1,11 @@
-package com.AdventureRPG.WorldManager.BatchSystem;
+package com.AdventureRPG.worldmanager.batchsystem;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.WorldManager.WorldManager;
-import com.AdventureRPG.WorldManager.WorldTick;
-import com.AdventureRPG.WorldManager.Chunks.Chunk;
-import com.AdventureRPG.WorldManager.QueueSystem.QueueSystem;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.worldmanager.WorldManager;
+import com.AdventureRPG.worldmanager.WorldTick;
+import com.AdventureRPG.worldmanager.chunks.Chunk;
+import com.AdventureRPG.worldmanager.queuesystem.QueueSystem;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 

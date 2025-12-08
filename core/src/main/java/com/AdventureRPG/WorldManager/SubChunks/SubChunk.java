@@ -1,9 +1,9 @@
-package com.AdventureRPG.WorldManager.SubChunks;
+package com.AdventureRPG.worldmanager.subchunks;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.WorldManager.Biomes.BiomeContainer;
-import com.AdventureRPG.WorldManager.Blocks.BlockContainer;
-import com.AdventureRPG.WorldManager.Chunks.Chunk;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.worldmanager.biomes.BiomeContainer;
+import com.AdventureRPG.worldmanager.blocks.BlockContainer;
+import com.AdventureRPG.worldmanager.chunks.Chunk;
 
 public final class SubChunk {
 

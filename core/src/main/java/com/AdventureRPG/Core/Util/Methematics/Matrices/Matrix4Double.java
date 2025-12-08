@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Util.Methematics.Matrices;
+package com.AdventureRPG.core.util.Methematics.Matrices;
 
 public class Matrix4Double {
 

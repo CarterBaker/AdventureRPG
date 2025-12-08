@@ -1,8 +1,8 @@
-package com.AdventureRPG.Core.RenderPipeline.TextureManager;
+package com.AdventureRPG.core.renderpipeline.texturemanager;
 
 import java.awt.Color;
 
-import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
+import com.AdventureRPG.core.kernel.InstanceFrame;
 
 class AliasInstance extends InstanceFrame {
     final String aliasType;

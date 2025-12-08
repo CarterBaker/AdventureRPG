@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.Util.Methematics.Vectors;
+package com.AdventureRPG.core.util.Methematics.Vectors;
 
-import com.AdventureRPG.Core.Util.Methematics.Extras.Coordinate3Int;
-import com.AdventureRPG.Core.Util.Methematics.Extras.Direction3Int;
+import com.AdventureRPG.core.util.Methematics.Extras.Coordinate3Int;
+import com.AdventureRPG.core.util.Methematics.Extras.Direction3Int;
 
 public class Vector3Int {
 

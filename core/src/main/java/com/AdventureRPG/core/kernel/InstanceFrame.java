@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Bootstrap;
+package com.AdventureRPG.core.kernel;
 
 public abstract class InstanceFrame extends MainFrame {
 
@@ -13,5 +13,16 @@ public abstract class InstanceFrame extends MainFrame {
 
         this.gameEngine = gameEngine;
         this.owner = owner;
+    }
+
+    // Accessible \\
+
+    protected final InstanceFrame create(InstanceFrame instanceFrame) {
+
+        instanceFrame.create(
+                gameEngine,
+                owner);
+
+        return instanceFrame;
     }
 }

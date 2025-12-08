@@ -1,26 +1,26 @@
-package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
+package com.AdventureRPG.core.renderpipeline.shadermanager;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.LayoutBlocks.LayoutBlock;
-import com.AdventureRPG.Core.RenderPipeline.Shader.Shader;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.Uniform;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.Matrices.*;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.MatrixArrays.*;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.Samplers.*;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.ScalarArrays.*;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.Scalars.*;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.VectorArrays.*;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.Vectors.*;
-import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
-import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.renderpipeline.shader.Shader;
+import com.AdventureRPG.core.renderpipeline.uniform.Uniform;
+import com.AdventureRPG.core.renderpipeline.uniform.UniformAttribute;
+import com.AdventureRPG.core.renderpipeline.uniform.matrices.*;
+import com.AdventureRPG.core.renderpipeline.uniform.matrixArrays.*;
+import com.AdventureRPG.core.renderpipeline.uniform.samplers.*;
+import com.AdventureRPG.core.renderpipeline.uniform.scalarArrays.*;
+import com.AdventureRPG.core.renderpipeline.uniform.scalars.*;
+import com.AdventureRPG.core.renderpipeline.uniform.vectorarrays.*;
+import com.AdventureRPG.core.renderpipeline.uniform.vectors.*;
+import com.AdventureRPG.core.renderpipeline.layoutblocks.LayoutBlock;
+import com.AdventureRPG.core.util.FileUtility;
+import com.AdventureRPG.core.util.Exceptions.FileException;
+import com.AdventureRPG.core.util.Exceptions.GraphicException;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

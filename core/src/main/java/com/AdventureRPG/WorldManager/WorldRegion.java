@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldManager;
+package com.AdventureRPG.worldmanager;
 
 public class WorldRegion {
 

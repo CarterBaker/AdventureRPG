@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.ThreadPipeline;
+package com.AdventureRPG.core.threadpipeline;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -6,7 +6,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+import com.AdventureRPG.core.kernel.SystemFrame;
 
 public class ThreadSystem extends SystemFrame {
 

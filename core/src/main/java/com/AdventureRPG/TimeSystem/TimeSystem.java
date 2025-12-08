@@ -1,12 +1,12 @@
-package com.AdventureRPG.TimeSystem;
+package com.AdventureRPG.timesystem;
 
 import java.io.File;
 import java.time.Instant;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.LightingSystem.LightingManager;
-import com.AdventureRPG.SaveManager.UserData;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.lightingsystem.LightingManager;
+import com.AdventureRPG.savemanager.UserData;
 
 public class TimeSystem extends SystemFrame {
 

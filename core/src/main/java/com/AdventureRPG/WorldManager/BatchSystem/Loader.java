@@ -1,15 +1,15 @@
-package com.AdventureRPG.WorldManager.BatchSystem;
+package com.AdventureRPG.worldmanager.batchsystem;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
-import com.AdventureRPG.Core.Util.Methematics.Extras.Coordinate2Int;
-import com.AdventureRPG.WorldManager.WorldManager;
-import com.AdventureRPG.WorldManager.Chunks.Chunk;
-import com.AdventureRPG.WorldManager.QueueSystem.QueueSystem;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.threadpipeline.ThreadSystem;
+import com.AdventureRPG.core.util.Methematics.Extras.Coordinate2Int;
+import com.AdventureRPG.worldmanager.WorldManager;
+import com.AdventureRPG.worldmanager.chunks.Chunk;
+import com.AdventureRPG.worldmanager.queuesystem.QueueSystem;
 
 public class Loader extends SystemFrame {
 

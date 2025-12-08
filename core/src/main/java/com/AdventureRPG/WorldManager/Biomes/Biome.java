@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldManager.Biomes;
+package com.AdventureRPG.worldmanager.biomes;
 
 import com.badlogic.gdx.graphics.Color;
 

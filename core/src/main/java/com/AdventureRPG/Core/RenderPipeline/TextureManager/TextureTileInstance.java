@@ -1,9 +1,9 @@
-package com.AdventureRPG.Core.RenderPipeline.TextureManager;
+package com.AdventureRPG.core.renderpipeline.texturemanager;
 
 import java.awt.image.BufferedImage;
 
-import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
-import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
+import com.AdventureRPG.core.kernel.InstanceFrame;
+import com.AdventureRPG.core.util.Exceptions.GraphicException;
 
 class TextureTileInstance extends InstanceFrame {
 

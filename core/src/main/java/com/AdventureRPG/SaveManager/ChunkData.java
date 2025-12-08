@@ -1,9 +1,9 @@
-package com.AdventureRPG.SaveManager;
+package com.AdventureRPG.savemanager;
 
 import java.io.File;
 
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.WorldManager.Chunks.Chunk;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.worldmanager.chunks.Chunk;
 
 public class ChunkData extends SystemFrame {
 

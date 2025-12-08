@@ -1,16 +1,16 @@
-package com.AdventureRPG.WorldManager.Chunks;
+package com.AdventureRPG.worldmanager.chunks;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.Util.Methematics.Extras.Coordinate2Int;
-import com.AdventureRPG.Core.Util.Methematics.Extras.Direction2Int;
-import com.AdventureRPG.WorldManager.WorldGenerator;
-import com.AdventureRPG.WorldManager.WorldManager;
-import com.AdventureRPG.WorldManager.QueueSystem.QueueProcess;
-import com.AdventureRPG.WorldManager.QueueSystem.QueueSystem;
-import com.AdventureRPG.WorldManager.SubChunks.SubChunk;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
+import com.AdventureRPG.core.util.Methematics.Extras.Coordinate2Int;
+import com.AdventureRPG.core.util.Methematics.Extras.Direction2Int;
+import com.AdventureRPG.worldmanager.WorldGenerator;
+import com.AdventureRPG.worldmanager.WorldManager;
+import com.AdventureRPG.worldmanager.queuesystem.QueueProcess;
+import com.AdventureRPG.worldmanager.queuesystem.QueueSystem;
+import com.AdventureRPG.worldmanager.subchunks.SubChunk;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 

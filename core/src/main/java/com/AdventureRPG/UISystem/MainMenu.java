@@ -1,4 +1,4 @@
-package com.AdventureRPG.UISystem;
+package com.AdventureRPG.uisystem;
 
 public class MainMenu extends MenuInstance {
 

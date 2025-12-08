@@ -1,6 +1,6 @@
-package com.AdventureRPG.Core.RenderPipeline.CameraSystem;
+package com.AdventureRPG.core.renderpipeline.camerasystem;
 
-import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
+import com.AdventureRPG.core.kernel.InstanceFrame;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;

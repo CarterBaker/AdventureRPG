@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.RenderPipeline.Shader;
+package com.AdventureRPG.core.renderpipeline.shader;
 
-import com.AdventureRPG.Core.RenderPipeline.LayoutBlocks.LayoutBlock;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.Uniform;
+import com.AdventureRPG.core.renderpipeline.uniform.Uniform;
+import com.AdventureRPG.core.renderpipeline.layoutblocks.LayoutBlock;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 

@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Bootstrap;
+package com.AdventureRPG.core.kernel;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;

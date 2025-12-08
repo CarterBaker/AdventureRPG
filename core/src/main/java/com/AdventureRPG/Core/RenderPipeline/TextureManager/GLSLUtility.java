@@ -1,9 +1,9 @@
-package com.AdventureRPG.Core.RenderPipeline.TextureManager;
+package com.AdventureRPG.core.renderpipeline.texturemanager;
 
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 
-import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
+import com.AdventureRPG.core.util.Exceptions.GraphicException;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;

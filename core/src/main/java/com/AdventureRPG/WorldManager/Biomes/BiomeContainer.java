@@ -1,6 +1,6 @@
-package com.AdventureRPG.WorldManager.Biomes;
+package com.AdventureRPG.worldmanager.biomes;
 
-import com.AdventureRPG.WorldManager.Chunks.ChunkPalette;
+import com.AdventureRPG.worldmanager.chunks.ChunkPalette;
 
 public final class BiomeContainer {
 

@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
+package com.AdventureRPG.core.renderpipeline.shadermanager;
 
 public enum ShaderType {
     VERT,

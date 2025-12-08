@@ -1,18 +1,18 @@
-package com.AdventureRPG.Core.RenderPipeline.MaterialManager;
+package com.AdventureRPG.core.renderpipeline.materialmanager;
 
 import java.io.File;
 
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.RenderPipeline.Material.Material;
-import com.AdventureRPG.Core.RenderPipeline.Shader.Shader;
-import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
-import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.Uniform;
-import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
-import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.JsonUtility;
-import com.AdventureRPG.Core.Util.Methematics.Matrices.*;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.*;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.renderpipeline.shader.Shader;
+import com.AdventureRPG.core.renderpipeline.shadermanager.ShaderManager;
+import com.AdventureRPG.core.renderpipeline.texturemanager.TextureManager;
+import com.AdventureRPG.core.renderpipeline.uniform.Uniform;
+import com.AdventureRPG.core.renderpipeline.uniform.UniformAttribute;
+import com.AdventureRPG.core.renderpipeline.material.Material;
+import com.AdventureRPG.core.util.FileUtility;
+import com.AdventureRPG.core.util.JsonUtility;
+import com.AdventureRPG.core.util.Methematics.Matrices.*;
+import com.AdventureRPG.core.util.Methematics.Vectors.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

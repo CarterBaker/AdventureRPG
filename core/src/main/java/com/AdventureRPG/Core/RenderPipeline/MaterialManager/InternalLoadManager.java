@@ -1,15 +1,15 @@
-package com.AdventureRPG.Core.RenderPipeline.MaterialManager;
+package com.AdventureRPG.core.renderpipeline.materialmanager;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.Material.Material;
-import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.renderpipeline.material.Material;
+import com.AdventureRPG.core.util.FileUtility;
+import com.AdventureRPG.core.util.Exceptions.FileException;
 
 class InternalLoadManager extends ManagerFrame {
 

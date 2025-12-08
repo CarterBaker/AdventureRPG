@@ -1,16 +1,16 @@
-package com.AdventureRPG.WorldManager.QueueSystem;
+package com.AdventureRPG.worldmanager.queuesystem;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
-import com.AdventureRPG.SaveManager.ChunkData;
-import com.AdventureRPG.SaveManager.SaveManager;
-import com.AdventureRPG.WorldManager.WorldManager;
-import com.AdventureRPG.WorldManager.Chunks.Chunk;
+import com.AdventureRPG.core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.threadpipeline.ThreadSystem;
+import com.AdventureRPG.savemanager.ChunkData;
+import com.AdventureRPG.savemanager.SaveManager;
+import com.AdventureRPG.worldmanager.WorldManager;
+import com.AdventureRPG.worldmanager.chunks.Chunk;
 
 public class Loader extends SystemFrame {
 

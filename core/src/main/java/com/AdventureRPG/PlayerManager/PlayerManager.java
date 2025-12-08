@@ -1,11 +1,11 @@
-package com.AdventureRPG.PlayerManager;
+package com.AdventureRPG.playermanager;
 
-import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
-import com.AdventureRPG.Core.PhysicsPipeline.MovementManager.MovementManager;
-import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector2Int;
-import com.AdventureRPG.WorldManager.WorldManager;
+import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.physicspipeline.input.InputSystem;
+import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
+import com.AdventureRPG.core.renderpipeline.camerasystem.CameraSystem;
+import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
+import com.AdventureRPG.worldmanager.WorldManager;
 import com.badlogic.gdx.math.Vector3;
 
 // TODO: This needs to be abstracted to generic NPC like class

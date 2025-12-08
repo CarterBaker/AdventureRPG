@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.Util.Methematics.Vectors;
+package com.AdventureRPG.core.util.Methematics.Vectors;
 
-import com.AdventureRPG.Core.Util.Methematics.Extras.Coordinate2Int;
-import com.AdventureRPG.Core.Util.Methematics.Extras.Direction2Int;
+import com.AdventureRPG.core.util.Methematics.Extras.Coordinate2Int;
+import com.AdventureRPG.core.util.Methematics.Extras.Direction2Int;
 
 public class Vector2Int {
 

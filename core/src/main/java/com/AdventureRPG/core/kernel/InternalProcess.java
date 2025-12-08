@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Bootstrap;
+package com.AdventureRPG.core.kernel;
 
 public enum InternalProcess {
 
@@ -16,6 +16,8 @@ public enum InternalProcess {
     FIXED_UPDATE(true),
     LATE_UPDATE(true),
     RENDER(true),
+
+    DRAW(true),
 
     DISPOSE(false);
 

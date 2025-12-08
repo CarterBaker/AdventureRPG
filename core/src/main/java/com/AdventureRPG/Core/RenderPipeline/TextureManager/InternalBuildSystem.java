@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.RenderPipeline.TextureManager;
+package com.AdventureRPG.core.renderpipeline.texturemanager;
 
 import java.io.File;
 import java.util.LinkedHashMap;
@@ -9,10 +9,10 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.util.FileUtility;
+import com.AdventureRPG.core.util.Exceptions.GraphicException;
 
 class InternalBuildSystem extends SystemFrame {
 

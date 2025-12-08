@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Bootstrap;
+package com.AdventureRPG.core.kernel;
 
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
@@ -82,7 +82,7 @@ public class EngineSetting {
         public static final int VERT_NOR = 3; // nX, nY, nZ
         public static final int VERT_COL = 1; // Color
         public static final int VERT_UV0 = 2; // UV
-        public static final int VERT_STRIDE = VERT_POS + VERT_NOR + VERT_COL + VERT_UV0;
+        public static final int STATIC_VERT_STRIDE = VERT_POS + VERT_NOR + VERT_COL + VERT_UV0;
         public static final int CHUNK_VERT_BUFFER = 128;
         public static final int MESH_VERT_LIMIT = 32767;
 }

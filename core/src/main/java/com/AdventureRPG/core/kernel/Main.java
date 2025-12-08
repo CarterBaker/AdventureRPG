@@ -1,9 +1,9 @@
-package com.AdventureRPG.Core.Bootstrap;
+package com.AdventureRPG.core.kernel;
 
 import java.io.File;
 
-import com.AdventureRPG.Core.Settings.Settings;
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.core.settings.Settings;
+import com.AdventureRPG.core.util.Exceptions.FileException;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
@@ -137,6 +137,7 @@ public class Main extends Game {
         internalFixedUpdate();
         internalLateUpdate();
         internalRender();
+        internalDraw();
     }
 
     // Exit Cycle \\
@@ -222,6 +223,12 @@ public class Main extends Game {
 
     private void internalRender() {
         gameEngine.internalRender();
+    }
+
+    // Draw \\
+
+    private void internalDraw() {
+        gameEngine.internalDraw();
     }
 
     // Dispose \\

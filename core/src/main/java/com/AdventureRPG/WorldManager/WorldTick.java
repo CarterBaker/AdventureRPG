@@ -1,7 +1,7 @@
-package com.AdventureRPG.WorldManager;
+package com.AdventureRPG.worldmanager;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.SystemFrame;
 import com.badlogic.gdx.Gdx;
 
 public class WorldTick extends SystemFrame {

@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldManager.Chunks;
+package com.AdventureRPG.worldmanager.chunks;
 
 import java.util.ArrayList;
 import java.util.List;

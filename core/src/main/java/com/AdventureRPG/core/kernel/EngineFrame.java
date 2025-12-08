@@ -1,11 +1,11 @@
-package com.AdventureRPG.Core.Bootstrap;
+package com.AdventureRPG.core.kernel;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.AdventureRPG.Core.Settings.Settings;
-import com.AdventureRPG.Core.Util.Exceptions.CoreException;
+import com.AdventureRPG.core.settings.Settings;
+import com.AdventureRPG.core.util.Exceptions.CoreException;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
 
@@ -268,16 +268,6 @@ public class EngineFrame extends ManagerFrame {
         super.internalLateUpdate();
     }
 
-    // Dispose \\
-
-    @Override
-    void internalDispose() {
-
-        this.setInternalProcess(InternalProcess.DISPOSE);
-
-        super.internalDispose();
-    }
-
     // Render \\
 
     @Override
@@ -286,6 +276,28 @@ public class EngineFrame extends ManagerFrame {
         this.setInternalProcess(InternalProcess.RENDER);
 
         super.internalRender();
+    }
+
+    // Draw \\
+
+    void internalDraw() {
+
+        this.setInternalProcess(InternalProcess.DRAW);
+
+        draw();
+    }
+
+    protected void draw() {
+    }
+
+    // Dispose \\
+
+    @Override
+    void internalDispose() {
+
+        this.setInternalProcess(InternalProcess.DISPOSE);
+
+        super.internalDispose();
     }
 
     // Accessible \\

@@ -1,7 +1,7 @@
-package com.AdventureRPG.WorldManager.Util;
+package com.AdventureRPG.worldmanager.util;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.SystemFrame;
 
 public class PackedCoordinate3Int extends SystemFrame {
 

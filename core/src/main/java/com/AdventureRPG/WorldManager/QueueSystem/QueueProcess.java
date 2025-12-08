@@ -1,6 +1,6 @@
-package com.AdventureRPG.WorldManager.QueueSystem;
+package com.AdventureRPG.worldmanager.queuesystem;
 
-import com.AdventureRPG.WorldManager.Chunks.ChunkState;
+import com.AdventureRPG.worldmanager.chunks.ChunkState;
 
 public enum QueueProcess {
 

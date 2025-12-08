@@ -1,9 +1,9 @@
-package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
+package com.AdventureRPG.core.renderpipeline.shadermanager;
 
-import com.AdventureRPG.Core.Bootstrap.ManagerFrame;
-import com.AdventureRPG.Core.RenderPipeline.LayoutBlocks.LayoutBlock;
-import com.AdventureRPG.Core.RenderPipeline.Shader.Shader;
-import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
+import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.renderpipeline.shader.Shader;
+import com.AdventureRPG.core.renderpipeline.layoutblocks.LayoutBlock;
+import com.AdventureRPG.core.util.Exceptions.GraphicException;
 
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;

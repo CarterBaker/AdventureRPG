@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
+package com.AdventureRPG.core.renderpipeline.shadermanager;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 

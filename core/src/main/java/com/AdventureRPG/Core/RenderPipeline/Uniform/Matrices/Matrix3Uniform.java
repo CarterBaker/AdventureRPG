@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.RenderPipeline.Uniform.Matrices;
+package com.AdventureRPG.core.renderpipeline.uniform.matrices;
 
-import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
-import com.AdventureRPG.Core.Util.Methematics.Matrices.Matrix3;
+import com.AdventureRPG.core.renderpipeline.uniform.UniformAttribute;
+import com.AdventureRPG.core.util.Methematics.Matrices.Matrix3;
 
 public class Matrix3Uniform extends UniformAttribute<Matrix3> {
 

@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.RenderPipeline.MaterialManager;
+package com.AdventureRPG.core.renderpipeline.materialmanager;
 
-import com.AdventureRPG.Core.Util.Methematics.Matrices.*;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.*;
+import com.AdventureRPG.core.util.Methematics.Matrices.*;
+import com.AdventureRPG.core.util.Methematics.Vectors.*;
 import com.google.gson.JsonArray;
 
 class MaterialParseUtility {

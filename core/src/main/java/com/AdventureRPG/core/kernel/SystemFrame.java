@@ -1,6 +1,6 @@
-package com.AdventureRPG.Core.Bootstrap;
+package com.AdventureRPG.core.kernel;
 
-import com.AdventureRPG.Core.Settings.Settings;
+import com.AdventureRPG.core.settings.Settings;
 
 public abstract class SystemFrame extends MainFrame {
 

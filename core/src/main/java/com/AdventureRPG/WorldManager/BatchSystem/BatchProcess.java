@@ -1,6 +1,6 @@
-package com.AdventureRPG.WorldManager.BatchSystem;
+package com.AdventureRPG.worldmanager.batchsystem;
 
-import com.AdventureRPG.WorldManager.QueueSystem.QueueBundle;
+import com.AdventureRPG.worldmanager.queuesystem.QueueBundle;
 
 public enum BatchProcess {
 

@@ -1,26 +1,22 @@
-package com.AdventureRPG.Core.Bootstrap;
+package com.AdventureRPG.core.kernel;
 
 import java.io.File;
 
-import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
-import com.AdventureRPG.Core.PhysicsPipeline.MovementManager.MovementManager;
-import com.AdventureRPG.Core.RenderPipeline.CameraSystem.CameraSystem;
-import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialManager;
-import com.AdventureRPG.Core.RenderPipeline.PassManager.PassManager;
-import com.AdventureRPG.Core.RenderPipeline.RenderManager.RenderManager;
-import com.AdventureRPG.Core.RenderPipeline.ShaderManager.ShaderManager;
-import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager;
-import com.AdventureRPG.Core.ScenePipeline.WorldEngineSystem.WorldEngineSystem;
-import com.AdventureRPG.Core.Settings.Settings;
-import com.AdventureRPG.Core.ThreadPipeline.ThreadSystem;
-import com.AdventureRPG.LightingSystem.LightingManager;
-import com.AdventureRPG.PlayerManager.PlayerManager;
-import com.AdventureRPG.SaveManager.SaveManager;
-import com.AdventureRPG.TimeSystem.TimeSystem;
-import com.AdventureRPG.UISystem.LoadScreen;
-import com.AdventureRPG.UISystem.Menu;
-import com.AdventureRPG.UISystem.UISystem;
-import com.AdventureRPG.WorldManager.WorldManager;
+import com.AdventureRPG.core.physicspipeline.input.InputSystem;
+import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
+import com.AdventureRPG.core.renderpipeline.RenderPipeline;
+import com.AdventureRPG.core.renderpipeline.camerasystem.CameraSystem;
+import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
+import com.AdventureRPG.core.settings.Settings;
+import com.AdventureRPG.core.threadpipeline.ThreadSystem;
+import com.AdventureRPG.lightingsystem.LightingManager;
+import com.AdventureRPG.playermanager.PlayerManager;
+import com.AdventureRPG.savemanager.SaveManager;
+import com.AdventureRPG.timesystem.TimeSystem;
+import com.AdventureRPG.uisystem.LoadScreen;
+import com.AdventureRPG.uisystem.Menu;
+import com.AdventureRPG.uisystem.UISystem;
+import com.AdventureRPG.worldmanager.WorldManager;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
 
@@ -32,11 +28,7 @@ public class GameEngine extends EngineFrame implements Screen {
     private CameraSystem cameraSystem;
     private InputSystem inputSystem;
     private MovementManager movementManager;
-    private TextureManager textureManager;
-    private ShaderManager shaderManager;
-    private MaterialManager materialManager;
-    private PassManager passManager;
-    private RenderManager renderManager;
+    private RenderPipeline renderPipeline;
 
     // Core
     private SaveManager saveManager;
@@ -72,11 +64,7 @@ public class GameEngine extends EngineFrame implements Screen {
         this.cameraSystem = (CameraSystem) register(new CameraSystem());
         this.inputSystem = (InputSystem) register(new InputSystem());
         this.movementManager = (MovementManager) register(new MovementManager());
-        this.textureManager = (TextureManager) register(new TextureManager());
-        this.shaderManager = (ShaderManager) register(new ShaderManager());
-        this.materialManager = (MaterialManager) register(new MaterialManager());
-        this.passManager = (PassManager) register(new PassManager());
-        this.renderManager = (RenderManager) register(new RenderManager());
+        this.renderPipeline = (RenderPipeline) register(new RenderPipeline());
     }
 
     @Override
@@ -127,8 +115,8 @@ public class GameEngine extends EngineFrame implements Screen {
     }
 
     @Override
-    protected void render() {
-        this.renderManager.draw();
+    protected void draw() {
+        this.renderPipeline.draw();
     }
 
     // Screen \\

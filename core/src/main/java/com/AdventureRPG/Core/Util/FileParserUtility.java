@@ -1,10 +1,10 @@
-package com.AdventureRPG.Core.Util;
+package com.AdventureRPG.core.util;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.core.util.Exceptions.FileException;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

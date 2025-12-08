@@ -1,9 +1,9 @@
-package com.AdventureRPG.SaveManager;
+package com.AdventureRPG.savemanager;
 
 import java.io.File;
 import java.util.Random;
 
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
+import com.AdventureRPG.core.kernel.SystemFrame;
 
 public class UserData extends SystemFrame {
 

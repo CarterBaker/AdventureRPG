@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldManager.Blocks;
+package com.AdventureRPG.worldmanager.blocks;
 
 import java.lang.reflect.Type;
 
@@ -57,7 +57,7 @@ public class BlockDeserializer implements JsonDeserializer<Builder> {
 
         try {
             String stateStr = obj.get("type").getAsString().toUpperCase();
-            builder.type(com.AdventureRPG.WorldManager.Blocks.Type.valueOf(stateStr));
+            builder.type(com.AdventureRPG.worldmanager.blocks.Type.valueOf(stateStr));
         } catch (IllegalArgumentException e) {
             throw new JsonParseException("Invalid state value: " + obj.get("state").getAsString(), e);
         }

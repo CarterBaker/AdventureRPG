@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Util;
+package com.AdventureRPG.core.util;
 
 /**
  * K.jpg's OpenSimplex 2, faster variant

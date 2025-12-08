@@ -1,6 +1,6 @@
-package com.AdventureRPG.Core.RenderPipeline.Uniform.Scalars;
+package com.AdventureRPG.core.renderpipeline.uniform.scalars;
 
-import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
+import com.AdventureRPG.core.renderpipeline.uniform.UniformAttribute;
 
 public class BooleanUniform extends UniformAttribute<Boolean> {
 

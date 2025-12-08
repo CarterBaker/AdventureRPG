@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.RenderPipeline.Uniform;
+package com.AdventureRPG.core.renderpipeline.uniform;
 
 public abstract class UniformAttribute<T> {
 

@@ -1,9 +1,9 @@
-package com.AdventureRPG.Core.Util;
+package com.AdventureRPG.core.util;
 
 import java.io.File;
 import java.io.FileReader;
 
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.core.util.Exceptions.FileException;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;

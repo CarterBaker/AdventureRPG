@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldManager.QueueSystem;
+package com.AdventureRPG.worldmanager.queuesystem;
 
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 

@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Util.Methematics.Vectors;
+package com.AdventureRPG.core.util.Methematics.Vectors;
 
 public class Vector2Boolean {
 

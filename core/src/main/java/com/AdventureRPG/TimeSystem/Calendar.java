@@ -1,4 +1,4 @@
-package com.AdventureRPG.TimeSystem;
+package com.AdventureRPG.timesystem;
 
 import java.util.Arrays;
 

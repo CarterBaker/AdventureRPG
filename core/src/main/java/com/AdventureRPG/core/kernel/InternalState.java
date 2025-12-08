@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Bootstrap;
+package com.AdventureRPG.core.kernel;
 
 public enum InternalState {
 

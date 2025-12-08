@@ -1,14 +1,14 @@
-package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
+package com.AdventureRPG.core.renderpipeline.shadermanager;
 
 import java.io.File;
 import java.nio.file.Path;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.Util.FileParserUtility;
-import com.AdventureRPG.Core.Util.JsonUtility;
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
-import com.AdventureRPG.Core.Util.Exceptions.GraphicException;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.util.FileParserUtility;
+import com.AdventureRPG.core.util.JsonUtility;
+import com.AdventureRPG.core.util.Exceptions.FileException;
+import com.AdventureRPG.core.util.Exceptions.GraphicException;
 import com.google.gson.JsonObject;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

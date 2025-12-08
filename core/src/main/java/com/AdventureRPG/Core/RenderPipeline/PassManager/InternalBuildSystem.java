@@ -1,13 +1,13 @@
-package com.AdventureRPG.Core.RenderPipeline.PassManager;
+package com.AdventureRPG.core.renderpipeline.passmanager;
 
 import java.io.File;
 
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.RenderPipeline.Material.Material;
-import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialManager;
-import com.AdventureRPG.Core.RenderPipeline.ProcessingPass.ProcessingPass;
-import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.JsonUtility;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.renderpipeline.material.Material;
+import com.AdventureRPG.core.renderpipeline.materialmanager.MaterialManager;
+import com.AdventureRPG.core.renderpipeline.processingpass.ProcessingPass;
+import com.AdventureRPG.core.util.FileUtility;
+import com.AdventureRPG.core.util.JsonUtility;
 import com.google.gson.JsonObject;
 
 class InternalBuildSystem extends SystemFrame {

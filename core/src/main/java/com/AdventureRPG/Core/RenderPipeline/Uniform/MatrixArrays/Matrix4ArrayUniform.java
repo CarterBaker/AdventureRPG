@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.RenderPipeline.Uniform.MatrixArrays;
+package com.AdventureRPG.core.renderpipeline.uniform.matrixArrays;
 
-import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
-import com.AdventureRPG.Core.Util.Methematics.Matrices.Matrix4;
+import com.AdventureRPG.core.renderpipeline.uniform.UniformAttribute;
+import com.AdventureRPG.core.util.Methematics.Matrices.Matrix4;
 
 public class Matrix4ArrayUniform extends UniformAttribute<Matrix4[]> {
 

@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Util.Methematics.Extras;
+package com.AdventureRPG.core.util.Methematics.Extras;
 
 public final class Coordinate2Int {
 

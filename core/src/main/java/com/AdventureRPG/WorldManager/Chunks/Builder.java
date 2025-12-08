@@ -1,21 +1,21 @@
-package com.AdventureRPG.WorldManager.Chunks;
+package com.AdventureRPG.worldmanager.chunks;
 
 import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
-import com.AdventureRPG.Core.RenderPipeline.MaterialManager.MaterialData;
-import com.AdventureRPG.Core.RenderPipeline.TextureManager.TextureManager.UVRect;
-import com.AdventureRPG.Core.Util.Methematics.Extras.Direction2Int;
-import com.AdventureRPG.Core.Util.Methematics.Extras.Direction3Int;
-import com.AdventureRPG.WorldManager.WorldManager;
-import com.AdventureRPG.WorldManager.Biomes.BiomeSystem;
-import com.AdventureRPG.WorldManager.Blocks.Block;
-import com.AdventureRPG.WorldManager.Blocks.BlockSystem;
-import com.AdventureRPG.WorldManager.Blocks.Type;
-import com.AdventureRPG.WorldManager.SubChunks.SubChunk;
-import com.AdventureRPG.WorldManager.SubChunks.SubChunkMesh;
-import com.AdventureRPG.WorldManager.Util.PackedCoordinate3Int;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.renderpipeline.materialmanager.MaterialData;
+import com.AdventureRPG.core.renderpipeline.texturemanager.TextureManager.UVRect;
+import com.AdventureRPG.core.util.Methematics.Extras.Direction2Int;
+import com.AdventureRPG.core.util.Methematics.Extras.Direction3Int;
+import com.AdventureRPG.worldmanager.WorldManager;
+import com.AdventureRPG.worldmanager.SubChunks.SubChunk;
+import com.AdventureRPG.worldmanager.SubChunks.SubChunkMesh;
+import com.AdventureRPG.worldmanager.biomes.BiomeSystem;
+import com.AdventureRPG.worldmanager.blocks.Block
+import com.AdventureRPG.worldmanager.Util.PackedCoordinate3Int;
+import com.AdventureRPG.worldmanager.subchunks.SubChunk;
+import com.AdventureRPG.worldmanager.subchunks.SubChunkMesh;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.IntArray;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -679,7 +679,7 @@ public class Builder {
     private void buildFromQuads(SubChunkMesh subChunkMesh) {
 
         subChunkMesh.clear();
-        final int stride = EngineSetting.VERT_STRIDE;
+        final int stride = EngineSetting.STATIC_VERT_STRIDE;
 
         for (int i = 0; i < quads.size; i += QUAD_SIZE) {
 

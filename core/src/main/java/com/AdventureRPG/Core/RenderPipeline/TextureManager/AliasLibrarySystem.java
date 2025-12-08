@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.RenderPipeline.TextureManager;
+package com.AdventureRPG.core.renderpipeline.texturemanager;
 
 import java.io.File;
 import java.io.FileReader;
@@ -7,17 +7,16 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.awt.Color;
 
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.Util.FileUtility;
-import com.AdventureRPG.Core.Util.JsonUtility;
-import com.AdventureRPG.Core.Util.Exceptions.FileException;
+import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.util.FileUtility;
+import com.AdventureRPG.core.util.JsonUtility;
+import com.AdventureRPG.core.util.Exceptions.FileException;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-
-import com.AdventureRPG.Core.Bootstrap.EngineSetting;
 
 public class AliasLibrarySystem extends SystemFrame {
 

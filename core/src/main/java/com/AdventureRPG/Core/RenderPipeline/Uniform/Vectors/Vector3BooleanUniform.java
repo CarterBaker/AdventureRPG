@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.RenderPipeline.Uniform.Vectors;
+package com.AdventureRPG.core.renderpipeline.uniform.vectors;
 
-import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector3Boolean;
+import com.AdventureRPG.core.renderpipeline.uniform.UniformAttribute;
+import com.AdventureRPG.core.util.Methematics.Vectors.Vector3Boolean;
 
 public class Vector3BooleanUniform extends UniformAttribute<Vector3Boolean> {
 

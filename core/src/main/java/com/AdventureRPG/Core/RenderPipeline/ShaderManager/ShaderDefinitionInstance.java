@@ -1,6 +1,6 @@
-package com.AdventureRPG.Core.RenderPipeline.ShaderManager;
+package com.AdventureRPG.core.renderpipeline.shadermanager;
 
-import com.AdventureRPG.Core.Bootstrap.InstanceFrame;
+import com.AdventureRPG.core.kernel.InstanceFrame;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

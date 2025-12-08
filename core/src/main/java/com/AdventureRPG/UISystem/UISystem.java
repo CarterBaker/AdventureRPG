@@ -1,12 +1,12 @@
-package com.AdventureRPG.UISystem;
+package com.AdventureRPG.uisystem;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import com.AdventureRPG.Core.Bootstrap.SystemFrame;
-import com.AdventureRPG.Core.PhysicsPipeline.InputSystem.InputSystem;
-import com.AdventureRPG.Core.Util.Exceptions.UIException;
+import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.physicspipeline.input.InputSystem;
+import com.AdventureRPG.core.util.Exceptions.UIException;
 
 public class UISystem extends SystemFrame {
 

@@ -1,4 +1,4 @@
-package com.AdventureRPG.Core.Settings;
+package com.AdventureRPG.core.settings;
 
 public class Settings {
 

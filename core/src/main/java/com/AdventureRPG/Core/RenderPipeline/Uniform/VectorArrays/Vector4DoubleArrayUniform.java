@@ -1,7 +1,7 @@
-package com.AdventureRPG.Core.RenderPipeline.Uniform.VectorArrays;
+package com.AdventureRPG.core.renderpipeline.uniform.vectorarrays;
 
-import com.AdventureRPG.Core.RenderPipeline.Uniform.UniformAttribute;
-import com.AdventureRPG.Core.Util.Methematics.Vectors.Vector4Double;
+import com.AdventureRPG.core.renderpipeline.uniform.UniformAttribute;
+import com.AdventureRPG.core.util.Methematics.Vectors.Vector4Double;
 
 public class Vector4DoubleArrayUniform extends UniformAttribute<Vector4Double[]> {
 

@@ -1,4 +1,4 @@
-package com.AdventureRPG.TimeSystem;
+package com.AdventureRPG.timesystem;
 
 public class CalendarData {
     String[] daysOfWeek;
