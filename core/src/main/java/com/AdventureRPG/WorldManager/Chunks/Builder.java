@@ -4,8 +4,8 @@ import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.AdventureRPG.core.kernel.EngineSetting;
-import com.AdventureRPG.core.renderpipeline.materialmanager.MaterialData;
-import com.AdventureRPG.core.renderpipeline.texturemanager.TextureManager.UVRect;
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialData;
+import com.AdventureRPG.core.shaderpipeline.texturemanager.TextureManager.UVRect;
 import com.AdventureRPG.core.util.Methematics.Extras.Direction2Int;
 import com.AdventureRPG.core.util.Methematics.Extras.Direction3Int;
 import com.AdventureRPG.worldmanager.WorldManager;

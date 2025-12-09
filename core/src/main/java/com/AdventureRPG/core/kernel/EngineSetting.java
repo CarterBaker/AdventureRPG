@@ -18,6 +18,7 @@ public class EngineSetting {
         public static final String REGION_IMAGE_PATH = "world/world.png"; // The main image that controls the world
         public static final String SHADER_PATH = "shaders"; // The location of all shader files
         public static final String MATERIAL_JSON_PATH = "materials"; // The location of all material json files
+        public static final String MODEL_JSON_PATH = "models"; // The location of all material json files
         public static final String PASS_JSON_PATH = "processingPasses"; // The location of all pass json files
 
         // File Extension Settings

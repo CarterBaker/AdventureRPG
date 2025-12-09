@@ -36,12 +36,16 @@ public abstract class ManagerFrame extends SystemFrame {
 
         this.systemTree.add(subSystem);
 
+        setupNewSubSystem(subSystem);
+
+        return subSystem;
+    }
+
+    void setupNewSubSystem(SystemFrame subSystem) {
         subSystem.register(
                 settings,
                 gameEngine,
                 this);
-
-        return subSystem;
     }
 
     protected final SystemFrame release(SystemFrame subSystem) {

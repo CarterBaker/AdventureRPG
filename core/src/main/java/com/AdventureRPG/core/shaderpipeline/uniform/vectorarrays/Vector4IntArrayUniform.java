@@ -1,0 +1,24 @@
+package com.AdventureRPG.core.shaderpipeline.uniform.vectorarrays;
+
+import com.AdventureRPG.core.shaderpipeline.uniform.UniformAttribute;
+import com.AdventureRPG.core.util.Methematics.Vectors.Vector4Int;
+
+public class Vector4IntArrayUniform extends UniformAttribute<Vector4Int[]> {
+
+    // Base \\
+
+    public Vector4IntArrayUniform(int count) {
+
+        super(new Vector4Int[count]);
+
+        for (int i = 0; i < count; i++)
+            value[i] = new Vector4Int();
+    }
+
+    // Utility \\
+
+    @Override
+    protected void push(int handle, Vector4Int[] value) {
+
+    }
+}

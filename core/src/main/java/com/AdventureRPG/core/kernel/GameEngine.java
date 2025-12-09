@@ -2,12 +2,14 @@ package com.AdventureRPG.core.kernel;
 
 import java.io.File;
 
+import com.AdventureRPG.core.geometrypipeline.GeometryPipeline;
 import com.AdventureRPG.core.physicspipeline.input.InputSystem;
 import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
 import com.AdventureRPG.core.renderpipeline.RenderPipeline;
 import com.AdventureRPG.core.renderpipeline.camerasystem.CameraSystem;
 import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
 import com.AdventureRPG.core.settings.Settings;
+import com.AdventureRPG.core.shaderpipeline.ShaderPipeline;
 import com.AdventureRPG.core.threadpipeline.ThreadSystem;
 import com.AdventureRPG.lightingsystem.LightingManager;
 import com.AdventureRPG.playermanager.PlayerManager;
@@ -28,6 +30,8 @@ public class GameEngine extends EngineFrame implements Screen {
     private CameraSystem cameraSystem;
     private InputSystem inputSystem;
     private MovementManager movementManager;
+    private ShaderPipeline shaderPipeline;
+    private GeometryPipeline geometryPipeline;
     private RenderPipeline renderPipeline;
 
     // Core
@@ -64,6 +68,8 @@ public class GameEngine extends EngineFrame implements Screen {
         this.cameraSystem = (CameraSystem) register(new CameraSystem());
         this.inputSystem = (InputSystem) register(new InputSystem());
         this.movementManager = (MovementManager) register(new MovementManager());
+        this.shaderPipeline = (ShaderPipeline) register(new ShaderPipeline());
+        this.geometryPipeline = (GeometryPipeline) register(new GeometryPipeline());
         this.renderPipeline = (RenderPipeline) register(new RenderPipeline());
     }
 

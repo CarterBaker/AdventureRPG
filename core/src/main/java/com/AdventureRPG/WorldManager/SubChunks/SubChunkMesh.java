@@ -1,6 +1,6 @@
 package com.AdventureRPG.worldmanager.subchunks;
 
-import com.AdventureRPG.core.renderpipeline.RenderableInstance.MeshPacket;
+import com.AdventureRPG.core.shaderpipeline.RenderableInstance.MeshPacket;
 
 public final class SubChunkMesh {
 

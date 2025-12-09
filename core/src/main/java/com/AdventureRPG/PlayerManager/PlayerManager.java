@@ -3,7 +3,7 @@ package com.AdventureRPG.playermanager;
 import com.AdventureRPG.core.kernel.ManagerFrame;
 import com.AdventureRPG.core.physicspipeline.input.InputSystem;
 import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
-import com.AdventureRPG.core.renderpipeline.camerasystem.CameraSystem;
+import com.AdventureRPG.core.shaderpipeline.camerasystem.CameraSystem;
 import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
 import com.AdventureRPG.worldmanager.WorldManager;
 import com.badlogic.gdx.math.Vector3;

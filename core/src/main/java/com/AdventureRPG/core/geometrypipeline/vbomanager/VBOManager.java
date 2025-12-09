@@ -1,0 +1,47 @@
+package com.AdventureRPG.core.geometrypipeline.vbomanager;
+
+import java.io.File;
+
+import com.AdventureRPG.core.kernel.ManagerFrame;
+
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+
+public class VBOManager extends ManagerFrame {
+
+    // Internal
+    private InternalBuildSystem internalBuildSystem;
+
+    // Retrieval Mapping
+    private Object2ObjectOpenHashMap<String, VBOHandle> vboName2VBOHandle;
+
+    // Base \\
+
+    @Override
+    protected void create() {
+
+        // Internal
+        this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
+
+        // Retrieval Mapping
+        this.vboName2VBOHandle = new Object2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    protected void freeMemory() {
+        internalBuildSystem = (InternalBuildSystem) release(internalBuildSystem);
+    }
+
+    // Utility \\
+
+    public void addVBO(File file) {
+
+    }
+
+    public void removeVBO(String vboName) {
+
+    }
+
+    public VBOHandle getVBOHandleFromName(String vboName) {
+        return vboName2VBOHandle.get(vboName);
+    }
+}

@@ -1,7 +1,7 @@
 package com.AdventureRPG.worldmanager.blocks;
 
-import com.AdventureRPG.core.renderpipeline.materialmanager.MaterialSystem;
-import com.AdventureRPG.core.renderpipeline.texturemanager.TextureManager;
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialSystem;
+import com.AdventureRPG.core.shaderpipeline.texturemanager.TextureManager;
 import com.AdventureRPG.worldmanager.WorldManager;
 
 public class Builder {

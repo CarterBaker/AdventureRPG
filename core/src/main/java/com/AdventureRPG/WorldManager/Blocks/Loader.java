@@ -2,8 +2,8 @@ package com.AdventureRPG.worldmanager.blocks;
 
 import java.util.List;
 
-import com.AdventureRPG.core.renderpipeline.materialmanager.MaterialSystem;
-import com.AdventureRPG.core.renderpipeline.texturemanager.TextureManager;
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialSystem;
+import com.AdventureRPG.core.shaderpipeline.texturemanager.TextureManager;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.google.gson.Gson;
