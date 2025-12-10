@@ -1,15 +1,15 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
+import com.AdventureRPG.core.kernel.DataFrame;
 import com.AdventureRPG.core.kernel.EngineSetting;
-import com.AdventureRPG.core.kernel.InstanceFrame;
 import com.AdventureRPG.core.util.Methematics.Matrices.Matrix4;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class ModelDataInstance extends InstanceFrame {
+public class ModelData extends DataFrame {
 
     // Internal
     final int modelID;
@@ -17,11 +17,11 @@ public class ModelDataInstance extends InstanceFrame {
     private Matrix4 transform;
 
     private int floatsPerQuad;
-    private Int2ObjectOpenHashMap<ObjectArrayList<MeshDataInstance>> materialID2MeshCollection;
+    private Int2ObjectOpenHashMap<ObjectArrayList<MeshData>> materialID2MeshCollection;
 
     // Base \\
 
-    ModelDataInstance(int modelID, VAOHandle vaoHandle) {
+    ModelData(int modelID, VAOHandle vaoHandle) {
 
         // Internal
         this.modelID = modelID;
@@ -42,14 +42,14 @@ public class ModelDataInstance extends InstanceFrame {
         addVerticesInternal(materialId, vertList, 0, vertList.size());
     }
 
-    public void merge(ModelDataInstance other) {
+    public void merge(ModelData other) {
 
         for (var entry : other.materialID2MeshCollection.int2ObjectEntrySet()) {
 
             int materialId = entry.getIntKey();
-            ObjectArrayList<MeshDataInstance> sourceMeshes = entry.getValue();
+            ObjectArrayList<MeshData> sourceMeshes = entry.getValue();
 
-            for (MeshDataInstance sourceMesh : sourceMeshes) {
+            for (MeshData sourceMesh : sourceMeshes) {
 
                 if (sourceMesh.isEmpty())
                     continue;
@@ -65,21 +65,21 @@ public class ModelDataInstance extends InstanceFrame {
         }
     }
 
-    private boolean tryMergeCompleteMesh(int materialId, MeshDataInstance sourceMesh) {
+    private boolean tryMergeCompleteMesh(int materialId, MeshData sourceMesh) {
 
-        ObjectArrayList<MeshDataInstance> meshList = materialID2MeshCollection.get(materialId);
+        ObjectArrayList<MeshData> meshList = materialID2MeshCollection.get(materialId);
 
         if (meshList == null)
             return false;
 
         // Try to fit into existing meshes
-        for (MeshDataInstance targetMesh : meshList)
+        for (MeshData targetMesh : meshList)
             if (!targetMesh.isFull() && targetMesh.tryAddCompleteMesh(sourceMesh))
                 return true;
 
         // Try creating one new mesh for the whole thing
         if (sourceMesh.getVertexCount() <= EngineSetting.MESH_VERT_LIMIT) {
-            MeshDataInstance newMesh = (MeshDataInstance) create(new MeshDataInstance(vaoHandle));
+            MeshData newMesh = new MeshData(vaoHandle);
             meshList.add(newMesh);
             return newMesh.tryAddCompleteMesh(sourceMesh);
         }
@@ -89,14 +89,14 @@ public class ModelDataInstance extends InstanceFrame {
 
     private void addVerticesInternal(int materialId, FloatArrayList vertList, int offset, int length) {
 
-        ObjectArrayList<MeshDataInstance> meshList = materialID2MeshCollection.computeIfAbsent(
+        ObjectArrayList<MeshData> meshList = materialID2MeshCollection.computeIfAbsent(
                 materialId,
                 k -> new ObjectArrayList<>());
 
         int processed = 0;
 
         // Try to fill existing meshes first
-        for (MeshDataInstance mesh : meshList) {
+        for (MeshData mesh : meshList) {
 
             if (processed >= length)
                 break;
@@ -111,7 +111,7 @@ public class ModelDataInstance extends InstanceFrame {
         // Create new meshes for remaining data
         while (processed < length) {
 
-            MeshDataInstance newMesh = (MeshDataInstance) create(new MeshDataInstance(vaoHandle));
+            MeshData newMesh = new MeshData(vaoHandle);
             meshList.add(newMesh);
 
             int added = newMesh.tryAddVertices(vertList, offset + processed, length - processed);
@@ -131,16 +131,16 @@ public class ModelDataInstance extends InstanceFrame {
         for (var entry : materialID2MeshCollection.int2ObjectEntrySet()) {
 
             int materialId = entry.getIntKey();
-            ObjectArrayList<MeshDataInstance> meshList = entry.getValue();
+            ObjectArrayList<MeshData> meshList = entry.getValue();
 
             if (meshList.size() <= 1)
                 continue;
 
             // Find sparse meshes
-            ObjectArrayList<MeshDataInstance> sparseMeshes = new ObjectArrayList<>();
-            ObjectArrayList<MeshDataInstance> denseMeshes = new ObjectArrayList<>();
+            ObjectArrayList<MeshData> sparseMeshes = new ObjectArrayList<>();
+            ObjectArrayList<MeshData> denseMeshes = new ObjectArrayList<>();
 
-            for (MeshDataInstance mesh : meshList) {
+            for (MeshData mesh : meshList) {
 
                 if (mesh.getFillPercentage() < minFillThreshold && !mesh.isEmpty())
                     sparseMeshes.add(mesh);
@@ -155,7 +155,7 @@ public class ModelDataInstance extends InstanceFrame {
 
             // Extract all vertices from sparse meshes
             FloatArrayList consolidatedVerts = new FloatArrayList();
-            for (MeshDataInstance sparse : sparseMeshes) {
+            for (MeshData sparse : sparseMeshes) {
                 FloatArrayList verts = sparse.getVerticesList();
                 consolidatedVerts.addElements(consolidatedVerts.size(), verts.elements(), 0, verts.size());
                 sparse.clear();
@@ -173,9 +173,9 @@ public class ModelDataInstance extends InstanceFrame {
 
     public void clear() {
 
-        for (ObjectArrayList<MeshDataInstance> meshList : materialID2MeshCollection.values()) {
+        for (ObjectArrayList<MeshData> meshList : materialID2MeshCollection.values()) {
 
-            for (MeshDataInstance mesh : meshList)
+            for (MeshData mesh : meshList)
                 mesh.clear();
 
             meshList.clear();
@@ -198,19 +198,19 @@ public class ModelDataInstance extends InstanceFrame {
         this.transform = transform;
     }
 
-    public Int2ObjectOpenHashMap<ObjectArrayList<MeshDataInstance>> getMaterialID2MeshCollection() {
+    public Int2ObjectOpenHashMap<ObjectArrayList<MeshData>> getMaterialID2MeshCollection() {
         return materialID2MeshCollection;
     }
 
-    public ObjectArrayList<MeshDataInstance> getMeshesForMaterial(int materialId) {
+    public ObjectArrayList<MeshData> getMeshesForMaterial(int materialId) {
         return materialID2MeshCollection.get(materialId);
     }
 
     public int getTotalVertexCount() {
 
         int total = 0;
-        for (ObjectArrayList<MeshDataInstance> meshList : materialID2MeshCollection.values())
-            for (MeshDataInstance mesh : meshList)
+        for (ObjectArrayList<MeshData> meshList : materialID2MeshCollection.values())
+            for (MeshData mesh : meshList)
                 total += mesh.getVertexCount();
 
         return total;
@@ -219,7 +219,7 @@ public class ModelDataInstance extends InstanceFrame {
     public int getTotalMeshCount() {
 
         int total = 0;
-        for (ObjectArrayList<MeshDataInstance> meshList : materialID2MeshCollection.values())
+        for (ObjectArrayList<MeshData> meshList : materialID2MeshCollection.values())
             total += meshList.size();
 
         return total;

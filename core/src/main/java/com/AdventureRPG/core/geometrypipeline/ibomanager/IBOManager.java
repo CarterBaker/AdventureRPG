@@ -33,11 +33,7 @@ public class IBOManager extends ManagerFrame {
 
     // Utility \\
 
-    public void addIBO(File file) {
-
-    }
-
-    public void removeIBO(String iboName) {
+    public void addIBO(String resourceName, File file) {
 
     }
 

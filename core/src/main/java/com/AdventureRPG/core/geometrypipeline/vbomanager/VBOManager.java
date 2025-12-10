@@ -33,11 +33,7 @@ public class VBOManager extends ManagerFrame {
 
     // Utility \\
 
-    public void addVBO(File file) {
-
-    }
-
-    public void removeVBO(String vboName) {
+    public void addVBO(String resourceName, File file) {
 
     }
 

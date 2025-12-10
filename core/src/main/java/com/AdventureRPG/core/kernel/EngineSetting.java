@@ -79,6 +79,7 @@ public class EngineSetting {
         public static final int WORLD_HEIGHT = 64; // The height of the world in blocks
 
         // Mesh
+        public static final int MAX_MODEL_READ_PASSES = 5;
         public static final int VERT_POS = 3; // X, Y, Z
         public static final int VERT_NOR = 3; // nX, nY, nZ
         public static final int VERT_COL = 1; // Color

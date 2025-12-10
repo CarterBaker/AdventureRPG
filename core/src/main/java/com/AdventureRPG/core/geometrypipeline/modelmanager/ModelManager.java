@@ -1,6 +1,7 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
 import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.geometrypipeline.modelbatchsystem.ModelBatchSystem;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -14,7 +15,7 @@ public class ModelManager extends ManagerFrame {
     private InternalLoadManager internalLoadManager;
     private ModelBatchSystem modelBatchSystem;
 
-    private Int2ObjectOpenHashMap<ModelDataInstance> loadedModels;
+    private Int2ObjectOpenHashMap<ModelData> loadedModels;
     private IntSet unloadedModels;
     private int modelCount;
 
@@ -28,7 +29,6 @@ public class ModelManager extends ManagerFrame {
     protected void create() {
 
         // Internal
-        this.modelBatchSystem = (ModelBatchSystem) register(new ModelBatchSystem());
         this.internalLoadManager = (InternalLoadManager) register(new InternalLoadManager());
 
         this.loadedModels = new Int2ObjectOpenHashMap<>();
@@ -38,6 +38,13 @@ public class ModelManager extends ManagerFrame {
         // Retrieval Mapping
         this.meshDataName2MeshDataID = new Object2IntOpenHashMap<>();
         this.meshDataID2MeshHandle = new Int2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    protected void init() {
+
+        // Internal
+        this.modelBatchSystem = gameEngine.get(ModelBatchSystem.class);
     }
 
     @Override
@@ -56,20 +63,15 @@ public class ModelManager extends ManagerFrame {
         internalLoadManager.loadMeshData();
     }
 
-    void addMeshData(MeshDataInstance meshDataInstance) {
-
-        MeshHandle meshHandle = GLSLUtility.uploadMeshData(meshDataInstance.vaoHandle,
-                meshDataInstance.getVerticesArray(),
-                meshDataInstance.getIndicesArray());
-
-        meshDataName2MeshDataID.put(meshDataInstance.meshName, meshDataInstance.meshID);
-        meshDataID2MeshHandle.put(meshDataInstance.meshID, meshHandle);
+    void addMeshHandle(String meshName, int meshID, MeshHandle meshHandle) {
+        meshDataName2MeshDataID.put(meshName, meshID);
+        meshDataID2MeshHandle.put(meshID, meshHandle);
     }
 
-    private ModelDataInstance createModelData(VAOHandle vaoHandle) {
+    private ModelData createModelData(VAOHandle vaoHandle) {
 
         int modelID = createModelID();
-        ModelDataInstance model = (ModelDataInstance) create(new ModelDataInstance(modelID, vaoHandle));
+        ModelData model = new ModelData(modelID, vaoHandle);
 
         loadedModels.put(modelID, model);
 
@@ -101,32 +103,15 @@ public class ModelManager extends ManagerFrame {
         return meshDataID2MeshHandle.get(meshID);
     }
 
-    public ModelDataInstance requestModelData(VAOHandle vaoHandle) {
+    public ModelData requestModelData(VAOHandle vaoHandle) {
         return createModelData(vaoHandle);
     }
 
-    public void pushModelData(int modelID) {
-
-        ModelDataInstance modelData = loadedModels.get(modelID);
-
-        if (modelData == null) // TODO: Add my own error
-            throw new IllegalArgumentException("Model ID " + modelID + " not found");
-
-        modelBatchSystem.pushModelData(modelData.vaoHandle, modelData);
+    public ModelHandle pushModelData(ModelData modelData) {
+        return modelBatchSystem.pushModelData(modelData);
     }
 
-    public void pullModelData(int modelID) {
-
-        ModelDataInstance modelData = loadedModels.get(modelID);
-
-        if (modelData == null)
-            return;
-
-        modelBatchSystem.pullModelData(modelData);
-
-        // Mark ID as available for reuse
-        unloadedModels.add(modelID);
-        loadedModels.remove(modelID);
+    public void pullModelData(ModelHandle modelHandle) {
+        modelBatchSystem.pullModelData(modelHandle);
     }
-
 }

@@ -4,6 +4,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.AdventureRPG.core.kernel.EngineSetting;
 import com.AdventureRPG.core.kernel.ManagerFrame;
@@ -54,37 +60,125 @@ class InternalLoadManager extends ManagerFrame {
     private void loadAllFiles() {
 
         if (!root.exists() || !root.isDirectory())
-            throw new FileException.FileNotFoundException("Shader directory not found: " + root.getAbsolutePath());
+            throw new FileException.FileNotFoundException("Mesh JSON directory not found: " + root.getAbsolutePath());
+
+        List<File> candidates = collectCandidateFiles();
+
+        if (candidates.isEmpty())
+            return; // nothing to do
+
+        processFilesWithDependencyResolution(candidates);
+    }
+
+    private List<File> collectCandidateFiles() {
 
         Path base = root.toPath();
 
         try (var stream = Files.walk(base)) {
-            stream
+            return stream
                     .filter(Files::isRegularFile)
-                    .forEach(path -> buildMeshDataFromFile(path.toFile()));
+                    .map(Path::toFile)
+                    .filter(file -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(file)))
+                    .collect(Collectors.toList());
         }
 
-        catch (IOException e) {
-            throw new FileException.FileReadException("MeshDataManager failed to load one or more files: ", e);
+        catch (IOException e) { // TODO: Add my own error
+            throw new FileException.FileReadException("MeshDataManager failed to list files: ", e);
         }
     }
 
-    private void buildMeshDataFromFile(File file) {
+    private void processFilesWithDependencyResolution(List<File> candidates) {
 
-        if (EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(file))) {
+        List<File> pending = new ArrayList<>(candidates);
+        Map<File, String> lastFailureReasons = new HashMap<>();
 
-            MeshDataInstance meshDataInstance = internalBuildSystem.buildMeshData(file, meshDataCount++);
+        int pass = 0;
+        boolean madeProgress;
 
-            if (meshDataInstance == null) {
-                --meshDataCount;
-                return;
+        while (!pending.isEmpty() && pass < EngineSetting.MAX_MODEL_READ_PASSES) {
+
+            pass++;
+            madeProgress = processFilePass(pending, lastFailureReasons);
+
+            if (!madeProgress)
+                break; // No progress means further passes will also fail
+        }
+
+        handleUnresolvedFiles(pending, lastFailureReasons, pass);
+    }
+
+    private boolean processFilePass(List<File> pending, Map<File, String> lastFailureReasons) {
+
+        boolean madeProgress = false;
+        Iterator<File> it = pending.iterator();
+
+        while (it.hasNext()) {
+
+            File file = it.next();
+            String meshName = FileUtility.getFileName(file);
+
+            MeshHandle meshHandle = attemptBuildMeshHandle(file, lastFailureReasons);
+
+            if (meshHandle == null)
+                continue; // Failed for now — try again in next pass
+
+            // Success: compile/register and remove from pending
+            try {
+                compileMeshData(meshName, meshDataCount, meshHandle);
+                meshDataCount++;
+                it.remove();
+                lastFailureReasons.remove(file);
+                madeProgress = true;
+
             }
 
-            compileMeshData(meshDataInstance);
+            catch (RuntimeException ex) {
+                it.remove(); // TODO: Add my own error
+                throw new FileException.FileReadException(
+                        "Failed while compiling mesh from file: " + file.getAbsolutePath(), ex);
+            }
+        }
+
+        return madeProgress;
+    }
+
+    private MeshHandle attemptBuildMeshHandle(File file, Map<File, String> lastFailureReasons) {
+
+        try {
+            return internalBuildSystem.buildMeshHandle(file, meshDataCount);
+        }
+
+        catch (RuntimeException ex) {
+            lastFailureReasons.put(file, ex.getMessage());
+            return null;
         }
     }
 
-    private void compileMeshData(MeshDataInstance meshDataInstance) {
-        modelManager.addMeshData(meshDataInstance);
+    private void handleUnresolvedFiles(List<File> pending, Map<File, String> lastFailureReasons, int pass) {
+
+        if (pending.isEmpty())
+            return;
+
+        StringBuilder errorMsg = new StringBuilder();
+        errorMsg.append(String.format("Failed to resolve mesh dependencies after %d passes. ", pass));
+        errorMsg.append(String.format("%d unresolved files:\n", pending.size()));
+
+        for (File f : pending) {
+
+            errorMsg.append("  - ").append(f.getAbsolutePath());
+            String reason = lastFailureReasons.get(f);
+
+            if (reason != null)
+                errorMsg.append(" (").append(reason).append(")");
+
+            errorMsg.append("\n");
+        }
+
+        // TODO: Add my own error
+        throw new FileException.FileReadException(errorMsg.toString());
+    }
+
+    private void compileMeshData(String meshName, int meshID, MeshHandle meshHandle) {
+        modelManager.addMeshHandle(meshName, meshID, meshHandle);
     }
 }

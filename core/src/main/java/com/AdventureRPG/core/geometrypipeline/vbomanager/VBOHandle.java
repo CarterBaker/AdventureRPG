@@ -1,19 +1,19 @@
 package com.AdventureRPG.core.geometrypipeline.vbomanager;
 
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import com.AdventureRPG.core.kernel.HandleFrame;
 
-public class VBOHandle {
+public class VBOHandle extends HandleFrame {
 
     // Internal
-    public final FloatArrayList vertices;
+    public final int vertexHandle;
     public final int vertexCount;
 
-    VBOHandle(
-            FloatArrayList vertices,
+    public VBOHandle(
+            int vertexHandle,
             int vertexCount) {
 
         // Internal
-        this.vertices = vertices;
+        this.vertexHandle = vertexHandle;
         this.vertexCount = vertexCount;
     }
 }

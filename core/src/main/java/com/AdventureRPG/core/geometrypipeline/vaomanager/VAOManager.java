@@ -33,11 +33,7 @@ public class VAOManager extends ManagerFrame {
 
     // Utility \\
 
-    public void addVAO(File file) {
-
-    }
-
-    public void removeVAO(String vaoName) {
+    public void addVAO(String resourceName, File file) {
 
     }
 

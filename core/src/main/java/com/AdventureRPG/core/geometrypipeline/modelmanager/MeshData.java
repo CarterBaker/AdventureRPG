@@ -1,19 +1,23 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
+import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOHandle;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
+import com.AdventureRPG.core.geometrypipeline.vbomanager.VBOHandle;
+import com.AdventureRPG.core.kernel.DataFrame;
 import com.AdventureRPG.core.kernel.EngineSetting;
-import com.AdventureRPG.core.kernel.InstanceFrame;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
-class MeshDataInstance extends InstanceFrame {
+class MeshData extends DataFrame {
 
     // Internal
     final String meshName;
     final int meshID;
 
     final VAOHandle vaoHandle;
+    VBOHandle vboHandle;
+    IBOHandle iboHandle;
 
     private final FloatArrayList vertices;
     private final ShortArrayList indices;
@@ -21,7 +25,7 @@ class MeshDataInstance extends InstanceFrame {
 
     // Base \\
 
-    MeshDataInstance(
+    MeshData(
             String meshName,
             int meshID,
             VAOHandle vaoHandle,
@@ -40,7 +44,7 @@ class MeshDataInstance extends InstanceFrame {
         this.vertexCount = vertCount;
     }
 
-    public MeshDataInstance(
+    public MeshData(
             VAOHandle vaoHandle) {
 
         // System Data
@@ -82,7 +86,7 @@ class MeshDataInstance extends InstanceFrame {
         return vertsToAdd;
     }
 
-    boolean tryAddCompleteMesh(MeshDataInstance source) {
+    boolean tryAddCompleteMesh(MeshData source) {
 
         if (source.isEmpty())
             return true;

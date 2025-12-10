@@ -1,19 +1,19 @@
 package com.AdventureRPG.core.geometrypipeline.ibomanager;
 
-import it.unimi.dsi.fastutil.shorts.ShortArrayList;
+import com.AdventureRPG.core.kernel.HandleFrame;
 
-public class IBOHandle {
+public class IBOHandle extends HandleFrame {
 
     // Internal
-    public final ShortArrayList indices;
+    public final int indexHandle;
     public final int indexCount;
 
-    IBOHandle(
-            ShortArrayList indices,
+    public IBOHandle(
+            int indexHandle,
             int indexCount) {
 
         // Internal
-        this.indices = indices;
+        this.indexHandle = indexHandle;
         this.indexCount = indexCount;
     }
 }
