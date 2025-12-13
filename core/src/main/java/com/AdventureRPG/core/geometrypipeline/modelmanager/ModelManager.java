@@ -1,7 +1,6 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
 import com.AdventureRPG.core.kernel.ManagerFrame;
-import com.AdventureRPG.core.geometrypipeline.modelbatchsystem.ModelBatchSystem;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -30,6 +29,7 @@ public class ModelManager extends ManagerFrame {
 
         // Internal
         this.internalLoadManager = (InternalLoadManager) register(new InternalLoadManager());
+        this.modelBatchSystem = (ModelBatchSystem) register(new ModelBatchSystem());
 
         this.loadedModels = new Int2ObjectOpenHashMap<>();
         this.unloadedModels = new IntOpenHashSet();
@@ -38,13 +38,6 @@ public class ModelManager extends ManagerFrame {
         // Retrieval Mapping
         this.meshDataName2MeshDataID = new Object2IntOpenHashMap<>();
         this.meshDataID2MeshHandle = new Int2ObjectOpenHashMap<>();
-    }
-
-    @Override
-    protected void init() {
-
-        // Internal
-        this.modelBatchSystem = gameEngine.get(ModelBatchSystem.class);
     }
 
     @Override
@@ -58,6 +51,10 @@ public class ModelManager extends ManagerFrame {
     }
 
     // Model Management \\
+
+    public void draw() {
+        modelBatchSystem.draw();
+    }
 
     void compileMeshData() {
         internalLoadManager.loadMeshData();
@@ -107,11 +104,13 @@ public class ModelManager extends ManagerFrame {
         return createModelData(vaoHandle);
     }
 
-    public ModelHandle pushModelData(ModelData modelData) {
-        return modelBatchSystem.pushModelData(modelData);
+    public void pushModel(ModelData modelData) {
+        modelData.setRendering(true);
+        modelBatchSystem.pushModel(modelData);
     }
 
-    public void pullModelData(ModelHandle modelHandle) {
-        modelBatchSystem.pullModelData(modelHandle);
+    public void pullModel(ModelData modelData) {
+        modelBatchSystem.pullModel(modelData);
+        modelData.setRendering(false);
     }
 }

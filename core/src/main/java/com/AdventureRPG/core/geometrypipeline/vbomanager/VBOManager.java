@@ -2,6 +2,7 @@ package com.AdventureRPG.core.geometrypipeline.vbomanager;
 
 import java.io.File;
 
+import com.AdventureRPG.core.geometrypipeline.modelmanager.InternalLoadManager;
 import com.AdventureRPG.core.kernel.ManagerFrame;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -33,8 +34,8 @@ public class VBOManager extends ManagerFrame {
 
     // Utility \\
 
-    public void addVBO(String resourceName, File file) {
-
+    public void addVBO(String resourceName, File file, InternalLoadManager loadManager) {
+        vboName2VBOHandle.put(resourceName, internalBuildSystem.addVBO(file, loadManager));
     }
 
     public VBOHandle getVBOHandleFromName(String vboName) {

@@ -2,6 +2,7 @@ package com.AdventureRPG.core.geometrypipeline.vaomanager;
 
 import java.io.File;
 
+import com.AdventureRPG.core.geometrypipeline.modelmanager.InternalLoadManager;
 import com.AdventureRPG.core.kernel.ManagerFrame;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -33,8 +34,8 @@ public class VAOManager extends ManagerFrame {
 
     // Utility \\
 
-    public void addVAO(String resourceName, File file) {
-
+    public void addVAO(String resourceName, File file, InternalLoadManager loadManager) {
+        vaoName2VAOHandle.put(resourceName, internalBuildSystem.addVAO(file, loadManager));
     }
 
     public VAOHandle getVAOHandleFromName(String vaoName) {

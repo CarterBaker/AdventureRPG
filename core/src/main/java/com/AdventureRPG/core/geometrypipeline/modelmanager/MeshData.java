@@ -1,6 +1,7 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
 import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOHandle;
+import com.AdventureRPG.core.geometrypipeline.util.GLSLUtility;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 import com.AdventureRPG.core.geometrypipeline.vbomanager.VBOHandle;
 import com.AdventureRPG.core.kernel.DataFrame;
@@ -18,6 +19,8 @@ class MeshData extends DataFrame {
     final VAOHandle vaoHandle;
     VBOHandle vboHandle;
     IBOHandle iboHandle;
+
+    MeshHandle meshHandle;
 
     private final FloatArrayList vertices;
     private final ShortArrayList indices;
@@ -177,5 +180,33 @@ class MeshData extends DataFrame {
 
     ShortArrayList getIndicesList() {
         return indices;
+    }
+
+    void pushToGPU() {
+
+        if (meshHandle != null)
+            pullFromGPU();
+
+        vboHandle = GLSLUtility.uploadVertexData(vaoHandle, getVerticesArray());
+        iboHandle = GLSLUtility.uploadIndexData(vaoHandle, getIndicesArray());
+
+        meshHandle = new MeshHandle(
+                vaoHandle.attributeHandle,
+                vaoHandle.vertStride,
+                vboHandle.vertexHandle,
+                vboHandle.vertexCount,
+                iboHandle.indexHandle,
+                iboHandle.indexCount);
+    }
+
+    void pullFromGPU() {
+
+        GLSLUtility.freeVBO(vboHandle);
+        GLSLUtility.freeIBO(iboHandle);
+
+        vboHandle = null;
+        iboHandle = null;
+
+        meshHandle = null;
     }
 }

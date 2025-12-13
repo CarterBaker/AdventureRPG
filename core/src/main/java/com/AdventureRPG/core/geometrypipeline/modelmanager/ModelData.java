@@ -19,6 +19,8 @@ public class ModelData extends DataFrame {
     private int floatsPerQuad;
     private Int2ObjectOpenHashMap<ObjectArrayList<MeshData>> materialID2MeshCollection;
 
+    private boolean rendering;
+
     // Base \\
 
     ModelData(int modelID, VAOHandle vaoHandle) {
@@ -30,6 +32,8 @@ public class ModelData extends DataFrame {
 
         this.floatsPerQuad = vaoHandle.vertStride * 4;
         this.materialID2MeshCollection = new Int2ObjectOpenHashMap<>();
+
+        this.rendering = false;
     }
 
     // Data \\
@@ -227,5 +231,57 @@ public class ModelData extends DataFrame {
 
     public int getMaterialCount() {
         return materialID2MeshCollection.size();
+    }
+
+    public boolean rendering() {
+        return rendering;
+    }
+
+    public void setRendering(boolean rendering) {
+        this.rendering = rendering;
+    }
+
+    public void pushMeshToGPU() {
+
+        if (rendering)
+            return; // TODO: This should throw an error
+
+        var entryIter = materialID2MeshCollection.int2ObjectEntrySet().fastIterator();
+        while (entryIter.hasNext()) {
+
+            var entry = entryIter.next();
+            ObjectArrayList<MeshData> meshList = entry.getValue();
+
+            int size = meshList.size();
+            for (int i = 0; i < size; i++) {
+
+                MeshData mesh = meshList.get(i);
+
+                if (!mesh.isEmpty())
+                    mesh.pushToGPU();
+            }
+        }
+    }
+
+    public void pullMeshFromGPU() {
+
+        if (!rendering)
+            return; // TODO: This should throw an error
+
+        var entryIter = materialID2MeshCollection.int2ObjectEntrySet().fastIterator();
+        while (entryIter.hasNext()) {
+
+            var entry = entryIter.next();
+            ObjectArrayList<MeshData> meshList = entry.getValue();
+
+            int size = meshList.size();
+            for (int i = 0; i < size; i++) {
+
+                MeshData mesh = meshList.get(i);
+
+                if (!mesh.isEmpty())
+                    mesh.pullFromGPU();
+            }
+        }
     }
 }

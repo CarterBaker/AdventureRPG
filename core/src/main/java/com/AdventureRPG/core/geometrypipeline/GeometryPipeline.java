@@ -3,7 +3,6 @@ package com.AdventureRPG.core.geometrypipeline;
 import com.AdventureRPG.core.kernel.PipelineFrame;
 
 import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOManager;
-import com.AdventureRPG.core.geometrypipeline.modelbatchsystem.ModelBatchSystem;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOManager;
 import com.AdventureRPG.core.geometrypipeline.vbomanager.VBOManager;
@@ -15,7 +14,6 @@ public class GeometryPipeline extends PipelineFrame {
     private IBOManager iboManager;
     private VAOManager vaoManager;
     private ModelManager modelManager;
-    private ModelBatchSystem modelBatchSystem;
 
     @Override
     protected void create() {
@@ -26,6 +24,5 @@ public class GeometryPipeline extends PipelineFrame {
         this.vaoManager = (VAOManager) register(new VAOManager());
 
         this.modelManager = (ModelManager) register(new ModelManager());
-        this.modelBatchSystem = (ModelBatchSystem) register(new ModelBatchSystem());
     }
 }

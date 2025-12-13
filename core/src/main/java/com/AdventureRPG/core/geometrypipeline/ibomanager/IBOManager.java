@@ -2,6 +2,7 @@ package com.AdventureRPG.core.geometrypipeline.ibomanager;
 
 import java.io.File;
 
+import com.AdventureRPG.core.geometrypipeline.modelmanager.InternalLoadManager;
 import com.AdventureRPG.core.kernel.ManagerFrame;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -33,8 +34,8 @@ public class IBOManager extends ManagerFrame {
 
     // Utility \\
 
-    public void addIBO(String resourceName, File file) {
-
+    public void addIBO(String resourceName, File file, InternalLoadManager loadManager) {
+        iboName2IBOHandle.put(resourceName, internalBuildSystem.addIBO(file, loadManager));
     }
 
     public IBOHandle getIBOHandleFromName(String iboName) {
