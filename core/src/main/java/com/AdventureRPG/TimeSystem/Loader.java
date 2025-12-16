@@ -1,26 +1,34 @@
 package com.AdventureRPG.timesystem;
 
-import com.AdventureRPG.core.util.Exceptions.FileException;
 import com.google.gson.Gson;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 
+// TODO: AI made this
 public class Loader {
 
     public static Calendar load(File file, Gson gson) {
 
-        if (!file.exists())
-            throw new FileException.FileNotFoundException(file);
-
-        try (Reader reader = new FileReader(file)) {
-            CalendarData dto = gson.fromJson(reader, CalendarData.class);
-            return new Calendar(dto.months, dto.daysOfWeek);
+        if (file == null || !file.exists()) { // TODO: Add my own error
+            throw new RuntimeException("Calendar file does not exist.");
         }
 
-        catch (IOException e) {
-            throw new FileException.FileLoadException(file, e);
+        try (Reader reader = new FileReader(file)) {
+
+            CalendarData calendarData = gson.fromJson(reader, CalendarData.class);
+
+            if (calendarData == null) { // TODO: Add my own error
+                throw new RuntimeException("Calendar data is empty or malformed.");
+            }
+
+            return new Calendar(
+                    calendarData.months,
+                    calendarData.daysOfWeek);
+
+        } catch (IOException e) { // TODO: Add my own error
+            throw new RuntimeException("Failed to load calendar file.", e);
         }
     }
 }

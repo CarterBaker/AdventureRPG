@@ -1,0 +1,90 @@
+package com.AdventureRPG.core.shaderpipeline.shadermanager;
+
+import java.io.File;
+
+import com.AdventureRPG.core.kernel.DataFrame;
+import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOData;
+import com.AdventureRPG.core.shaderpipeline.uniforms.UniformData;
+
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+
+public class ShaderData extends DataFrame {
+
+    // Internal
+    private final ShaderType shaderType;
+    private final String shaderName;
+    private final File shaderFile;
+
+    private String version;
+    private final ObjectArrayList<ShaderData> includes;
+    private final ObjectArrayList<UBOData> bufferBlocks;
+    private final ObjectArrayList<UniformData> uniforms;
+
+    public ShaderData(
+            ShaderType shaderType,
+            String shaderName,
+            File shaderFile) {
+
+        // Internal
+        this.shaderType = shaderType;
+        this.shaderName = shaderName;
+        this.shaderFile = shaderFile;
+
+        this.version = null;
+        this.bufferBlocks = new ObjectArrayList<>();
+        this.uniforms = new ObjectArrayList<>();
+        this.includes = new ObjectArrayList<>();
+    }
+
+    // Utility \\
+
+    public ShaderType shaderType() {
+        return shaderType;
+    }
+
+    String shaderName() {
+        return shaderName;
+    }
+
+    public File shaderFile() {
+        return shaderFile;
+    }
+
+    // Accessible \\
+
+    // Version
+    String getVersion() {
+        return version;
+    }
+
+    void setVersion(String version) {
+        this.version = version;
+    }
+
+    // Includes
+    void addIncludes(ShaderData include) {
+        includes.add(include);
+    }
+
+    ObjectArrayList<ShaderData> getIncludes() {
+        return includes;
+    }
+
+    // Buffers
+    public void addBufferBlock(UBOData block) {
+        bufferBlocks.add(block);
+    }
+
+    public ObjectArrayList<UBOData> getBufferBlocks() {
+        return bufferBlocks;
+    }
+
+    // Uniforms
+    void addUniform(UniformData uniform) {
+        uniforms.add(uniform);
+    }
+
+    ObjectArrayList<UniformData> getUniforms() {
+        return uniforms;
+    }
+}

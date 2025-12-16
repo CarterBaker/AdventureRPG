@@ -16,8 +16,8 @@ class GLSLUtility {
     // Shader Program Construction
     static int createShaderProgram(ShaderDefinitionInstance shaderDef) {
 
-        ShaderDataInstance vert = shaderDef.vert;
-        ShaderDataInstance frag = shaderDef.frag;
+        ShaderData vert = shaderDef.vert;
+        ShaderData frag = shaderDef.frag;
 
         int vertShader = compileShader(vert);
         int fragShader = compileShader(frag);
@@ -34,7 +34,7 @@ class GLSLUtility {
         IntArrayList includeShaders = new IntArrayList();
 
         // Attach included shader snippets
-        for (ShaderDataInstance include : shaderDef.getIncludes()) {
+        for (ShaderData include : shaderDef.getIncludes()) {
             int includeShader = compileShader(include);
             Gdx.gl.glAttachShader(program, includeShader);
             includeShaders.add(includeShader);
@@ -70,7 +70,7 @@ class GLSLUtility {
     }
 
     // Shader Compilation
-    private static int compileShader(ShaderDataInstance shader) {
+    private static int compileShader(ShaderData shader) {
 
         int type = switch (shader.shaderType()) {
             case VERT -> GL20.GL_VERTEX_SHADER;
@@ -105,7 +105,7 @@ class GLSLUtility {
     }
 
     // Shader Source Loading
-    private static String readShaderSource(ShaderDataInstance shader) {
+    private static String readShaderSource(ShaderData shader) {
 
         // Assumes the shader file already contains merged includes
         try {

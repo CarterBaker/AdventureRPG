@@ -1,6 +1,7 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
 import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.geometrypipeline.Mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -19,8 +20,8 @@ public class ModelManager extends ManagerFrame {
     private int modelCount;
 
     // Retrieval Mapping
-    private Object2IntOpenHashMap<String> meshDataName2MeshDataID;
-    private Int2ObjectOpenHashMap<MeshHandle> meshDataID2MeshHandle;
+    private Object2IntOpenHashMap<String> meshHandleName2MeshHandleID;
+    private Int2ObjectOpenHashMap<MeshHandle> meshHandleID2MeshHandle;
 
     // Base \\
 
@@ -36,8 +37,8 @@ public class ModelManager extends ManagerFrame {
         this.modelCount = 0;
 
         // Retrieval Mapping
-        this.meshDataName2MeshDataID = new Object2IntOpenHashMap<>();
-        this.meshDataID2MeshHandle = new Int2ObjectOpenHashMap<>();
+        this.meshHandleName2MeshHandleID = new Object2IntOpenHashMap<>();
+        this.meshHandleID2MeshHandle = new Int2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -61,8 +62,8 @@ public class ModelManager extends ManagerFrame {
     }
 
     void addMeshHandle(String meshName, int meshID, MeshHandle meshHandle) {
-        meshDataName2MeshDataID.put(meshName, meshID);
-        meshDataID2MeshHandle.put(meshID, meshHandle);
+        meshHandleName2MeshHandleID.put(meshName, meshID);
+        meshHandleID2MeshHandle.put(meshID, meshHandle);
     }
 
     private ModelData createModelData(VAOHandle vaoHandle) {
@@ -92,12 +93,12 @@ public class ModelManager extends ManagerFrame {
 
     // Accessible \\
 
-    public int getMeshDataIDFromMeshName(String meshName) {
-        return meshDataName2MeshDataID.getInt(meshName);
+    public int getMeshHandleIDFromMeshName(String meshName) {
+        return meshHandleName2MeshHandleID.getInt(meshName);
     }
 
-    public MeshHandle getMeshHandleFromMeshID(int meshID) {
-        return meshDataID2MeshHandle.get(meshID);
+    public MeshHandle getMeshHandleFromMeshHandleID(int meshID) {
+        return meshHandleID2MeshHandle.get(meshID);
     }
 
     public ModelData requestModelData(VAOHandle vaoHandle) {

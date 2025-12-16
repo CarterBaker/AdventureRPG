@@ -1,9 +1,10 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
+import com.AdventureRPG.core.geometrypipeline.Mesh.MeshHandle;
+import com.AdventureRPG.core.geometrypipeline.Models.ModelHandle;
 import com.AdventureRPG.core.kernel.SystemFrame;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
+import com.AdventureRPG.core.shaderpipeline.materials.Material;
 
 import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -11,23 +12,34 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class ModelBatchSystem extends SystemFrame {
 
     // Internal
-    private Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<IntSet>> modelID2MaterialID2MeshIDCollection;
-    private Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<ModelHandle>> materialID2MeshID2ModelHandle;
+    private MaterialManager materialManager;
 
     private IntSet loadedModels;
     private IntSet unloadedMesh;
     private int meshCount;
 
+    // Retrieval Mapping
+    private Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<IntSet>> modelID2MaterialID2MeshIDCollection;
+    private Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<ModelHandle>> materialID2MeshID2ModelHandle;
+
     @Override
     protected void create() {
 
         // Internal
-        this.modelID2MaterialID2MeshIDCollection = new Int2ObjectOpenHashMap<>();
-        this.materialID2MeshID2ModelHandle = new Int2ObjectOpenHashMap<>();
-
         this.loadedModels = new IntOpenHashSet();
         this.unloadedMesh = new IntOpenHashSet();
         this.meshCount = 0;
+
+        // Retrieval Mapping
+        this.modelID2MaterialID2MeshIDCollection = new Int2ObjectOpenHashMap<>();
+        this.materialID2MeshID2ModelHandle = new Int2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    protected void init() {
+
+        // Internal
+        this.materialManager = gameEngine.get(MaterialManager.class);
     }
 
     // Model Management \\
@@ -82,6 +94,8 @@ class ModelBatchSystem extends SystemFrame {
                 meshIDCollection.add(meshID);
 
                 MeshHandle meshHandle = meshData.meshHandle;
+                Material material = materialManager.getMaterialFromMaterialID(materialID);
+
                 ModelHandle modelHandle = new ModelHandle(
                         meshHandle.vao,
                         meshHandle.vertStride,
@@ -89,7 +103,7 @@ class ModelBatchSystem extends SystemFrame {
                         meshHandle.vertCount,
                         meshHandle.ibo,
                         meshHandle.indexCount,
-                        materialID);
+                        material);
 
                 meshID2ModelHandle.put(meshID, modelHandle);
             }

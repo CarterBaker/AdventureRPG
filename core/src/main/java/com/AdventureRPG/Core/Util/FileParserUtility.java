@@ -117,7 +117,7 @@ public class FileParserUtility {
         return count;
     }
 
-    public static int extractLayoutBinding(String line) {
+    public static int extractBufferBinding(String line) {
 
         try {
 

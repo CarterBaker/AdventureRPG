@@ -5,6 +5,9 @@ import java.nio.file.Path;
 
 import com.AdventureRPG.core.kernel.EngineSetting;
 import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOData;
+import com.AdventureRPG.core.shaderpipeline.uniforms.UniformData;
+import com.AdventureRPG.core.shaderpipeline.uniforms.UniformType;
 import com.AdventureRPG.core.util.FileParserUtility;
 import com.AdventureRPG.core.util.JsonUtility;
 import com.AdventureRPG.core.util.Exceptions.FileException;
@@ -29,19 +32,19 @@ public class InternalBuildSystem extends SystemFrame {
 
     // Compile \\
 
-    void parseShaderFile(ShaderDataInstance shaderDataInstance) {
+    void parseShaderFile(ShaderData shaderData) {
 
-        String rawText = FileParserUtility.convertFileToRawText(shaderDataInstance.shaderFile());
+        String rawText = FileParserUtility.convertFileToRawText(shaderData.shaderFile());
         ObjectArrayList<String> textArray = FileParserUtility.convertRawTextToArray(rawText);
 
-        shaderDataInstance.setVersion(parseVersionInfo(textArray));
+        shaderData.setVersion(parseVersionInfo(textArray));
 
         parseUniforms(
-                shaderDataInstance,
+                shaderData,
                 textArray);
 
         parseIncludes(
-                shaderDataInstance,
+                shaderData,
                 textArray);
     }
 
@@ -60,11 +63,11 @@ public class InternalBuildSystem extends SystemFrame {
     // Uniforms \\
 
     private void parseUniforms(
-            ShaderDataInstance shaderDataInstance,
+            ShaderData shaderData,
             ObjectArrayList<String> textArray) {
 
         boolean insideBlock = false;
-        LayoutDataInstance currentLayout = null;
+        UBOData currentBuffer = null;
         int braceDepth = 0;
 
         for (int i = 0; i < textArray.size(); i++) {
@@ -74,12 +77,12 @@ public class InternalBuildSystem extends SystemFrame {
             if (line.isEmpty())
                 continue;
 
-            // Check for uniform block start (with or without layout)
+            // Check for uniform block start (with or without buffer)
             if (isUniformBlockStart(line)) {
 
-                currentLayout = parseUniformBlockStart(line);
+                currentBuffer = parseUniformBlockStart(line);
 
-                if (currentLayout != null) {
+                if (currentBuffer != null) {
 
                     insideBlock = true;
                     braceDepth = FileParserUtility.countCharInString(line, '{') -
@@ -98,10 +101,10 @@ public class InternalBuildSystem extends SystemFrame {
                 // Block ended - add it to shader data
                 if (braceDepth <= 0) {
 
-                    if (currentLayout != null)
-                        shaderDataInstance.addLayoutBlock(currentLayout);
+                    if (currentBuffer != null)
+                        shaderData.addBufferBlock(currentBuffer);
 
-                    currentLayout = null;
+                    currentBuffer = null;
                     insideBlock = false;
 
                     continue;
@@ -123,28 +126,28 @@ public class InternalBuildSystem extends SystemFrame {
                 }
 
                 // Parse and add uniforms
-                parseUniformDeclaration(fullDeclaration, currentLayout, shaderDataInstance);
+                parseUniformDeclaration(fullDeclaration, currentBuffer, shaderData);
             }
         }
     }
 
     private boolean isUniformBlockStart(String line) {
-        // Matches: "layout(...) uniform BlockName {" or "uniform BlockName {"
+        // Matches: "buffer(...) uniform BlockName {" or "uniform BlockName {"
         return line.contains("uniform") &&
                 line.contains("{") &&
                 !line.contains(";") &&
                 !line.matches(".*\\buniform\\s+\\w+\\s+\\w+.*"); // Not "uniform type name"
     }
 
-    private LayoutDataInstance parseUniformBlockStart(String line) {
+    private UBOData parseUniformBlockStart(String line) {
 
         try {
 
             int binding = 0;
 
-            // Extract binding if layout exists
-            if (line.contains("layout"))
-                binding = FileParserUtility.extractLayoutBinding(line);
+            // Extract binding if buffer exists
+            if (line.contains("buffer"))
+                binding = FileParserUtility.extractBufferBinding(line);
 
             // Extract block name (text between "uniform" and "{")
             int uniformIdx = line.indexOf("uniform");
@@ -153,10 +156,10 @@ public class InternalBuildSystem extends SystemFrame {
             if (uniformIdx != -1 && braceIdx != -1) {
 
                 String blockName = line.substring(uniformIdx + 7, braceIdx).trim();
-                // Remove any layout qualifiers that might be in the name
+                // Remove any buffer qualifiers that might be in the name
                 blockName = blockName.replaceAll("\\(.*?\\)", "").trim();
 
-                return new LayoutDataInstance(blockName, binding);
+                return new UBOData(blockName, binding);
             }
 
         }
@@ -170,8 +173,8 @@ public class InternalBuildSystem extends SystemFrame {
 
     private void parseUniformDeclaration(
             String declaration,
-            LayoutDataInstance currentLayout,
-            ShaderDataInstance shaderDataInstance) {
+            UBOData currentBuffer,
+            ShaderData shaderData) {
 
         // Clean up declaration
         declaration = declaration.replace(";", "").trim();
@@ -182,8 +185,8 @@ public class InternalBuildSystem extends SystemFrame {
                 declaration.startsWith("struct"))
             return;
 
-        // Skip if not a uniform declaration (when outside layout blocks)
-        if (currentLayout == null && !declaration.contains("uniform"))
+        // Skip if not a uniform declaration (when outside buffer blocks)
+        if (currentBuffer == null && !declaration.contains("uniform"))
             return;
 
         // Remove "uniform" keyword
@@ -203,14 +206,14 @@ public class InternalBuildSystem extends SystemFrame {
             return;
 
         // Parse all variable names
-        parseVariableNames(namesStr, uniformType, currentLayout, shaderDataInstance);
+        parseVariableNames(namesStr, uniformType, currentBuffer, shaderData);
     }
 
     private void parseVariableNames(
             String namesStr,
             UniformType uniformType,
-            LayoutDataInstance currentLayout,
-            ShaderDataInstance shaderDataInstance) {
+            UBOData currentBuffer,
+            ShaderData shaderData) {
 
         String[] names = namesStr.split(",");
 
@@ -247,13 +250,13 @@ public class InternalBuildSystem extends SystemFrame {
                         "Unsized arrays not supported: " + variableName);
 
             // Create uniform instance
-            UniformDataInstance uniform = new UniformDataInstance(uniformType, variableName, arrayCount);
+            UniformData uniform = new UniformData(uniformType, variableName, arrayCount);
 
             // Add to appropriate container
-            if (currentLayout != null)
-                currentLayout.addUniform(uniform);
+            if (currentBuffer != null)
+                currentBuffer.addUniform(uniform);
             else
-                shaderDataInstance.addUniform(uniform);
+                shaderData.addUniform(uniform);
         }
     }
 
@@ -281,7 +284,7 @@ public class InternalBuildSystem extends SystemFrame {
     // Includes \\
 
     private void parseIncludes(
-            ShaderDataInstance shaderDataInstance,
+            ShaderData shaderData,
             ObjectArrayList<String> textArray) {
 
         for (String line : textArray) {
@@ -292,10 +295,10 @@ public class InternalBuildSystem extends SystemFrame {
 
                 if (includePath != null && !includePath.isEmpty()) {
 
-                    ShaderDataInstance includeShader = internalLoadManager.getShaderData(includePath);
+                    ShaderData includeShader = internalLoadManager.getShaderData(includePath);
 
                     if (includeShader != null)
-                        shaderDataInstance.addIncludes(includeShader);
+                        shaderData.addIncludes(includeShader);
                 }
             }
         }
@@ -317,8 +320,8 @@ public class InternalBuildSystem extends SystemFrame {
         }
 
         JsonObject obj = JsonUtility.loadJsonObject(jsonFile);
-        ShaderDataInstance vertData = internalLoadManager.getShaderData(obj.get("vert").getAsString());
-        ShaderDataInstance fragData = internalLoadManager.getShaderData(obj.get("frag").getAsString());
+        ShaderData vertData = internalLoadManager.getShaderData(obj.get("vert").getAsString());
+        ShaderData fragData = internalLoadManager.getShaderData(obj.get("frag").getAsString());
 
         if (vertData == null || fragData == null)
             throw new FileException.FileReadException(
@@ -334,7 +337,7 @@ public class InternalBuildSystem extends SystemFrame {
 
     private ShaderDefinitionInstance sortIncludes(ShaderDefinitionInstance shaderDefinition) {
 
-        ObjectArrayList<ShaderDataInstance> visited = new ObjectArrayList<>();
+        ObjectArrayList<ShaderData> visited = new ObjectArrayList<>();
 
         collectRecursiveIncludes(
                 shaderDefinition,
@@ -350,8 +353,8 @@ public class InternalBuildSystem extends SystemFrame {
 
     private void collectRecursiveIncludes(
             ShaderDefinitionInstance shaderDefinition,
-            ShaderDataInstance shaderData,
-            ObjectArrayList<ShaderDataInstance> visited) {
+            ShaderData shaderData,
+            ObjectArrayList<ShaderData> visited) {
 
         if (visited.contains(shaderData))
             return; // Cycle detected
@@ -362,7 +365,7 @@ public class InternalBuildSystem extends SystemFrame {
                 !shaderDefinition.getIncludes().contains(shaderData))
             shaderDefinition.addInclude(shaderData);
 
-        for (ShaderDataInstance include : shaderData.getIncludes())
+        for (ShaderData include : shaderData.getIncludes())
             collectRecursiveIncludes(shaderDefinition, include, visited);
     }
 }

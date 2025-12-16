@@ -1,7 +1,6 @@
 package com.AdventureRPG.core.shaderpipeline.texturemanager;
 
 import com.AdventureRPG.core.kernel.ManagerFrame;
-import com.AdventureRPG.core.shaderpipeline.util.UVCoordinate;
 
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;

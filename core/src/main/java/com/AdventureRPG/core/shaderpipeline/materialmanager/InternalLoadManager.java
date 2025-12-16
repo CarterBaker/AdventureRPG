@@ -7,7 +7,7 @@ import java.nio.file.Path;
 
 import com.AdventureRPG.core.kernel.EngineSetting;
 import com.AdventureRPG.core.kernel.ManagerFrame;
-import com.AdventureRPG.core.shaderpipeline.material.Material;
+import com.AdventureRPG.core.shaderpipeline.materials.Material;
 import com.AdventureRPG.core.util.FileUtility;
 import com.AdventureRPG.core.util.Exceptions.FileException;
 

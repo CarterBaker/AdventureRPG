@@ -8,14 +8,14 @@ public class ShaderDefinitionInstance extends InstanceFrame {
 
     // Internal
     public final String shaderName;
-    public final ShaderDataInstance vert;
-    public final ShaderDataInstance frag;
-    private final ObjectArrayList<ShaderDataInstance> includes;
+    public final ShaderData vert;
+    public final ShaderData frag;
+    private final ObjectArrayList<ShaderData> includes;
 
     public ShaderDefinitionInstance(
             String shaderName,
-            ShaderDataInstance vert,
-            ShaderDataInstance frag) {
+            ShaderData vert,
+            ShaderData frag) {
 
         // Internal
         this.shaderName = shaderName;
@@ -26,11 +26,11 @@ public class ShaderDefinitionInstance extends InstanceFrame {
 
     // Utility \\
 
-    public void addInclude(ShaderDataInstance include) {
+    public void addInclude(ShaderData include) {
         includes.add(include);
     }
 
-    public ObjectArrayList<ShaderDataInstance> getIncludes() {
+    public ObjectArrayList<ShaderData> getIncludes() {
         return includes;
     }
 }

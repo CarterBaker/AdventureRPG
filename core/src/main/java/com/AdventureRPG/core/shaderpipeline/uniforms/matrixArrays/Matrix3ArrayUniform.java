@@ -1,0 +1,24 @@
+package com.AdventureRPG.core.shaderpipeline.uniforms.matrixArrays;
+
+import com.AdventureRPG.core.shaderpipeline.uniforms.UniformAttribute;
+import com.AdventureRPG.core.util.Methematics.Matrices.Matrix3;
+
+public class Matrix3ArrayUniform extends UniformAttribute<Matrix3[]> {
+
+    // Base \\
+
+    public Matrix3ArrayUniform(int count) {
+
+        super(new Matrix3[count]);
+
+        for (int i = 0; i < count; i++)
+            value[i] = new Matrix3();
+    }
+
+    // Utility \\
+
+    @Override
+    protected void push(int handle, Matrix3[] value) {
+
+    }
+}

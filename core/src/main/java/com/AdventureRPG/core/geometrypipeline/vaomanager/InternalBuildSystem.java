@@ -5,7 +5,6 @@ import java.io.File;
 import com.AdventureRPG.core.kernel.SystemFrame;
 import com.AdventureRPG.core.util.FileUtility;
 import com.AdventureRPG.core.util.JsonUtility;
-import com.AdventureRPG.core.geometrypipeline.util.GLSLUtility;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.InternalLoadManager;
 import com.AdventureRPG.core.util.Exceptions.FileException;
 import com.google.gson.JsonElement;

@@ -7,17 +7,20 @@ import java.nio.file.Path;
 
 import com.AdventureRPG.core.kernel.EngineSetting;
 import com.AdventureRPG.core.kernel.ManagerFrame;
-import com.AdventureRPG.core.shaderpipeline.shader.Shader;
-import com.AdventureRPG.core.shaderpipeline.uniform.Uniform;
-import com.AdventureRPG.core.shaderpipeline.uniform.UniformAttribute;
-import com.AdventureRPG.core.shaderpipeline.uniform.matrices.*;
-import com.AdventureRPG.core.shaderpipeline.uniform.matrixArrays.*;
-import com.AdventureRPG.core.shaderpipeline.uniform.samplers.*;
-import com.AdventureRPG.core.shaderpipeline.uniform.scalarArrays.*;
-import com.AdventureRPG.core.shaderpipeline.uniform.scalars.*;
-import com.AdventureRPG.core.shaderpipeline.uniform.vectorarrays.*;
-import com.AdventureRPG.core.shaderpipeline.uniform.vectors.*;
-import com.AdventureRPG.core.shaderpipeline.layoutblocks.LayoutBlock;
+import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOData;
+import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOHandle;
+import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOManager;
+import com.AdventureRPG.core.shaderpipeline.shaders.Shader;
+import com.AdventureRPG.core.shaderpipeline.uniforms.Uniform;
+import com.AdventureRPG.core.shaderpipeline.uniforms.UniformAttribute;
+import com.AdventureRPG.core.shaderpipeline.uniforms.UniformData;
+import com.AdventureRPG.core.shaderpipeline.uniforms.matrices.*;
+import com.AdventureRPG.core.shaderpipeline.uniforms.matrixArrays.*;
+import com.AdventureRPG.core.shaderpipeline.uniforms.samplers.*;
+import com.AdventureRPG.core.shaderpipeline.uniforms.scalarArrays.*;
+import com.AdventureRPG.core.shaderpipeline.uniforms.scalars.*;
+import com.AdventureRPG.core.shaderpipeline.uniforms.vectorarrays.*;
+import com.AdventureRPG.core.shaderpipeline.uniforms.vectors.*;
 import com.AdventureRPG.core.util.FileUtility;
 import com.AdventureRPG.core.util.Exceptions.FileException;
 import com.AdventureRPG.core.util.Exceptions.GraphicException;
@@ -30,14 +33,14 @@ class InternalLoadManager extends ManagerFrame {
     // Internal
     private File root;
     private ShaderManager shaderManager;
+    private UBOManager uboManager;
     private InternalBuildSystem internalBuildSystem;
 
-    private ObjectArrayList<ShaderDataInstance> glslFiles;
+    private ObjectArrayList<ShaderData> glslFiles;
     private ObjectArrayList<File> jsonFiles;
 
-    private Object2ObjectOpenHashMap<String, ShaderDataInstance> lookup;
+    private Object2ObjectOpenHashMap<String, ShaderData> lookup;
 
-    private int layoutCount;
     private int shaderCount;
 
     // Base \\
@@ -54,7 +57,6 @@ class InternalLoadManager extends ManagerFrame {
 
         this.lookup = new Object2ObjectOpenHashMap<>();
 
-        this.layoutCount = 0;
         this.shaderCount = 0;
     }
 
@@ -63,6 +65,7 @@ class InternalLoadManager extends ManagerFrame {
 
         // Internal
         this.shaderManager = gameEngine.get(ShaderManager.class);
+        this.uboManager = gameEngine.get(UBOManager.class);
     }
 
     @Override
@@ -127,11 +130,10 @@ class InternalLoadManager extends ManagerFrame {
             throw new GraphicException.ShaderProgramException(
                     "Shader: " + file.getName() + ", Has an unrecognized extension");
 
-        ShaderDataInstance shaderDataInstance = (ShaderDataInstance) create(
-                new ShaderDataInstance(
-                        shaderType,
-                        FileUtility.getFileName(file),
-                        file));
+        ShaderData shaderDataInstance = new ShaderData(
+                shaderType,
+                FileUtility.getFileName(file),
+                file);
 
         glslFiles.add(shaderDataInstance);
 
@@ -167,7 +169,7 @@ class InternalLoadManager extends ManagerFrame {
                 shaderID,
                 shaderHandle);
 
-        assembleLayouts(
+        assembleBuffers(
                 shader,
                 shaderDefinition);
 
@@ -178,150 +180,41 @@ class InternalLoadManager extends ManagerFrame {
         return shader;
     }
 
-    // Layouts
-    private void assembleLayouts(
+    // Buffers
+    private void assembleBuffers(
             Shader shader,
             ShaderDefinitionInstance shaderDefinition) {
 
-        addLayoutsFromShaderData(
+        addBuffersFromShaderData(
                 shaderDefinition.vert,
                 shader);
 
-        addLayoutsFromShaderData(
+        addBuffersFromShaderData(
                 shaderDefinition.frag,
                 shader);
 
-        ObjectArrayList<ShaderDataInstance> includes = shaderDefinition.getIncludes();
+        ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
 
         for (int i = 0; i < includes.size(); i++)
-            addLayoutsFromShaderData(includes.get(i), shader);
+            addBuffersFromShaderData(includes.get(i), shader);
     }
 
-    private void addLayoutsFromShaderData(
-            ShaderDataInstance shaderData,
+    private void addBuffersFromShaderData(
+            ShaderData shaderData,
             Shader shader) {
 
-        ObjectArrayList<LayoutDataInstance> layoutBlocks = shaderData.getLayoutBlocks();
+        ObjectArrayList<UBOData> bufferBlocks = shaderData.getBufferBlocks();
 
-        for (int i = 0; i < layoutBlocks.size(); i++)
-            addLayoutFromLayoutData(layoutBlocks.get(i), shader);
+        for (int i = 0; i < bufferBlocks.size(); i++)
+            addBufferFromBufferData(bufferBlocks.get(i), shader);
     }
 
-    private void addLayoutFromLayoutData(
-            LayoutDataInstance layoutData,
+    private void addBufferFromBufferData(
+            UBOData bufferData,
             Shader shader) {
 
-        String layoutName = layoutData.blockName();
-        int bindingPoint = layoutData.binding();
-
-        // Check if this layout already exists in the manager
-        if (shaderManager.hasLayout(layoutName)) {
-            // Layout already exists, just reference it in this shader
-            LayoutBlock existingLayout = shaderManager.getLayoutFromLayoutName(layoutName);
-            shader.addLayout(layoutName, existingLayout);
-            return;
-        }
-
-        // Layout doesn't exist, create it
-        int layoutID = layoutCount++;
-
-        // Create the uniform buffer object on GPU and get its handle
-        int layoutHandle = GLSLUtility.createUniformBuffer();
-
-        LayoutBlock layoutBlock = new LayoutBlock(
-                layoutName,
-                layoutID,
-                layoutHandle);
-
-        // Add uniforms to the layout block with proper offsets
-        ObjectArrayList<UniformDataInstance> layoutUniforms = layoutData.getUniforms();
-        int currentOffset = 0;
-
-        for (int i = 0; i < layoutUniforms.size(); i++) {
-            UniformDataInstance uniformData = layoutUniforms.get(i);
-
-            // Calculate offset based on std140 layout rules
-            int offset = calculateStd140Offset(currentOffset, uniformData);
-
-            UniformAttribute<?> uniformAttribute = createUniformAttribute(uniformData);
-            Uniform<?> uniform = new Uniform<>(
-                    offset, // Store the offset within the buffer
-                    uniformAttribute);
-
-            layoutBlock.addUniform(uniformData.uniformName(), uniform);
-
-            // Update offset for next uniform
-            currentOffset = offset + calculateUniformSize(uniformData);
-        }
-
-        // Allocate GPU storage for the buffer (currentOffset now contains total size
-        // needed)
-        GLSLUtility.allocateUniformBuffer(layoutHandle, currentOffset);
-
-        // Bind it to the binding point
-        GLSLUtility.bindUniformBuffer(layoutHandle, bindingPoint);
-
-        // Register the layout in the shader manager (so other shaders can reuse it)
-        shaderManager.addLayout(layoutBlock);
-
-        // Also add it to this shader
-        shader.addLayout(layoutName, layoutBlock);
-    }
-
-    // Calculate offset following std140 layout rules
-    private int calculateStd140Offset(int currentOffset, UniformDataInstance uniformData) {
-        int alignment = getStd140Alignment(uniformData);
-
-        // Round up to next multiple of alignment
-        int offset = ((currentOffset + alignment - 1) / alignment) * alignment;
-
-        return offset;
-    }
-
-    // Get alignment requirements for std140 layout
-    private int getStd140Alignment(UniformDataInstance uniformData) {
-        return switch (uniformData.uniformType()) {
-            case FLOAT, INT, BOOL -> 4;
-            case VECTOR2, VECTOR2_INT, VECTOR2_BOOLEAN -> 8;
-            case VECTOR3, VECTOR3_INT, VECTOR3_BOOLEAN -> 16;
-            case VECTOR4, VECTOR4_INT, VECTOR4_BOOLEAN -> 16;
-            case MATRIX2 -> 16; // vec2 columns
-            case MATRIX3 -> 16; // vec3 columns aligned as vec4
-            case MATRIX4 -> 16; // vec4 columns
-            default -> 16; // Safe default
-        };
-    }
-
-    // Calculate size of uniform in bytes
-    private int calculateUniformSize(UniformDataInstance uniformData) {
-        int count = uniformData.count();
-
-        // For arrays, calculate stride differently
-        if (count > 1) {
-            int stride = switch (uniformData.uniformType()) {
-                case FLOAT, INT, BOOL -> 16; // Arrays of scalars: 16-byte stride
-                case VECTOR2, VECTOR2_INT, VECTOR2_BOOLEAN -> 16;
-                case VECTOR3, VECTOR3_INT, VECTOR3_BOOLEAN -> 16; // vec3 arrays padded to vec4
-                case VECTOR4, VECTOR4_INT, VECTOR4_BOOLEAN -> 16;
-                case MATRIX2 -> 32; // Each column is vec2, stride 16
-                case MATRIX3 -> 48; // Each column is vec3 (as vec4), stride 16
-                case MATRIX4 -> 64; // Each column is vec4, stride 16
-                default -> 16;
-            };
-            return stride * count;
-        }
-
-        // Single element sizes
-        return switch (uniformData.uniformType()) {
-            case FLOAT, INT, BOOL -> 4;
-            case VECTOR2, VECTOR2_INT, VECTOR2_BOOLEAN -> 8;
-            case VECTOR3, VECTOR3_INT, VECTOR3_BOOLEAN -> 12;
-            case VECTOR4, VECTOR4_INT, VECTOR4_BOOLEAN -> 16;
-            case MATRIX2 -> 32;
-            case MATRIX3 -> 48;
-            case MATRIX4 -> 64;
-            default -> 16;
-        };
+        UBOHandle ubo = uboManager.registerBuffer(bufferData);
+        shader.addBuffer(bufferData.blockName(), ubo);
     }
 
     // Uniforms
@@ -337,24 +230,24 @@ class InternalLoadManager extends ManagerFrame {
                 shaderDefinition.frag,
                 shader);
 
-        ObjectArrayList<ShaderDataInstance> includes = shaderDefinition.getIncludes();
+        ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
 
         for (int i = 0; i < includes.size(); i++)
             addUniformsFromShaderData(includes.get(i), shader);
     }
 
     private void addUniformsFromShaderData(
-            ShaderDataInstance shaderData,
+            ShaderData shaderData,
             Shader shader) {
 
-        ObjectArrayList<UniformDataInstance> uniforms = shaderData.getUniforms();
+        ObjectArrayList<UniformData> uniforms = shaderData.getUniforms();
 
         for (int i = 0; i < uniforms.size(); i++)
             addUniformFromUniformData(uniforms.get(i), shader);
     }
 
     private void addUniformFromUniformData(
-            UniformDataInstance uniformData,
+            UniformData uniformData,
             Shader shader) {
 
         UniformAttribute<?> uniformAttribute = createUniformAttribute(uniformData);
@@ -365,7 +258,7 @@ class InternalLoadManager extends ManagerFrame {
         shader.addUniform(uniformData.uniformName(), uniform);
     }
 
-    private UniformAttribute<?> createUniformAttribute(UniformDataInstance uniformData) {
+    private UniformAttribute<?> createUniformAttribute(UniformData uniformData) {
 
         int count = uniformData.count();
         boolean isArray = count > 1;
@@ -411,17 +304,17 @@ class InternalLoadManager extends ManagerFrame {
 
     // Utility \\
 
-    ShaderDataInstance getShaderData(String key) {
+    ShaderData getShaderData(String key) {
 
         // First try full path lookup
-        ShaderDataInstance result = lookup.get(key);
+        ShaderData result = lookup.get(key);
         if (result != null)
             return result;
 
         // Fallback try short stripped name
         for (int i = 0; i < glslFiles.size(); i++) {
 
-            ShaderDataInstance inst = glslFiles.get(i);
+            ShaderData inst = glslFiles.get(i);
             if (inst.shaderName().equals(key))
                 return inst;
         }

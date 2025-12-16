@@ -3,12 +3,12 @@ package com.AdventureRPG.core.shaderpipeline.materialmanager;
 import java.io.File;
 
 import com.AdventureRPG.core.kernel.SystemFrame;
-import com.AdventureRPG.core.shaderpipeline.shader.Shader;
+import com.AdventureRPG.core.shaderpipeline.materials.Material;
 import com.AdventureRPG.core.shaderpipeline.shadermanager.ShaderManager;
+import com.AdventureRPG.core.shaderpipeline.shaders.Shader;
 import com.AdventureRPG.core.shaderpipeline.texturemanager.TextureManager;
-import com.AdventureRPG.core.shaderpipeline.uniform.Uniform;
-import com.AdventureRPG.core.shaderpipeline.uniform.UniformAttribute;
-import com.AdventureRPG.core.shaderpipeline.material.Material;
+import com.AdventureRPG.core.shaderpipeline.uniforms.Uniform;
+import com.AdventureRPG.core.shaderpipeline.uniforms.UniformAttribute;
 import com.AdventureRPG.core.util.FileUtility;
 import com.AdventureRPG.core.util.JsonUtility;
 import com.AdventureRPG.core.util.Methematics.Matrices.*;
@@ -53,7 +53,8 @@ class InternalBuildSystem extends SystemFrame {
         return new Material(
                 materialName,
                 materialID,
-                shaderID,
+                shader,
+                shader.getBuffers(),
                 uniforms);
     }
 
@@ -109,7 +110,7 @@ class InternalBuildSystem extends SystemFrame {
         // Check if this is an array uniform
         boolean isArray = uniformData.has("count");
 
-        UniformAttribute<?> attribute = uniform.getAttribute();
+        UniformAttribute<?> attribute = uniform.attribute();
 
         // Update the uniform based on its type
         if (isArray) {

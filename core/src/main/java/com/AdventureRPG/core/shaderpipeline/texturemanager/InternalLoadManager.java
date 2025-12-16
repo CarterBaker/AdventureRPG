@@ -9,7 +9,6 @@ import java.util.List;
 
 import com.AdventureRPG.core.kernel.EngineSetting;
 import com.AdventureRPG.core.kernel.ManagerFrame;
-import com.AdventureRPG.core.shaderpipeline.util.UVCoordinate;
 import com.AdventureRPG.core.util.FileUtility;
 import com.AdventureRPG.core.util.Exceptions.GraphicException;
 

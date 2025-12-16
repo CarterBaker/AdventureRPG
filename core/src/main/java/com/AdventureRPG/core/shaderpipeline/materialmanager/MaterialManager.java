@@ -1,7 +1,7 @@
 package com.AdventureRPG.core.shaderpipeline.materialmanager;
 
 import com.AdventureRPG.core.kernel.ManagerFrame;
-import com.AdventureRPG.core.shaderpipeline.material.Material;
+import com.AdventureRPG.core.shaderpipeline.materials.Material;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;

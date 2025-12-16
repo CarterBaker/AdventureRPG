@@ -4,7 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 
-public class GLSLUtility {
+class GLSLUtility {
 
     // Buffer \\
 

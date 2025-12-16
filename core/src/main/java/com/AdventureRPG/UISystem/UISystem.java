@@ -31,7 +31,7 @@ public class UISystem extends SystemFrame {
 
             case LoadScreen -> new LoadScreen(this, Menu);
             case Main -> new MainMenu(this, Menu);
-            default -> throw new UIException.UnknownMenuException(Menu.name());
+            default -> throw new RuntimeException(""); // TODO: Add my own error
 
         };
 

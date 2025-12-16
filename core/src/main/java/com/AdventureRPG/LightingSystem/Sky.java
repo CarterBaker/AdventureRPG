@@ -1,23 +1,19 @@
 package com.AdventureRPG.lightingsystem;
 
 import com.AdventureRPG.core.kernel.SystemFrame;
-import com.AdventureRPG.core.shaderpipeline.ShaderManager.UniversalUniformType;
-import com.AdventureRPG.core.shaderpipeline.passmanager.PassData;
-import com.AdventureRPG.core.shaderpipeline.passmanager.PassSystem;
-import com.AdventureRPG.timesystem.TimeSystem;
+import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOHandle;
+import com.AdventureRPG.core.shaderpipeline.passmanager.PassManager;
+import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPass;
 
 public class Sky extends SystemFrame {
 
     // Root
-    private PassSystem passSystem;
-    private TimeSystem timeSystem;
+    private PassManager passmanager;
 
     // Shader
     private int skyPassID;
-    private PassData skyPass;
-
-    // Uniforms
-    private float u_overcast;
+    private ProcessingPass skyPass;
+    private UBOHandle skyUBO;
 
     // Base \\
 
@@ -25,32 +21,12 @@ public class Sky extends SystemFrame {
     protected void init() {
 
         // Root
-        this.passSystem = gameEngine.get(PassSystem.class);
-        this.timeSystem = gameEngine.get(TimeSystem.class);
-    }
-
-    @Override
-    protected void awake() {
+        this.passmanager = gameEngine.get(PassManager.class);
 
         // Shader
-        skyPassID = passSystem.getPassID("sky");
-        skyPass = passSystem.createPassInstance(skyPassID, -5);
-        skyPass.setUniform("u_overcast", u_overcast);
-
-        // Uniforms
-        this.u_overcast = 0;
-    }
-
-    @Override
-    protected void update() {
-
-        if (skyPass == null)
-            return;
-
-        skyPass.setUniversalUniform(UniversalUniformType.u_inverseView);
-        skyPass.setUniversalUniform(UniversalUniformType.u_inverseProjection);
-        skyPass.setUniform("u_timeOfDay", (float) timeSystem.getTimeOfDay());
-        skyPass.setUniversalUniform(UniversalUniformType.u_time);
+        skyPassID = passmanager.getPassIDFromPassName("sky");
+        skyPass = passmanager.getPassFromPassID(skyPassID);
+        skyUBO = skyPass.material.getUBO("sky");
     }
 
     public void generateRandomOffsetFromDay(long day) {
@@ -67,7 +43,7 @@ public class Sky extends SystemFrame {
 
         float noise = (float) Math.max(0.001, normalized);
 
-        if (skyPass != null)
-            skyPass.setUniform("u_randomNoiseFromDay", noise);
+        skyUBO.update("u_randomNoiseFromDay", noise);
+
     }
 }

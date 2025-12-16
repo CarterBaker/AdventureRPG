@@ -3,6 +3,7 @@ package com.AdventureRPG.core.geometrypipeline.modelmanager;
 import java.io.File;
 
 import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.geometrypipeline.Mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOHandle;
 import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOManager;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;

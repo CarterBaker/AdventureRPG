@@ -2,9 +2,11 @@ package com.AdventureRPG.core.shaderpipeline.passmanager;
 
 import java.io.File;
 
+import com.AdventureRPG.core.geometrypipeline.Mesh.MeshHandle;
+import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
 import com.AdventureRPG.core.kernel.SystemFrame;
-import com.AdventureRPG.core.shaderpipeline.material.Material;
 import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
+import com.AdventureRPG.core.shaderpipeline.materials.Material;
 import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPass;
 import com.AdventureRPG.core.util.FileUtility;
 import com.AdventureRPG.core.util.JsonUtility;
@@ -14,6 +16,7 @@ class InternalBuildSystem extends SystemFrame {
 
     // Internal
     private MaterialManager materialManager;
+    private MeshHandle processingTriangle;
 
     // Base \\
 
@@ -22,6 +25,10 @@ class InternalBuildSystem extends SystemFrame {
 
         // Internal
         this.materialManager = gameEngine.get(MaterialManager.class);
+
+        ModelManager modelManager = gameEngine.get(ModelManager.class);
+        int meshID = modelManager.getMeshHandleIDFromMeshName("ProcessingTriangle");
+        this.processingTriangle = modelManager.getMeshHandleFromMeshHandleID(meshID);
     }
 
     // Pass Management \\
@@ -38,7 +45,8 @@ class InternalBuildSystem extends SystemFrame {
         return new ProcessingPass(
                 passName,
                 passID,
-                material);
+                material,
+                processingTriangle);
     }
 
     private int getPassID(JsonObject json) {
