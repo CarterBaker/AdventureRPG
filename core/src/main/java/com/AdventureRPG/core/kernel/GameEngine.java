@@ -2,12 +2,13 @@ package com.AdventureRPG.core.kernel;
 
 import java.io.File;
 
+import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.core.geometrypipeline.GeometryPipeline;
 import com.AdventureRPG.core.physicspipeline.input.InputSystem;
 import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
 import com.AdventureRPG.core.renderpipeline.RenderPipeline;
 import com.AdventureRPG.core.renderpipeline.camerasystem.CameraSystem;
-import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
+import com.AdventureRPG.core.scenepipeline.ScenePipeline;
 import com.AdventureRPG.core.settings.Settings;
 import com.AdventureRPG.core.shaderpipeline.ShaderPipeline;
 import com.AdventureRPG.core.threadpipeline.ThreadSystem;
@@ -18,7 +19,6 @@ import com.AdventureRPG.timesystem.TimeSystem;
 import com.AdventureRPG.uisystem.LoadScreen;
 import com.AdventureRPG.uisystem.Menu;
 import com.AdventureRPG.uisystem.UISystem;
-import com.AdventureRPG.worldmanager.WorldManager;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
 
@@ -26,7 +26,7 @@ public class GameEngine extends EngineFrame implements Screen {
 
     // Kernel
     private ThreadSystem threadSystem;
-    private WorldEngineSystem worldEngineSystem;
+    private ScenePipeline scenePipeline;
     private CameraSystem cameraSystem;
     private InputSystem inputSystem;
     private MovementManager movementManager;
@@ -40,7 +40,7 @@ public class GameEngine extends EngineFrame implements Screen {
     private LightingManager lightingManager;
     private TimeSystem timeSystem;
     private PlayerManager playerManager;
-    private WorldManager worldManager;
+    private WorldPipeline worldPipeline;
 
     // UI
     private LoadScreen loadScreen;
@@ -64,7 +64,7 @@ public class GameEngine extends EngineFrame implements Screen {
 
         // Kernel
         this.threadSystem = (ThreadSystem) register(new ThreadSystem());
-        this.worldEngineSystem = (WorldEngineSystem) register(new WorldEngineSystem());
+        this.scenePipeline = (ScenePipeline) register(new ScenePipeline());
         this.cameraSystem = (CameraSystem) register(new CameraSystem());
         this.inputSystem = (InputSystem) register(new InputSystem());
         this.movementManager = (MovementManager) register(new MovementManager());
@@ -82,7 +82,7 @@ public class GameEngine extends EngineFrame implements Screen {
         lightingManager = (LightingManager) register(new LightingManager());
         timeSystem = (TimeSystem) register(new TimeSystem());
         playerManager = (PlayerManager) register(new PlayerManager());
-        worldManager = (WorldManager) register(new WorldManager());
+        worldPipeline = (WorldPipeline) register(new WorldPipeline());
     }
 
     @Override
@@ -94,10 +94,10 @@ public class GameEngine extends EngineFrame implements Screen {
 
     public void startLoading() {
 
-        worldManager.loadChunks();
+        worldPipeline.loadChunks();
 
         loadScreen = (LoadScreen) UISystem.open(Menu.LoadScreen);
-        loadScreen.setMaxProgrss(worldManager.queueSystem.totalQueueSize());
+        loadScreen.setMaxProgrss(worldPipeline.queueSystem.totalQueueSize());
 
         requestInternalState(InternalState.MENU_EXCLUSIVE);
     }
@@ -108,12 +108,12 @@ public class GameEngine extends EngineFrame implements Screen {
         // dynamically
         // Goes with the todo in main class
 
-        if (worldManager.queueSystem.hasQueue())
-            loadScreen.setProgrss(worldManager.queueSystem.totalQueueSize());
+        if (worldPipeline.queueSystem.hasQueue())
+            loadScreen.setProgrss(worldPipeline.queueSystem.totalQueueSize());
 
         else {
 
-            loadScreen.setProgrss(worldManager.queueSystem.totalQueueSize());
+            loadScreen.setProgrss(worldPipeline.queueSystem.totalQueueSize());
             UISystem.close(loadScreen);
 
             requestInternalState(InternalState.GAME_EXCLUSIVE);

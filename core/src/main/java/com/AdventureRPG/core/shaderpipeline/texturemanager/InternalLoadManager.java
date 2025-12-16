@@ -119,7 +119,7 @@ class InternalLoadManager extends ManagerFrame {
         // For each tile int he texture array map the appropriate data
         for (Object2ObjectMap.Entry<String, TextureTileInstance> tile : tileCoordinateMap.object2ObjectEntrySet()) {
 
-            UVCoordinate uvCoordinate = computeUV(
+            UVRect uvCoordinate = computeUV(
                     tile.getValue().getAtlasX(),
                     tile.getValue().getAtlasY(),
                     textureArray.atlasSize);
@@ -133,11 +133,19 @@ class InternalLoadManager extends ManagerFrame {
 
     // Use global image size settigns to calculate UVs for any given texture using
     // known x and y coordinate values stored internally per tile
-    private UVCoordinate computeUV(int atlasX, int atlasY, int atlasSize) {
+    private UVRect computeUV(int atlasX, int atlasY, int atlasSize) {
 
-        float u = (atlasX * EngineSetting.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
-        float v = (atlasY * EngineSetting.BLOCK_TEXTURE_SIZE) / (float) atlasSize;
+        // Normalized tile size
+        float tileSize = 1.0f / atlasSize;
 
-        return new UVCoordinate(u, v);
+        // Calculate origin
+        float u0 = atlasX * tileSize;
+        float v0 = atlasY * tileSize;
+
+        // Calculate extent
+        float u1 = u0 + tileSize;
+        float v1 = v0 + tileSize;
+
+        return new UVRect(u0, v0, u1, v1);
     }
 }

@@ -1,7 +1,7 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
 import com.AdventureRPG.core.kernel.ManagerFrame;
-import com.AdventureRPG.core.geometrypipeline.Mesh.MeshHandle;
+import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -15,7 +15,7 @@ public class ModelManager extends ManagerFrame {
     private InternalLoadManager internalLoadManager;
     private ModelBatchSystem modelBatchSystem;
 
-    private Int2ObjectOpenHashMap<ModelData> loadedModels;
+    private Int2ObjectOpenHashMap<MeshPacketData> loadedModels;
     private IntSet unloadedModels;
     private int modelCount;
 
@@ -66,10 +66,10 @@ public class ModelManager extends ManagerFrame {
         meshHandleID2MeshHandle.put(meshID, meshHandle);
     }
 
-    private ModelData createModelData(VAOHandle vaoHandle) {
+    private MeshPacketData createMeshPacketData(VAOHandle vaoHandle) {
 
         int modelID = createModelID();
-        ModelData model = new ModelData(modelID, vaoHandle);
+        MeshPacketData model = new MeshPacketData(modelID, vaoHandle);
 
         loadedModels.put(modelID, model);
 
@@ -101,17 +101,17 @@ public class ModelManager extends ManagerFrame {
         return meshHandleID2MeshHandle.get(meshID);
     }
 
-    public ModelData requestModelData(VAOHandle vaoHandle) {
-        return createModelData(vaoHandle);
+    public MeshPacketData requestMeshPacketData(VAOHandle vaoHandle) {
+        return createMeshPacketData(vaoHandle);
     }
 
-    public void pushModel(ModelData modelData) {
-        modelData.setRendering(true);
-        modelBatchSystem.pushModel(modelData);
+    public void pushModel(MeshPacketData meshPacketData) {
+        meshPacketData.setRendering(true);
+        modelBatchSystem.pushModel(meshPacketData);
     }
 
-    public void pullModel(ModelData modelData) {
-        modelBatchSystem.pullModel(modelData);
-        modelData.setRendering(false);
+    public void pullModel(MeshPacketData meshPacketData) {
+        modelBatchSystem.pullModel(meshPacketData);
+        meshPacketData.setRendering(false);
     }
 }

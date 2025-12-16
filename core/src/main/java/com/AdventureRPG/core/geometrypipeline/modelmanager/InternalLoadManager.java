@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.AdventureRPG.core.geometrypipeline.Mesh.MeshHandle;
+import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
 import com.AdventureRPG.core.kernel.EngineSetting;
 import com.AdventureRPG.core.kernel.ManagerFrame;
 import com.AdventureRPG.core.util.FileUtility;

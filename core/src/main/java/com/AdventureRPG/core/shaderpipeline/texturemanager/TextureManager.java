@@ -14,7 +14,7 @@ public class TextureManager extends ManagerFrame {
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> textureName2TileID;
     private Int2IntArrayMap tileID2textureArrayID;
-    private Int2ObjectOpenHashMap<UVCoordinate> tileID2textureArrayUV;
+    private Int2ObjectOpenHashMap<UVRect> tileID2textureArrayUV;
     private Object2IntOpenHashMap<String> textureArrayName2GPUHandle;
     private Int2IntArrayMap textureArrayID2GPUHandle;
 
@@ -55,7 +55,7 @@ public class TextureManager extends ManagerFrame {
         internalLoadManager.loadTextureArrays();
     }
 
-    void addTextureTile(TextureTileInstance textureTileInstance, UVCoordinate uvCoordinate) {
+    void addTextureTile(TextureTileInstance textureTileInstance, UVRect uvCoordinate) {
         textureName2TileID.put(textureTileInstance.name, textureTileInstance.id);
         tileID2textureArrayID.put(textureTileInstance.id, textureTileInstance.id);
         tileID2textureArrayUV.put(textureTileInstance.id, uvCoordinate);
@@ -90,7 +90,7 @@ public class TextureManager extends ManagerFrame {
         return tileID2textureArrayID.get(tileID);
     }
 
-    public UVCoordinate getTextureArrayUVfromTileID(int tileID) {
+    public UVRect getTextureArrayUVfromTileID(int tileID) {
         return tileID2textureArrayUV.get(tileID);
     }
 

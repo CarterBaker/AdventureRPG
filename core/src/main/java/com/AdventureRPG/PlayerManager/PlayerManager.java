@@ -1,11 +1,11 @@
 package com.AdventureRPG.playermanager;
 
+import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.core.kernel.ManagerFrame;
 import com.AdventureRPG.core.physicspipeline.input.InputSystem;
 import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
 import com.AdventureRPG.core.renderpipeline.camerasystem.CameraSystem;
 import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
-import com.AdventureRPG.worldmanager.WorldManager;
 import com.badlogic.gdx.math.Vector3;
 
 // TODO: This needs to be abstracted to generic NPC like class
@@ -16,7 +16,7 @@ public class PlayerManager extends ManagerFrame {
     private InputSystem inputSystem;
     private CameraSystem cameraSystem;
     private MovementManager movementManager;
-    private WorldManager worldManager;
+    private WorldPipeline worldPipeline;
 
     // Position
     private Vector3 currentPosition; // TODO: These are very special they should be built into the engine itself
@@ -42,7 +42,7 @@ public class PlayerManager extends ManagerFrame {
         this.inputSystem = gameEngine.get(InputSystem.class);
         this.cameraSystem = gameEngine.get(CameraSystem.class);
         this.movementManager = gameEngine.get(MovementManager.class);
-        this.worldManager = gameEngine.get(WorldManager.class);
+        this.worldPipeline = gameEngine.get(WorldPipeline.class);
     }
 
     @Override
@@ -63,7 +63,7 @@ public class PlayerManager extends ManagerFrame {
         // TODO: Along with the camera system not sure I want ot be doing this
         cameraSystem.moveCamera(currentPosition);
 
-        worldManager.updatePosition(currentPosition, currentChunk);
+        worldPipeline.updatePosition(currentPosition, currentChunk);
     }
 
     // Accessible \\

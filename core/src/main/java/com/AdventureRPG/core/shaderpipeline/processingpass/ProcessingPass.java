@@ -1,7 +1,7 @@
 package com.AdventureRPG.core.shaderpipeline.processingpass;
 
-import com.AdventureRPG.core.geometrypipeline.Mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.Models.ModelHandle;
+import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
 import com.AdventureRPG.core.shaderpipeline.materials.Material;
 
 public class ProcessingPass {

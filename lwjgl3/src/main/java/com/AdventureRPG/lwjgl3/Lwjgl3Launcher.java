@@ -9,10 +9,10 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.AdventureRPG.WorldPipeline.biomes.Biome;
+import com.AdventureRPG.WorldPipeline.biomes.BiomeDeserializer;
 import com.AdventureRPG.core.kernel.Main;
 import com.AdventureRPG.core.settings.*;
-import com.AdventureRPG.worldmanager.biomes.Biome;
-import com.AdventureRPG.worldmanager.biomes.BiomeDeserializer;
 
 public class Lwjgl3Launcher {
     private static final String GAME_DIRECTORY = "AdventureRPG";

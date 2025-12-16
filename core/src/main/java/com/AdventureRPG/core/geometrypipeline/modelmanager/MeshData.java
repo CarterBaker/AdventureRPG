@@ -1,7 +1,7 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
-import com.AdventureRPG.core.geometrypipeline.Mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOHandle;
+import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 import com.AdventureRPG.core.geometrypipeline.vbomanager.VBOHandle;
 import com.AdventureRPG.core.kernel.DataFrame;

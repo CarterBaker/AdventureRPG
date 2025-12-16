@@ -1,7 +1,7 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
-import com.AdventureRPG.core.geometrypipeline.Mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.Models.ModelHandle;
+import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
 import com.AdventureRPG.core.kernel.SystemFrame;
 import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
 import com.AdventureRPG.core.shaderpipeline.materials.Material;
@@ -48,18 +48,18 @@ class ModelBatchSystem extends SystemFrame {
 
     }
 
-    void pushModel(ModelData modelData) {
+    void pushModel(MeshPacketData meshPacketData) {
 
-        int modelID = modelData.getModelID();
+        int modelID = meshPacketData.getModelID();
 
         if (loadedModels.contains(modelID))
-            pullModel(modelData);
+            pullModel(meshPacketData);
 
         Int2ObjectOpenHashMap<IntSet> materialID2MeshID = modelID2MaterialID2MeshIDCollection.computeIfAbsent(
                 modelID,
                 k -> new Int2ObjectOpenHashMap<>());
 
-        var iterator = modelData.getMaterialID2MeshCollection()
+        var iterator = meshPacketData.getMaterialID2MeshCollection()
                 .int2ObjectEntrySet().fastIterator();
 
         while (iterator.hasNext()) {
@@ -112,9 +112,9 @@ class ModelBatchSystem extends SystemFrame {
         loadedModels.add(modelID);
     }
 
-    void pullModel(ModelData modelData) {
+    void pullModel(MeshPacketData meshPacketData) {
 
-        int modelID = modelData.getModelID();
+        int modelID = meshPacketData.getModelID();
 
         Int2ObjectOpenHashMap<IntSet> removedModel = modelID2MaterialID2MeshIDCollection
                 .remove(modelID);

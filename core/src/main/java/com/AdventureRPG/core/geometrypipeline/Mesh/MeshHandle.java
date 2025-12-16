@@ -1,4 +1,4 @@
-package com.AdventureRPG.core.geometrypipeline.Mesh;
+package com.AdventureRPG.core.geometrypipeline.mesh;
 
 import com.AdventureRPG.core.kernel.HandleFrame;
 

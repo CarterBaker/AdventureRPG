@@ -2,7 +2,7 @@ package com.AdventureRPG.core.shaderpipeline.passmanager;
 
 import java.io.File;
 
-import com.AdventureRPG.core.geometrypipeline.Mesh.MeshHandle;
+import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
 import com.AdventureRPG.core.kernel.SystemFrame;
 import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
