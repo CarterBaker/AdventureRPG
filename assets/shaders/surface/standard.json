@@ -1,7 +1,0 @@
-{
-    "vertex": "surface/standard.vsh",
-    "fragment": "surface/standard.fsh",
-    "fragmentIncludes": [
-        "pbr.glsl"
-    ]
-}
