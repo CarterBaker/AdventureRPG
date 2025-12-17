@@ -7,7 +7,7 @@ import com.AdventureRPG.core.geometrypipeline.GeometryPipeline;
 import com.AdventureRPG.core.physicspipeline.input.InputSystem;
 import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
 import com.AdventureRPG.core.renderpipeline.RenderPipeline;
-import com.AdventureRPG.core.renderpipeline.camerasystem.CameraSystem;
+import com.AdventureRPG.core.renderpipeline.camerasystem.CameraManager;
 import com.AdventureRPG.core.scenepipeline.ScenePipeline;
 import com.AdventureRPG.core.settings.Settings;
 import com.AdventureRPG.core.shaderpipeline.ShaderPipeline;
@@ -27,7 +27,7 @@ public class GameEngine extends EngineFrame implements Screen {
     // Kernel
     private ThreadSystem threadSystem;
     private ScenePipeline scenePipeline;
-    private CameraSystem cameraSystem;
+    private CameraManager cameraManager;
     private InputSystem inputSystem;
     private MovementManager movementManager;
     private ShaderPipeline shaderPipeline;
@@ -65,7 +65,7 @@ public class GameEngine extends EngineFrame implements Screen {
         // Kernel
         this.threadSystem = (ThreadSystem) register(new ThreadSystem());
         this.scenePipeline = (ScenePipeline) register(new ScenePipeline());
-        this.cameraSystem = (CameraSystem) register(new CameraSystem());
+        this.cameraManager = (CameraManager) register(new CameraManager());
         this.inputSystem = (InputSystem) register(new InputSystem());
         this.movementManager = (MovementManager) register(new MovementManager());
         this.shaderPipeline = (ShaderPipeline) register(new ShaderPipeline());
@@ -138,7 +138,7 @@ public class GameEngine extends EngineFrame implements Screen {
 
     @Override
     public void resize(int width, int height) {
-        cameraSystem.resize(width, height);
+        cameraManager.resize(width, height);
     }
 
     @Override

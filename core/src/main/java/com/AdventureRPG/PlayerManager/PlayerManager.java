@@ -4,7 +4,7 @@ import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.core.kernel.ManagerFrame;
 import com.AdventureRPG.core.physicspipeline.input.InputSystem;
 import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
-import com.AdventureRPG.core.renderpipeline.camerasystem.CameraSystem;
+import com.AdventureRPG.core.renderpipeline.camerasystem.CameraManager;
 import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
 import com.badlogic.gdx.math.Vector3;
 
@@ -14,7 +14,7 @@ public class PlayerManager extends ManagerFrame {
     // Player
     private StatisticsInstance statisticsInstance;
     private InputSystem inputSystem;
-    private CameraSystem cameraSystem;
+    private CameraManager cameraManager;
     private MovementManager movementManager;
     private WorldPipeline worldPipeline;
 
@@ -40,14 +40,14 @@ public class PlayerManager extends ManagerFrame {
 
         // Player
         this.inputSystem = gameEngine.get(InputSystem.class);
-        this.cameraSystem = gameEngine.get(CameraSystem.class);
+        this.cameraManager = gameEngine.get(CameraManager.class);
         this.movementManager = gameEngine.get(MovementManager.class);
         this.worldPipeline = gameEngine.get(WorldPipeline.class);
     }
 
     @Override
     protected void update() {
-        cameraSystem.rotateCamera(inputSystem.getRotation());
+        cameraManager.rotateCamera(inputSystem.getRotation());
     }
 
     @Override
@@ -56,12 +56,12 @@ public class PlayerManager extends ManagerFrame {
         movementManager.move(
                 statisticsInstance,
                 inputSystem.getInput(),
-                cameraSystem.mainCamera().direction(),
+                cameraManager.mainCamera().direction(),
                 currentPosition,
                 currentChunk);
 
         // TODO: Along with the camera system not sure I want ot be doing this
-        cameraSystem.moveCamera(currentPosition);
+        cameraManager.moveCamera(currentPosition);
 
         worldPipeline.updatePosition(currentPosition, currentChunk);
     }

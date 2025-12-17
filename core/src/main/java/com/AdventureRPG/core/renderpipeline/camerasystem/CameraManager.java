@@ -5,7 +5,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 
-public class CameraSystem extends SystemFrame {
+public class CameraManager extends SystemFrame {
 
     // Camera storage
     private final Array<CameraInstance> cameraInstances = new Array<>(false, 4);
