@@ -78,9 +78,6 @@ public final class InternalBuildSystem extends SystemFrame {
                                 "uniform '" + uniformData.uniformName() + "' not found in existing definition. " +
                                 "Use an #include file to ensure consistency across shaders.");
             }
-
-            // Could also validate type matches if needed
-            // (Would need to store type info in Uniform or compare attribute class)
         }
     }
 
@@ -207,5 +204,108 @@ public final class InternalBuildSystem extends SystemFrame {
             default -> throw new GraphicException.ShaderProgramException(
                     "Unsupported uniform type in UBO: " + uniformData.uniformType());
         };
+    }
+
+    // Clone an existing UniformAttribute (used by UBOManager.cloneUBOHandle)
+    public UniformAttribute<?> createUniformAttributeClone(UniformAttribute<?> source) {
+
+        // For arrays, extract size from the source
+        if (source instanceof FloatArrayUniform fa)
+            return new FloatArrayUniform(fa.get().length);
+        if (source instanceof DoubleArrayUniform da)
+            return new DoubleArrayUniform(da.get().length);
+        if (source instanceof IntegerArrayUniform ia)
+            return new IntegerArrayUniform(ia.get().length);
+        if (source instanceof BooleanArrayUniform ba)
+            return new BooleanArrayUniform(ba.get().length);
+
+        if (source instanceof Vector2ArrayUniform v2a)
+            return new Vector2ArrayUniform(v2a.get().length);
+        if (source instanceof Vector3ArrayUniform v3a)
+            return new Vector3ArrayUniform(v3a.get().length);
+        if (source instanceof Vector4ArrayUniform v4a)
+            return new Vector4ArrayUniform(v4a.get().length);
+        if (source instanceof Vector2DoubleArrayUniform v2da)
+            return new Vector2DoubleArrayUniform(v2da.get().length);
+        if (source instanceof Vector3DoubleArrayUniform v3da)
+            return new Vector3DoubleArrayUniform(v3da.get().length);
+        if (source instanceof Vector4DoubleArrayUniform v4da)
+            return new Vector4DoubleArrayUniform(v4da.get().length);
+        if (source instanceof Vector2IntArrayUniform v2ia)
+            return new Vector2IntArrayUniform(v2ia.get().length);
+        if (source instanceof Vector3IntArrayUniform v3ia)
+            return new Vector3IntArrayUniform(v3ia.get().length);
+        if (source instanceof Vector4IntArrayUniform v4ia)
+            return new Vector4IntArrayUniform(v4ia.get().length);
+        if (source instanceof Vector2BooleanArrayUniform v2ba)
+            return new Vector2BooleanArrayUniform(v2ba.get().length);
+        if (source instanceof Vector3BooleanArrayUniform v3ba)
+            return new Vector3BooleanArrayUniform(v3ba.get().length);
+        if (source instanceof Vector4BooleanArrayUniform v4ba)
+            return new Vector4BooleanArrayUniform(v4ba.get().length);
+
+        if (source instanceof Matrix2ArrayUniform m2a)
+            return new Matrix2ArrayUniform(m2a.get().length);
+        if (source instanceof Matrix3ArrayUniform m3a)
+            return new Matrix3ArrayUniform(m3a.get().length);
+        if (source instanceof Matrix4ArrayUniform m4a)
+            return new Matrix4ArrayUniform(m4a.get().length);
+        if (source instanceof Matrix2DoubleArrayUniform m2da)
+            return new Matrix2DoubleArrayUniform(m2da.get().length);
+        if (source instanceof Matrix3DoubleArrayUniform m3da)
+            return new Matrix3DoubleArrayUniform(m3da.get().length);
+        if (source instanceof Matrix4DoubleArrayUniform m4da)
+            return new Matrix4DoubleArrayUniform(m4da.get().length);
+
+        // Non-array types
+        if (source instanceof FloatUniform)
+            return new FloatUniform();
+        if (source instanceof DoubleUniform)
+            return new DoubleUniform();
+        if (source instanceof IntegerUniform)
+            return new IntegerUniform();
+        if (source instanceof BooleanUniform)
+            return new BooleanUniform();
+
+        if (source instanceof Vector2Uniform)
+            return new Vector2Uniform();
+        if (source instanceof Vector3Uniform)
+            return new Vector3Uniform();
+        if (source instanceof Vector4Uniform)
+            return new Vector4Uniform();
+        if (source instanceof Vector2DoubleUniform)
+            return new Vector2DoubleUniform();
+        if (source instanceof Vector3DoubleUniform)
+            return new Vector3DoubleUniform();
+        if (source instanceof Vector4DoubleUniform)
+            return new Vector4DoubleUniform();
+        if (source instanceof Vector2IntUniform)
+            return new Vector2IntUniform();
+        if (source instanceof Vector3IntUniform)
+            return new Vector3IntUniform();
+        if (source instanceof Vector4IntUniform)
+            return new Vector4IntUniform();
+        if (source instanceof Vector2BooleanUniform)
+            return new Vector2BooleanUniform();
+        if (source instanceof Vector3BooleanUniform)
+            return new Vector3BooleanUniform();
+        if (source instanceof Vector4BooleanUniform)
+            return new Vector4BooleanUniform();
+
+        if (source instanceof Matrix2Uniform)
+            return new Matrix2Uniform();
+        if (source instanceof Matrix3Uniform)
+            return new Matrix3Uniform();
+        if (source instanceof Matrix4Uniform)
+            return new Matrix4Uniform();
+        if (source instanceof Matrix2DoubleUniform)
+            return new Matrix2DoubleUniform();
+        if (source instanceof Matrix3DoubleUniform)
+            return new Matrix3DoubleUniform();
+        if (source instanceof Matrix4DoubleUniform)
+            return new Matrix4DoubleUniform();
+
+        throw new GraphicException.ShaderProgramException(
+                "Cannot clone unknown UniformAttribute type: " + source.getClass().getName());
     }
 }

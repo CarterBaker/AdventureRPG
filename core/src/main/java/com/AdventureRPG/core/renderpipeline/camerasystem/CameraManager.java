@@ -1,11 +1,14 @@
 package com.AdventureRPG.core.renderpipeline.camerasystem;
 
-import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.kernel.ManagerFrame;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 
-public class CameraManager extends SystemFrame {
+public class CameraManager extends ManagerFrame {
+
+    // Internal
+    private InternalBufferSystem internalBufferSystem;
 
     // Camera storage
     private final Array<CameraInstance> cameraInstances = new Array<>(false, 4);
@@ -23,6 +26,9 @@ public class CameraManager extends SystemFrame {
     // Accessible \\
 
     public CameraInstance createCamera(float fov, float width, float height) {
+
+        // Internal
+        this.internalBufferSystem = (InternalBufferSystem) register(new InternalBufferSystem());
 
         CameraInstance createdCamera = new CameraInstance(fov, width, height);
 

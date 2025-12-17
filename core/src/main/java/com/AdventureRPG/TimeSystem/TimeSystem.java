@@ -5,12 +5,15 @@ import java.time.Instant;
 
 import com.AdventureRPG.core.kernel.EngineSetting;
 import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOHandle;
+import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOManager;
 import com.AdventureRPG.lightingsystem.LightingManager;
 import com.AdventureRPG.savemanager.UserData;
 
 public class TimeSystem extends SystemFrame {
 
-    // Root
+    // Internal
+    private UBOManager uboManager;
     private LightingManager lightingManager;
 
     // Settings
@@ -54,6 +57,13 @@ public class TimeSystem extends SystemFrame {
     private long lastMonth;
     private long lastYear;
 
+    // Time Buffer
+
+    private UBOHandle timeData;
+    private float elapsedTime;
+    private float lastFrameTime;
+    private float randomNoiseFromDay;
+
     // Base \\
 
     @Override
@@ -89,13 +99,36 @@ public class TimeSystem extends SystemFrame {
 
     @Override
     protected void init() {
+
+        // Internal
+        this.uboManager = gameEngine.get(UBOManager.class);
         this.lightingManager = gameEngine.get(LightingManager.class);
+
+        // Buffer
+        this.timeData = uboManager.getUBOHandleFromUBOName("TimeData");
+        this.elapsedTime = 0;
+        this.lastFrameTime = 0;
+        this.randomNoiseFromDay = 0;
     }
 
     @Override
     protected void update() {
 
-        updateFromSystemClock();
+        float currentTime = System.currentTimeMillis() / 1000.0f;
+        float deltaTime = currentTime - this.lastFrameTime;
+        this.lastFrameTime = currentTime;
+        this.elapsedTime += deltaTime;
+
+        this.updateFromSystemClock();
+
+        this.timeData.update("u_timeOfDay", (float) this.visualTimeOfDay);
+        this.timeData.update("u_rawTimeOfDay", (float) this.dayProgress);
+        this.timeData.update("u_time", this.elapsedTime);
+        this.timeData.update("u_randomNoiseFromDay", this.randomNoiseFromDay);
+        this.timeData.update("u_deltaTime", deltaTime);
+        this.timeData.update("u_currentHour", this.currentHour);
+        this.timeData.update("u_currentMinute", this.currentMinute);
+        this.timeData.update("u_currentDay", this.currentDayOfMonth);
     }
 
     // Save System \\
@@ -220,10 +253,25 @@ public class TimeSystem extends SystemFrame {
         long totalDaysWithOffset = calculateTotalDaysWithOffset();
         long dayOfAge = totalDaysWithOffset % (YEARS_PER_AGE * totalDaysInYear);
 
+        generateRandomOffsetFromDay(totalDaysWithOffset);
+
         lightingManager.sky.generateRandomOffsetFromDay(totalDaysWithOffset);
 
         calculateDayOfWeek(totalDaysWithOffset);
         calculateDayOfMonth(totalDaysWithOffset, dayOfAge);
+    }
+
+    private void generateRandomOffsetFromDay(long day) {
+
+        long mixed = day ^ System.currentTimeMillis();
+
+        mixed ^= mixed >>> 33;
+        mixed *= -49064778989728563L;
+        mixed ^= mixed >>> 33;
+
+        double normalized = (double) (mixed & 16777215L) / 1.6777216E7;
+
+        this.randomNoiseFromDay = (float) Math.max(0.001, normalized);
     }
 
     private long calculateTotalDaysWithOffset() {
