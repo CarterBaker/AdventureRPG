@@ -1,5 +1,5 @@
 {
-  "vao": "utility/vao/Stride2",
+  "vao": "util/vao/Stride2",
   "vertices": [
     [-1.0, -1.0],
     [-1.0,  3.0],

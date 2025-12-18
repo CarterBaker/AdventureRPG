@@ -73,7 +73,8 @@ class InternalBuildSystem extends SystemFrame {
 
     // VAO Resolution \\
 
-    private VAOHandle resolveVAO(JsonObject json, File file, InternalLoadManager loadManager, String resourceName) {
+    private VAOHandle resolveVAO(JsonObject json, File file, InternalLoadManager loadManager,
+            String resourceName) {
         if (!json.has("vao") || json.get("vao").isJsonNull()) {
             throw new FileException.FileReadException(
                     "VBO requires 'vao' field in file: " + file.getName());

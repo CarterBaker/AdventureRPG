@@ -88,7 +88,7 @@ public class InternalLoadManager extends ManagerFrame {
 
     private void buildFileRegistry(List<File> meshFiles) {
         for (File file : meshFiles) {
-            String resourceName = FileUtility.getFileName(file);
+            String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             resourceName2File.put(resourceName, file);
         }
     }
@@ -100,21 +100,22 @@ public class InternalLoadManager extends ManagerFrame {
     // File Processing \\
 
     private void processMeshFiles(List<File> meshFiles) {
-        for (File file : meshFiles) {
+        for (File file : meshFiles)
             processMeshFile(file);
-        }
     }
 
-    private void processMeshFile(File file) {
+    public void processMeshFile(File file) {
+
         String meshName = FileUtility.getFileName(file);
 
         try {
-            MeshHandle meshHandle = internalBuildSystem.buildMeshHandle(file, meshDataCount, this);
+            MeshHandle meshHandle = internalBuildSystem.buildMeshHandle(root, file, meshDataCount++, this);
 
-            if (meshHandle != null) {
+            if (meshHandle != null)
                 registerMeshData(meshName, meshHandle);
-            }
-        } catch (RuntimeException ex) {
+        }
+
+        catch (RuntimeException ex) {
             throw new FileException.FileReadException(
                     "Failed to build mesh from file: " + file.getAbsolutePath(), ex);
         }
@@ -122,6 +123,5 @@ public class InternalLoadManager extends ManagerFrame {
 
     private void registerMeshData(String meshName, MeshHandle meshHandle) {
         modelManager.addMeshHandle(meshName, meshDataCount, meshHandle);
-        meshDataCount++;
     }
 }

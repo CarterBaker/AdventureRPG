@@ -30,8 +30,8 @@ public class GameEngine extends EngineFrame implements Screen {
     private CameraManager cameraManager;
     private InputSystem inputSystem;
     private MovementManager movementManager;
-    private ShaderPipeline shaderPipeline;
     private GeometryPipeline geometryPipeline;
+    private ShaderPipeline shaderPipeline;
     private RenderPipeline renderPipeline;
 
     // Core
@@ -67,8 +67,8 @@ public class GameEngine extends EngineFrame implements Screen {
         this.scenePipeline = (ScenePipeline) register(new ScenePipeline());
         this.inputSystem = (InputSystem) register(new InputSystem());
         this.movementManager = (MovementManager) register(new MovementManager());
-        this.shaderPipeline = (ShaderPipeline) register(new ShaderPipeline());
         this.geometryPipeline = (GeometryPipeline) register(new GeometryPipeline());
+        this.shaderPipeline = (ShaderPipeline) register(new ShaderPipeline());
         this.renderPipeline = (RenderPipeline) register(new RenderPipeline());
     }
 

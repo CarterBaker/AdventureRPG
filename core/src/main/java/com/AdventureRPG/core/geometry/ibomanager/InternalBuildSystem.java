@@ -73,7 +73,8 @@ class InternalBuildSystem extends SystemFrame {
 
     // VAO Resolution \\
 
-    private VAOHandle resolveVAO(JsonObject json, File file, InternalLoadManager loadManager, String resourceName) {
+    private VAOHandle resolveVAO(JsonObject json, File file, InternalLoadManager loadManager,
+            String resourceName) {
         if (!json.has("vao") || json.get("vao").isJsonNull()) {
             throw new FileException.FileReadException(
                     "IBO requires 'vao' field in file: " + file.getName());
@@ -116,7 +117,7 @@ class InternalBuildSystem extends SystemFrame {
 
         existing = vaoManager.getVAOHandleFromName(vaoName);
         if (existing == null) {
-            throw new FileException.FileReadException(
+            throw new FileException.FileReadException( // TODO: Add my own error
                     "Failed to create VAO '" + vaoName + "' from file: " + referencedFile.getName());
         }
 
@@ -135,7 +136,7 @@ class InternalBuildSystem extends SystemFrame {
         // Not found - create it from the referenced file
         File referencedFile = loadManager.getFileByResourceName(iboName);
         if (referencedFile == null) {
-            throw new FileException.FileReadException(
+            throw new FileException.FileReadException( // TODO: Add my own error
                     "IBO reference '" + iboName + "' not found in file registry for file: " + currentFile.getName());
         }
 

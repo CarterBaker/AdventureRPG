@@ -12,6 +12,7 @@ import com.AdventureRPG.core.geometry.vbomanager.VBOHandle;
 import com.AdventureRPG.core.geometry.vbomanager.VBOManager;
 import com.AdventureRPG.core.util.FileUtility;
 import com.AdventureRPG.core.util.JsonUtility;
+import com.AdventureRPG.core.util.Exceptions.FileException;
 import com.google.gson.JsonObject;
 
 class InternalBuildSystem extends SystemFrame {
@@ -32,9 +33,14 @@ class InternalBuildSystem extends SystemFrame {
 
     // Build \\
 
-    MeshHandle buildMeshHandle(File file, int meshID, InternalLoadManager loadManager) {
-        JsonObject jsonObject = loadJsonFromFile(file);
-        String resourceName = FileUtility.getFileName(file);
+    MeshHandle buildMeshHandle(
+            File root,
+            File file,
+            int meshID,
+            InternalLoadManager loadManager) {
+
+        JsonObject jsonObject = JsonUtility.loadJsonObject(file);
+        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
 
         VAOHandle vaoHandle = buildVAOHandle(resourceName, jsonObject, file, loadManager);
         VBOHandle vboHandle = buildVBOHandle(resourceName, jsonObject, file, loadManager);
@@ -43,11 +49,11 @@ class InternalBuildSystem extends SystemFrame {
         return createMeshHandle(vaoHandle, vboHandle, iboHandle);
     }
 
-    private JsonObject loadJsonFromFile(File file) {
-        return JsonUtility.loadJsonObject(file);
-    }
+    private MeshHandle createMeshHandle(
+            VAOHandle vaoHandle,
+            VBOHandle vboHandle,
+            IBOHandle iboHandle) {
 
-    private MeshHandle createMeshHandle(VAOHandle vaoHandle, VBOHandle vboHandle, IBOHandle iboHandle) {
         if (vaoHandle == null || vboHandle == null || iboHandle == null) {
             return null;
         }
@@ -63,54 +69,111 @@ class InternalBuildSystem extends SystemFrame {
 
     // VAO Building \\
 
-    private VAOHandle buildVAOHandle(String resourceName, JsonObject jsonObject, File file,
+    private VAOHandle buildVAOHandle(
+            String resourceName,
+            JsonObject jsonObject,
+            File file,
             InternalLoadManager loadManager) {
-        if (!hasValidElement(jsonObject, "vao")) {
+
+        if (!hasValidElement(jsonObject, "vao"))
             return null;
-        }
 
-        // Check if already exists
+        // Check if the vao already exists
         VAOHandle existing = vaoManager.getVAOHandleFromName(resourceName);
-        if (existing != null) {
+        if (existing != null)
             return existing;
+
+        var vaoElement = jsonObject.get("vao");
+
+        // Case 1: string reference
+        if (vaoElement.isJsonPrimitive() && vaoElement.getAsJsonPrimitive().isString()) {
+
+            String refName = vaoElement.getAsString();
+            File refFile = loadManager.getFileByResourceName(refName);
+
+            if (refFile == null)
+                throw new FileException.FileNotFoundException("Referenced VAO file not found: " + refName);
+
+            // Recursively build dependency
+            loadManager.processMeshFile(refFile);
+
+            // Return handle now registered in VAOManager
+            return vaoManager.getVAOHandleFromName(refName);
         }
 
+        // Case 2: int (vert stride) or raw object — let VAOManager handle it
         vaoManager.addVAO(resourceName, file, loadManager);
         return vaoManager.getVAOHandleFromName(resourceName);
     }
 
     // VBO Building \\
 
-    private VBOHandle buildVBOHandle(String resourceName, JsonObject jsonObject, File file,
+    private VBOHandle buildVBOHandle(
+            String resourceName,
+            JsonObject jsonObject,
+            File file,
             InternalLoadManager loadManager) {
-        if (!hasValidElement(jsonObject, "vbo")) {
+
+        if (!hasValidElement(jsonObject, "vbo"))
             return null;
-        }
 
-        // Check if already exists
+        // Check if the vbo already exists
         VBOHandle existing = vboManager.getVBOHandleFromName(resourceName);
-        if (existing != null) {
+        if (existing != null)
             return existing;
+
+        var vboElement = jsonObject.get("vbo");
+
+        // String reference
+        if (vboElement.isJsonPrimitive() && vboElement.getAsJsonPrimitive().isString()) {
+
+            String refName = vboElement.getAsString();
+            File refFile = loadManager.getFileByResourceName(refName);
+
+            if (refFile == null)
+                throw new FileException.FileNotFoundException("Referenced VBO file not found: " + refName);
+
+            loadManager.processMeshFile(refFile);
+            return vboManager.getVBOHandleFromName(refName);
         }
 
+        // Raw data
         vboManager.addVBO(resourceName, file, loadManager);
         return vboManager.getVBOHandleFromName(resourceName);
     }
 
     // IBO Building \\
 
-    private IBOHandle buildIBOHandle(String resourceName, JsonObject jsonObject, File file,
+    private IBOHandle buildIBOHandle(
+            String resourceName,
+            JsonObject jsonObject,
+            File file,
             InternalLoadManager loadManager) {
-        if (!hasValidElement(jsonObject, "ibo")) {
+
+        if (!hasValidElement(jsonObject, "ibo"))
             return null;
-        }
 
-        // Check if already exists
+        // Check if the ibSo already exists
         IBOHandle existing = iboManager.getIBOHandleFromName(resourceName);
-        if (existing != null) {
+        if (existing != null)
             return existing;
+
+        var iboElement = jsonObject.get("ibo");
+
+        // String reference
+        if (iboElement.isJsonPrimitive() && iboElement.getAsJsonPrimitive().isString()) {
+
+            String refName = iboElement.getAsString();
+            File refFile = loadManager.getFileByResourceName(refName);
+
+            if (refFile == null)
+                throw new FileException.FileNotFoundException("Referenced IBO file not found: " + refName);
+
+            loadManager.processMeshFile(refFile);
+            return iboManager.getIBOHandleFromName(refName);
         }
 
+        // Raw data
         iboManager.addIBO(resourceName, file, loadManager);
         return iboManager.getIBOHandleFromName(resourceName);
     }

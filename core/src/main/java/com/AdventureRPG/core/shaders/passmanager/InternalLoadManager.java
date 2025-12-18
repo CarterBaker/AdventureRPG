@@ -26,7 +26,7 @@ class InternalLoadManager extends ManagerFrame {
     protected void create() {
 
         // Internal
-        this.root = new File(EngineSetting.MATERIAL_JSON_PATH);
+        this.root = new File(EngineSetting.PASS_JSON_PATH);
         this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
 
         this.passCount = 0;
@@ -73,7 +73,7 @@ class InternalLoadManager extends ManagerFrame {
     private void buildPassFromFile(File file) {
 
         if (EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(file)))
-            compilePass(internalBuildSystem.buildPass(file, passCount++));
+            compilePass(internalBuildSystem.buildPass(root, file, passCount++));
     }
 
     private void compilePass(ProcessingPass processingPass) {

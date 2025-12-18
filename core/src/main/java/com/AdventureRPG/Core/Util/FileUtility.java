@@ -1,6 +1,7 @@
 package com.AdventureRPG.core.util;
 
 import java.io.File;
+import java.nio.file.Path;
 
 import com.AdventureRPG.core.util.Exceptions.FileException;
 
@@ -88,6 +89,35 @@ public class FileUtility {
             return false;
 
         return getExtension(file).equals(extension.toLowerCase());
+    }
+
+    // Gets canonical resource path relative to a root directory, without extension
+    public static String getPathWithFileNameWithoutExtension(File root, File file) {
+
+        if (root == null || file == null)
+            return "";
+
+        try {
+
+            Path rootPath = root.toPath().toRealPath();
+            Path filePath = file.toPath().toRealPath();
+
+            Path relative = rootPath.relativize(filePath);
+            String pathStr = relative.toString().replace('\\', '/');
+
+            int dotIndex = pathStr.lastIndexOf('.');
+
+            if (dotIndex > 0)
+                pathStr = pathStr.substring(0, dotIndex);
+
+            return pathStr;
+        }
+
+        catch (Exception e) {
+
+            // Fallback: filename without extension
+            return getFileName(file);
+        }
     }
 
     // Get file name and addition data stored by file name split by an underscore

@@ -27,15 +27,15 @@ class InternalBuildSystem extends SystemFrame {
         this.materialManager = gameEngine.get(MaterialManager.class);
 
         ModelManager modelManager = gameEngine.get(ModelManager.class);
-        int meshID = modelManager.getMeshHandleIDFromMeshName("ProcessingTriangle");
+        int meshID = modelManager.getMeshHandleIDFromMeshName("util/ProcessingTriangle");
         this.processingTriangle = modelManager.getMeshHandleFromMeshHandleID(meshID);
     }
 
     // Pass Management \\
 
-    ProcessingPass buildPass(File file, int passID) {
+    ProcessingPass buildPass(File root, File file, int passID) {
 
-        String passName = FileUtility.getFileName(file);
+        String passName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
 
         JsonObject json = JsonUtility.loadJsonObject(file);
         int materialID = getPassID(json);
