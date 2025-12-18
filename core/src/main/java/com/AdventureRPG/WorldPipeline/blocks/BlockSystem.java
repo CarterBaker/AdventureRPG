@@ -1,8 +1,8 @@
 package com.AdventureRPG.WorldPipeline.blocks;
 
-import com.AdventureRPG.core.kernel.SystemFrame;
-import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
-import com.AdventureRPG.core.shaderpipeline.texturemanager.TextureManager;
+import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.shaders.materialmanager.MaterialManager;
+import com.AdventureRPG.core.shaders.texturemanager.TextureManager;
 import com.google.gson.Gson;
 
 public class BlockSystem extends SystemFrame {

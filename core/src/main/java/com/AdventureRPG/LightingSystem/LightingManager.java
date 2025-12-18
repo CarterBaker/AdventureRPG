@@ -1,6 +1,6 @@
 package com.AdventureRPG.lightingsystem;
 
-import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.engine.ManagerFrame;
 
 public class LightingManager extends ManagerFrame {
 

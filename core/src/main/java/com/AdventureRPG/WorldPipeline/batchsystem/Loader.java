@@ -6,8 +6,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
 import com.AdventureRPG.WorldPipeline.queuesystem.QueueSystem;
-import com.AdventureRPG.core.kernel.EngineSetting;
-import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.engine.EngineSetting;
+import com.AdventureRPG.core.engine.SystemFrame;
 import com.AdventureRPG.core.threadpipeline.ThreadSystem;
 import com.AdventureRPG.core.util.Methematics.Extras.Coordinate2Int;
 

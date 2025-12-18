@@ -3,7 +3,7 @@ package com.AdventureRPG.savemanager;
 import java.io.File;
 
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
-import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.engine.SystemFrame;
 
 public class ChunkData extends SystemFrame {
 

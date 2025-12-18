@@ -5,10 +5,10 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
-import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
-import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOManager;
-import com.AdventureRPG.core.kernel.EngineSetting;
-import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.engine.EngineSetting;
+import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.geometry.modelmanager.ModelManager;
+import com.AdventureRPG.core.geometry.vaomanager.VAOManager;
 import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
 import com.AdventureRPG.core.threadpipeline.ThreadSystem;
 import com.AdventureRPG.savemanager.ChunkData;

@@ -1,6 +1,7 @@
 {
     "defaultColor": [0.0, 0.0, 0.0],
     "aliases": [
+        "m",
         "metal",
         "metallic",
         "metalness",

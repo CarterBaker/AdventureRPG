@@ -5,7 +5,7 @@ import com.AdventureRPG.WorldPipeline.biomes.BiomeSystem;
 import com.AdventureRPG.WorldPipeline.blocks.BlockSystem;
 import com.AdventureRPG.WorldPipeline.queuesystem.QueueSystem;
 import com.AdventureRPG.WorldPipeline.util.PackedCoordinate3Int;
-import com.AdventureRPG.core.kernel.PipelineFrame;
+import com.AdventureRPG.core.engine.PipelineFrame;
 import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
 import com.badlogic.gdx.math.Vector3;
 

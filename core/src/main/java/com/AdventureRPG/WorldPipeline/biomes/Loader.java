@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.AdventureRPG.core.kernel.EngineSetting;
+import com.AdventureRPG.core.engine.EngineSetting;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 

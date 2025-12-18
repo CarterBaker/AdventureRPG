@@ -1,10 +1,10 @@
 package com.AdventureRPG.playermanager;
 
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
-import com.AdventureRPG.core.kernel.ManagerFrame;
-import com.AdventureRPG.core.physicspipeline.input.InputSystem;
-import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
-import com.AdventureRPG.core.renderpipeline.camerasystem.CameraManager;
+import com.AdventureRPG.core.engine.ManagerFrame;
+import com.AdventureRPG.core.physics.input.InputSystem;
+import com.AdventureRPG.core.physics.movement.MovementManager;
+import com.AdventureRPG.core.renderer.camerasystem.CameraManager;
 import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
 import com.badlogic.gdx.math.Vector3;
 

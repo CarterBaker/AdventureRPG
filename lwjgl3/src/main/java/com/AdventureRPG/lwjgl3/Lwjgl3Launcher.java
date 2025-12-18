@@ -11,7 +11,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.AdventureRPG.WorldPipeline.biomes.Biome;
 import com.AdventureRPG.WorldPipeline.biomes.BiomeDeserializer;
-import com.AdventureRPG.core.kernel.Main;
+import com.AdventureRPG.core.engine.Main;
 import com.AdventureRPG.core.settings.*;
 
 public class Lwjgl3Launcher {

@@ -6,7 +6,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.engine.SystemFrame;
 
 public class ThreadSystem extends SystemFrame {
 

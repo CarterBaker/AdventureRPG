@@ -3,7 +3,7 @@
 in vec2 a_position;
 out vec3 v_dir;
 
-#include "CameraData.glsl"
+#include "includes/CameraData.glsl"
 
 void main() {
     // Convert from clip space to view space ray

@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import com.AdventureRPG.core.kernel.EngineSetting;
-import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.engine.EngineSetting;
+import com.AdventureRPG.core.engine.SystemFrame;
 import com.AdventureRPG.core.util.Methematics.Extras.Coordinate2Int;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;

@@ -3,10 +3,10 @@ package com.AdventureRPG.timesystem;
 import java.io.File;
 import java.time.Instant;
 
-import com.AdventureRPG.core.kernel.EngineSetting;
-import com.AdventureRPG.core.kernel.SystemFrame;
-import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOHandle;
-import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOManager;
+import com.AdventureRPG.core.engine.EngineSetting;
+import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.shaders.ubomanager.UBOHandle;
+import com.AdventureRPG.core.shaders.ubomanager.UBOManager;
 import com.AdventureRPG.lightingsystem.LightingManager;
 import com.AdventureRPG.savemanager.UserData;
 
@@ -105,10 +105,16 @@ public class TimeSystem extends SystemFrame {
         this.lightingManager = gameEngine.get(LightingManager.class);
 
         // Buffer
-        this.timeData = uboManager.getUBOHandleFromUBOName("TimeData");
         this.elapsedTime = 0;
         this.lastFrameTime = 0;
         this.randomNoiseFromDay = 0;
+    }
+
+    @Override
+    protected void awake() {
+
+        // Buffer
+        this.timeData = uboManager.getUBOHandleFromUBOName("TimeData");
     }
 
     @Override

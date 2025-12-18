@@ -1,6 +1,6 @@
 package com.AdventureRPG.playermanager;
 
-import com.AdventureRPG.core.kernel.InstanceFrame;
+import com.AdventureRPG.core.engine.InstanceFrame;
 
 public class StatisticsInstance extends InstanceFrame {
 

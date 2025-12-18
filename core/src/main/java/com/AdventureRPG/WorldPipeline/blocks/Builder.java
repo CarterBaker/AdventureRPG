@@ -1,8 +1,8 @@
 package com.AdventureRPG.WorldPipeline.blocks;
 
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
-import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
-import com.AdventureRPG.core.shaderpipeline.texturemanager.TextureManager;
+import com.AdventureRPG.core.shaders.materialmanager.MaterialManager;
+import com.AdventureRPG.core.shaders.texturemanager.TextureManager;
 
 public class Builder {
 

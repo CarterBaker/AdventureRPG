@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldPipeline.util;
 
-import com.AdventureRPG.core.kernel.EngineSetting;
-import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.engine.EngineSetting;
+import com.AdventureRPG.core.engine.SystemFrame;
 
 public class PackedCoordinate3Int extends SystemFrame {
 

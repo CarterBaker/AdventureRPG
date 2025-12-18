@@ -3,9 +3,9 @@
 in vec3 v_dir;
 out vec4 fragColor;
 
-#include "CameraData.glsl"
-#include "NoiseUtility.glsl"
-#include "TimeData.glsl"
+#include "includes/CameraData.glsl"
+#include "includes/NoiseUtility.glsl"
+#include "includes/TimeData.glsl"
 
 uniform float u_overcast;
 

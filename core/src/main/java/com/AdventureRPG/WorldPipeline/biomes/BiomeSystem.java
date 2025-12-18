@@ -1,6 +1,6 @@
 package com.AdventureRPG.WorldPipeline.biomes;
 
-import com.AdventureRPG.core.kernel.SystemFrame;
+import com.AdventureRPG.core.engine.SystemFrame;
 
 public class BiomeSystem extends SystemFrame {
 

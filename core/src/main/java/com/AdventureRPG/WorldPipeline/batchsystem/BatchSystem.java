@@ -4,8 +4,8 @@ import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.WorldPipeline.WorldTick;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
 import com.AdventureRPG.WorldPipeline.queuesystem.QueueSystem;
-import com.AdventureRPG.core.kernel.EngineSetting;
-import com.AdventureRPG.core.kernel.ManagerFrame;
+import com.AdventureRPG.core.engine.EngineSetting;
+import com.AdventureRPG.core.engine.ManagerFrame;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 

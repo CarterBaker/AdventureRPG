@@ -1,6 +1,7 @@
 {
     "defaultColor": [1.0, 1.0, 1.0],
     "aliases": [
+        "a",
         "albedo",
         "albd",
         "base",

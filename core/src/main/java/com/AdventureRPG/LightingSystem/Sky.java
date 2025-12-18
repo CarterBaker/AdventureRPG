@@ -1,9 +1,9 @@
 package com.AdventureRPG.lightingsystem;
 
-import com.AdventureRPG.core.kernel.SystemFrame;
-import com.AdventureRPG.core.shaderpipeline.UBOManager.UBOHandle;
-import com.AdventureRPG.core.shaderpipeline.passmanager.PassManager;
-import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPass;
+import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.shaders.passmanager.PassManager;
+import com.AdventureRPG.core.shaders.processingpass.ProcessingPass;
+import com.AdventureRPG.core.shaders.ubomanager.UBOHandle;
 
 public class Sky extends SystemFrame {
 
