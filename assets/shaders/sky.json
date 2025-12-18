@@ -1,0 +1,4 @@
+{
+    "vert": "sky/sky.vsh",
+    "frag": "sky/sky.fsh"
+}

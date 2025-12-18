@@ -9,18 +9,20 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.utils.BufferUtils;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class GLSLUtility {
 
     // Shader Program Construction
     static int createShaderProgram(ShaderDefinitionInstance shaderDef) {
 
-        ShaderData vert = shaderDef.vert;
-        ShaderData frag = shaderDef.frag;
+        // Preprocess shaders to replace #include directives with actual content
+        String vertSource = preprocessShaderSource(shaderDef, shaderDef.vert);
+        String fragSource = preprocessShaderSource(shaderDef, shaderDef.frag);
 
-        int vertShader = compileShader(vert);
-        int fragShader = compileShader(frag);
+        // Compile preprocessed shaders
+        int vertShader = compileShaderFromSource(GL20.GL_VERTEX_SHADER, vertSource, shaderDef.vert.shaderName());
+        int fragShader = compileShaderFromSource(GL20.GL_FRAGMENT_SHADER, fragSource, shaderDef.frag.shaderName());
 
         int program = Gdx.gl.glCreateProgram();
         if (program == 0)
@@ -29,17 +31,6 @@ class GLSLUtility {
 
         Gdx.gl.glAttachShader(program, vertShader);
         Gdx.gl.glAttachShader(program, fragShader);
-
-        // Track include shaders for cleanup
-        IntArrayList includeShaders = new IntArrayList();
-
-        // Attach included shader snippets
-        for (ShaderData include : shaderDef.getIncludes()) {
-            int includeShader = compileShader(include);
-            Gdx.gl.glAttachShader(program, includeShader);
-            includeShaders.add(includeShader);
-        }
-
         Gdx.gl.glLinkProgram(program);
 
         // Check link result
@@ -50,40 +41,29 @@ class GLSLUtility {
         if (statusBuf.get(0) == 0) {
             String log = Gdx.gl.glGetProgramInfoLog(program);
             Gdx.gl.glDeleteProgram(program);
-            throw new GraphicException.ShaderProgramException("Failed to link shader program: " + log);
+            Gdx.gl.glDeleteShader(vertShader);
+            Gdx.gl.glDeleteShader(fragShader);
+            throw new GraphicException.ShaderProgramException(
+                    "Failed to link shader program " + shaderDef.shaderName + ": " + log);
         }
 
-        // Cleanup - detach and delete all shaders
+        // Cleanup - detach and delete shaders
         Gdx.gl.glDetachShader(program, vertShader);
         Gdx.gl.glDetachShader(program, fragShader);
         Gdx.gl.glDeleteShader(vertShader);
         Gdx.gl.glDeleteShader(fragShader);
 
-        // Cleanup includes
-        for (int i = 0; i < includeShaders.size(); i++) {
-            int includeShader = includeShaders.getInt(i);
-            Gdx.gl.glDetachShader(program, includeShader);
-            Gdx.gl.glDeleteShader(includeShader);
-        }
-
         return program;
     }
 
     // Shader Compilation
-    private static int compileShader(ShaderData shader) {
-
-        int type = switch (shader.shaderType()) {
-            case VERT -> GL20.GL_VERTEX_SHADER;
-            case FRAG -> GL20.GL_FRAGMENT_SHADER;
-            case INCLUDE -> GL20.GL_VERTEX_SHADER;
-        };
+    private static int compileShaderFromSource(int type, String source, String shaderName) {
 
         int shaderID = Gdx.gl.glCreateShader(type);
         if (shaderID == 0)
             throw new GraphicException.ShaderProgramException(
-                    "Shader: " + shader.shaderName() + ", Contains an invalid shader ID");
+                    "Shader: " + shaderName + ", Contains an invalid shader ID");
 
-        String source = readShaderSource(shader);
         Gdx.gl.glShaderSource(shaderID, source);
         Gdx.gl.glCompileShader(shaderID);
 
@@ -92,13 +72,10 @@ class GLSLUtility {
         compiledBuf.rewind();
 
         if (compiledBuf.get(0) == 0) {
-
             String log = Gdx.gl.glGetShaderInfoLog(shaderID);
             Gdx.gl.glDeleteShader(shaderID);
-
-            // TODO: Add my own error
             throw new GraphicException.ShaderProgramException(
-                    "Failed to compile shader " + shader.shaderName() + ": " + log);
+                    "Failed to compile shader " + shaderName + ": " + log);
         }
 
         return shaderID;
@@ -116,6 +93,48 @@ class GLSLUtility {
             throw new GraphicException.ShaderProgramException("Failed to read shader source: " + shader.shaderFile(),
                     e);
         }
+    }
+
+    static String preprocessShaderSource(ShaderDefinitionInstance shaderDefinition, ShaderData shaderData) {
+        StringBuilder result = new StringBuilder();
+
+        // 1. Add version directive first (only from main shader, not includes)
+        String version = shaderData.getVersion();
+        if (version != null && !version.isEmpty()) {
+            result.append(version).append("\n\n");
+        }
+
+        // 2. Add all includes' content (in the order they were collected)
+        ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
+        for (int i = 0; i < includes.size(); i++) {
+            ShaderData include = includes.get(i);
+            String includeSource = FileParserUtility.convertFileToRawText(include.shaderFile());
+
+            // Remove #version and #include directives from included files
+            includeSource = stripPreprocessorDirectives(includeSource);
+
+            result.append("// -------- Include: ").append(include.shaderName()).append(" --------\n");
+            result.append(includeSource).append("\n");
+            result.append("// -------- End Include --------\n\n");
+        }
+
+        // 3. Add main shader source (without #version and #include directives)
+        String mainSource = FileParserUtility.convertFileToRawText(shaderData.shaderFile());
+        mainSource = stripPreprocessorDirectives(mainSource);
+
+        result.append(mainSource);
+
+        return result.toString();
+    }
+
+    private static String stripPreprocessorDirectives(String source) {
+        // Remove #version directives
+        source = source.replaceAll("(?m)^\\s*#version\\s+.*$", "");
+        // Remove #include directives
+        source = source.replaceAll("(?m)^\\s*#include\\s+.*$", "");
+        // Clean up multiple blank lines
+        source = source.replaceAll("\n{3,}", "\n\n");
+        return source.trim();
     }
 
     static int getUniformHandle(int programHandle, String uniformName) {
