@@ -15,6 +15,7 @@ import com.google.gson.JsonObject;
 class InternalBuildSystem extends SystemFrame {
 
     // Internal
+    private ModelManager modelManager;
     private MaterialManager materialManager;
     private MeshHandle processingTriangle;
 
@@ -24,14 +25,18 @@ class InternalBuildSystem extends SystemFrame {
     protected void init() {
 
         // Internal
+        this.modelManager = gameEngine.get(ModelManager.class);
         this.materialManager = gameEngine.get(MaterialManager.class);
-
-        ModelManager modelManager = gameEngine.get(ModelManager.class);
-        int meshID = modelManager.getMeshHandleIDFromMeshName("util/ProcessingTriangle");
-        this.processingTriangle = modelManager.getMeshHandleFromMeshHandleID(meshID);
     }
 
     // Pass Management \\
+
+    void assignMeshData() {
+
+        // Internal
+        int meshID = modelManager.getMeshHandleIDFromMeshName("util/ProcessingTriangle");
+        this.processingTriangle = modelManager.getMeshHandleFromMeshHandleID(meshID);
+    }
 
     ProcessingPass buildPass(File root, File file, int passID) {
 

@@ -106,13 +106,15 @@ public class InternalLoadManager extends ManagerFrame {
 
     public void processMeshFile(File file) {
 
-        String meshName = FileUtility.getFileName(file);
+        String meshName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
 
         try {
-            MeshHandle meshHandle = internalBuildSystem.buildMeshHandle(root, file, meshDataCount++, this);
+
+            int meshID = meshDataCount++;
+            MeshHandle meshHandle = internalBuildSystem.buildMeshHandle(root, file, meshID, this);
 
             if (meshHandle != null)
-                registerMeshData(meshName, meshHandle);
+                registerMeshData(meshName, meshID, meshHandle);
         }
 
         catch (RuntimeException ex) {
@@ -121,7 +123,7 @@ public class InternalLoadManager extends ManagerFrame {
         }
     }
 
-    private void registerMeshData(String meshName, MeshHandle meshHandle) {
-        modelManager.addMeshHandle(meshName, meshDataCount, meshHandle);
+    private void registerMeshData(String meshName, int meshID, MeshHandle meshHandle) {
+        modelManager.addMeshHandle(meshName, meshID, meshHandle);
     }
 }

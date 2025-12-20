@@ -120,6 +120,26 @@ public class FileUtility {
         }
     }
 
+    // Gets canonical resource path relative to a root directory, WITH extension
+    public static String getPathWithFileNameWithExtension(File root, File file) {
+
+        if (root == null || file == null)
+            return "";
+
+        try {
+
+            Path rootPath = root.toPath().toRealPath();
+            Path filePath = file.toPath().toRealPath();
+            Path relative = rootPath.relativize(filePath);
+
+            return relative.toString().replace('\\', '/');
+        }
+
+        catch (Exception e) {
+            return file.getName();
+        }
+    }
+
     // Get file name and addition data stored by file name split by an underscore
     public static String[] splitFileNameByUnderscore(String fileName) {
 

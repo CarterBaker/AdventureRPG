@@ -137,7 +137,7 @@ class InternalLoadManager extends ManagerFrame {
 
         glslFiles.add(shaderDataInstance);
 
-        String filePath = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+        String filePath = FileUtility.getPathWithFileNameWithExtension(root, file);
         lookup.put(filePath, shaderDataInstance);
     }
 

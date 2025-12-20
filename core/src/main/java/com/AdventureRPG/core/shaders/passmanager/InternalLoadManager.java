@@ -47,7 +47,13 @@ class InternalLoadManager extends ManagerFrame {
     // Pass Management \\
 
     void loadPasses() {
+        assignMeshData();
         loadAllFiles();
+    }
+
+    // Necessary for the internal builder to have data correctly assigned
+    private void assignMeshData() {
+        internalBuildSystem.assignMeshData();
     }
 
     // Load \\
