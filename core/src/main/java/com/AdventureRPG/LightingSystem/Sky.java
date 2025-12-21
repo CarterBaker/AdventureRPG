@@ -24,9 +24,9 @@ public class Sky extends SystemFrame {
         this.passmanager = gameEngine.get(PassManager.class);
 
         // Shader
-        skyPassID = passmanager.getPassIDFromPassName("sky");
+        skyPassID = passmanager.getPassIDFromPassName("Sky");
         skyPass = passmanager.getPassFromPassID(skyPassID);
-        skyUBO = skyPass.material.getUBO("sky");
+        skyUBO = skyPass.material.getUBO("Sky");
     }
 
     public void generateRandomOffsetFromDay(long day) {

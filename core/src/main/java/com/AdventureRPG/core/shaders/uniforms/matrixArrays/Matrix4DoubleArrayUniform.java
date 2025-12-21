@@ -1,77 +1,63 @@
 package com.AdventureRPG.core.shaders.uniforms.matrixArrays;
 
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Methematics.Matrices.Matrix4Double;
+import com.AdventureRPG.core.util.Mathematics.Matrices.Matrix4Double;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-public class Matrix4DoubleArrayUniform extends UniformAttribute<Matrix4Double[]> {
+public final class Matrix4DoubleArrayUniform extends UniformAttribute<float[]> {
 
-    private ByteBuffer buffer;
-    private FloatBuffer floatBuffer;
+    private final int elementCount;
+    private final ByteBuffer buffer;
+    private final FloatBuffer floatBuffer;
 
-    public Matrix4DoubleArrayUniform(int count) {
-        super(new Matrix4Double[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = new Matrix4Double();
-
-        this.buffer = BufferUtils.newByteBuffer(count * 64); // as floats
+    public Matrix4DoubleArrayUniform(int elementCount) {
+        super(new float[elementCount * 16]);
+        this.elementCount = elementCount;
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 64);
         this.floatBuffer = buffer.asFloatBuffer();
     }
 
-    @Override
-    protected void push(int handle, Matrix4Double[] value) {
-        floatBuffer.clear();
-        for (Matrix4Double mat : value) {
-            // Column-major order, convert to float
-            floatBuffer.put((float) mat.m00);
-            floatBuffer.put((float) mat.m10);
-            floatBuffer.put((float) mat.m20);
-            floatBuffer.put((float) mat.m30);
-            floatBuffer.put((float) mat.m01);
-            floatBuffer.put((float) mat.m11);
-            floatBuffer.put((float) mat.m21);
-            floatBuffer.put((float) mat.m31);
-            floatBuffer.put((float) mat.m02);
-            floatBuffer.put((float) mat.m12);
-            floatBuffer.put((float) mat.m22);
-            floatBuffer.put((float) mat.m32);
-            floatBuffer.put((float) mat.m03);
-            floatBuffer.put((float) mat.m13);
-            floatBuffer.put((float) mat.m23);
-            floatBuffer.put((float) mat.m33);
+    public void set(Matrix4Double[] matrices) {
+        for (int i = 0; i < elementCount; i++) {
+            int offset = i * 16;
+            Matrix4Double m = matrices[i];
+            value[offset] = (float) m.m00;
+            value[offset + 1] = (float) m.m10;
+            value[offset + 2] = (float) m.m20;
+            value[offset + 3] = (float) m.m30;
+            value[offset + 4] = (float) m.m01;
+            value[offset + 5] = (float) m.m11;
+            value[offset + 6] = (float) m.m21;
+            value[offset + 7] = (float) m.m31;
+            value[offset + 8] = (float) m.m02;
+            value[offset + 9] = (float) m.m12;
+            value[offset + 10] = (float) m.m22;
+            value[offset + 11] = (float) m.m32;
+            value[offset + 12] = (float) m.m03;
+            value[offset + 13] = (float) m.m13;
+            value[offset + 14] = (float) m.m23;
+            value[offset + 15] = (float) m.m33;
         }
-        floatBuffer.flip();
+    }
 
-        Gdx.gl.glUniformMatrix4fv(handle, value.length, false, floatBuffer);
+    @Override
+    protected void push(int handle, float[] data) {
+        Gdx.gl.glUniformMatrix4fv(handle, elementCount, false, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Matrix4Double mat : value) {
-            // Column-major order for UBO
-            buffer.putFloat((float) mat.m00);
-            buffer.putFloat((float) mat.m10);
-            buffer.putFloat((float) mat.m20);
-            buffer.putFloat((float) mat.m30);
-            buffer.putFloat((float) mat.m01);
-            buffer.putFloat((float) mat.m11);
-            buffer.putFloat((float) mat.m21);
-            buffer.putFloat((float) mat.m31);
-            buffer.putFloat((float) mat.m02);
-            buffer.putFloat((float) mat.m12);
-            buffer.putFloat((float) mat.m22);
-            buffer.putFloat((float) mat.m32);
-            buffer.putFloat((float) mat.m03);
-            buffer.putFloat((float) mat.m13);
-            buffer.putFloat((float) mat.m23);
-            buffer.putFloat((float) mat.m33);
-        }
-        buffer.flip();
+        floatBuffer.clear();
+        floatBuffer.put(value);
+        floatBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

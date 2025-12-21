@@ -7,8 +7,8 @@ import com.AdventureRPG.WorldPipeline.chunks.Chunk;
 import com.AdventureRPG.core.engine.EngineSetting;
 import com.AdventureRPG.core.engine.ManagerFrame;
 import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
-import com.AdventureRPG.core.util.Methematics.Extras.Coordinate2Int;
-import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
+import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
+import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Int;
 
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;

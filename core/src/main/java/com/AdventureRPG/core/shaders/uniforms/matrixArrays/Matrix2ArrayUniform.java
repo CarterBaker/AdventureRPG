@@ -1,53 +1,50 @@
 package com.AdventureRPG.core.shaders.uniforms.matrixArrays;
 
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Methematics.Matrices.Matrix2;
+import com.AdventureRPG.core.util.Mathematics.Matrices.Matrix2;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-public class Matrix2ArrayUniform extends UniformAttribute<Matrix2[]> {
+public final class Matrix2ArrayUniform extends UniformAttribute<float[]> {
 
-    private ByteBuffer buffer;
-    private FloatBuffer floatBuffer;
+    private final int elementCount;
+    private final ByteBuffer buffer;
+    private final FloatBuffer floatBuffer;
 
-    public Matrix2ArrayUniform(int count) {
-        super(new Matrix2[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = new Matrix2();
-
-        this.buffer = BufferUtils.newByteBuffer(count * 16); // count * 4 floats * 4 bytes
+    public Matrix2ArrayUniform(int elementCount) {
+        super(new float[elementCount * 4]); // 2x2 = 4 floats per matrix
+        this.elementCount = elementCount;
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 16); // 4 floats * 4 bytes
         this.floatBuffer = buffer.asFloatBuffer();
     }
 
-    @Override
-    protected void push(int handle, Matrix2[] value) {
-        floatBuffer.clear();
-        for (Matrix2 mat : value) {
-            // Column-major order
-            floatBuffer.put(mat.m00);
-            floatBuffer.put(mat.m10);
-            floatBuffer.put(mat.m01);
-            floatBuffer.put(mat.m11);
+    public void set(Matrix2[] matrices) {
+        for (int i = 0; i < elementCount; i++) {
+            int offset = i * 4;
+            value[offset] = matrices[i].m00;
+            value[offset + 1] = matrices[i].m10;
+            value[offset + 2] = matrices[i].m01;
+            value[offset + 3] = matrices[i].m11;
         }
-        floatBuffer.flip();
+    }
 
-        Gdx.gl.glUniformMatrix2fv(handle, value.length, false, floatBuffer);
+    @Override
+    protected void push(int handle, float[] data) {
+        Gdx.gl.glUniformMatrix2fv(handle, elementCount, false, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Matrix2 mat : value) {
-            // Column-major order for UBO
-            buffer.putFloat(mat.m00);
-            buffer.putFloat(mat.m10);
-            buffer.putFloat(mat.m01);
-            buffer.putFloat(mat.m11);
-        }
-        buffer.flip();
+        floatBuffer.clear();
+        floatBuffer.put(value);
+        floatBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

@@ -1,16 +1,16 @@
-package com.AdventureRPG.core.util.Methematics.Matrices;
+package com.AdventureRPG.core.util.Mathematics.Matrices;
 
-public class Matrix2Double {
+public class Matrix2 {
 
     // Data
-    public double m00, m01;
-    public double m10, m11;
+    public float m00, m01;
+    public float m10, m11;
 
     // Constructors \\
 
-    public Matrix2Double(
-            double m00, double m01,
-            double m10, double m11) {
+    public Matrix2(
+            float m00, float m01,
+            float m10, float m11) {
 
         this.m00 = m00;
         this.m01 = m01;
@@ -19,22 +19,22 @@ public class Matrix2Double {
         this.m11 = m11;
     }
 
-    public Matrix2Double() {
+    public Matrix2() {
         this(1, 0,
                 0, 1);
     }
 
-    public Matrix2Double(double scalar) {
+    public Matrix2(float scalar) {
         this(scalar, 0,
                 0, scalar);
     }
 
-    public Matrix2Double(Matrix2Double other) {
+    public Matrix2(Matrix2 other) {
         this(other.m00, other.m01,
                 other.m10, other.m11);
     }
 
-    public Matrix2Double(double[] array) {
+    public Matrix2(float[] array) {
         this(
                 array[0], array[1],
                 array[2], array[3]);
@@ -45,9 +45,9 @@ public class Matrix2Double {
 
     // Set \\
 
-    public Matrix2Double set(
-            double m00, double m01,
-            double m10, double m11) {
+    public Matrix2 set(
+            float m00, float m01,
+            float m10, float m11) {
 
         this.m00 = m00;
         this.m01 = m01;
@@ -58,13 +58,13 @@ public class Matrix2Double {
         return this;
     }
 
-    public Matrix2Double set(double scalar) {
+    public Matrix2 set(float scalar) {
         return set(
                 scalar, 0,
                 0, scalar);
     }
 
-    public Matrix2Double set(Matrix2Double other) {
+    public Matrix2 set(Matrix2 other) {
         return set(
                 other.m00, other.m01,
                 other.m10, other.m11);
@@ -72,9 +72,9 @@ public class Matrix2Double {
 
     // Addition \\
 
-    public Matrix2Double add(
-            double m00, double m01,
-            double m10, double m11) {
+    public Matrix2 add(
+            float m00, float m01,
+            float m10, float m11) {
 
         this.m00 += m00;
         this.m01 += m01;
@@ -85,13 +85,13 @@ public class Matrix2Double {
         return this;
     }
 
-    public Matrix2Double add(double scalar) {
+    public Matrix2 add(float scalar) {
         return add(
                 scalar, scalar,
                 scalar, scalar);
     }
 
-    public Matrix2Double add(Matrix2Double other) {
+    public Matrix2 add(Matrix2 other) {
         return add(
                 other.m00, other.m01,
                 other.m10, other.m11);
@@ -99,9 +99,9 @@ public class Matrix2Double {
 
     // Subtraction \\
 
-    public Matrix2Double subtract(
-            double m00, double m01,
-            double m10, double m11) {
+    public Matrix2 subtract(
+            float m00, float m01,
+            float m10, float m11) {
 
         this.m00 -= m00;
         this.m01 -= m01;
@@ -112,13 +112,13 @@ public class Matrix2Double {
         return this;
     }
 
-    public Matrix2Double subtract(double scalar) {
+    public Matrix2 subtract(float scalar) {
         return subtract(
                 scalar, scalar,
                 scalar, scalar);
     }
 
-    public Matrix2Double subtract(Matrix2Double other) {
+    public Matrix2 subtract(Matrix2 other) {
         return subtract(
                 other.m00, other.m01,
                 other.m10, other.m11);
@@ -126,17 +126,17 @@ public class Matrix2Double {
 
     // Multiplication \\
 
-    public Matrix2Double multiply(Matrix2Double other) {
+    public Matrix2 multiply(Matrix2 other) {
 
         // Prevent self-multiply corruption
-        double a00 = m00, a01 = m01;
-        double a10 = m10, a11 = m11;
+        float a00 = m00, a01 = m01;
+        float a10 = m10, a11 = m11;
 
-        double r00 = a00 * other.m00 + a01 * other.m10;
-        double r01 = a00 * other.m01 + a01 * other.m11;
+        float r00 = a00 * other.m00 + a01 * other.m10;
+        float r01 = a00 * other.m01 + a01 * other.m11;
 
-        double r10 = a10 * other.m00 + a11 * other.m10;
-        double r11 = a10 * other.m01 + a11 * other.m11;
+        float r10 = a10 * other.m00 + a11 * other.m10;
+        float r11 = a10 * other.m01 + a11 * other.m11;
 
         m00 = r00;
         m01 = r01;
@@ -148,7 +148,7 @@ public class Matrix2Double {
 
     // Scalar Multiplication \\
 
-    public Matrix2Double multiply(double s) {
+    public Matrix2 multiply(float s) {
 
         m00 *= s;
         m01 *= s;
@@ -160,14 +160,14 @@ public class Matrix2Double {
 
     // Division \\
 
-    public Matrix2Double divide(Matrix2Double other) {
+    public Matrix2 divide(Matrix2 other) {
 
-        Matrix2Double inv = new Matrix2Double(other).inverse();
+        Matrix2 inv = new Matrix2(other).inverse();
 
         return multiply(inv);
     }
 
-    public Matrix2Double divide(double scalar) {
+    public Matrix2 divide(float scalar) {
 
         if (scalar == 0) // TODO: Add my own error
             throw new ArithmeticException("Division by zero");
@@ -177,22 +177,22 @@ public class Matrix2Double {
 
     // Inversion \\
 
-    public Matrix2Double inverse() {
+    public Matrix2 inverse() {
 
-        double a00 = m00, a01 = m01;
-        double a10 = m10, a11 = m11;
+        float a00 = m00, a01 = m01;
+        float a10 = m10, a11 = m11;
 
-        double det = a00 * a11 - a01 * a10;
+        float det = a00 * a11 - a01 * a10;
 
         if (det == 0) // TODO: Add my own error
             throw new ArithmeticException("Matrix not invertible");
 
-        double invDet = 1.0f / det;
+        float invDet = 1.0f / det;
 
-        double r00 = a11 * invDet;
-        double r01 = -a01 * invDet;
-        double r10 = -a10 * invDet;
-        double r11 = a00 * invDet;
+        float r00 = a11 * invDet;
+        float r01 = -a01 * invDet;
+        float r10 = -a10 * invDet;
+        float r11 = a00 * invDet;
 
         m00 = r00;
         m01 = r01;
@@ -213,8 +213,8 @@ public class Matrix2Double {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Matrix2Double) {
-            Matrix2Double other = (Matrix2Double) obj;
+        if (obj instanceof Matrix2) {
+            Matrix2 other = (Matrix2) obj;
             return m00 == other.m00 && m01 == other.m01 &&
                     m10 == other.m10 && m11 == other.m11;
         }
@@ -225,18 +225,18 @@ public class Matrix2Double {
     public int hashCode() {
         int r = 17;
 
-        r = 31 * r + Double.hashCode(m00);
-        r = 31 * r + Double.hashCode(m01);
+        r = 31 * r + Float.hashCode(m00);
+        r = 31 * r + Float.hashCode(m01);
 
-        r = 31 * r + Double.hashCode(m10);
-        r = 31 * r + Double.hashCode(m11);
+        r = 31 * r + Float.hashCode(m10);
+        r = 31 * r + Float.hashCode(m11);
 
         return r;
     }
 
     @Override
     public String toString() {
-        return "Matrix2Double(" +
+        return "Matrix2(" +
                 "[" + m00 + ", " + m01 + "], " +
                 "[" + m10 + ", " + m11 + "]" +
                 ")";

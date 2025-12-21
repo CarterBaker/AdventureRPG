@@ -1,36 +1,36 @@
-package com.AdventureRPG.core.util.Methematics.Vectors;
+package com.AdventureRPG.core.util.Mathematics.Vectors;
 
-import com.AdventureRPG.core.util.Methematics.Extras.Direction3Int;
+import com.AdventureRPG.core.util.Mathematics.Extras.Direction3Int;
 
-public class Vector3 {
+public class Vector3Double {
 
     // Data
-    public float x, y, z;
+    public double x, y, z;
 
     // Constructors \\
 
-    public Vector3(float x, float y, float z) {
+    public Vector3Double(double x, double y, double z) {
 
         this.x = x;
         this.y = y;
         this.z = z;
     }
 
-    public Vector3() {
+    public Vector3Double() {
         this(0, 0, 0);
     }
 
-    public Vector3(float scalar) {
+    public Vector3Double(double scalar) {
         this(scalar, scalar, scalar);
     }
 
-    public Vector3(Vector3 other) {
+    public Vector3Double(Vector3Double other) {
         this(other.x, other.y, other.z);
     }
 
     // Set \\
 
-    public Vector3 set(float x, float y, float z) {
+    public Vector3Double set(double x, double y, double z) {
 
         this.x = x;
         this.y = y;
@@ -39,17 +39,17 @@ public class Vector3 {
         return this;
     }
 
-    public Vector3 set(float scalar) {
+    public Vector3Double set(double scalar) {
         return set(scalar, scalar, scalar);
     }
 
-    public Vector3 set(Vector3 other) {
+    public Vector3Double set(Vector3Double other) {
         return set(other.x, other.y, other.z);
     }
 
     // Addition \\
 
-    public Vector3 add(float x, float y, float z) {
+    public Vector3Double add(double x, double y, double z) {
 
         this.x += x;
         this.y += y;
@@ -58,17 +58,17 @@ public class Vector3 {
         return this;
     }
 
-    public Vector3 add(float scalar) {
+    public Vector3Double add(double scalar) {
         return add(scalar, scalar, scalar);
     }
 
-    public Vector3 add(Vector3 other) {
+    public Vector3Double add(Vector3Double other) {
         return add(other.x, other.y, other.z);
     }
 
     // Subtraction \\
 
-    public Vector3 subtract(float x, float y, float z) {
+    public Vector3Double subtract(double x, double y, double z) {
 
         this.x -= x;
         this.y -= y;
@@ -77,17 +77,17 @@ public class Vector3 {
         return this;
     }
 
-    public Vector3 subtract(float scalar) {
+    public Vector3Double subtract(double scalar) {
         return subtract(scalar, scalar, scalar);
     }
 
-    public Vector3 subtract(Vector3 other) {
+    public Vector3Double subtract(Vector3Double other) {
         return subtract(other.x, other.y, other.z);
     }
 
     // Multiplication \\
 
-    public Vector3 multiply(float x, float y, float z) {
+    public Vector3Double multiply(double x, double y, double z) {
 
         this.x *= x;
         this.y *= y;
@@ -96,17 +96,17 @@ public class Vector3 {
         return this;
     }
 
-    public Vector3 multiply(float scalar) {
+    public Vector3Double multiply(double scalar) {
         return multiply(scalar, scalar, scalar);
     }
 
-    public Vector3 multiply(Vector3 other) {
+    public Vector3Double multiply(Vector3Double other) {
         return multiply(other.x, other.y, other.z);
     }
 
     // Division \\
 
-    public Vector3 divide(float x, float y, float z) {
+    public Vector3Double divide(double x, double y, double z) {
 
         if (x == 0 || y == 0 || z == 0) // TODO: make my own error
             throw new ArithmeticException("Division by zero");
@@ -118,17 +118,17 @@ public class Vector3 {
         return this;
     }
 
-    public Vector3 divide(float scalar) {
+    public Vector3Double divide(double scalar) {
         return divide(scalar, scalar, scalar);
     }
 
-    public Vector3 divide(Vector3 other) {
+    public Vector3Double divide(Vector3Double other) {
         return divide(other.x, other.y, other.z);
     }
 
     // Direction Mapping \\
 
-    public Vector3 up() {
+    public Vector3Double up() {
 
         this.x = Direction3Int.UP.x;
         this.y = Direction3Int.UP.y;
@@ -137,7 +137,7 @@ public class Vector3 {
         return this;
     }
 
-    public Vector3 north() {
+    public Vector3Double north() {
 
         this.x = Direction3Int.NORTH.x;
         this.y = Direction3Int.NORTH.y;
@@ -146,7 +146,7 @@ public class Vector3 {
         return this;
     }
 
-    public Vector3 south() {
+    public Vector3Double south() {
 
         this.x = Direction3Int.SOUTH.x;
         this.y = Direction3Int.SOUTH.y;
@@ -155,7 +155,7 @@ public class Vector3 {
         return this;
     }
 
-    public Vector3 east() {
+    public Vector3Double east() {
 
         this.x = Direction3Int.EAST.x;
         this.y = Direction3Int.EAST.y;
@@ -164,7 +164,7 @@ public class Vector3 {
         return this;
     }
 
-    public Vector3 west() {
+    public Vector3Double west() {
 
         this.x = Direction3Int.WEST.x;
         this.y = Direction3Int.WEST.y;
@@ -173,7 +173,7 @@ public class Vector3 {
         return this;
     }
 
-    public Vector3 down() {
+    public Vector3Double down() {
 
         this.x = Direction3Int.DOWN.x;
         this.y = Direction3Int.DOWN.y;
@@ -195,9 +195,9 @@ public class Vector3 {
     @Override
     public boolean equals(Object obj) {
 
-        if (obj instanceof Vector3) {
+        if (obj instanceof Vector3Double) {
 
-            Vector3 v = (Vector3) obj;
+            Vector3Double v = (Vector3Double) obj;
             return this.x == v.x &&
                     this.y == v.y &&
                     this.z == v.z;
@@ -211,15 +211,15 @@ public class Vector3 {
 
         int result = 17;
 
-        result = 31 * result + Float.hashCode(x);
-        result = 31 * result + Float.hashCode(y);
-        result = 31 * result + Float.hashCode(z);
+        result = 31 * result + Double.hashCode(x);
+        result = 31 * result + Double.hashCode(y);
+        result = 31 * result + Double.hashCode(z);
 
         return result;
     }
 
     @Override
     public String toString() {
-        return "Vector3(" + x + ", " + y + ", " + z + ")";
+        return "Vector3Double(" + x + ", " + y + ", " + z + ")";
     }
 }

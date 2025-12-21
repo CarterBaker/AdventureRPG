@@ -1,35 +1,35 @@
-package com.AdventureRPG.core.util.Methematics.Vectors;
+package com.AdventureRPG.core.util.Mathematics.Vectors;
 
-import com.AdventureRPG.core.util.Methematics.Extras.Direction2Int;
+import com.AdventureRPG.core.util.Mathematics.Extras.Direction2Int;
 
-public class Vector2 {
+public class Vector2Double {
 
     // Data
-    public float x, y;
+    public double x, y;
 
     // Constructors \\
 
-    public Vector2(float x, float y) {
+    public Vector2Double(double x, double y) {
 
         this.x = x;
         this.y = y;
     }
 
-    public Vector2() {
+    public Vector2Double() {
         this(0, 0);
     }
 
-    public Vector2(float scalar) {
+    public Vector2Double(double scalar) {
         this(scalar, scalar);
     }
 
-    public Vector2(Vector2 other) {
+    public Vector2Double(Vector2Double other) {
         this(other.x, other.y);
     }
 
     // Set \\
 
-    public Vector2 set(float x, float y) {
+    public Vector2Double set(double x, double y) {
 
         this.x = x;
         this.y = y;
@@ -37,17 +37,17 @@ public class Vector2 {
         return this;
     }
 
-    public Vector2 set(float scalar) {
+    public Vector2Double set(double scalar) {
         return set(scalar, scalar);
     }
 
-    public Vector2 set(Vector2 other) {
+    public Vector2Double set(Vector2Double other) {
         return set(other.x, other.y);
     }
 
     // Addition \\
 
-    public Vector2 add(float x, float y) {
+    public Vector2Double add(double x, double y) {
 
         this.x += x;
         this.y += y;
@@ -55,17 +55,17 @@ public class Vector2 {
         return this;
     }
 
-    public Vector2 add(float scalar) {
+    public Vector2Double add(double scalar) {
         return add(scalar, scalar);
     }
 
-    public Vector2 add(Vector2 other) {
+    public Vector2Double add(Vector2Double other) {
         return add(other.x, other.y);
     }
 
     // Subtraction \\
 
-    public Vector2 subtract(float x, float y) {
+    public Vector2Double subtract(double x, double y) {
 
         this.x -= x;
         this.y -= y;
@@ -73,17 +73,17 @@ public class Vector2 {
         return this;
     }
 
-    public Vector2 subtract(float scalar) {
+    public Vector2Double subtract(double scalar) {
         return subtract(scalar, scalar);
     }
 
-    public Vector2 subtract(Vector2 other) {
+    public Vector2Double subtract(Vector2Double other) {
         return subtract(other.x, other.y);
     }
 
     // Multiplication \\
 
-    public Vector2 multiply(float x, float y) {
+    public Vector2Double multiply(double x, double y) {
 
         this.x *= x;
         this.y *= y;
@@ -91,17 +91,17 @@ public class Vector2 {
         return this;
     }
 
-    public Vector2 multiply(float scalar) {
+    public Vector2Double multiply(double scalar) {
         return multiply(scalar, scalar);
     }
 
-    public Vector2 multiply(Vector2 other) {
+    public Vector2Double multiply(Vector2Double other) {
         return multiply(other.x, other.y);
     }
 
     // Division \\
 
-    public Vector2 divide(float x, float y) {
+    public Vector2Double divide(double x, double y) {
 
         if (x == 0 || y == 0) // TODO: make my own error
             throw new ArithmeticException("Division by zero");
@@ -112,17 +112,17 @@ public class Vector2 {
         return this;
     }
 
-    public Vector2 divide(float scalar) {
+    public Vector2Double divide(double scalar) {
         return divide(scalar, scalar);
     }
 
-    public Vector2 divide(Vector2 other) {
+    public Vector2Double divide(Vector2Double other) {
         return divide(other.x, other.y);
     }
 
     // Direction Mapping \\
 
-    public Vector2 up() {
+    public Vector2Double up() {
 
         this.x = Direction2Int.NORTH.x;
         this.y = Direction2Int.NORTH.y;
@@ -130,7 +130,7 @@ public class Vector2 {
         return this;
     }
 
-    public Vector2 down() {
+    public Vector2Double down() {
 
         this.x = Direction2Int.SOUTH.x;
         this.y = Direction2Int.SOUTH.y;
@@ -138,7 +138,7 @@ public class Vector2 {
         return this;
     }
 
-    public Vector2 left() {
+    public Vector2Double left() {
 
         this.x = Direction2Int.WEST.x;
         this.y = Direction2Int.WEST.y;
@@ -146,7 +146,7 @@ public class Vector2 {
         return this;
     }
 
-    public Vector2 right() {
+    public Vector2Double right() {
 
         this.x = Direction2Int.EAST.x;
         this.y = Direction2Int.EAST.y;
@@ -166,9 +166,9 @@ public class Vector2 {
     @Override
     public boolean equals(Object obj) {
 
-        if (obj instanceof Vector2) {
+        if (obj instanceof Vector2Double) {
 
-            Vector2 v = (Vector2) obj;
+            Vector2Double v = (Vector2Double) obj;
             return this.x == v.x &&
                     this.y == v.y;
         }
@@ -179,14 +179,14 @@ public class Vector2 {
     @Override
     public int hashCode() {
 
-        int result = Float.hashCode(x);
-        result = 31 * result + Float.hashCode(y);
+        int result = Double.hashCode(x);
+        result = 31 * result + Double.hashCode(y);
 
         return result;
     }
 
     @Override
     public String toString() {
-        return "Vector2(" + x + ", " + y + ")";
+        return "Vector2Double(" + x + ", " + y + ")";
     }
 }

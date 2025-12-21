@@ -1,32 +1,44 @@
 package com.AdventureRPG.core.shaders.uniforms.vectors;
 
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Methematics.Vectors.Vector3;
+import com.AdventureRPG.core.util.Mathematics.Vectors.Vector3;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
-
 import java.nio.ByteBuffer;
 
-public class Vector3Uniform extends UniformAttribute<Vector3> {
-
+public class Vector3Uniform extends UniformAttribute<Object> {
     private ByteBuffer buffer;
 
     public Vector3Uniform() {
         super(new Vector3());
-        this.buffer = BufferUtils.newByteBuffer(12); // 3 floats * 4 bytes
+        this.buffer = BufferUtils.newByteBuffer(12);
     }
 
     @Override
-    protected void push(int handle, Vector3 value) {
-        Gdx.gl.glUniform3f(handle, value.x, value.y, value.z);
+    protected void push(int handle, Object value) {
+        if (value instanceof com.badlogic.gdx.math.Vector3) {
+            com.badlogic.gdx.math.Vector3 v = (com.badlogic.gdx.math.Vector3) value;
+            Gdx.gl.glUniform3f(handle, v.x, v.y, v.z);
+        } else {
+            Vector3 v = (Vector3) value;
+            Gdx.gl.glUniform3f(handle, v.x, v.y, v.z);
+        }
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
         buffer.clear();
-        buffer.putFloat(value.x);
-        buffer.putFloat(value.y);
-        buffer.putFloat(value.z);
+        if (value instanceof com.badlogic.gdx.math.Vector3) {
+            com.badlogic.gdx.math.Vector3 v = (com.badlogic.gdx.math.Vector3) value;
+            buffer.putFloat(v.x);
+            buffer.putFloat(v.y);
+            buffer.putFloat(v.z);
+        } else {
+            Vector3 v = (Vector3) value;
+            buffer.putFloat(v.x);
+            buffer.putFloat(v.y);
+            buffer.putFloat(v.z);
+        }
         buffer.flip();
         return buffer;
     }

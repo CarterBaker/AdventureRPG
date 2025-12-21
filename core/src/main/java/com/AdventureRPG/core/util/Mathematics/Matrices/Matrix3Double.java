@@ -1,18 +1,18 @@
-package com.AdventureRPG.core.util.Methematics.Matrices;
+package com.AdventureRPG.core.util.Mathematics.Matrices;
 
-public class Matrix3 {
+public class Matrix3Double {
 
     // Data
-    public float m00, m01, m02;
-    public float m10, m11, m12;
-    public float m20, m21, m22;
+    public double m00, m01, m02;
+    public double m10, m11, m12;
+    public double m20, m21, m22;
 
     // Constructors \\
 
-    public Matrix3(
-            float m00, float m01, float m02,
-            float m10, float m11, float m12,
-            float m20, float m21, float m22) {
+    public Matrix3Double(
+            double m00, double m01, double m02,
+            double m10, double m11, double m12,
+            double m20, double m21, double m22) {
 
         this.m00 = m00;
         this.m01 = m01;
@@ -27,25 +27,25 @@ public class Matrix3 {
         this.m22 = m22;
     }
 
-    public Matrix3() {
+    public Matrix3Double() {
         this(1, 0, 0,
                 0, 1, 0,
                 0, 0, 1);
     }
 
-    public Matrix3(float scalar) {
+    public Matrix3Double(double scalar) {
         this(scalar, 0, 0,
                 0, scalar, 0,
                 0, 0, scalar);
     }
 
-    public Matrix3(Matrix3 other) {
+    public Matrix3Double(Matrix3Double other) {
         this(other.m00, other.m01, other.m02,
                 other.m10, other.m11, other.m12,
                 other.m20, other.m21, other.m22);
     }
 
-    public Matrix3(float[] array) {
+    public Matrix3Double(double[] array) {
         this(
                 array[0], array[1], array[2],
                 array[3], array[4], array[5],
@@ -57,10 +57,10 @@ public class Matrix3 {
 
     // Set \\
 
-    public Matrix3 set(
-            float m00, float m01, float m02,
-            float m10, float m11, float m12,
-            float m20, float m21, float m22) {
+    public Matrix3Double set(
+            double m00, double m01, double m02,
+            double m10, double m11, double m12,
+            double m20, double m21, double m22) {
 
         this.m00 = m00;
         this.m01 = m01;
@@ -77,14 +77,14 @@ public class Matrix3 {
         return this;
     }
 
-    public Matrix3 set(float scalar) {
+    public Matrix3Double set(double scalar) {
         return set(
                 scalar, 0, 0,
                 0, scalar, 0,
                 0, 0, scalar);
     }
 
-    public Matrix3 set(Matrix3 other) {
+    public Matrix3Double set(Matrix3Double other) {
         return set(
                 other.m00, other.m01, other.m02,
                 other.m10, other.m11, other.m12,
@@ -93,10 +93,10 @@ public class Matrix3 {
 
     // Addition \\
 
-    public Matrix3 add(
-            float m00, float m01, float m02,
-            float m10, float m11, float m12,
-            float m20, float m21, float m22) {
+    public Matrix3Double add(
+            double m00, double m01, double m02,
+            double m10, double m11, double m12,
+            double m20, double m21, double m22) {
 
         this.m00 += m00;
         this.m01 += m01;
@@ -113,14 +113,14 @@ public class Matrix3 {
         return this;
     }
 
-    public Matrix3 add(float scalar) {
+    public Matrix3Double add(double scalar) {
         return add(
                 scalar, scalar, scalar,
                 scalar, scalar, scalar,
                 scalar, scalar, scalar);
     }
 
-    public Matrix3 add(Matrix3 other) {
+    public Matrix3Double add(Matrix3Double other) {
         return add(
                 other.m00, other.m01, other.m02,
                 other.m10, other.m11, other.m12,
@@ -129,10 +129,10 @@ public class Matrix3 {
 
     // Subtraction \\
 
-    public Matrix3 subtract(
-            float m00, float m01, float m02,
-            float m10, float m11, float m12,
-            float m20, float m21, float m22) {
+    public Matrix3Double subtract(
+            double m00, double m01, double m02,
+            double m10, double m11, double m12,
+            double m20, double m21, double m22) {
 
         this.m00 -= m00;
         this.m01 -= m01;
@@ -149,14 +149,14 @@ public class Matrix3 {
         return this;
     }
 
-    public Matrix3 subtract(float scalar) {
+    public Matrix3Double subtract(double scalar) {
         return subtract(
                 scalar, scalar, scalar,
                 scalar, scalar, scalar,
                 scalar, scalar, scalar);
     }
 
-    public Matrix3 subtract(Matrix3 other) {
+    public Matrix3Double subtract(Matrix3Double other) {
         return subtract(
                 other.m00, other.m01, other.m02,
                 other.m10, other.m11, other.m12,
@@ -165,24 +165,24 @@ public class Matrix3 {
 
     // Multiplication \\
 
-    public Matrix3 multiply(Matrix3 other) {
+    public Matrix3Double multiply(Matrix3Double other) {
 
         // Prevent self-multiply corruption
-        float a00 = m00, a01 = m01, a02 = m02;
-        float a10 = m10, a11 = m11, a12 = m12;
-        float a20 = m20, a21 = m21, a22 = m22;
+        double a00 = m00, a01 = m01, a02 = m02;
+        double a10 = m10, a11 = m11, a12 = m12;
+        double a20 = m20, a21 = m21, a22 = m22;
 
-        float r00 = a00 * other.m00 + a01 * other.m10 + a02 * other.m20;
-        float r01 = a00 * other.m01 + a01 * other.m11 + a02 * other.m21;
-        float r02 = a00 * other.m02 + a01 * other.m12 + a02 * other.m22;
+        double r00 = a00 * other.m00 + a01 * other.m10 + a02 * other.m20;
+        double r01 = a00 * other.m01 + a01 * other.m11 + a02 * other.m21;
+        double r02 = a00 * other.m02 + a01 * other.m12 + a02 * other.m22;
 
-        float r10 = a10 * other.m00 + a11 * other.m10 + a12 * other.m20;
-        float r11 = a10 * other.m01 + a11 * other.m11 + a12 * other.m21;
-        float r12 = a10 * other.m02 + a11 * other.m12 + a12 * other.m22;
+        double r10 = a10 * other.m00 + a11 * other.m10 + a12 * other.m20;
+        double r11 = a10 * other.m01 + a11 * other.m11 + a12 * other.m21;
+        double r12 = a10 * other.m02 + a11 * other.m12 + a12 * other.m22;
 
-        float r20 = a20 * other.m00 + a21 * other.m10 + a22 * other.m20;
-        float r21 = a20 * other.m01 + a21 * other.m11 + a22 * other.m21;
-        float r22 = a20 * other.m02 + a21 * other.m12 + a22 * other.m22;
+        double r20 = a20 * other.m00 + a21 * other.m10 + a22 * other.m20;
+        double r21 = a20 * other.m01 + a21 * other.m11 + a22 * other.m21;
+        double r22 = a20 * other.m02 + a21 * other.m12 + a22 * other.m22;
 
         m00 = r00;
         m01 = r01;
@@ -199,7 +199,7 @@ public class Matrix3 {
 
     // Scalar Multiplication \\
 
-    public Matrix3 multiply(float s) {
+    public Matrix3Double multiply(double s) {
 
         m00 *= s;
         m01 *= s;
@@ -216,14 +216,14 @@ public class Matrix3 {
 
     // Division \\
 
-    public Matrix3 divide(Matrix3 other) {
+    public Matrix3Double divide(Matrix3Double other) {
 
-        Matrix3 inv = new Matrix3(other).inverse();
+        Matrix3Double inv = new Matrix3Double(other).inverse();
 
         return multiply(inv);
     }
 
-    public Matrix3 divide(float scalar) {
+    public Matrix3Double divide(double scalar) {
 
         if (scalar == 0) // TODO: Add my own error
             throw new ArithmeticException("Division by zero");
@@ -233,32 +233,32 @@ public class Matrix3 {
 
     // Inversion \\
 
-    public Matrix3 inverse() {
+    public Matrix3Double inverse() {
 
-        float a00 = m00, a01 = m01, a02 = m02;
-        float a10 = m10, a11 = m11, a12 = m12;
-        float a20 = m20, a21 = m21, a22 = m22;
+        double a00 = m00, a01 = m01, a02 = m02;
+        double a10 = m10, a11 = m11, a12 = m12;
+        double a20 = m20, a21 = m21, a22 = m22;
 
-        float det = a00 * (a11 * a22 - a12 * a21) -
+        double det = a00 * (a11 * a22 - a12 * a21) -
                 a01 * (a10 * a22 - a12 * a20) +
                 a02 * (a10 * a21 - a11 * a20);
 
         if (det == 0) // TODO: Add my own error
             throw new ArithmeticException("Matrix not invertible");
 
-        float invDet = 1.0f / det;
+        double invDet = 1.0f / det;
 
-        float r00 = (a11 * a22 - a12 * a21) * invDet;
-        float r01 = (a02 * a21 - a01 * a22) * invDet;
-        float r02 = (a01 * a12 - a02 * a11) * invDet;
+        double r00 = (a11 * a22 - a12 * a21) * invDet;
+        double r01 = (a02 * a21 - a01 * a22) * invDet;
+        double r02 = (a01 * a12 - a02 * a11) * invDet;
 
-        float r10 = (a12 * a20 - a10 * a22) * invDet;
-        float r11 = (a00 * a22 - a02 * a20) * invDet;
-        float r12 = (a02 * a10 - a00 * a12) * invDet;
+        double r10 = (a12 * a20 - a10 * a22) * invDet;
+        double r11 = (a00 * a22 - a02 * a20) * invDet;
+        double r12 = (a02 * a10 - a00 * a12) * invDet;
 
-        float r20 = (a10 * a21 - a11 * a20) * invDet;
-        float r21 = (a01 * a20 - a00 * a21) * invDet;
-        float r22 = (a00 * a11 - a01 * a10) * invDet;
+        double r20 = (a10 * a21 - a11 * a20) * invDet;
+        double r21 = (a01 * a20 - a00 * a21) * invDet;
+        double r22 = (a00 * a11 - a01 * a10) * invDet;
 
         m00 = r00;
         m01 = r01;
@@ -285,8 +285,8 @@ public class Matrix3 {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Matrix3) {
-            Matrix3 other = (Matrix3) obj;
+        if (obj instanceof Matrix3Double) {
+            Matrix3Double other = (Matrix3Double) obj;
             return m00 == other.m00 && m01 == other.m01 && m02 == other.m02 &&
                     m10 == other.m10 && m11 == other.m11 && m12 == other.m12 &&
                     m20 == other.m20 && m21 == other.m21 && m22 == other.m22;
@@ -298,24 +298,24 @@ public class Matrix3 {
     public int hashCode() {
         int r = 17;
 
-        r = 31 * r + Float.hashCode(m00);
-        r = 31 * r + Float.hashCode(m01);
-        r = 31 * r + Float.hashCode(m02);
+        r = 31 * r + Double.hashCode(m00);
+        r = 31 * r + Double.hashCode(m01);
+        r = 31 * r + Double.hashCode(m02);
 
-        r = 31 * r + Float.hashCode(m10);
-        r = 31 * r + Float.hashCode(m11);
-        r = 31 * r + Float.hashCode(m12);
+        r = 31 * r + Double.hashCode(m10);
+        r = 31 * r + Double.hashCode(m11);
+        r = 31 * r + Double.hashCode(m12);
 
-        r = 31 * r + Float.hashCode(m20);
-        r = 31 * r + Float.hashCode(m21);
-        r = 31 * r + Float.hashCode(m22);
+        r = 31 * r + Double.hashCode(m20);
+        r = 31 * r + Double.hashCode(m21);
+        r = 31 * r + Double.hashCode(m22);
 
         return r;
     }
 
     @Override
     public String toString() {
-        return "Matrix3(" +
+        return "Matrix3Double(" +
                 "[" + m00 + ", " + m01 + ", " + m02 + "], " +
                 "[" + m10 + ", " + m11 + ", " + m12 + "], " +
                 "[" + m20 + ", " + m21 + ", " + m22 + "]" +

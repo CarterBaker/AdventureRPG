@@ -1,63 +1,56 @@
 package com.AdventureRPG.core.shaders.uniforms.matrixArrays;
 
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Methematics.Matrices.Matrix3;
+import com.AdventureRPG.core.util.Mathematics.Matrices.Matrix3;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-public class Matrix3ArrayUniform extends UniformAttribute<Matrix3[]> {
+public final class Matrix3ArrayUniform extends UniformAttribute<float[]> {
 
-    private ByteBuffer buffer;
-    private FloatBuffer floatBuffer;
+    private final int elementCount;
+    private final ByteBuffer buffer;
+    private final FloatBuffer floatBuffer;
 
-    public Matrix3ArrayUniform(int count) {
-        super(new Matrix3[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = new Matrix3();
-
-        this.buffer = BufferUtils.newByteBuffer(count * 36); // count * 9 floats * 4 bytes
+    public Matrix3ArrayUniform(int elementCount) {
+        super(new float[elementCount * 9]); // 3x3 = 9 floats per matrix
+        this.elementCount = elementCount;
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 36); // 9 floats * 4 bytes
         this.floatBuffer = buffer.asFloatBuffer();
     }
 
-    @Override
-    protected void push(int handle, Matrix3[] value) {
-        floatBuffer.clear();
-        for (Matrix3 mat : value) {
-            // Column-major order
-            floatBuffer.put(mat.m00);
-            floatBuffer.put(mat.m10);
-            floatBuffer.put(mat.m20);
-            floatBuffer.put(mat.m01);
-            floatBuffer.put(mat.m11);
-            floatBuffer.put(mat.m21);
-            floatBuffer.put(mat.m02);
-            floatBuffer.put(mat.m12);
-            floatBuffer.put(mat.m22);
+    public void set(Matrix3[] matrices) {
+        for (int i = 0; i < elementCount; i++) {
+            int offset = i * 9;
+            Matrix3 m = matrices[i];
+            value[offset] = m.m00;
+            value[offset + 1] = m.m10;
+            value[offset + 2] = m.m20;
+            value[offset + 3] = m.m01;
+            value[offset + 4] = m.m11;
+            value[offset + 5] = m.m21;
+            value[offset + 6] = m.m02;
+            value[offset + 7] = m.m12;
+            value[offset + 8] = m.m22;
         }
-        floatBuffer.flip();
+    }
 
-        Gdx.gl.glUniformMatrix3fv(handle, value.length, false, floatBuffer);
+    @Override
+    protected void push(int handle, float[] data) {
+        Gdx.gl.glUniformMatrix3fv(handle, elementCount, false, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Matrix3 mat : value) {
-            // Column-major order for UBO
-            buffer.putFloat(mat.m00);
-            buffer.putFloat(mat.m10);
-            buffer.putFloat(mat.m20);
-            buffer.putFloat(mat.m01);
-            buffer.putFloat(mat.m11);
-            buffer.putFloat(mat.m21);
-            buffer.putFloat(mat.m02);
-            buffer.putFloat(mat.m12);
-            buffer.putFloat(mat.m22);
-        }
-        buffer.flip();
+        floatBuffer.clear();
+        floatBuffer.put(value);
+        floatBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

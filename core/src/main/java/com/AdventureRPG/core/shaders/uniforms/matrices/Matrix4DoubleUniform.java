@@ -1,70 +1,81 @@
 package com.AdventureRPG.core.shaders.uniforms.matrices;
 
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Methematics.Matrices.Matrix4Double;
+import com.AdventureRPG.core.util.Mathematics.Matrices.Matrix4Double;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
-
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-public class Matrix4DoubleUniform extends UniformAttribute<Matrix4Double> {
-
+public class Matrix4DoubleUniform extends UniformAttribute<Object> {
     private ByteBuffer buffer;
     private FloatBuffer floatBuffer;
+    private com.badlogic.gdx.math.Matrix4 gdxMatrix;
 
     public Matrix4DoubleUniform() {
         super(new Matrix4Double());
-        this.buffer = BufferUtils.newByteBuffer(64); // as floats
+        this.buffer = BufferUtils.newByteBuffer(64);
         this.floatBuffer = buffer.asFloatBuffer();
+        this.gdxMatrix = new com.badlogic.gdx.math.Matrix4();
     }
 
     @Override
-    protected void push(int handle, Matrix4Double value) {
-        floatBuffer.clear();
-        // Column-major order, convert to float
-        floatBuffer.put((float) value.m00);
-        floatBuffer.put((float) value.m10);
-        floatBuffer.put((float) value.m20);
-        floatBuffer.put((float) value.m30);
-        floatBuffer.put((float) value.m01);
-        floatBuffer.put((float) value.m11);
-        floatBuffer.put((float) value.m21);
-        floatBuffer.put((float) value.m31);
-        floatBuffer.put((float) value.m02);
-        floatBuffer.put((float) value.m12);
-        floatBuffer.put((float) value.m22);
-        floatBuffer.put((float) value.m32);
-        floatBuffer.put((float) value.m03);
-        floatBuffer.put((float) value.m13);
-        floatBuffer.put((float) value.m23);
-        floatBuffer.put((float) value.m33);
-        floatBuffer.flip();
-
-        Gdx.gl.glUniformMatrix4fv(handle, 1, false, floatBuffer);
+    protected void push(int handle, Object value) {
+        if (value instanceof com.badlogic.gdx.math.Matrix4) {
+            Gdx.gl.glUniformMatrix4fv(handle, 1, false, ((com.badlogic.gdx.math.Matrix4) value).val, 0);
+        } else {
+            Matrix4Double m = (Matrix4Double) value;
+            float[] val = gdxMatrix.val;
+            val[0] = (float) m.m00;
+            val[1] = (float) m.m10;
+            val[2] = (float) m.m20;
+            val[3] = (float) m.m30;
+            val[4] = (float) m.m01;
+            val[5] = (float) m.m11;
+            val[6] = (float) m.m21;
+            val[7] = (float) m.m31;
+            val[8] = (float) m.m02;
+            val[9] = (float) m.m12;
+            val[10] = (float) m.m22;
+            val[11] = (float) m.m32;
+            val[12] = (float) m.m03;
+            val[13] = (float) m.m13;
+            val[14] = (float) m.m23;
+            val[15] = (float) m.m33;
+            Gdx.gl.glUniformMatrix4fv(handle, 1, false, val, 0);
+        }
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
         buffer.clear();
-        // Column-major order for UBO
-        buffer.putFloat((float) value.m00);
-        buffer.putFloat((float) value.m10);
-        buffer.putFloat((float) value.m20);
-        buffer.putFloat((float) value.m30);
-        buffer.putFloat((float) value.m01);
-        buffer.putFloat((float) value.m11);
-        buffer.putFloat((float) value.m21);
-        buffer.putFloat((float) value.m31);
-        buffer.putFloat((float) value.m02);
-        buffer.putFloat((float) value.m12);
-        buffer.putFloat((float) value.m22);
-        buffer.putFloat((float) value.m32);
-        buffer.putFloat((float) value.m03);
-        buffer.putFloat((float) value.m13);
-        buffer.putFloat((float) value.m23);
-        buffer.putFloat((float) value.m33);
-        buffer.flip();
+        if (value instanceof com.badlogic.gdx.math.Matrix4) {
+            floatBuffer.clear();
+            floatBuffer.put(((com.badlogic.gdx.math.Matrix4) value).val, 0, 16);
+            floatBuffer.flip();
+        } else {
+            Matrix4Double m = (Matrix4Double) value;
+            float[] val = gdxMatrix.val;
+            val[0] = (float) m.m00;
+            val[1] = (float) m.m10;
+            val[2] = (float) m.m20;
+            val[3] = (float) m.m30;
+            val[4] = (float) m.m01;
+            val[5] = (float) m.m11;
+            val[6] = (float) m.m21;
+            val[7] = (float) m.m31;
+            val[8] = (float) m.m02;
+            val[9] = (float) m.m12;
+            val[10] = (float) m.m22;
+            val[11] = (float) m.m32;
+            val[12] = (float) m.m03;
+            val[13] = (float) m.m13;
+            val[14] = (float) m.m23;
+            val[15] = (float) m.m33;
+            floatBuffer.clear();
+            floatBuffer.put(val, 0, 16);
+            floatBuffer.flip();
+        }
         return buffer;
     }
 }

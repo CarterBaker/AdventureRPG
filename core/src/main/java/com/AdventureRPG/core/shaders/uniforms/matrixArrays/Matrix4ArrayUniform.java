@@ -1,77 +1,63 @@
 package com.AdventureRPG.core.shaders.uniforms.matrixArrays;
 
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Methematics.Matrices.Matrix4;
+import com.AdventureRPG.core.util.Mathematics.Matrices.Matrix4;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-public class Matrix4ArrayUniform extends UniformAttribute<Matrix4[]> {
+public final class Matrix4ArrayUniform extends UniformAttribute<float[]> {
 
-    private ByteBuffer buffer;
-    private FloatBuffer floatBuffer;
+    private final int elementCount;
+    private final ByteBuffer buffer;
+    private final FloatBuffer floatBuffer;
 
-    public Matrix4ArrayUniform(int count) {
-        super(new Matrix4[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = new Matrix4();
-
-        this.buffer = BufferUtils.newByteBuffer(count * 64); // count * 16 floats * 4 bytes
+    public Matrix4ArrayUniform(int elementCount) {
+        super(new float[elementCount * 16]); // 4x4 = 16 floats per matrix
+        this.elementCount = elementCount;
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 64); // 16 floats * 4 bytes
         this.floatBuffer = buffer.asFloatBuffer();
     }
 
-    @Override
-    protected void push(int handle, Matrix4[] value) {
-        floatBuffer.clear();
-        for (Matrix4 mat : value) {
-            // Column-major order
-            floatBuffer.put(mat.m00);
-            floatBuffer.put(mat.m10);
-            floatBuffer.put(mat.m20);
-            floatBuffer.put(mat.m30);
-            floatBuffer.put(mat.m01);
-            floatBuffer.put(mat.m11);
-            floatBuffer.put(mat.m21);
-            floatBuffer.put(mat.m31);
-            floatBuffer.put(mat.m02);
-            floatBuffer.put(mat.m12);
-            floatBuffer.put(mat.m22);
-            floatBuffer.put(mat.m32);
-            floatBuffer.put(mat.m03);
-            floatBuffer.put(mat.m13);
-            floatBuffer.put(mat.m23);
-            floatBuffer.put(mat.m33);
+    public void set(Matrix4[] matrices) {
+        for (int i = 0; i < elementCount; i++) {
+            int offset = i * 16;
+            Matrix4 m = matrices[i];
+            value[offset] = m.m00;
+            value[offset + 1] = m.m10;
+            value[offset + 2] = m.m20;
+            value[offset + 3] = m.m30;
+            value[offset + 4] = m.m01;
+            value[offset + 5] = m.m11;
+            value[offset + 6] = m.m21;
+            value[offset + 7] = m.m31;
+            value[offset + 8] = m.m02;
+            value[offset + 9] = m.m12;
+            value[offset + 10] = m.m22;
+            value[offset + 11] = m.m32;
+            value[offset + 12] = m.m03;
+            value[offset + 13] = m.m13;
+            value[offset + 14] = m.m23;
+            value[offset + 15] = m.m33;
         }
-        floatBuffer.flip();
+    }
 
-        Gdx.gl.glUniformMatrix4fv(handle, value.length, false, floatBuffer);
+    @Override
+    protected void push(int handle, float[] data) {
+        Gdx.gl.glUniformMatrix4fv(handle, elementCount, false, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Matrix4 mat : value) {
-            // Column-major order for UBO
-            buffer.putFloat(mat.m00);
-            buffer.putFloat(mat.m10);
-            buffer.putFloat(mat.m20);
-            buffer.putFloat(mat.m30);
-            buffer.putFloat(mat.m01);
-            buffer.putFloat(mat.m11);
-            buffer.putFloat(mat.m21);
-            buffer.putFloat(mat.m31);
-            buffer.putFloat(mat.m02);
-            buffer.putFloat(mat.m12);
-            buffer.putFloat(mat.m22);
-            buffer.putFloat(mat.m32);
-            buffer.putFloat(mat.m03);
-            buffer.putFloat(mat.m13);
-            buffer.putFloat(mat.m23);
-            buffer.putFloat(mat.m33);
-        }
-        buffer.flip();
+        floatBuffer.clear();
+        floatBuffer.put(value);
+        floatBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

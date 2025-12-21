@@ -1,7 +1,7 @@
 package com.AdventureRPG.core.shaders.materialmanager;
 
-import com.AdventureRPG.core.util.Methematics.Matrices.*;
-import com.AdventureRPG.core.util.Methematics.Vectors.*;
+import com.AdventureRPG.core.util.Mathematics.Matrices.*;
+import com.AdventureRPG.core.util.Mathematics.Vectors.*;
 import com.google.gson.JsonArray;
 
 class MaterialParseUtility {

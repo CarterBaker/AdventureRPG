@@ -7,38 +7,39 @@ import com.badlogic.gdx.utils.BufferUtils;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-public class IntegerArrayUniform extends UniformAttribute<Integer[]> {
+public final class IntegerArrayUniform extends UniformAttribute<int[]> {
 
-    private ByteBuffer buffer;
-    private IntBuffer intBuffer;
+    private final int elementCount;
+    private final ByteBuffer buffer;
+    private final IntBuffer intBuffer;
 
-    public IntegerArrayUniform(int count) {
-        super(new Integer[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = 0;
+    public IntegerArrayUniform(int elementCount) {
+        super(new int[elementCount]);
+        this.elementCount = elementCount;
 
-        this.buffer = BufferUtils.newByteBuffer(count * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 4);
         this.intBuffer = buffer.asIntBuffer();
     }
 
-    @Override
-    protected void push(int handle, Integer[] value) {
-        intBuffer.clear();
-        for (Integer i : value) {
-            intBuffer.put(i);
-        }
-        intBuffer.flip();
+    public void set(Integer[] values) {
+        for (int i = 0; i < elementCount; i++)
+            value[i] = values[i];
+    }
 
-        Gdx.gl.glUniform1iv(handle, value.length, intBuffer);
+    @Override
+    protected void push(int handle, int[] data) {
+        Gdx.gl.glUniform1iv(handle, elementCount, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Integer i : value) {
-            buffer.putInt(i);
-        }
-        buffer.flip();
+        intBuffer.clear();
+        intBuffer.put(value);
+        intBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

@@ -7,38 +7,39 @@ import com.badlogic.gdx.utils.BufferUtils;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-public class FloatArrayUniform extends UniformAttribute<Float[]> {
+public final class FloatArrayUniform extends UniformAttribute<float[]> {
 
-    private ByteBuffer buffer;
-    private FloatBuffer floatBuffer;
+    private final int elementCount;
+    private final ByteBuffer buffer;
+    private final FloatBuffer floatBuffer;
 
-    public FloatArrayUniform(int count) {
-        super(new Float[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = 0.0f;
+    public FloatArrayUniform(int elementCount) {
+        super(new float[elementCount]);
+        this.elementCount = elementCount;
 
-        this.buffer = BufferUtils.newByteBuffer(count * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 4);
         this.floatBuffer = buffer.asFloatBuffer();
     }
 
-    @Override
-    protected void push(int handle, Float[] value) {
-        floatBuffer.clear();
-        for (Float f : value) {
-            floatBuffer.put(f);
-        }
-        floatBuffer.flip();
+    public void set(Float[] values) {
+        for (int i = 0; i < elementCount; i++)
+            value[i] = values[i];
+    }
 
-        Gdx.gl.glUniform1fv(handle, value.length, floatBuffer);
+    @Override
+    protected void push(int handle, float[] data) {
+        Gdx.gl.glUniform1fv(handle, elementCount, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Float f : value) {
-            buffer.putFloat(f);
-        }
-        buffer.flip();
+        floatBuffer.clear();
+        floatBuffer.put(value);
+        floatBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

@@ -12,8 +12,8 @@ import com.AdventureRPG.core.geometry.modelmanager.ModelManager;
 import com.AdventureRPG.core.geometry.vaomanager.VAOHandle;
 import com.AdventureRPG.core.geometry.vaomanager.VAOManager;
 import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
-import com.AdventureRPG.core.util.Methematics.Extras.Coordinate2Int;
-import com.AdventureRPG.core.util.Methematics.Extras.Direction2Int;
+import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
+import com.AdventureRPG.core.util.Mathematics.Extras.Direction2Int;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 

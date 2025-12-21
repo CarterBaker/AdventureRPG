@@ -3,8 +3,8 @@ package com.AdventureRPG.core.physics.movement;
 import com.AdventureRPG.core.engine.EngineSetting;
 import com.AdventureRPG.core.engine.ManagerFrame;
 import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
-import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
-import com.AdventureRPG.core.util.Methematics.Vectors.Vector3Int;
+import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Int;
+import com.AdventureRPG.core.util.Mathematics.Vectors.Vector3Int;
 import com.AdventureRPG.playermanager.StatisticsInstance;
 import com.badlogic.gdx.math.Vector3;
 

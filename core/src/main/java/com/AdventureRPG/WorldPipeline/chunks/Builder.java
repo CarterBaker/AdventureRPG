@@ -14,8 +14,8 @@ import com.AdventureRPG.WorldPipeline.util.PackedCoordinate3Int;
 import com.AdventureRPG.core.engine.EngineSetting;
 import com.AdventureRPG.core.shaders.materials.Material;
 import com.AdventureRPG.core.shaders.texturemanager.UVRect;
-import com.AdventureRPG.core.util.Methematics.Extras.Direction2Int;
-import com.AdventureRPG.core.util.Methematics.Extras.Direction3Int;
+import com.AdventureRPG.core.util.Mathematics.Extras.Direction2Int;
+import com.AdventureRPG.core.util.Mathematics.Extras.Direction3Int;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.IntArray;
 

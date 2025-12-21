@@ -211,51 +211,51 @@ public final class InternalBuildSystem extends SystemFrame {
 
         // For arrays, extract size from the source
         if (source instanceof FloatArrayUniform fa)
-            return new FloatArrayUniform(fa.get().length);
+            return new FloatArrayUniform(fa.elementCount());
         if (source instanceof DoubleArrayUniform da)
-            return new DoubleArrayUniform(da.get().length);
+            return new DoubleArrayUniform(da.elementCount());
         if (source instanceof IntegerArrayUniform ia)
-            return new IntegerArrayUniform(ia.get().length);
+            return new IntegerArrayUniform(ia.elementCount());
         if (source instanceof BooleanArrayUniform ba)
-            return new BooleanArrayUniform(ba.get().length);
+            return new BooleanArrayUniform(ba.elementCount());
 
         if (source instanceof Vector2ArrayUniform v2a)
-            return new Vector2ArrayUniform(v2a.get().length);
+            return new Vector2ArrayUniform(v2a.elementCount());
         if (source instanceof Vector3ArrayUniform v3a)
-            return new Vector3ArrayUniform(v3a.get().length);
+            return new Vector3ArrayUniform(v3a.elementCount());
         if (source instanceof Vector4ArrayUniform v4a)
-            return new Vector4ArrayUniform(v4a.get().length);
+            return new Vector4ArrayUniform(v4a.elementCount());
         if (source instanceof Vector2DoubleArrayUniform v2da)
-            return new Vector2DoubleArrayUniform(v2da.get().length);
+            return new Vector2DoubleArrayUniform(v2da.elementCount());
         if (source instanceof Vector3DoubleArrayUniform v3da)
-            return new Vector3DoubleArrayUniform(v3da.get().length);
+            return new Vector3DoubleArrayUniform(v3da.elementCount());
         if (source instanceof Vector4DoubleArrayUniform v4da)
-            return new Vector4DoubleArrayUniform(v4da.get().length);
+            return new Vector4DoubleArrayUniform(v4da.elementCount());
         if (source instanceof Vector2IntArrayUniform v2ia)
-            return new Vector2IntArrayUniform(v2ia.get().length);
+            return new Vector2IntArrayUniform(v2ia.elementCount());
         if (source instanceof Vector3IntArrayUniform v3ia)
-            return new Vector3IntArrayUniform(v3ia.get().length);
+            return new Vector3IntArrayUniform(v3ia.elementCount());
         if (source instanceof Vector4IntArrayUniform v4ia)
-            return new Vector4IntArrayUniform(v4ia.get().length);
+            return new Vector4IntArrayUniform(v4ia.elementCount());
         if (source instanceof Vector2BooleanArrayUniform v2ba)
-            return new Vector2BooleanArrayUniform(v2ba.get().length);
+            return new Vector2BooleanArrayUniform(v2ba.elementCount());
         if (source instanceof Vector3BooleanArrayUniform v3ba)
-            return new Vector3BooleanArrayUniform(v3ba.get().length);
+            return new Vector3BooleanArrayUniform(v3ba.elementCount());
         if (source instanceof Vector4BooleanArrayUniform v4ba)
-            return new Vector4BooleanArrayUniform(v4ba.get().length);
+            return new Vector4BooleanArrayUniform(v4ba.elementCount());
 
         if (source instanceof Matrix2ArrayUniform m2a)
-            return new Matrix2ArrayUniform(m2a.get().length);
+            return new Matrix2ArrayUniform(m2a.elementCount());
         if (source instanceof Matrix3ArrayUniform m3a)
-            return new Matrix3ArrayUniform(m3a.get().length);
+            return new Matrix3ArrayUniform(m3a.elementCount());
         if (source instanceof Matrix4ArrayUniform m4a)
-            return new Matrix4ArrayUniform(m4a.get().length);
+            return new Matrix4ArrayUniform(m4a.elementCount());
         if (source instanceof Matrix2DoubleArrayUniform m2da)
-            return new Matrix2DoubleArrayUniform(m2da.get().length);
+            return new Matrix2DoubleArrayUniform(m2da.elementCount());
         if (source instanceof Matrix3DoubleArrayUniform m3da)
-            return new Matrix3DoubleArrayUniform(m3da.get().length);
+            return new Matrix3DoubleArrayUniform(m3da.elementCount());
         if (source instanceof Matrix4DoubleArrayUniform m4da)
-            return new Matrix4DoubleArrayUniform(m4da.get().length);
+            return new Matrix4DoubleArrayUniform(m4da.elementCount());
 
         // Non-array types
         if (source instanceof FloatUniform)

@@ -7,7 +7,6 @@ import com.AdventureRPG.core.geometry.GeometryPipeline;
 import com.AdventureRPG.core.physics.input.InputSystem;
 import com.AdventureRPG.core.physics.movement.MovementManager;
 import com.AdventureRPG.core.renderer.RenderPipeline;
-import com.AdventureRPG.core.renderer.camerasystem.CameraManager;
 import com.AdventureRPG.core.scenepipeline.ScenePipeline;
 import com.AdventureRPG.core.settings.Settings;
 import com.AdventureRPG.core.shaders.ShaderPipeline;
@@ -27,7 +26,6 @@ public class GameEngine extends EngineFrame implements Screen {
     // Kernel
     private ThreadSystem threadSystem;
     private ScenePipeline scenePipeline;
-    private CameraManager cameraManager;
     private InputSystem inputSystem;
     private MovementManager movementManager;
     private GeometryPipeline geometryPipeline;
@@ -85,13 +83,6 @@ public class GameEngine extends EngineFrame implements Screen {
     }
 
     @Override
-    protected void init() {
-
-        // Render pipeline
-        this.cameraManager = this.get(CameraManager.class);
-    }
-
-    @Override
     protected void start() {
 
         startLoading();
@@ -144,7 +135,7 @@ public class GameEngine extends EngineFrame implements Screen {
 
     @Override
     public void resize(int width, int height) {
-        cameraManager.resize(width, height);
+        renderPipeline.resize(width, height);
     }
 
     @Override

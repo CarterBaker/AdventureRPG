@@ -1,51 +1,54 @@
 package com.AdventureRPG.core.shaders.uniforms.vectorarrays;
 
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Methematics.Vectors.Vector4Int;
+import com.AdventureRPG.core.util.Mathematics.Vectors.Vector4Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-public class Vector4IntArrayUniform extends UniformAttribute<Vector4Int[]> {
+public final class Vector4IntArrayUniform extends UniformAttribute<int[]> {
 
-    private ByteBuffer buffer;
-    private IntBuffer intBuffer;
+    private static final int COMPONENTS = 4;
 
-    public Vector4IntArrayUniform(int count) {
-        super(new Vector4Int[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = new Vector4Int();
+    private final int elementCount;
 
-        this.buffer = BufferUtils.newByteBuffer(count * 16);
+    private final ByteBuffer buffer;
+    private final IntBuffer intBuffer;
+
+    public Vector4IntArrayUniform(int elementCount) {
+        super(new int[elementCount * COMPONENTS]);
+        this.elementCount = elementCount;
+
+        this.buffer = BufferUtils.newByteBuffer(elementCount * COMPONENTS * 4);
         this.intBuffer = buffer.asIntBuffer();
     }
 
-    @Override
-    protected void push(int handle, Vector4Int[] value) {
-        intBuffer.clear();
-        for (Vector4Int vec : value) {
-            intBuffer.put(vec.x);
-            intBuffer.put(vec.y);
-            intBuffer.put(vec.z);
-            intBuffer.put(vec.w);
+    public void set(Vector4Int[] vectors) {
+        int idx = 0;
+        for (Vector4Int v : vectors) {
+            value[idx++] = v.x;
+            value[idx++] = v.y;
+            value[idx++] = v.z;
+            value[idx++] = v.w;
         }
-        intBuffer.flip();
+    }
 
-        Gdx.gl.glUniform4iv(handle, value.length, intBuffer);
+    @Override
+    protected void push(int handle, int[] data) {
+        Gdx.gl.glUniform4iv(handle, elementCount, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Vector4Int vec : value) {
-            buffer.putInt(vec.x);
-            buffer.putInt(vec.y);
-            buffer.putInt(vec.z);
-            buffer.putInt(vec.w);
-        }
-        buffer.flip();
+        intBuffer.clear();
+        intBuffer.put(value);
+        intBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

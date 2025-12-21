@@ -7,38 +7,39 @@ import com.badlogic.gdx.utils.BufferUtils;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-public class BooleanArrayUniform extends UniformAttribute<Boolean[]> {
+public final class BooleanArrayUniform extends UniformAttribute<int[]> {
 
-    private ByteBuffer buffer;
-    private IntBuffer intBuffer;
+    private final int elementCount;
+    private final ByteBuffer buffer;
+    private final IntBuffer intBuffer;
 
-    public BooleanArrayUniform(int count) {
-        super(new Boolean[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = Boolean.FALSE;
+    public BooleanArrayUniform(int elementCount) {
+        super(new int[elementCount]);
+        this.elementCount = elementCount;
 
-        this.buffer = BufferUtils.newByteBuffer(count * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 4);
         this.intBuffer = buffer.asIntBuffer();
     }
 
-    @Override
-    protected void push(int handle, Boolean[] value) {
-        intBuffer.clear();
-        for (Boolean b : value) {
-            intBuffer.put(b ? 1 : 0);
-        }
-        intBuffer.flip();
+    public void set(Boolean[] values) {
+        for (int i = 0; i < elementCount; i++)
+            value[i] = values[i] ? 1 : 0;
+    }
 
-        Gdx.gl.glUniform1iv(handle, value.length, intBuffer);
+    @Override
+    protected void push(int handle, int[] data) {
+        Gdx.gl.glUniform1iv(handle, elementCount, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Boolean b : value) {
-            buffer.putInt(b ? 1 : 0);
-        }
-        buffer.flip();
+        intBuffer.clear();
+        intBuffer.put(value);
+        intBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

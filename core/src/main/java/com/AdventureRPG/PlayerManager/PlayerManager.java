@@ -5,7 +5,7 @@ import com.AdventureRPG.core.engine.ManagerFrame;
 import com.AdventureRPG.core.physics.input.InputSystem;
 import com.AdventureRPG.core.physics.movement.MovementManager;
 import com.AdventureRPG.core.renderer.camerasystem.CameraManager;
-import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
+import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Int;
 import com.badlogic.gdx.math.Vector3;
 
 // TODO: This needs to be abstracted to generic NPC like class

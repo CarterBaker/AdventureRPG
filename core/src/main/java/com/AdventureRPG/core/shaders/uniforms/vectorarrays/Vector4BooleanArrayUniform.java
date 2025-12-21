@@ -1,51 +1,54 @@
 package com.AdventureRPG.core.shaders.uniforms.vectorarrays;
 
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Methematics.Vectors.Vector4Boolean;
+import com.AdventureRPG.core.util.Mathematics.Vectors.Vector4Boolean;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-public class Vector4BooleanArrayUniform extends UniformAttribute<Vector4Boolean[]> {
+public final class Vector4BooleanArrayUniform extends UniformAttribute<int[]> {
 
-    private ByteBuffer buffer;
-    private IntBuffer intBuffer;
+    private static final int COMPONENTS = 4;
 
-    public Vector4BooleanArrayUniform(int count) {
-        super(new Vector4Boolean[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = new Vector4Boolean();
+    private final int elementCount;
 
-        this.buffer = BufferUtils.newByteBuffer(count * 16);
+    private final ByteBuffer buffer;
+    private final IntBuffer intBuffer;
+
+    public Vector4BooleanArrayUniform(int elementCount) {
+        super(new int[elementCount * COMPONENTS]);
+        this.elementCount = elementCount;
+
+        this.buffer = BufferUtils.newByteBuffer(elementCount * COMPONENTS * 4);
         this.intBuffer = buffer.asIntBuffer();
     }
 
-    @Override
-    protected void push(int handle, Vector4Boolean[] value) {
-        intBuffer.clear();
-        for (Vector4Boolean vec : value) {
-            intBuffer.put(vec.x ? 1 : 0);
-            intBuffer.put(vec.y ? 1 : 0);
-            intBuffer.put(vec.z ? 1 : 0);
-            intBuffer.put(vec.w ? 1 : 0);
+    public void set(Vector4Boolean[] vectors) {
+        int idx = 0;
+        for (Vector4Boolean v : vectors) {
+            value[idx++] = v.x ? 1 : 0;
+            value[idx++] = v.y ? 1 : 0;
+            value[idx++] = v.z ? 1 : 0;
+            value[idx++] = v.w ? 1 : 0;
         }
-        intBuffer.flip();
+    }
 
-        Gdx.gl.glUniform4iv(handle, value.length, intBuffer);
+    @Override
+    protected void push(int handle, int[] data) {
+        Gdx.gl.glUniform4iv(handle, elementCount, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Vector4Boolean vec : value) {
-            buffer.putInt(vec.x ? 1 : 0);
-            buffer.putInt(vec.y ? 1 : 0);
-            buffer.putInt(vec.z ? 1 : 0);
-            buffer.putInt(vec.w ? 1 : 0);
-        }
-        buffer.flip();
+        intBuffer.clear();
+        intBuffer.put(value);
+        intBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

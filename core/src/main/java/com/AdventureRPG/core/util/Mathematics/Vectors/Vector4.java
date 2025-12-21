@@ -1,13 +1,13 @@
-package com.AdventureRPG.core.util.Methematics.Vectors;
+package com.AdventureRPG.core.util.Mathematics.Vectors;
 
-public class Vector4Int {
+public class Vector4 {
 
     // Data
-    public int x, y, z, w;
+    public float x, y, z, w;
 
     // Constructors \\
 
-    public Vector4Int(int x, int y, int z, int w) {
+    public Vector4(float x, float y, float z, float w) {
 
         this.x = x;
         this.y = y;
@@ -15,21 +15,21 @@ public class Vector4Int {
         this.w = w;
     }
 
-    public Vector4Int() {
+    public Vector4() {
         this(0, 0, 0, 0);
     }
 
-    public Vector4Int(int scalar) {
+    public Vector4(float scalar) {
         this(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Int(Vector4Int other) {
+    public Vector4(Vector4 other) {
         this(other.x, other.y, other.z, other.w);
     }
 
     // Set \\
 
-    public Vector4Int set(int x, int y, int z, int w) {
+    public Vector4 set(float x, float y, float z, float w) {
 
         this.x = x;
         this.y = y;
@@ -39,17 +39,17 @@ public class Vector4Int {
         return this;
     }
 
-    public Vector4Int set(int scalar) {
+    public Vector4 set(float scalar) {
         return set(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Int set(Vector4Int other) {
+    public Vector4 set(Vector4 other) {
         return set(other.x, other.y, other.z, other.w);
     }
 
     // Addition \\
 
-    public Vector4Int add(int x, int y, int z, int w) {
+    public Vector4 add(float x, float y, float z, float w) {
 
         this.x += x;
         this.y += y;
@@ -59,17 +59,17 @@ public class Vector4Int {
         return this;
     }
 
-    public Vector4Int add(int scalar) {
+    public Vector4 add(float scalar) {
         return add(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Int add(Vector4Int other) {
+    public Vector4 add(Vector4 other) {
         return add(other.x, other.y, other.z, other.w);
     }
 
     // Subtraction \\
 
-    public Vector4Int subtract(int x, int y, int z, int w) {
+    public Vector4 subtract(float x, float y, float z, float w) {
 
         this.x -= x;
         this.y -= y;
@@ -79,17 +79,17 @@ public class Vector4Int {
         return this;
     }
 
-    public Vector4Int subtract(int scalar) {
+    public Vector4 subtract(float scalar) {
         return subtract(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Int subtract(Vector4Int other) {
+    public Vector4 subtract(Vector4 other) {
         return subtract(other.x, other.y, other.z, other.w);
     }
 
     // Multiplication \\
 
-    public Vector4Int multiply(int x, int y, int z, int w) {
+    public Vector4 multiply(float x, float y, float z, float w) {
 
         this.x *= x;
         this.y *= y;
@@ -99,17 +99,17 @@ public class Vector4Int {
         return this;
     }
 
-    public Vector4Int multiply(int scalar) {
+    public Vector4 multiply(float scalar) {
         return multiply(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Int multiply(Vector4Int other) {
+    public Vector4 multiply(Vector4 other) {
         return multiply(other.x, other.y, other.z, other.w);
     }
 
     // Division \\
 
-    public Vector4Int divide(int x, int y, int z, int w) {
+    public Vector4 divide(float x, float y, float z, float w) {
 
         if (x == 0 || y == 0 || z == 0) // TODO: make my own error
             throw new ArithmeticException("Division by zero");
@@ -122,11 +122,11 @@ public class Vector4Int {
         return this;
     }
 
-    public Vector4Int divide(int scalar) {
+    public Vector4 divide(float scalar) {
         return divide(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Int divide(Vector4Int other) {
+    public Vector4 divide(Vector4 other) {
         return divide(other.x, other.y, other.z, other.w);
     }
 
@@ -144,9 +144,9 @@ public class Vector4Int {
     @Override
     public boolean equals(Object obj) {
 
-        if (obj instanceof Vector4Int) {
+        if (obj instanceof Vector4) {
 
-            Vector4Int v = (Vector4Int) obj;
+            Vector4 v = (Vector4) obj;
             return this.x == v.x &&
                     this.y == v.y &&
                     this.z == v.z &&
@@ -171,6 +171,6 @@ public class Vector4Int {
 
     @Override
     public String toString() {
-        return "Vector4Int(" + x + ", " + y + ", " + z + ", " + w + ")";
+        return "Vector4(" + x + ", " + y + ", " + z + ", " + w + ")";
     }
 }

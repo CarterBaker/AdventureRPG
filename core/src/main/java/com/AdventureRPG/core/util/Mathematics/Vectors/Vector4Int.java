@@ -1,13 +1,13 @@
-package com.AdventureRPG.core.util.Methematics.Vectors;
+package com.AdventureRPG.core.util.Mathematics.Vectors;
 
-public class Vector4Double {
+public class Vector4Int {
 
     // Data
-    public double x, y, z, w;
+    public int x, y, z, w;
 
     // Constructors \\
 
-    public Vector4Double(double x, double y, double z, double w) {
+    public Vector4Int(int x, int y, int z, int w) {
 
         this.x = x;
         this.y = y;
@@ -15,21 +15,21 @@ public class Vector4Double {
         this.w = w;
     }
 
-    public Vector4Double() {
+    public Vector4Int() {
         this(0, 0, 0, 0);
     }
 
-    public Vector4Double(double scalar) {
+    public Vector4Int(int scalar) {
         this(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Double(Vector4Double other) {
+    public Vector4Int(Vector4Int other) {
         this(other.x, other.y, other.z, other.w);
     }
 
     // Set \\
 
-    public Vector4Double set(double x, double y, double z, double w) {
+    public Vector4Int set(int x, int y, int z, int w) {
 
         this.x = x;
         this.y = y;
@@ -39,17 +39,17 @@ public class Vector4Double {
         return this;
     }
 
-    public Vector4Double set(double scalar) {
+    public Vector4Int set(int scalar) {
         return set(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Double set(Vector4Double other) {
+    public Vector4Int set(Vector4Int other) {
         return set(other.x, other.y, other.z, other.w);
     }
 
     // Addition \\
 
-    public Vector4Double add(double x, double y, double z, double w) {
+    public Vector4Int add(int x, int y, int z, int w) {
 
         this.x += x;
         this.y += y;
@@ -59,17 +59,17 @@ public class Vector4Double {
         return this;
     }
 
-    public Vector4Double add(double scalar) {
+    public Vector4Int add(int scalar) {
         return add(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Double add(Vector4Double other) {
+    public Vector4Int add(Vector4Int other) {
         return add(other.x, other.y, other.z, other.w);
     }
 
     // Subtraction \\
 
-    public Vector4Double subtract(double x, double y, double z, double w) {
+    public Vector4Int subtract(int x, int y, int z, int w) {
 
         this.x -= x;
         this.y -= y;
@@ -79,17 +79,17 @@ public class Vector4Double {
         return this;
     }
 
-    public Vector4Double subtract(double scalar) {
+    public Vector4Int subtract(int scalar) {
         return subtract(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Double subtract(Vector4Double other) {
+    public Vector4Int subtract(Vector4Int other) {
         return subtract(other.x, other.y, other.z, other.w);
     }
 
     // Multiplication \\
 
-    public Vector4Double multiply(double x, double y, double z, double w) {
+    public Vector4Int multiply(int x, int y, int z, int w) {
 
         this.x *= x;
         this.y *= y;
@@ -99,17 +99,17 @@ public class Vector4Double {
         return this;
     }
 
-    public Vector4Double multiply(double scalar) {
+    public Vector4Int multiply(int scalar) {
         return multiply(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Double multiply(Vector4Double other) {
+    public Vector4Int multiply(Vector4Int other) {
         return multiply(other.x, other.y, other.z, other.w);
     }
 
     // Division \\
 
-    public Vector4Double divide(double x, double y, double z, double w) {
+    public Vector4Int divide(int x, int y, int z, int w) {
 
         if (x == 0 || y == 0 || z == 0) // TODO: make my own error
             throw new ArithmeticException("Division by zero");
@@ -122,11 +122,11 @@ public class Vector4Double {
         return this;
     }
 
-    public Vector4Double divide(double scalar) {
+    public Vector4Int divide(int scalar) {
         return divide(scalar, scalar, scalar, scalar);
     }
 
-    public Vector4Double divide(Vector4Double other) {
+    public Vector4Int divide(Vector4Int other) {
         return divide(other.x, other.y, other.z, other.w);
     }
 
@@ -144,9 +144,9 @@ public class Vector4Double {
     @Override
     public boolean equals(Object obj) {
 
-        if (obj instanceof Vector4Double) {
+        if (obj instanceof Vector4Int) {
 
-            Vector4Double v = (Vector4Double) obj;
+            Vector4Int v = (Vector4Int) obj;
             return this.x == v.x &&
                     this.y == v.y &&
                     this.z == v.z &&
@@ -161,16 +161,16 @@ public class Vector4Double {
 
         int result = 17;
 
-        result = 31 * result + Double.hashCode(x);
-        result = 31 * result + Double.hashCode(y);
-        result = 31 * result + Double.hashCode(z);
-        result = 31 * result + Double.hashCode(w);
+        result = 31 * result + Float.hashCode(x);
+        result = 31 * result + Float.hashCode(y);
+        result = 31 * result + Float.hashCode(z);
+        result = 31 * result + Float.hashCode(w);
 
         return result;
     }
 
     @Override
     public String toString() {
-        return "Vector4Double(" + x + ", " + y + ", " + z + ", " + w + ")";
+        return "Vector4Int(" + x + ", " + y + ", " + z + ", " + w + ")";
     }
 }

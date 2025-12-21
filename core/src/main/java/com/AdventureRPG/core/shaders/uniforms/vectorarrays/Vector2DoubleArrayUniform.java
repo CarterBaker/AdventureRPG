@@ -1,47 +1,53 @@
 package com.AdventureRPG.core.shaders.uniforms.vectorarrays;
 
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Double;
+import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Double;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-public class Vector2DoubleArrayUniform extends UniformAttribute<Vector2Double[]> {
+public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
 
-    private ByteBuffer buffer;
-    private FloatBuffer floatBuffer;
+    private static final int COMPONENTS = 2;
 
-    public Vector2DoubleArrayUniform(int count) {
-        super(new Vector2Double[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = new Vector2Double();
+    private final int elementCount;
 
-        this.buffer = BufferUtils.newByteBuffer(count * 8); // as floats
+    private final ByteBuffer buffer;
+    private final FloatBuffer floatBuffer;
+
+    public Vector2DoubleArrayUniform(int elementCount) {
+        super(new float[elementCount * COMPONENTS]);
+        this.elementCount = elementCount;
+
+        // Stored as floats for OpenGL
+        this.buffer = BufferUtils.newByteBuffer(elementCount * COMPONENTS * 4);
         this.floatBuffer = buffer.asFloatBuffer();
     }
 
-    @Override
-    protected void push(int handle, Vector2Double[] value) {
-        floatBuffer.clear();
-        for (Vector2Double vec : value) {
-            floatBuffer.put((float) vec.x);
-            floatBuffer.put((float) vec.y);
+    public void set(Vector2Double[] vectors) {
+        int idx = 0;
+        for (Vector2Double v : vectors) {
+            value[idx++] = (float) v.x;
+            value[idx++] = (float) v.y;
         }
-        floatBuffer.flip();
+    }
 
-        Gdx.gl.glUniform2fv(handle, value.length, floatBuffer);
+    @Override
+    protected void push(int handle, float[] data) {
+        Gdx.gl.glUniform2fv(handle, elementCount, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Vector2Double vec : value) {
-            buffer.putFloat((float) vec.x);
-            buffer.putFloat((float) vec.y);
-        }
-        buffer.flip();
+        floatBuffer.clear();
+        floatBuffer.put(value);
+        floatBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

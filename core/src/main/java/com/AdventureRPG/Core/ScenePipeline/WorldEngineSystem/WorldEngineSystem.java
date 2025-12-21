@@ -4,8 +4,8 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.math.Vector3;
 import com.AdventureRPG.core.engine.EngineSetting;
 import com.AdventureRPG.core.engine.SystemFrame;
-import com.AdventureRPG.core.util.Methematics.Extras.Coordinate2Int;
-import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Int;
+import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
+import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Int;
 import com.badlogic.gdx.Gdx;
 
 public class WorldEngineSystem extends SystemFrame {

@@ -1,47 +1,52 @@
 package com.AdventureRPG.core.shaders.uniforms.vectorarrays;
 
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Methematics.Vectors.Vector2Boolean;
+import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Boolean;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-public class Vector2BooleanArrayUniform extends UniformAttribute<Vector2Boolean[]> {
+public final class Vector2BooleanArrayUniform extends UniformAttribute<int[]> {
 
-    private ByteBuffer buffer;
-    private IntBuffer intBuffer;
+    private static final int COMPONENTS = 2;
 
-    public Vector2BooleanArrayUniform(int count) {
-        super(new Vector2Boolean[count]);
-        for (int i = 0; i < count; i++)
-            value[i] = new Vector2Boolean();
+    private final int elementCount;
 
-        this.buffer = BufferUtils.newByteBuffer(count * 8);
+    private final ByteBuffer buffer;
+    private final IntBuffer intBuffer;
+
+    public Vector2BooleanArrayUniform(int elementCount) {
+        super(new int[elementCount * COMPONENTS]);
+        this.elementCount = elementCount;
+
+        this.buffer = BufferUtils.newByteBuffer(elementCount * COMPONENTS * 4);
         this.intBuffer = buffer.asIntBuffer();
     }
 
-    @Override
-    protected void push(int handle, Vector2Boolean[] value) {
-        intBuffer.clear();
-        for (Vector2Boolean vec : value) {
-            intBuffer.put(vec.x ? 1 : 0);
-            intBuffer.put(vec.y ? 1 : 0);
+    public void set(Vector2Boolean[] vectors) {
+        int idx = 0;
+        for (Vector2Boolean v : vectors) {
+            value[idx++] = v.x ? 1 : 0;
+            value[idx++] = v.y ? 1 : 0;
         }
-        intBuffer.flip();
+    }
 
-        Gdx.gl.glUniform2iv(handle, value.length, intBuffer);
+    @Override
+    protected void push(int handle, int[] data) {
+        Gdx.gl.glUniform2iv(handle, elementCount, data, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        for (Vector2Boolean vec : value) {
-            buffer.putInt(vec.x ? 1 : 0);
-            buffer.putInt(vec.y ? 1 : 0);
-        }
-        buffer.flip();
+        intBuffer.clear();
+        intBuffer.put(value);
+        intBuffer.flip();
         return buffer;
+    }
+
+    public int elementCount() {
+        return elementCount;
     }
 }

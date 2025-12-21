@@ -3,7 +3,7 @@ package com.AdventureRPG.core.geometry.modelmanager;
 import com.AdventureRPG.core.engine.DataFrame;
 import com.AdventureRPG.core.engine.EngineSetting;
 import com.AdventureRPG.core.geometry.vaomanager.VAOHandle;
-import com.AdventureRPG.core.util.Methematics.Matrices.Matrix4;
+import com.AdventureRPG.core.util.Mathematics.Matrices.Matrix4;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
