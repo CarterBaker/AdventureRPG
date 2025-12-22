@@ -27,6 +27,6 @@ public class RenderPipeline extends PipelineFrame {
     // Render Pipeline \\
 
     public void draw() {
-
+        renderManager.draw();
     }
 }

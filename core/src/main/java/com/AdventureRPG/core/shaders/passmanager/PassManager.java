@@ -1,6 +1,7 @@
 package com.AdventureRPG.core.shaders.passmanager;
 
 import com.AdventureRPG.core.engine.ManagerFrame;
+import com.AdventureRPG.core.renderer.rendermanager.RenderManager;
 import com.AdventureRPG.core.shaders.processingpass.ProcessingPass;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -10,6 +11,7 @@ public class PassManager extends ManagerFrame {
 
     // Internal
     private InternalLoadManager internalLoadManager;
+    private RenderManager renderManager;
 
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> passName2PassID;
@@ -29,6 +31,13 @@ public class PassManager extends ManagerFrame {
     }
 
     @Override
+    protected void init() {
+
+        // Internal
+        this.renderManager = gameEngine.get(RenderManager.class);
+    }
+
+    @Override
     protected void awake() {
         compilePasses();
     }
@@ -36,6 +45,12 @@ public class PassManager extends ManagerFrame {
     @Override
     protected void freeMemory() {
         internalLoadManager = (InternalLoadManager) release(internalLoadManager);
+    }
+
+    // Render Management \\
+
+    public void drawPass(ProcessingPass pass, int depth) {
+        renderManager.drawPass(pass, depth);
     }
 
     // Pass Management \\

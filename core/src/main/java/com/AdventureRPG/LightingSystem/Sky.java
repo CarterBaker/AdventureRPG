@@ -13,7 +13,7 @@ public class Sky extends SystemFrame {
     // Shader
     private int skyPassID;
     private ProcessingPass skyPass;
-    private UBOHandle skyUBO;
+    private UBOHandle timeUBO;
 
     // Base \\
 
@@ -26,9 +26,14 @@ public class Sky extends SystemFrame {
         // Shader
         skyPassID = passmanager.getPassIDFromPassName("Sky");
         skyPass = passmanager.getPassFromPassID(skyPassID);
-        skyUBO = skyPass.material.getUBO("Sky");
+        timeUBO = skyPass.material.getUBO("TimeData");
+
+        // Render management
+        passmanager.drawPass(skyPass, -10);
     }
 
+    // TODO: I do not know why I decided to do this here. old code. needs refactor
+    // to more appropriate spot
     public void generateRandomOffsetFromDay(long day) {
 
         long mixed = day ^ System.currentTimeMillis();
@@ -43,7 +48,7 @@ public class Sky extends SystemFrame {
 
         float noise = (float) Math.max(0.001, normalized);
 
-        skyUBO.update("u_randomNoiseFromDay", noise);
+        timeUBO.update("u_randomNoiseFromDay", noise);
 
     }
 }
