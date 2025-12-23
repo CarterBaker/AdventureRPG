@@ -1,0 +1,4 @@
+{
+    "vert": "debug/Debug.vsh",
+    "frag": "debug/Debug.fsh"
+}

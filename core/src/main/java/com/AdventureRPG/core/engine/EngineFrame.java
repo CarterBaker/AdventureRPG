@@ -6,7 +6,6 @@ import java.util.List;
 
 import com.AdventureRPG.core.settings.Settings;
 import com.AdventureRPG.core.util.Exceptions.CoreException;
-import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
 
 public class EngineFrame extends ManagerFrame {
@@ -21,6 +20,10 @@ public class EngineFrame extends ManagerFrame {
 
     private List<SystemFrame> kernelTree = new ArrayList<>();
     private SystemFrame[] kernelArray = new SystemFrame[0];
+
+    protected float delta;
+    protected int width;
+    protected int height;
 
     // Base \\
 
@@ -303,6 +306,14 @@ public class EngineFrame extends ManagerFrame {
     // Accessible \\
 
     public float getDeltaTime() {
-        return Gdx.graphics.getDeltaTime();
+        return delta;
+    }
+
+    public int getScreenWidth() {
+        return width;
+    }
+
+    public int getScreenHeight() {
+        return height;
     }
 }

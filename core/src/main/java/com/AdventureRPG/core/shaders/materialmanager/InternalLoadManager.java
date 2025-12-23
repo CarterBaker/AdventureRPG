@@ -73,7 +73,7 @@ class InternalLoadManager extends ManagerFrame {
     private void buildMaterialFromFile(File file) {
 
         if (EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(file)))
-            compileMaterial(internalBuildSystem.buildMaterial(file, materialCount++));
+            compileMaterial(internalBuildSystem.buildMaterial(root, file, materialCount++));
     }
 
     private void compileMaterial(Material material) {

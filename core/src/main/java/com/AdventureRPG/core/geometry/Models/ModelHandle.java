@@ -6,12 +6,12 @@ import com.AdventureRPG.core.shaders.materials.Material;
 public class ModelHandle extends HandleFrame {
 
     // Internal
-    final int vao;
-    final int vertStride;
-    final int vbo;
-    final int vertCount;
-    final int ibo;
-    final int indexCount;
+    public final int vao;
+    public final int vertStride;
+    public final int vbo;
+    public final int vertCount;
+    public final int ibo;
+    public final int indexCount;
     public final Material material;
 
     public ModelHandle(

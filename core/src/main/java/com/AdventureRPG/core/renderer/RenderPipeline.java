@@ -2,20 +2,20 @@ package com.AdventureRPG.core.renderer;
 
 import com.AdventureRPG.core.engine.PipelineFrame;
 import com.AdventureRPG.core.renderer.camerasystem.CameraManager;
-import com.AdventureRPG.core.renderer.rendermanager.RenderManager;
+import com.AdventureRPG.core.renderer.rendersystem.RenderSystem;
 
 public class RenderPipeline extends PipelineFrame {
 
     // Render Pipeline
     private CameraManager cameraManager;
-    private RenderManager renderManager;
+    private RenderSystem renderSystem;
 
     @Override
     protected void create() {
 
         // Render Pipeline
         this.cameraManager = (CameraManager) register(new CameraManager());
-        this.renderManager = (RenderManager) register(new RenderManager());
+        this.renderSystem = (RenderSystem) register(new RenderSystem());
     }
 
     // Camera Manager \\
@@ -27,6 +27,6 @@ public class RenderPipeline extends PipelineFrame {
     // Render Pipeline \\
 
     public void draw() {
-        renderManager.draw();
+        renderSystem.draw();
     }
 }

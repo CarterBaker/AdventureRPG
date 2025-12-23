@@ -24,12 +24,16 @@ public class Sky extends SystemFrame {
         this.passmanager = gameEngine.get(PassManager.class);
 
         // Shader
-        skyPassID = passmanager.getPassIDFromPassName("Sky");
-        skyPass = passmanager.getPassFromPassID(skyPassID);
-        timeUBO = skyPass.material.getUBO("TimeData");
+        this.skyPassID = passmanager.getPassIDFromPassName("Sky");
+        this.skyPass = passmanager.getPassFromPassID(skyPassID);
+        this.timeUBO = skyPass.material.getUBO("TimeData");
 
         // Render management
-        passmanager.drawPass(skyPass, -10);
+        // passmanager.pushPass(skyPass, -10);
+
+        int debugID = passmanager.getPassIDFromPassName("Debug");
+        ProcessingPass debugPass = passmanager.getPassFromPassID(debugID);
+        passmanager.pushPass(debugPass, -10);
     }
 
     // TODO: I do not know why I decided to do this here. old code. needs refactor
@@ -49,6 +53,5 @@ public class Sky extends SystemFrame {
         float noise = (float) Math.max(0.001, normalized);
 
         timeUBO.update("u_randomNoiseFromDay", noise);
-
     }
 }

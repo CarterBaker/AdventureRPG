@@ -41,11 +41,8 @@ class InternalBuildSystem extends SystemFrame {
     ProcessingPass buildPass(File root, File file, int passID) {
 
         String passName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-
         JsonObject json = JsonUtility.loadJsonObject(file);
-        int materialID = getPassID(json);
-
-        Material material = materialManager.getMaterialFromMaterialID(materialID);
+        Material material = materialManager.getMaterialFromMaterialID(getPassID(json));
 
         return new ProcessingPass(
                 passName,

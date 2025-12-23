@@ -131,11 +131,17 @@ public class GameEngine extends EngineFrame implements Screen {
     @Override
     public void render(float delta) {
 
+        // Internal
+        this.delta = delta;
     }
 
     @Override
     public void resize(int width, int height) {
+
         renderPipeline.resize(width, height);
+
+        this.width = width;
+        this.height = height;
     }
 
     @Override

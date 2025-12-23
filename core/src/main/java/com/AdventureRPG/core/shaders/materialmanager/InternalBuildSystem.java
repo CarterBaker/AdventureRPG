@@ -36,9 +36,9 @@ class InternalBuildSystem extends SystemFrame {
 
     // Material Management \\
 
-    Material buildMaterial(File file, int materialID) {
+    Material buildMaterial(File root, File file, int materialID) {
 
-        String materialName = FileUtility.getFileName(file);
+        String materialName = FileUtility.getPathWithFileNameWithoutExtension(root, file); // Gets "fullscreen/Sky"
 
         JsonObject json = JsonUtility.loadJsonObject(file);
         int shaderID = getShaderID(json);

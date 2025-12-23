@@ -45,6 +45,7 @@ public class MaterialManager extends ManagerFrame {
     }
 
     void addMaterial(Material material) {
+        debug("Material: " + material.materialName + ", ID: " + material.materialID);
         materialName2MaterialID.put(material.materialName, material.materialID);
         materialID2Material.put(material.materialID, material);
     }
@@ -52,10 +53,12 @@ public class MaterialManager extends ManagerFrame {
     // Accessible \\
 
     public int getMaterialIDFromMaterialName(String materialName) {
+        debug("Getting ID for name: " + materialName + ", ID: " + materialName2MaterialID.getInt(materialName));
         return materialName2MaterialID.getInt(materialName);
     }
 
     public Material getMaterialFromMaterialID(int materialID) {
+        debug("Getting Material for ID: " + materialID);
         return materialID2Material.get(materialID);
     }
 }
