@@ -33,7 +33,7 @@ public class Sky extends SystemFrame {
 
         int debugID = passmanager.getPassIDFromPassName("Debug");
         ProcessingPass debugPass = passmanager.getPassFromPassID(debugID);
-        passmanager.pushPass(debugPass, -10);
+        passmanager.pushPass(debugPass, 8);
     }
 
     // TODO: I do not know why I decided to do this here. old code. needs refactor

@@ -8,24 +8,34 @@ import java.nio.ByteBuffer;
 
 public class SampleImage2DArrayUniform extends UniformAttribute<Integer> {
 
-    private ByteBuffer buffer;
+    // Internal
+    private final ByteBuffer buffer;
 
     public SampleImage2DArrayUniform() {
+
+        // Internal
         super(0);
-        this.buffer = BufferUtils.newByteBuffer(4); // 1 int * 4 bytes
+        this.buffer = BufferUtils.newByteBuffer(4);
     }
 
     @Override
     protected void push(int handle, Integer value) {
-        // Upload texture unit index (same as 2D)
         Gdx.gl.glUniform1i(handle, value);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         buffer.clear();
+
         buffer.putInt(value);
+
         buffer.flip();
         return buffer;
+    }
+
+    @Override
+    public void set(Integer value) {
+        this.value = value;
     }
 }

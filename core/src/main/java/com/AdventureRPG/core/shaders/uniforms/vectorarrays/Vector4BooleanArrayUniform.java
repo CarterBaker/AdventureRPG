@@ -10,29 +10,18 @@ import java.nio.IntBuffer;
 
 public final class Vector4BooleanArrayUniform extends UniformAttribute<int[]> {
 
-    private static final int COMPONENTS = 4;
-
+    // Internal
     private final int elementCount;
-
     private final ByteBuffer buffer;
     private final IntBuffer intBuffer;
 
     public Vector4BooleanArrayUniform(int elementCount) {
-        super(new int[elementCount * COMPONENTS]);
+
+        // Internal
+        super(new int[elementCount * 4]);
         this.elementCount = elementCount;
-
-        this.buffer = BufferUtils.newByteBuffer(elementCount * COMPONENTS * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 4 * 4);
         this.intBuffer = buffer.asIntBuffer();
-    }
-
-    public void set(Vector4Boolean[] vectors) {
-        int idx = 0;
-        for (Vector4Boolean v : vectors) {
-            value[idx++] = v.x ? 1 : 0;
-            value[idx++] = v.y ? 1 : 0;
-            value[idx++] = v.z ? 1 : 0;
-            value[idx++] = v.w ? 1 : 0;
-        }
     }
 
     @Override
@@ -42,10 +31,29 @@ public final class Vector4BooleanArrayUniform extends UniformAttribute<int[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         intBuffer.clear();
         intBuffer.put(value);
         intBuffer.flip();
+
         return buffer;
+    }
+
+    @Override
+    public void set(int[] value) {
+        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+    }
+
+    public void set(Vector4Boolean[] vectors) {
+
+        int idx = 0;
+
+        for (Vector4Boolean v : vectors) {
+            value[idx++] = v.x ? 1 : 0;
+            value[idx++] = v.y ? 1 : 0;
+            value[idx++] = v.z ? 1 : 0;
+            value[idx++] = v.w ? 1 : 0;
+        }
     }
 
     public int elementCount() {

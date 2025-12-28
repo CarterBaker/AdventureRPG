@@ -8,53 +8,106 @@ import com.badlogic.gdx.utils.BufferUtils;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-public final class Matrix4DoubleArrayUniform extends UniformAttribute<float[]> {
+public final class Matrix4DoubleArrayUniform extends UniformAttribute<Matrix4Double[]> {
 
+    // Internal
     private final int elementCount;
-    private final ByteBuffer buffer;
-    private final FloatBuffer floatBuffer;
+    private final ByteBuffer uboBuffer;
+    private final FloatBuffer uniformBuffer;
 
     public Matrix4DoubleArrayUniform(int elementCount) {
-        super(new float[elementCount * 16]);
-        this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 64);
-        this.floatBuffer = buffer.asFloatBuffer();
-    }
 
-    public void set(Matrix4Double[] matrices) {
-        for (int i = 0; i < elementCount; i++) {
-            int offset = i * 16;
-            Matrix4Double m = matrices[i];
-            value[offset] = (float) m.m00;
-            value[offset + 1] = (float) m.m10;
-            value[offset + 2] = (float) m.m20;
-            value[offset + 3] = (float) m.m30;
-            value[offset + 4] = (float) m.m01;
-            value[offset + 5] = (float) m.m11;
-            value[offset + 6] = (float) m.m21;
-            value[offset + 7] = (float) m.m31;
-            value[offset + 8] = (float) m.m02;
-            value[offset + 9] = (float) m.m12;
-            value[offset + 10] = (float) m.m22;
-            value[offset + 11] = (float) m.m32;
-            value[offset + 12] = (float) m.m03;
-            value[offset + 13] = (float) m.m13;
-            value[offset + 14] = (float) m.m23;
-            value[offset + 15] = (float) m.m33;
-        }
+        // Internal
+        super(new Matrix4Double[elementCount]);
+        this.elementCount = elementCount;
+        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 64);
+        this.uniformBuffer = uboBuffer.asFloatBuffer();
+
+        // Initialize array with Matrix4Double instances
+        for (int i = 0; i < elementCount; i++)
+            value[i] = new Matrix4Double();
     }
 
     @Override
-    protected void push(int handle, float[] data) {
-        Gdx.gl.glUniformMatrix4fv(handle, elementCount, false, data, 0);
+    protected void push(int handle, Matrix4Double[] matrices) {
+
+        uniformBuffer.clear();
+
+        for (int i = 0; i < elementCount; i++) {
+
+            Matrix4Double matrix = matrices[i];
+
+            // Column 0
+            uniformBuffer.put((float) matrix.val[0]); // m00
+            uniformBuffer.put((float) matrix.val[4]); // m10
+            uniformBuffer.put((float) matrix.val[8]); // m20
+            uniformBuffer.put((float) matrix.val[12]); // m30
+
+            // Column 1
+            uniformBuffer.put((float) matrix.val[1]); // m01
+            uniformBuffer.put((float) matrix.val[5]); // m11
+            uniformBuffer.put((float) matrix.val[9]); // m21
+            uniformBuffer.put((float) matrix.val[13]); // m31
+
+            // Column 2
+            uniformBuffer.put((float) matrix.val[2]); // m02
+            uniformBuffer.put((float) matrix.val[6]); // m12
+            uniformBuffer.put((float) matrix.val[10]); // m22
+            uniformBuffer.put((float) matrix.val[14]); // m32
+
+            // Column 3
+            uniformBuffer.put((float) matrix.val[3]); // m03
+            uniformBuffer.put((float) matrix.val[7]); // m13
+            uniformBuffer.put((float) matrix.val[11]); // m23
+            uniformBuffer.put((float) matrix.val[15]); // m33
+        }
+
+        uniformBuffer.flip();
+        Gdx.gl.glUniformMatrix4fv(handle, elementCount, false, uniformBuffer);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        floatBuffer.clear();
-        floatBuffer.put(value);
-        floatBuffer.flip();
-        return buffer;
+
+        uboBuffer.clear();
+
+        for (int i = 0; i < elementCount; i++) {
+
+            Matrix4Double matrix = value[i];
+
+            // Column 0
+            uboBuffer.putFloat((float) matrix.val[0]); // m00
+            uboBuffer.putFloat((float) matrix.val[4]); // m10
+            uboBuffer.putFloat((float) matrix.val[8]); // m20
+            uboBuffer.putFloat((float) matrix.val[12]); // m30
+
+            // Column 1
+            uboBuffer.putFloat((float) matrix.val[1]); // m01
+            uboBuffer.putFloat((float) matrix.val[5]); // m11
+            uboBuffer.putFloat((float) matrix.val[9]); // m21
+            uboBuffer.putFloat((float) matrix.val[13]); // m31
+
+            // Column 2
+            uboBuffer.putFloat((float) matrix.val[2]); // m02
+            uboBuffer.putFloat((float) matrix.val[6]); // m12
+            uboBuffer.putFloat((float) matrix.val[10]); // m22
+            uboBuffer.putFloat((float) matrix.val[14]); // m32
+
+            // Column 3
+            uboBuffer.putFloat((float) matrix.val[3]); // m03
+            uboBuffer.putFloat((float) matrix.val[7]); // m13
+            uboBuffer.putFloat((float) matrix.val[11]); // m23
+            uboBuffer.putFloat((float) matrix.val[15]); // m33
+        }
+
+        uboBuffer.flip();
+        return uboBuffer;
+    }
+
+    @Override
+    public void set(Matrix4Double[] matrices) {
+        for (int i = 0; i < elementCount; i++)
+            this.value[i].set(matrices[i]);
     }
 
     public int elementCount() {

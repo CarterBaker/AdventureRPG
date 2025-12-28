@@ -18,7 +18,14 @@ public abstract class UniformAttribute<T> {
         this.value = value;
     }
 
-    // Utility \\
+    // UBO Utility \\
+
+    public ByteBuffer getByteBuffer() {
+        throw new UnsupportedOperationException(
+                "getByteBuffer() not implemented for " + getClass().getSimpleName());
+    }
+
+    // Uniform Utility \\
 
     final void push(int handle) {
         push(handle, value);
@@ -26,24 +33,7 @@ public abstract class UniformAttribute<T> {
 
     protected abstract void push(int handle, T value);
 
-    // UBO Support \\
-
-    /**
-     * Write this uniform's data to a ByteBuffer for UBO upload.
-     * Default implementation throws - subclasses must override if used in UBOs.
-     */
-    public ByteBuffer getByteBuffer() {
-        throw new UnsupportedOperationException(
-                "getByteBuffer() not implemented for " + getClass().getSimpleName());
-    }
-
     // Accessible \\
 
-    public final T get() {
-        return value;
-    }
-
-    public final void set(T value) {
-        this.value = value;
-    }
+    public abstract void set(T value);
 }

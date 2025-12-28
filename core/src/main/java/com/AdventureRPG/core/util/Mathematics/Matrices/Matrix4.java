@@ -3,10 +3,7 @@ package com.AdventureRPG.core.util.Mathematics.Matrices;
 public class Matrix4 {
 
     // Data
-    public float m00, m01, m02, m03;
-    public float m10, m11, m12, m13;
-    public float m20, m21, m22, m23;
-    public float m30, m31, m32, m33;
+    public final float[] val = new float[16];
 
     // Constructors \\
 
@@ -15,26 +12,22 @@ public class Matrix4 {
             float m10, float m11, float m12, float m13,
             float m20, float m21, float m22, float m23,
             float m30, float m31, float m32, float m33) {
-
-        this.m00 = m00;
-        this.m01 = m01;
-        this.m02 = m02;
-        this.m03 = m03;
-
-        this.m10 = m10;
-        this.m11 = m11;
-        this.m12 = m12;
-        this.m13 = m13;
-
-        this.m20 = m20;
-        this.m21 = m21;
-        this.m22 = m22;
-        this.m23 = m23;
-
-        this.m30 = m30;
-        this.m31 = m31;
-        this.m32 = m32;
-        this.m33 = m33;
+        val[0] = m00;
+        val[1] = m10;
+        val[2] = m20;
+        val[3] = m30;
+        val[4] = m01;
+        val[5] = m11;
+        val[6] = m21;
+        val[7] = m31;
+        val[8] = m02;
+        val[9] = m12;
+        val[10] = m22;
+        val[11] = m32;
+        val[12] = m03;
+        val[13] = m13;
+        val[14] = m23;
+        val[15] = m33;
     }
 
     public Matrix4() {
@@ -52,21 +45,170 @@ public class Matrix4 {
     }
 
     public Matrix4(Matrix4 other) {
-        this(other.m00, other.m01, other.m02, other.m03,
-                other.m10, other.m11, other.m12, other.m13,
-                other.m20, other.m21, other.m22, other.m23,
-                other.m30, other.m31, other.m32, other.m33);
+        System.arraycopy(other.val, 0, val, 0, 16);
     }
 
     public Matrix4(float[] array) {
-        this(
-                array[0], array[1], array[2], array[3],
-                array[4], array[5], array[6], array[7],
-                array[8], array[9], array[10], array[11],
-                array[12], array[13], array[14], array[15]);
 
         if (array == null || array.length != 16) // TODO: Add my own error
             throw new IllegalArgumentException("Matrix4 array must have exactly 16 elements");
+
+        // Row-major order
+        val[0] = array[0]; // m00
+        val[1] = array[4]; // m10
+        val[2] = array[8]; // m20
+        val[3] = array[12]; // m30
+        val[4] = array[1]; // m01
+        val[5] = array[5]; // m11
+        val[6] = array[9]; // m21
+        val[7] = array[13]; // m31
+        val[8] = array[2]; // m02
+        val[9] = array[6]; // m12
+        val[10] = array[10]; // m22
+        val[11] = array[14]; // m32
+        val[12] = array[3]; // m03
+        val[13] = array[7]; // m13
+        val[14] = array[11]; // m23
+        val[15] = array[15]; // m33
+    }
+
+    // Accessors \\
+
+    public float getM00() {
+        return val[0];
+    }
+
+    public float getM10() {
+        return val[1];
+    }
+
+    public float getM20() {
+        return val[2];
+    }
+
+    public float getM30() {
+        return val[3];
+    }
+
+    public float getM01() {
+        return val[4];
+    }
+
+    public float getM11() {
+        return val[5];
+    }
+
+    public float getM21() {
+        return val[6];
+    }
+
+    public float getM31() {
+        return val[7];
+    }
+
+    public float getM02() {
+        return val[8];
+    }
+
+    public float getM12() {
+        return val[9];
+    }
+
+    public float getM22() {
+        return val[10];
+    }
+
+    public float getM32() {
+        return val[11];
+    }
+
+    public float getM03() {
+        return val[12];
+    }
+
+    public float getM13() {
+        return val[13];
+    }
+
+    public float getM23() {
+        return val[14];
+    }
+
+    public float getM33() {
+        return val[15];
+    }
+
+    public void setM00(float v) {
+        val[0] = v;
+    }
+
+    public void setM10(float v) {
+        val[1] = v;
+    }
+
+    public void setM20(float v) {
+        val[2] = v;
+    }
+
+    public void setM30(float v) {
+        val[3] = v;
+    }
+
+    public void setM01(float v) {
+        val[4] = v;
+    }
+
+    public void setM11(float v) {
+        val[5] = v;
+    }
+
+    public void setM21(float v) {
+        val[6] = v;
+    }
+
+    public void setM31(float v) {
+        val[7] = v;
+    }
+
+    public void setM02(float v) {
+        val[8] = v;
+    }
+
+    public void setM12(float v) {
+        val[9] = v;
+    }
+
+    public void setM22(float v) {
+        val[10] = v;
+    }
+
+    public void setM32(float v) {
+        val[11] = v;
+    }
+
+    public void setM03(float v) {
+        val[12] = v;
+    }
+
+    public void setM13(float v) {
+        val[13] = v;
+    }
+
+    public void setM23(float v) {
+        val[14] = v;
+    }
+
+    public void setM33(float v) {
+        val[15] = v;
+    }
+
+    // Conversion \\
+
+    public Matrix4 fromGDX(com.badlogic.gdx.math.Matrix4 other) {
+
+        System.arraycopy(other.val, 0, val, 0, 16);
+
+        return this;
     }
 
     // Set \\
@@ -77,25 +219,22 @@ public class Matrix4 {
             float m20, float m21, float m22, float m23,
             float m30, float m31, float m32, float m33) {
 
-        this.m00 = m00;
-        this.m01 = m01;
-        this.m02 = m02;
-        this.m03 = m03;
-
-        this.m10 = m10;
-        this.m11 = m11;
-        this.m12 = m12;
-        this.m13 = m13;
-
-        this.m20 = m20;
-        this.m21 = m21;
-        this.m22 = m22;
-        this.m23 = m23;
-
-        this.m30 = m30;
-        this.m31 = m31;
-        this.m32 = m32;
-        this.m33 = m33;
+        val[0] = m00;
+        val[1] = m10;
+        val[2] = m20;
+        val[3] = m30;
+        val[4] = m01;
+        val[5] = m11;
+        val[6] = m21;
+        val[7] = m31;
+        val[8] = m02;
+        val[9] = m12;
+        val[10] = m22;
+        val[11] = m32;
+        val[12] = m03;
+        val[13] = m13;
+        val[14] = m23;
+        val[15] = m33;
 
         return this;
     }
@@ -109,11 +248,10 @@ public class Matrix4 {
     }
 
     public Matrix4 set(Matrix4 other) {
-        return set(
-                other.m00, other.m01, other.m02, other.m03,
-                other.m10, other.m11, other.m12, other.m13,
-                other.m20, other.m21, other.m22, other.m23,
-                other.m30, other.m31, other.m32, other.m33);
+
+        System.arraycopy(other.val, 0, val, 0, 16);
+
+        return this;
     }
 
     // Addition \\
@@ -124,25 +262,22 @@ public class Matrix4 {
             float m20, float m21, float m22, float m23,
             float m30, float m31, float m32, float m33) {
 
-        this.m00 += m00;
-        this.m01 += m01;
-        this.m02 += m02;
-        this.m03 += m03;
-
-        this.m10 += m10;
-        this.m11 += m11;
-        this.m12 += m12;
-        this.m13 += m13;
-
-        this.m20 += m20;
-        this.m21 += m21;
-        this.m22 += m22;
-        this.m23 += m23;
-
-        this.m30 += m30;
-        this.m31 += m31;
-        this.m32 += m32;
-        this.m33 += m33;
+        val[0] += m00;
+        val[1] += m10;
+        val[2] += m20;
+        val[3] += m30;
+        val[4] += m01;
+        val[5] += m11;
+        val[6] += m21;
+        val[7] += m31;
+        val[8] += m02;
+        val[9] += m12;
+        val[10] += m22;
+        val[11] += m32;
+        val[12] += m03;
+        val[13] += m13;
+        val[14] += m23;
+        val[15] += m33;
 
         return this;
     }
@@ -157,10 +292,10 @@ public class Matrix4 {
 
     public Matrix4 add(Matrix4 other) {
         return add(
-                other.m00, other.m01, other.m02, other.m03,
-                other.m10, other.m11, other.m12, other.m13,
-                other.m20, other.m21, other.m22, other.m23,
-                other.m30, other.m31, other.m32, other.m33);
+                other.val[0], other.val[4], other.val[8], other.val[12],
+                other.val[1], other.val[5], other.val[9], other.val[13],
+                other.val[2], other.val[6], other.val[10], other.val[14],
+                other.val[3], other.val[7], other.val[11], other.val[15]);
     }
 
     // Subtraction \\
@@ -171,25 +306,22 @@ public class Matrix4 {
             float m20, float m21, float m22, float m23,
             float m30, float m31, float m32, float m33) {
 
-        this.m00 -= m00;
-        this.m01 -= m01;
-        this.m02 -= m02;
-        this.m03 -= m03;
-
-        this.m10 -= m10;
-        this.m11 -= m11;
-        this.m12 -= m12;
-        this.m13 -= m13;
-
-        this.m20 -= m20;
-        this.m21 -= m21;
-        this.m22 -= m22;
-        this.m23 -= m23;
-
-        this.m30 -= m30;
-        this.m31 -= m31;
-        this.m32 -= m32;
-        this.m33 -= m33;
+        val[0] -= m00;
+        val[1] -= m10;
+        val[2] -= m20;
+        val[3] -= m30;
+        val[4] -= m01;
+        val[5] -= m11;
+        val[6] -= m21;
+        val[7] -= m31;
+        val[8] -= m02;
+        val[9] -= m12;
+        val[10] -= m22;
+        val[11] -= m32;
+        val[12] -= m03;
+        val[13] -= m13;
+        val[14] -= m23;
+        val[15] -= m33;
 
         return this;
     }
@@ -204,111 +336,160 @@ public class Matrix4 {
 
     public Matrix4 subtract(Matrix4 other) {
         return subtract(
-                other.m00, other.m01, other.m02, other.m03,
-                other.m10, other.m11, other.m12, other.m13,
-                other.m20, other.m21, other.m22, other.m23,
-                other.m30, other.m31, other.m32, other.m33);
+                other.val[0], other.val[4], other.val[8], other.val[12],
+                other.val[1], other.val[5], other.val[9], other.val[13],
+                other.val[2], other.val[6], other.val[10], other.val[14],
+                other.val[3], other.val[7], other.val[11], other.val[15]);
     }
 
     // Multiplication \\
 
-    public Matrix4 multiply(Matrix4 other) {
+    public Matrix4 multiply(
+            float m00, float m01, float m02, float m03,
+            float m10, float m11, float m12, float m13,
+            float m20, float m21, float m22, float m23,
+            float m30, float m31, float m32, float m33) {
 
-        // Prevent self-multiply corruption
-        float a00 = m00, a01 = m01, a02 = m02, a03 = m03;
-        float a10 = m10, a11 = m11, a12 = m12, a13 = m13;
-        float a20 = m20, a21 = m21, a22 = m22, a23 = m23;
-        float a30 = m30, a31 = m31, a32 = m32, a33 = m33;
+        // Extract original values to prevent self-overwrite
+        float a00 = val[0], a10 = val[1], a20 = val[2], a30 = val[3];
+        float a01 = val[4], a11 = val[5], a21 = val[6], a31 = val[7];
+        float a02 = val[8], a12 = val[9], a22 = val[10], a32 = val[11];
+        float a03 = val[12], a13 = val[13], a23 = val[14], a33 = val[15];
 
-        float r00 = a00 * other.m00 + a01 * other.m10 + a02 * other.m20 + a03 * other.m30;
-        float r01 = a00 * other.m01 + a01 * other.m11 + a02 * other.m21 + a03 * other.m31;
-        float r02 = a00 * other.m02 + a01 * other.m12 + a02 * other.m22 + a03 * other.m32;
-        float r03 = a00 * other.m03 + a01 * other.m13 + a02 * other.m23 + a03 * other.m33;
+        float r00 = a00 * m00 + a01 * m10 + a02 * m20 + a03 * m30;
+        float r10 = a10 * m00 + a11 * m10 + a12 * m20 + a13 * m30;
+        float r20 = a20 * m00 + a21 * m10 + a22 * m20 + a23 * m30;
+        float r30 = a30 * m00 + a31 * m10 + a32 * m20 + a33 * m30;
 
-        float r10 = a10 * other.m00 + a11 * other.m10 + a12 * other.m20 + a13 * other.m30;
-        float r11 = a10 * other.m01 + a11 * other.m11 + a12 * other.m21 + a13 * other.m31;
-        float r12 = a10 * other.m02 + a11 * other.m12 + a12 * other.m22 + a13 * other.m32;
-        float r13 = a10 * other.m03 + a11 * other.m13 + a12 * other.m23 + a13 * other.m33;
+        float r01 = a00 * m01 + a01 * m11 + a02 * m21 + a03 * m31;
+        float r11 = a10 * m01 + a11 * m11 + a12 * m21 + a13 * m31;
+        float r21 = a20 * m01 + a21 * m11 + a22 * m21 + a23 * m31;
+        float r31 = a30 * m01 + a31 * m11 + a32 * m21 + a33 * m31;
 
-        float r20 = a20 * other.m00 + a21 * other.m10 + a22 * other.m20 + a23 * other.m30;
-        float r21 = a20 * other.m01 + a21 * other.m11 + a22 * other.m21 + a23 * other.m31;
-        float r22 = a20 * other.m02 + a21 * other.m12 + a22 * other.m22 + a23 * other.m32;
-        float r23 = a20 * other.m03 + a21 * other.m13 + a22 * other.m23 + a23 * other.m33;
+        float r02 = a00 * m02 + a01 * m12 + a02 * m22 + a03 * m32;
+        float r12 = a10 * m02 + a11 * m12 + a12 * m22 + a13 * m32;
+        float r22 = a20 * m02 + a21 * m12 + a22 * m22 + a23 * m32;
+        float r32 = a30 * m02 + a31 * m12 + a32 * m22 + a33 * m32;
 
-        float r30 = a30 * other.m00 + a31 * other.m10 + a32 * other.m20 + a33 * other.m30;
-        float r31 = a30 * other.m01 + a31 * other.m11 + a32 * other.m21 + a33 * other.m31;
-        float r32 = a30 * other.m02 + a31 * other.m12 + a32 * other.m22 + a33 * other.m32;
-        float r33 = a30 * other.m03 + a31 * other.m13 + a32 * other.m23 + a33 * other.m33;
+        float r03 = a00 * m03 + a01 * m13 + a02 * m23 + a03 * m33;
+        float r13 = a10 * m03 + a11 * m13 + a12 * m23 + a13 * m33;
+        float r23 = a20 * m03 + a21 * m13 + a22 * m23 + a23 * m33;
+        float r33 = a30 * m03 + a31 * m13 + a32 * m23 + a33 * m33;
 
-        m00 = r00;
-        m01 = r01;
-        m02 = r02;
-        m03 = r03;
-        m10 = r10;
-        m11 = r11;
-        m12 = r12;
-        m13 = r13;
-        m20 = r20;
-        m21 = r21;
-        m22 = r22;
-        m23 = r23;
-        m30 = r30;
-        m31 = r31;
-        m32 = r32;
-        m33 = r33;
+        val[0] = r00;
+        val[1] = r10;
+        val[2] = r20;
+        val[3] = r30;
+        val[4] = r01;
+        val[5] = r11;
+        val[6] = r21;
+        val[7] = r31;
+        val[8] = r02;
+        val[9] = r12;
+        val[10] = r22;
+        val[11] = r32;
+        val[12] = r03;
+        val[13] = r13;
+        val[14] = r23;
+        val[15] = r33;
 
         return this;
     }
 
-    // Scalar Multiplication \\
+    public Matrix4 multiply(float scalar) {
+        return multiply(
+                scalar, 0, 0, 0,
+                0, scalar, 0, 0,
+                0, 0, scalar, 0,
+                0, 0, 0, scalar);
+    }
 
-    public Matrix4 multiply(float s) {
-
-        m00 *= s;
-        m01 *= s;
-        m02 *= s;
-        m03 *= s;
-        m10 *= s;
-        m11 *= s;
-        m12 *= s;
-        m13 *= s;
-        m20 *= s;
-        m21 *= s;
-        m22 *= s;
-        m23 *= s;
-        m30 *= s;
-        m31 *= s;
-        m32 *= s;
-        m33 *= s;
-
-        return this;
+    public Matrix4 multiply(Matrix4 other) {
+        return multiply(
+                other.val[0], other.val[4], other.val[8], other.val[12],
+                other.val[1], other.val[5], other.val[9], other.val[13],
+                other.val[2], other.val[6], other.val[10], other.val[14],
+                other.val[3], other.val[7], other.val[11], other.val[15]);
     }
 
     // Division \\
 
-    public Matrix4 divide(Matrix4 other) {
+    public Matrix4 divide(
+            float m00, float m01, float m02, float m03,
+            float m10, float m11, float m12, float m13,
+            float m20, float m21, float m22, float m23,
+            float m30, float m31, float m32, float m33) {
 
-        Matrix4 inv = new Matrix4(other).inverse();
+        float b00 = m00 * m11 - m01 * m10;
+        float b01 = m00 * m12 - m02 * m10;
+        float b02 = m00 * m13 - m03 * m10;
+        float b03 = m01 * m12 - m02 * m11;
+        float b04 = m01 * m13 - m03 * m11;
+        float b05 = m02 * m13 - m03 * m12;
+        float b06 = m20 * m31 - m21 * m30;
+        float b07 = m20 * m32 - m22 * m30;
+        float b08 = m20 * m33 - m23 * m30;
+        float b09 = m21 * m32 - m22 * m31;
+        float b10 = m21 * m33 - m23 * m31;
+        float b11 = m22 * m33 - m23 * m32;
 
-        return multiply(inv);
+        float det = b00 * b11 - b01 * b10 + b02 * b09 +
+                b03 * b08 - b04 * b07 + b05 * b06;
+
+        if (det == 0) // TODO: Add my own error
+            throw new ArithmeticException("Matrix not invertible");
+
+        float invDet = 1.0f / det;
+
+        // Invert the inputs
+        float i00 = (m11 * b11 - m12 * b10 + m13 * b09) * invDet;
+        float i01 = (-m01 * b11 + m02 * b10 - m03 * b09) * invDet;
+        float i02 = (m31 * b05 - m32 * b04 + m33 * b03) * invDet;
+        float i03 = (-m21 * b05 + m22 * b04 - m23 * b03) * invDet;
+
+        float i10 = (-m10 * b11 + m12 * b08 - m13 * b07) * invDet;
+        float i11 = (m00 * b11 - m02 * b08 + m03 * b07) * invDet;
+        float i12 = (-m30 * b05 + m32 * b02 - m33 * b01) * invDet;
+        float i13 = (m20 * b05 - m22 * b02 + m23 * b01) * invDet;
+
+        float i20 = (m10 * b10 - m11 * b08 + m13 * b06) * invDet;
+        float i21 = (-m00 * b10 + m01 * b08 - m03 * b06) * invDet;
+        float i22 = (m30 * b04 - m31 * b02 + m33 * b00) * invDet;
+        float i23 = (-m20 * b04 + m21 * b02 - m23 * b00) * invDet;
+
+        float i30 = (-m10 * b09 + m11 * b07 - m12 * b06) * invDet;
+        float i31 = (m00 * b09 - m01 * b07 + m02 * b06) * invDet;
+        float i32 = (-m30 * b03 + m31 * b01 - m32 * b00) * invDet;
+        float i33 = (m20 * b03 - m21 * b01 + m22 * b00) * invDet;
+
+        // Multiply current matrix by the inverted values using master multiply
+        return multiply(i00, i01, i02, i03, i10, i11, i12, i13, i20, i21, i22, i23, i30, i31, i32, i33);
     }
 
     public Matrix4 divide(float scalar) {
 
-        if (scalar == 0) // TODO: Add my own error
+        if (scalar == 0)
             throw new ArithmeticException("Division by zero");
 
-        return multiply(1.0f / scalar);
+        return multiply(1.0f / scalar, 0, 0, 0, 0, 1.0f / scalar, 0, 0, 0, 0, 1.0f / scalar, 0, 0, 0, 0, 1.0f / scalar);
+    }
+
+    public Matrix4 divide(Matrix4 other) {
+        return divide(
+                other.val[0], other.val[4], other.val[8], other.val[12],
+                other.val[1], other.val[5], other.val[9], other.val[13],
+                other.val[2], other.val[6], other.val[10], other.val[14],
+                other.val[3], other.val[7], other.val[11], other.val[15]);
     }
 
     // Inversion \\
 
     public Matrix4 inverse() {
 
-        float a00 = m00, a01 = m01, a02 = m02, a03 = m03;
-        float a10 = m10, a11 = m11, a12 = m12, a13 = m13;
-        float a20 = m20, a21 = m21, a22 = m22, a23 = m23;
-        float a30 = m30, a31 = m31, a32 = m32, a33 = m33;
+        float a00 = val[0], a10 = val[1], a20 = val[2], a30 = val[3];
+        float a01 = val[4], a11 = val[5], a21 = val[6], a31 = val[7];
+        float a02 = val[8], a12 = val[9], a22 = val[10], a32 = val[11];
+        float a03 = val[12], a13 = val[13], a23 = val[14], a33 = val[15];
 
         float b00 = a00 * a11 - a01 * a10;
         float b01 = a00 * a12 - a02 * a10;
@@ -331,42 +512,22 @@ public class Matrix4 {
 
         float invDet = 1.0f / det;
 
-        float r00 = (a11 * b11 - a12 * b10 + a13 * b09) * invDet;
-        float r01 = (-a01 * b11 + a02 * b10 - a03 * b09) * invDet;
-        float r02 = (a31 * b05 - a32 * b04 + a33 * b03) * invDet;
-        float r03 = (-a21 * b05 + a22 * b04 - a23 * b03) * invDet;
-
-        float r10 = (-a10 * b11 + a12 * b08 - a13 * b07) * invDet;
-        float r11 = (a00 * b11 - a02 * b08 + a03 * b07) * invDet;
-        float r12 = (-a30 * b05 + a32 * b02 - a33 * b01) * invDet;
-        float r13 = (a20 * b05 - a22 * b02 + a23 * b01) * invDet;
-
-        float r20 = (a10 * b10 - a11 * b08 + a13 * b06) * invDet;
-        float r21 = (-a00 * b10 + a01 * b08 - a03 * b06) * invDet;
-        float r22 = (a30 * b04 - a31 * b02 + a33 * b00) * invDet;
-        float r23 = (-a20 * b04 + a21 * b02 - a23 * b00) * invDet;
-
-        float r30 = (-a10 * b09 + a11 * b07 - a12 * b06) * invDet;
-        float r31 = (a00 * b09 - a01 * b07 + a02 * b06) * invDet;
-        float r32 = (-a30 * b03 + a31 * b01 - a32 * b00) * invDet;
-        float r33 = (a20 * b03 - a21 * b01 + a22 * b00) * invDet;
-
-        m00 = r00;
-        m01 = r01;
-        m02 = r02;
-        m03 = r03;
-        m10 = r10;
-        m11 = r11;
-        m12 = r12;
-        m13 = r13;
-        m20 = r20;
-        m21 = r21;
-        m22 = r22;
-        m23 = r23;
-        m30 = r30;
-        m31 = r31;
-        m32 = r32;
-        m33 = r33;
+        val[0] = (a11 * b11 - a12 * b10 + a13 * b09) * invDet;
+        val[1] = (-a10 * b11 + a12 * b08 - a13 * b07) * invDet;
+        val[2] = (a10 * b10 - a11 * b08 + a13 * b06) * invDet;
+        val[3] = (-a10 * b09 + a11 * b07 - a12 * b06) * invDet;
+        val[4] = (-a01 * b11 + a02 * b10 - a03 * b09) * invDet;
+        val[5] = (a00 * b11 - a02 * b08 + a03 * b07) * invDet;
+        val[6] = (-a00 * b10 + a01 * b08 - a03 * b06) * invDet;
+        val[7] = (a00 * b09 - a01 * b07 + a02 * b06) * invDet;
+        val[8] = (a31 * b05 - a32 * b04 + a33 * b03) * invDet;
+        val[9] = (-a30 * b05 + a32 * b02 - a33 * b01) * invDet;
+        val[10] = (a30 * b04 - a31 * b02 + a33 * b00) * invDet;
+        val[11] = (-a30 * b03 + a31 * b01 - a32 * b00) * invDet;
+        val[12] = (-a21 * b05 + a22 * b04 - a23 * b03) * invDet;
+        val[13] = (a20 * b05 - a22 * b02 + a23 * b01) * invDet;
+        val[14] = (-a20 * b04 + a21 * b02 - a23 * b00) * invDet;
+        val[15] = (a20 * b03 - a21 * b01 + a22 * b00) * invDet;
 
         return this;
     }
@@ -374,49 +535,51 @@ public class Matrix4 {
     // Utility \\
 
     public boolean hasValues() {
-        return m00 != 0 || m01 != 0 || m02 != 0 || m03 != 0 ||
-                m10 != 0 || m11 != 0 || m12 != 0 || m13 != 0 ||
-                m20 != 0 || m21 != 0 || m22 != 0 || m23 != 0 ||
-                m30 != 0 || m31 != 0 || m32 != 0 || m33 != 0;
+        return val[0] != 0 || val[1] != 0 || val[2] != 0 || val[3] != 0 ||
+                val[4] != 0 || val[5] != 0 || val[6] != 0 || val[7] != 0 ||
+                val[8] != 0 || val[9] != 0 || val[10] != 0 || val[11] != 0 ||
+                val[12] != 0 || val[13] != 0 || val[14] != 0 || val[15] != 0;
     }
 
     // Java \\
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Matrix4) {
-            Matrix4 other = (Matrix4) obj;
-            return m00 == other.m00 && m01 == other.m01 && m02 == other.m02 && m03 == other.m03 &&
-                    m10 == other.m10 && m11 == other.m11 && m12 == other.m12 && m13 == other.m13 &&
-                    m20 == other.m20 && m21 == other.m21 && m22 == other.m22 && m23 == other.m23 &&
-                    m30 == other.m30 && m31 == other.m31 && m32 == other.m32 && m33 == other.m33;
-        }
+
+        if (obj instanceof Matrix4 other)
+            return val[0] == other.val[0] && val[1] == other.val[1] && val[2] == other.val[2] && val[3] == other.val[3]
+                    &&
+                    val[4] == other.val[4] && val[5] == other.val[5] && val[6] == other.val[6] && val[7] == other.val[7]
+                    &&
+                    val[8] == other.val[8] && val[9] == other.val[9] && val[10] == other.val[10]
+                    && val[11] == other.val[11] &&
+                    val[12] == other.val[12] && val[13] == other.val[13] && val[14] == other.val[14]
+                    && val[15] == other.val[15];
+
         return false;
     }
 
     @Override
     public int hashCode() {
+
         int r = 17;
 
-        r = 31 * r + Float.hashCode(m00);
-        r = 31 * r + Float.hashCode(m01);
-        r = 31 * r + Float.hashCode(m02);
-        r = 31 * r + Float.hashCode(m03);
-
-        r = 31 * r + Float.hashCode(m10);
-        r = 31 * r + Float.hashCode(m11);
-        r = 31 * r + Float.hashCode(m12);
-        r = 31 * r + Float.hashCode(m13);
-
-        r = 31 * r + Float.hashCode(m20);
-        r = 31 * r + Float.hashCode(m21);
-        r = 31 * r + Float.hashCode(m22);
-        r = 31 * r + Float.hashCode(m23);
-
-        r = 31 * r + Float.hashCode(m30);
-        r = 31 * r + Float.hashCode(m31);
-        r = 31 * r + Float.hashCode(m32);
-        r = 31 * r + Float.hashCode(m33);
+        r = 31 * r + Float.hashCode(val[0]);
+        r = 31 * r + Float.hashCode(val[1]);
+        r = 31 * r + Float.hashCode(val[2]);
+        r = 31 * r + Float.hashCode(val[3]);
+        r = 31 * r + Float.hashCode(val[4]);
+        r = 31 * r + Float.hashCode(val[5]);
+        r = 31 * r + Float.hashCode(val[6]);
+        r = 31 * r + Float.hashCode(val[7]);
+        r = 31 * r + Float.hashCode(val[8]);
+        r = 31 * r + Float.hashCode(val[9]);
+        r = 31 * r + Float.hashCode(val[10]);
+        r = 31 * r + Float.hashCode(val[11]);
+        r = 31 * r + Float.hashCode(val[12]);
+        r = 31 * r + Float.hashCode(val[13]);
+        r = 31 * r + Float.hashCode(val[14]);
+        r = 31 * r + Float.hashCode(val[15]);
 
         return r;
     }
@@ -424,10 +587,10 @@ public class Matrix4 {
     @Override
     public String toString() {
         return "Matrix4(" +
-                "[" + m00 + ", " + m01 + ", " + m02 + ", " + m03 + "], " +
-                "[" + m10 + ", " + m11 + ", " + m12 + ", " + m13 + "], " +
-                "[" + m20 + ", " + m21 + ", " + m22 + ", " + m23 + "], " +
-                "[" + m30 + ", " + m31 + ", " + m32 + ", " + m33 + "]" +
+                "[" + val[0] + ", " + val[4] + ", " + val[8] + ", " + val[12] + "], " +
+                "[" + val[1] + ", " + val[5] + ", " + val[9] + ", " + val[13] + "], " +
+                "[" + val[2] + ", " + val[6] + ", " + val[10] + ", " + val[14] + "], " +
+                "[" + val[3] + ", " + val[7] + ", " + val[11] + ", " + val[15] + "]" +
                 ")";
     }
 }

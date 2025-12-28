@@ -10,39 +10,18 @@ import java.nio.FloatBuffer;
 
 public final class Vector4ArrayUniform extends UniformAttribute<float[]> {
 
-    private static final int COMPONENTS = 4;
-
+    // Internal
     private final int elementCount;
-
     private final ByteBuffer buffer;
     private final FloatBuffer floatBuffer;
 
     public Vector4ArrayUniform(int elementCount) {
-        super(new float[elementCount * COMPONENTS]);
+
+        // Internal
+        super(new float[elementCount * 4]);
         this.elementCount = elementCount;
-
-        this.buffer = BufferUtils.newByteBuffer(elementCount * COMPONENTS * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 4 * 4);
         this.floatBuffer = buffer.asFloatBuffer();
-    }
-
-    public void set(Vector4[] vectors) {
-        int idx = 0;
-        for (Vector4 v : vectors) {
-            value[idx++] = v.x;
-            value[idx++] = v.y;
-            value[idx++] = v.z;
-            value[idx++] = v.w;
-        }
-    }
-
-    public void set(com.badlogic.gdx.math.Vector4[] vectors) {
-        int idx = 0;
-        for (com.badlogic.gdx.math.Vector4 v : vectors) {
-            value[idx++] = v.x;
-            value[idx++] = v.y;
-            value[idx++] = v.z;
-            value[idx++] = v.w;
-        }
     }
 
     @Override
@@ -52,10 +31,41 @@ public final class Vector4ArrayUniform extends UniformAttribute<float[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         floatBuffer.clear();
         floatBuffer.put(value);
         floatBuffer.flip();
+
         return buffer;
+    }
+
+    @Override
+    public void set(float[] value) {
+        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+    }
+
+    public void set(Vector4[] vectors) {
+
+        int idx = 0;
+
+        for (Vector4 v : vectors) {
+            value[idx++] = v.x;
+            value[idx++] = v.y;
+            value[idx++] = v.z;
+            value[idx++] = v.w;
+        }
+    }
+
+    public void set(com.badlogic.gdx.math.Vector4[] vectors) {
+
+        int idx = 0;
+
+        for (com.badlogic.gdx.math.Vector4 v : vectors) {
+            value[idx++] = v.x;
+            value[idx++] = v.y;
+            value[idx++] = v.z;
+            value[idx++] = v.w;
+        }
     }
 
     public int elementCount() {

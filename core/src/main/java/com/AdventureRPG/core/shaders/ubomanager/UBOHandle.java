@@ -53,7 +53,7 @@ public final class UBOHandle extends HandleFrame {
         // Upload to GPU at the correct offset
         GLSLUtility.updateUniformBuffer(
                 gpuHandle,
-                uniform.offset(),
+                uniform.offset,
                 uniform.attribute().getByteBuffer());
     }
 

@@ -27,6 +27,16 @@ public class Vector2 {
         this(other.x, other.y);
     }
 
+    // Conversion \\
+
+    public com.badlogic.gdx.math.Vector2 toGdx() {
+        return new com.badlogic.gdx.math.Vector2(x, y);
+    }
+
+    public Vector2 fromGDX(com.badlogic.gdx.math.Vector2 other) {
+        return set(other.x, other.y);
+    }
+
     // Set \\
 
     public Vector2 set(float x, float y) {

@@ -28,6 +28,16 @@ public class Vector3 {
         this(other.x, other.y, other.z);
     }
 
+    // Conversion \\
+
+    public com.badlogic.gdx.math.Vector3 toGdx() {
+        return new com.badlogic.gdx.math.Vector3(x, y, z);
+    }
+
+    public Vector3 fromGDX(com.badlogic.gdx.math.Vector3 other) {
+        return set(other.x, other.y, other.z);
+    }
+
     // Set \\
 
     public Vector3 set(float x, float y, float z) {

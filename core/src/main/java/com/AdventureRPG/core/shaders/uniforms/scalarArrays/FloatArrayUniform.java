@@ -5,25 +5,19 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 
 import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
 
 public final class FloatArrayUniform extends UniformAttribute<float[]> {
 
+    // Internal
     private final int elementCount;
-    private final ByteBuffer buffer;
-    private final FloatBuffer floatBuffer;
+    private final ByteBuffer uboBuffer;
 
     public FloatArrayUniform(int elementCount) {
+
+        // Internal
         super(new float[elementCount]);
         this.elementCount = elementCount;
-
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 4);
-        this.floatBuffer = buffer.asFloatBuffer();
-    }
-
-    public void set(Float[] values) {
-        for (int i = 0; i < elementCount; i++)
-            value[i] = values[i];
+        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 4);
     }
 
     @Override
@@ -33,10 +27,19 @@ public final class FloatArrayUniform extends UniformAttribute<float[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-        floatBuffer.clear();
-        floatBuffer.put(value);
-        floatBuffer.flip();
-        return buffer;
+
+        uboBuffer.clear();
+
+        for (int i = 0; i < elementCount; i++)
+            uboBuffer.putFloat(value[i]);
+
+        uboBuffer.flip();
+        return uboBuffer;
+    }
+
+    @Override
+    public void set(float[] values) {
+        System.arraycopy(values, 0, this.value, 0, elementCount);
     }
 
     public int elementCount() {

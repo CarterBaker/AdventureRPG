@@ -10,28 +10,18 @@ import java.nio.FloatBuffer;
 
 public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
 
-    private static final int COMPONENTS = 2;
-
+    // Internal
     private final int elementCount;
-
     private final ByteBuffer buffer;
     private final FloatBuffer floatBuffer;
 
     public Vector2DoubleArrayUniform(int elementCount) {
-        super(new float[elementCount * COMPONENTS]);
+
+        // Internal
+        super(new float[elementCount * 2]);
         this.elementCount = elementCount;
-
-        // Stored as floats for OpenGL
-        this.buffer = BufferUtils.newByteBuffer(elementCount * COMPONENTS * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 2 * 4);
         this.floatBuffer = buffer.asFloatBuffer();
-    }
-
-    public void set(Vector2Double[] vectors) {
-        int idx = 0;
-        for (Vector2Double v : vectors) {
-            value[idx++] = (float) v.x;
-            value[idx++] = (float) v.y;
-        }
     }
 
     @Override
@@ -41,10 +31,27 @@ public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         floatBuffer.clear();
         floatBuffer.put(value);
         floatBuffer.flip();
+
         return buffer;
+    }
+
+    @Override
+    public void set(float[] value) {
+        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+    }
+
+    public void set(Vector2Double[] vectors) {
+
+        int idx = 0;
+
+        for (Vector2Double v : vectors) {
+            value[idx++] = (float) v.x;
+            value[idx++] = (float) v.y;
+        }
     }
 
     public int elementCount() {

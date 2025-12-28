@@ -1,4 +1,4 @@
 {
-    "vert": "debug/Debug.vsh",
+    "vert": "util/ProcessingTriangle.vsh",
     "frag": "debug/Debug.fsh"
 }

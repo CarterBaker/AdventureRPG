@@ -8,9 +8,12 @@ import java.nio.ByteBuffer;
 
 public class IntegerUniform extends UniformAttribute<Integer> {
 
-    private ByteBuffer buffer;
+    // Internal
+    private final ByteBuffer buffer;
 
     public IntegerUniform() {
+
+        // Internal
         super(0);
         this.buffer = BufferUtils.newByteBuffer(4);
     }
@@ -22,9 +25,17 @@ public class IntegerUniform extends UniformAttribute<Integer> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         buffer.clear();
+
         buffer.putInt(value);
+
         buffer.flip();
         return buffer;
+    }
+
+    @Override
+    public void set(Integer value) {
+        this.value = value;
     }
 }

@@ -4,16 +4,18 @@ import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
 import com.AdventureRPG.core.util.Mathematics.Vectors.Vector3Double;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
-
 import java.nio.ByteBuffer;
 
 public class Vector3DoubleUniform extends UniformAttribute<Vector3Double> {
 
-    private ByteBuffer buffer;
+    // Internal
+    private final ByteBuffer buffer;
 
     public Vector3DoubleUniform() {
+
+        // Internal
         super(new Vector3Double());
-        this.buffer = BufferUtils.newByteBuffer(12); // 3 floats * 4 bytes
+        this.buffer = BufferUtils.newByteBuffer(16);
     }
 
     @Override
@@ -23,11 +25,20 @@ public class Vector3DoubleUniform extends UniformAttribute<Vector3Double> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         buffer.clear();
+
         buffer.putFloat((float) value.x);
         buffer.putFloat((float) value.y);
         buffer.putFloat((float) value.z);
+        buffer.putFloat(0f); // padding
+
         buffer.flip();
         return buffer;
+    }
+
+    @Override
+    public void set(Vector3Double value) {
+        this.value.set(value);
     }
 }

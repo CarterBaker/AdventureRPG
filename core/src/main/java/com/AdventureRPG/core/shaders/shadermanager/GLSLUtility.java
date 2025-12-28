@@ -179,4 +179,20 @@ class GLSLUtility {
             Gdx.gl30.glDeleteBuffers(1, buffer);
         }
     }
+
+    static void bindUniformBlock(
+            int programHandle,
+            String blockName,
+            int bindingPoint) {
+        int blockIndex = Gdx.gl30.glGetUniformBlockIndex(programHandle, blockName);
+
+        if (blockIndex == -1)
+            throw new GraphicException.ShaderProgramException(
+                    "Uniform block not found in shader program: " + blockName);
+
+        Gdx.gl30.glUniformBlockBinding(
+                programHandle,
+                blockIndex,
+                bindingPoint);
+    }
 }

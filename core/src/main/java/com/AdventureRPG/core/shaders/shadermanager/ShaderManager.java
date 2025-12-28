@@ -2,6 +2,8 @@ package com.AdventureRPG.core.shaders.shadermanager;
 
 import com.AdventureRPG.core.engine.ManagerFrame;
 import com.AdventureRPG.core.shaders.shaders.Shader;
+import com.AdventureRPG.core.shaders.ubomanager.UBOData;
+import com.AdventureRPG.core.shaders.ubomanager.UBOHandle;
 import com.AdventureRPG.core.util.Exceptions.GraphicException;
 
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
@@ -57,6 +59,15 @@ public class ShaderManager extends ManagerFrame {
         shaderName2ShaderID.put(shader.shaderName, shader.shaderID);
         shaderID2Shader.put(shader.shaderID, shader);
         shaderID2GPUHandle.put(shader.shaderID, shader.shaderHandle);
+    }
+
+    public void bindShaderToUBO(
+            Shader shader,
+            UBOHandle ubo) {
+        GLSLUtility.bindUniformBlock(
+                shader.shaderHandle,
+                ubo.bufferName,
+                ubo.gpuHandle);
     }
 
     // Disposal \\

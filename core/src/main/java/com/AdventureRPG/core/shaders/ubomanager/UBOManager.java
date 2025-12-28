@@ -94,7 +94,7 @@ public final class UBOManager extends ManagerFrame {
             // Create new uniform with same offset
             Uniform<?> clonedUniform = new Uniform<>(
                     -1, // No handle for UBO uniforms
-                    sourceUniform.offset(),
+                    sourceUniform.offset,
                     clonedAttribute);
 
             clone.addUniform(uniformName, clonedUniform);
@@ -116,7 +116,7 @@ public final class UBOManager extends ManagerFrame {
         int maxEnd = 0;
 
         for (Uniform<?> uniform : uniforms.values()) {
-            int end = uniform.offset() + getAttributeSize(uniform.attribute());
+            int end = uniform.offset + getAttributeSize(uniform.attribute());
             if (end > maxEnd)
                 maxEnd = end;
         }

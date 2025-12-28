@@ -10,35 +10,18 @@ import java.nio.FloatBuffer;
 
 public final class Vector2ArrayUniform extends UniformAttribute<float[]> {
 
-    private static final int COMPONENTS = 2;
-
+    // Internal
     private final int elementCount;
-
     private final ByteBuffer buffer;
     private final FloatBuffer floatBuffer;
 
     public Vector2ArrayUniform(int elementCount) {
-        super(new float[elementCount * COMPONENTS]);
+
+        // Internal
+        super(new float[elementCount * 2]);
         this.elementCount = elementCount;
-
-        this.buffer = BufferUtils.newByteBuffer(elementCount * COMPONENTS * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 2 * 4);
         this.floatBuffer = buffer.asFloatBuffer();
-    }
-
-    public void set(Vector2[] vectors) {
-        int idx = 0;
-        for (Vector2 v : vectors) {
-            value[idx++] = v.x;
-            value[idx++] = v.y;
-        }
-    }
-
-    public void set(com.badlogic.gdx.math.Vector2[] vectors) {
-        int idx = 0;
-        for (com.badlogic.gdx.math.Vector2 v : vectors) {
-            value[idx++] = v.x;
-            value[idx++] = v.y;
-        }
     }
 
     @Override
@@ -48,10 +31,37 @@ public final class Vector2ArrayUniform extends UniformAttribute<float[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         floatBuffer.clear();
         floatBuffer.put(value);
         floatBuffer.flip();
+
         return buffer;
+    }
+
+    @Override
+    public void set(float[] value) {
+        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+    }
+
+    public void set(Vector2[] vectors) {
+
+        int idx = 0;
+
+        for (Vector2 v : vectors) {
+            value[idx++] = v.x;
+            value[idx++] = v.y;
+        }
+    }
+
+    public void set(com.badlogic.gdx.math.Vector2[] vectors) {
+
+        int idx = 0;
+
+        for (com.badlogic.gdx.math.Vector2 v : vectors) {
+            value[idx++] = v.x;
+            value[idx++] = v.y;
+        }
     }
 
     public int elementCount() {

@@ -214,6 +214,7 @@ class InternalLoadManager extends ManagerFrame {
             Shader shader) {
 
         UBOHandle ubo = uboManager.buildBuffer(bufferData);
+        shaderManager.bindShaderToUBO(shader, ubo);
         shader.addBuffer(bufferData.blockName(), ubo);
     }
 

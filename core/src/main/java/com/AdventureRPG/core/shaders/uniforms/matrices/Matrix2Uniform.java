@@ -8,34 +8,60 @@ import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
 public class Matrix2Uniform extends UniformAttribute<Matrix2> {
-    private ByteBuffer buffer;
-    private FloatBuffer floatBuffer;
+
+    // Internal
+    private final ByteBuffer uboBuffer;
+    private final FloatBuffer uniformBuffer;
 
     public Matrix2Uniform() {
+
+        // Internal
         super(new Matrix2());
-        this.buffer = BufferUtils.newByteBuffer(16);
-        this.floatBuffer = buffer.asFloatBuffer();
+        this.uboBuffer = BufferUtils.newByteBuffer(32); // (std140): 2 columns * (vector4) 4 floats * 4 bytes = 32 bytes
+        this.uniformBuffer = uboBuffer.asFloatBuffer();
     }
 
     @Override
     protected void push(int handle, Matrix2 value) {
-        floatBuffer.clear();
-        floatBuffer.put(value.m00);
-        floatBuffer.put(value.m10);
-        floatBuffer.put(value.m01);
-        floatBuffer.put(value.m11);
-        floatBuffer.flip();
-        Gdx.gl.glUniformMatrix2fv(handle, 1, false, floatBuffer);
+
+        uniformBuffer.clear();
+
+        // Column 0
+        uniformBuffer.put(value.val[0]); // m00
+        uniformBuffer.put(value.val[2]); // m10
+
+        // Column 1
+        uniformBuffer.put(value.val[1]); // m01
+        uniformBuffer.put(value.val[3]); // m11
+
+        uniformBuffer.flip();
+        Gdx.gl.glUniformMatrix2fv(handle, 1, false, uniformBuffer);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        buffer.putFloat(value.m00);
-        buffer.putFloat(value.m10);
-        buffer.putFloat(value.m01);
-        buffer.putFloat(value.m11);
-        buffer.flip();
-        return buffer;
+
+        uboBuffer.clear();
+
+        // Column 0
+        uboBuffer.putFloat(value.val[0]); // m00
+        uboBuffer.putFloat(value.val[2]); // m10
+        uboBuffer.putFloat(0f); // padding
+        uboBuffer.putFloat(0f); // padding
+
+        // Column 1
+        uboBuffer.putFloat(value.val[1]); // m01
+        uboBuffer.putFloat(value.val[3]); // m11
+        uboBuffer.putFloat(0f); // padding
+        uboBuffer.putFloat(0f); // padding
+
+        uboBuffer.flip();
+        return uboBuffer;
     }
+
+    @Override
+    public void set(Matrix2 value) {
+        this.value.set(value);
+    }
+
 }

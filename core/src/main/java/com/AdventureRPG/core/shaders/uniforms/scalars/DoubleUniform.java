@@ -8,11 +8,14 @@ import java.nio.ByteBuffer;
 
 public class DoubleUniform extends UniformAttribute<Double> {
 
-    private ByteBuffer buffer;
+    // Internal
+    private final ByteBuffer buffer;
 
     public DoubleUniform() {
+
+        // Internal
         super(0.0);
-        this.buffer = BufferUtils.newByteBuffer(4); // 4 bytes (float), not 8
+        this.buffer = BufferUtils.newByteBuffer(4); // store as float for GPU
     }
 
     @Override
@@ -22,9 +25,17 @@ public class DoubleUniform extends UniformAttribute<Double> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         buffer.clear();
-        buffer.putFloat(value.floatValue()); // Convert to float for UBO
+
+        buffer.putFloat(value.floatValue()); // convert double → float
+
         buffer.flip();
         return buffer;
+    }
+
+    @Override
+    public void set(Double value) {
+        this.value = value;
     }
 }

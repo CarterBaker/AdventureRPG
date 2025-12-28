@@ -1,4 +1,4 @@
 {
-    "vert": "sky/Sky.vsh",
+    "vert": "util/ProcessingTriangle.vsh",
     "frag": "sky/Sky.fsh"
 }

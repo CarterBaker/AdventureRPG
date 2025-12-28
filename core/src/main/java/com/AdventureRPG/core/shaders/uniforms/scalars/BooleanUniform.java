@@ -8,9 +8,12 @@ import java.nio.ByteBuffer;
 
 public class BooleanUniform extends UniformAttribute<Boolean> {
 
-    private ByteBuffer buffer;
+    // Internal
+    private final ByteBuffer buffer;
 
     public BooleanUniform() {
+
+        // Internal
         super(false);
         this.buffer = BufferUtils.newByteBuffer(4);
     }
@@ -22,9 +25,17 @@ public class BooleanUniform extends UniformAttribute<Boolean> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         buffer.clear();
+
         buffer.putInt(value ? 1 : 0);
+
         buffer.flip();
         return buffer;
+    }
+
+    @Override
+    public void set(Boolean value) {
+        this.value = value;
     }
 }

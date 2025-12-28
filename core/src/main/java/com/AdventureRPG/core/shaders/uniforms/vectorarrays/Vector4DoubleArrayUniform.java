@@ -10,29 +10,18 @@ import java.nio.FloatBuffer;
 
 public final class Vector4DoubleArrayUniform extends UniformAttribute<float[]> {
 
-    private static final int COMPONENTS = 4;
-
+    // Internal
     private final int elementCount;
-
     private final ByteBuffer buffer;
     private final FloatBuffer floatBuffer;
 
     public Vector4DoubleArrayUniform(int elementCount) {
-        super(new float[elementCount * COMPONENTS]);
+
+        // Internal
+        super(new float[elementCount * 4]);
         this.elementCount = elementCount;
-
-        this.buffer = BufferUtils.newByteBuffer(elementCount * COMPONENTS * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 4 * 4);
         this.floatBuffer = buffer.asFloatBuffer();
-    }
-
-    public void set(Vector4Double[] vectors) {
-        int idx = 0;
-        for (Vector4Double v : vectors) {
-            value[idx++] = (float) v.x;
-            value[idx++] = (float) v.y;
-            value[idx++] = (float) v.z;
-            value[idx++] = (float) v.w;
-        }
     }
 
     @Override
@@ -42,10 +31,29 @@ public final class Vector4DoubleArrayUniform extends UniformAttribute<float[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         floatBuffer.clear();
         floatBuffer.put(value);
         floatBuffer.flip();
+
         return buffer;
+    }
+
+    @Override
+    public void set(float[] value) {
+        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+    }
+
+    public void set(Vector4Double[] vectors) {
+
+        int idx = 0;
+
+        for (Vector4Double v : vectors) {
+            value[idx++] = (float) v.x;
+            value[idx++] = (float) v.y;
+            value[idx++] = (float) v.z;
+            value[idx++] = (float) v.w;
+        }
     }
 
     public int elementCount() {

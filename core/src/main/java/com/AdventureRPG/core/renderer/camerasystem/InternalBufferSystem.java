@@ -25,6 +25,7 @@ class InternalBufferSystem extends SystemFrame {
     protected void update() {
 
         CameraInstance mainCam = this.cameraManager.mainCamera();
+
         if (mainCam == null)
             return;
 

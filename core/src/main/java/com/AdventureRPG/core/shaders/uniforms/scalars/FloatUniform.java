@@ -8,9 +8,12 @@ import java.nio.ByteBuffer;
 
 public class FloatUniform extends UniformAttribute<Float> {
 
-    private ByteBuffer buffer;
+    // Internal
+    private final ByteBuffer buffer;
 
     public FloatUniform() {
+
+        // Internal
         super(0f);
         this.buffer = BufferUtils.newByteBuffer(4);
     }
@@ -22,9 +25,17 @@ public class FloatUniform extends UniformAttribute<Float> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         buffer.clear();
+
         buffer.putFloat(value);
+
         buffer.flip();
         return buffer;
+    }
+
+    @Override
+    public void set(Float value) {
+        this.value = value;
     }
 }

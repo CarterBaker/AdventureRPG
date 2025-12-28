@@ -10,27 +10,18 @@ import java.nio.IntBuffer;
 
 public final class Vector2BooleanArrayUniform extends UniformAttribute<int[]> {
 
-    private static final int COMPONENTS = 2;
-
+    // Internal
     private final int elementCount;
-
     private final ByteBuffer buffer;
     private final IntBuffer intBuffer;
 
     public Vector2BooleanArrayUniform(int elementCount) {
-        super(new int[elementCount * COMPONENTS]);
+
+        // Internal
+        super(new int[elementCount * 2]);
         this.elementCount = elementCount;
-
-        this.buffer = BufferUtils.newByteBuffer(elementCount * COMPONENTS * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 2 * 4);
         this.intBuffer = buffer.asIntBuffer();
-    }
-
-    public void set(Vector2Boolean[] vectors) {
-        int idx = 0;
-        for (Vector2Boolean v : vectors) {
-            value[idx++] = v.x ? 1 : 0;
-            value[idx++] = v.y ? 1 : 0;
-        }
     }
 
     @Override
@@ -40,10 +31,27 @@ public final class Vector2BooleanArrayUniform extends UniformAttribute<int[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         intBuffer.clear();
         intBuffer.put(value);
         intBuffer.flip();
+
         return buffer;
+    }
+
+    @Override
+    public void set(int[] value) {
+        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+    }
+
+    public void set(Vector2Boolean[] vectors) {
+
+        int idx = 0;
+
+        for (Vector2Boolean v : vectors) {
+            value[idx++] = v.x ? 1 : 0;
+            value[idx++] = v.y ? 1 : 0;
+        }
     }
 
     public int elementCount() {

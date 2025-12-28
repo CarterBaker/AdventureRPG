@@ -3,44 +3,79 @@ package com.AdventureRPG.core.util.Mathematics.Matrices;
 public class Matrix2Double {
 
     // Data
-    public double m00, m01;
-    public double m10, m11;
+    public final double[] val = new double[4];
 
     // Constructors \\
 
     public Matrix2Double(
             double m00, double m01,
             double m10, double m11) {
-
-        this.m00 = m00;
-        this.m01 = m01;
-
-        this.m10 = m10;
-        this.m11 = m11;
+        val[0] = m00;
+        val[1] = m10;
+        val[2] = m01;
+        val[3] = m11;
     }
 
     public Matrix2Double() {
-        this(1, 0,
+        this(
+                1, 0,
                 0, 1);
     }
 
     public Matrix2Double(double scalar) {
-        this(scalar, 0,
+        this(
+                scalar, 0,
                 0, scalar);
     }
 
     public Matrix2Double(Matrix2Double other) {
-        this(other.m00, other.m01,
-                other.m10, other.m11);
+        System.arraycopy(other.val, 0, val, 0, 4);
     }
 
     public Matrix2Double(double[] array) {
-        this(
-                array[0], array[1],
-                array[2], array[3]);
 
-        if (array == null || array.length != 9) // TODO: Add my own error
-            throw new IllegalArgumentException("Matrix3 array must have exactly 9 elements");
+        if (array == null || array.length != 4) // TODO: Add my own error
+            throw new IllegalArgumentException("Matrix2Double array must have exactly 4 elements");
+
+        // Row-major order [m00, m01, m10, m11]
+        val[0] = array[0]; // m00
+        val[1] = array[2]; // m10
+        val[2] = array[1]; // m01
+        val[3] = array[3]; // m11
+    }
+
+    // Accessors \\
+
+    public double getM00() {
+        return val[0];
+    }
+
+    public double getM10() {
+        return val[1];
+    }
+
+    public double getM01() {
+        return val[2];
+    }
+
+    public double getM11() {
+        return val[3];
+    }
+
+    public void setM00(double value) {
+        val[0] = value;
+    }
+
+    public void setM10(double value) {
+        val[1] = value;
+    }
+
+    public void setM01(double value) {
+        val[2] = value;
+    }
+
+    public void setM11(double value) {
+        val[3] = value;
     }
 
     // Set \\
@@ -49,11 +84,10 @@ public class Matrix2Double {
             double m00, double m01,
             double m10, double m11) {
 
-        this.m00 = m00;
-        this.m01 = m01;
-
-        this.m10 = m10;
-        this.m11 = m11;
+        val[0] = m00;
+        val[1] = m10;
+        val[2] = m01;
+        val[3] = m11;
 
         return this;
     }
@@ -65,9 +99,10 @@ public class Matrix2Double {
     }
 
     public Matrix2Double set(Matrix2Double other) {
-        return set(
-                other.m00, other.m01,
-                other.m10, other.m11);
+
+        System.arraycopy(other.val, 0, val, 0, 4);
+
+        return this;
     }
 
     // Addition \\
@@ -76,11 +111,10 @@ public class Matrix2Double {
             double m00, double m01,
             double m10, double m11) {
 
-        this.m00 += m00;
-        this.m01 += m01;
-
-        this.m10 += m10;
-        this.m11 += m11;
+        val[0] += m00;
+        val[1] += m10;
+        val[2] += m01;
+        val[3] += m11;
 
         return this;
     }
@@ -93,8 +127,8 @@ public class Matrix2Double {
 
     public Matrix2Double add(Matrix2Double other) {
         return add(
-                other.m00, other.m01,
-                other.m10, other.m11);
+                other.val[0], other.val[2],
+                other.val[1], other.val[3]);
     }
 
     // Subtraction \\
@@ -103,11 +137,10 @@ public class Matrix2Double {
             double m00, double m01,
             double m10, double m11) {
 
-        this.m00 -= m00;
-        this.m01 -= m01;
-
-        this.m10 -= m10;
-        this.m11 -= m11;
+        val[0] -= m00;
+        val[1] -= m10;
+        val[2] -= m01;
+        val[3] -= m11;
 
         return this;
     }
@@ -120,84 +153,103 @@ public class Matrix2Double {
 
     public Matrix2Double subtract(Matrix2Double other) {
         return subtract(
-                other.m00, other.m01,
-                other.m10, other.m11);
+                other.val[0], other.val[2],
+                other.val[1], other.val[3]);
     }
 
     // Multiplication \\
 
-    public Matrix2Double multiply(Matrix2Double other) {
+    public Matrix2Double multiply(
+            double m00, double m01,
+            double m10, double m11) {
 
-        // Prevent self-multiply corruption
-        double a00 = m00, a01 = m01;
-        double a10 = m10, a11 = m11;
+        // Extract original values to prevent self-overwrite
+        double a00 = val[0], a10 = val[1];
+        double a01 = val[2], a11 = val[3];
 
-        double r00 = a00 * other.m00 + a01 * other.m10;
-        double r01 = a00 * other.m01 + a01 * other.m11;
+        double r00 = a00 * m00 + a01 * m10;
+        double r10 = a10 * m00 + a11 * m10;
+        double r01 = a00 * m01 + a01 * m11;
+        double r11 = a10 * m01 + a11 * m11;
 
-        double r10 = a10 * other.m00 + a11 * other.m10;
-        double r11 = a10 * other.m01 + a11 * other.m11;
-
-        m00 = r00;
-        m01 = r01;
-        m10 = r10;
-        m11 = r11;
+        val[0] = r00;
+        val[1] = r10;
+        val[2] = r01;
+        val[3] = r11;
 
         return this;
     }
 
-    // Scalar Multiplication \\
+    public Matrix2Double multiply(double scalar) {
+        return multiply(
+                scalar, 0,
+                0, scalar);
+    }
 
-    public Matrix2Double multiply(double s) {
-
-        m00 *= s;
-        m01 *= s;
-        m10 *= s;
-        m11 *= s;
-
-        return this;
+    public Matrix2Double multiply(Matrix2Double other) {
+        return multiply(
+                other.val[0], other.val[2],
+                other.val[1], other.val[3]);
     }
 
     // Division \\
 
-    public Matrix2Double divide(Matrix2Double other) {
+    public Matrix2Double divide(
+            double m00, double m01,
+            double m10, double m11) {
 
-        Matrix2Double inv = new Matrix2Double(other).inverse();
+        // Compute determinant
+        double det = m00 * m11 - m01 * m10;
 
-        return multiply(inv);
+        if (det == 0) // TODO: Add my own error
+            throw new ArithmeticException("Matrix not invertible");
+
+        double invDet = 1.0 / det;
+
+        // Invert the inputs
+        double i00 = m11 * invDet;
+        double i01 = -m01 * invDet;
+        double i10 = -m10 * invDet;
+        double i11 = m00 * invDet;
+
+        // Multiply current matrix by the inverted values using master multiply
+        return multiply(i00, i01, i10, i11);
     }
 
     public Matrix2Double divide(double scalar) {
 
-        if (scalar == 0) // TODO: Add my own error
+        if (scalar == 0)
             throw new ArithmeticException("Division by zero");
 
-        return multiply(1.0f / scalar);
+        return multiply(
+                1.0 / scalar, 0,
+                0, 1.0 / scalar);
+    }
+
+    public Matrix2Double divide(Matrix2Double other) {
+        return divide(
+                other.val[0], other.val[2],
+                other.val[1], other.val[3]);
     }
 
     // Inversion \\
 
     public Matrix2Double inverse() {
 
-        double a00 = m00, a01 = m01;
-        double a10 = m10, a11 = m11;
+        double a00 = val[0], a10 = val[1];
+        double a01 = val[2], a11 = val[3];
 
         double det = a00 * a11 - a01 * a10;
 
         if (det == 0) // TODO: Add my own error
             throw new ArithmeticException("Matrix not invertible");
 
-        double invDet = 1.0f / det;
+        double invDet = 1.0 / det;
 
-        double r00 = a11 * invDet;
-        double r01 = -a01 * invDet;
-        double r10 = -a10 * invDet;
-        double r11 = a00 * invDet;
-
-        m00 = r00;
-        m01 = r01;
-        m10 = r10;
-        m11 = r11;
+        val[0] = a11 * invDet;
+        val[1] = -a10 * invDet;
+        val[2] = -a01 * invDet;
+        val[3] = a00 * invDet;
 
         return this;
     }
@@ -205,31 +257,31 @@ public class Matrix2Double {
     // Utility \\
 
     public boolean hasValues() {
-        return m00 != 0 || m01 != 0 ||
-                m10 != 0 || m11 != 0;
+        return val[0] != 0 || val[1] != 0 ||
+                val[2] != 0 || val[3] != 0;
     }
 
     // Java \\
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Matrix2Double) {
-            Matrix2Double other = (Matrix2Double) obj;
-            return m00 == other.m00 && m01 == other.m01 &&
-                    m10 == other.m10 && m11 == other.m11;
-        }
+
+        if (obj instanceof Matrix2Double other)
+            return val[0] == other.val[0] && val[1] == other.val[1] &&
+                    val[2] == other.val[2] && val[3] == other.val[3];
+
         return false;
     }
 
     @Override
     public int hashCode() {
+
         int r = 17;
 
-        r = 31 * r + Double.hashCode(m00);
-        r = 31 * r + Double.hashCode(m01);
-
-        r = 31 * r + Double.hashCode(m10);
-        r = 31 * r + Double.hashCode(m11);
+        r = 31 * r + Double.hashCode(val[0]);
+        r = 31 * r + Double.hashCode(val[1]);
+        r = 31 * r + Double.hashCode(val[2]);
+        r = 31 * r + Double.hashCode(val[3]);
 
         return r;
     }
@@ -237,8 +289,8 @@ public class Matrix2Double {
     @Override
     public String toString() {
         return "Matrix2Double(" +
-                "[" + m00 + ", " + m01 + "], " +
-                "[" + m10 + ", " + m11 + "]" +
+                "[" + val[0] + ", " + val[2] + "], " +
+                "[" + val[1] + ", " + val[3] + "]" +
                 ")";
     }
 }

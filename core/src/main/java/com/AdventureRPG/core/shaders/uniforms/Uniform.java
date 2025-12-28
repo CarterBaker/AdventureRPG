@@ -32,10 +32,6 @@ public class Uniform<T> {
 
     // Accessible \\
 
-    public int offset() {
-        return offset;
-    }
-
     public UniformAttribute<T> attribute() {
         return attribute;
     }

@@ -4,14 +4,16 @@ import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
 import com.AdventureRPG.core.util.Mathematics.Vectors.Vector4Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
-
 import java.nio.ByteBuffer;
 
 public class Vector4IntUniform extends UniformAttribute<Vector4Int> {
 
-    private ByteBuffer buffer;
+    // Internal
+    private final ByteBuffer buffer;
 
     public Vector4IntUniform() {
+
+        // Internal
         super(new Vector4Int());
         this.buffer = BufferUtils.newByteBuffer(16); // 4 ints * 4 bytes
     }
@@ -23,12 +25,20 @@ public class Vector4IntUniform extends UniformAttribute<Vector4Int> {
 
     @Override
     public ByteBuffer getByteBuffer() {
+
         buffer.clear();
+
         buffer.putInt(value.x);
         buffer.putInt(value.y);
         buffer.putInt(value.z);
         buffer.putInt(value.w);
+
         buffer.flip();
         return buffer;
+    }
+
+    @Override
+    public void set(Vector4Int value) {
+        this.value.set(value);
     }
 }
