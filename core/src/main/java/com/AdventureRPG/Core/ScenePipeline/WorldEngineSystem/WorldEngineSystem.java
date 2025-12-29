@@ -2,13 +2,13 @@ package com.AdventureRPG.core.scenepipeline.worldenginesystem;
 
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.math.Vector3;
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
 import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Int;
 import com.badlogic.gdx.Gdx;
 
-public class WorldEngineSystem extends SystemFrame {
+public class WorldEngineSystem extends SystemPackage {
 
     // Root
     private final Pixmap world;

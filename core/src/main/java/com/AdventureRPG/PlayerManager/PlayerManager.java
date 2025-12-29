@@ -1,15 +1,15 @@
 package com.AdventureRPG.playermanager;
 
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
-import com.AdventureRPG.core.engine.ManagerFrame;
-import com.AdventureRPG.core.physics.input.InputSystem;
-import com.AdventureRPG.core.physics.movement.MovementManager;
-import com.AdventureRPG.core.renderer.camerasystem.CameraManager;
+import com.AdventureRPG.core.engine.ManagerPackage;
+import com.AdventureRPG.core.physicspipeline.input.InputSystem;
+import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
+import com.AdventureRPG.core.renderpipeline.camerasystem.CameraManager;
 import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Int;
 import com.badlogic.gdx.math.Vector3;
 
 // TODO: This needs to be abstracted to generic NPC like class
-public class PlayerManager extends ManagerFrame {
+public class PlayerManager extends ManagerPackage {
 
     // Player
     private StatisticsInstance statisticsInstance;
@@ -39,10 +39,10 @@ public class PlayerManager extends ManagerFrame {
     protected void init() {
 
         // Player
-        this.inputSystem = gameEngine.get(InputSystem.class);
-        this.cameraManager = gameEngine.get(CameraManager.class);
-        this.movementManager = gameEngine.get(MovementManager.class);
-        this.worldPipeline = gameEngine.get(WorldPipeline.class);
+        this.inputSystem = internal.get(InputSystem.class);
+        this.cameraManager = internal.get(CameraManager.class);
+        this.movementManager = internal.get(MovementManager.class);
+        this.worldPipeline = internal.get(WorldPipeline.class);
     }
 
     @Override

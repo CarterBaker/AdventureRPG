@@ -1,13 +1,13 @@
 package com.AdventureRPG.WorldPipeline;
 
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
 import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
 
-public class WorldReader extends SystemFrame {
+public class WorldReader extends SystemPackage {
 
     // Root
     private WorldEngineSystem worldEngineSystem;
@@ -25,8 +25,8 @@ public class WorldReader extends SystemFrame {
     public void init() {
 
         // Root
-        worldEngineSystem = gameEngine.get(WorldEngineSystem.class);
-        world = gameEngine.get(WorldEngineSystem.class).getWorld();
+        worldEngineSystem = internal.get(WorldEngineSystem.class);
+        world = internal.get(WorldEngineSystem.class).getWorld();
     }
 
     // World Reader \\

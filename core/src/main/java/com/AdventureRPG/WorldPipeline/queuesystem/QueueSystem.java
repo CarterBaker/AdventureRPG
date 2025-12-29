@@ -4,8 +4,8 @@ import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.WorldPipeline.WorldTick;
 import com.AdventureRPG.WorldPipeline.batchsystem.BatchSystem;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.ManagerFrame;
+import com.AdventureRPG.core.engine.ManagerPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
 import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
 import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Int;
@@ -14,7 +14,7 @@ import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
-public class QueueSystem extends ManagerFrame {
+public class QueueSystem extends ManagerPackage {
 
     // Root
     private WorldEngineSystem worldEngineSystem;
@@ -76,8 +76,8 @@ public class QueueSystem extends ManagerFrame {
     protected void init() {
 
         // Root
-        this.worldEngineSystem = gameEngine.get(WorldEngineSystem.class);
-        this.worldPipeline = gameEngine.get(WorldPipeline.class);
+        this.worldEngineSystem = internal.get(WorldEngineSystem.class);
+        this.worldPipeline = internal.get(WorldPipeline.class);
         this.worldTick = worldPipeline.get(WorldTick.class);
 
         // Chunk Tracking

@@ -2,9 +2,9 @@ package com.AdventureRPG.WorldPipeline.chunks;
 
 import com.AdventureRPG.WorldPipeline.subchunks.SubChunk;
 import com.AdventureRPG.core.engine.DataFrame;
-import com.AdventureRPG.core.geometry.modelmanager.MeshPacketData;
-import com.AdventureRPG.core.geometry.modelmanager.ModelManager;
-import com.AdventureRPG.core.geometry.vaomanager.VAOHandle;
+import com.AdventureRPG.core.geometrypipeline.modelmanager.MeshPacketData;
+import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
+import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 
 public final class ChunkMeshData extends DataFrame {
 

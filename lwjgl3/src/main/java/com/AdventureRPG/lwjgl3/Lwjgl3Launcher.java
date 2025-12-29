@@ -12,7 +12,7 @@ import com.google.gson.GsonBuilder;
 import com.AdventureRPG.WorldPipeline.biomes.Biome;
 import com.AdventureRPG.WorldPipeline.biomes.BiomeDeserializer;
 import com.AdventureRPG.core.engine.Main;
-import com.AdventureRPG.core.settings.*;
+import com.AdventureRPG.core.engine.settings.*;
 
 public class Lwjgl3Launcher {
     private static final String GAME_DIRECTORY = "AdventureRPG";

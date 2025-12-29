@@ -4,12 +4,12 @@ import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.WorldPipeline.WorldTick;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
 import com.AdventureRPG.WorldPipeline.queuesystem.QueueSystem;
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.ManagerFrame;
+import com.AdventureRPG.core.engine.ManagerPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-public class BatchSystem extends ManagerFrame {
+public class BatchSystem extends ManagerPackage {
 
     // Root
     private WorldPipeline worldPipeline;
@@ -49,7 +49,7 @@ public class BatchSystem extends ManagerFrame {
     protected void init() {
 
         // Root
-        this.worldPipeline = gameEngine.get(WorldPipeline.class);
+        this.worldPipeline = internal.get(WorldPipeline.class);
         this.worldTick = worldPipeline.get(WorldTick.class);
         this.queueSystem = worldPipeline.get(QueueSystem.class);
 

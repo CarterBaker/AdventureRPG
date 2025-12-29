@@ -3,8 +3,8 @@ package com.AdventureRPG.WorldPipeline.subchunks;
 import com.AdventureRPG.WorldPipeline.biomes.BiomeContainer;
 import com.AdventureRPG.WorldPipeline.blocks.BlockContainer;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.geometry.modelmanager.MeshPacketData;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
+import com.AdventureRPG.core.geometrypipeline.modelmanager.MeshPacketData;
 
 public final class SubChunk {
 

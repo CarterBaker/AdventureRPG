@@ -3,20 +3,20 @@ package com.AdventureRPG.core.util;
 import java.io.File;
 import java.nio.file.Path;
 
-import com.AdventureRPG.core.util.Exceptions.FileException;
+import com.AdventureRPG.core.engine.UtiityPackage;
 
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
-public class FileUtility {
+public class FileUtility extends UtiityPackage {
 
     // Verify integrity of root path
     public static void verifyDirectory(File directory, String message) {
 
         if (!directory.exists())
-            throw new FileException.FileNotFoundException(message);
+            throwException(message);
 
         if (!directory.isDirectory())
-            throw new FileException.InvalidDirectoryException(message);
+            throwException(message);
     }
 
     // Gets the file name without extension

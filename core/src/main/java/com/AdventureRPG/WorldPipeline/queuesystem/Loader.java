@@ -5,16 +5,16 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.SystemFrame;
-import com.AdventureRPG.core.geometry.modelmanager.ModelManager;
-import com.AdventureRPG.core.geometry.vaomanager.VAOManager;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
+import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
+import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOManager;
 import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
 import com.AdventureRPG.core.threadpipeline.ThreadSystem;
 import com.AdventureRPG.savemanager.ChunkData;
 import com.AdventureRPG.savemanager.SaveManager;
 
-public class Loader extends SystemFrame {
+public class Loader extends SystemPackage {
 
     // Root
     private ThreadSystem threadSystem;
@@ -69,12 +69,12 @@ public class Loader extends SystemFrame {
     protected void init() {
 
         // Root
-        this.threadSystem = gameEngine.get(ThreadSystem.class);
-        this.vaoManager = gameEngine.get(VAOManager.class);
-        this.modelManager = gameEngine.get(ModelManager.class);
-        this.chunkData = gameEngine.get(ChunkData.class);
-        this.worldEngineSystem = gameEngine.get(WorldEngineSystem.class);
-        this.worldPipeline = gameEngine.get(WorldPipeline.class);
+        this.threadSystem = internal.get(ThreadSystem.class);
+        this.vaoManager = internal.get(VAOManager.class);
+        this.modelManager = internal.get(ModelManager.class);
+        this.chunkData = internal.get(ChunkData.class);
+        this.worldEngineSystem = internal.get(WorldEngineSystem.class);
+        this.worldPipeline = internal.get(WorldPipeline.class);
     }
 
     @Override

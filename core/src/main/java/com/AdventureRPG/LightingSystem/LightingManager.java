@@ -1,8 +1,8 @@
 package com.AdventureRPG.lightingsystem;
 
-import com.AdventureRPG.core.engine.ManagerFrame;
+import com.AdventureRPG.core.engine.ManagerPackage;
 
-public class LightingManager extends ManagerFrame {
+public class LightingManager extends ManagerPackage {
 
     // Lighting
     public Sky sky;

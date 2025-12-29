@@ -3,13 +3,13 @@ package com.AdventureRPG.core.engine;
 import java.io.File;
 
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
-import com.AdventureRPG.core.geometry.GeometryPipeline;
-import com.AdventureRPG.core.physics.input.InputSystem;
-import com.AdventureRPG.core.physics.movement.MovementManager;
-import com.AdventureRPG.core.renderer.RenderPipeline;
+import com.AdventureRPG.core.engine.settings.Settings;
+import com.AdventureRPG.core.geometrypipeline.GeometryPipeline;
+import com.AdventureRPG.core.physicspipeline.input.InputSystem;
+import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
+import com.AdventureRPG.core.renderpipeline.RenderPipeline;
 import com.AdventureRPG.core.scenepipeline.ScenePipeline;
-import com.AdventureRPG.core.settings.Settings;
-import com.AdventureRPG.core.shaders.ShaderPipeline;
+import com.AdventureRPG.core.shaderpipeline.ShaderPipeline;
 import com.AdventureRPG.core.threadpipeline.ThreadSystem;
 import com.AdventureRPG.lightingsystem.LightingManager;
 import com.AdventureRPG.playermanager.PlayerManager;
@@ -21,9 +21,10 @@ import com.AdventureRPG.uisystem.UISystem;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
 
-public class GameEngine extends EngineFrame implements Screen {
+public class GameEngine extends EnginePackage {
 
     // Kernel
+    private WindowSystem windowSystem;
     private ThreadSystem threadSystem;
     private ScenePipeline scenePipeline;
     private InputSystem inputSystem;
@@ -61,6 +62,7 @@ public class GameEngine extends EngineFrame implements Screen {
     protected void bootKernel() {
 
         // Kernel
+        this.windowSystem = (WindowSystem) register(new WindowSystem());
         this.threadSystem = (ThreadSystem) register(new ThreadSystem());
         this.scenePipeline = (ScenePipeline) register(new ScenePipeline());
         this.inputSystem = (InputSystem) register(new InputSystem());
@@ -122,41 +124,9 @@ public class GameEngine extends EngineFrame implements Screen {
         this.renderPipeline.draw();
     }
 
-    // Screen \\
+    // Utility \\
 
-    @Override
-    public void show() {
-    }
-
-    @Override
-    public void render(float delta) {
-
-        // Internal
-        this.delta = delta;
-    }
-
-    @Override
-    public void resize(int width, int height) {
-
-        renderPipeline.resize(width, height);
-
-        this.width = width;
-        this.height = height;
-    }
-
-    @Override
-    public void pause() {
-    }
-
-    @Override
-    public void resume() {
-    }
-
-    @Override
-    public void hide() {
-    }
-
-    @Override
-    public void dispose() {
+    Screen setScreen() {
+        return windowSystem;
     }
 }

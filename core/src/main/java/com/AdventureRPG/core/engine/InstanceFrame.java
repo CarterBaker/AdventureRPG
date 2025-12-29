@@ -1,17 +1,17 @@
 package com.AdventureRPG.core.engine;
 
-public abstract class InstanceFrame extends MainFrame {
+public abstract class InstanceFrame extends EngineUtility {
 
-    protected EngineFrame gameEngine;
-    protected SystemFrame owner;
+    protected EnginePackage internal;
+    protected SystemPackage owner;
 
     // Root \\
 
     public final void create(
-            EngineFrame gameEngine,
-            SystemFrame owner) {
+            EnginePackage internal,
+            SystemPackage owner) {
 
-        this.gameEngine = gameEngine;
+        this.internal = internal;
         this.owner = owner;
     }
 
@@ -20,7 +20,7 @@ public abstract class InstanceFrame extends MainFrame {
     protected final InstanceFrame create(InstanceFrame instanceFrame) {
 
         instanceFrame.create(
-                gameEngine,
+                internal,
                 owner);
 
         return instanceFrame;

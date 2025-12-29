@@ -6,9 +6,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
 
-public class ThreadSystem extends SystemFrame {
+public class ThreadSystem extends SystemPackage {
 
     // Settings
     private int AI_AVAILABLE_THREADS;

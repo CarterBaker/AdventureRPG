@@ -1,11 +1,11 @@
 package com.AdventureRPG.lightingsystem;
 
-import com.AdventureRPG.core.engine.SystemFrame;
-import com.AdventureRPG.core.shaders.passmanager.PassManager;
-import com.AdventureRPG.core.shaders.processingpass.ProcessingPass;
-import com.AdventureRPG.core.shaders.ubomanager.UBOHandle;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.shaderpipeline.passmanager.PassManager;
+import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPass;
+import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
 
-public class Sky extends SystemFrame {
+public class Sky extends SystemPackage {
 
     // Root
     private PassManager passmanager;
@@ -21,7 +21,7 @@ public class Sky extends SystemFrame {
     protected void init() {
 
         // Root
-        this.passmanager = gameEngine.get(PassManager.class);
+        this.passmanager = internal.get(PassManager.class);
 
         // Shader
         this.skyPassID = passmanager.getPassIDFromPassName("Sky");

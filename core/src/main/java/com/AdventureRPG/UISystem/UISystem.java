@@ -4,11 +4,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import com.AdventureRPG.core.engine.SystemFrame;
-import com.AdventureRPG.core.physics.input.InputSystem;
-import com.AdventureRPG.core.util.Exceptions.UIException;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.physicspipeline.input.InputSystem;
 
-public class UISystem extends SystemFrame {
+public class UISystem extends SystemPackage {
 
     // Root
     private InputSystem inputSystem;
@@ -20,7 +19,7 @@ public class UISystem extends SystemFrame {
 
     @Override
     protected void init() {
-        inputSystem = gameEngine.get(InputSystem.class);
+        inputSystem = internal.get(InputSystem.class);
     }
 
     // UI System \\

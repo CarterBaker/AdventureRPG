@@ -1,8 +1,8 @@
 package com.AdventureRPG.WorldPipeline.biomes;
 
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
 
-public class BiomeSystem extends SystemFrame {
+public class BiomeSystem extends SystemPackage {
 
     // Biome System
     private Biome[] biomes;
@@ -13,7 +13,7 @@ public class BiomeSystem extends SystemFrame {
     protected void init() {
 
         // Biome System
-        this.biomes = Loader.loadBiomes(gameEngine.gson);
+        this.biomes = Loader.loadBiomes(internal.gson);
     }
 
     // Biome System \\

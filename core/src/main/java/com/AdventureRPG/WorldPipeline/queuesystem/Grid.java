@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
@@ -13,7 +13,7 @@ import com.badlogic.gdx.math.collision.BoundingBox;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
-public class Grid extends SystemFrame {
+public class Grid extends SystemPackage {
 
     // Settings
     private int maxRenderDistance;

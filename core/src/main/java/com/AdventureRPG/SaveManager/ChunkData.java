@@ -3,9 +3,9 @@ package com.AdventureRPG.savemanager;
 import java.io.File;
 
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
 
-public class ChunkData extends SystemFrame {
+public class ChunkData extends SystemPackage {
 
     // Settings
     private File path;
@@ -16,7 +16,7 @@ public class ChunkData extends SystemFrame {
     protected void init() {
 
         // Settings
-        this.path = gameEngine.path;
+        this.path = internal.path;
     }
 
     // Save System \\

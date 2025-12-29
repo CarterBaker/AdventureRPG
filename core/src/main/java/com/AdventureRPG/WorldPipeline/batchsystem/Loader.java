@@ -6,12 +6,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
 import com.AdventureRPG.WorldPipeline.queuesystem.QueueSystem;
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.threadpipeline.ThreadSystem;
 import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
 
-public class Loader extends SystemFrame {
+public class Loader extends SystemPackage {
 
     // Root
     private ThreadSystem threadSystem;
@@ -59,8 +59,8 @@ public class Loader extends SystemFrame {
     protected void init() {
 
         // Root
-        this.threadSystem = gameEngine.get(WorldPipeline.class).get(ThreadSystem.class);
-        this.batchSystem = gameEngine.get(WorldPipeline.class).get(QueueSystem.class).get(BatchSystem.class);
+        this.threadSystem = internal.get(WorldPipeline.class).get(ThreadSystem.class);
+        this.batchSystem = internal.get(WorldPipeline.class).get(QueueSystem.class).get(BatchSystem.class);
     }
 
     @Override

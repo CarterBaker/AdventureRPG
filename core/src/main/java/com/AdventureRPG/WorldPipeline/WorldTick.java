@@ -1,10 +1,10 @@
 package com.AdventureRPG.WorldPipeline;
 
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.badlogic.gdx.Gdx;
 
-public class WorldTick extends SystemFrame {
+public class WorldTick extends SystemPackage {
 
     // Settings
     private float WORLD_TICK;

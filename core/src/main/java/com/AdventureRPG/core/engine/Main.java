@@ -2,8 +2,7 @@ package com.AdventureRPG.core.engine;
 
 import java.io.File;
 
-import com.AdventureRPG.core.settings.Settings;
-import com.AdventureRPG.core.util.Exceptions.FileException;
+import com.AdventureRPG.core.engine.settings.Settings;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
@@ -16,7 +15,7 @@ public class Main extends Game {
     private final Gson gson;
 
     // Core
-    private GameEngine gameEngine;
+    private GameEngine internal;
 
     // fixed interval
     private float fixedInterval;
@@ -40,7 +39,7 @@ public class Main extends Game {
     public void create() {
 
         // Main
-        this.gameEngine = new GameEngine(
+        this.internal = new GameEngine(
                 settings,
                 this,
                 GAME_DIRECTORY,
@@ -56,6 +55,9 @@ public class Main extends Game {
 
     @Override
     public void render() {
+
+        setDeltaTime();
+
         super.render();
         stateSwitch();
     }
@@ -64,7 +66,7 @@ public class Main extends Game {
 
     private void stateSwitch() {
 
-        switch (gameEngine.getInternalState()) {
+        switch (internal.getInternalState()) {
 
             case CONSTRUCTOR -> {
                 bootCycle();
@@ -90,16 +92,15 @@ public class Main extends Game {
     private void bootCycle() {
 
         // Start the game
-        gameEngine.internalBootKernel();
-
-        setScreen(gameEngine);
+        internal.internalBootKernel();
+        setScreen(internal.setScreen());
 
         internalCreate();
         internalInit();
         internalAwake();
         internalFreeMemory();
 
-        gameEngine.setInternalState(InternalState.FIRST_FRAME);
+        internal.setInternalState(InternalState.FIRST_FRAME);
     }
 
     // Start Cycle \\
@@ -109,7 +110,7 @@ public class Main extends Game {
         internalStart();
 
         // TODO: I want the game to start on game and work dynamically.
-        gameEngine.setInternalState(InternalState.MENU_EXCLUSIVE);
+        internal.setInternalState(InternalState.MENU_EXCLUSIVE);
     }
 
     // Menu Cycle \\
@@ -151,49 +152,49 @@ public class Main extends Game {
     // Create \\
 
     private void internalCreate() {
-        gameEngine.internalCreate();
+        internal.internalCreate();
     }
 
     // Init \\
 
     private void internalInit() {
-        gameEngine.internalInit();
+        internal.internalInit();
     }
 
     // Awake \\
 
     private void internalAwake() {
-        gameEngine.internalAwake();
+        internal.internalAwake();
     }
 
     // Free Memory \\
 
     private void internalFreeMemory() {
-        gameEngine.internalFreeMemory();
+        internal.internalFreeMemory();
     }
 
     // Start \\
 
     private void internalStart() {
-        gameEngine.internalStart();
+        internal.internalStart();
     }
 
     // Menu Exclusive Update \\
 
     private void internalMenuExclusiveUpdate() {
-        gameEngine.internalMenuExclusiveUpdate();
+        internal.internalMenuExclusiveUpdate();
     }
 
     // Game Exclusive Update \\
 
     private void internalGameExclusiveUpdate() {
-        gameEngine.internalGameExclusiveUpdate();
+        internal.internalGameExclusiveUpdate();
     }
 
     // update \\
 
     private void internalUpdate() {
-        gameEngine.internalUpdate();
+        internal.internalUpdate();
     }
 
     // Fixed Update \\
@@ -201,7 +202,7 @@ public class Main extends Game {
     private void internalFixedUpdate() {
 
         // TODO: Micro optimiztion read and cache the delta and then send it through to
-        // the gameEngine per frame instead of reading it twice.
+        // the internal per frame instead of reading it twice.
         elapsedTime += Gdx.graphics.getDeltaTime();
         int steps = 0;
 
@@ -210,39 +211,39 @@ public class Main extends Game {
             elapsedTime -= fixedInterval;
             steps++;
 
-            gameEngine.internalFixedUpdate();
+            internal.internalFixedUpdate();
         }
     }
 
     // Late Update \\
 
     private void internalLateUpdate() {
-        gameEngine.internalLateUpdate();
+        internal.internalLateUpdate();
     }
 
     // Render \\
 
     private void internalRender() {
-        gameEngine.internalRender();
+        internal.internalRender();
     }
 
     // Draw \\
 
     private void internalDraw() {
-        gameEngine.internalDraw();
+        internal.internalDraw();
     }
 
     // Dispose \\
 
     private void internalDispose() {
-        gameEngine.internalDispose();
+        internal.internalDispose();
     }
 
     @Override
     public void dispose() {
 
         // Internal Engine
-        gameEngine.setInternalState(InternalState.EXIT);
+        internal.setInternalState(InternalState.EXIT);
 
         // Settings
         HandleGameWindow();
@@ -251,6 +252,8 @@ public class Main extends Game {
         // Game
         super.dispose();
     }
+
+    // Utility \\
 
     // Close the main window on game close
     private void HandleGameWindow() {
@@ -272,8 +275,14 @@ public class Main extends Game {
             boolean deleted = settingsFile.delete();
 
             if (!deleted)
-                throw new FileException.FileNotFoundException(
+                throw new RuntimeException(
                         "File: " + settingsFile.getName() + ", Failed to delete on game close");
         }
+    }
+
+    // Set the games delta time for ease of access across all systems
+    private void setDeltaTime() {
+        float frameDelta = Gdx.graphics.getDeltaTime();
+        internal.setDeltaTime(frameDelta);
     }
 }

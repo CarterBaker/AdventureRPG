@@ -1,9 +1,9 @@
 package com.AdventureRPG.WorldPipeline.util;
 
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
 
-public class PackedCoordinate3Int extends SystemFrame {
+public class PackedCoordinate3Int extends SystemPackage {
 
     // Settings
     private int BIOME_SIZE;

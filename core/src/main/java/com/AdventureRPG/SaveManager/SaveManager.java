@@ -2,10 +2,10 @@ package com.AdventureRPG.savemanager;
 
 import java.io.File;
 
-import com.AdventureRPG.core.engine.ManagerFrame;
+import com.AdventureRPG.core.engine.ManagerPackage;
 
 // TODO: Eventually the whole save system will need a refactor
-public class SaveManager extends ManagerFrame {
+public class SaveManager extends ManagerPackage {
 
     // Settings
     public File path;
@@ -28,7 +28,7 @@ public class SaveManager extends ManagerFrame {
     protected void init() {
 
         // Settings
-        this.path = gameEngine.path;
+        this.path = internal.path;
     }
 
     // Save System \\

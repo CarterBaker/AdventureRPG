@@ -3,14 +3,14 @@ package com.AdventureRPG.timesystem;
 import java.io.File;
 import java.time.Instant;
 
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.SystemFrame;
-import com.AdventureRPG.core.shaders.ubomanager.UBOHandle;
-import com.AdventureRPG.core.shaders.ubomanager.UBOManager;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
+import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
+import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOManager;
 import com.AdventureRPG.lightingsystem.LightingManager;
 import com.AdventureRPG.savemanager.UserData;
 
-public class TimeSystem extends SystemFrame {
+public class TimeSystem extends SystemPackage {
 
     // Internal
     private UBOManager uboManager;
@@ -83,7 +83,7 @@ public class TimeSystem extends SystemFrame {
 
         // Calendar
         this.calendarFile = new File(EngineSetting.CALENDAR_JSON_PATH);
-        this.calendar = Loader.load(calendarFile, gameEngine.gson);
+        this.calendar = Loader.load(calendarFile, internal.gson);
 
         this.totalMonths = calendar.getTotalMonths();
         this.daysPerMonth = calendar.getDaysPerMonth();
@@ -101,8 +101,8 @@ public class TimeSystem extends SystemFrame {
     protected void init() {
 
         // Internal
-        this.uboManager = gameEngine.get(UBOManager.class);
-        this.lightingManager = gameEngine.get(LightingManager.class);
+        this.uboManager = internal.get(UBOManager.class);
+        this.lightingManager = internal.get(LightingManager.class);
 
         // Buffer
         this.elapsedTime = 0;

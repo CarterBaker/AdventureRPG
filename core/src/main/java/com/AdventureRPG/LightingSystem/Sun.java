@@ -1,7 +1,7 @@
 package com.AdventureRPG.lightingsystem;
 
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
 
-public class Sun extends SystemFrame {
+public class Sun extends SystemPackage {
 
 }

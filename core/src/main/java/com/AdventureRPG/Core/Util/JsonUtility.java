@@ -3,12 +3,12 @@ package com.AdventureRPG.core.util;
 import java.io.File;
 import java.io.FileReader;
 
-import com.AdventureRPG.core.util.Exceptions.FileException;
+import com.AdventureRPG.core.engine.UtiityPackage;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-public class JsonUtility {
+public class JsonUtility extends UtiityPackage {
 
     public static JsonArray validateArray(JsonObject json, String key) {
         return validateArray(json, key, 0);
@@ -19,7 +19,7 @@ public class JsonUtility {
         JsonArray array = json.getAsJsonArray(key);
 
         if (array == null || (requiredSize > 0 && array.size() != requiredSize))
-            throw new FileException.FileNotFoundException(null); // TODO: Not the best error
+            throwException(); // TODO: Not the best error
 
         return array;
     }
@@ -31,7 +31,7 @@ public class JsonUtility {
         }
 
         catch (Exception e) {
-            throw new FileException.FileNotFoundException(null); // TODO: Not the best error
+            return throwException(); // TODO: Not the best error
         }
     }
 

@@ -5,13 +5,13 @@ import com.AdventureRPG.WorldPipeline.blocks.BlockSystem;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
 import com.AdventureRPG.WorldPipeline.subchunks.SubChunk;
 import com.AdventureRPG.WorldPipeline.util.PackedCoordinate3Int;
-import com.AdventureRPG.core.engine.EngineSetting;
-import com.AdventureRPG.core.engine.SystemFrame;
+import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.util.OpenSimplex2;
 import com.AdventureRPG.savemanager.SaveManager;
 import com.AdventureRPG.savemanager.UserData;
 
-public class WorldGenerator extends SystemFrame {
+public class WorldGenerator extends SystemPackage {
 
     // Root
     private UserData userData;
@@ -48,8 +48,8 @@ public class WorldGenerator extends SystemFrame {
     protected void init() {
 
         // Root
-        this.userData = gameEngine.get(SaveManager.class).get(UserData.class);
-        this.worldPipeline = gameEngine.get(WorldPipeline.class);
+        this.userData = internal.get(SaveManager.class).get(UserData.class);
+        this.worldPipeline = internal.get(WorldPipeline.class);
 
         // World Manager
         this.packedCoordinate3Int = worldPipeline.get(PackedCoordinate3Int.class);
