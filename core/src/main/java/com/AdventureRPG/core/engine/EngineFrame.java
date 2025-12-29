@@ -21,6 +21,8 @@ public class EngineFrame extends ManagerFrame {
     private List<SystemFrame> kernelTree = new ArrayList<>();
     private SystemFrame[] kernelArray = new SystemFrame[0];
 
+    private long frameCount;
+
     protected float delta;
     protected int width;
     protected int height;
@@ -278,6 +280,8 @@ public class EngineFrame extends ManagerFrame {
 
         this.setInternalProcess(InternalProcess.RENDER);
 
+        this.frameCount++;
+
         super.internalRender();
     }
 
@@ -304,6 +308,10 @@ public class EngineFrame extends ManagerFrame {
     }
 
     // Accessible \\
+
+    public long getFrameCount() {
+        return frameCount;
+    }
 
     public float getDeltaTime() {
         return delta;

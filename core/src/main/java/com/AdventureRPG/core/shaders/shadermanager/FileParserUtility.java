@@ -123,7 +123,7 @@ class FileParserUtility {
 
             int bindingStart = line.indexOf("binding");
             if (bindingStart == -1)
-                return 0;
+                return -1; // Changed from 0 to -1
 
             int equalSign = line.indexOf("=", bindingStart);
             int closeParen = line.indexOf(")", equalSign);
@@ -135,10 +135,10 @@ class FileParserUtility {
         }
 
         catch (Exception e) {
-            // Parsing failed, return default
+            // Parsing failed, return not found
         }
 
-        return 0;
+        return -1;
     }
 
     static int findLastTypeDelimiter(String declaration) {

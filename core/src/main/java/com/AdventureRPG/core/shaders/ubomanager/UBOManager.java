@@ -5,6 +5,7 @@ import com.AdventureRPG.core.shaders.uniforms.Uniform;
 import com.AdventureRPG.core.shaders.uniforms.UniformAttribute;
 import com.AdventureRPG.core.util.Exceptions.GraphicException;
 
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public final class UBOManager extends ManagerFrame {
@@ -12,12 +13,22 @@ public final class UBOManager extends ManagerFrame {
     // Internal
     private InternalBuildSystem internalBuildSystem;
 
+    private int nextAvailableBinding;
+    private IntOpenHashSet releasedBindings;
+
     // Retrieval Mapping
     private Object2ObjectOpenHashMap<String, UBOHandle> uboName2UBOHandle;
 
     @Override
     protected void create() {
+
+        // Internal
         this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
+
+        this.nextAvailableBinding = 0;
+        this.releasedBindings = new IntOpenHashSet();
+
+        // Retrieval Mapping
         this.uboName2UBOHandle = new Object2ObjectOpenHashMap<>();
     }
 
@@ -32,6 +43,7 @@ public final class UBOManager extends ManagerFrame {
             GLSLUtility.deleteUniformBuffer(handle.gpuHandle);
 
         uboName2UBOHandle.clear();
+        releasedBindings.clear();
     }
 
     // UBO Management \\
@@ -44,7 +56,6 @@ public final class UBOManager extends ManagerFrame {
         UBOHandle existing = uboName2UBOHandle.get(blockName);
 
         if (existing != null) {
-
             // Validate it matches the existing structure
             internalBuildSystem.validate(existing, data);
             return existing; // Reuse existing handle
@@ -53,6 +64,9 @@ public final class UBOManager extends ManagerFrame {
         // Build new handle from data
         UBOHandle handle = internalBuildSystem.build(data);
         uboName2UBOHandle.put(blockName, handle);
+
+        // Track the binding point
+        trackBindingPoint(handle.bindingPoint);
 
         return handle;
     }
@@ -70,15 +84,18 @@ public final class UBOManager extends ManagerFrame {
 
     public UBOHandle cloneUBOHandle(UBOHandle source) {
 
+        // Allocate a new binding point for the clone
+        int newBinding = allocateBindingPoint();
+
         // Create new GPU buffer
         int gpuHandle = GLSLUtility.createUniformBuffer();
 
-        // Create new handle with same structure
+        // Create new handle with same structure but different binding
         UBOHandle clone = new UBOHandle(
                 source.bufferName,
                 0,
                 gpuHandle,
-                source.bindingPoint);
+                newBinding);
 
         // Clone all uniforms with their attributes
         Object2ObjectOpenHashMap<String, Uniform<?>> sourceUniforms = source.getUniforms();
@@ -106,11 +123,52 @@ public final class UBOManager extends ManagerFrame {
         // Allocate GPU buffer with computed size
         GLSLUtility.allocateUniformBuffer(gpuHandle, totalSize);
 
-        // Bind to same binding point
-        GLSLUtility.bindUniformBufferBase(gpuHandle, source.bindingPoint);
+        // Bind to NEW binding point
+        GLSLUtility.bindUniformBufferBase(gpuHandle, newBinding);
 
         return clone;
     }
+
+    public void destroyUBO(UBOHandle handle) {
+
+        // Remove from tracking
+        uboName2UBOHandle.remove(handle.bufferName);
+
+        // Delete GPU resource
+        GLSLUtility.deleteUniformBuffer(handle.gpuHandle);
+
+        // Release the binding point for reuse
+        releaseBindingPoint(handle.bindingPoint);
+    }
+
+    // Binding Point Management \\
+
+    private void trackBindingPoint(int binding) {
+        // If this is the current "next" binding, advance the counter
+        if (binding == nextAvailableBinding) {
+            nextAvailableBinding++;
+        }
+        // Otherwise it was explicitly specified or reused - no action needed
+    }
+
+    private int allocateBindingPoint() {
+        // First, check if we have any released bindings to reuse
+        if (!releasedBindings.isEmpty()) {
+            int reusedBinding = releasedBindings.iterator().nextInt();
+            releasedBindings.remove(reusedBinding);
+            return reusedBinding;
+        }
+
+        // Otherwise, use the next available binding and increment
+        return nextAvailableBinding++;
+    }
+
+    private void releaseBindingPoint(int binding) {
+        // Add to the pool of reusable bindings
+        releasedBindings.add(binding);
+    }
+
+    // Utility \\
 
     private int calculateTotalSize(Object2ObjectOpenHashMap<String, Uniform<?>> uniforms) {
         int maxEnd = 0;

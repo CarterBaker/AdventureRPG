@@ -29,11 +29,7 @@ public class Sky extends SystemFrame {
         this.timeUBO = skyPass.material.getUBO("TimeData");
 
         // Render management
-        // passmanager.pushPass(skyPass, -10);
-
-        int debugID = passmanager.getPassIDFromPassName("Debug");
-        ProcessingPass debugPass = passmanager.getPassFromPassID(debugID);
-        passmanager.pushPass(debugPass, 8);
+        passmanager.pushPass(skyPass, -10);
     }
 
     // TODO: I do not know why I decided to do this here. old code. needs refactor

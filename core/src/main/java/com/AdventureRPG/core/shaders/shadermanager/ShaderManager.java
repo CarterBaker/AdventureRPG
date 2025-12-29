@@ -67,7 +67,7 @@ public class ShaderManager extends ManagerFrame {
         GLSLUtility.bindUniformBlock(
                 shader.shaderHandle,
                 ubo.bufferName,
-                ubo.gpuHandle);
+                ubo.bindingPoint);
     }
 
     // Disposal \\

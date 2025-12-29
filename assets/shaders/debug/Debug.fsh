@@ -1,13 +1,8 @@
 #version 150
-in vec3 v_dir;
+
+in vec2 v_uv;
 out vec4 fragColor;
 
 void main() {
-    // Normalize the direction to get consistent values
-    vec3 dir = normalize(v_dir);
-
-    // Map direction components from [-1, 1] to [0, 1] for color display
-    vec3 color = dir * 0.5 + 0.5;
-
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(v_uv, 0.0, 1.0);  // R = u, G = v, B = 0
 }

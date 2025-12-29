@@ -13,6 +13,7 @@ import com.AdventureRPG.core.util.Exceptions.FileException;
 import com.AdventureRPG.core.util.Exceptions.GraphicException;
 import com.google.gson.JsonObject;
 
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class InternalBuildSystem extends SystemFrame {
@@ -21,12 +22,20 @@ public class InternalBuildSystem extends SystemFrame {
     private InternalLoadManager internalLoadManager;
     private File root;
 
+    private int nextAutoBinding;
+    private IntOpenHashSet usedBindings;
+
     // Base \\
 
     @Override
     protected void init() {
+
+        // Internal
         this.internalLoadManager = gameEngine.get(InternalLoadManager.class);
         this.root = new File(EngineSetting.SHADER_PATH);
+
+        this.nextAutoBinding = 0;
+        this.usedBindings = new IntOpenHashSet();
     }
 
     // Compile \\
@@ -142,10 +151,10 @@ public class InternalBuildSystem extends SystemFrame {
 
         try {
 
-            int binding = 0;
+            int binding = -1; // -1 means "not specified"
 
-            // Extract binding if buffer exists
-            if (line.contains("buffer"))
+            // Extract binding if layout or buffer exists
+            if (line.contains("layout") || line.contains("buffer"))
                 binding = FileParserUtility.extractBufferBinding(line);
 
             // Extract block name (text between "uniform" and "{")
@@ -155,17 +164,35 @@ public class InternalBuildSystem extends SystemFrame {
             if (uniformIdx != -1 && braceIdx != -1) {
 
                 String blockName = line.substring(uniformIdx + 7, braceIdx).trim();
-                // Remove any buffer qualifiers that might be in the name
+                // Remove any buffer/layout qualifiers that might be in the name
                 blockName = blockName.replaceAll("\\(.*?\\)", "").trim();
+
+                // Auto-assign binding if not specified
+                if (binding == -1 || binding == 0) {
+                    binding = nextAutoBinding++;
+                    System.out.println("Auto-assigned binding " + binding + " to UBO '" + blockName + "'");
+                }
+
+                // Check for binding collision
+                if (usedBindings.contains(binding)) {
+                    throw new GraphicException.ShaderProgramException(
+                            "Binding point collision! UBO '" + blockName + "' attempted to use binding " + binding +
+                                    " which is already in use. Each UBO must have a unique binding point.");
+                }
+
+                // Mark this binding as used
+                usedBindings.add(binding);
 
                 return new UBOData(blockName, binding);
             }
 
         }
 
-        catch (Exception e) {
+        catch (GraphicException.ShaderProgramException e) {
+            throw e; // Re-throw our own exceptions
+        } catch (Exception e) {
             throw new GraphicException.ShaderProgramException(
-                    "Failed to parse uniform block: " + line);
+                    "Failed to parse uniform block: " + line, e);
         }
         return null;
     }
