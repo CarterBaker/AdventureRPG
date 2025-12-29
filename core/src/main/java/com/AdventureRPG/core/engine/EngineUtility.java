@@ -75,11 +75,11 @@ abstract class EngineUtility {
     public class InternalException extends RuntimeException {
 
         public InternalException(String message) {
-            super(message);
+            super("[" + systemName + "] " + message);
         }
 
         public InternalException(String message, Throwable cause) {
-            super(message, cause);
+            super("[" + systemName + "] " + message, cause);
         }
     }
 

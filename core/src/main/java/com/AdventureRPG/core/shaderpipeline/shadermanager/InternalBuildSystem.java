@@ -285,24 +285,7 @@ public class InternalBuildSystem extends SystemPackage {
     }
 
     private UniformType parseUniformType(String typeStr) {
-
-        try {
-            // Try standard GLSL types first
-            return UniformType.valueOf(typeStr.toUpperCase());
-        }
-
-        catch (InternalException e) {
-
-            // Fall back to custom parser (handles user types, structs, etc.)
-            try {
-                return UniformType.fromString(typeStr);
-            }
-
-            catch (Exception ex) {
-                // Unknown type - you could return a default or null
-                return null;
-            }
-        }
+        return UniformType.fromString(typeStr);
     }
 
     // Includes \\
