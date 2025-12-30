@@ -127,14 +127,16 @@ public class TimeSystem extends SystemPackage {
 
         this.updateFromSystemClock();
 
-        this.timeData.update("u_timeOfDay", (float) this.visualTimeOfDay);
-        this.timeData.update("u_rawTimeOfDay", (float) this.dayProgress);
-        this.timeData.update("u_time", this.elapsedTime);
-        this.timeData.update("u_randomNoiseFromDay", this.randomNoiseFromDay);
-        this.timeData.update("u_deltaTime", deltaTime);
-        this.timeData.update("u_currentHour", this.currentHour);
-        this.timeData.update("u_currentMinute", this.currentMinute);
-        this.timeData.update("u_currentDay", this.currentDayOfMonth);
+        this.timeData.updateUniform("u_timeOfDay", (float) this.visualTimeOfDay);
+        this.timeData.updateUniform("u_rawTimeOfDay", (float) this.dayProgress);
+        this.timeData.updateUniform("u_time", this.elapsedTime);
+        this.timeData.updateUniform("u_randomNoiseFromDay", this.randomNoiseFromDay);
+        this.timeData.updateUniform("u_deltaTime", deltaTime);
+        this.timeData.updateUniform("u_currentHour", this.currentHour);
+        this.timeData.updateUniform("u_currentMinute", this.currentMinute);
+        this.timeData.updateUniform("u_currentDay", this.currentDayOfMonth);
+
+        this.timeData.push();
     }
 
     // Save System \\

@@ -1,8 +1,8 @@
 package com.AdventureRPG.core.geometrypipeline.vaomanager;
 
-import com.AdventureRPG.core.engine.HandleFrame;
+import com.AdventureRPG.core.engine.HandlePackage;
 
-public class VAOHandle extends HandleFrame {
+public class VAOHandle extends HandlePackage {
 
     // Internal
     public final int attributeHandle;

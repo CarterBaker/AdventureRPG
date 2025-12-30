@@ -30,15 +30,17 @@ class InternalBufferSystem extends SystemPackage {
             return;
 
         // Update all camera uniforms
-        this.cameraDataUBO.update("u_projection", mainCam.getProjection());
-        this.cameraDataUBO.update("u_view", mainCam.getView());
-        this.cameraDataUBO.update("u_inverseProjection", mainCam.getInverseProjection());
-        this.cameraDataUBO.update("u_inverseView", mainCam.getInverseView());
-        this.cameraDataUBO.update("u_viewProjection", mainCam.getViewProjection());
-        this.cameraDataUBO.update("u_cameraPosition", mainCam.getPosition());
-        this.cameraDataUBO.update("u_cameraFOV", mainCam.getFOV());
-        this.cameraDataUBO.update("u_viewport", mainCam.getViewport());
-        this.cameraDataUBO.update("u_nearPlane", mainCam.getNearPlane());
-        this.cameraDataUBO.update("u_farPlane", mainCam.getFarPlane());
+        this.cameraDataUBO.updateUniform("u_projection", mainCam.getProjection());
+        this.cameraDataUBO.updateUniform("u_view", mainCam.getView());
+        this.cameraDataUBO.updateUniform("u_inverseProjection", mainCam.getInverseProjection());
+        this.cameraDataUBO.updateUniform("u_inverseView", mainCam.getInverseView());
+        this.cameraDataUBO.updateUniform("u_viewProjection", mainCam.getViewProjection());
+        this.cameraDataUBO.updateUniform("u_cameraPosition", mainCam.getPosition());
+        this.cameraDataUBO.updateUniform("u_cameraFOV", mainCam.getFOV());
+        this.cameraDataUBO.updateUniform("u_viewport", mainCam.getViewport());
+        this.cameraDataUBO.updateUniform("u_nearPlane", mainCam.getNearPlane());
+        this.cameraDataUBO.updateUniform("u_farPlane", mainCam.getFarPlane());
+
+        this.cameraDataUBO.push();
     }
 }

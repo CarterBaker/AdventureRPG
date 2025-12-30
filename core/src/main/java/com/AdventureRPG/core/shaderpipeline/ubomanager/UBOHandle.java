@@ -1,42 +1,59 @@
 package com.AdventureRPG.core.shaderpipeline.ubomanager;
 
-import com.AdventureRPG.core.engine.HandleFrame;
+import java.nio.ByteBuffer;
+
+import com.AdventureRPG.core.engine.HandlePackage;
 import com.AdventureRPG.core.shaderpipeline.uniforms.Uniform;
+import com.badlogic.gdx.utils.BufferUtils;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-public final class UBOHandle extends HandleFrame {
+public final class UBOHandle extends HandlePackage {
 
-    // Identification
+    // Internal
     public final String bufferName;
     public final int bufferID;
     public final int gpuHandle;
     public final int bindingPoint;
+    public final int totalSizeBytes;
 
-    // Uniform storage
+    private final ByteBuffer stagingBuffer;
     private final Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
 
     public UBOHandle(
             String bufferName,
             int bufferID,
             int gpuHandle,
-            int bindingPoint) {
+            int bindingPoint,
+            int totalSizeBytes) {
 
+        // Internal
         this.bufferName = bufferName;
         this.bufferID = bufferID;
         this.gpuHandle = gpuHandle;
         this.bindingPoint = bindingPoint;
+        this.totalSizeBytes = totalSizeBytes;
 
+        this.stagingBuffer = BufferUtils.newByteBuffer(totalSizeBytes);
         this.uniforms = new Object2ObjectOpenHashMap<>();
     }
 
-    // Build-time: add uniforms with offsets
+    // Utility \\
     public void addUniform(String uniformName, Uniform<?> uniform) {
         uniforms.put(uniformName, uniform);
     }
 
-    // Runtime: update a specific uniform
-    public void update(String uniformName, Object value) {
+    // Utility \\
+
+    public Uniform<?> getUniform(String uniformName) {
+        return uniforms.get(uniformName);
+    }
+
+    public Object2ObjectOpenHashMap<String, Uniform<?>> getUniforms() {
+        return uniforms;
+    }
+
+    public void updateUniform(String uniformName, Object value) {
 
         Uniform<?> uniform = uniforms.get(uniformName);
 
@@ -49,19 +66,16 @@ public final class UBOHandle extends HandleFrame {
         Uniform<Object> typedUniform = (Uniform<Object>) uniform;
         typedUniform.attribute().set(value);
 
-        // Upload to GPU at the correct offset
-        GLSLUtility.updateUniformBuffer(
-                gpuHandle,
-                uniform.offset,
-                uniform.attribute().getByteBuffer());
+        // Copy to staging buffer at correct offset
+        ByteBuffer uniformData = uniform.attribute().getByteBuffer();
+        uniformData.rewind(); // ensure position is at start
+
+        stagingBuffer.position(uniform.offset);
+        stagingBuffer.put(uniformData);
     }
 
-    // Utility
-    public Uniform<?> getUniform(String uniformName) {
-        return uniforms.get(uniformName);
-    }
-
-    public Object2ObjectOpenHashMap<String, Uniform<?>> getUniforms() {
-        return uniforms;
+    public void push() {
+        stagingBuffer.rewind(); // reset to start
+        GLSLUtility.updateUniformBuffer(gpuHandle, 0, stagingBuffer);
     }
 }

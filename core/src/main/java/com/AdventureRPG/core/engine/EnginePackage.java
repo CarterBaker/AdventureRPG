@@ -23,18 +23,16 @@ public class EnginePackage extends ManagerPackage {
     private long frameCount;
     private float delta;
 
-    // Base \\
-
     public EnginePackage(
             Settings setting,
             Main main,
             File path,
             Gson gson) {
 
-        // Root
+        // Internal
         this.settings = setting;
         this.internal = this;
-        this.localManager = this;
+        this.local = this;
         this.main = main;
         this.path = path;
         this.gson = gson;
@@ -54,7 +52,10 @@ public class EnginePackage extends ManagerPackage {
 
         if (!target.accessible)
             throwException(
-                    "Cannot switch to the target state: " + target.toString() + ", From the requested location");
+                    "Engine state transition denied.\n" +
+                            "Target state: " + target + "\n" +
+                            "Reason: target state is not accessible from the current engine context.\n" +
+                            "Current state: " + internalState);
 
         this.setInternalState(target);
     }
@@ -67,14 +68,19 @@ public class EnginePackage extends ManagerPackage {
         if (this.getInternalProcess() != InternalProcess.BOOT_KERNEL &&
                 this.getInternalProcess() != InternalProcess.CREATE)
             throwException(
-                    "Game engine error, a process was attempted to be called out of order");
+                    "Subsystem registration rejected.\n" +
+                            "Attempted during process: " + getInternalProcess() + "\n" +
+                            "Allowed processes: BOOT_KERNEL, CREATE\n" +
+                            "Rule: subsystems may only be registered during kernel boot or creation.");
 
         if (this.getInternalProcess() == InternalProcess.CREATE)
             return super.internalRegister(subSystem);
 
         if (this.kernelTree.contains(subSystem))
-            throwException("Subsystem: " + subSystem.getClass().getSimpleName()
-                    + ", Already exists within the engine frame. Only one instance of any given system can exist at a time");
+            throwException(
+                    "Duplicate subsystem detected.\n" +
+                            "Subsystem type: " + subSystem.getClass().getSimpleName() + "\n" +
+                            "Rule: only one instance of a given subsystem may exist within the engine kernel.");
 
         this.kernelTree.add(subSystem);
 
@@ -219,6 +225,16 @@ public class EnginePackage extends ManagerPackage {
         super.internalStart();
     }
 
+    // Update \\
+
+    @Override
+    void internalUpdate() {
+
+        this.setInternalProcess(InternalProcess.UPDATE);
+
+        super.internalUpdate();
+    }
+
     // Menu Exclusive Update \\
 
     @Override
@@ -237,16 +253,6 @@ public class EnginePackage extends ManagerPackage {
         this.setInternalProcess(InternalProcess.GAME_EXCLUSIVE);
 
         super.internalGameExclusiveUpdate();
-    }
-
-    // Update \\
-
-    @Override
-    void internalUpdate() {
-
-        this.setInternalProcess(InternalProcess.UPDATE);
-
-        super.internalUpdate();
     }
 
     // Fixed Update \\

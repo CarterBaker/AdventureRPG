@@ -2,15 +2,17 @@ package com.AdventureRPG.core.shaderpipeline.texturemanager;
 
 import java.awt.image.BufferedImage;
 
-import com.AdventureRPG.core.engine.InstanceFrame;
+import com.AdventureRPG.core.engine.InstancePackage;
 
-class TextureAtlasInstance extends InstanceFrame {
+public class TextureAtlasInstance extends InstancePackage {
 
     // Internal
-    final int atlasSize;
-    private final BufferedImage atlas;
+    private int atlasSize;
+    private BufferedImage atlas;
 
-    TextureAtlasInstance(
+    // Internal \\
+
+    void init(
             int atlasSize,
             BufferedImage atlas) {
 
@@ -19,7 +21,13 @@ class TextureAtlasInstance extends InstanceFrame {
         this.atlas = atlas;
     }
 
-    BufferedImage atlas() {
+    // Accessible \\
+
+    int getAtlasSize() {
+        return atlasSize;
+    }
+
+    BufferedImage getAtlas() {
         return atlas;
     }
 }

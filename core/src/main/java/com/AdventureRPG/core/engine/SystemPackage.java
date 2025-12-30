@@ -7,7 +7,7 @@ public abstract class SystemPackage extends EngineUtility {
     // Core
     protected Settings settings = null;
     protected EnginePackage internal = null;
-    protected ManagerPackage localManager = null;
+    protected ManagerPackage local = null;
 
     // Internal
     InternalProcess internalProcess = null;
@@ -17,12 +17,12 @@ public abstract class SystemPackage extends EngineUtility {
     final void register(
             Settings settings,
             EnginePackage internal,
-            ManagerPackage localManager) {
+            ManagerPackage local) {
 
         // Core
         this.settings = settings;
         this.internal = internal;
-        this.localManager = localManager;
+        this.local = local;
 
         // Internal
         this.internalProcess = InternalProcess.CREATE;
@@ -42,8 +42,8 @@ public abstract class SystemPackage extends EngineUtility {
 
         InternalProcess rootProcess = internal.getInternalProcess();
 
-        if (!target.isUpdateProcess() &&
-                (target.getOrder() < rootProcess.getOrder() || target.getOrder() < this.internalProcess.getOrder()))
+        if (!target.isUpdateProcess &&
+                (target.order < rootProcess.order || target.order < this.internalProcess.order))
             return false;
 
         this.setInternalProcess(target);
@@ -213,7 +213,7 @@ public abstract class SystemPackage extends EngineUtility {
     private void verifySystem() {
         if (settings == null ||
                 internal == null ||
-                localManager == null ||
+                local == null ||
                 internalProcess == null)
             throwException("System was created without proper registration");
     }
@@ -228,12 +228,26 @@ public abstract class SystemPackage extends EngineUtility {
         debug("[" + internalProcess.toString() + "] " + String.valueOf(input));
     }
 
-    protected final InstanceFrame create(InstanceFrame instanceFrame) {
+    protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
 
-        instanceFrame.create(
-                internal,
-                this);
+        InstancePackage.setupCreation(internal, this);
 
-        return instanceFrame;
+        if (!InstancePackage.class.isAssignableFrom(instanceClass))
+            throwException("Cannot create non-InstancePackage class: " + instanceClass.getName());
+
+        try {
+            return instanceClass.getDeclaredConstructor().newInstance();
+        }
+
+        catch (Exception e) {
+
+            throwException("Failed to create instance: " + e.getMessage());
+
+            return null;
+        }
+
+        finally {
+            InstancePackage.CREATION_CONTEXT.remove();
+        }
     }
 }

@@ -56,14 +56,14 @@ public class TextureManager extends ManagerPackage {
     }
 
     void addTextureTile(TextureTileInstance textureTileInstance, UVRect uvCoordinate) {
-        textureName2TileID.put(textureTileInstance.name, textureTileInstance.id);
-        tileID2textureArrayID.put(textureTileInstance.id, textureTileInstance.id);
-        tileID2textureArrayUV.put(textureTileInstance.id, uvCoordinate);
+        textureName2TileID.put(textureTileInstance.getName(), textureTileInstance.getID());
+        tileID2textureArrayID.put(textureTileInstance.getID(), textureTileInstance.getID());
+        tileID2textureArrayUV.put(textureTileInstance.getID(), uvCoordinate);
     }
 
     void addTextureArray(TextureArrayInstance textureArrayInstance, int gpuHandle) {
-        textureArrayName2GPUHandle.put(textureArrayInstance.name, gpuHandle);
-        textureArrayID2GPUHandle.put(textureArrayInstance.id, gpuHandle);
+        textureArrayName2GPUHandle.put(textureArrayInstance.getName(), gpuHandle);
+        textureArrayID2GPUHandle.put(textureArrayInstance.getID(), gpuHandle);
     }
 
     // Disposal \\

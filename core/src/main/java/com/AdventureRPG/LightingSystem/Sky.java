@@ -48,6 +48,8 @@ public class Sky extends SystemPackage {
 
         float noise = (float) Math.max(0.001, normalized);
 
-        timeUBO.update("u_randomNoiseFromDay", noise);
+        timeUBO.updateUniform("u_randomNoiseFromDay", noise);
+
+        timeUBO.push();
     }
 }

@@ -7,9 +7,6 @@ import com.badlogic.gdx.utils.Array;
 
 public class CameraManager extends ManagerPackage {
 
-    // Internal
-    private InternalBufferSystem internalBufferSystem;
-
     // Camera storage
     private final Array<CameraInstance> cameraInstances = new Array<>(false, 4);
     private CameraInstance mainCamera;
@@ -28,9 +25,8 @@ public class CameraManager extends ManagerPackage {
     public CameraInstance createCamera(float fov, float width, float height) {
 
         // Internal
-        this.internalBufferSystem = (InternalBufferSystem) register(new InternalBufferSystem());
-
-        CameraInstance createdCamera = new CameraInstance(fov, width, height);
+        CameraInstance createdCamera = create(CameraInstance.class);
+        createdCamera.init(fov, width, height);
 
         cameraInstances.add(createdCamera);
 

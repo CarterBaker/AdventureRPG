@@ -19,27 +19,26 @@ public final class InternalBuildSystem extends SystemPackage {
     private int nextID = 0;
 
     public UBOHandle build(UBOData data) {
-
         int id = nextID++;
-        int binding = data.binding();
-
-        // Create GPU buffer
+        int binding = data.ID;
         int gpuHandle = GLSLUtility.createUniformBuffer();
 
-        // Create handle
+        // Compute std140 buffer layout FIRST
+        int totalSize = computeStd140BufferSize(data.getUniforms()); // NEW: get size first
+
+        // Create handle WITH size
         UBOHandle handle = new UBOHandle(
-                data.blockName(),
+                data.name,
                 id,
                 gpuHandle,
-                binding);
+                binding,
+                totalSize); // NEW: pass size
 
-        // Compute std140 buffer and populate uniforms
-        int totalSize = computeStd140Buffer(handle, data.getUniforms());
+        // Populate uniforms (this adds them to the handle)
+        populateUniforms(handle, data.getUniforms());
 
         // Allocate GPU buffer with computed size
         GLSLUtility.allocateUniformBuffer(gpuHandle, totalSize);
-
-        // Bind to binding point
         GLSLUtility.bindUniformBufferBase(gpuHandle, binding);
 
         return handle;
@@ -48,10 +47,10 @@ public final class InternalBuildSystem extends SystemPackage {
     public void validate(UBOHandle existing, UBOData newData) {
 
         // Validate binding matches
-        if (existing.bindingPoint != newData.binding()) {
+        if (existing.bindingPoint != newData.ID) {
             throwException(
-                    "UBO '" + newData.blockName() + "' has conflicting bindings: " +
-                            "existing=" + existing.bindingPoint + ", new=" + newData.binding() +
+                    "UBO '" + newData.name + "' has conflicting bindings: " +
+                            "existing=" + existing.bindingPoint + ", new=" + newData.ID +
                             ". All declarations of this uniform block must use the same binding point.");
         }
 
@@ -61,7 +60,7 @@ public final class InternalBuildSystem extends SystemPackage {
 
         if (newUniforms.size() != existingUniforms.size()) {
             throwException(
-                    "UBO '" + newData.blockName() + "' has conflicting structure: " +
+                    "UBO '" + newData.name + "' has conflicting structure: " +
                             "different number of uniforms (" + existingUniforms.size() +
                             " vs " + newUniforms.size() + "). " +
                             "Use an #include file to ensure consistency across shaders.");
@@ -69,49 +68,49 @@ public final class InternalBuildSystem extends SystemPackage {
 
         // Validate each uniform matches
         for (UniformData uniformData : newUniforms) {
-            Uniform<?> existingUniform = existingUniforms.get(uniformData.uniformName());
+            Uniform<?> existingUniform = existingUniforms.get(uniformData.name);
 
             if (existingUniform == null) {
                 throwException(
-                        "UBO '" + newData.blockName() + "' has conflicting structure: " +
-                                "uniform '" + uniformData.uniformName() + "' not found in existing definition. " +
+                        "UBO '" + newData.name + "' has conflicting structure: " +
+                                "uniform '" + uniformData.name + "' not found in existing definition. " +
                                 "Use an #include file to ensure consistency across shaders.");
             }
         }
     }
 
-    private int computeStd140Buffer(
-            UBOHandle handle,
-            ObjectArrayList<UniformData> uniformsData) {
-
+    // NEW: Calculate size only (no uniform creation)
+    private int computeStd140BufferSize(ObjectArrayList<UniformData> uniformsData) {
         int currentOffset = 0;
 
         for (UniformData uniformData : uniformsData) {
-
             int alignment = getStd140Alignment(uniformData);
             int size = getStd140Size(uniformData);
 
-            // Align current offset
             currentOffset = alignOffset(currentOffset, alignment);
-
-            // Create uniform attribute
-            UniformAttribute<?> attribute = createUniformAttribute(uniformData);
-
-            // Create uniform with offset (no handle needed for UBO uniforms)
-            Uniform<?> uniform = new Uniform<>(
-                    -1, // No handle for UBO uniforms
-                    currentOffset,
-                    attribute);
-
-            // Add to handle
-            handle.addUniform(uniformData.uniformName(), uniform);
-
-            // Advance offset
             currentOffset += size;
         }
 
-        // Final alignment to 16 bytes (std140 requirement)
         return alignOffset(currentOffset, 16);
+    }
+
+    // NEW: Populate uniforms into existing handle
+    private void populateUniforms(UBOHandle handle, ObjectArrayList<UniformData> uniformsData) {
+        int currentOffset = 0;
+
+        for (UniformData uniformData : uniformsData) {
+            int alignment = getStd140Alignment(uniformData);
+            int size = getStd140Size(uniformData);
+
+            currentOffset = alignOffset(currentOffset, alignment);
+
+            UniformAttribute<?> attribute = createUniformAttribute(uniformData);
+            Uniform<?> uniform = new Uniform<>(-1, currentOffset, attribute);
+
+            handle.addUniform(uniformData.name, uniform);
+
+            currentOffset += size;
+        }
     }
 
     private int alignOffset(int offset, int alignment) {

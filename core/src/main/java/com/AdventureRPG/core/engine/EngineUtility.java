@@ -28,7 +28,7 @@ abstract class EngineUtility {
         System.out.println(String.valueOf(input));
     }
 
-    protected final void error(Object input) {
+    protected final void errorLog(Object input) {
         System.err.println(String.valueOf(input));
     }
 
@@ -52,7 +52,7 @@ abstract class EngineUtility {
 
     protected final <T> T throwException(String message, Throwable cause) {
         logFatal(message, cause);
-        throw new InternalException("[" + systemName + "] " + message, cause);
+        throw new InternalException(message, cause);
     }
 
     protected final <T> T throwException(Object input) {
@@ -85,17 +85,21 @@ abstract class EngineUtility {
 
     private void logFatal(String message, Throwable cause) {
 
-        error("========================================");
-        error("FATAL ENGINE EXCEPTION");
-        error("System : " + systemName);
-        error("Time   : " + timeStamp());
-        error("Message: " + message);
+        errorLog("=========FATAL ENGINE EXCEPTION=========");
+
+        errorLog("");
+
+        errorLog("System : " + systemName);
+        errorLog("Time   : " + timeStamp());
+        errorLog("Message: " + message);
+
+        errorLog("");
 
         if (cause != null) {
-            error("Cause:");
+            errorLog("Cause:");
             cause.printStackTrace(System.err);
         }
 
-        error("========================================");
+        errorLog("========================================");
     }
 }

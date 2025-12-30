@@ -1,8 +1,8 @@
 package com.AdventureRPG.core.geometrypipeline.mesh;
 
-import com.AdventureRPG.core.engine.HandleFrame;
+import com.AdventureRPG.core.engine.HandlePackage;
 
-public class MeshHandle extends HandleFrame {
+public class MeshHandle extends HandlePackage {
 
     // Internal
     public final int vao;

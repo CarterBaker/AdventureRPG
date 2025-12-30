@@ -1,8 +1,8 @@
 package com.AdventureRPG.core.geometrypipeline.vbomanager;
 
-import com.AdventureRPG.core.engine.HandleFrame;
+import com.AdventureRPG.core.engine.HandlePackage;
 
-public class VBOHandle extends HandleFrame {
+public class VBOHandle extends HandlePackage {
 
     // Internal
     public final int vertexHandle;

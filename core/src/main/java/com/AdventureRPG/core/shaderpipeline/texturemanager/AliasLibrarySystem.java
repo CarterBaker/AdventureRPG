@@ -97,7 +97,8 @@ public class AliasLibrarySystem extends SystemPackage {
             int aliasId = aliasCount;
             ensureCapacity(aliasId + 1);
 
-            aliases[aliasId] = (AliasInstance) create(new AliasInstance(aliasType, defaultColor));
+            aliases[aliasId] = create(AliasInstance.class);
+            aliases[aliasId].init(aliasType, defaultColor);
             aliasCount++;
 
             // Register all alias variations in lookup map
@@ -154,7 +155,7 @@ public class AliasLibrarySystem extends SystemPackage {
     }
 
     Color getDefaultColor(int id) {
-        return aliases[id].defaultColor;
+        return aliases[id].getAliasColor();
     }
 
     int getAliasCount() {

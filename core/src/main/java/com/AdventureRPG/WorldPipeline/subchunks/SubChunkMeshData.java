@@ -1,13 +1,13 @@
 package com.AdventureRPG.WorldPipeline.subchunks;
 
-import com.AdventureRPG.core.engine.DataFrame;
+import com.AdventureRPG.core.engine.DataPackage;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.MeshPacketData;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
-public final class SubChunkMeshData extends DataFrame {
+public final class SubChunkMeshData extends DataPackage {
 
     // Sub Chunk
     public final SubChunk subChunk;
@@ -23,6 +23,10 @@ public final class SubChunkMeshData extends DataFrame {
             ModelManager modelManager,
             SubChunk subChunk,
             int subChunkIndex) {
+
+        super(
+                "",
+                0);
 
         // Sub Chunk
         this.subChunk = subChunk;

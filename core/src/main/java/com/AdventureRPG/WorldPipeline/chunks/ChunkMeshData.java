@@ -1,12 +1,12 @@
 package com.AdventureRPG.WorldPipeline.chunks;
 
 import com.AdventureRPG.WorldPipeline.subchunks.SubChunk;
-import com.AdventureRPG.core.engine.DataFrame;
+import com.AdventureRPG.core.engine.DataPackage;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.MeshPacketData;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 
-public final class ChunkMeshData extends DataFrame {
+public final class ChunkMeshData extends DataPackage {
 
     // Chunk
     private final Chunk chunk;
@@ -20,6 +20,10 @@ public final class ChunkMeshData extends DataFrame {
             VAOHandle vao,
             ModelManager modelManager,
             Chunk chunk) {
+
+        super(
+                "Chunk (" + chunk.coordinateX + ", " + chunk.coordinateY + ")",
+                0);
 
         // Chunk
         this.chunk = chunk;

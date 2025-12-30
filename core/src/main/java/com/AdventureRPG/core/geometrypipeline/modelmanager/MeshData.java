@@ -1,6 +1,6 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
-import com.AdventureRPG.core.engine.DataFrame;
+import com.AdventureRPG.core.engine.DataPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOHandle;
 import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
@@ -10,12 +10,9 @@ import com.AdventureRPG.core.geometrypipeline.vbomanager.VBOHandle;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
-class MeshData extends DataFrame {
+class MeshData extends DataPackage {
 
     // Internal
-    final String meshName;
-    final int meshID;
-
     final VAOHandle vaoHandle;
     VBOHandle vboHandle;
     IBOHandle iboHandle;
@@ -29,16 +26,17 @@ class MeshData extends DataFrame {
     // Base \\
 
     MeshData(
-            String meshName,
-            int meshID,
+            String name,
+            int ID,
             VAOHandle vaoHandle,
             FloatArrayList vertices,
             ShortArrayList indices,
             int vertCount) {
 
         // Internal
-        this.meshName = meshName;
-        this.meshID = meshID;
+        super(
+                name,
+                ID);
 
         this.vaoHandle = vaoHandle;
 
@@ -50,12 +48,13 @@ class MeshData extends DataFrame {
     public MeshData(
             VAOHandle vaoHandle) {
 
-        // System Data
-        this.meshName = "";
-        this.meshID = 0;
-
         // Internal
+        super(
+                "",
+                0);
+
         this.vaoHandle = vaoHandle;
+
         this.vertices = new FloatArrayList();
         this.indices = new ShortArrayList();
         this.vertexCount = 0;

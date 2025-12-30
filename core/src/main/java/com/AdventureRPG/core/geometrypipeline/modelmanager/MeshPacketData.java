@@ -1,6 +1,6 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
-import com.AdventureRPG.core.engine.DataFrame;
+import com.AdventureRPG.core.engine.DataPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 import com.AdventureRPG.core.util.Mathematics.Matrices.Matrix4;
@@ -9,10 +9,9 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class MeshPacketData extends DataFrame {
+public class MeshPacketData extends DataPackage {
 
     // Internal
-    final int modelID;
     final VAOHandle vaoHandle;
     private Matrix4 transform;
 
@@ -23,10 +22,14 @@ public class MeshPacketData extends DataFrame {
 
     // Base \\
 
-    MeshPacketData(int modelID, VAOHandle vaoHandle) {
+    MeshPacketData(int id, VAOHandle vaoHandle) {
 
         // Internal
-        this.modelID = modelID;
+
+        super(
+                "MeshPacketData",
+                id);
+
         this.vaoHandle = vaoHandle;
         this.transform = new Matrix4();
 
@@ -189,10 +192,6 @@ public class MeshPacketData extends DataFrame {
     }
 
     // Accessible \\
-
-    public int getModelID() {
-        return modelID;
-    }
 
     public Matrix4 getTransform() {
         return transform;

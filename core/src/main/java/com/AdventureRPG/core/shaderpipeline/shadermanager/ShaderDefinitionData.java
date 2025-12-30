@@ -1,24 +1,26 @@
 package com.AdventureRPG.core.shaderpipeline.shadermanager;
 
-import com.AdventureRPG.core.engine.InstanceFrame;
+import com.AdventureRPG.core.engine.DataPackage;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class ShaderDefinitionInstance extends InstanceFrame {
+public class ShaderDefinitionData extends DataPackage {
 
     // Internal
-    public final String shaderName;
     public final ShaderData vert;
     public final ShaderData frag;
     private final ObjectArrayList<ShaderData> includes;
 
-    public ShaderDefinitionInstance(
-            String shaderName,
+    public ShaderDefinitionData(
+            String name,
             ShaderData vert,
             ShaderData frag) {
 
         // Internal
-        this.shaderName = shaderName;
+        super(
+                name,
+                0);
+
         this.vert = vert;
         this.frag = frag;
         this.includes = new ObjectArrayList<>();

@@ -50,7 +50,7 @@ class ModelBatchSystem extends SystemPackage {
 
     void pushModel(MeshPacketData meshPacketData) {
 
-        int modelID = meshPacketData.getModelID();
+        int modelID = meshPacketData.ID;
 
         if (loadedModels.contains(modelID))
             pullModel(meshPacketData);
@@ -114,7 +114,7 @@ class ModelBatchSystem extends SystemPackage {
 
     void pullModel(MeshPacketData meshPacketData) {
 
-        int modelID = meshPacketData.getModelID();
+        int modelID = meshPacketData.ID;
 
         Int2ObjectOpenHashMap<IntSet> removedModel = modelID2MaterialID2MeshIDCollection
                 .remove(modelID);

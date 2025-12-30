@@ -1,8 +1,8 @@
 package com.AdventureRPG.core.geometrypipeline.ibomanager;
 
-import com.AdventureRPG.core.engine.HandleFrame;
+import com.AdventureRPG.core.engine.HandlePackage;
 
-public class IBOHandle extends HandleFrame {
+public class IBOHandle extends HandlePackage {
 
     // Internal
     public final int indexHandle;

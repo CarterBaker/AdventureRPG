@@ -1,32 +1,37 @@
 package com.AdventureRPG.core.shaderpipeline.uniforms;
 
-import com.AdventureRPG.core.engine.DataFrame;
+import com.AdventureRPG.core.engine.DataPackage;
 
-public class UniformData extends DataFrame {
+public class UniformData extends DataPackage {
 
     // Internal
     private final UniformType uniformType;
-    private final String uniformName;
     private final int count;
 
     public UniformData(
             UniformType uniformType,
-            String uniformName) {
+            String name) {
 
         // Internal
+        super(
+                name,
+                0);
+
         this.uniformType = uniformType;
-        this.uniformName = uniformName;
         this.count = 1;
     }
 
     public UniformData(
             UniformType uniformType,
-            String uniformName,
+            String name,
             int count) {
 
         // Internal
+        super(
+                name,
+                0);
+
         this.uniformType = uniformType;
-        this.uniformName = uniformName;
         this.count = count;
     }
 
@@ -34,10 +39,6 @@ public class UniformData extends DataFrame {
 
     public UniformType uniformType() {
         return uniformType;
-    }
-
-    public String uniformName() {
-        return uniformName;
     }
 
     public int count() {

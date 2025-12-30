@@ -23,6 +23,16 @@ import com.google.gson.Gson;
 
 public class GameEngine extends EnginePackage {
 
+    // TODO
+
+    /*
+     * For now, this is fine—the loading screen cascades the whole world
+     * loading for the game, which works while I am developing. However, once
+     * world streaming is implemented, the loading screen and menu delegation
+     * code will need to be refactored and removed from this class entirely,
+     * as it does not belong here.
+     */
+
     // Kernel
     private WindowSystem windowSystem;
     private ThreadSystem threadSystem;
@@ -33,7 +43,7 @@ public class GameEngine extends EnginePackage {
     private ShaderPipeline shaderPipeline;
     private RenderPipeline renderPipeline;
 
-    // Core
+    // Internal
     private SaveManager saveManager;
     private UISystem UISystem;
     private LightingManager lightingManager;
@@ -42,9 +52,9 @@ public class GameEngine extends EnginePackage {
     private WorldPipeline worldPipeline;
 
     // UI
-    private LoadScreen loadScreen;
+    private LoadScreen loadScreen; // TODO
 
-    // Base \\
+    // Internal \\
 
     public GameEngine(
             Settings settings,
@@ -75,7 +85,7 @@ public class GameEngine extends EnginePackage {
     @Override
     protected void create() {
 
-        // Core
+        // Internal
         saveManager = (SaveManager) register(new SaveManager());
         UISystem = (UISystem) register(new UISystem());
         lightingManager = (LightingManager) register(new LightingManager());
@@ -87,10 +97,10 @@ public class GameEngine extends EnginePackage {
     @Override
     protected void start() {
 
-        startLoading();
-        // UISystem.open(Menu.Main); // TODO: Commented out for debugging
+        startLoading(); // TODO
     }
 
+    // TODO
     public void startLoading() {
 
         worldPipeline.loadChunks();
@@ -102,10 +112,16 @@ public class GameEngine extends EnginePackage {
     }
 
     @Override
-    protected void menuExclusiveUpdate() { // TODO: This whole thing needs a rework
-        // Game should be the natural state and these things should just sort of work
-        // dynamically
-        // Goes with the todo in main class
+    protected void menuExclusiveUpdate() {
+
+        // TODO
+
+        /*
+         * This whole section needs a rework.
+         * The game should be the natural state, and these
+         * features should just sort of work dynamically.
+         * This also relates to the TODO in the main class.
+         */
 
         if (worldPipeline.queueSystem.hasQueue())
             loadScreen.setProgrss(worldPipeline.queueSystem.totalQueueSize());
@@ -123,8 +139,6 @@ public class GameEngine extends EnginePackage {
     protected void draw() {
         this.renderPipeline.draw();
     }
-
-    // Utility \\
 
     Screen setScreen() {
         return windowSystem;

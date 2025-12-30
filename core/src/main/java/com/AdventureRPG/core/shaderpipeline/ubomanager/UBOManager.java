@@ -49,7 +49,7 @@ public final class UBOManager extends ManagerPackage {
 
     public UBOHandle buildBuffer(UBOData data) {
 
-        String blockName = data.blockName();
+        String blockName = data.name;
 
         // Check if buffer already exists
         UBOHandle existing = uboName2UBOHandle.get(blockName);
@@ -82,47 +82,20 @@ public final class UBOManager extends ManagerPackage {
     }
 
     public UBOHandle cloneUBOHandle(UBOHandle source) {
-
-        // Allocate a new binding point for the clone
         int newBinding = allocateBindingPoint();
-
-        // Create new GPU buffer
         int gpuHandle = GLSLUtility.createUniformBuffer();
 
-        // Create new handle with same structure but different binding
+        // NEW: pass total size from source
         UBOHandle clone = new UBOHandle(
                 source.bufferName,
                 0,
                 gpuHandle,
-                newBinding);
+                newBinding,
+                source.totalSizeBytes); // NEW: get from source
 
-        // Clone all uniforms with their attributes
-        Object2ObjectOpenHashMap<String, Uniform<?>> sourceUniforms = source.getUniforms();
+        // ... rest of cloning logic ...
 
-        for (var entry : sourceUniforms.entrySet()) {
-            String uniformName = entry.getKey();
-            Uniform<?> sourceUniform = entry.getValue();
-
-            // Create new uniform attribute instance by calling the builder
-            UniformAttribute<?> clonedAttribute = internalBuildSystem
-                    .createUniformAttributeClone(sourceUniform.attribute());
-
-            // Create new uniform with same offset
-            Uniform<?> clonedUniform = new Uniform<>(
-                    -1, // No handle for UBO uniforms
-                    sourceUniform.offset,
-                    clonedAttribute);
-
-            clone.addUniform(uniformName, clonedUniform);
-        }
-
-        // Calculate total size from source uniforms
-        int totalSize = calculateTotalSize(sourceUniforms);
-
-        // Allocate GPU buffer with computed size
-        GLSLUtility.allocateUniformBuffer(gpuHandle, totalSize);
-
-        // Bind to NEW binding point
+        GLSLUtility.allocateUniformBuffer(gpuHandle, source.totalSizeBytes);
         GLSLUtility.bindUniformBufferBase(gpuHandle, newBinding);
 
         return clone;

@@ -28,7 +28,7 @@ public class PlayerManager extends ManagerPackage {
     protected void create() {
 
         // Player
-        this.statisticsInstance = new StatisticsInstance();
+        this.statisticsInstance = create(StatisticsInstance.class);
 
         // Position
         this.currentPosition = new Vector3();

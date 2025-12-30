@@ -2,23 +2,23 @@ package com.AdventureRPG.core.shaderpipeline.texturemanager;
 
 import java.awt.image.BufferedImage;
 
-import com.AdventureRPG.core.engine.InstanceFrame;
+import com.AdventureRPG.core.engine.InstancePackage;
 
-class TextureTileInstance extends InstanceFrame {
+public class TextureTileInstance extends InstancePackage {
 
     // Internal
-    final int id;
-    final String name;
-    final String atlas;
+    private int id;
+    private String name;
+    private String atlas;
 
     // Image
-    private final BufferedImage[] imageLayers;
+    private BufferedImage[] imageLayers;
 
     // Atlas
     private int atlasX;
     private int atlasY;
 
-    TextureTileInstance(
+    void init(
             int id,
             String name,
             String atlas,
@@ -31,6 +31,20 @@ class TextureTileInstance extends InstanceFrame {
 
         // Image
         this.imageLayers = new BufferedImage[aliasCount];
+    }
+
+    // Accessible \\
+
+    int getID() {
+        return id;
+    }
+
+    String getName() {
+        return name;
+    }
+
+    String getAtlas() {
+        return atlas;
     }
 
     // Image \\

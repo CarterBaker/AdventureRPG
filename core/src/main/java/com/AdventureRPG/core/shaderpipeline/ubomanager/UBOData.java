@@ -1,35 +1,28 @@
 package com.AdventureRPG.core.shaderpipeline.ubomanager;
 
-import com.AdventureRPG.core.engine.DataFrame;
+import com.AdventureRPG.core.engine.DataPackage;
 import com.AdventureRPG.core.shaderpipeline.uniforms.UniformData;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class UBOData extends DataFrame {
+public class UBOData extends DataPackage {
 
-    private final String blockName;
-    private final int binding;
+    // Internal
     private final ObjectArrayList<UniformData> uniforms;
 
     public UBOData(
-            String blockName,
-            int binding) {
+            String name,
+            int id) {
 
-        this.blockName = blockName;
-        this.binding = binding;
+        // Internal
+        super(
+                name,
+                id);
+
         this.uniforms = new ObjectArrayList<>();
     }
 
     // Accessible \\
-
-    // Data
-    public String blockName() {
-        return blockName;
-    }
-
-    public int binding() {
-        return binding;
-    }
 
     // Uniforms
     public void addUniform(UniformData uniform) {

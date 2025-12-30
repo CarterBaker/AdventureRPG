@@ -156,9 +156,9 @@ class InternalLoadManager extends ManagerPackage {
     }
 
     // Shader
-    private Shader assembleShader(ShaderDefinitionInstance shaderDefinition) {
+    private Shader assembleShader(ShaderDefinitionData shaderDefinition) {
 
-        String shaderName = shaderDefinition.shaderName;
+        String shaderName = shaderDefinition.name;
         int shaderID = shaderCount++;
         int shaderHandle = GLSLUtility.createShaderProgram(shaderDefinition);
 
@@ -181,7 +181,7 @@ class InternalLoadManager extends ManagerPackage {
     // Buffers
     private void assembleBuffers(
             Shader shader,
-            ShaderDefinitionInstance shaderDefinition) {
+            ShaderDefinitionData shaderDefinition) {
 
         addBuffersFromShaderData(
                 shaderDefinition.vert,
@@ -213,13 +213,13 @@ class InternalLoadManager extends ManagerPackage {
 
         UBOHandle ubo = uboManager.buildBuffer(bufferData);
         shaderManager.bindShaderToUBO(shader, ubo);
-        shader.addBuffer(bufferData.blockName(), ubo);
+        shader.addBuffer(bufferData.name, ubo);
     }
 
     // Uniforms
     private void assembleUniforms(
             Shader shader,
-            ShaderDefinitionInstance shaderDefinition) {
+            ShaderDefinitionData shaderDefinition) {
 
         addUniformsFromShaderData(
                 shaderDefinition.vert,
@@ -251,10 +251,10 @@ class InternalLoadManager extends ManagerPackage {
 
         UniformAttribute<?> uniformAttribute = createUniformAttribute(uniformData);
         Uniform<?> uniform = new Uniform<>(
-                GLSLUtility.getUniformHandle(shader.shaderHandle, uniformData.uniformName()),
+                GLSLUtility.getUniformHandle(shader.shaderHandle, uniformData.name),
                 uniformAttribute);
 
-        shader.addUniform(uniformData.uniformName(), uniform);
+        shader.addUniform(uniformData.name, uniform);
     }
 
     private UniformAttribute<?> createUniformAttribute(UniformData uniformData) {
@@ -314,7 +314,7 @@ class InternalLoadManager extends ManagerPackage {
         for (int i = 0; i < glslFiles.size(); i++) {
 
             ShaderData inst = glslFiles.get(i);
-            if (inst.shaderName().equals(key))
+            if (inst.name.equals(key))
                 return inst;
         }
 

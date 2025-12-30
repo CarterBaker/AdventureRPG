@@ -2,17 +2,16 @@ package com.AdventureRPG.core.shaderpipeline.shadermanager;
 
 import java.io.File;
 
-import com.AdventureRPG.core.engine.DataFrame;
+import com.AdventureRPG.core.engine.DataPackage;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOData;
 import com.AdventureRPG.core.shaderpipeline.uniforms.UniformData;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class ShaderData extends DataFrame {
+public class ShaderData extends DataPackage {
 
     // Internal
     private final ShaderType shaderType;
-    private final String shaderName;
     private final File shaderFile;
 
     private String version;
@@ -22,12 +21,15 @@ public class ShaderData extends DataFrame {
 
     public ShaderData(
             ShaderType shaderType,
-            String shaderName,
+            String name,
             File shaderFile) {
 
         // Internal
+        super(
+                name,
+                0);
+
         this.shaderType = shaderType;
-        this.shaderName = shaderName;
         this.shaderFile = shaderFile;
 
         this.version = null;
@@ -40,10 +42,6 @@ public class ShaderData extends DataFrame {
 
     public ShaderType shaderType() {
         return shaderType;
-    }
-
-    String shaderName() {
-        return shaderName;
     }
 
     public File shaderFile() {

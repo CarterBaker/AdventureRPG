@@ -2,14 +2,30 @@ package com.AdventureRPG.core.shaderpipeline.texturemanager;
 
 import java.awt.Color;
 
-import com.AdventureRPG.core.engine.InstanceFrame;
+import com.AdventureRPG.core.engine.InstancePackage;
 
-class AliasInstance extends InstanceFrame {
-    final String aliasType;
-    final Color defaultColor;
+public class AliasInstance extends InstancePackage {
 
-    AliasInstance(String aliasType, Color defaultColor) {
+    // Internal
+    private String aliasType;
+    private Color defaultColor;
+
+    // Internal \\
+
+    void init(String aliasType, Color defaultColor) {
+
+        // Internal
         this.aliasType = aliasType;
         this.defaultColor = defaultColor;
+    }
+
+    // Accessible \\
+
+    String getAliasType() {
+        return aliasType;
+    }
+
+    Color getAliasColor() {
+        return defaultColor;
     }
 }

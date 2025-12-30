@@ -166,10 +166,8 @@ public class InternalBuildSystem extends SystemPackage {
                 blockName = blockName.replaceAll("\\(.*?\\)", "").trim();
 
                 // Auto-assign binding if not specified
-                if (binding == -1 || binding == 0) {
+                if (binding == -1 || binding == 0)
                     binding = nextAutoBinding++;
-                    System.out.println("Auto-assigned binding " + binding + " to UBO '" + blockName + "'");
-                }
 
                 // Check for binding collision
                 if (usedBindings.contains(binding)) {
@@ -313,7 +311,7 @@ public class InternalBuildSystem extends SystemPackage {
 
     // Compile \\
 
-    ShaderDefinitionInstance compileShader(File jsonFile) {
+    ShaderDefinitionData compileShader(File jsonFile) {
 
         // Extract relative path from root shader directory
         Path rootPath = root.toPath();
@@ -339,10 +337,10 @@ public class InternalBuildSystem extends SystemPackage {
                     "Json data error: " + jsonFile.getName()
                             + ", The vert or frag files defined do not match the corresponding type");
 
-        return sortIncludes(new ShaderDefinitionInstance(shaderName, vertData, fragData));
+        return sortIncludes(new ShaderDefinitionData(shaderName, vertData, fragData));
     }
 
-    private ShaderDefinitionInstance sortIncludes(ShaderDefinitionInstance shaderDefinition) {
+    private ShaderDefinitionData sortIncludes(ShaderDefinitionData shaderDefinition) {
 
         ObjectArrayList<ShaderData> visited = new ObjectArrayList<>();
 
@@ -359,7 +357,7 @@ public class InternalBuildSystem extends SystemPackage {
     }
 
     private void collectRecursiveIncludes(
-            ShaderDefinitionInstance shaderDefinition,
+            ShaderDefinitionData shaderDefinition,
             ShaderData shaderData,
             ObjectArrayList<ShaderData> visited) {
 

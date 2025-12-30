@@ -14,10 +14,9 @@ public class Main extends Game {
     private final Settings settings;
     private final Gson gson;
 
-    // Core
+    // Internal
     private GameEngine internal;
 
-    // fixed interval
     private float fixedInterval;
     private float elapsedTime;
     private int maxSteps;
@@ -38,14 +37,13 @@ public class Main extends Game {
     @Override
     public void create() {
 
-        // Main
+        // Internal
         this.internal = new GameEngine(
                 settings,
                 this,
                 GAME_DIRECTORY,
                 gson);
 
-        // fixed interval
         this.fixedInterval = settings.FIXED_TIME_STEP;
         this.elapsedTime = 0.0f;
         this.maxSteps = 5;
@@ -282,7 +280,7 @@ public class Main extends Game {
 
     // Set the games delta time for ease of access across all systems
     private void setDeltaTime() {
-        float frameDelta = Gdx.graphics.getDeltaTime();
-        internal.setDeltaTime(frameDelta);
+        float deltaTime = Gdx.graphics.getDeltaTime();
+        internal.setDeltaTime(deltaTime);
     }
 }

@@ -8,9 +8,14 @@ public enum InternalState {
     GAME_EXCLUSIVE(true),
     EXIT(false);
 
+    // Internal
     public final boolean accessible;
 
+    // Internal \\
+
     InternalState(boolean accessible) {
+
+        // Internal
         this.accessible = accessible;
     }
 }

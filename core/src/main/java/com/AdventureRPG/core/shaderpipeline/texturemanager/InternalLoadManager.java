@@ -99,7 +99,7 @@ class InternalLoadManager extends ManagerPackage {
     }
 
     private void createTextureArray(TextureArrayInstance textureArray) {
-        arrayMap.put(textureArray.id, textureArray);
+        arrayMap.put(textureArray.getID(), textureArray);
     }
 
     private void pushTexturesToGPU(Int2ObjectOpenHashMap<TextureArrayInstance> textureArrays) {
@@ -121,7 +121,7 @@ class InternalLoadManager extends ManagerPackage {
             UVRect uvCoordinate = computeUV(
                     tile.getValue().getAtlasX(),
                     tile.getValue().getAtlasY(),
-                    textureArray.atlasSize);
+                    textureArray.getAtlasSize());
 
             textureManager.addTextureTile(tile.getValue(), uvCoordinate);
         }

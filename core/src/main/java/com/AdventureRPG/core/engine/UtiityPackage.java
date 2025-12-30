@@ -27,8 +27,8 @@ public abstract class UtiityPackage {
         ENGINE.log(input);
     }
 
-    protected static void error(Object input) {
-        ENGINE.error(input);
+    protected static void errorLog(Object input) {
+        ENGINE.errorLog(input);
     }
 
     protected static void timeStampLog(Object input) {

@@ -2,22 +2,22 @@ package com.AdventureRPG.core.shaderpipeline.texturemanager;
 
 import java.awt.image.BufferedImage;
 
-import com.AdventureRPG.core.engine.InstanceFrame;
+import com.AdventureRPG.core.engine.InstancePackage;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-class TextureArrayInstance extends InstanceFrame {
+public class TextureArrayInstance extends InstancePackage {
 
     // Internal
-    final int id;
-    final String name;
-    final int atlasSize;
-    private final TextureAtlasInstance[] textureArray;
+    private int id;
+    private String name;
+    private int atlasSize;
+    private TextureAtlasInstance[] textureArray;
 
     // Tiles
-    private final Object2ObjectOpenHashMap<String, TextureTileInstance> tileCoordinateMap;
+    private Object2ObjectOpenHashMap<String, TextureTileInstance> tileCoordinateMap;
 
-    TextureArrayInstance(
+    void init(
             int id,
             String name,
             int atlasSize,
@@ -31,6 +31,20 @@ class TextureArrayInstance extends InstanceFrame {
 
         // Tiles
         this.tileCoordinateMap = new Object2ObjectOpenHashMap<>();
+    }
+
+    // Accessible \\
+
+    int getID() {
+        return id;
+    }
+
+    String getName() {
+        return name;
+    }
+
+    int getAtlasSize() {
+        return atlasSize;
     }
 
     // Tiles \\
@@ -54,7 +68,7 @@ class TextureArrayInstance extends InstanceFrame {
         BufferedImage[] layers = new BufferedImage[textureArray.length];
 
         for (int i = 0; i < textureArray.length; i++)
-            layers[i] = textureArray[i].atlas();
+            layers[i] = textureArray[i].getAtlas();
 
         return layers;
     }

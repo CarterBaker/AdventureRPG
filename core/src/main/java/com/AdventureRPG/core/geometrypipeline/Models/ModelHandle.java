@@ -1,9 +1,9 @@
 package com.AdventureRPG.core.geometrypipeline.Models;
 
-import com.AdventureRPG.core.engine.HandleFrame;
+import com.AdventureRPG.core.engine.HandlePackage;
 import com.AdventureRPG.core.shaderpipeline.materials.Material;
 
-public class ModelHandle extends HandleFrame {
+public class ModelHandle extends HandlePackage {
 
     // Internal
     public final int vao;

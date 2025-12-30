@@ -82,8 +82,12 @@ class InternalBuildSystem extends SystemPackage {
             TextureTileInstance textureTile = textureTiles.get(instanceName);
 
             if (textureTile == null) {
-                textureTile = (TextureTileInstance) create(
-                        new TextureTileInstance(textureCount++, instanceName, atlasName, aliasCount));
+                textureTile = create(TextureTileInstance.class);
+                textureTile.init(
+                        textureCount++,
+                        instanceName,
+                        atlasName,
+                        aliasCount);
                 textureTiles.put(instanceName, textureTile);
             }
 
@@ -100,7 +104,7 @@ class InternalBuildSystem extends SystemPackage {
 
         LinkedHashMap<String, TextureTileInstance> sortedTiles = new LinkedHashMap<>();
         textureTiles.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue((tile1, tile2) -> Integer.compare(tile1.id, tile2.id)))
+                .sorted(Map.Entry.comparingByValue((tile1, tile2) -> Integer.compare(tile1.getID(), tile2.getID())))
                 .forEachOrdered(entry -> sortedTiles.put(entry.getKey(), entry.getValue()));
 
         return sortedTiles;
@@ -185,7 +189,12 @@ class InternalBuildSystem extends SystemPackage {
 
         graphic.dispose();
 
-        return (TextureAtlasInstance) create(new TextureAtlasInstance(atlasSize, atlasImage));
+        TextureAtlasInstance textureAtlasInstance = create(TextureAtlasInstance.class);
+        textureAtlasInstance.init(
+                atlasSize,
+                atlasImage);
+
+        return textureAtlasInstance;
     }
 
     private int calculateAtlasSize(int tileCount) {
@@ -200,12 +209,12 @@ class InternalBuildSystem extends SystemPackage {
             String textureArrayName,
             TextureAtlasInstance[] textureAtlases) {
 
-        TextureArrayInstance textureArray = (TextureArrayInstance) create(
-                new TextureArrayInstance(
-                        arrayCount++,
-                        textureArrayName,
-                        textureAtlases[0].atlasSize,
-                        textureAtlases));
+        TextureArrayInstance textureArray = create(TextureArrayInstance.class);
+        textureArray.init(
+                arrayCount++,
+                textureArrayName,
+                textureAtlases[0].getAtlasSize(),
+                textureAtlases);
 
         for (TextureTileInstance tile : textureTiles.values())
             textureArray.registerTile(
