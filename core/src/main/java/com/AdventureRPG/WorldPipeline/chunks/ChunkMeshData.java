@@ -21,10 +21,6 @@ public final class ChunkMeshData extends DataPackage {
             ModelManager modelManager,
             Chunk chunk) {
 
-        super(
-                "Chunk (" + chunk.coordinateX + ", " + chunk.coordinateY + ")",
-                0);
-
         // Chunk
         this.chunk = chunk;
 

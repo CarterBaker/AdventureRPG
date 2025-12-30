@@ -117,6 +117,19 @@ public abstract class SystemPackage extends EngineUtility {
     protected void start() {
     }
 
+    // Update \\
+
+    void internalUpdate() {
+
+        if (!this.verifyProcess(InternalProcess.UPDATE))
+            return;
+
+        update();
+    }
+
+    protected void update() {
+    }
+
     // Menu Exclusive Update \\
 
     void internalMenuExclusiveUpdate() {
@@ -141,19 +154,6 @@ public abstract class SystemPackage extends EngineUtility {
     }
 
     protected void gameExclusiveUpdate() {
-    }
-
-    // Update \\
-
-    void internalUpdate() {
-
-        if (!this.verifyProcess(InternalProcess.UPDATE))
-            return;
-
-        update();
-    }
-
-    protected void update() {
     }
 
     // Fixed Update \\

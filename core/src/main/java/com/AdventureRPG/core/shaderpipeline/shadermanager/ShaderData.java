@@ -12,6 +12,7 @@ public class ShaderData extends DataPackage {
 
     // Internal
     private final ShaderType shaderType;
+    private final String shaderName;
     private final File shaderFile;
 
     private String version;
@@ -21,15 +22,12 @@ public class ShaderData extends DataPackage {
 
     public ShaderData(
             ShaderType shaderType,
-            String name,
+            String shaderName,
             File shaderFile) {
 
         // Internal
-        super(
-                name,
-                0);
-
         this.shaderType = shaderType;
+        this.shaderName = shaderName;
         this.shaderFile = shaderFile;
 
         this.version = null;
@@ -42,6 +40,10 @@ public class ShaderData extends DataPackage {
 
     public ShaderType shaderType() {
         return shaderType;
+    }
+
+    String shaderName() {
+        return shaderName;
     }
 
     public File shaderFile() {

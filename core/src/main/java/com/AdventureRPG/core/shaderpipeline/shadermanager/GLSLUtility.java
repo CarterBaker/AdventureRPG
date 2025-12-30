@@ -21,13 +21,13 @@ class GLSLUtility extends UtiityPackage {
         String fragSource = preprocessShaderSource(shaderDef, shaderDef.frag);
 
         // Compile preprocessed shaders
-        int vertShader = compileShaderFromSource(GL20.GL_VERTEX_SHADER, vertSource, shaderDef.vert.name);
-        int fragShader = compileShaderFromSource(GL20.GL_FRAGMENT_SHADER, fragSource, shaderDef.frag.name);
+        int vertShader = compileShaderFromSource(GL20.GL_VERTEX_SHADER, vertSource, shaderDef.vert.shaderName());
+        int fragShader = compileShaderFromSource(GL20.GL_FRAGMENT_SHADER, fragSource, shaderDef.frag.shaderName());
 
         int program = Gdx.gl.glCreateProgram();
         if (program == 0)
             throwException(
-                    "Failed to return a valid gpu handle for shader: " + shaderDef.name);
+                    "Failed to return a valid gpu handle for shader: " + shaderDef.shaderName);
 
         Gdx.gl.glAttachShader(program, vertShader);
         Gdx.gl.glAttachShader(program, fragShader);
@@ -44,7 +44,7 @@ class GLSLUtility extends UtiityPackage {
             Gdx.gl.glDeleteShader(vertShader);
             Gdx.gl.glDeleteShader(fragShader);
             throwException(
-                    "Failed to link shader program " + shaderDef.name + ": " + log);
+                    "Failed to link shader program " + shaderDef.shaderName + ": " + log);
         }
 
         // Cleanup - detach and delete shaders
@@ -99,7 +99,7 @@ class GLSLUtility extends UtiityPackage {
             // Remove #version and #include directives from included files
             includeSource = stripPreprocessorDirectives(includeSource);
 
-            result.append("// -------- Include: ").append(include.name).append(" --------\n");
+            result.append("// -------- Include: ").append(include.shaderName()).append(" --------\n");
             result.append(includeSource).append("\n");
             result.append("// -------- End Include --------\n\n");
         }

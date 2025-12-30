@@ -158,7 +158,7 @@ class InternalLoadManager extends ManagerPackage {
     // Shader
     private Shader assembleShader(ShaderDefinitionData shaderDefinition) {
 
-        String shaderName = shaderDefinition.name;
+        String shaderName = shaderDefinition.shaderName;
         int shaderID = shaderCount++;
         int shaderHandle = GLSLUtility.createShaderProgram(shaderDefinition);
 
@@ -213,7 +213,7 @@ class InternalLoadManager extends ManagerPackage {
 
         UBOHandle ubo = uboManager.buildBuffer(bufferData);
         shaderManager.bindShaderToUBO(shader, ubo);
-        shader.addBuffer(bufferData.name, ubo);
+        shader.addBuffer(bufferData.blockName(), ubo);
     }
 
     // Uniforms
@@ -251,10 +251,10 @@ class InternalLoadManager extends ManagerPackage {
 
         UniformAttribute<?> uniformAttribute = createUniformAttribute(uniformData);
         Uniform<?> uniform = new Uniform<>(
-                GLSLUtility.getUniformHandle(shader.shaderHandle, uniformData.name),
+                GLSLUtility.getUniformHandle(shader.shaderHandle, uniformData.uniformName()),
                 uniformAttribute);
 
-        shader.addUniform(uniformData.name, uniform);
+        shader.addUniform(uniformData.uniformName(), uniform);
     }
 
     private UniformAttribute<?> createUniformAttribute(UniformData uniformData) {
@@ -314,7 +314,7 @@ class InternalLoadManager extends ManagerPackage {
         for (int i = 0; i < glslFiles.size(); i++) {
 
             ShaderData inst = glslFiles.get(i);
-            if (inst.name.equals(key))
+            if (inst.shaderName().equals(key))
                 return inst;
         }
 

@@ -6,32 +6,27 @@ public class UniformData extends DataPackage {
 
     // Internal
     private final UniformType uniformType;
+    private final String uniformName;
     private final int count;
 
     public UniformData(
             UniformType uniformType,
-            String name) {
+            String uniformName) {
 
         // Internal
-        super(
-                name,
-                0);
-
         this.uniformType = uniformType;
+        this.uniformName = uniformName;
         this.count = 1;
     }
 
     public UniformData(
             UniformType uniformType,
-            String name,
+            String uniformName,
             int count) {
 
         // Internal
-        super(
-                name,
-                0);
-
         this.uniformType = uniformType;
+        this.uniformName = uniformName;
         this.count = count;
     }
 
@@ -39,6 +34,10 @@ public class UniformData extends DataPackage {
 
     public UniformType uniformType() {
         return uniformType;
+    }
+
+    public String uniformName() {
+        return uniformName;
     }
 
     public int count() {

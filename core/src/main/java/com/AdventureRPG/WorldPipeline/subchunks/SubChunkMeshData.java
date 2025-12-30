@@ -24,10 +24,6 @@ public final class SubChunkMeshData extends DataPackage {
             SubChunk subChunk,
             int subChunkIndex) {
 
-        super(
-                "",
-                0);
-
         // Sub Chunk
         this.subChunk = subChunk;
         this.subChunkIndex = subChunkIndex;

@@ -13,6 +13,9 @@ import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 class MeshData extends DataPackage {
 
     // Internal
+    final String meshName;
+    final int meshID;
+
     final VAOHandle vaoHandle;
     VBOHandle vboHandle;
     IBOHandle iboHandle;
@@ -26,17 +29,16 @@ class MeshData extends DataPackage {
     // Base \\
 
     MeshData(
-            String name,
-            int ID,
+            String meshName,
+            int meshID,
             VAOHandle vaoHandle,
             FloatArrayList vertices,
             ShortArrayList indices,
             int vertCount) {
 
         // Internal
-        super(
-                name,
-                ID);
+        this.meshName = meshName;
+        this.meshID = meshID;
 
         this.vaoHandle = vaoHandle;
 
@@ -48,13 +50,12 @@ class MeshData extends DataPackage {
     public MeshData(
             VAOHandle vaoHandle) {
 
+        // System Data
+        this.meshName = "";
+        this.meshID = 0;
+
         // Internal
-        super(
-                "",
-                0);
-
         this.vaoHandle = vaoHandle;
-
         this.vertices = new FloatArrayList();
         this.indices = new ShortArrayList();
         this.vertexCount = 0;

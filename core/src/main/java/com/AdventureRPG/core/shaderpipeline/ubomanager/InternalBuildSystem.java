@@ -20,7 +20,7 @@ public final class InternalBuildSystem extends SystemPackage {
 
     public UBOHandle build(UBOData data) {
         int id = nextID++;
-        int binding = data.ID;
+        int binding = data.binding();
         int gpuHandle = GLSLUtility.createUniformBuffer();
 
         // Compute std140 buffer layout FIRST
@@ -28,7 +28,7 @@ public final class InternalBuildSystem extends SystemPackage {
 
         // Create handle WITH size
         UBOHandle handle = new UBOHandle(
-                data.name,
+                data.blockName(),
                 id,
                 gpuHandle,
                 binding,
@@ -47,10 +47,10 @@ public final class InternalBuildSystem extends SystemPackage {
     public void validate(UBOHandle existing, UBOData newData) {
 
         // Validate binding matches
-        if (existing.bindingPoint != newData.ID) {
+        if (existing.bindingPoint != newData.binding()) {
             throwException(
-                    "UBO '" + newData.name + "' has conflicting bindings: " +
-                            "existing=" + existing.bindingPoint + ", new=" + newData.ID +
+                    "UBO '" + newData.blockName() + "' has conflicting bindings: " +
+                            "existing=" + existing.bindingPoint + ", new=" + newData.binding() +
                             ". All declarations of this uniform block must use the same binding point.");
         }
 
@@ -60,7 +60,7 @@ public final class InternalBuildSystem extends SystemPackage {
 
         if (newUniforms.size() != existingUniforms.size()) {
             throwException(
-                    "UBO '" + newData.name + "' has conflicting structure: " +
+                    "UBO '" + newData.blockName() + "' has conflicting structure: " +
                             "different number of uniforms (" + existingUniforms.size() +
                             " vs " + newUniforms.size() + "). " +
                             "Use an #include file to ensure consistency across shaders.");
@@ -68,12 +68,12 @@ public final class InternalBuildSystem extends SystemPackage {
 
         // Validate each uniform matches
         for (UniformData uniformData : newUniforms) {
-            Uniform<?> existingUniform = existingUniforms.get(uniformData.name);
+            Uniform<?> existingUniform = existingUniforms.get(uniformData.uniformName());
 
             if (existingUniform == null) {
                 throwException(
-                        "UBO '" + newData.name + "' has conflicting structure: " +
-                                "uniform '" + uniformData.name + "' not found in existing definition. " +
+                        "UBO '" + newData.blockName() + "' has conflicting structure: " +
+                                "uniform '" + uniformData.uniformName() + "' not found in existing definition. " +
                                 "Use an #include file to ensure consistency across shaders.");
             }
         }
@@ -107,7 +107,7 @@ public final class InternalBuildSystem extends SystemPackage {
             UniformAttribute<?> attribute = createUniformAttribute(uniformData);
             Uniform<?> uniform = new Uniform<>(-1, currentOffset, attribute);
 
-            handle.addUniform(uniformData.name, uniform);
+            handle.addUniform(uniformData.uniformName(), uniform);
 
             currentOffset += size;
         }

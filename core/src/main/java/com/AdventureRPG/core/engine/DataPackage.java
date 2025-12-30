@@ -8,17 +8,4 @@ public class DataPackage extends EngineUtility {
      * kernel of the engine itself. Typically the data contained within
      * is used to create a permanant HandlePackage.
      */
-
-    // Internal
-    public final String name;
-    public final int ID;
-
-    public DataPackage(
-            String name,
-            int ID) {
-
-        // Internal
-        this.name = name;
-        this.ID = ID;
-    }
 }

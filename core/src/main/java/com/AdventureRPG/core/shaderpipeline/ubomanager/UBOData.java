@@ -7,22 +7,29 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class UBOData extends DataPackage {
 
-    // Internal
+    private final String blockName;
+    private final int binding;
     private final ObjectArrayList<UniformData> uniforms;
 
     public UBOData(
-            String name,
-            int id) {
+            String blockName,
+            int binding) {
 
-        // Internal
-        super(
-                name,
-                id);
-
+        this.blockName = blockName;
+        this.binding = binding;
         this.uniforms = new ObjectArrayList<>();
     }
 
     // Accessible \\
+
+    // Data
+    public String blockName() {
+        return blockName;
+    }
+
+    public int binding() {
+        return binding;
+    }
 
     // Uniforms
     public void addUniform(UniformData uniform) {

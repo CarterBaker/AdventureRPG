@@ -114,26 +114,19 @@ public class Main extends Game {
     // Menu Cycle \\
 
     private void menuCycle() {
-
+        internalUpdate();
         internalMenuExclusiveUpdate();
-
-        updateCycle();
+        internalFixedUpdate();
+        internalLateUpdate();
+        internalRender();
+        internalDraw();
     }
 
     // Game Cycle \\
 
     private void gameCycle() {
-
-        internalGameExclusiveUpdate();
-
-        updateCycle();
-    }
-
-    // Update Cycle \\
-
-    private void updateCycle() {
-
         internalUpdate();
+        internalGameExclusiveUpdate();
         internalFixedUpdate();
         internalLateUpdate();
         internalRender();
@@ -177,6 +170,12 @@ public class Main extends Game {
         internal.internalStart();
     }
 
+    // update \\
+
+    private void internalUpdate() {
+        internal.internalUpdate();
+    }
+
     // Menu Exclusive Update \\
 
     private void internalMenuExclusiveUpdate() {
@@ -187,12 +186,6 @@ public class Main extends Game {
 
     private void internalGameExclusiveUpdate() {
         internal.internalGameExclusiveUpdate();
-    }
-
-    // update \\
-
-    private void internalUpdate() {
-        internal.internalUpdate();
     }
 
     // Fixed Update \\

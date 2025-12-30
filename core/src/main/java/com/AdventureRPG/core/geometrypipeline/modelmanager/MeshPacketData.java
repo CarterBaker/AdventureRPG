@@ -12,6 +12,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MeshPacketData extends DataPackage {
 
     // Internal
+    final int modelID;
     final VAOHandle vaoHandle;
     private Matrix4 transform;
 
@@ -22,14 +23,10 @@ public class MeshPacketData extends DataPackage {
 
     // Base \\
 
-    MeshPacketData(int id, VAOHandle vaoHandle) {
+    MeshPacketData(int modelID, VAOHandle vaoHandle) {
 
         // Internal
-
-        super(
-                "MeshPacketData",
-                id);
-
+        this.modelID = modelID;
         this.vaoHandle = vaoHandle;
         this.transform = new Matrix4();
 
@@ -192,6 +189,10 @@ public class MeshPacketData extends DataPackage {
     }
 
     // Accessible \\
+
+    public int getModelID() {
+        return modelID;
+    }
 
     public Matrix4 getTransform() {
         return transform;

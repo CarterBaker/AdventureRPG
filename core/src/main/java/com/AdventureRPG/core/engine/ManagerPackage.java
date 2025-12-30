@@ -158,6 +158,17 @@ public abstract class ManagerPackage extends SystemPackage {
             this.systemArray[i].internalStart();
     }
 
+    // Update \\
+
+    @Override
+    void internalUpdate() {
+
+        super.internalUpdate();
+
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalUpdate();
+    }
+
     // Menu Exclusive Update \\
 
     @Override
@@ -178,17 +189,6 @@ public abstract class ManagerPackage extends SystemPackage {
 
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalGameExclusiveUpdate();
-    }
-
-    // Update \\
-
-    @Override
-    void internalUpdate() {
-
-        super.internalUpdate();
-
-        for (int i = 0; i < this.systemArray.length; i++)
-            this.systemArray[i].internalUpdate();
     }
 
     // Fixed Update \\

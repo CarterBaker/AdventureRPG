@@ -49,7 +49,7 @@ public final class UBOManager extends ManagerPackage {
 
     public UBOHandle buildBuffer(UBOData data) {
 
-        String blockName = data.name;
+        String blockName = data.blockName();
 
         // Check if buffer already exists
         UBOHandle existing = uboName2UBOHandle.get(blockName);
