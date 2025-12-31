@@ -75,7 +75,7 @@ public abstract class InstancePackage extends EngineUtility {
     final void requestContext(InternalContext targetContext) {
 
         if (!targetContext.canEnterFrom(this.internalContext.order))
-            throwException("Firing order issue. Instance attempted to perform an illegal context set.");
+            throwException("Instance attempted to perform an illegal context set.");
 
         this.internalContext = targetContext;
     }

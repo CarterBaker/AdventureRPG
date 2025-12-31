@@ -8,20 +8,9 @@ public enum InternalState {
      * systems are permitted to run in this state.
      */
 
-    CONSTRUCTOR(false),
-    FIRST_FRAME(false),
-    MENU_EXCLUSIVE(true),
-    GAME_EXCLUSIVE(true),
-    EXIT(false);
-
-    // Internal
-    public final boolean accessible;
-
-    // Internal \\
-
-    InternalState(boolean accessible) {
-
-        // Internal
-        this.accessible = accessible;
-    }
+    CONSTRUCTOR(),
+    FIRST_FRAME(),
+    MENU_EXCLUSIVE(),
+    GAME_EXCLUSIVE(),
+    EXIT();
 }

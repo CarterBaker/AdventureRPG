@@ -48,6 +48,9 @@ public abstract class SystemPackage extends EngineUtility {
                 || !targetContext.canEnterFrom(this.internalContext.order))
             return false;
 
+        if (internal.internalState != InternalState.CONSTRUCTOR)
+            debug("This works too");
+
         this.setContext(targetContext);
         return true;
     }

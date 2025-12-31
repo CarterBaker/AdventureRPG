@@ -96,18 +96,6 @@ public class EnginePackage extends ManagerPackage {
         this.internalState = target;
     }
 
-    public final void requestInternalState(InternalState target) {
-
-        if (!target.accessible)
-            throwException(
-                    "Engine state transition denied.\n" +
-                            "Target state: " + target + "\n" +
-                            "Reason: target state is not accessible from the current engine engineContext.\n" +
-                            "Current state: " + internalState);
-
-        this.setInternalState(target);
-    }
-
     // Internal Context \\
 
     @Override // From `SystemPackage`
@@ -121,6 +109,7 @@ public class EnginePackage extends ManagerPackage {
         if (!targetContext.canEnterFrom(this.internalContext.order))
             return false;
 
+        debug("This works");
         this.setContext(targetContext);
         return true;
     }
@@ -357,7 +346,7 @@ public class EnginePackage extends ManagerPackage {
         this.bootStrapTree.clear();
         this.bootStrapArray = new SystemPackage[0];
 
-        this.setContext(InternalContext.CREATE);
+        this.setContext(InternalContext.NULL);
     }
 
     // Create \\
@@ -490,7 +479,7 @@ public class EnginePackage extends ManagerPackage {
         draw();
     }
 
-    // draw() is internal engine specific. SystemPackages do not contain `draw`.
+    // Internal engine specific. SystemPackages do not contain `draw`.
     protected void draw() {
     }
 

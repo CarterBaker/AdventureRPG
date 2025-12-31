@@ -75,6 +75,8 @@ public class GameEngine extends EnginePackage {
                 gson);
     }
 
+    // BootStrap \\
+
     @Override
     protected void bootStrap() {
 
@@ -87,6 +89,8 @@ public class GameEngine extends EnginePackage {
         this.shaderPipeline = (ShaderPipeline) register(new ShaderPipeline());
         this.renderPipeline = (RenderPipeline) register(new RenderPipeline());
     }
+
+    // Internal \\
 
     @Override
     protected void create() {
@@ -114,7 +118,7 @@ public class GameEngine extends EnginePackage {
         loadScreen = (LoadScreen) UISystem.open(Menu.LoadScreen);
         loadScreen.setMaxProgrss(worldPipeline.queueSystem.totalQueueSize());
 
-        requestInternalState(InternalState.MENU_EXCLUSIVE);
+        setInternalState(InternalState.MENU_EXCLUSIVE);
     }
 
     @Override
@@ -136,7 +140,7 @@ public class GameEngine extends EnginePackage {
             loadScreen.setProgrss(worldPipeline.queueSystem.totalQueueSize());
             UISystem.close(loadScreen);
 
-            requestInternalState(InternalState.GAME_EXCLUSIVE);
+            setInternalState(InternalState.GAME_EXCLUSIVE);
         }
     }
 

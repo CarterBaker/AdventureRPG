@@ -106,6 +106,7 @@ public class RenderSystem extends SystemPackage {
     // Accessible \\
 
     public void pushPass(ProcessingPass pass, int depth) {
+
         ObjectArrayList<ProcessingPass> passList = depth2PassList.computeIfAbsent(
                 depth,
                 k -> new ObjectArrayList<>());

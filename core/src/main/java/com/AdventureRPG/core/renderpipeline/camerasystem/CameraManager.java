@@ -23,7 +23,6 @@ public class CameraManager extends ManagerPackage {
 
         // Internal
         this.internalBufferSystem = (InternalBufferSystem) register(new InternalBufferSystem());
-
         createCamera(settings.FOV, width, height);
     }
 
