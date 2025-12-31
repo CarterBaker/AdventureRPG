@@ -2,65 +2,116 @@ package com.AdventureRPG.core.engine;
 
 public abstract class InstancePackage extends EngineUtility {
 
+    /*
+     * InstancePackages are lightweight, engine-managed objects. They are
+     * intended as small, general-purpose data containers and helpers used
+     * by SystemPackages and their extensions, without owning lifecycle or
+     * global state.
+     *
+     * By design, InstancePackages may only be instantiated via the engine
+     * `create` method, either here or in SystemPackage. Any attempt to
+     * construct an InstancePackage outside of this mechanism will result
+     * in an immediate exception.
+     */
+
     // Internal
-    static final ThreadLocal<CreationContext> CREATION_CONTEXT = new ThreadLocal<>();
+    static final ThreadLocal<CreationData> CREATION_DATA = new ThreadLocal<>();
 
     protected final EnginePackage internal;
     protected final SystemPackage owner;
+
+    InternalContext internalContext;
 
     // Internal //
 
     public InstancePackage() {
 
         // Internal
-        CreationContext ctx = CREATION_CONTEXT.get();
+        CreationData creationData = CREATION_DATA.get();
 
-        if (ctx == null)
-            throwException("Instances must be created via internal engine create() method");
+        if (creationData == null)
+            throwException("Instances must be created via internal engine `create` method");
 
-        if (ctx.internal == null || ctx.owner == null)
+        if (creationData.internal == null || creationData.owner == null)
             throwException("Cannot create instance without a proper internal engine or owner reference");
 
-        this.internal = ctx.internal;
-        this.owner = ctx.owner;
+        this.internal = creationData.internal;
+        this.owner = creationData.owner;
+
+        this.internalContext = InternalContext.NULL;
     }
 
-    static final class CreationContext {
+    // Init \\
+
+    protected void internalCreate() {
+
+        if (!this.verifyProcess(InternalContext.CREATE))
+            return;
+
+        create();
+
+        // Set the internal process higher to avoid calling `get` illegally.
+        requestContext(InternalContext.INIT);
+    }
+
+    protected void create() {
+    }
+
+    // Internal Context \\
+
+    final InternalContext getContext() {
+        return internalContext;
+    }
+
+    final boolean verifyProcess(InternalContext targetContext) {
+
+        if (!targetContext.canEnterFrom(this.internalContext.order))
+            return false;
+
+        this.requestContext(targetContext);
+        return true;
+    }
+
+    final void requestContext(InternalContext targetContext) {
+
+        if (!targetContext.canEnterFrom(this.internalContext.order))
+            throwException("Firing order issue. Instance attempted to perform an illegal context set.");
+
+        this.internalContext = targetContext;
+    }
+
+    // Utility \\
+
+    static final class CreationData extends DataPackage {
         final EnginePackage internal;
         final SystemPackage owner;
 
-        CreationContext(EnginePackage internal, SystemPackage owner) {
+        CreationData(EnginePackage internal, SystemPackage owner) {
             this.internal = internal;
             this.owner = owner;
         }
     }
 
     static void setupCreation(EnginePackage internal, SystemPackage owner) {
-        CREATION_CONTEXT.set(new CreationContext(internal, owner));
+        CREATION_DATA.set(new CreationData(internal, owner));
     }
 
     // Accessible \\
 
-    protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
+    @SuppressWarnings("unchecked")
+    protected final <T> T get(Class<T> type) {
 
-        InstancePackage.setupCreation(internal, owner);
+        if (this.internalContext != InternalContext.CREATE)
+            throwException(
+                    "Get called outside CREATE phase.\n" +
+                            "Requested: " + type.getSimpleName() + "\n" +
+                            "Current process: " + getContext());
 
-        if (!InstancePackage.class.isAssignableFrom(instanceClass))
-            throwException("Cannot create non-InstancePackage class: " + instanceClass.getName());
-
-        try {
-            return instanceClass.getDeclaredConstructor().newInstance();
-        }
-
-        catch (Exception e) {
-
-            throwException("Failed to create instance: " + e.getMessage());
-
-            return null;
-        }
-
-        finally {
-            InstancePackage.CREATION_CONTEXT.remove();
-        }
+        return internal.get(true, type);
     }
+
+    protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
+        return internal.internalCreate(instanceClass);
+    }
+
 }

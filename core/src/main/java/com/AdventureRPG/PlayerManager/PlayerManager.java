@@ -39,10 +39,10 @@ public class PlayerManager extends ManagerPackage {
     protected void init() {
 
         // Player
-        this.inputSystem = internal.get(InputSystem.class);
-        this.cameraManager = internal.get(CameraManager.class);
-        this.movementManager = internal.get(MovementManager.class);
-        this.worldPipeline = internal.get(WorldPipeline.class);
+        this.inputSystem = get(InputSystem.class);
+        this.cameraManager = get(CameraManager.class);
+        this.movementManager = get(MovementManager.class);
+        this.worldPipeline = get(WorldPipeline.class);
     }
 
     @Override

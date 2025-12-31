@@ -3,11 +3,11 @@ package com.AdventureRPG.core.util;
 import java.io.File;
 import java.nio.file.Path;
 
-import com.AdventureRPG.core.engine.UtiityPackage;
+import com.AdventureRPG.core.engine.UtilityPackage;
 
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
-public class FileUtility extends UtiityPackage {
+public class FileUtility extends UtilityPackage {
 
     // Verify integrity of root path
     public static void verifyDirectory(File directory, String message) {

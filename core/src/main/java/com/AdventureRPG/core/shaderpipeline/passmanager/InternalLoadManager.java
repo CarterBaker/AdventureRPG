@@ -35,7 +35,7 @@ class InternalLoadManager extends ManagerPackage {
     protected void init() {
 
         // Internal
-        this.passManager = internal.get(PassManager.class);
+        this.passManager = get(PassManager.class);
     }
 
     @Override

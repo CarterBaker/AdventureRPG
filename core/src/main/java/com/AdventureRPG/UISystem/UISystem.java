@@ -19,7 +19,7 @@ public class UISystem extends SystemPackage {
 
     @Override
     protected void init() {
-        inputSystem = internal.get(InputSystem.class);
+        inputSystem = get(InputSystem.class);
     }
 
     // UI System \\

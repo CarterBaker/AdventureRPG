@@ -5,7 +5,7 @@ public class DataPackage extends EngineUtility {
     /*
      * DataPackages are intended to be used as a temporary data storage
      * container designed specifically for use within the internal boot
-     * kernel of the engine itself. Typically the data contained within
+     * bootStrap of the engine itself. Typically the data contained within
      * is used to create a permanant HandlePackage.
      */
 }

@@ -25,8 +25,8 @@ class InternalBuildSystem extends SystemPackage {
     protected void init() {
 
         // Internal
-        this.modelManager = internal.get(ModelManager.class);
-        this.materialManager = internal.get(MaterialManager.class);
+        this.modelManager = get(ModelManager.class);
+        this.materialManager = get(MaterialManager.class);
     }
 
     // Pass Management \\

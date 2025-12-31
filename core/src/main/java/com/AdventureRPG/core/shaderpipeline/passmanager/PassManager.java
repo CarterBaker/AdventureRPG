@@ -34,7 +34,7 @@ public class PassManager extends ManagerPackage {
     protected void init() {
 
         // Internal
-        this.renderSystem = internal.get(RenderSystem.class);
+        this.renderSystem = get(RenderSystem.class);
     }
 
     @Override

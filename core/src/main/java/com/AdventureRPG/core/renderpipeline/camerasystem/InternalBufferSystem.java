@@ -12,8 +12,8 @@ class InternalBufferSystem extends SystemPackage {
 
     @Override
     protected void init() {
-        this.uboManager = this.internal.get(UBOManager.class);
-        this.cameraManager = this.internal.get(CameraManager.class);
+        this.uboManager = this.get(UBOManager.class);
+        this.cameraManager = this.get(CameraManager.class);
     }
 
     @Override

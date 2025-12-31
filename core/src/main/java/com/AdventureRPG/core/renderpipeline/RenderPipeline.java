@@ -18,14 +18,9 @@ public class RenderPipeline extends PipelineFrame {
         this.renderSystem = (RenderSystem) register(new RenderSystem());
     }
 
-    // Camera Manager \\
-
-    public void resize(int width, int height) {
-        cameraManager.resize(width, height);
-    }
-
     // Render Pipeline \\
 
+    // TODO: Not happy with this here
     public void draw() {
         renderSystem.draw();
     }

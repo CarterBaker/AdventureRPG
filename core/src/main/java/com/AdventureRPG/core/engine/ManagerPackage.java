@@ -6,7 +6,7 @@ import java.util.List;
 public abstract class ManagerPackage extends SystemPackage {
 
     // Internal
-    private List<SystemPackage> systemTree = new ArrayList<>();
+    private List<SystemPackage> systemCollection = new ArrayList<>();
     private SystemPackage[] systemArray = new SystemPackage[0];
     private List<SystemPackage> garbageCollection = new ArrayList<>();
 
@@ -18,31 +18,36 @@ public abstract class ManagerPackage extends SystemPackage {
 
     SystemPackage internalRegister(SystemPackage subSystem) {
 
-        if (this.getInternalProcess() != InternalProcess.CREATE)
+        if (this.getContext() != InternalContext.CREATE)
             throwException(
                     "Register method was called from a process other than create. Current process: "
-                            + this.getInternalProcess());
+                            + this.getContext());
 
         if (subSystem instanceof EnginePackage)
             throwException("Only one engine package is allowed at any given time");
 
-        if (this.systemTree.contains(subSystem))
+        if (this.systemCollection.contains(subSystem))
             throwException("Subsystem: " + subSystem.getClass().getSimpleName()
-                    + ", Already exists within the engine frame. Only one instance of any given system can exist at a time");
+                    + ", Already exists within the internal engine. Only one instance of any given system can exist at a time");
 
-        this.systemTree.add(subSystem);
+        this.systemCollection.add(subSystem);
 
         setupNewSubSystem(subSystem);
 
         return subSystem;
     }
 
-    void setupNewSubSystem(SystemPackage subSystem) {
+    private void setupNewSubSystem(SystemPackage subSystem) {
+
         subSystem.register(
                 settings,
                 internal,
                 this);
+
+        internal.registerToSystemRegistry(subSystem);
     }
+
+    // System Release \\
 
     protected final SystemPackage release(SystemPackage subSystem) {
         internalRelease(subSystem);
@@ -51,10 +56,10 @@ public abstract class ManagerPackage extends SystemPackage {
 
     void internalRelease(SystemPackage subSystem) {
 
-        if (this.getInternalProcess() != InternalProcess.FREE_MEMORY)
+        if (this.getContext() != InternalContext.FREE_MEMORY)
             throwException(
                     "Release method was called from a process other than free memory. Current process: "
-                            + this.getInternalProcess());
+                            + this.getContext());
 
         if (subSystem instanceof EnginePackage)
             throwException(
@@ -64,39 +69,6 @@ public abstract class ManagerPackage extends SystemPackage {
             return;
 
         this.garbageCollection.add(subSystem);
-
-        return;
-    }
-
-    // System Retrieval \\
-
-    @SuppressWarnings("unchecked")
-    public final <T> T get(Class<T> type) {
-
-        if (this.internal.getInternalProcess() != InternalProcess.INIT)
-            throwException(
-                    "Get method was called from a process other than initialization. Current process: "
-                            + this.getInternalProcess());
-
-        for (SystemPackage frame : this.systemTree) {
-
-            if (type.isAssignableFrom(frame.getClass()))
-                return (T) frame;
-
-            if (frame instanceof ManagerPackage manager) {
-
-                T nested = manager.get(type);
-
-                if (nested != null)
-                    return nested;
-            }
-        }
-
-        return null;
-    }
-
-    private final void cacheSubSystems() {
-        this.systemArray = this.systemTree.toArray(new SystemPackage[0]);
     }
 
     // Create \\
@@ -237,13 +209,17 @@ public abstract class ManagerPackage extends SystemPackage {
 
     // Utility \\
 
-    private void clearGarbage() {
+    private final void cacheSubSystems() {
+        this.systemArray = this.systemCollection.toArray(new SystemPackage[0]);
+    }
+
+    void clearGarbage() {
 
         if (garbageCollection.isEmpty())
             return;
 
         for (SystemPackage target : garbageCollection)
-            systemTree.remove(target);
+            systemCollection.remove(target);
 
         garbageCollection.clear();
 

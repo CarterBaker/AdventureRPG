@@ -683,7 +683,7 @@ public class Builder {
     private void buildFromQuads(SubChunkMeshData subChunkMeshData) {
 
         subChunkMeshData.clear();
-        final int stride = EngineSetting.Chunk_VERT_STRIDE;
+        final int stride = EngineSetting.CHUNK_VERT_STRIDE;
 
         for (int i = 0; i < quads.size; i += QUAD_SIZE) {
 

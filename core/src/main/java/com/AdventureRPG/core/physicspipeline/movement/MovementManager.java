@@ -33,7 +33,7 @@ public class MovementManager extends ManagerPackage {
     protected void init() {
 
         // Root
-        this.worldEngineSystem = internal.get(WorldEngineSystem.class);
+        this.worldEngineSystem = get(WorldEngineSystem.class);
     }
 
     // Movement \\

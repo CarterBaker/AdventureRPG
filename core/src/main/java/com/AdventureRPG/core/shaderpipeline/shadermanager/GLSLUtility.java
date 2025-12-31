@@ -3,7 +3,7 @@ package com.AdventureRPG.core.shaderpipeline.shadermanager;
 import java.nio.file.Files;
 import java.nio.IntBuffer;
 
-import com.AdventureRPG.core.engine.UtiityPackage;
+import com.AdventureRPG.core.engine.UtilityPackage;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
@@ -11,7 +11,7 @@ import com.badlogic.gdx.utils.BufferUtils;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class GLSLUtility extends UtiityPackage {
+class GLSLUtility extends UtilityPackage {
 
     // Shader Program Construction
     static int createShaderProgram(ShaderDefinitionData shaderDef) {

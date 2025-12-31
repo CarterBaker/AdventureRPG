@@ -1,7 +1,7 @@
 package com.AdventureRPG.core.renderpipeline.rendersystem;
 
 import com.AdventureRPG.core.engine.SystemPackage;
-import com.AdventureRPG.core.engine.WindowSystem;
+import com.AdventureRPG.core.engine.WindowInstance;
 import com.AdventureRPG.core.geometrypipeline.Models.ModelHandle;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
 import com.AdventureRPG.core.shaderpipeline.materials.Material;
@@ -15,7 +15,7 @@ public class RenderSystem extends SystemPackage {
 
     // Internal
     private ModelManager modelManager;
-    private WindowSystem windowSystem;
+    private WindowInstance windowInstance;
 
     // Render Queue: depth -> ordered list of passes
     private Int2ObjectOpenHashMap<ObjectArrayList<ProcessingPass>> depth2PassList;
@@ -29,8 +29,8 @@ public class RenderSystem extends SystemPackage {
 
     @Override
     protected void init() {
-        this.modelManager = internal.get(ModelManager.class);
-        this.windowSystem = internal.get(WindowSystem.class);
+        this.modelManager = get(ModelManager.class);
+        this.windowInstance = internal.getWindowInstance();
     }
 
     @Override
@@ -44,8 +44,8 @@ public class RenderSystem extends SystemPackage {
 
         // Set viewport
         GLSLUtility.setViewport(
-                windowSystem.getWidth(),
-                windowSystem.getHeight());
+                windowInstance.getWidth(),
+                windowInstance.getHeight());
 
         // Clear buffers
         GLSLUtility.clearBuffer();

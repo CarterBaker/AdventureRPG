@@ -40,7 +40,7 @@ class InternalLoadManager extends ManagerPackage {
     protected void init() {
 
         // Internal
-        this.textureManager = internal.get(TextureManager.class);
+        this.textureManager = get(TextureManager.class);
     }
 
     @Override

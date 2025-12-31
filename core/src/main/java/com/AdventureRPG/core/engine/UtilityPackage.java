@@ -1,6 +1,6 @@
 package com.AdventureRPG.core.engine;
 
-public abstract class UtiityPackage {
+public abstract class UtilityPackage {
 
     // Internal \\
 

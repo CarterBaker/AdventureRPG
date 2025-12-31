@@ -101,8 +101,8 @@ public class TimeSystem extends SystemPackage {
     protected void init() {
 
         // Internal
-        this.uboManager = internal.get(UBOManager.class);
-        this.lightingManager = internal.get(LightingManager.class);
+        this.uboManager = get(UBOManager.class);
+        this.lightingManager = get(LightingManager.class);
 
         // Buffer
         this.elapsedTime = 0;

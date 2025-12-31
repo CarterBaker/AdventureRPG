@@ -49,9 +49,9 @@ public class BatchSystem extends ManagerPackage {
     protected void init() {
 
         // Root
-        this.worldPipeline = internal.get(WorldPipeline.class);
-        this.worldTick = worldPipeline.get(WorldTick.class);
-        this.queueSystem = worldPipeline.get(QueueSystem.class);
+        this.worldPipeline = get(WorldPipeline.class);
+        this.worldTick = get(WorldTick.class);
+        this.queueSystem = get(QueueSystem.class);
 
         // Chunk Tracking
         this.loadedChunks = new Long2ObjectOpenHashMap<>(queueSystem.totalChunks());

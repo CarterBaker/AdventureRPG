@@ -48,12 +48,12 @@ public class WorldGenerator extends SystemPackage {
     protected void init() {
 
         // Root
-        this.userData = internal.get(SaveManager.class).get(UserData.class);
-        this.worldPipeline = internal.get(WorldPipeline.class);
+        this.userData = get(UserData.class);
+        this.worldPipeline = get(WorldPipeline.class);
 
         // World Manager
-        this.packedCoordinate3Int = worldPipeline.get(PackedCoordinate3Int.class);
-        this.blockSystem = worldPipeline.get(BlockSystem.class);
+        this.packedCoordinate3Int = get(PackedCoordinate3Int.class);
+        this.blockSystem = get(BlockSystem.class);
 
         // Default Blocks
         this.AIR_BLOCK = blockSystem.getBlockByName("Air");

@@ -3,12 +3,12 @@ package com.AdventureRPG.core.util;
 import java.io.File;
 import java.io.FileReader;
 
-import com.AdventureRPG.core.engine.UtiityPackage;
+import com.AdventureRPG.core.engine.UtilityPackage;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-public class JsonUtility extends UtiityPackage {
+public class JsonUtility extends UtilityPackage {
 
     public static JsonArray validateArray(JsonObject json, String key) {
         return validateArray(json, key, 0);

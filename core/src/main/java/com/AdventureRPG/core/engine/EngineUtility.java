@@ -5,7 +5,17 @@ import java.time.format.DateTimeFormatter;
 
 abstract class EngineUtility {
 
+    /*
+     * Here is where we throw methods every class in the engine
+     * should have access to. Used to unify debugging and exception
+     * handling among other various utilities.
+     */
+
     // Internal
+    private final String packageName = getClass().getPackage() != null
+            ? getClass().getPackage().getName()
+            : "<default>";
+
     private final String systemName = getClass().getSimpleName();
 
     // Debug \\
@@ -15,11 +25,12 @@ abstract class EngineUtility {
     }
 
     protected final void debug(Object input) {
+        System.out.println("(" + packageName + ")");
         System.out.println("[" + systemName + "] " + String.valueOf(input));
     }
 
     protected final void timeStampDebug(Object input) {
-        debug(timeStamp() + String.valueOf(input));
+        debug("[" + timeStamp() + "] " + String.valueOf(input));
     }
 
     // Log \\
@@ -33,7 +44,7 @@ abstract class EngineUtility {
     }
 
     protected final void timeStampLog(Object input) {
-        System.out.println(timeStamp() + String.valueOf(input));
+        System.out.println("[" + timeStamp() + "] " + String.valueOf(input));
     }
 
     // Exception Handling \\
@@ -52,7 +63,7 @@ abstract class EngineUtility {
 
     protected final <T> T throwException(String message, Throwable cause) {
         logFatal(message, cause);
-        throw new InternalException(message, cause);
+        throw new InternalException("[" + systemName + "] " + message, cause);
     }
 
     protected final <T> T throwException(Object input) {
@@ -66,40 +77,40 @@ abstract class EngineUtility {
     // Utility \\
 
     private final String timeStamp() {
-        String time = LocalTime.now().format(TIME_FORMAT);
-        return "[" + time + "] ";
+        return LocalTime.now().format(TIME_FORMAT);
     }
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
-    public class InternalException extends RuntimeException {
+    public static class InternalException extends RuntimeException {
 
         public InternalException(String message) {
-            super("[" + systemName + "] " + message);
+            super(message);
         }
 
         public InternalException(String message, Throwable cause) {
-            super("[" + systemName + "] " + message, cause);
+            super(message, cause);
         }
     }
 
     private void logFatal(String message, Throwable cause) {
 
-        errorLog("=========FATAL ENGINE EXCEPTION=========");
+        log("========Internal Engine Failure========");
 
-        errorLog("");
+        log("");
 
-        errorLog("System : " + systemName);
-        errorLog("Time   : " + timeStamp());
-        errorLog("Message: " + message);
+        log("Package   : " + packageName);
+        log("System    : " + systemName);
+        log("Time      : " + timeStamp());
+        errorLog("Message   : " + message);
 
-        errorLog("");
+        log("");
 
         if (cause != null) {
-            errorLog("Cause:");
+            log("Cause:");
             cause.printStackTrace(System.err);
         }
 
-        errorLog("========================================");
+        log("=======================================");
     }
 }

@@ -29,7 +29,7 @@ public class InternalBuildSystem extends SystemPackage {
     protected void init() {
 
         // Internal
-        this.internalLoadManager = internal.get(InternalLoadManager.class);
+        this.internalLoadManager = get(InternalLoadManager.class);
         this.root = new File(EngineSetting.SHADER_PATH);
 
         this.nextAutoBinding = 0;

@@ -89,7 +89,7 @@ public class EngineSetting {
         public static final int VERT_NOR = 3; // nX, nY, nZ
         public static final int VERT_COL = 1; // Color
         public static final int VERT_UV0 = 2; // UV
-        public static final int Chunk_VERT_STRIDE = VERT_POS + VERT_NOR + VERT_COL + VERT_UV0; // Always 9
+        public static final int CHUNK_VERT_STRIDE = VERT_POS + VERT_NOR + VERT_COL + VERT_UV0; // Always 9
         public static final int CHUNK_VERT_BUFFER = 128;
         public static final int MESH_VERT_LIMIT = 32767;
 }

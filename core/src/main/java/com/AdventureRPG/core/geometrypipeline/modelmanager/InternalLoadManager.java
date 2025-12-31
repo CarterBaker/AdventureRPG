@@ -37,7 +37,7 @@ public class InternalLoadManager extends ManagerPackage {
 
     @Override
     protected void init() {
-        this.modelManager = internal.get(ModelManager.class);
+        this.modelManager = get(ModelManager.class);
     }
 
     @Override

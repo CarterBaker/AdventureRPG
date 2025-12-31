@@ -76,9 +76,9 @@ public class QueueSystem extends ManagerPackage {
     protected void init() {
 
         // Root
-        this.worldEngineSystem = internal.get(WorldEngineSystem.class);
-        this.worldPipeline = internal.get(WorldPipeline.class);
-        this.worldTick = worldPipeline.get(WorldTick.class);
+        this.worldEngineSystem = get(WorldEngineSystem.class);
+        this.worldPipeline = get(WorldPipeline.class);
+        this.worldTick = get(WorldTick.class);
 
         // Chunk Tracking
         int initialCapacity = (int) Math.ceil(grid.totalChunks() / loadFactor);

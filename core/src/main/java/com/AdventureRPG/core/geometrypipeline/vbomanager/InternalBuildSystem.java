@@ -22,8 +22,8 @@ class InternalBuildSystem extends SystemPackage {
 
     @Override
     protected void init() {
-        this.vboManager = internal.get(VBOManager.class);
-        this.vaoManager = internal.get(VAOManager.class);
+        this.vboManager = get(VBOManager.class);
+        this.vaoManager = get(VAOManager.class);
     }
 
     // Build \\

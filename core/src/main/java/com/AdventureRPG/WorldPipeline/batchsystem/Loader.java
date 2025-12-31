@@ -59,8 +59,8 @@ public class Loader extends SystemPackage {
     protected void init() {
 
         // Root
-        this.threadSystem = internal.get(WorldPipeline.class).get(ThreadSystem.class);
-        this.batchSystem = internal.get(WorldPipeline.class).get(QueueSystem.class).get(BatchSystem.class);
+        this.threadSystem = get(ThreadSystem.class);
+        this.batchSystem = get(BatchSystem.class);
     }
 
     @Override

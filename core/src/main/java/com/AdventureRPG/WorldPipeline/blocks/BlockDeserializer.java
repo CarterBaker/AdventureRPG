@@ -11,7 +11,7 @@ import com.google.gson.JsonParseException;
 public class BlockDeserializer implements JsonDeserializer<Builder> {
 
     @Override
-    public Builder deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+    public Builder deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext internalContext)
             throws JsonParseException {
 
         JsonObject obj = json.getAsJsonObject();

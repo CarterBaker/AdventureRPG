@@ -25,8 +25,8 @@ public class WorldReader extends SystemPackage {
     public void init() {
 
         // Root
-        worldEngineSystem = internal.get(WorldEngineSystem.class);
-        world = internal.get(WorldEngineSystem.class).getWorld();
+        worldEngineSystem = get(WorldEngineSystem.class);
+        world = get(WorldEngineSystem.class).getWorld();
     }
 
     // World Reader \\

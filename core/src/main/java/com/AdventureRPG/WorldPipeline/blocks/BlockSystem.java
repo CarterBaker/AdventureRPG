@@ -22,8 +22,8 @@ public class BlockSystem extends SystemPackage {
         this.gson = internal.gson;
 
         // Block System
-        TextureManager textureManager = internal.get(TextureManager.class);
-        MaterialManager materialManager = internal.get(MaterialManager.class);
+        TextureManager textureManager = get(TextureManager.class);
+        MaterialManager materialManager = get(MaterialManager.class);
         this.blocks = Loader.LoadBlocks(
                 internal.gson,
                 textureManager,

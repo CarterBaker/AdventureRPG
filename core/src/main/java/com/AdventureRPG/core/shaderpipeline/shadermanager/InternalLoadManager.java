@@ -62,8 +62,8 @@ class InternalLoadManager extends ManagerPackage {
     protected void init() {
 
         // Internal
-        this.shaderManager = internal.get(ShaderManager.class);
-        this.uboManager = internal.get(UBOManager.class);
+        this.shaderManager = get(ShaderManager.class);
+        this.uboManager = get(UBOManager.class);
     }
 
     @Override

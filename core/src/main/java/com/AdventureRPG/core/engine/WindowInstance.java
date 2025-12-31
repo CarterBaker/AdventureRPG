@@ -3,22 +3,21 @@ package com.AdventureRPG.core.engine;
 import com.AdventureRPG.core.renderpipeline.camerasystem.CameraManager;
 import com.badlogic.gdx.Screen;
 
-public class WindowSystem extends SystemPackage implements Screen {
-
-    // Core
-    private CameraManager cameraManager;
+public class WindowInstance extends InstancePackage implements Screen {
 
     // Internal
+    private CameraManager cameraManager;
+
     private int width;
     private int height;
 
-    // Core \\
+    // Internal \\
 
     @Override
-    protected void init() {
+    protected void create() {
 
-        // Core
-        this.cameraManager = internal.get(CameraManager.class);
+        // Internal
+        this.cameraManager = get(CameraManager.class);
 
         // Internal
         this.width = 0;

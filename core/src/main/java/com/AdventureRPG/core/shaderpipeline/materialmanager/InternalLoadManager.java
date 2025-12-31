@@ -35,7 +35,7 @@ class InternalLoadManager extends ManagerPackage {
     protected void init() {
 
         // Internal
-        this.materialManager = internal.get(MaterialManager.class);
+        this.materialManager = get(MaterialManager.class);
     }
 
     @Override

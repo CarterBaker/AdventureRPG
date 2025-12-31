@@ -9,6 +9,14 @@ import com.google.gson.Gson;
 
 public class Main extends Game {
 
+    /*
+     * Main serves as the bridge between libGDX and the internal engine.
+     * While libGDX provides cross-platform support, the internal engine
+     * handles core systems such as lifecycle management, updates, and rendering.
+     * This class ensures that libGDX delegates execution to the engine while
+     * keeping the two systems decoupled.
+     */
+
     // Root
     private final File GAME_DIRECTORY;
     private final Settings settings;
@@ -16,10 +24,6 @@ public class Main extends Game {
 
     // Internal
     private GameEngine internal;
-
-    private float fixedInterval;
-    private float elapsedTime;
-    private int maxSteps;
 
     // Base \\
 
@@ -44,11 +48,7 @@ public class Main extends Game {
                 GAME_DIRECTORY,
                 gson);
 
-        this.fixedInterval = settings.FIXED_TIME_STEP;
-        this.elapsedTime = 0.0f;
-        this.maxSteps = 5;
-
-        stateSwitch();
+        internal.updateInternalState();
     }
 
     @Override
@@ -57,177 +57,8 @@ public class Main extends Game {
         setDeltaTime();
 
         super.render();
-        stateSwitch();
-    }
 
-    // State Management \\
-
-    private void stateSwitch() {
-
-        switch (internal.getInternalState()) {
-
-            case CONSTRUCTOR -> {
-                bootCycle();
-            }
-
-            case FIRST_FRAME ->
-                startCycle();
-
-            case MENU_EXCLUSIVE ->
-                menuCycle();
-
-            case GAME_EXCLUSIVE ->
-                gameCycle();
-
-            case EXIT -> {
-                exitCycle();
-            }
-        }
-    }
-
-    // Boot Cycle \\
-
-    private void bootCycle() {
-
-        // Start the game
-        internal.internalBootKernel();
-        setScreen(internal.setScreen());
-
-        internalCreate();
-        internalInit();
-        internalAwake();
-        internalFreeMemory();
-
-        internal.setInternalState(InternalState.FIRST_FRAME);
-    }
-
-    // Start Cycle \\
-
-    private void startCycle() {
-
-        internalStart();
-
-        // TODO: I want the game to start on game and work dynamically.
-        internal.setInternalState(InternalState.MENU_EXCLUSIVE);
-    }
-
-    // Menu Cycle \\
-
-    private void menuCycle() {
-        internalUpdate();
-        internalMenuExclusiveUpdate();
-        internalFixedUpdate();
-        internalLateUpdate();
-        internalRender();
-        internalDraw();
-    }
-
-    // Game Cycle \\
-
-    private void gameCycle() {
-        internalUpdate();
-        internalGameExclusiveUpdate();
-        internalFixedUpdate();
-        internalLateUpdate();
-        internalRender();
-        internalDraw();
-    }
-
-    // Exit Cycle \\
-
-    private void exitCycle() {
-
-        internalDispose();
-    }
-
-    // Create \\
-
-    private void internalCreate() {
-        internal.internalCreate();
-    }
-
-    // Init \\
-
-    private void internalInit() {
-        internal.internalInit();
-    }
-
-    // Awake \\
-
-    private void internalAwake() {
-        internal.internalAwake();
-    }
-
-    // Free Memory \\
-
-    private void internalFreeMemory() {
-        internal.internalFreeMemory();
-    }
-
-    // Start \\
-
-    private void internalStart() {
-        internal.internalStart();
-    }
-
-    // update \\
-
-    private void internalUpdate() {
-        internal.internalUpdate();
-    }
-
-    // Menu Exclusive Update \\
-
-    private void internalMenuExclusiveUpdate() {
-        internal.internalMenuExclusiveUpdate();
-    }
-
-    // Game Exclusive Update \\
-
-    private void internalGameExclusiveUpdate() {
-        internal.internalGameExclusiveUpdate();
-    }
-
-    // Fixed Update \\
-
-    private void internalFixedUpdate() {
-
-        // TODO: Micro optimiztion read and cache the delta and then send it through to
-        // the internal per frame instead of reading it twice.
-        elapsedTime += Gdx.graphics.getDeltaTime();
-        int steps = 0;
-
-        while (elapsedTime >= fixedInterval && steps < maxSteps) {
-
-            elapsedTime -= fixedInterval;
-            steps++;
-
-            internal.internalFixedUpdate();
-        }
-    }
-
-    // Late Update \\
-
-    private void internalLateUpdate() {
-        internal.internalLateUpdate();
-    }
-
-    // Render \\
-
-    private void internalRender() {
-        internal.internalRender();
-    }
-
-    // Draw \\
-
-    private void internalDraw() {
-        internal.internalDraw();
-    }
-
-    // Dispose \\
-
-    private void internalDispose() {
-        internal.internalDispose();
+        internal.updateInternalState();
     }
 
     @Override
@@ -246,9 +77,13 @@ public class Main extends Game {
 
     // Utility \\
 
+    // Set the games delta time for ease of access across all systems
+    private void setDeltaTime() {
+        internal.setDeltaTime(Gdx.graphics.getDeltaTime());
+    }
+
     // Close the main window on game close
     private void HandleGameWindow() {
-
         if (getScreen() != null)
             getScreen().dispose();
     }
@@ -269,11 +104,5 @@ public class Main extends Game {
                 throw new RuntimeException(
                         "File: " + settingsFile.getName() + ", Failed to delete on game close");
         }
-    }
-
-    // Set the games delta time for ease of access across all systems
-    private void setDeltaTime() {
-        float deltaTime = Gdx.graphics.getDeltaTime();
-        internal.setDeltaTime(deltaTime);
     }
 }

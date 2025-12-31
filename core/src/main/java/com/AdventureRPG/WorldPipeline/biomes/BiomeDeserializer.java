@@ -12,7 +12,7 @@ import com.google.gson.JsonParseException;
 public class BiomeDeserializer implements JsonDeserializer<Biome> {
 
     @Override
-    public Biome deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+    public Biome deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext internalContext)
             throws JsonParseException {
 
         JsonObject obj = json.getAsJsonObject();

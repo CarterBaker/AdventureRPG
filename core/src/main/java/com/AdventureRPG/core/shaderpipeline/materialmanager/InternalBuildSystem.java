@@ -30,8 +30,8 @@ class InternalBuildSystem extends SystemPackage {
     protected void init() {
 
         // Internal
-        this.textureManager = internal.get(TextureManager.class);
-        this.shaderManager = internal.get(ShaderManager.class);
+        this.textureManager = get(TextureManager.class);
+        this.shaderManager = get(ShaderManager.class);
     }
 
     // Material Management \\

@@ -10,7 +10,7 @@ public abstract class SystemPackage extends EngineUtility {
     protected ManagerPackage local = null;
 
     // Internal
-    InternalProcess internalProcess = null;
+    InternalContext internalContext = null;
 
     // Core \\
 
@@ -25,28 +25,30 @@ public abstract class SystemPackage extends EngineUtility {
         this.local = local;
 
         // Internal
-        this.internalProcess = InternalProcess.CREATE;
+        this.internalContext = InternalContext.NULL;
     }
 
-    // Internal Process \\
+    // Internal Context \\
 
-    final InternalProcess getInternalProcess() {
-        return internalProcess;
+    final InternalContext getContext() {
+        return internalContext;
     }
 
-    final void setInternalProcess(InternalProcess target) {
-        this.internalProcess = target;
+    void setContext(InternalContext targetContext) {
+
+        if (!targetContext.canEnterFrom(this.internalContext.order))
+            throwException("Firing order issue. Internal engine attempted to perform an illegal context set.");
+
+        this.internalContext = targetContext;
     }
 
-    final boolean verifyProcess(InternalProcess target) {
+    boolean verifyProcess(InternalContext targetContext) {
 
-        InternalProcess rootProcess = internal.getInternalProcess();
-
-        if (!target.isUpdateProcess &&
-                (target.order < rootProcess.order || target.order < this.internalProcess.order))
+        if (internal.internalContext != targetContext
+                || !targetContext.canEnterFrom(this.internalContext.order))
             return false;
 
-        this.setInternalProcess(target);
+        this.setContext(targetContext);
         return true;
     }
 
@@ -56,7 +58,7 @@ public abstract class SystemPackage extends EngineUtility {
 
         verifySystem();
 
-        if (!this.verifyProcess(InternalProcess.CREATE))
+        if (!this.verifyProcess(InternalContext.CREATE))
             return;
 
         create();
@@ -69,7 +71,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalInit() {
 
-        if (!this.verifyProcess(InternalProcess.INIT))
+        if (!this.verifyProcess(InternalContext.INIT))
             return;
 
         init();
@@ -82,7 +84,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalAwake() {
 
-        if (!this.verifyProcess(InternalProcess.AWAKE))
+        if (!this.verifyProcess(InternalContext.AWAKE))
             return;
 
         awake();
@@ -95,7 +97,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalFreeMemory() {
 
-        if (!this.verifyProcess(InternalProcess.FREE_MEMORY))
+        if (!this.verifyProcess(InternalContext.FREE_MEMORY))
             return;
 
         freeMemory();
@@ -108,7 +110,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalStart() {
 
-        if (!this.verifyProcess(InternalProcess.START))
+        if (!this.verifyProcess(InternalContext.START))
             return;
 
         start();
@@ -121,7 +123,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalUpdate() {
 
-        if (!this.verifyProcess(InternalProcess.UPDATE))
+        if (!this.verifyProcess(InternalContext.UPDATE))
             return;
 
         update();
@@ -134,7 +136,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalMenuExclusiveUpdate() {
 
-        if (!this.verifyProcess(InternalProcess.MENU_EXCLUSIVE))
+        if (!this.verifyProcess(InternalContext.MENU_EXCLUSIVE))
             return;
 
         menuExclusiveUpdate();
@@ -147,7 +149,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalGameExclusiveUpdate() {
 
-        if (!this.verifyProcess(InternalProcess.GAME_EXCLUSIVE))
+        if (!this.verifyProcess(InternalContext.GAME_EXCLUSIVE))
             return;
 
         gameExclusiveUpdate();
@@ -160,7 +162,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalFixedUpdate() {
 
-        if (!this.verifyProcess(InternalProcess.FIXED_UPDATE))
+        if (!this.verifyProcess(InternalContext.FIXED_UPDATE))
             return;
 
         fixedUpdate();
@@ -173,7 +175,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalLateUpdate() {
 
-        if (!this.verifyProcess(InternalProcess.LATE_UPDATE))
+        if (!this.verifyProcess(InternalContext.LATE_UPDATE))
             return;
 
         lateUpdate();
@@ -186,7 +188,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalRender() {
 
-        if (!this.verifyProcess(InternalProcess.RENDER))
+        if (!this.verifyProcess(InternalContext.RENDER))
             return;
 
         render();
@@ -199,7 +201,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalDispose() {
 
-        if (!this.verifyProcess(InternalProcess.DISPOSE))
+        if (!this.verifyProcess(InternalContext.DISPOSE))
             return;
 
         dispose();
@@ -214,7 +216,7 @@ public abstract class SystemPackage extends EngineUtility {
         if (settings == null ||
                 internal == null ||
                 local == null ||
-                internalProcess == null)
+                internalContext == null)
             throwException("System was created without proper registration");
     }
 
@@ -225,10 +227,14 @@ public abstract class SystemPackage extends EngineUtility {
     }
 
     protected final void debugProcess(Object input) {
-        debug("[" + internalProcess.toString() + "] " + String.valueOf(input));
+        debug("[" + internalContext.toString() + "] " + String.valueOf(input));
     }
 
     protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
+        return internalCreate(instanceClass);
+    }
+
+    final <T extends InstancePackage> T internalCreate(Class<T> instanceClass) {
 
         InstancePackage.setupCreation(internal, this);
 
@@ -236,7 +242,11 @@ public abstract class SystemPackage extends EngineUtility {
             throwException("Cannot create non-InstancePackage class: " + instanceClass.getName());
 
         try {
-            return instanceClass.getDeclaredConstructor().newInstance();
+
+            T instance = instanceClass.getDeclaredConstructor().newInstance();
+            instance.internalCreate();
+
+            return instance;
         }
 
         catch (Exception e) {
@@ -247,7 +257,12 @@ public abstract class SystemPackage extends EngineUtility {
         }
 
         finally {
-            InstancePackage.CREATION_CONTEXT.remove();
+            InstancePackage.CREATION_DATA.remove();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    protected final <T> T get(Class<T> type) {
+        return internal.get(false, type);
     }
 }

@@ -21,7 +21,7 @@ public class Sky extends SystemPackage {
     protected void init() {
 
         // Root
-        this.passmanager = internal.get(PassManager.class);
+        this.passmanager = get(PassManager.class);
 
         // Shader
         this.skyPassID = passmanager.getPassIDFromPassName("Sky");

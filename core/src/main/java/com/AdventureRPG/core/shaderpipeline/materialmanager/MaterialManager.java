@@ -36,7 +36,7 @@ public class MaterialManager extends ManagerPackage {
     protected void init() {
 
         // Internal
-        this.shaderManager = internal.get(ShaderManager.class);
+        this.shaderManager = get(ShaderManager.class);
     }
 
     @Override

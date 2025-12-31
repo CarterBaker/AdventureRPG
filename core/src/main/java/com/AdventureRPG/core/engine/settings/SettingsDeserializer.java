@@ -11,7 +11,7 @@ import com.google.gson.JsonParseException;
 public class SettingsDeserializer implements JsonDeserializer<Settings> {
 
     @Override
-    public Settings deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+    public Settings deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext internalContext)
             throws JsonParseException {
 
         JsonObject obj = json.getAsJsonObject();

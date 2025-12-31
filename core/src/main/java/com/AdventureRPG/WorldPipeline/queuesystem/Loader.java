@@ -69,12 +69,12 @@ public class Loader extends SystemPackage {
     protected void init() {
 
         // Root
-        this.threadSystem = internal.get(ThreadSystem.class);
-        this.vaoManager = internal.get(VAOManager.class);
-        this.modelManager = internal.get(ModelManager.class);
-        this.chunkData = internal.get(ChunkData.class);
-        this.worldEngineSystem = internal.get(WorldEngineSystem.class);
-        this.worldPipeline = internal.get(WorldPipeline.class);
+        this.threadSystem = get(ThreadSystem.class);
+        this.vaoManager = get(VAOManager.class);
+        this.modelManager = get(ModelManager.class);
+        this.chunkData = get(ChunkData.class);
+        this.worldEngineSystem = get(WorldEngineSystem.class);
+        this.worldPipeline = get(WorldPipeline.class);
     }
 
     @Override

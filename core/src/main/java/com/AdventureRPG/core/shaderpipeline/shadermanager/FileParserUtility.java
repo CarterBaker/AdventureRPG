@@ -4,11 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
-import com.AdventureRPG.core.engine.UtiityPackage;
+import com.AdventureRPG.core.engine.UtilityPackage;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class FileParserUtility extends UtiityPackage {
+class FileParserUtility extends UtilityPackage {
 
     // Shader Parsing \\
 

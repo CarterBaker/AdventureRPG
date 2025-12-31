@@ -30,7 +30,7 @@ class InternalBuildSystem extends SystemPackage {
 
     @Override
     protected void init() {
-        aliasLibrarySystem = internal.get(AliasLibrarySystem.class);
+        aliasLibrarySystem = get(AliasLibrarySystem.class);
     }
 
     // Main \\

@@ -3,13 +3,13 @@ package com.AdventureRPG.core.shaderpipeline.texturemanager;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 
-import com.AdventureRPG.core.engine.UtiityPackage;
+import com.AdventureRPG.core.engine.UtilityPackage;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.graphics.Pixmap;
 
-class GLSLUtility extends UtiityPackage {
+class GLSLUtility extends UtilityPackage {
 
     // Texture Management \\
 

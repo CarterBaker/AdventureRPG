@@ -18,13 +18,20 @@ import com.AdventureRPG.timesystem.TimeSystem;
 import com.AdventureRPG.uisystem.LoadScreen;
 import com.AdventureRPG.uisystem.Menu;
 import com.AdventureRPG.uisystem.UISystem;
-import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
 
 public class GameEngine extends EnginePackage {
 
-    // TODO
+    /*
+     * This is the game engine itself. This is the less abstract
+     * side of the internal engine, though this and EnginePackage
+     * are both closely related and work in sync with each other.
+     * This class is where all pipelines are declared and all
+     * logic is routed through this class from Main to each
+     * package in order.
+     */
 
+    // TODO
     /*
      * For now, this is fine—the loading screen cascades the whole world
      * loading for the game, which works while I am developing. However, once
@@ -33,8 +40,7 @@ public class GameEngine extends EnginePackage {
      * as it does not belong here.
      */
 
-    // Kernel
-    private WindowSystem windowSystem;
+    // BootStrap
     private ThreadSystem threadSystem;
     private ScenePipeline scenePipeline;
     private InputSystem inputSystem;
@@ -51,7 +57,6 @@ public class GameEngine extends EnginePackage {
     private PlayerManager playerManager;
     private WorldPipeline worldPipeline;
 
-    // UI
     private LoadScreen loadScreen; // TODO
 
     // Internal \\
@@ -61,6 +66,8 @@ public class GameEngine extends EnginePackage {
             Main main,
             File path,
             Gson gson) {
+
+        // Internal
         super(
                 settings,
                 main,
@@ -69,10 +76,9 @@ public class GameEngine extends EnginePackage {
     }
 
     @Override
-    protected void bootKernel() {
+    protected void bootStrap() {
 
-        // Kernel
-        this.windowSystem = (WindowSystem) register(new WindowSystem());
+        // BootStrap
         this.threadSystem = (ThreadSystem) register(new ThreadSystem());
         this.scenePipeline = (ScenePipeline) register(new ScenePipeline());
         this.inputSystem = (InputSystem) register(new InputSystem());
@@ -115,9 +121,8 @@ public class GameEngine extends EnginePackage {
     protected void menuExclusiveUpdate() {
 
         // TODO
-
         /*
-         * This whole section needs a rework.
+         * This whole section needs a refactor.
          * The game should be the natural state, and these
          * features should just sort of work dynamically.
          * This also relates to the TODO in the main class.
@@ -138,9 +143,5 @@ public class GameEngine extends EnginePackage {
     @Override
     protected void draw() {
         this.renderPipeline.draw();
-    }
-
-    Screen setScreen() {
-        return windowSystem;
     }
 }
