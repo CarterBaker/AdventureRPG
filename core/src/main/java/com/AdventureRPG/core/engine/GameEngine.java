@@ -15,8 +15,6 @@ import com.AdventureRPG.lightingsystem.LightingManager;
 import com.AdventureRPG.playermanager.PlayerManager;
 import com.AdventureRPG.savemanager.SaveManager;
 import com.AdventureRPG.timesystem.TimeSystem;
-import com.AdventureRPG.uisystem.LoadScreen;
-import com.AdventureRPG.uisystem.Menu;
 import com.AdventureRPG.uisystem.UISystem;
 import com.google.gson.Gson;
 
@@ -29,15 +27,6 @@ public class GameEngine extends EnginePackage {
      * This class is where all pipelines are declared and all
      * logic is routed through this class from Main to each
      * package in order.
-     */
-
-    // TODO
-    /*
-     * For now, this is fine—the loading screen cascades the whole world
-     * loading for the game, which works while I am developing. However, once
-     * world streaming is implemented, the loading screen and menu delegation
-     * code will need to be refactored and removed from this class entirely,
-     * as it does not belong here.
      */
 
     // BootStrap
@@ -56,8 +45,6 @@ public class GameEngine extends EnginePackage {
     private TimeSystem timeSystem;
     private PlayerManager playerManager;
     private WorldPipeline worldPipeline;
-
-    private LoadScreen loadScreen; // TODO
 
     // Internal \\
 
@@ -78,7 +65,7 @@ public class GameEngine extends EnginePackage {
     // BootStrap \\
 
     @Override
-    protected void bootStrap() {
+    protected void bootstrap() {
 
         // BootStrap
         this.threadSystem = (ThreadSystem) register(new ThreadSystem());
@@ -105,47 +92,7 @@ public class GameEngine extends EnginePackage {
     }
 
     @Override
-    protected void start() {
-
-        startLoading(); // TODO
-    }
-
-    // TODO
-    public void startLoading() {
-
-        worldPipeline.loadChunks();
-
-        loadScreen = (LoadScreen) UISystem.open(Menu.LoadScreen);
-        loadScreen.setMaxProgrss(worldPipeline.queueSystem.totalQueueSize());
-
-        setInternalState(InternalState.MENU_EXCLUSIVE);
-    }
-
-    @Override
-    protected void menuExclusiveUpdate() {
-
-        // TODO
-        /*
-         * This whole section needs a refactor.
-         * The game should be the natural state, and these
-         * features should just sort of work dynamically.
-         * This also relates to the TODO in the main class.
-         */
-
-        if (worldPipeline.queueSystem.hasQueue())
-            loadScreen.setProgrss(worldPipeline.queueSystem.totalQueueSize());
-
-        else {
-
-            loadScreen.setProgrss(worldPipeline.queueSystem.totalQueueSize());
-            UISystem.close(loadScreen);
-
-            setInternalState(InternalState.GAME_EXCLUSIVE);
-        }
-    }
-
-    @Override
-    protected void draw() {
+    void draw() {
         this.renderPipeline.draw();
     }
 }

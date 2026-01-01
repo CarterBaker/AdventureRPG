@@ -4,17 +4,44 @@ import com.AdventureRPG.core.engine.settings.Settings;
 
 public abstract class SystemPackage extends EngineUtility {
 
+    /*
+     * This is the base class for all systems within the engine.
+     * SystemPackages follow a strict lifecycle with automatic phase
+     * verification to ensure proper execution order. Each phase can
+     * be overridden by child classes to implement custom behavior.
+     *
+     * Lifecycle order:
+     * CREATE → INIT → AWAKE → FREE_MEMORY → START →
+     * UPDATE → FIXED_UPDATE → LATE_UPDATE → RENDER → DISPOSE
+     *
+     * Systems must be registered through a ManagerPackage or
+     * EnginePackage to function properly.
+     */
+
     // Core
-    protected Settings settings = null;
-    protected EnginePackage internal = null;
-    protected ManagerPackage local = null;
+    protected Settings settings;
+    protected EnginePackage internal;
+    protected ManagerPackage local;
 
     // Internal
-    InternalContext internalContext = null;
+    InternalContext internalContext;
+
+    // Internal \\
+
+    public SystemPackage() {
+
+        // Core
+        this.settings = null;
+        this.internal = null;
+        this.local = null;
+
+        // Internal
+        this.internalContext = null;
+    }
 
     // Core \\
 
-    final void register(
+    final SystemPackage register(
             Settings settings,
             EnginePackage internal,
             ManagerPackage local) {
@@ -26,12 +53,14 @@ public abstract class SystemPackage extends EngineUtility {
 
         // Internal
         this.internalContext = InternalContext.NULL;
+
+        return this;
     }
 
     // Internal Context \\
 
     final InternalContext getContext() {
-        return internalContext;
+        return this.internalContext;
     }
 
     void setContext(InternalContext targetContext) {
@@ -44,12 +73,9 @@ public abstract class SystemPackage extends EngineUtility {
 
     boolean verifyProcess(InternalContext targetContext) {
 
-        if (internal.internalContext != targetContext
+        if (this.internal.internalContext != targetContext
                 || !targetContext.canEnterFrom(this.internalContext.order))
             return false;
-
-        if (internal.internalState != InternalState.CONSTRUCTOR)
-            debug("This works too");
 
         this.setContext(targetContext);
         return true;
@@ -59,12 +85,12 @@ public abstract class SystemPackage extends EngineUtility {
 
     void internalCreate() {
 
-        verifySystem();
+        this.verifySystem();
 
         if (!this.verifyProcess(InternalContext.CREATE))
             return;
 
-        create();
+        this.create();
     }
 
     protected void create() {
@@ -77,7 +103,7 @@ public abstract class SystemPackage extends EngineUtility {
         if (!this.verifyProcess(InternalContext.INIT))
             return;
 
-        init();
+        this.init();
     }
 
     protected void init() {
@@ -90,7 +116,7 @@ public abstract class SystemPackage extends EngineUtility {
         if (!this.verifyProcess(InternalContext.AWAKE))
             return;
 
-        awake();
+        this.awake();
     }
 
     protected void awake() {
@@ -103,7 +129,7 @@ public abstract class SystemPackage extends EngineUtility {
         if (!this.verifyProcess(InternalContext.FREE_MEMORY))
             return;
 
-        freeMemory();
+        this.freeMemory();
     }
 
     protected void freeMemory() {
@@ -116,7 +142,7 @@ public abstract class SystemPackage extends EngineUtility {
         if (!this.verifyProcess(InternalContext.START))
             return;
 
-        start();
+        this.start();
     }
 
     protected void start() {
@@ -129,36 +155,10 @@ public abstract class SystemPackage extends EngineUtility {
         if (!this.verifyProcess(InternalContext.UPDATE))
             return;
 
-        update();
+        this.update();
     }
 
     protected void update() {
-    }
-
-    // Menu Exclusive Update \\
-
-    void internalMenuExclusiveUpdate() {
-
-        if (!this.verifyProcess(InternalContext.MENU_EXCLUSIVE))
-            return;
-
-        menuExclusiveUpdate();
-    }
-
-    protected void menuExclusiveUpdate() {
-    }
-
-    // Game Exclusive Update \\
-
-    void internalGameExclusiveUpdate() {
-
-        if (!this.verifyProcess(InternalContext.GAME_EXCLUSIVE))
-            return;
-
-        gameExclusiveUpdate();
-    }
-
-    protected void gameExclusiveUpdate() {
     }
 
     // Fixed Update \\
@@ -168,7 +168,7 @@ public abstract class SystemPackage extends EngineUtility {
         if (!this.verifyProcess(InternalContext.FIXED_UPDATE))
             return;
 
-        fixedUpdate();
+        this.fixedUpdate();
     }
 
     protected void fixedUpdate() {
@@ -181,7 +181,7 @@ public abstract class SystemPackage extends EngineUtility {
         if (!this.verifyProcess(InternalContext.LATE_UPDATE))
             return;
 
-        lateUpdate();
+        this.lateUpdate();
     }
 
     protected void lateUpdate() {
@@ -194,7 +194,7 @@ public abstract class SystemPackage extends EngineUtility {
         if (!this.verifyProcess(InternalContext.RENDER))
             return;
 
-        render();
+        this.render();
     }
 
     protected void render() {
@@ -207,7 +207,7 @@ public abstract class SystemPackage extends EngineUtility {
         if (!this.verifyProcess(InternalContext.DISPOSE))
             return;
 
-        dispose();
+        this.dispose();
     }
 
     protected void dispose() {
@@ -215,7 +215,7 @@ public abstract class SystemPackage extends EngineUtility {
 
     // Utility \\
 
-    private void verifySystem() {
+    private final void verifySystem() {
         if (settings == null ||
                 internal == null ||
                 local == null ||
@@ -226,20 +226,20 @@ public abstract class SystemPackage extends EngineUtility {
     // Accessible \\
 
     protected final void debugProcess() {
-        debugProcess("");
+        this.debugProcess("");
     }
 
     protected final void debugProcess(Object input) {
-        debug("[" + internalContext.toString() + "] " + String.valueOf(input));
+        this.debug("[" + this.internalContext.toString() + "] " + String.valueOf(input));
     }
 
     protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
-        return internalCreate(instanceClass);
+        return this.internalCreate(instanceClass);
     }
 
     final <T extends InstancePackage> T internalCreate(Class<T> instanceClass) {
 
-        InstancePackage.setupCreation(internal, this);
+        InstancePackage.setupCreation(this.internal, this);
 
         if (!InstancePackage.class.isAssignableFrom(instanceClass))
             throwException("Cannot create non-InstancePackage class: " + instanceClass.getName());
@@ -266,6 +266,6 @@ public abstract class SystemPackage extends EngineUtility {
 
     @SuppressWarnings("unchecked")
     protected final <T> T get(Class<T> type) {
-        return internal.get(false, type);
+        return this.internal.get(false, type);
     }
 }

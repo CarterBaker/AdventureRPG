@@ -48,7 +48,7 @@ public class Main extends Game {
                 GAME_DIRECTORY,
                 gson);
 
-        internal.updateInternalState();
+        internal.execute();
     }
 
     @Override
@@ -58,7 +58,7 @@ public class Main extends Game {
 
         super.render();
 
-        internal.updateInternalState();
+        internal.execute();
     }
 
     @Override

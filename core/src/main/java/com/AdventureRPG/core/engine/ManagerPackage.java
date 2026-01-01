@@ -5,23 +5,48 @@ import java.util.List;
 
 public abstract class ManagerPackage extends SystemPackage {
 
-    // Internal
-    private List<SystemPackage> systemCollection = new ArrayList<>();
-    private SystemPackage[] systemArray = new SystemPackage[0];
-    private List<SystemPackage> garbageCollection = new ArrayList<>();
+    /*
+     * This is the intermediary class between the engine and individual
+     * systems. ManagerPackages can contain and manage multiple child
+     * SystemPackages, propagating lifecycle calls down the hierarchy.
+     * This allows for modular organization where related systems can
+     * be grouped under a single manager.
+     *
+     * Key responsibilities:
+     * - Child system registration and lifecycle management
+     * - Garbage collection of released systems
+     * - Lifecycle propagation to all registered children
+     */
+
+    // System Management
+    SystemPackage[] systemArray;
+    private List<SystemPackage> systemCollection;
+    private List<SystemPackage> garbageCollection;
+
+    // Internal \\
+
+    public ManagerPackage() {
+
+        // System Management
+        this.systemArray = new SystemPackage[0];
+        this.systemCollection = new ArrayList<>();
+        this.garbageCollection = new ArrayList<>();
+    }
 
     // System Registry \\
 
-    protected final SystemPackage register(SystemPackage subSystem) {
+    protected SystemPackage register(SystemPackage subSystem) {
+
+        if (this.getContext() != InternalContext.CREATE)
+            throwException(
+                    "Subsystem registration rejected.\n" +
+                            "Attempted during process: " + this.getContext() + "\n" +
+                            "Allowed process: CREATE");
+
         return internalRegister(subSystem);
     }
 
     SystemPackage internalRegister(SystemPackage subSystem) {
-
-        if (this.getContext() != InternalContext.CREATE)
-            throwException(
-                    "Register method was called from a process other than create. Current process: "
-                            + this.getContext());
 
         if (subSystem instanceof EnginePackage)
             throwException("Only one engine package is allowed at any given time");
@@ -32,25 +57,18 @@ public abstract class ManagerPackage extends SystemPackage {
 
         this.systemCollection.add(subSystem);
 
-        setupNewSubSystem(subSystem);
-
-        return subSystem;
-    }
-
-    private void setupNewSubSystem(SystemPackage subSystem) {
-
         subSystem.register(
                 settings,
                 internal,
                 this);
 
-        internal.registerToSystemRegistry(subSystem);
+        return internal.internalRegister(subSystem);
     }
 
     // System Release \\
 
     protected final SystemPackage release(SystemPackage subSystem) {
-        internalRelease(subSystem);
+        this.internalRelease(subSystem);
         return null;
     }
 
@@ -58,10 +76,11 @@ public abstract class ManagerPackage extends SystemPackage {
 
         if (this.getContext() != InternalContext.FREE_MEMORY)
             throwException(
-                    "Release method was called from a process other than free memory. Current process: "
-                            + this.getContext());
+                    "Subsystem release rejected.\n" +
+                            "Attempted during process: " + this.getContext() + "\n" +
+                            "Allowed process: FREE_MEMORY");
 
-        if (subSystem instanceof EnginePackage)
+        if (subSystem == internal)
             throwException(
                     "Release call was attempted on the game engine itself. This is not allowed under any circumstance");
 
@@ -116,7 +135,7 @@ public abstract class ManagerPackage extends SystemPackage {
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalFreeMemory();
 
-        clearGarbage();
+        this.clearGarbage();
     }
 
     // Start \\
@@ -139,28 +158,6 @@ public abstract class ManagerPackage extends SystemPackage {
 
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalUpdate();
-    }
-
-    // Menu Exclusive Update \\
-
-    @Override // From `SystemPackage`
-    void internalMenuExclusiveUpdate() {
-
-        super.internalMenuExclusiveUpdate();
-
-        for (int i = 0; i < this.systemArray.length; i++)
-            this.systemArray[i].internalMenuExclusiveUpdate();
-    }
-
-    // Game Exclusive Update \\
-
-    @Override // From `SystemPackage`
-    void internalGameExclusiveUpdate() {
-
-        super.internalGameExclusiveUpdate();
-
-        for (int i = 0; i < this.systemArray.length; i++)
-            this.systemArray[i].internalGameExclusiveUpdate();
     }
 
     // Fixed Update \\
@@ -209,20 +206,20 @@ public abstract class ManagerPackage extends SystemPackage {
 
     // Utility \\
 
-    private final void cacheSubSystems() {
+    final void cacheSubSystems() {
         this.systemArray = this.systemCollection.toArray(new SystemPackage[0]);
     }
 
     void clearGarbage() {
 
-        if (garbageCollection.isEmpty())
+        if (this.garbageCollection.isEmpty())
             return;
 
         for (SystemPackage target : garbageCollection)
-            systemCollection.remove(target);
+            this.systemCollection.remove(target);
 
-        garbageCollection.clear();
+        this.garbageCollection.clear();
 
-        cacheSubSystems();
+        this.cacheSubSystems();
     }
 }

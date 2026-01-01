@@ -8,9 +8,9 @@ public enum InternalState {
      * systems are permitted to run in this state.
      */
 
-    CONSTRUCTOR(),
-    FIRST_FRAME(),
-    MENU_EXCLUSIVE(),
-    GAME_EXCLUSIVE(),
-    EXIT();
+    BOOTSTRAP,
+    CREATE,
+    START,
+    UPDATE,
+    EXIT;
 }
