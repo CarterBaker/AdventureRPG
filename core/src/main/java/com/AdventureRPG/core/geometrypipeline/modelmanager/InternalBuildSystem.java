@@ -24,7 +24,7 @@ class InternalBuildSystem extends SystemPackage {
     // Base \\
 
     @Override
-    protected void init() {
+    protected void get() {
         this.vboManager = get(VBOManager.class);
         this.iboManager = get(IBOManager.class);
         this.vaoManager = get(VAOManager.class);
@@ -96,7 +96,7 @@ class InternalBuildSystem extends SystemPackage {
             // Recursively build dependency
             loadManager.processMeshFile(refFile);
 
-            // Return handle now registered in VAOManager
+            // Return handle now created in VAOManager
             return vaoManager.getVAOHandleFromName(refName);
         }
 

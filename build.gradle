@@ -42,7 +42,7 @@ configure(subprojects) {
 
   // From https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/
   // The article can be helpful when using assets.txt in your project.
-  tasks.register('generateAssetList') {
+  tasks.create('generateAssetList') {
     inputs.dir("${project.rootDir}/assets/")
     // projectFolder/assets
     File assetsFolder = new File("${project.rootDir}/assets/")

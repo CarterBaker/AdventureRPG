@@ -36,7 +36,7 @@ class ModelBatchSystem extends SystemPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Internal
         this.materialManager = get(MaterialManager.class);

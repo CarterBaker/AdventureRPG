@@ -98,7 +98,7 @@ public class TimeSystem extends SystemPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Internal
         this.uboManager = get(UBOManager.class);

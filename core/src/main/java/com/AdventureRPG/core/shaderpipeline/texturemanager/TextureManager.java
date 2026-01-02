@@ -24,7 +24,7 @@ public class TextureManager extends ManagerPackage {
     protected void create() {
 
         // Root
-        this.internalLoadManager = (InternalLoadManager) register(new InternalLoadManager());
+        this.internalLoadManager = create(InternalLoadManager.class);
 
         // Retrieval Mapping
         this.textureName2TileID = new Object2IntOpenHashMap<>();
@@ -40,8 +40,8 @@ public class TextureManager extends ManagerPackage {
     }
 
     @Override
-    protected void freeMemory() {
-        internalLoadManager = (InternalLoadManager) release(internalLoadManager);
+    protected void release() {
+        internalLoadManager = release(InternalLoadManager.class);
     }
 
     @Override

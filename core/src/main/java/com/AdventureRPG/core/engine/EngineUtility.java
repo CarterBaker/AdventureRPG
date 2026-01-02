@@ -6,17 +6,23 @@ import java.time.format.DateTimeFormatter;
 abstract class EngineUtility {
 
     /*
-     * Here is where we throw methods every class in the engine
-     * should have access to. Used to unify debugging and exception
-     * handling among other various utilities.
+     * Base utility class shared by all engine-level systems.
+     *
+     * Provides:
+     * - Standardized debug and logging output
+     * - Centralized fatal exception handling
+     * - Common timing utilities
+     *
+     * Intended to enforce consistent diagnostics and failure
+     * behavior across the engine.
      */
 
     // Internal
-    private final String packageName = getClass().getPackage() != null
+    protected final String packageName = getClass().getPackage() != null
             ? getClass().getPackage().getName()
             : "<default>";
 
-    private final String systemName = getClass().getSimpleName();
+    protected final String systemName = getClass().getSimpleName();
 
     // Debug \\
 

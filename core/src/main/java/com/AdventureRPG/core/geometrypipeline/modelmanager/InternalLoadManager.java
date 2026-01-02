@@ -30,19 +30,19 @@ public class InternalLoadManager extends ManagerPackage {
     @Override
     protected void create() {
         this.root = new File(EngineSetting.MODEL_JSON_PATH);
-        this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
+        this.internalBuildSystem = create(InternalBuildSystem.class);
         this.meshDataCount = 0;
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
-    protected void init() {
+    protected void get() {
         this.modelManager = get(ModelManager.class);
     }
 
     @Override
-    protected void freeMemory() {
-        this.internalBuildSystem = (InternalBuildSystem) release(internalBuildSystem);
+    protected void release() {
+        this.internalBuildSystem = release(InternalBuildSystem.class);
     }
 
     // MeshData Management \\
@@ -115,7 +115,7 @@ public class InternalLoadManager extends ManagerPackage {
             MeshHandle meshHandle = internalBuildSystem.buildMeshHandle(root, file, meshID, this);
 
             if (meshHandle != null)
-                registerMeshData(meshName, meshID, meshHandle);
+                createMeshData(meshName, meshID, meshHandle);
         }
 
         catch (RuntimeException ex) {
@@ -124,7 +124,7 @@ public class InternalLoadManager extends ManagerPackage {
         }
     }
 
-    private void registerMeshData(String meshName, int meshID, MeshHandle meshHandle) {
+    private void createMeshData(String meshName, int meshID, MeshHandle meshHandle) {
         modelManager.addMeshHandle(meshName, meshID, meshHandle);
     }
 }

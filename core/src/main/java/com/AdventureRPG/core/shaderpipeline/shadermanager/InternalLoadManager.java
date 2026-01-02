@@ -48,7 +48,7 @@ class InternalLoadManager extends ManagerPackage {
 
         // Internal
         this.root = new File(EngineSetting.SHADER_PATH);
-        this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
+        this.internalBuildSystem = create(InternalBuildSystem.class);
 
         this.glslFiles = new ObjectArrayList<>();
         this.jsonFiles = new ObjectArrayList<>();
@@ -59,7 +59,7 @@ class InternalLoadManager extends ManagerPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Internal
         this.shaderManager = get(ShaderManager.class);
@@ -67,10 +67,10 @@ class InternalLoadManager extends ManagerPackage {
     }
 
     @Override
-    protected void freeMemory() {
+    protected void release() {
 
         // Internal
-        this.internalBuildSystem = (InternalBuildSystem) release(internalBuildSystem);
+        this.internalBuildSystem = release(InternalBuildSystem.class);
     }
 
     // Shader Management \\
@@ -128,7 +128,8 @@ class InternalLoadManager extends ManagerPackage {
             throwException(
                     "Shader: " + file.getName() + ", Has an unrecognized extension");
 
-        ShaderData shaderDataInstance = new ShaderData(
+        ShaderData shaderDataInstance = create(ShaderData.class);
+        shaderDataInstance.init(
                 shaderType,
                 FileUtility.getFileName(file),
                 file);
@@ -158,7 +159,7 @@ class InternalLoadManager extends ManagerPackage {
     // Shader
     private Shader assembleShader(ShaderDefinitionData shaderDefinition) {
 
-        String shaderName = shaderDefinition.shaderName;
+        String shaderName = shaderDefinition.getShaderName();
         int shaderID = shaderCount++;
         int shaderHandle = GLSLUtility.createShaderProgram(shaderDefinition);
 
@@ -184,11 +185,11 @@ class InternalLoadManager extends ManagerPackage {
             ShaderDefinitionData shaderDefinition) {
 
         addBuffersFromShaderData(
-                shaderDefinition.vert,
+                shaderDefinition.getVert(),
                 shader);
 
         addBuffersFromShaderData(
-                shaderDefinition.frag,
+                shaderDefinition.getFrag(),
                 shader);
 
         ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
@@ -212,8 +213,14 @@ class InternalLoadManager extends ManagerPackage {
             Shader shader) {
 
         UBOHandle ubo = uboManager.buildBuffer(bufferData);
-        shaderManager.bindShaderToUBO(shader, ubo);
-        shader.addBuffer(bufferData.blockName(), ubo);
+
+        shaderManager.bindShaderToUBO(
+                shader,
+                ubo);
+
+        shader.addBuffer(
+                bufferData.getBlockName(),
+                ubo);
     }
 
     // Uniforms
@@ -222,11 +229,11 @@ class InternalLoadManager extends ManagerPackage {
             ShaderDefinitionData shaderDefinition) {
 
         addUniformsFromShaderData(
-                shaderDefinition.vert,
+                shaderDefinition.getVert(),
                 shader);
 
         addUniformsFromShaderData(
-                shaderDefinition.frag,
+                shaderDefinition.getFrag(),
                 shader);
 
         ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
@@ -251,18 +258,18 @@ class InternalLoadManager extends ManagerPackage {
 
         UniformAttribute<?> uniformAttribute = createUniformAttribute(uniformData);
         Uniform<?> uniform = new Uniform<>(
-                GLSLUtility.getUniformHandle(shader.shaderHandle, uniformData.uniformName()),
+                GLSLUtility.getUniformHandle(shader.shaderHandle, uniformData.getUniformName()),
                 uniformAttribute);
 
-        shader.addUniform(uniformData.uniformName(), uniform);
+        shader.addUniform(uniformData.getUniformName(), uniform);
     }
 
     private UniformAttribute<?> createUniformAttribute(UniformData uniformData) {
 
-        int count = uniformData.count();
+        int count = uniformData.getCount();
         boolean isArray = count > 1;
 
-        return switch (uniformData.uniformType()) {
+        return switch (uniformData.getUniformType()) {
 
             // Scalars
             case FLOAT -> isArray ? new FloatArrayUniform(count) : new FloatUniform();
@@ -297,7 +304,7 @@ class InternalLoadManager extends ManagerPackage {
             case SAMPLE_IMAGE_2D_ARRAY -> new SampleImage2DArrayUniform(); // Already an array type
 
             default -> throwException(
-                    "Unsupported uniform type: " + uniformData.uniformType().toString());
+                    "Unsupported uniform type: " + uniformData.getUniformType().toString());
         };
     }
 
@@ -314,7 +321,7 @@ class InternalLoadManager extends ManagerPackage {
         for (int i = 0; i < glslFiles.size(); i++) {
 
             ShaderData inst = glslFiles.get(i);
-            if (inst.shaderName().equals(key))
+            if (inst.getShaderName().equals(key))
                 return inst;
         }
 

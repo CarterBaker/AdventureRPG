@@ -20,10 +20,10 @@ public class ShaderPipeline extends PipelineFrame {
     protected void create() {
 
         // Render Pipeline
-        this.textureManager = (TextureManager) register(new TextureManager());
-        this.uboManager = (UBOManager) register(new UBOManager());
-        this.shaderManager = (ShaderManager) register(new ShaderManager());
-        this.materialManager = (MaterialManager) register(new MaterialManager());
-        this.passManager = (PassManager) register(new PassManager());
+        this.textureManager = create(TextureManager.class);
+        this.uboManager = create(UBOManager.class);
+        this.shaderManager = create(ShaderManager.class);
+        this.materialManager = create(MaterialManager.class);
+        this.passManager = create(PassManager.class);
     }
 }

@@ -22,7 +22,7 @@ public class UserData extends SystemPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Settings
         this.path = internal.path;

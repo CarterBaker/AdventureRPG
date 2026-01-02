@@ -36,7 +36,7 @@ public class PlayerManager extends ManagerPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Player
         this.inputSystem = get(InputSystem.class);

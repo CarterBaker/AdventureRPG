@@ -30,25 +30,25 @@ class InternalLoadManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        this.aliasLibrarySystem = (AliasLibrarySystem) register(new AliasLibrarySystem());
-        this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
+        this.aliasLibrarySystem = create(AliasLibrarySystem.class);
+        this.internalBuildSystem = create(InternalBuildSystem.class);
         this.arrayMap = new Int2ObjectOpenHashMap<TextureArrayInstance>();
         this.root = new File(EngineSetting.BLOCK_TEXTURE_PATH);
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Internal
         this.textureManager = get(TextureManager.class);
     }
 
     @Override
-    protected void freeMemory() {
+    protected void release() {
 
         // Internal
-        aliasLibrarySystem = (AliasLibrarySystem) release(aliasLibrarySystem);
-        internalBuildSystem = (InternalBuildSystem) release(internalBuildSystem);
+        aliasLibrarySystem = release(AliasLibrarySystem.class);
+        internalBuildSystem = release(InternalBuildSystem.class);
     }
 
     // File Navigation \\

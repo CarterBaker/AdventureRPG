@@ -23,14 +23,14 @@ public class MovementManager extends ManagerPackage {
     protected void create() {
 
         // Root
-        this.movementCalculationSystem = (MovementCalculationSystem) register(new MovementCalculationSystem());
+        this.movementCalculationSystem = create(MovementCalculationSystem.class);
 
         // Settings
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Root
         this.worldEngineSystem = get(WorldEngineSystem.class);

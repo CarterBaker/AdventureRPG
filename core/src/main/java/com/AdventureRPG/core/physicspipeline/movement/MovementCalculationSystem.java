@@ -17,7 +17,7 @@ public class MovementCalculationSystem extends SystemPackage {
     // Base \\
 
     @Override
-    public void init() {
+    public void get() {
 
         // Temp
         this.forward = new Vector3();

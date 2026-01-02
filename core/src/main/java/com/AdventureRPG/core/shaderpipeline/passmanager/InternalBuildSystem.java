@@ -22,7 +22,7 @@ class InternalBuildSystem extends SystemPackage {
     // Base \\
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Internal
         this.modelManager = get(ModelManager.class);

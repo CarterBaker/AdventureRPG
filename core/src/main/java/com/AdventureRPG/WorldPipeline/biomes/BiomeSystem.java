@@ -10,7 +10,7 @@ public class BiomeSystem extends SystemPackage {
     // Base \\
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Biome System
         this.biomes = Loader.loadBiomes(internal.gson);

@@ -21,15 +21,15 @@ public class IBOManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
+        this.internalBuildSystem = create(InternalBuildSystem.class);
 
         // Retrieval Mapping
         this.iboName2IBOHandle = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
-    protected void freeMemory() {
-        internalBuildSystem = (InternalBuildSystem) release(internalBuildSystem);
+    protected void release() {
+        internalBuildSystem = release(InternalBuildSystem.class);
     }
 
     // Utility \\

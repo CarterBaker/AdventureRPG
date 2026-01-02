@@ -10,11 +10,15 @@ import com.google.gson.Gson;
 public class Main extends Game {
 
     /*
-     * Main serves as the bridge between libGDX and the internal engine.
-     * While libGDX provides cross-platform support, the internal engine
-     * handles core systems such as lifecycle management, updates, and rendering.
-     * This class ensures that libGDX delegates execution to the engine while
-     * keeping the two systems decoupled.
+     * Main serves as the application entry point.
+     * It bridges libGDX with the internal engine, allowing
+     * the engine to manage lifecycle, updates, and rendering
+     * independently of the platform layer.
+     *
+     * Key responsibilities:
+     * - Initialize and execute the internal engine
+     * - Propagate frame delta time to the engine
+     * - Coordinate shutdown and resource disposal
      */
 
     // Root
@@ -42,11 +46,15 @@ public class Main extends Game {
     public void create() {
 
         // Internal
-        this.internal = new GameEngine(
+        EnginePackage.setupConstructor(
                 settings,
                 this,
                 GAME_DIRECTORY,
                 gson);
+
+        this.internal = new GameEngine();
+
+        EnginePackage.ENGINE_STRUCT.remove();
 
         internal.execute();
     }
@@ -65,7 +73,7 @@ public class Main extends Game {
     public void dispose() {
 
         // Internal Engine
-        internal.setInternalState(InternalState.EXIT);
+        internal.setInternalState(EngineState.EXIT);
 
         // Settings
         HandleGameWindow();

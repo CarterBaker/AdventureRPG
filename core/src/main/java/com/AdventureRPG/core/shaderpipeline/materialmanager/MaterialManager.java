@@ -3,7 +3,6 @@ package com.AdventureRPG.core.shaderpipeline.materialmanager;
 import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.shaderpipeline.materials.Material;
 import com.AdventureRPG.core.shaderpipeline.shadermanager.ShaderManager;
-import com.AdventureRPG.core.shaderpipeline.shaders.Shader;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -25,7 +24,7 @@ public class MaterialManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        this.internalLoadManager = (InternalLoadManager) register(new InternalLoadManager());
+        this.internalLoadManager = create(InternalLoadManager.class);
 
         // Retrieval Mapping
         this.materialName2MaterialID = new Object2IntOpenHashMap<>();
@@ -33,7 +32,7 @@ public class MaterialManager extends ManagerPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Internal
         this.shaderManager = get(ShaderManager.class);
@@ -45,8 +44,8 @@ public class MaterialManager extends ManagerPackage {
     }
 
     @Override
-    protected void freeMemory() {
-        internalLoadManager = (InternalLoadManager) release(internalLoadManager);
+    protected void release() {
+        internalLoadManager = release(InternalLoadManager.class);
     }
 
     // Material Management \\

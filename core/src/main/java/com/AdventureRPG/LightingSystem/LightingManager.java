@@ -14,7 +14,7 @@ public class LightingManager extends ManagerPackage {
     protected void create() {
 
         // Lighting
-        this.sky = (Sky) register(new Sky());
-        this.sun = (Sun) register(new Sun());
+        this.sky = create(Sky.class);
+        this.sun = create(Sun.class);
     }
 }

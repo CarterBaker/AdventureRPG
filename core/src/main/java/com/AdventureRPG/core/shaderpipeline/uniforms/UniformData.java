@@ -5,11 +5,13 @@ import com.AdventureRPG.core.engine.DataPackage;
 public class UniformData extends DataPackage {
 
     // Internal
-    private final UniformType uniformType;
-    private final String uniformName;
-    private final int count;
+    private UniformType uniformType;
+    private String uniformName;
+    private int count;
 
-    public UniformData(
+    // Internal
+
+    public void init(
             UniformType uniformType,
             String uniformName) {
 
@@ -19,7 +21,7 @@ public class UniformData extends DataPackage {
         this.count = 1;
     }
 
-    public UniformData(
+    public void init(
             UniformType uniformType,
             String uniformName,
             int count) {
@@ -32,15 +34,15 @@ public class UniformData extends DataPackage {
 
     // Data \\
 
-    public UniformType uniformType() {
+    public UniformType getUniformType() {
         return uniformType;
     }
 
-    public String uniformName() {
+    public String getUniformName() {
         return uniformName;
     }
 
-    public int count() {
+    public int getCount() {
         return count;
     }
 }

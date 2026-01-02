@@ -5,6 +5,12 @@ import com.badlogic.gdx.Screen;
 
 public class WindowInstance extends InstancePackage implements Screen {
 
+    /*
+     * WindowInstance implements a single application window.
+     * It serves as the engine-level screen and coordinates
+     * rendering, resizing, and camera management.
+     */
+
     // Internal
     private CameraManager cameraManager;
 
@@ -19,7 +25,6 @@ public class WindowInstance extends InstancePackage implements Screen {
         // Internal
         this.cameraManager = get(CameraManager.class);
 
-        // Internal
         this.width = 0;
         this.height = 0;
     }

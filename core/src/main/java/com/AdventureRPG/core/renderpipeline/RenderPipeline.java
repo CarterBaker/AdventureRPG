@@ -14,8 +14,8 @@ public class RenderPipeline extends PipelineFrame {
     protected void create() {
 
         // Render Pipeline
-        this.cameraManager = (CameraManager) register(new CameraManager());
-        this.renderSystem = (RenderSystem) register(new RenderSystem());
+        this.cameraManager = create(CameraManager.class);
+        this.renderSystem = create(RenderSystem.class);
     }
 
     // Render Pipeline \\

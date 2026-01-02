@@ -27,7 +27,7 @@ class InternalBuildSystem extends SystemPackage {
     // Base \\
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Internal
         this.textureManager = get(TextureManager.class);

@@ -11,7 +11,7 @@ class InternalBufferSystem extends SystemPackage {
     private UBOHandle cameraDataUBO;
 
     @Override
-    protected void init() {
+    protected void get() {
         this.uboManager = this.get(UBOManager.class);
         this.cameraManager = this.get(CameraManager.class);
     }

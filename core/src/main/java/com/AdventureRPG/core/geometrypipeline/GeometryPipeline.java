@@ -18,10 +18,9 @@ public class GeometryPipeline extends PipelineFrame {
     protected void create() {
 
         // Geometry Pipeline
-        this.vboManager = (VBOManager) register(new VBOManager());
-        this.iboManager = (IBOManager) register(new IBOManager());
-        this.vaoManager = (VAOManager) register(new VAOManager());
-
-        this.modelManager = (ModelManager) register(new ModelManager());
+        this.vboManager = create(VBOManager.class);
+        this.iboManager = create(IBOManager.class);
+        this.vaoManager = create(VAOManager.class);
+        this.modelManager = create(ModelManager.class);
     }
 }

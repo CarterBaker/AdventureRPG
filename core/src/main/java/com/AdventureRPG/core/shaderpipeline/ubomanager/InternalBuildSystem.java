@@ -20,7 +20,7 @@ public final class InternalBuildSystem extends SystemPackage {
 
     public UBOHandle build(UBOData data) {
         int id = nextID++;
-        int binding = data.binding();
+        int binding = data.getBinding();
         int gpuHandle = GLSLUtility.createUniformBuffer();
 
         // Compute std140 buffer layout FIRST
@@ -28,7 +28,7 @@ public final class InternalBuildSystem extends SystemPackage {
 
         // Create handle WITH size
         UBOHandle handle = new UBOHandle(
-                data.blockName(),
+                data.getBlockName(),
                 id,
                 gpuHandle,
                 binding,
@@ -47,10 +47,10 @@ public final class InternalBuildSystem extends SystemPackage {
     public void validate(UBOHandle existing, UBOData newData) {
 
         // Validate binding matches
-        if (existing.bindingPoint != newData.binding()) {
+        if (existing.bindingPoint != newData.getBinding()) {
             throwException(
-                    "UBO '" + newData.blockName() + "' has conflicting bindings: " +
-                            "existing=" + existing.bindingPoint + ", new=" + newData.binding() +
+                    "UBO '" + newData.getBlockName() + "' has conflicting bindings: " +
+                            "existing=" + existing.bindingPoint + ", new=" + newData.getBinding() +
                             ". All declarations of this uniform block must use the same binding point.");
         }
 
@@ -60,7 +60,7 @@ public final class InternalBuildSystem extends SystemPackage {
 
         if (newUniforms.size() != existingUniforms.size()) {
             throwException(
-                    "UBO '" + newData.blockName() + "' has conflicting structure: " +
+                    "UBO '" + newData.getBlockName() + "' has conflicting structure: " +
                             "different number of uniforms (" + existingUniforms.size() +
                             " vs " + newUniforms.size() + "). " +
                             "Use an #include file to ensure consistency across shaders.");
@@ -68,12 +68,12 @@ public final class InternalBuildSystem extends SystemPackage {
 
         // Validate each uniform matches
         for (UniformData uniformData : newUniforms) {
-            Uniform<?> existingUniform = existingUniforms.get(uniformData.uniformName());
+            Uniform<?> existingUniform = existingUniforms.get(uniformData.getUniformName());
 
             if (existingUniform == null) {
                 throwException(
-                        "UBO '" + newData.blockName() + "' has conflicting structure: " +
-                                "uniform '" + uniformData.uniformName() + "' not found in existing definition. " +
+                        "UBO '" + newData.getBlockName() + "' has conflicting structure: " +
+                                "uniform '" + uniformData.getUniformName() + "' not found in existing definition. " +
                                 "Use an #include file to ensure consistency across shaders.");
             }
         }
@@ -107,7 +107,7 @@ public final class InternalBuildSystem extends SystemPackage {
             UniformAttribute<?> attribute = createUniformAttribute(uniformData);
             Uniform<?> uniform = new Uniform<>(-1, currentOffset, attribute);
 
-            handle.addUniform(uniformData.uniformName(), uniform);
+            handle.addUniform(uniformData.getUniformName(), uniform);
 
             currentOffset += size;
         }
@@ -118,7 +118,7 @@ public final class InternalBuildSystem extends SystemPackage {
     }
 
     private int getStd140Alignment(UniformData uniformData) {
-        return switch (uniformData.uniformType()) {
+        return switch (uniformData.getUniformType()) {
             case FLOAT, INT, BOOL -> 4;
             case VECTOR2, VECTOR2_INT, VECTOR2_BOOLEAN -> 8;
             case VECTOR3, VECTOR3_INT, VECTOR3_BOOLEAN,
@@ -136,7 +136,7 @@ public final class InternalBuildSystem extends SystemPackage {
     }
 
     private int getStd140Size(UniformData uniformData) {
-        int baseSize = switch (uniformData.uniformType()) {
+        int baseSize = switch (uniformData.getUniformType()) {
             case FLOAT, INT, BOOL -> 4;
             case VECTOR2, VECTOR2_INT, VECTOR2_BOOLEAN -> 8;
             case VECTOR3, VECTOR3_INT, VECTOR3_BOOLEAN -> 12;
@@ -155,10 +155,10 @@ public final class InternalBuildSystem extends SystemPackage {
         };
 
         // Handle arrays
-        if (uniformData.count() > 1) {
+        if (uniformData.getCount() > 1) {
             int alignment = getStd140Alignment(uniformData);
             int stride = alignOffset(baseSize, alignment);
-            return stride * uniformData.count();
+            return stride * uniformData.getCount();
         }
 
         return baseSize;
@@ -166,41 +166,41 @@ public final class InternalBuildSystem extends SystemPackage {
 
     private UniformAttribute<?> createUniformAttribute(UniformData uniformData) {
 
-        int count = uniformData.count();
-        boolean isArray = count > 1;
+        int getCount = uniformData.getCount();
+        boolean isArray = getCount > 1;
 
-        return switch (uniformData.uniformType()) {
+        return switch (uniformData.getUniformType()) {
 
             // Scalars
-            case FLOAT -> isArray ? new FloatArrayUniform(count) : new FloatUniform();
-            case DOUBLE -> isArray ? new DoubleArrayUniform(count) : new DoubleUniform();
-            case INT -> isArray ? new IntegerArrayUniform(count) : new IntegerUniform();
-            case BOOL -> isArray ? new BooleanArrayUniform(count) : new BooleanUniform();
+            case FLOAT -> isArray ? new FloatArrayUniform(getCount) : new FloatUniform();
+            case DOUBLE -> isArray ? new DoubleArrayUniform(getCount) : new DoubleUniform();
+            case INT -> isArray ? new IntegerArrayUniform(getCount) : new IntegerUniform();
+            case BOOL -> isArray ? new BooleanArrayUniform(getCount) : new BooleanUniform();
 
             // Vectors
-            case VECTOR2 -> isArray ? new Vector2ArrayUniform(count) : new Vector2Uniform();
-            case VECTOR3 -> isArray ? new Vector3ArrayUniform(count) : new Vector3Uniform();
-            case VECTOR4 -> isArray ? new Vector4ArrayUniform(count) : new Vector4Uniform();
-            case VECTOR2_DOUBLE -> isArray ? new Vector2DoubleArrayUniform(count) : new Vector2DoubleUniform();
-            case VECTOR3_DOUBLE -> isArray ? new Vector3DoubleArrayUniform(count) : new Vector3DoubleUniform();
-            case VECTOR4_DOUBLE -> isArray ? new Vector4DoubleArrayUniform(count) : new Vector4DoubleUniform();
-            case VECTOR2_INT -> isArray ? new Vector2IntArrayUniform(count) : new Vector2IntUniform();
-            case VECTOR3_INT -> isArray ? new Vector3IntArrayUniform(count) : new Vector3IntUniform();
-            case VECTOR4_INT -> isArray ? new Vector4IntArrayUniform(count) : new Vector4IntUniform();
-            case VECTOR2_BOOLEAN -> isArray ? new Vector2BooleanArrayUniform(count) : new Vector2BooleanUniform();
-            case VECTOR3_BOOLEAN -> isArray ? new Vector3BooleanArrayUniform(count) : new Vector3BooleanUniform();
-            case VECTOR4_BOOLEAN -> isArray ? new Vector4BooleanArrayUniform(count) : new Vector4BooleanUniform();
+            case VECTOR2 -> isArray ? new Vector2ArrayUniform(getCount) : new Vector2Uniform();
+            case VECTOR3 -> isArray ? new Vector3ArrayUniform(getCount) : new Vector3Uniform();
+            case VECTOR4 -> isArray ? new Vector4ArrayUniform(getCount) : new Vector4Uniform();
+            case VECTOR2_DOUBLE -> isArray ? new Vector2DoubleArrayUniform(getCount) : new Vector2DoubleUniform();
+            case VECTOR3_DOUBLE -> isArray ? new Vector3DoubleArrayUniform(getCount) : new Vector3DoubleUniform();
+            case VECTOR4_DOUBLE -> isArray ? new Vector4DoubleArrayUniform(getCount) : new Vector4DoubleUniform();
+            case VECTOR2_INT -> isArray ? new Vector2IntArrayUniform(getCount) : new Vector2IntUniform();
+            case VECTOR3_INT -> isArray ? new Vector3IntArrayUniform(getCount) : new Vector3IntUniform();
+            case VECTOR4_INT -> isArray ? new Vector4IntArrayUniform(getCount) : new Vector4IntUniform();
+            case VECTOR2_BOOLEAN -> isArray ? new Vector2BooleanArrayUniform(getCount) : new Vector2BooleanUniform();
+            case VECTOR3_BOOLEAN -> isArray ? new Vector3BooleanArrayUniform(getCount) : new Vector3BooleanUniform();
+            case VECTOR4_BOOLEAN -> isArray ? new Vector4BooleanArrayUniform(getCount) : new Vector4BooleanUniform();
 
             // Matrices
-            case MATRIX2 -> isArray ? new Matrix2ArrayUniform(count) : new Matrix2Uniform();
-            case MATRIX3 -> isArray ? new Matrix3ArrayUniform(count) : new Matrix3Uniform();
-            case MATRIX4 -> isArray ? new Matrix4ArrayUniform(count) : new Matrix4Uniform();
-            case MATRIX2_DOUBLE -> isArray ? new Matrix2DoubleArrayUniform(count) : new Matrix2DoubleUniform();
-            case MATRIX3_DOUBLE -> isArray ? new Matrix3DoubleArrayUniform(count) : new Matrix3DoubleUniform();
-            case MATRIX4_DOUBLE -> isArray ? new Matrix4DoubleArrayUniform(count) : new Matrix4DoubleUniform();
+            case MATRIX2 -> isArray ? new Matrix2ArrayUniform(getCount) : new Matrix2Uniform();
+            case MATRIX3 -> isArray ? new Matrix3ArrayUniform(getCount) : new Matrix3Uniform();
+            case MATRIX4 -> isArray ? new Matrix4ArrayUniform(getCount) : new Matrix4Uniform();
+            case MATRIX2_DOUBLE -> isArray ? new Matrix2DoubleArrayUniform(getCount) : new Matrix2DoubleUniform();
+            case MATRIX3_DOUBLE -> isArray ? new Matrix3DoubleArrayUniform(getCount) : new Matrix3DoubleUniform();
+            case MATRIX4_DOUBLE -> isArray ? new Matrix4DoubleArrayUniform(getCount) : new Matrix4DoubleUniform();
 
             default -> throwException(
-                    "Unsupported uniform type in UBO: " + uniformData.uniformType());
+                    "Unsupported uniform type in UBO: " + uniformData.getUniformType());
         };
     }
 

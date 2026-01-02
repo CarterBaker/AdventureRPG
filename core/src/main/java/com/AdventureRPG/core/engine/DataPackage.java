@@ -1,11 +1,13 @@
 package com.AdventureRPG.core.engine;
 
-public class DataPackage extends EngineUtility {
+public class DataPackage extends InstancePackage {
 
     /*
-     * DataPackages are intended to be used as a temporary data storage
-     * container designed specifically for use within the internal boot
-     * bootStrap of the engine itself. Typically the data contained within
-     * is used to create a permanant HandlePackage.
+     * DataPackages are intended for temporary data storage during
+     * the internal BOOTSTRAP phase of the engine.
+     *
+     * The data contained is typically used to construct a
+     * persistent HandlePackage and is not expected to survive
+     * beyond initialization.
      */
 }

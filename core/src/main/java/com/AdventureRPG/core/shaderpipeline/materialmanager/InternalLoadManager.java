@@ -26,21 +26,21 @@ class InternalLoadManager extends ManagerPackage {
 
         // Internal
         this.root = new File(EngineSetting.MATERIAL_JSON_PATH);
-        this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
+        this.internalBuildSystem = create(InternalBuildSystem.class);
 
         this.materialCount = 0;
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Internal
         this.materialManager = get(MaterialManager.class);
     }
 
     @Override
-    protected void freeMemory() {
-        this.internalBuildSystem = (InternalBuildSystem) release(internalBuildSystem);
+    protected void release() {
+        this.internalBuildSystem = release(InternalBuildSystem.class);
     }
 
     // Material Management \\

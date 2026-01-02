@@ -3,9 +3,12 @@ package com.AdventureRPG.core.engine;
 public class HandlePackage extends EngineUtility {
 
     /*
-     * HandlePackages are intended to be held indefinately during
-     * game creation, as well as duplicated during game lifetime in
-     * some situations. Used as permanant data storage mainly for
-     * use in holding reference to gpu-side data.
+     * HandlePackages are intended to be held indefinitely during
+     * game creation and may be duplicated during runtime when
+     * required.
+     *
+     * Primarily used as persistent data containers for long-lived
+     * references, including (but not limited to) GPU-side resources
+     * and engine-managed handles.
      */
 }

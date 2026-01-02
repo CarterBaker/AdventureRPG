@@ -21,12 +21,9 @@ import com.google.gson.Gson;
 public class GameEngine extends EnginePackage {
 
     /*
-     * This is the game engine itself. This is the less abstract
-     * side of the internal engine, though this and EnginePackage
-     * are both closely related and work in sync with each other.
-     * This class is where all pipelines are declared and all
-     * logic is routed through this class from Main to each
-     * package in order.
+     * GameEngine defines the concrete engine instance.
+     * Registers pipelines and managers, and routes execution
+     * from Main to internal systems.
      */
 
     // BootStrap
@@ -40,27 +37,11 @@ public class GameEngine extends EnginePackage {
 
     // Internal
     private SaveManager saveManager;
-    private UISystem UISystem;
+    private UISystem uiSystem;
     private LightingManager lightingManager;
     private TimeSystem timeSystem;
     private PlayerManager playerManager;
     private WorldPipeline worldPipeline;
-
-    // Internal \\
-
-    public GameEngine(
-            Settings settings,
-            Main main,
-            File path,
-            Gson gson) {
-
-        // Internal
-        super(
-                settings,
-                main,
-                path,
-                gson);
-    }
 
     // BootStrap \\
 
@@ -68,13 +49,13 @@ public class GameEngine extends EnginePackage {
     protected void bootstrap() {
 
         // BootStrap
-        this.threadSystem = (ThreadSystem) register(new ThreadSystem());
-        this.scenePipeline = (ScenePipeline) register(new ScenePipeline());
-        this.inputSystem = (InputSystem) register(new InputSystem());
-        this.movementManager = (MovementManager) register(new MovementManager());
-        this.geometryPipeline = (GeometryPipeline) register(new GeometryPipeline());
-        this.shaderPipeline = (ShaderPipeline) register(new ShaderPipeline());
-        this.renderPipeline = (RenderPipeline) register(new RenderPipeline());
+        this.threadSystem = create(ThreadSystem.class);
+        this.scenePipeline = create(ScenePipeline.class);
+        this.inputSystem = create(InputSystem.class);
+        this.movementManager = create(MovementManager.class);
+        this.geometryPipeline = create(GeometryPipeline.class);
+        this.shaderPipeline = create(ShaderPipeline.class);
+        this.renderPipeline = create(RenderPipeline.class);
     }
 
     // Internal \\
@@ -83,12 +64,12 @@ public class GameEngine extends EnginePackage {
     protected void create() {
 
         // Internal
-        saveManager = (SaveManager) register(new SaveManager());
-        UISystem = (UISystem) register(new UISystem());
-        lightingManager = (LightingManager) register(new LightingManager());
-        timeSystem = (TimeSystem) register(new TimeSystem());
-        playerManager = (PlayerManager) register(new PlayerManager());
-        worldPipeline = (WorldPipeline) register(new WorldPipeline());
+        this.saveManager = create(SaveManager.class);
+        this.uiSystem = create(UISystem.class);
+        this.lightingManager = create(LightingManager.class);
+        this.timeSystem = create(TimeSystem.class);
+        this.playerManager = create(PlayerManager.class);
+        this.worldPipeline = create(WorldPipeline.class);
     }
 
     @Override

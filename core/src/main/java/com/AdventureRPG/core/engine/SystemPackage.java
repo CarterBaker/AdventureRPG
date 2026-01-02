@@ -11,59 +11,98 @@ public abstract class SystemPackage extends EngineUtility {
      * be overridden by child classes to implement custom behavior.
      *
      * Lifecycle order:
-     * CREATE → INIT → AWAKE → FREE_MEMORY → START →
+     * CREATE → GET → AWAKE → RELEASE → START →
      * UPDATE → FIXED_UPDATE → LATE_UPDATE → RENDER → DISPOSE
      *
-     * Systems must be registered through a ManagerPackage or
+     * Systems must be created through a ManagerPackage or
      * EnginePackage to function properly.
      */
 
     // Core
-    protected Settings settings;
-    protected EnginePackage internal;
-    protected ManagerPackage local;
+    static final ThreadLocal<SystemStruct> SYSTEM_STRUCT = new ThreadLocal<>();
+
+    // Main
+    public final Settings settings;
+    public final EnginePackage internal;
+    public final ManagerPackage local;
 
     // Internal
-    InternalContext internalContext;
+    SystemContext internalContext;
 
     // Internal \\
 
-    public SystemPackage() {
+    protected SystemPackage(Settings settings) {
 
-        // Core
-        this.settings = null;
-        this.internal = null;
-        this.local = null;
+        // Main
+        this.settings = settings;
+        this.internal = (EnginePackage) this;
+        this.local = (ManagerPackage) this;
 
         // Internal
-        this.internalContext = null;
+        this.internalContext = SystemContext.NULL;
     }
 
-    // Core \\
+    protected SystemPackage() {
 
-    final SystemPackage register(
+        // Core
+        SystemStruct data = SYSTEM_STRUCT.get();
+
+        if (data == null)
+            throwException("Systems must be created via internal engine `create` method");
+
+        if (data.settings == null || data.internal == null || data.local == null)
+            throwException("SystemData was incomplete during system creation");
+
+        // Main
+        this.settings = data.settings;
+        this.internal = data.internal;
+        this.local = data.local;
+
+        // Internal
+        this.internalContext = SystemContext.NULL;
+    }
+
+    static final class SystemStruct extends StructPackage {
+
+        /*
+         * A container used to ensure proper system creation during the creation
+         * phase of the internal engines lifecycle. Mainly serves as a temporary data
+         * transfer mechanism.
+         */
+
+        // Internal
+        final Settings settings;
+        final EnginePackage internal;
+        final ManagerPackage local;
+
+        // Internal \\
+
+        SystemStruct(
+                Settings settings,
+                EnginePackage internal,
+                ManagerPackage local) {
+
+            // Internal
+            this.settings = settings;
+            this.internal = internal;
+            this.local = local;
+        }
+    }
+
+    static void setupConstructor(
             Settings settings,
             EnginePackage internal,
             ManagerPackage local) {
-
-        // Core
-        this.settings = settings;
-        this.internal = internal;
-        this.local = local;
-
-        // Internal
-        this.internalContext = InternalContext.NULL;
-
-        return this;
+        SYSTEM_STRUCT.set(new SystemStruct(settings, internal, local));
     }
 
-    // Internal Context \\
+    // System Context \\
 
-    final InternalContext getContext() {
+    final SystemContext getContext() {
         return this.internalContext;
     }
 
-    void setContext(InternalContext targetContext) {
+    void setContext(SystemContext targetContext) {
 
         if (!targetContext.canEnterFrom(this.internalContext.order))
             throwException("Firing order issue. Internal engine attempted to perform an illegal context set.");
@@ -71,7 +110,7 @@ public abstract class SystemPackage extends EngineUtility {
         this.internalContext = targetContext;
     }
 
-    boolean verifyProcess(InternalContext targetContext) {
+    boolean verifyContext(SystemContext targetContext) {
 
         if (this.internal.internalContext != targetContext
                 || !targetContext.canEnterFrom(this.internalContext.order))
@@ -81,170 +120,23 @@ public abstract class SystemPackage extends EngineUtility {
         return true;
     }
 
-    // Create \\
+    // System Registry \\
 
-    void internalCreate() {
+    @SuppressWarnings("unchecked")
+    protected <T extends EngineUtility> T create(Class<T> targetClass) {
 
-        this.verifySystem();
+        if (InstancePackage.class.isAssignableFrom(targetClass))
+            return (T) this.createInstance((Class<? extends InstancePackage>) targetClass);
 
-        if (!this.verifyProcess(InternalContext.CREATE))
-            return;
-
-        this.create();
+        return throwException(
+                "SystemPackage can only create InstancePackage types.");
     }
 
-    protected void create() {
-    }
-
-    // Init \\
-
-    void internalInit() {
-
-        if (!this.verifyProcess(InternalContext.INIT))
-            return;
-
-        this.init();
-    }
-
-    protected void init() {
-    }
-
-    // Awake \\
-
-    void internalAwake() {
-
-        if (!this.verifyProcess(InternalContext.AWAKE))
-            return;
-
-        this.awake();
-    }
-
-    protected void awake() {
-    }
-
-    // FreeMemory \\
-
-    void internalFreeMemory() {
-
-        if (!this.verifyProcess(InternalContext.FREE_MEMORY))
-            return;
-
-        this.freeMemory();
-    }
-
-    protected void freeMemory() {
-    }
-
-    // Start \\
-
-    void internalStart() {
-
-        if (!this.verifyProcess(InternalContext.START))
-            return;
-
-        this.start();
-    }
-
-    protected void start() {
-    }
-
-    // Update \\
-
-    void internalUpdate() {
-
-        if (!this.verifyProcess(InternalContext.UPDATE))
-            return;
-
-        this.update();
-    }
-
-    protected void update() {
-    }
-
-    // Fixed Update \\
-
-    void internalFixedUpdate() {
-
-        if (!this.verifyProcess(InternalContext.FIXED_UPDATE))
-            return;
-
-        this.fixedUpdate();
-    }
-
-    protected void fixedUpdate() {
-    }
-
-    // Late Update \\
-
-    void internalLateUpdate() {
-
-        if (!this.verifyProcess(InternalContext.LATE_UPDATE))
-            return;
-
-        this.lateUpdate();
-    }
-
-    protected void lateUpdate() {
-    }
-
-    // Render \\
-
-    void internalRender() {
-
-        if (!this.verifyProcess(InternalContext.RENDER))
-            return;
-
-        this.render();
-    }
-
-    protected void render() {
-    }
-
-    // Dispose \\
-
-    void internalDispose() {
-
-        if (!this.verifyProcess(InternalContext.DISPOSE))
-            return;
-
-        this.dispose();
-    }
-
-    protected void dispose() {
-    }
-
-    // Utility \\
-
-    private final void verifySystem() {
-        if (settings == null ||
-                internal == null ||
-                local == null ||
-                internalContext == null)
-            throwException("System was created without proper registration");
-    }
-
-    // Accessible \\
-
-    protected final void debugProcess() {
-        this.debugProcess("");
-    }
-
-    protected final void debugProcess(Object input) {
-        this.debug("[" + this.internalContext.toString() + "] " + String.valueOf(input));
-    }
-
-    protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
-        return this.internalCreate(instanceClass);
-    }
-
-    final <T extends InstancePackage> T internalCreate(Class<T> instanceClass) {
-
-        InstancePackage.setupCreation(this.internal, this);
-
-        if (!InstancePackage.class.isAssignableFrom(instanceClass))
-            throwException("Cannot create non-InstancePackage class: " + instanceClass.getName());
+    final <T extends InstancePackage> T createInstance(Class<T> instanceClass) {
 
         try {
+
+            InstancePackage.setupConstructor(this.internal, this);
 
             T instance = instanceClass.getDeclaredConstructor().newInstance();
             instance.internalCreate();
@@ -260,8 +152,148 @@ public abstract class SystemPackage extends EngineUtility {
         }
 
         finally {
-            InstancePackage.CREATION_DATA.remove();
+            InstancePackage.CREATION_STRUCT.remove();
         }
+    }
+
+    // Create \\
+
+    void internalCreate() {
+
+        if (!this.verifyContext(SystemContext.CREATE))
+            return;
+
+        this.create();
+    }
+
+    protected void create() {
+    }
+
+    // Init \\
+
+    void internalGet() {
+
+        if (!this.verifyContext(SystemContext.GET))
+            return;
+
+        this.get();
+    }
+
+    protected void get() {
+    }
+
+    // Awake \\
+
+    void internalAwake() {
+
+        if (!this.verifyContext(SystemContext.AWAKE))
+            return;
+
+        this.awake();
+    }
+
+    protected void awake() {
+    }
+
+    // FreeMemory \\
+
+    void internalRelease() {
+
+        if (!this.verifyContext(SystemContext.RELEASE))
+            return;
+
+        this.release();
+    }
+
+    protected void release() {
+    }
+
+    // Start \\
+
+    void internalStart() {
+
+        if (!this.verifyContext(SystemContext.START))
+            return;
+
+        this.start();
+    }
+
+    protected void start() {
+    }
+
+    // Update \\
+
+    void internalUpdate() {
+
+        if (!this.verifyContext(SystemContext.UPDATE))
+            return;
+
+        this.update();
+    }
+
+    protected void update() {
+    }
+
+    // Fixed Update \\
+
+    void internalFixedUpdate() {
+
+        if (!this.verifyContext(SystemContext.FIXED_UPDATE))
+            return;
+
+        this.fixedUpdate();
+    }
+
+    protected void fixedUpdate() {
+    }
+
+    // Late Update \\
+
+    void internalLateUpdate() {
+
+        if (!this.verifyContext(SystemContext.LATE_UPDATE))
+            return;
+
+        this.lateUpdate();
+    }
+
+    protected void lateUpdate() {
+    }
+
+    // Render \\
+
+    void internalRender() {
+
+        if (!this.verifyContext(SystemContext.RENDER))
+            return;
+
+        this.render();
+    }
+
+    protected void render() {
+    }
+
+    // Dispose \\
+
+    void internalDispose() {
+
+        if (!this.verifyContext(SystemContext.DISPOSE))
+            return;
+
+        this.dispose();
+    }
+
+    protected void dispose() {
+    }
+
+    // Accessible \\
+
+    protected final void debugContext() {
+        this.debugContext("");
+    }
+
+    protected final void debugContext(Object input) {
+        this.debug("[" + this.internalContext.toString() + "] " + String.valueOf(input));
     }
 
     @SuppressWarnings("unchecked")

@@ -28,7 +28,7 @@ public class RenderSystem extends SystemPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
         this.modelManager = get(ModelManager.class);
         this.windowInstance = internal.getWindowInstance();
     }

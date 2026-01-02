@@ -2,15 +2,15 @@ package com.AdventureRPG.core.engine;
 
 import com.AdventureRPG.core.engine.EngineUtility.InternalException;
 
-enum InternalContext {
+enum SystemContext {
 
         /*
-         * InternalContext represent active execution contexts within the
-         * internal engine. Each instance corresponds to a specific process
+         * SystemContext represent active execution contexts within the
+         * internal engine. Each context corresponds to a specific process
          * method currently being executed.
          *
-         * They are used to track which internalContext is running at any given time
-         * and to provide execution order for internal engine systems.
+         * They are used to track which process is running at any given time
+         * and to enforce execution order for internal engine systems.
          */
 
         // Empty constructor for initialization
@@ -22,10 +22,10 @@ enum InternalContext {
         // Constructor chain
         CREATE("NULL",
                         "BOOTSTRAP"),
-        INIT("CREATE"),
-        AWAKE("INIT"),
-        FREE_MEMORY("AWAKE"),
-        START("FREE_MEMORY"),
+        GET("CREATE"),
+        AWAKE("GET"),
+        RELEASE("AWAKE"),
+        START("RELEASE"),
 
         // Runtime (cyclic)
         UPDATE("START",
@@ -43,9 +43,9 @@ enum InternalContext {
         DISPOSE("NULL",
                         "BOOTSTRAP",
                         "CREATE",
-                        "INIT",
+                        "GET",
                         "AWAKE",
-                        "FREE_MEMORY",
+                        "RELEASE",
                         "START",
                         "UPDATE",
                         "FIXED_UPDATE",
@@ -60,7 +60,7 @@ enum InternalContext {
 
         // Internal \\
 
-        InternalContext(String... entryPoints) {
+        SystemContext(String... entryPoints) {
 
                 // Internal
                 this.order = this.ordinal();
@@ -68,20 +68,20 @@ enum InternalContext {
         }
 
         static {
-                for (InternalContext context : values()) {
+                for (SystemContext context : values()) {
 
                         short mask = 0;
 
                         for (String name : context.entryPoints) {
 
                                 try {
-                                        InternalContext prev = InternalContext.valueOf(name);
+                                        SystemContext prev = SystemContext.valueOf(name);
                                         mask |= (short) (1 << prev.order);
                                 }
 
                                 catch (IllegalArgumentException e) {
                                         throw new InternalException(
-                                                        "Invalid InternalContext predecessor: "
+                                                        "Invalid SystemContext predecessor: "
                                                                         + name + " -> " + context.name(),
                                                         e);
                                 }

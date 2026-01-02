@@ -45,7 +45,7 @@ public class WorldGenerator extends SystemPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Root
         this.userData = get(UserData.class);

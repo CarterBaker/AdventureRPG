@@ -3,6 +3,8 @@ package com.AdventureRPG.core.engine;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.AdventureRPG.core.engine.settings.Settings;
+
 public abstract class ManagerPackage extends SystemPackage {
 
     /*
@@ -15,19 +17,32 @@ public abstract class ManagerPackage extends SystemPackage {
      * Key responsibilities:
      * - Child system registration and lifecycle management
      * - Garbage collection of released systems
-     * - Lifecycle propagation to all registered children
+     * - Lifecycle propagation to all created children
      */
 
     // System Management
     SystemPackage[] systemArray;
-    private List<SystemPackage> systemCollection;
-    private List<SystemPackage> garbageCollection;
+    List<SystemPackage> systemCollection;
+    List<Class<?>> garbageCollection;
 
     // Internal \\
 
-    public ManagerPackage() {
+    protected ManagerPackage(Settings settings) {
 
-        // System Management
+        // Internal
+        super(settings);
+
+        this.systemArray = new SystemPackage[0];
+        this.systemCollection = new ArrayList<>();
+        this.garbageCollection = new ArrayList<>();
+    }
+
+    protected ManagerPackage() {
+
+        // Internal System Package
+        super();
+
+        // Internal
         this.systemArray = new SystemPackage[0];
         this.systemCollection = new ArrayList<>();
         this.garbageCollection = new ArrayList<>();
@@ -35,59 +50,97 @@ public abstract class ManagerPackage extends SystemPackage {
 
     // System Registry \\
 
-    protected SystemPackage register(SystemPackage subSystem) {
+    @Override // From `SystemPackage`
+    @SuppressWarnings("unchecked")
+    protected <T extends EngineUtility> T create(Class<T> systemClass) {
 
-        if (this.getContext() != InternalContext.CREATE)
+        if (systemClass == EnginePackage.class)
+            throwException("Only one engine package is allowed at any given time");
+
+        if (SystemPackage.class.isAssignableFrom(systemClass))
+            return (T) this.createSystem((Class<? extends SystemPackage>) systemClass);
+
+        return super.create(systemClass);
+    }
+
+    @SuppressWarnings("unchecked")
+    <T extends SystemPackage> T createSystem(Class<T> systemClass) {
+
+        if (this.getContext() != SystemContext.CREATE &&
+                this.internal.getContext() != SystemContext.BOOTSTRAP)
             throwException(
                     "Subsystem registration rejected.\n" +
                             "Attempted during process: " + this.getContext() + "\n" +
-                            "Allowed process: CREATE");
+                            "Allowed processes: BOOTSTRAP, CREATE");
 
-        return internalRegister(subSystem);
+        try {
+
+            // Prepare system creation context
+            SystemPackage.setupConstructor(
+                    this.settings,
+                    this.internal,
+                    this);
+
+            var constructor = systemClass.getDeclaredConstructor();
+            constructor.setAccessible(true);
+
+            T systemPackage = constructor.newInstance();
+
+            if (this.internal.internalRegistry.containsKey(systemPackage.getClass()))
+                throwException(
+                        "Subsystem: " + systemPackage.getClass().getSimpleName() +
+                                " already exists within the internal engine");
+
+            return this.registerSystem(systemPackage);
+        }
+
+        catch (Exception e) {
+            throw new InternalException(
+                    "Failed to create system: " + systemClass.getSimpleName(),
+                    e);
+        }
+
+        finally {
+            SystemPackage.SYSTEM_STRUCT.remove();
+        }
     }
 
-    SystemPackage internalRegister(SystemPackage subSystem) {
+    @SuppressWarnings("unchecked")
+    protected <T extends SystemPackage> T registerSystem(T systemPackage) {
 
-        if (subSystem instanceof EnginePackage)
-            throwException("Only one engine package is allowed at any given time");
+        this.internal.internalRegistry.put(systemPackage.getClass(), systemPackage);
+        this.systemCollection.add(systemPackage);
 
-        if (this.systemCollection.contains(subSystem))
-            throwException("Subsystem: " + subSystem.getClass().getSimpleName()
-                    + ", Already exists within the internal engine. Only one instance of any given system can exist at a time");
-
-        this.systemCollection.add(subSystem);
-
-        subSystem.register(
-                settings,
-                internal,
-                this);
-
-        return internal.internalRegister(subSystem);
+        return systemPackage;
     }
 
     // System Release \\
 
-    protected final SystemPackage release(SystemPackage subSystem) {
-        this.internalRelease(subSystem);
-        return null;
-    }
+    @SuppressWarnings("unchecked")
+    public <T extends SystemPackage> T release(Class<T> systemClass) {
 
-    void internalRelease(SystemPackage subSystem) {
-
-        if (this.getContext() != InternalContext.FREE_MEMORY)
+        if (this.getContext() != SystemContext.RELEASE)
             throwException(
                     "Subsystem release rejected.\n" +
                             "Attempted during process: " + this.getContext() + "\n" +
-                            "Allowed process: FREE_MEMORY");
+                            "Allowed process: RELEASE");
 
-        if (subSystem == internal)
+        if (systemClass == EnginePackage.class)
             throwException(
                     "Release call was attempted on the game engine itself. This is not allowed under any circumstance");
 
-        if (this.garbageCollection.contains(subSystem))
+        this.internalRelease(systemClass);
+
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    void internalRelease(Class<?> systemClass) {
+
+        if (this.garbageCollection.contains(systemClass))
             return;
 
-        this.garbageCollection.add(subSystem);
+        this.garbageCollection.add(systemClass);
     }
 
     // Create \\
@@ -106,12 +159,12 @@ public abstract class ManagerPackage extends SystemPackage {
     // Init \\
 
     @Override // From `SystemPackage`
-    void internalInit() {
+    void internalGet() {
 
-        super.internalInit();
+        super.internalGet();
 
         for (int i = 0; i < this.systemArray.length; i++)
-            this.systemArray[i].internalInit();
+            this.systemArray[i].internalGet();
     }
 
     // Awake \\
@@ -125,15 +178,15 @@ public abstract class ManagerPackage extends SystemPackage {
             this.systemArray[i].internalAwake();
     }
 
-    // Free Memory \\
+    // Release \\
 
     @Override // From `SystemPackage`
-    void internalFreeMemory() {
+    void internalRelease() {
 
-        super.internalFreeMemory();
+        super.internalRelease();
 
         for (int i = 0; i < this.systemArray.length; i++)
-            this.systemArray[i].internalFreeMemory();
+            this.systemArray[i].internalRelease();
 
         this.clearGarbage();
     }
@@ -215,8 +268,13 @@ public abstract class ManagerPackage extends SystemPackage {
         if (this.garbageCollection.isEmpty())
             return;
 
-        for (SystemPackage target : garbageCollection)
-            this.systemCollection.remove(target);
+        for (Class<?> systemClass : garbageCollection) {
+
+            SystemPackage systemPackage = this.internal.internalRegistry.get(systemClass);
+
+            this.internal.internalRegistry.remove(systemClass);
+            this.systemCollection.remove(systemPackage);
+        }
 
         this.garbageCollection.clear();
 

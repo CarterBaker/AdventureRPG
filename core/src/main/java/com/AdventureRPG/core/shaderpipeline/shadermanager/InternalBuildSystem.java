@@ -26,7 +26,7 @@ public class InternalBuildSystem extends SystemPackage {
     // Base \\
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Internal
         this.internalLoadManager = get(InternalLoadManager.class);
@@ -40,7 +40,7 @@ public class InternalBuildSystem extends SystemPackage {
 
     void parseShaderFile(ShaderData shaderData) {
 
-        String rawText = FileParserUtility.convertFileToRawText(shaderData.shaderFile());
+        String rawText = FileParserUtility.convertFileToRawText(shaderData.getShaderFile());
         ObjectArrayList<String> textArray = FileParserUtility.convertRawTextToArray(rawText);
 
         shaderData.setVersion(parseVersionInfo(textArray));
@@ -179,7 +179,12 @@ public class InternalBuildSystem extends SystemPackage {
                 // Mark this binding as used
                 usedBindings.add(binding);
 
-                return new UBOData(blockName, binding);
+                UBOData uboData = create(UBOData.class);
+                uboData.init(
+                        blockName,
+                        binding);
+
+                return uboData;
             }
 
         }
@@ -272,7 +277,11 @@ public class InternalBuildSystem extends SystemPackage {
                         "Unsized arrays not supported: " + variableName);
 
             // Create uniform instance
-            UniformData uniform = new UniformData(uniformType, variableName, arrayCount);
+            UniformData uniform = create(UniformData.class);
+            uniform.init(
+                    uniformType,
+                    variableName,
+                    arrayCount);
 
             // Add to appropriate container
             if (currentBuffer != null)
@@ -332,12 +341,18 @@ public class InternalBuildSystem extends SystemPackage {
             throwException(
                     "Json data error: " + jsonFile.getName() + ", The vert or frag file defined could not be found");
 
-        if (vertData.shaderType() != ShaderType.VERT || fragData.shaderType() != ShaderType.FRAG)
+        if (vertData.getShaderType() != ShaderType.VERT || fragData.getShaderType() != ShaderType.FRAG)
             throwException(
                     "Json data error: " + jsonFile.getName()
                             + ", The vert or frag files defined do not match the corresponding type");
 
-        return sortIncludes(new ShaderDefinitionData(shaderName, vertData, fragData));
+        ShaderDefinitionData shaderDefinitionData = create(ShaderDefinitionData.class);
+        shaderDefinitionData.init(
+                shaderName,
+                vertData,
+                fragData);
+
+        return sortIncludes(shaderDefinitionData);
     }
 
     private ShaderDefinitionData sortIncludes(ShaderDefinitionData shaderDefinition) {
@@ -346,11 +361,11 @@ public class InternalBuildSystem extends SystemPackage {
 
         collectRecursiveIncludes(
                 shaderDefinition,
-                shaderDefinition.vert,
+                shaderDefinition.getVert(),
                 visited);
         collectRecursiveIncludes(
                 shaderDefinition,
-                shaderDefinition.frag,
+                shaderDefinition.getFrag(),
                 visited);
 
         return shaderDefinition;
@@ -366,7 +381,7 @@ public class InternalBuildSystem extends SystemPackage {
 
         visited.add(shaderData);
 
-        if (shaderData.shaderType() == ShaderType.INCLUDE &&
+        if (shaderData.getShaderType() == ShaderType.INCLUDE &&
                 !shaderDefinition.getIncludes().contains(shaderData))
             shaderDefinition.addInclude(shaderData);
 

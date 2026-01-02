@@ -16,7 +16,7 @@ public class BlockSystem extends SystemPackage {
     // Base \\
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Root
         this.gson = internal.gson;

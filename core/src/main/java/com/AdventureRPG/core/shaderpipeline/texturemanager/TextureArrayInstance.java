@@ -49,7 +49,7 @@ public class TextureArrayInstance extends InstancePackage {
 
     // Tiles \\
 
-    void registerTile(int x, int y, TextureTileInstance tile) {
+    void createTile(int x, int y, TextureTileInstance tile) {
         String key = x + "," + y;
         tileCoordinateMap.put(key, tile);
     }

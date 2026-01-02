@@ -7,12 +7,20 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ShaderDefinitionData extends DataPackage {
 
     // Internal
-    public final String shaderName;
-    public final ShaderData vert;
-    public final ShaderData frag;
-    private final ObjectArrayList<ShaderData> includes;
+    private String shaderName;
+    private ShaderData vert;
+    private ShaderData frag;
+    private ObjectArrayList<ShaderData> includes;
 
-    public ShaderDefinitionData(
+    // Internal \\
+
+    protected void create() {
+
+        // Internal
+        this.includes = new ObjectArrayList<>();
+    }
+
+    public void init(
             String shaderName,
             ShaderData vert,
             ShaderData frag) {
@@ -21,11 +29,24 @@ public class ShaderDefinitionData extends DataPackage {
         this.shaderName = shaderName;
         this.vert = vert;
         this.frag = frag;
-        this.includes = new ObjectArrayList<>();
     }
 
     // Utility \\
 
+    // Internal
+    public String getShaderName() {
+        return shaderName;
+    }
+
+    public ShaderData getVert() {
+        return vert;
+    }
+
+    public ShaderData getFrag() {
+        return frag;
+    }
+
+    // Includes
     public void addInclude(ShaderData include) {
         includes.add(include);
     }

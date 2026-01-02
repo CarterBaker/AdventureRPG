@@ -1,5 +1,6 @@
 package com.AdventureRPG.core.geometrypipeline.ibomanager;
 
+import com.AdventureRPG.core.engine.UtilityPackage;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
@@ -9,8 +10,15 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 
-class GLSLUtility {
+class GLSLUtility extends UtilityPackage {
 
+        /*
+         * GLSLUtility provides low-level OpenGL operations for managing index buffers.
+         * It binds VAOs, creates GPU buffers, and uploads index data efficiently.
+         * Designed as a static utility, it does not store state beyond buffer handles.
+         */
+
+        // Uploads index data to a GPU buffer and binds it to the given VAO.
         static IBOHandle uploadIndexData(VAOHandle vaoHandle, short[] indices) {
 
                 GL30 gl30 = Gdx.gl30;

@@ -51,9 +51,9 @@ public class QueueSystem extends ManagerPackage {
     protected void create() {
 
         // Root
-        this.grid = (Grid) register(new Grid());
-        this.loader = (Loader) register(new Loader());
-        this.batchSystem = (BatchSystem) register(new BatchSystem());
+        this.grid = create(Grid.class);
+        this.loader = create(Loader.class);
+        this.batchSystem = create(BatchSystem.class);
 
         // Settings
         this.MAX_CHUNK_LOADS_PER_FRAME = EngineSetting.MAX_CHUNK_LOADS_PER_FRAME;
@@ -73,7 +73,7 @@ public class QueueSystem extends ManagerPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Root
         this.worldEngineSystem = get(WorldEngineSystem.class);

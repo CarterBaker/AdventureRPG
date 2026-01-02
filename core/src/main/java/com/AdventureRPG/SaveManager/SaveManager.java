@@ -20,12 +20,13 @@ public class SaveManager extends ManagerPackage {
     protected void create() {
 
         // Save System
-        this.userData = (UserData) register(new UserData());
-        this.chunkData = (ChunkData) register(new ChunkData());
+        this.userData = create(UserData.class);
+        this.chunkData = create(ChunkData.class);
+
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Settings
         this.path = internal.path;

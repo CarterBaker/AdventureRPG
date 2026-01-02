@@ -56,7 +56,7 @@ public class Loader extends SystemPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Root
         this.threadSystem = get(ThreadSystem.class);

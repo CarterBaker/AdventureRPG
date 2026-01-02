@@ -13,7 +13,7 @@ public class ChunkData extends SystemPackage {
     // Base \\
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Settings
         this.path = internal.path;

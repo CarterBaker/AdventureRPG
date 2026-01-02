@@ -23,7 +23,7 @@ public class PassManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        this.internalLoadManager = (InternalLoadManager) register(new InternalLoadManager());
+        this.internalLoadManager = create(InternalLoadManager.class);
 
         // Retrieval Mapping
         this.passName2PassID = new Object2IntOpenHashMap<>();
@@ -31,7 +31,7 @@ public class PassManager extends ManagerPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Internal
         this.renderSystem = get(RenderSystem.class);
@@ -43,8 +43,8 @@ public class PassManager extends ManagerPackage {
     }
 
     @Override
-    protected void freeMemory() {
-        internalLoadManager = (InternalLoadManager) release(internalLoadManager);
+    protected void release() {
+        internalLoadManager = release(InternalLoadManager.class);
     }
 
     // Render Management \\

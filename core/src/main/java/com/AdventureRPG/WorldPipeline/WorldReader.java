@@ -22,7 +22,7 @@ public class WorldReader extends SystemPackage {
         this.world = new Pixmap(Gdx.files.internal(EngineSetting.REGION_IMAGE_PATH));
     }
 
-    public void init() {
+    public void get() {
 
         // Root
         worldEngineSystem = get(WorldEngineSystem.class);

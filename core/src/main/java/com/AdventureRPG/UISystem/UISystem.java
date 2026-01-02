@@ -18,7 +18,7 @@ public class UISystem extends SystemPackage {
     // Base \\
 
     @Override
-    protected void init() {
+    protected void get() {
         inputSystem = get(InputSystem.class);
     }
 

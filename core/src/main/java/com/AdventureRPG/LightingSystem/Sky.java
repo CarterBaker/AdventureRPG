@@ -18,7 +18,7 @@ public class Sky extends SystemPackage {
     // Base \\
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Root
         this.passmanager = get(PassManager.class);

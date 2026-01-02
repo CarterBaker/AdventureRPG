@@ -29,7 +29,7 @@ class InternalBuildSystem extends SystemPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
         aliasLibrarySystem = get(AliasLibrarySystem.class);
     }
 
@@ -217,7 +217,7 @@ class InternalBuildSystem extends SystemPackage {
                 textureAtlases);
 
         for (TextureTileInstance tile : textureTiles.values())
-            textureArray.registerTile(
+            textureArray.createTile(
                     tile.getAtlasX(),
                     tile.getAtlasY(),
                     tile);

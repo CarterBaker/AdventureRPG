@@ -22,7 +22,7 @@ public final class UBOManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        this.internalBuildSystem = (InternalBuildSystem) register(new InternalBuildSystem());
+        this.internalBuildSystem = create(InternalBuildSystem.class);
 
         this.nextAvailableBinding = 0;
         this.releasedBindings = new IntOpenHashSet();
@@ -32,8 +32,8 @@ public final class UBOManager extends ManagerPackage {
     }
 
     @Override
-    protected void freeMemory() {
-        this.internalBuildSystem = (InternalBuildSystem) release(internalBuildSystem);
+    protected void release() {
+        this.internalBuildSystem = release(InternalBuildSystem.class);
     }
 
     @Override
@@ -49,7 +49,7 @@ public final class UBOManager extends ManagerPackage {
 
     public UBOHandle buildBuffer(UBOData data) {
 
-        String blockName = data.blockName();
+        String blockName = data.getBlockName();
 
         // Check if buffer already exists
         UBOHandle existing = uboName2UBOHandle.get(blockName);

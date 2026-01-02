@@ -12,6 +12,6 @@ public class ScenePipeline extends PipelineFrame {
     protected void create() {
 
         // Scene Pipeline
-        this.worldEngineSystem = (WorldEngineSystem) register(new WorldEngineSystem());
+        this.worldEngineSystem = create(WorldEngineSystem.class);
     }
 }

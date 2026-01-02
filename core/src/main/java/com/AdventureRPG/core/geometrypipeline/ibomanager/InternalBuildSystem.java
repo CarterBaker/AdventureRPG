@@ -21,7 +21,7 @@ class InternalBuildSystem extends SystemPackage {
     // Base \\
 
     @Override
-    protected void init() {
+    protected void get() {
         this.iboManager = get(IBOManager.class);
         this.vaoManager = get(VAOManager.class);
     }

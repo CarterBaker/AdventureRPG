@@ -24,7 +24,7 @@ public class ShaderManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        this.internalLoadManager = (InternalLoadManager) register(new InternalLoadManager());
+        this.internalLoadManager = create(InternalLoadManager.class);
 
         // Retrieval Mapping
         this.shaderName2ShaderID = new Object2IntOpenHashMap<>();
@@ -38,8 +38,8 @@ public class ShaderManager extends ManagerPackage {
     }
 
     @Override
-    protected void freeMemory() {
-        internalLoadManager = (InternalLoadManager) release(internalLoadManager);
+    protected void release() {
+        internalLoadManager = release(InternalLoadManager.class);
     }
 
     @Override

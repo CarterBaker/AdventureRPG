@@ -17,17 +17,19 @@ class GLSLUtility extends UtilityPackage {
     static int createShaderProgram(ShaderDefinitionData shaderDef) {
 
         // Preprocess shaders to replace #include directives with actual content
-        String vertSource = preprocessShaderSource(shaderDef, shaderDef.vert);
-        String fragSource = preprocessShaderSource(shaderDef, shaderDef.frag);
+        String vertSource = preprocessShaderSource(shaderDef, shaderDef.getVert());
+        String fragSource = preprocessShaderSource(shaderDef, shaderDef.getFrag());
 
         // Compile preprocessed shaders
-        int vertShader = compileShaderFromSource(GL20.GL_VERTEX_SHADER, vertSource, shaderDef.vert.shaderName());
-        int fragShader = compileShaderFromSource(GL20.GL_FRAGMENT_SHADER, fragSource, shaderDef.frag.shaderName());
+        int vertShader = compileShaderFromSource(GL20.GL_VERTEX_SHADER, vertSource,
+                shaderDef.getVert().getShaderName());
+        int fragShader = compileShaderFromSource(GL20.GL_FRAGMENT_SHADER, fragSource,
+                shaderDef.getFrag().getShaderName());
 
         int program = Gdx.gl.glCreateProgram();
         if (program == 0)
             throwException(
-                    "Failed to return a valid gpu handle for shader: " + shaderDef.shaderName);
+                    "Failed to return a valid gpu handle for shader: " + shaderDef.getShaderName());
 
         Gdx.gl.glAttachShader(program, vertShader);
         Gdx.gl.glAttachShader(program, fragShader);
@@ -44,7 +46,7 @@ class GLSLUtility extends UtilityPackage {
             Gdx.gl.glDeleteShader(vertShader);
             Gdx.gl.glDeleteShader(fragShader);
             throwException(
-                    "Failed to link shader program " + shaderDef.shaderName + ": " + log);
+                    "Failed to link shader program " + shaderDef.getShaderName() + ": " + log);
         }
 
         // Cleanup - detach and delete shaders
@@ -94,18 +96,18 @@ class GLSLUtility extends UtilityPackage {
         ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
         for (int i = 0; i < includes.size(); i++) {
             ShaderData include = includes.get(i);
-            String includeSource = FileParserUtility.convertFileToRawText(include.shaderFile());
+            String includeSource = FileParserUtility.convertFileToRawText(include.getShaderFile());
 
             // Remove #version and #include directives from included files
             includeSource = stripPreprocessorDirectives(includeSource);
 
-            result.append("// -------- Include: ").append(include.shaderName()).append(" --------\n");
+            result.append("// -------- Include: ").append(include.getShaderName()).append(" --------\n");
             result.append(includeSource).append("\n");
             result.append("// -------- End Include --------\n\n");
         }
 
         // 3. Add main shader source (without #version and #include directives)
-        String mainSource = FileParserUtility.convertFileToRawText(shaderData.shaderFile());
+        String mainSource = FileParserUtility.convertFileToRawText(shaderData.getShaderFile());
         mainSource = stripPreprocessorDirectives(mainSource);
 
         result.append(mainSource);

@@ -2,6 +2,19 @@ package com.AdventureRPG.core.engine;
 
 public abstract class UtilityPackage {
 
+    /*
+     * UtilityPackage provides engine-level diagnostics and exception
+     * handling to static utility classes.
+     *
+     * Since static helpers cannot extend EngineUtility directly,
+     * this class exposes a shared internal EngineUtility instance
+     * and forwards its functionality through static methods.
+     *
+     * This allows static systems to participate in the same
+     * debugging and failure-reporting infrastructure as the rest
+     * of the engine.
+     */
+
     // Internal \\
 
     protected static final EngineUtility ENGINE = new EngineUtility() {

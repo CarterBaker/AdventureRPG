@@ -18,7 +18,6 @@ public class WorldPipeline extends PipelineFrame {
     public WorldTick worldTick;
     public WorldReader worldReader;
     public QueueSystem queueSystem;
-    public BatchSystem batchSystem;
     public BiomeSystem biomeSystem;
 
     // Position
@@ -31,13 +30,13 @@ public class WorldPipeline extends PipelineFrame {
     protected void create() {
 
         // World System
-        this.blockSystem = (BlockSystem) register(new BlockSystem());
-        this.packedCoordinate3Int = (PackedCoordinate3Int) register(new PackedCoordinate3Int());
-        this.worldGenerator = (WorldGenerator) register(new WorldGenerator());
-        this.worldTick = (WorldTick) register(new WorldTick());
-        this.worldReader = (WorldReader) register(new WorldReader());
-        this.queueSystem = (QueueSystem) register(new QueueSystem());
-        this.biomeSystem = (BiomeSystem) register(new BiomeSystem());
+        this.blockSystem = create(BlockSystem.class);
+        this.packedCoordinate3Int = create(PackedCoordinate3Int.class);
+        this.worldGenerator = create(WorldGenerator.class);
+        this.worldTick = create(WorldTick.class);
+        this.worldReader = create(WorldReader.class);
+        this.queueSystem = create(QueueSystem.class);
+        this.biomeSystem = create(BiomeSystem.class);
 
         // Position
         this.currentPosition = new Vector3();

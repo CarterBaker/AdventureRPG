@@ -25,23 +25,25 @@ public class EnginePackage extends ManagerPackage {
      * - Global system registry and retrieval
      * - State machine execution (BOOTSTRAP → CREATE → START → UPDATE → EXIT)
      * - Frame timing and fixed timestep updates
-     * - Root lifecycle propagation to all registered systems
+     * - Root lifecycle propagation to all created systems
      */
 
+    // Core
+    static final ThreadLocal<EngineStruct> ENGINE_STRUCT = new ThreadLocal<>();
+
     // Root
-    public Game game;
-    public Screen screen;
-    public File path;
-    public Gson gson;
+    public final Game game;
+    public final File path;
+    public final Gson gson;
 
     // Internal
     private Main main;
+    private Screen screen;
     private WindowInstance windowInstance;
-    private InternalState internalState;
+    private EngineState engineState;
 
     // System Management
-    private Object2ObjectLinkedOpenHashMap<Class<?>, SystemPackage> systemRegistry;
-    private List<SystemPackage> garbageCollection;
+    Object2ObjectLinkedOpenHashMap<Class<?>, SystemPackage> internalRegistry;
 
     // Timing
     private long frameCount;
@@ -52,103 +54,116 @@ public class EnginePackage extends ManagerPackage {
 
     // Internal \\
 
-    public EnginePackage(
-            Settings setting,
-            Main main,
-            File path,
-            Gson gson) {
+    EnginePackage() {
+
+        // Internal Manager Package
+        super(ENGINE_STRUCT.get() != null ? ENGINE_STRUCT.get().settings : null);
 
         // Core
-        this.settings = setting;
-        this.internal = this;
-        this.local = this;
+        EngineStruct data = ENGINE_STRUCT.get();
+
+        if (data == null)
+            throwException("Engine must be created via EnginePackage.setupConstructor()");
 
         // Root
-        this.game = main;
-        this.screen = null;
-        this.path = path;
-        this.gson = gson;
+        this.game = data.game;
+        this.path = data.path;
+        this.gson = data.gson;
 
         // Internal
-        this.main = main;
+        this.main = data.main;
+        this.screen = null;
         this.windowInstance = null;
-        this.internalState = InternalState.BOOTSTRAP;
+        this.engineState = EngineState.BOOTSTRAP;
 
         // System Management
-        this.systemRegistry = new Object2ObjectLinkedOpenHashMap<>();
-        this.garbageCollection = new ArrayList<>();
+        this.internalRegistry = new Object2ObjectLinkedOpenHashMap<>();
 
         // Timing
         this.frameCount = 0L;
         this.deltaTime = 0f;
-        this.fixedInterval = setting.FIXED_TIME_STEP;
+        this.fixedInterval = data.settings.FIXED_TIME_STEP;
         this.elapsedTime = 0f;
         this.maxSteps = 5;
     }
 
-    // Internal State \\
+    static final class EngineStruct extends StructPackage {
 
-    final InternalState getInternalState() {
-        return this.internalState;
+        /*
+         * A container used to ensure proper engine creation from `Main`. Used
+         * to bypass constructor related timing issues and to ensure that things
+         * settings are able to be called easily without using a get method.
+         */
+
+        // Internal
+        final Settings settings;
+        final Main main;
+        final Game game;
+        final File path;
+        final Gson gson;
+
+        // Internal \\
+
+        EngineStruct(
+                Settings settings,
+                Main main,
+                File path,
+                Gson gson) {
+
+            // Internal
+            this.settings = settings;
+            this.main = main;
+            this.game = main;
+            this.path = path;
+            this.gson = gson;
+        }
     }
 
-    final void setInternalState(InternalState target) {
-        this.internalState = target;
+    public static void setupConstructor(
+            Settings settings,
+            Main main,
+            File path,
+            Gson gson) {
+        ENGINE_STRUCT.set(
+                new EngineStruct(
+                        settings,
+                        main,
+                        path,
+                        gson));
     }
 
-    // Internal Context \\
+    // Engine State \\
+
+    final EngineState getEngineState() {
+        return this.engineState;
+    }
+
+    final void setInternalState(EngineState target) {
+        this.engineState = target;
+    }
+
+    // System Context \\
 
     @Override // From `SystemPackage`
-    final void setContext(InternalContext targetContext) {
+    final void setContext(SystemContext targetContext) {
         this.internalContext = targetContext;
     }
 
     @Override // From `SystemPackage`
-    boolean verifyProcess(InternalContext targetContext) {
+    boolean verifyContext(SystemContext targetContext) {
         this.setContext(targetContext);
         return true;
     }
 
     // System Registry \\
 
-    @Override // From `ManagerPackage`
-    protected SystemPackage register(SystemPackage subSystem) {
+    @SuppressWarnings("unchecked")
+    protected <T extends SystemPackage> T registerSystem(T systemPackage) {
 
-        if (this.getContext() != InternalContext.BOOTSTRAP &&
-                this.getContext() != InternalContext.CREATE)
-            throwException(
-                    "Subsystem registration rejected.\n" +
-                            "Attempted during process: " + this.getContext() + "\n" +
-                            "Allowed processes: BOOTSTRAP, CREATE");
+        this.internalRegistry.put(systemPackage.getClass(), systemPackage);
+        this.systemCollection.add(systemPackage);
 
-        return super.internalRegister(subSystem);
-    }
-
-    @Override // From `ManagerPackage`
-    SystemPackage internalRegister(SystemPackage subSystem) {
-
-        Class<?> type = subSystem.getClass();
-
-        if (this.systemRegistry.containsKey(type))
-            throwException("Subsystem: " + type.getSimpleName()
-                    + ", Already exists within the internal engine. Only one instance of any given system can exist at a time");
-
-        this.systemRegistry.put(type, subSystem);
-
-        return subSystem;
-    }
-
-    // System Release \\
-
-    @Override // From `ManagerPackage`
-    void internalRelease(SystemPackage subSystem) {
-
-        if (this.garbageCollection.contains(subSystem))
-            return;
-
-        this.garbageCollection.add(subSystem);
-
-        super.internalRelease(subSystem);
+        return systemPackage;
     }
 
     // System Retrieval \\
@@ -156,27 +171,27 @@ public class EnginePackage extends ManagerPackage {
     @SuppressWarnings("unchecked")
     final <T> T get(boolean bypass, Class<T> type) {
 
-        if (!bypass && this.getContext() != InternalContext.INIT)
+        if (!bypass && this.getContext() != SystemContext.GET)
             throwException(
-                    "Get called outside INIT phase.\n" +
+                    "Get called outside GET phase.\n" +
                             "Requested: " + type.getSimpleName() + "\n" +
                             "Current process: " + this.getContext());
 
-        T system = (T) this.systemRegistry.get(type);
+        T systemPackage = (T) this.internalRegistry.get(type);
 
-        if (system == null)
+        if (systemPackage == null)
             throwException(
                     "System not found in registry.\n" +
                             "Requested type: " + type.getSimpleName() + "\n" +
-                            "This system either doesn't exist, hasn't been registered yet, or was already released.");
+                            "This system either doesn't exist, hasn't been created yet, or was already released.");
 
-        return system;
+        return systemPackage;
     }
 
     // Game State \\
 
     final void execute() {
-        switch (internalState) {
+        switch (engineState) {
             case BOOTSTRAP -> this.bootstrapCycle();
             case CREATE -> this.createCycle();
             case START -> this.startCycle();
@@ -189,13 +204,14 @@ public class EnginePackage extends ManagerPackage {
     private final void bootstrapCycle() {
 
         this.internalBootstrap();
+
         this.createGameWindow();
 
-        this.internalInit();
+        this.internalGet();
         this.internalAwake();
-        this.internalFreeMemory();
+        this.internalRelease();
 
-        this.setInternalState(InternalState.CREATE);
+        this.setInternalState(EngineState.CREATE);
         this.execute();
     }
 
@@ -203,11 +219,11 @@ public class EnginePackage extends ManagerPackage {
     private final void createCycle() {
 
         this.internalCreate();
-        this.internalInit();
+        this.internalGet();
         this.internalAwake();
-        this.internalFreeMemory();
+        this.internalRelease();
 
-        this.setInternalState(InternalState.START);
+        this.setInternalState(EngineState.START);
     }
 
     // Start Cycle
@@ -215,7 +231,7 @@ public class EnginePackage extends ManagerPackage {
 
         this.internalStart();
 
-        this.setInternalState(InternalState.UPDATE);
+        this.setInternalState(EngineState.UPDATE);
     }
 
     // Update Cycle
@@ -237,16 +253,16 @@ public class EnginePackage extends ManagerPackage {
     private final void internalBootstrap() {
 
         // First make sure to enter the BOOTSTRAP state
-        this.setContext(InternalContext.BOOTSTRAP);
+        this.setContext(SystemContext.BOOTSTRAP);
 
         // Only call OUR bootstrap, not super
         this.bootstrap();
 
-        // Cache any systems registered during bootstrap
+        // Cache any systems created during bootstrap
         this.cacheSubSystems();
 
         // Now we can enter CREATE and walk through create for all systems
-        this.setContext(InternalContext.CREATE);
+        this.setContext(SystemContext.CREATE);
 
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalCreate();
@@ -261,7 +277,7 @@ public class EnginePackage extends ManagerPackage {
     @Override // From `ManagerPackage`
     protected final void internalCreate() {
 
-        this.setContext(InternalContext.CREATE);
+        this.setContext(SystemContext.CREATE);
 
         super.internalCreate();
     }
@@ -269,11 +285,11 @@ public class EnginePackage extends ManagerPackage {
     // Init \\
 
     @Override // From `ManagerPackage`
-    protected final void internalInit() {
+    protected final void internalGet() {
 
-        this.setContext(InternalContext.INIT);
+        this.setContext(SystemContext.GET);
 
-        super.internalInit();
+        super.internalGet();
     }
 
     // Awake \\
@@ -281,19 +297,19 @@ public class EnginePackage extends ManagerPackage {
     @Override // From `ManagerPackage`
     protected final void internalAwake() {
 
-        this.setContext(InternalContext.AWAKE);
+        this.setContext(SystemContext.AWAKE);
 
         super.internalAwake();
     }
 
-    // Free Memory \\
+    // Release \\
 
     @Override // From `ManagerPackage`
-    protected final void internalFreeMemory() {
+    protected final void internalRelease() {
 
-        this.setContext(InternalContext.FREE_MEMORY);
+        this.setContext(SystemContext.RELEASE);
 
-        super.internalFreeMemory();
+        super.internalRelease();
     }
 
     // Start \\
@@ -301,7 +317,7 @@ public class EnginePackage extends ManagerPackage {
     @Override // From `ManagerPackage`
     protected final void internalStart() {
 
-        this.setContext(InternalContext.START);
+        this.setContext(SystemContext.START);
 
         super.internalStart();
     }
@@ -311,7 +327,7 @@ public class EnginePackage extends ManagerPackage {
     @Override // From `ManagerPackage`
     protected final void internalUpdate() {
 
-        this.setContext(InternalContext.UPDATE);
+        this.setContext(SystemContext.UPDATE);
 
         super.internalUpdate();
     }
@@ -329,7 +345,7 @@ public class EnginePackage extends ManagerPackage {
             this.elapsedTime -= fixedInterval;
             steps++;
 
-            this.setContext(InternalContext.FIXED_UPDATE);
+            this.setContext(SystemContext.FIXED_UPDATE);
 
             super.internalFixedUpdate();
         }
@@ -340,7 +356,7 @@ public class EnginePackage extends ManagerPackage {
     @Override // From `ManagerPackage`
     protected final void internalLateUpdate() {
 
-        this.setContext(InternalContext.LATE_UPDATE);
+        this.setContext(SystemContext.LATE_UPDATE);
 
         super.internalLateUpdate();
     }
@@ -350,7 +366,7 @@ public class EnginePackage extends ManagerPackage {
     @Override // From `ManagerPackage`
     protected final void internalRender() {
 
-        this.setContext(InternalContext.RENDER);
+        this.setContext(SystemContext.RENDER);
 
         super.internalRender();
     }
@@ -359,7 +375,7 @@ public class EnginePackage extends ManagerPackage {
 
     private final void internalDraw() {
 
-        this.setContext(InternalContext.DRAW);
+        this.setContext(SystemContext.DRAW);
 
         this.setFrameCount();
 
@@ -375,7 +391,7 @@ public class EnginePackage extends ManagerPackage {
     @Override // From `ManagerPackage`
     protected final void internalDispose() {
 
-        this.setContext(InternalContext.DISPOSE);
+        this.setContext(SystemContext.DISPOSE);
 
         super.internalDispose();
     }
@@ -404,18 +420,23 @@ public class EnginePackage extends ManagerPackage {
         if (this.garbageCollection.isEmpty())
             return;
 
-        for (SystemPackage target : this.garbageCollection)
-            this.systemRegistry.remove(target.getClass());
+        for (Class<?> systemClass : garbageCollection) {
+
+            SystemPackage systemPackage = this.internal.internalRegistry.get(systemClass);
+
+            this.internalRegistry.remove(systemClass);
+            this.systemCollection.remove(systemPackage);
+        }
 
         this.garbageCollection.clear();
 
-        super.clearGarbage();
+        this.cacheSubSystems();
     }
 
     // Accessible \\
 
-    public final InternalState getState() {
-        return this.internalState;
+    public final EngineState getState() {
+        return this.engineState;
     }
 
     public final long getFrameCount() {

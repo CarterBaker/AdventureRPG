@@ -15,19 +15,19 @@ public abstract class InstancePackage extends EngineUtility {
      */
 
     // Internal
-    static final ThreadLocal<CreationData> CREATION_DATA = new ThreadLocal<>();
+    static final ThreadLocal<CreationStruct> CREATION_STRUCT = new ThreadLocal<>();
 
     protected final EnginePackage internal;
     protected final SystemPackage owner;
 
-    InternalContext internalContext;
+    SystemContext systemContext;
 
     // Internal //
 
     public InstancePackage() {
 
         // Internal
-        CreationData creationData = CREATION_DATA.get();
+        CreationStruct creationData = CREATION_STRUCT.get();
 
         if (creationData == null)
             throwException("Instances must be created via internal engine `create` method");
@@ -38,20 +38,50 @@ public abstract class InstancePackage extends EngineUtility {
         this.internal = creationData.internal;
         this.owner = creationData.owner;
 
-        this.internalContext = InternalContext.NULL;
+        this.systemContext = SystemContext.NULL;
+    }
+
+    static final class CreationStruct extends StructPackage {
+
+        /*
+         * A container used to ensure proper instance creation at any point in the
+         * internal engines lifecycle. Mainly serves as a temporary data transfer
+         * mechanism.
+         */
+
+        // Internal
+        final EnginePackage internal;
+        final SystemPackage owner;
+
+        // Internal \\
+
+        CreationStruct(
+                EnginePackage internal,
+                SystemPackage owner) {
+
+            // Internal
+            this.internal = internal;
+            this.owner = owner;
+        }
+    }
+
+    static void setupConstructor(
+            EnginePackage internal,
+            SystemPackage owner) {
+        CREATION_STRUCT.set(new CreationStruct(internal, owner));
     }
 
     // Init \\
 
     protected void internalCreate() {
 
-        if (!this.verifyProcess(InternalContext.CREATE))
+        if (!this.verifyProcess(SystemContext.CREATE))
             return;
 
         create();
 
         // Set the internal process higher to avoid calling `get` illegally.
-        requestContext(InternalContext.INIT);
+        requestContext(SystemContext.GET);
     }
 
     protected void create() {
@@ -59,41 +89,25 @@ public abstract class InstancePackage extends EngineUtility {
 
     // Internal Context \\
 
-    final InternalContext getContext() {
-        return internalContext;
+    final SystemContext getContext() {
+        return systemContext;
     }
 
-    final boolean verifyProcess(InternalContext targetContext) {
+    final boolean verifyProcess(SystemContext targetContext) {
 
-        if (!targetContext.canEnterFrom(this.internalContext.order))
+        if (!targetContext.canEnterFrom(this.systemContext.order))
             return false;
 
         this.requestContext(targetContext);
         return true;
     }
 
-    final void requestContext(InternalContext targetContext) {
+    final void requestContext(SystemContext targetContext) {
 
-        if (!targetContext.canEnterFrom(this.internalContext.order))
+        if (!targetContext.canEnterFrom(this.systemContext.order))
             throwException("Instance attempted to perform an illegal context set.");
 
-        this.internalContext = targetContext;
-    }
-
-    // Utility \\
-
-    static final class CreationData extends DataPackage {
-        final EnginePackage internal;
-        final SystemPackage owner;
-
-        CreationData(EnginePackage internal, SystemPackage owner) {
-            this.internal = internal;
-            this.owner = owner;
-        }
-    }
-
-    static void setupCreation(EnginePackage internal, SystemPackage owner) {
-        CREATION_DATA.set(new CreationData(internal, owner));
+        this.systemContext = targetContext;
     }
 
     // Accessible \\
@@ -101,9 +115,9 @@ public abstract class InstancePackage extends EngineUtility {
     @SuppressWarnings("unchecked")
     protected final <T> T get(Class<T> type) {
 
-        if (this.internalContext != InternalContext.CREATE)
+        if (this.systemContext != SystemContext.CREATE)
             throwException(
-                    "Get called outside CREATE phase.\n" +
+                    "Get called outside GET phase.\n" +
                             "Requested: " + type.getSimpleName() + "\n" +
                             "Current process: " + getContext());
 
@@ -111,7 +125,7 @@ public abstract class InstancePackage extends EngineUtility {
     }
 
     protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
-        return internal.internalCreate(instanceClass);
+        return internal.createInstance(instanceClass);
     }
 
 }

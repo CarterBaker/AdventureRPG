@@ -34,7 +34,7 @@ public class BatchSystem extends ManagerPackage {
     protected void create() {
 
         // Root
-        this.loader = (Loader) register(new Loader());
+        this.loader = create(Loader.class);
 
         // Settings
         this.MAX_CHUNK_LOADS_PER_FRAME = EngineSetting.MAX_CHUNK_LOADS_PER_FRAME;
@@ -46,7 +46,7 @@ public class BatchSystem extends ManagerPackage {
     }
 
     @Override
-    protected void init() {
+    protected void get() {
 
         // Root
         this.worldPipeline = get(WorldPipeline.class);

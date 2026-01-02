@@ -11,16 +11,28 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ShaderData extends DataPackage {
 
     // Internal
-    private final ShaderType shaderType;
-    private final String shaderName;
-    private final File shaderFile;
+    private ShaderType shaderType;
+    private String shaderName;
+    private File shaderFile;
 
     private String version;
-    private final ObjectArrayList<ShaderData> includes;
-    private final ObjectArrayList<UBOData> bufferBlocks;
-    private final ObjectArrayList<UniformData> uniforms;
+    private ObjectArrayList<ShaderData> includes;
+    private ObjectArrayList<UBOData> bufferBlocks;
+    private ObjectArrayList<UniformData> uniforms;
 
-    public ShaderData(
+    // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Internal
+        this.version = null;
+        this.bufferBlocks = new ObjectArrayList<>();
+        this.uniforms = new ObjectArrayList<>();
+        this.includes = new ObjectArrayList<>();
+    }
+
+    public void init(
             ShaderType shaderType,
             String shaderName,
             File shaderFile) {
@@ -29,44 +41,38 @@ public class ShaderData extends DataPackage {
         this.shaderType = shaderType;
         this.shaderName = shaderName;
         this.shaderFile = shaderFile;
-
-        this.version = null;
-        this.bufferBlocks = new ObjectArrayList<>();
-        this.uniforms = new ObjectArrayList<>();
-        this.includes = new ObjectArrayList<>();
-    }
-
-    // Utility \\
-
-    public ShaderType shaderType() {
-        return shaderType;
-    }
-
-    String shaderName() {
-        return shaderName;
-    }
-
-    public File shaderFile() {
-        return shaderFile;
     }
 
     // Accessible \\
 
+    // Internal
+    public ShaderType getShaderType() {
+        return shaderType;
+    }
+
+    public String getShaderName() {
+        return shaderName;
+    }
+
+    public File getShaderFile() {
+        return shaderFile;
+    }
+
     // Version
-    String getVersion() {
+    public String getVersion() {
         return version;
     }
 
-    void setVersion(String version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 
     // Includes
-    void addIncludes(ShaderData include) {
+    public void addIncludes(ShaderData include) {
         includes.add(include);
     }
 
-    ObjectArrayList<ShaderData> getIncludes() {
+    public ObjectArrayList<ShaderData> getIncludes() {
         return includes;
     }
 
@@ -80,11 +86,11 @@ public class ShaderData extends DataPackage {
     }
 
     // Uniforms
-    void addUniform(UniformData uniform) {
+    public void addUniform(UniformData uniform) {
         uniforms.add(uniform);
     }
 
-    ObjectArrayList<UniformData> getUniforms() {
+    public ObjectArrayList<UniformData> getUniforms() {
         return uniforms;
     }
 }

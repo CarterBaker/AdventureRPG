@@ -29,8 +29,8 @@ public class ModelManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        this.internalLoadManager = (InternalLoadManager) register(new InternalLoadManager());
-        this.modelBatchSystem = (ModelBatchSystem) register(new ModelBatchSystem());
+        this.internalLoadManager = create(InternalLoadManager.class);
+        this.modelBatchSystem = create(ModelBatchSystem.class);
 
         this.loadedModels = new Int2ObjectOpenHashMap<>();
         this.unloadedModels = new IntOpenHashSet();
@@ -47,8 +47,8 @@ public class ModelManager extends ManagerPackage {
     }
 
     @Override
-    protected void freeMemory() {
-        internalLoadManager = (InternalLoadManager) release(internalLoadManager);
+    protected void release() {
+        internalLoadManager = release(InternalLoadManager.class);
     }
 
     // Model Management \\

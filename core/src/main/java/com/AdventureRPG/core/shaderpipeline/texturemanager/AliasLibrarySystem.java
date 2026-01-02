@@ -108,7 +108,7 @@ public class AliasLibrarySystem extends SystemPackage {
                 aliasLookup.put(aliasVariation, aliasId);
             }
 
-            // Also register the file name itself as an alias
+            // Also create the file name itself as an alias
             aliasLookup.put(aliasType.toLowerCase(), aliasId);
         }
 
