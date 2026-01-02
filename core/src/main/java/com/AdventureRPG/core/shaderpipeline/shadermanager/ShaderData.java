@@ -23,7 +23,7 @@ public class ShaderData extends DataPackage {
     // Internal \\
 
     @Override
-    protected void create() {
+    protected void get() {
 
         // Internal
         this.version = null;
@@ -32,7 +32,7 @@ public class ShaderData extends DataPackage {
         this.includes = new ObjectArrayList<>();
     }
 
-    public void init(
+    public void awake(
             ShaderType shaderType,
             String shaderName,
             File shaderFile) {

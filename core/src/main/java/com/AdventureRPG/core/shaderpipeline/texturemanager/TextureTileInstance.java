@@ -18,7 +18,7 @@ public class TextureTileInstance extends InstancePackage {
     private int atlasX;
     private int atlasY;
 
-    void init(
+    void awake(
             int id,
             String name,
             String atlas,

@@ -38,7 +38,7 @@ public abstract class InstancePackage extends EngineUtility {
         this.internal = creationData.internal;
         this.owner = creationData.owner;
 
-        this.systemContext = SystemContext.NULL;
+        this.systemContext = SystemContext.CREATE;
     }
 
     static final class CreationStruct extends StructPackage {
@@ -71,23 +71,7 @@ public abstract class InstancePackage extends EngineUtility {
         CREATION_STRUCT.set(new CreationStruct(internal, owner));
     }
 
-    // Init \\
-
-    protected void internalCreate() {
-
-        if (!this.verifyProcess(SystemContext.CREATE))
-            return;
-
-        create();
-
-        // Set the internal process higher to avoid calling `get` illegally.
-        requestContext(SystemContext.GET);
-    }
-
-    protected void create() {
-    }
-
-    // Internal Context \\
+    // System Context \\
 
     final SystemContext getContext() {
         return systemContext;
@@ -110,12 +94,18 @@ public abstract class InstancePackage extends EngineUtility {
         this.systemContext = targetContext;
     }
 
-    // Accessible \\
+    // System Registry \\
+
+    protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
+        return internal.createInstance(instanceClass);
+    }
+
+    // System Retrieval \\
 
     @SuppressWarnings("unchecked")
     protected final <T> T get(Class<T> type) {
 
-        if (this.systemContext != SystemContext.CREATE)
+        if (this.systemContext != SystemContext.GET)
             throwException(
                     "Get called outside GET phase.\n" +
                             "Requested: " + type.getSimpleName() + "\n" +
@@ -124,8 +114,19 @@ public abstract class InstancePackage extends EngineUtility {
         return internal.get(true, type);
     }
 
-    protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
-        return internal.createInstance(instanceClass);
+    // Get \\
+
+    protected void internalGet() {
+
+        if (!this.verifyProcess(SystemContext.GET))
+            return;
+
+        get();
+
+        // Set the internal process higher to avoid calling `get` illegally.
+        requestContext(SystemContext.AWAKE);
     }
 
+    protected void get() {
+    }
 }

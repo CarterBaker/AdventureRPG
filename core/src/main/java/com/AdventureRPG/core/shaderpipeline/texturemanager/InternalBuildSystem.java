@@ -83,7 +83,7 @@ class InternalBuildSystem extends SystemPackage {
 
             if (textureTile == null) {
                 textureTile = create(TextureTileInstance.class);
-                textureTile.init(
+                textureTile.awake(
                         textureCount++,
                         instanceName,
                         atlasName,
@@ -190,7 +190,7 @@ class InternalBuildSystem extends SystemPackage {
         graphic.dispose();
 
         TextureAtlasInstance textureAtlasInstance = create(TextureAtlasInstance.class);
-        textureAtlasInstance.init(
+        textureAtlasInstance.awake(
                 atlasSize,
                 atlasImage);
 
@@ -210,7 +210,7 @@ class InternalBuildSystem extends SystemPackage {
             TextureAtlasInstance[] textureAtlases) {
 
         TextureArrayInstance textureArray = create(TextureArrayInstance.class);
-        textureArray.init(
+        textureArray.awake(
                 arrayCount++,
                 textureArrayName,
                 textureAtlases[0].getAtlasSize(),

@@ -17,7 +17,7 @@ public class CameraManager extends ManagerPackage {
     private int width;
     private int height;
 
-    // Init
+    // Get
     @Override
     public void create() {
 
@@ -32,7 +32,7 @@ public class CameraManager extends ManagerPackage {
 
         // Internal
         CameraInstance createdCamera = create(CameraInstance.class);
-        createdCamera.init(fov, width, height);
+        createdCamera.awake(fov, width, height);
 
         cameraInstances.add(createdCamera);
 

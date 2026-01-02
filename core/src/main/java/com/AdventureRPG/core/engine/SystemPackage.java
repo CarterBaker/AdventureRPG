@@ -139,7 +139,7 @@ public abstract class SystemPackage extends EngineUtility {
             InstancePackage.setupConstructor(this.internal, this);
 
             T instance = instanceClass.getDeclaredConstructor().newInstance();
-            instance.internalCreate();
+            instance.internalGet();
 
             return instance;
         }
@@ -156,6 +156,13 @@ public abstract class SystemPackage extends EngineUtility {
         }
     }
 
+    // System Retrieval \\
+
+    @SuppressWarnings("unchecked")
+    protected final <T> T get(Class<T> type) {
+        return this.internal.get(false, type);
+    }
+
     // Create \\
 
     void internalCreate() {
@@ -169,7 +176,7 @@ public abstract class SystemPackage extends EngineUtility {
     protected void create() {
     }
 
-    // Init \\
+    // Get \\
 
     void internalGet() {
 
@@ -294,10 +301,5 @@ public abstract class SystemPackage extends EngineUtility {
 
     protected final void debugContext(Object input) {
         this.debug("[" + this.internalContext.toString() + "] " + String.valueOf(input));
-    }
-
-    @SuppressWarnings("unchecked")
-    protected final <T> T get(Class<T> type) {
-        return this.internal.get(false, type);
     }
 }

@@ -143,6 +143,24 @@ public abstract class ManagerPackage extends SystemPackage {
         this.garbageCollection.add(systemClass);
     }
 
+    void clearGarbage() {
+
+        if (this.garbageCollection.isEmpty())
+            return;
+
+        for (Class<?> systemClass : garbageCollection) {
+
+            SystemPackage systemPackage = this.internal.internalRegistry.get(systemClass);
+
+            this.internal.internalRegistry.remove(systemClass);
+            this.systemCollection.remove(systemPackage);
+        }
+
+        this.garbageCollection.clear();
+
+        this.cacheSubSystems();
+    }
+
     // Create \\
 
     @Override // From `SystemPackage`
@@ -156,7 +174,7 @@ public abstract class ManagerPackage extends SystemPackage {
             this.systemArray[i].internalCreate();
     }
 
-    // Init \\
+    // Get \\
 
     @Override // From `SystemPackage`
     void internalGet() {
@@ -261,23 +279,5 @@ public abstract class ManagerPackage extends SystemPackage {
 
     final void cacheSubSystems() {
         this.systemArray = this.systemCollection.toArray(new SystemPackage[0]);
-    }
-
-    void clearGarbage() {
-
-        if (this.garbageCollection.isEmpty())
-            return;
-
-        for (Class<?> systemClass : garbageCollection) {
-
-            SystemPackage systemPackage = this.internal.internalRegistry.get(systemClass);
-
-            this.internal.internalRegistry.remove(systemClass);
-            this.systemCollection.remove(systemPackage);
-        }
-
-        this.garbageCollection.clear();
-
-        this.cacheSubSystems();
     }
 }

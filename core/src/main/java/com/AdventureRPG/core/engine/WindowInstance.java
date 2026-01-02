@@ -20,7 +20,7 @@ public class WindowInstance extends InstancePackage implements Screen {
     // Internal \\
 
     @Override
-    protected void create() {
+    protected void get() {
 
         // Internal
         this.cameraManager = get(CameraManager.class);

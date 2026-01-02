@@ -15,13 +15,13 @@ public class UBOData extends DataPackage {
     // Internal \\
 
     @Override
-    protected void create() {
+    protected void get() {
 
         // Internal
         this.uniforms = new ObjectArrayList<>();
     }
 
-    public void init(
+    public void awake(
             String blockName,
             int binding) {
 

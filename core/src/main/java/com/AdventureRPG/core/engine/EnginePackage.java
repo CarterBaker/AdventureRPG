@@ -1,8 +1,6 @@
 package com.AdventureRPG.core.engine;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.AdventureRPG.core.engine.settings.Settings;
 import com.badlogic.gdx.Game;
@@ -166,6 +164,27 @@ public class EnginePackage extends ManagerPackage {
         return systemPackage;
     }
 
+    // System Release \\
+
+    @Override // From `ManagerPackage`
+    final void clearGarbage() {
+
+        if (this.garbageCollection.isEmpty())
+            return;
+
+        for (Class<?> systemClass : garbageCollection) {
+
+            SystemPackage systemPackage = this.internal.internalRegistry.get(systemClass);
+
+            this.internalRegistry.remove(systemClass);
+            this.systemCollection.remove(systemPackage);
+        }
+
+        this.garbageCollection.clear();
+
+        this.cacheSubSystems();
+    }
+
     // System Retrieval \\
 
     @SuppressWarnings("unchecked")
@@ -282,7 +301,7 @@ public class EnginePackage extends ManagerPackage {
         super.internalCreate();
     }
 
-    // Init \\
+    // Get \\
 
     @Override // From `ManagerPackage`
     protected final void internalGet() {
@@ -412,25 +431,6 @@ public class EnginePackage extends ManagerPackage {
 
         this.screen = windowInstance;
         this.game.setScreen(screen);
-    }
-
-    @Override // From `ManagerPackage`
-    final void clearGarbage() {
-
-        if (this.garbageCollection.isEmpty())
-            return;
-
-        for (Class<?> systemClass : garbageCollection) {
-
-            SystemPackage systemPackage = this.internal.internalRegistry.get(systemClass);
-
-            this.internalRegistry.remove(systemClass);
-            this.systemCollection.remove(systemPackage);
-        }
-
-        this.garbageCollection.clear();
-
-        this.cacheSubSystems();
     }
 
     // Accessible \\

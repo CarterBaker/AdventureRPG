@@ -98,7 +98,7 @@ public class AliasLibrarySystem extends SystemPackage {
             ensureCapacity(aliasId + 1);
 
             aliases[aliasId] = create(AliasInstance.class);
-            aliases[aliasId].init(aliasType, defaultColor);
+            aliases[aliasId].awake(aliasType, defaultColor);
             aliasCount++;
 
             // Register all alias variations in lookup map

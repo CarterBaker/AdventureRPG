@@ -17,7 +17,7 @@ public class TextureArrayInstance extends InstancePackage {
     // Tiles
     private Object2ObjectOpenHashMap<String, TextureTileInstance> tileCoordinateMap;
 
-    void init(
+    void awake(
             int id,
             String name,
             int atlasSize,

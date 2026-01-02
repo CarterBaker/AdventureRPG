@@ -21,7 +21,7 @@ public class CameraInstance extends InstancePackage {
 
     // Internal \\
 
-    public void init(
+    public void awake(
             float fov,
             float viewportWidth,
             float viewportHeight) {

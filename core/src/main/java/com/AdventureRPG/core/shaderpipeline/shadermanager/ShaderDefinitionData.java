@@ -14,13 +14,14 @@ public class ShaderDefinitionData extends DataPackage {
 
     // Internal \\
 
-    protected void create() {
+    @Override
+    protected void get() {
 
         // Internal
         this.includes = new ObjectArrayList<>();
     }
 
-    public void init(
+    public void awake(
             String shaderName,
             ShaderData vert,
             ShaderData frag) {
