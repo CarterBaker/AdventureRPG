@@ -1,6 +1,6 @@
 package com.AdventureRPG.core.engine;
 
-public class HandlePackage extends EngineUtility {
+public class HandlePackage extends InstancePackage {
 
     /*
      * HandlePackages are intended to be held indefinitely during

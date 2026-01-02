@@ -64,8 +64,8 @@ public class ShaderManager extends ManagerPackage {
             UBOHandle ubo) {
         GLSLUtility.bindUniformBlock(
                 shader.shaderHandle,
-                ubo.bufferName,
-                ubo.bindingPoint);
+                ubo.getBufferName(),
+                ubo.getBindingPoint());
     }
 
     // Disposal \\

@@ -161,12 +161,12 @@ class InternalBuildSystem extends SystemPackage {
         }
 
         float[] vertices = parseVertexData(verticesArray, vaoHandle, file);
-        return GLSLUtility.uploadVertexData(vaoHandle, vertices);
+        return GLSLUtility.uploadVertexData(vaoHandle, create(VBOHandle.class), vertices);
     }
 
     private float[] parseVertexData(JsonArray verticesArray, VAOHandle vaoHandle, File file) {
         int vertexCount = verticesArray.size();
-        int floatsPerVertex = vaoHandle.vertStride;
+        int floatsPerVertex = vaoHandle.getVertStride();
         float[] vertices = new float[vertexCount * floatsPerVertex];
 
         int index = 0;

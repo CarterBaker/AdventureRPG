@@ -57,13 +57,16 @@ class InternalBuildSystem extends SystemPackage {
             return null;
         }
 
-        return new MeshHandle(
-                vaoHandle.attributeHandle,
-                vaoHandle.vertStride,
-                vboHandle.vertexHandle,
-                vboHandle.vertexCount,
-                iboHandle.indexHandle,
-                iboHandle.indexCount);
+        MeshHandle meshHandle = create(MeshHandle.class);
+        meshHandle.constructor(
+                vaoHandle.getAttributeHandle(),
+                vaoHandle.getVertStride(),
+                vboHandle.getVertexHandle(),
+                vboHandle.getVertexCount(),
+                iboHandle.getIndexHandle(),
+                iboHandle.getIndexCount());
+
+        return meshHandle;
     }
 
     // VAO Building \\

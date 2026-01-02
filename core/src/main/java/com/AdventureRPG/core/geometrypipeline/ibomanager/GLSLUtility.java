@@ -19,13 +19,13 @@ class GLSLUtility extends UtilityPackage {
          */
 
         // Uploads index data to a GPU buffer and binds it to the given VAO.
-        static IBOHandle uploadIndexData(VAOHandle vaoHandle, short[] indices) {
+        static IBOHandle uploadIndexData(VAOHandle vaoHandle, IBOHandle iboHandle, short[] indices) {
 
                 GL30 gl30 = Gdx.gl30;
                 GL20 gl20 = Gdx.gl20;
 
                 // Bind the VAO FIRST
-                gl30.glBindVertexArray(vaoHandle.attributeHandle);
+                gl30.glBindVertexArray(vaoHandle.getAttributeHandle());
 
                 // Create IBO
                 int ibo = gl20.glGenBuffer();
@@ -45,6 +45,8 @@ class GLSLUtility extends UtilityPackage {
                 gl30.glBindVertexArray(0);
 
                 int indexCount = indices.length;
-                return new IBOHandle(ibo, indexCount);
+                iboHandle.constructor(ibo, indexCount);
+
+                return iboHandle;
         }
 }

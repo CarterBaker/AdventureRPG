@@ -65,7 +65,7 @@ class MeshData extends DataPackage {
 
     int tryAddVertices(FloatArrayList sourceVerts, int offset, int length) {
 
-        int floatsPerQuad = vaoHandle.vertStride * 4;
+        int floatsPerQuad = vaoHandle.getVertStride() * 4;
 
         if (length % floatsPerQuad != 0) // TODO: Add my own error
             throw new IllegalArgumentException("Vertex data is not aligned to quads");
@@ -78,7 +78,7 @@ class MeshData extends DataPackage {
             return 0;
 
         int vertsToAdd = quadsFit * 4;
-        int floatsToAdd = vertsToAdd * vaoHandle.vertStride;
+        int floatsToAdd = vertsToAdd * vaoHandle.getVertStride();
 
         // Direct copy from source list's backing array
         vertices.addElements(vertices.size(), sourceVerts.elements(), offset, floatsToAdd);
@@ -187,16 +187,17 @@ class MeshData extends DataPackage {
         if (meshHandle != null)
             pullFromGPU();
 
-        vboHandle = GLSLUtility.uploadVertexData(vaoHandle, getVerticesArray());
-        iboHandle = GLSLUtility.uploadIndexData(vaoHandle, getIndicesArray());
+        vboHandle = GLSLUtility.uploadVertexData(vaoHandle, create(VBOHandle.class), getVerticesArray());
+        iboHandle = GLSLUtility.uploadIndexData(vaoHandle, create(IBOHandle.class), getIndicesArray());
 
-        meshHandle = new MeshHandle(
-                vaoHandle.attributeHandle,
-                vaoHandle.vertStride,
-                vboHandle.vertexHandle,
-                vboHandle.vertexCount,
-                iboHandle.indexHandle,
-                iboHandle.indexCount);
+        MeshHandle meshHandle = create(MeshHandle.class);
+        meshHandle.constructor(
+                vaoHandle.getAttributeHandle(),
+                vaoHandle.getVertStride(),
+                vboHandle.getVertexHandle(),
+                vboHandle.getVertexCount(),
+                iboHandle.getIndexHandle(),
+                iboHandle.getIndexCount());
     }
 
     void pullFromGPU() {

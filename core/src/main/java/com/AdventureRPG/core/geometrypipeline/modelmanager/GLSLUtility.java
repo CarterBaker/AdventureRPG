@@ -14,13 +14,13 @@ import java.nio.ShortBuffer;
 
 class GLSLUtility {
 
-        static VBOHandle uploadVertexData(VAOHandle vaoHandle, float[] vertices) {
+        static VBOHandle uploadVertexData(VAOHandle vaoHandle, VBOHandle vboHandle, float[] vertices) {
 
                 GL30 gl30 = Gdx.gl30;
                 GL20 gl20 = Gdx.gl20;
 
                 // Bind the VAO FIRST
-                gl30.glBindVertexArray(vaoHandle.attributeHandle);
+                gl30.glBindVertexArray(vaoHandle.getAttributeHandle());
 
                 // Create VBO
                 int vbo = gl20.glGenBuffer();
@@ -37,7 +37,7 @@ class GLSLUtility {
                                 vertexBuffer, GL20.GL_STATIC_DRAW);
 
                 // Configure vertex attributes
-                int stride = vaoHandle.vertStride * 4; // floats to bytes
+                int stride = vaoHandle.getVertStride() * 4; // floats to bytes
 
                 gl20.glVertexAttribPointer(0, 3, GL20.GL_FLOAT, false, stride, 0);
                 gl20.glEnableVertexAttribArray(0);
@@ -52,17 +52,20 @@ class GLSLUtility {
                 gl30.glBindVertexArray(0);
                 gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
 
-                int vertexCount = vertices.length / vaoHandle.vertStride;
-                return new VBOHandle(vbo, vertexCount);
+                int vertexCount = vertices.length / vaoHandle.getVertStride();
+
+                vboHandle.constructor(vbo, vertexCount);
+
+                return vboHandle;
         }
 
-        static IBOHandle uploadIndexData(VAOHandle vaoHandle, short[] indices) {
+        static IBOHandle uploadIndexData(VAOHandle vaoHandle, IBOHandle iboHandle, short[] indices) {
 
                 GL30 gl30 = Gdx.gl30;
                 GL20 gl20 = Gdx.gl20;
 
                 // Bind the VAO FIRST
-                gl30.glBindVertexArray(vaoHandle.attributeHandle);
+                gl30.glBindVertexArray(vaoHandle.getAttributeHandle());
 
                 // Create IBO
                 int ibo = gl20.glGenBuffer();
@@ -82,14 +85,16 @@ class GLSLUtility {
                 gl30.glBindVertexArray(0);
 
                 int indexCount = indices.length;
-                return new IBOHandle(ibo, indexCount);
+                iboHandle.constructor(ibo, indexCount);
+
+                return iboHandle;
         }
 
         static void freeVBO(VBOHandle handle) {
-                Gdx.gl20.glDeleteBuffer(handle.vertexHandle);
+                Gdx.gl20.glDeleteBuffer(handle.getVertexHandle());
         }
 
         static void freeIBO(IBOHandle handle) {
-                Gdx.gl20.glDeleteBuffer(handle.indexHandle);
+                Gdx.gl20.glDeleteBuffer(handle.getIndexHandle());
         }
 }

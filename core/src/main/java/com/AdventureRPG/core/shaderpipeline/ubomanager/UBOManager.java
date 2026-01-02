@@ -39,7 +39,7 @@ public final class UBOManager extends ManagerPackage {
     @Override
     protected void dispose() {
         for (UBOHandle handle : uboName2UBOHandle.values())
-            GLSLUtility.deleteUniformBuffer(handle.gpuHandle);
+            GLSLUtility.deleteUniformBuffer(handle.getGpuHandle());
 
         uboName2UBOHandle.clear();
         releasedBindings.clear();
@@ -65,7 +65,7 @@ public final class UBOManager extends ManagerPackage {
         uboName2UBOHandle.put(blockName, handle);
 
         // Track the binding point
-        trackBindingPoint(handle.bindingPoint);
+        trackBindingPoint(handle.getBindingPoint());
 
         return handle;
     }
@@ -86,16 +86,17 @@ public final class UBOManager extends ManagerPackage {
         int gpuHandle = GLSLUtility.createUniformBuffer();
 
         // NEW: pass total size from source
-        UBOHandle clone = new UBOHandle(
-                source.bufferName,
+        UBOHandle clone = create(UBOHandle.class);
+        clone.constructor(
+                source.getBufferName(),
                 0,
                 gpuHandle,
                 newBinding,
-                source.totalSizeBytes); // NEW: get from source
+                source.getTotalSizeBytes()); // NEW: get from source
 
         // ... rest of cloning logic ...
 
-        GLSLUtility.allocateUniformBuffer(gpuHandle, source.totalSizeBytes);
+        GLSLUtility.allocateUniformBuffer(gpuHandle, source.getTotalSizeBytes());
         GLSLUtility.bindUniformBufferBase(gpuHandle, newBinding);
 
         return clone;
@@ -104,13 +105,13 @@ public final class UBOManager extends ManagerPackage {
     public void destroyUBO(UBOHandle handle) {
 
         // Remove from tracking
-        uboName2UBOHandle.remove(handle.bufferName);
+        uboName2UBOHandle.remove(handle.getBufferName());
 
         // Delete GPU resource
-        GLSLUtility.deleteUniformBuffer(handle.gpuHandle);
+        GLSLUtility.deleteUniformBuffer(handle.getGpuHandle());
 
         // Release the binding point for reuse
-        releaseBindingPoint(handle.bindingPoint);
+        releaseBindingPoint(handle.getBindingPoint());
     }
 
     // Binding Point Management \\

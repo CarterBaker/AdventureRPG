@@ -96,13 +96,14 @@ class ModelBatchSystem extends SystemPackage {
                 MeshHandle meshHandle = meshData.meshHandle;
                 Material material = materialManager.getMaterialFromMaterialID(materialID);
 
-                ModelHandle modelHandle = new ModelHandle(
-                        meshHandle.vao,
-                        meshHandle.vertStride,
-                        meshHandle.vbo,
-                        meshHandle.vertCount,
-                        meshHandle.ibo,
-                        meshHandle.indexCount,
+                ModelHandle modelHandle = create(ModelHandle.class);
+                modelHandle.constructor(
+                        meshHandle.getVaoHandle(),
+                        meshHandle.getVertStride(),
+                        meshHandle.getVboHandle(),
+                        meshHandle.getVertCount(),
+                        meshHandle.getIboHandle(),
+                        meshHandle.getIndexCount(),
                         material);
 
                 meshID2ModelHandle.put(meshID, modelHandle);

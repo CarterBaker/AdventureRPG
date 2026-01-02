@@ -30,7 +30,7 @@ public class MeshPacketData extends DataPackage {
         this.vaoHandle = vaoHandle;
         this.transform = new Matrix4();
 
-        this.floatsPerQuad = vaoHandle.vertStride * 4;
+        this.floatsPerQuad = vaoHandle.getVertStride() * 4;
         this.materialID2MeshCollection = new Int2ObjectOpenHashMap<>();
 
         this.rendering = false;
@@ -109,7 +109,7 @@ public class MeshPacketData extends DataPackage {
                 continue;
 
             int added = mesh.tryAddVertices(vertList, offset + processed, length - processed);
-            processed += added * vaoHandle.vertStride;
+            processed += added * vaoHandle.getVertStride();
         }
 
         // Create new meshes for remaining data
@@ -123,7 +123,7 @@ public class MeshPacketData extends DataPackage {
             if (added == 0) // TODO: Add my own error
                 throw new IllegalStateException("Failed to add vertices to new mesh");
 
-            processed += added * vaoHandle.vertStride;
+            processed += added * vaoHandle.getVertStride();
         }
     }
 

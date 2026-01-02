@@ -5,27 +5,64 @@ import com.AdventureRPG.core.engine.HandlePackage;
 public class MeshHandle extends HandlePackage {
 
     // Internal
-    public final int vao;
-    public final int vertStride;
-    public final int vbo;
-    public final int vertCount;
-    public final int ibo;
-    public final int indexCount;
+    private int vaoHandle;
+    private int vertStride;
 
-    public MeshHandle(
-            int vao,
+    private int vboHandle;
+    private int vertCount;
+
+    private int iboHandle;
+    private int indexCount;
+
+    // Internal \\
+
+    public void constructor(
+            int vaoHandle,
             int vertStride,
-            int vbo,
+
+            int vboHandle,
             int vertCount,
-            int ibo,
+
+            int iboHandle,
             int indexCount) {
 
         // Internal
-        this.vao = vao;
+        this.vaoHandle = vaoHandle;
         this.vertStride = vertStride;
-        this.vbo = vbo;
+
+        this.vboHandle = vboHandle;
         this.vertCount = vertCount;
-        this.ibo = ibo;
+
+        this.iboHandle = iboHandle;
         this.indexCount = indexCount;
+    }
+
+    // Accessible \\
+
+    // VAO
+    public int getVaoHandle() {
+        return vaoHandle;
+    }
+
+    public int getVertStride() {
+        return vertStride;
+    }
+
+    // VBO
+    public int getVboHandle() {
+        return vboHandle;
+    }
+
+    public int getVertCount() {
+        return vertCount;
+    }
+
+    // IBO
+    public int getIboHandle() {
+        return iboHandle;
+    }
+
+    public int getIndexCount() {
+        return indexCount;
     }
 }

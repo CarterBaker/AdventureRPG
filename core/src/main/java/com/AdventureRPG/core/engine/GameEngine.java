@@ -1,9 +1,6 @@
 package com.AdventureRPG.core.engine;
 
-import java.io.File;
-
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
-import com.AdventureRPG.core.engine.settings.Settings;
 import com.AdventureRPG.core.geometrypipeline.GeometryPipeline;
 import com.AdventureRPG.core.physicspipeline.input.InputSystem;
 import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
@@ -16,7 +13,6 @@ import com.AdventureRPG.playermanager.PlayerManager;
 import com.AdventureRPG.savemanager.SaveManager;
 import com.AdventureRPG.timesystem.TimeSystem;
 import com.AdventureRPG.uisystem.UISystem;
-import com.google.gson.Gson;
 
 public class GameEngine extends EnginePackage {
 

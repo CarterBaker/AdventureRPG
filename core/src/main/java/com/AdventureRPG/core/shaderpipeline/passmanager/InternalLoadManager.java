@@ -7,7 +7,7 @@ import java.nio.file.Path;
 
 import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
-import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPass;
+import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPassHandle;
 import com.AdventureRPG.core.util.FileUtility;
 
 class InternalLoadManager extends ManagerPackage {
@@ -81,7 +81,7 @@ class InternalLoadManager extends ManagerPackage {
             compilePass(internalBuildSystem.buildPass(root, file, passCount++));
     }
 
-    private void compilePass(ProcessingPass processingPass) {
-        passManager.addPass(processingPass);
+    private void compilePass(ProcessingPassHandle processingPassHandle) {
+        passManager.addPass(processingPassHandle);
     }
 }

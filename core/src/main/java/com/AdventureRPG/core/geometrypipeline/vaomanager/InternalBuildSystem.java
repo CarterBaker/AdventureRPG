@@ -98,10 +98,11 @@ class InternalBuildSystem extends SystemPackage {
     // Creation \\
 
     private VAOHandle createVAOFromStride(int vertStride) {
-        if (vertStride <= 0) {
+
+        if (vertStride <= 0)
             throwException(
                     "VAO stride must be positive, got: " + vertStride);
-        }
-        return GLSLUtility.createVAO(vertStride);
+
+        return GLSLUtility.createVAO(create(VAOHandle.class), vertStride);
     }
 }

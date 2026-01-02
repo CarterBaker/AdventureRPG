@@ -27,7 +27,8 @@ public final class InternalBuildSystem extends SystemPackage {
         int totalSize = computeStd140BufferSize(data.getUniforms()); // NEW: get size first
 
         // Create handle WITH size
-        UBOHandle handle = new UBOHandle(
+        UBOHandle uboHandle = create(UBOHandle.class);
+        uboHandle.constructor(
                 data.getBlockName(),
                 id,
                 gpuHandle,
@@ -35,22 +36,22 @@ public final class InternalBuildSystem extends SystemPackage {
                 totalSize); // NEW: pass size
 
         // Populate uniforms (this adds them to the handle)
-        populateUniforms(handle, data.getUniforms());
+        populateUniforms(uboHandle, data.getUniforms());
 
         // Allocate GPU buffer with computed size
         GLSLUtility.allocateUniformBuffer(gpuHandle, totalSize);
         GLSLUtility.bindUniformBufferBase(gpuHandle, binding);
 
-        return handle;
+        return uboHandle;
     }
 
     public void validate(UBOHandle existing, UBOData newData) {
 
         // Validate binding matches
-        if (existing.bindingPoint != newData.getBinding()) {
+        if (existing.getBindingPoint() != newData.getBinding()) {
             throwException(
                     "UBO '" + newData.getBlockName() + "' has conflicting bindings: " +
-                            "existing=" + existing.bindingPoint + ", new=" + newData.getBinding() +
+                            "existing=" + existing.getBindingPoint() + ", new=" + newData.getBinding() +
                             ". All declarations of this uniform block must use the same binding point.");
         }
 

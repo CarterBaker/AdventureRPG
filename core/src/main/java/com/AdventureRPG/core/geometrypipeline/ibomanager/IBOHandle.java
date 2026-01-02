@@ -5,15 +5,27 @@ import com.AdventureRPG.core.engine.HandlePackage;
 public class IBOHandle extends HandlePackage {
 
     // Internal
-    public final int indexHandle;
-    public final int indexCount;
+    private int indexHandle;
+    private int indexCount;
 
-    public IBOHandle(
+    // Internal \\
+
+    public void constructor(
             int indexHandle,
             int indexCount) {
 
         // Internal
         this.indexHandle = indexHandle;
         this.indexCount = indexCount;
+    }
+
+    // Accessible \\
+
+    public int getIndexHandle() {
+        return indexHandle;
+    }
+
+    public int getIndexCount() {
+        return indexCount;
     }
 }

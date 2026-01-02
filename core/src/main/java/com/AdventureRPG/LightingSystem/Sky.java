@@ -2,7 +2,7 @@ package com.AdventureRPG.lightingsystem;
 
 import com.AdventureRPG.core.engine.SystemPackage;
 import com.AdventureRPG.core.shaderpipeline.passmanager.PassManager;
-import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPass;
+import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPassHandle;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
 
 public class Sky extends SystemPackage {
@@ -12,7 +12,7 @@ public class Sky extends SystemPackage {
 
     // Shader
     private int skyPassID;
-    private ProcessingPass skyPass;
+    private ProcessingPassHandle skyPass;
     private UBOHandle timeUBO;
 
     // Base \\
@@ -26,7 +26,7 @@ public class Sky extends SystemPackage {
         // Shader
         this.skyPassID = passmanager.getPassIDFromPassName("Sky");
         this.skyPass = passmanager.getPassFromPassID(skyPassID);
-        this.timeUBO = skyPass.material.getUBO("TimeData");
+        this.timeUBO = skyPass.getMaterial().getUBO("TimeData");
 
         // Render management
         passmanager.pushPass(skyPass, -10);

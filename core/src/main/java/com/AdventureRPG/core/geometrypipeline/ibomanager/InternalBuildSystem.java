@@ -160,7 +160,7 @@ class InternalBuildSystem extends SystemPackage {
         }
 
         short[] indices = parseIndexData(indicesArray, file);
-        return GLSLUtility.uploadIndexData(vaoHandle, indices);
+        return GLSLUtility.uploadIndexData(vaoHandle, create(IBOHandle.class), indices);
     }
 
     private short[] parseIndexData(JsonArray indicesArray, File file) {

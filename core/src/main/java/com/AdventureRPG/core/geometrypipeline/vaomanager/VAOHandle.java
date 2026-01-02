@@ -5,15 +5,27 @@ import com.AdventureRPG.core.engine.HandlePackage;
 public class VAOHandle extends HandlePackage {
 
     // Internal
-    public final int attributeHandle;
-    public final int vertStride;
+    private int attributeHandle;
+    private int vertStride;
 
-    public VAOHandle(
+    // Internal \\
+
+    public void constructor(
             int attributeHandle,
             int vertStride) {
 
         // Internal
         this.attributeHandle = attributeHandle;
         this.vertStride = vertStride;
+    }
+
+    // Accessible \\
+
+    public int getAttributeHandle() {
+        return attributeHandle;
+    }
+
+    public int getVertStride() {
+        return vertStride;
     }
 }

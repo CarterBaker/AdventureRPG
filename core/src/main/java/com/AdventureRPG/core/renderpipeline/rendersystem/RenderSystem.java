@@ -5,7 +5,7 @@ import com.AdventureRPG.core.engine.WindowInstance;
 import com.AdventureRPG.core.geometrypipeline.Models.ModelHandle;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
 import com.AdventureRPG.core.shaderpipeline.materials.Material;
-import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPass;
+import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPassHandle;
 import com.AdventureRPG.core.shaderpipeline.shaders.Shader;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -18,7 +18,7 @@ public class RenderSystem extends SystemPackage {
     private WindowInstance windowInstance;
 
     // Render Queue: depth -> ordered list of passes
-    private Int2ObjectOpenHashMap<ObjectArrayList<ProcessingPass>> depth2PassList;
+    private Int2ObjectOpenHashMap<ObjectArrayList<ProcessingPassHandle>> depth2PassList;
 
     // Base \\
 
@@ -62,10 +62,10 @@ public class RenderSystem extends SystemPackage {
                 modelManager.draw();
             } else {
                 // Draw processing passes at this depth
-                ObjectArrayList<ProcessingPass> passList = depth2PassList.get(depth);
+                ObjectArrayList<ProcessingPassHandle> passList = depth2PassList.get(depth);
 
                 if (passList != null) {
-                    for (ProcessingPass pass : passList) {
+                    for (ProcessingPassHandle pass : passList) {
                         drawProcessingPass(pass);
                     }
                 }
@@ -78,10 +78,10 @@ public class RenderSystem extends SystemPackage {
         }
     }
 
-    private void drawProcessingPass(ProcessingPass pass) {
+    private void drawProcessingPass(ProcessingPassHandle pass) {
 
-        ModelHandle modelHandle = pass.modelHandle;
-        Material material = pass.material;
+        ModelHandle modelHandle = pass.getModelHandle();
+        Material material = pass.getMaterial();
         Shader shader = material.shader;
 
         // Disable depth testing for full-screen passes
@@ -91,10 +91,10 @@ public class RenderSystem extends SystemPackage {
         GLSLUtility.useShader(shader.shaderHandle);
 
         // Bind VAO
-        GLSLUtility.bindVAO(modelHandle.vao);
+        GLSLUtility.bindVAO(modelHandle.getVaoHandle());
 
         // Draw
-        GLSLUtility.drawElements(modelHandle.indexCount);
+        GLSLUtility.drawElements(modelHandle.getIndexCount());
 
         // Unbind
         GLSLUtility.unbindVAO();
@@ -105,17 +105,17 @@ public class RenderSystem extends SystemPackage {
 
     // Accessible \\
 
-    public void pushPass(ProcessingPass pass, int depth) {
+    public void pushPass(ProcessingPassHandle pass, int depth) {
 
-        ObjectArrayList<ProcessingPass> passList = depth2PassList.computeIfAbsent(
+        ObjectArrayList<ProcessingPassHandle> passList = depth2PassList.computeIfAbsent(
                 depth,
                 k -> new ObjectArrayList<>());
 
         passList.add(pass);
     }
 
-    public void pullPass(ProcessingPass pass, int depth) {
-        ObjectArrayList<ProcessingPass> passList = depth2PassList.get(depth);
+    public void pullPass(ProcessingPassHandle pass, int depth) {
+        ObjectArrayList<ProcessingPassHandle> passList = depth2PassList.get(depth);
 
         if (passList == null)
             return;
@@ -127,13 +127,13 @@ public class RenderSystem extends SystemPackage {
             depth2PassList.remove(depth);
     }
 
-    public void pullPass(ProcessingPass pass) {
+    public void pullPass(ProcessingPassHandle pass) {
         // Search all depths for this pass
         var iterator = depth2PassList.int2ObjectEntrySet().fastIterator();
 
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            ObjectArrayList<ProcessingPass> passList = entry.getValue();
+            ObjectArrayList<ProcessingPassHandle> passList = entry.getValue();
 
             if (passList.remove(pass)) {
                 // Clean up empty depth levels

@@ -11,16 +11,18 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 public final class UBOHandle extends HandlePackage {
 
     // Internal
-    public final String bufferName;
-    public final int bufferID;
-    public final int gpuHandle;
-    public final int bindingPoint;
-    public final int totalSizeBytes;
+    private String bufferName;
+    private int bufferID;
+    private int gpuHandle;
+    private int bindingPoint;
+    private int totalSizeBytes;
 
-    private final ByteBuffer stagingBuffer;
-    private final Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
+    private ByteBuffer stagingBuffer;
+    private Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
 
-    public UBOHandle(
+    // Internal \\
+
+    public void constructor(
             String bufferName,
             int bufferID,
             int gpuHandle,
@@ -38,12 +40,31 @@ public final class UBOHandle extends HandlePackage {
         this.uniforms = new Object2ObjectOpenHashMap<>();
     }
 
-    // Utility \\
+    // Accessible \\
+
+    public String getBufferName() {
+        return bufferName;
+    }
+
+    public int getBufferID() {
+        return bufferID;
+    }
+
+    public int getGpuHandle() {
+        return gpuHandle;
+    }
+
+    public int getBindingPoint() {
+        return bindingPoint;
+    }
+
+    public int getTotalSizeBytes() {
+        return totalSizeBytes;
+    }
+
     public void addUniform(String uniformName, Uniform<?> uniform) {
         uniforms.put(uniformName, uniform);
     }
-
-    // Utility \\
 
     public Uniform<?> getUniform(String uniformName) {
         return uniforms.get(uniformName);
