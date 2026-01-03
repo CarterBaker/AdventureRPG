@@ -1,5 +1,6 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
+import com.AdventureRPG.core.engine.UtilityPackage;
 import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOHandle;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 import com.AdventureRPG.core.geometrypipeline.vbomanager.VBOHandle;
@@ -12,9 +13,12 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
-class GLSLUtility {
+class GLSLUtility extends UtilityPackage {
 
-        static VBOHandle uploadVertexData(VAOHandle vaoHandle, VBOHandle vboHandle, float[] vertices) {
+        static VBOHandle uploadVertexData(
+                        VAOHandle vaoHandle,
+                        VBOHandle vboHandle,
+                        float[] vertices) {
 
                 GL30 gl30 = Gdx.gl30;
                 GL20 gl20 = Gdx.gl20;
@@ -54,12 +58,17 @@ class GLSLUtility {
 
                 int vertexCount = vertices.length / vaoHandle.getVertStride();
 
-                vboHandle.constructor(vbo, vertexCount);
+                vboHandle.constructor(
+                                vbo,
+                                vertexCount);
 
                 return vboHandle;
         }
 
-        static IBOHandle uploadIndexData(VAOHandle vaoHandle, IBOHandle iboHandle, short[] indices) {
+        static IBOHandle uploadIndexData(
+                        VAOHandle vaoHandle,
+                        IBOHandle iboHandle,
+                        short[] indices) {
 
                 GL30 gl30 = Gdx.gl30;
                 GL20 gl20 = Gdx.gl20;

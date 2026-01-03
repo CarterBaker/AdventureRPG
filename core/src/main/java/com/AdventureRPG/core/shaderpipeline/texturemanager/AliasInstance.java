@@ -12,7 +12,7 @@ public class AliasInstance extends InstancePackage {
 
     // Internal \\
 
-    void awake(String aliasType, Color defaultColor) {
+    void constructor(String aliasType, Color defaultColor) {
 
         // Internal
         this.aliasType = aliasType;

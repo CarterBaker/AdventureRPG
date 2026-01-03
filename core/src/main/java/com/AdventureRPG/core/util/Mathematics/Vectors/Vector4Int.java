@@ -1,4 +1,4 @@
-package com.AdventureRPG.core.util.Mathematics.Vectors;
+package com.AdventureRPG.core.util.mathematics.vectors;
 
 public class Vector4Int {
 

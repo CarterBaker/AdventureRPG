@@ -1,7 +1,7 @@
 package com.AdventureRPG.core.shaderpipeline.uniforms.vectorarrays;
 
 import com.AdventureRPG.core.shaderpipeline.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Mathematics.Vectors.Vector3Double;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector3Double;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 

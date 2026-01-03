@@ -56,6 +56,7 @@ public class InternalLoadManager extends ManagerPackage {
     // File Collection \\
 
     private List<File> collectMeshFiles() {
+
         validateRootDirectory();
 
         Path basePath = root.toPath();
@@ -66,7 +67,9 @@ public class InternalLoadManager extends ManagerPackage {
                     .map(Path::toFile)
                     .filter(this::isValidJsonFile)
                     .collect(Collectors.toList());
-        } catch (IOException e) {
+        }
+
+        catch (IOException e) {
             throwException(
                     "Failed to list mesh files in directory: " + root.getAbsolutePath(), e);
         }
@@ -75,9 +78,8 @@ public class InternalLoadManager extends ManagerPackage {
     }
 
     private void validateRootDirectory() {
-        if (!root.exists() || !root.isDirectory()) {
+        if (!root.exists() || !root.isDirectory())
             throwException("Mesh JSON directory not found: " + root.getAbsolutePath());
-        }
     }
 
     private boolean isValidJsonFile(File file) {
@@ -88,8 +90,11 @@ public class InternalLoadManager extends ManagerPackage {
     // File Registry \\
 
     private void buildFileRegistry(List<File> meshFiles) {
+
         for (File file : meshFiles) {
+
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+
             resourceName2File.put(resourceName, file);
         }
     }

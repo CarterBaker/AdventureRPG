@@ -5,8 +5,8 @@ import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.physicspipeline.input.InputSystem;
 import com.AdventureRPG.core.physicspipeline.movement.MovementManager;
 import com.AdventureRPG.core.renderpipeline.camerasystem.CameraManager;
-import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Int;
-import com.badlogic.gdx.math.Vector3;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector2Int;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector3;
 
 // TODO: This needs to be abstracted to generic NPC like class
 public class PlayerManager extends ManagerPackage {
@@ -56,7 +56,7 @@ public class PlayerManager extends ManagerPackage {
         movementManager.move(
                 statisticsInstance,
                 inputSystem.getInput(),
-                cameraManager.mainCamera().direction(),
+                cameraManager.mainCamera().getDirection(),
                 currentPosition,
                 currentChunk);
 

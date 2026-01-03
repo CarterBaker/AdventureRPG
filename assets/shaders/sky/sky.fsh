@@ -1,70 +1,72 @@
 #version 150
-
 in vec3 v_dir;
 out vec4 fragColor;
 
-#include "includes/CameraData.glsl"
 #include "includes/NoiseUtility.glsl"
 #include "includes/TimeData.glsl"
 
-uniform float u_overcast;
-
+/* ---- CONSTANTS ---- */
 const float c_tintStrength = 0.45;
-const vec3 c_baseColor = vec3(0.4, 0.6, 1.0);
-const vec3 c_blendLight = vec3(0.8, 0.85, 0.9);
-const vec3 c_blendDark = vec3(0.005, 0.015, 0.05);
-const float c_horizon = 0.5;
-const float c_starSpeed = 0.001;
+const vec3 c_baseColor = vec3(0.42, 0.62, 1.0);
+const vec3 c_dayLight = vec3(0.80, 0.85, 0.90);
+const vec3 c_nightDark = vec3(0.01, 0.015, 0.04);
+const float c_starSpeed = 0.0008;
+const float PI = 3.14159265359;
 
 void main() {
-    // Time-based factor (0 = night, 1 = day)
-    float invertedTimeFactor = abs(1.0 - 2.0 * u_timeOfDay);
-    float timeFactor = 1.0 - invertedTimeFactor;
-    float timeSeed = timeFactor * u_randomNoiseFromDay;
-
-    // Vertical gradient factor
-    float t = clamp(v_dir.y * 0.7 + 0.3, 0.001, 1.0);
-    t = pow(t, 1.2);
-
-    // Calculate and blend the clouds into the sky
-    vec2 cloudDrift = vec2(u_time * 0.02, u_time * 0.01);
-    float softness = mix(2.0, 6.0, timeFactor);
-    vec3 noisePos = v_dir * softness + vec3(cloudDrift, 0.0) + timeSeed * 10.0;
-    float cloudNoise = smoothNoise3D(noisePos);
-    float cloudMask = clamp((c_horizon - v_dir.y) / c_horizon, 0.001, 1.0);
-    vec3 cloudColor = mix(c_blendDark, vec3(1.0), timeFactor);
-    float cloudStrength = cloudNoise * 0.25 * cloudMask;
-
-    // Stars
     vec3 dir = normalize(v_dir);
+
+    /* ---- TIME ---- */
+    float nightFactor = abs(1.0 - 2.0 * u_timeOfDay);
+    float dayFactor = 1.0 - nightFactor;
+
+    /* ---- ALTITUDE ---- */
+    float altitude = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
+    altitude = smoothstep(0.0, 1.0, altitude);
+
+    /* ---- BASE SKY ---- */
+    vec3 daySky = mix(c_baseColor, c_dayLight, altitude);
+    vec3 nightSky = mix(c_nightDark, vec3(0.03, 0.05, 0.12), altitude);
+    vec3 sky = mix(nightSky, daySky, dayFactor);
+
+    /* ---- TWILIGHT MASK ---- */
+    float twilight = smoothstep(0.0, 0.25, dayFactor) * smoothstep(1.0, 0.75, dayFactor);
+
+    /* ---- DAILY SUNSET VARIATION ---- */
+    float daySeed = fract(u_randomNoiseFromDay);
+    vec3 sunsetA = vec3(1.0, 0.55, 0.4);
+    vec3 sunsetB = vec3(0.9, 0.4, 0.7);
+    vec3 sunsetTint = mix(sunsetA, sunsetB, daySeed);
+    float horizonMask = smoothstep(0.0, 0.5, 1.0 - altitude);
+    sky = mix(sky, sky * sunsetTint, horizonMask * twilight * c_tintStrength);
+
+    /* ---- CLOUDS (SEAMLESS) ---- */
+    float phi = atan(dir.z, dir.x);
+    float theta = acos(clamp(dir.y, -1.0, 1.0));
+
+    vec2 uv = vec2(phi / (2.0 * PI), theta / PI);
+    uv = uv * vec2(4.0, 2.4) + vec2(u_time * 0.015, u_time * 0.01);
+
+    vec3 cloudPos = vec3(uv, u_randomNoiseFromDay * 10.0);
+    float cloudNoise = fbmNoise3D(cloudPos);
+
+    float cloudFade = smoothstep(0.05, 0.6, 1.0 - altitude);
+    float cloudAmt = cloudNoise * 0.25 * cloudFade * mix(0.3, 1.0, dayFactor);
+    vec3 cloudColor = mix(vec3(0.15), vec3(1.0), dayFactor);
+    sky = mix(sky, cloudColor, cloudAmt);
+
+    /* ---- STARS ---- */
     float angle = u_time * c_starSpeed;
-    float cosA = cos(angle);
-    float sinA = sin(angle);
-    vec3 rotatedDir = vec3(dir.x * cosA - dir.z * sinA, dir.y, dir.x * sinA + dir.z * cosA);
+    mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+    vec3 starDir = normalize(vec3(rot * dir.xz, dir.y));
 
-    vec3 starBasePos = floor(rotatedDir * 100.0);
-    float starSeed = hash31(starBasePos);
-    float hasStar = step(0.97, starSeed);
-    float starBrightness = pow(fract(starSeed * 1234.5), 20.0);
-    float starSpeed = 0.03 + 0.02 * hash31(starBasePos + vec3(2.0));
-    float twinkleSeed = hash31(starBasePos + vec3(1.0, 0.0, 0.0));
-    float twinklePhase = u_time * starSpeed + twinkleSeed * 6.28;
-    float twinkle = 0.85 + 0.15 * sin(twinklePhase) * sin(twinklePhase);
-    vec3 stars = vec3(hasStar * starBrightness * twinkle);
-    stars *= invertedTimeFactor;
-
-    // Overcast factor
-    float overcastBlend = u_overcast * timeFactor;
-
-    // Calculate the sky color based on time of day
-    vec3 tint = mix(vec3(0.4, 0.6, 1.0), vec3(1.0, 0.5, 0.7), fract(u_randomNoiseFromDay));
-    tint = tint * invertedTimeFactor;
-    vec3 tintedBase = mix(c_baseColor, tint, c_tintStrength);
-    vec3 dayNight = mix(c_blendDark, c_blendLight, timeFactor);
-    vec3 sky = mix(dayNight, tintedBase, t * timeFactor);
-    sky = mix(sky, cloudColor, cloudStrength);
-    sky = mix(sky, stars, invertedTimeFactor);
-    sky = mix(sky, c_blendDark, overcastBlend);
+    vec3 starCell = floor(starDir * 120.0);
+    float starSeed = hash31(starCell);
+    float starOn = step(0.985, starSeed);
+    float starBright = pow(fract(starSeed * 931.7), 18.0);
+    float twinkle = 0.85 + 0.15 * sin(u_time * 0.8 + starSeed * 6.28);
+    float starFade = smoothstep(0.1, 0.6, altitude) * nightFactor;
+    sky += vec3(starOn * starBright * twinkle * starFade);
 
     fragColor = vec4(sky, 1.0);
 }

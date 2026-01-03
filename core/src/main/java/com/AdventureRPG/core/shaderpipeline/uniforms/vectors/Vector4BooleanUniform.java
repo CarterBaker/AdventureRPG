@@ -1,7 +1,7 @@
 package com.AdventureRPG.core.shaderpipeline.uniforms.vectors;
 
 import com.AdventureRPG.core.shaderpipeline.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Mathematics.Vectors.Vector4Boolean;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector4Boolean;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 import java.nio.ByteBuffer;

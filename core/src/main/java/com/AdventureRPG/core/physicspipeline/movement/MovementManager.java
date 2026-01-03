@@ -3,10 +3,10 @@ package com.AdventureRPG.core.physicspipeline.movement;
 import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
-import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Int;
-import com.AdventureRPG.core.util.Mathematics.Vectors.Vector3Int;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector2Int;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector3;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector3Int;
 import com.AdventureRPG.playermanager.StatisticsInstance;
-import com.badlogic.gdx.math.Vector3;
 
 public class MovementManager extends ManagerPackage {
 

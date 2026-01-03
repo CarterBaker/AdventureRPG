@@ -1,7 +1,7 @@
 package com.AdventureRPG.core.shaderpipeline.uniforms.matrices;
 
 import com.AdventureRPG.core.shaderpipeline.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Mathematics.Matrices.Matrix3;
+import com.AdventureRPG.core.util.mathematics.matrices.Matrix3;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 import java.nio.ByteBuffer;

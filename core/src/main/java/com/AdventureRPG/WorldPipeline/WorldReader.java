@@ -3,7 +3,7 @@ package com.AdventureRPG.WorldPipeline;
 import com.AdventureRPG.core.engine.SystemPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.scenepipeline.worldenginesystem.WorldEngineSystem;
-import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
+import com.AdventureRPG.core.util.mathematics.Extras.Coordinate2Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Pixmap;
 

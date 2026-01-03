@@ -129,7 +129,7 @@ class InternalLoadManager extends ManagerPackage {
                     "Shader: " + file.getName() + ", Has an unrecognized extension");
 
         ShaderData shaderDataInstance = create(ShaderData.class);
-        shaderDataInstance.awake(
+        shaderDataInstance.constructor(
                 shaderType,
                 FileUtility.getFileName(file),
                 file);

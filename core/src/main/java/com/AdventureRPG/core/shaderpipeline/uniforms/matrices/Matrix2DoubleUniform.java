@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
 import com.AdventureRPG.core.shaderpipeline.uniforms.UniformAttribute;
-import com.AdventureRPG.core.util.Mathematics.Matrices.Matrix2Double;
+import com.AdventureRPG.core.util.mathematics.matrices.Matrix2Double;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 

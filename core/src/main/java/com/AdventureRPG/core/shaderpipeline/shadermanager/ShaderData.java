@@ -32,7 +32,7 @@ public class ShaderData extends DataPackage {
         this.includes = new ObjectArrayList<>();
     }
 
-    public void awake(
+    public void constructor(
             ShaderType shaderType,
             String shaderName,
             File shaderFile) {

@@ -1,4 +1,4 @@
-package com.AdventureRPG.core.util.Mathematics.Extras;
+package com.AdventureRPG.core.util.mathematics.Extras;
 
 public enum Direction2Int {
 

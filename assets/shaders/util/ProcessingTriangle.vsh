@@ -1,23 +1,16 @@
 #version 150
-
 in vec2 a_position;
 out vec3 v_dir;
-
 #include "includes/CameraData.glsl"
 
 void main() {
-    // Near plane point in clip space
-    vec4 clip = vec4(a_position, -1.0, 1.0);
+    // Full-screen quad in clip space
+    gl_Position = vec4(a_position, 0.9999, 1.0);
 
-    // Unproject to view space
-    vec4 view = u_inverseProjection * clip;
-    view /= view.w;
+    // Unproject from clip space to view space
+    vec4 viewPos = u_inverseProjection * vec4(a_position, 1.0, 1.0);
+    viewPos.xyz /= viewPos.w;
 
-    // Convert point → direction
-    view = vec4(view.xyz, 0.0);
-
-    // Rotate into world space
-    v_dir = normalize((u_inverseView * view).xyz);
-
-    gl_Position = vec4(a_position, 0.0, 1.0);
+    // Transform view direction to world space
+    v_dir = normalize((u_inverseView * vec4(viewPos.xyz, 0.0)).xyz);
 }

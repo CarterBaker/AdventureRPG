@@ -21,7 +21,7 @@ public class ShaderDefinitionData extends DataPackage {
         this.includes = new ObjectArrayList<>();
     }
 
-    public void awake(
+    public void constructor(
             String shaderName,
             ShaderData vert,
             ShaderData frag) {

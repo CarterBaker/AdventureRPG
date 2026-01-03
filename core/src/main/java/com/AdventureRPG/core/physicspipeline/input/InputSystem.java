@@ -1,11 +1,11 @@
 package com.AdventureRPG.core.physicspipeline.input;
 
 import com.AdventureRPG.core.engine.SystemPackage;
-import com.AdventureRPG.core.util.Mathematics.Vectors.Vector3Int;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector2;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector3Int;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
-import com.badlogic.gdx.math.Vector2;
 
 public class InputSystem extends SystemPackage implements InputProcessor {
 
@@ -112,7 +112,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
             return;
 
         float deltaX = Gdx.input.getDeltaX() * sensitivity;
-        float deltaY = -Gdx.input.getDeltaY() * sensitivity;
+        float deltaY = Gdx.input.getDeltaY() * sensitivity;
 
         rotation.set(deltaX, deltaY);
     }

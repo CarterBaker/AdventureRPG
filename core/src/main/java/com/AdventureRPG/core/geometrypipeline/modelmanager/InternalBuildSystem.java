@@ -45,7 +45,10 @@ class InternalBuildSystem extends SystemPackage {
         VBOHandle vboHandle = buildVBOHandle(resourceName, jsonObject, file, loadManager);
         IBOHandle iboHandle = buildIBOHandle(resourceName, jsonObject, file, loadManager);
 
-        return createMeshHandle(vaoHandle, vboHandle, iboHandle);
+        return createMeshHandle(
+                vaoHandle,
+                vboHandle,
+                iboHandle);
     }
 
     private MeshHandle createMeshHandle(
@@ -104,7 +107,10 @@ class InternalBuildSystem extends SystemPackage {
         }
 
         // Case 2: int (vert stride) or raw object — let VAOManager handle it
-        vaoManager.addVAO(resourceName, file, loadManager);
+        vaoManager.addVAO(
+                resourceName,
+                file,
+                loadManager);
         return vaoManager.getVAOHandleFromName(resourceName);
     }
 
@@ -140,7 +146,10 @@ class InternalBuildSystem extends SystemPackage {
         }
 
         // Raw data
-        vboManager.addVBO(resourceName, file, loadManager);
+        vboManager.addVBO(
+                resourceName,
+                file,
+                loadManager);
         return vboManager.getVBOHandleFromName(resourceName);
     }
 
@@ -176,7 +185,10 @@ class InternalBuildSystem extends SystemPackage {
         }
 
         // Raw data
-        iboManager.addIBO(resourceName, file, loadManager);
+        iboManager.addIBO(
+                resourceName,
+                file,
+                loadManager);
         return iboManager.getIBOHandleFromName(resourceName);
     }
 

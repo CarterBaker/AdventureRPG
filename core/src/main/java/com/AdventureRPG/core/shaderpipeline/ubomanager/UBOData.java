@@ -21,7 +21,7 @@ public class UBOData extends DataPackage {
         this.uniforms = new ObjectArrayList<>();
     }
 
-    public void awake(
+    public void constructor(
             String blockName,
             int binding) {
 

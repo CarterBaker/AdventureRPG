@@ -11,7 +11,7 @@ public class UniformData extends DataPackage {
 
     // Internal
 
-    public void awake(
+    public void constructor(
             UniformType uniformType,
             String uniformName) {
 
@@ -21,7 +21,7 @@ public class UniformData extends DataPackage {
         this.count = 1;
     }
 
-    public void awake(
+    public void constructor(
             UniformType uniformType,
             String uniformName,
             int count) {

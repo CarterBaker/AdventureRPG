@@ -9,7 +9,7 @@ import com.AdventureRPG.WorldPipeline.queuesystem.QueueSystem;
 import com.AdventureRPG.core.engine.SystemPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.threadpipeline.ThreadSystem;
-import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
+import com.AdventureRPG.core.util.mathematics.Extras.Coordinate2Int;
 
 public class Loader extends SystemPackage {
 

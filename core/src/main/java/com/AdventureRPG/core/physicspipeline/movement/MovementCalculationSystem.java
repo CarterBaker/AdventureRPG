@@ -1,31 +1,22 @@
 package com.AdventureRPG.core.physicspipeline.movement;
 
 import com.AdventureRPG.core.engine.SystemPackage;
-import com.AdventureRPG.core.util.Mathematics.Vectors.Vector3Int;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector3;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector3Int;
 import com.AdventureRPG.playermanager.StatisticsInstance;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.Vector3;
 
-// TODO: This needs to be decoupled from requireing statistics and converted to singleton
 public class MovementCalculationSystem extends SystemPackage {
 
-    // Temp
     private Vector3 forward;
     private Vector3 right;
     private Vector3 localMove;
 
-    // Base \\
-
     @Override
     public void get() {
-
-        // Temp
-        this.forward = new Vector3();
-        this.right = new Vector3();
-        this.localMove = new Vector3();
+        forward = new Vector3();
+        right = new Vector3();
+        localMove = new Vector3();
     }
-
-    // Movement \\
 
     public Vector3 calculate(
             StatisticsInstance statisticsInstance,
@@ -33,29 +24,49 @@ public class MovementCalculationSystem extends SystemPackage {
             Vector3Int input,
             Vector3 cameraDirection) {
 
-        // Calculate horizontal forward vector (XZ plane)
-        forward.set(cameraDirection.x, 0f, cameraDirection.z).nor();
+        forward.x = cameraDirection.x;
+        forward.y = 0f;
+        forward.z = cameraDirection.z;
+        normalize(forward);
 
-        // Right = perpendicular to forward
-        right.set(-forward.z, 0f, forward.x);
+        right.x = -forward.z;
+        right.y = 0f;
+        right.z = forward.x;
 
-        // Build movement vector based on input
-        localMove.set(0f, 0f, 0f);
-        localMove.mulAdd(forward, input.z);
-        localMove.mulAdd(right, input.x);
+        localMove.x = 0f;
+        localMove.y = 0f;
+        localMove.z = 0f;
+
+        localMove.x += forward.x * input.z;
+        localMove.z += forward.z * input.z;
+
+        localMove.x += right.x * input.x;
+        localMove.z += right.z * input.x;
+
         localMove.y += input.y;
 
-        // Normalize to prevent diagonal speed boost
-        if (!localMove.isZero())
-            localMove.nor();
+        normalize(localMove);
 
-        // Scale by movement speed and delta time
-        localMove.scl(statisticsInstance.movementSpeed * Gdx.graphics.getDeltaTime());
+        float scale = statisticsInstance.movementSpeed * internal.getDeltaTime();
+        localMove.x *= scale;
+        localMove.y *= scale;
+        localMove.z *= scale;
 
-        // Add the movement to current position in place
-        currentPosition.add(localMove);
+        currentPosition.x += localMove.x;
+        currentPosition.y += localMove.y;
+        currentPosition.z += localMove.z;
 
-        // Return the mutated currentPosition for chaining or assignment
         return currentPosition;
+    }
+
+    private void normalize(Vector3 v) {
+        float lenSq = v.x * v.x + v.y * v.y + v.z * v.z;
+        if (lenSq == 0f)
+            return;
+
+        float invLen = 1.0f / (float) Math.sqrt(lenSq);
+        v.x *= invLen;
+        v.y *= invLen;
+        v.z *= invLen;
     }
 }

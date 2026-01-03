@@ -180,7 +180,7 @@ public class InternalBuildSystem extends SystemPackage {
                 usedBindings.add(binding);
 
                 UBOData uboData = create(UBOData.class);
-                uboData.awake(
+                uboData.constructor(
                         blockName,
                         binding);
 
@@ -278,7 +278,7 @@ public class InternalBuildSystem extends SystemPackage {
 
             // Create uniform instance
             UniformData uniform = create(UniformData.class);
-            uniform.awake(
+            uniform.constructor(
                     uniformType,
                     variableName,
                     arrayCount);
@@ -347,7 +347,7 @@ public class InternalBuildSystem extends SystemPackage {
                             + ", The vert or frag files defined do not match the corresponding type");
 
         ShaderDefinitionData shaderDefinitionData = create(ShaderDefinitionData.class);
-        shaderDefinitionData.awake(
+        shaderDefinitionData.constructor(
                 shaderName,
                 vertData,
                 fragData);

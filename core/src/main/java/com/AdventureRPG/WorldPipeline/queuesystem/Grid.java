@@ -6,7 +6,7 @@ import java.util.List;
 
 import com.AdventureRPG.core.engine.SystemPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
-import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
+import com.AdventureRPG.core.util.mathematics.Extras.Coordinate2Int;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 

@@ -1,11 +1,11 @@
 package com.AdventureRPG.core.scenepipeline.worldenginesystem;
 
 import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.math.Vector3;
 import com.AdventureRPG.core.engine.SystemPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
-import com.AdventureRPG.core.util.Mathematics.Extras.Coordinate2Int;
-import com.AdventureRPG.core.util.Mathematics.Vectors.Vector2Int;
+import com.AdventureRPG.core.util.mathematics.Extras.Coordinate2Int;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector2Int;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector3;
 import com.badlogic.gdx.Gdx;
 
 public class WorldEngineSystem extends SystemPackage {

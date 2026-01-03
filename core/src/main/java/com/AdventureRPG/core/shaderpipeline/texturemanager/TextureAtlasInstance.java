@@ -12,7 +12,7 @@ public class TextureAtlasInstance extends InstancePackage {
 
     // Internal \\
 
-    void awake(
+    void constructor(
             int atlasSize,
             BufferedImage atlas) {
 

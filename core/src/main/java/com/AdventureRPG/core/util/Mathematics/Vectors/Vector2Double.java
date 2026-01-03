@@ -1,6 +1,6 @@
-package com.AdventureRPG.core.util.Mathematics.Vectors;
+package com.AdventureRPG.core.util.mathematics.vectors;
 
-import com.AdventureRPG.core.util.Mathematics.Extras.Direction2Int;
+import com.AdventureRPG.core.util.mathematics.Extras.Direction2Int;
 
 public class Vector2Double {
 

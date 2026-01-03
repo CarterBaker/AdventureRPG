@@ -12,12 +12,6 @@ import java.nio.ShortBuffer;
 
 class GLSLUtility extends UtilityPackage {
 
-        /*
-         * GLSLUtility provides low-level OpenGL operations for managing index buffers.
-         * It binds VAOs, creates GPU buffers, and uploads index data efficiently.
-         * Designed as a static utility, it does not store state beyond buffer handles.
-         */
-
         // Uploads index data to a GPU buffer and binds it to the given VAO.
         static IBOHandle uploadIndexData(VAOHandle vaoHandle, IBOHandle iboHandle, short[] indices) {
 

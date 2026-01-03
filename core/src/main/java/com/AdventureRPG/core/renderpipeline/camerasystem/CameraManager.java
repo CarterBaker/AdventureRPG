@@ -1,9 +1,10 @@
 package com.AdventureRPG.core.renderpipeline.camerasystem;
 
 import com.AdventureRPG.core.engine.ManagerPackage;
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.Array;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector2;
+import com.AdventureRPG.core.util.mathematics.vectors.Vector3;
+
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 
 public class CameraManager extends ManagerPackage {
 
@@ -11,7 +12,7 @@ public class CameraManager extends ManagerPackage {
     private InternalBufferSystem internalBufferSystem;
 
     // Camera storage
-    private final Array<CameraInstance> cameraInstances = new Array<>(false, 4);
+    private final ObjectLinkedOpenHashSet<CameraInstance> cameraInstances = new ObjectLinkedOpenHashSet<>();
     private CameraInstance mainCamera;
 
     private int width;
@@ -32,7 +33,7 @@ public class CameraManager extends ManagerPackage {
 
         // Internal
         CameraInstance createdCamera = create(CameraInstance.class);
-        createdCamera.awake(fov, width, height);
+        createdCamera.constructor(fov, width, height);
 
         cameraInstances.add(createdCamera);
 
@@ -54,7 +55,7 @@ public class CameraManager extends ManagerPackage {
         return mainCamera;
     }
 
-    public Array<CameraInstance> cameraInstances() {
+    public ObjectLinkedOpenHashSet<CameraInstance> cameraInstances() {
         return cameraInstances;
     }
 
