@@ -28,10 +28,10 @@ public class Matrix2Uniform extends UniformAttribute<Matrix2> {
 
         // Column 0
         uniformBuffer.put(value.val[0]); // m00
-        uniformBuffer.put(value.val[2]); // m10
+        uniformBuffer.put(value.val[1]); // m10
 
         // Column 1
-        uniformBuffer.put(value.val[1]); // m01
+        uniformBuffer.put(value.val[2]); // m01
         uniformBuffer.put(value.val[3]); // m11
 
         uniformBuffer.flip();
@@ -45,12 +45,12 @@ public class Matrix2Uniform extends UniformAttribute<Matrix2> {
 
         // Column 0
         uboBuffer.putFloat(value.val[0]); // m00
-        uboBuffer.putFloat(value.val[2]); // m10
+        uboBuffer.putFloat(value.val[1]); // m10
         uboBuffer.putFloat(0f); // padding
         uboBuffer.putFloat(0f); // padding
 
         // Column 1
-        uboBuffer.putFloat(value.val[1]); // m01
+        uboBuffer.putFloat(value.val[2]); // m01
         uboBuffer.putFloat(value.val[3]); // m11
         uboBuffer.putFloat(0f); // padding
         uboBuffer.putFloat(0f); // padding

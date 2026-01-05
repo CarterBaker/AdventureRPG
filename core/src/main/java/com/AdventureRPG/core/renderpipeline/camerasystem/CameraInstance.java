@@ -20,9 +20,6 @@ public class CameraInstance extends InstancePackage {
     private Matrix4 inverseProjectionMat = new Matrix4();
     private Matrix4 inverseViewMat = new Matrix4();
 
-    private float yaw = 0;
-    private float pitch = 0;
-
     public void constructor(float fov, float viewportWidth, float viewportHeight) {
 
         perspectiveCamera = new PerspectiveCamera(fov, viewportWidth, viewportHeight);
@@ -61,67 +58,87 @@ public class CameraInstance extends InstancePackage {
                 perspectiveCamera.up.z);
     }
 
-    /** Update camera rotation (FPS-style, stable, no flips) */
+    /** Set camera rotation */
     public void setRotation(Vector2 input) {
-        // Update yaw/pitch from input
-        yaw -= input.x;
-        pitch -= input.y;
 
-        // Clamp pitch to avoid singularity
-        pitch = Math.max(-89.9f, Math.min(89.9f, pitch));
+        // input.x = horizontal rotation (yaw)
+        // input.y = vertical rotation (pitch)
 
-        // Convert to radians
-        float yawRad = (float) Math.toRadians(yaw);
-        float pitchRad = (float) Math.toRadians(pitch);
+        // Get current direction as angles
+        float yaw = (float) Math.atan2(perspectiveCamera.direction.x, perspectiveCamera.direction.z);
+        float pitch = (float) Math.asin(-perspectiveCamera.direction.y);
 
-        // Compute forward vector using yaw/pitch (spherical coordinates)
-        float cosPitch = (float) Math.cos(pitchRad);
-        directionVec.x = cosPitch * (float) Math.sin(yawRad);
-        directionVec.y = (float) Math.sin(pitchRad);
-        directionVec.z = -cosPitch * (float) Math.cos(yawRad);
-        normalize(directionVec);
+        // Apply rotation deltas
+        yaw += Math.toRadians(input.x);
+        pitch += Math.toRadians(input.y);
 
-        // CRITICAL: Build right vector directly from yaw (independent of pitch)
-        // This is ALWAYS perpendicular to world up, avoiding gimbal lock
-        Vector3 right = new Vector3();
-        right.x = (float) Math.cos(yawRad); // Perpendicular to yaw direction
-        right.y = 0.0f; // Always horizontal
-        right.z = (float) Math.sin(yawRad);
-        normalize(right);
+        // Clamp pitch to prevent looking directly up/down (gimbal lock)
+        // 89 degrees = ~1.553 radians
+        float maxPitch = (float) Math.toRadians(89.0);
+        pitch = Math.max(-maxPitch, Math.min(maxPitch, pitch));
 
-        // Compute up vector as cross of forward and right
-        upVec.set(cross(directionVec, right));
-        normalize(upVec);
+        // Calculate new direction from angles
+        float cosPitch = (float) Math.cos(pitch);
+        perspectiveCamera.direction.x = (float) Math.sin(yaw) * cosPitch;
+        perspectiveCamera.direction.y = -(float) Math.sin(pitch);
+        perspectiveCamera.direction.z = (float) Math.cos(yaw) * cosPitch;
 
-        // Apply to LibGDX camera
-        perspectiveCamera.direction.set(directionVec.x, directionVec.y, directionVec.z);
-        perspectiveCamera.up.set(upVec.x, upVec.y, upVec.z);
+        // Keep up vector pointing up (prevents rolling)
+        perspectiveCamera.up.set(0, 1, 0);
+
+        // Debug tracking
+        debugCameraOrientation();
+
+        // Update camera
         perspectiveCamera.update();
-
         updateCachedValues();
     }
 
-    private Vector3 cross(Vector3 a, Vector3 b) {
-        return new Vector3(
-                a.y * b.z - a.z * b.y,
-                a.z * b.x - a.x * b.z,
-                a.x * b.y - a.y * b.x);
+    //
+
+    // Add these fields to your class
+    private String lastDebugState = "";
+
+    private void debugCameraOrientation() {
+        // Get cardinal direction you're facing
+        String facing = getCardinalDirection();
+
+        // Get right vector (cross product of direction and up)
+        com.badlogic.gdx.math.Vector3 gdxDir = perspectiveCamera.direction;
+        com.badlogic.gdx.math.Vector3 gdxUp = perspectiveCamera.up;
+        com.badlogic.gdx.math.Vector3 right = new com.badlogic.gdx.math.Vector3(gdxDir).crs(gdxUp);
+
+        // Format state
+        String currentState = String.format(
+                "Facing: %s | Dir: (%.2f, %.2f, %.2f) | Up: (%.2f, %.2f, %.2f) | Right: (%.2f, %.2f, %.2f)",
+                facing,
+                gdxDir.x, gdxDir.y, gdxDir.z,
+                gdxUp.x, gdxUp.y, gdxUp.z,
+                right.x, right.y, right.z);
+
+        // Only print if changed
+        if (!currentState.equals(lastDebugState)) {
+            System.out.println(currentState);
+            lastDebugState = currentState;
+        }
     }
 
-    private void normalize(Vector3 v) {
-        float len = (float) Math.sqrt(
-                v.x * v.x +
-                        v.y * v.y +
-                        v.z * v.z);
+    private String getCardinalDirection() {
+        float x = perspectiveCamera.direction.x;
+        float z = perspectiveCamera.direction.z;
+        float angle = (float) Math.toDegrees(Math.atan2(x, z));
+        if (angle < 0)
+            angle += 360;
 
-        if (len == 0f)
-            return;
-
-        float inv = 1.0f / len;
-        v.x *= inv;
-        v.y *= inv;
-        v.z *= inv;
+        if (angle < 45 || angle >= 315)
+            return "NORTH";
+        if (angle >= 45 && angle < 135)
+            return "EAST";
+        if (angle >= 135 && angle < 225)
+            return "SOUTH";
+        return "WEST";
     }
+    //
 
     /** Set camera position */
     public void setPosition(Vector3 input) {

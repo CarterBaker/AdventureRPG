@@ -15,5 +15,6 @@ void main() {
     viewPos.xyz /= viewPos.w;
 
     // Transform view direction to world space
+    // v_dir = normalize(mat3(u_inverseView) * viewPos.xyz); AI tried this already
     v_dir = normalize((u_inverseView * vec4(viewPos.xyz, 0.0)).xyz);
 }

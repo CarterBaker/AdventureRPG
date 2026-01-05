@@ -38,26 +38,26 @@ public class Matrix4Uniform extends UniformAttribute<Object> {
 
         // Column 0
         uboBuffer.putFloat((float) matrix.val[0]); // m00
-        uboBuffer.putFloat((float) matrix.val[4]); // m10
-        uboBuffer.putFloat((float) matrix.val[8]); // m20
-        uboBuffer.putFloat((float) matrix.val[12]); // m30
+        uboBuffer.putFloat((float) matrix.val[1]); // m10
+        uboBuffer.putFloat((float) matrix.val[2]); // m20
+        uboBuffer.putFloat((float) matrix.val[3]); // m30
 
         // Column 1
-        uboBuffer.putFloat((float) matrix.val[1]); // m01
+        uboBuffer.putFloat((float) matrix.val[4]); // m01
         uboBuffer.putFloat((float) matrix.val[5]); // m11
-        uboBuffer.putFloat((float) matrix.val[9]); // m21
-        uboBuffer.putFloat((float) matrix.val[13]); // m31
+        uboBuffer.putFloat((float) matrix.val[6]); // m21
+        uboBuffer.putFloat((float) matrix.val[7]); // m31
 
         // Column 2
-        uboBuffer.putFloat((float) matrix.val[2]); // m02
-        uboBuffer.putFloat((float) matrix.val[6]); // m12
+        uboBuffer.putFloat((float) matrix.val[8]); // m02
+        uboBuffer.putFloat((float) matrix.val[9]); // m12
         uboBuffer.putFloat((float) matrix.val[10]); // m22
-        uboBuffer.putFloat((float) matrix.val[14]); // m32
+        uboBuffer.putFloat((float) matrix.val[11]); // m32
 
         // Column 3
-        uboBuffer.putFloat((float) matrix.val[3]); // m03
-        uboBuffer.putFloat((float) matrix.val[7]); // m13
-        uboBuffer.putFloat((float) matrix.val[11]); // m23
+        uboBuffer.putFloat((float) matrix.val[12]); // m03
+        uboBuffer.putFloat((float) matrix.val[13]); // m13
+        uboBuffer.putFloat((float) matrix.val[14]); // m23
         uboBuffer.putFloat((float) matrix.val[15]); // m33
 
         uboBuffer.flip();

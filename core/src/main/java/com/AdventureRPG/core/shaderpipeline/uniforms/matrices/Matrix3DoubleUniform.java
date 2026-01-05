@@ -24,20 +24,8 @@ public class Matrix3DoubleUniform extends UniformAttribute<Matrix3Double> {
     @Override
     protected void push(int handle, Matrix3Double value) {
 
-        // Column 0
-        uniformBuffer.val[0] = (float) value.val[0]; // m00
-        uniformBuffer.val[1] = (float) value.val[3]; // m10
-        uniformBuffer.val[2] = (float) value.val[6]; // m20
-
-        // Column 1
-        uniformBuffer.val[3] = (float) value.val[1]; // m01
-        uniformBuffer.val[4] = (float) value.val[4]; // m11
-        uniformBuffer.val[5] = (float) value.val[7]; // m21
-
-        // Column 2
-        uniformBuffer.val[6] = (float) value.val[2]; // m02
-        uniformBuffer.val[7] = (float) value.val[5]; // m12
-        uniformBuffer.val[8] = (float) value.val[8]; // m22
+        for (int i = 0; i < 9; i++)
+            uniformBuffer.val[i] = (float) value.val[i];
 
         Gdx.gl.glUniformMatrix3fv(handle, 1, false, uniformBuffer.val, 0);
     }
@@ -49,19 +37,19 @@ public class Matrix3DoubleUniform extends UniformAttribute<Matrix3Double> {
 
         // Column 0
         uboBuffer.putFloat((float) value.val[0]); // m00
-        uboBuffer.putFloat((float) value.val[3]); // m10
-        uboBuffer.putFloat((float) value.val[6]); // m20
+        uboBuffer.putFloat((float) value.val[1]); // m10
+        uboBuffer.putFloat((float) value.val[2]); // m20
         uboBuffer.putFloat(0f); // padding
 
         // Column 1
-        uboBuffer.putFloat((float) value.val[1]); // m01
+        uboBuffer.putFloat((float) value.val[3]); // m01
         uboBuffer.putFloat((float) value.val[4]); // m11
-        uboBuffer.putFloat((float) value.val[7]); // m21
+        uboBuffer.putFloat((float) value.val[5]); // m21
         uboBuffer.putFloat(0f); // padding
 
         // Column 2
-        uboBuffer.putFloat((float) value.val[2]); // m02
-        uboBuffer.putFloat((float) value.val[5]); // m12
+        uboBuffer.putFloat((float) value.val[6]); // m02
+        uboBuffer.putFloat((float) value.val[7]); // m12
         uboBuffer.putFloat((float) value.val[8]); // m22
         uboBuffer.putFloat(0f); // padding
 

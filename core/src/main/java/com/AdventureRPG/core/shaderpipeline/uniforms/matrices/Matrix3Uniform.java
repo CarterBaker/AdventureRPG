@@ -38,19 +38,19 @@ public class Matrix3Uniform extends UniformAttribute<Object> {
 
         // Column 0
         uboBuffer.putFloat(matrix.val[0]); // m00
-        uboBuffer.putFloat(matrix.val[3]); // m10
-        uboBuffer.putFloat(matrix.val[6]); // m20
+        uboBuffer.putFloat(matrix.val[1]); // m10
+        uboBuffer.putFloat(matrix.val[2]); // m20
         uboBuffer.putFloat(0f); // padding
 
         // Column 1
-        uboBuffer.putFloat(matrix.val[1]); // m01
+        uboBuffer.putFloat(matrix.val[3]); // m01
         uboBuffer.putFloat(matrix.val[4]); // m11
-        uboBuffer.putFloat(matrix.val[7]); // m21
+        uboBuffer.putFloat(matrix.val[5]); // m21
         uboBuffer.putFloat(0f); // padding
 
         // Column 2
-        uboBuffer.putFloat(matrix.val[2]); // m02
-        uboBuffer.putFloat(matrix.val[5]); // m12
+        uboBuffer.putFloat(matrix.val[6]); // m02
+        uboBuffer.putFloat(matrix.val[7]); // m12
         uboBuffer.putFloat(matrix.val[8]); // m22
         uboBuffer.putFloat(0f); // padding
 
