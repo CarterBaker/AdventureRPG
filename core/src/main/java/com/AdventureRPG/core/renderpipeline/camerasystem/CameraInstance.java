@@ -86,59 +86,10 @@ public class CameraInstance extends InstancePackage {
         // Keep up vector pointing up (prevents rolling)
         perspectiveCamera.up.set(0, 1, 0);
 
-        // Debug tracking
-        debugCameraOrientation();
-
         // Update camera
         perspectiveCamera.update();
         updateCachedValues();
     }
-
-    //
-
-    // Add these fields to your class
-    private String lastDebugState = "";
-
-    private void debugCameraOrientation() {
-        // Get cardinal direction you're facing
-        String facing = getCardinalDirection();
-
-        // Get right vector (cross product of direction and up)
-        com.badlogic.gdx.math.Vector3 gdxDir = perspectiveCamera.direction;
-        com.badlogic.gdx.math.Vector3 gdxUp = perspectiveCamera.up;
-        com.badlogic.gdx.math.Vector3 right = new com.badlogic.gdx.math.Vector3(gdxDir).crs(gdxUp);
-
-        // Format state
-        String currentState = String.format(
-                "Facing: %s | Dir: (%.2f, %.2f, %.2f) | Up: (%.2f, %.2f, %.2f) | Right: (%.2f, %.2f, %.2f)",
-                facing,
-                gdxDir.x, gdxDir.y, gdxDir.z,
-                gdxUp.x, gdxUp.y, gdxUp.z,
-                right.x, right.y, right.z);
-
-        // Only print if changed
-        if (!currentState.equals(lastDebugState)) {
-            System.out.println(currentState);
-            lastDebugState = currentState;
-        }
-    }
-
-    private String getCardinalDirection() {
-        float x = perspectiveCamera.direction.x;
-        float z = perspectiveCamera.direction.z;
-        float angle = (float) Math.toDegrees(Math.atan2(x, z));
-        if (angle < 0)
-            angle += 360;
-
-        if (angle < 45 || angle >= 315)
-            return "NORTH";
-        if (angle >= 45 && angle < 135)
-            return "EAST";
-        if (angle >= 135 && angle < 225)
-            return "SOUTH";
-        return "WEST";
-    }
-    //
 
     /** Set camera position */
     public void setPosition(Vector3 input) {

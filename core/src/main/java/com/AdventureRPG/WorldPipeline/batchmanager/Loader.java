@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldPipeline.batchsystem;
+package com.AdventureRPG.WorldPipeline.batchmanager;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -15,7 +15,7 @@ public class Loader extends SystemPackage {
 
     // Root
     private ThreadSystem threadSystem;
-    private BatchSystem batchSystem;
+    private BatchManager batchSystem;
 
     // Async System
     private Queue<Chunk> addRequests;
@@ -60,7 +60,7 @@ public class Loader extends SystemPackage {
 
         // Root
         this.threadSystem = get(ThreadSystem.class);
-        this.batchSystem = get(BatchSystem.class);
+        this.batchSystem = get(BatchManager.class);
     }
 
     @Override

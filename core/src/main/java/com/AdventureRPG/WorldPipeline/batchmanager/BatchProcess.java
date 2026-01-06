@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldPipeline.batchsystem;
+package com.AdventureRPG.WorldPipeline.batchmanager;
 
 import com.AdventureRPG.WorldPipeline.queuesystem.QueueBundle;
 
@@ -21,7 +21,7 @@ public enum BatchProcess {
                 this.priority = priority;
         }
 
-        public boolean process(BatchSystem batchSystem) {
+        public boolean process(BatchManager batchSystem) {
 
                 return switch (this) {
 

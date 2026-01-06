@@ -6,11 +6,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.WorldPipeline.biomes.BiomeSystem;
 import com.AdventureRPG.WorldPipeline.blocks.Block;
-import com.AdventureRPG.WorldPipeline.blocks.BlockSystem;
+import com.AdventureRPG.WorldPipeline.blocks.BlockManager;
 import com.AdventureRPG.WorldPipeline.blocks.Type;
 import com.AdventureRPG.WorldPipeline.subchunks.SubChunk;
 import com.AdventureRPG.WorldPipeline.subchunks.SubChunkMeshData;
-import com.AdventureRPG.WorldPipeline.util.PackedCoordinate3Int;
+import com.AdventureRPG.WorldPipeline.util.SubChunkCoordinateUtility;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialHandle;
 import com.AdventureRPG.core.shaderpipeline.texturemanager.UVRect;
@@ -26,8 +26,7 @@ public class Builder {
 
     // Game Manager
     private final WorldPipeline worldPipeline;
-    private final BlockSystem blockSystem;
-    private final PackedCoordinate3Int packedCoordinate3Int;
+    private final BlockManager blockSystem;
     private final BiomeSystem biomeSystem;
 
     // Settings
@@ -62,7 +61,6 @@ public class Builder {
         // Game Manager
         this.worldPipeline = worldPipeline;
         this.blockSystem = worldPipeline.blockSystem;
-        this.packedCoordinate3Int = worldPipeline.packedCoordinate3Int;
         this.biomeSystem = worldPipeline.biomeSystem;
 
         // Settings
@@ -75,13 +73,13 @@ public class Builder {
         this.quadCounts = new Int2IntOpenHashMap();
         this.blendColors = new Color[8];
 
-        this.tempBatchedBlocks = new BitSet(packedCoordinate3Int.chunkSize);
-        this.batchedBlocksUp = new BitSet(packedCoordinate3Int.chunkSize);
-        this.batchedBlocksNorth = new BitSet(packedCoordinate3Int.chunkSize);
-        this.batchedBlocksSouth = new BitSet(packedCoordinate3Int.chunkSize);
-        this.batchedBlocksEast = new BitSet(packedCoordinate3Int.chunkSize);
-        this.batchedBlocksWest = new BitSet(packedCoordinate3Int.chunkSize);
-        this.batchedBlocksDown = new BitSet(packedCoordinate3Int.chunkSize);
+        this.tempBatchedBlocks = new BitSet(SubChunkCoordinateUtility.CHUNK_BLOCK_COUNT);
+        this.batchedBlocksUp = new BitSet(SubChunkCoordinateUtility.CHUNK_BLOCK_COUNT);
+        this.batchedBlocksNorth = new BitSet(SubChunkCoordinateUtility.CHUNK_BLOCK_COUNT);
+        this.batchedBlocksSouth = new BitSet(SubChunkCoordinateUtility.CHUNK_BLOCK_COUNT);
+        this.batchedBlocksEast = new BitSet(SubChunkCoordinateUtility.CHUNK_BLOCK_COUNT);
+        this.batchedBlocksWest = new BitSet(SubChunkCoordinateUtility.CHUNK_BLOCK_COUNT);
+        this.batchedBlocksDown = new BitSet(SubChunkCoordinateUtility.CHUNK_BLOCK_COUNT);
 
         this.tmpColor = new Color();
         this.tempQuadBuffer = new FloatArrayList();
@@ -106,15 +104,15 @@ public class Builder {
             SubChunk subChunk = chunk.getSubChunk(subChunkIndex);
 
             // Go through each and every pre-packed coordinate inside the chunk
-            for (int index = 0; index < packedCoordinate3Int.chunkSize; index++) {
+            for (int index = 0; index < SubChunkCoordinateUtility.CHUNK_BLOCK_COUNT; index++) {
 
                 // Grab the pre-packed coordinate
-                int xyz = packedCoordinate3Int.getPackedBlockCoordinate(index);
+                int xyz = SubChunkCoordinateUtility.getPackedBlockCoordinate(index);
 
                 // Unpack x, y and z
-                int x = packedCoordinate3Int.unpackX(xyz);
-                int y = packedCoordinate3Int.unpackY(xyz);
-                int z = packedCoordinate3Int.unpackZ(xyz);
+                int x = SubChunkCoordinateUtility.unpackX(xyz);
+                int y = SubChunkCoordinateUtility.unpackY(xyz);
+                int z = SubChunkCoordinateUtility.unpackZ(xyz);
 
                 // Get the block and block type for the pre-packed coordinate
                 int blockID = subChunk.getBlock(x, y, z);
@@ -315,7 +313,7 @@ public class Builder {
             int yCheck = nextY + otherDir.y * i;
             int zCheck = nextZ + otherDir.z * i;
 
-            int xyz = packedCoordinate3Int.pack(xCheck, yCheck, zCheck);
+            int xyz = SubChunkCoordinateUtility.pack(xCheck, yCheck, zCheck);
 
             int comparativeBiomeID = subChunk.getBiome(xCheck, yCheck, zCheck);
             int comparativeBlockID = subChunk.getBlock(xCheck, yCheck, zCheck);
@@ -445,7 +443,7 @@ public class Builder {
         y = convertToVertSpace(y, direction.y);
         z = convertToVertSpace(z, direction.z);
 
-        int xyz = packedCoordinate3Int.pack(x, y, z);
+        int xyz = SubChunkCoordinateUtility.pack(x, y, z);
 
         int directionIndex = direction.index;
 
@@ -704,9 +702,9 @@ public class Builder {
             Direction3Int dirA = tangents[0];
             Direction3Int dirB = tangents[1];
 
-            int x = packedCoordinate3Int.unpackX(xyz);
-            int y = packedCoordinate3Int.unpackY(xyz);
-            int z = packedCoordinate3Int.unpackZ(xyz);
+            int x = SubChunkCoordinateUtility.unpackX(xyz);
+            int y = SubChunkCoordinateUtility.unpackY(xyz);
+            int z = SubChunkCoordinateUtility.unpackZ(xyz);
 
             // Compute quad vertex positions
             int[][] verts = new int[4][3];

@@ -30,10 +30,6 @@ public class Sky extends SystemPackage {
 
         // Render management
         passmanager.pushPass(skyPass, -10);
-
-        int debugID = passmanager.getPassIDFromPassName("DebugCameraOrientation");
-        PassHandle debugPass = passmanager.getPassFromPassID(debugID);
-        passmanager.pushPass(debugPass, 10);
     }
 
     // TODO: I do not know why I decided to do this here. old code. needs refactor

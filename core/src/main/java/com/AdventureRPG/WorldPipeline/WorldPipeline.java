@@ -1,9 +1,9 @@
 package com.AdventureRPG.WorldPipeline;
 
 import com.AdventureRPG.WorldPipeline.biomes.BiomeSystem;
-import com.AdventureRPG.WorldPipeline.blocks.BlockSystem;
+import com.AdventureRPG.WorldPipeline.blocks.BlockManager;
 import com.AdventureRPG.WorldPipeline.queuesystem.QueueSystem;
-import com.AdventureRPG.WorldPipeline.util.PackedCoordinate3Int;
+import com.AdventureRPG.WorldPipeline.util.SubChunkCoordinateUtility;
 import com.AdventureRPG.core.engine.PipelineFrame;
 import com.AdventureRPG.core.util.mathematics.vectors.Vector2Int;
 import com.AdventureRPG.core.util.mathematics.vectors.Vector3;
@@ -11,8 +11,7 @@ import com.AdventureRPG.core.util.mathematics.vectors.Vector3;
 public class WorldPipeline extends PipelineFrame {
 
     // World System
-    public BlockSystem blockSystem;
-    public PackedCoordinate3Int packedCoordinate3Int;
+    public BlockManager blockSystem;
     public WorldGenerator worldGenerator;
     public WorldTick worldTick;
     public WorldReader worldReader;
@@ -29,8 +28,7 @@ public class WorldPipeline extends PipelineFrame {
     protected void create() {
 
         // World System
-        this.blockSystem = create(BlockSystem.class);
-        this.packedCoordinate3Int = create(PackedCoordinate3Int.class);
+        this.blockSystem = create(BlockManager.class);
         this.worldGenerator = create(WorldGenerator.class);
         this.worldTick = create(WorldTick.class);
         this.worldReader = create(WorldReader.class);

@@ -10,8 +10,8 @@ public class EngineSetting {
         public static final int MAX_CHUNK_LOADS_PER_TICK = 16384; // 120 frames per second
 
         // Path Settings
-        public static final String CALENDAR_JSON_PATH = "calendar.json"; // The location of the calendar json file
-        public static final String BLOCK_JSON_PATH = "blocks.json"; // The location of the blocks json file
+        public static final String CALENDAR_JSON_PATH = "util/calendar.json"; // The location of the calendar json file
+        public static final String BLOCK_JSON_PATH = "blocks/Blocks.json"; // The location of the blocks json file
         public static final String BLOCK_TEXTURE_PATH = "textures"; // The location of all block images
         public static final String BLOCK_TEXTURE_ALIAS_PATH = "textureAliases"; // Location of alias definitions
         public static final String BIOME_JSON_PATH = "biomes"; // Location of all biome files

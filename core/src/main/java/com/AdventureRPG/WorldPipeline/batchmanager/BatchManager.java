@@ -1,4 +1,4 @@
-package com.AdventureRPG.WorldPipeline.batchsystem;
+package com.AdventureRPG.WorldPipeline.batchmanager;
 
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.WorldPipeline.WorldTick;
@@ -9,7 +9,7 @@ import com.AdventureRPG.core.engine.settings.EngineSetting;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-public class BatchSystem extends ManagerPackage {
+public class BatchManager extends ManagerPackage {
 
     // Root
     private WorldPipeline worldPipeline;

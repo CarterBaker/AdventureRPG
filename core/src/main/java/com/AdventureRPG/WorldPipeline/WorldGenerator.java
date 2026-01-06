@@ -1,10 +1,10 @@
 package com.AdventureRPG.WorldPipeline;
 
 import com.AdventureRPG.WorldPipeline.blocks.Block;
-import com.AdventureRPG.WorldPipeline.blocks.BlockSystem;
+import com.AdventureRPG.WorldPipeline.blocks.BlockManager;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
 import com.AdventureRPG.WorldPipeline.subchunks.SubChunk;
-import com.AdventureRPG.WorldPipeline.util.PackedCoordinate3Int;
+import com.AdventureRPG.WorldPipeline.util.SubChunkCoordinateUtility;
 import com.AdventureRPG.core.engine.SystemPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.util.OpenSimplex2;
@@ -23,8 +23,7 @@ public class WorldGenerator extends SystemPackage {
     private int WORLD_HEIGHT;
 
     // World Manager
-    private PackedCoordinate3Int packedCoordinate3Int;
-    private BlockSystem blockSystem;
+    private BlockManager blockSystem;
 
     // Default Blocks
     private Block AIR_BLOCK; // TODO: With 2D chunk coordinates this is
@@ -52,8 +51,7 @@ public class WorldGenerator extends SystemPackage {
         this.worldPipeline = get(WorldPipeline.class);
 
         // World Manager
-        this.packedCoordinate3Int = get(PackedCoordinate3Int.class);
-        this.blockSystem = get(BlockSystem.class);
+        this.blockSystem = get(BlockManager.class);
 
         // Default Blocks
         this.AIR_BLOCK = blockSystem.getBlockByName("Air");
@@ -82,8 +80,8 @@ public class WorldGenerator extends SystemPackage {
         long offsetX = chunk.coordinateX * CHUNK_SIZE;
         long offsetZ = chunk.coordinateY * CHUNK_SIZE;
 
-        int biomeSize = packedCoordinate3Int.biomeSize;
-        int chunkSize = packedCoordinate3Int.chunkSize;
+        int biomeSize = SubChunkCoordinateUtility.BIOME_BOCK_COUNT;
+        int chunkSize = SubChunkCoordinateUtility.CHUNK_BLOCK_COUNT;
 
         // TODO: The first step of world generation will be to get the base biome
         WorldRegion WorldRegion = worldPipeline.worldReader.worldRegionFromPosition(chunk.coordinate);
@@ -102,11 +100,11 @@ public class WorldGenerator extends SystemPackage {
 
             for (int index = 0; index < biomeSize; index++) {
 
-                int xyz = packedCoordinate3Int.getPackedBiomeCoordinates(index);
+                int xyz = SubChunkCoordinateUtility.getPackedBiomeCoordinate(index);
 
-                int x = packedCoordinate3Int.unpackX(xyz);
-                int y = packedCoordinate3Int.unpackY(xyz);
-                int z = packedCoordinate3Int.unpackZ(xyz);
+                int x = SubChunkCoordinateUtility.unpackX(xyz);
+                int y = SubChunkCoordinateUtility.unpackY(xyz);
+                int z = SubChunkCoordinateUtility.unpackZ(xyz);
 
                 int convertedX = x * (CHUNK_SIZE / BIOME_SIZE);
                 int convertedY = y * (CHUNK_SIZE / BIOME_SIZE);
@@ -123,11 +121,11 @@ public class WorldGenerator extends SystemPackage {
 
             for (int index = 0; index < chunkSize; index++) {
 
-                int xyz = packedCoordinate3Int.getPackedBlockCoordinate(index);
+                int xyz = SubChunkCoordinateUtility.getPackedBlockCoordinate(index);
 
-                int localX = packedCoordinate3Int.unpackX(xyz);
-                int localY = packedCoordinate3Int.unpackY(xyz);
-                int localZ = packedCoordinate3Int.unpackZ(xyz);
+                int localX = SubChunkCoordinateUtility.unpackX(xyz);
+                int localY = SubChunkCoordinateUtility.unpackY(xyz);
+                int localZ = SubChunkCoordinateUtility.unpackZ(xyz);
 
                 long worldX = localX + offsetX;
                 long worldY = localY + offsetY;

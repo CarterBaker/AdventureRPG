@@ -2,6 +2,7 @@ package com.AdventureRPG.WorldPipeline.blocks;
 
 import java.util.List;
 
+import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
 import com.AdventureRPG.core.shaderpipeline.texturemanager.TextureManager;
 import com.badlogic.gdx.Gdx;
@@ -16,7 +17,7 @@ public class Loader {
             TextureManager textureManager,
             MaterialManager materialManager) {
 
-        FileHandle file = Gdx.files.internal("blocks.json");
+        FileHandle file = Gdx.files.internal(EngineSetting.BLOCK_JSON_PATH);
         String json = file.readString("UTF-8");
 
         List<Builder> builders = gson.fromJson(json, new TypeToken<List<Builder>>() {

@@ -2,7 +2,7 @@ package com.AdventureRPG.WorldPipeline.queuesystem;
 
 import com.AdventureRPG.WorldPipeline.WorldPipeline;
 import com.AdventureRPG.WorldPipeline.WorldTick;
-import com.AdventureRPG.WorldPipeline.batchsystem.BatchSystem;
+import com.AdventureRPG.WorldPipeline.batchmanager.BatchManager;
 import com.AdventureRPG.WorldPipeline.chunks.Chunk;
 import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
@@ -22,7 +22,7 @@ public class QueueSystem extends ManagerPackage {
     private WorldTick worldTick;
     private Grid grid;
     private Loader loader;
-    private BatchSystem batchSystem;
+    private BatchManager batchSystem;
 
     // Settings
     private int MAX_CHUNK_LOADS_PER_FRAME;
@@ -53,7 +53,7 @@ public class QueueSystem extends ManagerPackage {
         // Root
         this.grid = create(Grid.class);
         this.loader = create(Loader.class);
-        this.batchSystem = create(BatchSystem.class);
+        this.batchSystem = create(BatchManager.class);
 
         // Settings
         this.MAX_CHUNK_LOADS_PER_FRAME = EngineSetting.MAX_CHUNK_LOADS_PER_FRAME;

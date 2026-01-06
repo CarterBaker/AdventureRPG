@@ -1,14 +1,10 @@
 package com.AdventureRPG.WorldPipeline.blocks;
 
-import com.AdventureRPG.core.engine.SystemPackage;
+import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
 import com.AdventureRPG.core.shaderpipeline.texturemanager.TextureManager;
-import com.google.gson.Gson;
 
-public class BlockSystem extends SystemPackage {
-
-    // Root
-    private Gson gson;
+public class BlockManager extends ManagerPackage {
 
     // Block System
     private Block[] blocks;
@@ -17,9 +13,6 @@ public class BlockSystem extends SystemPackage {
 
     @Override
     protected void get() {
-
-        // Root
-        this.gson = internal.gson;
 
         // Block System
         TextureManager textureManager = get(TextureManager.class);
