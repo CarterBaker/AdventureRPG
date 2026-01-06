@@ -3,7 +3,6 @@ package com.AdventureRPG.core.geometrypipeline.modelmanager;
 import com.AdventureRPG.core.engine.DataPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOHandle;
-import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 import com.AdventureRPG.core.geometrypipeline.vbomanager.VBOHandle;
 

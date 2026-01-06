@@ -1,7 +1,6 @@
 package com.AdventureRPG.core.shaderpipeline.materialmanager;
 
 import com.AdventureRPG.core.engine.ManagerPackage;
-import com.AdventureRPG.core.shaderpipeline.materials.Material;
 import com.AdventureRPG.core.shaderpipeline.shadermanager.ShaderManager;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
 
@@ -16,7 +15,7 @@ public class MaterialManager extends ManagerPackage {
 
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> materialName2MaterialID;
-    private Int2ObjectOpenHashMap<Material> materialID2Material;
+    private Int2ObjectOpenHashMap<MaterialHandle> materialID2Material;
 
     // Base \\
 
@@ -54,18 +53,18 @@ public class MaterialManager extends ManagerPackage {
         internalLoadManager.loadMaterials();
     }
 
-    void addMaterial(Material material) {
-        materialName2MaterialID.put(material.materialName, material.materialID);
-        materialID2Material.put(material.materialID, material);
+    void addMaterial(MaterialHandle material) {
+        materialName2MaterialID.put(material.getMaterialName(), material.getMaterialID());
+        materialID2Material.put(material.getMaterialID(), material);
     }
 
     // Accessible \\
 
     public void bindShaderToUBO(
-            Material material,
+            MaterialHandle material,
             UBOHandle ubo) {
         shaderManager.bindShaderToUBO(
-                material.shader,
+                material.getShaderHandle(),
                 ubo);
     }
 
@@ -73,7 +72,7 @@ public class MaterialManager extends ManagerPackage {
         return materialName2MaterialID.getInt(materialName);
     }
 
-    public Material getMaterialFromMaterialID(int materialID) {
+    public MaterialHandle getMaterialFromMaterialID(int materialID) {
         return materialID2Material.get(materialID);
     }
 }

@@ -2,7 +2,6 @@
 in vec2 a_position;
 out vec3 v_dir;
 out vec2 v_screenPos;
-
 #include "includes/CameraData.glsl"
 
 void main() {
@@ -11,10 +10,11 @@ void main() {
     v_screenPos = a_position;
 
     // Unproject from clip space to view space
+    // Use far plane (z = 1.0 in clip space maps to far plane)
     vec4 viewPos = u_inverseProjection * vec4(a_position, 1.0, 1.0);
     viewPos.xyz /= viewPos.w;
 
     // Transform view direction to world space
-    // v_dir = normalize(mat3(u_inverseView) * viewPos.xyz); AI tried this already
-    v_dir = normalize((u_inverseView * vec4(viewPos.xyz, 0.0)).xyz);
+    // Use w=0.0 because we only want the direction, not position
+    v_dir = (u_inverseView * vec4(viewPos.xyz, 0.0)).xyz;
 }

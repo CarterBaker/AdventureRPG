@@ -69,7 +69,7 @@ public class CameraInstance extends InstancePackage {
         float pitch = (float) Math.asin(-perspectiveCamera.direction.y);
 
         // Apply rotation deltas
-        yaw += Math.toRadians(input.x);
+        yaw -= Math.toRadians(input.x);
         pitch += Math.toRadians(input.y);
 
         // Clamp pitch to prevent looking directly up/down (gimbal lock)

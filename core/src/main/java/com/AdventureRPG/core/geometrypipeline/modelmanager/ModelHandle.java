@@ -1,7 +1,7 @@
-package com.AdventureRPG.core.geometrypipeline.Models;
+package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
 import com.AdventureRPG.core.engine.HandlePackage;
-import com.AdventureRPG.core.shaderpipeline.materials.Material;
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialHandle;
 
 public class ModelHandle extends HandlePackage {
 
@@ -15,7 +15,7 @@ public class ModelHandle extends HandlePackage {
     private int iboHandle;
     private int indexCount;
 
-    private Material material;
+    private MaterialHandle material;
 
     // Internal \\
 
@@ -29,7 +29,7 @@ public class ModelHandle extends HandlePackage {
             int iboHandle,
             int indexCount,
 
-            Material material) {
+            MaterialHandle material) {
 
         // Internal
         this.vaoHandle = vaoHandle;
@@ -74,7 +74,7 @@ public class ModelHandle extends HandlePackage {
     }
 
     // Material
-    public Material getMaterial() {
+    public MaterialHandle getMaterial() {
         return material;
     }
 }

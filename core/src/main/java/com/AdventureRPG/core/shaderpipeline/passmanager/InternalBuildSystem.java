@@ -3,11 +3,10 @@ package com.AdventureRPG.core.shaderpipeline.passmanager;
 import java.io.File;
 
 import com.AdventureRPG.core.engine.SystemPackage;
-import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
+import com.AdventureRPG.core.geometrypipeline.modelmanager.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialHandle;
 import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
-import com.AdventureRPG.core.shaderpipeline.materials.Material;
-import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPassHandle;
 import com.AdventureRPG.core.util.FileUtility;
 import com.AdventureRPG.core.util.JsonUtility;
 import com.google.gson.JsonObject;
@@ -38,13 +37,13 @@ class InternalBuildSystem extends SystemPackage {
         this.processingTriangle = modelManager.getMeshHandleFromMeshHandleID(meshID);
     }
 
-    ProcessingPassHandle buildPass(File root, File file, int passID) {
+    PassHandle buildPass(File root, File file, int passID) {
 
         String passName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
         JsonObject json = JsonUtility.loadJsonObject(file);
-        Material material = materialManager.getMaterialFromMaterialID(getPassID(json));
+        MaterialHandle material = materialManager.getMaterialFromMaterialID(getPassID(json));
 
-        ProcessingPassHandle processingPassHandle = create(ProcessingPassHandle.class);
+        PassHandle processingPassHandle = create(PassHandle.class);
         processingPassHandle.constructor(
                 passName,
                 passID,

@@ -1,10 +1,8 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
 import com.AdventureRPG.core.engine.SystemPackage;
-import com.AdventureRPG.core.geometrypipeline.Models.ModelHandle;
-import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialHandle;
 import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
-import com.AdventureRPG.core.shaderpipeline.materials.Material;
 
 import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -94,7 +92,7 @@ class ModelBatchSystem extends SystemPackage {
                 meshIDCollection.add(meshID);
 
                 MeshHandle meshHandle = meshData.meshHandle;
-                Material material = materialManager.getMaterialFromMaterialID(materialID);
+                MaterialHandle material = materialManager.getMaterialFromMaterialID(materialID);
 
                 ModelHandle modelHandle = create(ModelHandle.class);
                 modelHandle.constructor(

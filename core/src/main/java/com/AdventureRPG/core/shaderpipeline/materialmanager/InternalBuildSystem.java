@@ -3,9 +3,8 @@ package com.AdventureRPG.core.shaderpipeline.materialmanager;
 import java.io.File;
 
 import com.AdventureRPG.core.engine.SystemPackage;
-import com.AdventureRPG.core.shaderpipeline.materials.Material;
+import com.AdventureRPG.core.shaderpipeline.shadermanager.ShaderHandle;
 import com.AdventureRPG.core.shaderpipeline.shadermanager.ShaderManager;
-import com.AdventureRPG.core.shaderpipeline.shaders.Shader;
 import com.AdventureRPG.core.shaderpipeline.texturemanager.TextureManager;
 import com.AdventureRPG.core.shaderpipeline.uniforms.Uniform;
 import com.AdventureRPG.core.shaderpipeline.uniforms.UniformAttribute;
@@ -36,26 +35,30 @@ class InternalBuildSystem extends SystemPackage {
 
     // Material Management \\
 
-    Material buildMaterial(File root, File file, int materialID) {
+    MaterialHandle buildMaterial(File root, File file, int materialID) {
 
         String materialName = FileUtility.getPathWithFileNameWithoutExtension(root, file); // Gets "fullscreen/Sky"
 
         JsonObject json = JsonUtility.loadJsonObject(file);
         int shaderID = getShaderID(json);
 
-        Shader shader = shaderManager.getShaderFromShaderID(shaderID);
+        ShaderHandle shader = shaderManager.getShaderFromShaderID(shaderID);
         Object2ObjectOpenHashMap<String, Uniform<?>> uniforms = shader.getUniforms();
 
         updateUniforms(
                 json,
                 uniforms);
 
-        return new Material(
+        MaterialHandle materialHandle = create(MaterialHandle.class);
+
+        materialHandle.constructor(
                 materialName,
                 materialID,
                 shader,
                 shader.getBuffers(),
                 uniforms);
+
+        return materialHandle;
     }
 
     private int getShaderID(JsonObject json) {

@@ -1,7 +1,6 @@
 package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
 import com.AdventureRPG.core.engine.ManagerPackage;
-import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;

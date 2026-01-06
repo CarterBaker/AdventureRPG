@@ -1,25 +1,26 @@
-package com.AdventureRPG.core.shaderpipeline.materials;
+package com.AdventureRPG.core.shaderpipeline.materialmanager;
 
-import com.AdventureRPG.core.shaderpipeline.shaders.Shader;
+import com.AdventureRPG.core.engine.HandlePackage;
+import com.AdventureRPG.core.shaderpipeline.shadermanager.ShaderHandle;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
 import com.AdventureRPG.core.shaderpipeline.uniforms.Uniform;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-public class Material {
+public class MaterialHandle extends HandlePackage {
 
     // Internal
-    public final String materialName;
-    public final int materialID;
+    private String materialName;
+    private int materialID;
 
-    public final Shader shader;
-    private final Object2ObjectOpenHashMap<String, UBOHandle> buffers;
+    private ShaderHandle shaderHandle;
+    private Object2ObjectOpenHashMap<String, UBOHandle> buffers;
     private Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
 
-    public Material(
+    public void constructor(
             String materialName,
             int materialID,
-            Shader shader,
+            ShaderHandle shaderHandle,
             Object2ObjectOpenHashMap<String, UBOHandle> buffers,
             Object2ObjectOpenHashMap<String, Uniform<?>> uniforms) {
 
@@ -27,12 +28,24 @@ public class Material {
         this.materialName = materialName;
         this.materialID = materialID;
 
-        this.shader = shader;
+        this.shaderHandle = shaderHandle;
         this.buffers = buffers;
         this.uniforms = uniforms;
     }
 
     // Accessible \\
+
+    public String getMaterialName() {
+        return materialName;
+    }
+
+    public int getMaterialID() {
+        return materialID;
+    }
+
+    public ShaderHandle getShaderHandle() {
+        return shaderHandle;
+    }
 
     public UBOHandle getUBO(String ubo) {
         return buffers.get(ubo);

@@ -5,7 +5,6 @@ import java.io.File;
 import com.AdventureRPG.core.engine.SystemPackage;
 import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOHandle;
 import com.AdventureRPG.core.geometrypipeline.ibomanager.IBOManager;
-import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOHandle;
 import com.AdventureRPG.core.geometrypipeline.vaomanager.VAOManager;
 import com.AdventureRPG.core.geometrypipeline.vbomanager.VBOHandle;

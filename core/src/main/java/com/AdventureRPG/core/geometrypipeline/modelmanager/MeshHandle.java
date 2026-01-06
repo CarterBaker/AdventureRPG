@@ -1,4 +1,4 @@
-package com.AdventureRPG.core.geometrypipeline.mesh;
+package com.AdventureRPG.core.geometrypipeline.modelmanager;
 
 import com.AdventureRPG.core.engine.HandlePackage;
 

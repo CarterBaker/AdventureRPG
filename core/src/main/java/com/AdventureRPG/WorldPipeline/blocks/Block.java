@@ -1,7 +1,7 @@
 package com.AdventureRPG.WorldPipeline.blocks;
 
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialHandle;
 import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialManager;
-import com.AdventureRPG.core.shaderpipeline.materials.Material;
 import com.AdventureRPG.core.shaderpipeline.texturemanager.TextureManager;
 import com.AdventureRPG.core.shaderpipeline.texturemanager.UVRect;
 import com.AdventureRPG.core.util.mathematics.Extras.Direction3Int;
@@ -31,12 +31,12 @@ public class Block {
     public final int upMat, northMat, southMat, eastMat, westMat, downMat;
 
     // Cached Material (pre-fetched, avoids runtime lookups)
-    public final Material upMaterialData;
-    public final Material northMaterialData;
-    public final Material southMaterialData;
-    public final Material eastMaterialData;
-    public final Material westMaterialData;
-    public final Material downMaterialData;
+    public final MaterialHandle upMaterialData;
+    public final MaterialHandle northMaterialData;
+    public final MaterialHandle southMaterialData;
+    public final MaterialHandle eastMaterialData;
+    public final MaterialHandle westMaterialData;
+    public final MaterialHandle downMaterialData;
 
     public final Type type;
 
@@ -169,7 +169,7 @@ public class Block {
         };
     }
 
-    public Material getMaterialDataForSide(Direction3Int side) {
+    public MaterialHandle getMaterialDataForSide(Direction3Int side) {
 
         return switch (side) {
             case UP -> upMaterialData;

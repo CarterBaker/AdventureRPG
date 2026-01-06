@@ -2,11 +2,11 @@ package com.AdventureRPG.core.renderpipeline.rendersystem;
 
 import com.AdventureRPG.core.engine.SystemPackage;
 import com.AdventureRPG.core.engine.WindowInstance;
-import com.AdventureRPG.core.geometrypipeline.Models.ModelHandle;
+import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelHandle;
 import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelManager;
-import com.AdventureRPG.core.shaderpipeline.materials.Material;
-import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPassHandle;
-import com.AdventureRPG.core.shaderpipeline.shaders.Shader;
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialHandle;
+import com.AdventureRPG.core.shaderpipeline.passmanager.PassHandle;
+import com.AdventureRPG.core.shaderpipeline.shadermanager.ShaderHandle;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -18,7 +18,7 @@ public class RenderSystem extends SystemPackage {
     private WindowInstance windowInstance;
 
     // Render Queue: depth -> ordered list of passes
-    private Int2ObjectOpenHashMap<ObjectArrayList<ProcessingPassHandle>> depth2PassList;
+    private Int2ObjectOpenHashMap<ObjectArrayList<PassHandle>> depth2PassList;
 
     // Base \\
 
@@ -62,10 +62,10 @@ public class RenderSystem extends SystemPackage {
                 modelManager.draw();
             } else {
                 // Draw processing passes at this depth
-                ObjectArrayList<ProcessingPassHandle> passList = depth2PassList.get(depth);
+                ObjectArrayList<PassHandle> passList = depth2PassList.get(depth);
 
                 if (passList != null) {
-                    for (ProcessingPassHandle pass : passList) {
+                    for (PassHandle pass : passList) {
                         drawProcessingPass(pass);
                     }
                 }
@@ -78,17 +78,17 @@ public class RenderSystem extends SystemPackage {
         }
     }
 
-    private void drawProcessingPass(ProcessingPassHandle pass) {
+    private void drawProcessingPass(PassHandle pass) {
 
         ModelHandle modelHandle = pass.getModelHandle();
-        Material material = pass.getMaterial();
-        Shader shader = material.shader;
+        MaterialHandle material = pass.getMaterial();
+        ShaderHandle shaderHandle = material.getShaderHandle();
 
         // Disable depth testing for full-screen passes
         GLSLUtility.disableDepth();
 
         // Bind shader
-        GLSLUtility.useShader(shader.shaderHandle);
+        GLSLUtility.useShader(shaderHandle.getShaderHandle());
 
         // Bind VAO
         GLSLUtility.bindVAO(modelHandle.getVaoHandle());
@@ -105,17 +105,17 @@ public class RenderSystem extends SystemPackage {
 
     // Accessible \\
 
-    public void pushPass(ProcessingPassHandle pass, int depth) {
+    public void pushPass(PassHandle pass, int depth) {
 
-        ObjectArrayList<ProcessingPassHandle> passList = depth2PassList.computeIfAbsent(
+        ObjectArrayList<PassHandle> passList = depth2PassList.computeIfAbsent(
                 depth,
                 k -> new ObjectArrayList<>());
 
         passList.add(pass);
     }
 
-    public void pullPass(ProcessingPassHandle pass, int depth) {
-        ObjectArrayList<ProcessingPassHandle> passList = depth2PassList.get(depth);
+    public void pullPass(PassHandle pass, int depth) {
+        ObjectArrayList<PassHandle> passList = depth2PassList.get(depth);
 
         if (passList == null)
             return;
@@ -127,13 +127,13 @@ public class RenderSystem extends SystemPackage {
             depth2PassList.remove(depth);
     }
 
-    public void pullPass(ProcessingPassHandle pass) {
+    public void pullPass(PassHandle pass) {
         // Search all depths for this pass
         var iterator = depth2PassList.int2ObjectEntrySet().fastIterator();
 
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            ObjectArrayList<ProcessingPassHandle> passList = entry.getValue();
+            ObjectArrayList<PassHandle> passList = entry.getValue();
 
             if (passList.remove(pass)) {
                 // Clean up empty depth levels

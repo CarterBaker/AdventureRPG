@@ -2,7 +2,6 @@ package com.AdventureRPG.core.shaderpipeline.passmanager;
 
 import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.renderpipeline.rendersystem.RenderSystem;
-import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPassHandle;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -15,7 +14,7 @@ public class PassManager extends ManagerPackage {
 
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> passName2PassID;
-    private Int2ObjectOpenHashMap<ProcessingPassHandle> passID2Pass;
+    private Int2ObjectOpenHashMap<PassHandle> passID2Pass;
 
     // Base \\
 
@@ -49,11 +48,11 @@ public class PassManager extends ManagerPackage {
 
     // Render Management \\
 
-    public void pushPass(ProcessingPassHandle pass, int depth) {
+    public void pushPass(PassHandle pass, int depth) {
         renderSystem.pushPass(pass, depth);
     }
 
-    public void pullPass(ProcessingPassHandle processingPass) {
+    public void pullPass(PassHandle processingPass) {
         renderSystem.pullPass(processingPass);
     }
 
@@ -63,7 +62,7 @@ public class PassManager extends ManagerPackage {
         internalLoadManager.loadPasses();
     }
 
-    void addPass(ProcessingPassHandle pass) {
+    void addPass(PassHandle pass) {
         passName2PassID.put(pass.getPassName(), pass.getPassID());
         passID2Pass.put(pass.getPassID(), pass);
     }
@@ -74,7 +73,7 @@ public class PassManager extends ManagerPackage {
         return passName2PassID.getInt(passName);
     }
 
-    public ProcessingPassHandle getPassFromPassID(int passID) {
+    public PassHandle getPassFromPassID(int passID) {
         return passID2Pass.get(passID);
     }
 }

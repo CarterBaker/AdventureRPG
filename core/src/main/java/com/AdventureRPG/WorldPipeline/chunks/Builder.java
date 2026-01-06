@@ -12,7 +12,7 @@ import com.AdventureRPG.WorldPipeline.subchunks.SubChunk;
 import com.AdventureRPG.WorldPipeline.subchunks.SubChunkMeshData;
 import com.AdventureRPG.WorldPipeline.util.PackedCoordinate3Int;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
-import com.AdventureRPG.core.shaderpipeline.materials.Material;
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialHandle;
 import com.AdventureRPG.core.shaderpipeline.texturemanager.UVRect;
 import com.AdventureRPG.core.util.mathematics.Extras.Direction2Int;
 import com.AdventureRPG.core.util.mathematics.Extras.Direction3Int;
@@ -478,7 +478,7 @@ public class Builder {
         int color2 = getVertColor(subChunk, subChunkIndex, vert2X, vert2Y, vert2Z);
         int color3 = getVertColor(subChunk, subChunkIndex, vert3X, vert3Y, vert3Z);
 
-        int materialDataID = blockSystem.getBlockByID(blockID).getMaterialDataForSide(direction).materialID;
+        int materialDataID = blockSystem.getBlockByID(blockID).getMaterialDataForSide(direction).getMaterialID();
 
         packQuad(
                 xyz,
@@ -719,8 +719,8 @@ public class Builder {
             // Block data
             Block block = blockSystem.getBlockByID(blockID);
             UVRect uv = block.getUVForSide(direction);
-            Material materialData = block.getMaterialDataForSide(direction);
-            int matId = materialData.materialID;
+            MaterialHandle materialData = block.getMaterialDataForSide(direction);
+            int matId = materialData.getMaterialID();
 
             // Colors
             Color.rgba8888ToColor(tmpColor, color0);

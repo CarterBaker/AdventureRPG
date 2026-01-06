@@ -7,7 +7,6 @@ import java.nio.file.Path;
 
 import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
-import com.AdventureRPG.core.shaderpipeline.materials.Material;
 import com.AdventureRPG.core.util.FileUtility;
 
 class InternalLoadManager extends ManagerPackage {
@@ -75,7 +74,7 @@ class InternalLoadManager extends ManagerPackage {
             compileMaterial(internalBuildSystem.buildMaterial(root, file, materialCount++));
     }
 
-    private void compileMaterial(Material material) {
+    private void compileMaterial(MaterialHandle material) {
         materialManager.addMaterial(material);
     }
 }

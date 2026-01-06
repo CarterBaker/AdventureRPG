@@ -1,21 +1,22 @@
-package com.AdventureRPG.core.shaderpipeline.shaders;
+package com.AdventureRPG.core.shaderpipeline.shadermanager;
 
+import com.AdventureRPG.core.engine.HandlePackage;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
 import com.AdventureRPG.core.shaderpipeline.uniforms.Uniform;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-public class Shader {
+public class ShaderHandle extends HandlePackage {
 
     // Internal
-    public final String shaderName;
-    public final int shaderID;
-    public final int shaderHandle;
+    private String shaderName;
+    private int shaderID;
+    private int shaderHandle;
 
-    private final Object2ObjectOpenHashMap<String, UBOHandle> buffers;
-    private final Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
+    private Object2ObjectOpenHashMap<String, UBOHandle> buffers;
+    private Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
 
-    public Shader(
+    public void constructor(
             String shaderName,
             int shaderID,
             int shaderHandle) {
@@ -39,6 +40,20 @@ public class Shader {
     // Uniforms
     public void addUniform(String uniformName, Uniform<?> uniform) {
         uniforms.put(uniformName, uniform);
+    }
+
+    // Accessible \\
+
+    public String getShaderName() {
+        return shaderName;
+    }
+
+    public int getShaderID() {
+        return shaderID;
+    }
+
+    public int getShaderHandle() {
+        return shaderHandle;
     }
 
     public Object2ObjectOpenHashMap<String, UBOHandle> getBuffers() {

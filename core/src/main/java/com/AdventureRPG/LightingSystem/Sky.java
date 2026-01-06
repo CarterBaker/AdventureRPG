@@ -2,7 +2,7 @@ package com.AdventureRPG.lightingsystem;
 
 import com.AdventureRPG.core.engine.SystemPackage;
 import com.AdventureRPG.core.shaderpipeline.passmanager.PassManager;
-import com.AdventureRPG.core.shaderpipeline.processingpass.ProcessingPassHandle;
+import com.AdventureRPG.core.shaderpipeline.passmanager.PassHandle;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
 
 public class Sky extends SystemPackage {
@@ -12,7 +12,7 @@ public class Sky extends SystemPackage {
 
     // Shader
     private int skyPassID;
-    private ProcessingPassHandle skyPass;
+    private PassHandle skyPass;
     private UBOHandle timeUBO;
 
     // Base \\
@@ -32,7 +32,7 @@ public class Sky extends SystemPackage {
         passmanager.pushPass(skyPass, -10);
 
         int debugID = passmanager.getPassIDFromPassName("DebugCameraOrientation");
-        ProcessingPassHandle debugPass = passmanager.getPassFromPassID(debugID);
+        PassHandle debugPass = passmanager.getPassFromPassID(debugID);
         passmanager.pushPass(debugPass, 10);
     }
 

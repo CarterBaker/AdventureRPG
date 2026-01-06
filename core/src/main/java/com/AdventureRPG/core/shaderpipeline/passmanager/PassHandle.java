@@ -1,25 +1,25 @@
-package com.AdventureRPG.core.shaderpipeline.processingpass;
+package com.AdventureRPG.core.shaderpipeline.passmanager;
 
 import com.AdventureRPG.core.engine.HandlePackage;
-import com.AdventureRPG.core.geometrypipeline.Models.ModelHandle;
-import com.AdventureRPG.core.geometrypipeline.mesh.MeshHandle;
-import com.AdventureRPG.core.shaderpipeline.materials.Material;
+import com.AdventureRPG.core.geometrypipeline.modelmanager.MeshHandle;
+import com.AdventureRPG.core.geometrypipeline.modelmanager.ModelHandle;
+import com.AdventureRPG.core.shaderpipeline.materialmanager.MaterialHandle;
 
-public class ProcessingPassHandle extends HandlePackage {
+public class PassHandle extends HandlePackage {
 
     // Internal
     private String passName;
     private int passID;
 
     private ModelHandle modelHandle;
-    private Material material;
+    private MaterialHandle material;
 
     // Internal \\
 
     public void constructor(
             String passName,
             int passID,
-            Material material,
+            MaterialHandle material,
             MeshHandle processingTriangle) {
 
         // Internal
@@ -52,7 +52,7 @@ public class ProcessingPassHandle extends HandlePackage {
         return modelHandle;
     }
 
-    public Material getMaterial() {
+    public MaterialHandle getMaterial() {
         return material;
     }
 }

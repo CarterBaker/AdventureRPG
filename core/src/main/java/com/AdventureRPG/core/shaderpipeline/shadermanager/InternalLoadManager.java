@@ -7,7 +7,6 @@ import java.nio.file.Path;
 
 import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
-import com.AdventureRPG.core.shaderpipeline.shaders.Shader;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOData;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOManager;
@@ -73,7 +72,7 @@ class InternalLoadManager extends ManagerPackage {
         this.internalBuildSystem = release(InternalBuildSystem.class);
     }
 
-    // Shader Management \\
+    // ShaderHandle Management \\
 
     void loadShaders() {
 
@@ -88,7 +87,7 @@ class InternalLoadManager extends ManagerPackage {
     private void loadAllFiles() {
 
         if (!root.exists() || !root.isDirectory())
-            throwException("Shader directory not found: " + root.getAbsolutePath());
+            throwException("ShaderHandle directory not found: " + root.getAbsolutePath());
 
         Path base = root.toPath();
 
@@ -126,7 +125,7 @@ class InternalLoadManager extends ManagerPackage {
 
         if (shaderType == null)
             throwException(
-                    "Shader: " + file.getName() + ", Has an unrecognized extension");
+                    "ShaderHandle: " + file.getName() + ", Has an unrecognized extension");
 
         ShaderData shaderDataInstance = create(ShaderData.class);
         shaderDataInstance.constructor(
@@ -156,14 +155,16 @@ class InternalLoadManager extends ManagerPackage {
                             internalBuildSystem.compileShader(jsonFiles.get(i))));
     }
 
-    // Shader
-    private Shader assembleShader(ShaderDefinitionData shaderDefinition) {
+    // ShaderHandle
+    private ShaderHandle assembleShader(ShaderDefinitionData shaderDefinition) {
 
         String shaderName = shaderDefinition.getShaderName();
         int shaderID = shaderCount++;
         int shaderHandle = GLSLUtility.createShaderProgram(shaderDefinition);
 
-        Shader shader = new Shader(
+        ShaderHandle shader = create(ShaderHandle.class);
+
+        shader.constructor(
                 shaderName,
                 shaderID,
                 shaderHandle);
@@ -181,7 +182,7 @@ class InternalLoadManager extends ManagerPackage {
 
     // Buffers
     private void assembleBuffers(
-            Shader shader,
+            ShaderHandle shader,
             ShaderDefinitionData shaderDefinition) {
 
         addBuffersFromShaderData(
@@ -200,7 +201,7 @@ class InternalLoadManager extends ManagerPackage {
 
     private void addBuffersFromShaderData(
             ShaderData shaderData,
-            Shader shader) {
+            ShaderHandle shader) {
 
         ObjectArrayList<UBOData> bufferBlocks = shaderData.getBufferBlocks();
 
@@ -210,7 +211,7 @@ class InternalLoadManager extends ManagerPackage {
 
     private void addBufferFromBufferData(
             UBOData bufferData,
-            Shader shader) {
+            ShaderHandle shader) {
 
         UBOHandle ubo = uboManager.buildBuffer(bufferData);
 
@@ -225,7 +226,7 @@ class InternalLoadManager extends ManagerPackage {
 
     // Uniforms
     private void assembleUniforms(
-            Shader shader,
+            ShaderHandle shader,
             ShaderDefinitionData shaderDefinition) {
 
         addUniformsFromShaderData(
@@ -244,7 +245,7 @@ class InternalLoadManager extends ManagerPackage {
 
     private void addUniformsFromShaderData(
             ShaderData shaderData,
-            Shader shader) {
+            ShaderHandle shader) {
 
         ObjectArrayList<UniformData> uniforms = shaderData.getUniforms();
 
@@ -254,11 +255,11 @@ class InternalLoadManager extends ManagerPackage {
 
     private void addUniformFromUniformData(
             UniformData uniformData,
-            Shader shader) {
+            ShaderHandle shader) {
 
         UniformAttribute<?> uniformAttribute = createUniformAttribute(uniformData);
         Uniform<?> uniform = new Uniform<>(
-                GLSLUtility.getUniformHandle(shader.shaderHandle, uniformData.getUniformName()),
+                GLSLUtility.getUniformHandle(shader.getShaderHandle(), uniformData.getUniformName()),
                 uniformAttribute);
 
         shader.addUniform(uniformData.getUniformName(), uniform);
@@ -326,7 +327,7 @@ class InternalLoadManager extends ManagerPackage {
         }
 
         return throwException(
-                "Shader data for key: " + key + ", Could not be found");
+                "ShaderHandle data for key: " + key + ", Could not be found");
     }
 
 }

@@ -69,6 +69,13 @@ public class GameEngine extends EnginePackage {
     }
 
     @Override
+    protected void release() {
+
+        // Internal
+        this.geometryPipeline = release(GeometryPipeline.class);
+    }
+
+    @Override
     void draw() {
         this.renderPipeline.draw();
     }
