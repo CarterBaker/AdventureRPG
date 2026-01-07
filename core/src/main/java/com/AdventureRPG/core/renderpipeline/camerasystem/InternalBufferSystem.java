@@ -24,7 +24,7 @@ class InternalBufferSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        CameraInstance mainCam = this.cameraManager.mainCamera();
+        CameraInstance mainCam = this.cameraManager.getMainCamera();
 
         if (mainCam == null)
             return;

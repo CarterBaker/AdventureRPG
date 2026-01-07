@@ -136,6 +136,29 @@ public class Vector3 {
         return divide(other.x, other.y, other.z);
     }
 
+    // Normalization \\
+
+    public float length() {
+        return (float) Math.sqrt(x * x + y * y + z * z);
+    }
+
+    public float lengthSquared() {
+        return x * x + y * y + z * z;
+    }
+
+    public Vector3 normalize() {
+        float len = length();
+
+        if (len == 0)
+            return this;
+
+        this.x /= len;
+        this.y /= len;
+        this.z /= len;
+
+        return this;
+    }
+
     // Direction Mapping \\
 
     public Vector3 up() {

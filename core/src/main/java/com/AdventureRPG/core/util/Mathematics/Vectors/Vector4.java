@@ -140,6 +140,30 @@ public class Vector4 {
         return divide(other.x, other.y, other.z, other.w);
     }
 
+    // Normalization \\
+
+    public float length() {
+        return (float) Math.sqrt(x * x + y * y + z * z + w * w);
+    }
+
+    public float lengthSquared() {
+        return x * x + y * y + z * z + w * w;
+    }
+
+    public Vector4 normalize() {
+        float len = length();
+
+        if (len == 0)
+            return this;
+
+        this.x /= len;
+        this.y /= len;
+        this.z /= len;
+        this.w /= len;
+
+        return this;
+    }
+
     // Utility \\
 
     public boolean hasValues() {

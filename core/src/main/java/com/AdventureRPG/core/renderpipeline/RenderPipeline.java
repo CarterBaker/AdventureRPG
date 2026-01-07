@@ -1,10 +1,10 @@
 package com.AdventureRPG.core.renderpipeline;
 
-import com.AdventureRPG.core.engine.PipelineFrame;
+import com.AdventureRPG.core.engine.PipelinePackage;
 import com.AdventureRPG.core.renderpipeline.camerasystem.CameraManager;
 import com.AdventureRPG.core.renderpipeline.rendersystem.RenderSystem;
 
-public class RenderPipeline extends PipelineFrame {
+public class RenderPipeline extends PipelinePackage {
 
     // Render Pipeline
     private CameraManager cameraManager;

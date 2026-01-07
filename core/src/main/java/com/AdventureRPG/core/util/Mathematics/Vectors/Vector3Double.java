@@ -126,6 +126,29 @@ public class Vector3Double {
         return divide(other.x, other.y, other.z);
     }
 
+    // Normalization \\
+
+    public double length() {
+        return Math.sqrt(x * x + y * y + z * z);
+    }
+
+    public double lengthSquared() {
+        return x * x + y * y + z * z;
+    }
+
+    public Vector3Double normalize() {
+        double len = length();
+
+        if (len == 0)
+            return this;
+
+        this.x /= len;
+        this.y /= len;
+        this.z /= len;
+
+        return this;
+    }
+
     // Direction Mapping \\
 
     public Vector3Double up() {

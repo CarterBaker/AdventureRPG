@@ -38,7 +38,7 @@ public abstract class InstancePackage extends EngineUtility {
         this.internal = creationData.internal;
         this.owner = creationData.owner;
 
-        this.systemContext = SystemContext.CREATE;
+        this.systemContext = SystemContext.NULL;
     }
 
     static final class CreationStruct extends StructPackage {
@@ -97,36 +97,60 @@ public abstract class InstancePackage extends EngineUtility {
     // System Registry \\
 
     protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
+
         return internal.createInstance(instanceClass);
     }
 
     // System Retrieval \\
 
     @SuppressWarnings("unchecked")
-    protected final <T> T get(Class<T> type) {
+    protected final <T> T get(Class<T> instanceClass) {
 
         if (this.systemContext != SystemContext.GET)
             throwException(
                     "Get called outside GET phase.\n" +
-                            "Requested: " + type.getSimpleName() + "\n" +
+                            "Requested: " + instanceClass.getSimpleName() + "\n" +
                             "Current process: " + getContext());
 
-        return internal.get(true, type);
+        return internal.get(true, instanceClass);
+    }
+
+    // Create \\
+
+    void internalCreate() {
+
+        if (!this.verifyProcess(SystemContext.CREATE))
+            return;
+
+        this.create();
+    }
+
+    protected void create() {
     }
 
     // Get \\
 
-    protected void internalGet() {
+    void internalGet() {
 
         if (!this.verifyProcess(SystemContext.GET))
             return;
 
-        get();
-
-        // Set the internal process higher to avoid calling `get` illegally.
-        requestContext(SystemContext.AWAKE);
+        this.get();
     }
 
     protected void get() {
+    }
+
+    // Awake \\
+
+    void internalAwake() {
+
+        if (!this.verifyProcess(SystemContext.AWAKE))
+            return;
+
+        this.awake();
+    }
+
+    protected void awake() {
     }
 }

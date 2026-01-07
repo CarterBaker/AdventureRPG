@@ -130,6 +130,30 @@ public class Vector4Double {
         return divide(other.x, other.y, other.z, other.w);
     }
 
+    // Normalization \\
+
+    public double length() {
+        return Math.sqrt(x * x + y * y + z * z + w * w);
+    }
+
+    public double lengthSquared() {
+        return x * x + y * y + z * z + w * w;
+    }
+
+    public Vector4Double normalize() {
+        double len = length();
+
+        if (len == 0)
+            return this;
+
+        this.x /= len;
+        this.y /= len;
+        this.z /= len;
+        this.w /= len;
+
+        return this;
+    }
+
     // Utility \\
 
     public boolean hasValues() {

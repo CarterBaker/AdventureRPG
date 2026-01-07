@@ -8,7 +8,6 @@ import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
 import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOManager;
 import com.AdventureRPG.lightingsystem.LightingManager;
-import com.AdventureRPG.savemanager.UserData;
 
 public class TimeSystem extends SystemPackage {
 
@@ -137,16 +136,6 @@ public class TimeSystem extends SystemPackage {
         this.timeData.updateUniform("u_currentDay", this.currentDayOfMonth);
 
         this.timeData.push();
-    }
-
-    // Save System \\
-
-    public void setTime(UserData userData) {
-        // TOTO: Implement later
-    }
-
-    public void getTime(UserData userData) {
-        // TOTO: Implement later
     }
 
     // Time \\

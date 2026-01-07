@@ -139,7 +139,10 @@ public abstract class SystemPackage extends EngineUtility {
             InstancePackage.setupConstructor(this.internal, this);
 
             T instance = instanceClass.getDeclaredConstructor().newInstance();
+
+            instance.internalCreate();
             instance.internalGet();
+            instance.internalAwake();
 
             return instance;
         }

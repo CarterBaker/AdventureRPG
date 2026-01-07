@@ -130,6 +130,28 @@ public class Vector2 {
         return divide(other.x, other.y);
     }
 
+    // Normalization \\
+
+    public float length() {
+        return (float) Math.sqrt(x * x + y * y);
+    }
+
+    public float lengthSquared() {
+        return x * x + y * y;
+    }
+
+    public Vector2 normalize() {
+        float len = length();
+
+        if (len == 0)
+            return this;
+
+        this.x /= len;
+        this.y /= len;
+
+        return this;
+    }
+
     // Direction Mapping \\
 
     public Vector2 up() {

@@ -1,8 +1,7 @@
 package com.AdventureRPG.core.renderpipeline.camerasystem;
 
 import com.AdventureRPG.core.engine.ManagerPackage;
-import com.AdventureRPG.core.util.mathematics.vectors.Vector2;
-import com.AdventureRPG.core.util.mathematics.vectors.Vector3;
+import com.AdventureRPG.core.inputpipeline.input.InputSystem;
 
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 
@@ -10,21 +9,38 @@ public class CameraManager extends ManagerPackage {
 
     // Internal
     private InternalBufferSystem internalBufferSystem;
+    private InputSystem inputSystem;
 
-    // Camera storage
     private final ObjectLinkedOpenHashSet<CameraInstance> cameraInstances = new ObjectLinkedOpenHashSet<>();
     private CameraInstance mainCamera;
 
     private int width;
     private int height;
 
-    // Get
+    // Internal \\
+
     @Override
     public void create() {
 
         // Internal
         this.internalBufferSystem = create(InternalBufferSystem.class);
         createCamera(settings.FOV, width, height);
+    }
+
+    @Override
+    public void get() {
+
+        // Internal
+        this.inputSystem = get(InputSystem.class);
+    }
+
+    @Override
+    protected void update() {
+
+        if (mainCamera == null)
+            return;
+
+        mainCamera.setRotation(inputSystem.getRotation());
     }
 
     // Accessible \\
@@ -43,6 +59,10 @@ public class CameraManager extends ManagerPackage {
         return createdCamera;
     }
 
+    public CameraInstance getMainCamera() {
+        return mainCamera;
+    }
+
     public void setMainCamera(CameraInstance cam) {
 
         if (cam == null)
@@ -51,11 +71,7 @@ public class CameraManager extends ManagerPackage {
         mainCamera = cam;
     }
 
-    public CameraInstance mainCamera() {
-        return mainCamera;
-    }
-
-    public ObjectLinkedOpenHashSet<CameraInstance> cameraInstances() {
+    public ObjectLinkedOpenHashSet<CameraInstance> getCameraInstances() {
         return cameraInstances;
     }
 
@@ -65,22 +81,5 @@ public class CameraManager extends ManagerPackage {
         this.height = height;
 
         mainCamera.updateViewport(width, height);
-    }
-
-    public void rotateCamera(Vector2 input) {
-        rotateCamera(mainCamera, input);
-    }
-
-    // TODO: Not sure I want to be doing this
-    public void moveCamera(Vector3 input) {
-        moveCamera(mainCamera, input);
-    }
-
-    public void rotateCamera(CameraInstance cameraInstance, Vector2 input) {
-        cameraInstance.setRotation(input);
-    }
-
-    public void moveCamera(CameraInstance cameraInstance, Vector3 input) {
-        cameraInstance.setPosition(input);
     }
 }

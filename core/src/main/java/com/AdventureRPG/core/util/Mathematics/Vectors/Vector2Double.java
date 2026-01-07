@@ -120,6 +120,28 @@ public class Vector2Double {
         return divide(other.x, other.y);
     }
 
+    // Normalization \\
+
+    public double length() {
+        return Math.sqrt(x * x + y * y);
+    }
+
+    public double lengthSquared() {
+        return x * x + y * y;
+    }
+
+    public Vector2Double normalize() {
+        double len = length();
+
+        if (len == 0)
+            return this;
+
+        this.x /= len;
+        this.y /= len;
+
+        return this;
+    }
+
     // Direction Mapping \\
 
     public Vector2Double up() {

@@ -1,6 +1,5 @@
 package com.AdventureRPG.core.geometrypipeline.buildManager;
 
-import com.AdventureRPG.WorldPipeline.subchunks.SubChunk;
 import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.geometrypipeline.buildManager.subchunkbuilderbranch.SubChunkBuilderBranch;
 
@@ -18,7 +17,7 @@ public class BuildManager extends ManagerPackage {
         this.subChunkBuilderBranch = create(SubChunkBuilderBranch.class);
     }
 
-    public void build(SubChunk subChunk) {
-        subChunkBuilderBranch.build(subChunk);
+    public void build() {
+        subChunkBuilderBranch.build();
     }
 }
