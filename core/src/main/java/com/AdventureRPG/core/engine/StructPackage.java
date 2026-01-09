@@ -3,11 +3,11 @@ package com.AdventureRPG.core.engine;
 public abstract class StructPackage extends EngineUtility {
 
     /*
-     * Struct Packages are used mainly for bypassing constructor
-     * Timing issues in the engine itself. Intended to extend
-     * sub-classes within other classes themselves to aide in
-     * assigning public final variables so that constructors can
-     * remain easily accessible from anywhere in the internal
-     * engine.
+     * StructPackages are intended to serve as long-lived data containers
+     * that are independent of engine timing rules, such as handles or
+     * data packages. They exist solely to hold and transfer data and may
+     * be used anywhere persistent information is required throughout the
+     * game's lifecycle. StructPackages do not encapsulate behavior; their
+     * role is to provide simple, accessible structures for durable data.
      */
 }

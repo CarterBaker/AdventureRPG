@@ -1,3 +1,6 @@
+#ifndef NOISE_UTILITY_GLSL
+#define NOISE_UTILITY_GLSL
+
 float hash31(vec3 p) {
     p = fract(p * 0.1031);
     p += dot(p, p.yzx + 33.33);
@@ -32,6 +35,46 @@ float smoothNoise3D(vec3 p) {
     return mix(nxy0, nxy1, u.z);
 }
 
+// Simple FBM - back to basics
 float fbmNoise3D(vec3 p) {
-    return 0.6 * smoothNoise3D(p) + 0.3 * smoothNoise3D(p * 2.7) + 0.1 * smoothNoise3D(p * 5.1);
+    float n = 0.0;
+    n += 0.5 * smoothNoise3D(p);
+    n += 0.25 * smoothNoise3D(p * 2.0);
+    n += 0.125 * smoothNoise3D(p * 4.0);
+    return n;
 }
+
+// --- 2D FBM using existing 3D implementation ---
+float fbmNoise2D(vec2 p) {
+    return fbmNoise3D(vec3(p, 0.0));
+}
+
+// --- simple 2D cell (Worley) noise ---
+float cellNoise(vec3 p) {
+    vec2 pv = p.xy;
+    vec2 i = floor(pv);
+    vec2 f = fract(pv);
+
+    float res = 1.0;
+
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            vec2 neighbor = vec2(float(x), float(y));
+            vec3 cell = vec3(i + neighbor, p.z);
+
+            // use your existing hash
+            float h = hash31(cell);
+
+            vec2 randOffset = vec2(fract(h * 113.1), fract(h * 17.3));
+
+            vec2 diff = neighbor + randOffset - f;
+
+            float d = dot(diff, diff);
+            res = min(res, d);
+        }
+    }
+
+    return 1.0 - sqrt(res);
+}
+
+#endif

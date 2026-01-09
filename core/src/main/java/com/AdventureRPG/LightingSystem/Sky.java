@@ -1,9 +1,9 @@
 package com.AdventureRPG.lightingsystem;
 
+import com.AdventureRPG.bootstrap.shaderpipeline.passmanager.PassHandle;
+import com.AdventureRPG.bootstrap.shaderpipeline.passmanager.PassManager;
+import com.AdventureRPG.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.AdventureRPG.core.engine.SystemPackage;
-import com.AdventureRPG.core.shaderpipeline.passmanager.PassManager;
-import com.AdventureRPG.core.shaderpipeline.passmanager.PassHandle;
-import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
 
 public class Sky extends SystemPackage {
 
@@ -30,6 +30,10 @@ public class Sky extends SystemPackage {
 
         // Render management
         passmanager.pushPass(skyPass, -10);
+
+        int debugPassID = passmanager.getPassIDFromPassName("DebugCameraOrientationHUD");
+        PassHandle debugPass = passmanager.getPassFromPassID(debugPassID);
+        passmanager.pushPass(debugPass, 10);
     }
 
     // TODO: I do not know why I decided to do this here. old code. needs refactor

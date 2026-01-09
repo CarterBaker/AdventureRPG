@@ -1,0 +1,4 @@
+{
+    "material": "debug/DebugCameraOrientationBase",
+    "mesh": "util/PlanarPass"
+}

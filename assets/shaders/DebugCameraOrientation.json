@@ -1,4 +1,0 @@
-{
-    "vert": "debug/DebugCameraOrientation.vsh",
-    "frag": "debug/DebugCameraOrientation.fsh"
-}

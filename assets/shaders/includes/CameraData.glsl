@@ -1,3 +1,6 @@
+#ifndef CAMERA_DATA_GLSL
+#define CAMERA_DATA_GLSL
+
 layout(std140) uniform CameraData {
     mat4 u_projection;
     mat4 u_view;
@@ -10,3 +13,5 @@ layout(std140) uniform CameraData {
     float u_nearPlane;
     float u_farPlane;
 };
+
+#endif

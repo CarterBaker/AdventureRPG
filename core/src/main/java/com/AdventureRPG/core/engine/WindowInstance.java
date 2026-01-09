@@ -1,6 +1,6 @@
 package com.AdventureRPG.core.engine;
 
-import com.AdventureRPG.core.renderpipeline.camerasystem.CameraManager;
+import com.AdventureRPG.bootstrap.renderpipeline.camerasystem.CameraManager;
 import com.badlogic.gdx.Screen;
 
 public class WindowInstance extends InstancePackage implements Screen {

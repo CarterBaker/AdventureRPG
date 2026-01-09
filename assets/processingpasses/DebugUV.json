@@ -1,3 +1,4 @@
 {
-    "material": "debug/DebugUV"
+    "material": "debug/DebugUV",
+    "mesh": "util/PlanarPass"
 }

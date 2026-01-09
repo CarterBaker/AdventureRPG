@@ -1,3 +1,4 @@
 {
-    "material": "fullscreen/Sky"
+    "material": "fullscreen/Sky",
+    "mesh": "util/PlanarPass"
 }

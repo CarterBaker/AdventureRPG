@@ -3,10 +3,10 @@ package com.AdventureRPG.timesystem;
 import java.io.File;
 import java.time.Instant;
 
+import com.AdventureRPG.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.AdventureRPG.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.AdventureRPG.core.engine.SystemPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
-import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOHandle;
-import com.AdventureRPG.core.shaderpipeline.ubomanager.UBOManager;
 import com.AdventureRPG.lightingsystem.LightingManager;
 
 public class TimeSystem extends SystemPackage {

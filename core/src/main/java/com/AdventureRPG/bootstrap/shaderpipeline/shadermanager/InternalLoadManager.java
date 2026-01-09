@@ -1,0 +1,333 @@
+package com.AdventureRPG.bootstrap.shaderpipeline.shadermanager;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import com.AdventureRPG.bootstrap.shaderpipeline.ubomanager.UBOData;
+import com.AdventureRPG.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.AdventureRPG.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import com.AdventureRPG.bootstrap.shaderpipeline.uniforms.Uniform;
+import com.AdventureRPG.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.AdventureRPG.bootstrap.shaderpipeline.uniforms.UniformData;
+import com.AdventureRPG.bootstrap.shaderpipeline.uniforms.matrices.*;
+import com.AdventureRPG.bootstrap.shaderpipeline.uniforms.matrixArrays.*;
+import com.AdventureRPG.bootstrap.shaderpipeline.uniforms.samplers.*;
+import com.AdventureRPG.bootstrap.shaderpipeline.uniforms.scalarArrays.*;
+import com.AdventureRPG.bootstrap.shaderpipeline.uniforms.scalars.*;
+import com.AdventureRPG.bootstrap.shaderpipeline.uniforms.vectorarrays.*;
+import com.AdventureRPG.bootstrap.shaderpipeline.uniforms.vectors.*;
+import com.AdventureRPG.core.engine.ManagerPackage;
+import com.AdventureRPG.core.engine.settings.EngineSetting;
+import com.AdventureRPG.core.util.FileUtility;
+
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+
+class InternalLoadManager extends ManagerPackage {
+
+    // Internal
+    private File root;
+    private ShaderManager shaderManager;
+    private UBOManager uboManager;
+    private InternalBuildSystem internalBuildSystem;
+
+    private ObjectArrayList<ShaderData> glslFiles;
+    private ObjectArrayList<File> jsonFiles;
+
+    private Object2ObjectOpenHashMap<String, ShaderData> lookup;
+
+    private int shaderCount;
+
+    // Base \\
+
+    @Override
+    protected void create() {
+
+        // Internal
+        this.root = new File(EngineSetting.SHADER_PATH);
+        this.internalBuildSystem = create(InternalBuildSystem.class);
+
+        this.glslFiles = new ObjectArrayList<>();
+        this.jsonFiles = new ObjectArrayList<>();
+
+        this.lookup = new Object2ObjectOpenHashMap<>();
+
+        this.shaderCount = 0;
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.shaderManager = get(ShaderManager.class);
+        this.uboManager = get(UBOManager.class);
+    }
+
+    @Override
+    protected void release() {
+
+        // Internal
+        this.internalBuildSystem = release(InternalBuildSystem.class);
+    }
+
+    // ShaderHandle Management \\
+
+    void loadShaders() {
+
+        // First load all files and organize them
+        loadAllFiles();
+        buildShaderData();
+        compileShaders();
+    }
+
+    // Load \\
+
+    private void loadAllFiles() {
+
+        if (!root.exists() || !root.isDirectory())
+            throwException("ShaderHandle directory not found: " + root.getAbsolutePath());
+
+        Path base = root.toPath();
+
+        try (var stream = Files.walk(base)) {
+            stream
+                    .filter(Files::isRegularFile)
+                    .forEach(path -> categorizeFile(path.toFile()));
+        }
+
+        catch (IOException e) {
+            throwException("ShaderManager failed to load one or more files: ", e);
+        }
+    }
+
+    private void categorizeFile(File file) {
+
+        String extension = FileUtility.getExtension(file);
+
+        if (extension == null)
+            return;
+
+        ShaderType shaderType = null;
+
+        if (EngineSetting.JSON_FILE_EXTENSIONS.contains(extension)) {
+            jsonFiles.add(file);
+            return;
+        }
+
+        else if (EngineSetting.VERT_FILE_EXTENSIONS.contains(extension))
+            shaderType = ShaderType.VERT;
+        else if (EngineSetting.FRAG_FILE_EXTENSIONS.contains(extension))
+            shaderType = ShaderType.FRAG;
+        else if (EngineSetting.INCLUDE_FILE_EXTENSIONS.contains(extension))
+            shaderType = ShaderType.INCLUDE;
+
+        if (shaderType == null)
+            throwException(
+                    "ShaderHandle: " + file.getName() + ", Has an unrecognized extension");
+
+        ShaderData shaderDataInstance = create(ShaderData.class);
+        shaderDataInstance.constructor(
+                shaderType,
+                FileUtility.getFileName(file),
+                file);
+
+        glslFiles.add(shaderDataInstance);
+
+        String filePath = FileUtility.getPathWithFileNameWithExtension(root, file);
+        lookup.put(filePath, shaderDataInstance);
+    }
+
+    // Build \\
+
+    private void buildShaderData() {
+        for (int i = 0; i < glslFiles.size(); i++)
+            internalBuildSystem.parseShaderFile(glslFiles.get(i));
+    }
+
+    // Compile \\
+
+    private void compileShaders() {
+        for (int i = 0; i < jsonFiles.size(); i++)
+            shaderManager.addShader(
+                    assembleShader(
+                            internalBuildSystem.compileShader(jsonFiles.get(i))));
+    }
+
+    // ShaderHandle
+    private ShaderHandle assembleShader(ShaderDefinitionData shaderDefinition) {
+
+        String shaderName = shaderDefinition.getShaderName();
+        int shaderID = shaderCount++;
+        int shaderHandle = GLSLUtility.createShaderProgram(shaderDefinition);
+
+        ShaderHandle shader = create(ShaderHandle.class);
+
+        shader.constructor(
+                shaderName,
+                shaderID,
+                shaderHandle);
+
+        assembleBuffers(
+                shader,
+                shaderDefinition);
+
+        assembleUniforms(
+                shader,
+                shaderDefinition);
+
+        return shader;
+    }
+
+    // Buffers
+    private void assembleBuffers(
+            ShaderHandle shader,
+            ShaderDefinitionData shaderDefinition) {
+
+        addBuffersFromShaderData(
+                shaderDefinition.getVert(),
+                shader);
+
+        addBuffersFromShaderData(
+                shaderDefinition.getFrag(),
+                shader);
+
+        ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
+
+        for (int i = 0; i < includes.size(); i++)
+            addBuffersFromShaderData(includes.get(i), shader);
+    }
+
+    private void addBuffersFromShaderData(
+            ShaderData shaderData,
+            ShaderHandle shader) {
+
+        ObjectArrayList<UBOData> bufferBlocks = shaderData.getBufferBlocks();
+
+        for (int i = 0; i < bufferBlocks.size(); i++)
+            addBufferFromBufferData(bufferBlocks.get(i), shader);
+    }
+
+    private void addBufferFromBufferData(
+            UBOData bufferData,
+            ShaderHandle shader) {
+
+        UBOHandle ubo = uboManager.buildBuffer(bufferData);
+
+        shaderManager.bindShaderToUBO(
+                shader,
+                ubo);
+
+        shader.addBuffer(
+                bufferData.getBlockName(),
+                ubo);
+    }
+
+    // Uniforms
+    private void assembleUniforms(
+            ShaderHandle shader,
+            ShaderDefinitionData shaderDefinition) {
+
+        addUniformsFromShaderData(
+                shaderDefinition.getVert(),
+                shader);
+
+        addUniformsFromShaderData(
+                shaderDefinition.getFrag(),
+                shader);
+
+        ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
+
+        for (int i = 0; i < includes.size(); i++)
+            addUniformsFromShaderData(includes.get(i), shader);
+    }
+
+    private void addUniformsFromShaderData(
+            ShaderData shaderData,
+            ShaderHandle shader) {
+
+        ObjectArrayList<UniformData> uniforms = shaderData.getUniforms();
+
+        for (int i = 0; i < uniforms.size(); i++)
+            addUniformFromUniformData(uniforms.get(i), shader);
+    }
+
+    private void addUniformFromUniformData(
+            UniformData uniformData,
+            ShaderHandle shader) {
+
+        UniformAttribute<?> uniformAttribute = createUniformAttribute(uniformData);
+        Uniform<?> uniform = new Uniform<>(
+                GLSLUtility.getUniformHandle(shader.getShaderHandle(), uniformData.getUniformName()),
+                uniformAttribute);
+
+        shader.addUniform(uniformData.getUniformName(), uniform);
+    }
+
+    private UniformAttribute<?> createUniformAttribute(UniformData uniformData) {
+
+        int count = uniformData.getCount();
+        boolean isArray = count > 1;
+
+        return switch (uniformData.getUniformType()) {
+
+            // Scalars
+            case FLOAT -> isArray ? new FloatArrayUniform(count) : new FloatUniform();
+            case DOUBLE -> isArray ? new DoubleArrayUniform(count) : new DoubleUniform();
+            case INT -> isArray ? new IntegerArrayUniform(count) : new IntegerUniform();
+            case BOOL -> isArray ? new BooleanArrayUniform(count) : new BooleanUniform();
+
+            // Vectors
+            case VECTOR2 -> isArray ? new Vector2ArrayUniform(count) : new Vector2Uniform();
+            case VECTOR3 -> isArray ? new Vector3ArrayUniform(count) : new Vector3Uniform();
+            case VECTOR4 -> isArray ? new Vector4ArrayUniform(count) : new Vector4Uniform();
+            case VECTOR2_DOUBLE -> isArray ? new Vector2DoubleArrayUniform(count) : new Vector2DoubleUniform();
+            case VECTOR3_DOUBLE -> isArray ? new Vector3DoubleArrayUniform(count) : new Vector3DoubleUniform();
+            case VECTOR4_DOUBLE -> isArray ? new Vector4DoubleArrayUniform(count) : new Vector4DoubleUniform();
+            case VECTOR2_INT -> isArray ? new Vector2IntArrayUniform(count) : new Vector2IntUniform();
+            case VECTOR3_INT -> isArray ? new Vector3IntArrayUniform(count) : new Vector3IntUniform();
+            case VECTOR4_INT -> isArray ? new Vector4IntArrayUniform(count) : new Vector4IntUniform();
+            case VECTOR2_BOOLEAN -> isArray ? new Vector2BooleanArrayUniform(count) : new Vector2BooleanUniform();
+            case VECTOR3_BOOLEAN -> isArray ? new Vector3BooleanArrayUniform(count) : new Vector3BooleanUniform();
+            case VECTOR4_BOOLEAN -> isArray ? new Vector4BooleanArrayUniform(count) : new Vector4BooleanUniform();
+
+            // Matrices
+            case MATRIX2 -> isArray ? new Matrix2ArrayUniform(count) : new Matrix2Uniform();
+            case MATRIX3 -> isArray ? new Matrix3ArrayUniform(count) : new Matrix3Uniform();
+            case MATRIX4 -> isArray ? new Matrix4ArrayUniform(count) : new Matrix4Uniform();
+            case MATRIX2_DOUBLE -> isArray ? new Matrix2DoubleArrayUniform(count) : new Matrix2DoubleUniform();
+            case MATRIX3_DOUBLE -> isArray ? new Matrix3DoubleArrayUniform(count) : new Matrix3DoubleUniform();
+            case MATRIX4_DOUBLE -> isArray ? new Matrix4DoubleArrayUniform(count) : new Matrix4DoubleUniform();
+
+            // Samplers
+            case SAMPLE_IMAGE_2D -> new SampleImage2DUniform();
+            case SAMPLE_IMAGE_2D_ARRAY -> new SampleImage2DArrayUniform(); // Already an array type
+
+            default -> throwException(
+                    "Unsupported uniform type: " + uniformData.getUniformType().toString());
+        };
+    }
+
+    // Utility \\
+
+    ShaderData getShaderData(String key) {
+
+        // First try full path lookup
+        ShaderData result = lookup.get(key);
+        if (result != null)
+            return result;
+
+        // Fallback try short stripped name
+        for (int i = 0; i < glslFiles.size(); i++) {
+
+            ShaderData inst = glslFiles.get(i);
+            if (inst.getShaderName().equals(key))
+                return inst;
+        }
+
+        return throwException(
+                "ShaderHandle data for key: " + key + ", Could not be found");
+    }
+
+}

@@ -1,14 +1,14 @@
 package com.AdventureRPG.core.engine;
 
-import com.AdventureRPG.core.entitypipeline.EntityPipeline;
-import com.AdventureRPG.core.geometrypipeline.GeometryPipeline;
-import com.AdventureRPG.core.inputpipeline.InputPipeline;
-import com.AdventureRPG.core.renderpipeline.RenderPipeline;
-import com.AdventureRPG.core.shaderpipeline.ShaderPipeline;
-import com.AdventureRPG.core.threadpipeline.ThreadSystem;
-import com.AdventureRPG.core.worldpipeline.WorldPipeline;
+import com.AdventureRPG.bootstrap.entitypipeline.EntityPipeline;
+import com.AdventureRPG.bootstrap.entitypipeline.playermanager.PlayerManager;
+import com.AdventureRPG.bootstrap.geometrypipeline.GeometryPipeline;
+import com.AdventureRPG.bootstrap.inputpipeline.InputPipeline;
+import com.AdventureRPG.bootstrap.renderpipeline.RenderPipeline;
+import com.AdventureRPG.bootstrap.shaderpipeline.ShaderPipeline;
+import com.AdventureRPG.bootstrap.threadpipeline.ThreadSystem;
+import com.AdventureRPG.bootstrap.worldpipeline.WorldPipeline;
 import com.AdventureRPG.lightingsystem.LightingManager;
-import com.AdventureRPG.playermanager.PlayerManager;
 import com.AdventureRPG.timesystem.TimeSystem;
 
 public class GameEngine extends EnginePackage {
@@ -56,7 +56,6 @@ public class GameEngine extends EnginePackage {
         // Internal
         this.lightingManager = create(LightingManager.class);
         this.timeSystem = create(TimeSystem.class);
-        this.playerManager = create(PlayerManager.class);
     }
 
     @Override

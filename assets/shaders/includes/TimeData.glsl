@@ -1,3 +1,6 @@
+#ifndef TIME_DATA_GLSL
+#define TIME_DATA_GLSL
+
 layout(std140) uniform TimeData {
     float u_timeOfDay;           // 0.0 to 1.0
     float u_rawTimeOfDay;        // unbent time
@@ -8,3 +11,5 @@ layout(std140) uniform TimeData {
     int u_currentMinute;
     int u_currentDay;
 };
+
+#endif
