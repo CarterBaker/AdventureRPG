@@ -36,6 +36,7 @@ public class RenderSystem extends SystemPackage {
     @Override
     protected void awake() {
         GLSLUtility.enableDepth();
+        GLSLUtility.enableBlending();
     }
 
     // Render Management \\

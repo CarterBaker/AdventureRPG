@@ -20,12 +20,23 @@ class GLSLUtility {
     }
 
     static void clearBuffer() {
-        Gdx.gl.glClearColor(0, 0, 0, 1);
+        Gdx.gl.glClearColor(0, 0, 0, 0);
         Gdx.gl.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
     }
 
     static void setViewport(int width, int height) {
         Gdx.gl.glViewport(0, 0, width, height);
+    }
+
+    // Blending \\
+
+    static void enableBlending() {
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    static void disableBlending() {
+        Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
     // Shader \\
