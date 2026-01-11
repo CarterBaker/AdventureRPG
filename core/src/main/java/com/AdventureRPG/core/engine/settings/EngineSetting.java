@@ -10,16 +10,16 @@ public class EngineSetting {
         public static final int MAX_CHUNK_LOADS_PER_TICK = 16384; // 120 frames per second
 
         // Path Settings
-        public static final String CALENDAR_JSON_PATH = "util/calendar.json"; // The location of the calendar json file
-        public static final String BLOCK_JSON_PATH = "blocks/Blocks.json"; // The location of the blocks json file
-        public static final String BLOCK_TEXTURE_PATH = "textures"; // The location of all block images
+        public static final String BLOCK_TEXTURE_PATH = "textures"; // Location of all block images
         public static final String BLOCK_TEXTURE_ALIAS_PATH = "textureAliases"; // Location of alias definitions
-        public static final String BIOME_JSON_PATH = "biomes"; // Location of all biome files
+        public static final String SHADER_PATH = "shaders"; // Location of all shader files
+        public static final String MATERIAL_JSON_PATH = "materials"; // Location of all material json files
+        public static final String PASS_JSON_PATH = "processingPasses"; // Location of all pass json files
+        public static final String MODEL_JSON_PATH = "models"; // Location of all material json files
         public static final String REGION_IMAGE_PATH = "world/world.png"; // The main image that controls the world
-        public static final String SHADER_PATH = "shaders"; // The location of all shader files
-        public static final String MATERIAL_JSON_PATH = "materials"; // The location of all material json files
-        public static final String MODEL_JSON_PATH = "models"; // The location of all material json files
-        public static final String PASS_JSON_PATH = "processingPasses"; // The location of all pass json files
+        public static final String CALENDAR_JSON_PATH = "calendar/Calendar.json"; // Location of the calendar json file
+        public static final String BLOCK_JSON_PATH = "blocks/Blocks.json"; // Location of the blocks json file
+        public static final String BIOME_JSON_PATH = "biomes"; // Location of all biome files
 
         // File Extension Settings
 
@@ -68,14 +68,16 @@ public class EngineSetting {
         // Time Settings
         public static final int MINUTES_PER_HOUR = 60; // How many minutes are in an hour
         public static final int HOURS_PER_DAY = 24; // How many hours are in a day
-        public static final int DAYS_PER_DAY = 20; // How many in-game days fit inside a real world day
         public static final float MIDDAY_OFFSET = 0.5f; // The offset of days in comparison to real world days
+        public static final int DAYS_PER_DAY = 20; // How many in-game days fit inside a real world day
+        public static final int YEARS_PER_AGE = 1500; // How many game years are there in an in-game age
 
-        public static final int STARTING_DAY = 15; // The day the game will start in
+        public static final int STARTING_MINUTE = 30; // The minutes the game will start in
+        public static final int STARTING_HOUR = 12; // The hour the game will start in
         public static final int STARTING_MONTH = 6; // The month the game will start in
+        public static final int STARTING_DAY_OF_MONTH = 15; // The day of the month the game will start in
         public static final int STARTING_YEAR = 1356; // The year the game will start in
         public static final int STARTING_AGE = 3; // The age the game will start in
-        public static final int YEARS_PER_AGE = 1500; // How many years are there in an age
 
         // Scale Settings
         public static final float BLOCK_SIZE = 1.0f; // 1x1x1 block scale

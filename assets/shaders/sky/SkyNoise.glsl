@@ -1,5 +1,5 @@
-#ifndef SKY_NOISE_HELPER_GLSL
-#define SKY_NOISE_HELPER_GLSL
+#ifndef SKY_NOISE_GLSL
+#define SKY_NOISE_GLSL
 
 #include "includes/NoiseUtility.glsl"
 #include "includes/TimeData.glsl"

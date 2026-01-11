@@ -111,9 +111,10 @@ void main() {
         vec3 cameraRight = normalize(vec3(u_view[0][0], u_view[1][0], u_view[2][0]));
         vec3 cameraUp = normalize(vec3(u_view[0][1], u_view[1][1], u_view[2][1]));
 
-        vec2 camX2D = vec2(dot(cameraRight, vec3(1, 0, 0)), dot(cameraUp, vec3(1, 0, 0))) * axisScale;
-        vec2 camY2D = vec2(dot(cameraRight, vec3(0, 1, 0)), dot(cameraUp, vec3(0, 1, 0))) * axisScale;
-        vec2 camZ2D = vec2(dot(cameraRight, vec3(0, 0, 1)), dot(cameraUp, vec3(0, 0, 1))) * axisScale;
+        // Fixed: Negate the X component to flip horizontally
+        vec2 camX2D = vec2(-dot(cameraRight, vec3(1, 0, 0)), dot(cameraUp, vec3(1, 0, 0))) * axisScale;
+        vec2 camY2D = vec2(-dot(cameraRight, vec3(0, 1, 0)), dot(cameraUp, vec3(0, 1, 0))) * axisScale;
+        vec2 camZ2D = vec2(-dot(cameraRight, vec3(0, 0, 1)), dot(cameraUp, vec3(0, 0, 1))) * axisScale;
 
         float distToXAxis =
         length(camX2D) > 0.01 ? abs(topRightUV.y * camX2D.x - topRightUV.x * camX2D.y) / length(camX2D) : 999.0;
@@ -269,7 +270,7 @@ void main() {
         }
     }
 
-    // North arrow
+    // North arrow - Fixed to point up
     vec2 normalizedNorth = vec2(0.0, 1.0);
     float arrowStartDist = circleRadius + 0.005;
     vec2 arrowBase = bottomRightCenter + normalizedNorth * arrowStartDist;
@@ -277,7 +278,8 @@ void main() {
     float arrowWidth = 0.015;
 
     vec2 localUV = uv - arrowBase;
-    vec2 rotatedArrowUV = vec2(localUV.x, -localUV.y);
+    // Fixed: Removed the Y-flip that was inverting the arrow
+    vec2 rotatedArrowUV = localUV;
 
     float shaftLength = arrowLength * 0.6;
     float shaft = step(abs(rotatedArrowUV.x), arrowWidth * 0.3) * step(0.0, rotatedArrowUV.y) *
@@ -330,8 +332,9 @@ void main() {
         float samplePitch = (uv.y / barLength) * 1.5708;
 
         vec3 barColor = vec3(0.3);
+        // Fixed: Inverted the color mapping to match corrected pitch
         barColor.g += max(0.0, sin(samplePitch)) * 0.7;
-        barColor.b += max(0.0, -sin(samplePitch)) * 0.7;
+        barColor.r += max(0.0, -sin(samplePitch)) * 0.7;
 
         hudColor = barColor;
         hudAlpha = 0.8;

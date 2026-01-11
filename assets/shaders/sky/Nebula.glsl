@@ -4,43 +4,82 @@
 #include "includes/NoiseUtility.glsl"
 #include "includes/TimeData.glsl"
 #include "sky/DayNightCycle.glsl"
+#include "sky/SeasonCycle.glsl"
 
-// dir: normalized world-space direction
-// altitude: 0=horizon, 1=zenith
-// factors: day/night cycle factors
-vec3 calculateNebula(vec3 dir, float altitude, CycleFactors factors) {
-    if (factors.night < 0.2) return vec3(0.0);  // fully transparent/black if day
+vec4 calculateNebula(vec3 dir, float dailyVariation, CycleFactors dayFactor,
+    SeasonFactors seasonFactor) {
 
-    // --- remove east/west banding by de-aligning world axes ---
-    mat3 rot = mat3(0.36, 0.48, -0.80, -0.80, 0.60, 0.10, 0.48, 0.64, 0.60);
-    vec3 p = rot * dir * 2.0;  // smaller multiplier -> larger cloud shapes
+    float nightFade = smoothstep(0.3, 0.6, dayFactor.night);
+    if (nightFade <= 0.0) return vec4(0.0);
 
-    // Base density
-    float n1 = fbmNoise3D(p * 0.6);  // larger scale = bigger clouds
+    float seasonalBrightness = mix(0.08, 1.0, seasonFactor.winter);
+
+    mat3 rot = mat3(0.36, 0.48, -0.80,
+        -0.80, 0.60, 0.10,
+        0.48, 0.64, 0.60);
+
+    vec3 p = rot * dir * 2.0;
+
+    // ------------------------------------------------------------------
+    // FIRST: evaluate density proxy BEFORE motion to derive "opacity"
+    // ------------------------------------------------------------------
+    float n1_pre = fbmNoise3D(p * 0.6);
+    float n2_pre = fbmNoise3D(p * 1.2 + vec3(2.3, 1.1, 0.5));
+    float density_pre = smoothstep(0.5, 0.8, 0.5 * n1_pre + 0.5 * n2_pre);
+
+    // core opacity proxy (before alpha shaping)
+    float core_pre = smoothstep(0.05, 0.55, density_pre);
+    core_pre *= core_pre;
+
+    // ------------------------------------------------------------------
+    // WAVE MOTION with inverse opacity coupling
+    // ------------------------------------------------------------------
+
+    // more transparent → more motion
+    float motionFactor = 1.0 - clamp(core_pre, 0.0, 1.0);
+
+    // slightly stronger base motion
+    float waveAmplitude = 0.10;     // was 0.05
+    float waveSpeed = 0.2;
+
+    vec2 wave =
+        waveAmplitude * motionFactor * vec2(
+            sin(u_time * waveSpeed + p.x * 2.0),
+            cos(u_time * waveSpeed + p.y * 2.5));
+
+    // apply motion
+    p.xy += wave;
+
+    // ------------------------------------------------------------------
+    // continue your original pipeline with displaced p
+    // ------------------------------------------------------------------
+
+    float n1 = fbmNoise3D(p * 0.6);
     float n2 = fbmNoise3D(p * 1.2 + vec3(2.3, 1.1, 0.5));
-    float density = n1 * 0.5 + n2 * 0.5;
-    density = smoothstep(0.3, 0.7, density);  // slightly softer threshold
+    float density = smoothstep(0.5, 0.8, 0.5 * n1 + 0.5 * n2);
 
-    // Small detail modulation (keep subtle, no distortion)
     float detail = fbmNoise3D(p * 2.5 + vec3(0.5, 1.2, 0.8));
-    density *= 0.8 + detail * 0.2;
+    density *= 0.8 + 0.2 * detail;
 
-    // Color variation
-    float colorMix = fbmNoise3D(p * 0.4 + vec3(1.0, 2.0, 3.0));  // larger scale
-    vec3 color1 = vec3(1.0, 0.2, 0.3);                           // brighter red
-    vec3 color2 = vec3(0.2, 0.3, 1.0);                           // brighter blue
-    vec3 color3 = vec3(0.8, 0.2, 0.9);                           // bright purple accent
+    float colorMix = fbmNoise3D(p * 0.4 + vec3(1.0,2.0,3.0));
+    vec3 baseColor = mix(vec3(1.0,0.2,0.3), vec3(0.2,0.3,1.0), colorMix);
+    baseColor = mix(baseColor, vec3(0.8,0.2,0.9), smoothstep(0.4,0.7,colorMix));
 
-    vec3 nebulaColor = mix(color1, color2, colorMix);
-    nebulaColor = mix(nebulaColor, color3, smoothstep(0.4, 0.7, colorMix));
+    float core = smoothstep(0.05, 0.55, density);
+    core *= core;
 
-    // Fade factors
-    float nightFade = smoothstep(0.2, 0.5, factors.night);
-    float altFade = smoothstep(0.3, 0.7, altitude);  // slightly wider range
+    float colorStrength = abs(colorMix - 0.5) * 2.0;
+    colorStrength = clamp(colorStrength, 0.0, 1.0);
 
-    float alpha = density * nightFade * altFade * 0.8;  // brighter overall
+    float structureBlend = mix(core, core * colorStrength, 0.6);
 
-    return nebulaColor * alpha;
+    float edgeFade = smoothstep(0.0, 1.0, density);
+
+    float alpha = structureBlend * edgeFade * nightFade * seasonalBrightness;
+
+    alpha = sqrt(alpha);
+
+    return vec4(baseColor, alpha);
 }
 
 #endif
