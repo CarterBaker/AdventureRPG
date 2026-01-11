@@ -1,10 +1,10 @@
 package com.AdventureRPG.bootstrap.entitypipeline.playermanager;
 
-import com.AdventureRPG.bootstrap.entitypipeline.entityManager.EntityHandle;
+import com.AdventureRPG.bootstrap.entitypipeline.entity.EntityHandle;
 import com.AdventureRPG.bootstrap.entitypipeline.entityManager.EntityManager;
 import com.AdventureRPG.bootstrap.entitypipeline.movementmanager.MovementManager;
 import com.AdventureRPG.bootstrap.inputpipeline.input.InputSystem;
-import com.AdventureRPG.bootstrap.renderpipeline.camerasystem.CameraInstance;
+import com.AdventureRPG.bootstrap.renderpipeline.camera.CameraInstance;
 import com.AdventureRPG.bootstrap.renderpipeline.camerasystem.CameraManager;
 import com.AdventureRPG.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.AdventureRPG.core.engine.ManagerPackage;
@@ -18,6 +18,7 @@ public class PlayerManager extends ManagerPackage {
     private CameraManager cameraManager;
     private InputSystem inputSystem;
     private MovementManager movementmanager;
+    private EntityManager entityManager;
 
     // Active Player
     private EntityHandle player;
@@ -31,14 +32,24 @@ public class PlayerManager extends ManagerPackage {
         this.cameraManager = get(CameraManager.class);
         this.inputSystem = get(InputSystem.class);
         this.movementmanager = get(MovementManager.class);
+        this.entityManager = get(EntityManager.class);
+    }
+
+    @Override
+    protected void awake() {
 
         // Active Player
-        this.player = get(EntityManager.class).createEntity();
+        this.player = entityManager.createEntity();
     }
 
     @Override
     protected void update() {
+
         calculatePlayerPosition();
+
+        debug("Player current position: " + player.getWorldPositionStruct().getPosition().toString() +
+                ", Player current chunk: "
+                + Coordinate2Int.toString(player.getWorldPositionStruct().getChunkCoordinate()));
     }
 
     private void calculatePlayerPosition() {

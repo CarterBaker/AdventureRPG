@@ -16,9 +16,9 @@ public class EngineSetting {
         public static final String MATERIAL_JSON_PATH = "materials"; // Location of all material json files
         public static final String PASS_JSON_PATH = "processingPasses"; // Location of all pass json files
         public static final String MODEL_JSON_PATH = "models"; // Location of all material json files
-        public static final String REGION_IMAGE_PATH = "world/world.png"; // The main image that controls the world
+        public static final String WORLD_TEXTURE_PATH = "worlds"; // The location of all world images
         public static final String CALENDAR_JSON_PATH = "calendar/Calendar.json"; // Location of the calendar json file
-        public static final String BLOCK_JSON_PATH = "blocks/Blocks.json"; // Location of the blocks json file
+        public static final String BLOCK_JSON_PATH = "blocks"; // Location of all block json files
         public static final String BIOME_JSON_PATH = "biomes"; // Location of all biome files
 
         // File Extension Settings
@@ -94,4 +94,7 @@ public class EngineSetting {
         public static final int CHUNK_VERT_STRIDE = VERT_POS + VERT_NOR + VERT_COL + VERT_UV0; // Always 9
         public static final int CHUNK_VERT_BUFFER = 128;
         public static final int MESH_VERT_LIMIT = 32767;
+
+        // World
+        public static final String STARTING_WORLD = "TerraArcana"; // The world the player starts in
 }

@@ -23,10 +23,10 @@ public class GameEngine extends EnginePackage {
     private GeometryPipeline geometryPipeline;
     private ShaderPipeline shaderPipeline;
     private RenderPipeline renderPipeline;
-    private CalendarPipeline calendarPipeline;
-    private InputPipeline inputPipeline;
     private WorldPipeline worldPipeline;
+    private InputPipeline inputPipeline;
     private EntityPipeline entityPipeline;
+    private CalendarPipeline calendarPipeline;
 
     // Runtime
     private DebugPipeline debugPipeline;
@@ -41,10 +41,10 @@ public class GameEngine extends EnginePackage {
         this.geometryPipeline = create(GeometryPipeline.class);
         this.shaderPipeline = create(ShaderPipeline.class);
         this.renderPipeline = create(RenderPipeline.class);
-        this.calendarPipeline = create(CalendarPipeline.class);
-        this.inputPipeline = create(InputPipeline.class);
         this.worldPipeline = create(WorldPipeline.class);
+        this.inputPipeline = create(InputPipeline.class);
         this.entityPipeline = create(EntityPipeline.class);
+        this.calendarPipeline = create(CalendarPipeline.class);
     }
 
     // Runtime \\

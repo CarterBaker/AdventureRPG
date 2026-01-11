@@ -1,4 +1,4 @@
-package com.AdventureRPG.bootstrap.renderpipeline.camerasystem;
+package com.AdventureRPG.bootstrap.renderpipeline.camera;
 
 import com.AdventureRPG.core.engine.InstancePackage;
 import com.AdventureRPG.core.util.mathematics.matrices.Matrix4;

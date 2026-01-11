@@ -1,6 +1,7 @@
 package com.AdventureRPG.bootstrap.renderpipeline.camerasystem;
 
 import com.AdventureRPG.bootstrap.inputpipeline.input.InputSystem;
+import com.AdventureRPG.bootstrap.renderpipeline.camera.CameraInstance;
 import com.AdventureRPG.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;

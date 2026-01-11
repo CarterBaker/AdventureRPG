@@ -1,6 +1,6 @@
 package com.AdventureRPG.bootstrap.worldpipeline;
 
-import com.AdventureRPG.bootstrap.worldpipeline.worldloadmanager.WorldLoadManager;
+import com.AdventureRPG.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.AdventureRPG.core.engine.PipelinePackage;
 
 public class WorldPipeline extends PipelinePackage {
@@ -11,6 +11,6 @@ public class WorldPipeline extends PipelinePackage {
     protected void create() {
 
         // World Pipeline
-        create(WorldLoadManager.class);
+        create(WorldStreamManager.class);
     }
 }

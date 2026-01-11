@@ -1,9 +1,11 @@
 package com.AdventureRPG.bootstrap.entitypipeline.movementmanager;
 
-import com.AdventureRPG.bootstrap.entitypipeline.entityManager.EntityHandle;
+import com.AdventureRPG.bootstrap.entitypipeline.entity.EntityHandle;
 import com.AdventureRPG.bootstrap.entitypipeline.entityManager.StatisticsInstance;
 import com.AdventureRPG.bootstrap.worldpipeline.util.WorldPositionStruct;
-import com.AdventureRPG.bootstrap.worldpipeline.worldloadmanager.WorldLoadManager;
+import com.AdventureRPG.bootstrap.worldpipeline.util.WorldWrapUtility;
+import com.AdventureRPG.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
+import com.AdventureRPG.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.util.mathematics.Extras.Coordinate2Int;
@@ -14,7 +16,7 @@ public class MovementManager extends ManagerPackage {
 
     // Internal
     private MovementCalculationSystem movementCalculationSystem;
-    private WorldLoadManager worldEngineSystem;
+    private WorldStreamManager worldStreamManager;
 
     // Settings
     private int CHUNK_SIZE;
@@ -35,7 +37,7 @@ public class MovementManager extends ManagerPackage {
     protected void get() {
 
         // Internal
-        this.worldEngineSystem = get(WorldLoadManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     // Movement \\
@@ -65,8 +67,8 @@ public class MovementManager extends ManagerPackage {
                 chunkCoordinateX,
                 chunkCoordinateY);
 
-        worldEngineSystem.wrapAroundChunk(position);
-        worldEngineSystem.wrapAroundWorld(chunkCoordinate);
+        WorldWrapUtility.wrapAroundChunk(position);
+        chunkCoordinate = WorldWrapUtility.wrapAroundWorld(entityHandle.getWorldHandle(), chunkCoordinate);
 
         worldPosition.setPosition(position);
         worldPosition.setChunkCoordinate(chunkCoordinate);

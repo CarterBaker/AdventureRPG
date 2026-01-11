@@ -1,5 +1,6 @@
 package com.AdventureRPG.bootstrap.renderpipeline.camerasystem;
 
+import com.AdventureRPG.bootstrap.renderpipeline.camera.CameraInstance;
 import com.AdventureRPG.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.AdventureRPG.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.AdventureRPG.core.engine.SystemPackage;
