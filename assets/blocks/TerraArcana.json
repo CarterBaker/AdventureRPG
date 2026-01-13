@@ -1,58 +1,60 @@
-[
-    {
-        "name": "Air",
-        "type": "NULL"
-    },
-    {
-        "name": "Water",
-        "texture": "standard/water",
-        "type": "LIQUID"
-    },
-    {
-        "name": "Lava",
-        "texture": "standard/lava",
-        "type": "LIQUID"
-    },
-    {
-        "name": "Grass Block",
-        "upTex": "standard/grassBlockUp",
-        "northTex": "standard/grassBlockNorth",
-        "downTex": "standard/dirt",
-        "type": "SOLID"
-    },
-    {
-        "name": "Dirt Block",
-        "texture": "standard/dirt",
-        "type": "SOLID"
-    },
-    {
-        "name": "Stone Block",
-        "texture": "standard/stone",
-        "type": "SOLID"
-    },
-    {
-        "name": "Copper Ore",
-        "texture": "standard/copperOre",
-        "type": "SOLID"
-    },
-    {
-        "name": "Iron Ore",
-        "texture": "standard/ironOre",
-        "type": "SOLID"
-    },
-    {
-        "name": "Gold Ore",
-        "texture": "standard/goldOre",
-        "type": "SOLID"
-    },
-    {
-        "name": "Coal Ore",
-        "texture": "standard/coalOre",
-        "type": "SOLID"
-    },
-    {
-        "name": "Sand",
-        "texture": "standard/sand",
-        "type": "SOLID"
-    }
-]
+{   
+    "blocks": [
+        {
+            "name": "Air",
+            "type": "NULL"
+        },
+        {
+            "name": "Water",
+            "texture": "standard/water",
+            "type": "LIQUID"
+        },
+        {
+            "name": "Lava",
+            "texture": "standard/lava",
+            "type": "LIQUID"
+        },
+        {
+            "name": "Grass Block",
+            "upTex": "standard/grassBlockUp",
+            "northTex": "standard/grassBlockNorth",
+            "downTex": "standard/dirt",
+            "type": "SOLID"
+        },
+        {
+            "name": "Dirt Block",
+            "texture": "standard/dirt",
+            "type": "SOLID"
+        },
+        {
+            "name": "Stone Block",
+            "texture": "standard/stone",
+            "type": "SOLID"
+        },
+        {
+            "name": "Copper Ore",
+            "texture": "standard/copperOre",
+            "type": "SOLID"
+        },
+        {
+            "name": "Iron Ore",
+            "texture": "standard/ironOre",
+            "type": "SOLID"
+        },
+        {
+            "name": "Gold Ore",
+            "texture": "standard/goldOre",
+            "type": "SOLID"
+        },
+        {
+            "name": "Coal Ore",
+            "texture": "standard/coalOre",
+            "type": "SOLID"
+        },
+        {
+            "name": "Sand",
+            "texture": "standard/sand",
+            "type": "SOLID"
+        }
+    ]
+}

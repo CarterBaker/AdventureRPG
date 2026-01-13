@@ -8,7 +8,6 @@ import com.AdventureRPG.bootstrap.renderpipeline.camera.CameraInstance;
 import com.AdventureRPG.bootstrap.renderpipeline.camerasystem.CameraManager;
 import com.AdventureRPG.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.AdventureRPG.core.engine.ManagerPackage;
-import com.AdventureRPG.core.util.mathematics.Extras.Coordinate2Int;
 import com.AdventureRPG.core.util.mathematics.vectors.Vector3;
 import com.AdventureRPG.core.util.mathematics.vectors.Vector3Int;
 
@@ -44,12 +43,7 @@ public class PlayerManager extends ManagerPackage {
 
     @Override
     protected void update() {
-
         calculatePlayerPosition();
-
-        debug("Player current position: " + player.getWorldPositionStruct().getPosition().toString() +
-                ", Player current chunk: "
-                + Coordinate2Int.toString(player.getWorldPositionStruct().getChunkCoordinate()));
     }
 
     private void calculatePlayerPosition() {
@@ -60,5 +54,15 @@ public class PlayerManager extends ManagerPackage {
         Vector3 direction = camera.getDirection();
 
         movementmanager.move(input, direction, player);
+    }
+
+    // Accessible \\
+
+    public EntityHandle getPlayer() {
+        return player;
+    }
+
+    public WorldPositionStruct getPlayerPosition() {
+        return player.getWorldPositionStruct();
     }
 }

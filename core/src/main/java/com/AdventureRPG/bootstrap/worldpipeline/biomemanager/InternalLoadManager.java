@@ -1,21 +1,19 @@
-package com.AdventureRPG.bootstrap.worldpipeline.blockmanager;
+package com.AdventureRPG.bootstrap.worldpipeline.biomemanager;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.AdventureRPG.bootstrap.worldpipeline.block.BlockHandle;
+import com.AdventureRPG.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.AdventureRPG.core.engine.ManagerPackage;
 import com.AdventureRPG.core.engine.settings.EngineSetting;
 import com.AdventureRPG.core.util.FileUtility;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-
 public class InternalLoadManager extends ManagerPackage {
 
     // Internal
-    private BlockManager blockManager;
+    private BiomeManager biomeManager;
     private InternalBuildSystem internalBuildSystem;
     private File root;
 
@@ -26,14 +24,14 @@ public class InternalLoadManager extends ManagerPackage {
 
         // Internal
         this.internalBuildSystem = create(InternalBuildSystem.class);
-        this.root = new File(EngineSetting.BLOCK_JSON_PATH);
+        this.root = new File(EngineSetting.BIOME_JSON_PATH);
     }
 
     @Override
     protected void get() {
 
         // Internal
-        this.blockManager = get(BlockManager.class);
+        this.biomeManager = get(BiomeManager.class);
     }
 
     @Override
@@ -45,13 +43,14 @@ public class InternalLoadManager extends ManagerPackage {
 
     // Load \\
 
-    void loadBlocks() {
+    void loadBiomes() {
 
-        FileUtility.verifyDirectory(root, "[BlockManager] The root folder could not be verified");
+        FileUtility.verifyDirectory(root, "[BiomeManager] The root folder could not be verified");
 
         Path rootPath = root.toPath();
 
         try (var stream = Files.walk(rootPath)) {
+
             stream
                     .filter(Files::isRegularFile)
                     .filter(path -> FileUtility.hasExtension(path.toFile(), EngineSetting.JSON_FILE_EXTENSIONS))
@@ -59,15 +58,15 @@ public class InternalLoadManager extends ManagerPackage {
         }
 
         catch (IOException e) {
-            throwException("BlockManager failed to load one or more files: ", e);
+            throwException("BiomeManager failed to load one or more files: ", e);
         }
     }
 
     private void processJsonFile(File jsonFile) {
 
-        ObjectArrayList<BlockHandle> blocks = internalBuildSystem.compileBlocks(jsonFile);
+        BiomeHandle biome = internalBuildSystem.compileBiome(jsonFile);
 
-        for (int i = 0; i < blocks.size(); i++)
-            blockManager.addBlock(blocks.get(i));
+        if (biome != null)
+            biomeManager.addBiome(biome);
     }
 }

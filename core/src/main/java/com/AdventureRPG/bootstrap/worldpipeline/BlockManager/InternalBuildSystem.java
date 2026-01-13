@@ -1,4 +1,4 @@
-package com.AdventureRPG.bootstrap.worldpipeline.BlockManager;
+package com.AdventureRPG.bootstrap.worldpipeline.blockmanager;
 
 import java.io.File;
 
@@ -106,21 +106,30 @@ public class InternalBuildSystem extends SystemPackage {
         int highestTexture = findHighestDefinedTexture(
                 upTexture, downTexture, northTexture, southTexture, eastTexture, westTexture);
 
-        if (highestTexture == -1)
-            throwException("Block: " + blockName + " in file: " + jsonFile.getName() + ", has no textures defined");
+        if (highestTexture == -1) {
+            upTexture = -1;
+            downTexture = -1;
+            northTexture = -1;
+            southTexture = -1;
+            eastTexture = -1;
+            westTexture = -1;
+        }
 
-        if (upTexture == -1)
-            upTexture = highestTexture;
-        if (downTexture == -1)
-            downTexture = highestTexture;
-        if (northTexture == -1)
-            northTexture = highestTexture;
-        if (southTexture == -1)
-            southTexture = highestTexture;
-        if (eastTexture == -1)
-            eastTexture = highestTexture;
-        if (westTexture == -1)
-            westTexture = highestTexture;
+        else { // Autofill missing faces with the best available texture
+
+            if (upTexture == -1)
+                upTexture = highestTexture;
+            if (downTexture == -1)
+                downTexture = highestTexture;
+            if (northTexture == -1)
+                northTexture = highestTexture;
+            if (southTexture == -1)
+                southTexture = highestTexture;
+            if (eastTexture == -1)
+                eastTexture = highestTexture;
+            if (westTexture == -1)
+                westTexture = highestTexture;
+        }
 
         // Create block
         BlockHandle block = create(BlockHandle.class);

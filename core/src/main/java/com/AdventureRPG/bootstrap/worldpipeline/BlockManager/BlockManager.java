@@ -1,4 +1,4 @@
-package com.AdventureRPG.bootstrap.worldpipeline.BlockManager;
+package com.AdventureRPG.bootstrap.worldpipeline.blockmanager;
 
 import com.AdventureRPG.bootstrap.worldpipeline.block.BlockHandle;
 import com.AdventureRPG.core.engine.ManagerPackage;

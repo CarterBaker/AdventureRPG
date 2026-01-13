@@ -21,7 +21,7 @@ public class EngineSetting {
         public static final String BLOCK_JSON_PATH = "blocks"; // Location of all block json files
         public static final String BIOME_JSON_PATH = "biomes"; // Location of all biome files
 
-        // File Extension Settings
+        // File Extension Settingsa
 
         // JSON extensions
         private static final String[] JSON_FILE_EXTENSIONS_INTERNAL = {
@@ -81,6 +81,7 @@ public class EngineSetting {
 
         // Scale Settings
         public static final float BLOCK_SIZE = 1.0f; // 1x1x1 block scale
+        public static final int BLOCK_PALETTE_THRESHOLD = 512; // The max amount of blocks a palette can compress
         public static final int BIOME_SIZE = 4; // The width of the biomes within a chunk
         public static final int CHUNK_SIZE = 16; // The width of a chunk in blocks
         public static final int MEGA_CHUNK_SIZE = 4; // The width that we will batch chunks for rendering
