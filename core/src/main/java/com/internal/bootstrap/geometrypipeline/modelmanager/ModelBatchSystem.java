@@ -1,0 +1,161 @@
+package com.internal.bootstrap.geometrypipeline.modelmanager;
+
+import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
+import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import com.internal.core.engine.SystemPackage;
+
+import it.unimi.dsi.fastutil.ints.*;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+
+class ModelBatchSystem extends SystemPackage {
+
+    // Internal
+    private MaterialManager materialManager;
+
+    private IntSet loadedModels;
+    private IntSet unloadedMesh;
+    private int meshCount;
+
+    // Retrieval Mapping
+    private Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<IntSet>> modelID2MaterialID2MeshIDCollection;
+    private Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<ModelHandle>> materialID2MeshID2ModelHandle;
+
+    @Override
+    protected void create() {
+
+        // Internal
+        this.loadedModels = new IntOpenHashSet();
+        this.unloadedMesh = new IntOpenHashSet();
+        this.meshCount = 0;
+
+        // Retrieval Mapping
+        this.modelID2MaterialID2MeshIDCollection = new Int2ObjectOpenHashMap<>();
+        this.materialID2MeshID2ModelHandle = new Int2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.materialManager = get(MaterialManager.class);
+    }
+
+    // Model Management \\
+
+    void draw() {
+
+    }
+
+    void pushModel(MeshPacketData meshPacketData) {
+
+        int modelID = meshPacketData.modelID;
+
+        if (loadedModels.contains(modelID))
+            pullModel(meshPacketData);
+
+        Int2ObjectOpenHashMap<IntSet> materialID2MeshID = modelID2MaterialID2MeshIDCollection.computeIfAbsent(
+                modelID,
+                k -> new Int2ObjectOpenHashMap<>());
+
+        var iterator = meshPacketData.getMaterialID2MeshCollection()
+                .int2ObjectEntrySet().fastIterator();
+
+        while (iterator.hasNext()) {
+
+            var entry = iterator.next();
+            int materialID = entry.getIntKey();
+
+            ObjectArrayList<MeshData> meshDatas = entry.getValue();
+            IntSet meshIDCollection = materialID2MeshID.computeIfAbsent(
+                    materialID,
+                    k -> new IntOpenHashSet());
+
+            Int2ObjectOpenHashMap<ModelHandle> meshID2ModelHandle = materialID2MeshID2ModelHandle.computeIfAbsent(
+                    materialID,
+                    k -> new Int2ObjectOpenHashMap<>());
+
+            for (MeshData meshData : meshDatas) {
+
+                if (meshData.isEmpty())
+                    continue;
+
+                int meshID;
+
+                if (!unloadedMesh.isEmpty()) {
+                    meshID = unloadedMesh.iterator().nextInt();
+                    unloadedMesh.remove(meshID);
+                }
+
+                else
+                    meshID = meshCount++;
+
+                meshIDCollection.add(meshID);
+
+                MeshHandle meshHandle = meshData.meshHandle;
+                MaterialHandle material = materialManager.getMaterialFromMaterialID(materialID);
+
+                ModelHandle modelHandle = create(ModelHandle.class);
+                modelHandle.constructor(
+                        meshHandle.getVaoHandle(),
+                        meshHandle.getVertStride(),
+                        meshHandle.getVboHandle(),
+                        meshHandle.getVertCount(),
+                        meshHandle.getIboHandle(),
+                        meshHandle.getIndexCount(),
+                        material);
+
+                meshID2ModelHandle.put(meshID, modelHandle);
+            }
+        }
+
+        loadedModels.add(modelID);
+    }
+
+    void pullModel(MeshPacketData meshPacketData) {
+
+        int modelID = meshPacketData.modelID;
+
+        Int2ObjectOpenHashMap<IntSet> removedModel = modelID2MaterialID2MeshIDCollection
+                .remove(modelID);
+
+        if (removedModel == null)
+            return;
+
+        loadedModels.remove(modelID);
+
+        var iterator = removedModel.int2ObjectEntrySet().fastIterator();
+        while (iterator.hasNext()) {
+
+            var entry = iterator.next();
+            int materialID = entry.getIntKey();
+            IntSet meshIDs = entry.getValue();
+
+            // Remove all meshes from the material to mesh map
+            Int2ObjectOpenHashMap<ModelHandle> meshID2ModelHandle = materialID2MeshID2ModelHandle.get(materialID);
+
+            if (meshID2ModelHandle != null) {
+
+                for (int meshID : meshIDs) {
+                    meshID2ModelHandle.remove(meshID);
+                    unloadedMesh.add(meshID);
+                }
+
+                // If this material no longer has any meshes, remove it entirely
+                if (meshID2ModelHandle.isEmpty())
+                    materialID2MeshID2ModelHandle.remove(materialID);
+            }
+        }
+    }
+
+    int getModelCount() {
+        return loadedModels.size();
+    }
+
+    int getMeshCount() {
+        return (meshCount - unloadedMesh.size());
+    }
+
+    int getMaterialGroupCount() {
+        return materialID2MeshID2ModelHandle.size();
+    }
+}

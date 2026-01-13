@@ -9,8 +9,8 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.AdventureRPG.core.engine.Main;
-import com.AdventureRPG.core.engine.settings.*;
+import com.internal.core.engine.Main;
+import com.internal.core.engine.settings.*;
 
 public class Lwjgl3Launcher {
 

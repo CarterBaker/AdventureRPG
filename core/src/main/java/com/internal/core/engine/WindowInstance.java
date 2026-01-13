@@ -1,0 +1,76 @@
+package com.internal.core.engine;
+
+import com.badlogic.gdx.Screen;
+import com.internal.bootstrap.renderpipeline.camerasystem.CameraManager;
+
+public class WindowInstance extends InstancePackage implements Screen {
+
+    /*
+     * WindowInstance implements a single application window.
+     * It serves as the engine-level screen and coordinates
+     * rendering, resizing, and camera management.
+     */
+
+    // Internal
+    private CameraManager cameraManager;
+
+    private int width;
+    private int height;
+
+    // Internal \\
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.cameraManager = get(CameraManager.class);
+
+        this.width = 0;
+        this.height = 0;
+    }
+
+    // Screen \\
+
+    @Override
+    public void show() {
+    }
+
+    @Override
+    public void render(float delta) {
+    }
+
+    @Override
+    public void resize(int width, int height) {
+
+        cameraManager.resize(width, height);
+
+        this.width = width;
+        this.height = height;
+    }
+
+    @Override
+    public void pause() {
+    }
+
+    @Override
+    public void resume() {
+    }
+
+    @Override
+    public void hide() {
+    }
+
+    @Override
+    public void dispose() {
+    }
+
+    // Accessible \\
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+}
