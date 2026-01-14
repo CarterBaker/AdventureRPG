@@ -3,9 +3,11 @@ package com.internal.bootstrap.worldpipeline.gridmanager;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.mathematics.Extras.Coordinate2Int;
 
-import it.unimi.dsi.fastutil.floats.Float2LongAVLTreeMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+
+import java.util.Comparator;
 
 class GridBuildSystem extends SystemPackage {
 
@@ -83,20 +85,14 @@ class GridBuildSystem extends SystemPackage {
     private long[] assignLoadOrder(
             Long2ObjectOpenHashMap<GridSlotData> gridSlotdata) {
 
-        Float2LongAVLTreeMap loadOrder = new Float2LongAVLTreeMap();
+        ObjectArrayList<GridSlotData> slots = new ObjectArrayList<>(gridSlotdata.values());
 
-        // Populate sorted map with epsilon to handle duplicate distances
-        float epsilon = 0.0001f;
-        int counter = 0;
+        slots.sort(Comparator.comparingDouble(GridSlotData::getDistanceFromCenter));
 
-        for (GridSlotData slot : gridSlotdata.values()) {
-            float adjustedDistance = slot.getDistanceFromCenter() + (epsilon * counter);
-            loadOrder.put(adjustedDistance, slot.getGridCoordinate());
-            counter++;
+        long[] coordinates = new long[slots.size()];
+        for (int i = 0; i < slots.size(); i++) {
+            coordinates[i] = slots.get(i).getGridCoordinate();
         }
-
-        // Extract coordinates in sorted order (smallest distance → largest)
-        long[] coordinates = loadOrder.values().toLongArray();
 
         return coordinates;
     }

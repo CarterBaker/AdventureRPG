@@ -4,6 +4,7 @@ import com.internal.bootstrap.util.queue.QueueInstance;
 import com.internal.bootstrap.util.queue.QueueItemHandle;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.AssessmentBranch;
+import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BatchBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BuildBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.GenerationBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
@@ -19,6 +20,7 @@ class ChunkQueueManager extends ManagerPackage {
     private GenerationBranch generationBranch;
     private AssessmentBranch assessmentBranch;
     private BuildBranch buildBranch;
+    private BatchBranch batchBranch;
 
     // Chunk Queue
     private QueueInstance chunkQueue;
@@ -37,6 +39,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.generationBranch = create(GenerationBranch.class);
         this.assessmentBranch = create(AssessmentBranch.class);
         this.buildBranch = create(BuildBranch.class);
+        this.batchBranch = create(BatchBranch.class);
 
         // Stream System
         this.chunkQueue = create(QueueInstance.class);
@@ -51,6 +54,8 @@ class ChunkQueueManager extends ManagerPackage {
 
         this.loadRequests = new LongLinkedOpenHashSet();
         this.unloadRequests = new LongLinkedOpenHashSet();
+
+        this.assessmentBranch.setActiveChunks(activeChunks);
     }
 
     @Override
@@ -139,6 +144,7 @@ class ChunkQueueManager extends ManagerPackage {
             case GENERATE -> generationBranch.generateChunk(chunkInstance);
             case NEIGHBOR_ASSESSMENT -> assessmentBranch.assessChunk(chunkInstance);
             case BUILD -> buildBranch.buildChunk(chunkInstance);
+            case BATCH -> batchBranch.batchChunk(chunkInstance);
         }
 
         // Add back to end

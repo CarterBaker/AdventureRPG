@@ -13,7 +13,11 @@ public enum ChunkState {
 
     // Neighbors
     NEEDS_NEIGHBOR_ASSIGNMENT(QueueOperation.NEIGHBOR_ASSESSMENT),
-    HAS_NEIGHBOR_ASSIGNMENT(QueueOperation.BUILD);
+    HAS_NEIGHBOR_ASSIGNMENT(QueueOperation.BUILD),
+
+    // Geometry
+    NEEDS_GEOMETRY_ASSIGNMENT(QueueOperation.BUILD),
+    HAS_GEOMETRY_ASSIGNMENT(QueueOperation.BATCH);
 
     // Internal
     private final QueueOperation associatedOperation;
