@@ -4,11 +4,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 public class EngineSetting {
 
-        // World Tick Settings
-        public static final float WORLD_TICK = 1; // Internal clock used to throttle world load
-        public static final int MAX_CHUNK_LOADS_PER_FRAME = 256; // 256 chunks per frame
-        public static final int MAX_CHUNK_LOADS_PER_TICK = 16384; // 120 frames per second
-
         // Path Settings
         public static final String BLOCK_TEXTURE_PATH = "textures"; // Location of all block images
         public static final String BLOCK_TEXTURE_ALIAS_PATH = "textureAliases"; // Location of alias definitions
@@ -98,4 +93,6 @@ public class EngineSetting {
 
         // World
         public static final String STARTING_WORLD = "TerraArcana"; // The world the player starts in
+        public static final int MAX_CHUNK_STREAM_PER_FRAME = 256; // Chunks to load per frame
+        public static final int MAX_CHUNK_STREAM_PER_BATCH = 32; // Chunks to load per batch
 }

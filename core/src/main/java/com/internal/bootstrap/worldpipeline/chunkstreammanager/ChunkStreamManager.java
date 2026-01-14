@@ -1,19 +1,24 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 import com.internal.bootstrap.entitypipeline.playermanager.PlayerManager;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.core.engine.ManagerPackage;
+import com.internal.core.util.mathematics.Extras.Coordinate2Int;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
 public class ChunkStreamManager extends ManagerPackage {
 
     // Internal
     private PlayerManager playerManager;
     private ChunkPositionSystem chunkPositionSystem;
-    private ChunkQueueSystem chunkQueueSystem;
+    private ChunkQueueManager chunkQueueManager;
     private GridManager gridManager;
 
     // Chunk Position
     private long activeChunkCoordinate;
+    private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
 
     // Internal \\
 
@@ -22,7 +27,15 @@ public class ChunkStreamManager extends ManagerPackage {
 
         // Internal
         this.chunkPositionSystem = create(ChunkPositionSystem.class);
-        this.chunkQueueSystem = create(ChunkQueueSystem.class);
+        this.chunkQueueManager = create(ChunkQueueManager.class);
+
+        // Chunk Position
+        this.activeChunkCoordinate = Coordinate2Int.pack(-1, -1);
+        this.activeChunks = new Long2ObjectLinkedOpenHashMap<>();
+
+        // Assign the same collection reference to all systems
+        this.chunkPositionSystem.setActiveChunks(activeChunks);
+        this.chunkQueueManager.setActiveChunks(activeChunks);
     }
 
     @Override
@@ -31,13 +44,6 @@ public class ChunkStreamManager extends ManagerPackage {
         // Internal
         this.playerManager = get(PlayerManager.class);
         this.gridManager = get(GridManager.class);
-    }
-
-    @Override
-    protected void start() {
-
-        // Chunk Position
-        this.activeChunkCoordinate = playerManager.getPlayerPosition().getChunkCoordinate();
     }
 
     @Override
