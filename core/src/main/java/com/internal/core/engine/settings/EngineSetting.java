@@ -10,7 +10,7 @@ public class EngineSetting {
         public static final String SHADER_PATH = "shaders"; // Location of all shader files
         public static final String MATERIAL_JSON_PATH = "materials"; // Location of all material json files
         public static final String PASS_JSON_PATH = "processingPasses"; // Location of all pass json files
-        public static final String MODEL_JSON_PATH = "models"; // Location of all material json files
+        public static final String MESH_JSON_PATH = "mesh"; // Location of all material json files
         public static final String WORLD_TEXTURE_PATH = "worlds"; // The location of all world images
         public static final String CALENDAR_JSON_PATH = "calendar/Calendar.json"; // Location of the calendar json file
         public static final String BLOCK_JSON_PATH = "blocks"; // Location of all block json files

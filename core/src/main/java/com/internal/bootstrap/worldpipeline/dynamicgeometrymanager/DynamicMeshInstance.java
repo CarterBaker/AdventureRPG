@@ -1,15 +1,16 @@
-package com.internal.bootstrap.geometrypipeline.modelmanager;
+package com.internal.bootstrap.worldpipeline.dynamicgeometrymanager;
 
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOHandle;
+import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vbomanager.VBOHandle;
-import com.internal.core.engine.DataPackage;
+import com.internal.core.engine.InstancePackage;
 import com.internal.core.engine.settings.EngineSetting;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
-class MeshData extends DataPackage {
+class DynamicMeshInstance extends InstancePackage {
 
     // Internal
     final String meshName;
@@ -27,7 +28,7 @@ class MeshData extends DataPackage {
 
     // Base \\
 
-    MeshData(
+    DynamicMeshInstance(
             String meshName,
             int meshID,
             VAOHandle vaoHandle,
@@ -46,7 +47,7 @@ class MeshData extends DataPackage {
         this.vertexCount = vertCount;
     }
 
-    public MeshData(
+    public DynamicMeshInstance(
             VAOHandle vaoHandle) {
 
         // System Data
@@ -88,7 +89,7 @@ class MeshData extends DataPackage {
         return vertsToAdd;
     }
 
-    boolean tryAddCompleteMesh(MeshData source) {
+    boolean tryAddCompleteMesh(DynamicMeshInstance source) {
 
         if (source.isEmpty())
             return true;

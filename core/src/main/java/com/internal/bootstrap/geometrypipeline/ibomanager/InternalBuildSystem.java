@@ -5,7 +5,7 @@ import java.io.File;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.geometrypipeline.modelmanager.InternalLoadManager;
+import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.core.engine.SystemPackage;

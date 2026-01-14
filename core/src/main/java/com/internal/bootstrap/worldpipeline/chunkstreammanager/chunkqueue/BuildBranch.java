@@ -1,18 +1,17 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 
-import com.internal.bootstrap.geometrypipeline.buildManager.BuildManager;
 import com.internal.bootstrap.threadpipeline.ThreadSystem;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkState;
+import com.internal.bootstrap.worldpipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.engine.settings.EngineSetting;
 
 public class BuildBranch extends BranchPackage {
 
     // Internal
     private ThreadSystem threadSystem;
-    private BuildManager buildManager;
+    private DynamicGeometryManager dynamicGeometryManager;
 
     // internal \\
 
@@ -21,7 +20,7 @@ public class BuildBranch extends BranchPackage {
 
         // Internal
         this.threadSystem = get(ThreadSystem.class);
-        this.buildManager = get(BuildManager.class);
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
     }
 
     // Chunk Generation \\
@@ -32,21 +31,10 @@ public class BuildBranch extends BranchPackage {
         threadSystem.submitGeneration(() -> {
 
             boolean success = true;
-            SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
 
-            // Generate all subchunks
-            for (int i = 0; i < EngineSetting.WORLD_HEIGHT; i++) {
-
-                SubChunkInstance subChunk = subChunks[i];
-                if (buildManager.build(
-                        chunkInstance,
-                        subChunk))
-                    continue;
-
+            // Attempt to build the chunk
+            if (!dynamicGeometryManager.build(chunkInstance))
                 success = false;
-                break;
-
-            }
 
             if (success) // Thread-safe state update
                 chunkInstance.setChunkState(ChunkState.HAS_GENERATION_DATA);

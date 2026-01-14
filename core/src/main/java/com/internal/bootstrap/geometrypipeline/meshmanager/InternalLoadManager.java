@@ -1,4 +1,4 @@
-package com.internal.bootstrap.geometrypipeline.modelmanager;
+package com.internal.bootstrap.geometrypipeline.meshmanager;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,7 +18,7 @@ public class InternalLoadManager extends ManagerPackage {
 
     // Internal
     private File root;
-    private ModelManager modelManager;
+    private MeshManager meshManager;
     private InternalBuildSystem internalBuildSystem;
     private int meshDataCount;
 
@@ -29,7 +29,7 @@ public class InternalLoadManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        this.root = new File(EngineSetting.MODEL_JSON_PATH);
+        this.root = new File(EngineSetting.MESH_JSON_PATH);
         this.internalBuildSystem = create(InternalBuildSystem.class);
         this.meshDataCount = 0;
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
@@ -37,7 +37,7 @@ public class InternalLoadManager extends ManagerPackage {
 
     @Override
     protected void get() {
-        this.modelManager = get(ModelManager.class);
+        this.meshManager = get(MeshManager.class);
     }
 
     @Override
@@ -130,6 +130,6 @@ public class InternalLoadManager extends ManagerPackage {
     }
 
     private void createMeshData(String meshName, int meshID, MeshHandle meshHandle) {
-        modelManager.addMeshHandle(meshName, meshID, meshHandle);
+        meshManager.addMeshHandle(meshName, meshID, meshHandle);
     }
 }

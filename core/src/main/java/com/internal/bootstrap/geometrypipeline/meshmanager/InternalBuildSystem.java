@@ -1,4 +1,4 @@
-package com.internal.bootstrap.geometrypipeline.modelmanager;
+package com.internal.bootstrap.geometrypipeline.meshmanager;
 
 import java.io.File;
 

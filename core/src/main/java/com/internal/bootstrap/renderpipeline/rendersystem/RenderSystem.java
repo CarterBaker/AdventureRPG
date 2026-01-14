@@ -1,7 +1,7 @@
 package com.internal.bootstrap.renderpipeline.rendersystem;
 
+import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
-import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
 import com.internal.bootstrap.shaderpipeline.passmanager.PassHandle;
 import com.internal.bootstrap.shaderpipeline.shadermanager.ShaderHandle;
@@ -14,7 +14,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RenderSystem extends SystemPackage {
 
     // Internal
-    private ModelManager modelManager;
+    private MeshManager meshManager;
     private WindowInstance windowInstance;
 
     // Render Queue: depth -> ordered list of passes
@@ -29,7 +29,7 @@ public class RenderSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.modelManager = get(ModelManager.class);
+        this.meshManager = get(MeshManager.class);
         this.windowInstance = internal.getWindowInstance();
     }
 
@@ -60,7 +60,7 @@ public class RenderSystem extends SystemPackage {
 
             if (depth == 0) {
                 // Draw model batch system at depth 0
-                modelManager.draw();
+                // meshManager.draw();
             } else {
                 // Draw processing passes at this depth
                 ObjectArrayList<PassHandle> passList = depth2PassList.get(depth);
@@ -75,7 +75,7 @@ public class RenderSystem extends SystemPackage {
 
         // Handle depth 0 if it wasn't in the queue
         if (!depth2PassList.containsKey(0)) {
-            modelManager.draw();
+            // meshManager.draw();
         }
     }
 

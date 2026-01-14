@@ -1,7 +1,7 @@
-package com.internal.bootstrap.geometrypipeline.modelmanager;
+package com.internal.bootstrap.worldpipeline.dynamicgeometrymanager;
 
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
-import com.internal.core.engine.DataPackage;
+import com.internal.core.engine.InstancePackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.matrices.Matrix4;
 
@@ -9,7 +9,7 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class MeshPacketData extends DataPackage {
+public class DynamicModelInstance extends InstancePackage {
 
     // Internal
     final int modelID;
@@ -17,13 +17,13 @@ public class MeshPacketData extends DataPackage {
     private Matrix4 transform;
 
     private int floatsPerQuad;
-    private Int2ObjectOpenHashMap<ObjectArrayList<MeshData>> materialID2MeshCollection;
+    private Int2ObjectOpenHashMap<ObjectArrayList<DynamicMeshInstance>> materialID2MeshCollection;
 
     private boolean rendering;
 
     // Base \\
 
-    MeshPacketData(int modelID, VAOHandle vaoHandle) {
+    DynamicModelInstance(int modelID, VAOHandle vaoHandle) {
 
         // Internal
         this.modelID = modelID;
@@ -46,14 +46,14 @@ public class MeshPacketData extends DataPackage {
         addVerticesInternal(materialId, vertList, 0, vertList.size());
     }
 
-    public void merge(MeshPacketData other) {
+    public void merge(DynamicModelInstance other) {
 
         for (var entry : other.materialID2MeshCollection.int2ObjectEntrySet()) {
 
             int materialId = entry.getIntKey();
-            ObjectArrayList<MeshData> sourceMeshes = entry.getValue();
+            ObjectArrayList<DynamicMeshInstance> sourceMeshes = entry.getValue();
 
-            for (MeshData sourceMesh : sourceMeshes) {
+            for (DynamicMeshInstance sourceMesh : sourceMeshes) {
 
                 if (sourceMesh.isEmpty())
                     continue;
@@ -69,21 +69,21 @@ public class MeshPacketData extends DataPackage {
         }
     }
 
-    private boolean tryMergeCompleteMesh(int materialId, MeshData sourceMesh) {
+    private boolean tryMergeCompleteMesh(int materialId, DynamicMeshInstance sourceMesh) {
 
-        ObjectArrayList<MeshData> meshList = materialID2MeshCollection.get(materialId);
+        ObjectArrayList<DynamicMeshInstance> meshList = materialID2MeshCollection.get(materialId);
 
         if (meshList == null)
             return false;
 
         // Try to fit into existing meshes
-        for (MeshData targetMesh : meshList)
+        for (DynamicMeshInstance targetMesh : meshList)
             if (!targetMesh.isFull() && targetMesh.tryAddCompleteMesh(sourceMesh))
                 return true;
 
         // Try creating one new mesh for the whole thing
         if (sourceMesh.getVertexCount() <= EngineSetting.MESH_VERT_LIMIT) {
-            MeshData newMesh = new MeshData(vaoHandle);
+            DynamicMeshInstance newMesh = new DynamicMeshInstance(vaoHandle);
             meshList.add(newMesh);
             return newMesh.tryAddCompleteMesh(sourceMesh);
         }
@@ -93,14 +93,14 @@ public class MeshPacketData extends DataPackage {
 
     private void addVerticesInternal(int materialId, FloatArrayList vertList, int offset, int length) {
 
-        ObjectArrayList<MeshData> meshList = materialID2MeshCollection.computeIfAbsent(
+        ObjectArrayList<DynamicMeshInstance> meshList = materialID2MeshCollection.computeIfAbsent(
                 materialId,
                 k -> new ObjectArrayList<>());
 
         int processed = 0;
 
         // Try to fill existing meshes first
-        for (MeshData mesh : meshList) {
+        for (DynamicMeshInstance mesh : meshList) {
 
             if (processed >= length)
                 break;
@@ -115,7 +115,7 @@ public class MeshPacketData extends DataPackage {
         // Create new meshes for remaining data
         while (processed < length) {
 
-            MeshData newMesh = new MeshData(vaoHandle);
+            DynamicMeshInstance newMesh = new DynamicMeshInstance(vaoHandle);
             meshList.add(newMesh);
 
             int added = newMesh.tryAddVertices(vertList, offset + processed, length - processed);
@@ -135,16 +135,16 @@ public class MeshPacketData extends DataPackage {
         for (var entry : materialID2MeshCollection.int2ObjectEntrySet()) {
 
             int materialId = entry.getIntKey();
-            ObjectArrayList<MeshData> meshList = entry.getValue();
+            ObjectArrayList<DynamicMeshInstance> meshList = entry.getValue();
 
             if (meshList.size() <= 1)
                 continue;
 
             // Find sparse meshes
-            ObjectArrayList<MeshData> sparseMeshes = new ObjectArrayList<>();
-            ObjectArrayList<MeshData> denseMeshes = new ObjectArrayList<>();
+            ObjectArrayList<DynamicMeshInstance> sparseMeshes = new ObjectArrayList<>();
+            ObjectArrayList<DynamicMeshInstance> denseMeshes = new ObjectArrayList<>();
 
-            for (MeshData mesh : meshList) {
+            for (DynamicMeshInstance mesh : meshList) {
 
                 if (mesh.getFillPercentage() < minFillThreshold && !mesh.isEmpty())
                     sparseMeshes.add(mesh);
@@ -159,7 +159,7 @@ public class MeshPacketData extends DataPackage {
 
             // Extract all vertices from sparse meshes
             FloatArrayList consolidatedVerts = new FloatArrayList();
-            for (MeshData sparse : sparseMeshes) {
+            for (DynamicMeshInstance sparse : sparseMeshes) {
                 FloatArrayList verts = sparse.getVerticesList();
                 consolidatedVerts.addElements(consolidatedVerts.size(), verts.elements(), 0, verts.size());
                 sparse.clear();
@@ -177,9 +177,9 @@ public class MeshPacketData extends DataPackage {
 
     public void clear() {
 
-        for (ObjectArrayList<MeshData> meshList : materialID2MeshCollection.values()) {
+        for (ObjectArrayList<DynamicMeshInstance> meshList : materialID2MeshCollection.values()) {
 
-            for (MeshData mesh : meshList)
+            for (DynamicMeshInstance mesh : meshList)
                 mesh.clear();
 
             meshList.clear();
@@ -202,19 +202,19 @@ public class MeshPacketData extends DataPackage {
         this.transform = transform;
     }
 
-    public Int2ObjectOpenHashMap<ObjectArrayList<MeshData>> getMaterialID2MeshCollection() {
+    public Int2ObjectOpenHashMap<ObjectArrayList<DynamicMeshInstance>> getMaterialID2MeshCollection() {
         return materialID2MeshCollection;
     }
 
-    public ObjectArrayList<MeshData> getMeshesForMaterial(int materialId) {
+    public ObjectArrayList<DynamicMeshInstance> getMeshesForMaterial(int materialId) {
         return materialID2MeshCollection.get(materialId);
     }
 
     public int getTotalVertexCount() {
 
         int total = 0;
-        for (ObjectArrayList<MeshData> meshList : materialID2MeshCollection.values())
-            for (MeshData mesh : meshList)
+        for (ObjectArrayList<DynamicMeshInstance> meshList : materialID2MeshCollection.values())
+            for (DynamicMeshInstance mesh : meshList)
                 total += mesh.getVertexCount();
 
         return total;
@@ -223,7 +223,7 @@ public class MeshPacketData extends DataPackage {
     public int getTotalMeshCount() {
 
         int total = 0;
-        for (ObjectArrayList<MeshData> meshList : materialID2MeshCollection.values())
+        for (ObjectArrayList<DynamicMeshInstance> meshList : materialID2MeshCollection.values())
             total += meshList.size();
 
         return total;
@@ -250,12 +250,12 @@ public class MeshPacketData extends DataPackage {
         while (entryIter.hasNext()) {
 
             var entry = entryIter.next();
-            ObjectArrayList<MeshData> meshList = entry.getValue();
+            ObjectArrayList<DynamicMeshInstance> meshList = entry.getValue();
 
             int size = meshList.size();
             for (int i = 0; i < size; i++) {
 
-                MeshData mesh = meshList.get(i);
+                DynamicMeshInstance mesh = meshList.get(i);
 
                 if (!mesh.isEmpty())
                     mesh.pushToGPU();
@@ -272,12 +272,12 @@ public class MeshPacketData extends DataPackage {
         while (entryIter.hasNext()) {
 
             var entry = entryIter.next();
-            ObjectArrayList<MeshData> meshList = entry.getValue();
+            ObjectArrayList<DynamicMeshInstance> meshList = entry.getValue();
 
             int size = meshList.size();
             for (int i = 0; i < size; i++) {
 
-                MeshData mesh = meshList.get(i);
+                DynamicMeshInstance mesh = meshList.get(i);
 
                 if (!mesh.isEmpty())
                     mesh.pullFromGPU();

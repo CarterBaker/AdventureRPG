@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.passmanager;
 
-import com.internal.bootstrap.geometrypipeline.modelmanager.MeshHandle;
+import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
 import com.internal.core.engine.HandlePackage;

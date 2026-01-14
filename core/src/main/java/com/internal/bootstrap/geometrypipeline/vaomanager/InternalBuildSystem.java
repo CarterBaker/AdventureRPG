@@ -4,7 +4,7 @@ import java.io.File;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.geometrypipeline.modelmanager.InternalLoadManager;
+import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;

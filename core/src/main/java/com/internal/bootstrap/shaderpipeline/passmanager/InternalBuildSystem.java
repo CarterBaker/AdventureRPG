@@ -3,8 +3,8 @@ package com.internal.bootstrap.shaderpipeline.passmanager;
 import java.io.File;
 
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.geometrypipeline.modelmanager.MeshHandle;
-import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
+import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;
+import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.core.engine.SystemPackage;
@@ -14,7 +14,7 @@ import com.internal.core.util.JsonUtility;
 class InternalBuildSystem extends SystemPackage {
 
     // Internal
-    private ModelManager modelManager;
+    private MeshManager meshManager;
     private MaterialManager materialManager;
     private MeshHandle processingTriangle;
 
@@ -24,7 +24,7 @@ class InternalBuildSystem extends SystemPackage {
     protected void get() {
 
         // Internal
-        this.modelManager = get(ModelManager.class);
+        this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
     }
 
@@ -33,8 +33,8 @@ class InternalBuildSystem extends SystemPackage {
     void assignMeshData() {
 
         // Internal
-        int meshID = modelManager.getMeshHandleIDFromMeshName("util/PlanarPass");
-        this.processingTriangle = modelManager.getMeshHandleFromMeshHandleID(meshID);
+        int meshID = meshManager.getMeshHandleIDFromMeshName("util/PlanarPass");
+        this.processingTriangle = meshManager.getMeshHandleFromMeshHandleID(meshID);
     }
 
     PassHandle buildPass(File root, File file, int passID) {
@@ -70,7 +70,7 @@ class InternalBuildSystem extends SystemPackage {
             meshName = json.get("mesh").getAsString();
         }
 
-        int meshID = modelManager.getMeshHandleIDFromMeshName(meshName);
-        return modelManager.getMeshHandleFromMeshHandleID(meshID);
+        int meshID = meshManager.getMeshHandleIDFromMeshName(meshName);
+        return meshManager.getMeshHandleFromMeshHandleID(meshID);
     }
 }

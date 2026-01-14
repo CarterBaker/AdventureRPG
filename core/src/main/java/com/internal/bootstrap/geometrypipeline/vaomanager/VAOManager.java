@@ -2,7 +2,7 @@ package com.internal.bootstrap.geometrypipeline.vaomanager;
 
 import java.io.File;
 
-import com.internal.bootstrap.geometrypipeline.modelmanager.InternalLoadManager;
+import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
 import com.internal.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
