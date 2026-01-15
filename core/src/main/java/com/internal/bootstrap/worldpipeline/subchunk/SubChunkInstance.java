@@ -1,12 +1,13 @@
 package com.internal.bootstrap.worldpipeline.subchunk;
 
-import com.internal.bootstrap.worldpipeline.util.BlockPaletteHandle;
 import com.internal.core.engine.InstancePackage;
+import com.internal.core.engine.settings.EngineSetting;
 
 public class SubChunkInstance extends InstancePackage {
 
     // Internal
-    BlockPaletteHandle blocks;
+    BlockPaletteHandle biomePaletteHandle;
+    BlockPaletteHandle blockPaletteHandle;
 
     // Internal \\
 
@@ -14,12 +15,25 @@ public class SubChunkInstance extends InstancePackage {
     protected void create() {
 
         // Internal
-        this.blocks = create(BlockPaletteHandle.class);
+        this.biomePaletteHandle = create(BlockPaletteHandle.class);
+        this.biomePaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE / EngineSetting.BIOME_SIZE,
+                EngineSetting.BLOCK_PALETTE_THRESHOLD / EngineSetting.BIOME_SIZE);
+
+        this.blockPaletteHandle = create(BlockPaletteHandle.class);
+        this.blockPaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE,
+                EngineSetting.BLOCK_PALETTE_THRESHOLD);
+
     }
 
     // Accessible \\
 
-    public BlockPaletteHandle getBlocks() {
-        return blocks;
+    public BlockPaletteHandle getBiomePaletteHandle() {
+        return biomePaletteHandle;
+    }
+
+    public BlockPaletteHandle getBlockPaletteHandle() {
+        return blockPaletteHandle;
     }
 }

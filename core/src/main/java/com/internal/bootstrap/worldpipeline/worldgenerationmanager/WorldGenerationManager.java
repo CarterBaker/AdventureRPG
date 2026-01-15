@@ -1,11 +1,11 @@
 package com.internal.bootstrap.worldpipeline.worldgenerationmanager;
 
+import com.internal.bootstrap.worldpipeline.subchunk.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import com.internal.bootstrap.worldpipeline.util.BlockPaletteHandle;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.OpenSimplex2;
-import com.internal.core.util.mathematics.Extras.Coordinate2Int;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 
 public class WorldGenerationManager extends ManagerPackage {
 
@@ -53,8 +53,8 @@ public class WorldGenerationManager extends ManagerPackage {
     public boolean generateSubChunk(long chunkCoordinate, SubChunkInstance subChunkInstance, int subChunkIndex) {
 
         // Unpack chunk coordinates
-        int chunkX = Coordinate2Int.unpackX(chunkCoordinate);
-        int chunkZ = Coordinate2Int.unpackY(chunkCoordinate);
+        int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
+        int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
 
         // Calculate world offsets
         long offsetX = (long) chunkX * CHUNK_SIZE;
@@ -62,7 +62,7 @@ public class WorldGenerationManager extends ManagerPackage {
         long offsetY = (long) subChunkIndex * CHUNK_SIZE;
 
         // Get block palette
-        BlockPaletteHandle blocks = subChunkInstance.getBlocks();
+        BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
 
         // Noise parameters
         double scale = 0.05; // Lower = bigger hills

@@ -1,21 +1,28 @@
 package com.internal.bootstrap.worldpipeline.chunk;
 
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicModelInstance;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.InstancePackage;
 import com.internal.core.engine.settings.EngineSetting;
 
 public class ChunkInstance extends InstancePackage {
 
     // Internal
+    private WorldHandle worldHandle;
     private long chunkCoordinate;
-    private ChunkState chunkState;
+    private volatile ChunkState chunkState;
 
     // SubChunks
     private SubChunkInstance[] subChunks;
 
     // Neighbors
     private ChunkNeighborStruct chunkNeighbors;
+
+    // Dynamic Mesh
+    private DynamicModelInstance dynamicModelInstance;
 
     // Internal \\
 
@@ -33,15 +40,27 @@ public class ChunkInstance extends InstancePackage {
 
         // Neighbors
         this.chunkNeighbors = new ChunkNeighborStruct();
+
+        // Dynamic Mesh
+        this.dynamicModelInstance = create(DynamicModelInstance.class);
     }
 
-    public void constructor(long chunkCoordinate) {
+    public void constructor(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            VAOHandle vaoHandle) {
 
         // Internal
+        this.worldHandle = worldHandle;
         this.chunkCoordinate = chunkCoordinate;
 
         // Neighbors
-        this.chunkNeighbors.constructor(chunkCoordinate);
+        this.chunkNeighbors.constructor(
+                chunkCoordinate,
+                this);
+
+        // Dynamic Mesh
+        this.dynamicModelInstance.constructor(vaoHandle);
     }
 
     public void dispose() {
@@ -50,12 +69,13 @@ public class ChunkInstance extends InstancePackage {
 
     // Accessible \\
 
-    public long getChunkCoordinate() {
-        return chunkCoordinate;
+    // Internal
+    public WorldHandle getWorldHandle() {
+        return worldHandle;
     }
 
-    public ChunkState getChunkState() {
-        return chunkState;
+    public long getChunkCoordinate() {
+        return chunkCoordinate;
     }
 
     public QueueOperation getChunkStateOperation() {
@@ -66,15 +86,18 @@ public class ChunkInstance extends InstancePackage {
         this.chunkState = chunkState;
     }
 
+    // SubChunks
     public SubChunkInstance[] getSubChunks() {
         return subChunks;
     }
 
-    public SubChunkInstance getSubChunk(int i) {
-        return subChunks[i];
-    }
-
+    // Neighbors
     public ChunkNeighborStruct getChunkNeighbors() {
         return chunkNeighbors;
+    }
+
+    // Dynamic Mesh
+    public DynamicModelInstance getDynamicModelInstance() {
+        return dynamicModelInstance;
     }
 }

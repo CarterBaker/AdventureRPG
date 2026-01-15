@@ -1,7 +1,7 @@
 package com.internal.bootstrap.worldpipeline.gridmanager;
 
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Int;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -59,7 +59,7 @@ class GridBuildSystem extends SystemPackage {
 
                 if (distanceFromCenter <= radiusSquared) {
 
-                    long gridCoordinate = Coordinate2Int.pack(x, y);
+                    long gridCoordinate = Coordinate2Long.pack(x, y);
                     gridSlotdata.put(gridCoordinate, createGridSlotData(
                             gridCoordinate,
                             distanceFromCenter));

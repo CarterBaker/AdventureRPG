@@ -8,7 +8,7 @@ import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate2Int;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector3;
 import com.internal.core.util.mathematics.vectors.Vector3Int;
 
@@ -51,8 +51,8 @@ public class MovementManager extends ManagerPackage {
         Vector3 position = worldPosition.getPosition();
 
         long chunkCoordinate = worldPosition.getChunkCoordinate();
-        int chunkCoordinateX = Coordinate2Int.unpackX(chunkCoordinate);
-        int chunkCoordinateY = Coordinate2Int.unpackY(chunkCoordinate);
+        int chunkCoordinateX = Coordinate2Long.unpackX(chunkCoordinate);
+        int chunkCoordinateY = Coordinate2Long.unpackY(chunkCoordinate);
 
         StatisticsInstance statistics = entityHandle.getStatisticsInstance();
 
@@ -83,7 +83,7 @@ public class MovementManager extends ManagerPackage {
         chunkCoordinateX += calculateChunkCoordinateAxisFrom(position.x);
         chunkCoordinateY += calculateChunkCoordinateAxisFrom(position.z);
 
-        return Coordinate2Int.pack(chunkCoordinateX, chunkCoordinateY);
+        return Coordinate2Long.pack(chunkCoordinateX, chunkCoordinateY);
     }
 
     // Use the calculated position this frame to calculate the new chunks position

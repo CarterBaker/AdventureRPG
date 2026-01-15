@@ -4,7 +4,7 @@ import com.internal.bootstrap.entitypipeline.playermanager.PlayerManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Int;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
@@ -30,7 +30,7 @@ public class ChunkStreamManager extends ManagerPackage {
         this.chunkQueueManager = create(ChunkQueueManager.class);
 
         // Chunk Position
-        this.activeChunkCoordinate = Coordinate2Int.pack(-1, -1);
+        this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
         this.activeChunks = new Long2ObjectLinkedOpenHashMap<>();
 
         // Assign the same collection reference to all systems

@@ -1,6 +1,7 @@
-package com.internal.bootstrap.worldpipeline.dynamicgeometrymanager;
+package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 
@@ -22,10 +23,12 @@ public class DynamicGeometryManager extends ManagerPackage {
 
     public boolean build(ChunkInstance chunkInstance) {
 
+        SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
+
         for (int i = 0; i < worldHeight; i++)
             if (!internalBuildManager.build(
                     chunkInstance,
-                    chunkInstance.getSubChunk(i)))
+                    subChunks[i]))
                 return false;
 
         return true;

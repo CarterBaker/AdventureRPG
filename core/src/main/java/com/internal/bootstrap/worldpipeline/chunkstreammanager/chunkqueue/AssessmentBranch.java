@@ -4,7 +4,7 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkState;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.util.mathematics.Extras.Direction2Int;
+import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
@@ -22,7 +22,7 @@ public class AssessmentBranch extends BranchPackage {
         ChunkNeighborStruct neighbors = chunkInstance.getChunkNeighbors();
 
         // Search for all neighbors
-        for (int i = 0; i < Direction2Int.LENGTH; i++) {
+        for (int i = 0; i < Direction2Vector.LENGTH; i++) {
 
             long neighborCoordinate = neighbors.getNeighborCoordinate(i);
             ChunkInstance neighborChunk = activeChunks.get(neighborCoordinate);

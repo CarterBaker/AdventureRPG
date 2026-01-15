@@ -3,7 +3,7 @@ package com.internal.bootstrap.entitypipeline.entityManager;
 import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Int;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class EntityManager extends ManagerPackage {
@@ -23,7 +23,7 @@ public class EntityManager extends ManagerPackage {
         entityHandle.constructor(
                 worldStreamManager.getActiveWorld(),
                 new Vector3(),
-                Coordinate2Int.pack(0, 0));
+                Coordinate2Long.pack(0, 0));
 
         return entityHandle;
     }

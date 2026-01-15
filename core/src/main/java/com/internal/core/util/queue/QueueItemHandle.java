@@ -1,4 +1,4 @@
-package com.internal.bootstrap.util.queue;
+package com.internal.core.util.queue;
 
 import com.internal.core.engine.HandlePackage;
 

@@ -2,7 +2,7 @@
     "blocks": [
         {
             "name": "Air",
-            "type": "NULL"
+            "type": "NONE"
         },
         {
             "name": "Water",
@@ -19,42 +19,42 @@
             "upTex": "standard/grassBlockUp",
             "northTex": "standard/grassBlockNorth",
             "downTex": "standard/dirt",
-            "type": "SOLID"
+            "type": "FULL"
         },
         {
             "name": "Dirt Block",
             "texture": "standard/dirt",
-            "type": "SOLID"
+            "type": "FULL"
         },
         {
             "name": "Stone Block",
             "texture": "standard/stone",
-            "type": "SOLID"
+            "type": "FULL"
         },
         {
             "name": "Copper Ore",
             "texture": "standard/copperOre",
-            "type": "SOLID"
+            "type": "FULL"
         },
         {
             "name": "Iron Ore",
             "texture": "standard/ironOre",
-            "type": "SOLID"
+            "type": "FULL"
         },
         {
             "name": "Gold Ore",
             "texture": "standard/goldOre",
-            "type": "SOLID"
+            "type": "FULL"
         },
         {
             "name": "Coal Ore",
             "texture": "standard/coalOre",
-            "type": "SOLID"
+            "type": "FULL"
         },
         {
             "name": "Sand",
             "texture": "standard/sand",
-            "type": "SOLID"
+            "type": "FULL"
         }
     ]
 }

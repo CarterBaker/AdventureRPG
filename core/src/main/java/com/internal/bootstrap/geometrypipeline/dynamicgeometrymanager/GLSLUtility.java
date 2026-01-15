@@ -1,4 +1,4 @@
-package com.internal.bootstrap.worldpipeline.dynamicgeometrymanager;
+package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;

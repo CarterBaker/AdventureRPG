@@ -5,7 +5,7 @@ import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Int;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -65,8 +65,8 @@ class ChunkPositionSystem extends SystemPackage {
             GridInstance gridInstance,
             long activeChunkCoordinate) {
 
-        int activeChunkCoordinateX = Coordinate2Int.unpackX(activeChunkCoordinate);
-        int activeChunkCoordinateY = Coordinate2Int.unpackY(activeChunkCoordinate);
+        int activeChunkCoordinateX = Coordinate2Long.unpackX(activeChunkCoordinate);
+        int activeChunkCoordinateY = Coordinate2Long.unpackY(activeChunkCoordinate);
 
         // The grid is prebuilt and never changes
         for (int i = 0; i < gridInstance.getTotalSlots(); i++)
@@ -89,15 +89,15 @@ class ChunkPositionSystem extends SystemPackage {
             int activeChunkCoordinateY) {
 
         // Use the position in grid as an offset
-        int offsetX = Coordinate2Int.unpackX(gridCoordinate);
-        int offsetY = Coordinate2Int.unpackY(gridCoordinate);
+        int offsetX = Coordinate2Long.unpackX(gridCoordinate);
+        int offsetY = Coordinate2Long.unpackY(gridCoordinate);
 
         // Use the current chunks coordinates to compute necessary chunks
         int chunkCoordinateX = activeChunkCoordinateX + offsetX;
         int chunkCoordinateY = activeChunkCoordinateY + offsetY;
 
         // Pack the coordinates into a usable long value and wrap it
-        long chunkCoordinate = Coordinate2Int.pack(chunkCoordinateX, chunkCoordinateY);
+        long chunkCoordinate = Coordinate2Long.pack(chunkCoordinateX, chunkCoordinateY);
         chunkCoordinate = WorldWrapUtility.wrapAroundWorld(worldHandle, chunkCoordinate);
 
         // Remove the computed coordinate from the unload queue

@@ -1,4 +1,4 @@
-package com.internal.bootstrap.worldpipeline.dynamicgeometrymanager;
+package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;

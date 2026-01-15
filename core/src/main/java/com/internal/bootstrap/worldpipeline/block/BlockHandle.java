@@ -1,7 +1,8 @@
 package com.internal.bootstrap.worldpipeline.block;
 
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometry;
 import com.internal.core.engine.HandlePackage;
-import com.internal.core.util.mathematics.Extras.Direction3Int;
+import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
@@ -10,17 +11,17 @@ public class BlockHandle extends HandlePackage {
     // Identity
     private String blockName;
     private int blockID;
-    private BlockType blockType;
+    private DynamicGeometry geometry;
 
     // Textures
-    private Object2IntOpenHashMap<Direction3Int> faceTextures;
+    private Object2IntOpenHashMap<Direction3Vector> faceTextures;
 
     // Constructor \\
 
     public void constructor(
             String blockName,
             int blockID,
-            BlockType blockType,
+            DynamicGeometry geometry,
             int upTexture,
             int downTexture,
             int northTexture,
@@ -30,15 +31,15 @@ public class BlockHandle extends HandlePackage {
 
         this.blockName = blockName;
         this.blockID = blockID;
-        this.blockType = blockType;
+        this.geometry = geometry;
 
         this.faceTextures = new Object2IntOpenHashMap<>();
-        this.faceTextures.put(Direction3Int.UP, upTexture);
-        this.faceTextures.put(Direction3Int.DOWN, downTexture);
-        this.faceTextures.put(Direction3Int.NORTH, northTexture);
-        this.faceTextures.put(Direction3Int.SOUTH, southTexture);
-        this.faceTextures.put(Direction3Int.EAST, eastTexture);
-        this.faceTextures.put(Direction3Int.WEST, westTexture);
+        this.faceTextures.put(Direction3Vector.UP, upTexture);
+        this.faceTextures.put(Direction3Vector.DOWN, downTexture);
+        this.faceTextures.put(Direction3Vector.NORTH, northTexture);
+        this.faceTextures.put(Direction3Vector.SOUTH, southTexture);
+        this.faceTextures.put(Direction3Vector.EAST, eastTexture);
+        this.faceTextures.put(Direction3Vector.WEST, westTexture);
     }
 
     // Accessible \\
@@ -51,11 +52,11 @@ public class BlockHandle extends HandlePackage {
         return blockID;
     }
 
-    public BlockType getBlockType() {
-        return blockType;
+    public DynamicGeometry getGeometry() {
+        return geometry;
     }
 
-    public int getTextureForFace(Direction3Int direction) {
+    public int getTextureForFace(Direction3Vector direction) {
         return faceTextures.getInt(direction);
     }
 }

@@ -1,6 +1,6 @@
 package com.internal.core.util.mathematics.Extras;
 
-public final class Coordinate3Int {
+public final class Coordinate3Long {
 
     // Bit sizes (must sum to 64)
     private static final int X_BITS = 26;
@@ -16,60 +16,34 @@ public final class Coordinate3Int {
     private static final long Y_MASK = (1L << Y_BITS) - 1;
     private static final long Z_MASK = (1L << Z_BITS) - 1;
 
-    private Coordinate3Int() {
-        // Prevent instantiation
-    }
+    // Internal \\
 
-    // Pack coordinates into a single long
     public static long pack(int x, int y, int z) {
         return ((long) x & X_MASK) << X_SHIFT |
                 ((long) y & Y_MASK) << Y_SHIFT |
                 ((long) z & Z_MASK);
     }
 
-    // Unpack X from packed value
     public static int unpackX(long value) {
         return (int) ((value >>> X_SHIFT) & X_MASK);
     }
 
-    // Unpack Y from packed value
     public static int unpackY(long value) {
         return (int) ((value >>> Y_SHIFT) & Y_MASK);
     }
 
-    // Unpack Z from packed value
     public static int unpackZ(long value) {
         return (int) (value & Z_MASK); // Z is at the bottom
     }
 
-    // Arithmetic
+    // utility \\
 
-    public static long add(long a, long b) {
-        return pack(
-                unpackX(a) + unpackX(b),
-                unpackY(a) + unpackY(b),
-                unpackZ(a) + unpackZ(b));
+    public static long getNeighbor(long packed, Direction2Vector direction) {
+        return packed + direction.coordinate3Long;
     }
 
-    public static long subtract(long a, long b) {
-        return pack(
-                unpackX(a) - unpackX(b),
-                unpackY(a) - unpackY(b),
-                unpackZ(a) - unpackZ(b));
-    }
-
-    public static long multiply(long a, long b) {
-        return pack(
-                unpackX(a) * unpackX(b),
-                unpackY(a) * unpackY(b),
-                unpackZ(a) * unpackZ(b));
-    }
-
-    public static long divide(long a, long b) {
-        return pack(
-                unpackX(a) / unpackX(b),
-                unpackY(a) / unpackY(b),
-                unpackZ(a) / unpackZ(b));
+    public static long getNeighbor(long packed, Direction3Vector direction) {
+        return packed + direction.coordinate3Long;
     }
 
     // Utility

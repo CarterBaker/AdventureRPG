@@ -1,7 +1,7 @@
 package com.internal.core.util.mathematics.vectors;
 
-import com.internal.core.util.mathematics.Extras.Coordinate2Int;
-import com.internal.core.util.mathematics.Extras.Direction2Int;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
 public class Vector2Int {
 
@@ -125,32 +125,32 @@ public class Vector2Int {
 
     public Vector2Int up() {
 
-        this.x = Direction2Int.NORTH.x;
-        this.y = Direction2Int.NORTH.y;
+        this.x = Direction2Vector.NORTH.x;
+        this.y = Direction2Vector.NORTH.y;
 
         return this;
     }
 
     public Vector2Int down() {
 
-        this.x = Direction2Int.SOUTH.x;
-        this.y = Direction2Int.SOUTH.y;
+        this.x = Direction2Vector.SOUTH.x;
+        this.y = Direction2Vector.SOUTH.y;
 
         return this;
     }
 
     public Vector2Int left() {
 
-        this.x = Direction2Int.WEST.x;
-        this.y = Direction2Int.WEST.y;
+        this.x = Direction2Vector.WEST.x;
+        this.y = Direction2Vector.WEST.y;
 
         return this;
     }
 
     public Vector2Int right() {
 
-        this.x = Direction2Int.EAST.x;
-        this.y = Direction2Int.EAST.y;
+        this.x = Direction2Vector.EAST.x;
+        this.y = Direction2Vector.EAST.y;
 
         return this;
     }
@@ -163,7 +163,7 @@ public class Vector2Int {
     }
 
     public long pack() {
-        return Coordinate2Int.pack(x, y);
+        return Coordinate2Long.pack(x, y);
     }
 
     // Java \\

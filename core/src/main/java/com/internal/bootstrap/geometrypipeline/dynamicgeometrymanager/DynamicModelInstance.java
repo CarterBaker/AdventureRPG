@@ -1,4 +1,4 @@
-package com.internal.bootstrap.worldpipeline.dynamicgeometrymanager;
+package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.core.engine.InstancePackage;
@@ -12,8 +12,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class DynamicModelInstance extends InstancePackage {
 
     // Internal
-    final int modelID;
-    final VAOHandle vaoHandle;
+    private VAOHandle vaoHandle;
     private Matrix4 transform;
 
     private int floatsPerQuad;
@@ -23,10 +22,9 @@ public class DynamicModelInstance extends InstancePackage {
 
     // Base \\
 
-    DynamicModelInstance(int modelID, VAOHandle vaoHandle) {
+    public void constructor(VAOHandle vaoHandle) {
 
         // Internal
-        this.modelID = modelID;
         this.vaoHandle = vaoHandle;
         this.transform = new Matrix4();
 
@@ -40,8 +38,8 @@ public class DynamicModelInstance extends InstancePackage {
 
     public void addVertices(int materialId, FloatArrayList vertList) {
 
-        if (vertList.size() % floatsPerQuad != 0) // TODO: Add my own error
-            throw new IllegalArgumentException("Vertex data must be quad-aligned");
+        if (vertList.size() % floatsPerQuad != 0)
+            throwException("Vertex data must be quad-aligned");
 
         addVerticesInternal(materialId, vertList, 0, vertList.size());
     }
@@ -120,8 +118,8 @@ public class DynamicModelInstance extends InstancePackage {
 
             int added = newMesh.tryAddVertices(vertList, offset + processed, length - processed);
 
-            if (added == 0) // TODO: Add my own error
-                throw new IllegalStateException("Failed to add vertices to new mesh");
+            if (added == 0)
+                throwException("Failed to add vertices to new mesh");
 
             processed += added * vaoHandle.getVertStride();
         }
@@ -129,8 +127,8 @@ public class DynamicModelInstance extends InstancePackage {
 
     public void consolidateMeshes(float minFillThreshold) {
 
-        if (minFillThreshold <= 0.0f || minFillThreshold >= 1.0f) // TODO: Add my own error
-            throw new IllegalArgumentException("Threshold must be between 0 and 1 exclusive");
+        if (minFillThreshold <= 0.0f || minFillThreshold >= 1.0f)
+            throwException("Threshold must be between 0 and 1 exclusive");
 
         for (var entry : materialID2MeshCollection.int2ObjectEntrySet()) {
 
@@ -189,10 +187,6 @@ public class DynamicModelInstance extends InstancePackage {
     }
 
     // Accessible \\
-
-    public int getModelID() {
-        return modelID;
-    }
 
     public Matrix4 getTransform() {
         return transform;

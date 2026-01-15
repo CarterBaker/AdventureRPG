@@ -1,7 +1,8 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
-import com.internal.bootstrap.util.queue.QueueInstance;
-import com.internal.bootstrap.util.queue.QueueItemHandle;
+import com.internal.bootstrap.entitypipeline.playermanager.PlayerManager;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.AssessmentBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BatchBranch;
@@ -9,6 +10,9 @@ import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BuildB
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.GenerationBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.core.engine.ManagerPackage;
+import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.queue.QueueInstance;
+import com.internal.core.util.queue.QueueItemHandle;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
@@ -17,10 +21,14 @@ import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 class ChunkQueueManager extends ManagerPackage {
 
     // Internal
+    private VAOManager vaoManager;
+    private PlayerManager playerManager;
     private GenerationBranch generationBranch;
     private AssessmentBranch assessmentBranch;
     private BuildBranch buildBranch;
     private BatchBranch batchBranch;
+
+    private VAOHandle chunkVAO;
 
     // Chunk Queue
     private QueueInstance chunkQueue;
@@ -56,6 +64,21 @@ class ChunkQueueManager extends ManagerPackage {
         this.unloadRequests = new LongLinkedOpenHashSet();
 
         this.assessmentBranch.setActiveChunks(activeChunks);
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.vaoManager = get(VAOManager.class);
+        this.playerManager = get(PlayerManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Internal
+        this.chunkVAO = vaoManager.getVAOHandleFromName(EngineSetting.CHUNK_VAO);
     }
 
     @Override
@@ -115,7 +138,10 @@ class ChunkQueueManager extends ManagerPackage {
         iterator.remove();
 
         ChunkInstance chunkInstance = create(ChunkInstance.class);
-        chunkInstance.constructor(chunkCoordinate);
+        chunkInstance.constructor(
+                playerManager.getPlayer().getWorldHandle(),
+                chunkCoordinate,
+                chunkVAO);
 
         activeChunks.put(chunkCoordinate, chunkInstance);
     }

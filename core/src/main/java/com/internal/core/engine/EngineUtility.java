@@ -3,7 +3,7 @@ package com.internal.core.engine;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
-abstract class EngineUtility {
+public abstract class EngineUtility {
 
     /*
      * Base utility class shared by all engine-level systems.

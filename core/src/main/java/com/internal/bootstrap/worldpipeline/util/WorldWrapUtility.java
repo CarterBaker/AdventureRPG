@@ -3,7 +3,7 @@ package com.internal.bootstrap.worldpipeline.util;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate2Int;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector2Int;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
@@ -30,8 +30,8 @@ public class WorldWrapUtility extends UtilityPackage {
         int maxX = worldScale.x / EngineSetting.CHUNK_SIZE;
         int maxY = worldScale.y / EngineSetting.CHUNK_SIZE;
 
-        int inputX = Coordinate2Int.unpackX(input);
-        int inputY = Coordinate2Int.unpackY(input);
+        int inputX = Coordinate2Long.unpackX(input);
+        int inputY = Coordinate2Long.unpackY(input);
 
         int x = inputX % maxX;
         if (x < 0)
@@ -44,7 +44,7 @@ public class WorldWrapUtility extends UtilityPackage {
         inputX = x;
         inputY = y;
 
-        return Coordinate2Int.pack(inputX, inputY);
+        return Coordinate2Long.pack(inputX, inputY);
     }
 
     public static Vector2Int wrapAroundWorld(WorldHandle worldHandle, Vector2Int input) {
@@ -83,8 +83,8 @@ public class WorldWrapUtility extends UtilityPackage {
         int maxX = (worldScale.x / EngineSetting.CHUNKS_PER_PIXEL / EngineSetting.CHUNK_SIZE);
         int maxY = (worldScale.y / EngineSetting.CHUNKS_PER_PIXEL / EngineSetting.CHUNK_SIZE);
 
-        int inputX = Coordinate2Int.unpackX(input);
-        int inputY = Coordinate2Int.unpackY(input);
+        int inputX = Coordinate2Long.unpackX(input);
+        int inputY = Coordinate2Long.unpackY(input);
 
         int x = (int) Math.floor(inputX) % maxX;
         if (x < 0)
@@ -97,6 +97,6 @@ public class WorldWrapUtility extends UtilityPackage {
         inputX = x;
         inputY = y;
 
-        return Coordinate2Int.pack(inputX, inputY);
+        return Coordinate2Long.pack(inputX, inputY);
     }
 }

@@ -92,6 +92,7 @@ public class EngineSetting {
         public static final int MESH_VERT_LIMIT = 32767;
 
         // World
+        public static final String CHUNK_VAO = "util/vao/Stride9"; // The vao that all chunks will use
         public static final String STARTING_WORLD = "TerraArcana"; // The world the player starts in
         public static final int MAX_CHUNK_STREAM_PER_FRAME = 256; // Chunks to load per frame
         public static final int MAX_CHUNK_STREAM_PER_BATCH = 32; // Chunks to load per batch

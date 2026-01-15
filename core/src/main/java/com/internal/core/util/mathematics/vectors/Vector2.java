@@ -1,6 +1,6 @@
 package com.internal.core.util.mathematics.vectors;
 
-import com.internal.core.util.mathematics.Extras.Direction2Int;
+import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
 public class Vector2 {
 
@@ -156,32 +156,32 @@ public class Vector2 {
 
     public Vector2 up() {
 
-        this.x = Direction2Int.NORTH.x;
-        this.y = Direction2Int.NORTH.y;
+        this.x = Direction2Vector.NORTH.x;
+        this.y = Direction2Vector.NORTH.y;
 
         return this;
     }
 
     public Vector2 down() {
 
-        this.x = Direction2Int.SOUTH.x;
-        this.y = Direction2Int.SOUTH.y;
+        this.x = Direction2Vector.SOUTH.x;
+        this.y = Direction2Vector.SOUTH.y;
 
         return this;
     }
 
     public Vector2 left() {
 
-        this.x = Direction2Int.WEST.x;
-        this.y = Direction2Int.WEST.y;
+        this.x = Direction2Vector.WEST.x;
+        this.y = Direction2Vector.WEST.y;
 
         return this;
     }
 
     public Vector2 right() {
 
-        this.x = Direction2Int.EAST.x;
-        this.y = Direction2Int.EAST.y;
+        this.x = Direction2Vector.EAST.x;
+        this.y = Direction2Vector.EAST.y;
 
         return this;
     }

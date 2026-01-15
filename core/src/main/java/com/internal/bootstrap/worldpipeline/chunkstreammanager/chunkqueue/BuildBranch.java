@@ -1,9 +1,9 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.threadpipeline.ThreadSystem;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkState;
-import com.internal.bootstrap.worldpipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.BranchPackage;
 

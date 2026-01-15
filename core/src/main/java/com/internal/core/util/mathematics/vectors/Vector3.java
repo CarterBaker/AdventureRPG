@@ -1,6 +1,6 @@
 package com.internal.core.util.mathematics.vectors;
 
-import com.internal.core.util.mathematics.Extras.Direction3Int;
+import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 public class Vector3 {
 
@@ -163,54 +163,54 @@ public class Vector3 {
 
     public Vector3 up() {
 
-        this.x = Direction3Int.UP.x;
-        this.y = Direction3Int.UP.y;
-        this.z = Direction3Int.UP.z;
+        this.x = Direction3Vector.UP.x;
+        this.y = Direction3Vector.UP.y;
+        this.z = Direction3Vector.UP.z;
 
         return this;
     }
 
     public Vector3 north() {
 
-        this.x = Direction3Int.NORTH.x;
-        this.y = Direction3Int.NORTH.y;
-        this.z = Direction3Int.NORTH.z;
+        this.x = Direction3Vector.NORTH.x;
+        this.y = Direction3Vector.NORTH.y;
+        this.z = Direction3Vector.NORTH.z;
 
         return this;
     }
 
     public Vector3 south() {
 
-        this.x = Direction3Int.SOUTH.x;
-        this.y = Direction3Int.SOUTH.y;
-        this.z = Direction3Int.SOUTH.z;
+        this.x = Direction3Vector.SOUTH.x;
+        this.y = Direction3Vector.SOUTH.y;
+        this.z = Direction3Vector.SOUTH.z;
 
         return this;
     }
 
     public Vector3 east() {
 
-        this.x = Direction3Int.EAST.x;
-        this.y = Direction3Int.EAST.y;
-        this.z = Direction3Int.EAST.z;
+        this.x = Direction3Vector.EAST.x;
+        this.y = Direction3Vector.EAST.y;
+        this.z = Direction3Vector.EAST.z;
 
         return this;
     }
 
     public Vector3 west() {
 
-        this.x = Direction3Int.WEST.x;
-        this.y = Direction3Int.WEST.y;
-        this.z = Direction3Int.WEST.z;
+        this.x = Direction3Vector.WEST.x;
+        this.y = Direction3Vector.WEST.y;
+        this.z = Direction3Vector.WEST.z;
 
         return this;
     }
 
     public Vector3 down() {
 
-        this.x = Direction3Int.DOWN.x;
-        this.y = Direction3Int.DOWN.y;
-        this.z = Direction3Int.DOWN.z;
+        this.x = Direction3Vector.DOWN.x;
+        this.y = Direction3Vector.DOWN.y;
+        this.z = Direction3Vector.DOWN.z;
 
         return this;
     }

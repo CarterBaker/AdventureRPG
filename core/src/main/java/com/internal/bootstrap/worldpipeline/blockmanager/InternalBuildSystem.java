@@ -4,9 +4,9 @@ import java.io.File;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometry;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
-import com.internal.bootstrap.worldpipeline.block.BlockType;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.JsonUtility;
 
@@ -60,7 +60,7 @@ public class InternalBuildSystem extends SystemPackage {
 
         // Parse type (default to SOLID if not specified)
         String typeStr = blockJson.has("type") ? blockJson.get("type").getAsString() : "SOLID";
-        BlockType blockType = parseBlockType(typeStr);
+        DynamicGeometry blockType = parseBlockType(typeStr);
 
         // Parse textures
         int upTexture = -1;
@@ -149,10 +149,10 @@ public class InternalBuildSystem extends SystemPackage {
 
     // Utility \\
 
-    private BlockType parseBlockType(String typeStr) {
+    private DynamicGeometry parseBlockType(String typeStr) {
 
         try {
-            return BlockType.valueOf(typeStr.toUpperCase());
+            return DynamicGeometry.valueOf(typeStr.toUpperCase());
         }
 
         catch (IllegalArgumentException e) {

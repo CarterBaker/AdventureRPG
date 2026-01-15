@@ -1,8 +1,9 @@
 package com.internal.bootstrap.worldpipeline.chunk;
 
+import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.core.engine.StructPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Int;
-import com.internal.core.util.mathematics.Extras.Direction2Int;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
 public class ChunkNeighborStruct extends StructPackage {
 
@@ -15,24 +16,24 @@ public class ChunkNeighborStruct extends StructPackage {
     public ChunkNeighborStruct() {
 
         // Internal
-        this.neighborCoordinates = new long[Direction2Int.LENGTH];
-        this.neighborChunks = new ChunkInstance[Direction2Int.LENGTH];
+        this.neighborCoordinates = new long[Direction2Vector.LENGTH];
+        this.neighborChunks = new ChunkInstance[Direction2Vector.LENGTH];
     }
 
-    public void constructor(long chunkCoordinate) {
+    public void constructor(
+            long chunkCoordinate,
+            ChunkInstance chunkInstance) {
 
         // Internal
-        int aX = Coordinate2Int.unpackX(chunkCoordinate);
-        int aY = Coordinate2Int.unpackY(chunkCoordinate);
+        for (int i = 0; i < Direction2Vector.LENGTH; i++) {
 
-        for (int i = 0; i < Direction2Int.LENGTH; i++) {
+            long neighborCoordinate = Coordinate2Long.getNeighbor(
+                    chunkCoordinate,
+                    Direction2Vector.VALUES[i]);
 
-            Direction2Int direction = Direction2Int.getDirection(i);
-
-            int bX = direction.x;
-            int bY = direction.y;
-
-            neighborCoordinates[i] = Coordinate2Int.pack(aX + bX, aY + bY);
+            neighborCoordinates[i] = WorldWrapUtility.wrapAroundWorld(
+                    chunkInstance.getWorldHandle(),
+                    neighborCoordinate);
         }
     }
 
