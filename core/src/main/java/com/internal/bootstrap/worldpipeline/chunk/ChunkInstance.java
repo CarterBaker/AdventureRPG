@@ -35,7 +35,7 @@ public class ChunkInstance extends InstancePackage {
         // SubChunks
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
 
-        for (int i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
+        for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
             subChunks[i] = create(SubChunkInstance.class);
 
         // Neighbors
@@ -53,6 +53,10 @@ public class ChunkInstance extends InstancePackage {
         // Internal
         this.worldHandle = worldHandle;
         this.chunkCoordinate = chunkCoordinate;
+
+        // SubChunks
+        for (byte i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
+            subChunks[i].constructor(i);
 
         // Neighbors
         this.chunkNeighbors.constructor(
@@ -89,6 +93,10 @@ public class ChunkInstance extends InstancePackage {
     // SubChunks
     public SubChunkInstance[] getSubChunks() {
         return subChunks;
+    }
+
+    public SubChunkInstance getSubChunk(int subChunkCoordinate) {
+        return subChunks[subChunkCoordinate];
     }
 
     // Neighbors

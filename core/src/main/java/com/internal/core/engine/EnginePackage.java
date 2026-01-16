@@ -227,9 +227,9 @@ public class EnginePackage extends ManagerPackage {
     }
 
     @Override
-    protected final <T extends AsyncInstancePackage> Future<?> executeAsync(
+    protected final <T extends AsyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
-            AsyncInstancePackage asyncStruct,
+            AsyncContainerPackage asyncStruct,
             AsyncStructConsumer<T> consumer) {
 
         return internalThreadManager.executeAsync(handle, asyncStruct, consumer);
@@ -239,7 +239,7 @@ public class EnginePackage extends ManagerPackage {
     protected final Future<?> executeAsync(
             ThreadHandle handle,
             AsyncStructConsumerMulti consumer,
-            AsyncInstancePackage... asyncStructs) {
+            AsyncContainerPackage... asyncStructs) {
 
         return internalThreadManager.executeAsync(handle, consumer, asyncStructs);
     }

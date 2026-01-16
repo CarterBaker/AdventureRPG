@@ -8,7 +8,7 @@ import com.internal.core.engine.settings.EngineSetting;
 public class DynamicGeometryManager extends ManagerPackage {
 
     // Internal
-    private DynamicGeometryAsyncInstance dynamicGeometryAsyncInstance;
+    private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
     private InternalBuildManager internalBuildManager;
     private int worldHeight;
 
@@ -18,20 +18,20 @@ public class DynamicGeometryManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        this.dynamicGeometryAsyncInstance = create(DynamicGeometryAsyncInstance.class);
+        this.dynamicGeometryAsyncContainer = create(DynamicGeometryAsyncContainer.class);
         this.internalBuildManager = create(InternalBuildManager.class);
         this.worldHeight = EngineSetting.WORLD_HEIGHT;
     }
 
     public boolean build(
-            DynamicGeometryAsyncInstance dynamicGeometryAsyncInstance,
+            DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
             ChunkInstance chunkInstance) {
 
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
 
         for (int i = 0; i < worldHeight; i++)
             if (!internalBuildManager.build(
-                    dynamicGeometryAsyncInstance,
+                    dynamicGeometryAsyncContainer,
                     chunkInstance,
                     subChunks[i]))
                 return false;
@@ -41,7 +41,7 @@ public class DynamicGeometryManager extends ManagerPackage {
 
     // Accessible \\
 
-    public DynamicGeometryAsyncInstance getDynamicGeometryAsyncInstance() {
-        return dynamicGeometryAsyncInstance;
+    public DynamicGeometryAsyncContainer getDynamicGeometryAsyncInstance() {
+        return dynamicGeometryAsyncContainer;
     }
 }

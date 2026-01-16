@@ -146,4 +146,15 @@ public final class Coordinate3Short extends UtilityPackage {
     public static int getBlockIndex(int x, int y, int z) {
         return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x;
     }
+
+    // Check if any axis is 0 or CHUNK_SIZE
+    public static boolean isAtEdge(short packed) {
+        int x = (packed >> 8) & 0xF;
+        int y = (packed >> 4) & 0xF;
+        int z = packed & 0xF;
+
+        return (x == 0 || x == 15 ||
+                y == 0 || y == 15 ||
+                z == 0 || z == 15);
+    }
 }

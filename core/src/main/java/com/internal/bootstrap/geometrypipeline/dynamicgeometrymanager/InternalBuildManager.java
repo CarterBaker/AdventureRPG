@@ -54,17 +54,16 @@ class InternalBuildManager extends ManagerPackage {
     // Geometry Builder \\
 
     public boolean build(
-            DynamicGeometryAsyncInstance dynamicGeometryAsyncInstance,
+            DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance) {
 
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
 
-        FloatArrayList quads = dynamicGeometryAsyncInstance.getQuads();
-
-        BitSet batchedBlocks = dynamicGeometryAsyncInstance.getBatchedBlocks();
-        BitSet[] directionalBatches = dynamicGeometryAsyncInstance.getDirectionalBatches();
+        FloatArrayList quads = dynamicGeometryAsyncContainer.getQuads();
+        BitSet[] directionalBatches = dynamicGeometryAsyncContainer.getDirectionalBatches();
+        BitSet batchReturn = dynamicGeometryAsyncContainer.getBatchReturn();
 
         for (int i = 0; i < Coordinate3Short.BLOCK_COORDINATE_COUNT; i++) {
 
@@ -81,34 +80,36 @@ class InternalBuildManager extends ManagerPackage {
                 if (directionalBatches[direction].get(xyz))
                     continue;
 
-                FloatArrayList blockQauds = assembleQuads(
+                if (!assembleQuads(
                         blockHandle.getGeometry(),
                         chunkInstance,
                         subChunkInstance,
+                        xyz,
+                        Direction3Vector.VALUES[direction],
                         biomeHandle,
                         blockHandle,
-                        xyz,
-                        batchedBlocks);
-
-                if (blockQauds == null)
+                        quads,
+                        batchReturn))
                     continue;
 
-                directionalBatches[direction].or(batchedBlocks);
-                batchedBlocks.clear();
+                directionalBatches[direction].or(batchReturn);
+                batchReturn.clear();
             }
         }
 
         return false; // TODO: Temporary
     }
 
-    private FloatArrayList assembleQuads(
+    private Boolean assembleQuads(
             DynamicGeometry geometry,
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
+            short xyz,
+            Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            short xyz,
-            BitSet batchedBlocks) {
+            FloatArrayList quads,
+            BitSet batchReturn) {
 
         return switch (geometry) {
 
@@ -117,34 +118,42 @@ class InternalBuildManager extends ManagerPackage {
             case FULL -> fullGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
+                    xyz,
+                    direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    xyz,
-                    batchedBlocks);
+                    quads,
+                    batchReturn);
 
             case PARTIAL -> partialGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
+                    xyz,
+                    direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    xyz,
-                    batchedBlocks);
+                    quads,
+                    batchReturn);
 
             case COMPLEX -> complexGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
+                    xyz,
+                    direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    xyz,
-                    batchedBlocks);
+                    quads,
+                    batchReturn);
 
             case LIQUID -> liquidGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
+                    xyz,
+                    direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    xyz,
-                    batchedBlocks);
+                    quads,
+                    batchReturn);
         };
     }
 }

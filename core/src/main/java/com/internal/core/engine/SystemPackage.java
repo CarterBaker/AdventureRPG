@@ -180,9 +180,9 @@ public abstract class SystemPackage extends EngineUtility {
         return internal.executeAsync(handle, task);
     }
 
-    protected <T extends AsyncInstancePackage> Future<?> executeAsync(
+    protected <T extends AsyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
-            AsyncInstancePackage asyncStruct,
+            AsyncContainerPackage asyncStruct,
             AsyncStructConsumer<T> consumer) {
 
         return internal.executeAsync(handle, asyncStruct, consumer);
@@ -191,7 +191,7 @@ public abstract class SystemPackage extends EngineUtility {
     protected Future<?> executeAsync(
             ThreadHandle handle,
             AsyncStructConsumerMulti consumer,
-            AsyncInstancePackage... asyncStructs) {
+            AsyncContainerPackage... asyncStructs) {
 
         return internal.executeAsync(handle, consumer, asyncStructs);
     }

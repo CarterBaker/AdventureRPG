@@ -2,18 +2,17 @@ package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import java.util.BitSet;
 
-import com.internal.core.engine.AsyncInstancePackage;
+import com.internal.core.engine.AsyncContainerPackage;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
-public class DynamicGeometryAsyncInstance extends AsyncInstancePackage {
+public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
 
     // Internal
     private FloatArrayList quads;
-
-    private BitSet batchedBlocks;
     private BitSet[] directionalBatches;
+    private BitSet batchReturn;
 
     // Internal \\
 
@@ -21,11 +20,11 @@ public class DynamicGeometryAsyncInstance extends AsyncInstancePackage {
 
         // Internal
         this.quads = new FloatArrayList();
-
-        this.batchedBlocks = new BitSet();
         this.directionalBatches = new BitSet[Direction3Vector.LENGTH];
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             directionalBatches[i] = new BitSet();
+        this.batchReturn = new BitSet();
+
     }
 
     // Reset \\
@@ -35,10 +34,9 @@ public class DynamicGeometryAsyncInstance extends AsyncInstancePackage {
 
         // Internal
         quads.clear();
-
-        batchedBlocks.clear();
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             directionalBatches[i].clear();
+        batchReturn.clear();
     }
 
     // Accessible \\
@@ -47,11 +45,11 @@ public class DynamicGeometryAsyncInstance extends AsyncInstancePackage {
         return quads;
     }
 
-    public BitSet getBatchedBlocks() {
-        return batchedBlocks;
-    }
-
     public BitSet[] getDirectionalBatches() {
         return directionalBatches;
+    }
+
+    public BitSet getBatchReturn() {
+        return batchReturn;
     }
 }

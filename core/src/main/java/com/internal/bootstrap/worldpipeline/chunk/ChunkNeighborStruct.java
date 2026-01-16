@@ -25,13 +25,13 @@ public class ChunkNeighborStruct extends StructPackage {
             ChunkInstance chunkInstance) {
 
         // Internal
-        for (int i = 0; i < Direction2Vector.LENGTH; i++) {
+        for (byte direction2VectorIndex = 0; direction2VectorIndex < Direction2Vector.LENGTH; direction2VectorIndex++) {
 
             long neighborCoordinate = Coordinate2Long.getNeighbor(
                     chunkCoordinate,
-                    Direction2Vector.VALUES[i]);
+                    Direction2Vector.VALUES[direction2VectorIndex]);
 
-            neighborCoordinates[i] = WorldWrapUtility.wrapAroundWorld(
+            neighborCoordinates[direction2VectorIndex] = WorldWrapUtility.wrapAroundWorld(
                     chunkInstance.getWorldHandle(),
                     neighborCoordinate);
         }
@@ -39,15 +39,15 @@ public class ChunkNeighborStruct extends StructPackage {
 
     // Accessible \\
 
-    public long getNeighborCoordinate(int i) {
-        return neighborCoordinates[i];
+    public long getNeighborCoordinate(int direction2VectorIndex) {
+        return neighborCoordinates[direction2VectorIndex];
     }
 
-    public ChunkInstance getNeighborChunk(int i) {
-        return neighborChunks[i];
+    public ChunkInstance getNeighborChunk(int direction2VectorIndex) {
+        return neighborChunks[direction2VectorIndex];
     }
 
-    public void setNeighborChunk(int i, ChunkInstance chunkInstance) {
-        neighborChunks[i] = chunkInstance;
+    public void setNeighborChunk(int direction2VectorIndex, ChunkInstance chunkInstance) {
+        neighborChunks[direction2VectorIndex] = chunkInstance;
     }
 }

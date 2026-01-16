@@ -1,7 +1,7 @@
 package com.internal.core.kernel.InternalThreadManager;
 
 import java.util.concurrent.Future;
-import com.internal.core.engine.AsyncInstancePackage;
+import com.internal.core.engine.AsyncContainerPackage;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.ThreadHandle;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -69,9 +69,9 @@ public class InternalThreadManager extends ManagerPackage {
         return handle.getExecutor().submit(task);
     }
 
-    public <T extends AsyncInstancePackage> Future<?> executeAsync(
+    public <T extends AsyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
-            AsyncInstancePackage asyncStruct,
+            AsyncContainerPackage asyncStruct,
             AsyncStructConsumer<T> consumer) {
 
         return executeAsync(handle, () -> {
@@ -91,11 +91,11 @@ public class InternalThreadManager extends ManagerPackage {
     public Future<?> executeAsync(
             ThreadHandle handle,
             AsyncStructConsumerMulti consumer,
-            AsyncInstancePackage... asyncStructs) {
+            AsyncContainerPackage... asyncStructs) {
 
         return executeAsync(handle, () -> {
 
-            AsyncInstancePackage[] instances = new AsyncInstancePackage[asyncStructs.length];
+            AsyncContainerPackage[] instances = new AsyncContainerPackage[asyncStructs.length];
 
             for (int i = 0; i < asyncStructs.length; i++)
                 instances[i] = asyncStructs[i].getInstance();
@@ -106,7 +106,7 @@ public class InternalThreadManager extends ManagerPackage {
 
             finally {
 
-                for (AsyncInstancePackage instance : instances)
+                for (AsyncContainerPackage instance : instances)
                     instance.reset();
             }
         });
@@ -115,12 +115,12 @@ public class InternalThreadManager extends ManagerPackage {
     // Functional Interfaces \\
 
     @FunctionalInterface
-    public interface AsyncStructConsumer<T extends AsyncInstancePackage> {
+    public interface AsyncStructConsumer<T extends AsyncContainerPackage> {
         void accept(T instance);
     }
 
     @FunctionalInterface
     public interface AsyncStructConsumerMulti {
-        void accept(AsyncInstancePackage[] instances);
+        void accept(AsyncContainerPackage[] instances);
     }
 }

@@ -6,6 +6,7 @@ import com.internal.core.engine.settings.EngineSetting;
 public class SubChunkInstance extends InstancePackage {
 
     // Internal
+    byte subChunkCoordinate;
     BlockPaletteHandle biomePaletteHandle;
     BlockPaletteHandle blockPaletteHandle;
 
@@ -27,7 +28,17 @@ public class SubChunkInstance extends InstancePackage {
 
     }
 
+    public void constructor(byte subChunkCoordinate) {
+
+        // Internal
+        this.subChunkCoordinate = subChunkCoordinate;
+    }
+
     // Accessible \\
+
+    public byte getSubChunkCoordinate() {
+        return subChunkCoordinate;
+    }
 
     public BlockPaletteHandle getBiomePaletteHandle() {
         return biomePaletteHandle;

@@ -1,6 +1,6 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryAsyncInstance;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryAsyncContainer;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkState;
@@ -12,7 +12,7 @@ public class BuildBranch extends BranchPackage {
     // Internal
     private ThreadHandle threadHandle;
     private DynamicGeometryManager dynamicGeometryManager;
-    private DynamicGeometryAsyncInstance dynamicGeometryAsyncInstance;
+    private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
 
     // internal \\
 
@@ -22,7 +22,7 @@ public class BuildBranch extends BranchPackage {
         // Internal
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
-        this.dynamicGeometryAsyncInstance = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
+        this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
     }
 
     // Chunk Generation \\
@@ -30,13 +30,13 @@ public class BuildBranch extends BranchPackage {
     public void buildChunk(ChunkInstance chunkInstance) {
 
         // Submit to generation thread
-        executeAsync(threadHandle, dynamicGeometryAsyncInstance, (DynamicGeometryAsyncInstance instance) -> {
+        executeAsync(threadHandle, dynamicGeometryAsyncContainer, (DynamicGeometryAsyncContainer instance) -> {
 
             boolean success = true;
 
             // Attempt to build the chunk
             if (!dynamicGeometryManager.build(
-                    dynamicGeometryAsyncInstance,
+                    dynamicGeometryAsyncContainer,
                     chunkInstance))
                 success = false;
 

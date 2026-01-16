@@ -1,9 +1,9 @@
 package com.internal.core.engine;
 
-public abstract class AsyncInstancePackage extends InstancePackage {
+public abstract class AsyncContainerPackage extends InstancePackage {
 
     /*
-     * AsyncInstancePackage is a thread-safe data container designed for
+     * AsyncContainerPackage is a thread-safe data container designed for
      * multi-threaded operations. Each thread automatically gets its own
      * isolated instance, preventing race conditions and eliminating the
      * need for synchronization locks.
@@ -17,7 +17,7 @@ public abstract class AsyncInstancePackage extends InstancePackage {
      * lifecycle management and automatic cleanup.
      *
      * Usage:
-     * class DynamicGeometryAsyncStruct extends AsyncInstancePackage {
+     * class DynamicGeometryAsyncStruct extends AsyncContainerPackage {
      * float[] vertices;
      * 
      * protected void create() {
@@ -30,7 +30,8 @@ public abstract class AsyncInstancePackage extends InstancePackage {
      * }
      *
      * // In a system:
-     * AsyncInstancePackage geometryData = create(DynamicGeometryAsyncStruct.class);
+     * AsyncContainerPackage geometryData =
+     * create(DynamicGeometryAsyncStruct.class);
      * 
      * // Use with automatic reset:
      * threadManager.submitWithReset("Generation", geometryData, (data) -> {
@@ -44,7 +45,7 @@ public abstract class AsyncInstancePackage extends InstancePackage {
 
     // Internal \\
 
-    protected AsyncInstancePackage() {
+    protected AsyncContainerPackage() {
 
         super();
 
@@ -70,7 +71,7 @@ public abstract class AsyncInstancePackage extends InstancePackage {
             var constructor = this.getClass().getDeclaredConstructor();
             constructor.setAccessible(true);
 
-            AsyncInstancePackage instance = (AsyncInstancePackage) constructor.newInstance();
+            AsyncContainerPackage instance = (AsyncContainerPackage) constructor.newInstance();
 
             // Run lifecycle
             instance.internalCreate();
@@ -103,7 +104,7 @@ public abstract class AsyncInstancePackage extends InstancePackage {
      * and goes through its lifecycle (create -> get -> awake).
      */
     @SuppressWarnings("unchecked")
-    public final <T extends AsyncInstancePackage> T getInstance() {
+    public final <T extends AsyncContainerPackage> T getInstance() {
         return (T) threadLocalInstance.get();
     }
 
