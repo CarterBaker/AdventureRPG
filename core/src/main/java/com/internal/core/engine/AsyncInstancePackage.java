@@ -1,9 +1,9 @@
 package com.internal.core.engine;
 
-public abstract class AsyncStructPackage extends InstancePackage {
+public abstract class AsyncInstancePackage extends InstancePackage {
 
     /*
-     * AsyncStructPackage is a thread-safe data container designed for
+     * AsyncInstancePackage is a thread-safe data container designed for
      * multi-threaded operations. Each thread automatically gets its own
      * isolated instance, preventing race conditions and eliminating the
      * need for synchronization locks.
@@ -17,7 +17,7 @@ public abstract class AsyncStructPackage extends InstancePackage {
      * lifecycle management and automatic cleanup.
      *
      * Usage:
-     * class DynamicGeometryAsyncStruct extends AsyncStructPackage {
+     * class DynamicGeometryAsyncStruct extends AsyncInstancePackage {
      * float[] vertices;
      * 
      * protected void create() {
@@ -30,7 +30,7 @@ public abstract class AsyncStructPackage extends InstancePackage {
      * }
      *
      * // In a system:
-     * AsyncStructPackage geometryData = create(DynamicGeometryAsyncStruct.class);
+     * AsyncInstancePackage geometryData = create(DynamicGeometryAsyncStruct.class);
      * 
      * // Use with automatic reset:
      * threadManager.submitWithReset("Generation", geometryData, (data) -> {
@@ -44,7 +44,7 @@ public abstract class AsyncStructPackage extends InstancePackage {
 
     // Internal \\
 
-    protected AsyncStructPackage() {
+    protected AsyncInstancePackage() {
 
         super();
 
@@ -70,7 +70,7 @@ public abstract class AsyncStructPackage extends InstancePackage {
             var constructor = this.getClass().getDeclaredConstructor();
             constructor.setAccessible(true);
 
-            AsyncStructPackage instance = (AsyncStructPackage) constructor.newInstance();
+            AsyncInstancePackage instance = (AsyncInstancePackage) constructor.newInstance();
 
             // Run lifecycle
             instance.internalCreate();
@@ -90,17 +90,9 @@ public abstract class AsyncStructPackage extends InstancePackage {
         }
     }
 
-    // Reset \\
+    // reset \\
 
-    final void internalReset() {
-        reset();
-    }
-
-    /**
-     * Override this to clean up/reset your data for reuse.
-     * Called automatically by submitWithReset() or manually when needed.
-     */
-    protected void reset() {
+    public void reset() {
     }
 
     // Accessible \\
@@ -111,7 +103,7 @@ public abstract class AsyncStructPackage extends InstancePackage {
      * and goes through its lifecycle (create -> get -> awake).
      */
     @SuppressWarnings("unchecked")
-    public final <T extends AsyncStructPackage> T getInstance() {
+    public final <T extends AsyncInstancePackage> T getInstance() {
         return (T) threadLocalInstance.get();
     }
 

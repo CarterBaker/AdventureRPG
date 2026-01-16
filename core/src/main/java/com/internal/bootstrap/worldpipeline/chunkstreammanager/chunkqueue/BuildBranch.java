@@ -1,5 +1,6 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryAsyncInstance;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkState;
@@ -11,6 +12,7 @@ public class BuildBranch extends BranchPackage {
     // Internal
     private ThreadHandle threadHandle;
     private DynamicGeometryManager dynamicGeometryManager;
+    private DynamicGeometryAsyncInstance dynamicGeometryAsyncInstance;
 
     // internal \\
 
@@ -20,6 +22,7 @@ public class BuildBranch extends BranchPackage {
         // Internal
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
+        this.dynamicGeometryAsyncInstance = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
     }
 
     // Chunk Generation \\
@@ -27,12 +30,14 @@ public class BuildBranch extends BranchPackage {
     public void buildChunk(ChunkInstance chunkInstance) {
 
         // Submit to generation thread
-        executeAsync(threadHandle, () -> {
+        executeAsync(threadHandle, dynamicGeometryAsyncInstance, (DynamicGeometryAsyncInstance instance) -> {
 
             boolean success = true;
 
             // Attempt to build the chunk
-            if (!dynamicGeometryManager.build(chunkInstance))
+            if (!dynamicGeometryManager.build(
+                    dynamicGeometryAsyncInstance,
+                    chunkInstance))
                 success = false;
 
             if (success) // Thread-safe state update

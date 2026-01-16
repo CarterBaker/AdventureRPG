@@ -2,9 +2,9 @@ package com.internal.core.engine;
 
 import java.util.concurrent.Future;
 
-import com.internal.core.engine.InternalThreadManager.AsyncStructConsumer;
-import com.internal.core.engine.InternalThreadManager.AsyncStructConsumerMulti;
 import com.internal.core.engine.settings.Settings;
+import com.internal.core.kernel.InternalThreadManager.InternalThreadManager.AsyncStructConsumer;
+import com.internal.core.kernel.InternalThreadManager.InternalThreadManager.AsyncStructConsumerMulti;
 
 public abstract class SystemPackage extends EngineUtility {
 
@@ -180,9 +180,9 @@ public abstract class SystemPackage extends EngineUtility {
         return internal.executeAsync(handle, task);
     }
 
-    protected <T extends AsyncStructPackage> Future<?> executeAsync(
+    protected <T extends AsyncInstancePackage> Future<?> executeAsync(
             ThreadHandle handle,
-            AsyncStructPackage asyncStruct,
+            AsyncInstancePackage asyncStruct,
             AsyncStructConsumer<T> consumer) {
 
         return internal.executeAsync(handle, asyncStruct, consumer);
@@ -191,7 +191,7 @@ public abstract class SystemPackage extends EngineUtility {
     protected Future<?> executeAsync(
             ThreadHandle handle,
             AsyncStructConsumerMulti consumer,
-            AsyncStructPackage... asyncStructs) {
+            AsyncInstancePackage... asyncStructs) {
 
         return internal.executeAsync(handle, consumer, asyncStructs);
     }

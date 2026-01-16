@@ -22,14 +22,6 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
 class InternalBuildManager extends ManagerPackage {
 
-    // TODO:
-    /*
-     * I am going to create a thread system integrated with the engine itself
-     * and move all new object allocations here to a thread safe BufferPackage
-     * That automatically clears on completion within one thread and self
-     * duplicates when already in use in another thread.
-     */
-
     // Internal
     private FullGeometryBranch fullGeometryBranch;
     private PartialGeometryBranch partialGeometryBranch;
@@ -62,17 +54,17 @@ class InternalBuildManager extends ManagerPackage {
     // Geometry Builder \\
 
     public boolean build(
+            DynamicGeometryAsyncInstance dynamicGeometryAsyncInstance,
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance) {
 
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
 
-        FloatArrayList quads = new FloatArrayList();
+        FloatArrayList quads = dynamicGeometryAsyncInstance.getQuads();
 
-        // Block Tracking
-        BitSet batchedBlocks = new BitSet();
-        BitSet[] directionalBatches = new BitSet[Direction3Vector.LENGTH];
+        BitSet batchedBlocks = dynamicGeometryAsyncInstance.getBatchedBlocks();
+        BitSet[] directionalBatches = dynamicGeometryAsyncInstance.getDirectionalBatches();
 
         for (int i = 0; i < Coordinate3Short.BLOCK_COORDINATE_COUNT; i++) {
 

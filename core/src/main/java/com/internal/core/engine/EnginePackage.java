@@ -6,9 +6,10 @@ import java.util.concurrent.Future;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
-import com.internal.core.engine.InternalThreadManager.AsyncStructConsumer;
-import com.internal.core.engine.InternalThreadManager.AsyncStructConsumerMulti;
 import com.internal.core.engine.settings.Settings;
+import com.internal.core.kernel.InternalThreadManager.InternalThreadManager;
+import com.internal.core.kernel.InternalThreadManager.InternalThreadManager.AsyncStructConsumer;
+import com.internal.core.kernel.InternalThreadManager.InternalThreadManager.AsyncStructConsumerMulti;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 
@@ -226,9 +227,9 @@ public class EnginePackage extends ManagerPackage {
     }
 
     @Override
-    protected final <T extends AsyncStructPackage> Future<?> executeAsync(
+    protected final <T extends AsyncInstancePackage> Future<?> executeAsync(
             ThreadHandle handle,
-            AsyncStructPackage asyncStruct,
+            AsyncInstancePackage asyncStruct,
             AsyncStructConsumer<T> consumer) {
 
         return internalThreadManager.executeAsync(handle, asyncStruct, consumer);
@@ -238,7 +239,7 @@ public class EnginePackage extends ManagerPackage {
     protected final Future<?> executeAsync(
             ThreadHandle handle,
             AsyncStructConsumerMulti consumer,
-            AsyncStructPackage... asyncStructs) {
+            AsyncInstancePackage... asyncStructs) {
 
         return internalThreadManager.executeAsync(handle, consumer, asyncStructs);
     }

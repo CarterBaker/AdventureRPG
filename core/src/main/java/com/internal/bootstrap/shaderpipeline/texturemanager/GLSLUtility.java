@@ -68,7 +68,7 @@ class GLSLUtility extends UtilityPackage {
             BufferedImage img = layers[layer];
             Pixmap pix = convertBufferedImageToPixmapRGBA(img);
 
-            // Reset position to 0 to be safe
+            // reset position to 0 to be safe
             ByteBuffer pixels = pix.getPixels();
             pixels.position(0);
 
