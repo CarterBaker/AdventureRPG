@@ -1,17 +1,17 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 
-import com.internal.bootstrap.threadpipeline.ThreadSystem;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkState;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
 import com.internal.core.engine.BranchPackage;
+import com.internal.core.engine.ThreadHandle;
 import com.internal.core.engine.settings.EngineSetting;
 
 public class GenerationBranch extends BranchPackage {
 
     // Internal
-    private ThreadSystem threadSystem;
+    private ThreadHandle threadHandle;
     private WorldGenerationManager worldGenerationManager;
 
     // internal \\
@@ -20,7 +20,7 @@ public class GenerationBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.threadSystem = get(ThreadSystem.class);
+        this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.worldGenerationManager = get(WorldGenerationManager.class);
     }
 
@@ -29,7 +29,7 @@ public class GenerationBranch extends BranchPackage {
     public void generateChunk(ChunkInstance chunkInstance) {
 
         // Submit to generation thread
-        threadSystem.submitGeneration(() -> {
+        executeAsync(threadHandle, () -> {
 
             boolean success = true;
             long chunkCoordinate = chunkInstance.getChunkCoordinate();

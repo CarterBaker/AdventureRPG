@@ -23,11 +23,6 @@ public class Settings {
     // Phsyics Settings
     public final float FIXED_TIME_STEP;
 
-    // Thread Settings
-    public final int AI_AVAILABLE_THREADS; // Maximum available threads to pool off
-    public final int GENERATION_AVAILABLE_THREADS; // Maximum available threads to pool off
-    public final int GENERAL_AVAILABLE_THREADS; // Maximum available threads to pool off
-
     // Base \\
 
     // TODO: I will need to add system wide safety rails here
@@ -50,11 +45,6 @@ public class Settings {
 
         // Phsyics Settings
         this.FIXED_TIME_STEP = builder.FIXED_TIME_STEP;
-
-        // Thread Settings
-        this.AI_AVAILABLE_THREADS = builder.AI_AVAILABLE_THREADS;
-        this.GENERATION_AVAILABLE_THREADS = builder.GENERATION_AVAILABLE_THREADS;
-        this.GENERAL_AVAILABLE_THREADS = builder.GENERAL_AVAILABLE_THREADS;
     }
 
     // Builder \\
@@ -78,11 +68,6 @@ public class Settings {
 
         // Physics Settings
         private float FIXED_TIME_STEP = 0.02f;
-
-        // Thread Settings
-        private int AI_AVAILABLE_THREADS = 2;
-        private int GENERATION_AVAILABLE_THREADS = 2;
-        private int GENERAL_AVAILABLE_THREADS = 2;
 
         // Base \\
 
@@ -133,23 +118,6 @@ public class Settings {
 
         public Builder FIXED_TIME_STEP(float FIXED_TIME_STEP) {
             this.FIXED_TIME_STEP = FIXED_TIME_STEP;
-            return this;
-        }
-
-        // Thread Settings \\
-
-        public Builder AI_AVAILABLE_THREADS(int AI_AVAILABLE_THREADS) {
-            this.AI_AVAILABLE_THREADS = AI_AVAILABLE_THREADS;
-            return this;
-        }
-
-        public Builder GENERATION_AVAILABLE_THREADS(int GENERATION_AVAILABLE_THREADS) {
-            this.GENERATION_AVAILABLE_THREADS = GENERATION_AVAILABLE_THREADS;
-            return this;
-        }
-
-        public Builder GENERAL_AVAILABLE_THREADS(int GENERAL_AVAILABLE_THREADS) {
-            this.GENERAL_AVAILABLE_THREADS = GENERAL_AVAILABLE_THREADS;
             return this;
         }
 

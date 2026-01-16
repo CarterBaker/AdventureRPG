@@ -4,6 +4,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 public class EngineSetting {
 
+        // Internal Settings
+        public static final String THREAD_DEFINITIONS = "internal/threads"; // Location of all thread pool definitions
+
         // Path Settings
         public static final String BLOCK_TEXTURE_PATH = "textures"; // Location of all block images
         public static final String BLOCK_TEXTURE_ALIAS_PATH = "textureAliases"; // Location of alias definitions

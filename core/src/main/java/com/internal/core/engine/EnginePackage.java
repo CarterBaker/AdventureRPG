@@ -1,10 +1,13 @@
 package com.internal.core.engine;
 
 import java.io.File;
+import java.util.concurrent.Future;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
+import com.internal.core.engine.InternalThreadManager.AsyncStructConsumer;
+import com.internal.core.engine.InternalThreadManager.AsyncStructConsumerMulti;
 import com.internal.core.engine.settings.Settings;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
@@ -39,6 +42,7 @@ public class EnginePackage extends ManagerPackage {
     private Screen screen;
     private WindowInstance windowInstance;
     private EngineState engineState;
+    private InternalThreadManager internalThreadManager;
 
     // System Management
     Object2ObjectLinkedOpenHashMap<Class<?>, SystemPackage> internalRegistry;
@@ -72,7 +76,7 @@ public class EnginePackage extends ManagerPackage {
         this.main = data.main;
         this.screen = null;
         this.windowInstance = null;
-        this.engineState = EngineState.BOOTSTRAP;
+        this.engineState = EngineState.KERNEL;
 
         // System Management
         this.internalRegistry = new Object2ObjectLinkedOpenHashMap<>();
@@ -207,16 +211,57 @@ public class EnginePackage extends ManagerPackage {
         return systemPackage;
     }
 
+    // Thread Management \\
+
+    @Override
+    protected final ThreadHandle getThreadHandleFromThreadName(String threadName) {
+        return internalThreadManager.getThreadHandleFromThreadName(threadName);
+    }
+
+    // Submit \\
+
+    @Override
+    protected final Future<?> executeAsync(ThreadHandle handle, Runnable task) {
+        return internalThreadManager.executeAsync(handle, task);
+    }
+
+    @Override
+    protected final <T extends AsyncStructPackage> Future<?> executeAsync(
+            ThreadHandle handle,
+            AsyncStructPackage asyncStruct,
+            AsyncStructConsumer<T> consumer) {
+
+        return internalThreadManager.executeAsync(handle, asyncStruct, consumer);
+    }
+
+    @Override
+    protected final Future<?> executeAsync(
+            ThreadHandle handle,
+            AsyncStructConsumerMulti consumer,
+            AsyncStructPackage... asyncStructs) {
+
+        return internalThreadManager.executeAsync(handle, consumer, asyncStructs);
+    }
+
     // Game State \\
 
     final void execute() {
         switch (engineState) {
+            case KERNEL -> this.kernelCycle();
             case BOOTSTRAP -> this.bootstrapCycle();
             case CREATE -> this.createCycle();
             case START -> this.startCycle();
             case UPDATE -> this.updateCycle();
             case EXIT -> this.exitCycle();
         }
+    }
+
+    // Kernel Cycle
+    private final void kernelCycle() {
+
+        this.internalKernel();
+
+        preFrameCycle(EngineState.BOOTSTRAP);
     }
 
     // Bootstrap Cycle
@@ -226,11 +271,16 @@ public class EnginePackage extends ManagerPackage {
 
         this.createGameWindow();
 
+        preFrameCycle(EngineState.CREATE);
+    }
+
+    private final void preFrameCycle(EngineState nextState) {
+
         this.internalGet();
         this.internalAwake();
         this.internalRelease();
 
-        this.setInternalState(EngineState.CREATE);
+        this.setInternalState(nextState);
         this.execute();
     }
 
@@ -265,6 +315,31 @@ public class EnginePackage extends ManagerPackage {
     // Exit Cycle
     private final void exitCycle() {
         this.internalDispose();
+    }
+
+    // Kernel \\
+
+    private void internalKernel() {
+
+        // First make sure to enter the KERNEL state
+        this.setContext(SystemContext.KERNEL);
+
+        kernel();
+
+        // Cache any systems created during KERNEL
+        this.cacheSubSystems();
+
+        // Now we can enter BOOTSTRAP and walk through create for all systems
+        this.setContext(SystemContext.CREATE);
+
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalCreate();
+    }
+
+    private final void kernel() {
+
+        // Kernel Systems
+        this.internalThreadManager = create(InternalThreadManager.class);
     }
 
     // Bootstrap \\

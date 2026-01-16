@@ -1,0 +1,7 @@
+{
+  "threads": [
+    {"name": "General", "size": 2},
+    {"name": "WorldStreaming", "size": 4},
+    {"name": "AI", "size": 4}
+  ]
+}

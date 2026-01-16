@@ -43,14 +43,6 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         if (obj.has("FIXED_TIME_STEP"))
             builder.FIXED_TIME_STEP(obj.get("FIXED_TIME_STEP").getAsFloat());
 
-        // Thread Settings
-        if (obj.has("AI_AVAILABLE_THREADS"))
-            builder.AI_AVAILABLE_THREADS(obj.get("AI_AVAILABLE_THREADS").getAsInt());
-        if (obj.has("GENERATION_AVAILABLE_THREADS"))
-            builder.GENERATION_AVAILABLE_THREADS(obj.get("GENERATION_AVAILABLE_THREADS").getAsInt());
-        if (obj.has("GENERAL_AVAILABLE_THREADS"))
-            builder.GENERAL_AVAILABLE_THREADS(obj.get("GENERAL_AVAILABLE_THREADS").getAsInt());
-
         return builder.build();
     }
 }

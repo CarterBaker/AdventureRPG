@@ -6,7 +6,6 @@ import com.internal.bootstrap.geometrypipeline.GeometryPipeline;
 import com.internal.bootstrap.inputpipeline.InputPipeline;
 import com.internal.bootstrap.renderpipeline.RenderPipeline;
 import com.internal.bootstrap.shaderpipeline.ShaderPipeline;
-import com.internal.bootstrap.threadpipeline.ThreadSystem;
 import com.internal.bootstrap.worldpipeline.WorldPipeline;
 import com.internal.runtime.debug.DebugPipeline;
 
@@ -19,7 +18,6 @@ public class GameEngine extends EnginePackage {
      */
 
     // BootStrap
-    private ThreadSystem threadSystem;
     private GeometryPipeline geometryPipeline;
     private ShaderPipeline shaderPipeline;
     private RenderPipeline renderPipeline;
@@ -37,7 +35,6 @@ public class GameEngine extends EnginePackage {
     protected void bootstrap() {
 
         // BootStrap
-        this.threadSystem = create(ThreadSystem.class);
         this.geometryPipeline = create(GeometryPipeline.class);
         this.shaderPipeline = create(ShaderPipeline.class);
         this.renderPipeline = create(RenderPipeline.class);

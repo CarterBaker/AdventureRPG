@@ -66,12 +66,13 @@ public abstract class ManagerPackage extends SystemPackage {
     @SuppressWarnings("unchecked")
     <T extends SystemPackage> T createSystem(Class<T> systemClass) {
 
-        if (this.getContext() != SystemContext.CREATE &&
-                this.internal.getContext() != SystemContext.BOOTSTRAP)
+        if (this.getContext() != SystemContext.KERNEL &&
+                this.internal.getContext() != SystemContext.BOOTSTRAP &&
+                this.internal.getContext() != SystemContext.CREATE)
             throwException(
                     "Subsystem registration rejected.\n" +
                             "Attempted during process: " + this.getContext() + "\n" +
-                            "Allowed processes: BOOTSTRAP, CREATE");
+                            "Allowed processes: KERNEL, BOOTSTRAP, CREATE");
 
         try {
 

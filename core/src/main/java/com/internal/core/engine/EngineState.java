@@ -8,6 +8,7 @@ public enum EngineState {
      * systems are permitted to run in this state.
      */
 
+    KERNEL,
     BOOTSTRAP,
     CREATE,
     START,

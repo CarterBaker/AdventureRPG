@@ -16,11 +16,16 @@ enum SystemContext {
         // Empty constructor for initialization
         NULL(),
 
+        // Kernel
+        KERNEL("NULL"),
+
         // BootStrap
-        BOOTSTRAP("NULL"),
+        BOOTSTRAP("NULL",
+                        "KERNEL"),
 
         // Constructor chain
         CREATE("NULL",
+                        "KERNEL",
                         "BOOTSTRAP"),
         GET("CREATE"),
         AWAKE("GET"),
@@ -41,6 +46,7 @@ enum SystemContext {
 
         // Game Disposal (can be entered from anywhere)
         DISPOSE("NULL",
+                        "KERNEL",
                         "BOOTSTRAP",
                         "CREATE",
                         "GET",

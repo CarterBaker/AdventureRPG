@@ -1,5 +1,9 @@
 package com.internal.core.engine;
 
+import java.util.concurrent.Future;
+
+import com.internal.core.engine.InternalThreadManager.AsyncStructConsumer;
+import com.internal.core.engine.InternalThreadManager.AsyncStructConsumerMulti;
 import com.internal.core.engine.settings.Settings;
 
 public abstract class SystemPackage extends EngineUtility {
@@ -164,6 +168,32 @@ public abstract class SystemPackage extends EngineUtility {
     @SuppressWarnings("unchecked")
     protected final <T> T get(Class<T> type) {
         return this.internal.get(false, type);
+    }
+
+    // Thread Management \\
+
+    protected ThreadHandle getThreadHandleFromThreadName(String threadName) {
+        return internal.getThreadHandleFromThreadName(threadName);
+    }
+
+    protected Future<?> executeAsync(ThreadHandle handle, Runnable task) {
+        return internal.executeAsync(handle, task);
+    }
+
+    protected <T extends AsyncStructPackage> Future<?> executeAsync(
+            ThreadHandle handle,
+            AsyncStructPackage asyncStruct,
+            AsyncStructConsumer<T> consumer) {
+
+        return internal.executeAsync(handle, asyncStruct, consumer);
+    }
+
+    protected Future<?> executeAsync(
+            ThreadHandle handle,
+            AsyncStructConsumerMulti consumer,
+            AsyncStructPackage... asyncStructs) {
+
+        return internal.executeAsync(handle, consumer, asyncStructs);
     }
 
     // Create \\
