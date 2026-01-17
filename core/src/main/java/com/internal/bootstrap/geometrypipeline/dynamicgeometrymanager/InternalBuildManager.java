@@ -84,6 +84,8 @@ class InternalBuildManager extends ManagerPackage {
                         blockHandle.getGeometry(),
                         chunkInstance,
                         subChunkInstance,
+                        biomePaletteHandle,
+                        blockPaletteHandle,
                         xyz,
                         Direction3Vector.VALUES[direction],
                         biomeHandle,
@@ -104,6 +106,8 @@ class InternalBuildManager extends ManagerPackage {
             DynamicGeometry geometry,
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
             short xyz,
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
@@ -118,6 +122,8 @@ class InternalBuildManager extends ManagerPackage {
             case FULL -> fullGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
                     xyz,
                     direction3Vector,
                     biomeHandle,
@@ -128,6 +134,8 @@ class InternalBuildManager extends ManagerPackage {
             case PARTIAL -> partialGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
                     xyz,
                     direction3Vector,
                     biomeHandle,
@@ -138,6 +146,8 @@ class InternalBuildManager extends ManagerPackage {
             case COMPLEX -> complexGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
                     xyz,
                     direction3Vector,
                     biomeHandle,
@@ -148,6 +158,8 @@ class InternalBuildManager extends ManagerPackage {
             case LIQUID -> liquidGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
                     xyz,
                     direction3Vector,
                     biomeHandle,
@@ -156,4 +168,8 @@ class InternalBuildManager extends ManagerPackage {
                     batchReturn);
         };
     }
+
+    // Offsett all positive directions
+    // short vertXYZ = Coordinate3Short.convertToVertSpace(xyz, direction3Vector);
+    // TODO: Accidentally skipped ahead will need this later.
 }

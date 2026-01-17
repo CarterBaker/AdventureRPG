@@ -100,8 +100,56 @@ public final class Coordinate3Short extends UtilityPackage {
         return packed & 0xF;
     }
 
-    // Neighbor lookup with wrapping (optimized bit manipulation)
+    // Get neighbor without wrapping, returns -1 if out of bounds
     public static short getNeighbor(short packed, int dx, int dy, int dz) {
+        // Extract and add in one step
+        int x = ((packed >> 8) & 0xF) + dx;
+        int y = ((packed >> 4) & 0xF) + dy;
+        int z = (packed & 0xF) + dz;
+
+        // Check if any coordinate is outside [0, 15] using bitwise OR
+        // If any value has bits set beyond bit 4, it's out of bounds
+        if (((x | y | z) & ~0xF) != 0) {
+            return -1;
+        }
+
+        return (short) ((x << 8) | (y << 4) | z);
+    }
+
+    // Direct bit addition with Direction3Vector, no wrap
+    public static short getNeighbor(short packed, Direction3Vector direction3Int) {
+        short directionPacked = direction3Int.coordinate3Short;
+
+        int x = ((packed >> 8) & 0xF) + ((directionPacked >> 8) & 0xF);
+        int y = ((packed >> 4) & 0xF) + ((directionPacked >> 4) & 0xF);
+        int z = (packed & 0xF) + (directionPacked & 0xF);
+
+        // Single bitwise check for all coordinates
+        if (((x | y | z) & ~0xF) != 0) {
+            return -1;
+        }
+
+        return (short) ((x << 8) | (y << 4) | z);
+    }
+
+    // Direct bit addition with Direction2Vector, no wrap
+    public static short getNeighbor(short packed, Direction2Vector direction2Int) {
+        short directionPacked = direction2Int.coordinate3Short;
+
+        int x = ((packed >> 8) & 0xF) + ((directionPacked >> 8) & 0xF);
+        int y = (packed >> 4) & 0xF; // Y unchanged
+        int z = (packed & 0xF) + (directionPacked & 0xF);
+
+        // Check only X and Z (Y is unchanged so can't be out of bounds)
+        if (((x | z) & ~0xF) != 0) {
+            return -1;
+        }
+
+        return (short) ((x << 8) | (y << 4) | z);
+    }
+
+    // Neighbor lookup with wrapping (optimized bit manipulation)
+    public static short getNeighborAndWrap(short packed, int dx, int dy, int dz) {
         // Extract, add, and wrap in minimal operations
         int x = ((packed >> 8) + dx) & 0xF;
         int y = ((packed >> 4) + dy) & 0xF;
@@ -110,7 +158,7 @@ public final class Coordinate3Short extends UtilityPackage {
     }
 
     // FAST: Direct bit addition with Direction3Int.chunkCoordinate3Short
-    public static short getNeighbor(short packed, Direction3Vector direction3Int) {
+    public static short getNeighborAndWrap(short packed, Direction3Vector direction3Int) {
 
         short directionPacked = direction3Int.coordinate3Short;
 
@@ -122,7 +170,7 @@ public final class Coordinate3Short extends UtilityPackage {
     }
 
     // FAST: Direct bit addition with Direction2Int.chunkCoordinate3Short
-    public static short getNeighbor(short packed, Direction2Vector direction2Int) {
+    public static short getNeighborAndWrap(short packed, Direction2Vector direction2Int) {
 
         short directionPacked = direction2Int.coordinate3Short;
 
@@ -130,6 +178,35 @@ public final class Coordinate3Short extends UtilityPackage {
         int x = ((packed >> 8) + (directionPacked >> 8)) & 0xF;
         int y = (packed >> 4) & 0xF; // Y unchanged
         int z = (packed + directionPacked) & 0xF;
+        return (short) ((x << 8) | (y << 4) | z);
+    }
+
+    // Get neighbor with scaled direction (for greedy meshing tangent checks)
+    public static short getNeighborWithOffset(short packed, Direction3Vector direction, int offset) {
+        // Extract base coordinates
+        int x = ((packed >> 8) & 0xF) + ((direction.coordinate3Short >> 8) & 0xF) * offset;
+        int y = ((packed >> 4) & 0xF) + ((direction.coordinate3Short >> 4) & 0xF) * offset;
+        int z = (packed & 0xF) + (direction.coordinate3Short & 0xF) * offset;
+
+        // Check if any coordinate is outside [0, 15]
+        if (((x | y | z) & ~0xF) != 0) {
+            return -1;
+        }
+
+        return (short) ((x << 8) | (y << 4) | z);
+    }
+
+    // 2D version (Y unchanged)
+    public static short getNeighborWithOffset(short packed, Direction2Vector direction, int offset) {
+        int x = ((packed >> 8) & 0xF) + ((direction.coordinate3Short >> 8) & 0xF) * offset;
+        int y = (packed >> 4) & 0xF; // Y unchanged
+        int z = (packed & 0xF) + (direction.coordinate3Short & 0xF) * offset;
+
+        // Check only X and Z
+        if (((x | z) & ~0xF) != 0) {
+            return -1;
+        }
+
         return (short) ((x << 8) | (y << 4) | z);
     }
 
@@ -156,5 +233,13 @@ public final class Coordinate3Short extends UtilityPackage {
         return (x == 0 || x == 15 ||
                 y == 0 || y == 15 ||
                 z == 0 || z == 15);
+    }
+
+    // Convert block coordinate to vert space using direction's pre-packed offset
+    public static short convertToVertSpace(short blockXYZ, Direction3Vector direction) {
+        int x = ((blockXYZ >> 8) + (direction.vertOffset3Short >> 8)) & 0xF;
+        int y = ((blockXYZ >> 4) + (direction.vertOffset3Short >> 4)) & 0xF;
+        int z = (blockXYZ + direction.vertOffset3Short) & 0xF;
+        return (short) ((x << 8) | (y << 4) | z);
     }
 }

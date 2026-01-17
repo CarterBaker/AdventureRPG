@@ -2,8 +2,8 @@ package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicge
 
 import java.util.BitSet;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometry;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
+import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -21,17 +21,27 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 public class FullGeometryBranch extends BranchPackage {
 
     // Internal
+    private BiomeManager biomeManager;
     private BlockManager blockManager;
 
     // Data
-    private static final SubChunkInstance ERROR = new SubChunkInstance();
+    private SubChunkInstance ERROR;
+    private static final int CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
 
     // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Data
+        this.ERROR = create(SubChunkInstance.class);
+    }
 
     @Override
     protected void get() {
 
         // Internal
+        this.biomeManager = get(BiomeManager.class);
         this.blockManager = get(BlockManager.class);
     }
 
@@ -40,6 +50,8 @@ public class FullGeometryBranch extends BranchPackage {
     public Boolean assembleQuads(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
             short xyz,
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
@@ -52,10 +64,21 @@ public class FullGeometryBranch extends BranchPackage {
                 subChunkInstance,
                 xyz,
                 direction3Vector,
+                biomeHandle,
                 blockHandle))
             return false;
 
-        return false; // TODO: Temporary
+        return assembleQuad(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                blockPaletteHandle,
+                xyz,
+                direction3Vector,
+                biomeHandle,
+                blockHandle,
+                quads,
+                batchReturn);
     }
 
     private boolean blockHasFace(
@@ -63,6 +86,7 @@ public class FullGeometryBranch extends BranchPackage {
             SubChunkInstance subChunkInstance,
             short xyz,
             Direction3Vector direction3Vector,
+            BiomeHandle biomeHandle,
             BlockHandle blockHandle) {
 
         SubChunkInstance comparativeSubChunkCoordinate = getComparativeSubChunkInstance(
@@ -73,16 +97,21 @@ public class FullGeometryBranch extends BranchPackage {
         if (comparativeSubChunkCoordinate == ERROR)
             return false;
 
-        short comparativeXYZ = Coordinate3Short.getNeighbor(xyz, direction3Vector);
+        short comparativeXYZ = Coordinate3Short.getNeighborAndWrap(xyz, direction3Vector);
+
+        BlockPaletteHandle comparativeBiomePaletteHandle = comparativeSubChunkCoordinate.getBiomePaletteHandle();
+        short comparativeBiomeID = comparativeBiomePaletteHandle.getBlock(comparativeXYZ);
+        BiomeHandle comparativeBiomeHandle = biomeManager.getBiomeFromBiomeID(comparativeBiomeID);
 
         BlockPaletteHandle comparativeBlockPaletteHandle = comparativeSubChunkCoordinate.getBlockPaletteHandle();
         short comparativeBlockID = comparativeBlockPaletteHandle.getBlock(comparativeXYZ);
         BlockHandle comparativeBlockHandle = blockManager.getBlockFromBlockID(comparativeBlockID);
 
-        if (comparativeBlockHandle.getGeometry() == DynamicGeometry.FULL)
-            return false;
-
-        return true;
+        return compareNeighbor(
+                biomeHandle,
+                comparativeBiomeHandle,
+                blockHandle,
+                comparativeBlockHandle);
     }
 
     private SubChunkInstance getComparativeSubChunkInstance(
@@ -129,5 +158,155 @@ public class FullGeometryBranch extends BranchPackage {
         return comparativeSubChunkInstance;
     }
 
+    private boolean compareNeighbor(
+            BiomeHandle biomeHandleA,
+            BiomeHandle biomeHandleB,
+            BlockHandle blockHandleA,
+            BlockHandle blockHandleB) {
+
+        if (biomeHandleA == biomeHandleB &&
+                blockHandleA == blockHandleB)
+            return true;
+
+        return false;
+    }
+
     // Face Assembly \\
+
+    private boolean assembleQuad(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
+            short xyz,
+            Direction3Vector direction3Vector,
+            BiomeHandle biomeHandle,
+            BlockHandle blockHandle,
+            FloatArrayList quads,
+            BitSet batchReturn) {
+
+        // First step start with default values for the check
+        boolean checkA = true;
+        boolean checkB = true;
+
+        int sizeA = 1;
+        int sizeB = 1;
+
+        // Get the tangent directions for the current `Direction3vector`
+        Direction3Vector[] tangents = Direction3Vector.getTangents(direction3Vector);
+        Direction3Vector comparativeDirectionA = tangents[0];
+        Direction3Vector comparativeDirectionB = tangents[1];
+
+        do {
+
+            // expand along A
+            if (checkA) {
+
+                if (tryExpand(
+                        chunkInstance,
+                        subChunkInstance,
+                        biomePaletteHandle,
+                        blockPaletteHandle,
+                        xyz,
+                        direction3Vector,
+                        comparativeDirectionA, comparativeDirectionB,
+                        sizeA, sizeB,
+                        biomeHandle,
+                        blockHandle,
+                        quads,
+                        batchReturn))
+                    sizeA++;
+
+                else
+                    checkA = false;
+            }
+
+            // expand along B
+            if (checkB) {
+
+                if (tryExpand(
+                        chunkInstance,
+                        subChunkInstance,
+                        biomePaletteHandle,
+                        blockPaletteHandle,
+                        xyz,
+                        direction3Vector,
+                        comparativeDirectionB, comparativeDirectionA,
+                        sizeB, sizeA,
+                        biomeHandle,
+                        blockHandle,
+                        quads,
+                        batchReturn))
+                    sizeB++;
+
+                else
+                    checkB = false;
+            }
+
+        }
+
+        while (checkA || checkB);
+
+        return true;
+    }
+
+    // The main method to stretch the face
+    private boolean tryExpand(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
+            short xyz,
+            Direction3Vector direction3Vector,
+            Direction3Vector expandDirection, Direction3Vector tangentDirection,
+            int currentSize, int tangentSize,
+            BiomeHandle biomeHandle,
+            BlockHandle blockHandle,
+            FloatArrayList quads,
+            BitSet batchReturn) {
+
+        // First step is to make sure we are within the same chunk
+        if (currentSize >= CHUNK_SIZE)
+            return false;
+
+        // Calculate next base coordinate along `expandDirection`
+        short nextXYZ = Coordinate3Short.getNeighbor(xyz, expandDirection);
+
+        // Used to keep the coordinates within a single chunk
+        if (nextXYZ == -1)
+            return false;
+
+        // Loop across the perpendicular dimension
+        for (int i = 0; i < tangentSize; i++) {
+
+            short checkXYZ = Coordinate3Short.getNeighborWithOffset(nextXYZ, tangentDirection, i);
+            if (checkXYZ == -1)
+                return false;
+
+            short comparativeBiomeID = biomePaletteHandle.getBlock(checkXYZ);
+            BiomeHandle comparativeBiomeHandle = biomeManager.getBiomeFromBiomeID(comparativeBiomeID);
+
+            short comparativeBlockID = blockPaletteHandle.getBlock(checkXYZ);
+            BlockHandle comparativeBlockHandle = blockManager.getBlockFromBlockID(comparativeBlockID);
+
+            if (!compareNeighbor(
+                    biomeHandle,
+                    comparativeBiomeHandle,
+                    blockHandle,
+                    comparativeBlockHandle) ||
+                    batchReturn.get(checkXYZ) ||
+                    !blockHasFace(
+                            chunkInstance,
+                            subChunkInstance,
+                            checkXYZ,
+                            direction3Vector,
+                            biomeHandle,
+                            blockHandle))
+                return false;
+
+            batchReturn.set(checkXYZ);
+        }
+
+        return true;
+    }
 }

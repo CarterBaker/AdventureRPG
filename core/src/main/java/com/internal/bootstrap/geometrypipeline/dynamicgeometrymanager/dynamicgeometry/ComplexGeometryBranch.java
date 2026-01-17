@@ -5,6 +5,7 @@ import java.util.BitSet;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.subchunk.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
@@ -16,6 +17,8 @@ public class ComplexGeometryBranch extends BranchPackage {
     public Boolean assembleQuads(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
             short xyz,
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
