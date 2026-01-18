@@ -1,5 +1,6 @@
 package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.DynamicGeometryAsyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.ManagerPackage;

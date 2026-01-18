@@ -12,7 +12,7 @@ import com.internal.bootstrap.worldpipeline.subchunk.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate3Short;
+import com.internal.core.util.mathematics.Extras.Color;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
@@ -27,6 +27,7 @@ public class FullGeometryBranch extends BranchPackage {
     // Data
     private SubChunkInstance ERROR;
     private static final int CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
+    private static final int WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT;
 
     // Internal \\
 
@@ -45,7 +46,7 @@ public class FullGeometryBranch extends BranchPackage {
         this.blockManager = get(BlockManager.class);
     }
 
-    // Full Geometry Builder \\
+    // Face Verification \\
 
     public Boolean assembleQuads(
             ChunkInstance chunkInstance,
@@ -57,7 +58,8 @@ public class FullGeometryBranch extends BranchPackage {
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
             FloatArrayList quads,
-            BitSet batchReturn) {
+            BitSet batchReturn,
+            Color[] vertColors) {
 
         if (!blockHasFace(
                 chunkInstance,
@@ -78,7 +80,8 @@ public class FullGeometryBranch extends BranchPackage {
                 biomeHandle,
                 blockHandle,
                 quads,
-                batchReturn);
+                batchReturn,
+                vertColors);
     }
 
     private boolean blockHasFace(
@@ -120,7 +123,7 @@ public class FullGeometryBranch extends BranchPackage {
             short xyz,
             Direction3Vector direction3Vector) {
 
-        // If the coordinate is within the sa,e
+        // If the coordinate is within the same `SubChunkInstance` continue
         if (!Coordinate3Short.isAtEdge(xyz))
             return subChunkInstance;
 
@@ -171,7 +174,7 @@ public class FullGeometryBranch extends BranchPackage {
         return false;
     }
 
-    // Face Assembly \\
+    // Greedy Expansion \\
 
     private boolean assembleQuad(
             ChunkInstance chunkInstance,
@@ -183,14 +186,15 @@ public class FullGeometryBranch extends BranchPackage {
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
             FloatArrayList quads,
-            BitSet batchReturn) {
+            BitSet batchReturn,
+            Color[] vertColors) {
 
         // First step start with default values for the check
         boolean checkA = true;
         boolean checkB = true;
 
-        int sizeA = 1;
-        int sizeB = 1;
+        byte sizeA = 1;
+        byte sizeB = 1;
 
         // Get the tangent directions for the current `Direction3vector`
         Direction3Vector[] tangents = Direction3Vector.getTangents(direction3Vector);
@@ -247,7 +251,19 @@ public class FullGeometryBranch extends BranchPackage {
 
         while (checkA || checkB);
 
-        return true;
+        return prepareFace(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                blockPaletteHandle,
+                xyz,
+                sizeA, sizeB,
+                direction3Vector,
+                comparativeDirectionA, comparativeDirectionB,
+                biomeHandle,
+                blockHandle,
+                quads,
+                vertColors);
     }
 
     // The main method to stretch the face
@@ -308,5 +324,169 @@ public class FullGeometryBranch extends BranchPackage {
         }
 
         return true;
+    }
+
+    // Face preperation \\
+
+    private boolean prepareFace(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
+            short xyz,
+            byte sizeA, byte sizeB,
+            Direction3Vector direction3Vector,
+            Direction3Vector tangentDirectionA, Direction3Vector tangentDirectionB,
+            BiomeHandle biomeHandle,
+            BlockHandle blockHandle,
+            FloatArrayList quads,
+            Color[] vertColors) {
+
+        // Convert block to vert space
+        short vertXYZ = Coordinate3Short.convertToVertSpace(xyz, direction3Vector);
+
+        // base (vert0)
+        short vert0XYZ = vertXYZ;
+
+        // base + width (vert1)
+        short vert1XYZ = Coordinate3Short.getNeighborWithOffsetFromVert(vertXYZ, tangentDirectionA, sizeA);
+
+        // base + width + height (vert2)
+        short vert2XYZ = Coordinate3Short.getNeighborWithOffsetFromVert(vert1XYZ, tangentDirectionB, sizeB);
+
+        // base + height (vert3)
+        short vert3XYZ = Coordinate3Short.getNeighborWithOffsetFromVert(vertXYZ, tangentDirectionB, sizeB);
+
+        float color0 = getVertColor(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                xyz,
+                vertXYZ,
+                direction3Vector,
+                biomeHandle,
+                vertColors);
+
+        float color1 = getVertColor(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                xyz,
+                vertXYZ,
+                direction3Vector,
+                biomeHandle,
+                vertColors);
+
+        float color2 = getVertColor(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                xyz,
+                vertXYZ,
+                direction3Vector,
+                biomeHandle,
+                vertColors);
+
+        float color3 = getVertColor(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                xyz,
+                vertXYZ,
+                direction3Vector,
+                biomeHandle,
+                vertColors);
+
+        return false;
+    }
+
+    private float getVertColor(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            short xyz,
+            short vertXYZ,
+            Direction3Vector direction3Vector,
+            BiomeHandle biomeHandle,
+            Color[] vertColors) {
+
+        for (int i = 0; i < 8; i++) {
+
+            BlockDirection3Vector blockDirection3Vector = BlockDirection3Vector.VALUES[i];
+            short offsetXYZ = Coordinate3Short.getNeighborFromVert(vertXYZ, blockDirection3Vector);
+            short blockXYZ = Coordinate3Short.convertToBlockSpace(offsetXYZ, blockDirection3Vector);
+
+            SubChunkInstance comparativeSubChunkCoordinate = getComparativeSubChunkInstance(
+                    chunkInstance,
+                    subChunkInstance,
+                    blockXYZ,
+                    blockDirection3Vector);
+            if (comparativeSubChunkCoordinate == ERROR) {
+                vertColors[i] = Color.WHITE;
+                continue;
+            }
+
+            BlockPaletteHandle comparativeBiomePaletteHandle = comparativeSubChunkCoordinate.getBiomePaletteHandle();
+            short comparativeBiomeID = comparativeBiomePaletteHandle.getBlock(blockXYZ);
+            BiomeHandle comparativeBiomeHandle = biomeManager.getBiomeFromBiomeID(comparativeBiomeID);
+
+            vertColors[i] = comparativeBiomeHandle.getBiomeColor();
+        }
+
+        return blendColors();
+    }
+
+    private SubChunkInstance getComparativeSubChunkInstance(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            short xyz,
+            BlockDirection3Vector blockDirection3Vector) {
+
+        // If the coordinate is within the same `SubChunkInstance` continue
+        if (!Coordinate3Short.isAtEdge(xyz))
+            return subChunkInstance;
+
+        short x = Coordinate3Short.unpackX(xyz);
+        short y = Coordinate3Short.unpackY(xyz);
+        short z = Coordinate3Short.unpackZ(xyz);
+
+        short subChunkCoordinate = subChunkInstance.getSubChunkCoordinate();
+
+        // Handle vertical movement
+        if (y < 0) {
+
+            if (subChunkCoordinate == 0)
+                return null;
+
+            subChunkCoordinate -= 1;
+        }
+
+        if (y >= CHUNK_SIZE) {
+
+            if (subChunkCoordinate == (WORLD_HEIGHT - 1))
+                return null;
+
+            subChunkCoordinate += 1;
+        }
+
+        boolean needsHorizontalNeighbor = (x < 0 ||
+                x >= CHUNK_SIZE ||
+                z < 0 ||
+                z >= CHUNK_SIZE);
+
+        if (!needsHorizontalNeighbor)
+            return chunkInstance.getSubChunk(subChunkCoordinate);
+
+        Direction2Vector direction2Vector = blockDirection3Vector.to2D();
+        ChunkNeighborStruct chunkNeighborStruct = chunkInstance.getChunkNeighbors();
+        ChunkInstance neighborChunkInstance = chunkNeighborStruct.getNeighborChunk(direction2Vector.index);
+        if (neighborChunkInstance == null)
+            return ERROR;
+
+        SubChunkInstance comparativeSubChunkInstance = neighborChunkInstance.getSubChunk(subChunkCoordinate);
+        if (comparativeSubChunkInstance == null)
+            return ERROR;
+
+        return comparativeSubChunkInstance;
     }
 }

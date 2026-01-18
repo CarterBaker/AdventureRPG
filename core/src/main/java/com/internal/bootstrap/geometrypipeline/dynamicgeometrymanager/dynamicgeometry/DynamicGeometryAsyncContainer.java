@@ -1,8 +1,9 @@
-package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
+package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry;
 
 import java.util.BitSet;
 
 import com.internal.core.engine.AsyncContainerPackage;
+import com.internal.core.util.mathematics.Extras.Color;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -13,6 +14,8 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
     private FloatArrayList quads;
     private BitSet[] directionalBatches;
     private BitSet batchReturn;
+
+    private Color[] vertColors;
 
     // Internal \\
 
@@ -25,6 +28,7 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
             directionalBatches[i] = new BitSet();
         this.batchReturn = new BitSet();
 
+        this.vertColors = new Color[BlockDirection3Vector.LENGTH];
     }
 
     // Reset \\
@@ -37,6 +41,8 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             directionalBatches[i].clear();
         batchReturn.clear();
+
+        this.vertColors = new Color[BlockDirection3Vector.LENGTH];
     }
 
     // Accessible \\
@@ -51,5 +57,9 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
 
     public BitSet getBatchReturn() {
         return batchReturn;
+    }
+
+    public Color[] getVertColors() {
+        return vertColors;
     }
 }

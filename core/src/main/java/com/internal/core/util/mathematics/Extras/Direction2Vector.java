@@ -1,5 +1,9 @@
 package com.internal.core.util.mathematics.Extras;
 
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.Coordinate3Short;
+
+import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+
 public enum Direction2Vector {
 
         NORTH(0, 1),
@@ -22,6 +26,19 @@ public enum Direction2Vector {
         public static final Direction2Vector[] VALUES = values();
         public static final int LENGTH = values().length;
 
+        private static final Direction3Vector[] TO_3D_LOOKUP = new Direction3Vector[LENGTH];
+
+        static {
+                TO_3D_LOOKUP[NORTH.ordinal()] = Direction3Vector.NORTH;
+                TO_3D_LOOKUP[NORTHEAST.ordinal()] = null;
+                TO_3D_LOOKUP[EAST.ordinal()] = Direction3Vector.EAST;
+                TO_3D_LOOKUP[SOUTHEAST.ordinal()] = null;
+                TO_3D_LOOKUP[SOUTH.ordinal()] = Direction3Vector.SOUTH;
+                TO_3D_LOOKUP[SOUTHWEST.ordinal()] = null;
+                TO_3D_LOOKUP[WEST.ordinal()] = Direction3Vector.WEST;
+                TO_3D_LOOKUP[NORTHWEST.ordinal()] = null;
+        }
+
         // Internal \\
 
         Direction2Vector(int x, int y) {
@@ -39,17 +56,6 @@ public enum Direction2Vector {
         // Utility \\
 
         public Direction3Vector to3D() {
-                switch (this) {
-                        case NORTH:
-                                return Direction3Vector.NORTH;
-                        case EAST:
-                                return Direction3Vector.EAST;
-                        case SOUTH:
-                                return Direction3Vector.SOUTH;
-                        case WEST:
-                                return Direction3Vector.WEST;
-                        default:
-                                return null;
-                }
+                return TO_3D_LOOKUP[this.ordinal()];
         }
 }

@@ -1,10 +1,11 @@
 package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.FullGeometryBranch;
-
 import java.util.BitSet;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.ComplexGeometryBranch;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.Coordinate3Short;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.DynamicGeometryAsyncContainer;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.FullGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.LiquidGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.PartialGeometryBranch;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
@@ -15,7 +16,7 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate3Short;
+import com.internal.core.util.mathematics.Extras.Color;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -65,6 +66,8 @@ class InternalBuildManager extends ManagerPackage {
         BitSet[] directionalBatches = dynamicGeometryAsyncContainer.getDirectionalBatches();
         BitSet batchReturn = dynamicGeometryAsyncContainer.getBatchReturn();
 
+        Color[] vertColors = dynamicGeometryAsyncContainer.getVertColors();
+
         for (int i = 0; i < Coordinate3Short.BLOCK_COORDINATE_COUNT; i++) {
 
             short xyz = Coordinate3Short.getBlockCoordinate(i);
@@ -91,7 +94,8 @@ class InternalBuildManager extends ManagerPackage {
                         biomeHandle,
                         blockHandle,
                         quads,
-                        batchReturn))
+                        batchReturn,
+                        vertColors))
                     continue;
 
                 directionalBatches[direction].or(batchReturn);
@@ -113,7 +117,8 @@ class InternalBuildManager extends ManagerPackage {
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
             FloatArrayList quads,
-            BitSet batchReturn) {
+            BitSet batchReturn,
+            Color[] vertColors) {
 
         return switch (geometry) {
 
@@ -129,7 +134,8 @@ class InternalBuildManager extends ManagerPackage {
                     biomeHandle,
                     blockHandle,
                     quads,
-                    batchReturn);
+                    batchReturn,
+                    vertColors);
 
             case PARTIAL -> partialGeometryBranch.assembleQuads(
                     chunkInstance,
@@ -141,7 +147,8 @@ class InternalBuildManager extends ManagerPackage {
                     biomeHandle,
                     blockHandle,
                     quads,
-                    batchReturn);
+                    batchReturn,
+                    vertColors);
 
             case COMPLEX -> complexGeometryBranch.assembleQuads(
                     chunkInstance,
@@ -153,7 +160,8 @@ class InternalBuildManager extends ManagerPackage {
                     biomeHandle,
                     blockHandle,
                     quads,
-                    batchReturn);
+                    batchReturn,
+                    vertColors);
 
             case LIQUID -> liquidGeometryBranch.assembleQuads(
                     chunkInstance,
@@ -165,11 +173,8 @@ class InternalBuildManager extends ManagerPackage {
                     biomeHandle,
                     blockHandle,
                     quads,
-                    batchReturn);
+                    batchReturn,
+                    vertColors);
         };
     }
-
-    // Offsett all positive directions
-    // short vertXYZ = Coordinate3Short.convertToVertSpace(xyz, direction3Vector);
-    // TODO: Accidentally skipped ahead will need this later.
 }

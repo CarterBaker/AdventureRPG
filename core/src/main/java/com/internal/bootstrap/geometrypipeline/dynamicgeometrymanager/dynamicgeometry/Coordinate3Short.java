@@ -1,7 +1,9 @@
-package com.internal.core.util.mathematics.Extras;
+package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry;
 
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.mathematics.Extras.Direction2Vector;
+import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 public final class Coordinate3Short extends UtilityPackage {
 
@@ -88,16 +90,16 @@ public final class Coordinate3Short extends UtilityPackage {
     }
 
     // Direct unpacking from packed coordinate
-    public static int unpackX(short packed) {
-        return (packed >> 8) & 0xF;
+    public static byte unpackX(short packed) {
+        return (byte) ((packed >> 8) & 0xF);
     }
 
-    public static int unpackY(short packed) {
-        return (packed >> 4) & 0xF;
+    public static byte unpackY(short packed) {
+        return (byte) ((packed >> 4) & 0xF);
     }
 
-    public static int unpackZ(short packed) {
-        return packed & 0xF;
+    public static byte unpackZ(short packed) {
+        return (byte) (packed & 0xF);
     }
 
     // Get neighbor without wrapping, returns -1 if out of bounds
@@ -210,6 +212,34 @@ public final class Coordinate3Short extends UtilityPackage {
         return (short) ((x << 8) | (y << 4) | z);
     }
 
+    // Add this to Coordinate3Short class
+    // Get neighbor in VERT SPACE (5 bits per component, range 0-16)
+    public static short getNeighborFromVert(short vertPacked, BlockDirection3Vector blockDirection) {
+        short directionPacked = blockDirection.coordinate3Short;
+
+        // Extract from VERT SPACE (5 bits), add BLOCK SPACE direction (4 bits, but may
+        // be negative like -1=15)
+        int x = ((vertPacked >> 10) & 0x1F) + ((directionPacked >> 8) & 0xF);
+        int y = ((vertPacked >> 5) & 0x1F) + ((directionPacked >> 4) & 0xF);
+        int z = (vertPacked & 0x1F) + (directionPacked & 0xF);
+
+        // Result can be -1 to 17, but we'll handle wrapping in convertToBlockSpace
+        // Pack back into vert space (5 bits each)
+        return (short) ((x << 10) | (y << 5) | z);
+    }
+
+    // Get neighbor with scaled direction in VERT SPACE (for quad vertices)
+    public static short getNeighborWithOffsetFromVert(short vertPacked, Direction3Vector direction, int offset) {
+        // Extract from VERT SPACE (5 bits per component)
+        int x = ((vertPacked >> 10) & 0x1F) + ((direction.coordinate3Short >> 8) & 0xF) * offset;
+        int y = ((vertPacked >> 5) & 0x1F) + ((direction.coordinate3Short >> 4) & 0xF) * offset;
+        int z = (vertPacked & 0x1F) + (direction.coordinate3Short & 0xF) * offset;
+
+        // Pack back into vert space (5 bits each) - no bounds checking needed for quad
+        // vertices
+        return (short) ((x << 10) | (y << 5) | z);
+    }
+
     // Get the flattened index from a packed coordinate
     public static int getBlockIndex(short packed) {
         int x = unpackX(packed);
@@ -235,11 +265,53 @@ public final class Coordinate3Short extends UtilityPackage {
                 z == 0 || z == 15);
     }
 
+    // Check if vertex coordinate is at edge (0 or 16 in vert space)
+    public static boolean isVertAtEdge(short vertPacked) {
+        int x = (vertPacked >> 10) & 0x1F;
+        int y = (vertPacked >> 5) & 0x1F;
+        int z = vertPacked & 0x1F;
+
+        // Values 0 and 16 both have (val & 0x0F) == 0
+        return ((x & 0x0F) == 0) || ((y & 0x0F) == 0) || ((z & 0x0F) == 0);
+    }
+
     // Convert block coordinate to vert space using direction's pre-packed offset
+    // vertOffset3Short should contain 0 or 1 for each axis (packed as 4 bits each)
     public static short convertToVertSpace(short blockXYZ, Direction3Vector direction) {
-        int x = ((blockXYZ >> 8) + (direction.vertOffset3Short >> 8)) & 0xF;
-        int y = ((blockXYZ >> 4) + (direction.vertOffset3Short >> 4)) & 0xF;
-        int z = (blockXYZ + direction.vertOffset3Short) & 0xF;
+        // Don't mask the result - allow values 0-16
+        int x = ((blockXYZ >> 8) & 0xF) + ((direction.vertOffset3Short >> 8) & 0xF);
+        int y = ((blockXYZ >> 4) & 0xF) + ((direction.vertOffset3Short >> 4) & 0xF);
+        int z = (blockXYZ & 0xF) + (direction.vertOffset3Short & 0xF);
+        // Pack with 5 bits per component to hold 0-16
+        return (short) ((x << 10) | (y << 5) | z);
+    }
+
+    // Convert vert coordinate to block space using direction's pre-packed offset
+    public static short convertToBlockSpace(short vertXYZ, Direction3Vector direction) {
+        int x = ((vertXYZ >> 10) & 0x1F) - ((direction.vertOffset3Short >> 8) & 0xF);
+        int y = ((vertXYZ >> 5) & 0x1F) - ((direction.vertOffset3Short >> 4) & 0xF);
+        int z = (vertXYZ & 0x1F) - (direction.vertOffset3Short & 0xF);
+
+        // Wrap: -1 → 15, 16 → 0, otherwise keep value
+        x = (x & 0xF);
+        y = (y & 0xF);
+        z = (z & 0xF);
+
+        return (short) ((x << 8) | (y << 4) | z);
+    }
+
+    // Convert vert coordinate to block space using BlockDirection3Vector's
+    // pre-packed offset
+    public static short convertToBlockSpace(short vertXYZ, BlockDirection3Vector direction) {
+        int x = ((vertXYZ >> 10) & 0x1F) - ((direction.vertOffset3Short >> 8) & 0xF);
+        int y = ((vertXYZ >> 5) & 0x1F) - ((direction.vertOffset3Short >> 4) & 0xF);
+        int z = (vertXYZ & 0x1F) - (direction.vertOffset3Short & 0xF);
+
+        // Wrap: -1 → 15, 16 → 0, otherwise keep value
+        x = (x & 0xF);
+        y = (y & 0xF);
+        z = (z & 0xF);
+
         return (short) ((x << 8) | (y << 4) | z);
     }
 }

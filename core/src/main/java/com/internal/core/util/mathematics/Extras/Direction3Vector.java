@@ -1,5 +1,6 @@
 package com.internal.core.util.mathematics.Extras;
 
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.Coordinate3Short;
 import com.internal.core.engine.EngineUtility.InternalException;
 
 public enum Direction3Vector {
@@ -22,6 +23,31 @@ public enum Direction3Vector {
 
 	public static final Direction3Vector[] VALUES = values();
 	public static final int LENGTH = values().length;
+
+	private static final Direction3Vector[][] TANGENTS_LOOKUP = new Direction3Vector[LENGTH][];
+	private static final Direction2Vector[] TO_2D_LOOKUP = new Direction2Vector[LENGTH];
+
+	static {
+		Direction3Vector[] horizontalTangents = new Direction3Vector[] { EAST, NORTH };
+		Direction3Vector[] northSouthTangents = new Direction3Vector[] { EAST, UP };
+		Direction3Vector[] eastWestTangents = new Direction3Vector[] { NORTH, UP };
+
+		TANGENTS_LOOKUP[NORTH.ordinal()] = northSouthTangents;
+		TANGENTS_LOOKUP[EAST.ordinal()] = eastWestTangents;
+		TANGENTS_LOOKUP[SOUTH.ordinal()] = northSouthTangents;
+		TANGENTS_LOOKUP[WEST.ordinal()] = eastWestTangents;
+		TANGENTS_LOOKUP[UP.ordinal()] = horizontalTangents;
+		TANGENTS_LOOKUP[DOWN.ordinal()] = horizontalTangents;
+	}
+
+	static {
+		TO_2D_LOOKUP[NORTH.ordinal()] = Direction2Vector.NORTH;
+		TO_2D_LOOKUP[EAST.ordinal()] = Direction2Vector.EAST;
+		TO_2D_LOOKUP[SOUTH.ordinal()] = Direction2Vector.SOUTH;
+		TO_2D_LOOKUP[WEST.ordinal()] = Direction2Vector.WEST;
+		TO_2D_LOOKUP[UP.ordinal()] = null;
+		TO_2D_LOOKUP[DOWN.ordinal()] = null;
+	}
 
 	// Internal \\
 
@@ -46,44 +72,10 @@ public enum Direction3Vector {
 	// Utility \\
 
 	public Direction2Vector to2D() {
-		switch (this) {
-			case NORTH:
-				return Direction2Vector.NORTH;
-			case EAST:
-				return Direction2Vector.EAST;
-			case SOUTH:
-				return Direction2Vector.SOUTH;
-			case WEST:
-				return Direction2Vector.WEST;
-			default:
-				return null;
-		}
+		return TO_2D_LOOKUP[this.ordinal()];
 	}
 
 	public static Direction3Vector[] getTangents(Direction3Vector normal) {
-
-		switch (normal) {
-
-			case UP:
-			case DOWN:
-				return new Direction3Vector[] {
-						EAST,
-						NORTH };
-
-			case NORTH:
-			case SOUTH:
-				return new Direction3Vector[] {
-						EAST,
-						UP };
-
-			case EAST:
-			case WEST:
-				return new Direction3Vector[] {
-						NORTH,
-						UP };
-
-			default:
-				throw new InternalException("Unexpected normal: " + normal);
-		}
+		return TANGENTS_LOOKUP[normal.ordinal()];
 	}
 }

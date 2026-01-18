@@ -8,6 +8,7 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.BranchPackage;
+import com.internal.core.util.mathematics.Extras.Color;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -24,7 +25,8 @@ public class LiquidGeometryBranch extends BranchPackage {
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
             FloatArrayList quads,
-            BitSet batchReturn) {
+            BitSet batchReturn,
+            Color[] vertColors) {
 
         // build geometry into quads
 
