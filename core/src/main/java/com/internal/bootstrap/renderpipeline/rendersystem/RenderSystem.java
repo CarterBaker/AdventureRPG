@@ -1,6 +1,5 @@
 package com.internal.bootstrap.renderpipeline.rendersystem;
 
-import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
 import com.internal.bootstrap.shaderpipeline.passmanager.PassHandle;
@@ -14,7 +13,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RenderSystem extends SystemPackage {
 
     // Internal
-    private MeshManager meshManager;
     private WindowInstance windowInstance;
 
     // Render Queue: depth -> ordered list of passes
@@ -29,7 +27,6 @@ public class RenderSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.meshManager = get(MeshManager.class);
         this.windowInstance = internal.getWindowInstance();
     }
 

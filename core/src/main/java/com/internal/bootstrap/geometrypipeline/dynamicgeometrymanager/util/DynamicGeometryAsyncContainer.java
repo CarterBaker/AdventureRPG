@@ -1,4 +1,4 @@
-package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry;
+package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
 import java.util.BitSet;
 
@@ -7,11 +7,12 @@ import com.internal.core.util.mathematics.Extras.Color;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
 
     // Internal
-    private FloatArrayList quads;
+    private Int2ObjectOpenHashMap<FloatArrayList> verts;
     private BitSet[] directionalBatches;
     private BitSet batchReturn;
 
@@ -22,7 +23,7 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
     protected void create() {
 
         // Internal
-        this.quads = new FloatArrayList();
+        this.verts = new Int2ObjectOpenHashMap<>();
         this.directionalBatches = new BitSet[Direction3Vector.LENGTH];
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             directionalBatches[i] = new BitSet();
@@ -37,18 +38,19 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
     public void reset() {
 
         // Internal
-        quads.clear();
+        for (FloatArrayList buffer : verts.values())
+            buffer.clear();
+
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             directionalBatches[i].clear();
-        batchReturn.clear();
 
-        this.vertColors = new Color[BlockDirection3Vector.LENGTH];
+        batchReturn.clear();
     }
 
     // Accessible \\
 
-    public FloatArrayList getQuads() {
-        return quads;
+    public Int2ObjectOpenHashMap<FloatArrayList> getVerts() {
+        return verts;
     }
 
     public BitSet[] getDirectionalBatches() {

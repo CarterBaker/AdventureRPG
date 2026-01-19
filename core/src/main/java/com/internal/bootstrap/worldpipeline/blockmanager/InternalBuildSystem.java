@@ -4,7 +4,8 @@ import java.io.File;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometry;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
+import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.core.engine.SystemPackage;
@@ -16,6 +17,7 @@ public class InternalBuildSystem extends SystemPackage {
 
     // Internal
     private TextureManager textureManager;
+    private MaterialManager materialManager;
     private int blockCount;
 
     // Base \\
@@ -28,6 +30,7 @@ public class InternalBuildSystem extends SystemPackage {
     @Override
     protected void get() {
         this.textureManager = get(TextureManager.class);
+        this.materialManager = get(MaterialManager.class);
     }
 
     // Compile \\
@@ -60,7 +63,15 @@ public class InternalBuildSystem extends SystemPackage {
 
         // Parse type (default to SOLID if not specified)
         String typeStr = blockJson.has("type") ? blockJson.get("type").getAsString() : "SOLID";
-        DynamicGeometry blockType = parseBlockType(typeStr);
+        DynamicGeometryType blockType = parseBlockType(typeStr);
+
+        // Parse material (default to -1 if not specified, meaning no material/Air
+        // block)
+        int materialID = -1;
+        if (blockJson.has("material")) {
+            String materialPath = blockJson.get("material").getAsString();
+            materialID = materialManager.getMaterialIDFromMaterialName(materialPath);
+        }
 
         // Parse textures
         int upTexture = -1;
@@ -137,6 +148,7 @@ public class InternalBuildSystem extends SystemPackage {
                 blockName,
                 blockCount++,
                 blockType,
+                materialID,
                 upTexture,
                 downTexture,
                 northTexture,
@@ -149,10 +161,10 @@ public class InternalBuildSystem extends SystemPackage {
 
     // Utility \\
 
-    private DynamicGeometry parseBlockType(String typeStr) {
+    private DynamicGeometryType parseBlockType(String typeStr) {
 
         try {
-            return DynamicGeometry.valueOf(typeStr.toUpperCase());
+            return DynamicGeometryType.valueOf(typeStr.toUpperCase());
         }
 
         catch (IllegalArgumentException e) {

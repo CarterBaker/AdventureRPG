@@ -1,6 +1,6 @@
 package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
-public enum DynamicGeometry {
+public enum DynamicGeometryType {
     NONE,
     FULL,
     PARTIAL,

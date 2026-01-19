@@ -1,6 +1,6 @@
 package com.internal.core.util.mathematics.Extras;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.Coordinate3Short;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.Coordinate3Short;
 import com.internal.core.engine.EngineUtility.InternalException;
 
 public enum Direction3Vector {

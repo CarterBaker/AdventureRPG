@@ -1,4 +1,4 @@
-package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry;
+package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.engine.settings.EngineSetting;

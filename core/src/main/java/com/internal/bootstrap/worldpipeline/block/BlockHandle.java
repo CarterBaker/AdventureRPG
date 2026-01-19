@@ -1,6 +1,6 @@
 package com.internal.bootstrap.worldpipeline.block;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometry;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
@@ -11,9 +11,10 @@ public class BlockHandle extends HandlePackage {
     // Identity
     private String blockName;
     private int blockID;
-    private DynamicGeometry geometry;
+    private DynamicGeometryType geometry;
 
     // Textures
+    private int materialID;
     private Object2IntOpenHashMap<Direction3Vector> faceTextures;
 
     // Constructor \\
@@ -21,7 +22,8 @@ public class BlockHandle extends HandlePackage {
     public void constructor(
             String blockName,
             int blockID,
-            DynamicGeometry geometry,
+            DynamicGeometryType geometry,
+            int materialID,
             int upTexture,
             int downTexture,
             int northTexture,
@@ -32,6 +34,7 @@ public class BlockHandle extends HandlePackage {
         this.blockName = blockName;
         this.blockID = blockID;
         this.geometry = geometry;
+        this.materialID = materialID;
 
         this.faceTextures = new Object2IntOpenHashMap<>();
         this.faceTextures.put(Direction3Vector.UP, upTexture);
@@ -52,8 +55,12 @@ public class BlockHandle extends HandlePackage {
         return blockID;
     }
 
-    public DynamicGeometry getGeometry() {
+    public DynamicGeometryType getGeometry() {
         return geometry;
+    }
+
+    public int getMaterialID() {
+        return materialID;
     }
 
     public int getTextureForFace(Direction3Vector direction) {

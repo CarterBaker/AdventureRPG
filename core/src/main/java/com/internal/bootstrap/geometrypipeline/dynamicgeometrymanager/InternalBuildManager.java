@@ -3,11 +3,11 @@ package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 import java.util.BitSet;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.ComplexGeometryBranch;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.Coordinate3Short;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.DynamicGeometryAsyncContainer;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.FullGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.LiquidGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.PartialGeometryBranch;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.Coordinate3Short;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
@@ -20,6 +20,7 @@ import com.internal.core.util.mathematics.Extras.Color;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 class InternalBuildManager extends ManagerPackage {
 
@@ -59,10 +60,19 @@ class InternalBuildManager extends ManagerPackage {
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance) {
 
+        DynamicPacketInstance dynamicPacketInstance = subChunkInstance.getDynamicModelInstance();
+
+        if (dynamicPacketInstance.getState() == DynamicPacketState.GENERATING_VERT_DATA ||
+                dynamicPacketInstance.getState() == DynamicPacketState.RENDERING_PACKET)
+            return false;
+
+        dynamicPacketInstance.setState(DynamicPacketState.GENERATING_VERT_DATA);
+        dynamicPacketInstance.clear();
+
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
 
-        FloatArrayList quads = dynamicGeometryAsyncContainer.getQuads();
+        Int2ObjectOpenHashMap<FloatArrayList> verts = dynamicGeometryAsyncContainer.getVerts();
         BitSet[] directionalBatches = dynamicGeometryAsyncContainer.getDirectionalBatches();
         BitSet batchReturn = dynamicGeometryAsyncContainer.getBatchReturn();
 
@@ -80,60 +90,76 @@ class InternalBuildManager extends ManagerPackage {
 
             for (int direction = 0; direction < Direction3Vector.LENGTH; direction++) {
 
-                if (directionalBatches[direction].get(xyz))
+                batchReturn.clear();
+
+                BitSet accumulatedBatch = directionalBatches[direction];
+
+                if (accumulatedBatch.get(xyz))
+                    continue;
+
+                DynamicGeometryType blockGeometry = blockHandle.getGeometry();
+                if (blockGeometry == DynamicGeometryType.NONE)
                     continue;
 
                 if (!assembleQuads(
-                        blockHandle.getGeometry(),
+                        blockGeometry,
                         chunkInstance,
                         subChunkInstance,
                         biomePaletteHandle,
                         blockPaletteHandle,
+                        dynamicPacketInstance,
                         xyz,
                         Direction3Vector.VALUES[direction],
                         biomeHandle,
                         blockHandle,
-                        quads,
+                        verts,
+                        accumulatedBatch,
                         batchReturn,
                         vertColors))
                     continue;
 
-                directionalBatches[direction].or(batchReturn);
-                batchReturn.clear();
+                accumulatedBatch.or(batchReturn);
             }
         }
 
-        return false; // TODO: Temporary
+        for (int materialID : verts.keySet())
+            dynamicPacketInstance.addVertices(materialID, verts.get(materialID));
+
+        dynamicPacketInstance.setState(DynamicPacketState.HAS_VERT_DATA);
+
+        return true;
     }
 
-    private Boolean assembleQuads(
-            DynamicGeometry geometry,
+    private boolean assembleQuads(
+            DynamicGeometryType geometry,
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
             BlockPaletteHandle biomePaletteHandle,
             BlockPaletteHandle blockPaletteHandle,
+            DynamicPacketInstance dynamicPacketInstance,
             short xyz,
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            FloatArrayList quads,
+            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            BitSet accumulatedBatch,
             BitSet batchReturn,
             Color[] vertColors) {
 
         return switch (geometry) {
-
-            case NONE -> null;
 
             case FULL -> fullGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
                     biomePaletteHandle,
                     blockPaletteHandle,
+                    dynamicPacketInstance,
                     xyz,
                     direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    quads,
+                    verts,
+                    accumulatedBatch,
                     batchReturn,
                     vertColors);
 
@@ -142,11 +168,13 @@ class InternalBuildManager extends ManagerPackage {
                     subChunkInstance,
                     biomePaletteHandle,
                     blockPaletteHandle,
+                    dynamicPacketInstance,
                     xyz,
                     direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    quads,
+                    verts,
+                    accumulatedBatch,
                     batchReturn,
                     vertColors);
 
@@ -155,11 +183,13 @@ class InternalBuildManager extends ManagerPackage {
                     subChunkInstance,
                     biomePaletteHandle,
                     blockPaletteHandle,
+                    dynamicPacketInstance,
                     xyz,
                     direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    quads,
+                    verts,
+                    accumulatedBatch,
                     batchReturn,
                     vertColors);
 
@@ -168,13 +198,17 @@ class InternalBuildManager extends ManagerPackage {
                     subChunkInstance,
                     biomePaletteHandle,
                     blockPaletteHandle,
+                    dynamicPacketInstance,
                     xyz,
                     direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    quads,
+                    verts,
+                    accumulatedBatch,
                     batchReturn,
                     vertColors);
+
+            case NONE -> true; // Not reachable
         };
     }
 }

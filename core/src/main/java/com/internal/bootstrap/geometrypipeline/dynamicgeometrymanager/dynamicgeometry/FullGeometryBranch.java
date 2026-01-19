@@ -2,6 +2,11 @@ package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicge
 
 import java.util.BitSet;
 
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.BlockDirection3Vector;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.Coordinate3Short;
+import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import com.internal.bootstrap.shaderpipeline.texturemanager.UVRect;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
@@ -17,10 +22,12 @@ import com.internal.core.util.mathematics.Extras.Direction2Vector;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class FullGeometryBranch extends BranchPackage {
 
     // Internal
+    private TextureManager textureManager;
     private BiomeManager biomeManager;
     private BlockManager blockManager;
 
@@ -42,22 +49,25 @@ public class FullGeometryBranch extends BranchPackage {
     protected void get() {
 
         // Internal
+        this.textureManager = get(TextureManager.class);
         this.biomeManager = get(BiomeManager.class);
         this.blockManager = get(BlockManager.class);
     }
 
     // Face Verification \\
 
-    public Boolean assembleQuads(
+    public boolean assembleQuads(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
             BlockPaletteHandle biomePaletteHandle,
             BlockPaletteHandle blockPaletteHandle,
+            DynamicPacketInstance dynamicPacketInstance,
             short xyz,
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            FloatArrayList quads,
+            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            BitSet accumulatedBatch,
             BitSet batchReturn,
             Color[] vertColors) {
 
@@ -75,11 +85,13 @@ public class FullGeometryBranch extends BranchPackage {
                 subChunkInstance,
                 biomePaletteHandle,
                 blockPaletteHandle,
+                dynamicPacketInstance,
                 xyz,
                 direction3Vector,
                 biomeHandle,
                 blockHandle,
-                quads,
+                verts,
+                accumulatedBatch,
                 batchReturn,
                 vertColors);
     }
@@ -166,12 +178,8 @@ public class FullGeometryBranch extends BranchPackage {
             BiomeHandle biomeHandleB,
             BlockHandle blockHandleA,
             BlockHandle blockHandleB) {
-
-        if (biomeHandleA == biomeHandleB &&
-                blockHandleA == blockHandleB)
-            return true;
-
-        return false;
+        return (biomeHandleA == biomeHandleB &&
+                blockHandleA == blockHandleB);
     }
 
     // Greedy Expansion \\
@@ -181,11 +189,13 @@ public class FullGeometryBranch extends BranchPackage {
             SubChunkInstance subChunkInstance,
             BlockPaletteHandle biomePaletteHandle,
             BlockPaletteHandle blockPaletteHandle,
+            DynamicPacketInstance dynamicPacketInstance,
             short xyz,
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            FloatArrayList quads,
+            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            BitSet accumulatedBatch,
             BitSet batchReturn,
             Color[] vertColors) {
 
@@ -217,7 +227,7 @@ public class FullGeometryBranch extends BranchPackage {
                         sizeA, sizeB,
                         biomeHandle,
                         blockHandle,
-                        quads,
+                        accumulatedBatch,
                         batchReturn))
                     sizeA++;
 
@@ -239,7 +249,7 @@ public class FullGeometryBranch extends BranchPackage {
                         sizeB, sizeA,
                         biomeHandle,
                         blockHandle,
-                        quads,
+                        accumulatedBatch,
                         batchReturn))
                     sizeB++;
 
@@ -256,13 +266,14 @@ public class FullGeometryBranch extends BranchPackage {
                 subChunkInstance,
                 biomePaletteHandle,
                 blockPaletteHandle,
+                dynamicPacketInstance,
                 xyz,
                 sizeA, sizeB,
                 direction3Vector,
                 comparativeDirectionA, comparativeDirectionB,
                 biomeHandle,
                 blockHandle,
-                quads,
+                verts,
                 vertColors);
     }
 
@@ -278,7 +289,7 @@ public class FullGeometryBranch extends BranchPackage {
             int currentSize, int tangentSize,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            FloatArrayList quads,
+            BitSet accumulatedBatch,
             BitSet batchReturn) {
 
         // First step is to make sure we are within the same chunk
@@ -310,7 +321,7 @@ public class FullGeometryBranch extends BranchPackage {
                     comparativeBiomeHandle,
                     blockHandle,
                     comparativeBlockHandle) ||
-                    batchReturn.get(checkXYZ) ||
+                    accumulatedBatch.get(checkXYZ) ||
                     !blockHasFace(
                             chunkInstance,
                             subChunkInstance,
@@ -333,81 +344,75 @@ public class FullGeometryBranch extends BranchPackage {
             SubChunkInstance subChunkInstance,
             BlockPaletteHandle biomePaletteHandle,
             BlockPaletteHandle blockPaletteHandle,
+            DynamicPacketInstance dynamicPacketInstance,
             short xyz,
             byte sizeA, byte sizeB,
             Direction3Vector direction3Vector,
             Direction3Vector tangentDirectionA, Direction3Vector tangentDirectionB,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            FloatArrayList quads,
+            Int2ObjectOpenHashMap<FloatArrayList> verts,
             Color[] vertColors) {
 
-        // Convert block to vert space
-        short vertXYZ = Coordinate3Short.convertToVertSpace(xyz, direction3Vector);
-
-        // base (vert0)
-        short vert0XYZ = vertXYZ;
+        // Convert block to vert space (vert0)
+        short vert0XYZ = Coordinate3Short.convertToVertSpace(xyz, direction3Vector);
 
         // base + width (vert1)
-        short vert1XYZ = Coordinate3Short.getNeighborWithOffsetFromVert(vertXYZ, tangentDirectionA, sizeA);
+        short vert1XYZ = Coordinate3Short.getNeighborWithOffsetFromVert(vert0XYZ, tangentDirectionA, sizeA);
 
         // base + width + height (vert2)
         short vert2XYZ = Coordinate3Short.getNeighborWithOffsetFromVert(vert1XYZ, tangentDirectionB, sizeB);
 
         // base + height (vert3)
-        short vert3XYZ = Coordinate3Short.getNeighborWithOffsetFromVert(vertXYZ, tangentDirectionB, sizeB);
+        short vert3XYZ = Coordinate3Short.getNeighborWithOffsetFromVert(vert0XYZ, tangentDirectionB, sizeB);
 
-        float color0 = getVertColor(
+        float vert0Color = getVertColor(
                 chunkInstance,
                 subChunkInstance,
-                biomePaletteHandle,
-                xyz,
-                vertXYZ,
-                direction3Vector,
-                biomeHandle,
+                vert0XYZ,
                 vertColors);
 
-        float color1 = getVertColor(
+        float vert1Color = getVertColor(
                 chunkInstance,
                 subChunkInstance,
-                biomePaletteHandle,
-                xyz,
-                vertXYZ,
-                direction3Vector,
-                biomeHandle,
+                vert1XYZ,
                 vertColors);
 
-        float color2 = getVertColor(
+        float vert2Color = getVertColor(
                 chunkInstance,
                 subChunkInstance,
-                biomePaletteHandle,
-                xyz,
-                vertXYZ,
-                direction3Vector,
-                biomeHandle,
+                vert2XYZ,
                 vertColors);
 
-        float color3 = getVertColor(
+        float vert3Color = getVertColor(
                 chunkInstance,
                 subChunkInstance,
-                biomePaletteHandle,
-                xyz,
-                vertXYZ,
-                direction3Vector,
-                biomeHandle,
+                vert3XYZ,
                 vertColors);
 
-        return false;
+        int materialID = blockHandle.getMaterialID();
+        int textureID = blockHandle.getTextureForFace(direction3Vector);
+
+        return finalizeFace(
+                verts,
+                dynamicPacketInstance,
+                direction3Vector,
+                materialID,
+                textureID,
+                vert0XYZ,
+                vert1XYZ,
+                vert2XYZ,
+                vert3XYZ,
+                vert0Color,
+                vert1Color,
+                vert2Color,
+                vert3Color);
     }
 
     private float getVertColor(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
-            BlockPaletteHandle biomePaletteHandle,
-            short xyz,
             short vertXYZ,
-            Direction3Vector direction3Vector,
-            BiomeHandle biomeHandle,
             Color[] vertColors) {
 
         for (int i = 0; i < 8; i++) {
@@ -433,7 +438,7 @@ public class FullGeometryBranch extends BranchPackage {
             vertColors[i] = comparativeBiomeHandle.getBiomeColor();
         }
 
-        return blendColors();
+        return blendColors(vertColors);
     }
 
     private SubChunkInstance getComparativeSubChunkInstance(
@@ -488,5 +493,104 @@ public class FullGeometryBranch extends BranchPackage {
             return ERROR;
 
         return comparativeSubChunkInstance;
+    }
+
+    private float blendColors(Color[] vertColors) {
+
+        float r = 0, g = 0, b = 0, a = 0;
+        int count = 0;
+
+        for (Color c : vertColors) {
+            if (c != null) {
+                r += c.r;
+                g += c.g;
+                b += c.b;
+                a += c.a;
+                count++;
+            }
+        }
+
+        if (count == 0)
+            return Color.rgba8888(Color.WHITE);
+
+        r /= count;
+        g /= count;
+        b /= count;
+        a /= count;
+
+        return Color.rgba8888(r, g, b, a);
+    }
+
+    private boolean finalizeFace(
+            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            DynamicPacketInstance dynamicPacketInstance,
+            Direction3Vector direction3Vector,
+            int materialId,
+            int textureID,
+            short vert0XYZ,
+            short vert1XYZ,
+            short vert2XYZ,
+            short vert3XYZ,
+            float vert0Color,
+            float vert1Color,
+            float vert2Color,
+            float vert3Color) {
+
+        // Get or create buffer for this material
+        FloatArrayList buffer = verts.computeIfAbsent(materialId, k -> new FloatArrayList());
+
+        // Normal is just the direction
+        float nx = (float) direction3Vector.x;
+        float ny = (float) direction3Vector.y;
+        float nz = (float) direction3Vector.z;
+
+        // Get UV coordinates directly from texture atlas
+        UVRect uvRect = textureManager.getTextureArrayUVfromTileID(textureID);
+
+        // Vertex 0 (bottom-left corner)
+        buffer.add((float) Coordinate3Short.unpackX(vert0XYZ));
+        buffer.add((float) Coordinate3Short.unpackY(vert0XYZ));
+        buffer.add((float) Coordinate3Short.unpackZ(vert0XYZ));
+        buffer.add(nx);
+        buffer.add(ny);
+        buffer.add(nz);
+        buffer.add(vert0Color);
+        buffer.add(uvRect.u0);
+        buffer.add(uvRect.v0);
+
+        // Vertex 1 (bottom-right corner)
+        buffer.add((float) Coordinate3Short.unpackX(vert1XYZ));
+        buffer.add((float) Coordinate3Short.unpackY(vert1XYZ));
+        buffer.add((float) Coordinate3Short.unpackZ(vert1XYZ));
+        buffer.add(nx);
+        buffer.add(ny);
+        buffer.add(nz);
+        buffer.add(vert1Color);
+        buffer.add(uvRect.u1);
+        buffer.add(uvRect.v0);
+
+        // Vertex 2 (top-right corner)
+        buffer.add((float) Coordinate3Short.unpackX(vert2XYZ));
+        buffer.add((float) Coordinate3Short.unpackY(vert2XYZ));
+        buffer.add((float) Coordinate3Short.unpackZ(vert2XYZ));
+        buffer.add(nx);
+        buffer.add(ny);
+        buffer.add(nz);
+        buffer.add(vert2Color);
+        buffer.add(uvRect.u1);
+        buffer.add(uvRect.v1);
+
+        // Vertex 3 (top-left corner)
+        buffer.add((float) Coordinate3Short.unpackX(vert3XYZ));
+        buffer.add((float) Coordinate3Short.unpackY(vert3XYZ));
+        buffer.add((float) Coordinate3Short.unpackZ(vert3XYZ));
+        buffer.add(nx);
+        buffer.add(ny);
+        buffer.add(nz);
+        buffer.add(vert3Color);
+        buffer.add(uvRect.u0);
+        buffer.add(uvRect.v1);
+
+        return true;
     }
 }

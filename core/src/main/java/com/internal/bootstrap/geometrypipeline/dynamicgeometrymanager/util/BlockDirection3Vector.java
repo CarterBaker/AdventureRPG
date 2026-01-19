@@ -1,4 +1,4 @@
-package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry;
+package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate3Long;

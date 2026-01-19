@@ -1,5 +1,7 @@
 package com.internal.bootstrap.worldpipeline.subchunk;
 
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.core.engine.InstancePackage;
 import com.internal.core.engine.settings.EngineSetting;
 
@@ -7,8 +9,12 @@ public class SubChunkInstance extends InstancePackage {
 
     // Internal
     byte subChunkCoordinate;
+
     BlockPaletteHandle biomePaletteHandle;
     BlockPaletteHandle blockPaletteHandle;
+
+    // Dynamic Mesh
+    private DynamicPacketInstance dynamicPacketInstance;
 
     // Internal \\
 
@@ -26,16 +32,25 @@ public class SubChunkInstance extends InstancePackage {
                 EngineSetting.CHUNK_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD);
 
+        // Dynamic Mesh
+        this.dynamicPacketInstance = create(DynamicPacketInstance.class);
+
     }
 
-    public void constructor(byte subChunkCoordinate) {
+    public void constructor(
+            byte subChunkCoordinate,
+            VAOHandle vaoHandle) {
 
         // Internal
         this.subChunkCoordinate = subChunkCoordinate;
+
+        // Dynamic Mesh
+        this.dynamicPacketInstance.constructor(vaoHandle);
     }
 
     // Accessible \\
 
+    // Internal
     public byte getSubChunkCoordinate() {
         return subChunkCoordinate;
     }
@@ -46,5 +61,10 @@ public class SubChunkInstance extends InstancePackage {
 
     public BlockPaletteHandle getBlockPaletteHandle() {
         return blockPaletteHandle;
+    }
+
+    // Dynamic Mesh
+    public DynamicPacketInstance getDynamicModelInstance() {
+        return dynamicPacketInstance;
     }
 }

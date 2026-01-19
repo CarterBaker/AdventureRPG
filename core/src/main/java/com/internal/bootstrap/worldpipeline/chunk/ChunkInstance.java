@@ -1,6 +1,6 @@
 package com.internal.bootstrap.worldpipeline.chunk;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicModelInstance;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
@@ -22,7 +22,7 @@ public class ChunkInstance extends InstancePackage {
     private ChunkNeighborStruct chunkNeighbors;
 
     // Dynamic Mesh
-    private DynamicModelInstance dynamicModelInstance;
+    private DynamicPacketInstance dynamicPacketInstance;
 
     // Internal \\
 
@@ -42,7 +42,7 @@ public class ChunkInstance extends InstancePackage {
         this.chunkNeighbors = new ChunkNeighborStruct();
 
         // Dynamic Mesh
-        this.dynamicModelInstance = create(DynamicModelInstance.class);
+        this.dynamicPacketInstance = create(DynamicPacketInstance.class);
     }
 
     public void constructor(
@@ -55,8 +55,10 @@ public class ChunkInstance extends InstancePackage {
         this.chunkCoordinate = chunkCoordinate;
 
         // SubChunks
-        for (byte i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
-            subChunks[i].constructor(i);
+        for (byte subChunkCoordinate = 0; subChunkCoordinate < EngineSetting.WORLD_HEIGHT; subChunkCoordinate++)
+            subChunks[subChunkCoordinate].constructor(
+                    subChunkCoordinate,
+                    vaoHandle);
 
         // Neighbors
         this.chunkNeighbors.constructor(
@@ -64,7 +66,7 @@ public class ChunkInstance extends InstancePackage {
                 this);
 
         // Dynamic Mesh
-        this.dynamicModelInstance.constructor(vaoHandle);
+        this.dynamicPacketInstance.constructor(vaoHandle);
     }
 
     public void dispose() {
@@ -105,7 +107,7 @@ public class ChunkInstance extends InstancePackage {
     }
 
     // Dynamic Mesh
-    public DynamicModelInstance getDynamicModelInstance() {
-        return dynamicModelInstance;
+    public DynamicPacketInstance getDynamicModelInstance() {
+        return dynamicPacketInstance;
     }
 }

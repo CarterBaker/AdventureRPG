@@ -206,6 +206,22 @@ public class Color {
         return this;
     }
 
+    // Conversion \\
+
+    public static float rgba8888(Color color) {
+        return color.toPackedFloat();
+    }
+
+    public static float rgba8888(float r, float g, float b, float a) {
+        int ri = (int) (r * 255.0f);
+        int gi = (int) (g * 255.0f);
+        int bi = (int) (b * 255.0f);
+        int ai = (int) (a * 255.0f);
+
+        int packed = (ai << 24) | (bi << 16) | (gi << 8) | ri;
+        return Float.intBitsToFloat(packed & 0xfeffffff);
+    }
+
     // Utility \\
 
     public boolean hasValues() {
