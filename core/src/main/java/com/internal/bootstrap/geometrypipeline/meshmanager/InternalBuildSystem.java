@@ -61,12 +61,9 @@ class InternalBuildSystem extends SystemPackage {
 
         MeshHandle meshHandle = create(MeshHandle.class);
         meshHandle.constructor(
-                vaoHandle.getAttributeHandle(),
-                vaoHandle.getVertStride(),
-                vboHandle.getVertexHandle(),
-                vboHandle.getVertexCount(),
-                iboHandle.getIndexHandle(),
-                iboHandle.getIndexCount());
+                vaoHandle,
+                vboHandle,
+                iboHandle);
 
         return meshHandle;
     }

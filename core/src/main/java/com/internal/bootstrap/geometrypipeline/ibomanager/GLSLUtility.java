@@ -43,4 +43,9 @@ class GLSLUtility extends UtilityPackage {
 
                 return iboHandle;
         }
+
+        static void removeIndexData(IBOHandle iboHandle) {
+                GL20 gl20 = Gdx.gl20;
+                gl20.glDeleteBuffer(iboHandle.getIndexHandle());
+        }
 }

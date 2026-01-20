@@ -28,12 +28,7 @@ public class PassHandle extends HandlePackage {
 
         this.modelHandle = create(ModelHandle.class);
         this.modelHandle.constructor(
-                processingTriangle.getVaoHandle(),
-                processingTriangle.getVertStride(),
-                processingTriangle.getVboHandle(),
-                processingTriangle.getVertCount(),
-                processingTriangle.getIboHandle(),
-                processingTriangle.getIndexCount(),
+                processingTriangle,
                 material);
         this.material = material;
     }

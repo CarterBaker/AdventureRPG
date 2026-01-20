@@ -1,6 +1,8 @@
 package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
+import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
 import com.internal.core.engine.InstancePackage;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -13,6 +15,8 @@ public class DynamicPacketInstance extends InstancePackage {
     private volatile DynamicPacketState state;
     private VAOHandle vaoHandle;
     private Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> materialID2ModelCollection;
+    private ObjectArrayList<ModelHandle> modelHandleCollection;
+    private Int2ObjectOpenHashMap<RenderCallHandle> renderCallID2RenderCall;
 
     // Internal \\
 
@@ -138,5 +142,29 @@ public class DynamicPacketInstance extends InstancePackage {
         materialID2ModelCollection.clear();
 
         setState(DynamicPacketState.EMPTY);
+    }
+
+    public void setModelHandleCollection(ObjectArrayList<ModelHandle> modelHandleCollection) {
+        this.modelHandleCollection = modelHandleCollection;
+    }
+
+    public ObjectArrayList<ModelHandle> getModelHandleCollection() {
+        return modelHandleCollection;
+    }
+
+    public void clearModelHandleCollection() {
+        modelHandleCollection.clear();
+    }
+
+    public void setRenderCallCollection(Int2ObjectOpenHashMap<RenderCallHandle> renderCallID2RenderCall) {
+        this.renderCallID2RenderCall = renderCallID2RenderCall;
+    }
+
+    public Int2ObjectOpenHashMap<RenderCallHandle> getRenderCallCollection() {
+        return renderCallID2RenderCall;
+    }
+
+    public void clearRenderCallCollection() {
+        renderCallID2RenderCall.clear();
     }
 }

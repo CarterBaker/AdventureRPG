@@ -3,9 +3,11 @@ package com.internal.bootstrap.geometrypipeline.ibomanager;
 import java.io.File;
 
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 public class IBOManager extends ManagerPackage {
 
@@ -40,5 +42,17 @@ public class IBOManager extends ManagerPackage {
 
     public IBOHandle getIBOHandleFromName(String iboName) {
         return iboName2IBOHandle.get(iboName);
+    }
+
+    // Accessible \\
+
+    public IBOHandle createIBO(VAOHandle vaoHandle, ShortArrayList indices) {
+        IBOHandle iboHandle = create(IBOHandle.class);
+        short[] indexArray = indices.toShortArray();
+        return GLSLUtility.uploadIndexData(vaoHandle, iboHandle, indexArray);
+    }
+
+    public void removeIBO(IBOHandle iboHandle) {
+        GLSLUtility.removeIndexData(iboHandle);
     }
 }

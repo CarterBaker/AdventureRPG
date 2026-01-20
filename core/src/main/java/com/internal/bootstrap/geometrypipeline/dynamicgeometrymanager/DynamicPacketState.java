@@ -5,5 +5,6 @@ public enum DynamicPacketState {
     NEEDS_VERT_DATA,
     GENERATING_VERT_DATA,
     HAS_VERT_DATA,
-    RENDERING_PACKET
+    UPLOADED_TO_GPU,
+    UPLOADED_TO_RENDERER
 }

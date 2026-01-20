@@ -3,6 +3,7 @@ package com.internal.bootstrap.geometrypipeline;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
+import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.geometrypipeline.vbomanager.VBOManager;
 import com.internal.core.engine.PipelinePackage;
@@ -17,6 +18,7 @@ public class GeometryPipeline extends PipelinePackage {
         create(IBOManager.class);
         create(VAOManager.class);
         create(MeshManager.class);
+        create(ModelManager.class);
         create(DynamicGeometryManager.class);
     }
 }

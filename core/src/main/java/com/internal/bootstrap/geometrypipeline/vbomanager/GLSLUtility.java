@@ -54,4 +54,9 @@ class GLSLUtility {
 
                 return vboHandle;
         }
+
+        static void removeVertexData(VBOHandle vboHandle) {
+                GL20 gl20 = Gdx.gl20;
+                gl20.glDeleteBuffer(vboHandle.getVertexHandle());
+        }
 }

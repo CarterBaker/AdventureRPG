@@ -1,5 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.passmanager;
 
+import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.core.engine.ManagerPackage;
 
@@ -49,11 +50,11 @@ public class PassManager extends ManagerPackage {
     // Render Management \\
 
     public void pushPass(PassHandle pass, int depth) {
-        renderSystem.pushPass(pass, depth);
+        renderSystem.pushRenderCall(pass.getModelHandle(), depth);
     }
 
-    public void pullPass(PassHandle processingPass) {
-        renderSystem.pullPass(processingPass);
+    public void pullPass(RenderCallHandle renderCallHandle) {
+        renderSystem.pullRenderCall(renderCallHandle);
     }
 
     // Pass Management \\

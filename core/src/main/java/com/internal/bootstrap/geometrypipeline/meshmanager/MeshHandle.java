@@ -1,68 +1,56 @@
 package com.internal.bootstrap.geometrypipeline.meshmanager;
 
+import com.internal.bootstrap.geometrypipeline.ibomanager.IBOHandle;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vbomanager.VBOHandle;
 import com.internal.core.engine.HandlePackage;
 
 public class MeshHandle extends HandlePackage {
 
     // Internal
-    private int vaoHandle;
-    private int vertStride;
-
-    private int vboHandle;
-    private int vertCount;
-
-    private int iboHandle;
-    private int indexCount;
+    private VAOHandle vaoHandle;
+    private VBOHandle vboHandle;
+    private IBOHandle iboHandle;
 
     // Internal \\
 
     public void constructor(
-            int vaoHandle,
-            int vertStride,
-
-            int vboHandle,
-            int vertCount,
-
-            int iboHandle,
-            int indexCount) {
+            VAOHandle vaoHandle,
+            VBOHandle vboHandle,
+            IBOHandle iboHandle) {
 
         // Internal
         this.vaoHandle = vaoHandle;
-        this.vertStride = vertStride;
-
         this.vboHandle = vboHandle;
-        this.vertCount = vertCount;
-
         this.iboHandle = iboHandle;
-        this.indexCount = indexCount;
     }
 
     // Accessible \\
 
     // VAO
-    public int getVaoHandle() {
-        return vaoHandle;
+    public int getVAOHandle() {
+        return vaoHandle.getAttributeHandle();
     }
 
     public int getVertStride() {
-        return vertStride;
+        return vaoHandle.getVertStride();
     }
 
     // VBO
     public int getVboHandle() {
-        return vboHandle;
+        return vboHandle.getVertexHandle();
     }
 
     public int getVertCount() {
-        return vertCount;
+        return vboHandle.getVertexCount();
     }
 
     // IBO
     public int getIboHandle() {
-        return iboHandle;
+        return iboHandle.getIndexHandle();
     }
 
     public int getIndexCount() {
-        return indexCount;
+        return iboHandle.getIndexCount();
     }
 }

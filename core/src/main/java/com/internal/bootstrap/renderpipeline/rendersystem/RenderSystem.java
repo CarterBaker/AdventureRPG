@@ -1,32 +1,47 @@
 package com.internal.bootstrap.renderpipeline.rendersystem;
 
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
+import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchHandle;
+import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
-import com.internal.bootstrap.shaderpipeline.passmanager.PassHandle;
-import com.internal.bootstrap.shaderpipeline.shadermanager.ShaderHandle;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.WindowInstance;
 
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class RenderSystem extends SystemPackage {
 
     // Internal
     private WindowInstance windowInstance;
+    private Int2ObjectAVLTreeMap<Object2ObjectOpenHashMap<MaterialHandle, RenderBatchHandle>> depth2RenderBatchHandles;
 
-    // Render Queue: depth -> ordered list of passes
-    private Int2ObjectOpenHashMap<ObjectArrayList<PassHandle>> depth2PassList;
+    private int nextId;
+    private IntOpenHashSet freeIds;
+    private Int2IntOpenHashMap id2Depth;
+    private Int2ObjectOpenHashMap<MaterialHandle> id2MaterialHandle;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void create() {
-        this.depth2PassList = new Int2ObjectOpenHashMap<>();
+
+        // Internal
+        this.depth2RenderBatchHandles = new Int2ObjectAVLTreeMap<>();
+
+        this.nextId = 0;
+        this.freeIds = new IntOpenHashSet();
+        this.id2Depth = new Int2IntOpenHashMap();
+        this.id2MaterialHandle = new Int2ObjectOpenHashMap<>();
     }
 
     @Override
     protected void get() {
+
+        // Internal
         this.windowInstance = internal.getWindowInstance();
     }
 
@@ -36,109 +51,157 @@ public class RenderSystem extends SystemPackage {
         GLSLUtility.enableBlending();
     }
 
-    // Render Management \\
+    // Render System \\
 
     public void draw() {
 
-        // Set viewport
         GLSLUtility.setViewport(
                 windowInstance.getWidth(),
                 windowInstance.getHeight());
 
-        // Clear buffers
         GLSLUtility.clearBuffer();
 
-        // Get all depth keys and sort them (negative to positive)
-        int[] depths = depth2PassList.keySet().toIntArray();
-        java.util.Arrays.sort(depths);
+        // Iterate through each depth level
+        for (var depthEntry : depth2RenderBatchHandles.int2ObjectEntrySet()) {
 
-        // Draw passes in depth order
-        for (int depth : depths) {
+            int depth = depthEntry.getIntKey();
+            var materialBatches = depthEntry.getValue();
 
-            if (depth == 0) {
-                // Draw model batch system at depth 0
-                // meshManager.draw();
-            } else {
-                // Draw processing passes at this depth
-                ObjectArrayList<PassHandle> passList = depth2PassList.get(depth);
+            // Iterate through each material batch at this depth
+            for (var batchEntry : materialBatches.entrySet()) {
 
-                if (passList != null) {
-                    for (PassHandle pass : passList) {
-                        drawProcessingPass(pass);
-                    }
-                }
+                MaterialHandle material = batchEntry.getKey();
+                RenderBatchHandle batch = batchEntry.getValue();
+
+                // Bind material once for entire batch
+                bindMaterial(material, depth);
+
+                // Draw all render calls in this batch
+                for (RenderCallHandle renderCall : batch.getRenderCalls())
+                    drawBatchedRenderCall(renderCall);
             }
-        }
-
-        // Handle depth 0 if it wasn't in the queue
-        if (!depth2PassList.containsKey(0)) {
-            // meshManager.draw();
         }
     }
 
-    private void drawProcessingPass(PassHandle pass) {
+    private void bindMaterial(MaterialHandle material, int depth) {
 
-        ModelHandle modelHandle = pass.getModelHandle();
-        MaterialHandle material = pass.getMaterial();
-        ShaderHandle shaderHandle = material.getShaderHandle();
+        // Configure depth testing based on depth level
+        if (depth == 0) // Standard 3D rendering with depth testing
+            GLSLUtility.enableDepth();
 
-        // Disable depth testing for full-screen passes
-        GLSLUtility.disableDepth();
+        else // Post-processing passes typically don't use depth testing
+            GLSLUtility.disableDepth();
 
-        // Bind shader
-        GLSLUtility.useShader(shaderHandle.getShaderHandle());
+        // Bind shader once for entire batch
+        GLSLUtility.useShader(material.getShaderHandle().getShaderHandle());
+    }
+
+    private void drawBatchedRenderCall(RenderCallHandle renderCall) {
+
+        ModelHandle modelHandle = renderCall.getModelHandle();
 
         // Bind VAO
-        GLSLUtility.bindVAO(modelHandle.getVaoHandle());
+        GLSLUtility.bindVAO(modelHandle.getVAOHandle());
 
         // Draw
         GLSLUtility.drawElements(modelHandle.getIndexCount());
 
         // Unbind
         GLSLUtility.unbindVAO();
-
-        // Re-enable depth for subsequent passes
-        GLSLUtility.enableDepth();
     }
 
     // Accessible \\
 
-    public void pushPass(PassHandle pass, int depth) {
+    public RenderCallHandle pushRenderCall(ModelHandle modelHandle, int depth) {
 
-        ObjectArrayList<PassHandle> passList = depth2PassList.computeIfAbsent(
-                depth,
-                k -> new ObjectArrayList<>());
+        // Generate unique ID (reuse freed IDs first)
+        int id;
 
-        passList.add(pass);
+        if (!freeIds.isEmpty()) {
+            var iterator = freeIds.iterator();
+            id = iterator.nextInt();
+            iterator.remove();
+        }
+
+        else
+            id = nextId++;
+
+        // Create render call handle
+        RenderCallHandle renderCall = create(RenderCallHandle.class);
+        renderCall.constructor(id, modelHandle);
+
+        // Get material from model
+        MaterialHandle material = modelHandle.getMaterial();
+
+        // Get or create material batches map for this depth
+        Object2ObjectOpenHashMap<MaterialHandle, RenderBatchHandle> materialBatches = depth2RenderBatchHandles
+                .computeIfAbsent(
+                        depth,
+                        k -> new Object2ObjectOpenHashMap<>());
+
+        // Get or create batch for this material
+        RenderBatchHandle batch = materialBatches.computeIfAbsent(
+                material,
+                k -> {
+                    RenderBatchHandle newBatch = create(RenderBatchHandle.class);
+                    newBatch.constructor(material);
+                    return newBatch;
+                });
+
+        // Add render call to batch
+        batch.addRenderCall(renderCall);
+
+        // Track ID metadata
+        id2Depth.put(id, depth);
+        id2MaterialHandle.put(id, material);
+
+        return renderCall;
     }
 
-    public void pullPass(PassHandle pass, int depth) {
-        ObjectArrayList<PassHandle> passList = depth2PassList.get(depth);
+    public void pullRenderCall(RenderCallHandle renderCall) {
 
-        if (passList == null)
+        if (renderCall == null)
             return;
 
-        passList.remove(pass);
+        int id = renderCall.getHandle();
 
-        // Clean up empty depth levels
-        if (passList.isEmpty())
-            depth2PassList.remove(depth);
-    }
+        // Check if this render call actually exists
+        if (!id2Depth.containsKey(id))
+            return;
 
-    public void pullPass(PassHandle pass) {
-        // Search all depths for this pass
-        var iterator = depth2PassList.int2ObjectEntrySet().fastIterator();
+        int depth = id2Depth.remove(id);
+        MaterialHandle material = id2MaterialHandle.remove(id);
 
-        while (iterator.hasNext()) {
-            var entry = iterator.next();
-            ObjectArrayList<PassHandle> passList = entry.getValue();
+        // Get the material batches for this depth
+        Object2ObjectOpenHashMap<MaterialHandle, RenderBatchHandle> materialBatches = depth2RenderBatchHandles
+                .get(depth);
 
-            if (passList.remove(pass)) {
-                // Clean up empty depth levels
-                if (passList.isEmpty())
-                    iterator.remove();
-                return;
-            }
+        if (materialBatches == null)
+            return;
+
+        // Get the batch for this material
+        RenderBatchHandle batch = materialBatches.get(material);
+
+        if (batch == null)
+            return;
+
+        // Remove render call from batch
+        batch.removeRenderCall(renderCall);
+
+        // Clean up empty batch
+        if (batch.isEmpty()) {
+            batch.dispose();
+            materialBatches.remove(material);
         }
+
+        // Clean up empty depth level
+        if (materialBatches.isEmpty())
+            depth2RenderBatchHandles.remove(depth);
+
+        // Mark ID as free for reuse
+        freeIds.add(id);
+
+        // Dispose render call
+        renderCall.dispose();
     }
 }
