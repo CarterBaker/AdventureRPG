@@ -4,5 +4,7 @@ public enum QueueOperation {
     GENERATE,
     NEIGHBOR_ASSESSMENT,
     BUILD,
-    BATCH
+    MERGE,
+    BATCH,
+    FINALIZE
 }

@@ -6,17 +6,13 @@ import com.internal.core.engine.HandlePackage;
 public class RenderCallHandle extends HandlePackage {
 
     // Internal
-    private int handle;
     private ModelHandle modelHandle;
 
     // internal \\
 
-    public void constructor(
-            int handle,
-            ModelHandle modelHandle) {
+    public void constructor(ModelHandle modelHandle) {
 
         // Internal
-        this.handle = handle;
         this.modelHandle = modelHandle;
     }
 
@@ -25,10 +21,6 @@ public class RenderCallHandle extends HandlePackage {
     }
 
     // Accessible \\
-
-    public int getHandle() {
-        return handle;
-    }
 
     public ModelHandle getModelHandle() {
         return modelHandle;

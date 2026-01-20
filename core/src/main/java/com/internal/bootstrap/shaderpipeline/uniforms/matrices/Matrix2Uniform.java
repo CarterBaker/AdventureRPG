@@ -63,6 +63,7 @@ public class Matrix2Uniform extends UniformAttribute<Matrix2> {
     @Override
     public void set(Matrix2 value) {
         this.value.set(value);
+        super.set(value);
     }
 
 }

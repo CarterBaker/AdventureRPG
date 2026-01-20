@@ -37,5 +37,6 @@ public class FloatUniform extends UniformAttribute<Float> {
     @Override
     public void set(Float value) {
         this.value = value;
+        super.set(value);
     }
 }

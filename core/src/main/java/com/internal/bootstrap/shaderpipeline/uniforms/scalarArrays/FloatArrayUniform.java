@@ -12,17 +12,25 @@ public final class FloatArrayUniform extends UniformAttribute<float[]> {
     private final int elementCount;
     private final ByteBuffer uboBuffer;
 
+    private final float[] elements;
+
     public FloatArrayUniform(int elementCount) {
 
         // Internal
         super(new float[elementCount]);
         this.elementCount = elementCount;
         this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 4);
+
+        this.elements = new float[elementCount];
     }
 
     @Override
     protected void push(int handle, float[] data) {
-        Gdx.gl.glUniform1fv(handle, elementCount, data, 0);
+
+        for (int i = 0; i < elementCount; i++)
+            elements[i] = (float) data[i];
+
+        Gdx.gl.glUniform1fv(handle, elementCount, elements, 0);
     }
 
     @Override
@@ -39,7 +47,11 @@ public final class FloatArrayUniform extends UniformAttribute<float[]> {
 
     @Override
     public void set(float[] values) {
-        System.arraycopy(values, 0, this.value, 0, elementCount);
+
+        for (int i = 0; i < elementCount; i++)
+            elements[i] = (float) (values[i]);
+
+        super.set(values);
     }
 
     public int elementCount() {

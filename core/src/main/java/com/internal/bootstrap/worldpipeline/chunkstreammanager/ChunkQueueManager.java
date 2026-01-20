@@ -8,6 +8,7 @@ import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.Assess
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BatchBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BuildBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.GenerationBranch;
+import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.MergeBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
@@ -26,6 +27,7 @@ class ChunkQueueManager extends ManagerPackage {
     private GenerationBranch generationBranch;
     private AssessmentBranch assessmentBranch;
     private BuildBranch buildBranch;
+    private MergeBranch mergeBranch;
     private BatchBranch batchBranch;
 
     private VAOHandle chunkVAO;
@@ -47,6 +49,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.generationBranch = create(GenerationBranch.class);
         this.assessmentBranch = create(AssessmentBranch.class);
         this.buildBranch = create(BuildBranch.class);
+        this.mergeBranch = create(MergeBranch.class);
         this.batchBranch = create(BatchBranch.class);
 
         // Stream System
@@ -170,7 +173,10 @@ class ChunkQueueManager extends ManagerPackage {
             case GENERATE -> generationBranch.generateChunk(chunkInstance);
             case NEIGHBOR_ASSESSMENT -> assessmentBranch.assessChunk(chunkInstance);
             case BUILD -> buildBranch.buildChunk(chunkInstance);
+            case MERGE -> mergeBranch.mergeChunk(chunkInstance);
             case BATCH -> batchBranch.batchChunk(chunkInstance);
+            case FINALIZE -> {
+            }
         }
 
         // Add back to end

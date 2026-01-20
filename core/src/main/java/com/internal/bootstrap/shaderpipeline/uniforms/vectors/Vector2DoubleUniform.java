@@ -39,5 +39,6 @@ public class Vector2DoubleUniform extends UniformAttribute<Vector2Double> {
     @Override
     public void set(Vector2Double value) {
         this.value.set(value);
+        super.set(value);
     }
 }

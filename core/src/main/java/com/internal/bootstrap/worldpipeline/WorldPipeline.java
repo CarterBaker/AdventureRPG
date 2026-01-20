@@ -1,5 +1,6 @@
 package com.internal.bootstrap.worldpipeline;
 
+import com.internal.bootstrap.worldpipeline.batchmanager.BatchManager;
 import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
@@ -22,5 +23,6 @@ public class WorldPipeline extends PipelinePackage {
         create(WorldGenerationManager.class);
         create(GridManager.class);
         create(ChunkStreamManager.class);
+        create(BatchManager.class);
     }
 }

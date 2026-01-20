@@ -6,30 +6,35 @@ import com.internal.core.engine.SystemPackage;
 
 public class Sky extends SystemPackage {
 
-    // Root
+    // Internal
     private PassManager passmanager;
 
     // Shader
-    private int skyPassID;
     private PassHandle skyPass;
 
-    // Base \\
+    // Debug
+    private PassHandle debugPass;
+
+    // Internal \\
 
     @Override
     protected void get() {
 
-        // Root
+        // Internal
         this.passmanager = get(PassManager.class);
 
         // Shader
-        this.skyPassID = passmanager.getPassIDFromPassName("Sky");
+        int skyPassID = passmanager.getPassIDFromPassName("Sky");
         this.skyPass = passmanager.getPassFromPassID(skyPassID);
 
-        // Render management
-        passmanager.pushPass(skyPass, -10);
-
+        // Debug
         int debugPassID = passmanager.getPassIDFromPassName("DebugCameraOrientationHUD");
-        PassHandle debugPass = passmanager.getPassFromPassID(debugPassID);
+        this.debugPass = passmanager.getPassFromPassID(debugPassID);
+    }
+
+    @Override
+    protected void update() {
+        passmanager.pushPass(skyPass, -10);
         passmanager.pushPass(debugPass, 10);
     }
 }

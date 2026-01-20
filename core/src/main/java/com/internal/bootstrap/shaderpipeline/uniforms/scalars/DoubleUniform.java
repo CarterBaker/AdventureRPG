@@ -37,5 +37,6 @@ public class DoubleUniform extends UniformAttribute<Double> {
     @Override
     public void set(Double value) {
         this.value = value;
+        super.set(value);
     }
 }

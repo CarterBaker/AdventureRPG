@@ -4,13 +4,11 @@ import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchHandle;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
+import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.WindowInstance;
 
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class RenderSystem extends SystemPackage {
@@ -19,11 +17,6 @@ public class RenderSystem extends SystemPackage {
     private WindowInstance windowInstance;
     private Int2ObjectAVLTreeMap<Object2ObjectOpenHashMap<MaterialHandle, RenderBatchHandle>> depth2RenderBatchHandles;
 
-    private int nextId;
-    private IntOpenHashSet freeIds;
-    private Int2IntOpenHashMap id2Depth;
-    private Int2ObjectOpenHashMap<MaterialHandle> id2MaterialHandle;
-
     // Internal \\
 
     @Override
@@ -31,11 +24,6 @@ public class RenderSystem extends SystemPackage {
 
         // Internal
         this.depth2RenderBatchHandles = new Int2ObjectAVLTreeMap<>();
-
-        this.nextId = 0;
-        this.freeIds = new IntOpenHashSet();
-        this.id2Depth = new Int2IntOpenHashMap();
-        this.id2MaterialHandle = new Int2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -76,9 +64,14 @@ public class RenderSystem extends SystemPackage {
                 // Bind material once for entire batch
                 bindMaterial(material, depth);
 
+                // Push all uniforms per material
+                pushMaterialUniforms(material);
+
                 // Draw all render calls in this batch
                 for (RenderCallHandle renderCall : batch.getRenderCalls())
                     drawBatchedRenderCall(renderCall);
+
+                batch.clear();
             }
         }
     }
@@ -94,6 +87,18 @@ public class RenderSystem extends SystemPackage {
 
         // Bind shader once for entire batch
         GLSLUtility.useShader(material.getShaderHandle().getShaderHandle());
+    }
+
+    private void pushMaterialUniforms(MaterialHandle material) {
+
+        var uniforms = material.getUniforms();
+
+        if (uniforms == null || uniforms.isEmpty())
+            return;
+
+        for (Uniform<?> uniform : uniforms.values()) {
+            uniform.push();
+        }
     }
 
     private void drawBatchedRenderCall(RenderCallHandle renderCall) {
@@ -114,21 +119,9 @@ public class RenderSystem extends SystemPackage {
 
     public RenderCallHandle pushRenderCall(ModelHandle modelHandle, int depth) {
 
-        // Generate unique ID (reuse freed IDs first)
-        int id;
-
-        if (!freeIds.isEmpty()) {
-            var iterator = freeIds.iterator();
-            id = iterator.nextInt();
-            iterator.remove();
-        }
-
-        else
-            id = nextId++;
-
         // Create render call handle
         RenderCallHandle renderCall = create(RenderCallHandle.class);
-        renderCall.constructor(id, modelHandle);
+        renderCall.constructor(modelHandle);
 
         // Get material from model
         MaterialHandle material = modelHandle.getMaterial();
@@ -151,57 +144,6 @@ public class RenderSystem extends SystemPackage {
         // Add render call to batch
         batch.addRenderCall(renderCall);
 
-        // Track ID metadata
-        id2Depth.put(id, depth);
-        id2MaterialHandle.put(id, material);
-
         return renderCall;
-    }
-
-    public void pullRenderCall(RenderCallHandle renderCall) {
-
-        if (renderCall == null)
-            return;
-
-        int id = renderCall.getHandle();
-
-        // Check if this render call actually exists
-        if (!id2Depth.containsKey(id))
-            return;
-
-        int depth = id2Depth.remove(id);
-        MaterialHandle material = id2MaterialHandle.remove(id);
-
-        // Get the material batches for this depth
-        Object2ObjectOpenHashMap<MaterialHandle, RenderBatchHandle> materialBatches = depth2RenderBatchHandles
-                .get(depth);
-
-        if (materialBatches == null)
-            return;
-
-        // Get the batch for this material
-        RenderBatchHandle batch = materialBatches.get(material);
-
-        if (batch == null)
-            return;
-
-        // Remove render call from batch
-        batch.removeRenderCall(renderCall);
-
-        // Clean up empty batch
-        if (batch.isEmpty()) {
-            batch.dispose();
-            materialBatches.remove(material);
-        }
-
-        // Clean up empty depth level
-        if (materialBatches.isEmpty())
-            depth2RenderBatchHandles.remove(depth);
-
-        // Mark ID as free for reuse
-        freeIds.add(id);
-
-        // Dispose render call
-        renderCall.dispose();
     }
 }

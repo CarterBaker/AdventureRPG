@@ -106,8 +106,11 @@ public final class Matrix4DoubleArrayUniform extends UniformAttribute<Matrix4Dou
 
     @Override
     public void set(Matrix4Double[] matrices) {
+
         for (int i = 0; i < elementCount; i++)
             this.value[i].set(matrices[i]);
+
+        super.set(value);
     }
 
     public int elementCount() {

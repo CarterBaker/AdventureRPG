@@ -37,5 +37,6 @@ public class SampleImage2DArrayUniform extends UniformAttribute<Integer> {
     @Override
     public void set(Integer value) {
         this.value = value;
+        super.set(value);
     }
 }

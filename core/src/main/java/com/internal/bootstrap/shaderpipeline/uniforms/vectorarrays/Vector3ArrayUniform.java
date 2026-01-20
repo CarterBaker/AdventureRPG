@@ -63,6 +63,8 @@ public final class Vector3ArrayUniform extends UniformAttribute<float[]> {
             uniformData[i * 3 + 1] = vectors[i].y;
             uniformData[i * 3 + 2] = vectors[i].z;
         }
+
+        super.set(value);
     }
 
     public void set(com.badlogic.gdx.math.Vector3[] vectors) {
@@ -78,6 +80,8 @@ public final class Vector3ArrayUniform extends UniformAttribute<float[]> {
             uniformData[i * 3 + 1] = vectors[i].y;
             uniformData[i * 3 + 2] = vectors[i].z;
         }
+
+        super.set(value);
     }
 
     @Override
@@ -91,6 +95,8 @@ public final class Vector3ArrayUniform extends UniformAttribute<float[]> {
             uniformData[i * 3 + 1] = this.value[i * 4 + 1];
             uniformData[i * 3 + 2] = this.value[i * 4 + 2];
         }
+
+        super.set(value);
     }
 
     public int elementCount() {

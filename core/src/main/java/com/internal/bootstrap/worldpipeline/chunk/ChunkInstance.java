@@ -107,7 +107,7 @@ public class ChunkInstance extends InstancePackage {
     }
 
     // Dynamic Mesh
-    public DynamicPacketInstance getDynamicModelInstance() {
+    public DynamicPacketInstance getDynamicPacketInstance() {
         return dynamicPacketInstance;
     }
 }

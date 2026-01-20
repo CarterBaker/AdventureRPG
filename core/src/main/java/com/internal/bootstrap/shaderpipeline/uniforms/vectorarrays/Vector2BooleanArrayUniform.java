@@ -42,6 +42,7 @@ public final class Vector2BooleanArrayUniform extends UniformAttribute<int[]> {
     @Override
     public void set(int[] value) {
         System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+        super.set(value);
     }
 
     public void set(Vector2Boolean[] vectors) {
@@ -52,6 +53,8 @@ public final class Vector2BooleanArrayUniform extends UniformAttribute<int[]> {
             value[idx++] = v.x ? 1 : 0;
             value[idx++] = v.y ? 1 : 0;
         }
+
+        super.set(value);
     }
 
     public int elementCount() {

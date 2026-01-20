@@ -45,5 +45,6 @@ public class Vector4DoubleUniform extends UniformAttribute<Vector4Double> {
     @Override
     public void set(Vector4Double value) {
         this.value.set(value);
+        super.set(value);
     }
 }

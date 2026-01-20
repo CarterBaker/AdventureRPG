@@ -6,12 +6,14 @@ public class Uniform<T> {
     public final int uniformHandle; // Used for standalone uniforms
     public final int offset; // Used for UBO uniforms
     public final UniformAttribute<T> attribute;
+    private boolean hasData = true;
 
     // Constructor for standalone uniforms
     public Uniform(
             int uniformHandle,
             UniformAttribute<T> attribute) {
         this(uniformHandle, 0, attribute);
+        attribute.constructor(this);
     }
 
     // Constructor for UBO uniforms (with offset)
@@ -22,12 +24,21 @@ public class Uniform<T> {
         this.uniformHandle = uniformHandle;
         this.offset = offset;
         this.attribute = attribute;
+        attribute.constructor(this);
     }
 
     // Utility \\
 
+    public final void set() {
+        hasData = true;
+    }
+
     public final void push() {
-        attribute.push(uniformHandle);
+
+        if (hasData)
+            attribute.push(uniformHandle);
+
+        hasData = false;
     }
 
     // Accessible \\

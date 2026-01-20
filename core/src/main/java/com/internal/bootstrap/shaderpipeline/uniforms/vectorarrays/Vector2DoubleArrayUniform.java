@@ -42,6 +42,7 @@ public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
     @Override
     public void set(float[] value) {
         System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+        super.set(value);
     }
 
     public void set(Vector2Double[] vectors) {
@@ -52,6 +53,8 @@ public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
             value[idx++] = (float) v.x;
             value[idx++] = (float) v.y;
         }
+
+        super.set(value);
     }
 
     public int elementCount() {

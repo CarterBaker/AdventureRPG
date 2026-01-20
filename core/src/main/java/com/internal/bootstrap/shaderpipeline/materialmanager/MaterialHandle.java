@@ -51,6 +51,10 @@ public class MaterialHandle extends HandlePackage {
         return buffers.get(ubo);
     }
 
+    public Object2ObjectOpenHashMap<String, Uniform<?>> getUniforms() {
+        return uniforms;
+    }
+
     public Uniform<?> getUniform(String uniformName) {
         return uniforms.get(uniformName);
     }

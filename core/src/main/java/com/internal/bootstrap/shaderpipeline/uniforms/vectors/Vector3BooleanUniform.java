@@ -41,5 +41,6 @@ public class Vector3BooleanUniform extends UniformAttribute<Vector3Boolean> {
     @Override
     public void set(Vector3Boolean value) {
         this.value.set(value);
+        super.set(value);
     }
 }

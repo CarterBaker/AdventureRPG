@@ -39,7 +39,7 @@ public class MegaChunkInstance extends InstancePackage {
     }
 
     // Dynamic Mesh
-    public DynamicPacketInstance getDynamicModelInstance() {
+    public DynamicPacketInstance getDynamicPacketInstance() {
         return dynamicPacketInstance;
     }
 }

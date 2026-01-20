@@ -81,5 +81,7 @@ public class Matrix4Uniform extends UniformAttribute<Object> {
         else // TODO: Add my own error
             throw new IllegalArgumentException(
                     "Expected Matrix4 or com.badlogic.gdx.math.Matrix4, got " + value.getClass());
+
+        super.set(value);
     }
 }

@@ -67,5 +67,6 @@ public class Matrix4DoubleUniform extends UniformAttribute<Matrix4Double> {
     @Override
     public void set(Matrix4Double value) {
         this.value.set(value);
+        super.set(value);
     }
 }

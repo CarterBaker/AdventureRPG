@@ -91,8 +91,11 @@ public final class Matrix3DoubleArrayUniform extends UniformAttribute<Matrix3Dou
 
     @Override
     public void set(Matrix3Double[] matrices) {
+
         for (int i = 0; i < elementCount; i++)
             this.value[i].set(matrices[i]);
+
+        super.set(value);
     }
 
     public int elementCount() {

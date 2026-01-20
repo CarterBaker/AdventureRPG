@@ -78,8 +78,11 @@ public final class Matrix2DoubleArrayUniform extends UniformAttribute<Matrix2Dou
 
     @Override
     public void set(Matrix2Double[] matrices) {
+
         for (int i = 0; i < elementCount; i++)
             this.value[i].set(matrices[i]);
+
+        super.set(value);
     }
 
     public int elementCount() {

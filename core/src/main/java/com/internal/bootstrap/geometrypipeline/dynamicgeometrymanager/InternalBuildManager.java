@@ -60,7 +60,7 @@ class InternalBuildManager extends ManagerPackage {
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance) {
 
-        DynamicPacketInstance dynamicPacketInstance = subChunkInstance.getDynamicModelInstance();
+        DynamicPacketInstance dynamicPacketInstance = subChunkInstance.getDynamicPacketInstance();
 
         if (dynamicPacketInstance.getState() == DynamicPacketState.GENERATING_VERT_DATA ||
                 dynamicPacketInstance.getState() == DynamicPacketState.UPLOADED_TO_GPU ||

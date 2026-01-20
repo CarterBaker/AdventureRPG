@@ -42,6 +42,7 @@ public final class Vector4ArrayUniform extends UniformAttribute<float[]> {
     @Override
     public void set(float[] value) {
         System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+        super.set(value);
     }
 
     public void set(Vector4[] vectors) {
@@ -54,6 +55,8 @@ public final class Vector4ArrayUniform extends UniformAttribute<float[]> {
             value[idx++] = v.z;
             value[idx++] = v.w;
         }
+
+        super.set(value);
     }
 
     public void set(com.badlogic.gdx.math.Vector4[] vectors) {
@@ -66,6 +69,8 @@ public final class Vector4ArrayUniform extends UniformAttribute<float[]> {
             value[idx++] = v.z;
             value[idx++] = v.w;
         }
+
+        super.set(value);
     }
 
     public int elementCount() {

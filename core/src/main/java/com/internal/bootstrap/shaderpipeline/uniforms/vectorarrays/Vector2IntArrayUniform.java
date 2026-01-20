@@ -42,6 +42,7 @@ public final class Vector2IntArrayUniform extends UniformAttribute<int[]> {
     @Override
     public void set(int[] value) {
         System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+        super.set(value);
     }
 
     public void set(Vector2Int[] vectors) {
@@ -52,6 +53,8 @@ public final class Vector2IntArrayUniform extends UniformAttribute<int[]> {
             value[idx++] = v.x;
             value[idx++] = v.y;
         }
+
+        super.set(value);
     }
 
     public int elementCount() {

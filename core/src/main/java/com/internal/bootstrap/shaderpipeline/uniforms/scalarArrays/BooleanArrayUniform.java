@@ -12,23 +12,25 @@ public final class BooleanArrayUniform extends UniformAttribute<boolean[]> {
     private final int elementCount;
     private final ByteBuffer uboBuffer;
 
+    private final float[] elements;
+
     public BooleanArrayUniform(int elementCount) {
 
         // Internal
         super(new boolean[elementCount]);
         this.elementCount = elementCount;
         this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 4);
+
+        this.elements = new float[elementCount];
     }
 
     @Override
     protected void push(int handle, boolean[] data) {
 
-        float[] floatData = new float[elementCount];
-
         for (int i = 0; i < elementCount; i++)
-            floatData[i] = data[i] ? 1f : 0f;
+            elements[i] = data[i] ? 1f : 0f;
 
-        Gdx.gl.glUniform1fv(handle, elementCount, floatData, 0);
+        Gdx.gl.glUniform1fv(handle, elementCount, elements, 0);
     }
 
     @Override
@@ -45,7 +47,11 @@ public final class BooleanArrayUniform extends UniformAttribute<boolean[]> {
 
     @Override
     public void set(boolean[] values) {
-        System.arraycopy(values, 0, this.value, 0, elementCount);
+
+        for (int i = 0; i < elementCount; i++)
+            elements[i] = values[i] ? 1f : 0f;
+
+        super.set(values);
     }
 
     public int elementCount() {

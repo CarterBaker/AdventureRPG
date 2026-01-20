@@ -42,6 +42,7 @@ public final class Vector4DoubleArrayUniform extends UniformAttribute<float[]> {
     @Override
     public void set(float[] value) {
         System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+        super.set(value);
     }
 
     public void set(Vector4Double[] vectors) {
@@ -54,6 +55,8 @@ public final class Vector4DoubleArrayUniform extends UniformAttribute<float[]> {
             value[idx++] = (float) v.z;
             value[idx++] = (float) v.w;
         }
+
+        super.set(value);
     }
 
     public int elementCount() {

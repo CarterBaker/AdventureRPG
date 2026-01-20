@@ -60,6 +60,8 @@ public final class Vector3BooleanArrayUniform extends UniformAttribute<int[]> {
             uniformData[i * 3 + 1] = vectors[i].y ? 1 : 0;
             uniformData[i * 3 + 2] = vectors[i].z ? 1 : 0;
         }
+
+        super.set(value);
     }
 
     @Override
@@ -72,6 +74,8 @@ public final class Vector3BooleanArrayUniform extends UniformAttribute<int[]> {
             uniformData[i * 3 + 1] = this.value[i * 4 + 1];
             uniformData[i * 3 + 2] = this.value[i * 4 + 2];
         }
+
+        super.set(value);
     }
 
     public int elementCount() {

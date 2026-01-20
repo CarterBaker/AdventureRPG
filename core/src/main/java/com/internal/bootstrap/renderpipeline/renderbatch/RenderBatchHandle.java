@@ -26,8 +26,8 @@ public class RenderBatchHandle extends HandlePackage {
         renderCalls.add(renderCall);
     }
 
-    public void removeRenderCall(RenderCallHandle renderCall) {
-        renderCalls.remove(renderCall);
+    public void clear() {
+        renderCalls.clear();
     }
 
     public boolean isEmpty() {

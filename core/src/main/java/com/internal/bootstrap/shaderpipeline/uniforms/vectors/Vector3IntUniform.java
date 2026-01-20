@@ -41,5 +41,6 @@ public class Vector3IntUniform extends UniformAttribute<Vector3Int> {
     @Override
     public void set(Vector3Int value) {
         this.value.set(value);
+        super.set(value);
     }
 }

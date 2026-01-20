@@ -63,5 +63,7 @@ public class Vector3Uniform extends UniformAttribute<Object> {
         else // TODO: Add my own error
             throw new IllegalArgumentException(
                     "set(Vector3): Expected Vector3 or com.badlogic.gdx.math.Vector3, got " + value.getClass());
+
+        super.set(value);
     }
 }

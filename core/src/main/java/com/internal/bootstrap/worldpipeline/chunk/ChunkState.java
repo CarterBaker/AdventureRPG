@@ -17,7 +17,15 @@ public enum ChunkState {
 
     // Geometry
     NEEDS_GEOMETRY_ASSIGNMENT(QueueOperation.BUILD),
-    HAS_GEOMETRY_ASSIGNMENT(QueueOperation.BATCH);
+    HAS_GEOMETRY_ASSIGNMENT(QueueOperation.MERGE),
+
+    // Merge
+    NEEDS_MERGE_DATA(QueueOperation.MERGE),
+    HAS_MERGE_DATA(QueueOperation.BATCH),
+
+    // Batch
+    NEEDS_BATCH_DATA(QueueOperation.BATCH),
+    HAS_BATCH_DATA(QueueOperation.FINALIZE);
 
     // Internal
     private final QueueOperation associatedOperation;

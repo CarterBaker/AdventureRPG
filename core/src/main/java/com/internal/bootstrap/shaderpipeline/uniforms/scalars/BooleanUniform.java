@@ -37,5 +37,6 @@ public class BooleanUniform extends UniformAttribute<Boolean> {
     @Override
     public void set(Boolean value) {
         this.value = value;
+        super.set(value);
     }
 }

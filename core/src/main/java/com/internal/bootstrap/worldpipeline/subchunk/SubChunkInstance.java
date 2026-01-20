@@ -64,7 +64,7 @@ public class SubChunkInstance extends InstancePackage {
     }
 
     // Dynamic Mesh
-    public DynamicPacketInstance getDynamicModelInstance() {
+    public DynamicPacketInstance getDynamicPacketInstance() {
         return dynamicPacketInstance;
     }
 }

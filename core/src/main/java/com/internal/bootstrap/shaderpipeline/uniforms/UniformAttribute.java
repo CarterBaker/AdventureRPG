@@ -5,7 +5,12 @@ import java.nio.ByteBuffer;
 public abstract class UniformAttribute<T> {
 
     // Internal
+    private Uniform<?> uniform;
     protected T value;
+
+    public void constructor(Uniform<?> uniform) {
+        this.uniform = uniform;
+    }
 
     // Base \\
 
@@ -35,5 +40,7 @@ public abstract class UniformAttribute<T> {
 
     // Accessible \\
 
-    public abstract void set(T value);
+    public void set(T value) {
+        uniform.set();
+    }
 }
