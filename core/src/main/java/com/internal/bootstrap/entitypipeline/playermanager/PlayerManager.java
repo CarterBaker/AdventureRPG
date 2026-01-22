@@ -19,10 +19,19 @@ public class PlayerManager extends ManagerPackage {
     private MovementManager movementmanager;
     private EntityManager entityManager;
 
+    private InternalBufferSystem internalBufferSystem;
+
     // Active Player
     private EntityHandle player;
 
     // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Internal
+        this.internalBufferSystem = create(InternalBufferSystem.class);
+    }
 
     @Override
     protected void get() {
@@ -54,6 +63,8 @@ public class PlayerManager extends ManagerPackage {
         Vector3 direction = camera.getDirection();
 
         movementmanager.move(input, direction, player);
+
+        internalBufferSystem.updatePlayerPosition(player.getWorldPositionStruct());
     }
 
     // Accessible \\

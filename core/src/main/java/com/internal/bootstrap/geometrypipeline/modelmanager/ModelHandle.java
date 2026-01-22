@@ -34,8 +34,8 @@ public class ModelHandle extends HandlePackage {
     }
 
     // VAO
-    public int getVAOHandle() {
-        return meshHandle.getVAOHandle();
+    public int getVAO() {
+        return meshHandle.getVAO();
     }
 
     public int getVertStride() {
@@ -43,8 +43,8 @@ public class ModelHandle extends HandlePackage {
     }
 
     // VBO
-    public int getVboHandle() {
-        return meshHandle.getVboHandle();
+    public int getVBO() {
+        return meshHandle.getVBO();
     }
 
     public int getVertCount() {
@@ -52,8 +52,8 @@ public class ModelHandle extends HandlePackage {
     }
 
     // IBO
-    public int getIboHandle() {
-        return meshHandle.getIboHandle();
+    public int getIBO() {
+        return meshHandle.getIBO();
     }
 
     public int getIndexCount() {

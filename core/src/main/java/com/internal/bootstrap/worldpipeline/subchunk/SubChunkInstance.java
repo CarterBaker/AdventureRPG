@@ -1,20 +1,18 @@
 package com.internal.bootstrap.worldpipeline.subchunk;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
-import com.internal.core.engine.InstancePackage;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.settings.EngineSetting;
 
-public class SubChunkInstance extends InstancePackage {
+public class SubChunkInstance extends WorldRenderInstance {
 
     // Internal
     byte subChunkCoordinate;
 
     BlockPaletteHandle biomePaletteHandle;
     BlockPaletteHandle blockPaletteHandle;
-
-    // Dynamic Mesh
-    private DynamicPacketInstance dynamicPacketInstance;
 
     // Internal \\
 
@@ -32,20 +30,24 @@ public class SubChunkInstance extends InstancePackage {
                 EngineSetting.CHUNK_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD);
 
-        // Dynamic Mesh
-        this.dynamicPacketInstance = create(DynamicPacketInstance.class);
-
+        super.create();
     }
 
     public void constructor(
+            WorldRenderSystem worldRenderSystem,
+            WorldHandle worldHandle,
+            long coordinate,
             byte subChunkCoordinate,
             VAOHandle vaoHandle) {
 
+        super.constructor(
+                worldRenderSystem,
+                worldHandle,
+                coordinate,
+                vaoHandle);
+
         // Internal
         this.subChunkCoordinate = subChunkCoordinate;
-
-        // Dynamic Mesh
-        this.dynamicPacketInstance.constructor(vaoHandle);
     }
 
     // Accessible \\
@@ -61,10 +63,5 @@ public class SubChunkInstance extends InstancePackage {
 
     public BlockPaletteHandle getBlockPaletteHandle() {
         return blockPaletteHandle;
-    }
-
-    // Dynamic Mesh
-    public DynamicPacketInstance getDynamicPacketInstance() {
-        return dynamicPacketInstance;
     }
 }

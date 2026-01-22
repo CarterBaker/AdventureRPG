@@ -2,7 +2,10 @@ package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
+import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
@@ -14,10 +17,13 @@ class ChunkPositionSystem extends SystemPackage {
 
     // Internal
     private ChunkQueueManager chunkQueueManager;
+    private WorldRenderSystem worldRenderSystem;
 
     // Chunk Streaming
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
-    private Long2ObjectOpenHashMap<ChunkInstance> unloadQueue;
+    private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
+    private Long2ObjectOpenHashMap<ChunkInstance> chunkUnloadQueue;
+    private Long2ObjectOpenHashMap<MegaChunkInstance> megaChunkUnloadQueue;
 
     // Internal \\
 
@@ -25,7 +31,8 @@ class ChunkPositionSystem extends SystemPackage {
     protected void create() {
 
         // Chunk Streaming
-        this.unloadQueue = new Long2ObjectOpenHashMap<>();
+        this.chunkUnloadQueue = new Long2ObjectOpenHashMap<>();
+        this.megaChunkUnloadQueue = new Long2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -33,6 +40,7 @@ class ChunkPositionSystem extends SystemPackage {
 
         // Internal
         this.chunkQueueManager = get(ChunkQueueManager.class);
+        this.worldRenderSystem = get(WorldRenderSystem.class);
     }
 
     // Chunk Streaming \\
@@ -54,10 +62,11 @@ class ChunkPositionSystem extends SystemPackage {
     private void clearQueue() {
 
         // Clear unload map
-        unloadQueue.clear();
+        chunkUnloadQueue.clear();
 
-        // Reversely remove all computed Coordinate2Ints from unloadQueue for efficiency
-        unloadQueue.putAll(activeChunks);
+        // Reversely remove all computed Coordinate2Ints from chunkUnloadQueue
+        chunkUnloadQueue.putAll(activeChunks);
+        megaChunkUnloadQueue.putAll(activeMegaChunks);
     }
 
     private void createQueue(
@@ -77,8 +86,11 @@ class ChunkPositionSystem extends SystemPackage {
                     activeChunkCoordinateX,
                     activeChunkCoordinateY);
 
-        for (long chunkCoordinate : unloadQueue.keySet())
+        for (long chunkCoordinate : chunkUnloadQueue.keySet())
             chunkQueueManager.requestUnload(chunkCoordinate);
+
+        for (long megaChunkCoordinate : megaChunkUnloadQueue.keySet())
+            unloadMegaChunkInstance(megaChunkCoordinate);
     }
 
     private void handleGridSlot(
@@ -88,35 +100,52 @@ class ChunkPositionSystem extends SystemPackage {
             int activeChunkCoordinateX,
             int activeChunkCoordinateY) {
 
-        // Use the position in grid as an offset
         int offsetX = Coordinate2Long.unpackX(gridCoordinate);
         int offsetY = Coordinate2Long.unpackY(gridCoordinate);
-
-        // Use the current chunks coordinates to compute necessary chunks
         int chunkCoordinateX = activeChunkCoordinateX + offsetX;
         int chunkCoordinateY = activeChunkCoordinateY + offsetY;
-
-        // Pack the coordinates into a usable long value and wrap it
         long chunkCoordinate = Coordinate2Long.pack(chunkCoordinateX, chunkCoordinateY);
         chunkCoordinate = WorldWrapUtility.wrapAroundWorld(worldHandle, chunkCoordinate);
 
-        // Remove the computed coordinate from the unload queue
-        unloadQueue.remove(chunkCoordinate);
+        long megaChunkCoordinate = Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate);
 
-        // Attempt to use the chunk coordinate to retrieve a loaded chunk
+        gridInstance.assignChunkToSlot(
+                gridCoordinate,
+                chunkCoordinate,
+                megaChunkCoordinate);
+
+        chunkUnloadQueue.remove(chunkCoordinate);
+        megaChunkUnloadQueue.remove(megaChunkCoordinate);
+
+        GridSlotHandle gridSlotHandle = gridInstance.getGridSlot(gridCoordinate);
+
         ChunkInstance loadedChunk = activeChunks.get(chunkCoordinate);
 
-        // If the chunk was loaded we move it to the new grid position
         if (loadedChunk != null)
-            gridInstance.assignChunkToSlot(gridCoordinate, chunkCoordinate);
-
-        else // If the chunkCoordinate could not be found add it to the queue
+            loadedChunk.setGridSlotHandle(gridSlotHandle);
+        else
             chunkQueueManager.requestLoad(chunkCoordinate);
+
+        MegaChunkInstance loadedMegaChunk = activeMegaChunks.get(megaChunkCoordinate);
+
+        if (loadedMegaChunk != null)
+            loadedMegaChunk.setGridSlotHandle(gridSlotHandle);
+
+        worldRenderSystem.moveWorldInstance(chunkCoordinate, gridSlotHandle.getSlotUBO());
+    }
+
+    private void unloadMegaChunkInstance(long megaChunkCoordinate) {
+        MegaChunkInstance megaChunkInstance = megaChunkUnloadQueue.get(megaChunkCoordinate);
+        megaChunkInstance.dispose();
     }
 
     // Utility \\
 
     public void setActiveChunks(Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
         this.activeChunks = activeChunks;
+    }
+
+    public void setActiveMegaChunks(Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
+        this.activeMegaChunks = activeMegaChunks;
     }
 }

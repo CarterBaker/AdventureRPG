@@ -19,6 +19,11 @@ public class FloatUniform extends UniformAttribute<Float> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new FloatUniform();
+    }
+
+    @Override
     protected void push(int handle, Float value) {
         Gdx.gl.glUniform1f(handle, value);
     }

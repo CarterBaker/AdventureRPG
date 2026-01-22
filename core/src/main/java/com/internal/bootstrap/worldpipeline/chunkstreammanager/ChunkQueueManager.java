@@ -10,8 +10,10 @@ import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BuildB
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.GenerationBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.MergeBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.queue.QueueInstance;
 import com.internal.core.util.queue.QueueItemHandle;
 
@@ -22,15 +24,13 @@ import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 class ChunkQueueManager extends ManagerPackage {
 
     // Internal
-    private VAOManager vaoManager;
-    private PlayerManager playerManager;
+    private ChunkStreamManager chunkStreamManager;
+    private WorldRenderSystem worldRenderSystem;
     private GenerationBranch generationBranch;
     private AssessmentBranch assessmentBranch;
     private BuildBranch buildBranch;
     private MergeBranch mergeBranch;
     private BatchBranch batchBranch;
-
-    private VAOHandle chunkVAO;
 
     // Chunk Queue
     private QueueInstance chunkQueue;
@@ -73,15 +73,8 @@ class ChunkQueueManager extends ManagerPackage {
     protected void get() {
 
         // Internal
-        this.vaoManager = get(VAOManager.class);
-        this.playerManager = get(PlayerManager.class);
-    }
-
-    @Override
-    protected void awake() {
-
-        // Internal
-        this.chunkVAO = vaoManager.getVAOHandleFromName(EngineSetting.CHUNK_VAO);
+        this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.worldRenderSystem = get(WorldRenderSystem.class);
     }
 
     @Override
@@ -142,9 +135,10 @@ class ChunkQueueManager extends ManagerPackage {
 
         ChunkInstance chunkInstance = create(ChunkInstance.class);
         chunkInstance.constructor(
-                playerManager.getPlayer().getWorldHandle(),
+                worldRenderSystem,
+                chunkStreamManager.getActiveWorldHandle(),
                 chunkCoordinate,
-                chunkVAO);
+                chunkStreamManager.getChunkVAO());
 
         activeChunks.put(chunkCoordinate, chunkInstance);
     }

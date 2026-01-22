@@ -1,18 +1,16 @@
 package com.internal.bootstrap.worldpipeline.chunk;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
-import com.internal.core.engine.InstancePackage;
 import com.internal.core.engine.settings.EngineSetting;
 
-public class ChunkInstance extends InstancePackage {
+public class ChunkInstance extends WorldRenderInstance {
 
     // Internal
-    private WorldHandle worldHandle;
-    private long chunkCoordinate;
     private volatile ChunkState chunkState;
 
     // SubChunks
@@ -20,9 +18,6 @@ public class ChunkInstance extends InstancePackage {
 
     // Neighbors
     private ChunkNeighborStruct chunkNeighbors;
-
-    // Dynamic Mesh
-    private DynamicPacketInstance dynamicPacketInstance;
 
     // Internal \\
 
@@ -41,49 +36,50 @@ public class ChunkInstance extends InstancePackage {
         // Neighbors
         this.chunkNeighbors = new ChunkNeighborStruct();
 
-        // Dynamic Mesh
-        this.dynamicPacketInstance = create(DynamicPacketInstance.class);
+        super.create();
     }
 
+    @Override
     public void constructor(
+            WorldRenderSystem worldRenderSystem,
             WorldHandle worldHandle,
-            long chunkCoordinate,
+            long coordinate,
             VAOHandle vaoHandle) {
 
-        // Internal
-        this.worldHandle = worldHandle;
-        this.chunkCoordinate = chunkCoordinate;
+        super.constructor(
+                worldRenderSystem,
+                worldHandle,
+                coordinate,
+                vaoHandle);
 
         // SubChunks
         for (byte subChunkCoordinate = 0; subChunkCoordinate < EngineSetting.WORLD_HEIGHT; subChunkCoordinate++)
             subChunks[subChunkCoordinate].constructor(
+                    worldrendersystem,
+                    worldHandle,
+                    coordinate,
                     subChunkCoordinate,
                     vaoHandle);
 
         // Neighbors
         this.chunkNeighbors.constructor(
-                chunkCoordinate,
+                coordinate,
                 this);
-
-        // Dynamic Mesh
-        this.dynamicPacketInstance.constructor(vaoHandle);
     }
 
-    public void dispose() {
+    // Utility \\
 
+    public void merge() {
+
+        dynamicPacketInstance.clear();
+
+        for (SubChunkInstance subChunkInstance : subChunks)
+            dynamicPacketInstance.merge(subChunkInstance.getDynamicPacketInstance());
     }
 
     // Accessible \\
 
     // Internal
-    public WorldHandle getWorldHandle() {
-        return worldHandle;
-    }
-
-    public long getChunkCoordinate() {
-        return chunkCoordinate;
-    }
-
     public QueueOperation getChunkStateOperation() {
         return chunkState.getAssociatedOperation();
     }
@@ -104,10 +100,5 @@ public class ChunkInstance extends InstancePackage {
     // Neighbors
     public ChunkNeighborStruct getChunkNeighbors() {
         return chunkNeighbors;
-    }
-
-    // Dynamic Mesh
-    public DynamicPacketInstance getDynamicPacketInstance() {
-        return dynamicPacketInstance;
     }
 }

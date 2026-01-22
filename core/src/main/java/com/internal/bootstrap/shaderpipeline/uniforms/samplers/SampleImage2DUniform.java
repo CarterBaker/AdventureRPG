@@ -19,6 +19,11 @@ public class SampleImage2DUniform extends UniformAttribute<Integer> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new SampleImage2DUniform();
+    }
+
+    @Override
     protected void push(int handle, Integer value) {
         Gdx.gl.glUniform1i(handle, value);
     }

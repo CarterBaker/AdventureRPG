@@ -25,6 +25,11 @@ public final class Vector4BooleanArrayUniform extends UniformAttribute<int[]> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector4BooleanArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, int[] data) {
         Gdx.gl.glUniform4iv(handle, elementCount, data, 0);
     }

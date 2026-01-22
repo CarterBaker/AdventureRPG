@@ -28,47 +28,7 @@ public class DynamicPacketInstance extends InstancePackage {
         this.materialID2ModelCollection = new Int2ObjectOpenHashMap<>();
     }
 
-    // Utility \\
-
-    public DynamicPacketState getState() {
-        return state;
-    }
-
-    public void setState(DynamicPacketState state) {
-        this.state = state;
-    }
-
-    public Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> getMaterialID2ModelCollection() {
-        return materialID2ModelCollection;
-    }
-
-    public ObjectArrayList<DynamicModelHandle> getModelsForMaterial(int materialId) {
-        return materialID2ModelCollection.get(materialId);
-    }
-
-    public int getMaterialCount() {
-        return materialID2ModelCollection.size();
-    }
-
-    public int getTotalModelCount() {
-        int total = 0;
-        for (ObjectArrayList<DynamicModelHandle> models : materialID2ModelCollection.values()) {
-            total += models.size();
-        }
-        return total;
-    }
-
-    public int getTotalVertexCount() {
-        int total = 0;
-        for (ObjectArrayList<DynamicModelHandle> models : materialID2ModelCollection.values()) {
-            for (DynamicModelHandle model : models) {
-                total += model.getVertexCount();
-            }
-        }
-        return total;
-    }
-
-    // Accessible \\
+    // Dynamic Packet \\
 
     public void addVertices(int materialId, FloatArrayList vertList) {
 
@@ -144,27 +104,43 @@ public class DynamicPacketInstance extends InstancePackage {
         setState(DynamicPacketState.EMPTY);
     }
 
-    public void setModelHandleCollection(ObjectArrayList<ModelHandle> modelHandleCollection) {
-        this.modelHandleCollection = modelHandleCollection;
+    // Utility \\
+
+    public DynamicPacketState getState() {
+        return state;
     }
 
-    public ObjectArrayList<ModelHandle> getModelHandleCollection() {
-        return modelHandleCollection;
+    public void setState(DynamicPacketState state) {
+        this.state = state;
     }
 
-    public void clearModelHandleCollection() {
-        modelHandleCollection.clear();
+    public Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> getMaterialID2ModelCollection() {
+        return materialID2ModelCollection;
     }
 
-    public void setRenderCallCollection(Int2ObjectOpenHashMap<RenderCallHandle> renderCallID2RenderCall) {
-        this.renderCallID2RenderCall = renderCallID2RenderCall;
+    public ObjectArrayList<DynamicModelHandle> getModelsForMaterial(int materialId) {
+        return materialID2ModelCollection.get(materialId);
     }
 
-    public Int2ObjectOpenHashMap<RenderCallHandle> getRenderCallCollection() {
-        return renderCallID2RenderCall;
+    public int getMaterialCount() {
+        return materialID2ModelCollection.size();
     }
 
-    public void clearRenderCallCollection() {
-        renderCallID2RenderCall.clear();
+    public int getTotalModelCount() {
+        int total = 0;
+        for (ObjectArrayList<DynamicModelHandle> models : materialID2ModelCollection.values()) {
+            total += models.size();
+        }
+        return total;
+    }
+
+    public int getTotalVertexCount() {
+        int total = 0;
+        for (ObjectArrayList<DynamicModelHandle> models : materialID2ModelCollection.values()) {
+            for (DynamicModelHandle model : models) {
+                total += model.getVertexCount();
+            }
+        }
+        return total;
     }
 }

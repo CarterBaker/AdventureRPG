@@ -25,6 +25,11 @@ public final class DoubleArrayUniform extends UniformAttribute<double[]> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new DoubleArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, double[] data) {
 
         for (int i = 0; i < elementCount; i++)

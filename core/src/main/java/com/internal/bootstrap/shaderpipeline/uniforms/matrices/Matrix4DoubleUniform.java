@@ -23,6 +23,11 @@ public class Matrix4DoubleUniform extends UniformAttribute<Matrix4Double> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Matrix4DoubleUniform();
+    }
+
+    @Override
     protected void push(int handle, Matrix4Double value) {
 
         for (int i = 0; i < 16; i++)

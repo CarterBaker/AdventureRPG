@@ -19,6 +19,11 @@ public class BooleanUniform extends UniformAttribute<Boolean> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new BooleanUniform();
+    }
+
+    @Override
     protected void push(int handle, Boolean value) {
         Gdx.gl.glUniform1i(handle, value ? 1 : 0);
     }

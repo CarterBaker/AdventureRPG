@@ -16,8 +16,8 @@ public enum ChunkState {
     HAS_NEIGHBOR_ASSIGNMENT(QueueOperation.BUILD),
 
     // Geometry
-    NEEDS_GEOMETRY_ASSIGNMENT(QueueOperation.BUILD),
-    HAS_GEOMETRY_ASSIGNMENT(QueueOperation.MERGE),
+    NEEDS_GEOMETRY_DATA(QueueOperation.BUILD),
+    HAS_GEOMETRY_DATA(QueueOperation.MERGE),
 
     // Merge
     NEEDS_MERGE_DATA(QueueOperation.MERGE),

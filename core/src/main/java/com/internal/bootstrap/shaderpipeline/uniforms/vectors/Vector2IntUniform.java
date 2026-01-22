@@ -20,6 +20,11 @@ public class Vector2IntUniform extends UniformAttribute<Vector2Int> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector2IntUniform();
+    }
+
+    @Override
     protected void push(int handle, Vector2Int value) {
         Gdx.gl.glUniform2i(handle, value.x, value.y);
     }

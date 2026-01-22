@@ -25,6 +25,11 @@ public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector2DoubleArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, float[] data) {
         Gdx.gl.glUniform2fv(handle, elementCount, data, 0);
     }

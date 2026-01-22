@@ -27,6 +27,11 @@ public final class Vector3BooleanArrayUniform extends UniformAttribute<int[]> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector3BooleanArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, int[] data) {
         Gdx.gl.glUniform3iv(handle, elementCount, uniformData, 0);
     }

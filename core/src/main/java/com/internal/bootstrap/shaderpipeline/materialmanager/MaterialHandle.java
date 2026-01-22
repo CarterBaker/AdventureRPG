@@ -47,6 +47,14 @@ public class MaterialHandle extends HandlePackage {
         return shaderHandle;
     }
 
+    public Object2ObjectOpenHashMap<String, UBOHandle> getUBOs() {
+        return buffers;
+    }
+
+    public void setUBO(String uboName, UBOHandle uboHandle) {
+        buffers.put(uboName, uboHandle);
+    }
+
     public UBOHandle getUBO(String ubo) {
         return buffers.get(ubo);
     }

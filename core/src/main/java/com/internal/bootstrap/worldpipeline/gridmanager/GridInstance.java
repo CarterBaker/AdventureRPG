@@ -50,7 +50,13 @@ public class GridInstance extends InstancePackage {
         return gridSlots.get(gridCoordinate);
     }
 
-    public void assignChunkToSlot(long gridCoordinate, long chunkCoordinate) {
-        getGridSlot(gridCoordinate).setChunkCoordinate(chunkCoordinate);
+    public void assignChunkToSlot(
+            long gridCoordinate,
+            long chunkCoordinate,
+            long megaChunkCoordinate) {
+
+        GridSlotHandle gridSlotHandle = getGridSlot(gridCoordinate);
+        gridSlotHandle.setChunkCoordinate(chunkCoordinate);
+        gridSlotHandle.setMegaChunkCoordinate(megaChunkCoordinate);
     }
 }

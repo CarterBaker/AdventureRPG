@@ -25,6 +25,8 @@ public abstract class UniformAttribute<T> {
 
     // UBO Utility \\
 
+    public abstract UniformAttribute<?> createDefault();
+
     public ByteBuffer getByteBuffer() {
         throw new UnsupportedOperationException(
                 "getByteBuffer() not implemented for " + getClass().getSimpleName());

@@ -81,25 +81,34 @@ public final class UBOManager extends ManagerPackage {
         return handle;
     }
 
-    public UBOHandle cloneUBOHandle(UBOHandle source) {
+    public UBOHandle cloneUBO(UBOHandle source) {
+
         int newBinding = allocateBindingPoint();
-        int gpuHandle = GLSLUtility.createUniformBuffer();
+        int newGpuHandle = GLSLUtility.createUniformBuffer();
 
-        // NEW: pass total size from source
-        UBOHandle clone = create(UBOHandle.class);
-        clone.constructor(
-                source.getBufferName(),
-                0,
-                gpuHandle,
-                newBinding,
-                source.getTotalSizeBytes()); // NEW: get from source
+        UBOHandle copy = create(UBOHandle.class);
+        copy.constructor(source.getBufferName(), 0, newGpuHandle, newBinding, source.getTotalSizeBytes());
 
-        // ... rest of cloning logic ...
+        // Copy uniform structure
+        for (String uniformName : source.getUniforms().keySet()) {
+            Uniform<?> sourceUniform = source.getUniform(uniformName);
 
-        GLSLUtility.allocateUniformBuffer(gpuHandle, source.getTotalSizeBytes());
-        GLSLUtility.bindUniformBufferBase(gpuHandle, newBinding);
+            // Each attribute knows how to create a default copy of itself
+            UniformAttribute<?> newAttribute = sourceUniform.attribute.createDefault();
 
-        return clone;
+            Uniform<?> copiedUniform = createUniform(sourceUniform.offset, newAttribute);
+            copy.addUniform(uniformName, copiedUniform);
+        }
+
+        GLSLUtility.allocateUniformBuffer(newGpuHandle, source.getTotalSizeBytes());
+        GLSLUtility.bindUniformBufferBase(newGpuHandle, newBinding);
+
+        return copy;
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private Uniform<?> createUniform(int offset, UniformAttribute<?> attribute) {
+        return new Uniform(0, offset, attribute);
     }
 
     public void destroyUBO(UBOHandle handle) {
@@ -139,26 +148,5 @@ public final class UBOManager extends ManagerPackage {
     private void releaseBindingPoint(int binding) {
         // Add to the pool of reusable bindings
         releasedBindings.add(binding);
-    }
-
-    // Utility \\
-
-    private int calculateTotalSize(Object2ObjectOpenHashMap<String, Uniform<?>> uniforms) {
-        int maxEnd = 0;
-
-        for (Uniform<?> uniform : uniforms.values()) {
-            int end = uniform.offset + getAttributeSize(uniform.attribute());
-            if (end > maxEnd)
-                maxEnd = end;
-        }
-
-        // Align to 16 bytes (std140 requirement)
-        return ((maxEnd + 15) / 16) * 16;
-    }
-
-    private int getAttributeSize(UniformAttribute<?> attribute) {
-        // Return approximate size - this is a fallback
-        // The actual size should be calculated properly based on type
-        return attribute.getByteBuffer().capacity();
     }
 }

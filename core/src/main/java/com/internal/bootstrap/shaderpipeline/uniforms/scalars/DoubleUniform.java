@@ -19,6 +19,11 @@ public class DoubleUniform extends UniformAttribute<Double> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new DoubleUniform();
+    }
+
+    @Override
     protected void push(int handle, Double value) {
         Gdx.gl.glUniform1f(handle, value.floatValue());
     }

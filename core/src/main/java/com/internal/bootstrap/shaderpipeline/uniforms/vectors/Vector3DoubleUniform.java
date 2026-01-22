@@ -20,6 +20,11 @@ public class Vector3DoubleUniform extends UniformAttribute<Vector3Double> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector3DoubleUniform();
+    }
+
+    @Override
     protected void push(int handle, Vector3Double value) {
         Gdx.gl.glUniform3f(handle, (float) value.x, (float) value.y, (float) value.z);
     }

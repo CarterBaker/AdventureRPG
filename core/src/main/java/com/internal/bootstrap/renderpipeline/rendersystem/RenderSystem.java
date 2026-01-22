@@ -4,6 +4,7 @@ import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchHandle;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
+import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.WindowInstance;
@@ -64,6 +65,9 @@ public class RenderSystem extends SystemPackage {
                 // Bind material once for entire batch
                 bindMaterial(material, depth);
 
+                // Bind all UBOs for this material
+                bindMaterialUBOs(material);
+
                 // Push all uniforms per material
                 pushMaterialUniforms(material);
 
@@ -89,6 +93,18 @@ public class RenderSystem extends SystemPackage {
         GLSLUtility.useShader(material.getShaderHandle().getShaderHandle());
     }
 
+    private void bindMaterialUBOs(MaterialHandle material) {
+
+        var ubos = material.getUBOs();
+
+        if (ubos == null || ubos.isEmpty())
+            return;
+
+        // Bind each UBO to its binding point
+        for (UBOHandle ubo : ubos.values())
+            GLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+    }
+
     private void pushMaterialUniforms(MaterialHandle material) {
 
         var uniforms = material.getUniforms();
@@ -106,7 +122,7 @@ public class RenderSystem extends SystemPackage {
         ModelHandle modelHandle = renderCall.getModelHandle();
 
         // Bind VAO
-        GLSLUtility.bindVAO(modelHandle.getVAOHandle());
+        GLSLUtility.bindVAO(modelHandle.getVAO());
 
         // Draw
         GLSLUtility.drawElements(modelHandle.getIndexCount());

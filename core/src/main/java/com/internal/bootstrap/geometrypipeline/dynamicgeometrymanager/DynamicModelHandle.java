@@ -101,6 +101,10 @@ public class DynamicModelHandle extends HandlePackage {
 
     // Accessible \\
 
+    public VAOHandle getVAOHandle() {
+        return vaoHandle;
+    }
+
     public FloatArrayList getVertices() {
         return vertices;
     }

@@ -20,6 +20,11 @@ public class Vector3Uniform extends UniformAttribute<Object> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector3Uniform();
+    }
+
+    @Override
     protected void push(int handle, Object value) {
 
         // From libGDX vector

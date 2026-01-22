@@ -32,7 +32,7 @@ public class GenerationBranch extends BranchPackage {
         executeAsync(threadHandle, () -> {
 
             boolean success = true;
-            long chunkCoordinate = chunkInstance.getChunkCoordinate();
+            long chunkCoordinate = chunkInstance.getCoordinate();
             SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
 
             // Generate all subchunks
@@ -51,10 +51,10 @@ public class GenerationBranch extends BranchPackage {
             }
 
             if (success) // Thread-safe state update
-                chunkInstance.setChunkState(ChunkState.HAS_GENERATION_DATA);
+                chunkInstance.setChunkState(ChunkState.HAS_GEOMETRY_DATA);
 
             else // Keep it in NEEDS_GENERATION_DATA to retry
-                chunkInstance.setChunkState(ChunkState.NEEDS_GENERATION_DATA);
+                chunkInstance.setChunkState(ChunkState.NEEDS_GEOMETRY_DATA);
         });
     }
 }

@@ -28,7 +28,11 @@ public class MeshHandle extends HandlePackage {
     // Accessible \\
 
     // VAO
-    public int getVAOHandle() {
+    public VAOHandle getVAOHandle() {
+        return vaoHandle;
+    }
+
+    public int getVAO() {
         return vaoHandle.getAttributeHandle();
     }
 
@@ -37,7 +41,11 @@ public class MeshHandle extends HandlePackage {
     }
 
     // VBO
-    public int getVboHandle() {
+    public VBOHandle getVBOHandle() {
+        return vboHandle;
+    }
+
+    public int getVBO() {
         return vboHandle.getVertexHandle();
     }
 
@@ -46,7 +54,11 @@ public class MeshHandle extends HandlePackage {
     }
 
     // IBO
-    public int getIboHandle() {
+    public IBOHandle getIBOHandle() {
+        return iboHandle;
+    }
+
+    public int getIBO() {
         return iboHandle.getIndexHandle();
     }
 

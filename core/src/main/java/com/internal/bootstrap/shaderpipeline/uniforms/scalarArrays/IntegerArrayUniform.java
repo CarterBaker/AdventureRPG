@@ -25,6 +25,11 @@ public final class IntegerArrayUniform extends UniformAttribute<int[]> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new IntegerArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, int[] data) {
 
         for (int i = 0; i < elementCount; i++)

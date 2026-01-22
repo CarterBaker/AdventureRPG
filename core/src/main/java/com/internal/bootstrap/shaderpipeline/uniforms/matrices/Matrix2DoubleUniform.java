@@ -23,6 +23,11 @@ public class Matrix2DoubleUniform extends UniformAttribute<Matrix2Double> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Matrix2DoubleUniform();
+    }
+
+    @Override
     protected void push(int handle, Matrix2Double value) {
 
         uniformBuffer.clear();

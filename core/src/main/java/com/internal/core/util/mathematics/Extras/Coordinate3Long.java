@@ -33,7 +33,7 @@ public final class Coordinate3Long {
     }
 
     public static int unpackZ(long value) {
-        return (int) (value & Z_MASK); // Z is at the bottom
+        return (int) (value & Z_MASK);
     }
 
     // utility \\
@@ -46,7 +46,7 @@ public final class Coordinate3Long {
         return packed + direction.coordinate3Long;
     }
 
-    // Utility
+    // Java Utility \\
 
     public static String toString(long value) {
         return "Coordinate3Int(" + unpackX(value) + ", " +

@@ -25,6 +25,11 @@ public final class Vector2IntArrayUniform extends UniformAttribute<int[]> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector2IntArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, int[] data) {
         Gdx.gl.glUniform2iv(handle, elementCount, data, 0);
     }

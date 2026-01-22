@@ -20,6 +20,11 @@ public class Matrix3Uniform extends UniformAttribute<Object> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Matrix3Uniform();
+    }
+
+    @Override
     protected void push(int handle, Object value) {
 
         // Push libGDX matrix

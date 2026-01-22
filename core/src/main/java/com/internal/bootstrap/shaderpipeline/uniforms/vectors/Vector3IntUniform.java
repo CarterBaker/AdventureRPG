@@ -20,6 +20,11 @@ public class Vector3IntUniform extends UniformAttribute<Vector3Int> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector3IntUniform();
+    }
+
+    @Override
     protected void push(int handle, Vector3Int value) {
         Gdx.gl.glUniform3i(handle, value.x, value.y, value.z);
     }

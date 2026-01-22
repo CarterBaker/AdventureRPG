@@ -25,6 +25,11 @@ public final class BooleanArrayUniform extends UniformAttribute<boolean[]> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new BooleanArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, boolean[] data) {
 
         for (int i = 0; i < elementCount; i++)

@@ -25,6 +25,11 @@ public final class FloatArrayUniform extends UniformAttribute<float[]> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new FloatArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, float[] data) {
 
         for (int i = 0; i < elementCount; i++)

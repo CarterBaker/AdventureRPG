@@ -29,6 +29,11 @@ public final class Matrix2DoubleArrayUniform extends UniformAttribute<Matrix2Dou
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Matrix2DoubleArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, Matrix2Double[] matrices) {
 
         uniformBuffer.clear();

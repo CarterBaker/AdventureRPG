@@ -20,6 +20,11 @@ public class Vector4BooleanUniform extends UniformAttribute<Vector4Boolean> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector4BooleanUniform();
+    }
+
+    @Override
     protected void push(int handle, Vector4Boolean value) {
         Gdx.gl.glUniform4i(handle,
                 value.x ? 1 : 0,

@@ -23,6 +23,11 @@ public class Matrix3DoubleUniform extends UniformAttribute<Matrix3Double> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Matrix3DoubleUniform();
+    }
+
+    @Override
     protected void push(int handle, Matrix3Double value) {
 
         for (int i = 0; i < 9; i++)

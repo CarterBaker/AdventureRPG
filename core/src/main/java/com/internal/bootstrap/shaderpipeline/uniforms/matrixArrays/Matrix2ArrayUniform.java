@@ -29,6 +29,11 @@ public final class Matrix2ArrayUniform extends UniformAttribute<Matrix2[]> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Matrix2ArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, Matrix2[] matrices) {
 
         uniformBuffer.clear();

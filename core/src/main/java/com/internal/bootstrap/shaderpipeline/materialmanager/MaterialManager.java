@@ -2,10 +2,12 @@ package com.internal.bootstrap.shaderpipeline.materialmanager;
 
 import com.internal.bootstrap.shaderpipeline.shadermanager.ShaderManager;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class MaterialManager extends ManagerPackage {
 
@@ -74,5 +76,32 @@ public class MaterialManager extends ManagerPackage {
 
     public MaterialHandle getMaterialFromMaterialID(int materialID) {
         return materialID2Material.get(materialID);
+    }
+
+    public MaterialHandle cloneMaterial(int materialID) {
+
+        MaterialHandle originalMaterial = getMaterialFromMaterialID(materialID);
+
+        if (originalMaterial == null)
+            throwException("Cannot clone material - materialID " + materialID + " not found");
+
+        // Clone UBOs map (shallow copy - UBOHandles themselves are shared)
+        Object2ObjectOpenHashMap<String, UBOHandle> clonedBuffers = new Object2ObjectOpenHashMap<>(
+                originalMaterial.getUBOs());
+
+        // Clone uniforms map (shallow copy - Uniform objects themselves are shared)
+        Object2ObjectOpenHashMap<String, Uniform<?>> clonedUniforms = new Object2ObjectOpenHashMap<>(
+                originalMaterial.getUniforms());
+
+        // Create new material handle with cloned maps
+        MaterialHandle clonedMaterial = create(MaterialHandle.class);
+        clonedMaterial.constructor(
+                originalMaterial.getMaterialName(),
+                originalMaterial.getMaterialID(),
+                originalMaterial.getShaderHandle(),
+                clonedBuffers,
+                clonedUniforms);
+
+        return clonedMaterial;
     }
 }

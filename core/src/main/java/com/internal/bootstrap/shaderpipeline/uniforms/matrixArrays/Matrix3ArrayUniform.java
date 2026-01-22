@@ -29,6 +29,11 @@ public final class Matrix3ArrayUniform extends UniformAttribute<Object> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Matrix3ArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, Object value) {
 
         uniformBuffer.clear();

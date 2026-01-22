@@ -60,4 +60,16 @@ class GLSLUtility {
     static void drawElements(int indexCount) {
         Gdx.gl.glDrawElements(GL20.GL_TRIANGLES, indexCount, GL20.GL_UNSIGNED_SHORT, 0);
     }
+
+    // UBO \\
+
+    static void bindUniformBuffer(int bindingPoint, int gpuHandle) {
+        Gdx.gl30.glBindBufferBase(GL30.GL_UNIFORM_BUFFER, bindingPoint, gpuHandle);
+    }
+
+    static void updateUniformBuffer(int gpuHandle, int offset, java.nio.ByteBuffer data) {
+        Gdx.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, gpuHandle);
+        Gdx.gl30.glBufferSubData(GL30.GL_UNIFORM_BUFFER, offset, data.remaining(), data);
+        Gdx.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, 0);
+    }
 }

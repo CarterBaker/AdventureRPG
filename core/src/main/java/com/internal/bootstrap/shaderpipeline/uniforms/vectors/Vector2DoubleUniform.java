@@ -20,6 +20,11 @@ public class Vector2DoubleUniform extends UniformAttribute<Vector2Double> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector2DoubleUniform();
+    }
+
+    @Override
     protected void push(int handle, Vector2Double value) {
         Gdx.gl.glUniform2f(handle, (float) value.x, (float) value.y);
     }

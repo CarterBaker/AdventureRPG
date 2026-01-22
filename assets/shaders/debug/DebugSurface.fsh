@@ -3,10 +3,13 @@
 in vec3 vWorldNormal;
 out vec4 FragColor;
 
+#include "includes/GridCoordinateData.glsl"
+#include "includes/PlayerPositionData.glsl"
+
 void main()
 {
     vec3 n = abs(normalize(vWorldNormal));
-
+    
     // Determine dominant axis
     if (n.x > n.y && n.x > n.z)
         FragColor = vec4(1.0, 0.0, 0.0, 1.0); // X axis → Red

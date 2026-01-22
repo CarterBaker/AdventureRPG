@@ -27,6 +27,11 @@ public final class Vector3ArrayUniform extends UniformAttribute<float[]> {
     }
 
     @Override
+    public UniformAttribute<?> createDefault() {
+        return new Vector3ArrayUniform(elementCount);
+    }
+
+    @Override
     protected void push(int handle, float[] data) {
         Gdx.gl.glUniform3fv(handle, elementCount, uniformData, 0);
     }
