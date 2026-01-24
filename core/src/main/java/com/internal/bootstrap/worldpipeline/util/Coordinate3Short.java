@@ -1,5 +1,6 @@
-package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
+package com.internal.bootstrap.worldpipeline.util;
 
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.BlockDirection3Vector;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;

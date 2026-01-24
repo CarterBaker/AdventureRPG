@@ -1,6 +1,7 @@
 package com.internal.bootstrap.worldpipeline.subchunk;
 
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
@@ -9,8 +10,6 @@ import com.internal.core.engine.settings.EngineSetting;
 public class SubChunkInstance extends WorldRenderInstance {
 
     // Internal
-    byte subChunkCoordinate;
-
     BlockPaletteHandle biomePaletteHandle;
     BlockPaletteHandle blockPaletteHandle;
 
@@ -37,7 +36,6 @@ public class SubChunkInstance extends WorldRenderInstance {
             WorldRenderSystem worldRenderSystem,
             WorldHandle worldHandle,
             long coordinate,
-            byte subChunkCoordinate,
             VAOHandle vaoHandle) {
 
         super.constructor(
@@ -45,18 +43,11 @@ public class SubChunkInstance extends WorldRenderInstance {
                 worldHandle,
                 coordinate,
                 vaoHandle);
-
-        // Internal
-        this.subChunkCoordinate = subChunkCoordinate;
     }
 
     // Accessible \\
 
     // Internal
-    public byte getSubChunkCoordinate() {
-        return subChunkCoordinate;
-    }
-
     public BlockPaletteHandle getBiomePaletteHandle() {
         return biomePaletteHandle;
     }

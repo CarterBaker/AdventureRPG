@@ -28,6 +28,8 @@ public class GenerationBranch extends BranchPackage {
 
     public void generateChunk(ChunkInstance chunkInstance) {
 
+        chunkInstance.setChunkState(ChunkState.GENERATING_DATA);
+
         // Submit to generation thread
         executeAsync(threadHandle, () -> {
 
@@ -41,20 +43,18 @@ public class GenerationBranch extends BranchPackage {
                 SubChunkInstance subChunk = subChunks[i];
                 if (worldGenerationManager.generateSubChunk(
                         chunkCoordinate,
-                        subChunk,
-                        i))
+                        subChunk))
                     continue;
 
                 success = false;
                 break;
-
             }
 
             if (success) // Thread-safe state update
-                chunkInstance.setChunkState(ChunkState.HAS_GEOMETRY_DATA);
+                chunkInstance.setChunkState(ChunkState.HAS_GENERATION_DATA);
 
             else // Keep it in NEEDS_GENERATION_DATA to retry
-                chunkInstance.setChunkState(ChunkState.NEEDS_GEOMETRY_DATA);
+                chunkInstance.setChunkState(ChunkState.NEEDS_GENERATION_DATA);
         });
     }
 }

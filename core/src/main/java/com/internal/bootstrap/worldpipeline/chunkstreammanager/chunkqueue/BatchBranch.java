@@ -22,7 +22,11 @@ public class BatchBranch extends BranchPackage {
     // Batch Management \\
 
     public void batchChunk(ChunkInstance chunkInstance) {
+
+        chunkInstance.setChunkState(ChunkState.BATCHING_DATA);
+
         chunkBatchSystem.batchChunk(chunkInstance);
+
         chunkInstance.setChunkState(ChunkState.HAS_BATCH_DATA);
     }
 }

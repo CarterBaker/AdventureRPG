@@ -6,15 +6,15 @@ import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeo
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.FullGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.LiquidGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.PartialGeometryBranch;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.Coordinate3Short;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
+import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.subchunk.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import com.internal.bootstrap.worldpipeline.util.Coordinate3Short;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.mathematics.Extras.Color;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
@@ -83,7 +83,7 @@ class InternalBuildManager extends ManagerPackage {
 
             short xyz = Coordinate3Short.getBlockCoordinate(i);
 
-            short biomeID = biomePaletteHandle.getBlock(xyz);
+            short biomeID = biomePaletteHandle.getBlock(xyz, blockPaletteHandle.getPaletteSize());
             BiomeHandle biomeHandle = biomeManager.getBiomeFromBiomeID(biomeID);
 
             short blockID = blockPaletteHandle.getBlock(xyz);

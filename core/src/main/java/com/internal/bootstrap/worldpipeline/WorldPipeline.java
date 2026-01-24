@@ -11,8 +11,6 @@ import com.internal.core.engine.PipelinePackage;
 
 public class WorldPipeline extends PipelinePackage {
 
-    /* !!! Released after use !!! */
-
     @Override
     protected void create() {
 

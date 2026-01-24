@@ -41,10 +41,10 @@ public class BuildBranch extends BranchPackage {
                 success = false;
 
             if (success) // Thread-safe state update
-                chunkInstance.setChunkState(ChunkState.HAS_GENERATION_DATA);
+                chunkInstance.setChunkState(ChunkState.HAS_GEOMETRY_DATA);
 
             else // Keep it in NEEDS_GENERATION_DATA to retry
-                chunkInstance.setChunkState(ChunkState.NEEDS_GENERATION_DATA);
+                chunkInstance.setChunkState(ChunkState.NEEDS_GEOMETRY_DATA);
         });
     }
 }

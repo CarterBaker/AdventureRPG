@@ -57,7 +57,6 @@ public class ChunkInstance extends WorldRenderInstance {
             subChunks[subChunkCoordinate].constructor(
                     worldrendersystem,
                     worldHandle,
-                    coordinate,
                     subChunkCoordinate,
                     vaoHandle);
 

@@ -23,6 +23,8 @@ public class MergeBranch extends BranchPackage {
 
     public void mergeChunk(ChunkInstance chunkInstance) {
 
+        chunkInstance.setChunkState(ChunkState.MERGING_DATA);
+
         // Submit to generation thread
         executeAsync(threadHandle, () -> {
             chunkInstance.merge();

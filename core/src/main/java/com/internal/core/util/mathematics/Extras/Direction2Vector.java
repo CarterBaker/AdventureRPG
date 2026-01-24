@@ -1,6 +1,6 @@
 package com.internal.core.util.mathematics.Extras;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.Coordinate3Short;
+import com.internal.bootstrap.worldpipeline.util.Coordinate3Short;
 
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 

@@ -1,14 +1,15 @@
-package com.internal.bootstrap.worldpipeline.subchunk;
+package com.internal.bootstrap.worldpipeline.block;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import com.internal.bootstrap.worldpipeline.util.Coordinate3Short;
 import com.internal.core.engine.HandlePackage;
 
 public class BlockPaletteHandle extends HandlePackage {
 
     // Internal
-    private int chunkSize;
+    private int paletteSize;
     private int totalBlocks;
     private int maxPaletteSize;
 
@@ -26,8 +27,8 @@ public class BlockPaletteHandle extends HandlePackage {
             int paletteThreshold) {
 
         // Internal
-        this.chunkSize = paletteSize;
-        this.totalBlocks = chunkSize * chunkSize * chunkSize;
+        this.paletteSize = paletteSize;
+        this.totalBlocks = paletteSize * paletteSize * paletteSize;
         this.maxPaletteSize = paletteThreshold;
 
         // Palette mode
@@ -38,6 +39,10 @@ public class BlockPaletteHandle extends HandlePackage {
     }
 
     // Utility \\
+
+    private int getBlockIndex(int x, int y, int z) {
+        return x + y * paletteSize + z * paletteSize * paletteSize;
+    }
 
     private void allocatePackedArray() {
         int longsNeeded = (int) Math.ceil((totalBlocks * (double) bitsPerEntry) / 64.0);
@@ -50,7 +55,20 @@ public class BlockPaletteHandle extends HandlePackage {
         int bitOffset = startBit % 64;
 
         long mask = (1L << bitsPerEntry) - 1;
-        return (int) ((packedData[longIndex] >>> bitOffset) & mask);
+
+        // Check if value spans two longs
+        if (bitOffset + bitsPerEntry <= 64) {
+            return (int) ((packedData[longIndex] >>> bitOffset) & mask);
+        } else {
+            // Value spans two longs
+            int bitsInFirstLong = 64 - bitOffset;
+            int bitsInSecondLong = bitsPerEntry - bitsInFirstLong;
+
+            long firstPart = (packedData[longIndex] >>> bitOffset);
+            long secondPart = (packedData[longIndex + 1] & ((1L << bitsInSecondLong) - 1)) << bitsInFirstLong;
+
+            return (int) ((firstPart | secondPart) & mask);
+        }
     }
 
     private void writePackedValue(int index, int value) {
@@ -59,8 +77,25 @@ public class BlockPaletteHandle extends HandlePackage {
         int bitOffset = startBit % 64;
 
         long mask = (1L << bitsPerEntry) - 1;
-        packedData[longIndex] &= ~(mask << bitOffset);
-        packedData[longIndex] |= ((long) value) << bitOffset;
+
+        // Check if value spans two longs
+        if (bitOffset + bitsPerEntry <= 64) {
+            packedData[longIndex] &= ~(mask << bitOffset);
+            packedData[longIndex] |= ((long) value & mask) << bitOffset;
+        } else {
+            // Value spans two longs
+            int bitsInFirstLong = 64 - bitOffset;
+            int bitsInSecondLong = bitsPerEntry - bitsInFirstLong;
+
+            long firstMask = ((1L << bitsInFirstLong) - 1) << bitOffset;
+            long secondMask = (1L << bitsInSecondLong) - 1;
+
+            packedData[longIndex] &= ~firstMask;
+            packedData[longIndex] |= ((long) value & ((1L << bitsInFirstLong) - 1)) << bitOffset;
+
+            packedData[longIndex + 1] &= ~secondMask;
+            packedData[longIndex + 1] |= ((long) value >>> bitsInFirstLong) & secondMask;
+        }
     }
 
     private int calculateBitsNeeded(int paletteSize) {
@@ -101,24 +136,13 @@ public class BlockPaletteHandle extends HandlePackage {
 
     // Accessible \\
 
-    public short getBlock(short xyz) {
-
-        int x = (xyz >> 8) & 0xF;
-        int y = (xyz >> 4) & 0xF;
-        int z = xyz & 0xF;
-
-        int index = (y * chunkSize + z) * chunkSize + x;
-
-        if (directData != null)
-            return directData[index];
-
-        int paletteIndex = readPackedValue(index);
-        return palette.get(paletteIndex);
+    public int getPaletteSize() {
+        return paletteSize;
     }
 
     public short getBlock(int x, int y, int z) {
 
-        int index = (y * chunkSize + z) * chunkSize + x;
+        int index = getBlockIndex(x, y, z);
 
         if (directData != null)
             return directData[index];
@@ -127,9 +151,38 @@ public class BlockPaletteHandle extends HandlePackage {
         return palette.get(paletteIndex);
     }
 
+    public short getBlock(short xyz) {
+        int index = Coordinate3Short.getBlockIndex(xyz);
+
+        if (directData != null)
+            return directData[index];
+
+        int paletteIndex = readPackedValue(index);
+        return palette.get(paletteIndex);
+    }
+
+    public short getBlock(short xyz, int virtualPaletteSize) {
+
+        // Calculate the scale factor between actual and virtual palette sizes
+        int scale = paletteSize / virtualPaletteSize;
+
+        // Unpack the coordinates
+        int x = Coordinate3Short.unpackX(xyz);
+        int y = Coordinate3Short.unpackY(xyz);
+        int z = Coordinate3Short.unpackZ(xyz);
+
+        // Scale down to virtual coordinates
+        int virtualX = x / scale;
+        int virtualY = y / scale;
+        int virtualZ = z / scale;
+
+        // Get the block at the virtual position
+        return getBlock(virtualX, virtualY, virtualZ);
+    }
+
     public void setBlock(int x, int y, int z, short blockId) {
 
-        int index = (y * chunkSize + z) * chunkSize + x;
+        int index = getBlockIndex(x, y, z);
 
         if (directData != null) {
             directData[index] = blockId;
@@ -139,6 +192,7 @@ public class BlockPaletteHandle extends HandlePackage {
         int paletteIndex = palette.indexOf(blockId);
 
         if (paletteIndex == -1) {
+
             if (palette.size() >= maxPaletteSize) {
                 convertToDirect();
                 directData[index] = blockId;
@@ -149,9 +203,8 @@ public class BlockPaletteHandle extends HandlePackage {
             paletteIndex = palette.size() - 1;
 
             int neededBits = calculateBitsNeeded(palette.size());
-            if (neededBits > bitsPerEntry) {
+            if (neededBits > bitsPerEntry)
                 expandBits(neededBits);
-            }
         }
 
         writePackedValue(index, paletteIndex);

@@ -164,13 +164,13 @@ class ChunkQueueManager extends ManagerPackage {
         QueueOperation operation = chunkInstance.getChunkStateOperation();
 
         switch (operation) {
+            case SKIP -> {
+            }
             case GENERATE -> generationBranch.generateChunk(chunkInstance);
             case NEIGHBOR_ASSESSMENT -> assessmentBranch.assessChunk(chunkInstance);
             case BUILD -> buildBranch.buildChunk(chunkInstance);
             case MERGE -> mergeBranch.mergeChunk(chunkInstance);
             case BATCH -> batchBranch.batchChunk(chunkInstance);
-            case FINALIZE -> {
-            }
         }
 
         // Add back to end

@@ -4,17 +4,17 @@ import java.util.BitSet;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.BlockDirection3Vector;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.Coordinate3Short;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.bootstrap.shaderpipeline.texturemanager.UVRect;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
+import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
-import com.internal.bootstrap.worldpipeline.subchunk.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import com.internal.bootstrap.worldpipeline.util.Coordinate3Short;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Color;
@@ -139,7 +139,7 @@ public class FullGeometryBranch extends BranchPackage {
         if (!Coordinate3Short.isAtEdge(xyz))
             return subChunkInstance;
 
-        byte subChunkCoordinate = subChunkInstance.getSubChunkCoordinate();
+        byte subChunkCoordinate = (byte) subChunkInstance.getCoordinate();
 
         // Handle vertical chunk comparison
         if (direction3Vector == Direction3Vector.UP ||
@@ -455,7 +455,7 @@ public class FullGeometryBranch extends BranchPackage {
         short y = Coordinate3Short.unpackY(xyz);
         short z = Coordinate3Short.unpackZ(xyz);
 
-        short subChunkCoordinate = subChunkInstance.getSubChunkCoordinate();
+        short subChunkCoordinate = (byte) subChunkInstance.getCoordinate();
 
         // Handle vertical movement
         if (y < 0) {
