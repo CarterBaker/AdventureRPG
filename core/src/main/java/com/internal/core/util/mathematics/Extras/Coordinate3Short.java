@@ -1,10 +1,8 @@
-package com.internal.bootstrap.worldpipeline.util;
+package com.internal.core.util.mathematics.Extras;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.BlockDirection3Vector;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Direction2Vector;
-import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 public final class Coordinate3Short extends UtilityPackage {
 
@@ -14,43 +12,23 @@ public final class Coordinate3Short extends UtilityPackage {
     }
 
     // Chunk dimensions
-    private static final int BIOME_SIZE;
     private static final int CHUNK_SIZE;
-    public static final short BIOME_COORDINATE_COUNT;
     public static final short BLOCK_COORDINATE_COUNT;
 
     // Precomputed flattened coordinates packed into shorts
     // Format: xxxx yyyy zzzz (4 bits each, 12 bits total per coordinate)
-    private static final short[] biomeCoordinates;
     private static final short[] blockCoordinates;
 
     static {
         // Load settings
-        BIOME_SIZE = EngineSetting.BIOME_SIZE;
         CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
-
-        int biomeAxis = CHUNK_SIZE / BIOME_SIZE;
-        BIOME_COORDINATE_COUNT = (short) (biomeAxis * biomeAxis * biomeAxis);
         BLOCK_COORDINATE_COUNT = (short) (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
 
         // Allocate coordinate arrays
-        biomeCoordinates = new short[BIOME_COORDINATE_COUNT];
         blockCoordinates = new short[BLOCK_COORDINATE_COUNT];
 
         // Precompute all coordinates
-        flattenBiomeCoordinates(biomeAxis);
         flattenBlockCoordinates();
-    }
-
-    private static void flattenBiomeCoordinates(int biomeAxis) {
-        int idx = 0;
-        for (int y = 0; y < biomeAxis; y++) {
-            for (int z = 0; z < biomeAxis; z++) {
-                for (int x = 0; x < biomeAxis; x++) {
-                    biomeCoordinates[idx++] = pack(x, y, z);
-                }
-            }
-        }
     }
 
     private static void flattenBlockCoordinates() {
@@ -70,15 +48,6 @@ public final class Coordinate3Short extends UtilityPackage {
     // Pack x, y, z into a single short (4 bits each)
     public static short pack(int x, int y, int z) {
         return (short) ((x << 8) | (y << 4) | z);
-    }
-
-    // Public API for biome coordinates
-    public static short[] getBiomeCoordinates() {
-        return biomeCoordinates;
-    }
-
-    public static short getBiomeCoordinate(int index) {
-        return biomeCoordinates[index];
     }
 
     // Public API for block coordinates

@@ -23,12 +23,17 @@ public class MergeBranch extends BranchPackage {
 
     public void mergeChunk(ChunkInstance chunkInstance) {
 
-        chunkInstance.setChunkState(ChunkState.MERGING_DATA);
+        if (!chunkInstance.tryBeginOperation(QueueOperation.MERGE))
+            return;
 
         // Submit to generation thread
         executeAsync(threadHandle, () -> {
-            chunkInstance.merge();
-            chunkInstance.setChunkState(ChunkState.HAS_MERGE_DATA);
+
+            if (chunkInstance.merge())
+                chunkInstance.setChunkState(ChunkState.HAS_MERGE_DATA);
+
+            else
+                chunkInstance.setChunkState(ChunkState.NEEDS_MERGE_DATA);
         });
     }
 }

@@ -1,5 +1,6 @@
 package com.internal.bootstrap.worldpipeline.worldgenerationmanager;
 
+import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
@@ -107,12 +108,10 @@ public class WorldGenerationManager extends ManagerPackage {
 
                     short blockID;
 
-                    if (worldY <= groundHeight) {
-                        blockID = GRASS_BLOCK_ID;
-                    } else {
-                        blockID = AIR_BLOCK_ID;
-                    }
+                    if (worldY > groundHeight)
+                        continue;
 
+                    blockID = GRASS_BLOCK_ID;
                     blocks.setBlock(localX, localY, localZ, blockID);
                 }
             }

@@ -23,7 +23,8 @@ public class BatchBranch extends BranchPackage {
 
     public void batchChunk(ChunkInstance chunkInstance) {
 
-        chunkInstance.setChunkState(ChunkState.BATCHING_DATA);
+        if (!chunkInstance.tryBeginOperation(QueueOperation.BATCH))
+            return;
 
         chunkBatchSystem.batchChunk(chunkInstance);
 

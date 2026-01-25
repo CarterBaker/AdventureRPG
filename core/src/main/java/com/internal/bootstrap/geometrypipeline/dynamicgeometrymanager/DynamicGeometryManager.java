@@ -28,16 +28,20 @@ public class DynamicGeometryManager extends ManagerPackage {
             DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
             ChunkInstance chunkInstance) {
 
+        boolean success = true;
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
+
+        // TODO: Could potential add skipping for perfectly valid geometry if only one
+        // subchunk fails.
 
         for (int i = 0; i < worldHeight; i++)
             if (!internalBuildManager.build(
                     dynamicGeometryAsyncContainer,
                     chunkInstance,
                     subChunks[i]))
-                return false;
+                success = false;
 
-        return true;
+        return success;
     }
 
     // Accessible \\

@@ -14,9 +14,9 @@ import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import com.internal.bootstrap.worldpipeline.util.Coordinate3Short;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.mathematics.Extras.Color;
+import com.internal.core.util.mathematics.Extras.Coordinate3Short;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -62,12 +62,9 @@ class InternalBuildManager extends ManagerPackage {
 
         DynamicPacketInstance dynamicPacketInstance = subChunkInstance.getDynamicPacketInstance();
 
-        if (dynamicPacketInstance.getState() == DynamicPacketState.GENERATING_VERT_DATA ||
-                dynamicPacketInstance.getState() == DynamicPacketState.UPLOADED_TO_GPU ||
-                dynamicPacketInstance.getState() == DynamicPacketState.UPLOADED_TO_RENDERER)
+        if (!dynamicPacketInstance.tryLock())
             return false;
 
-        dynamicPacketInstance.setState(DynamicPacketState.GENERATING_VERT_DATA);
         dynamicPacketInstance.clear();
 
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
@@ -83,11 +80,14 @@ class InternalBuildManager extends ManagerPackage {
 
             short xyz = Coordinate3Short.getBlockCoordinate(i);
 
-            short biomeID = biomePaletteHandle.getBlock(xyz, blockPaletteHandle.getPaletteSize());
+            short biomeID = biomePaletteHandle.getBlock(xyz);
             BiomeHandle biomeHandle = biomeManager.getBiomeFromBiomeID(biomeID);
 
             short blockID = blockPaletteHandle.getBlock(xyz);
             BlockHandle blockHandle = blockManager.getBlockFromBlockID(blockID);
+
+            if (blockHandle.getGeometry() == DynamicGeometryType.NONE)
+                debug(blockHandle.getGeometry().toString());
 
             for (int direction = 0; direction < Direction3Vector.LENGTH; direction++) {
 
@@ -126,7 +126,10 @@ class InternalBuildManager extends ManagerPackage {
         for (int materialID : verts.keySet())
             dynamicPacketInstance.addVertices(materialID, verts.get(materialID));
 
-        dynamicPacketInstance.setState(DynamicPacketState.HAS_VERT_DATA);
+        if (dynamicPacketInstance.getTotalVertexCount() > 0)
+            dynamicPacketInstance.setReady();
+        else
+            dynamicPacketInstance.unlock();
 
         return true;
     }

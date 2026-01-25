@@ -62,7 +62,7 @@ public class InternalBuildSystem extends SystemPackage {
         String blockName = JsonUtility.validateString(blockJson, "name");
 
         // Parse type (default to SOLID if not specified)
-        String typeStr = blockJson.has("type") ? blockJson.get("type").getAsString() : "SOLID";
+        String typeStr = blockJson.has("type") ? blockJson.get("type").getAsString() : "FULL";
         DynamicGeometryType blockType = parseBlockType(typeStr);
 
         // Parse material (default to -1 if not specified, meaning no material/Air

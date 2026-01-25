@@ -18,31 +18,35 @@ public class SubChunkInstance extends WorldRenderInstance {
     @Override
     protected void create() {
 
+        super.create();
+
         // Internal
         this.biomePaletteHandle = create(BlockPaletteHandle.class);
-        this.biomePaletteHandle.constructor(
-                EngineSetting.CHUNK_SIZE / EngineSetting.BIOME_SIZE,
-                EngineSetting.BLOCK_PALETTE_THRESHOLD / EngineSetting.BIOME_SIZE);
-
         this.blockPaletteHandle = create(BlockPaletteHandle.class);
-        this.blockPaletteHandle.constructor(
-                EngineSetting.CHUNK_SIZE,
-                EngineSetting.BLOCK_PALETTE_THRESHOLD);
-
-        super.create();
     }
 
     public void constructor(
             WorldRenderSystem worldRenderSystem,
             WorldHandle worldHandle,
             long coordinate,
-            VAOHandle vaoHandle) {
+            VAOHandle vaoHandle,
+            short airBlockId) {
 
         super.constructor(
                 worldRenderSystem,
                 worldHandle,
                 coordinate,
                 vaoHandle);
+
+        this.biomePaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE / EngineSetting.BIOME_SIZE,
+                EngineSetting.BLOCK_PALETTE_THRESHOLD / EngineSetting.BIOME_SIZE,
+                airBlockId);
+
+        this.blockPaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE,
+                EngineSetting.BLOCK_PALETTE_THRESHOLD,
+                airBlockId);
     }
 
     // Accessible \\

@@ -28,7 +28,8 @@ public class GenerationBranch extends BranchPackage {
 
     public void generateChunk(ChunkInstance chunkInstance) {
 
-        chunkInstance.setChunkState(ChunkState.GENERATING_DATA);
+        if (!chunkInstance.tryBeginOperation(QueueOperation.GENERATE))
+            return;
 
         // Submit to generation thread
         executeAsync(threadHandle, () -> {

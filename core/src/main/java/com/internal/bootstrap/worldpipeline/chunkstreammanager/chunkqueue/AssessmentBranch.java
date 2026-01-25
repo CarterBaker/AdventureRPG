@@ -17,7 +17,8 @@ public class AssessmentBranch extends BranchPackage {
 
     public void assessChunk(ChunkInstance chunkInstance) {
 
-        chunkInstance.setChunkState(ChunkState.ASSESSING_NEIGHBORS);
+        if (!chunkInstance.tryBeginOperation(QueueOperation.NEIGHBOR_ASSESSMENT))
+            return;
 
         // Run on render thread - no thread handoff needed
         boolean allNeighborsFound = true;

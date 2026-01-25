@@ -29,21 +29,18 @@ public class BuildBranch extends BranchPackage {
 
     public void buildChunk(ChunkInstance chunkInstance) {
 
+        if (!chunkInstance.tryBeginOperation(QueueOperation.BUILD))
+            return;
+
         // Submit to generation thread
         executeAsync(threadHandle, dynamicGeometryAsyncContainer, (DynamicGeometryAsyncContainer instance) -> {
 
-            boolean success = true;
-
-            // Attempt to build the chunk
-            if (!dynamicGeometryManager.build(
+            if (dynamicGeometryManager.build(
                     dynamicGeometryAsyncContainer,
                     chunkInstance))
-                success = false;
-
-            if (success) // Thread-safe state update
                 chunkInstance.setChunkState(ChunkState.HAS_GEOMETRY_DATA);
 
-            else // Keep it in NEEDS_GENERATION_DATA to retry
+            else
                 chunkInstance.setChunkState(ChunkState.NEEDS_GEOMETRY_DATA);
         });
     }

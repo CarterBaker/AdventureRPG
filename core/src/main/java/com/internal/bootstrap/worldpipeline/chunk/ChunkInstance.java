@@ -1,5 +1,7 @@
 package com.internal.bootstrap.worldpipeline.chunk;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
@@ -11,7 +13,7 @@ import com.internal.core.engine.settings.EngineSetting;
 public class ChunkInstance extends WorldRenderInstance {
 
     // Internal
-    private volatile ChunkState chunkState;
+    private AtomicReference<ChunkState> chunkState;
 
     // SubChunks
     private SubChunkInstance[] subChunks;
@@ -25,7 +27,7 @@ public class ChunkInstance extends WorldRenderInstance {
     protected void create() {
 
         // Internal
-        this.chunkState = ChunkState.UNINITIALIZED;
+        this.chunkState = new AtomicReference<>(ChunkState.UNINITIALIZED);
 
         // SubChunks
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
@@ -39,12 +41,12 @@ public class ChunkInstance extends WorldRenderInstance {
         super.create();
     }
 
-    @Override
     public void constructor(
             WorldRenderSystem worldRenderSystem,
             WorldHandle worldHandle,
             long coordinate,
-            VAOHandle vaoHandle) {
+            VAOHandle vaoHandle,
+            short airBlockId) {
 
         super.constructor(
                 worldRenderSystem,
@@ -58,7 +60,8 @@ public class ChunkInstance extends WorldRenderInstance {
                     worldrendersystem,
                     worldHandle,
                     subChunkCoordinate,
-                    vaoHandle);
+                    vaoHandle,
+                    airBlockId);
 
         // Neighbors
         this.chunkNeighbors.constructor(
@@ -68,23 +71,56 @@ public class ChunkInstance extends WorldRenderInstance {
 
     // Utility \\
 
-    public void merge() {
+    public boolean merge() {
 
+        boolean success = true;
         dynamicPacketInstance.clear();
 
         for (SubChunkInstance subChunkInstance : subChunks)
-            dynamicPacketInstance.merge(subChunkInstance.getDynamicPacketInstance());
+            if (!dynamicPacketInstance.merge(subChunkInstance.getDynamicPacketInstance()))
+                success = false;
+
+        return success;
     }
 
     // Accessible \\
 
     // Internal
-    public QueueOperation getChunkStateOperation() {
-        return chunkState.getAssociatedOperation();
+    public ChunkState getChunkState() {
+        return chunkState.get();
     }
 
     public void setChunkState(ChunkState chunkState) {
-        this.chunkState = chunkState;
+        this.chunkState.set(chunkState);
+    }
+
+    public QueueOperation getChunkStateOperation() {
+        return chunkState.get().getAssociatedOperation();
+    }
+
+    public boolean tryBeginOperation(QueueOperation operation) {
+
+        ChunkState targetState = switch (operation) {
+            case GENERATE -> ChunkState.GENERATING_DATA;
+            case NEIGHBOR_ASSESSMENT -> ChunkState.ASSESSING_NEIGHBORS;
+            case BUILD -> ChunkState.GENERATING_GEOMETRY;
+            case MERGE -> ChunkState.MERGING_DATA;
+            case BATCH -> ChunkState.BATCHING_DATA;
+            case SKIP -> null;
+        };
+
+        if (targetState == null)
+            return false;
+
+        // Try to transition from current state to target state
+        ChunkState currentState = chunkState.get();
+
+        // Already in the target state (already processing)
+        if (currentState == targetState)
+            return false;
+
+        // Atomic transition
+        return chunkState.compareAndSet(currentState, targetState);
     }
 
     // SubChunks

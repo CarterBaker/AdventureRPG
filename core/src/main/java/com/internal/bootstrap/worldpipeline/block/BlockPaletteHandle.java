@@ -3,186 +3,168 @@ package com.internal.bootstrap.worldpipeline.block;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.internal.bootstrap.worldpipeline.util.Coordinate3Short;
 import com.internal.core.engine.HandlePackage;
+import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.mathematics.Extras.Coordinate3Short;
 
-public class BlockPaletteHandle extends HandlePackage {
+public final class BlockPaletteHandle extends HandlePackage {
 
-    // Internal
-    private int paletteSize;
-    private int totalBlocks;
+    private int paletteAxisSize;
+    private int blocksPerCell;
+    private int scaleBits;
+
+    private int totalCells;
     private int maxPaletteSize;
 
-    // Palette mode
     private List<Short> palette;
     private long[] packedData;
     private int bitsPerEntry;
 
     private short[] directData;
 
-    // Internal \\
+    /* ------------------------------------------------------------ */
+    /* Construction */
+    /* ------------------------------------------------------------ */
 
-    public void constructor(
-            int paletteSize,
-            int paletteThreshold) {
+    public void constructor(int paletteAxisSize, int paletteThreshold, short airBlockId) {
 
-        // Internal
-        this.paletteSize = paletteSize;
-        this.totalBlocks = paletteSize * paletteSize * paletteSize;
+        int chunkSize = EngineSetting.CHUNK_SIZE;
+
+        if (chunkSize % paletteAxisSize != 0) {
+            throwException("paletteAxisSize must evenly divide CHUNK_SIZE");
+        }
+
+        int blocksPerCell = chunkSize / paletteAxisSize;
+
+        if ((blocksPerCell & (blocksPerCell - 1)) != 0) {
+            throwException("blocksPerCell must be power-of-two");
+        }
+
+        this.paletteAxisSize = paletteAxisSize;
+        this.blocksPerCell = blocksPerCell;
+        this.scaleBits = Integer.numberOfTrailingZeros(blocksPerCell);
+        this.totalCells = paletteAxisSize * paletteAxisSize * paletteAxisSize;
         this.maxPaletteSize = paletteThreshold;
 
-        // Palette mode
         this.palette = new ArrayList<>();
-        this.bitsPerEntry = 4;
 
+        // CRITICAL FIX: reserve index 0 permanently for AIR
+        this.palette.add(airBlockId);
+
+        this.bitsPerEntry = 1;
         allocatePackedArray();
     }
 
-    // Utility \\
-
-    private int getBlockIndex(int x, int y, int z) {
-        return x + y * paletteSize + z * paletteSize * paletteSize;
-    }
+    /* ------------------------------------------------------------ */
 
     private void allocatePackedArray() {
-        int longsNeeded = (int) Math.ceil((totalBlocks * (double) bitsPerEntry) / 64.0);
+        int longsNeeded = (int) Math.ceil((totalCells * (double) bitsPerEntry) / 64.0);
         this.packedData = new long[longsNeeded];
+    }
+
+    private int calculateBitsNeeded(int paletteSize) {
+        return Math.max(1, 32 - Integer.numberOfLeadingZeros(paletteSize - 1));
     }
 
     private int readPackedValue(int index) {
         int startBit = index * bitsPerEntry;
-        int longIndex = startBit / 64;
-        int bitOffset = startBit % 64;
+        int longIndex = startBit >>> 6;
+        int bitOffset = startBit & 63;
+        long mask = (1L << bitsPerEntry) - 1L;
 
-        long mask = (1L << bitsPerEntry) - 1;
-
-        // Check if value spans two longs
         if (bitOffset + bitsPerEntry <= 64) {
             return (int) ((packedData[longIndex] >>> bitOffset) & mask);
-        } else {
-            // Value spans two longs
-            int bitsInFirstLong = 64 - bitOffset;
-            int bitsInSecondLong = bitsPerEntry - bitsInFirstLong;
-
-            long firstPart = (packedData[longIndex] >>> bitOffset);
-            long secondPart = (packedData[longIndex + 1] & ((1L << bitsInSecondLong) - 1)) << bitsInFirstLong;
-
-            return (int) ((firstPart | secondPart) & mask);
         }
+
+        int lowBits = 64 - bitOffset;
+        int highBits = bitsPerEntry - lowBits;
+
+        long low = packedData[longIndex] >>> bitOffset;
+        long high = packedData[longIndex + 1] & ((1L << highBits) - 1L);
+
+        return (int) ((high << lowBits) | low);
     }
 
     private void writePackedValue(int index, int value) {
         int startBit = index * bitsPerEntry;
-        int longIndex = startBit / 64;
-        int bitOffset = startBit % 64;
+        int longIndex = startBit >>> 6;
+        int bitOffset = startBit & 63;
+        long mask = (1L << bitsPerEntry) - 1L;
 
-        long mask = (1L << bitsPerEntry) - 1;
-
-        // Check if value spans two longs
         if (bitOffset + bitsPerEntry <= 64) {
-            packedData[longIndex] &= ~(mask << bitOffset);
-            packedData[longIndex] |= ((long) value & mask) << bitOffset;
-        } else {
-            // Value spans two longs
-            int bitsInFirstLong = 64 - bitOffset;
-            int bitsInSecondLong = bitsPerEntry - bitsInFirstLong;
-
-            long firstMask = ((1L << bitsInFirstLong) - 1) << bitOffset;
-            long secondMask = (1L << bitsInSecondLong) - 1;
-
-            packedData[longIndex] &= ~firstMask;
-            packedData[longIndex] |= ((long) value & ((1L << bitsInFirstLong) - 1)) << bitOffset;
-
-            packedData[longIndex + 1] &= ~secondMask;
-            packedData[longIndex + 1] |= ((long) value >>> bitsInFirstLong) & secondMask;
+            packedData[longIndex] = (packedData[longIndex] & ~(mask << bitOffset)) |
+                    ((long) value << bitOffset);
+            return;
         }
+
+        int lowBits = 64 - bitOffset;
+        int highBits = bitsPerEntry - lowBits;
+
+        long lowMask = (1L << lowBits) - 1L;
+        long highMask = (1L << highBits) - 1L;
+
+        packedData[longIndex] = (packedData[longIndex] & ~(lowMask << bitOffset)) |
+                ((long) value & lowMask) << bitOffset;
+
+        packedData[longIndex + 1] = (packedData[longIndex + 1] & ~highMask) |
+                ((long) value >>> lowBits);
     }
 
-    private int calculateBitsNeeded(int paletteSize) {
-        if (paletteSize <= 1)
-            return 1;
-        return 32 - Integer.numberOfLeadingZeros(paletteSize - 1);
-    }
-
-    private void expandBits(int newBitsPerEntry) {
+    private void expandBits(int newBits) {
         long[] oldData = packedData;
         int oldBits = bitsPerEntry;
 
-        bitsPerEntry = newBitsPerEntry;
+        bitsPerEntry = newBits;
         allocatePackedArray();
 
-        for (int i = 0; i < totalBlocks; i++) {
-            int startBit = i * oldBits;
-            int longIndex = startBit / 64;
-            int bitOffset = startBit % 64;
-            long mask = (1L << oldBits) - 1;
-            int value = (int) ((oldData[longIndex] >>> bitOffset) & mask);
-
+        for (int i = 0; i < totalCells; i++) {
+            int value = readPackedValueFrom(oldData, oldBits, i);
             writePackedValue(i, value);
         }
     }
 
-    private void convertToDirect() {
-        directData = new short[totalBlocks];
+    private static int readPackedValueFrom(long[] data, int bits, int index) {
+        int startBit = index * bits;
+        int longIndex = startBit >>> 6;
+        int bitOffset = startBit & 63;
+        long mask = (1L << bits) - 1L;
 
-        for (int i = 0; i < totalBlocks; i++) {
-            int paletteIndex = readPackedValue(i);
-            directData[i] = palette.get(paletteIndex);
+        if (bitOffset + bits <= 64) {
+            return (int) ((data[longIndex] >>> bitOffset) & mask);
         }
 
-        palette = null;
-        packedData = null;
+        int lowBits = 64 - bitOffset;
+        int highBits = bits - lowBits;
+
+        long low = data[longIndex] >>> bitOffset;
+        long high = data[longIndex + 1] & ((1L << highBits) - 1L);
+
+        return (int) ((high << lowBits) | low);
     }
 
-    // Accessible \\
+    /* ------------------------------------------------------------ */
 
-    public int getPaletteSize() {
-        return paletteSize;
+    private int getCellIndex(short packedXYZ) {
+        int x = Coordinate3Short.unpackX(packedXYZ) >> scaleBits;
+        int y = Coordinate3Short.unpackY(packedXYZ) >> scaleBits;
+        int z = Coordinate3Short.unpackZ(packedXYZ) >> scaleBits;
+        return (y * paletteAxisSize + z) * paletteAxisSize + x;
     }
 
-    public short getBlock(int x, int y, int z) {
+    /* ------------------------------------------------------------ */
+    /* Public API */
+    /* ------------------------------------------------------------ */
 
-        int index = getBlockIndex(x, y, z);
-
-        if (directData != null)
-            return directData[index];
-
-        int paletteIndex = readPackedValue(index);
-        return palette.get(paletteIndex);
+    public short getBlock(short packedXYZ) {
+        int index = getCellIndex(packedXYZ);
+        return directData != null
+                ? directData[index]
+                : palette.get(readPackedValue(index));
     }
 
-    public short getBlock(short xyz) {
-        int index = Coordinate3Short.getBlockIndex(xyz);
+    public void setBlock(short packedXYZ, short blockId) {
 
-        if (directData != null)
-            return directData[index];
-
-        int paletteIndex = readPackedValue(index);
-        return palette.get(paletteIndex);
-    }
-
-    public short getBlock(short xyz, int virtualPaletteSize) {
-
-        // Calculate the scale factor between actual and virtual palette sizes
-        int scale = paletteSize / virtualPaletteSize;
-
-        // Unpack the coordinates
-        int x = Coordinate3Short.unpackX(xyz);
-        int y = Coordinate3Short.unpackY(xyz);
-        int z = Coordinate3Short.unpackZ(xyz);
-
-        // Scale down to virtual coordinates
-        int virtualX = x / scale;
-        int virtualY = y / scale;
-        int virtualZ = z / scale;
-
-        // Get the block at the virtual position
-        return getBlock(virtualX, virtualY, virtualZ);
-    }
-
-    public void setBlock(int x, int y, int z, short blockId) {
-
-        int index = getBlockIndex(x, y, z);
+        int index = getCellIndex(packedXYZ);
 
         if (directData != null) {
             directData[index] = blockId;
@@ -203,10 +185,29 @@ public class BlockPaletteHandle extends HandlePackage {
             paletteIndex = palette.size() - 1;
 
             int neededBits = calculateBitsNeeded(palette.size());
-            if (neededBits > bitsPerEntry)
+            if (neededBits > bitsPerEntry) {
                 expandBits(neededBits);
+            }
         }
 
+        // ALWAYS write, even when paletteIndex == 0
         writePackedValue(index, paletteIndex);
+    }
+
+    public short getBlock(int x, int y, int z) {
+        return getBlock(Coordinate3Short.pack(x, y, z));
+    }
+
+    public void setBlock(int x, int y, int z, short blockId) {
+        setBlock(Coordinate3Short.pack(x, y, z), blockId);
+    }
+
+    private void convertToDirect() {
+        directData = new short[totalCells];
+        for (int i = 0; i < totalCells; i++) {
+            directData[i] = palette.get(readPackedValue(i));
+        }
+        palette = null;
+        packedData = null;
     }
 }

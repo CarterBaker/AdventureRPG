@@ -14,10 +14,10 @@ import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import com.internal.bootstrap.worldpipeline.util.Coordinate3Short;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Color;
+import com.internal.core.util.mathematics.Extras.Coordinate3Short;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
@@ -178,8 +178,8 @@ public class FullGeometryBranch extends BranchPackage {
             BiomeHandle biomeHandleB,
             BlockHandle blockHandleA,
             BlockHandle blockHandleB) {
-        return (biomeHandleA == biomeHandleB &&
-                blockHandleA == blockHandleB);
+        return (biomeHandleA != biomeHandleB &&
+                blockHandleA != blockHandleB);
     }
 
     // Greedy Expansion \\

@@ -1,9 +1,5 @@
 package com.internal.core.util.mathematics.Extras;
 
-import com.internal.bootstrap.worldpipeline.util.Coordinate3Short;
-
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
-
 public enum Direction2Vector {
 
         NORTH(0, 1),

@@ -1,8 +1,6 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
-import com.internal.bootstrap.entitypipeline.playermanager.PlayerManager;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
+import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.AssessmentBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BatchBranch;
@@ -12,8 +10,6 @@ import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.MergeB
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.queue.QueueInstance;
 import com.internal.core.util.queue.QueueItemHandle;
 
@@ -24,6 +20,7 @@ import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 class ChunkQueueManager extends ManagerPackage {
 
     // Internal
+    private BlockManager blockManager;
     private ChunkStreamManager chunkStreamManager;
     private WorldRenderSystem worldRenderSystem;
     private GenerationBranch generationBranch;
@@ -31,6 +28,9 @@ class ChunkQueueManager extends ManagerPackage {
     private BuildBranch buildBranch;
     private MergeBranch mergeBranch;
     private BatchBranch batchBranch;
+
+    // Block Management
+    private short airBlockId;
 
     // Chunk Queue
     private QueueInstance chunkQueue;
@@ -73,8 +73,16 @@ class ChunkQueueManager extends ManagerPackage {
     protected void get() {
 
         // Internal
+        this.blockManager = get(BlockManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.worldRenderSystem = get(WorldRenderSystem.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Block Management
+        this.airBlockId = (short) blockManager.getBlockIDFromBlockName("Air");
     }
 
     @Override
@@ -138,7 +146,8 @@ class ChunkQueueManager extends ManagerPackage {
                 worldRenderSystem,
                 chunkStreamManager.getActiveWorldHandle(),
                 chunkCoordinate,
-                chunkStreamManager.getChunkVAO());
+                chunkStreamManager.getChunkVAO(),
+                airBlockId);
 
         activeChunks.put(chunkCoordinate, chunkInstance);
     }
@@ -165,7 +174,7 @@ class ChunkQueueManager extends ManagerPackage {
 
         switch (operation) {
             case SKIP -> {
-            }
+            } // no-op
             case GENERATE -> generationBranch.generateChunk(chunkInstance);
             case NEIGHBOR_ASSESSMENT -> assessmentBranch.assessChunk(chunkInstance);
             case BUILD -> buildBranch.buildChunk(chunkInstance);

@@ -1,8 +1,8 @@
 package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
-import com.internal.bootstrap.worldpipeline.util.Coordinate3Short;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate3Long;
+import com.internal.core.util.mathematics.Extras.Coordinate3Short;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
 public enum BlockDirection3Vector {

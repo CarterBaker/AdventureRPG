@@ -2,6 +2,7 @@ package com.internal.bootstrap.worldpipeline.worldrendersystem;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicModelHandle;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketState;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
@@ -68,7 +69,7 @@ public class WorldRenderSystem extends SystemPackage {
         }
     }
 
-    public void renderWorldInstance(WorldRenderInstance worldRenderInstance) {
+    public boolean renderWorldInstance(WorldRenderInstance worldRenderInstance) {
 
         long coordinate = worldRenderInstance.getCoordinate();
 
@@ -77,6 +78,9 @@ public class WorldRenderSystem extends SystemPackage {
             removeWorldInstance(coordinate);
 
         DynamicPacketInstance dynamicPacket = worldRenderInstance.getDynamicPacketInstance();
+
+        if (dynamicPacket.getState() != DynamicPacketState.READY)
+            return false;
 
         // Create list to store all models for this chunk
         ObjectArrayList<ModelHandle> modelList = new ObjectArrayList<>();
@@ -115,8 +119,13 @@ public class WorldRenderSystem extends SystemPackage {
             }
         }
 
+        if (modelList.isEmpty())
+            return false;
+
         // Store the model list mapped to this coordinate
         coordinate2Models.put(coordinate, modelList);
+
+        return true;
     }
 
     public void removeWorldInstance(long coordinate) {

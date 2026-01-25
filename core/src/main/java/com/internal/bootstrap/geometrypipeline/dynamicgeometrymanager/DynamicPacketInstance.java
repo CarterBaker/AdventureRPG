@@ -1,5 +1,7 @@
 package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
@@ -12,7 +14,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class DynamicPacketInstance extends InstancePackage {
 
     // Internal
-    private volatile DynamicPacketState state;
+    private AtomicReference<DynamicPacketState> state;
     private VAOHandle vaoHandle;
     private Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> materialID2ModelCollection;
     private ObjectArrayList<ModelHandle> modelHandleCollection;
@@ -23,9 +25,23 @@ public class DynamicPacketInstance extends InstancePackage {
     public void constructor(VAOHandle vaoHandle) {
 
         // Internal
-        this.state = DynamicPacketState.EMPTY;
+        this.state = new AtomicReference<>(DynamicPacketState.EMPTY);
         this.vaoHandle = vaoHandle;
         this.materialID2ModelCollection = new Int2ObjectOpenHashMap<>();
+    }
+
+    // State Management \\
+
+    public boolean tryLock() {
+        return state.compareAndSet(DynamicPacketState.EMPTY, DynamicPacketState.GENERATING);
+    }
+
+    public void unlock() {
+        state.set(DynamicPacketState.EMPTY);
+    }
+
+    public void setReady() {
+        state.set(DynamicPacketState.READY);
     }
 
     // Dynamic Packet \\
@@ -73,20 +89,40 @@ public class DynamicPacketInstance extends InstancePackage {
         }
     }
 
-    public void merge(DynamicPacketInstance other) {
+    public boolean merge(DynamicPacketInstance other) {
 
-        for (var entry : other.materialID2ModelCollection.int2ObjectEntrySet()) {
+        if (other == null || other.materialID2ModelCollection == null)
+            return true;
 
-            int materialId = entry.getIntKey();
-            ObjectArrayList<DynamicModelHandle> sourceModels = entry.getValue();
+        try {
 
-            for (DynamicModelHandle sourceModel : sourceModels) {
+            for (var entry : other.materialID2ModelCollection.int2ObjectEntrySet()) {
 
-                if (sourceModel.isEmpty())
+                int materialId = entry.getIntKey();
+                ObjectArrayList<DynamicModelHandle> sourceModels = entry.getValue();
+
+                if (sourceModels == null)
                     continue;
 
-                addVertices(materialId, sourceModel.getVertices());
+                for (DynamicModelHandle sourceModel : sourceModels) {
+
+                    if (sourceModel == null || sourceModel.isEmpty())
+                        continue;
+
+                    FloatArrayList vertices = sourceModel.getVertices();
+
+                    if (vertices == null || vertices.isEmpty())
+                        continue;
+
+                    addVertices(materialId, vertices);
+                }
             }
+
+            return true;
+        }
+
+        catch (Exception e) {
+            return false;
         }
     }
 
@@ -107,11 +143,11 @@ public class DynamicPacketInstance extends InstancePackage {
     // Utility \\
 
     public DynamicPacketState getState() {
-        return state;
+        return state.get();
     }
 
     public void setState(DynamicPacketState state) {
-        this.state = state;
+        this.state.set(state);
     }
 
     public Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> getMaterialID2ModelCollection() {
