@@ -17,6 +17,7 @@ import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Color;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate3Short;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
@@ -71,29 +72,43 @@ public class FullGeometryBranch extends BranchPackage {
             BitSet batchReturn,
             Color[] vertColors) {
 
-        if (!blockHasFace(
-                chunkInstance,
-                subChunkInstance,
-                xyz,
-                direction3Vector,
-                biomeHandle,
-                blockHandle))
-            return false;
+        try {
 
-        return assembleQuad(
-                chunkInstance,
-                subChunkInstance,
-                biomePaletteHandle,
-                blockPaletteHandle,
-                dynamicPacketInstance,
-                xyz,
-                direction3Vector,
-                biomeHandle,
-                blockHandle,
-                verts,
-                accumulatedBatch,
-                batchReturn,
-                vertColors);
+            if (!blockHasFace(
+                    chunkInstance,
+                    subChunkInstance,
+                    xyz,
+                    direction3Vector,
+                    biomeHandle,
+                    blockHandle))
+                return false;
+
+            return assembleQuad(
+                    chunkInstance,
+                    subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
+                    dynamicPacketInstance,
+                    xyz,
+                    direction3Vector,
+                    biomeHandle,
+                    blockHandle,
+                    verts,
+                    accumulatedBatch,
+                    batchReturn,
+                    vertColors);
+
+        }
+
+        catch (Exception e) {
+
+            debugBuilder(("EXCEPTION in assembleQuads for xyz=" + xyz + " direction=" + direction3Vector),
+                    chunkInstance,
+                    subChunkInstance);
+            if (isDebugChunk(chunkInstance, subChunkInstance))
+                e.printStackTrace();
+            return false;
+        }
     }
 
     private boolean blockHasFace(
@@ -109,22 +124,14 @@ public class FullGeometryBranch extends BranchPackage {
                 subChunkInstance,
                 xyz,
                 direction3Vector);
-        if (comparativeSubChunkCoordinate == ERROR)
-            return false;
 
         short comparativeXYZ = Coordinate3Short.getNeighborAndWrap(xyz, direction3Vector);
-
-        BlockPaletteHandle comparativeBiomePaletteHandle = comparativeSubChunkCoordinate.getBiomePaletteHandle();
-        short comparativeBiomeID = comparativeBiomePaletteHandle.getBlock(comparativeXYZ);
-        BiomeHandle comparativeBiomeHandle = biomeManager.getBiomeFromBiomeID(comparativeBiomeID);
 
         BlockPaletteHandle comparativeBlockPaletteHandle = comparativeSubChunkCoordinate.getBlockPaletteHandle();
         short comparativeBlockID = comparativeBlockPaletteHandle.getBlock(comparativeXYZ);
         BlockHandle comparativeBlockHandle = blockManager.getBlockFromBlockID(comparativeBlockID);
 
         return compareNeighbor(
-                biomeHandle,
-                comparativeBiomeHandle,
                 blockHandle,
                 comparativeBlockHandle);
     }
@@ -174,12 +181,9 @@ public class FullGeometryBranch extends BranchPackage {
     }
 
     private boolean compareNeighbor(
-            BiomeHandle biomeHandleA,
-            BiomeHandle biomeHandleB,
             BlockHandle blockHandleA,
             BlockHandle blockHandleB) {
-        return (biomeHandleA != biomeHandleB &&
-                blockHandleA != blockHandleB);
+        return (blockHandleA.getGeometry() != blockHandleB.getGeometry());
     }
 
     // Greedy Expansion \\
@@ -335,6 +339,15 @@ public class FullGeometryBranch extends BranchPackage {
         }
 
         return true;
+    }
+
+    private boolean compareNeighbor(
+            BiomeHandle biomeHandleA,
+            BiomeHandle biomeHandleB,
+            BlockHandle blockHandleA,
+            BlockHandle blockHandleB) {
+        return (biomeHandleA != biomeHandleB &&
+                blockHandleA != blockHandleB);
     }
 
     // Face preperation \\
@@ -592,5 +605,23 @@ public class FullGeometryBranch extends BranchPackage {
         buffer.add(uvRect.v1);
 
         return true;
+    }
+
+    // TODO: Remove
+
+    private boolean isDebugChunk(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance) {
+        long chunkCoord = chunkInstance.getCoordinate();
+        return chunkCoord == Coordinate2Long.pack(0, 0) && subChunkInstance.getCoordinate() == 0;
+    }
+
+    private void debugBuilder(
+            String message,
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance) {
+
+        if (!isDebugChunk(chunkInstance, subChunkInstance))
+            return;
+
+        System.out.println(message);
     }
 }

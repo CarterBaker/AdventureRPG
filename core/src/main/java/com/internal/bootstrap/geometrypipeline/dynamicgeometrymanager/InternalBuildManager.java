@@ -15,7 +15,9 @@ import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.ManagerPackage;
+import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Color;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate3Short;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
@@ -33,6 +35,8 @@ class InternalBuildManager extends ManagerPackage {
     private BiomeManager biomeManager;
     private BlockManager blockManager;
 
+    private int BLOCK_COORDINATE_COUNT;
+
     // Internal \\
 
     @Override
@@ -43,6 +47,8 @@ class InternalBuildManager extends ManagerPackage {
         this.partialGeometryBranch = create(PartialGeometryBranch.class);
         this.complexGeometryBranch = create(ComplexGeometryBranch.class);
         this.liquidGeometryBranch = create(LiquidGeometryBranch.class);
+
+        this.BLOCK_COORDINATE_COUNT = Coordinate3Short.BLOCK_COORDINATE_COUNT;
     }
 
     @Override
@@ -66,6 +72,7 @@ class InternalBuildManager extends ManagerPackage {
             return false;
 
         dynamicPacketInstance.clear();
+        dynamicGeometryAsyncContainer.reset();
 
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
@@ -76,7 +83,7 @@ class InternalBuildManager extends ManagerPackage {
 
         Color[] vertColors = dynamicGeometryAsyncContainer.getVertColors();
 
-        for (int i = 0; i < Coordinate3Short.BLOCK_COORDINATE_COUNT; i++) {
+        for (int i = 0; i < BLOCK_COORDINATE_COUNT; i++) {
 
             short xyz = Coordinate3Short.getBlockCoordinate(i);
 
@@ -85,9 +92,6 @@ class InternalBuildManager extends ManagerPackage {
 
             short blockID = blockPaletteHandle.getBlock(xyz);
             BlockHandle blockHandle = blockManager.getBlockFromBlockID(blockID);
-
-            if (blockHandle.getGeometry() == DynamicGeometryType.NONE)
-                debug(blockHandle.getGeometry().toString());
 
             for (int direction = 0; direction < Direction3Vector.LENGTH; direction++) {
 
@@ -214,5 +218,22 @@ class InternalBuildManager extends ManagerPackage {
 
             case NONE -> true; // Not reachable
         };
+    }
+
+    // TODO: Remove
+
+    private void debugBuilder(
+            String message,
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance) {
+
+        long chunkCoord = chunkInstance.getCoordinate();
+        if (chunkCoord != Coordinate2Long.pack(0, 0))
+            return;
+
+        if (subChunkInstance.getCoordinate() != 0)
+            return;
+
+        System.out.println(message);
     }
 }
