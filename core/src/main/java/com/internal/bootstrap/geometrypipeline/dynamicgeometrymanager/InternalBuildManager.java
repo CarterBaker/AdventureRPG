@@ -15,9 +15,7 @@ import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Color;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate3Short;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
@@ -218,22 +216,5 @@ class InternalBuildManager extends ManagerPackage {
 
             case NONE -> true; // Not reachable
         };
-    }
-
-    // TODO: Remove
-
-    private void debugBuilder(
-            String message,
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance) {
-
-        long chunkCoord = chunkInstance.getCoordinate();
-        if (chunkCoord != Coordinate2Long.pack(0, 0))
-            return;
-
-        if (subChunkInstance.getCoordinate() != 0)
-            return;
-
-        System.out.println(message);
     }
 }

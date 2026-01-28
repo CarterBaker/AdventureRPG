@@ -13,7 +13,6 @@ public class DynamicModelHandle extends HandlePackage {
     private int materialID;
     private VAOHandle vaoHandle;
     private int vertStride;
-
     private FloatArrayList vertices;
     private ShortArrayList indices;
 
@@ -27,7 +26,6 @@ public class DynamicModelHandle extends HandlePackage {
         this.materialID = materialID;
         this.vaoHandle = vaoHandle;
         this.vertStride = vaoHandle.getVertStride();
-
         this.vertices = new FloatArrayList();
         this.indices = new ShortArrayList();
     }
@@ -44,16 +42,14 @@ public class DynamicModelHandle extends HandlePackage {
         int currentVertCount = vertices.size() / vertStride;
         int availableVerts = EngineSetting.MESH_VERT_LIMIT - currentVertCount;
 
-        if (availableVerts <= 0)
-            return 0;
+        // Round down to nearest multiple of 4 (complete quads only)
+        int availableQuads = availableVerts / 4;
 
-        int quadsToAdd = length / floatsPerQuad;
-        int vertsToAdd = quadsToAdd * 4;
-        int vertsFit = Math.min(availableVerts, vertsToAdd);
-        int quadsFit = vertsFit / 4;
+        if (availableQuads <= 0)
+            return 0; // No room for even one quad
 
-        if (quadsFit <= 0)
-            return 0;
+        int quadsRequested = length / floatsPerQuad;
+        int quadsFit = Math.min(availableQuads, quadsRequested);
 
         int floatsToAdd = quadsFit * floatsPerQuad;
 
@@ -74,6 +70,7 @@ public class DynamicModelHandle extends HandlePackage {
         int quadCount = sourceVerts.size() / floatsPerQuad;
 
         vertices.addElements(vertices.size(), sourceVerts.elements(), 0, sourceVerts.size());
+
         appendQuadIndices(startVertex, quadCount);
     }
 
@@ -119,7 +116,8 @@ public class DynamicModelHandle extends HandlePackage {
 
     public boolean isFull() {
         int currentVertCount = vertices.size() / vertStride;
-        return currentVertCount >= EngineSetting.MESH_VERT_LIMIT;
+        int availableVerts = EngineSetting.MESH_VERT_LIMIT - currentVertCount;
+        return availableVerts < 4; // Need at least 4 verts for a quad
     }
 
     public int getVertexCount() {

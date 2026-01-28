@@ -72,43 +72,29 @@ public class FullGeometryBranch extends BranchPackage {
             BitSet batchReturn,
             Color[] vertColors) {
 
-        try {
-
-            if (!blockHasFace(
-                    chunkInstance,
-                    subChunkInstance,
-                    xyz,
-                    direction3Vector,
-                    biomeHandle,
-                    blockHandle))
-                return false;
-
-            return assembleQuad(
-                    chunkInstance,
-                    subChunkInstance,
-                    biomePaletteHandle,
-                    blockPaletteHandle,
-                    dynamicPacketInstance,
-                    xyz,
-                    direction3Vector,
-                    biomeHandle,
-                    blockHandle,
-                    verts,
-                    accumulatedBatch,
-                    batchReturn,
-                    vertColors);
-
-        }
-
-        catch (Exception e) {
-
-            debugBuilder(("EXCEPTION in assembleQuads for xyz=" + xyz + " direction=" + direction3Vector),
-                    chunkInstance,
-                    subChunkInstance);
-            if (isDebugChunk(chunkInstance, subChunkInstance))
-                e.printStackTrace();
+        if (!blockHasFace(
+                chunkInstance,
+                subChunkInstance,
+                xyz,
+                direction3Vector,
+                biomeHandle,
+                blockHandle))
             return false;
-        }
+
+        return assembleQuad(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                blockPaletteHandle,
+                dynamicPacketInstance,
+                xyz,
+                direction3Vector,
+                biomeHandle,
+                blockHandle,
+                verts,
+                accumulatedBatch,
+                batchReturn,
+                vertColors);
     }
 
     private boolean blockHasFace(
@@ -124,6 +110,9 @@ public class FullGeometryBranch extends BranchPackage {
                 subChunkInstance,
                 xyz,
                 direction3Vector);
+
+        if (comparativeSubChunkCoordinate == null)
+            return true;
 
         short comparativeXYZ = Coordinate3Short.getNeighborAndWrap(xyz, direction3Vector);
 
@@ -159,7 +148,7 @@ public class FullGeometryBranch extends BranchPackage {
             if (comparativeSubChunkCoordinate >= 0 && comparativeSubChunkCoordinate < EngineSetting.WORLD_HEIGHT)
                 return chunkInstance.getSubChunk(comparativeSubChunkCoordinate);
 
-            else // Else return null
+            else // Else return null at edge of world height wise
                 return null;
         }
 
@@ -346,8 +335,8 @@ public class FullGeometryBranch extends BranchPackage {
             BiomeHandle biomeHandleB,
             BlockHandle blockHandleA,
             BlockHandle blockHandleB) {
-        return (biomeHandleA != biomeHandleB &&
-                blockHandleA != blockHandleB);
+        return (biomeHandleA == biomeHandleB &&
+                blockHandleA == blockHandleB);
     }
 
     // Face preperation \\
@@ -609,9 +598,12 @@ public class FullGeometryBranch extends BranchPackage {
 
     // TODO: Remove
 
-    private boolean isDebugChunk(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance) {
-        long chunkCoord = chunkInstance.getCoordinate();
-        return chunkCoord == Coordinate2Long.pack(0, 0) && subChunkInstance.getCoordinate() == 0;
+    private boolean shouldDebug(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance) {
+
+        return chunkInstance.getCoordinate() == Coordinate2Long.pack(0, 0)
+                && subChunkInstance.getCoordinate() == 0;
     }
 
     private void debugBuilder(
@@ -619,9 +611,10 @@ public class FullGeometryBranch extends BranchPackage {
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance) {
 
-        if (!isDebugChunk(chunkInstance, subChunkInstance))
+        if (!shouldDebug(chunkInstance, subChunkInstance))
             return;
 
         System.out.println(message);
     }
+
 }

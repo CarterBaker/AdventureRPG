@@ -33,15 +33,16 @@ public class BuildBranch extends BranchPackage {
             return;
 
         // Submit to generation thread
-        executeAsync(threadHandle, dynamicGeometryAsyncContainer, (DynamicGeometryAsyncContainer instance) -> {
+        executeAsync(threadHandle, dynamicGeometryAsyncContainer,
+                (DynamicGeometryAsyncContainer threadSpecificReferenceContainer) -> {
 
-            if (dynamicGeometryManager.build(
-                    dynamicGeometryAsyncContainer,
-                    chunkInstance))
-                chunkInstance.setChunkState(ChunkState.HAS_GEOMETRY_DATA);
+                    if (dynamicGeometryManager.build(
+                            threadSpecificReferenceContainer,
+                            chunkInstance))
+                        chunkInstance.setChunkState(ChunkState.HAS_GEOMETRY_DATA);
 
-            else
-                chunkInstance.setChunkState(ChunkState.NEEDS_GEOMETRY_DATA);
-        });
+                    else
+                        chunkInstance.setChunkState(ChunkState.NEEDS_GEOMETRY_DATA);
+                });
     }
 }
