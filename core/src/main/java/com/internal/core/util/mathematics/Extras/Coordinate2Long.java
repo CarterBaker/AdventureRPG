@@ -28,6 +28,16 @@ public final class Coordinate2Long {
         return packed + direction.coordinate2Long;
     }
 
+    // Addition \\
+
+    public static long add(long a, long b) {
+        long sum = a + b;
+
+        // Fix overflow from low 32 bits affecting high 32 bits
+        long carry = (sum & 0x100000000L) >>> 32; // will be 1 if Y overflowed
+        return sum + (carry << 32);
+    }
+
     // Utility \\
 
     public static long toMegaChunkCoordinate(long packedChunk) {

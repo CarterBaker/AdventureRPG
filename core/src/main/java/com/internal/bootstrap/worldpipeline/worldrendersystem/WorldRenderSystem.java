@@ -43,12 +43,14 @@ public class WorldRenderSystem extends SystemPackage {
 
     @Override
     protected void update() {
+
+        timeStampDebug(
+                "Frame: " + internal.getFrameCount() + ", WorldRenderSystem models: " + coordinate2Models.size());
+
         // Push all models to render system each frame
-        for (ObjectArrayList<ModelHandle> modelList : coordinate2Models.values()) {
-            for (ModelHandle model : modelList) {
+        for (ObjectArrayList<ModelHandle> modelList : coordinate2Models.values())
+            for (ModelHandle model : modelList)
                 renderSystem.pushRenderCall(model, 0);
-            }
-        }
     }
 
     // World Render System \\

@@ -1,34 +1,39 @@
 package com.internal.bootstrap.worldpipeline.megachunk;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderOperation;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
-import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
-
-import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 public class MegaChunkInstance extends WorldRenderInstance {
 
     // Internal
-    private Long2ObjectLinkedOpenHashMap<ChunkInstance> chunks;
-    private int MEGA_CHUNK_SCALE;
+    private int megaScale;
+    private AtomicReference<MegaState> megaState;
+
+    // Batch Data
+    private MegaBatchStruct megaBatchStruct;
 
     @Override
     protected void create() {
-        super.create();
 
-        chunks = new Long2ObjectLinkedOpenHashMap<>();
+        // Internal
+        this.megaState = new AtomicReference<>(MegaState.UNINITIALIZED);
+
+        super.create();
     }
 
-    @Override
     public void constructor(
             WorldRenderSystem worldRenderSystem,
             WorldHandle worldHandle,
             long megaChunkCoordinate,
-            VAOHandle vaoHandle) {
+            VAOHandle vaoHandle,
+            int megaScale) {
 
         super.constructor(
                 worldRenderSystem,
@@ -36,29 +41,67 @@ public class MegaChunkInstance extends WorldRenderInstance {
                 megaChunkCoordinate,
                 vaoHandle);
 
-        // Internal
-        int MEGA_CHUNK_SIZE = EngineSetting.MEGA_CHUNK_SIZE;
-        this.MEGA_CHUNK_SCALE = MEGA_CHUNK_SIZE * MEGA_CHUNK_SIZE;
+        // Batch Data
+        this.megaScale = megaScale;
+        megaBatchStruct = new MegaBatchStruct(
+                coordinate,
+                megaScale);
     }
 
     // Utility \\
 
-    public boolean addChunkInstance(ChunkInstance chunkInstance) {
+    public boolean merge() {
 
-        long chunkCoordinate = chunkInstance.getCoordinate();
-        if (Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate) != coordinate)
-            return false;
-
-        chunks.put(chunkCoordinate, chunkInstance);
-
-        return (chunks.size() == MEGA_CHUNK_SCALE);
-    }
-
-    public void merge() {
-
+        boolean success = true;
         dynamicPacketInstance.clear();
 
-        for (ChunkInstance chunkInstance : chunks.values())
-            dynamicPacketInstance.merge(chunkInstance.getDynamicPacketInstance());
+        Long2ObjectOpenHashMap<ChunkInstance> batchedChunks = megaBatchStruct.getBatchedChunks();
+
+        for (ChunkInstance chunkInstance : batchedChunks.values())
+            if (!dynamicPacketInstance.merge(chunkInstance.getDynamicPacketInstance()))
+                success = false;
+
+        return success;
+    }
+
+    // Accessibility \\
+
+    // Internal
+    public MegaState getMegaState() {
+        return megaState.get();
+    }
+
+    public void setMegaState(MegaState megaState) {
+        this.megaState.set(megaState);
+    }
+
+    public RenderOperation getMegaRenderOperation() {
+        return megaState.get().getRenderOperation();
+    }
+
+    public boolean tryBeginOperation(MegaState targetState) {
+
+        MegaState currentState = megaState.get();
+
+        // Already in the target state
+        if (currentState == targetState)
+            return false;
+
+        // Atomic transition
+        return megaState.compareAndSet(currentState, targetState);
+    }
+
+    // Batch Data
+
+    public boolean isComplete() {
+        return megaBatchStruct.isComplete();
+    }
+
+    public boolean batchChunk(ChunkInstance chunkInstance) {
+        return megaBatchStruct.batchChunk(chunkInstance);
+    }
+
+    public Long2ObjectOpenHashMap<ChunkInstance> getBatchedChunks() {
+        return megaBatchStruct.getBatchedChunks();
     }
 }

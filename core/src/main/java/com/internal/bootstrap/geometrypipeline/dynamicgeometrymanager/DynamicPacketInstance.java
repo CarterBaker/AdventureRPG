@@ -2,9 +2,7 @@ package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
-import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
 import com.internal.core.engine.InstancePackage;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -16,9 +14,9 @@ public class DynamicPacketInstance extends InstancePackage {
     // Internal
     private AtomicReference<DynamicPacketState> state;
     private VAOHandle vaoHandle;
+
+    // model Management
     private Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> materialID2ModelCollection;
-    private ObjectArrayList<ModelHandle> modelHandleCollection;
-    private Int2ObjectOpenHashMap<RenderCallHandle> renderCallID2RenderCall;
 
     // Internal \\
 
@@ -27,6 +25,8 @@ public class DynamicPacketInstance extends InstancePackage {
         // Internal
         this.state = new AtomicReference<>(DynamicPacketState.EMPTY);
         this.vaoHandle = vaoHandle;
+
+        // model Management
         this.materialID2ModelCollection = new Int2ObjectOpenHashMap<>();
     }
 
@@ -36,57 +36,66 @@ public class DynamicPacketInstance extends InstancePackage {
         return state.compareAndSet(DynamicPacketState.EMPTY, DynamicPacketState.GENERATING);
     }
 
-    public void unlock() {
-        state.set(DynamicPacketState.EMPTY);
-    }
-
     public void setReady() {
         state.set(DynamicPacketState.READY);
     }
 
+    public void unlock() {
+        state.set(DynamicPacketState.EMPTY);
+    }
+
     // Dynamic Packet \\
 
-    public void addVertices(int materialId, FloatArrayList vertList) {
+    public boolean addVertices(
+            int materialId,
+            FloatArrayList vertList) {
 
         int floatsPerQuad = vaoHandle.getVertStride() * 4;
 
+        // Enforce quad alignment
         if (vertList.size() % floatsPerQuad != 0)
-            throwException("Vertex data must be quad-aligned");
+            return false;
 
         ObjectArrayList<DynamicModelHandle> modelList = materialID2ModelCollection.computeIfAbsent(
-                materialId,
-                k -> new ObjectArrayList<>());
+                materialId, k -> new ObjectArrayList<>());
 
         int processed = 0;
-        int totalFloats = vertList.size();
+        int total = vertList.size();
 
-        while (processed < totalFloats) {
+        while (processed < total) {
 
-            // Try to find an existing model with space
-            DynamicModelHandle targetModel = null;
-            for (DynamicModelHandle model : modelList) {
+            // Find first model with remaining capacity
+            DynamicModelHandle target = null;
+            for (DynamicModelHandle model : modelList)
                 if (!model.isFull()) {
-                    targetModel = model;
+                    target = model;
                     break;
                 }
+
+            // Allocate new model if all are full
+            boolean addToMaterialBucket = false;
+            if (target == null) {
+                target = create(DynamicModelHandle.class);
+                target.constructor(materialId, vaoHandle);
+                addToMaterialBucket = true;
             }
 
-            // Create new model if needed
-            if (targetModel == null) {
-                targetModel = create(DynamicModelHandle.class);
-                targetModel.constructor(materialId, vaoHandle);
-                modelList.add(targetModel);
-            }
+            // Attempt to append vertices
+            int added = target.tryAddVertices(
+                    vertList,
+                    processed,
+                    total - processed);
 
-            // Add as many vertices as possible to this model
-            int remaining = totalFloats - processed;
-            int added = targetModel.tryAddVertices(vertList, processed, remaining);
+            if (added <= 0)
+                return false;
 
-            if (added == 0)
-                throwException("Failed to add vertices to model");
+            else if (addToMaterialBucket)
+                modelList.add(target);
 
             processed += added;
         }
+
+        return true;
     }
 
     public boolean merge(DynamicPacketInstance other) {
@@ -94,89 +103,63 @@ public class DynamicPacketInstance extends InstancePackage {
         if (other == null || other.materialID2ModelCollection == null)
             return true;
 
-        try {
+        for (var entry : other.materialID2ModelCollection.int2ObjectEntrySet()) {
 
-            for (var entry : other.materialID2ModelCollection.int2ObjectEntrySet()) {
+            int materialId = entry.getIntKey();
+            ObjectArrayList<DynamicModelHandle> sourceModels = entry.getValue();
 
-                int materialId = entry.getIntKey();
-                ObjectArrayList<DynamicModelHandle> sourceModels = entry.getValue();
+            if (sourceModels == null)
+                continue;
 
-                if (sourceModels == null)
+            for (DynamicModelHandle source : sourceModels) {
+
+                if (source == null || source.isEmpty())
                     continue;
 
-                for (DynamicModelHandle sourceModel : sourceModels) {
+                FloatArrayList vertices = source.getVertices();
+                if (vertices == null || vertices.isEmpty())
+                    continue;
 
-                    if (sourceModel == null || sourceModel.isEmpty())
-                        continue;
-
-                    FloatArrayList vertices = sourceModel.getVertices();
-
-                    if (vertices == null || vertices.isEmpty())
-                        continue;
-
-                    addVertices(materialId, vertices);
-                }
+                // Early exit on failure
+                if (!addVertices(materialId, vertices))
+                    return false;
             }
-
-            return true;
         }
 
-        catch (Exception e) {
-            return false;
-        }
+        return true;
     }
 
     public void clear() {
 
         for (ObjectArrayList<DynamicModelHandle> modelList : materialID2ModelCollection.values()) {
-            for (DynamicModelHandle model : modelList) {
+
+            for (DynamicModelHandle model : modelList)
                 model.clear();
-            }
+
             modelList.clear();
         }
 
         materialID2ModelCollection.clear();
 
-        setState(DynamicPacketState.EMPTY);
+        unlock();
     }
 
-    // Utility \\
+    // Accessible \\
 
     public DynamicPacketState getState() {
         return state.get();
     }
 
-    public void setState(DynamicPacketState state) {
-        this.state.set(state);
+    public boolean hasModels() {
+
+        for (ObjectArrayList<DynamicModelHandle> models : materialID2ModelCollection.values())
+            if (models.size() > 0)
+                return true;
+
+        return false;
     }
 
     public Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> getMaterialID2ModelCollection() {
         return materialID2ModelCollection;
-    }
-
-    public ObjectArrayList<DynamicModelHandle> getModelsForMaterial(int materialId) {
-        return materialID2ModelCollection.get(materialId);
-    }
-
-    public int getMaterialCount() {
-        return materialID2ModelCollection.size();
-    }
-
-    public int getTotalModelCount() {
-        int total = 0;
-        for (ObjectArrayList<DynamicModelHandle> models : materialID2ModelCollection.values()) {
-            total += models.size();
-        }
-        return total;
-    }
-
-    public int getTotalVertexCount() {
-        int total = 0;
-        for (ObjectArrayList<DynamicModelHandle> models : materialID2ModelCollection.values()) {
-            for (DynamicModelHandle model : models) {
-                total += model.getVertexCount();
-            }
-        }
-        return total;
     }
 }

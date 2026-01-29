@@ -33,6 +33,7 @@ public enum ChunkState {
     HAS_BATCH_DATA(QueueOperation.SKIP);
 
     // Internal
+    private final int order;
     private final QueueOperation associatedOperation;
 
     // Internal \\
@@ -40,10 +41,15 @@ public enum ChunkState {
     ChunkState(QueueOperation associatedOperation) {
 
         // Internal
+        this.order = ordinal();
         this.associatedOperation = associatedOperation;
     }
 
     // Accessible \\
+
+    public int getOrder() {
+        return order;
+    }
 
     public QueueOperation getAssociatedOperation() {
         return associatedOperation;

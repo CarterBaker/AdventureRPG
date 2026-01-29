@@ -13,18 +13,14 @@ public class ChunkNeighborStruct extends StructPackage {
 
     // Internal \\
 
-    public ChunkNeighborStruct() {
-
-        // Internal
-        this.neighborCoordinates = new long[Direction2Vector.LENGTH];
-        this.neighborChunks = new ChunkInstance[Direction2Vector.LENGTH];
-    }
-
-    public void constructor(
+    public ChunkNeighborStruct(
             long chunkCoordinate,
             ChunkInstance chunkInstance) {
 
         // Internal
+        this.neighborCoordinates = new long[Direction2Vector.LENGTH];
+        this.neighborChunks = new ChunkInstance[Direction2Vector.LENGTH];
+
         for (byte direction2VectorIndex = 0; direction2VectorIndex < Direction2Vector.LENGTH; direction2VectorIndex++) {
 
             long neighborCoordinate = Coordinate2Long.getNeighbor(

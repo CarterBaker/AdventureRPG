@@ -125,15 +125,17 @@ class InternalBuildManager extends ManagerPackage {
             }
         }
 
+        boolean success = true;
         for (int materialID : verts.keySet())
-            dynamicPacketInstance.addVertices(materialID, verts.get(materialID));
+            if (!dynamicPacketInstance.addVertices(materialID, verts.get(materialID)))
+                success = false;
 
-        if (dynamicPacketInstance.getTotalVertexCount() > 0)
+        if (dynamicPacketInstance.hasModels())
             dynamicPacketInstance.setReady();
         else
             dynamicPacketInstance.unlock();
 
-        return true;
+        return success;
     }
 
     private boolean assembleQuads(

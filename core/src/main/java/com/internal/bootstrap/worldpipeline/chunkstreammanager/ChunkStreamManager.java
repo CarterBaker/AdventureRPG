@@ -18,12 +18,12 @@ public class ChunkStreamManager extends ManagerPackage {
     // Internal
     private VAOManager vaoManager;
     private PlayerManager playerManager;
+    private GridManager gridManager;
+    private VAOHandle chunkVAO;
+
     private ChunkPositionSystem chunkPositionSystem;
     private ChunkQueueManager chunkQueueManager;
-    private ChunkBatchSystem chunkBatchSystem;
-    private GridManager gridManager;
-
-    private VAOHandle chunkVAO;
+    private BatchSystem batchSystem;
 
     // Chunk Position
     private long activeChunkCoordinate;
@@ -38,7 +38,7 @@ public class ChunkStreamManager extends ManagerPackage {
         // Internal
         this.chunkPositionSystem = create(ChunkPositionSystem.class);
         this.chunkQueueManager = create(ChunkQueueManager.class);
-        this.chunkBatchSystem = create(ChunkBatchSystem.class);
+        this.batchSystem = create(BatchSystem.class);
 
         // Chunk Position
         this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
@@ -49,7 +49,8 @@ public class ChunkStreamManager extends ManagerPackage {
         this.chunkPositionSystem.setActiveChunks(activeChunks);
         this.chunkPositionSystem.setActiveMegaChunks(activeMegaChunks);
         this.chunkQueueManager.setActiveChunks(activeChunks);
-        this.chunkBatchSystem.setActiveMegaChunks(activeMegaChunks);
+        this.chunkQueueManager.setActiveMegaChunks(activeMegaChunks);
+        this.batchSystem.setActiveMegaChunks(activeMegaChunks);
     }
 
     @Override
@@ -59,7 +60,6 @@ public class ChunkStreamManager extends ManagerPackage {
         this.vaoManager = get(VAOManager.class);
         this.playerManager = get(PlayerManager.class);
         this.gridManager = get(GridManager.class);
-
     }
 
     @Override

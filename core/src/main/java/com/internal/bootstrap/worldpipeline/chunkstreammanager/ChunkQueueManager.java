@@ -8,6 +8,7 @@ import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BuildB
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.GenerationBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.MergeBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
+import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.queue.QueueInstance;
@@ -39,6 +40,7 @@ class ChunkQueueManager extends ManagerPackage {
     private LongLinkedOpenHashSet loadRequests;
     private LongLinkedOpenHashSet unloadRequests;
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
+    private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
 
     // Internal \\
 
@@ -67,6 +69,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.unloadRequests = new LongLinkedOpenHashSet();
 
         this.assessmentBranch.setActiveChunks(activeChunks);
+        this.batchBranch.setActiveMegaChunks(activeMegaChunks);
     }
 
     @Override
@@ -205,5 +208,9 @@ class ChunkQueueManager extends ManagerPackage {
 
     public void setActiveChunks(Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
         this.activeChunks = activeChunks;
+    }
+
+    public void setActiveMegaChunks(Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
+        this.activeMegaChunks = activeMegaChunks;
     }
 }

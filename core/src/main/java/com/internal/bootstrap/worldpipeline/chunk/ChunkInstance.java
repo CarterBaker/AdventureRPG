@@ -35,9 +35,6 @@ public class ChunkInstance extends WorldRenderInstance {
         for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
             subChunks[i] = create(SubChunkInstance.class);
 
-        // Neighbors
-        this.chunkNeighbors = new ChunkNeighborStruct();
-
         super.create();
     }
 
@@ -64,7 +61,7 @@ public class ChunkInstance extends WorldRenderInstance {
                     airBlockId);
 
         // Neighbors
-        this.chunkNeighbors.constructor(
+        this.chunkNeighbors = new ChunkNeighborStruct(
                 coordinate,
                 this);
     }

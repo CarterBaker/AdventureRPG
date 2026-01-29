@@ -30,7 +30,8 @@ public class AssessmentBranch extends BranchPackage {
             long neighborCoordinate = neighbors.getNeighborCoordinate(i);
             ChunkInstance neighborChunk = activeChunks.get(neighborCoordinate);
 
-            if (neighborChunk != null)
+            if (neighborChunk != null &&
+                    neighborChunk.getChunkState().getOrder() >= ChunkState.HAS_GENERATION_DATA.getOrder())
                 neighbors.setNeighborChunk(i, neighborChunk);
 
             else

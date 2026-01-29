@@ -1,5 +1,6 @@
 package com.internal.bootstrap.renderpipeline.rendersystem;
 
+import com.badlogic.gdx.scenes.scene2d.ui.Table.Debug;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchHandle;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
@@ -43,6 +44,8 @@ public class RenderSystem extends SystemPackage {
     // Render System \\
 
     public void draw() {
+
+        timeStampDebug("Frame: " + internal.getFrameCount() + ", Draw frame");
 
         GLSLUtility.setViewport(
                 windowInstance.getWidth(),

@@ -17,7 +17,6 @@ import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Color;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate3Short;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
@@ -595,26 +594,4 @@ public class FullGeometryBranch extends BranchPackage {
 
         return true;
     }
-
-    // TODO: Remove
-
-    private boolean shouldDebug(
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance) {
-
-        return chunkInstance.getCoordinate() == Coordinate2Long.pack(0, 0)
-                && subChunkInstance.getCoordinate() == 0;
-    }
-
-    private void debugBuilder(
-            String message,
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance) {
-
-        if (!shouldDebug(chunkInstance, subChunkInstance))
-            return;
-
-        System.out.println(message);
-    }
-
 }
