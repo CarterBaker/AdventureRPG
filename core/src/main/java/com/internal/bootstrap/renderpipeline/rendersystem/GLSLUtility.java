@@ -8,6 +8,17 @@ class GLSLUtility {
 
     // Buffer \\
 
+    static void clearBuffer() {
+        Gdx.gl.glClearColor(0, 0, 0, 0);
+        Gdx.gl.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
+    }
+
+    static void setViewport(int width, int height) {
+        Gdx.gl.glViewport(0, 0, width, height);
+    }
+
+    // Depth \\
+
     static void enableDepth() {
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
         Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
@@ -19,13 +30,8 @@ class GLSLUtility {
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
     }
 
-    static void clearBuffer() {
-        Gdx.gl.glClearColor(0, 0, 0, 0);
-        Gdx.gl.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
-    }
-
-    static void setViewport(int width, int height) {
-        Gdx.gl.glViewport(0, 0, width, height);
+    static void clearDepthBuffer() {
+        Gdx.gl.glClear(GL30.GL_DEPTH_BUFFER_BIT);
     }
 
     // Blending \\
@@ -37,6 +43,18 @@ class GLSLUtility {
 
     static void disableBlending() {
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    // Culling \\
+
+    static void enableCulling() {
+        Gdx.gl.glEnable(GL20.GL_CULL_FACE);
+        Gdx.gl.glCullFace(GL20.GL_BACK);
+        Gdx.gl.glFrontFace(GL20.GL_CCW);
+    }
+
+    static void disableCulling() {
+        Gdx.gl.glDisable(GL20.GL_CULL_FACE);
     }
 
     // Shader \\

@@ -15,6 +15,10 @@ public class ChunkInstance extends WorldRenderInstance {
     // Internal
     private AtomicReference<ChunkState> chunkState;
 
+    private int[] vertPositionArray;
+    private float[] mergeOffsetValues;
+    private int CHUNK_SIZE;
+
     // SubChunks
     private SubChunkInstance[] subChunks;
 
@@ -28,6 +32,9 @@ public class ChunkInstance extends WorldRenderInstance {
 
         // Internal
         this.chunkState = new AtomicReference<>(ChunkState.UNINITIALIZED);
+        this.vertPositionArray = new int[] { 1 }; // We only need to change the height when merging sub chunks
+        this.mergeOffsetValues = new float[1];
+        this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
 
         // SubChunks
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
@@ -73,9 +80,21 @@ public class ChunkInstance extends WorldRenderInstance {
         boolean success = true;
         dynamicPacketInstance.clear();
 
-        for (SubChunkInstance subChunkInstance : subChunks)
-            if (!dynamicPacketInstance.merge(subChunkInstance.getDynamicPacketInstance()))
+        for (SubChunkInstance subChunkInstance : subChunks) {
+
+            mergeOffsetValues[0] = subChunkInstance.getCoordinate() * CHUNK_SIZE;
+
+            if (!dynamicPacketInstance.merge(
+                    subChunkInstance.getDynamicPacketInstance(),
+                    vertPositionArray,
+                    mergeOffsetValues))
                 success = false;
+        }
+
+        if (success && dynamicPacketInstance.hasModels())
+            dynamicPacketInstance.setReady();
+        else if (!dynamicPacketInstance.hasModels())
+            dynamicPacketInstance.unlock();
 
         return success;
     }

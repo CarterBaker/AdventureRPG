@@ -1,6 +1,5 @@
 package com.internal.bootstrap.renderpipeline.rendersystem;
 
-import com.badlogic.gdx.scenes.scene2d.ui.Table.Debug;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchHandle;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
@@ -39,13 +38,12 @@ public class RenderSystem extends SystemPackage {
     protected void awake() {
         GLSLUtility.enableDepth();
         GLSLUtility.enableBlending();
+        GLSLUtility.disableCulling();
     }
 
     // Render System \\
 
     public void draw() {
-
-        timeStampDebug("Frame: " + internal.getFrameCount() + ", Draw frame");
 
         GLSLUtility.setViewport(
                 windowInstance.getWidth(),
@@ -58,6 +56,9 @@ public class RenderSystem extends SystemPackage {
 
             int depth = depthEntry.getIntKey();
             var materialBatches = depthEntry.getValue();
+
+            // Clear depth buffer for each custom depth layer
+            GLSLUtility.clearDepthBuffer();
 
             // Iterate through each material batch at this depth
             for (var batchEntry : materialBatches.entrySet()) {

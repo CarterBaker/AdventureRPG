@@ -8,6 +8,9 @@ import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderOperation;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
+import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 public class MegaChunkInstance extends WorldRenderInstance {
@@ -15,6 +18,12 @@ public class MegaChunkInstance extends WorldRenderInstance {
     // Internal
     private int megaScale;
     private AtomicReference<MegaState> megaState;
+
+    private int[] vertPositionArray;
+    private float[] mergeOffsetValues;
+    private int CHUNK_SIZE;
+    private int megaX;
+    private int megaZ;
 
     // Batch Data
     private MegaBatchStruct megaBatchStruct;
@@ -24,6 +33,9 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
         // Internal
         this.megaState = new AtomicReference<>(MegaState.UNINITIALIZED);
+        this.vertPositionArray = new int[] { 0, 2 }; // X and Z offsets when merging chunks
+        this.mergeOffsetValues = new float[2];
+        this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
 
         super.create();
     }
@@ -41,6 +53,10 @@ public class MegaChunkInstance extends WorldRenderInstance {
                 megaChunkCoordinate,
                 vaoHandle);
 
+        // Internal
+        this.megaX = Coordinate2Long.unpackX(megaChunkCoordinate);
+        this.megaZ = Coordinate2Long.unpackY(megaChunkCoordinate);
+
         // Batch Data
         this.megaScale = megaScale;
         megaBatchStruct = new MegaBatchStruct(
@@ -57,9 +73,27 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
         Long2ObjectOpenHashMap<ChunkInstance> batchedChunks = megaBatchStruct.getBatchedChunks();
 
-        for (ChunkInstance chunkInstance : batchedChunks.values())
-            if (!dynamicPacketInstance.merge(chunkInstance.getDynamicPacketInstance()))
+        for (ChunkInstance chunkInstance : batchedChunks.values()) {
+
+            long chunkCoord = chunkInstance.getCoordinate();
+            int chunkX = Coordinate2Long.unpackX(chunkCoord);
+            int chunkZ = Coordinate2Long.unpackY(chunkCoord);
+
+            // Calculate offset relative to mega chunk origin
+            mergeOffsetValues[0] = (chunkX - megaX) * CHUNK_SIZE; // X offset
+            mergeOffsetValues[1] = (chunkZ - megaZ) * CHUNK_SIZE; // Z offset
+
+            if (!dynamicPacketInstance.merge(
+                    chunkInstance.getDynamicPacketInstance(),
+                    vertPositionArray,
+                    mergeOffsetValues))
                 success = false;
+        }
+
+        if (success && dynamicPacketInstance.hasModels())
+            dynamicPacketInstance.setReady();
+        else if (!dynamicPacketInstance.hasModels())
+            dynamicPacketInstance.unlock();
 
         return success;
     }

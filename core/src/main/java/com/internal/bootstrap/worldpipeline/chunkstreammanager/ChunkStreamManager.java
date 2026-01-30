@@ -21,14 +21,13 @@ public class ChunkStreamManager extends ManagerPackage {
     private GridManager gridManager;
     private VAOHandle chunkVAO;
 
-    private ChunkPositionSystem chunkPositionSystem;
-    private ChunkQueueManager chunkQueueManager;
-    private BatchSystem batchSystem;
-
-    // Chunk Position
     private long activeChunkCoordinate;
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
+
+    private ChunkPositionSystem chunkPositionSystem;
+    private ChunkQueueManager chunkQueueManager;
+    private ChunkBatchSystem chunkBatchSystem;
 
     // Internal \\
 
@@ -36,21 +35,21 @@ public class ChunkStreamManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        this.chunkPositionSystem = create(ChunkPositionSystem.class);
-        this.chunkQueueManager = create(ChunkQueueManager.class);
-        this.batchSystem = create(BatchSystem.class);
-
-        // Chunk Position
         this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
         this.activeChunks = new Long2ObjectLinkedOpenHashMap<>();
         this.activeMegaChunks = new Long2ObjectLinkedOpenHashMap<>();
 
-        // Assign the same collection reference to all systems
+        this.chunkPositionSystem = create(ChunkPositionSystem.class);
         this.chunkPositionSystem.setActiveChunks(activeChunks);
         this.chunkPositionSystem.setActiveMegaChunks(activeMegaChunks);
+
+        this.chunkQueueManager = create(ChunkQueueManager.class);
         this.chunkQueueManager.setActiveChunks(activeChunks);
         this.chunkQueueManager.setActiveMegaChunks(activeMegaChunks);
-        this.batchSystem.setActiveMegaChunks(activeMegaChunks);
+
+        this.chunkBatchSystem = create(ChunkBatchSystem.class);
+        this.chunkBatchSystem.setActiveChunks(activeChunks);
+        this.chunkBatchSystem.setActiveMegaChunks(activeMegaChunks);
     }
 
     @Override

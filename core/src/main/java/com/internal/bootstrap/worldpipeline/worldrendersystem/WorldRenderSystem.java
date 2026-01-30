@@ -44,9 +44,6 @@ public class WorldRenderSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        timeStampDebug(
-                "Frame: " + internal.getFrameCount() + ", WorldRenderSystem models: " + coordinate2Models.size());
-
         // Push all models to render system each frame
         for (ObjectArrayList<ModelHandle> modelList : coordinate2Models.values())
             for (ModelHandle model : modelList)
@@ -72,6 +69,9 @@ public class WorldRenderSystem extends SystemPackage {
     }
 
     public boolean renderWorldInstance(WorldRenderInstance worldRenderInstance) {
+
+        if (worldRenderInstance.getGridSlotHandle() == null)
+            return false;
 
         long coordinate = worldRenderInstance.getCoordinate();
 

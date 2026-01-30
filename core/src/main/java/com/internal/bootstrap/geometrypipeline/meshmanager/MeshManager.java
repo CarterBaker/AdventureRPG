@@ -91,7 +91,7 @@ public class MeshManager extends ManagerPackage {
     public IBOHandle createIBO(
             VAOHandle vaoHandle,
             ShortArrayList indices) {
-        return createIBO(
+        return iboManager.createIBO(
                 vaoHandle,
                 indices);
     }

@@ -4,7 +4,6 @@ import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entityManager.StatisticsInstance;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
-import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
@@ -16,7 +15,6 @@ public class MovementManager extends ManagerPackage {
 
     // Internal
     private MovementCalculationSystem movementCalculationSystem;
-    private WorldStreamManager worldStreamManager;
 
     // Settings
     private int CHUNK_SIZE;
@@ -31,13 +29,6 @@ public class MovementManager extends ManagerPackage {
 
         // Settings
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
-    }
-
-    @Override
-    protected void get() {
-
-        // Internal
-        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     // Movement \\

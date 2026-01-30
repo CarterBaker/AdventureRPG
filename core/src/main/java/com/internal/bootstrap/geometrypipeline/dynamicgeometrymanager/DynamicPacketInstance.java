@@ -98,13 +98,22 @@ public class DynamicPacketInstance extends InstancePackage {
         return true;
     }
 
-    public boolean merge(DynamicPacketInstance other) {
-
+    public boolean merge(DynamicPacketInstance other, int[] offsetIndices, float[] offsets) {
         if (other == null || other.materialID2ModelCollection == null)
             return true;
 
-        for (var entry : other.materialID2ModelCollection.int2ObjectEntrySet()) {
+        int stride = vaoHandle.getVertStride();
 
+        // Validation
+        if (offsetIndices.length != offsets.length)
+            throw new IllegalArgumentException("offsetIndices and offsets must have same length");
+
+        for (int index : offsetIndices) {
+            if (index >= stride)
+                throw new IllegalArgumentException("offsetIndex " + index + " exceeds vertStride " + stride);
+        }
+
+        for (var entry : other.materialID2ModelCollection.int2ObjectEntrySet()) {
             int materialId = entry.getIntKey();
             ObjectArrayList<DynamicModelHandle> sourceModels = entry.getValue();
 
@@ -112,7 +121,6 @@ public class DynamicPacketInstance extends InstancePackage {
                 continue;
 
             for (DynamicModelHandle source : sourceModels) {
-
                 if (source == null || source.isEmpty())
                     continue;
 
@@ -120,13 +128,38 @@ public class DynamicPacketInstance extends InstancePackage {
                 if (vertices == null || vertices.isEmpty())
                     continue;
 
-                // Early exit on failure
-                if (!addVertices(materialId, vertices))
+                FloatArrayList offsetVertices = applyOffset(vertices, offsetIndices, offsets);
+
+                if (!addVertices(materialId, offsetVertices))
                     return false;
             }
         }
 
         return true;
+    }
+
+    private FloatArrayList applyOffset(FloatArrayList vertices, int[] offsetIndices, float[] offsets) {
+        int stride = vaoHandle.getVertStride();
+        FloatArrayList result = new FloatArrayList(vertices.size());
+
+        for (int i = 0; i < vertices.size(); i += stride) {
+            // Copy entire vertex
+            for (int j = 0; j < stride; j++) {
+                float value = vertices.getFloat(i + j);
+
+                // Apply offsets to specified indices
+                for (int k = 0; k < offsetIndices.length; k++) {
+                    if (j == offsetIndices[k]) {
+                        value += offsets[k];
+                        break;
+                    }
+                }
+
+                result.add(value);
+            }
+        }
+
+        return result;
     }
 
     public void clear() {

@@ -69,7 +69,6 @@ class ChunkQueueManager extends ManagerPackage {
         this.unloadRequests = new LongLinkedOpenHashSet();
 
         this.assessmentBranch.setActiveChunks(activeChunks);
-        this.batchBranch.setActiveMegaChunks(activeMegaChunks);
     }
 
     @Override

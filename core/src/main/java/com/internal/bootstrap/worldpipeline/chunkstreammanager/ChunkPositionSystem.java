@@ -135,8 +135,24 @@ class ChunkPositionSystem extends SystemPackage {
     }
 
     private void unloadMegaChunkInstance(long megaChunkCoordinate) {
+
+        boolean dispose = true;
         MegaChunkInstance megaChunkInstance = megaChunkUnloadQueue.get(megaChunkCoordinate);
-        megaChunkInstance.dispose();
+
+        // Check if any of this mega's chunks are still active
+        Long2ObjectOpenHashMap<ChunkInstance> batchedChunks = megaChunkInstance.getBatchedChunks();
+
+        // At least one chunk is still active, don't unload the mega
+        for (ChunkInstance chunkInstance : batchedChunks.values()) {
+
+            if (activeChunks.containsKey(chunkInstance.getCoordinate()))
+                dispose = false;
+
+            worldRenderSystem.removeWorldInstance(chunkInstance.getCoordinate());
+        }
+
+        if (dispose)
+            megaChunkInstance.dispose();
     }
 
     // Utility \\
