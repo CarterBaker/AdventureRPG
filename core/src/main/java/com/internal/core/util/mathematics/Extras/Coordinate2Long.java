@@ -54,6 +54,8 @@ public final class Coordinate2Long {
     // Java Utility \\
 
     public static String toString(long value) {
-        return "Coordinate2Int(" + unpackX(value) + ", " + unpackY(value) + ")";
+        return "Coordinate2Long(" +
+                unpackX(value) + ", " +
+                unpackY(value) + ")";
     }
 }

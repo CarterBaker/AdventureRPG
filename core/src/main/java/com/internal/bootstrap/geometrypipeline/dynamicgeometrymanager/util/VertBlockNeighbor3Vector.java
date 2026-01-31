@@ -2,10 +2,10 @@ package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate3Long;
-import com.internal.core.util.mathematics.Extras.Coordinate3Short;
+import com.internal.core.util.mathematics.Extras.Coordinate3Int;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
-public enum BlockDirection3Vector {
+public enum VertBlockNeighbor3Vector {
 
     UPPER_NORTH_EAST(0, 0, 0),
     UPPER_NORTH_WEST(-1, 0, 0),
@@ -22,9 +22,9 @@ public enum BlockDirection3Vector {
 
     public final long coordinate2Long;
     public final long coordinate3Long;
-    public final short vertOffset3Short;
+    public final int vertOffset3Int;
 
-    public static final BlockDirection3Vector[] VALUES = values();
+    public static final VertBlockNeighbor3Vector[] VALUES = values();
     public static final int LENGTH = values().length;
 
     private static final Direction2Vector[] TO_2D_LOOKUP = new Direction2Vector[LENGTH];
@@ -42,7 +42,7 @@ public enum BlockDirection3Vector {
 
     // Internal \\
 
-    BlockDirection3Vector(int x, int y, int z) {
+    VertBlockNeighbor3Vector(int x, int y, int z) {
 
         // Internal
         this.index = this.ordinal();
@@ -56,7 +56,7 @@ public enum BlockDirection3Vector {
         int vx = x < 0 ? 0 : 1;
         int vy = y < 0 ? 0 : 1;
         int vz = z < 0 ? 0 : 1;
-        this.vertOffset3Short = Coordinate3Short.pack(vx, vy, vz);
+        this.vertOffset3Int = Coordinate3Int.pack(vx, vy, vz);
     }
 
     public Direction2Vector to2D() {

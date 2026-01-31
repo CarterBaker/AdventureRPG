@@ -49,7 +49,8 @@ public final class Coordinate3Long {
     // Java Utility \\
 
     public static String toString(long value) {
-        return "Coordinate3Int(" + unpackX(value) + ", " +
+        return "Coordinate3Long(" +
+                unpackX(value) + ", " +
                 unpackY(value) + ", " +
                 unpackZ(value) + ")";
     }

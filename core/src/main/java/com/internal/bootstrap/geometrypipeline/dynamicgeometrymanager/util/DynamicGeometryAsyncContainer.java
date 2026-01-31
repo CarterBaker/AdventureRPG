@@ -29,7 +29,7 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
             directionalBatches[i] = new BitSet();
         this.batchReturn = new BitSet();
 
-        this.vertColors = new Color[BlockDirection3Vector.LENGTH];
+        this.vertColors = new Color[VertBlockNeighbor3Vector.LENGTH];
     }
 
     // Reset \\

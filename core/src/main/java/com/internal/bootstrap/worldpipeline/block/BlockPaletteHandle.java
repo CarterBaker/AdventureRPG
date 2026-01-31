@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate3Short;
+import com.internal.core.util.mathematics.Extras.Coordinate3Int;
 
 public final class BlockPaletteHandle extends HandlePackage {
 
@@ -13,6 +13,7 @@ public final class BlockPaletteHandle extends HandlePackage {
     private int blocksPerCell;
     private int paletteAxisSize;
     private int scaleBits;
+    private int chunkMask; // For converting signed to chunk-local
 
     private int totalCells;
     private int maxPaletteSize;
@@ -39,6 +40,7 @@ public final class BlockPaletteHandle extends HandlePackage {
 
         this.paletteAxisSize = paletteAxisSize;
         this.scaleBits = Integer.numberOfTrailingZeros(blocksPerCell);
+        this.chunkMask = chunkSize - 1; // Assumes chunkSize is power of 2
         this.totalCells = paletteAxisSize * paletteAxisSize * paletteAxisSize;
         this.maxPaletteSize = paletteThreshold;
 
@@ -46,6 +48,7 @@ public final class BlockPaletteHandle extends HandlePackage {
         this.palette.add(airBlockId);
 
         this.bitsPerEntry = 1;
+
         allocatePackedArray();
     }
 
@@ -61,6 +64,7 @@ public final class BlockPaletteHandle extends HandlePackage {
     }
 
     private int readPackedValue(int index) {
+
         int startBit = index * bitsPerEntry;
         int longIndex = startBit >>> 6;
         int bitOffset = startBit & 63;
@@ -77,6 +81,7 @@ public final class BlockPaletteHandle extends HandlePackage {
     }
 
     private void writePackedValue(int index, int value) {
+
         int startBit = index * bitsPerEntry;
         int longIndex = startBit >>> 6;
         int bitOffset = startBit & 63;
@@ -97,6 +102,7 @@ public final class BlockPaletteHandle extends HandlePackage {
     }
 
     private void expandBits(int newBits) {
+
         long[] oldData = packedData;
         int oldBits = bitsPerEntry;
 
@@ -110,6 +116,7 @@ public final class BlockPaletteHandle extends HandlePackage {
     }
 
     private static int readPackedValueFrom(long[] data, int bits, int index) {
+
         int startBit = index * bits;
         int longIndex = startBit >>> 6;
         int bitOffset = startBit & 63;
@@ -125,10 +132,13 @@ public final class BlockPaletteHandle extends HandlePackage {
         return (int) ((high << lowBits) | low);
     }
 
-    private int getCellIndex(short packedXYZ) {
-        int x = Coordinate3Short.unpackX(packedXYZ) >> scaleBits;
-        int y = Coordinate3Short.unpackY(packedXYZ) >> scaleBits;
-        int z = Coordinate3Short.unpackZ(packedXYZ) >> scaleBits;
+    private int getCellIndex(int packedXYZ) {
+
+        // Unpack using Coordinate3Int (handles sign extension)
+        // Then mask to chunk-local coordinates and scale down to cell coordinates
+        int x = (Coordinate3Int.unpackX(packedXYZ) & chunkMask) >> scaleBits;
+        int y = (Coordinate3Int.unpackY(packedXYZ) & chunkMask) >> scaleBits;
+        int z = (Coordinate3Int.unpackZ(packedXYZ) & chunkMask) >> scaleBits;
         return (y * paletteAxisSize + z) * paletteAxisSize + x;
     }
 
@@ -144,12 +154,13 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     // Accessible \\
 
-    public short getBlock(short packedXYZ) {
+    public short getBlock(int packedXYZ) {
         int index = getCellIndex(packedXYZ);
         return directData != null ? directData[index] : palette.get(readPackedValue(index));
     }
 
-    public void setBlock(short packedXYZ, short blockId) {
+    public void setBlock(int packedXYZ, short blockId) {
+
         int index = getCellIndex(packedXYZ);
 
         if (directData != null) {
@@ -160,6 +171,7 @@ public final class BlockPaletteHandle extends HandlePackage {
         int paletteIndex = palette.indexOf(blockId);
 
         if (paletteIndex == -1) {
+
             if (palette.size() >= maxPaletteSize) {
                 convertToDirect();
                 directData[index] = blockId;
@@ -178,10 +190,10 @@ public final class BlockPaletteHandle extends HandlePackage {
     }
 
     public short getBlock(int x, int y, int z) {
-        return getBlock(Coordinate3Short.pack(x, y, z));
+        return getBlock(Coordinate3Int.pack(x, y, z));
     }
 
     public void setBlock(int x, int y, int z, short blockId) {
-        setBlock(Coordinate3Short.pack(x, y, z), blockId);
+        setBlock(Coordinate3Int.pack(x, y, z), blockId);
     }
 }

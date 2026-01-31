@@ -14,9 +14,10 @@ import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import com.internal.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.mathematics.Extras.Color;
-import com.internal.core.util.mathematics.Extras.Coordinate3Short;
+import com.internal.core.util.mathematics.Extras.Coordinate3Int;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -46,7 +47,7 @@ class InternalBuildManager extends ManagerPackage {
         this.complexGeometryBranch = create(ComplexGeometryBranch.class);
         this.liquidGeometryBranch = create(LiquidGeometryBranch.class);
 
-        this.BLOCK_COORDINATE_COUNT = Coordinate3Short.BLOCK_COORDINATE_COUNT;
+        this.BLOCK_COORDINATE_COUNT = ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT;
     }
 
     @Override
@@ -83,7 +84,7 @@ class InternalBuildManager extends ManagerPackage {
 
         for (int i = 0; i < BLOCK_COORDINATE_COUNT; i++) {
 
-            short xyz = Coordinate3Short.getBlockCoordinate(i);
+            int xyz = ChunkCoordinate3Int.getBlockCoordinate(i);
 
             short biomeID = biomePaletteHandle.getBlock(xyz);
             BiomeHandle biomeHandle = biomeManager.getBiomeFromBiomeID(biomeID);
@@ -145,7 +146,7 @@ class InternalBuildManager extends ManagerPackage {
             BlockPaletteHandle biomePaletteHandle,
             BlockPaletteHandle blockPaletteHandle,
             DynamicPacketInstance dynamicPacketInstance,
-            short xyz,
+            int xyz,
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
