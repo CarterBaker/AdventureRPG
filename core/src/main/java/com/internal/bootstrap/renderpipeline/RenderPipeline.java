@@ -1,6 +1,6 @@
 package com.internal.bootstrap.renderpipeline;
 
-import com.internal.bootstrap.renderpipeline.camerasystem.CameraManager;
+import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.core.engine.PipelinePackage;
 

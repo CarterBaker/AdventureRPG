@@ -5,7 +5,7 @@ import com.internal.bootstrap.entitypipeline.entityManager.EntityManager;
 import com.internal.bootstrap.entitypipeline.movementmanager.MovementManager;
 import com.internal.bootstrap.inputpipeline.input.InputSystem;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
-import com.internal.bootstrap.renderpipeline.camerasystem.CameraManager;
+import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.mathematics.vectors.Vector3;
@@ -63,6 +63,7 @@ public class PlayerManager extends ManagerPackage {
         Vector3 direction = camera.getDirection();
 
         movementmanager.move(input, direction, player);
+        camera.setPosition(player.getWorldPositionStruct().getPosition());
 
         internalBufferSystem.updatePlayerPosition(player.getWorldPositionStruct());
     }

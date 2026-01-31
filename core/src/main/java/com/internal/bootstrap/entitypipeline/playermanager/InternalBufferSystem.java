@@ -4,7 +4,6 @@ import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.engine.settings.EngineSetting;
 
 public class InternalBufferSystem extends SystemPackage {
 
@@ -18,14 +17,15 @@ public class InternalBufferSystem extends SystemPackage {
     protected void get() {
 
         // Internal
-        this.uboManager = get(UBOManager.class);
+        // this.uboManager = get(UBOManager.class);
     }
 
     @Override
     protected void awake() {
 
         // Internal
-        this.playerPositionUBO = uboManager.getUBOHandleFromUBOName(EngineSetting.PLAYER_POSITION_UBO);
+        // this.playerPositionUBO =
+        // uboManager.getUBOHandleFromUBOName(EngineSetting.PLAYER_POSITION_UBO);
     }
 
     // Update Methods \\
@@ -33,7 +33,9 @@ public class InternalBufferSystem extends SystemPackage {
     public void updatePlayerPosition(WorldPositionStruct playerPosition) {
 
         // Update the UBO
-        playerPositionUBO.updateUniform("u_playerPosition", playerPosition.getPosition());
-        playerPositionUBO.push();
+        // playerPositionUBO.updateUniform(
+        // "u_playerPosition",
+        // playerPosition.getPosition());
+        // playerPositionUBO.push();
     }
 }

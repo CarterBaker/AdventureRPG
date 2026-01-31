@@ -16,10 +16,12 @@ import java.util.Comparator;
 class GridBuildSystem extends SystemPackage {
 
     private UBOManager uboManager;
+    private int CHUNK_SIZE;
     private Vector2 gridPosition;
 
     @Override
     protected void create() {
+        this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
         this.gridPosition = new Vector2();
     }
 
@@ -128,8 +130,8 @@ class GridBuildSystem extends SystemPackage {
             UBOHandle slotUBO = uboManager.cloneUBO(baseUBO);
 
             // Unpack grid coordinates
-            int gridX = Coordinate2Long.unpackX(gridCoordinate);
-            int gridY = Coordinate2Long.unpackY(gridCoordinate);
+            int gridX = Coordinate2Long.unpackX(gridCoordinate) * CHUNK_SIZE;
+            int gridY = Coordinate2Long.unpackY(gridCoordinate) * CHUNK_SIZE;
             gridPosition.set(gridX, gridY);
 
             // Set the static grid position once

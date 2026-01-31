@@ -17,7 +17,6 @@ public enum Direction2Vector {
 
         public final long coordinate2Long;
         public final long coordinate3Long;
-        public final short coordinate3Short;
 
         public static final Direction2Vector[] VALUES = values();
         public static final int LENGTH = values().length;
@@ -46,7 +45,6 @@ public enum Direction2Vector {
 
                 this.coordinate2Long = Coordinate2Long.pack(x, y);
                 this.coordinate3Long = Coordinate3Long.pack(x, 0, y);
-                this.coordinate3Short = Coordinate3Short.pack(x, 0, y);
         }
 
         // Utility \\

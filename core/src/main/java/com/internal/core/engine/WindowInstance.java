@@ -1,7 +1,7 @@
 package com.internal.core.engine;
 
 import com.badlogic.gdx.Screen;
-import com.internal.bootstrap.renderpipeline.camerasystem.CameraManager;
+import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
 
 public class WindowInstance extends InstancePackage implements Screen {
 

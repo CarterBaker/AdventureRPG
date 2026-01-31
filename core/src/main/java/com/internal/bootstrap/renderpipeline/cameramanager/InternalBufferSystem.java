@@ -1,4 +1,4 @@
-package com.internal.bootstrap.renderpipeline.camerasystem;
+package com.internal.bootstrap.renderpipeline.cameramanager;
 
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;

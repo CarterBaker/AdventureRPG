@@ -3,9 +3,6 @@
 in vec3 vWorldNormal;
 out vec4 FragColor;
 
-#include "includes/GridCoordinateData.glsl"
-#include "includes/PlayerPositionData.glsl"
-
 void main()
 {
     vec3 n = abs(normalize(vWorldNormal));

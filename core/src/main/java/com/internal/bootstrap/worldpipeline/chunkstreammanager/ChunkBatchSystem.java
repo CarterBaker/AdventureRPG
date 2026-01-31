@@ -1,7 +1,6 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.chunk.ChunkState;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaState;
@@ -15,21 +14,22 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 public class ChunkBatchSystem extends SystemPackage {
+
     // Internal
     private ThreadHandle threadHandle;
     private WorldRenderSystem worldRenderSystem;
     private ChunkStreamManager chunkStreamManager;
 
-    // Collections
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
 
-    // Constants
     private int MEGA_CHUNK_SIZE;
     private int megaScale;
 
     @Override
     protected void get() {
+
+        // Internal
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.worldRenderSystem = get(WorldRenderSystem.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
@@ -45,7 +45,7 @@ public class ChunkBatchSystem extends SystemPackage {
 
     // Batching Logic \\
 
-    public void batchChunk(ChunkInstance chunkInstance) {
+    public boolean batchChunk(ChunkInstance chunkInstance) {
 
         long megaChunkCoordinate = Coordinate2Long.toMegaChunkCoordinate(chunkInstance.getCoordinate());
 
@@ -54,14 +54,13 @@ public class ChunkBatchSystem extends SystemPackage {
                 this::createMegaChunkInstance);
 
         if (!megaChunkInstance.batchChunk(chunkInstance))
-            return;
-
-        // Update chunk state
-        chunkInstance.setChunkState(ChunkState.HAS_BATCH_DATA);
+            return false;
 
         // Check if mega chunk is now complete
         if (megaChunkInstance.isComplete())
             megaChunkInstance.setMegaState(MegaState.NEEDS_MERGE_DATA);
+
+        return true;
     }
 
     private MegaChunkInstance createMegaChunkInstance(long megaChunkCoordinate) {
@@ -76,11 +75,12 @@ public class ChunkBatchSystem extends SystemPackage {
 
         // Transfer grid slot handle if chunk exists at mega coordinate
         ChunkInstance chunkInstance = activeChunks.get(megaChunkCoordinate);
-        if (chunkInstance != null) {
-            GridSlotHandle gridSlotHandle = chunkInstance.getGridSlotHandle();
-            if (gridSlotHandle != null)
-                megaChunkInstance.setGridSlotHandle(gridSlotHandle);
-        }
+        if (chunkInstance == null)
+            return megaChunkInstance;
+
+        GridSlotHandle gridSlotHandle = chunkInstance.getGridSlotHandle();
+        if (gridSlotHandle != null)
+            megaChunkInstance.setGridSlotHandle(gridSlotHandle);
 
         return megaChunkInstance;
     }

@@ -86,12 +86,10 @@ public final class Coordinate3Short extends UtilityPackage {
     }
 
     // Direct bit addition with Direction3Vector, no wrap
-    public static short getNeighbor(short packed, Direction3Vector direction3Int) {
-        short directionPacked = direction3Int.coordinate3Short;
-
-        int x = (packed & 0xF) + (directionPacked & 0xF);
-        int y = ((packed >> 8) & 0xF) + ((directionPacked >> 8) & 0xF);
-        int z = ((packed >> 4) & 0xF) + ((directionPacked >> 4) & 0xF);
+    public static short getNeighbor(short packed, Direction3Vector direction) {
+        int x = (packed & 0xF) + direction.x;
+        int y = ((packed >> 8) & 0xF) + direction.y;
+        int z = ((packed >> 4) & 0xF) + direction.z;
 
         if (((x | y | z) & ~0xF) != 0)
             return -1;
@@ -100,12 +98,10 @@ public final class Coordinate3Short extends UtilityPackage {
     }
 
     // Direct bit addition with Direction2Vector, no wrap
-    public static short getNeighbor(short packed, Direction2Vector direction2Int) {
-        short directionPacked = direction2Int.coordinate3Short;
-
-        int x = (packed & 0xF) + (directionPacked & 0xF);
+    public static short getNeighbor(short packed, Direction2Vector direction) {
+        int x = (packed & 0xF) + direction.x;
         int y = (packed >> 8) & 0xF;
-        int z = ((packed >> 4) & 0xF) + ((directionPacked >> 4) & 0xF);
+        int z = ((packed >> 4) & 0xF) + direction.y;
 
         if (((x | z) & ~0xF) != 0)
             return -1;
@@ -121,31 +117,27 @@ public final class Coordinate3Short extends UtilityPackage {
         return (short) ((y << 8) | (z << 4) | x);
     }
 
-    // FAST: Direct bit addition with Direction3Int.chunkCoordinate3Short
-    public static short getNeighborAndWrap(short packed, Direction3Vector direction3Int) {
-        short directionPacked = direction3Int.coordinate3Short;
-
-        int x = (packed + directionPacked) & 0xF;
-        int y = ((packed >> 8) + (directionPacked >> 8)) & 0xF;
-        int z = ((packed >> 4) + (directionPacked >> 4)) & 0xF;
+    // FAST: Direct bit addition with Direction3Vector wrapping
+    public static short getNeighborAndWrap(short packed, Direction3Vector direction) {
+        int x = ((packed & 0xF) + direction.x) & 0xF;
+        int y = (((packed >> 8) & 0xF) + direction.y) & 0xF;
+        int z = (((packed >> 4) & 0xF) + direction.z) & 0xF;
         return (short) ((y << 8) | (z << 4) | x);
     }
 
-    // FAST: Direct bit addition with Direction2Int.chunkCoordinate3Short
-    public static short getNeighborAndWrap(short packed, Direction2Vector direction2Int) {
-        short directionPacked = direction2Int.coordinate3Short;
-
-        int x = (packed + directionPacked) & 0xF;
+    // FAST: Direct bit addition with Direction2Vector wrapping
+    public static short getNeighborAndWrap(short packed, Direction2Vector direction) {
+        int x = ((packed & 0xF) + direction.x) & 0xF;
         int y = (packed >> 8) & 0xF;
-        int z = ((packed >> 4) + (directionPacked >> 4)) & 0xF;
+        int z = (((packed >> 4) & 0xF) + direction.y) & 0xF;
         return (short) ((y << 8) | (z << 4) | x);
     }
 
     // Get neighbor with scaled direction (for greedy meshing tangent checks)
     public static short getNeighborWithOffset(short packed, Direction3Vector direction, int offset) {
-        int x = (packed & 0xF) + (direction.coordinate3Short & 0xF) * offset;
-        int y = ((packed >> 8) & 0xF) + ((direction.coordinate3Short >> 8) & 0xF) * offset;
-        int z = ((packed >> 4) & 0xF) + ((direction.coordinate3Short >> 4) & 0xF) * offset;
+        int x = (packed & 0xF) + direction.x * offset;
+        int y = ((packed >> 8) & 0xF) + direction.y * offset;
+        int z = ((packed >> 4) & 0xF) + direction.z * offset;
 
         if (((x | y | z) & ~0xF) != 0)
             return -1;
@@ -155,9 +147,9 @@ public final class Coordinate3Short extends UtilityPackage {
 
     // 2D version (Y unchanged)
     public static short getNeighborWithOffset(short packed, Direction2Vector direction, int offset) {
-        int x = (packed & 0xF) + (direction.coordinate3Short & 0xF) * offset;
+        int x = (packed & 0xF) + direction.x * offset;
         int y = (packed >> 8) & 0xF;
-        int z = ((packed >> 4) & 0xF) + ((direction.coordinate3Short >> 4) & 0xF) * offset;
+        int z = ((packed >> 4) & 0xF) + direction.y * offset;
 
         if (((x | z) & ~0xF) != 0)
             return -1;
@@ -167,20 +159,18 @@ public final class Coordinate3Short extends UtilityPackage {
 
     // Get neighbor in VERT SPACE (5 bits per component, range 0-16)
     public static short getNeighborFromVert(short vertPacked, BlockDirection3Vector blockDirection) {
-        short directionPacked = blockDirection.coordinate3Short;
-
-        int x = (vertPacked & 0x1F) + (directionPacked & 0xF);
-        int y = ((vertPacked >> 10) & 0x1F) + ((directionPacked >> 8) & 0xF);
-        int z = ((vertPacked >> 5) & 0x1F) + ((directionPacked >> 4) & 0xF);
+        int x = (vertPacked & 0x1F) + blockDirection.x;
+        int y = ((vertPacked >> 10) & 0x1F) + blockDirection.y;
+        int z = ((vertPacked >> 5) & 0x1F) + blockDirection.z;
 
         return (short) ((y << 10) | (z << 5) | x);
     }
 
     // Get neighbor with scaled direction in VERT SPACE (for quad vertices)
     public static short getNeighborWithOffsetFromVert(short vertPacked, Direction3Vector direction, int offset) {
-        int x = (vertPacked & 0x1F) + (direction.coordinate3Short & 0xF) * offset;
-        int y = ((vertPacked >> 10) & 0x1F) + ((direction.coordinate3Short >> 8) & 0xF) * offset;
-        int z = ((vertPacked >> 5) & 0x1F) + ((direction.coordinate3Short >> 4) & 0xF) * offset;
+        int x = (vertPacked & 0x1F) + direction.x * offset;
+        int y = ((vertPacked >> 10) & 0x1F) + direction.y * offset;
+        int z = ((vertPacked >> 5) & 0x1F) + direction.z * offset;
 
         return (short) ((y << 10) | (z << 5) | x);
     }

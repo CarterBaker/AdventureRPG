@@ -7,7 +7,6 @@ layout (location = 3) in vec2 aTexCoord;  // u, v (2 floats)
 
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
-#include "includes/PlayerPositionData.glsl"
 
 out vec3 vWorldNormal;
 
@@ -15,8 +14,8 @@ void main() {
     vWorldNormal = normalize(aNormal);
 
     vec3 worldPos = aPos;
-    worldPos.x += u_gridPosition.x * 16.0;
-    worldPos.z += u_gridPosition.y * 16.0;
+    worldPos.x += u_gridPosition.x;
+    worldPos.z += u_gridPosition.y;
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }

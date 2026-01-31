@@ -1,7 +1,5 @@
 package com.internal.core.util.mathematics.Extras;
 
-import com.internal.core.engine.EngineUtility.InternalException;
-
 public enum Direction3Vector {
 
 	NORTH(0, 0, 1),
@@ -17,7 +15,6 @@ public enum Direction3Vector {
 
 	public final long coordinate2Long;
 	public final long coordinate3Long;
-	public final short coordinate3Short;
 	public final short vertOffset3Short;
 
 	public static final Direction3Vector[] VALUES = values();
@@ -60,7 +57,6 @@ public enum Direction3Vector {
 
 		this.coordinate2Long = Coordinate2Long.pack(x, z);
 		this.coordinate3Long = Coordinate3Long.pack(x, y, z);
-		this.coordinate3Short = Coordinate3Short.pack(x, y, z);
 
 		int vx = x > 0 ? 1 : 0;
 		int vy = y > 0 ? 1 : 0;
