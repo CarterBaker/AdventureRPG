@@ -17,6 +17,7 @@ import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Color;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate3Short;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
@@ -110,8 +111,16 @@ public class FullGeometryBranch extends BranchPackage {
                 xyz,
                 direction3Vector);
 
-        if (comparativeSubChunkCoordinate == null)
-            return true;
+        if (comparativeSubChunkCoordinate == null) {
+
+            byte subY = (byte) subChunkInstance.getCoordinate();
+
+            if (direction3Vector == Direction3Vector.DOWN && subY == 0 ||
+                    direction3Vector == Direction3Vector.UP && subY == WORLD_HEIGHT - 1)
+                return true;
+
+            return false;
+        }
 
         short comparativeXYZ = Coordinate3Short.getNeighborAndWrap(xyz, direction3Vector);
 
@@ -322,9 +331,9 @@ public class FullGeometryBranch extends BranchPackage {
                             biomeHandle,
                             blockHandle))
                 return false;
-
-            batchReturn.set(checkXYZ);
         }
+
+        batchReturn.set(nextXYZ);
 
         return true;
     }
@@ -393,6 +402,17 @@ public class FullGeometryBranch extends BranchPackage {
 
         int materialID = blockHandle.getMaterialID();
         int textureID = blockHandle.getTextureForFace(direction3Vector);
+
+        tempDebug(subChunkInstance, chunkInstance, xyz,
+                String.format(
+                        "Face %s @ block(%d,%d,%d) size(%d,%d): v0(%d,%d,%d) v1(%d,%d,%d) v2(%d,%d,%d) v3(%d,%d,%d)",
+                        direction3Vector.toString(),
+                        Coordinate3Short.unpackX(xyz), Coordinate3Short.unpackY(xyz), Coordinate3Short.unpackZ(xyz),
+                        sizeA, sizeB,
+                        vert0XYZ & 0x1F, (vert0XYZ >> 10) & 0x1F, (vert0XYZ >> 5) & 0x1F,
+                        vert1XYZ & 0x1F, (vert1XYZ >> 10) & 0x1F, (vert1XYZ >> 5) & 0x1F,
+                        vert2XYZ & 0x1F, (vert2XYZ >> 10) & 0x1F, (vert2XYZ >> 5) & 0x1F,
+                        vert3XYZ & 0x1F, (vert3XYZ >> 10) & 0x1F, (vert3XYZ >> 5) & 0x1F));
 
         return finalizeFace(
                 verts,
@@ -593,5 +613,26 @@ public class FullGeometryBranch extends BranchPackage {
         buffer.add(uvRect.v1);
 
         return true;
+    }
+
+    // TODO: Remove
+
+    private void tempDebug(
+            SubChunkInstance subChunkInstance,
+            ChunkInstance chunkInstance,
+            short xyz,
+            String message) {
+
+        if (chunkInstance.getCoordinate() != Coordinate2Long.pack(0, 0) ||
+                subChunkInstance.getCoordinate() != 0)
+            return;
+
+        int bx = Coordinate3Short.unpackX(xyz);
+        int by = Coordinate3Short.unpackY(xyz);
+        int bz = Coordinate3Short.unpackZ(xyz);
+
+        if (bx == 0 && by == 0 && bz == 0)
+            System.out.println(message);
+
     }
 }
