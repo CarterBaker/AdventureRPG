@@ -143,7 +143,7 @@ public class FullGeometryBranch extends BranchPackage {
             Direction3Vector direction3Vector) {
 
         // If the coordinate is within the same `SubChunkInstance` continue
-        if (!ChunkCoordinate3Int.isAtEdge(xyz))
+        if (!ChunkCoordinate3Int.isAtEdge(xyz, direction3Vector))
             return subChunkInstance;
 
         byte subChunkCoordinate = (byte) subChunkInstance.getCoordinate();
@@ -232,8 +232,10 @@ public class FullGeometryBranch extends BranchPackage {
                         biomeHandle,
                         blockHandle,
                         accumulatedBatch,
-                        batchReturn))
+                        batchReturn)) {
+                    accumulatedBatch.or(batchReturn);
                     sizeA++;
+                }
 
                 else
                     checkA = false;
@@ -254,8 +256,10 @@ public class FullGeometryBranch extends BranchPackage {
                         biomeHandle,
                         blockHandle,
                         accumulatedBatch,
-                        batchReturn))
+                        batchReturn)) {
+                    accumulatedBatch.or(batchReturn);
                     sizeB++;
+                }
 
                 else
                     checkB = false;
@@ -301,7 +305,7 @@ public class FullGeometryBranch extends BranchPackage {
             return false;
 
         // Calculate next base coordinate along `expandDirection`
-        int nextXYZ = ChunkCoordinate3Int.getNeighbor(xyz, expandDirection);
+        int nextXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, expandDirection, currentSize);
 
         // Used to keep the coordinates within a single chunk
         if (nextXYZ == -1)
@@ -329,11 +333,13 @@ public class FullGeometryBranch extends BranchPackage {
                     !blockHasFace(
                             chunkInstance,
                             subChunkInstance,
-                            nextXYZ,
+                            checkXYZ,
                             direction3Vector,
-                            biomeHandle,
-                            blockHandle))
+                            comparativeBiomeHandle,
+                            comparativeBlockHandle)) {
+                batchReturn.clear();
                 return false;
+            }
 
             batchReturn.set(ChunkCoordinate3Int.getIndex(checkXYZ));
         }
@@ -459,10 +465,10 @@ public class FullGeometryBranch extends BranchPackage {
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
             int xyz,
-            VertBlockNeighbor3Vector blockDirection3Vector) {
+            VertBlockNeighbor3Vector vertBlockNeighbor3Vector) {
 
         // If the coordinate is within the same `SubChunkInstance` continue
-        if (!ChunkCoordinate3Int.isAtEdge(xyz))
+        if (!ChunkCoordinate3Int.isAtEdge(xyz, vertBlockNeighbor3Vector))
             return subChunkInstance;
 
         int x = Coordinate3Int.unpackX(xyz);
@@ -496,7 +502,7 @@ public class FullGeometryBranch extends BranchPackage {
         if (!needsHorizontalNeighbor)
             return chunkInstance.getSubChunk(subChunkCoordinate);
 
-        Direction2Vector direction2Vector = blockDirection3Vector.to2D();
+        Direction2Vector direction2Vector = vertBlockNeighbor3Vector.to2D();
         ChunkNeighborStruct chunkNeighborStruct = chunkInstance.getChunkNeighbors();
         ChunkInstance neighborChunkInstance = chunkNeighborStruct.getNeighborChunk(direction2Vector.index);
         if (neighborChunkInstance == null)

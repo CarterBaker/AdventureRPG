@@ -120,8 +120,6 @@ class InternalBuildManager extends ManagerPackage {
                         batchReturn,
                         vertColors))
                     continue;
-
-                accumulatedBatch.or(batchReturn);
             }
         }
 

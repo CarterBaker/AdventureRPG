@@ -129,16 +129,54 @@ public class ChunkCoordinate3Int extends UtilityPackage {
     }
 
     // Check if the x, y or z component is 0 or (`CHUNK_SIZE` - 1)
-    public static boolean isAtEdge(int packed) {
+    public static boolean isAtEdge(int packed, Direction3Vector direction) {
 
         int max = CHUNK_SIZE - 1;
         int x = Coordinate3Int.unpackX(packed);
         int y = Coordinate3Int.unpackY(packed);
         int z = Coordinate3Int.unpackZ(packed);
 
-        return (x == 0 || x == max ||
-                y == 0 || y == max ||
-                z == 0 || z == max);
+        // Check X axis if direction has X component
+        if (direction.x < 0 && x == 0)
+            return true;
+        if (direction.x > 0 && x == max)
+            return true;
+
+        // Check Y axis if direction has Y component
+        if (direction.y < 0 && y == 0)
+            return true;
+        if (direction.y > 0 && y == max)
+            return true;
+
+        // Check Z axis if direction has Z component
+        if (direction.z < 0 && z == 0)
+            return true;
+        if (direction.z > 0 && z == max)
+            return true;
+
+        return false;
+    }
+
+    // Check if a vert coordinate is at the edge in the given direction
+    public static boolean isAtEdge(int packed, VertBlockNeighbor3Vector direction) {
+
+        int x = Coordinate3Int.unpackX(packed);
+        int y = Coordinate3Int.unpackY(packed);
+        int z = Coordinate3Int.unpackZ(packed);
+
+        // Check X axis - only check if direction.x is -1
+        if (direction.x == -1 && x == 0)
+            return true;
+
+        // Check Y axis - only check if direction.y is -1
+        if (direction.y == -1 && y == 0)
+            return true;
+
+        // Check Z axis - only check if direction.z is -1
+        if (direction.z == -1 && z == 0)
+            return true;
+
+        return false;
     }
 
     // Convert a block coordinate to vert space
