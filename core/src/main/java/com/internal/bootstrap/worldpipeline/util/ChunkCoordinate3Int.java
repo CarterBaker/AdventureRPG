@@ -16,7 +16,7 @@ public class ChunkCoordinate3Int extends UtilityPackage {
 
     // Chunk dimensions
     private static final int CHUNK_SIZE;
-    public static final short BLOCK_COORDINATE_COUNT;
+    public static final int BLOCK_COORDINATE_COUNT;
 
     // Precomputed flattened coordinates packed into shorts
     // Format: yyyy zzzz xxxx (4 bits each, 12 bits total per coordinate)
@@ -27,7 +27,7 @@ public class ChunkCoordinate3Int extends UtilityPackage {
 
         // Load settings
         CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
-        BLOCK_COORDINATE_COUNT = (short) (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
+        BLOCK_COORDINATE_COUNT = (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
 
         // Allocate coordinate arrays
         blockCoordinates = new int[BLOCK_COORDINATE_COUNT];
@@ -38,12 +38,12 @@ public class ChunkCoordinate3Int extends UtilityPackage {
 
     private static void flattenBlockCoordinates() {
 
-        short idx = 0;
+        int idx = 0;
 
         // Iterate in Y-Z-X order to match BlockPaletteHandle's getIndex() ordering
-        for (byte y = 0; y < CHUNK_SIZE; y++)
-            for (byte z = 0; z < CHUNK_SIZE; z++)
-                for (byte x = 0; x < CHUNK_SIZE; x++)
+        for (int y = 0; y < CHUNK_SIZE; y++)
+            for (int z = 0; z < CHUNK_SIZE; z++)
+                for (int x = 0; x < CHUNK_SIZE; x++)
                     blockCoordinates[idx++] = Coordinate3Int.pack(x, y, z);
     }
 
@@ -55,6 +55,18 @@ public class ChunkCoordinate3Int extends UtilityPackage {
 
     public static int getBlockCoordinate(int index) {
         return blockCoordinates[index];
+    }
+
+    // Convert packed coordinate back to index (inverse of getBlockCoordinate)
+    public static int getIndex(int packed) {
+
+        int mask = CHUNK_SIZE - 1;
+        int x = Coordinate3Int.unpackX(packed) & mask;
+        int y = Coordinate3Int.unpackY(packed) & mask;
+        int z = Coordinate3Int.unpackZ(packed) & mask;
+
+        // Y-Z-X order to match flattenBlockCoordinates
+        return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x;
     }
 
     // Convert a vert coordinate to block space
@@ -72,11 +84,18 @@ public class ChunkCoordinate3Int extends UtilityPackage {
     }
 
     // Get the neighbor next to a coordinate using the `Direction3Vector`
+    // Returns -1 if the neighbor is out of chunk bounds
     public static int getNeighbor(int packed, Direction3Vector direction) {
 
         int x = Coordinate3Int.unpackX(packed) + direction.x;
         int y = Coordinate3Int.unpackY(packed) + direction.y;
         int z = Coordinate3Int.unpackZ(packed) + direction.z;
+
+        // Check bounds
+        if (x < 0 || x >= CHUNK_SIZE ||
+                y < 0 || y >= CHUNK_SIZE ||
+                z < 0 || z >= CHUNK_SIZE)
+            return -1;
 
         return Coordinate3Int.pack(x, y, z);
     }
@@ -93,11 +112,18 @@ public class ChunkCoordinate3Int extends UtilityPackage {
     }
 
     // Get the neighbor next to a coordinate and along a tangent
+    // Returns -1 if the result is out of chunk bounds
     public static int getNeighborWithOffset(int packed, Direction3Vector tangent, int offset) {
 
         int x = Coordinate3Int.unpackX(packed) + (tangent.x * offset);
         int y = Coordinate3Int.unpackY(packed) + (tangent.y * offset);
         int z = Coordinate3Int.unpackZ(packed) + (tangent.z * offset);
+
+        // Check bounds
+        if (x < 0 || x >= CHUNK_SIZE ||
+                y < 0 || y >= CHUNK_SIZE ||
+                z < 0 || z >= CHUNK_SIZE)
+            return -1;
 
         return Coordinate3Int.pack(x, y, z);
     }

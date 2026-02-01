@@ -17,7 +17,6 @@ import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.mathematics.Extras.Color;
-import com.internal.core.util.mathematics.Extras.Coordinate3Int;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -92,17 +91,17 @@ class InternalBuildManager extends ManagerPackage {
             short blockID = blockPaletteHandle.getBlock(xyz);
             BlockHandle blockHandle = blockManager.getBlockFromBlockID(blockID);
 
+            DynamicGeometryType blockGeometry = blockHandle.getGeometry();
+            if (blockGeometry == DynamicGeometryType.NONE)
+                continue;
+
             for (int direction = 0; direction < Direction3Vector.LENGTH; direction++) {
 
                 batchReturn.clear();
 
                 BitSet accumulatedBatch = directionalBatches[direction];
 
-                if (accumulatedBatch.get(xyz))
-                    continue;
-
-                DynamicGeometryType blockGeometry = blockHandle.getGeometry();
-                if (blockGeometry == DynamicGeometryType.NONE)
+                if (accumulatedBatch.get(i))
                     continue;
 
                 if (!assembleQuads(

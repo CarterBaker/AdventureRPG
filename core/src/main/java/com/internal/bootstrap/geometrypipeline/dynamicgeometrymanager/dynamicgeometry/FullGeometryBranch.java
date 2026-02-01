@@ -73,12 +73,6 @@ public class FullGeometryBranch extends BranchPackage {
             BitSet batchReturn,
             Color[] vertColors) {
 
-        if (blockHandle.getBlockID() == 3)
-            tempDebug(subChunkInstance, chunkInstance, xyz,
-                    String.format(
-                            "Grass at local (%d,%d,%d)",
-                            Coordinate3Int.unpackX(xyz), Coordinate3Int.unpackY(xyz), Coordinate3Int.unpackZ(xyz)));
-
         if (!blockHasFace(
                 chunkInstance,
                 subChunkInstance,
@@ -331,7 +325,7 @@ public class FullGeometryBranch extends BranchPackage {
                     comparativeBiomeHandle,
                     blockHandle,
                     comparativeBlockHandle) ||
-                    accumulatedBatch.get(nextXYZ) ||
+                    accumulatedBatch.get(ChunkCoordinate3Int.getIndex(checkXYZ)) ||
                     !blockHasFace(
                             chunkInstance,
                             subChunkInstance,
@@ -340,9 +334,9 @@ public class FullGeometryBranch extends BranchPackage {
                             biomeHandle,
                             blockHandle))
                 return false;
-        }
 
-        batchReturn.set(nextXYZ);
+            batchReturn.set(ChunkCoordinate3Int.getIndex(checkXYZ));
+        }
 
         return true;
     }
@@ -440,17 +434,18 @@ public class FullGeometryBranch extends BranchPackage {
             int offsetXYZ = ChunkCoordinate3Int.getNeighborFromVert(vertXYZ, blockDirection3Vector);
             int blockXYZ = ChunkCoordinate3Int.convertToBlockSpace(offsetXYZ, blockDirection3Vector);
 
-            SubChunkInstance comparativeSubChunkCoordinate = getComparativeSubChunkInstance(
+            SubChunkInstance comparativeSubChunkInstance = getComparativeSubChunkInstance(
                     chunkInstance,
                     subChunkInstance,
                     blockXYZ,
                     blockDirection3Vector);
-            if (comparativeSubChunkCoordinate == ERROR) {
+            if (comparativeSubChunkInstance == null ||
+                    comparativeSubChunkInstance == ERROR) {
                 vertColors[i] = Color.WHITE;
                 continue;
             }
 
-            BlockPaletteHandle comparativeBiomePaletteHandle = comparativeSubChunkCoordinate.getBiomePaletteHandle();
+            BlockPaletteHandle comparativeBiomePaletteHandle = comparativeSubChunkInstance.getBiomePaletteHandle();
             short comparativeBiomeID = comparativeBiomePaletteHandle.getBlock(blockXYZ);
             BiomeHandle comparativeBiomeHandle = biomeManager.getBiomeFromBiomeID(comparativeBiomeID);
 
@@ -485,7 +480,7 @@ public class FullGeometryBranch extends BranchPackage {
             subChunkCoordinate -= 1;
         }
 
-        if (y >= CHUNK_SIZE) {
+        else if (y >= CHUNK_SIZE) {
 
             if (subChunkCoordinate == (WORLD_HEIGHT - 1))
                 return null;
@@ -614,7 +609,6 @@ public class FullGeometryBranch extends BranchPackage {
     }
 
     // TODO: Remove
-
     private void tempDebug(
             SubChunkInstance subChunkInstance,
             ChunkInstance chunkInstance,
@@ -629,10 +623,13 @@ public class FullGeometryBranch extends BranchPackage {
         int by = Coordinate3Int.unpackY(xyz);
         int bz = Coordinate3Int.unpackZ(xyz);
 
-        if (bx == 0 &&
-        // by == 0 &&
-                bz == 0)
-            System.out.println(message);
+        BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
+        short blockID = blockPaletteHandle.getBlock(xyz);
+        BlockHandle blockHandle = blockManager.getBlockFromBlockID(blockID);
+        String blockName = blockHandle != null ? blockHandle.getBlockName() : "Unknown";
 
+        // Output format: [x, y, z] [block name] + message
+        System.out.println("[" + bx + ", " + by + ", " + bz + "] [" + blockName + "] " + message);
     }
+
 }

@@ -1,6 +1,5 @@
 package com.internal.core.util.mathematics.Extras;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertBlockNeighbor3Vector;
 import com.internal.core.engine.UtilityPackage;
 
 public final class Coordinate3Int extends UtilityPackage {

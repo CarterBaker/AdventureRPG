@@ -13,7 +13,6 @@ public final class BlockPaletteHandle extends HandlePackage {
     private int blocksPerCell;
     private int paletteAxisSize;
     private int scaleBits;
-    private int chunkMask; // For converting signed to chunk-local
 
     private int totalCells;
     private int maxPaletteSize;
@@ -40,7 +39,6 @@ public final class BlockPaletteHandle extends HandlePackage {
 
         this.paletteAxisSize = paletteAxisSize;
         this.scaleBits = Integer.numberOfTrailingZeros(blocksPerCell);
-        this.chunkMask = chunkSize - 1; // Assumes chunkSize is power of 2
         this.totalCells = paletteAxisSize * paletteAxisSize * paletteAxisSize;
         this.maxPaletteSize = paletteThreshold;
 
@@ -133,12 +131,10 @@ public final class BlockPaletteHandle extends HandlePackage {
     }
 
     private int getCellIndex(int packedXYZ) {
-
-        // Unpack using Coordinate3Int (handles sign extension)
-        // Then mask to chunk-local coordinates and scale down to cell coordinates
-        int x = (Coordinate3Int.unpackX(packedXYZ) & chunkMask) >> scaleBits;
-        int y = (Coordinate3Int.unpackY(packedXYZ) & chunkMask) >> scaleBits;
-        int z = (Coordinate3Int.unpackZ(packedXYZ) & chunkMask) >> scaleBits;
+        // Direct bit extraction - no sign extension needed for palette indexing
+        int x = ((packedXYZ) & 0xF) >> scaleBits; // Bottom 4 bits of 10-bit field
+        int y = ((packedXYZ >> 20) & 0xF) >> scaleBits; // Bottom 4 bits of Y field
+        int z = ((packedXYZ >> 10) & 0xF) >> scaleBits; // Bottom 4 bits of Z field
         return (y * paletteAxisSize + z) * paletteAxisSize + x;
     }
 
@@ -156,7 +152,8 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     public short getBlock(int packedXYZ) {
         int index = getCellIndex(packedXYZ);
-        return directData != null ? directData[index] : palette.get(readPackedValue(index));
+        short result = directData != null ? directData[index] : palette.get(readPackedValue(index));
+        return result;
     }
 
     public void setBlock(int packedXYZ, short blockId) {

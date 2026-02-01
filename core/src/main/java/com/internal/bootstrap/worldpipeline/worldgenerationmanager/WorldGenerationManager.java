@@ -113,37 +113,10 @@ public class WorldGenerationManager extends ManagerPackage {
 
                     blockID = GRASS_BLOCK_ID;
                     blocks.setBlock(localX, localY, localZ, blockID);
-
-                    if (localX == 0 && localZ == 0)
-                        debugSubChunk(chunkCoordinate, subChunkInstance,
-                                String.format(
-                                        "Generating grass at local (%d,%d,%d) | world (%d,%d,%d)",
-                                        localX, localY, localZ,
-                                        worldX, worldY, worldZ));
                 }
             }
         }
 
         return true;
-    }
-
-    // TODO: Remove
-    private void debugSubChunk(
-            long chunkCoordinate,
-            SubChunkInstance subChunkInstance,
-            String message) {
-
-        // Only debug chunk at origin (0,0) by default
-        if (chunkCoordinate != Coordinate2Long.pack(0, 0) ||
-                subChunkInstance.getCoordinate() != 0)
-            return;
-
-        int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
-        int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
-        byte subY = (byte) subChunkInstance.getCoordinate();
-
-        System.out.printf(
-                "[DEBUG] Chunk(%d,%d) SubChunk(%d): %s%n",
-                chunkX, chunkZ, subY, message);
     }
 }

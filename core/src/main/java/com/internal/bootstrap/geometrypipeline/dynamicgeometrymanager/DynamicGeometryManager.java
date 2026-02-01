@@ -31,9 +31,6 @@ public class DynamicGeometryManager extends ManagerPackage {
         boolean success = true;
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
 
-        // TODO: Could potential add skipping for perfectly valid geometry if only one
-        // subchunk fails.
-
         for (int i = 0; i < worldHeight; i++)
             if (!internalBuildManager.build(
                     dynamicGeometryAsyncContainer,
