@@ -8,6 +8,7 @@ import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BuildB
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.GenerationBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.MergeBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.core.engine.ManagerPackage;
@@ -23,6 +24,7 @@ class ChunkQueueManager extends ManagerPackage {
     // Internal
     private BlockManager blockManager;
     private ChunkStreamManager chunkStreamManager;
+    private ChunkPositionSystem chunkPositionSystem;
     private WorldRenderSystem worldRenderSystem;
     private GenerationBranch generationBranch;
     private AssessmentBranch assessmentBranch;
@@ -77,6 +79,7 @@ class ChunkQueueManager extends ManagerPackage {
         // Internal
         this.blockManager = get(BlockManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.chunkPositionSystem = get(ChunkPositionSystem.class);
         this.worldRenderSystem = get(WorldRenderSystem.class);
     }
 
@@ -101,7 +104,6 @@ class ChunkQueueManager extends ManagerPackage {
 
         unloadRequests.remove(chunkCoordinate);
         loadRequests.add(chunkCoordinate);
-
     }
 
     void requestUnload(long chunkCoordinate) {
@@ -150,6 +152,9 @@ class ChunkQueueManager extends ManagerPackage {
                 chunkCoordinate,
                 chunkStreamManager.getChunkVAO(),
                 airBlockId);
+
+        GridSlotHandle gridSlotHandle = chunkPositionSystem.getGridSlotHandleForChunk(chunkCoordinate);
+        chunkInstance.setGridSlotHandle(gridSlotHandle);
 
         activeChunks.put(chunkCoordinate, chunkInstance);
     }

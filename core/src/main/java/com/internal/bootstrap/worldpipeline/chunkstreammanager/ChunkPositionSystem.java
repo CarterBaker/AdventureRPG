@@ -24,6 +24,7 @@ class ChunkPositionSystem extends SystemPackage {
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
     private Long2ObjectOpenHashMap<ChunkInstance> chunkUnloadQueue;
     private Long2ObjectOpenHashMap<MegaChunkInstance> megaChunkUnloadQueue;
+    private Long2ObjectOpenHashMap<GridSlotHandle> chunkCoordinate2GridSlot;
 
     // Internal \\
 
@@ -33,6 +34,7 @@ class ChunkPositionSystem extends SystemPackage {
         // Chunk Streaming
         this.chunkUnloadQueue = new Long2ObjectOpenHashMap<>();
         this.megaChunkUnloadQueue = new Long2ObjectOpenHashMap<>();
+        this.chunkCoordinate2GridSlot = new Long2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -68,6 +70,7 @@ class ChunkPositionSystem extends SystemPackage {
         // Reversely remove all computed Coordinate2Ints from chunkUnloadQueue
         chunkUnloadQueue.putAll(activeChunks);
         megaChunkUnloadQueue.putAll(activeMegaChunks);
+        chunkCoordinate2GridSlot.clear();
     }
 
     private void createQueue(
@@ -119,6 +122,7 @@ class ChunkPositionSystem extends SystemPackage {
         megaChunkUnloadQueue.remove(megaChunkCoordinate);
 
         GridSlotHandle gridSlotHandle = gridInstance.getGridSlot(gridCoordinate);
+        chunkCoordinate2GridSlot.put(chunkCoordinate, gridSlotHandle);
 
         ChunkInstance loadedChunk = activeChunks.get(chunkCoordinate);
 
@@ -173,5 +177,11 @@ class ChunkPositionSystem extends SystemPackage {
 
     public void setActiveMegaChunks(Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
         this.activeMegaChunks = activeMegaChunks;
+    }
+
+    // Accessible \\
+
+    public GridSlotHandle getGridSlotHandleForChunk(long chunkCoordinate) {
+        return chunkCoordinate2GridSlot.get(chunkCoordinate);
     }
 }
