@@ -63,6 +63,7 @@ class ChunkPositionSystem extends SystemPackage {
 
         // Clear unload map
         chunkUnloadQueue.clear();
+        megaChunkUnloadQueue.clear();
 
         // Reversely remove all computed Coordinate2Ints from chunkUnloadQueue
         chunkUnloadQueue.putAll(activeChunks);
@@ -145,14 +146,23 @@ class ChunkPositionSystem extends SystemPackage {
         // At least one chunk is still active, don't unload the mega
         for (ChunkInstance chunkInstance : batchedChunks.values()) {
 
-            if (activeChunks.containsKey(chunkInstance.getCoordinate()))
+            if (activeChunks.containsKey(chunkInstance.getCoordinate())) {
                 dispose = false;
+                break;
+            }
 
             worldRenderSystem.removeWorldInstance(chunkInstance.getCoordinate());
         }
 
-        if (dispose)
-            megaChunkInstance.dispose();
+        if (!dispose)
+            return;
+
+        // Only remove rendering when actually disposing
+        for (ChunkInstance chunkInstance : batchedChunks.values())
+            worldRenderSystem.removeWorldInstance(chunkInstance.getCoordinate());
+
+        megaChunkInstance.dispose();
+
     }
 
     // Utility \\
