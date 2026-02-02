@@ -85,6 +85,12 @@ class GLSLUtility {
         Gdx.gl30.glBindBufferBase(GL30.GL_UNIFORM_BUFFER, bindingPoint, gpuHandle);
     }
 
+    static void bindUniformBlockToProgram(int shaderProgram, String blockName, int bindingPoint) {
+        int blockIndex = Gdx.gl30.glGetUniformBlockIndex(shaderProgram, blockName);
+        if (blockIndex != GL30.GL_INVALID_INDEX)
+            Gdx.gl30.glUniformBlockBinding(shaderProgram, blockIndex, bindingPoint);
+    }
+
     static void updateUniformBuffer(int gpuHandle, int offset, java.nio.ByteBuffer data) {
         Gdx.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, gpuHandle);
         Gdx.gl30.glBufferSubData(GL30.GL_UNIFORM_BUFFER, offset, data.remaining(), data);

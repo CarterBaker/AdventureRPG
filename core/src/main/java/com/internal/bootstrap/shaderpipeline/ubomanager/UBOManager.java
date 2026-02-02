@@ -83,25 +83,28 @@ public final class UBOManager extends ManagerPackage {
 
     public UBOHandle cloneUBO(UBOHandle source) {
 
-        int newBinding = allocateBindingPoint();
+        // REUSE the source's binding point
+        int sharedBinding = source.getBindingPoint();
         int newGpuHandle = GLSLUtility.createUniformBuffer();
 
         UBOHandle copy = create(UBOHandle.class);
-        copy.constructor(source.getBufferName(), 0, newGpuHandle, newBinding, source.getTotalSizeBytes());
+        copy.constructor(
+                source.getBufferName(),
+                source.getBufferID(),
+                newGpuHandle,
+                sharedBinding,
+                source.getTotalSizeBytes());
 
         // Copy uniform structure
         for (String uniformName : source.getUniforms().keySet()) {
             Uniform<?> sourceUniform = source.getUniform(uniformName);
-
-            // Each attribute knows how to create a default copy of itself
             UniformAttribute<?> newAttribute = sourceUniform.attribute.createDefault();
-
             Uniform<?> copiedUniform = createUniform(sourceUniform.offset, newAttribute);
             copy.addUniform(uniformName, copiedUniform);
         }
 
+        // Allocate GPU buffer
         GLSLUtility.allocateUniformBuffer(newGpuHandle, source.getTotalSizeBytes());
-        GLSLUtility.bindUniformBufferBase(newGpuHandle, newBinding);
 
         return copy;
     }

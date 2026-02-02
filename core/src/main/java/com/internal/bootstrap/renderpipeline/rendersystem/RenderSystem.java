@@ -105,8 +105,15 @@ public class RenderSystem extends SystemPackage {
             return;
 
         // Bind each UBO to its binding point
-        for (UBOHandle ubo : ubos.values())
-            GLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+        for (UBOHandle ubo : ubos.values()) {
+            GLSLUtility.bindUniformBlockToProgram(
+                    material.getShaderHandle().getShaderHandle(),
+                    ubo.getBufferName(),
+                    ubo.getBindingPoint());
+            GLSLUtility.bindUniformBuffer(
+                    ubo.getBindingPoint(),
+                    ubo.getGpuHandle());
+        }
     }
 
     private void pushMaterialUniforms(MaterialHandle material) {

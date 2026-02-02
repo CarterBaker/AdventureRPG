@@ -134,6 +134,9 @@ class GridBuildSystem extends SystemPackage {
             int gridY = Coordinate2Long.unpackY(gridCoordinate) * CHUNK_SIZE;
             gridPosition.set(gridX, gridY);
 
+            System.out.println("Grid coord " + gridCoordinate + " -> position (" + gridX + ", " + gridY + ") binding="
+                    + slotUBO.getBindingPoint());
+
             // Set the static grid position once
             slotUBO.updateUniform("u_gridPosition", gridPosition);
             slotUBO.push();

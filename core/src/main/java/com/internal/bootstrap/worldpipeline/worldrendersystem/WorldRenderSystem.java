@@ -139,9 +139,8 @@ public class WorldRenderSystem extends SystemPackage {
             return;
 
         // Remove each model (this unloads VBO/IBO from GPU)
-        for (ModelHandle model : modelList) {
+        for (ModelHandle model : modelList)
             modelManager.removeMesh(model);
-        }
 
         // Clear the list and remove from map
         modelList.clear();
