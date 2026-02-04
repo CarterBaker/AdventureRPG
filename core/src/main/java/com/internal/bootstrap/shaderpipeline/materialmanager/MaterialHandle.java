@@ -66,4 +66,17 @@ public class MaterialHandle extends HandlePackage {
     public Uniform<?> getUniform(String uniformName) {
         return uniforms.get(uniformName);
     }
+
+    @SuppressWarnings("unchecked")
+    public <T> void setUniform(String uniformName, T value) {
+        Uniform<?> uniform = uniforms.get(uniformName);
+
+        if (uniform == null) {
+            System.err.println("Warning: Uniform '" + uniformName + "' not found in material '" + materialName + "'");
+            return;
+        }
+
+        // Cast the uniform and set the value
+        ((Uniform<T>) uniform).attribute().set(value);
+    }
 }

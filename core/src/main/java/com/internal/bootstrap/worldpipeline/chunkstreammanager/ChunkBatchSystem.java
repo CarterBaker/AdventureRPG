@@ -19,6 +19,7 @@ public class ChunkBatchSystem extends SystemPackage {
     private ThreadHandle threadHandle;
     private WorldRenderSystem worldRenderSystem;
     private ChunkStreamManager chunkStreamManager;
+    private ChunkPositionSystem chunkPositionSystem;
 
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
@@ -33,6 +34,7 @@ public class ChunkBatchSystem extends SystemPackage {
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.worldRenderSystem = get(WorldRenderSystem.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.chunkPositionSystem = get(ChunkPositionSystem.class);
 
         this.MEGA_CHUNK_SIZE = EngineSetting.MEGA_CHUNK_SIZE;
         this.megaScale = MEGA_CHUNK_SIZE * MEGA_CHUNK_SIZE;
@@ -73,14 +75,8 @@ public class ChunkBatchSystem extends SystemPackage {
                 chunkStreamManager.getChunkVAO(),
                 megaScale);
 
-        // Transfer grid slot handle if chunk exists at mega coordinate
-        ChunkInstance chunkInstance = activeChunks.get(megaChunkCoordinate);
-        if (chunkInstance == null)
-            return megaChunkInstance;
-
-        GridSlotHandle gridSlotHandle = chunkInstance.getGridSlotHandle();
-        if (gridSlotHandle != null)
-            megaChunkInstance.setGridSlotHandle(gridSlotHandle);
+        GridSlotHandle gridSlotHandle = chunkPositionSystem.getGridSlotHandleForChunk(megaChunkCoordinate);
+        megaChunkInstance.setGridSlotHandle(gridSlotHandle);
 
         return megaChunkInstance;
     }
