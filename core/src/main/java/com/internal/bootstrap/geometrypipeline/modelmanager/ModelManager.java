@@ -38,6 +38,10 @@ public class ModelManager extends ManagerPackage {
 
         // Accessible \\
 
+        public VAOHandle cloneVAO(VAOHandle templateVAO) {
+                return vaoManager.cloneVAO(templateVAO);
+        }
+
         public ModelHandle createModel(
                         VAOHandle vaoHandle,
                         FloatArrayList vertices,

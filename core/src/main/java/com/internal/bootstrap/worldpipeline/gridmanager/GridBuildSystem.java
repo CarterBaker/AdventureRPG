@@ -17,12 +17,10 @@ class GridBuildSystem extends SystemPackage {
 
     private UBOManager uboManager;
     private int CHUNK_SIZE;
-    private Vector2 gridPosition;
 
     @Override
     protected void create() {
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
-        this.gridPosition = new Vector2();
     }
 
     @Override
@@ -77,7 +75,6 @@ class GridBuildSystem extends SystemPackage {
                 float distanceFromCenter = (x * x) + (y * y);
 
                 if (distanceFromCenter <= radiusSquared) {
-
                     long gridCoordinate = Coordinate2Long.pack(x, y);
                     gridSlotdata.put(gridCoordinate, createGridSlotData(
                             gridCoordinate,
@@ -109,9 +106,8 @@ class GridBuildSystem extends SystemPackage {
         slots.sort(Comparator.comparingDouble(GridSlotData::getDistanceFromCenter));
 
         long[] coordinates = new long[slots.size()];
-        for (int i = 0; i < slots.size(); i++) {
+        for (int i = 0; i < slots.size(); i++)
             coordinates[i] = slots.get(i).getGridCoordinate();
-        }
 
         return coordinates;
     }
@@ -132,7 +128,7 @@ class GridBuildSystem extends SystemPackage {
             // Unpack grid coordinates
             int gridX = Coordinate2Long.unpackX(gridCoordinate) * CHUNK_SIZE;
             int gridY = Coordinate2Long.unpackY(gridCoordinate) * CHUNK_SIZE;
-            gridPosition.set(gridX, gridY);
+            Vector2 gridPosition = new Vector2(gridX, gridY);
 
             // Set the static grid position once
             slotUBO.updateUniform("u_gridPosition", gridPosition);

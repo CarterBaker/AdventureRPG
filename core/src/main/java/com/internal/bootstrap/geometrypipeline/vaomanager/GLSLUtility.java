@@ -43,4 +43,50 @@ class GLSLUtility extends UtilityPackage {
                 vaoHandle.constructor(vao, floatsPerVert);
                 return vaoHandle;
         }
+
+        static VAOHandle cloneVAO(VAOHandle vaoHandle, VAOHandle templateVAO) {
+                GL30 gl = Gdx.gl30;
+
+                IntBuffer id = ByteBuffer
+                                .allocateDirect(4)
+                                .order(ByteOrder.nativeOrder())
+                                .asIntBuffer();
+
+                gl.glGenVertexArrays(1, id);
+                int vao = id.get(0);
+
+                // CONFIGURE THE VAO with same layout as template
+                gl.glBindVertexArray(vao);
+                int strideBytes = templateVAO.getVertStride() * 4;
+
+                gl.glEnableVertexAttribArray(0);
+                gl.glVertexAttribPointer(0, 3, GL20.GL_FLOAT, false, strideBytes, 0);
+                gl.glEnableVertexAttribArray(1);
+                gl.glVertexAttribPointer(1, 3, GL20.GL_FLOAT, false, strideBytes, 12);
+                gl.glEnableVertexAttribArray(2);
+                gl.glVertexAttribPointer(2, 1, GL20.GL_FLOAT, false, strideBytes, 24);
+                gl.glEnableVertexAttribArray(3);
+                gl.glVertexAttribPointer(3, 2, GL20.GL_FLOAT, false, strideBytes, 28);
+
+                gl.glBindVertexArray(0);
+
+                // Initialize the handle that was created by the engine
+                vaoHandle.constructor(vao, templateVAO.getVertStride());
+                return vaoHandle;
+        }
+
+        static void removeVAO(VAOHandle vaoHandle) {
+                GL30 gl = Gdx.gl30;
+
+                int vao = vaoHandle.getAttributeHandle();
+                if (vao != 0) {
+                        IntBuffer buffer = ByteBuffer
+                                        .allocateDirect(4)
+                                        .order(ByteOrder.nativeOrder())
+                                        .asIntBuffer();
+
+                        buffer.put(vao).flip();
+                        gl.glDeleteVertexArrays(1, buffer);
+                }
+        }
 }

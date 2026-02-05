@@ -5,11 +5,11 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.AssessmentBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BatchBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BuildBranch;
+import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.ChunkQueueItem;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.GenerationBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.MergeBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
-import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.queue.QueueInstance;
@@ -42,7 +42,6 @@ class ChunkQueueManager extends ManagerPackage {
     private LongLinkedOpenHashSet loadRequests;
     private LongLinkedOpenHashSet unloadRequests;
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
-    private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
 
     // Internal \\
 
@@ -202,8 +201,9 @@ class ChunkQueueManager extends ManagerPackage {
         long chunkCoordinate = iterator.nextLong();
         iterator.remove();
 
-        ChunkInstance chunkInstance = activeChunks.remove(chunkCoordinate);
+        worldRenderSystem.removeWorldInstance(chunkCoordinate);
 
+        ChunkInstance chunkInstance = activeChunks.remove(chunkCoordinate);
         if (chunkInstance != null)
             chunkInstance.dispose();
     }
@@ -212,9 +212,5 @@ class ChunkQueueManager extends ManagerPackage {
 
     public void setActiveChunks(Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
         this.activeChunks = activeChunks;
-    }
-
-    public void setActiveMegaChunks(Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
-        this.activeMegaChunks = activeMegaChunks;
     }
 }

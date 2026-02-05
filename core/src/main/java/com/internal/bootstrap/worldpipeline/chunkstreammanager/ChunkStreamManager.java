@@ -45,10 +45,8 @@ public class ChunkStreamManager extends ManagerPackage {
 
         this.chunkQueueManager = create(ChunkQueueManager.class);
         this.chunkQueueManager.setActiveChunks(activeChunks);
-        this.chunkQueueManager.setActiveMegaChunks(activeMegaChunks);
 
         this.chunkBatchSystem = create(ChunkBatchSystem.class);
-        this.chunkBatchSystem.setActiveChunks(activeChunks);
         this.chunkBatchSystem.setActiveMegaChunks(activeMegaChunks);
     }
 

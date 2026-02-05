@@ -21,7 +21,6 @@ public class ChunkBatchSystem extends SystemPackage {
     private ChunkStreamManager chunkStreamManager;
     private ChunkPositionSystem chunkPositionSystem;
 
-    private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
 
     private int MEGA_CHUNK_SIZE;
@@ -124,6 +123,13 @@ public class ChunkBatchSystem extends SystemPackage {
         });
     }
 
+    public void requestUnload(long megaChunkCoordinate) {
+
+        MegaChunkInstance megaChunkInstance = activeMegaChunks.get(megaChunkCoordinate);
+        worldRenderSystem.removeWorldInstance(megaChunkCoordinate);
+        megaChunkInstance.dispose();
+    }
+
     // Render Data \\
 
     private void renderBatched(MegaChunkInstance megaChunkInstance) {
@@ -150,10 +156,6 @@ public class ChunkBatchSystem extends SystemPackage {
     }
 
     // Accessible \\
-
-    public void setActiveChunks(Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
-        this.activeChunks = activeChunks;
-    }
 
     public void setActiveMegaChunks(Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
         this.activeMegaChunks = activeMegaChunks;

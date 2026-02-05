@@ -80,6 +80,10 @@ public class MeshManager extends ManagerPackage {
         return meshHandleID2MeshHandle.get(meshID);
     }
 
+    public VAOHandle cloneVAO(VAOHandle templateVAO) {
+        return vaoManager.cloneVAO(templateVAO);
+    }
+
     public VBOHandle createVBO(
             VAOHandle vaoHandle,
             FloatArrayList vertices) {
@@ -133,6 +137,7 @@ public class MeshManager extends ManagerPackage {
     }
 
     public void removeMesh(MeshHandle meshHandle) {
+        vaoManager.removeVAO(meshHandle.getVAOHandle());
         vboManager.removeVBO(meshHandle.getVBOHandle());
         iboManager.removeIBO(meshHandle.getIBOHandle());
     }

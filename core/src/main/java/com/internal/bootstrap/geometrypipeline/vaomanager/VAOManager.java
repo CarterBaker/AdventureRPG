@@ -41,4 +41,13 @@ public class VAOManager extends ManagerPackage {
     public VAOHandle getVAOHandleFromName(String vaoName) {
         return vaoName2VAOHandle.get(vaoName);
     }
+
+    public VAOHandle cloneVAO(VAOHandle templateVAO) {
+        VAOHandle newHandle = create(VAOHandle.class);
+        return GLSLUtility.cloneVAO(newHandle, templateVAO);
+    }
+
+    public void removeVAO(VAOHandle vaoHandle) {
+        GLSLUtility.removeVAO(vaoHandle);
+    }
 }

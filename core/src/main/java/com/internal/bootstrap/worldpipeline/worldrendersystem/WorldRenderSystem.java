@@ -5,6 +5,8 @@ import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPac
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketState;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
@@ -22,15 +24,18 @@ public class WorldRenderSystem extends SystemPackage {
     private ModelManager modelManager;
     private RenderSystem renderSystem;
 
-    // Coordinate -> List of ModelHandles for that chunk
+    // Coordinate to List of ModelHandles for that chunk
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelHandle>> coordinate2Models;
+    private Long2ObjectOpenHashMap<ObjectArrayList<ModelHandle>> renderableModels;
 
     // Internal \\
 
     @Override
     protected void create() {
+
         // Internal
         this.coordinate2Models = new Long2ObjectOpenHashMap<>();
+        this.renderableModels = new Long2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -45,14 +50,18 @@ public class WorldRenderSystem extends SystemPackage {
     protected void update() {
 
         // Push all models to render system each frame
-        for (ObjectArrayList<ModelHandle> modelList : coordinate2Models.values())
+        for (ObjectArrayList<ModelHandle> modelList : renderableModels.values())
             for (ModelHandle model : modelList)
                 renderSystem.pushRenderCall(model, 0);
     }
 
     // World Render System \\
 
-    public void moveWorldInstance(long coordinate, UBOHandle uboHandle) {
+    public void clearRenderInstance() {
+        renderableModels.clear();
+    }
+
+    public void assignRenderModel(long coordinate, UBOHandle uboHandle) {
 
         // Get the model list for this coordinate
         ObjectArrayList<ModelHandle> modelList = coordinate2Models.get(coordinate);
@@ -66,6 +75,8 @@ public class WorldRenderSystem extends SystemPackage {
             MaterialHandle material = model.getMaterial();
             material.setUBO(EngineSetting.GRID_COORDINATE_UBO, uboHandle);
         }
+
+        renderableModels.put(coordinate, modelList);
     }
 
     public boolean renderWorldInstance(WorldRenderInstance worldRenderInstance) {
@@ -101,6 +112,9 @@ public class WorldRenderSystem extends SystemPackage {
                 if (dynamicModel.isEmpty())
                     continue;
 
+                // Clone the VAO template to get a unique VAO for this mesh
+                VAOHandle cloneVaoHandle = modelManager.cloneVAO(dynamicModel.getVAOHandle());
+
                 // Clone the material to get a unique instance
                 MaterialHandle clonedMaterial = materialManager.cloneMaterial(materialID);
 
@@ -111,7 +125,7 @@ public class WorldRenderSystem extends SystemPackage {
 
                 // Create model from dynamic model data
                 ModelHandle modelHandle = modelManager.createModel(
-                        dynamicModel.getVAOHandle(),
+                        cloneVaoHandle,
                         dynamicModel.getVertices(),
                         dynamicModel.getIndices(),
                         clonedMaterial);
@@ -126,11 +140,15 @@ public class WorldRenderSystem extends SystemPackage {
 
         // Store the model list mapped to this coordinate
         coordinate2Models.put(coordinate, modelList);
+        renderableModels.put(coordinate, modelList);
 
         return true;
     }
 
     public void removeWorldInstance(long coordinate) {
+
+        // Remove from render list
+        renderableModels.remove(coordinate);
 
         // Get the model list for this coordinate
         ObjectArrayList<ModelHandle> modelList = coordinate2Models.get(coordinate);

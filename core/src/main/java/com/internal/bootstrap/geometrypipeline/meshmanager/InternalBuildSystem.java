@@ -40,7 +40,8 @@ class InternalBuildSystem extends SystemPackage {
         JsonObject jsonObject = JsonUtility.loadJsonObject(file);
         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
 
-        VAOHandle vaoHandle = buildVAOHandle(resourceName, jsonObject, file, loadManager);
+        VAOHandle vaoTemplate = buildVAOHandle(resourceName, jsonObject, file, loadManager);
+        VAOHandle vaoHandle = vaoManager.cloneVAO(vaoTemplate);
         VBOHandle vboHandle = buildVBOHandle(resourceName, jsonObject, file, loadManager);
         IBOHandle iboHandle = buildIBOHandle(resourceName, jsonObject, file, loadManager);
 

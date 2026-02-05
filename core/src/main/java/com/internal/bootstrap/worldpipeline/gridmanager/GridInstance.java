@@ -49,14 +49,4 @@ public class GridInstance extends InstancePackage {
     public GridSlotHandle getGridSlot(long gridCoordinate) {
         return gridSlots.get(gridCoordinate);
     }
-
-    public void assignChunkToSlot(
-            long gridCoordinate,
-            long chunkCoordinate,
-            long megaChunkCoordinate) {
-
-        GridSlotHandle gridSlotHandle = getGridSlot(gridCoordinate);
-        gridSlotHandle.setChunkCoordinate(chunkCoordinate);
-        gridSlotHandle.setMegaChunkCoordinate(megaChunkCoordinate);
-    }
 }
