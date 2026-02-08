@@ -6,12 +6,16 @@ import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstanc
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 public class SubChunkInstance extends WorldRenderInstance {
 
     // Internal
-    BlockPaletteHandle biomePaletteHandle;
-    BlockPaletteHandle blockPaletteHandle;
+    private BlockPaletteHandle biomePaletteHandle;
+    private BlockPaletteHandle blockPaletteHandle;
+    private BlockPaletteHandle blockRotationPaletteHandle;
+
+    private short defaultDirection = (short) Direction3Vector.UP.index;
 
     // Internal \\
 
@@ -23,6 +27,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         // Internal
         this.biomePaletteHandle = create(BlockPaletteHandle.class);
         this.blockPaletteHandle = create(BlockPaletteHandle.class);
+        this.blockRotationPaletteHandle = create(BlockPaletteHandle.class);
     }
 
     public void constructor(
@@ -47,6 +52,11 @@ public class SubChunkInstance extends WorldRenderInstance {
                 EngineSetting.CHUNK_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD,
                 airBlockId);
+
+        this.blockRotationPaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE,
+                EngineSetting.BLOCK_PALETTE_THRESHOLD,
+                defaultDirection);
     }
 
     // Accessible \\
@@ -58,5 +68,9 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     public BlockPaletteHandle getBlockPaletteHandle() {
         return blockPaletteHandle;
+    }
+
+    public BlockPaletteHandle getBlockRotationPaletteHandle() {
+        return blockRotationPaletteHandle;
     }
 }
