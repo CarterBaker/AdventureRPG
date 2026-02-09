@@ -6,6 +6,7 @@ import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
+import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
@@ -104,5 +105,14 @@ public class ChunkStreamManager extends ManagerPackage {
 
     public WorldHandle getActiveWorldHandle() {
         return playerManager.getPlayer().getWorldHandle();
+    }
+
+    public ChunkInstance getChunkInstance(long rawChunkCoordinate) {
+
+        long wrapped = WorldWrapUtility.wrapAroundWorld(
+                getActiveWorldHandle(),
+                rawChunkCoordinate);
+
+        return activeChunks.get(wrapped);
     }
 }

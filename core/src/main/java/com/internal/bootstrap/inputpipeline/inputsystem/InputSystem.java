@@ -1,4 +1,4 @@
-package com.internal.bootstrap.inputpipeline.input;
+package com.internal.bootstrap.inputpipeline.inputsystem;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;

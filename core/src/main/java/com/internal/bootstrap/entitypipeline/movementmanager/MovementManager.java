@@ -4,7 +4,6 @@ import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entityManager.StatisticsInstance;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
-import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;

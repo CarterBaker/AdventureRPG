@@ -1,6 +1,6 @@
 package com.internal.bootstrap.renderpipeline.cameramanager;
 
-import com.internal.bootstrap.inputpipeline.input.InputSystem;
+import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.core.engine.ManagerPackage;
 

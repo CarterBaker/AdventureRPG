@@ -3,11 +3,17 @@ package com.internal.bootstrap.entitypipeline.playermanager;
 import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entityManager.EntityManager;
 import com.internal.bootstrap.entitypipeline.movementmanager.MovementManager;
-import com.internal.bootstrap.inputpipeline.input.InputSystem;
+import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
+import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
+import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
+import com.internal.bootstrap.worldpipeline.util.WorldPositionUtility;
 import com.internal.core.engine.ManagerPackage;
+import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector3;
 import com.internal.core.util.mathematics.vectors.Vector3Int;
 
@@ -18,11 +24,14 @@ public class PlayerManager extends ManagerPackage {
     private InputSystem inputSystem;
     private MovementManager movementmanager;
     private EntityManager entityManager;
+    private BlockManager blockManager;
+    private ChunkStreamManager chunkStreamManager;
 
     private InternalBufferSystem internalBufferSystem;
 
     // Active Player
     private EntityHandle player;
+    private boolean verifyPlayerPosition;
 
     // Internal \\
 
@@ -31,6 +40,8 @@ public class PlayerManager extends ManagerPackage {
 
         // Internal
         this.internalBufferSystem = create(InternalBufferSystem.class);
+
+        this.verifyPlayerPosition = true;
     }
 
     @Override
@@ -41,6 +52,8 @@ public class PlayerManager extends ManagerPackage {
         this.inputSystem = get(InputSystem.class);
         this.movementmanager = get(MovementManager.class);
         this.entityManager = get(EntityManager.class);
+        this.blockManager = get(BlockManager.class);
+        this.chunkStreamManager = get(ChunkStreamManager.class);
     }
 
     @Override
@@ -57,15 +70,57 @@ public class PlayerManager extends ManagerPackage {
 
     private void calculatePlayerPosition() {
 
+        WorldPositionStruct worldPositionStruct = player.getWorldPositionStruct();
+
+        if (verifyPlayerPosition) {
+            verifyPlayerPosition = verifyPlayerPosition(worldPositionStruct);
+            return;
+        }
+
         // Get required reference data
         Vector3Int input = inputSystem.getInput();
         CameraInstance camera = cameraManager.getMainCamera();
         Vector3 direction = camera.getDirection();
 
         movementmanager.move(input, direction, player);
-        camera.setPosition(player.getWorldPositionStruct().getPosition());
+        camera.setPosition(worldPositionStruct.getPosition());
 
-        internalBufferSystem.updatePlayerPosition(player.getWorldPositionStruct());
+        internalBufferSystem.updatePlayerPosition(worldPositionStruct);
+    }
+
+    private boolean verifyPlayerPosition(WorldPositionStruct worldPositionStruct) {
+
+        ChunkInstance activeChunkInstance = chunkStreamManager.getChunkInstance(
+                worldPositionStruct.getChunkCoordinate());
+
+        if (activeChunkInstance == null)
+            return true;
+
+        QueueOperation state = activeChunkInstance.getChunkState().getAssociatedOperation();
+        if (state == QueueOperation.GENERATE)
+            return true;
+
+        float offset = EngineSetting.BLOCK_SIZE / 2;
+        Vector3 position = worldPositionStruct.getPosition();
+        int blockX = (int) position.x;
+        int totalY = (int) position.y;
+        int blockZ = (int) position.z;
+
+        int safeY = WorldPositionUtility.findSafeSpawnHeight(
+                activeChunkInstance,
+                blockManager,
+                blockX,
+                totalY,
+                blockZ);
+
+        if (safeY == -1)
+            return true;
+
+        position.x = blockX + offset;
+        position.y = safeY + offset;
+        position.z = blockZ + offset;
+
+        return false;
     }
 
     // Accessible \\

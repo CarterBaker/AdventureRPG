@@ -1,9 +1,10 @@
 package com.internal.bootstrap.entitypipeline.entityManager;
 
 import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
+import com.internal.bootstrap.worldpipeline.util.WorldPositionUtility;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class EntityManager extends ManagerPackage {
@@ -19,11 +20,14 @@ public class EntityManager extends ManagerPackage {
 
     public EntityHandle createEntity() {
 
+        WorldHandle activeWorldHandle = worldStreamManager.getActiveWorld();
+        long randomChunk = WorldPositionUtility.getRandomChunk(activeWorldHandle);
+
         EntityHandle entityHandle = create(EntityHandle.class);
         entityHandle.constructor(
                 worldStreamManager.getActiveWorld(),
                 new Vector3(),
-                Coordinate2Long.pack(0, 0));
+                randomChunk);
 
         return entityHandle;
     }

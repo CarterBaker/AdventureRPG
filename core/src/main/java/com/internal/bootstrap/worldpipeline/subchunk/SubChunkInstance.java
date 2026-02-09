@@ -1,11 +1,13 @@
 package com.internal.bootstrap.worldpipeline.subchunk;
 
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.mathematics.Extras.Coordinate3Int;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 public class SubChunkInstance extends WorldRenderInstance {
@@ -62,6 +64,7 @@ public class SubChunkInstance extends WorldRenderInstance {
     // Accessible \\
 
     // Internal
+
     public BlockPaletteHandle getBiomePaletteHandle() {
         return biomePaletteHandle;
     }
@@ -72,5 +75,9 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     public BlockPaletteHandle getBlockRotationPaletteHandle() {
         return blockRotationPaletteHandle;
+    }
+
+    public short getBlock(int x, int y, int z) {
+        return blockPaletteHandle.getBlock(Coordinate3Int.pack(x, y, z));
     }
 }
