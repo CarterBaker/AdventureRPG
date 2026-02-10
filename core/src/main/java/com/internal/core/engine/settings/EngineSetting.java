@@ -18,6 +18,7 @@ public class EngineSetting {
         public static final String CALENDAR_JSON_PATH = "calendar/Calendar.json"; // Location of the calendar json file
         public static final String BLOCK_JSON_PATH = "blocks"; // Location of all block json files
         public static final String BIOME_JSON_PATH = "biomes"; // Location of all biome files
+        public static final String ENTITY_JSON_PATH = "entities"; // Location of all entity files
 
         // File Extension Settingsa
 
@@ -100,4 +101,7 @@ public class EngineSetting {
         public static final String GRID_COORDINATE_UBO = "GridCoordinateData"; // The grid slot specific UBO
         public static final int MAX_CHUNK_STREAM_PER_FRAME = 128; // Chunks to load per frame
         public static final int MAX_CHUNK_STREAM_PER_BATCH = 32; // Chunks to load per batch
+
+        // Player
+        public static final String DEFAULT_PLAYER_RACE = "humanoid"; // The starting race for all players
 }

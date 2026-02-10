@@ -1,6 +1,7 @@
 package com.internal.bootstrap.entitypipeline.playermanager;
 
-import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
+import com.internal.bootstrap.entitypipeline.entityManager.EntityData;
+import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entityManager.EntityManager;
 import com.internal.bootstrap.entitypipeline.movementmanager.MovementManager;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
@@ -30,8 +31,11 @@ public class PlayerManager extends ManagerPackage {
     private InternalBufferSystem internalBufferSystem;
 
     // Active Player
+    private EntityData entityData;
     private EntityHandle player;
     private boolean verifyPlayerPosition;
+    private Vector3 cameraPosition;
+    private Vector3 cameraOffset;
 
     // Internal \\
 
@@ -42,6 +46,8 @@ public class PlayerManager extends ManagerPackage {
         this.internalBufferSystem = create(InternalBufferSystem.class);
 
         this.verifyPlayerPosition = true;
+        this.cameraPosition = new Vector3();
+        this.cameraOffset = new Vector3();
     }
 
     @Override
@@ -60,7 +66,12 @@ public class PlayerManager extends ManagerPackage {
     protected void awake() {
 
         // Active Player
-        this.player = entityManager.createEntity();
+        this.entityData = entityManager.getTemplateDataFromTemplateName(EngineSetting.DEFAULT_PLAYER_RACE);
+        this.player = entityManager.createEntity(entityData);
+        this.cameraOffset.set(
+                (player.getSize().x / 2),
+                player.getEyeHeight(),
+                (player.getSize().z / 2));
     }
 
     @Override
@@ -83,7 +94,10 @@ public class PlayerManager extends ManagerPackage {
         Vector3 direction = camera.getDirection();
 
         movementmanager.move(input, direction, player);
-        camera.setPosition(worldPositionStruct.getPosition());
+
+        cameraPosition.set(worldPositionStruct.getPosition());
+        cameraPosition.add(cameraOffset);
+        camera.setPosition(cameraPosition);
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }
@@ -100,7 +114,6 @@ public class PlayerManager extends ManagerPackage {
         if (state == QueueOperation.GENERATE)
             return true;
 
-        float offset = EngineSetting.BLOCK_SIZE / 2;
         Vector3 position = worldPositionStruct.getPosition();
         int blockX = (int) position.x;
         int totalY = (int) position.y;
@@ -116,9 +129,9 @@ public class PlayerManager extends ManagerPackage {
         if (safeY == -1)
             return true;
 
-        position.x = blockX + offset;
-        position.y = safeY + offset;
-        position.z = blockZ + offset;
+        position.x = blockX;
+        position.y = safeY;
+        position.z = blockZ;
 
         return false;
     }

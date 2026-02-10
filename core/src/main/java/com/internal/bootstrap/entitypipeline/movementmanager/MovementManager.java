@@ -1,6 +1,6 @@
 package com.internal.bootstrap.entitypipeline.movementmanager;
 
-import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
+import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entityManager.StatisticsInstance;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
