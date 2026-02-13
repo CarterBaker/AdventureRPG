@@ -36,8 +36,8 @@ public class VBOManager extends ManagerPackage {
 
     // Utility \\
 
-    public void addVBO(String resourceName, File file, InternalLoadManager loadManager) {
-        vboName2VBOHandle.put(resourceName, internalBuildSystem.addVBO(file, loadManager));
+    public void addVBO(String resourceName, File file, InternalLoadManager loadManager, VAOHandle vaoHandle) {
+        vboName2VBOHandle.put(resourceName, internalBuildSystem.addVBO(file, loadManager, vaoHandle));
     }
 
     public VBOHandle getVBOHandleFromName(String vboName) {

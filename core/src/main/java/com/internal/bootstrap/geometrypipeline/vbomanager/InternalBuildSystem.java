@@ -28,7 +28,7 @@ class InternalBuildSystem extends SystemPackage {
 
     // Build \\
 
-    public VBOHandle addVBO(File file, InternalLoadManager loadManager) {
+    public VBOHandle addVBO(File file, InternalLoadManager loadManager, VAOHandle vaoHandle) {
         String resourceName = FileUtility.getFileName(file);
 
         // Always check if VBO already exists first
@@ -38,13 +38,12 @@ class InternalBuildSystem extends SystemPackage {
         }
 
         JsonObject json = loadJsonObject(file);
-        VAOHandle vaoHandle = resolveVAO(json, file, loadManager, resourceName);
         JsonElement vboElement = validateVBOElement(json, file);
 
         // Handle string reference
         if (vboElement.isJsonPrimitive() && vboElement.getAsJsonPrimitive().isString()) {
             String vboName = vboElement.getAsString();
-            return getOrCreateVBO(vboName, loadManager, file);
+            return getOrCreateVBO(vboName, loadManager, file, vaoHandle);
         }
 
         // Handle vertex data array
@@ -127,27 +126,28 @@ class InternalBuildSystem extends SystemPackage {
 
     // VBO Resolution \\
 
-    private VBOHandle getOrCreateVBO(String vboName, InternalLoadManager loadManager, File currentFile) {
+    private VBOHandle getOrCreateVBO(
+            String vboName,
+            InternalLoadManager loadManager,
+            File currentFile,
+            VAOHandle vaoHandle) {
+
         // Check if it already exists
         VBOHandle existing = vboManager.getVBOHandleFromName(vboName);
-        if (existing != null) {
+        if (existing != null)
             return existing;
-        }
 
         // Not found - create it from the referenced file
         File referencedFile = loadManager.getFileByResourceName(vboName);
-        if (referencedFile == null) {
+        if (referencedFile == null)
             throwException(
                     "VBO reference '" + vboName + "' not found in file registry for file: " + currentFile.getName());
-        }
 
-        vboManager.addVBO(vboName, referencedFile, loadManager);
-
+        vboManager.addVBO(vboName, referencedFile, loadManager, vaoHandle);
         existing = vboManager.getVBOHandleFromName(vboName);
-        if (existing == null) {
+        if (existing == null)
             throwException(
                     "Failed to create VBO '" + vboName + "' from file: " + referencedFile.getName());
-        }
 
         return existing;
     }

@@ -6,6 +6,7 @@ public final class Coordinate2Long {
     private static final int MEGA_SHIFT = Integer.numberOfTrailingZeros(EngineSetting.MEGA_CHUNK_SIZE);
 
     // Internal \\
+
     public static long pack(int x, int y) {
         // High 32 bits get x, low 32 bits get y
         return ((long) x << 32) | (y & 0xFFFFFFFFL);
@@ -30,12 +31,21 @@ public final class Coordinate2Long {
     }
 
     // Addition \\
+
     public static long add(long a, long b) {
 
         int aX = unpackX(a);
         int aY = unpackY(a);
         int bX = unpackX(b);
         int bY = unpackY(b);
+
+        return pack(aX + bX, aY + bY);
+    }
+
+    public static long add(long a, int bX, int bY) {
+
+        int aX = unpackX(a);
+        int aY = unpackY(a);
 
         return pack(aX + bX, aY + bY);
     }

@@ -36,8 +36,8 @@ public class IBOManager extends ManagerPackage {
 
     // Utility \\
 
-    public void addIBO(String resourceName, File file, InternalLoadManager loadManager) {
-        iboName2IBOHandle.put(resourceName, internalBuildSystem.addIBO(file, loadManager));
+    public void addIBO(String resourceName, File file, InternalLoadManager loadManager, VAOHandle vaoHandle) {
+        iboName2IBOHandle.put(resourceName, internalBuildSystem.addIBO(file, loadManager, vaoHandle));
     }
 
     public IBOHandle getIBOHandleFromName(String iboName) {

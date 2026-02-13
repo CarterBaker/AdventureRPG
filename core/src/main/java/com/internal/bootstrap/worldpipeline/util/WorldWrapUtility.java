@@ -10,6 +10,7 @@ import com.internal.core.util.mathematics.vectors.Vector3;
 public class WorldWrapUtility extends UtilityPackage {
 
     public static Vector3 wrapAroundChunk(Vector3 input) {
+
         float x = input.x % EngineSetting.CHUNK_SIZE;
         if (x < 0)
             x += EngineSetting.CHUNK_SIZE;
@@ -25,10 +26,10 @@ public class WorldWrapUtility extends UtilityPackage {
     }
 
     public static long wrapAroundWorld(WorldHandle worldHandle, long input) {
-        Vector2Int worldScale = worldHandle.getWorldScale();
 
-        int maxX = worldScale.x / EngineSetting.CHUNK_SIZE;
-        int maxY = worldScale.y / EngineSetting.CHUNK_SIZE;
+        Vector2Int worldScale = worldHandle.getWorldScale();
+        int maxX = worldScale.x;
+        int maxY = worldScale.y;
 
         int inputX = Coordinate2Long.unpackX(input);
         int inputY = Coordinate2Long.unpackY(input);
@@ -41,62 +42,6 @@ public class WorldWrapUtility extends UtilityPackage {
         if (y < 0)
             y += maxY;
 
-        inputX = x;
-        inputY = y;
-
-        return Coordinate2Long.pack(inputX, inputY);
-    }
-
-    public static Vector2Int wrapAroundWorld(WorldHandle worldHandle, Vector2Int input) {
-        Vector2Int worldScale = worldHandle.getWorldScale();
-
-        int maxX = worldScale.x / EngineSetting.CHUNK_SIZE;
-        int maxY = worldScale.y / EngineSetting.CHUNK_SIZE;
-
-        int x = input.x % maxX;
-        if (x < 0)
-            x += maxX;
-
-        int y = input.y % maxY;
-        if (y < 0)
-            y += maxY;
-
-        input.x = x;
-        input.y = y;
-
-        return input;
-    }
-
-    public static Vector3 wrapAroundGrid(int maxRenderDistance, Vector3 input) {
-        float maxX = maxRenderDistance * EngineSetting.CHUNK_SIZE;
-        float maxZ = maxRenderDistance * EngineSetting.CHUNK_SIZE;
-
-        input.x = ((input.x + maxX / 2) % maxX + maxX) % maxX - maxX / 2;
-        input.z = ((input.z + maxZ / 2) % maxZ + maxZ) % maxZ - maxZ / 2;
-
-        return input;
-    }
-
-    public static long wrapAroundImageRegion(WorldHandle worldHandle, long input) {
-        Vector2Int worldScale = worldHandle.getWorldScale();
-
-        int maxX = (worldScale.x / EngineSetting.CHUNKS_PER_PIXEL / EngineSetting.CHUNK_SIZE);
-        int maxY = (worldScale.y / EngineSetting.CHUNKS_PER_PIXEL / EngineSetting.CHUNK_SIZE);
-
-        int inputX = Coordinate2Long.unpackX(input);
-        int inputY = Coordinate2Long.unpackY(input);
-
-        int x = (int) Math.floor(inputX) % maxX;
-        if (x < 0)
-            x += maxX;
-
-        int y = (int) Math.floor(inputY) % maxY;
-        if (y < 0)
-            y += maxY;
-
-        inputX = x;
-        inputY = y;
-
-        return Coordinate2Long.pack(inputX, inputY);
+        return Coordinate2Long.pack(x, y);
     }
 }

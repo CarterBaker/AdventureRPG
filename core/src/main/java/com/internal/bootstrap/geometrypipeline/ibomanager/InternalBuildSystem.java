@@ -28,9 +28,7 @@ class InternalBuildSystem extends SystemPackage {
 
     // Build \\
 
-    public IBOHandle addIBO(
-            File file,
-            InternalLoadManager loadManager) {
+    public IBOHandle addIBO(File file, InternalLoadManager loadManager, VAOHandle vaoHandle) {
 
         String resourceName = FileUtility.getFileName(file);
 
@@ -40,11 +38,6 @@ class InternalBuildSystem extends SystemPackage {
             return existing;
 
         JsonObject json = loadJsonObject(file);
-        VAOHandle vaoHandle = resolveVAO(
-                json,
-                file,
-                loadManager,
-                resourceName);
         JsonElement iboElement = validateIBOElement(
                 json,
                 file);
@@ -57,7 +50,8 @@ class InternalBuildSystem extends SystemPackage {
             return getOrCreateIBO(
                     iboName,
                     loadManager,
-                    file);
+                    file,
+                    vaoHandle);
         }
 
         // Handle index data array
@@ -163,7 +157,8 @@ class InternalBuildSystem extends SystemPackage {
     private IBOHandle getOrCreateIBO(
             String iboName,
             InternalLoadManager loadManager,
-            File currentFile) {
+            File currentFile,
+            VAOHandle vaoHandle) {
 
         // Check if it already exists
         IBOHandle existing = iboManager.getIBOHandleFromName(iboName);
@@ -176,11 +171,7 @@ class InternalBuildSystem extends SystemPackage {
             throwException(
                     "IBO reference '" + iboName + "' not found in file registry for file: " + currentFile.getName());
 
-        iboManager.addIBO(
-                iboName,
-                referencedFile,
-                loadManager);
-
+        iboManager.addIBO(iboName, referencedFile, loadManager, vaoHandle);
         existing = iboManager.getIBOHandleFromName(iboName);
         if (existing == null)
             throwException(

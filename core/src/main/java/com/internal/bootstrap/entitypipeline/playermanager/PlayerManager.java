@@ -3,8 +3,8 @@ package com.internal.bootstrap.entitypipeline.playermanager;
 import com.internal.bootstrap.entitypipeline.entityManager.EntityData;
 import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entityManager.EntityManager;
-import com.internal.bootstrap.entitypipeline.movementmanager.MovementManager;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
+import com.internal.bootstrap.physicspipeline.physicsmanager.PhysicsManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -23,7 +23,7 @@ public class PlayerManager extends ManagerPackage {
     // Internal
     private CameraManager cameraManager;
     private InputSystem inputSystem;
-    private MovementManager movementmanager;
+    private PhysicsManager physicsManager;
     private EntityManager entityManager;
     private BlockManager blockManager;
     private ChunkStreamManager chunkStreamManager;
@@ -56,7 +56,7 @@ public class PlayerManager extends ManagerPackage {
         // Internal
         this.cameraManager = get(CameraManager.class);
         this.inputSystem = get(InputSystem.class);
-        this.movementmanager = get(MovementManager.class);
+        this.physicsManager = get(PhysicsManager.class);
         this.entityManager = get(EntityManager.class);
         this.blockManager = get(BlockManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
@@ -93,7 +93,7 @@ public class PlayerManager extends ManagerPackage {
         CameraInstance camera = cameraManager.getMainCamera();
         Vector3 direction = camera.getDirection();
 
-        movementmanager.move(input, direction, player);
+        physicsManager.move(input, direction, player);
 
         cameraPosition.set(worldPositionStruct.getPosition());
         cameraPosition.add(cameraOffset);

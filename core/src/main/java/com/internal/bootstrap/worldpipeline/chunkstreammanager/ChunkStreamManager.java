@@ -11,6 +11,8 @@ import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.vectors.Vector2;
+import com.internal.core.util.mathematics.vectors.Vector2Int;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
@@ -107,12 +109,7 @@ public class ChunkStreamManager extends ManagerPackage {
         return playerManager.getPlayer().getWorldHandle();
     }
 
-    public ChunkInstance getChunkInstance(long rawChunkCoordinate) {
-
-        long wrapped = WorldWrapUtility.wrapAroundWorld(
-                getActiveWorldHandle(),
-                rawChunkCoordinate);
-
-        return activeChunks.get(wrapped);
+    public ChunkInstance getChunkInstance(long chunkCoordinate) {
+        return activeChunks.get(chunkCoordinate);
     }
 }
