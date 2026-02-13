@@ -14,10 +14,9 @@ import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate3Int;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 import com.internal.core.util.mathematics.vectors.Vector3;
-import com.internal.core.util.mathematics.vectors.Vector3Int;
 
-import it.unimi.dsi.fastutil.longs.Long2IntMap;
-import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2LongMap;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 
 public class BlockCollisionBranch extends BranchPackage {
 
@@ -26,7 +25,6 @@ public class BlockCollisionBranch extends BranchPackage {
     private BlockManager blockManager;
 
     private int CHUNK_SIZE;
-    private int WORLD_HEIGHT;
 
     // Internal \\
 
@@ -35,7 +33,6 @@ public class BlockCollisionBranch extends BranchPackage {
 
         // Internal
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
-        this.WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT * CHUNK_SIZE;
     }
 
     @Override
@@ -49,46 +46,64 @@ public class BlockCollisionBranch extends BranchPackage {
     // Utility \\
 
     public void calculate(
-            Vector3Int input,
             Vector3 position,
             Vector3 movement,
             EntityHandle entityHandle) {
 
         BlockCompositionStruct blockCompositionStruct = entityHandle.getBlockCompositionStruct();
+        Vector3 size = entityHandle.getSize();
 
-        if (input.x != 0) {
-
-            Direction3Vector direction = Direction3Vector.getDirectionX(input.x);
-            if (hasCollisionInDirection(blockCompositionStruct, direction, entityHandle))
+        if (movement.x != 0) {
+            Direction3Vector direction = Direction3Vector.getDirectionX((int) Math.signum(movement.x));
+            if (hasCollisionInDirection(
+                    blockCompositionStruct,
+                    direction,
+                    entityHandle,
+                    position.x,
+                    size.x,
+                    movement.x))
                 movement.x = 0;
         }
 
-        if (input.y != 0) {
-
-            Direction3Vector direction = Direction3Vector.getDirectionY(input.y);
-            if (hasCollisionInDirection(blockCompositionStruct, direction, entityHandle))
+        if (movement.y != 0) {
+            Direction3Vector direction = Direction3Vector.getDirectionY((int) Math.signum(movement.y));
+            if (hasCollisionInDirection(
+                    blockCompositionStruct,
+                    direction,
+                    entityHandle,
+                    position.y,
+                    size.y,
+                    movement.y))
                 movement.y = 0;
         }
 
-        if (input.z != 0) {
-
-            Direction3Vector direction = Direction3Vector.getDirectionZ(input.z);
-            if (hasCollisionInDirection(blockCompositionStruct, direction, entityHandle))
+        if (movement.z != 0) {
+            Direction3Vector direction = Direction3Vector.getDirectionZ((int) Math.signum(movement.z));
+            if (hasCollisionInDirection(
+                    blockCompositionStruct,
+                    direction,
+                    entityHandle,
+                    position.z,
+                    size.z,
+                    movement.z))
                 movement.z = 0;
         }
     }
 
     private boolean hasCollisionInDirection(
             BlockCompositionStruct blockCompositionStruct,
-            Direction3Vector directionection,
-            EntityHandle entityHandle) {
+            Direction3Vector direction,
+            EntityHandle entityHandle,
+            float axisPosition,
+            float axisSize,
+            float axisMovement) {
 
-        Long2IntOpenHashMap adjacentBlocks = blockCompositionStruct.getAllBlocksForSide(directionection);
+        Int2LongOpenHashMap adjacentBlocks = blockCompositionStruct.getAllBlocksForSide(direction);
 
-        // Iterate through all adjacent blocks in this directionection
-        for (Long2IntMap.Entry entry : adjacentBlocks.long2IntEntrySet()) {
-            long chunkCoordinate = entry.getLongKey();
-            int blockCoordinate = entry.getIntValue();
+        // Iterate through all adjacent blocks in this direction
+        for (Int2LongMap.Entry entry : adjacentBlocks.int2LongEntrySet()) {
+            int blockCoordinate = entry.getIntKey();
+            long chunkCoordinate = entry.getLongValue();
 
             // Get chunk
             ChunkInstance chunk = chunkStreamManager.getChunkInstance(chunkCoordinate);
@@ -97,27 +112,57 @@ public class BlockCollisionBranch extends BranchPackage {
 
             // Get subchunk
             int localX = Coordinate3Int.unpackX(blockCoordinate);
-            int worldY = Coordinate3Int.unpackY(blockCoordinate);
+            int localY = Coordinate3Int.unpackY(blockCoordinate);
             int localZ = Coordinate3Int.unpackZ(blockCoordinate);
 
-            int subChunkY = worldY / CHUNK_SIZE; // which subchunk
-            int localY = worldY % CHUNK_SIZE; // block inside subchunk
+            int subChunkY = localY / CHUNK_SIZE;
+            int subLocalY = localY % CHUNK_SIZE;
 
             SubChunkInstance subChunk = chunk.getSubChunk(subChunkY);
             if (subChunk == null)
                 continue;
 
-            int localCoordinate = Coordinate3Int.pack(localX, localY, localZ);
+            int localCoordinate = Coordinate3Int.pack(localX, subLocalY, localZ);
 
             // Get block
             short blockID = subChunk.getBlockPaletteHandle().getBlock(localCoordinate);
             BlockHandle block = blockManager.getBlockFromBlockID(blockID);
 
-            // Check if solid
-            if (block != null && block.getGeometry() != DynamicGeometryType.NONE)
-                return true; // Collision detected
+            if (isColliding(
+                    block,
+                    direction,
+                    axisPosition,
+                    axisSize,
+                    axisMovement))
+                return true;
         }
 
-        return false; // No collision
+        return false;
+    }
+
+    private boolean isColliding(
+            BlockHandle block,
+            Direction3Vector direction,
+            float axisPosition,
+            float axisSize,
+            float axisMovement) {
+
+        // Not a solid block
+        if (block == null || block.getGeometry() == DynamicGeometryType.NONE)
+            return false;
+
+        // Get fractional position within current block
+        float fractional = axisPosition - (int) axisPosition;
+
+        // Negative direction: origin is moving backward
+        if (direction.negative) {
+            float newPosition = fractional + axisMovement;
+            return newPosition <= 0.0f;
+        }
+
+        // Positive direction: the far edge (origin + size) is moving forward
+        float edgePosition = fractional + axisSize;
+        float newEdgePosition = edgePosition + axisMovement;
+        return newEdgePosition >= 1.0f;
     }
 }

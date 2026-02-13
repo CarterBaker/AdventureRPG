@@ -30,11 +30,17 @@ public enum Direction3Vector {
 	// Internal
 	public final int index;
 	public final int x, y, z;
+
 	public final long coordinate2Long;
 	public final long coordinate3Long;
 	public final int vertOffset3Int;
+
+	public final boolean positive;
+	public final boolean negative;
+
 	public static final Direction3Vector[] VALUES = values();
 	public static final int LENGTH = values().length;
+
 	private static final Direction3Vector[][] TANGENTS_LOOKUP = new Direction3Vector[LENGTH][];
 	private static final Direction2Vector[] TO_2D_LOOKUP = new Direction2Vector[LENGTH];
 
@@ -55,6 +61,7 @@ public enum Direction3Vector {
 		TANGENTS_LOOKUP[UP.ordinal()] = horizontalTangents;
 		TANGENTS_LOOKUP[DOWN.ordinal()] = horizontalTangents;
 	}
+
 	static {
 		TO_2D_LOOKUP[NORTH.ordinal()] = Direction2Vector.NORTH;
 		TO_2D_LOOKUP[EAST.ordinal()] = Direction2Vector.EAST;
@@ -95,16 +102,23 @@ public enum Direction3Vector {
 			int z) {
 
 		// Internal
+
 		this.index = this.ordinal();
 		this.x = x;
 		this.y = y;
 		this.z = z;
+
 		this.coordinate2Long = Coordinate2Long.pack(x, z);
 		this.coordinate3Long = Coordinate3Long.pack(x, y, z);
 		int vx = x > 0 ? 1 : 0;
 		int vy = y > 0 ? 1 : 0;
 		int vz = z > 0 ? 1 : 0;
 		this.vertOffset3Int = Coordinate3Int.pack(vx, vy, vz);
+
+		positive = (x > 0 ||
+				y > 0 ||
+				z > 0);
+		negative = (!positive);
 	}
 
 	// Utility \\

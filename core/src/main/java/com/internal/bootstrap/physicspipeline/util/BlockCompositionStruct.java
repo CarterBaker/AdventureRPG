@@ -8,14 +8,14 @@ import com.internal.core.util.mathematics.Extras.Direction3Vector;
 import com.internal.core.util.mathematics.vectors.Vector3;
 import com.internal.core.util.mathematics.vectors.Vector3Int;
 
-import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 
 public class BlockCompositionStruct extends StructPackage {
 
     // internal
     private Vector3Int currentBlock;
-    private Long2IntOpenHashMap blockCompositionMap;
-    private Long2IntOpenHashMap[] chunkCoordinate2BlockCoordinate;
+    private Int2LongOpenHashMap blockCompositionMap;
+    private Int2LongOpenHashMap[] blockCoordinate2ChunkCoordinate;
 
     private int DIRECTION_COUNT;
     private int CHUNK_SIZE;
@@ -31,10 +31,10 @@ public class BlockCompositionStruct extends StructPackage {
         this.WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT * CHUNK_SIZE;
 
         this.currentBlock = new Vector3Int();
-        this.blockCompositionMap = new Long2IntOpenHashMap();
-        this.chunkCoordinate2BlockCoordinate = new Long2IntOpenHashMap[DIRECTION_COUNT];
+        this.blockCompositionMap = new Int2LongOpenHashMap();
+        this.blockCoordinate2ChunkCoordinate = new Int2LongOpenHashMap[DIRECTION_COUNT];
         for (int i = 0; i < DIRECTION_COUNT; i++)
-            chunkCoordinate2BlockCoordinate[i] = new Long2IntOpenHashMap();
+            blockCoordinate2ChunkCoordinate[i] = new Int2LongOpenHashMap();
     }
 
     // Utility \\
@@ -90,7 +90,7 @@ public class BlockCompositionStruct extends StructPackage {
         for (int i = 0; i < DIRECTION_COUNT; i++) {
 
             Direction3Vector direction = Direction3Vector.VALUES[i];
-            Long2IntOpenHashMap directionMap = this.chunkCoordinate2BlockCoordinate[i];
+            Int2LongOpenHashMap directionMap = this.blockCoordinate2ChunkCoordinate[i];
             directionMap.clear();
 
             // Get tangents (perpendicular axes)
@@ -127,7 +127,7 @@ public class BlockCompositionStruct extends StructPackage {
             int blockY,
             int blockZ,
             long chunkCoordinate,
-            Long2IntOpenHashMap map) {
+            Int2LongOpenHashMap map) {
 
         int chunkOffsetX = 0;
         int chunkOffsetY = 0;
@@ -165,16 +165,16 @@ public class BlockCompositionStruct extends StructPackage {
             chunkCoordinate = Coordinate2Long.add(chunkCoordinate, chunkOffsetX, chunkOffsetY);
         int blockCoordinate = Coordinate3Int.pack(blockX, blockY, blockZ);
 
-        map.put(chunkCoordinate, blockCoordinate);
+        map.put(blockCoordinate, chunkCoordinate);
     }
 
     // Accessiblity \\
 
-    public Long2IntOpenHashMap getBlockCompositionMap() {
+    public Int2LongOpenHashMap getBlockCompositionMap() {
         return blockCompositionMap;
     }
 
-    public Long2IntOpenHashMap getAllBlocksForSide(Direction3Vector direction) {
-        return chunkCoordinate2BlockCoordinate[direction.index];
+    public Int2LongOpenHashMap getAllBlocksForSide(Direction3Vector direction) {
+        return blockCoordinate2ChunkCoordinate[direction.index];
     }
 }

@@ -55,7 +55,6 @@ public class PhysicsManager extends ManagerPackage {
                 statistics);
 
         blockCollisionBranch.calculate(
-                input,
                 position,
                 movement,
                 entityHandle);
