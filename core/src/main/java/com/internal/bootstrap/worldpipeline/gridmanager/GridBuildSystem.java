@@ -30,21 +30,26 @@ class GridBuildSystem extends SystemPackage {
 
     GridInstance buildGrid() {
 
-        // First calculate the radius
+        // Calculate the radius of the grid
         float radius = calculateRadius();
 
-        // Next calculate grid coordinates
+        // Create temporary grid slot data with angle and distance
         Long2ObjectOpenHashMap<GridSlotData> gridSlotdata = createGridSlotData(radius);
 
-        // Now we know the total amount of chunks the current grid will hold
+        // Calculate total slots in grid
         int totalSlots = gridSlotdata.size();
 
-        // Initialize data lists
+        // Assign load order sorted by distance
         long[] loadOrder = assignLoadOrder(gridSlotdata);
 
+        // Extract grid coordinates from data
         LongOpenHashSet gridCoordinates = new LongOpenHashSet(gridSlotdata.keySet());
 
-        Long2ObjectOpenHashMap<GridSlotHandle> gridSlots = createGridSlotHandles(gridCoordinates);
+        // Create persistent grid slot handles with management data
+        Long2ObjectOpenHashMap<GridSlotHandle> gridSlots = createGridSlotHandles(
+                gridCoordinates,
+                gridSlotdata,
+                radius);
 
         GridInstance gridInstance = create(GridInstance.class);
         gridInstance.constructor(
@@ -56,12 +61,12 @@ class GridBuildSystem extends SystemPackage {
         return gridInstance;
     }
 
-    // Radius formula
+    // Calculate grid radius from max render distance
     private float calculateRadius() {
         return settings.maxRenderDistance / 2f;
     }
 
-    // Collect all coordinates inside a circle
+    // Create all grid slot coordinates within circular radius
     private Long2ObjectOpenHashMap<GridSlotData> createGridSlotData(float radius) {
 
         Long2ObjectOpenHashMap<GridSlotData> gridSlotdata = new Long2ObjectOpenHashMap<>();
@@ -75,10 +80,14 @@ class GridBuildSystem extends SystemPackage {
                 float distanceFromCenter = (x * x) + (y * y);
 
                 if (distanceFromCenter <= radiusSquared) {
+                    // Calculate angle for visibility calculations
+                    float angleRadians = (float) Math.atan2(y, x);
+
                     long gridCoordinate = Coordinate2Long.pack(x, y);
                     gridSlotdata.put(gridCoordinate, createGridSlotData(
                             gridCoordinate,
-                            distanceFromCenter));
+                            distanceFromCenter,
+                            angleRadians));
                 }
             }
 
@@ -87,17 +96,19 @@ class GridBuildSystem extends SystemPackage {
 
     private GridSlotData createGridSlotData(
             long gridCoordinate,
-            float distanceFromCenter) {
+            float distanceFromCenter,
+            float angleRadians) {
 
         GridSlotData gridSlotData = create(GridSlotData.class);
         gridSlotData.constructor(
                 gridCoordinate,
-                distanceFromCenter);
+                distanceFromCenter,
+                angleRadians);
 
         return gridSlotData;
     }
 
-    // Sort by distance and assign load order
+    // Sort slots by distance and return load order
     private long[] assignLoadOrder(
             Long2ObjectOpenHashMap<GridSlotData> gridSlotdata) {
 
@@ -112,43 +123,92 @@ class GridBuildSystem extends SystemPackage {
         return coordinates;
     }
 
+    // Create persistent grid slot handles with UBOs and management modes
     private Long2ObjectOpenHashMap<GridSlotHandle> createGridSlotHandles(
-            LongOpenHashSet gridCoordinates) {
+            LongOpenHashSet gridCoordinates,
+            Long2ObjectOpenHashMap<GridSlotData> gridSlotdata,
+            float radius) {
 
         Long2ObjectOpenHashMap<GridSlotHandle> gridSlots = new Long2ObjectOpenHashMap<>();
 
-        // Get the UBOManager to access the base UBO and clone it
+        // Get base UBO for cloning
         UBOHandle baseUBO = uboManager.getUBOHandleFromUBOName(EngineSetting.GRID_COORDINATE_UBO);
 
         for (Long gridCoordinate : gridCoordinates) {
 
-            // Clone the UBO for this grid slot
+            // Clone UBO for this grid slot
             UBOHandle slotUBO = uboManager.cloneUBO(baseUBO);
 
-            // Unpack grid coordinates
+            // Unpack and calculate grid position
             int gridX = Coordinate2Long.unpackX(gridCoordinate) * CHUNK_SIZE;
             int gridY = Coordinate2Long.unpackY(gridCoordinate) * CHUNK_SIZE;
             Vector2 gridPosition = new Vector2(gridX, gridY);
 
-            // Set the static grid position once
+            // Set static grid position uniform
             slotUBO.updateUniform("u_gridPosition", gridPosition);
             slotUBO.push();
 
-            // Create the grid slot handle with its unique UBO
+            // Get distance from temporary data
+            GridSlotData slotData = gridSlotdata.get(gridCoordinate);
+            float distanceFromCenter = slotData.getDistanceFromCenter();
+
+            // Calculate normalized distance for threshold comparisons
+            float normalizedDistance = (float) Math.sqrt(distanceFromCenter) / radius;
+
+            // Determine data management level based on distance
+            DataManagement dataManagement = calculateDataManagement(normalizedDistance);
+
+            // Determine rendering mode based on distance
+            RenderingMode renderingMode = calculateRenderingMode(normalizedDistance);
+
+            // Create persistent grid slot handle
             gridSlots.putIfAbsent(
                     gridCoordinate,
-                    createGridSlotHandle(gridCoordinate, slotUBO));
+                    createGridSlotHandle(
+                            gridCoordinate,
+                            slotUBO,
+                            distanceFromCenter,
+                            dataManagement,
+                            renderingMode));
         }
 
         return gridSlots;
     }
 
-    private GridSlotHandle createGridSlotHandle(long gridCoordinate, UBOHandle slotUBO) {
+    // Determine data management level from normalized distance
+    private DataManagement calculateDataManagement(float normalizedDistance) {
+        if (normalizedDistance <= EngineSetting.GRID_FULL_DATA_THRESHOLD) {
+            return DataManagement.FULL;
+        } else if (normalizedDistance <= EngineSetting.GRID_ESSENTIAL_DATA_THRESHOLD) {
+            return DataManagement.ESSENTIAL;
+        } else {
+            return DataManagement.RELEASE;
+        }
+    }
+
+    // Determine rendering mode from normalized distance
+    private RenderingMode calculateRenderingMode(float normalizedDistance) {
+        if (normalizedDistance <= EngineSetting.GRID_INDIVIDUAL_RENDER_THRESHOLD) {
+            return RenderingMode.Individual;
+        } else {
+            return RenderingMode.Mega;
+        }
+    }
+
+    private GridSlotHandle createGridSlotHandle(
+            long gridCoordinate,
+            UBOHandle slotUBO,
+            float distanceFromCenter,
+            DataManagement dataManagement,
+            RenderingMode renderingMode) {
 
         GridSlotHandle gridSlotHandle = create(GridSlotHandle.class);
         gridSlotHandle.constructor(
                 gridCoordinate,
-                slotUBO);
+                slotUBO,
+                distanceFromCenter,
+                dataManagement,
+                renderingMode);
 
         return gridSlotHandle;
     }

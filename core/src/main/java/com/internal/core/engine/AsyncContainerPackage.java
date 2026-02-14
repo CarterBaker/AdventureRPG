@@ -1,7 +1,6 @@
 package com.internal.core.engine;
 
 public abstract class AsyncContainerPackage extends InstancePackage {
-
     /*
      * AsyncContainerPackage is a thread-safe data container designed for
      * multi-threaded operations. Each thread automatically gets its own
@@ -39,16 +38,12 @@ public abstract class AsyncContainerPackage extends InstancePackage {
      * // ... use geo
      * }); // reset() called automatically
      */
-
     // Internal
     private final ThreadLocal<Object> threadLocalInstance;
 
     // Internal \\
-
     protected AsyncContainerPackage() {
-
         super();
-
         this.threadLocalInstance = ThreadLocal.withInitial(() -> {
             try {
                 return createThreadInstance();
@@ -60,58 +55,36 @@ public abstract class AsyncContainerPackage extends InstancePackage {
     }
 
     // Thread Instance Creation \\
-
     private Object createThreadInstance() {
-
         try {
-
             // Create new instance for this thread
             InstancePackage.setupConstructor(this.internal, this.owner);
-
             var constructor = this.getClass().getDeclaredConstructor();
             constructor.setAccessible(true);
-
             AsyncContainerPackage instance = (AsyncContainerPackage) constructor.newInstance();
-
             // Run lifecycle
             instance.internalCreate();
             instance.internalGet();
             instance.internalAwake();
-
             return instance;
-        }
-
-        catch (Exception e) {
+        } catch (Exception e) {
             throwException("Failed to create thread instance: " + e.getMessage());
             return null;
-        }
-
-        finally {
+        } finally {
             InstancePackage.CREATION_STRUCT.remove();
         }
     }
 
     // reset \\
-
     public void reset() {
     }
 
     // Accessible \\
-
-    /**
-     * Get the instance for the current thread.
-     * If this is the first access from this thread, a new instance is created
-     * and goes through its lifecycle (create -> get -> awake).
-     */
     @SuppressWarnings("unchecked")
     public final <T extends AsyncContainerPackage> T getInstance() {
         return (T) threadLocalInstance.get();
     }
 
-    /**
-     * Remove the current thread's instance.
-     * Use when a thread is permanently done with this data.
-     */
     public final void removeInstance() {
         threadLocalInstance.remove();
     }
