@@ -3,8 +3,10 @@ package com.internal.core.engine;
 import java.util.concurrent.Future;
 
 import com.internal.core.engine.settings.Settings;
-import com.internal.core.kernel.InternalThreadManager.InternalThreadManager.AsyncStructConsumer;
-import com.internal.core.kernel.InternalThreadManager.InternalThreadManager.AsyncStructConsumerMulti;
+import com.internal.core.kernel.threadmanager.InternalThreadManager.AsyncStructConsumer;
+import com.internal.core.kernel.threadmanager.InternalThreadManager.AsyncStructConsumerMulti;
+import com.internal.core.kernel.threadmanager.InternalThreadManager.BiSyncAsyncConsumer;
+import com.internal.core.kernel.threadmanager.InternalThreadManager.SyncStructConsumer;
 
 public abstract class SystemPackage extends EngineUtility {
 
@@ -194,6 +196,23 @@ public abstract class SystemPackage extends EngineUtility {
             AsyncContainerPackage... asyncStructs) {
 
         return internal.executeAsync(handle, consumer, asyncStructs);
+    }
+
+    protected <T extends SyncContainerPackage> Future<?> executeAsync(
+            ThreadHandle handle,
+            SyncContainerPackage syncStruct,
+            SyncStructConsumer<T> consumer) {
+
+        return internal.executeAsync(handle, syncStruct, consumer);
+    }
+
+    protected <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
+            ThreadHandle handle,
+            AsyncContainerPackage asyncStruct,
+            SyncContainerPackage syncStruct,
+            BiSyncAsyncConsumer<T, S> consumer) {
+
+        return internal.executeAsync(handle, asyncStruct, syncStruct, consumer);
     }
 
     // Create \\

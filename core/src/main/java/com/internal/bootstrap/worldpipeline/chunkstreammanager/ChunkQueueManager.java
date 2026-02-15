@@ -2,13 +2,17 @@ package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.AssessmentBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BatchBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BuildBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.ChunkQueueItem;
+import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.DumpBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.GenerationBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.MergeBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotDetailLevel;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.core.engine.ManagerPackage;
@@ -31,6 +35,7 @@ class ChunkQueueManager extends ManagerPackage {
     private BuildBranch buildBranch;
     private MergeBranch mergeBranch;
     private BatchBranch batchBranch;
+    private DumpBranch dumpBranch;
 
     // Block Management
     private short airBlockId;
@@ -54,6 +59,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.buildBranch = create(BuildBranch.class);
         this.mergeBranch = create(MergeBranch.class);
         this.batchBranch = create(BatchBranch.class);
+        this.dumpBranch = create(DumpBranch.class);
 
         // Stream System
         this.chunkQueue = create(QueueInstance.class);
@@ -175,21 +181,67 @@ class ChunkQueueManager extends ManagerPackage {
         // Remove from front
         iterator.remove();
 
-        // Process the chunk based on its state
-        QueueOperation operation = chunkInstance.getChunkStateOperation();
+        // Determine what operation this chunk needs
+        QueueOperation operation = determineQueueOperation(chunkInstance);
 
         switch (operation) {
-            case SKIP -> {
-            } // no-op
-            case GENERATE -> generationBranch.generateChunk(chunkInstance);
-            case NEIGHBOR_ASSESSMENT -> assessmentBranch.assessChunk(chunkInstance);
+            case LOAD -> generationBranch.getNewChunk(chunkInstance);
+            case ASSESSMENT -> assessmentBranch.assessChunk(chunkInstance);
             case BUILD -> buildBranch.buildChunk(chunkInstance);
             case MERGE -> mergeBranch.mergeChunk(chunkInstance);
             case BATCH -> batchBranch.batchChunk(chunkInstance);
+            case DUMP -> dumpBranch.dumpChunkData(chunkInstance);
+            case SKIP -> {
+            } // No-op, chunk is correct or processing
         }
 
         // Add back to end
         activeChunks.put(chunkCoordinate, chunkInstance);
+    }
+
+    private QueueOperation determineQueueOperation(ChunkInstance chunkInstance) {
+
+        GridSlotHandle gridSlotHandle = chunkInstance.getGridSlotHandle();
+        GridSlotDetailLevel targetLevel = gridSlotHandle.getDetailLevel();
+
+        ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
+
+        // Skip if locked
+        if (syncContainer.isLocked())
+            return QueueOperation.SKIP;
+
+        // Try to acquire lock to read data
+        if (!syncContainer.tryAcquire())
+            return QueueOperation.SKIP;
+
+        try {
+
+            // Check if we need to progress
+            ChunkData nextRequired = targetLevel.getNextRequiredData(syncContainer.data);
+            if (nextRequired != null) {
+                return switch (nextRequired) {
+                    case LOAD_DATA, GENERATION_DATA -> QueueOperation.LOAD;
+                    case NEIGHBOR_DATA -> QueueOperation.ASSESSMENT;
+                    case BUILD_DATA -> QueueOperation.BUILD;
+                    case MERGE_DATA -> QueueOperation.MERGE;
+                    case BATCH_DATA -> QueueOperation.BATCH;
+                    case RENDER_DATA -> QueueOperation.SKIP;
+                };
+            }
+
+            // Check if we need to dump (remove data)
+            ChunkData nextToDump = targetLevel.getNextDataToDump(syncContainer.data);
+            if (nextToDump != null)
+                return QueueOperation.DUMP;
+
+            // Chunk is at correct detail level
+            return QueueOperation.SKIP;
+
+        }
+
+        finally {
+            syncContainer.release();
+        }
     }
 
     private void unloadQueue() {

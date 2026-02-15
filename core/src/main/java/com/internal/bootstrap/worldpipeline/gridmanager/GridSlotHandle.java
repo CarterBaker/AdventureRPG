@@ -9,8 +9,8 @@ public class GridSlotHandle extends HandlePackage {
     private long gridCoordinate;
     private UBOHandle slotUBO;
     private float distanceFromCenter;
-    private DataManagement dataManagement;
-    private RenderingMode renderingMode;
+    private float normalizedDistance;
+    private GridSlotDetailLevel detailLevel;
 
     // Internal \\
 
@@ -18,15 +18,15 @@ public class GridSlotHandle extends HandlePackage {
             long gridCoordinate,
             UBOHandle slotUBO,
             float distanceFromCenter,
-            DataManagement dataManagement,
-            RenderingMode renderingMode) {
+            float normalizedDistance,
+            GridSlotDetailLevel detailLevel) {
 
         // Internal
         this.gridCoordinate = gridCoordinate;
         this.slotUBO = slotUBO;
         this.distanceFromCenter = distanceFromCenter;
-        this.dataManagement = dataManagement;
-        this.renderingMode = renderingMode;
+        this.normalizedDistance = normalizedDistance;
+        this.detailLevel = detailLevel;
     }
 
     // Accessible \\
@@ -43,11 +43,11 @@ public class GridSlotHandle extends HandlePackage {
         return distanceFromCenter;
     }
 
-    public DataManagement getDataManagement() {
-        return dataManagement;
+    public float getNormalizedDistance() {
+        return normalizedDistance;
     }
 
-    public RenderingMode getRenderingMode() {
-        return renderingMode;
+    public GridSlotDetailLevel getDetailLevel() {
+        return detailLevel;
     }
 }

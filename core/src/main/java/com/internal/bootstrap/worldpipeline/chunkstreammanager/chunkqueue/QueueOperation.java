@@ -1,10 +1,11 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 
 public enum QueueOperation {
-    SKIP,
-    GENERATE,
-    NEIGHBOR_ASSESSMENT,
+    LOAD,
+    ASSESSMENT,
     BUILD,
     MERGE,
-    BATCH
+    BATCH,
+    DUMP,
+    SKIP;
 }

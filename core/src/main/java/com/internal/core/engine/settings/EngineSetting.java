@@ -101,9 +101,6 @@ public class EngineSetting {
         public static final String GRID_COORDINATE_UBO = "GridCoordinateData"; // The grid slot specific UBO
         public static final int MAX_CHUNK_STREAM_PER_FRAME = 128; // Chunks to load per frame
         public static final int MAX_CHUNK_STREAM_PER_BATCH = 32; // Chunks to load per batch
-        public static final float GRID_FULL_DATA_THRESHOLD = 0.35f; // Inner 35% holds FULL block data
-        public static final float GRID_ESSENTIAL_DATA_THRESHOLD = 0.70f; // Middle 70% holds ESSENTIAL data
-        public static final float GRID_INDIVIDUAL_RENDER_THRESHOLD = 0.25f; // Inner 50% renders Individually
 
         // Player
         public static final String DEFAULT_PLAYER_RACE = "humanoid"; // The starting race for all players

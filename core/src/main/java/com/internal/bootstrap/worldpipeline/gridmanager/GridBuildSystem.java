@@ -80,10 +80,12 @@ class GridBuildSystem extends SystemPackage {
                 float distanceFromCenter = (x * x) + (y * y);
 
                 if (distanceFromCenter <= radiusSquared) {
+
                     // Calculate angle for visibility calculations
                     float angleRadians = (float) Math.atan2(y, x);
 
                     long gridCoordinate = Coordinate2Long.pack(x, y);
+
                     gridSlotdata.put(gridCoordinate, createGridSlotData(
                             gridCoordinate,
                             distanceFromCenter,
@@ -117,13 +119,14 @@ class GridBuildSystem extends SystemPackage {
         slots.sort(Comparator.comparingDouble(GridSlotData::getDistanceFromCenter));
 
         long[] coordinates = new long[slots.size()];
+
         for (int i = 0; i < slots.size(); i++)
             coordinates[i] = slots.get(i).getGridCoordinate();
 
         return coordinates;
     }
 
-    // Create persistent grid slot handles with UBOs and management modes
+    // Create persistent grid slot handles with detail levels
     private Long2ObjectOpenHashMap<GridSlotHandle> createGridSlotHandles(
             LongOpenHashSet gridCoordinates,
             Long2ObjectOpenHashMap<GridSlotData> gridSlotdata,
@@ -149,17 +152,14 @@ class GridBuildSystem extends SystemPackage {
             slotUBO.push();
 
             // Get distance from temporary data
-            GridSlotData slotData = gridSlotdata.get(gridCoordinate);
+            GridSlotData slotData = gridSlotdata.get(gridCoordinate.longValue());
             float distanceFromCenter = slotData.getDistanceFromCenter();
 
-            // Calculate normalized distance for threshold comparisons
+            // Calculate normalized distance (0.0 = center, 1.0 = edge)
             float normalizedDistance = (float) Math.sqrt(distanceFromCenter) / radius;
 
-            // Determine data management level based on distance
-            DataManagement dataManagement = calculateDataManagement(normalizedDistance);
-
-            // Determine rendering mode based on distance
-            RenderingMode renderingMode = calculateRenderingMode(normalizedDistance);
+            // Determine detail level from distance
+            GridSlotDetailLevel detailLevel = GridSlotDetailLevel.getDetailLevelForDistance(normalizedDistance);
 
             // Create persistent grid slot handle
             gridSlots.putIfAbsent(
@@ -168,47 +168,27 @@ class GridBuildSystem extends SystemPackage {
                             gridCoordinate,
                             slotUBO,
                             distanceFromCenter,
-                            dataManagement,
-                            renderingMode));
+                            normalizedDistance,
+                            detailLevel));
         }
 
         return gridSlots;
-    }
-
-    // Determine data management level from normalized distance
-    private DataManagement calculateDataManagement(float normalizedDistance) {
-        if (normalizedDistance <= EngineSetting.GRID_FULL_DATA_THRESHOLD) {
-            return DataManagement.FULL;
-        } else if (normalizedDistance <= EngineSetting.GRID_ESSENTIAL_DATA_THRESHOLD) {
-            return DataManagement.ESSENTIAL;
-        } else {
-            return DataManagement.RELEASE;
-        }
-    }
-
-    // Determine rendering mode from normalized distance
-    private RenderingMode calculateRenderingMode(float normalizedDistance) {
-        if (normalizedDistance <= EngineSetting.GRID_INDIVIDUAL_RENDER_THRESHOLD) {
-            return RenderingMode.Individual;
-        } else {
-            return RenderingMode.Mega;
-        }
     }
 
     private GridSlotHandle createGridSlotHandle(
             long gridCoordinate,
             UBOHandle slotUBO,
             float distanceFromCenter,
-            DataManagement dataManagement,
-            RenderingMode renderingMode) {
+            float normalizedDistance,
+            GridSlotDetailLevel detailLevel) {
 
         GridSlotHandle gridSlotHandle = create(GridSlotHandle.class);
         gridSlotHandle.constructor(
                 gridCoordinate,
                 slotUBO,
                 distanceFromCenter,
-                dataManagement,
-                renderingMode);
+                normalizedDistance,
+                detailLevel);
 
         return gridSlotHandle;
     }

@@ -1,4 +1,4 @@
-package com.internal.core.kernel.InternalThreadManager;
+package com.internal.core.kernel.threadmanager;
 
 import java.io.File;
 import java.io.IOException;

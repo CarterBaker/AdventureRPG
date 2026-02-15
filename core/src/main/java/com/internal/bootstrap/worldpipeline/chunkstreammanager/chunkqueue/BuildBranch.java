@@ -3,7 +3,8 @@ package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.chunk.ChunkState;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.ThreadHandle;
 
@@ -29,20 +30,13 @@ public class BuildBranch extends BranchPackage {
 
     public void buildChunk(ChunkInstance chunkInstance) {
 
-        if (!chunkInstance.tryBeginOperation(QueueOperation.BUILD))
-            return;
-
-        // Submit to generation thread
-        executeAsync(threadHandle, dynamicGeometryAsyncContainer,
-                (DynamicGeometryAsyncContainer threadSpecificReferenceContainer) -> {
-
-                    if (dynamicGeometryManager.build(
-                            threadSpecificReferenceContainer,
-                            chunkInstance))
-                        chunkInstance.setChunkState(ChunkState.HAS_GEOMETRY_DATA);
-
-                    else
-                        chunkInstance.setChunkState(ChunkState.NEEDS_GEOMETRY_DATA);
+        executeAsync(
+                threadHandle,
+                dynamicGeometryAsyncContainer,
+                chunkInstance.getChunkDataSyncContainer(),
+                (DynamicGeometryAsyncContainer geo, ChunkDataSyncContainer data) -> {
+                    if (dynamicGeometryManager.build(geo, chunkInstance))
+                        data.data[ChunkData.BUILD_DATA.index] = true;
                 });
     }
 }

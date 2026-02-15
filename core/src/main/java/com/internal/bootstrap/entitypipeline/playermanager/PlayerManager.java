@@ -9,8 +9,8 @@ import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
-import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionUtility;
 import com.internal.core.engine.ManagerPackage;
@@ -110,8 +110,8 @@ public class PlayerManager extends ManagerPackage {
         if (activeChunkInstance == null)
             return true;
 
-        QueueOperation state = activeChunkInstance.getChunkState().getAssociatedOperation();
-        if (state == QueueOperation.GENERATE)
+        // Check if chunk has generation data using sync container
+        if (!activeChunkInstance.getChunkDataSyncContainer().hasData(ChunkData.GENERATION_DATA))
             return true;
 
         Vector3 position = worldPositionStruct.getPosition();

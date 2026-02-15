@@ -7,9 +7,11 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
 import com.internal.core.engine.settings.Settings;
-import com.internal.core.kernel.InternalThreadManager.InternalThreadManager;
-import com.internal.core.kernel.InternalThreadManager.InternalThreadManager.AsyncStructConsumer;
-import com.internal.core.kernel.InternalThreadManager.InternalThreadManager.AsyncStructConsumerMulti;
+import com.internal.core.kernel.threadmanager.InternalThreadManager;
+import com.internal.core.kernel.threadmanager.InternalThreadManager.AsyncStructConsumer;
+import com.internal.core.kernel.threadmanager.InternalThreadManager.AsyncStructConsumerMulti;
+import com.internal.core.kernel.threadmanager.InternalThreadManager.BiSyncAsyncConsumer;
+import com.internal.core.kernel.threadmanager.InternalThreadManager.SyncStructConsumer;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 
@@ -242,6 +244,25 @@ public class EnginePackage extends ManagerPackage {
             AsyncContainerPackage... asyncStructs) {
 
         return internalThreadManager.executeAsync(handle, consumer, asyncStructs);
+    }
+
+    @Override
+    protected final <T extends SyncContainerPackage> Future<?> executeAsync(
+            ThreadHandle handle,
+            SyncContainerPackage syncStruct,
+            SyncStructConsumer<T> consumer) {
+
+        return internalThreadManager.executeAsync(handle, syncStruct, consumer);
+    }
+
+    @Override
+    protected final <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
+            ThreadHandle handle,
+            AsyncContainerPackage asyncStruct,
+            SyncContainerPackage syncStruct,
+            BiSyncAsyncConsumer<T, S> consumer) {
+
+        return internalThreadManager.executeAsync(handle, asyncStruct, syncStruct, consumer);
     }
 
     // Game State \\

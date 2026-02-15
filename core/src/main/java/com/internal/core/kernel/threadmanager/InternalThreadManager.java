@@ -1,4 +1,4 @@
-package com.internal.core.kernel.InternalThreadManager;
+package com.internal.core.kernel.threadmanager;
 
 import java.util.concurrent.Future;
 import com.internal.core.engine.AsyncContainerPackage;
@@ -107,7 +107,31 @@ public class InternalThreadManager extends ManagerPackage {
         });
     }
 
+    public <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
+            ThreadHandle handle,
+            AsyncContainerPackage asyncStruct,
+            SyncContainerPackage syncStruct,
+            BiSyncAsyncConsumer<T, S> consumer) {
+
+        return executeAsync(handle, () -> {
+            T asyncInstance = asyncStruct.getInstance();
+            try {
+                if (syncStruct.tryAcquire()) {
+                    try {
+                        S syncInstance = syncStruct.getInstance();
+                        consumer.accept(asyncInstance, syncInstance);
+                    } finally {
+                        syncStruct.release();
+                    }
+                }
+            } finally {
+                asyncInstance.reset();
+            }
+        });
+    }
+
     // Functional Interfaces \\
+
     @FunctionalInterface
     public interface AsyncStructConsumer<T extends AsyncContainerPackage> {
         void accept(T instance);
@@ -121,5 +145,10 @@ public class InternalThreadManager extends ManagerPackage {
     @FunctionalInterface
     public interface SyncStructConsumer<T extends SyncContainerPackage> {
         void accept(T instance);
+    }
+
+    @FunctionalInterface
+    public interface BiSyncAsyncConsumer<T extends AsyncContainerPackage, S extends SyncContainerPackage> {
+        void accept(T asyncInstance, S syncInstance);
     }
 }

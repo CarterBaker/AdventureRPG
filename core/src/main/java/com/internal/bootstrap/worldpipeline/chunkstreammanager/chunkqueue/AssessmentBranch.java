@@ -2,7 +2,7 @@ package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
-import com.internal.bootstrap.worldpipeline.chunk.ChunkState;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
@@ -17,33 +17,25 @@ public class AssessmentBranch extends BranchPackage {
 
     public void assessChunk(ChunkInstance chunkInstance) {
 
-        if (!chunkInstance.tryBeginOperation(QueueOperation.NEIGHBOR_ASSESSMENT))
-            return;
+        if (!chunkInstance.getChunkDataSyncContainer().setData(ChunkData.NEIGHBOR_DATA, false))
+            return; // Locked, skip
 
-        // Run on render thread - no thread handoff needed
         boolean allNeighborsFound = true;
         ChunkNeighborStruct neighbors = chunkInstance.getChunkNeighbors();
 
-        // Search for all neighbors
         for (int i = 0; i < Direction2Vector.LENGTH; i++) {
 
             long neighborCoordinate = neighbors.getNeighborCoordinate(i);
             ChunkInstance neighborChunk = activeChunks.get(neighborCoordinate);
 
-            if (neighborChunk != null &&
-                    neighborChunk.getChunkState().getOrder() >= ChunkState.HAS_GENERATION_DATA.getOrder())
+            if (neighborChunk != null && neighborChunk.getChunkDataSyncContainer().hasData(ChunkData.GENERATION_DATA))
                 neighbors.setNeighborChunk(i, neighborChunk);
-
             else
                 allNeighborsFound = false;
         }
 
-        // Update state
         if (allNeighborsFound)
-            chunkInstance.setChunkState(ChunkState.HAS_NEIGHBOR_ASSIGNMENT);
-
-        else
-            chunkInstance.setChunkState(ChunkState.NEEDS_NEIGHBOR_ASSIGNMENT);
+            chunkInstance.getChunkDataSyncContainer().setData(ChunkData.NEIGHBOR_DATA, true);
     }
 
     // Accessible \\
