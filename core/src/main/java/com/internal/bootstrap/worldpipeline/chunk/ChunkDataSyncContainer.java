@@ -1,5 +1,7 @@
 package com.internal.bootstrap.worldpipeline.chunk;
 
+import java.util.Arrays;
+
 import com.internal.core.engine.SyncContainerPackage;
 
 public class ChunkDataSyncContainer extends SyncContainerPackage {
@@ -11,9 +13,11 @@ public class ChunkDataSyncContainer extends SyncContainerPackage {
 
     @Override
     public void create() {
-
-        // Internal
         this.data = new boolean[ChunkData.LENGTH];
+    }
+
+    public void resetData() {
+        Arrays.fill(data, false);
     }
 
     // Accessible \\
@@ -21,7 +25,6 @@ public class ChunkDataSyncContainer extends SyncContainerPackage {
     public boolean hasData(ChunkData dataType) {
         if (!tryAcquire())
             return false;
-
         try {
             return data[dataType.index];
         } finally {
@@ -32,7 +35,6 @@ public class ChunkDataSyncContainer extends SyncContainerPackage {
     public boolean setData(ChunkData dataType, boolean value) {
         if (!tryAcquire())
             return false;
-
         try {
             data[dataType.index] = value;
             return true;

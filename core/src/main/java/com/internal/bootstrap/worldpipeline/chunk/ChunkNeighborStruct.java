@@ -5,29 +5,29 @@ import com.internal.core.engine.StructPackage;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+
 public class ChunkNeighborStruct extends StructPackage {
 
     // Internal
     private final long[] neighborCoordinates;
-    private final ChunkInstance[] neighborChunks;
+    private final Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
 
     // Internal \\
 
     public ChunkNeighborStruct(
             long chunkCoordinate,
-            ChunkInstance chunkInstance) {
+            ChunkInstance chunkInstance,
+            Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
 
-        // Internal
         this.neighborCoordinates = new long[Direction2Vector.LENGTH];
-        this.neighborChunks = new ChunkInstance[Direction2Vector.LENGTH];
+        this.activeChunks = activeChunks;
 
-        for (byte direction2VectorIndex = 0; direction2VectorIndex < Direction2Vector.LENGTH; direction2VectorIndex++) {
-
+        for (byte i = 0; i < Direction2Vector.LENGTH; i++) {
             long neighborCoordinate = Coordinate2Long.getNeighbor(
                     chunkCoordinate,
-                    Direction2Vector.VALUES[direction2VectorIndex]);
-
-            neighborCoordinates[direction2VectorIndex] = WorldWrapUtility.wrapAroundWorld(
+                    Direction2Vector.VALUES[i]);
+            neighborCoordinates[i] = WorldWrapUtility.wrapAroundWorld(
                     chunkInstance.getWorldHandle(),
                     neighborCoordinate);
         }
@@ -40,10 +40,6 @@ public class ChunkNeighborStruct extends StructPackage {
     }
 
     public ChunkInstance getNeighborChunk(int direction2VectorIndex) {
-        return neighborChunks[direction2VectorIndex];
-    }
-
-    public void setNeighborChunk(int direction2VectorIndex, ChunkInstance chunkInstance) {
-        neighborChunks[direction2VectorIndex] = chunkInstance;
+        return activeChunks.get(neighborCoordinates[direction2VectorIndex]);
     }
 }

@@ -158,8 +158,16 @@ class GridBuildSystem extends SystemPackage {
             // Calculate normalized distance (0.0 = center, 1.0 = edge)
             float normalizedDistance = (float) Math.sqrt(distanceFromCenter) / radius;
 
-            // Determine detail level from distance
-            GridSlotDetailLevel detailLevel = GridSlotDetailLevel.getDetailLevelForDistance(normalizedDistance);
+            // Calculate absolute chunk distance from center
+            int chunkX = Coordinate2Long.unpackX(gridCoordinate);
+            int chunkY = Coordinate2Long.unpackY(gridCoordinate);
+            float absoluteChunkDistance = (float) Math.sqrt(chunkX * chunkX + chunkY * chunkY);
+
+            // Determine detail level from both normalized distance and absolute chunk
+            // distance
+            GridSlotDetailLevel detailLevel = GridSlotDetailLevel.getDetailLevelForDistance(
+                    normalizedDistance,
+                    absoluteChunkDistance);
 
             // Create persistent grid slot handle
             gridSlots.putIfAbsent(

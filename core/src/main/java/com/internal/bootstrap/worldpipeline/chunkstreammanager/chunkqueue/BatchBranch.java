@@ -1,7 +1,6 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkBatchSystem;
 import com.internal.core.engine.BranchPackage;
@@ -9,12 +8,10 @@ import com.internal.core.engine.BranchPackage;
 public class BatchBranch extends BranchPackage {
 
     private ChunkBatchSystem chunkBatchSystem;
-    private int batchIndex;
 
     @Override
     protected void get() {
         this.chunkBatchSystem = get(ChunkBatchSystem.class);
-        this.batchIndex = ChunkData.BATCH_DATA.index;
     }
 
     public void batchChunk(ChunkInstance chunkInstance) {
@@ -28,8 +25,9 @@ public class BatchBranch extends BranchPackage {
             return;
 
         try {
-            boolean success = chunkBatchSystem.batchChunk(chunkInstance);
-            syncContainer.data[batchIndex] = success;
+            // Just try to batch - ChunkBatchSystem will set BATCH_DATA flag
+            // when mega is uploaded to GPU
+            chunkBatchSystem.batchChunk(chunkInstance);
 
         } finally {
             syncContainer.release();

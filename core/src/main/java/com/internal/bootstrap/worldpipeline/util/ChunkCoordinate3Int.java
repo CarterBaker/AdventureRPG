@@ -17,11 +17,13 @@ public class ChunkCoordinate3Int extends UtilityPackage {
     // Chunk dimensions
     private static final int CHUNK_SIZE;
     public static final int BLOCK_COORDINATE_COUNT;
+    public static final int INTERIOR_BLOCK_COUNT;
 
     // Precomputed flattened coordinates packed into shorts
     // Format: yyyy zzzz xxxx (4 bits each, 12 bits total per coordinate)
     // Y-Z-X order matches array indexing for cache coherency
     private static final int[] blockCoordinates;
+    private static final int[] interiorBlockCoordinates;
 
     static {
 
@@ -29,11 +31,16 @@ public class ChunkCoordinate3Int extends UtilityPackage {
         CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
         BLOCK_COORDINATE_COUNT = (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
 
+        int interiorSize = CHUNK_SIZE - 2;
+        INTERIOR_BLOCK_COUNT = (interiorSize * interiorSize * interiorSize);
+
         // Allocate coordinate arrays
         blockCoordinates = new int[BLOCK_COORDINATE_COUNT];
+        interiorBlockCoordinates = new int[INTERIOR_BLOCK_COUNT];
 
         // Precompute all coordinates
         flattenBlockCoordinates();
+        flattenInteriorBlockCoordinates();
     }
 
     private static void flattenBlockCoordinates() {
@@ -47,6 +54,17 @@ public class ChunkCoordinate3Int extends UtilityPackage {
                     blockCoordinates[idx++] = Coordinate3Int.pack(x, y, z);
     }
 
+    private static void flattenInteriorBlockCoordinates() {
+
+        int idx = 0;
+
+        // Only iterate interior blocks (skip outer shell on all axes)
+        for (int y = 1; y < CHUNK_SIZE - 1; y++)
+            for (int z = 1; z < CHUNK_SIZE - 1; z++)
+                for (int x = 1; x < CHUNK_SIZE - 1; x++)
+                    interiorBlockCoordinates[idx++] = Coordinate3Int.pack(x, y, z);
+    }
+
     // Accessible \\
 
     public static int[] getBlockCoordinates() {
@@ -55,6 +73,14 @@ public class ChunkCoordinate3Int extends UtilityPackage {
 
     public static int getBlockCoordinate(int index) {
         return blockCoordinates[index];
+    }
+
+    public static int[] getInteriorBlockCoordinates() {
+        return interiorBlockCoordinates;
+    }
+
+    public static int getInteriorBlockCoordinate(int index) {
+        return interiorBlockCoordinates[index];
     }
 
     // Convert packed coordinate back to index (inverse of getBlockCoordinate)

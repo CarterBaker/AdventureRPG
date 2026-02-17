@@ -3,6 +3,7 @@ package com.internal.bootstrap.worldpipeline.block;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.internal.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate3Int;
@@ -23,9 +24,11 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     private short[] directData;
 
+    private short defaultBlockId;
+
     // Construction \\
 
-    public void constructor(int paletteAxisSize, int paletteThreshold, short airBlockId) {
+    public void constructor(int paletteAxisSize, int paletteThreshold, short defaultBlockId) {
 
         this.chunkSize = EngineSetting.CHUNK_SIZE;
 
@@ -41,13 +44,32 @@ public final class BlockPaletteHandle extends HandlePackage {
         this.scaleBits = Integer.numberOfTrailingZeros(blocksPerCell);
         this.totalCells = paletteAxisSize * paletteAxisSize * paletteAxisSize;
         this.maxPaletteSize = paletteThreshold;
+        this.defaultBlockId = defaultBlockId;
 
         this.palette = new ArrayList<>();
-        this.palette.add(airBlockId);
+        this.palette.add(defaultBlockId);
 
         this.bitsPerEntry = 1;
 
         allocatePackedArray();
+    }
+
+    public void clear() {
+
+        // Collapse palette in-place
+        palette.clear();
+        palette.add(defaultBlockId);
+        bitsPerEntry = 1;
+
+        // Reuse or allocate minimum packed array
+        int longsNeeded = (totalCells + 63) >>> 6; // bitsPerEntry=1
+        if (packedData != null && packedData.length == longsNeeded)
+            java.util.Arrays.fill(packedData, 0L);
+        else
+            packedData = new long[longsNeeded]; // Only if chunk went direct and nulled it
+
+        // Drop direct reference
+        directData = null;
     }
 
     // Internal \\
@@ -131,10 +153,9 @@ public final class BlockPaletteHandle extends HandlePackage {
     }
 
     private int getCellIndex(int packedXYZ) {
-        // Direct bit extraction - no sign extension needed for palette indexing
-        int x = ((packedXYZ) & 0xF) >> scaleBits; // Bottom 4 bits of 10-bit field
-        int y = ((packedXYZ >> 20) & 0xF) >> scaleBits; // Bottom 4 bits of Y field
-        int z = ((packedXYZ >> 10) & 0xF) >> scaleBits; // Bottom 4 bits of Z field
+        int x = ((packedXYZ) & 0xF) >> scaleBits;
+        int y = ((packedXYZ >> 20) & 0xF) >> scaleBits;
+        int z = ((packedXYZ >> 10) & 0xF) >> scaleBits;
         return (y * paletteAxisSize + z) * paletteAxisSize + x;
     }
 
@@ -148,12 +169,35 @@ public final class BlockPaletteHandle extends HandlePackage {
         packedData = null;
     }
 
+    public void dumpInteriorBlocks(short airBlockId) {
+
+        int[] interiorCoordinates = ChunkCoordinate3Int.getInteriorBlockCoordinates();
+
+        if (directData != null) {
+            for (int packedXYZ : interiorCoordinates) {
+                int index = getCellIndex(packedXYZ);
+                directData[index] = airBlockId;
+            }
+            return;
+        }
+
+        int airPaletteIndex = palette.indexOf(airBlockId);
+        if (airPaletteIndex == -1) {
+            palette.add(airBlockId);
+            airPaletteIndex = palette.size() - 1;
+        }
+
+        for (int packedXYZ : interiorCoordinates) {
+            int index = getCellIndex(packedXYZ);
+            writePackedValue(index, airPaletteIndex);
+        }
+    }
+
     // Accessible \\
 
     public short getBlock(int packedXYZ) {
         int index = getCellIndex(packedXYZ);
-        short result = directData != null ? directData[index] : palette.get(readPackedValue(index));
-        return result;
+        return directData != null ? directData[index] : palette.get(readPackedValue(index));
     }
 
     public void setBlock(int packedXYZ, short blockId) {

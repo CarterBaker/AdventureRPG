@@ -6,6 +6,7 @@ public enum QueueOperation {
     BUILD,
     MERGE,
     BATCH,
+    RENDER,
     DUMP,
     SKIP;
 }

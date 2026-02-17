@@ -6,13 +6,11 @@ import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
-import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
-import com.internal.core.util.mathematics.vectors.Vector2;
-import com.internal.core.util.mathematics.vectors.Vector2Int;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
@@ -23,50 +21,58 @@ public class ChunkStreamManager extends ManagerPackage {
     private PlayerManager playerManager;
     private GridManager gridManager;
     private VAOHandle chunkVAO;
-
     private long activeChunkCoordinate;
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
-
     private ChunkPositionSystem chunkPositionSystem;
     private ChunkQueueManager chunkQueueManager;
     private ChunkBatchSystem chunkBatchSystem;
+    private WorldRenderSystem worldRenderSystem;
 
     // Internal \\
 
     @Override
     protected void create() {
 
-        // Internal
         this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
         this.activeChunks = new Long2ObjectLinkedOpenHashMap<>();
         this.activeMegaChunks = new Long2ObjectLinkedOpenHashMap<>();
 
         this.chunkPositionSystem = create(ChunkPositionSystem.class);
-        this.chunkPositionSystem.setActiveChunks(activeChunks);
-        this.chunkPositionSystem.setActiveMegaChunks(activeMegaChunks);
-
         this.chunkQueueManager = create(ChunkQueueManager.class);
-        this.chunkQueueManager.setActiveChunks(activeChunks);
-
         this.chunkBatchSystem = create(ChunkBatchSystem.class);
-        this.chunkBatchSystem.setActiveMegaChunks(activeMegaChunks);
     }
 
     @Override
     protected void get() {
 
-        // Internal
         this.vaoManager = get(VAOManager.class);
         this.playerManager = get(PlayerManager.class);
         this.gridManager = get(GridManager.class);
+        this.worldRenderSystem = get(WorldRenderSystem.class);
+
+        // Push placeholder references - replaced in awake once grid is ready
+        this.chunkPositionSystem.setActiveChunks(activeChunks);
+        this.chunkPositionSystem.setActiveMegaChunks(activeMegaChunks);
+        this.chunkQueueManager.setActiveChunks(activeChunks);
+        this.chunkBatchSystem.setActiveMegaChunks(activeMegaChunks);
+        this.worldRenderSystem.setActiveChunks(activeChunks);
+        this.worldRenderSystem.setActiveMegaChunks(activeMegaChunks);
     }
 
     @Override
     protected void awake() {
 
-        // Internal
         this.chunkVAO = vaoManager.getVAOHandleFromName(EngineSetting.CHUNK_VAO);
+
+        // Grid is built by now - replace map with correctly sized instance
+        int maxChunks = gridManager.getGrid().getTotalSlots() + EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
+        this.activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);
+
+        // Re-push to all dependents
+        this.chunkPositionSystem.setActiveChunks(activeChunks);
+        this.chunkQueueManager.setActiveChunks(activeChunks);
+        this.worldRenderSystem.setActiveChunks(activeChunks);
     }
 
     @Override
@@ -87,7 +93,6 @@ public class ChunkStreamManager extends ManagerPackage {
                 gridManager.getGrid());
     }
 
-    // Used to compare the players currently active chunk coordinate
     private boolean newActiveChunk() {
 
         long playerChunkCoordinate = playerManager.getPlayerPosition().getChunkCoordinate();

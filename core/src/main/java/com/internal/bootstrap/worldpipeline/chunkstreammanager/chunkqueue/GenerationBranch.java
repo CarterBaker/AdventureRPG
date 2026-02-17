@@ -15,8 +15,8 @@ public class GenerationBranch extends BranchPackage {
     // Internal
     private ThreadHandle threadHandle;
     private WorldGenerationManager worldGenerationManager;
-
     private int loadIndex;
+    private int essentialIndex;
     private int generationIndex;
 
     // internal \\
@@ -27,8 +27,8 @@ public class GenerationBranch extends BranchPackage {
         // Internal
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.worldGenerationManager = get(WorldGenerationManager.class);
-
         this.loadIndex = ChunkData.LOAD_DATA.index;
+        this.essentialIndex = ChunkData.ESSENTIAL_DATA.index;
         this.generationIndex = ChunkData.GENERATION_DATA.index;
     }
 
@@ -48,11 +48,9 @@ public class GenerationBranch extends BranchPackage {
 
                     // Check if already attempted
                     if (!container.data[loadIndex]) {
-
                         loaded = loadChunk(
                                 chunkInstance,
                                 container);
-
                         container.data[loadIndex] = true;
                     }
 
@@ -66,6 +64,7 @@ public class GenerationBranch extends BranchPackage {
     private boolean loadChunk(
             ChunkInstance chunkInstance,
             ChunkDataSyncContainer container) {
+
         return false; // TODO: Implement loading from disk/cache
     }
 
@@ -92,6 +91,9 @@ public class GenerationBranch extends BranchPackage {
         }
 
         // Thread-safe state update via sync container
-        container.data[generationIndex] = success;
+        if (success) {
+            container.data[essentialIndex] = true; // Set ESSENTIAL_DATA - never cleared
+            container.data[generationIndex] = true; // Set GENERATION_DATA
+        }
     }
 }

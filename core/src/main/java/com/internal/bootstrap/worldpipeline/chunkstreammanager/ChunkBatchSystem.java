@@ -1,17 +1,22 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
+import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaState;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderOperation;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.ThreadHandle;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
+
+import java.util.ArrayDeque;
 
 public class ChunkBatchSystem extends SystemPackage {
 
@@ -20,23 +25,35 @@ public class ChunkBatchSystem extends SystemPackage {
     private WorldRenderSystem worldRenderSystem;
     private ChunkStreamManager chunkStreamManager;
     private ChunkPositionSystem chunkPositionSystem;
+    private GridManager gridManager;
 
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
+    private LongLinkedOpenHashSet unloadRequests;
+
+    // Mega Pool
+    private ArrayDeque<MegaChunkInstance> megaPool;
+    private int MEGA_POOL_MAX_OVERFLOW;
 
     private int MEGA_CHUNK_SIZE;
     private int megaScale;
+    private int batchDataIndex;
 
     @Override
     protected void get() {
 
-        // Internal
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.worldRenderSystem = get(WorldRenderSystem.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.chunkPositionSystem = get(ChunkPositionSystem.class);
+        this.gridManager = get(GridManager.class);
 
         this.MEGA_CHUNK_SIZE = EngineSetting.MEGA_CHUNK_SIZE;
         this.megaScale = MEGA_CHUNK_SIZE * MEGA_CHUNK_SIZE;
+        this.batchDataIndex = ChunkData.BATCH_DATA.index;
+
+        this.unloadRequests = new LongLinkedOpenHashSet();
+        this.megaPool = new ArrayDeque<>();
+        this.MEGA_POOL_MAX_OVERFLOW = EngineSetting.MEGA_POOL_MAX_OVERFLOW;
     }
 
     @Override
@@ -46,7 +63,7 @@ public class ChunkBatchSystem extends SystemPackage {
 
     // Batching Logic \\
 
-    public boolean batchChunk(ChunkInstance chunkInstance) {
+    public void batchChunk(ChunkInstance chunkInstance) {
 
         long megaChunkCoordinate = Coordinate2Long.toMegaChunkCoordinate(chunkInstance.getCoordinate());
 
@@ -54,19 +71,20 @@ public class ChunkBatchSystem extends SystemPackage {
                 megaChunkCoordinate,
                 this::createMegaChunkInstance);
 
-        if (!megaChunkInstance.batchChunk(chunkInstance))
-            return false;
+        megaChunkInstance.batchChunk(chunkInstance);
 
-        // Check if mega chunk is now complete
-        if (megaChunkInstance.isComplete())
-            megaChunkInstance.setMegaState(MegaState.NEEDS_MERGE_DATA);
-
-        return true;
+        if (megaChunkInstance.isComplete() &&
+                (megaChunkInstance.getMegaState() == MegaState.UNINITIALIZED ||
+                        megaChunkInstance.getMegaState() == MegaState.PARTIAL))
+            megaChunkInstance.setMegaState(MegaState.NEEDS_MERGE);
     }
 
     private MegaChunkInstance createMegaChunkInstance(long megaChunkCoordinate) {
 
-        MegaChunkInstance megaChunkInstance = create(MegaChunkInstance.class);
+        MegaChunkInstance megaChunkInstance = megaPool.isEmpty()
+                ? create(MegaChunkInstance.class)
+                : megaPool.poll();
+
         megaChunkInstance.constructor(
                 worldRenderSystem,
                 chunkStreamManager.getActiveWorldHandle(),
@@ -84,24 +102,43 @@ public class ChunkBatchSystem extends SystemPackage {
 
     private void assessMegaChunks() {
 
-        for (MegaChunkInstance megaChunkInstance : activeMegaChunks.values()) {
+        var iterator = activeMegaChunks.long2ObjectEntrySet().iterator();
 
-            if (megaChunkInstance.getMegaState() == MegaState.NEEDS_MERGE_DATA) {
-                mergeMega(megaChunkInstance);
+        while (iterator.hasNext()) {
+
+            var entry = iterator.next();
+            long megaCoordinate = entry.getLongKey();
+            MegaChunkInstance megaChunkInstance = entry.getValue();
+            MegaState state = megaChunkInstance.getMegaState();
+
+            // Pending unload
+            if (unloadRequests.contains(megaCoordinate)) {
+
+                // Thread is active - defer
+                if (state == MegaState.MERGING)
+                    continue;
+
+                unloadRequests.remove(megaCoordinate);
+                iterator.remove();
+
+                worldRenderSystem.removeWorldInstance(megaCoordinate);
+                megaChunkInstance.reset();
+
+                // Pool mega chunks based on how many mega slots exist plus overflow
+                int megaSlots = gridManager.getGrid().getTotalSlots() / megaScale;
+                if (megaPool.size() < megaSlots + MEGA_POOL_MAX_OVERFLOW)
+                    megaPool.push(megaChunkInstance);
+                else
+                    megaChunkInstance.dispose();
+
                 continue;
             }
 
-            RenderOperation renderOp = megaChunkInstance.getMegaRenderOperation();
-
-            switch (renderOp) {
-                case NONE -> {
-                } // no-op
-                case NEEDS_BATCH_RENDER -> renderBatched(megaChunkInstance);
-                case HAS_BATCH_RENDER -> {
-                } // no-op, already rendering
-                case NEEDS_INDIVIDUAL_RENDER -> renderIndividual(megaChunkInstance);
-                case HAS_INDIVIDUAL_RENDER -> {
-                } // no-op, already rendering
+            switch (state) {
+                case NEEDS_MERGE -> mergeMega(megaChunkInstance);
+                case MERGED -> uploadMegaToGPU(megaChunkInstance);
+                default -> {
+                }
             }
         }
     }
@@ -116,43 +153,39 @@ public class ChunkBatchSystem extends SystemPackage {
         executeAsync(threadHandle, () -> {
 
             if (megaChunkInstance.merge())
-                megaChunkInstance.setMegaState(MegaState.COMPLETE);
-
+                megaChunkInstance.setMegaState(MegaState.MERGED);
             else
-                megaChunkInstance.setMegaState(MegaState.NEEDS_MERGE_DATA);
+                megaChunkInstance.setMegaState(MegaState.NEEDS_MERGE);
         });
     }
 
+    // GPU Upload \\
+
+    private void uploadMegaToGPU(MegaChunkInstance megaChunkInstance) {
+
+        if (worldRenderSystem.renderWorldInstance(megaChunkInstance)) {
+            megaChunkInstance.setMegaState(MegaState.UPLOADED);
+
+            Long2ObjectOpenHashMap<ChunkInstance> batchedChunks = megaChunkInstance.getBatchedChunks();
+
+            for (ChunkInstance chunk : batchedChunks.values()) {
+                if (chunk.getChunkDataSyncContainer().tryAcquire()) {
+                    try {
+                        chunk.getChunkDataSyncContainer().data[batchDataIndex] = true;
+                    } finally {
+                        chunk.getChunkDataSyncContainer().release();
+                    }
+                }
+            }
+        }
+    }
+
+    // Unload \\
+
     public void requestUnload(long megaChunkCoordinate) {
 
-        MegaChunkInstance megaChunkInstance = activeMegaChunks.get(megaChunkCoordinate);
-        worldRenderSystem.removeWorldInstance(megaChunkCoordinate);
-        megaChunkInstance.dispose();
-    }
-
-    // Render Data \\
-
-    private void renderBatched(MegaChunkInstance megaChunkInstance) {
-
-        Long2ObjectOpenHashMap<ChunkInstance> batchedChunks = megaChunkInstance.getBatchedChunks();
-
-        for (ChunkInstance chunkInstance : batchedChunks.values())
-            worldRenderSystem.removeWorldInstance(chunkInstance.getCoordinate());
-
-        if (worldRenderSystem.renderWorldInstance(megaChunkInstance))
-            megaChunkInstance.setMegaState(MegaState.RENDERING_BATCHED);
-    }
-
-    private void renderIndividual(MegaChunkInstance megaChunkInstance) {
-
-        Long2ObjectOpenHashMap<ChunkInstance> batchedChunks = megaChunkInstance.getBatchedChunks();
-
-        for (ChunkInstance chunkInstance : batchedChunks.values()) {
-            worldRenderSystem.removeWorldInstance(chunkInstance.getCoordinate());
-            worldRenderSystem.renderWorldInstance(chunkInstance);
-        }
-
-        megaChunkInstance.setMegaState(MegaState.RENDERING_INDIVIDUAL);
+        if (activeMegaChunks.containsKey(megaChunkCoordinate))
+            unloadRequests.add(megaChunkCoordinate);
     }
 
     // Accessible \\

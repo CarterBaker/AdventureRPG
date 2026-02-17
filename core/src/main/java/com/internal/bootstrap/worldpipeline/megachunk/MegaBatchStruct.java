@@ -9,8 +9,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public class MegaBatchStruct extends StructPackage {
 
     // Internal
-    private final int megaScale;
-    private final long megaChunkCoordinate;
+    private int megaScale;
+    private long megaChunkCoordinate;
     private final Long2ObjectOpenHashMap<ChunkInstance> batchedChunks;
     private boolean isComplete;
 
@@ -20,10 +20,23 @@ public class MegaBatchStruct extends StructPackage {
             long megaChunkCoordinate,
             int megaScale) {
 
-        // Internal
         this.megaScale = megaScale;
         this.megaChunkCoordinate = megaChunkCoordinate;
         this.batchedChunks = new Long2ObjectOpenHashMap<>();
+    }
+
+    public void constructor(long megaChunkCoordinate, int megaScale) {
+
+        this.megaChunkCoordinate = megaChunkCoordinate;
+        this.megaScale = megaScale;
+        this.batchedChunks.clear();
+        this.isComplete = false;
+    }
+
+    public void reset() {
+
+        batchedChunks.clear();
+        isComplete = false;
     }
 
     // Accessible \\
@@ -43,7 +56,6 @@ public class MegaBatchStruct extends StructPackage {
 
         batchedChunks.put(chunkInstance.getCoordinate(), chunkInstance);
         isComplete = batchedChunks.size() == megaScale;
-
         return true;
     }
 

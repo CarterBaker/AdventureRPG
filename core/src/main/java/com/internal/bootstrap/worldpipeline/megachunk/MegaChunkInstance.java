@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderOperation;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderType;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
@@ -31,11 +31,13 @@ public class MegaChunkInstance extends WorldRenderInstance {
     @Override
     protected void create() {
 
-        // Internal
         this.megaState = new AtomicReference<>(MegaState.UNINITIALIZED);
-        this.vertPositionArray = new int[] { 0, 2 }; // X and Z offsets when merging chunks
+        this.vertPositionArray = new int[] { 0, 2 };
         this.mergeOffsetValues = new float[2];
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
+
+        // Batch struct created once, re-initialized on reuse
+        this.megaBatchStruct = new MegaBatchStruct(0, 0);
 
         super.create();
     }
@@ -50,18 +52,27 @@ public class MegaChunkInstance extends WorldRenderInstance {
         super.constructor(
                 worldRenderSystem,
                 worldHandle,
+                RenderType.BATCHED,
                 megaChunkCoordinate,
                 vaoHandle);
 
-        // Internal
         this.megaX = Coordinate2Long.unpackX(megaChunkCoordinate);
         this.megaZ = Coordinate2Long.unpackY(megaChunkCoordinate);
-
-        // Batch Data
         this.megaScale = megaScale;
-        megaBatchStruct = new MegaBatchStruct(
-                coordinate,
-                megaScale);
+
+        // Re-initialize struct in place
+        megaBatchStruct.constructor(megaChunkCoordinate, megaScale);
+
+        // Reset state for reuse
+        megaState.set(MegaState.UNINITIALIZED);
+    }
+
+    public void reset() {
+
+        megaState.set(MegaState.UNINITIALIZED);
+        dynamicPacketInstance.clear();
+        setGridSlotHandle(null);
+        megaBatchStruct.reset();
     }
 
     // Utility \\
@@ -79,9 +90,8 @@ public class MegaChunkInstance extends WorldRenderInstance {
             int chunkX = Coordinate2Long.unpackX(chunkCoord);
             int chunkZ = Coordinate2Long.unpackY(chunkCoord);
 
-            // Calculate offset relative to mega chunk origin
-            mergeOffsetValues[0] = (chunkX - megaX) * CHUNK_SIZE; // X offset
-            mergeOffsetValues[1] = (chunkZ - megaZ) * CHUNK_SIZE; // Z offset
+            mergeOffsetValues[0] = (chunkX - megaX) * CHUNK_SIZE;
+            mergeOffsetValues[1] = (chunkZ - megaZ) * CHUNK_SIZE;
 
             if (!dynamicPacketInstance.merge(
                     chunkInstance.getDynamicPacketInstance(),
@@ -98,9 +108,8 @@ public class MegaChunkInstance extends WorldRenderInstance {
         return success;
     }
 
-    // Accessibility \\
+    // Accessible \\
 
-    // Internal
     public MegaState getMegaState() {
         return megaState.get();
     }
@@ -109,23 +118,15 @@ public class MegaChunkInstance extends WorldRenderInstance {
         this.megaState.set(megaState);
     }
 
-    public RenderOperation getMegaRenderOperation() {
-        return megaState.get().getRenderOperation();
-    }
-
     public boolean tryBeginOperation(MegaState targetState) {
 
         MegaState currentState = megaState.get();
 
-        // Already in the target state
         if (currentState == targetState)
             return false;
 
-        // Atomic transition
         return megaState.compareAndSet(currentState, targetState);
     }
-
-    // Batch Data
 
     public boolean isComplete() {
         return megaBatchStruct.isComplete();

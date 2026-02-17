@@ -101,6 +101,8 @@ public class EngineSetting {
         public static final String GRID_COORDINATE_UBO = "GridCoordinateData"; // The grid slot specific UBO
         public static final int MAX_CHUNK_STREAM_PER_FRAME = 128; // Chunks to load per frame
         public static final int MAX_CHUNK_STREAM_PER_BATCH = 32; // Chunks to load per batch
+        public static final int CHUNK_POOL_MAX_OVERFLOW = 32; // Extra pooled chunks above grid slot count
+        public static final int MEGA_POOL_MAX_OVERFLOW = 8; // Extra pooled mega chunks above mega slot count
 
         // Player
         public static final String DEFAULT_PLAYER_RACE = "humanoid"; // The starting race for all players

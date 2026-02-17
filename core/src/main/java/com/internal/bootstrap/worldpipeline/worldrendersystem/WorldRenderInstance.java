@@ -11,6 +11,7 @@ public class WorldRenderInstance extends InstancePackage {
     // Internal
     protected WorldRenderSystem worldrendersystem;
     protected WorldHandle worldHandle;
+    protected RenderType renderType;
     protected long coordinate;
 
     // grid
@@ -29,12 +30,14 @@ public class WorldRenderInstance extends InstancePackage {
     public void constructor(
             WorldRenderSystem worldRenderSystem,
             WorldHandle worldHandle,
+            RenderType renderType,
             long coordinate,
             VAOHandle vaoHandle) {
 
         // Internal
         this.worldrendersystem = worldRenderSystem;
         this.worldHandle = worldHandle;
+        this.renderType = renderType;
         this.coordinate = coordinate;
 
         // Dynamic Mesh

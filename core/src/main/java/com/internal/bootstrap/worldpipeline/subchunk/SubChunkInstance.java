@@ -3,6 +3,7 @@ package com.internal.bootstrap.worldpipeline.subchunk;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderType;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
@@ -16,14 +17,12 @@ public class SubChunkInstance extends WorldRenderInstance {
     private BlockPaletteHandle biomePaletteHandle;
     private BlockPaletteHandle blockPaletteHandle;
     private BlockPaletteHandle blockRotationPaletteHandle;
-
     private short defaultDirection = (short) Direction3Vector.UP.index;
 
     // Internal \\
 
     @Override
     protected void create() {
-
         super.create();
 
         // Internal
@@ -42,6 +41,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         super.constructor(
                 worldRenderSystem,
                 worldHandle,
+                RenderType.INVALID,
                 coordinate,
                 vaoHandle);
 
@@ -61,9 +61,18 @@ public class SubChunkInstance extends WorldRenderInstance {
                 defaultDirection);
     }
 
-    // Accessible \\
+    public void reset() {
 
-    // Internal
+        // Clear all palette data back to default state
+        biomePaletteHandle.clear();
+        blockPaletteHandle.clear();
+        blockRotationPaletteHandle.clear();
+
+        // Clear subchunk geometry
+        dynamicPacketInstance.clear();
+    }
+
+    // Accessible \\
 
     public BlockPaletteHandle getBiomePaletteHandle() {
         return biomePaletteHandle;
