@@ -9,12 +9,12 @@ import com.internal.core.engine.InstancePackage;
 public class WorldRenderInstance extends InstancePackage {
 
     // Internal
-    protected WorldRenderSystem worldrendersystem;
+    protected WorldRenderSystem worldRenderSystem;
     protected WorldHandle worldHandle;
     protected RenderType renderType;
     protected long coordinate;
 
-    // grid
+    // Grid
     protected GridSlotHandle gridSlotHandle;
 
     // Dynamic Mesh
@@ -22,8 +22,6 @@ public class WorldRenderInstance extends InstancePackage {
 
     @Override
     protected void create() {
-
-        // Dynamic Mesh
         this.dynamicPacketInstance = create(DynamicPacketInstance.class);
     }
 
@@ -34,23 +32,24 @@ public class WorldRenderInstance extends InstancePackage {
             long coordinate,
             VAOHandle vaoHandle) {
 
-        // Internal
-        this.worldrendersystem = worldRenderSystem;
+        this.worldRenderSystem = worldRenderSystem;
         this.worldHandle = worldHandle;
         this.renderType = renderType;
         this.coordinate = coordinate;
 
-        // Dynamic Mesh
         this.dynamicPacketInstance.constructor(vaoHandle);
     }
 
     public void dispose() {
-        worldrendersystem.removeWorldInstance(coordinate);
+
+        if (renderType == RenderType.INDIVIDUAL)
+            worldRenderSystem.removeChunkInstance(coordinate);
+        else
+            worldRenderSystem.removeMegaInstance(coordinate);
     }
 
     // Accessible \\
 
-    // Internal
     public WorldHandle getWorldHandle() {
         return worldHandle;
     }
@@ -59,7 +58,6 @@ public class WorldRenderInstance extends InstancePackage {
         return coordinate;
     }
 
-    // Grid
     public GridSlotHandle getGridSlotHandle() {
         return gridSlotHandle;
     }
@@ -68,7 +66,6 @@ public class WorldRenderInstance extends InstancePackage {
         this.gridSlotHandle = gridSlotHandle;
     }
 
-    // Dynamic Mesh
     public DynamicPacketInstance getDynamicPacketInstance() {
         return dynamicPacketInstance;
     }

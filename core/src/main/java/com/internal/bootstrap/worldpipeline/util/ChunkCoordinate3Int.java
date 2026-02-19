@@ -32,7 +32,7 @@ public class ChunkCoordinate3Int extends UtilityPackage {
         BLOCK_COORDINATE_COUNT = (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
 
         int interiorSize = CHUNK_SIZE - 2;
-        INTERIOR_BLOCK_COUNT = (interiorSize * interiorSize * interiorSize);
+        INTERIOR_BLOCK_COUNT = CHUNK_SIZE * interiorSize * interiorSize;
 
         // Allocate coordinate arrays
         blockCoordinates = new int[BLOCK_COORDINATE_COUNT];
@@ -58,8 +58,7 @@ public class ChunkCoordinate3Int extends UtilityPackage {
 
         int idx = 0;
 
-        // Only iterate interior blocks (skip outer shell on all axes)
-        for (int y = 1; y < CHUNK_SIZE - 1; y++)
+        for (int y = 0; y < CHUNK_SIZE; y++)
             for (int z = 1; z < CHUNK_SIZE - 1; z++)
                 for (int x = 1; x < CHUNK_SIZE - 1; x++)
                     interiorBlockCoordinates[idx++] = Coordinate3Int.pack(x, y, z);

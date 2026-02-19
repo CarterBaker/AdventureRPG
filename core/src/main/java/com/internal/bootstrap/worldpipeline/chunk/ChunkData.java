@@ -1,26 +1,32 @@
 package com.internal.bootstrap.worldpipeline.chunk;
 
 public enum ChunkData {
-    LOAD_DATA(1), // Level 1: Try to load from disk
-    ESSENTIAL_DATA(1), // Level 1: Permanent marker - has at least shell data (never cleared once set)
-    GENERATION_DATA(2), // Level 2: Has full block data (generated or loaded)
-    NEIGHBOR_DATA(3), // Level 3: Has neighbor references
-    BUILD_DATA(4), // Level 4: CPU-side geometry (dump when far)
-    MERGE_DATA(5), // Level 5: Merged subchunks (dump when far)
-    BATCH_DATA(6), // Level 6: GPU batched into mega (mid-range)
-    RENDER_DATA(7); // Level 7: Actually rendering (never dump this flag)
 
-    // Internal
+    LOAD_DATA(0),
+    ESSENTIAL_DATA(0),
+    GENERATION_DATA(3),
+    NEIGHBOR_DATA(0),
+    BUILD_DATA(2),
+    MERGE_DATA(2),
+    BATCH_DATA(0),
+    RENDER_DATA(0);
+
+    public static final int NOT_DUMPABLE = 0;
+    public static final int DUMP_BELOW_DISTANT = 3;
+    public static final int DUMP_BELOW_NEAR = 2;
+
     public final int index;
-    public final int minDetailLevel;
+    public final int minimumDetailLevelRequired;
+
     public static final ChunkData[] VALUES = values();
     public static final int LENGTH = values().length;
 
-    // Internal \\
-
-    ChunkData(int minDetailLevel) {
-        // Internal
+    ChunkData(int minimumDetailLevelRequired) {
         this.index = this.ordinal();
-        this.minDetailLevel = minDetailLevel;
+        this.minimumDetailLevelRequired = minimumDetailLevelRequired;
+    }
+
+    public boolean isDumpable() {
+        return minimumDetailLevelRequired != NOT_DUMPABLE;
     }
 }

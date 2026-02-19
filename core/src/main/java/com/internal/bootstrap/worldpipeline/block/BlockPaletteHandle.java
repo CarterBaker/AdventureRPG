@@ -56,19 +56,16 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     public void clear() {
 
-        // Collapse palette in-place
         palette.clear();
         palette.add(defaultBlockId);
         bitsPerEntry = 1;
 
-        // Reuse or allocate minimum packed array
-        int longsNeeded = (totalCells + 63) >>> 6; // bitsPerEntry=1
+        int longsNeeded = (totalCells + 63) >>> 6;
         if (packedData != null && packedData.length == longsNeeded)
             java.util.Arrays.fill(packedData, 0L);
         else
-            packedData = new long[longsNeeded]; // Only if chunk went direct and nulled it
+            packedData = new long[longsNeeded];
 
-        // Drop direct reference
         directData = null;
     }
 
@@ -169,28 +166,61 @@ public final class BlockPaletteHandle extends HandlePackage {
         packedData = null;
     }
 
+    private void setBlockByIndex(int index, short blockId) {
+
+        int paletteIndex = palette.indexOf(blockId);
+
+        if (paletteIndex == -1) {
+            palette.add(blockId);
+            paletteIndex = palette.size() - 1;
+            int neededBits = calculateBitsNeeded(palette.size());
+            if (neededBits > bitsPerEntry)
+                expandBits(neededBits);
+        }
+
+        writePackedValue(index, paletteIndex);
+    }
+
+    private void collapse() {
+
+        List<Short> oldPalette = directData != null ? null : palette;
+        long[] oldData = directData != null ? null : packedData;
+        int oldBits = bitsPerEntry;
+        short[] oldDirect = directData;
+
+        palette = new ArrayList<>();
+        palette.add(defaultBlockId);
+        bitsPerEntry = 1;
+        allocatePackedArray();
+        directData = null;
+
+        for (int i = 0; i < totalCells; i++) {
+            short block = oldDirect != null
+                    ? oldDirect[i]
+                    : oldPalette.get(readPackedValueFrom(oldData, oldBits, i));
+            setBlockByIndex(i, block);
+        }
+    }
+
     public void dumpInteriorBlocks(short airBlockId) {
 
         int[] interiorCoordinates = ChunkCoordinate3Int.getInteriorBlockCoordinates();
 
         if (directData != null) {
-            for (int packedXYZ : interiorCoordinates) {
-                int index = getCellIndex(packedXYZ);
-                directData[index] = airBlockId;
+            for (int packedXYZ : interiorCoordinates)
+                directData[getCellIndex(packedXYZ)] = airBlockId;
+        } else {
+            int airPaletteIndex = palette.indexOf(airBlockId);
+            if (airPaletteIndex == -1) {
+                palette.add(airBlockId);
+                airPaletteIndex = palette.size() - 1;
             }
-            return;
+
+            for (int packedXYZ : interiorCoordinates)
+                writePackedValue(getCellIndex(packedXYZ), airPaletteIndex);
         }
 
-        int airPaletteIndex = palette.indexOf(airBlockId);
-        if (airPaletteIndex == -1) {
-            palette.add(airBlockId);
-            airPaletteIndex = palette.size() - 1;
-        }
-
-        for (int packedXYZ : interiorCoordinates) {
-            int index = getCellIndex(packedXYZ);
-            writePackedValue(index, airPaletteIndex);
-        }
+        collapse();
     }
 
     // Accessible \\

@@ -50,6 +50,26 @@ public final class Coordinate2Long {
         return pack(aX + bX, aY + bY);
     }
 
+    // Subtraction \\
+
+    public static long subtract(long a, long b) {
+
+        int aX = unpackX(a);
+        int aY = unpackY(a);
+        int bX = unpackX(b);
+        int bY = unpackY(b);
+
+        return pack(aX - bX, aY - bY);
+    }
+
+    public static long subtract(long a, int bX, int bY) {
+
+        int aX = unpackX(a);
+        int aY = unpackY(a);
+
+        return pack(aX - bX, aY - bY);
+    }
+
     // Utility \\
 
     public static long toMegaChunkCoordinate(long packedChunk) {

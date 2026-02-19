@@ -121,10 +121,9 @@ public class ChunkBatchSystem extends SystemPackage {
                 unloadRequests.remove(megaCoordinate);
                 iterator.remove();
 
-                worldRenderSystem.removeWorldInstance(megaCoordinate);
+                worldRenderSystem.removeMegaInstance(megaCoordinate);
                 megaChunkInstance.reset();
 
-                // Pool mega chunks based on how many mega slots exist plus overflow
                 int megaSlots = gridManager.getGrid().getTotalSlots() / megaScale;
                 if (megaPool.size() < megaSlots + MEGA_POOL_MAX_OVERFLOW)
                     megaPool.push(megaChunkInstance);
@@ -163,7 +162,7 @@ public class ChunkBatchSystem extends SystemPackage {
 
     private void uploadMegaToGPU(MegaChunkInstance megaChunkInstance) {
 
-        if (worldRenderSystem.renderWorldInstance(megaChunkInstance)) {
+        if (worldRenderSystem.addMegaInstance(megaChunkInstance)) {
             megaChunkInstance.setMegaState(MegaState.UPLOADED);
 
             Long2ObjectOpenHashMap<ChunkInstance> batchedChunks = megaChunkInstance.getBatchedChunks();

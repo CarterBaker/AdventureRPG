@@ -12,6 +12,7 @@ public class GridInstance extends InstancePackage {
     private long[] loadOrder;
     private LongOpenHashSet gridCoordinates;
     private Long2ObjectOpenHashMap<GridSlotHandle> gridSlots;
+    private float radiusSquared;
 
     // Internal \\
 
@@ -19,7 +20,8 @@ public class GridInstance extends InstancePackage {
             int totalSlots,
             long[] loadOrder,
             LongOpenHashSet gridCoordinates,
-            Long2ObjectOpenHashMap<GridSlotHandle> gridSlots) {
+            Long2ObjectOpenHashMap<GridSlotHandle> gridSlots,
+            float radiusSquared) {
 
         // Internal
         this.totalSlots = totalSlots;
@@ -48,5 +50,9 @@ public class GridInstance extends InstancePackage {
 
     public GridSlotHandle getGridSlot(long gridCoordinate) {
         return gridSlots.get(gridCoordinate);
+    }
+
+    public float getRadiusSquared() {
+        return radiusSquared;
     }
 }

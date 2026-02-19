@@ -27,7 +27,6 @@ public class ChunkStreamManager extends ManagerPackage {
     private ChunkPositionSystem chunkPositionSystem;
     private ChunkQueueManager chunkQueueManager;
     private ChunkBatchSystem chunkBatchSystem;
-    private WorldRenderSystem worldRenderSystem;
 
     // Internal \\
 
@@ -49,15 +48,12 @@ public class ChunkStreamManager extends ManagerPackage {
         this.vaoManager = get(VAOManager.class);
         this.playerManager = get(PlayerManager.class);
         this.gridManager = get(GridManager.class);
-        this.worldRenderSystem = get(WorldRenderSystem.class);
 
         // Push placeholder references - replaced in awake once grid is ready
         this.chunkPositionSystem.setActiveChunks(activeChunks);
         this.chunkPositionSystem.setActiveMegaChunks(activeMegaChunks);
         this.chunkQueueManager.setActiveChunks(activeChunks);
         this.chunkBatchSystem.setActiveMegaChunks(activeMegaChunks);
-        this.worldRenderSystem.setActiveChunks(activeChunks);
-        this.worldRenderSystem.setActiveMegaChunks(activeMegaChunks);
     }
 
     @Override
@@ -72,7 +68,6 @@ public class ChunkStreamManager extends ManagerPackage {
         // Re-push to all dependents
         this.chunkPositionSystem.setActiveChunks(activeChunks);
         this.chunkQueueManager.setActiveChunks(activeChunks);
-        this.worldRenderSystem.setActiveChunks(activeChunks);
     }
 
     @Override

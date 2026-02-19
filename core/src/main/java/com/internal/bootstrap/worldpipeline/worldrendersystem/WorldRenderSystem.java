@@ -6,20 +6,21 @@ import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPac
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
+import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
-import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
+import com.internal.bootstrap.entitypipeline.playermanager.PlayerManager;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldRenderSystem extends SystemPackage {
@@ -28,223 +29,327 @@ public class WorldRenderSystem extends SystemPackage {
     private MaterialManager materialManager;
     private ModelManager modelManager;
     private RenderSystem renderSystem;
+    private CameraManager cameraManager;
+    private PlayerManager playerManager;
+    private GridManager gridManager;
 
-    // Separate GPU data storage by type
+    // GPU data
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelHandle>> chunkModels;
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelHandle>> megaModels;
 
-    LongOpenHashSet renderedMegas;
-    LongOpenHashSet chunksOwnedByMegas;
+    // Render queues
+    private Long2ObjectLinkedOpenHashMap<GridSlotHandle> chunkRenderQueue;
+    private Long2ObjectLinkedOpenHashMap<GridSlotHandle> megaRenderQueue;
 
-    // Unified wish list - coordinates to render (chunks and megas mixed)
-    private LongLinkedOpenHashSet desiredCoordinates;
-
-    // References to active chunks/megas
-    private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
-    private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
-
-    // Mega settings
-    private int MEGA_CHUNK_SIZE;
+    // Frustum Culling
+    private static final float PITCH_MIN_DISTANCE_SQ = 16f;
+    private static final float HALF_PI = (float) (Math.PI / 2f);
+    private static final float TWO_PI = (float) (Math.PI * 2f);
+    private static final float PI = (float) Math.PI;
+    private float megaAngularBleedBase;
 
     // Internal \\
 
     @Override
     protected void create() {
 
-        // Internal
         this.chunkModels = new Long2ObjectOpenHashMap<>();
         this.megaModels = new Long2ObjectOpenHashMap<>();
-        this.desiredCoordinates = new LongLinkedOpenHashSet();
-
-        this.renderedMegas = new LongOpenHashSet();
-        this.chunksOwnedByMegas = new LongOpenHashSet();
+        this.chunkRenderQueue = new Long2ObjectLinkedOpenHashMap<>();
+        this.megaRenderQueue = new Long2ObjectLinkedOpenHashMap<>();
     }
 
     @Override
     protected void get() {
 
-        // Internal
         this.materialManager = get(MaterialManager.class);
         this.modelManager = get(ModelManager.class);
         this.renderSystem = get(RenderSystem.class);
+        this.gridManager = get(GridManager.class);
+        this.cameraManager = get(CameraManager.class);
+        this.playerManager = get(PlayerManager.class);
+    }
 
-        this.MEGA_CHUNK_SIZE = EngineSetting.MEGA_CHUNK_SIZE;
+    @Override
+    protected void awake() {
+
+        float megaSize = EngineSetting.MEGA_CHUNK_SIZE;
+        this.megaAngularBleedBase = (float) Math.sqrt(megaSize * megaSize + megaSize * megaSize) / 2f;
     }
 
     @Override
     protected void update() {
+        renderWorld();
+    }
 
-        renderedMegas.clear();
-        chunksOwnedByMegas.clear();
+    // Render \\
 
-        // First pass: identify which megas will render and mark their children
-        for (long coordinate : desiredCoordinates) {
-            if (megaModels.containsKey(coordinate)) {
-                renderedMegas.add(coordinate);
+    private void renderWorld() {
 
-                // Mark all child chunks
-                int megaX = Coordinate2Long.unpackX(coordinate);
-                int megaZ = Coordinate2Long.unpackY(coordinate);
+        CameraInstance camera = cameraManager.getMainCamera();
+        float fullRadiusSq = gridManager.getGrid().getRadiusSquared();
 
-                for (int x = 0; x < MEGA_CHUNK_SIZE; x++) {
-                    for (int z = 0; z < MEGA_CHUNK_SIZE; z++) {
-                        long childChunk = Coordinate2Long.pack(megaX + x, megaZ + z);
-                        chunksOwnedByMegas.add(childChunk);
-                    }
-                }
-            }
-        }
+        float cameraAngle = getCameraAngle(camera);
+        float halfFov = getHalfFov(camera);
+        float pitchDistanceSq = getPitchDistanceSq(camera, fullRadiusSq);
 
-        // Second pass: render everything
-        for (long coordinate : desiredCoordinates) {
+        for (long coordinate : megaRenderQueue.keySet())
+            renderMega(coordinate, cameraAngle, halfFov, pitchDistanceSq);
 
-            // Try to render as mega
-            if (megaModels.containsKey(coordinate)) {
-                MegaChunkInstance mega = activeMegaChunks.get(coordinate);
-                if (mega != null && mega.getGridSlotHandle() != null) {
-                    UBOHandle uboHandle = mega.getGridSlotHandle().getSlotUBO();
+        for (long coordinate : chunkRenderQueue.keySet())
+            renderChunk(coordinate, cameraAngle, halfFov, pitchDistanceSq);
+    }
 
-                    ObjectArrayList<ModelHandle> models = megaModels.get(coordinate);
-                    for (ModelHandle model : models) {
-                        model.getMaterial().setUBO(EngineSetting.GRID_COORDINATE_UBO, uboHandle);
-                        renderSystem.pushRenderCall(model, 0);
-                    }
-                }
-                continue;
-            }
+    private void renderMega(long megaCoordinate, float cameraAngle, float halfFov, float pitchDistanceSq) {
 
-            // Try to render as individual chunk (skip if owned by mega)
-            if (chunksOwnedByMegas.contains(coordinate))
-                continue;
+        GridSlotHandle gridSlotHandle = megaRenderQueue.get(megaCoordinate);
 
-            if (chunkModels.containsKey(coordinate)) {
-                ChunkInstance chunk = activeChunks.get(coordinate);
-                if (chunk != null && chunk.getGridSlotHandle() != null) {
-                    UBOHandle uboHandle = chunk.getGridSlotHandle().getSlotUBO();
+        if (!isMegaVisible(gridSlotHandle, cameraAngle, halfFov, pitchDistanceSq))
+            return;
 
-                    ObjectArrayList<ModelHandle> models = chunkModels.get(coordinate);
-                    for (ModelHandle model : models) {
-                        model.getMaterial().setUBO(EngineSetting.GRID_COORDINATE_UBO, uboHandle);
-                        renderSystem.pushRenderCall(model, 0);
-                    }
-                }
-            }
+        ObjectArrayList<ModelHandle> models = megaModels.get(megaCoordinate);
+        if (models == null)
+            return;
+
+        UBOHandle uboHandle = gridSlotHandle.getSlotUBO();
+        for (ModelHandle model : models) {
+            model.getMaterial().setUBO(EngineSetting.GRID_COORDINATE_UBO, uboHandle);
+            renderSystem.pushRenderCall(model, 0);
         }
     }
 
-    // Render Queue System \\
+    private void renderChunk(long chunkCoordinate, float cameraAngle, float halfFov, float pitchDistanceSq) {
 
-    public void clearRenderQueue() {
-        desiredCoordinates.clear();
+        GridSlotHandle gridSlotHandle = chunkRenderQueue.get(chunkCoordinate);
+
+        if (megaRenderQueue.containsKey(gridSlotHandle.getMegaCoordinate()))
+            return;
+
+        if (!isChunkVisible(gridSlotHandle, cameraAngle, halfFov, pitchDistanceSq))
+            return;
+
+        ObjectArrayList<ModelHandle> models = chunkModels.get(chunkCoordinate);
+        if (models == null)
+            return;
+
+        UBOHandle uboHandle = gridSlotHandle.getSlotUBO();
+        for (ModelHandle model : models) {
+            model.getMaterial().setUBO(EngineSetting.GRID_COORDINATE_UBO, uboHandle);
+            renderSystem.pushRenderCall(model, 0);
+        }
     }
 
-    public void queueForRender(long coordinate) {
-        desiredCoordinates.add(coordinate);
+    // Frustum Culling \\
+
+    private boolean isChunkVisible(GridSlotHandle slot, float cameraAngle, float halfFov, float pitchDistanceSq) {
+
+        float distanceSq = slot.getDistanceFromCenter();
+
+        if (distanceSq > pitchDistanceSq)
+            return false;
+
+        if (distanceSq <= 4f)
+            return true;
+
+        float bleed = 0.75f / (float) Math.sqrt(distanceSq);
+
+        return isWithinAngle(slot.getAngleFromCenter(), cameraAngle, halfFov + bleed);
+    }
+
+    private boolean isMegaVisible(GridSlotHandle slot, float cameraAngle, float halfFov, float pitchDistanceSq) {
+
+        float distanceSq = slot.getDistanceFromCenter();
+
+        if (distanceSq > pitchDistanceSq)
+            return false;
+
+        if (distanceSq <= 4f)
+            return true;
+
+        float distance = (float) Math.sqrt(distanceSq);
+        float megaBleed = (float) Math.atan(megaAngularBleedBase / distance);
+
+        return isWithinAngle(slot.getAngleFromCenter(), cameraAngle, halfFov + megaBleed);
+    }
+
+    private boolean isWithinAngle(float slotAngle, float cameraAngle, float tolerance) {
+
+        float diff = slotAngle - cameraAngle;
+
+        if (diff > PI)
+            diff -= TWO_PI;
+        if (diff < -PI)
+            diff += TWO_PI;
+
+        return Math.abs(diff) <= tolerance;
+    }
+
+    // Camera Math \\
+
+    private float getCameraAngle(CameraInstance camera) {
+        return (float) Math.atan2(-camera.getDirection().z, camera.getDirection().x);
+    }
+
+    private float getHalfFov(CameraInstance camera) {
+        return (float) Math.toRadians(camera.getFOV() / 2f);
+    }
+
+    private float getPitchDistanceSq(CameraInstance camera, float fullRadiusSq) {
+
+        // Camera stores y as negative when looking up - negate to correct
+        float pitch = (float) Math.asin(Math.max(-1f, Math.min(1f, -camera.getDirection().y)));
+        float absPitch = Math.abs(pitch);
+        float pitchT = 1f - (absPitch / HALF_PI);
+        pitchT = pitchT * pitchT;
+
+        // Higher player Y increases minimum render distance when looking down
+        float playerY = playerManager.getPlayer().getWorldPositionStruct().getPosition().y;
+        float heightFactor = Math.min(1f, playerY / (EngineSetting.WORLD_HEIGHT * EngineSetting.CHUNK_SIZE));
+        float minDistanceSq = PITCH_MIN_DISTANCE_SQ + (heightFactor * (fullRadiusSq * 0.25f));
+
+        return minDistanceSq + (pitchT * (fullRadiusSq - minDistanceSq));
+    }
+
+    // Render Queue \\
+
+    public void rebuildRenderQueue() {
+
+        clearRenderQueue();
+
+        GridInstance gridInstance = gridManager.getGrid();
+
+        for (int i = 0; i < gridInstance.getTotalSlots(); i++) {
+
+            long gridCoordinate = gridInstance.getGridCoordinate(i);
+            GridSlotHandle gridSlotHandle = gridInstance.getGridSlot(gridCoordinate);
+
+            queueChunk(gridSlotHandle);
+
+            if (gridSlotHandle.getDetailLevel().renderMode == RenderType.BATCHED)
+                queueMega(gridSlotHandle);
+        }
+    }
+
+    private void queueChunk(GridSlotHandle gridSlotHandle) {
+
+        if (megaRenderQueue.containsKey(gridSlotHandle.getMegaCoordinate()))
+            return;
+
+        chunkRenderQueue.put(gridSlotHandle.getChunkCoordinate(), gridSlotHandle);
+    }
+
+    private void queueMega(GridSlotHandle gridSlotHandle) {
+
+        if (gridSlotHandle.getChunkCoordinate() != gridSlotHandle.getMegaCoordinate())
+            return;
+
+        megaRenderQueue.put(gridSlotHandle.getMegaCoordinate(), gridSlotHandle);
+
+        for (GridSlotHandle coveredSlot : gridSlotHandle.getCoveredSlots())
+            chunkRenderQueue.remove(coveredSlot.getChunkCoordinate());
+    }
+
+    private void clearRenderQueue() {
+        chunkRenderQueue.clear();
+        megaRenderQueue.clear();
     }
 
     // World Render System \\
 
-    public boolean renderWorldInstance(WorldRenderInstance worldRenderInstance) {
+    public boolean addChunkInstance(WorldRenderInstance worldRenderInstance) {
 
         if (worldRenderInstance.getGridSlotHandle() == null)
             return false;
 
         long coordinate = worldRenderInstance.getCoordinate();
-        RenderType renderType = worldRenderInstance.renderType;
 
-        // Check if already uploaded and remove it first
-        if (renderType == RenderType.INDIVIDUAL && chunkModels.containsKey(coordinate))
-            removeWorldInstance(coordinate, renderType);
-        else if (renderType == RenderType.BATCHED && megaModels.containsKey(coordinate))
-            removeWorldInstance(coordinate, renderType);
+        if (chunkModels.containsKey(coordinate))
+            removeChunkInstance(coordinate);
+
+        ObjectArrayList<ModelHandle> modelList = buildModelList(worldRenderInstance);
+        if (modelList == null)
+            return false;
+
+        chunkModels.put(coordinate, modelList);
+        return true;
+    }
+
+    public boolean addMegaInstance(WorldRenderInstance worldRenderInstance) {
+
+        if (worldRenderInstance.getGridSlotHandle() == null)
+            return false;
+
+        long coordinate = worldRenderInstance.getCoordinate();
+
+        if (megaModels.containsKey(coordinate))
+            removeMegaInstance(coordinate);
+
+        ObjectArrayList<ModelHandle> modelList = buildModelList(worldRenderInstance);
+        if (modelList == null)
+            return false;
+
+        megaModels.put(coordinate, modelList);
+        return true;
+    }
+
+    private ObjectArrayList<ModelHandle> buildModelList(WorldRenderInstance worldRenderInstance) {
 
         DynamicPacketInstance dynamicPacket = worldRenderInstance.getDynamicPacketInstance();
 
         if (dynamicPacket.getState() != DynamicPacketState.READY)
-            return false;
+            return null;
 
-        // Create list to store all models
         ObjectArrayList<ModelHandle> modelList = new ObjectArrayList<>();
 
-        // Iterate through each material in the dynamic packet
-        var materialCollection = dynamicPacket.getMaterialID2ModelCollection();
-
-        for (var entry : materialCollection.int2ObjectEntrySet()) {
+        for (var entry : dynamicPacket.getMaterialID2ModelCollection().int2ObjectEntrySet()) {
 
             int materialID = entry.getIntKey();
             ObjectArrayList<DynamicModelHandle> dynamicModels = entry.getValue();
 
-            // Process each dynamic model for this material
             for (DynamicModelHandle dynamicModel : dynamicModels) {
 
                 if (dynamicModel.isEmpty())
                     continue;
 
-                // Clone the VAO template to get a unique VAO for this mesh
                 VAOHandle cloneVaoHandle = modelManager.cloneVAO(dynamicModel.getVAOHandle());
-
-                // Clone the material to get a unique instance
                 MaterialHandle clonedMaterial = materialManager.cloneMaterial(materialID);
 
-                // Create model from dynamic model data (uploads to GPU)
-                ModelHandle modelHandle = modelManager.createModel(
+                modelList.add(modelManager.createModel(
                         cloneVaoHandle,
                         dynamicModel.getVertices(),
                         dynamicModel.getIndices(),
-                        clonedMaterial);
-
-                // Add to model list
-                modelList.add(modelHandle);
+                        clonedMaterial));
             }
         }
 
-        if (modelList.isEmpty())
-            return false;
-
-        // Store in the appropriate map based on render type
-        if (renderType == RenderType.INDIVIDUAL) {
-            chunkModels.put(coordinate, modelList);
-        } else {
-            megaModels.put(coordinate, modelList);
-        }
-
-        return true;
+        return modelList.isEmpty() ? null : modelList;
     }
 
-    public void removeWorldInstance(long coordinate) {
-        // Try removing from both maps (one will succeed, one will no-op)
-        removeWorldInstance(coordinate, RenderType.INDIVIDUAL);
-        removeWorldInstance(coordinate, RenderType.BATCHED);
-    }
+    public void removeChunkInstance(long coordinate) {
 
-    private void removeWorldInstance(long coordinate, RenderType renderType) {
-
-        // Get from appropriate map
-        Long2ObjectOpenHashMap<ObjectArrayList<ModelHandle>> sourceMap = (renderType == RenderType.INDIVIDUAL)
-                ? chunkModels
-                : megaModels;
-
-        ObjectArrayList<ModelHandle> modelList = sourceMap.get(coordinate);
+        ObjectArrayList<ModelHandle> modelList = chunkModels.get(coordinate);
 
         if (modelList == null)
             return;
 
-        // Remove each model (this unloads VBO/IBO from GPU)
         for (ModelHandle model : modelList)
             modelManager.removeMesh(model);
 
-        // Clear the list and remove from map
         modelList.clear();
-        sourceMap.remove(coordinate);
+        chunkModels.remove(coordinate);
     }
 
-    // Utility \\
+    public void removeMegaInstance(long coordinate) {
 
-    public void setActiveChunks(Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
-        this.activeChunks = activeChunks;
-    }
+        ObjectArrayList<ModelHandle> modelList = megaModels.get(coordinate);
 
-    public void setActiveMegaChunks(Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
-        this.activeMegaChunks = activeMegaChunks;
+        if (modelList == null)
+            return;
+
+        for (ModelHandle model : modelList)
+            modelManager.removeMesh(model);
+
+        modelList.clear();
+        megaModels.remove(coordinate);
     }
 }

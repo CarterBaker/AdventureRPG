@@ -193,7 +193,6 @@ class ChunkQueueManager extends ManagerPackage {
         long chunkCoordinate = entry.getLongKey();
         ChunkInstance chunkInstance = entry.getValue();
 
-        // Remove from front regardless - we re-add at end if keeping
         iterator.remove();
 
         // Pending unload - try to recycle if no thread is holding it
@@ -207,14 +206,11 @@ class ChunkQueueManager extends ManagerPackage {
                 return;
             }
 
-            // We own the lock - safe to recycle
             try {
                 unloadRequests.remove(chunkCoordinate);
-                worldRenderSystem.removeWorldInstance(chunkCoordinate);
+                worldRenderSystem.removeChunkInstance(chunkCoordinate);
                 chunkInstance.reset();
-            }
-
-            finally {
+            } finally {
                 syncContainer.release();
             }
 

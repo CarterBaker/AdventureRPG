@@ -13,6 +13,7 @@ public class RenderBranch extends BranchPackage {
 
     @Override
     protected void get() {
+
         this.worldRenderSystem = get(WorldRenderSystem.class);
         this.renderIndex = ChunkData.RENDER_DATA.index;
     }
@@ -28,10 +29,8 @@ public class RenderBranch extends BranchPackage {
             return;
 
         try {
-            // Upload individual chunk geometry to GPU
-            boolean success = worldRenderSystem.renderWorldInstance(chunkInstance);
+            boolean success = worldRenderSystem.addChunkInstance(chunkInstance);
             syncContainer.data[renderIndex] = success;
-
         } finally {
             syncContainer.release();
         }
