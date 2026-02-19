@@ -41,8 +41,7 @@ public class WorldRenderSystem extends SystemPackage {
     private Long2ObjectLinkedOpenHashMap<GridSlotHandle> chunkRenderQueue;
     private Long2ObjectLinkedOpenHashMap<GridSlotHandle> megaRenderQueue;
 
-    // Frustum Culling
-    private static final float PITCH_MIN_DISTANCE_SQ = 16f;
+    // Culling constants
     private static final float HALF_PI = (float) (Math.PI / 2f);
     private static final float TWO_PI = (float) (Math.PI * 2f);
     private static final float PI = (float) Math.PI;
@@ -52,7 +51,6 @@ public class WorldRenderSystem extends SystemPackage {
 
     @Override
     protected void create() {
-
         this.chunkModels = new Long2ObjectOpenHashMap<>();
         this.megaModels = new Long2ObjectOpenHashMap<>();
         this.chunkRenderQueue = new Long2ObjectLinkedOpenHashMap<>();
@@ -61,7 +59,6 @@ public class WorldRenderSystem extends SystemPackage {
 
     @Override
     protected void get() {
-
         this.materialManager = get(MaterialManager.class);
         this.modelManager = get(ModelManager.class);
         this.renderSystem = get(RenderSystem.class);
@@ -72,7 +69,6 @@ public class WorldRenderSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-
         float megaSize = EngineSetting.MEGA_CHUNK_SIZE;
         this.megaAngularBleedBase = (float) Math.sqrt(megaSize * megaSize + megaSize * megaSize) / 2f;
     }
@@ -87,24 +83,34 @@ public class WorldRenderSystem extends SystemPackage {
     private void renderWorld() {
 
         CameraInstance camera = cameraManager.getMainCamera();
-        float fullRadiusSq = gridManager.getGrid().getRadiusSquared();
 
+        // Horizontal compass direction the camera faces
         float cameraAngle = getCameraAngle(camera);
         float halfFov = getHalfFov(camera);
-        float pitchDistanceSq = getPitchDistanceSq(camera, fullRadiusSq);
+
+        // How far we've tilted from the horizon (0 = looking straight, PI/2 = straight
+        // down/up)
+        float absPitch = getAbsPitch(camera);
+
+        // The horizontal arc of the visible cone.
+        // At pitch=0: equals halfFov (tight forward cone).
+        // As pitch approaches PI/2: expands toward PI (full 360 circle),
+        // because every horizontal direction is "ahead" when looking straight down.
+        float effectiveAngle = getEffectiveHalfAngle(halfFov, absPitch);
+        boolean fullCircle = effectiveAngle >= PI;
 
         for (long coordinate : megaRenderQueue.keySet())
-            renderMega(coordinate, cameraAngle, halfFov, pitchDistanceSq);
+            renderMega(coordinate, cameraAngle, effectiveAngle, fullCircle);
 
         for (long coordinate : chunkRenderQueue.keySet())
-            renderChunk(coordinate, cameraAngle, halfFov, pitchDistanceSq);
+            renderChunk(coordinate, cameraAngle, effectiveAngle, fullCircle);
     }
 
-    private void renderMega(long megaCoordinate, float cameraAngle, float halfFov, float pitchDistanceSq) {
+    private void renderMega(long megaCoordinate, float cameraAngle, float effectiveAngle, boolean fullCircle) {
 
         GridSlotHandle gridSlotHandle = megaRenderQueue.get(megaCoordinate);
 
-        if (!isMegaVisible(gridSlotHandle, cameraAngle, halfFov, pitchDistanceSq))
+        if (!isMegaVisible(gridSlotHandle, cameraAngle, effectiveAngle, fullCircle))
             return;
 
         ObjectArrayList<ModelHandle> models = megaModels.get(megaCoordinate);
@@ -118,14 +124,14 @@ public class WorldRenderSystem extends SystemPackage {
         }
     }
 
-    private void renderChunk(long chunkCoordinate, float cameraAngle, float halfFov, float pitchDistanceSq) {
+    private void renderChunk(long chunkCoordinate, float cameraAngle, float effectiveAngle, boolean fullCircle) {
 
         GridSlotHandle gridSlotHandle = chunkRenderQueue.get(chunkCoordinate);
 
         if (megaRenderQueue.containsKey(gridSlotHandle.getMegaCoordinate()))
             return;
 
-        if (!isChunkVisible(gridSlotHandle, cameraAngle, halfFov, pitchDistanceSq))
+        if (!isChunkVisible(gridSlotHandle, cameraAngle, effectiveAngle, fullCircle))
             return;
 
         ObjectArrayList<ModelHandle> models = chunkModels.get(chunkCoordinate);
@@ -139,37 +145,43 @@ public class WorldRenderSystem extends SystemPackage {
         }
     }
 
-    // Frustum Culling \\
+    // Culling \\
+    //
+    // The grid already only holds chunks within maxRenderDistance — the grid
+    // boundary
+    // IS the distance limit. No separate distance check is needed here. We only
+    // need
+    // to know whether each chunk falls inside the horizontal view cone.
 
-    private boolean isChunkVisible(GridSlotHandle slot, float cameraAngle, float halfFov, float pitchDistanceSq) {
+    private boolean isChunkVisible(GridSlotHandle slot, float cameraAngle, float effectiveAngle, boolean fullCircle) {
 
-        float distanceSq = slot.getDistanceFromCenter();
-
-        if (distanceSq > pitchDistanceSq)
-            return false;
-
-        if (distanceSq <= 4f)
+        // Chunks right underfoot are always visible
+        if (slot.getDistanceFromCenter() <= 4f)
             return true;
 
-        float bleed = 0.75f / (float) Math.sqrt(distanceSq);
+        // Looking straight down/up — all horizontal directions visible
+        if (fullCircle)
+            return true;
 
-        return isWithinAngle(slot.getAngleFromCenter(), cameraAngle, halfFov + bleed);
+        // Nearby chunks subtend a wider angle so they need more bleed to avoid edge
+        // popping
+        float bleed = 0.75f / (float) Math.sqrt(slot.getDistanceFromCenter());
+
+        return isWithinAngle(slot.getAngleFromCenter(), cameraAngle, effectiveAngle + bleed);
     }
 
-    private boolean isMegaVisible(GridSlotHandle slot, float cameraAngle, float halfFov, float pitchDistanceSq) {
+    private boolean isMegaVisible(GridSlotHandle slot, float cameraAngle, float effectiveAngle, boolean fullCircle) {
 
-        float distanceSq = slot.getDistanceFromCenter();
-
-        if (distanceSq > pitchDistanceSq)
-            return false;
-
-        if (distanceSq <= 4f)
+        if (slot.getDistanceFromCenter() <= 4f)
             return true;
 
-        float distance = (float) Math.sqrt(distanceSq);
+        if (fullCircle)
+            return true;
+
+        float distance = (float) Math.sqrt(slot.getDistanceFromCenter());
         float megaBleed = (float) Math.atan(megaAngularBleedBase / distance);
 
-        return isWithinAngle(slot.getAngleFromCenter(), cameraAngle, halfFov + megaBleed);
+        return isWithinAngle(slot.getAngleFromCenter(), cameraAngle, effectiveAngle + megaBleed);
     }
 
     private boolean isWithinAngle(float slotAngle, float cameraAngle, float tolerance) {
@@ -186,6 +198,11 @@ public class WorldRenderSystem extends SystemPackage {
 
     // Camera Math \\
 
+    /**
+     * Horizontal compass bearing the camera faces, in radians.
+     * Uses atan2(-z, x) to match the grid's atan2(gridY, gridX) convention,
+     * assuming world +X = grid +X and world -Z = grid +Y.
+     */
     private float getCameraAngle(CameraInstance camera) {
         return (float) Math.atan2(-camera.getDirection().z, camera.getDirection().x);
     }
@@ -194,20 +211,34 @@ public class WorldRenderSystem extends SystemPackage {
         return (float) Math.toRadians(camera.getFOV() / 2f);
     }
 
-    private float getPitchDistanceSq(CameraInstance camera, float fullRadiusSq) {
+    /**
+     * Recover absolute pitch from the direction vector.
+     * CameraInstance sets direction.y = -sin(pitch), so we negate to recover pitch.
+     * Returns [0, PI/2]: 0 = horizon, PI/2 = straight up or down.
+     */
+    private float getAbsPitch(CameraInstance camera) {
+        float sinPitch = Math.max(-1f, Math.min(1f, -camera.getDirection().y));
+        return Math.abs((float) Math.asin(sinPitch));
+    }
 
-        // Camera stores y as negative when looking up - negate to correct
-        float pitch = (float) Math.asin(Math.max(-1f, Math.min(1f, -camera.getDirection().y)));
-        float absPitch = Math.abs(pitch);
-        float pitchT = 1f - (absPitch / HALF_PI);
-        pitchT = pitchT * pitchT;
-
-        // Higher player Y increases minimum render distance when looking down
-        float playerY = playerManager.getPlayer().getWorldPositionStruct().getPosition().y;
-        float heightFactor = Math.min(1f, playerY / (EngineSetting.WORLD_HEIGHT * EngineSetting.CHUNK_SIZE));
-        float minDistanceSq = PITCH_MIN_DISTANCE_SQ + (heightFactor * (fullRadiusSq * 0.25f));
-
-        return minDistanceSq + (pitchT * (fullRadiusSq - minDistanceSq));
+    /**
+     * Compute the effective horizontal half-angle of the visible cone.
+     *
+     * Derivation: a view cone with vertical half-angle α, tilted at pitch θ below
+     * the horizon, intersects the XZ plane in a horizontal arc of:
+     * atan(tan(α) / cos(θ))
+     *
+     * pitch = 0 → atan(tan(α) / 1) = α (normal FOV, tight cone forward)
+     * pitch = 90° → cos(θ) → 0, result → PI (full 360°, looking straight down)
+     *
+     * Returns PI as sentinel when cos(pitch) < 0.01 (essentially vertical).
+     * Caller uses the fullCircle flag to skip the angle test entirely in that case.
+     */
+    private float getEffectiveHalfAngle(float halfFov, float absPitch) {
+        float cosP = (float) Math.cos(absPitch);
+        if (cosP < 0.01f)
+            return PI;
+        return (float) Math.atan(Math.tan(halfFov) / cosP);
     }
 
     // Render Queue \\
