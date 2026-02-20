@@ -16,7 +16,6 @@ public class GridSlotData extends DataPackage {
             float distanceFromCenter,
             float angleRadians) {
 
-        // Internal
         this.gridCoordinate = gridCoordinate;
         this.distanceFromCenter = distanceFromCenter;
         this.angleRadians = angleRadians;
@@ -28,6 +27,7 @@ public class GridSlotData extends DataPackage {
         return gridCoordinate;
     }
 
+    // Corner-based distance — used only for load order sorting
     public float getDistanceFromCenter() {
         return distanceFromCenter;
     }

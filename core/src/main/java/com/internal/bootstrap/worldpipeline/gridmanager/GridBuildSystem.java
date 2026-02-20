@@ -38,7 +38,6 @@ class GridBuildSystem extends SystemPackage {
         Long2ObjectOpenHashMap<GridSlotData> gridSlotData = createGridSlotData(radius);
 
         int totalSlots = gridSlotData.size();
-
         long[] loadOrder = assignLoadOrder(gridSlotData);
 
         LongOpenHashSet gridCoordinates = new LongOpenHashSet(gridSlotData.keySet());
@@ -74,6 +73,7 @@ class GridBuildSystem extends SystemPackage {
         for (int x = -(maxRenderDistance / 2); x < maxRenderDistance / 2; x++) {
             for (int y = -(maxRenderDistance / 2); y < maxRenderDistance / 2; y++) {
 
+                // Corner-based — used only for load order sorting
                 float distanceFromCenter = (x * x) + (y * y);
 
                 if (distanceFromCenter <= radiusSquared) {
@@ -97,13 +97,9 @@ class GridBuildSystem extends SystemPackage {
             float distanceFromCenter,
             float angleRadians) {
 
-        GridSlotData gridSlotData = create(GridSlotData.class);
-        gridSlotData.constructor(
-                gridCoordinate,
-                distanceFromCenter,
-                angleRadians);
-
-        return gridSlotData;
+        GridSlotData data = create(GridSlotData.class);
+        data.constructor(gridCoordinate, distanceFromCenter, angleRadians);
+        return data;
     }
 
     private long[] assignLoadOrder(Long2ObjectOpenHashMap<GridSlotData> gridSlotData) {
@@ -132,28 +128,39 @@ class GridBuildSystem extends SystemPackage {
 
             int gridX = Coordinate2Long.unpackX(gridCoordinate) * CHUNK_SIZE;
             int gridY = Coordinate2Long.unpackY(gridCoordinate) * CHUNK_SIZE;
-            Vector2 gridPosition = new Vector2(gridX, gridY);
 
-            slotUBO.updateUniform("u_gridPosition", gridPosition);
+            slotUBO.updateUniform("u_gridPosition", new Vector2(gridX, gridY));
             slotUBO.push();
-
-            GridSlotData slotData = gridSlotData.get(gridCoordinate.longValue());
-            float distanceFromCenter = slotData.getDistanceFromCenter();
-            float angleFromCenter = slotData.getAngleRadians();
 
             int chunkX = Coordinate2Long.unpackX(gridCoordinate);
             int chunkY = Coordinate2Long.unpackY(gridCoordinate);
-            float absoluteChunkDistance = (float) Math.sqrt(chunkX * chunkX + chunkY * chunkY);
 
+            float absoluteChunkDistance = (float) Math.sqrt(chunkX * chunkX + chunkY * chunkY);
             GridSlotDetailLevel detailLevel = GridSlotDetailLevel.getDetailLevelForDistance(absoluteChunkDistance);
+
+            // Chunk culling center — this slot as a single 1x1 chunk, center is +0.5 on
+            // each axis
+            float ccx = chunkX + 0.5f;
+            float ccy = chunkY + 0.5f;
+            float chunkDistanceFromCenter = ccx * ccx + ccy * ccy;
+            float chunkAngleFromCenter = (float) Math.atan2(ccy, ccx);
+
+            // Mega culling center — this slot as an NxN mega, center is +N/2 on each axis
+            float halfMega = MEGA_CHUNK_SIZE / 2f;
+            float mcx = chunkX + halfMega;
+            float mcy = chunkY + halfMega;
+            float megaDistanceFromCenter = mcx * mcx + mcy * mcy;
+            float megaAngleFromCenter = (float) Math.atan2(mcy, mcx);
 
             gridSlots.putIfAbsent(
                     gridCoordinate,
                     createGridSlotHandle(
                             gridCoordinate,
                             slotUBO,
-                            distanceFromCenter,
-                            angleFromCenter,
+                            chunkDistanceFromCenter,
+                            chunkAngleFromCenter,
+                            megaDistanceFromCenter,
+                            megaAngleFromCenter,
                             detailLevel));
         }
 
@@ -163,19 +170,23 @@ class GridBuildSystem extends SystemPackage {
     private GridSlotHandle createGridSlotHandle(
             long gridCoordinate,
             UBOHandle slotUBO,
-            float distanceFromCenter,
-            float angleFromCenter,
+            float chunkDistanceFromCenter,
+            float chunkAngleFromCenter,
+            float megaDistanceFromCenter,
+            float megaAngleFromCenter,
             GridSlotDetailLevel detailLevel) {
 
-        GridSlotHandle gridSlotHandle = create(GridSlotHandle.class);
-        gridSlotHandle.constructor(
+        GridSlotHandle handle = create(GridSlotHandle.class);
+        handle.constructor(
                 gridCoordinate,
                 slotUBO,
-                distanceFromCenter,
-                angleFromCenter,
+                chunkDistanceFromCenter,
+                chunkAngleFromCenter,
+                megaDistanceFromCenter,
+                megaAngleFromCenter,
                 detailLevel);
 
-        return gridSlotHandle;
+        return handle;
     }
 
     private void populateCoveredSlots(Long2ObjectOpenHashMap<GridSlotHandle> gridSlots) {
