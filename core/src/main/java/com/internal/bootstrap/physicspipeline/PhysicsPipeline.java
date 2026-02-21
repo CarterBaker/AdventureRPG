@@ -1,6 +1,7 @@
 package com.internal.bootstrap.physicspipeline;
 
-import com.internal.bootstrap.physicspipeline.physicsmanager.PhysicsManager;
+import com.internal.bootstrap.physicspipeline.moevementmanager.MovementManager;
+import com.internal.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import com.internal.core.engine.PipelinePackage;
 
 public class PhysicsPipeline extends PipelinePackage {
@@ -9,6 +10,7 @@ public class PhysicsPipeline extends PipelinePackage {
     protected void create() {
 
         // Entity Pipeline
-        create(PhysicsManager.class);
+        create(MovementManager.class);
+        create(RaycastManager.class);
     }
 }

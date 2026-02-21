@@ -41,6 +41,17 @@ public class DynamicGeometryManager extends ManagerPackage {
         return success;
     }
 
+    public boolean buildSubChunk(
+            DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
+            ChunkInstance chunkInstance,
+            int subChunkIndex) {
+
+        return internalBuildManager.build(
+                dynamicGeometryAsyncContainer,
+                chunkInstance,
+                chunkInstance.getSubChunks()[subChunkIndex]);
+    }
+
     // Accessible \\
 
     public DynamicGeometryAsyncContainer getDynamicGeometryAsyncInstance() {

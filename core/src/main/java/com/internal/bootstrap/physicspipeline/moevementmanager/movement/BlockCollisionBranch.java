@@ -1,5 +1,5 @@
 // BlockCollisionBranch.java
-package com.internal.bootstrap.physicspipeline.physicsmanager.physics;
+package com.internal.bootstrap.physicspipeline.moevementmanager.movement;
 
 import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;

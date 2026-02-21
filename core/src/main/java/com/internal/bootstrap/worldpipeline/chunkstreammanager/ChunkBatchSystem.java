@@ -73,9 +73,12 @@ public class ChunkBatchSystem extends SystemPackage {
 
         megaChunkInstance.batchChunk(chunkInstance);
 
+        MegaState state = megaChunkInstance.getMegaState();
+
         if (megaChunkInstance.isComplete() &&
-                (megaChunkInstance.getMegaState() == MegaState.UNINITIALIZED ||
-                        megaChunkInstance.getMegaState() == MegaState.PARTIAL))
+                (state == MegaState.UNINITIALIZED ||
+                        state == MegaState.PARTIAL ||
+                        state == MegaState.UPLOADED))
             megaChunkInstance.setMegaState(MegaState.NEEDS_MERGE);
     }
 
@@ -142,7 +145,7 @@ public class ChunkBatchSystem extends SystemPackage {
         }
     }
 
-    // Merge Data \\
+    // Merge \\
 
     private void mergeMega(MegaChunkInstance megaChunkInstance) {
 
@@ -191,5 +194,19 @@ public class ChunkBatchSystem extends SystemPackage {
 
     public void setActiveMegaChunks(Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
         this.activeMegaChunks = activeMegaChunks;
+    }
+
+    public void invalidateMegaForChunk(long chunkCoordinate) {
+
+        long megaCoordinate = Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate);
+        MegaChunkInstance mega = activeMegaChunks.get(megaCoordinate);
+
+        if (mega == null)
+            return;
+
+        if (mega.getMegaState() == MegaState.MERGING)
+            return;
+
+        mega.setMegaState(MegaState.NEEDS_MERGE);
     }
 }

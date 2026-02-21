@@ -3,6 +3,8 @@ package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 import com.internal.bootstrap.entitypipeline.playermanager.PlayerManager;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
@@ -111,5 +113,33 @@ public class ChunkStreamManager extends ManagerPackage {
 
     public ChunkInstance getChunkInstance(long chunkCoordinate) {
         return activeChunks.get(chunkCoordinate);
+    }
+
+    public void invalidateChunkBatch(long chunkCoordinate) {
+
+        ChunkInstance chunk = activeChunks.get(chunkCoordinate);
+
+        if (chunk == null)
+            return;
+
+        ChunkDataSyncContainer sync = chunk.getChunkDataSyncContainer();
+
+        if (sync.isLocked())
+            return;
+
+        if (!sync.tryAcquire())
+            return;
+
+        try {
+            sync.data[ChunkData.BATCH_DATA.index] = false;
+        }
+
+        finally {
+            sync.release();
+        }
+    }
+
+    public void invalidateMegaForChunk(long chunkCoordinate) {
+        chunkBatchSystem.invalidateMegaForChunk(chunkCoordinate);
     }
 }

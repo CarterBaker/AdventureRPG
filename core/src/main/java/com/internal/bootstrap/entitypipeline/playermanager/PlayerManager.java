@@ -4,7 +4,7 @@ import com.internal.bootstrap.entitypipeline.entityManager.EntityData;
 import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entityManager.EntityManager;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
-import com.internal.bootstrap.physicspipeline.physicsmanager.PhysicsManager;
+import com.internal.bootstrap.physicspipeline.moevementmanager.MovementManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -23,12 +23,13 @@ public class PlayerManager extends ManagerPackage {
     // Internal
     private CameraManager cameraManager;
     private InputSystem inputSystem;
-    private PhysicsManager physicsManager;
+    private MovementManager movementManager;
     private EntityManager entityManager;
     private BlockManager blockManager;
     private ChunkStreamManager chunkStreamManager;
 
     private InternalBufferSystem internalBufferSystem;
+    private BlockPlacementSystem blockPlacementSystem;
 
     // Active Player
     private EntityData entityData;
@@ -42,8 +43,8 @@ public class PlayerManager extends ManagerPackage {
     @Override
     protected void create() {
 
-        // Internal
         this.internalBufferSystem = create(InternalBufferSystem.class);
+        this.blockPlacementSystem = create(BlockPlacementSystem.class);
 
         this.verifyPlayerPosition = true;
         this.cameraPosition = new Vector3();
@@ -53,10 +54,9 @@ public class PlayerManager extends ManagerPackage {
     @Override
     protected void get() {
 
-        // Internal
         this.cameraManager = get(CameraManager.class);
         this.inputSystem = get(InputSystem.class);
-        this.physicsManager = get(PhysicsManager.class);
+        this.movementManager = get(MovementManager.class);
         this.entityManager = get(EntityManager.class);
         this.blockManager = get(BlockManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
@@ -65,7 +65,6 @@ public class PlayerManager extends ManagerPackage {
     @Override
     protected void awake() {
 
-        // Active Player
         this.entityData = entityManager.getTemplateDataFromTemplateName(EngineSetting.DEFAULT_PLAYER_RACE);
         this.player = entityManager.createEntity(entityData);
         this.cameraOffset.set(
@@ -88,16 +87,26 @@ public class PlayerManager extends ManagerPackage {
             return;
         }
 
-        // Get required reference data
         Vector3Int input = inputSystem.getInput();
         CameraInstance camera = cameraManager.getMainCamera();
         Vector3 direction = camera.getDirection();
 
-        physicsManager.move(input, direction, player);
+        // Movement
+        movementManager.move(input, direction, player);
 
+        // Camera follow
         cameraPosition.set(worldPositionStruct.getPosition());
         cameraPosition.add(cameraOffset);
         camera.setPosition(cameraPosition);
+
+        // Block interaction — ray starts from eye position
+        blockPlacementSystem.update(
+                worldPositionStruct,
+                cameraPosition,
+                direction,
+                player.getStatisticsInstance(),
+                inputSystem.isLeftClick(),
+                inputSystem.isRightClick());
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }
@@ -110,7 +119,6 @@ public class PlayerManager extends ManagerPackage {
         if (activeChunkInstance == null)
             return true;
 
-        // Check if chunk has generation data using sync container
         if (!activeChunkInstance.getChunkDataSyncContainer().hasData(ChunkData.GENERATION_DATA))
             return true;
 

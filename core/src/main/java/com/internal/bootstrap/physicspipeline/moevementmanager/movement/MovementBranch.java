@@ -1,4 +1,4 @@
-package com.internal.bootstrap.physicspipeline.physicsmanager.physics;
+package com.internal.bootstrap.physicspipeline.moevementmanager.movement;
 
 import com.internal.bootstrap.entitypipeline.entityManager.StatisticsStruct;
 import com.internal.core.engine.BranchPackage;

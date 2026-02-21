@@ -1,9 +1,9 @@
-package com.internal.bootstrap.physicspipeline.physicsmanager;
+package com.internal.bootstrap.physicspipeline.moevementmanager;
 
 import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entityManager.StatisticsStruct;
-import com.internal.bootstrap.physicspipeline.physicsmanager.physics.BlockCollisionBranch;
-import com.internal.bootstrap.physicspipeline.physicsmanager.physics.MovementBranch;
+import com.internal.bootstrap.physicspipeline.moevementmanager.movement.BlockCollisionBranch;
+import com.internal.bootstrap.physicspipeline.moevementmanager.movement.MovementBranch;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.core.engine.ManagerPackage;
@@ -12,7 +12,7 @@ import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector3;
 import com.internal.core.util.mathematics.vectors.Vector3Int;
 
-public class PhysicsManager extends ManagerPackage {
+public class MovementManager extends ManagerPackage {
     // Internal
     private MovementBranch movementBranch;
     private BlockCollisionBranch blockCollisionBranch;

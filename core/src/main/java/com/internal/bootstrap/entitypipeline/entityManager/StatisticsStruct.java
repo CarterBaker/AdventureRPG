@@ -6,4 +6,5 @@ public class StatisticsStruct extends InstancePackage {
 
     // Stats
     public float movementSpeed = 10f; // TODO: This is set high for testing purposes
+    public float reach = 5f;
 }
