@@ -46,25 +46,15 @@ public class WorldRenderSystem extends SystemPackage {
     private static final float PI = (float) Math.PI;
     private static final float HALF_PI = (float) (Math.PI / 2f);
 
-    // Minimum angular bleed so far chunks at the cone edge never gap.
     private static final float MIN_BLEED = 0.05f;
-
-    // Minimum render radius (squared) at extreme 90 degree pitch.
-    // Radius of 5 chunks = 25 squared. Always less than fullCenterRadiusSq on any
-    // real grid.
     private static final float PITCH_MIN_DIST_SQ = 25f;
-
-    // Angle widens fast so there are no holes even at moderate downward angles.
-    // 2 = already halfway to full circle at 45 degrees down.
     private static final float PITCH_POWER_ANGLE = 1f;
-
-    // Distance stays large much longer for performance, only pulls back sharply
-    // near vertical.
-    // 6 = barely shrinks until ~70 degrees, then drops hard near 90.
     private static final float PITCH_POWER_DISTANCE = 6f;
 
-    // Max render radius in center-offset chunk units, derived from settings in
-    // awake.
+    // The furthest chunk-distance-squared still within the immediate 3x3 grid.
+    // Slot center offsets are +0.5 per axis, so corner of 3x3 = 1.5^2 + 1.5^2 = 4.5
+    private static final float IMMEDIATE_3X3_DIST_SQ = 4.5f;
+
     private float fullCenterRadiusSq;
     private float megaAngularBleedBase;
 
@@ -93,8 +83,6 @@ public class WorldRenderSystem extends SystemPackage {
         float megaSize = EngineSetting.MEGA_CHUNK_SIZE;
         this.megaAngularBleedBase = (float) Math.sqrt(megaSize * megaSize + megaSize * megaSize) / 2f;
 
-        // Max render radius from settings, padded by halfMega to cover furthest mega
-        // center in the same center-offset unit system that slot distances use.
         float halfMega = megaSize / 2f;
         float centerRadius = (settings.maxRenderDistance / 2f) + halfMega;
         this.fullCenterRadiusSq = centerRadius * centerRadius;
@@ -115,10 +103,6 @@ public class WorldRenderSystem extends SystemPackage {
         float halfFov = getHalfFov(camera);
         float absPitch = getAbsPitch(camera);
 
-        // Angle and distance use separate power curves so they can be tuned
-        // independently.
-        // Angle widens early to prevent holes at moderate pitch.
-        // Distance stays full longer for performance, only shrinks near vertical.
         float tAngle = getPitchT(absPitch, PITCH_POWER_ANGLE);
         float tDistance = getPitchT(absPitch, PITCH_POWER_DISTANCE);
         float effectiveAngle = getEffectiveHalfAngle(halfFov, tAngle);
@@ -176,6 +160,10 @@ public class WorldRenderSystem extends SystemPackage {
 
         float distanceSq = slot.getChunkDistanceFromCenter();
 
+        // Always render the immediate 3x3 chunks around the player
+        if (distanceSq <= IMMEDIATE_3X3_DIST_SQ)
+            return true;
+
         if (distanceSq > maxDistanceSq)
             return false;
 
@@ -224,33 +212,14 @@ public class WorldRenderSystem extends SystemPackage {
         return Math.abs((float) Math.asin(sinPitch));
     }
 
-    /**
-     * Pitch curve driver. Returns t in [0, 1].
-     * t = 0 at horizon, t = 1 at straight up/down.
-     * power controls how quickly t rises — low = early onset, high = late sharp
-     * drop.
-     */
     private float getPitchT(float absPitch, float power) {
         return (float) Math.pow(absPitch / HALF_PI, power);
     }
 
-    /**
-     * Horizontal half-angle of the visible cone.
-     * t = 0 → halfFov (tight forward cone at horizon)
-     * t = 1 → PI (full 360 circle at vertical)
-     */
     private float getEffectiveHalfAngle(float halfFov, float t) {
         return halfFov + t * (PI - halfFov);
     }
 
-    /**
-     * Max render distance (squared).
-     * t = 0 → fullCenterRadiusSq (full distance at horizon)
-     * t = 1 → PITCH_MIN_DIST_SQ (5 chunk radius at vertical)
-     *
-     * PITCH_MIN_DIST_SQ = 25 is always less than fullCenterRadiusSq on any
-     * real grid so this always shrinks, never inverts.
-     */
     private float getPitchMaxDistanceSq(float t) {
         return fullCenterRadiusSq + t * (PITCH_MIN_DIST_SQ - fullCenterRadiusSq);
     }

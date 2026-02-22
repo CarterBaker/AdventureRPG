@@ -99,9 +99,9 @@ public class PlayerManager extends ManagerPackage {
         cameraPosition.add(cameraOffset);
         camera.setPosition(cameraPosition);
 
-        // Block interaction — ray starts from eye position
+        // Block interaction
         blockPlacementSystem.update(
-                worldPositionStruct,
+                player,
                 cameraPosition,
                 direction,
                 player.getStatisticsInstance(),

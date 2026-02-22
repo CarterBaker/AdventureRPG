@@ -1,5 +1,6 @@
 package com.internal.bootstrap.entitypipeline.playermanager;
 
+import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entityManager.StatisticsStruct;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
@@ -14,6 +15,7 @@ import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.Extras.Coordinate3Int;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class BlockPlacementSystem extends SystemPackage {
@@ -28,10 +30,14 @@ public class BlockPlacementSystem extends SystemPackage {
 
     private int CHUNK_SIZE;
     private int WORLD_HEIGHT;
+    private float PLACEMENT_INTERVAL;
 
     // Block IDs
     private short AIR_BLOCK_ID;
     private short GRASS_BLOCK_ID;
+
+    // Elapsed time since last placement
+    private float timeSinceLastPlacement;
 
     // Reused per frame
     private final BlockCastStruct castStruct = new BlockCastStruct();
@@ -42,6 +48,8 @@ public class BlockPlacementSystem extends SystemPackage {
     protected void create() {
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
         this.WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT;
+        this.PLACEMENT_INTERVAL = EngineSetting.BLOCK_PLACEMENT_INTERVAL;
+        this.timeSinceLastPlacement = PLACEMENT_INTERVAL; // Ready to place immediately
     }
 
     @Override
@@ -63,15 +71,21 @@ public class BlockPlacementSystem extends SystemPackage {
     // Update \\
 
     public void update(
-            WorldPositionStruct worldPositionStruct,
+            EntityHandle player,
             Vector3 cameraPosition,
             Vector3 cameraDirection,
             StatisticsStruct statistics,
             boolean breakBlock,
             boolean placeBlock) {
 
+        timeSinceLastPlacement += internal.getDeltaTime();
+
         if (!breakBlock && !placeBlock)
             return;
+        if (timeSinceLastPlacement < PLACEMENT_INTERVAL)
+            return;
+
+        WorldPositionStruct worldPositionStruct = player.getWorldPositionStruct();
 
         raycastManager.castBlock(
                 worldPositionStruct.getChunkCoordinate(),
@@ -91,6 +105,7 @@ public class BlockPlacementSystem extends SystemPackage {
                     AIR_BLOCK_ID);
             rebuildAffected(chunk, castStruct.chunkCoordinate, castStruct.blockX, castStruct.blockY, castStruct.blockZ,
                     castStruct.subChunkY);
+            timeSinceLastPlacement = 0f;
             return;
         }
 
@@ -128,12 +143,19 @@ public class BlockPlacementSystem extends SystemPackage {
         }
 
         long placeChunkCoord = Coordinate2Long.pack(placeChunkX, placeChunkZ);
+
+        // Block if target is occupied by the player
+        int packedPlaceCoord = Coordinate3Int.pack(placeX, placeY, placeZ);
+        if (player.getBlockCompositionStruct().getBlockCompositionMap().containsKey(packedPlaceCoord))
+            return;
+
         ChunkInstance placeChunk = chunkStreamManager.getChunkInstance(placeChunkCoord);
         if (placeChunk == null)
             return;
 
         writeBlock(placeChunk, placeX, placeY, placeZ, placeSubChunkY, GRASS_BLOCK_ID);
         rebuildAffected(placeChunk, placeChunkCoord, placeX, placeY, placeZ, placeSubChunkY);
+        timeSinceLastPlacement = 0f;
     }
 
     // Rebuild \\
