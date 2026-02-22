@@ -7,19 +7,19 @@
         {
             "name": "Water",
             "type": "LIQUID",
-            "material": "standard/StandardBlockMat",
+            "material": "standard/StandardSurface",
             "texture": "standard/water"
         },
         {
             "name": "Lava",
             "type": "LIQUID",
-            "material": "standard/StandardBlockMat",
+            "material": "standard/StandardSurface",
             "texture": "standard/lava"
         },
         {
             "name": "Grass Block",
             "type": "FULL",
-            "material": "standard/StandardBlockMat",
+            "material": "standard/StandardSurface",
             "upTex": "standard/grassBlockUp",
             "northTex": "standard/grassBlockNorth",
             "downTex": "standard/dirt"
@@ -27,43 +27,43 @@
         {
             "name": "Dirt Block",
             "type": "FULL",
-            "material": "standard/StandardBlockMat",
+            "material": "standard/StandardSurface",
             "texture": "standard/dirt"
         },
         {
             "name": "Stone Block",
             "type": "FULL",
-            "material": "standard/StandardBlockMat",
+            "material": "standard/StandardSurface",
             "texture": "standard/stone"
         },
         {
             "name": "Copper Ore",
             "type": "FULL",
-            "material": "standard/StandardBlockMat",
+            "material": "standard/StandardSurface",
             "texture": "standard/copperOre"
         },
         {
             "name": "Iron Ore",
             "type": "FULL",
-            "material": "standard/StandardBlockMat",
+            "material": "standard/StandardSurface",
             "texture": "standard/ironOre"
         },
         {
             "name": "Gold Ore",
             "type": "FULL",
-            "material": "standard/StandardBlockMat",
+            "material": "standard/StandardSurface",
             "texture": "standard/goldOre"
         },
         {
             "name": "Coal Ore",
             "type": "FULL",
-            "material": "standard/StandardBlockMat",
+            "material": "standard/StandardSurface",
             "texture": "standard/coalOre"
         },
         {
             "name": "Sand",
             "type": "FULL",
-            "material": "standard/StandardBlockMat",
+            "material": "standard/StandardSurface",
             "texture": "standard/sand"
         }
     ]

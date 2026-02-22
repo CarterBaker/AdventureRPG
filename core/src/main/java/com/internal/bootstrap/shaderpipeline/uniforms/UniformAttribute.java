@@ -32,6 +32,16 @@ public abstract class UniformAttribute<T> {
                 "getByteBuffer() not implemented for " + getClass().getSimpleName());
     }
 
+    // Sampler Utility \\
+
+    public boolean isSampler() {
+        return false;
+    }
+
+    public void bindTexture(int unit) {
+        // No-op for non-samplers
+    }
+
     // Uniform Utility \\
 
     final void push(int handle) {

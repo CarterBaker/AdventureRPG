@@ -133,11 +133,17 @@ public class AliasLibrarySystem extends SystemPackage {
 
     // Accessible \\
 
-    AliasInstance[] getAllAliases() {
+    public AliasInstance[] getAllAliases() {
         return aliases;
     }
 
-    int getOrDefault(String aliasVariation) {
+    public int get(String aliasVariation) {
+        if (aliasVariation == null)
+            return -1;
+        return aliasLookup.getOrDefault(aliasVariation.toLowerCase(), -1);
+    }
+
+    public int getOrDefault(String aliasVariation) {
 
         if (aliasVariation == null)
             return -1;
@@ -146,7 +152,7 @@ public class AliasLibrarySystem extends SystemPackage {
         return aliasLookup.getOrDefault(key, -1);
     }
 
-    AliasInstance getAlias(int aliasId) {
+    public AliasInstance getAlias(int aliasId) {
 
         if (aliasId < 0 || aliasId >= aliasCount)
             return null;
@@ -154,15 +160,15 @@ public class AliasLibrarySystem extends SystemPackage {
         return aliases[aliasId];
     }
 
-    Color getDefaultColor(int id) {
+    public Color getDefaultColor(int id) {
         return aliases[id].getAliasColor();
     }
 
-    int getAliasCount() {
+    public int getAliasCount() {
         return aliasCount;
     }
 
-    boolean hasAlias(String aliasVariation) {
+    public boolean hasAlias(String aliasVariation) {
         return getOrDefault(aliasVariation) != -1;
     }
 }

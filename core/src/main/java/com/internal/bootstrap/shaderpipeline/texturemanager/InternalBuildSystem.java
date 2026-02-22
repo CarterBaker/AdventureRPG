@@ -22,8 +22,6 @@ class InternalBuildSystem extends SystemPackage {
 
     @Override
     protected void create() {
-
-        // Internal
         this.textureCount = 0;
         this.arrayCount = 0;
     }
@@ -35,16 +33,12 @@ class InternalBuildSystem extends SystemPackage {
 
     // Main \\
 
-    TextureArrayInstance buildTextureArray(List<File> imageFiles, File sourceDirectory) {
+    TextureArrayInstance buildTextureArray(List<File> imageFiles, File sourceDirectory, String arrayName) {
 
         LinkedHashMap<String, TextureTileInstance> textureTiles = createTextureTiles(imageFiles, sourceDirectory);
-
         TextureAtlasInstance[] textureAtlases = createTextureAtlases(textureTiles);
 
-        return createTextureArray(
-                textureTiles,
-                sourceDirectory.getName(),
-                textureAtlases);
+        return createTextureArray(textureTiles, arrayName, textureAtlases);
     }
 
     // Texture Tiles \\
@@ -61,9 +55,7 @@ class InternalBuildSystem extends SystemPackage {
 
             try {
                 img = ImageIO.read(file);
-            }
-
-            catch (Exception e) {
+            } catch (Exception e) {
                 return throwException("File: " + file + ", could not be read as an image");
             }
 
@@ -76,8 +68,7 @@ class InternalBuildSystem extends SystemPackage {
             int aliasId = aliasLibrarySystem.getOrDefault(aliasType);
 
             if (aliasId == -1)
-                throwException(
-                        "Alias: " + aliasType + ", could not be found in the system");
+                throwException("Alias: " + aliasType + ", could not be found in the system");
 
             TextureTileInstance textureTile = textureTiles.get(instanceName);
 
@@ -94,9 +85,7 @@ class InternalBuildSystem extends SystemPackage {
             textureTile.setImage(img, aliasId);
         }
 
-        textureTiles = organizeTextureTiles(textureTiles);
-
-        return textureTiles;
+        return organizeTextureTiles(textureTiles);
     }
 
     private LinkedHashMap<String, TextureTileInstance> organizeTextureTiles(
@@ -104,7 +93,7 @@ class InternalBuildSystem extends SystemPackage {
 
         LinkedHashMap<String, TextureTileInstance> sortedTiles = new LinkedHashMap<>();
         textureTiles.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue((tile1, tile2) -> Integer.compare(tile1.getID(), tile2.getID())))
+                .sorted(Map.Entry.comparingByValue((t1, t2) -> Integer.compare(t1.getID(), t2.getID())))
                 .forEachOrdered(entry -> sortedTiles.put(entry.getKey(), entry.getValue()));
 
         return sortedTiles;
@@ -118,9 +107,7 @@ class InternalBuildSystem extends SystemPackage {
         TextureAtlasInstance[] textureAtlases = new TextureAtlasInstance[aliasLibrarySystem.getAliasCount()];
         int atlasSize = calculateAtlasSize(textureTiles.size());
 
-        assignTilePositions(
-                textureTiles,
-                atlasSize);
+        assignTilePositions(textureTiles, atlasSize);
 
         for (int alias = 0; alias < aliasLibrarySystem.getAliasCount(); alias++)
             textureAtlases[alias] = createTextureAtlas(alias, atlasSize, textureTiles);
@@ -132,14 +119,11 @@ class InternalBuildSystem extends SystemPackage {
             LinkedHashMap<String, TextureTileInstance> textureTiles,
             int atlasSize) {
 
-        int tilesPerRow = atlasSize;
         int currentIndex = 0;
 
         for (TextureTileInstance tile : textureTiles.values()) {
-
-            int x = currentIndex % tilesPerRow;
-            int y = currentIndex / tilesPerRow;
-
+            int x = currentIndex % atlasSize;
+            int y = currentIndex / atlasSize;
             tile.setAtlasPosition(x, y);
             currentIndex++;
         }
@@ -150,7 +134,6 @@ class InternalBuildSystem extends SystemPackage {
             int atlasSize,
             LinkedHashMap<String, TextureTileInstance> textureTiles) {
 
-        // Create the atlas image
         int atlasPixelWidth = atlasSize * EngineSetting.BLOCK_TEXTURE_SIZE;
         int atlasPixelHeight = atlasSize * EngineSetting.BLOCK_TEXTURE_SIZE;
 
@@ -161,10 +144,8 @@ class InternalBuildSystem extends SystemPackage {
 
         Graphics2D graphic = atlasImage.createGraphics();
 
-        // Get default color for this alias
         Color defaultColor = aliasLibrarySystem.getDefaultColor(alias);
 
-        // Fill each tile position
         for (TextureTileInstance tile : textureTiles.values()) {
 
             int x = tile.getAtlasX() * EngineSetting.BLOCK_TEXTURE_SIZE;
@@ -172,11 +153,8 @@ class InternalBuildSystem extends SystemPackage {
 
             BufferedImage tileImage = tile.getImage(alias);
 
-            // Draw the actual tile image
             if (tileImage != null)
                 graphic.drawImage(tileImage, x, y, null);
-
-            // Draw default color for missing layer
             else {
                 graphic.setColor(new Color(
                         defaultColor.getRed(),
@@ -190,9 +168,7 @@ class InternalBuildSystem extends SystemPackage {
         graphic.dispose();
 
         TextureAtlasInstance textureAtlasInstance = create(TextureAtlasInstance.class);
-        textureAtlasInstance.constructor(
-                atlasSize,
-                atlasImage);
+        textureAtlasInstance.constructor(atlasSize, atlasImage);
 
         return textureAtlasInstance;
     }
@@ -206,21 +182,18 @@ class InternalBuildSystem extends SystemPackage {
 
     private TextureArrayInstance createTextureArray(
             LinkedHashMap<String, TextureTileInstance> textureTiles,
-            String textureArrayName,
+            String arrayName,
             TextureAtlasInstance[] textureAtlases) {
 
         TextureArrayInstance textureArray = create(TextureArrayInstance.class);
         textureArray.constructor(
                 arrayCount++,
-                textureArrayName,
+                arrayName,
                 textureAtlases[0].getAtlasSize(),
                 textureAtlases);
 
         for (TextureTileInstance tile : textureTiles.values())
-            textureArray.createTile(
-                    tile.getAtlasX(),
-                    tile.getAtlasY(),
-                    tile);
+            textureArray.createTile(tile.getAtlasX(), tile.getAtlasY(), tile);
 
         return textureArray;
     }

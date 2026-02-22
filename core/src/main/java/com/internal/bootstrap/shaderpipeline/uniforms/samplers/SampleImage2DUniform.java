@@ -1,6 +1,7 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.samplers;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
 
@@ -12,8 +13,6 @@ public class SampleImage2DUniform extends UniformAttribute<Integer> {
     private final ByteBuffer buffer;
 
     public SampleImage2DUniform() {
-
-        // Internal
         super(0);
         this.buffer = BufferUtils.newByteBuffer(4);
     }
@@ -23,6 +22,22 @@ public class SampleImage2DUniform extends UniformAttribute<Integer> {
         return new SampleImage2DUniform();
     }
 
+    // Sampler \\
+
+    @Override
+    public boolean isSampler() {
+        return true;
+    }
+
+    @Override
+    public void bindTexture(int unit) {
+        Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0 + unit);
+        Gdx.gl.glBindTexture(GL20.GL_TEXTURE_2D, value);
+        this.value = unit;
+    }
+
+    // Push \\
+
     @Override
     protected void push(int handle, Integer value) {
         Gdx.gl.glUniform1i(handle, value);
@@ -30,11 +45,8 @@ public class SampleImage2DUniform extends UniformAttribute<Integer> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         buffer.clear();
-
         buffer.putInt(value);
-
         buffer.flip();
         return buffer;
     }

@@ -1,0 +1,4 @@
+{
+    "vert": "surface/StandardSurface.vsh",
+    "frag": "surface/StandardSurface.fsh"
+}

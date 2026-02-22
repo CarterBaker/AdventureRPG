@@ -2,7 +2,6 @@ package com.internal.bootstrap.worldpipeline.blockmanager;
 
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.core.engine.ManagerPackage;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
@@ -10,6 +9,7 @@ public class BlockManager extends ManagerPackage {
 
     // Internal
     private InternalLoadManager internalLoadManager;
+    private InternalBufferSystem internalBufferSystem;
 
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> blockName2BlockID;
@@ -19,11 +19,9 @@ public class BlockManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Internal
         this.internalLoadManager = create(InternalLoadManager.class);
+        this.internalBufferSystem = create(InternalBufferSystem.class);
 
-        // Retrieval Mapping
         this.blockName2BlockID = new Object2IntOpenHashMap<>();
         this.blockID2Block = new Int2ObjectOpenHashMap<>();
     }
@@ -52,20 +50,15 @@ public class BlockManager extends ManagerPackage {
     // Accessible \\
 
     public int getBlockIDFromBlockName(String blockName) {
-
         if (!blockName2BlockID.containsKey(blockName))
             throwException("Block not found: " + blockName);
-
         return blockName2BlockID.getInt(blockName);
     }
 
     public BlockHandle getBlockFromBlockID(int blockID) {
-
         BlockHandle block = blockID2Block.get(blockID);
-
         if (block == null)
             throwException("Block ID not found: " + blockID);
-
         return block;
     }
 }

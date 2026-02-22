@@ -108,4 +108,7 @@ public class EngineSetting {
         // Player
         public static final String DEFAULT_PLAYER_RACE = "humanoid"; // The starting race for all players
         public static final float BLOCK_PLACEMENT_INTERVAL = 0.1f; // Seconds between block placements
+
+        // Lighting
+        public static final int LUNAR_CYCLE_DAYS = 28; // Days per full lunar cycle
 }

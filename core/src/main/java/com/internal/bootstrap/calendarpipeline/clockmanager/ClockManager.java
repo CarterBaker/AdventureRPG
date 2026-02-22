@@ -146,7 +146,7 @@ public class ClockManager extends ManagerPackage {
 
     // Utility \\
 
-    ClockHandle getClockHandle() {
+    public ClockHandle getClockHandle() {
         return clockHandle;
     }
 }

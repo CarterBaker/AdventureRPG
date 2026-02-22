@@ -28,32 +28,25 @@ class InternalLoadManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Internal
         this.aliasLibrarySystem = create(AliasLibrarySystem.class);
         this.internalBuildSystem = create(InternalBuildSystem.class);
-        this.arrayMap = new Int2ObjectOpenHashMap<TextureArrayInstance>();
+        this.arrayMap = new Int2ObjectOpenHashMap<>();
         this.root = new File(EngineSetting.BLOCK_TEXTURE_PATH);
     }
 
     @Override
     protected void get() {
-
-        // Internal
         this.textureManager = get(TextureManager.class);
     }
 
     @Override
     protected void release() {
-
-        // Internal
         aliasLibrarySystem = release(AliasLibrarySystem.class);
         internalBuildSystem = release(InternalBuildSystem.class);
     }
 
     // File Navigation \\
 
-    // The main method that delegates logic to helpers to return texture arrays
     void loadTextureArrays() {
 
         aliasLibrarySystem.loadAliases();
@@ -65,14 +58,12 @@ class InternalLoadManager extends ManagerPackage {
         try (var stream = Files.walk(rootPath)) {
             stream
                     .filter(Files::isDirectory)
-                    .filter(folder -> !folder.equals(rootPath)) // exclude root itself
+                    .filter(folder -> !folder.equals(rootPath))
                     .forEach(folder -> createArrayFromFolder(folder.toFile()));
         }
 
         catch (IOException e) {
-            throwException(
-                    "There was an issue loading one or more files from the source directory",
-                    e);
+            throwException("There was an issue loading one or more files from the source directory", e);
         }
 
         pushTexturesToGPU(arrayMap);
@@ -95,7 +86,9 @@ class InternalLoadManager extends ManagerPackage {
         if (imageFiles.isEmpty())
             return;
 
-        createTextureArray(internalBuildSystem.buildTextureArray(imageFiles, directory));
+        String arrayName = FileUtility.getPathWithFileNameWithoutExtension(root, directory);
+
+        createTextureArray(internalBuildSystem.buildTextureArray(imageFiles, directory, arrayName));
     }
 
     private void createTextureArray(TextureArrayInstance textureArray) {
@@ -109,13 +102,10 @@ class InternalLoadManager extends ManagerPackage {
 
     private void pushTextureToGPU(TextureArrayInstance textureArray) {
 
-        // First and foremost push the array to the gpu and return the handle
         int gpuHandle = GLSLUtility.pushTextureArray(textureArray.getRawImageArray());
 
-        // Next step retrieve the tile data
         Object2ObjectOpenHashMap<String, TextureTileInstance> tileCoordinateMap = textureArray.getTileCoordinateMap();
 
-        // For each tile int he texture array map the appropriate data
         for (Object2ObjectMap.Entry<String, TextureTileInstance> tile : tileCoordinateMap.object2ObjectEntrySet()) {
 
             UVRect uvCoordinate = computeUV(
@@ -126,22 +116,15 @@ class InternalLoadManager extends ManagerPackage {
             textureManager.addTextureTile(tile.getValue(), uvCoordinate);
         }
 
-        // For each array map the appropriate data
         textureManager.addTextureArray(textureArray, gpuHandle);
     }
 
-    // Use global image size settigns to calculate UVs for any given texture using
-    // known x and y coordinate values stored internally per tile
     private UVRect computeUV(int atlasX, int atlasY, int atlasSize) {
 
-        // Normalized tile size
         float tileSize = 1.0f / atlasSize;
 
-        // Calculate origin
         float u0 = atlasX * tileSize;
         float v0 = atlasY * tileSize;
-
-        // Calculate extent
         float u1 = u0 + tileSize;
         float v1 = v0 + tileSize;
 
