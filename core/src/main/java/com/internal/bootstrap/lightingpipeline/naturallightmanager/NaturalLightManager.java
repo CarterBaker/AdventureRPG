@@ -1,6 +1,7 @@
 package com.internal.bootstrap.lightingpipeline.naturallightmanager;
 
 import com.internal.bootstrap.calendarpipeline.clockmanager.ClockManager;
+import com.internal.bootstrap.lightingpipeline.directionallight.DirectionalLightHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.ManagerPackage;
@@ -14,7 +15,7 @@ public class NaturalLightManager extends ManagerPackage {
     private SunLightSystem sunLightSystem;
     private MoonLightSystem moonLightSystem;
 
-    private UBOHandle naturalLightUBO;
+    private DirectionalLightHandle directionalLight;
 
     // Internal \\
 
@@ -22,6 +23,7 @@ public class NaturalLightManager extends ManagerPackage {
     protected void create() {
         this.sunLightSystem = create(SunLightSystem.class);
         this.moonLightSystem = create(MoonLightSystem.class);
+        this.directionalLight = create(DirectionalLightHandle.class);
     }
 
     @Override
@@ -32,17 +34,40 @@ public class NaturalLightManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        this.naturalLightUBO = uboManager.getUBOHandleFromUBOName("NaturalLightData");
-        sunLightSystem.constructor(naturalLightUBO);
-        moonLightSystem.constructor(naturalLightUBO);
+        UBOHandle naturalLightUBO = uboManager.getUBOHandleFromUBOName("DirectionalLightData");
+        directionalLight.constructor(naturalLightUBO);
     }
 
     @Override
     protected void update() {
+
         float visualTimeOfDay = (float) clockManager.getClockHandle().getVisualTimeOfDay();
+
         sunLightSystem.update(visualTimeOfDay);
         moonLightSystem.update(visualTimeOfDay);
-        naturalLightUBO.push();
+
+        float sunIntensity = sunLightSystem.getIntensity();
+        float moonIntensity = moonLightSystem.getIntensity();
+
+        float sunBlend = Math.min(sunIntensity / 0.15f, 1.0f);
+
+        directionalLight.setDirection(
+                lerp(moonLightSystem.getDirection().x, sunLightSystem.getDirection().x, sunBlend),
+                lerp(moonLightSystem.getDirection().y, sunLightSystem.getDirection().y, sunBlend),
+                lerp(moonLightSystem.getDirection().z, sunLightSystem.getDirection().z, sunBlend));
+
+        directionalLight.setColor(
+                lerp(moonLightSystem.getColor().x, sunLightSystem.getColor().x, sunBlend),
+                lerp(moonLightSystem.getColor().y, sunLightSystem.getColor().y, sunBlend),
+                lerp(moonLightSystem.getColor().z, sunLightSystem.getColor().z, sunBlend));
+
+        directionalLight.setIntensity(lerp(moonIntensity, sunIntensity, sunBlend));
+
+        directionalLight.push();
+    }
+
+    private float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
     }
 
     // Accessible \\
@@ -55,7 +80,7 @@ public class NaturalLightManager extends ManagerPackage {
         return moonLightSystem;
     }
 
-    public UBOHandle getNaturalLightUBO() {
-        return naturalLightUBO;
+    public DirectionalLightHandle getDirectionalLight() {
+        return directionalLight;
     }
 }

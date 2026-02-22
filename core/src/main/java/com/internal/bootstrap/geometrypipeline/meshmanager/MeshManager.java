@@ -2,7 +2,6 @@ package com.internal.bootstrap.geometrypipeline.meshmanager;
 
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
-import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.geometrypipeline.vbomanager.VBOHandle;

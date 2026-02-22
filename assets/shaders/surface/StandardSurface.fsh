@@ -5,7 +5,7 @@ in vec2 vTexCoord;
 in vec4 vBiomeColor;
 
 #include "includes/StandardTextureLayoutData.glsl"
-#include "includes/NaturalLightData.glsl"
+#include "includes/DirectionalLightData.glsl"
 #include "surface/includes/Albedo.glsl"
 
 out vec4 FragColor;
@@ -19,12 +19,8 @@ void main() {
     if (albedo.a < 0.01)
     discard;
 
-    float sunDot  = max(dot(normal, -u_sunDirection),  0.0);
-    float moonDot = max(dot(normal, -u_moonDirection), 0.0);
-
-    vec3 light = (u_sunColor  * u_sunIntensity  * sunDot)
-    + (u_moonColor * u_moonIntensity * moonDot)
-    + vec3(AMBIENT);
+    float lightDot = max(dot(normal, -u_lightDirection), 0.0);
+    vec3  light    = u_lightColor * u_lightIntensity * lightDot + vec3(AMBIENT);
 
     FragColor = vec4(albedo.rgb * vBiomeColor.rgb * light, albedo.a);
 }
