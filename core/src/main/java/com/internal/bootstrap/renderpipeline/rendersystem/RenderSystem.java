@@ -112,6 +112,7 @@ public class RenderSystem extends SystemPackage {
 
             if (uniform.attribute().isSampler()) {
                 uniform.attribute().bindTexture(textureUnit);
+                uniform.set();
                 textureUnit++;
             }
 

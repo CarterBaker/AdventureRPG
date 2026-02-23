@@ -1,7 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.texturemanager;
 
 import com.internal.core.engine.ManagerPackage;
-
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -22,11 +21,7 @@ public class TextureManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Root
         this.internalLoadManager = create(InternalLoadManager.class);
-
-        // Retrieval Mapping
         this.textureName2TileID = new Object2IntOpenHashMap<>();
         this.tileID2textureArrayID = new Int2IntArrayMap();
         this.tileID2textureArrayUV = new Int2ObjectOpenHashMap<>();
@@ -55,9 +50,10 @@ public class TextureManager extends ManagerPackage {
         internalLoadManager.loadTextureArrays();
     }
 
-    void addTextureTile(TextureTileInstance textureTileInstance, UVRect uvCoordinate) {
+    // Fixed: accepts the owning array's ID so tileID -> arrayID is correct
+    void addTextureTile(TextureTileInstance textureTileInstance, UVRect uvCoordinate, int arrayID) {
         textureName2TileID.put(textureTileInstance.getName(), textureTileInstance.getID());
-        tileID2textureArrayID.put(textureTileInstance.getID(), textureTileInstance.getID());
+        tileID2textureArrayID.put(textureTileInstance.getID(), arrayID);
         tileID2textureArrayUV.put(textureTileInstance.getID(), uvCoordinate);
     }
 
@@ -69,10 +65,8 @@ public class TextureManager extends ManagerPackage {
     // Disposal \\
 
     private void disposeAllGPUResources() {
-
         for (int gpuHandle : textureArrayID2GPUHandle.values())
             GLSLUtility.deleteTextureArray(gpuHandle);
-
         textureName2TileID.clear();
         tileID2textureArrayID.clear();
         tileID2textureArrayUV.clear();
@@ -91,7 +85,10 @@ public class TextureManager extends ManagerPackage {
     }
 
     public UVRect getTextureArrayUVfromTileID(int tileID) {
-        return tileID2textureArrayUV.get(tileID);
+        UVRect uvRect = tileID2textureArrayUV.get(tileID);
+        if (uvRect == null)
+            throw new RuntimeException("[TextureManager] No UVRect registered for tileID: " + tileID);
+        return uvRect;
     }
 
     public int getGPUHandlefromTextureArrayName(String textureArrayName) {

@@ -7,16 +7,22 @@ public class VAOHandle extends HandlePackage {
     // Internal
     private int attributeHandle;
     private int vertStride;
+    private int[] attrSizes;
 
     // Internal \\
 
     public void constructor(
             int attributeHandle,
-            int vertStride) {
+            int[] attrSizes) {
 
-        // Internal
         this.attributeHandle = attributeHandle;
-        this.vertStride = vertStride;
+        this.attrSizes = attrSizes;
+
+        // Derive stride from sum of attribute sizes
+        int stride = 0;
+        for (int size : attrSizes)
+            stride += size;
+        this.vertStride = stride;
     }
 
     // Accessible \\
@@ -27,5 +33,9 @@ public class VAOHandle extends HandlePackage {
 
     public int getVertStride() {
         return vertStride;
+    }
+
+    public int[] getAttrSizes() {
+        return attrSizes;
     }
 }

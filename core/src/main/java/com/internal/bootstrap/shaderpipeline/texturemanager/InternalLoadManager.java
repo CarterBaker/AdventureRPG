@@ -113,7 +113,9 @@ class InternalLoadManager extends ManagerPackage {
                     tile.getValue().getAtlasY(),
                     textureArray.getAtlasSize());
 
-            textureManager.addTextureTile(tile.getValue(), uvCoordinate);
+            // Fixed: pass textureArray.getID() so the tile is correctly mapped to its
+            // owning array
+            textureManager.addTextureTile(tile.getValue(), uvCoordinate, textureArray.getID());
         }
 
         textureManager.addTextureArray(textureArray, gpuHandle);

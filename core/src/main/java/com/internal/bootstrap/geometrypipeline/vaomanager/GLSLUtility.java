@@ -1,7 +1,6 @@
 package com.internal.bootstrap.geometrypipeline.vaomanager;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 import com.internal.core.engine.UtilityPackage;
 
@@ -11,80 +10,59 @@ import java.nio.IntBuffer;
 
 class GLSLUtility extends UtilityPackage {
 
-        static VAOHandle createVAO(VAOHandle vaoHandle, int floatsPerVert) {
+        static VAOHandle createVAO(VAOHandle vaoHandle, int[] attrSizes) {
+
                 GL30 gl = Gdx.gl30;
                 IntBuffer id = ByteBuffer
                                 .allocateDirect(4)
                                 .order(ByteOrder.nativeOrder())
                                 .asIntBuffer();
-
                 gl.glGenVertexArrays(1, id);
                 int vao = id.get(0);
 
-                // CONFIGURE THE VAO
+                vaoHandle.constructor(vao, attrSizes);
+
+                // Only enable arrays here - attrib pointers are set in uploadVertexData
+                // once a real VBO is bound. Without a VBO bound, glVertexAttribPointer
+                // records null and attributes silently read zero.
                 gl.glBindVertexArray(vao);
-
-                int strideBytes = floatsPerVert * 4;
-
-                gl.glEnableVertexAttribArray(0);
-                gl.glVertexAttribPointer(0, 3, GL20.GL_FLOAT, false, strideBytes, 0);
-
-                gl.glEnableVertexAttribArray(1);
-                gl.glVertexAttribPointer(1, 3, GL20.GL_FLOAT, false, strideBytes, 12);
-
-                gl.glEnableVertexAttribArray(2);
-                gl.glVertexAttribPointer(2, 1, GL20.GL_FLOAT, false, strideBytes, 24);
-
-                gl.glEnableVertexAttribArray(3);
-                gl.glVertexAttribPointer(3, 2, GL20.GL_FLOAT, false, strideBytes, 28);
-
+                for (int i = 0; i < attrSizes.length; i++)
+                        gl.glEnableVertexAttribArray(i);
                 gl.glBindVertexArray(0);
 
-                vaoHandle.constructor(vao, floatsPerVert);
                 return vaoHandle;
         }
 
         static VAOHandle cloneVAO(VAOHandle vaoHandle, VAOHandle templateVAO) {
-                GL30 gl = Gdx.gl30;
 
+                GL30 gl = Gdx.gl30;
                 IntBuffer id = ByteBuffer
                                 .allocateDirect(4)
                                 .order(ByteOrder.nativeOrder())
                                 .asIntBuffer();
-
                 gl.glGenVertexArrays(1, id);
                 int vao = id.get(0);
 
-                // CONFIGURE THE VAO with same layout as template
+                vaoHandle.constructor(vao, templateVAO.getAttrSizes());
+
                 gl.glBindVertexArray(vao);
-                int strideBytes = templateVAO.getVertStride() * 4;
-
-                gl.glEnableVertexAttribArray(0);
-                gl.glVertexAttribPointer(0, 3, GL20.GL_FLOAT, false, strideBytes, 0);
-                gl.glEnableVertexAttribArray(1);
-                gl.glVertexAttribPointer(1, 3, GL20.GL_FLOAT, false, strideBytes, 12);
-                gl.glEnableVertexAttribArray(2);
-                gl.glVertexAttribPointer(2, 1, GL20.GL_FLOAT, false, strideBytes, 24);
-                gl.glEnableVertexAttribArray(3);
-                gl.glVertexAttribPointer(3, 2, GL20.GL_FLOAT, false, strideBytes, 28);
-
+                for (int i = 0; i < templateVAO.getAttrSizes().length; i++)
+                        gl.glEnableVertexAttribArray(i);
                 gl.glBindVertexArray(0);
 
-                // Initialize the handle that was created by the engine
-                vaoHandle.constructor(vao, templateVAO.getVertStride());
                 return vaoHandle;
         }
 
         static void removeVAO(VAOHandle vaoHandle) {
-                GL30 gl = Gdx.gl30;
 
+                GL30 gl = Gdx.gl30;
                 int vao = vaoHandle.getAttributeHandle();
+
                 if (vao != 0) {
                         IntBuffer buffer = ByteBuffer
                                         .allocateDirect(4)
                                         .order(ByteOrder.nativeOrder())
                                         .asIntBuffer();
-
                         buffer.put(vao).flip();
                         gl.glDeleteVertexArrays(1, buffer);
                 }
