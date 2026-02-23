@@ -12,6 +12,8 @@ public class SampleImage2DArrayUniform extends UniformAttribute<Integer> {
 
     // Internal
     private final ByteBuffer buffer;
+    private int gpuHandle = 0; // permanent — set once from material JSON
+    private int textureUnit = 0; // transient — assigned each frame by RenderSystem
 
     public SampleImage2DArrayUniform() {
         super(0);
@@ -32,28 +34,29 @@ public class SampleImage2DArrayUniform extends UniformAttribute<Integer> {
 
     @Override
     public void bindTexture(int unit) {
+        this.textureUnit = unit;
         Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0 + unit);
-        Gdx.gl30.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, value);
-        this.value = unit;
+        Gdx.gl30.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, gpuHandle);
     }
 
     // Push \\
 
     @Override
     protected void push(int handle, Integer value) {
-        Gdx.gl.glUniform1i(handle, value);
+        Gdx.gl.glUniform1i(handle, textureUnit);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
         buffer.clear();
-        buffer.putInt(value);
+        buffer.putInt(gpuHandle);
         buffer.flip();
         return buffer;
     }
 
     @Override
     public void set(Integer value) {
+        this.gpuHandle = value;
         this.value = value;
         super.set(value);
     }
