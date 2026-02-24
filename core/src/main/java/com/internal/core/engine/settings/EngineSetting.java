@@ -87,11 +87,7 @@ public class EngineSetting {
         public static final int WORLD_HEIGHT = 64; // The height of the world in blocks
 
         // Mesh
-        public static final int VERT_POS = 3; // X, Y, Z
-        public static final int VERT_NOR = 3; // nX, nY, nZ
-        public static final int VERT_COL = 1; // Color
-        public static final int VERT_UV0 = 2; // UV
-        public static final int CHUNK_VERT_STRIDE = VERT_POS + VERT_NOR + VERT_COL + VERT_UV0; // Always 9
+        public static final int DEFAULT_BLOCK_DIRECTION = 4; // Direction3Vector.UP ordinal
         public static final int CHUNK_VERT_BUFFER = 128;
         public static final int MESH_VERT_LIMIT = 32767;
 

@@ -52,6 +52,16 @@ public final class Vector3BooleanArrayUniform extends UniformAttribute<int[]> {
         return uboBuffer;
     }
 
+    @Override
+    public void setObject(Object value) {
+
+        if (value instanceof Vector3Boolean[] vectors)
+            set(vectors);
+
+        else
+            set((int[]) value);
+    }
+
     public void set(Vector3Boolean[] vectors) {
 
         for (int i = 0; i < vectors.length && i < elementCount; i++) {

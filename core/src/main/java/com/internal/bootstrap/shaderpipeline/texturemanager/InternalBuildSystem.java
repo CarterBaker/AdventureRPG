@@ -34,16 +34,18 @@ class InternalBuildSystem extends SystemPackage {
     // Main \\
 
     TextureArrayInstance buildTextureArray(List<File> imageFiles, File sourceDirectory, String arrayName) {
-
-        LinkedHashMap<String, TextureTileInstance> textureTiles = createTextureTiles(imageFiles, sourceDirectory);
+        LinkedHashMap<String, TextureTileInstance> textureTiles = createTextureTiles(imageFiles, sourceDirectory,
+                arrayName);
         TextureAtlasInstance[] textureAtlases = createTextureAtlases(textureTiles);
-
         return createTextureArray(textureTiles, arrayName, textureAtlases);
     }
 
     // Texture Tiles \\
 
-    private LinkedHashMap<String, TextureTileInstance> createTextureTiles(List<File> imageFiles, File sourceDirectory) {
+    private LinkedHashMap<String, TextureTileInstance> createTextureTiles(
+            List<File> imageFiles,
+            File sourceDirectory,
+            String arrayName) {
 
         LinkedHashMap<String, TextureTileInstance> textureTiles = new LinkedHashMap<>();
         String atlasName = sourceDirectory.getName();
@@ -65,21 +67,23 @@ class InternalBuildSystem extends SystemPackage {
             String instanceName = parts[0];
             String aliasType = parts[1];
 
+            String fullName = arrayName + "/" + instanceName;
+
             int aliasId = aliasLibrarySystem.getOrDefault(aliasType);
 
             if (aliasId == -1)
                 throwException("Alias: " + aliasType + ", could not be found in the system");
 
-            TextureTileInstance textureTile = textureTiles.get(instanceName);
+            TextureTileInstance textureTile = textureTiles.get(fullName);
 
             if (textureTile == null) {
                 textureTile = create(TextureTileInstance.class);
                 textureTile.constructor(
                         textureCount++,
-                        instanceName,
+                        fullName,
                         atlasName,
                         aliasCount);
-                textureTiles.put(instanceName, textureTile);
+                textureTiles.put(fullName, textureTile);
             }
 
             textureTile.setImage(img, aliasId);
@@ -153,9 +157,14 @@ class InternalBuildSystem extends SystemPackage {
 
             BufferedImage tileImage = tile.getImage(alias);
 
-            if (tileImage != null)
-                graphic.drawImage(tileImage, x, y, null);
-            else {
+            if (tileImage != null) {
+                // Flip vertically so OpenGL's bottom-left origin matches Java's top-left
+                graphic.drawImage(tileImage,
+                        x, y + EngineSetting.BLOCK_TEXTURE_SIZE,
+                        x + EngineSetting.BLOCK_TEXTURE_SIZE, y,
+                        0, 0, tileImage.getWidth(), tileImage.getHeight(),
+                        null);
+            } else {
                 graphic.setColor(new Color(
                         defaultColor.getRed(),
                         defaultColor.getGreen(),

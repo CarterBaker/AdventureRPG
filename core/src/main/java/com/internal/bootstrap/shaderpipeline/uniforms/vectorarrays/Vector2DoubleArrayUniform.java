@@ -20,7 +20,7 @@ public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
         // Internal
         super(new float[elementCount * 2]);
         this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 2 * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 4 * 4);
         this.floatBuffer = buffer.asFloatBuffer();
     }
 
@@ -38,7 +38,12 @@ public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
     public ByteBuffer getByteBuffer() {
 
         floatBuffer.clear();
-        floatBuffer.put(value);
+        for (int i = 0; i < elementCount; i++) {
+            floatBuffer.put(value[i * 2]);
+            floatBuffer.put(value[i * 2 + 1]);
+            floatBuffer.put(0f);
+            floatBuffer.put(0f);
+        }
         floatBuffer.flip();
 
         return buffer;

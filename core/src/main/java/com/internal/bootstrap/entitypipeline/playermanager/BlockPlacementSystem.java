@@ -6,6 +6,8 @@ import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeo
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import com.internal.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import com.internal.bootstrap.physicspipeline.util.BlockCastStruct;
+import com.internal.bootstrap.worldpipeline.block.BlockHandle;
+import com.internal.bootstrap.worldpipeline.block.BlockRotationType;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
@@ -16,6 +18,7 @@ import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate3Int;
+import com.internal.core.util.mathematics.Extras.Direction3Vector;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class BlockPlacementSystem extends SystemPackage {
@@ -36,6 +39,9 @@ public class BlockPlacementSystem extends SystemPackage {
     private short AIR_BLOCK_ID;
     private short GRASS_BLOCK_ID;
 
+    // Orientation
+    private short DEFAULT_ORIENTATION;
+
     // Elapsed time since last placement
     private float timeSinceLastPlacement;
 
@@ -49,7 +55,7 @@ public class BlockPlacementSystem extends SystemPackage {
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
         this.WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT;
         this.PLACEMENT_INTERVAL = EngineSetting.BLOCK_PLACEMENT_INTERVAL;
-        this.timeSinceLastPlacement = PLACEMENT_INTERVAL; // Ready to place immediately
+        this.timeSinceLastPlacement = PLACEMENT_INTERVAL;
     }
 
     @Override
@@ -66,6 +72,9 @@ public class BlockPlacementSystem extends SystemPackage {
     protected void awake() {
         this.AIR_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("Air");
         this.GRASS_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("Grass Block");
+
+        // UP facing, spin 0 — matches SubChunkInstance palette default
+        this.DEFAULT_ORIENTATION = (short) (EngineSetting.DEFAULT_BLOCK_DIRECTION * 4);
     }
 
     // Update \\
@@ -101,10 +110,10 @@ public class BlockPlacementSystem extends SystemPackage {
             ChunkInstance chunk = chunkStreamManager.getChunkInstance(castStruct.chunkCoordinate);
             if (chunk == null)
                 return;
-            writeBlock(chunk, castStruct.blockX, castStruct.blockY, castStruct.blockZ, castStruct.subChunkY,
-                    AIR_BLOCK_ID);
-            rebuildAffected(chunk, castStruct.chunkCoordinate, castStruct.blockX, castStruct.blockY, castStruct.blockZ,
-                    castStruct.subChunkY);
+            writeBlock(chunk, castStruct.blockX, castStruct.blockY, castStruct.blockZ,
+                    castStruct.subChunkY, AIR_BLOCK_ID);
+            rebuildAffected(chunk, castStruct.chunkCoordinate,
+                    castStruct.blockX, castStruct.blockY, castStruct.blockZ, castStruct.subChunkY);
             timeSinceLastPlacement = 0f;
             return;
         }
@@ -153,9 +162,59 @@ public class BlockPlacementSystem extends SystemPackage {
         if (placeChunk == null)
             return;
 
+        // Facing from hit surface, spin from camera horizontal direction
+        BlockHandle grassHandle = blockManager.getBlockFromBlockID(GRASS_BLOCK_ID);
+        Direction3Vector hitFaceDir = Direction3Vector.getDirection(
+                castStruct.hitFace.x,
+                castStruct.hitFace.y,
+                castStruct.hitFace.z);
+        short orientation = resolveOrientation(grassHandle, hitFaceDir, cameraDirection);
+
         writeBlock(placeChunk, placeX, placeY, placeZ, placeSubChunkY, GRASS_BLOCK_ID);
+        writeOrientation(placeChunk, placeX, placeY, placeZ, placeSubChunkY, orientation);
+
         rebuildAffected(placeChunk, placeChunkCoord, placeX, placeY, placeZ, placeSubChunkY);
         timeSinceLastPlacement = 0f;
+    }
+
+    // Orientation \\
+
+    private short resolveOrientation(
+            BlockHandle blockHandle,
+            Direction3Vector hitFace,
+            Vector3 cameraDirection) {
+
+        if (blockHandle.getRotationType() == BlockRotationType.NONE)
+            return DEFAULT_ORIENTATION;
+
+        Direction3Vector facing;
+
+        if (blockHandle.getRotationType() == BlockRotationType.CARDINAL) {
+            // Cardinal blocks cannot face UP or DOWN — fall back to default
+            if (hitFace == Direction3Vector.UP || hitFace == Direction3Vector.DOWN)
+                facing = Direction3Vector.VALUES[EngineSetting.DEFAULT_BLOCK_DIRECTION];
+            else
+                facing = hitFace;
+        } else {
+            // FULL — face toward the surface that was clicked
+            facing = hitFace;
+        }
+
+        // Derive spin from camera's horizontal direction when placing on UP or DOWN
+        // This lets blocks placed on flat surfaces rotate to face the player,
+        // creating a circular/pinwheel pattern when walking around placing blocks
+        int spin = 0;
+        if (facing == Direction3Vector.UP || facing == Direction3Vector.DOWN) {
+            float ax = Math.abs(cameraDirection.x);
+            float az = Math.abs(cameraDirection.z);
+            if (ax >= az)
+                spin = cameraDirection.x > 0 ? 1 : 3; // looking east → spin 1, west → spin 3
+            else
+                spin = cameraDirection.z > 0 ? 0 : 2; // looking north → spin 0, south → spin 2
+        }
+        // Side placements use spin 0 — scroll wheel input can drive this later
+
+        return (short) (facing.ordinal() * 4 + spin);
     }
 
     // Rebuild \\
@@ -226,5 +285,19 @@ public class BlockPlacementSystem extends SystemPackage {
         if (subChunk == null)
             return;
         subChunk.getBlockPaletteHandle().setBlock(blockX, blockY, blockZ, blockID);
+    }
+
+    private void writeOrientation(
+            ChunkInstance chunk,
+            int blockX,
+            int blockY,
+            int blockZ,
+            int subChunkY,
+            short orientation) {
+
+        SubChunkInstance subChunk = chunk.getSubChunk(subChunkY);
+        if (subChunk == null)
+            return;
+        subChunk.getBlockRotationPaletteHandle().setBlock(blockX, blockY, blockZ, orientation);
     }
 }

@@ -23,22 +23,18 @@ public final class InternalBuildSystem extends SystemPackage {
         int binding = data.getBinding();
         int gpuHandle = GLSLUtility.createUniformBuffer();
 
-        // Compute std140 buffer layout FIRST
-        int totalSize = computeStd140BufferSize(data.getUniforms()); // NEW: get size first
+        int totalSize = computeStd140BufferSize(data.getUniforms());
 
-        // Create handle WITH size
         UBOHandle uboHandle = create(UBOHandle.class);
         uboHandle.constructor(
                 data.getBlockName(),
                 id,
                 gpuHandle,
                 binding,
-                totalSize); // NEW: pass size
+                totalSize);
 
-        // Populate uniforms (this adds them to the handle)
         populateUniforms(uboHandle, data.getUniforms());
 
-        // Allocate GPU buffer with computed size
         GLSLUtility.allocateUniformBuffer(gpuHandle, totalSize);
         GLSLUtility.bindUniformBufferBase(gpuHandle, binding);
 
@@ -47,7 +43,6 @@ public final class InternalBuildSystem extends SystemPackage {
 
     public void validate(UBOHandle existing, UBOData newData) {
 
-        // Validate binding matches
         if (existing.getBindingPoint() != newData.getBinding()) {
             throwException(
                     "UBO '" + newData.getBlockName() + "' has conflicting bindings: " +
@@ -55,7 +50,6 @@ public final class InternalBuildSystem extends SystemPackage {
                             ". All declarations of this uniform block must use the same binding point.");
         }
 
-        // Validate structure matches
         ObjectArrayList<UniformData> newUniforms = newData.getUniforms();
         Object2ObjectOpenHashMap<String, Uniform<?>> existingUniforms = existing.getUniforms();
 
@@ -67,7 +61,6 @@ public final class InternalBuildSystem extends SystemPackage {
                             "Use an #include file to ensure consistency across shaders.");
         }
 
-        // Validate each uniform matches
         for (UniformData uniformData : newUniforms) {
             Uniform<?> existingUniform = existingUniforms.get(uniformData.getUniformName());
 
@@ -80,7 +73,6 @@ public final class InternalBuildSystem extends SystemPackage {
         }
     }
 
-    // NEW: Calculate size only (no uniform creation)
     private int computeStd140BufferSize(ObjectArrayList<UniformData> uniformsData) {
         int currentOffset = 0;
 
@@ -95,7 +87,6 @@ public final class InternalBuildSystem extends SystemPackage {
         return alignOffset(currentOffset, 16);
     }
 
-    // NEW: Populate uniforms into existing handle
     private void populateUniforms(UBOHandle handle, ObjectArrayList<UniformData> uniformsData) {
         int currentOffset = 0;
 
@@ -119,19 +110,16 @@ public final class InternalBuildSystem extends SystemPackage {
     }
 
     private int getStd140Alignment(UniformData uniformData) {
+
+        // Arrays always align to 16 in std140
+        if (uniformData.getCount() > 1)
+            return 16;
+
         return switch (uniformData.getUniformType()) {
             case FLOAT, INT, BOOL -> 4;
-            case VECTOR2, VECTOR2_INT, VECTOR2_BOOLEAN -> 8;
-            case VECTOR3, VECTOR3_INT, VECTOR3_BOOLEAN,
-                    VECTOR4, VECTOR4_INT, VECTOR4_BOOLEAN ->
-                16;
-            case MATRIX2 -> 16;
-            case MATRIX3 -> 16;
-            case MATRIX4 -> 16;
             case DOUBLE -> 8;
+            case VECTOR2, VECTOR2_INT, VECTOR2_BOOLEAN -> 8;
             case VECTOR2_DOUBLE -> 8;
-            case VECTOR3_DOUBLE, VECTOR4_DOUBLE -> 16;
-            case MATRIX2_DOUBLE, MATRIX3_DOUBLE, MATRIX4_DOUBLE -> 16;
             default -> 16;
         };
     }
@@ -142,9 +130,9 @@ public final class InternalBuildSystem extends SystemPackage {
             case VECTOR2, VECTOR2_INT, VECTOR2_BOOLEAN -> 8;
             case VECTOR3, VECTOR3_INT, VECTOR3_BOOLEAN -> 12;
             case VECTOR4, VECTOR4_INT, VECTOR4_BOOLEAN -> 16;
-            case MATRIX2 -> 32; // 2 vec4s in std140
-            case MATRIX3 -> 48; // 3 vec4s
-            case MATRIX4 -> 64; // 4 vec4s
+            case MATRIX2 -> 32;
+            case MATRIX3 -> 48;
+            case MATRIX4 -> 64;
             case DOUBLE -> 8;
             case VECTOR2_DOUBLE -> 16;
             case VECTOR3_DOUBLE -> 24;
@@ -155,10 +143,9 @@ public final class InternalBuildSystem extends SystemPackage {
             default -> 16;
         };
 
-        // Handle arrays
+        // Array stride always rounds up to 16 in std140
         if (uniformData.getCount() > 1) {
-            int alignment = getStd140Alignment(uniformData);
-            int stride = alignOffset(baseSize, alignment);
+            int stride = alignOffset(baseSize, 16);
             return stride * uniformData.getCount();
         }
 
@@ -205,10 +192,8 @@ public final class InternalBuildSystem extends SystemPackage {
         };
     }
 
-    // Clone an existing UniformAttribute (used by UBOManager.cloneUBOHandle)
     public UniformAttribute<?> createUniformAttributeClone(UniformAttribute<?> source) {
 
-        // For arrays, extract size from the source
         if (source instanceof FloatArrayUniform fa)
             return new FloatArrayUniform(fa.elementCount());
         if (source instanceof DoubleArrayUniform da)
@@ -256,7 +241,6 @@ public final class InternalBuildSystem extends SystemPackage {
         if (source instanceof Matrix4DoubleArrayUniform m4da)
             return new Matrix4DoubleArrayUniform(m4da.elementCount());
 
-        // Non-array types
         if (source instanceof FloatUniform)
             return new FloatUniform();
         if (source instanceof DoubleUniform)

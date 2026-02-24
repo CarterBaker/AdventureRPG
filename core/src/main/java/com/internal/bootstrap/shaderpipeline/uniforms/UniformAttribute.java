@@ -55,4 +55,8 @@ public abstract class UniformAttribute<T> {
     public void set(T value) {
         uniform.set();
     }
+
+    public void setObject(Object value) {
+        set((T) value);
+    }
 }

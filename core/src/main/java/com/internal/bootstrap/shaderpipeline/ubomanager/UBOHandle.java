@@ -83,9 +83,7 @@ public final class UBOHandle extends HandlePackage {
                     "Uniform not found in UBO '" + bufferName + "': " + uniformName);
 
         // Set the value in the uniform's attribute
-        @SuppressWarnings("unchecked")
-        Uniform<Object> typedUniform = (Uniform<Object>) uniform;
-        typedUniform.attribute().set(value);
+        uniform.attribute().setObject(value);
 
         // Copy to staging buffer at correct offset
         ByteBuffer uniformData = uniform.attribute().getByteBuffer();

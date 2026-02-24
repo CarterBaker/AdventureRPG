@@ -45,6 +45,16 @@ public final class Vector4IntArrayUniform extends UniformAttribute<int[]> {
     }
 
     @Override
+    public void setObject(Object value) {
+
+        if (value instanceof Vector4Int[] vectors)
+            set(vectors);
+
+        else
+            set((int[]) value);
+    }
+
+    @Override
     public void set(int[] value) {
         System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
         super.set(value);

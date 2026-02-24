@@ -53,6 +53,19 @@ public final class Vector3ArrayUniform extends UniformAttribute<float[]> {
         return uboBuffer;
     }
 
+    @Override
+    public void setObject(Object value) {
+
+        if (value instanceof Vector3[] vectors)
+            set(vectors);
+
+        else if (value instanceof com.badlogic.gdx.math.Vector3[] vectors)
+            set(vectors);
+
+        else
+            set((float[]) value);
+    }
+
     public void set(Vector3[] vectors) {
 
         for (int i = 0; i < vectors.length && i < elementCount; i++) {

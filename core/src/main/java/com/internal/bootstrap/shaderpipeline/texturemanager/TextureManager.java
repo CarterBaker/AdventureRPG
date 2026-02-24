@@ -16,6 +16,7 @@ public class TextureManager extends ManagerPackage {
     private Int2ObjectOpenHashMap<UVRect> tileID2textureArrayUV;
     private Object2IntOpenHashMap<String> textureArrayName2GPUHandle;
     private Int2IntArrayMap textureArrayID2GPUHandle;
+    private Object2IntOpenHashMap<String> textureArrayName2AtlasSize;
 
     // Base \\
 
@@ -27,6 +28,10 @@ public class TextureManager extends ManagerPackage {
         this.tileID2textureArrayUV = new Int2ObjectOpenHashMap<>();
         this.textureArrayName2GPUHandle = new Object2IntOpenHashMap<>();
         this.textureArrayID2GPUHandle = new Int2IntArrayMap();
+        this.textureArrayName2AtlasSize = new Object2IntOpenHashMap<>();
+
+        // TODO: I wanna alter this to store object handles instead of seperate maps
+        this.textureName2TileID.defaultReturnValue(-1);
     }
 
     @Override
@@ -50,7 +55,6 @@ public class TextureManager extends ManagerPackage {
         internalLoadManager.loadTextureArrays();
     }
 
-    // Fixed: accepts the owning array's ID so tileID -> arrayID is correct
     void addTextureTile(TextureTileInstance textureTileInstance, UVRect uvCoordinate, int arrayID) {
         textureName2TileID.put(textureTileInstance.getName(), textureTileInstance.getID());
         tileID2textureArrayID.put(textureTileInstance.getID(), arrayID);
@@ -60,6 +64,7 @@ public class TextureManager extends ManagerPackage {
     void addTextureArray(TextureArrayInstance textureArrayInstance, int gpuHandle) {
         textureArrayName2GPUHandle.put(textureArrayInstance.getName(), gpuHandle);
         textureArrayID2GPUHandle.put(textureArrayInstance.getID(), gpuHandle);
+        textureArrayName2AtlasSize.put(textureArrayInstance.getName(), textureArrayInstance.getAtlasSize());
     }
 
     // Disposal \\
@@ -72,12 +77,19 @@ public class TextureManager extends ManagerPackage {
         tileID2textureArrayUV.clear();
         textureArrayName2GPUHandle.clear();
         textureArrayID2GPUHandle.clear();
+        textureArrayName2AtlasSize.clear();
     }
 
     // Accessible \\
 
     public int getTileIDFromTextureName(String textureName) {
-        return textureName2TileID.getInt(textureName);
+
+        int id = textureName2TileID.getInt(textureName);
+
+        if (id == textureName2TileID.defaultReturnValue())
+            throw new RuntimeException("[TextureManager] Texture not found: \"" + textureName + "\"");
+
+        return id;
     }
 
     public int getTextureArrayIDFromTileID(int tileID) {
@@ -97,5 +109,9 @@ public class TextureManager extends ManagerPackage {
 
     public int getGPUHandleFromTextureArrayID(int textureArrayID) {
         return textureArrayID2GPUHandle.get(textureArrayID);
+    }
+
+    public int getAtlasSizeFromTextureArrayName(String name) {
+        return textureArrayName2AtlasSize.getInt(name);
     }
 }

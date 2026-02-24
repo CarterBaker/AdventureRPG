@@ -4,8 +4,6 @@ import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeo
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-
 public class BlockHandle extends HandlePackage {
 
     // Identity
@@ -15,7 +13,9 @@ public class BlockHandle extends HandlePackage {
 
     // Textures
     private int materialID;
-    private Object2IntOpenHashMap<Direction3Vector> faceTextures;
+    private int[] faceTextures;
+
+    private BlockRotationType rotationType;
 
     // Constructor \\
 
@@ -23,26 +23,24 @@ public class BlockHandle extends HandlePackage {
             String blockName,
             int blockID,
             DynamicGeometryType geometry,
+            BlockRotationType rotationType,
             int materialID,
-            int upTexture,
-            int downTexture,
-            int northTexture,
-            int southTexture,
-            int eastTexture,
-            int westTexture) {
+            int northTexture, int eastTexture, int southTexture,
+            int westTexture, int upTexture, int downTexture) {
 
         this.blockName = blockName;
         this.blockID = blockID;
         this.geometry = geometry;
+        this.rotationType = rotationType;
         this.materialID = materialID;
 
-        this.faceTextures = new Object2IntOpenHashMap<>();
-        this.faceTextures.put(Direction3Vector.UP, upTexture);
-        this.faceTextures.put(Direction3Vector.DOWN, downTexture);
-        this.faceTextures.put(Direction3Vector.NORTH, northTexture);
-        this.faceTextures.put(Direction3Vector.SOUTH, southTexture);
-        this.faceTextures.put(Direction3Vector.EAST, eastTexture);
-        this.faceTextures.put(Direction3Vector.WEST, westTexture);
+        this.faceTextures = new int[Direction3Vector.LENGTH];
+        this.faceTextures[Direction3Vector.NORTH.ordinal()] = northTexture;
+        this.faceTextures[Direction3Vector.EAST.ordinal()] = eastTexture;
+        this.faceTextures[Direction3Vector.SOUTH.ordinal()] = southTexture;
+        this.faceTextures[Direction3Vector.WEST.ordinal()] = westTexture;
+        this.faceTextures[Direction3Vector.UP.ordinal()] = upTexture;
+        this.faceTextures[Direction3Vector.DOWN.ordinal()] = downTexture;
     }
 
     // Accessible \\
@@ -64,6 +62,10 @@ public class BlockHandle extends HandlePackage {
     }
 
     public int getTextureForFace(Direction3Vector direction) {
-        return faceTextures.getInt(direction);
+        return faceTextures[direction.ordinal()];
+    }
+
+    public BlockRotationType getRotationType() {
+        return rotationType;
     }
 }

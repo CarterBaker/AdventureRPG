@@ -253,15 +253,19 @@ class InternalLoadManager extends ManagerPackage {
             addUniformFromUniformData(uniforms.get(i), shader);
     }
 
-    private void addUniformFromUniformData(
-            UniformData uniformData,
-            ShaderHandle shader) {
+    private void addUniformFromUniformData(UniformData uniformData, ShaderHandle shader) {
+
+        // Array uniforms must be queried as "name[0]", single uniforms just use "name"
+        String queryName = uniformData.getCount() > 1
+                ? uniformData.getUniformName() + "[0]"
+                : uniformData.getUniformName();
 
         UniformAttribute<?> uniformAttribute = createUniformAttribute(uniformData);
         Uniform<?> uniform = new Uniform<>(
-                GLSLUtility.getUniformHandle(shader.getShaderHandle(), uniformData.getUniformName()),
+                GLSLUtility.getUniformHandle(shader.getShaderHandle(), queryName),
                 uniformAttribute);
 
+        // Still store it under the plain name (no [0]) for lookup later
         shader.addUniform(uniformData.getUniformName(), uniform);
     }
 

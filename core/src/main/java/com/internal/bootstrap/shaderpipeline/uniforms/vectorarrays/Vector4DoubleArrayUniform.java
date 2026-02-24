@@ -45,6 +45,16 @@ public final class Vector4DoubleArrayUniform extends UniformAttribute<float[]> {
     }
 
     @Override
+    public void setObject(Object value) {
+
+        if (value instanceof Vector4Double[] vectors)
+            set(vectors);
+
+        else
+            set((float[]) value);
+    }
+
+    @Override
     public void set(float[] value) {
         System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
         super.set(value);

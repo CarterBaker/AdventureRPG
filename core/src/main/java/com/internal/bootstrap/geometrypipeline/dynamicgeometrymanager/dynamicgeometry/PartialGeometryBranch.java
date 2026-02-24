@@ -22,6 +22,7 @@ public class PartialGeometryBranch extends BranchPackage {
             SubChunkInstance subChunkInstance,
             BlockPaletteHandle biomePaletteHandle,
             BlockPaletteHandle blockPaletteHandle,
+            BlockPaletteHandle rotationPaletteHandle,
             DynamicPacketInstance dynamicPacketInstance,
             int xyz,
             Direction3Vector direction3Vector,

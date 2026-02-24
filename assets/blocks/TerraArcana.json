@@ -8,63 +8,64 @@
             "name": "Water",
             "type": "LIQUID",
             "material": "standard/StandardSurface",
-            "texture": "standard/water"
+            "texture": "surface/standard/Water"
         },
         {
             "name": "Lava",
             "type": "LIQUID",
             "material": "standard/StandardSurface",
-            "texture": "standard/lava"
+            "texture": "surface/standard/Lava"
         },
         {
             "name": "Grass Block",
             "type": "FULL",
+            "rotation": "FULL",
             "material": "standard/StandardSurface",
-            "upTex": "standard/grassBlockUp",
-            "northTex": "standard/grassBlockNorth",
-            "downTex": "standard/dirt"
+            "northTex": "surface/standard/GrassBlockNorth",
+            "upTex": "surface/standard/GrassBlockUp",
+            "downTex": "surface/standard/Dirt"
         },
         {
             "name": "Dirt Block",
             "type": "FULL",
             "material": "standard/StandardSurface",
-            "texture": "standard/dirt"
+            "texture": "surface/standard/Dirt"
         },
         {
             "name": "Stone Block",
             "type": "FULL",
             "material": "standard/StandardSurface",
-            "texture": "standard/stone"
+            "texture": "surface/standard/Stone"
         },
         {
             "name": "Copper Ore",
             "type": "FULL",
             "material": "standard/StandardSurface",
-            "texture": "standard/copperOre"
+            "texture": "surface/standard/CopperOre"
         },
         {
             "name": "Iron Ore",
             "type": "FULL",
             "material": "standard/StandardSurface",
-            "texture": "standard/ironOre"
+            "texture": "surface/standard/IronOre"
         },
         {
             "name": "Gold Ore",
             "type": "FULL",
             "material": "standard/StandardSurface",
-            "texture": "standard/goldOre"
+            "texture": "surface/standard/GoldOre"
         },
         {
             "name": "Coal Ore",
             "type": "FULL",
             "material": "standard/StandardSurface",
-            "texture": "standard/coalOre"
+            "texture": "surface/standard/CoalOre"
         },
         {
             "name": "Sand",
             "type": "FULL",
             "material": "standard/StandardSurface",
-            "texture": "standard/sand"
+            "texture": "surface/standard/Sand"
         }
     ]
 }

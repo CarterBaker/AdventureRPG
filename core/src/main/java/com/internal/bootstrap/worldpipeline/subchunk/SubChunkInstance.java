@@ -1,7 +1,6 @@
 package com.internal.bootstrap.worldpipeline.subchunk;
 
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
-import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderType;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
@@ -9,7 +8,6 @@ import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate3Int;
-import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 public class SubChunkInstance extends WorldRenderInstance {
 
@@ -17,15 +15,12 @@ public class SubChunkInstance extends WorldRenderInstance {
     private BlockPaletteHandle biomePaletteHandle;
     private BlockPaletteHandle blockPaletteHandle;
     private BlockPaletteHandle blockRotationPaletteHandle;
-    private short defaultDirection = (short) Direction3Vector.UP.index;
 
     // Internal \\
 
     @Override
     protected void create() {
         super.create();
-
-        // Internal
         this.biomePaletteHandle = create(BlockPaletteHandle.class);
         this.blockPaletteHandle = create(BlockPaletteHandle.class);
         this.blockRotationPaletteHandle = create(BlockPaletteHandle.class);
@@ -55,20 +50,20 @@ public class SubChunkInstance extends WorldRenderInstance {
                 EngineSetting.BLOCK_PALETTE_THRESHOLD,
                 airBlockId);
 
+        // Default orientation = UP facing, spin 0
+        // Encoded as: facing * 4 + spin = UP.ordinal() * 4 + 0
+        short defaultOrientation = (short) (EngineSetting.DEFAULT_BLOCK_DIRECTION * 4);
+
         this.blockRotationPaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD,
-                defaultDirection);
+                defaultOrientation);
     }
 
     public void reset() {
-
-        // Clear all palette data back to default state
         biomePaletteHandle.clear();
         blockPaletteHandle.clear();
         blockRotationPaletteHandle.clear();
-
-        // Clear subchunk geometry
         dynamicPacketInstance.clear();
     }
 

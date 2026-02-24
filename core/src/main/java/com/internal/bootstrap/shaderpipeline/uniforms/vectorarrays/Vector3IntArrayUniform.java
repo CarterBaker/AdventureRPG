@@ -53,6 +53,16 @@ public final class Vector3IntArrayUniform extends UniformAttribute<int[]> {
         return uboBuffer;
     }
 
+    @Override
+    public void setObject(Object value) {
+
+        if (value instanceof Vector3Int[] vectors)
+            set(vectors);
+
+        else
+            set((int[]) value);
+    }
+
     public void set(Vector3Int[] vectors) {
 
         for (int i = 0; i < vectors.length && i < elementCount; i++) {

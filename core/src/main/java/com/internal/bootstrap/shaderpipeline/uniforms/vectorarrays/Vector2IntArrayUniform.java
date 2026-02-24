@@ -20,7 +20,7 @@ public final class Vector2IntArrayUniform extends UniformAttribute<int[]> {
         // Internal
         super(new int[elementCount * 2]);
         this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 2 * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 4 * 4);
         this.intBuffer = buffer.asIntBuffer();
     }
 
@@ -38,10 +38,25 @@ public final class Vector2IntArrayUniform extends UniformAttribute<int[]> {
     public ByteBuffer getByteBuffer() {
 
         intBuffer.clear();
-        intBuffer.put(value);
+        for (int i = 0; i < elementCount; i++) {
+            intBuffer.put(value[i * 2]);
+            intBuffer.put(value[i * 2 + 1]);
+            intBuffer.put(0);
+            intBuffer.put(0);
+        }
         intBuffer.flip();
 
         return buffer;
+    }
+
+    @Override
+    public void setObject(Object value) {
+
+        if (value instanceof Vector2Int[] vectors)
+            set(vectors);
+
+        else
+            set((int[]) value);
     }
 
     @Override

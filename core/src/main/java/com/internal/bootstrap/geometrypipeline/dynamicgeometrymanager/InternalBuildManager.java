@@ -72,8 +72,10 @@ class InternalBuildManager extends ManagerPackage {
         dynamicPacketInstance.clear();
         dynamicGeometryAsyncContainer.reset();
 
+        // Fetch all three palettes once up front
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
+        BlockPaletteHandle rotationPaletteHandle = subChunkInstance.getBlockRotationPaletteHandle();
 
         Int2ObjectOpenHashMap<FloatArrayList> verts = dynamicGeometryAsyncContainer.getVerts();
         BitSet[] directionalBatches = dynamicGeometryAsyncContainer.getDirectionalBatches();
@@ -110,6 +112,7 @@ class InternalBuildManager extends ManagerPackage {
                         subChunkInstance,
                         biomePaletteHandle,
                         blockPaletteHandle,
+                        rotationPaletteHandle,
                         dynamicPacketInstance,
                         xyz,
                         Direction3Vector.VALUES[direction],
@@ -142,6 +145,7 @@ class InternalBuildManager extends ManagerPackage {
             SubChunkInstance subChunkInstance,
             BlockPaletteHandle biomePaletteHandle,
             BlockPaletteHandle blockPaletteHandle,
+            BlockPaletteHandle rotationPaletteHandle,
             DynamicPacketInstance dynamicPacketInstance,
             int xyz,
             Direction3Vector direction3Vector,
@@ -159,6 +163,7 @@ class InternalBuildManager extends ManagerPackage {
                     subChunkInstance,
                     biomePaletteHandle,
                     blockPaletteHandle,
+                    rotationPaletteHandle,
                     dynamicPacketInstance,
                     xyz,
                     direction3Vector,
@@ -174,6 +179,7 @@ class InternalBuildManager extends ManagerPackage {
                     subChunkInstance,
                     biomePaletteHandle,
                     blockPaletteHandle,
+                    rotationPaletteHandle,
                     dynamicPacketInstance,
                     xyz,
                     direction3Vector,
@@ -189,6 +195,7 @@ class InternalBuildManager extends ManagerPackage {
                     subChunkInstance,
                     biomePaletteHandle,
                     blockPaletteHandle,
+                    rotationPaletteHandle,
                     dynamicPacketInstance,
                     xyz,
                     direction3Vector,
@@ -204,6 +211,7 @@ class InternalBuildManager extends ManagerPackage {
                     subChunkInstance,
                     biomePaletteHandle,
                     blockPaletteHandle,
+                    rotationPaletteHandle,
                     dynamicPacketInstance,
                     xyz,
                     direction3Vector,

@@ -1,6 +1,5 @@
 package com.internal.bootstrap.worldpipeline.worldgenerationmanager;
 
-import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;

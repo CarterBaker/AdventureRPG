@@ -8,8 +8,10 @@ import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeo
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
+import com.internal.bootstrap.worldpipeline.block.BlockRotationType;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.JsonUtility;
+import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -61,85 +63,64 @@ public class InternalBuildSystem extends SystemPackage {
         // Parse name
         String blockName = JsonUtility.validateString(blockJson, "name");
 
-        // Parse type (default to SOLID if not specified)
+        // Parse geometry type
         String typeStr = blockJson.has("type") ? blockJson.get("type").getAsString() : "FULL";
         DynamicGeometryType blockType = parseBlockType(typeStr);
 
-        // Parse material (default to -1 if not specified, meaning no material/Air
-        // block)
+        // Parse rotation type
+        BlockRotationType rotationType = BlockRotationType.NONE;
+        if (blockJson.has("rotation")) {
+            try {
+                rotationType = BlockRotationType.valueOf(
+                        blockJson.get("rotation").getAsString().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throwException("Invalid rotation type in block: " + blockName);
+            }
+        }
+
+        // Parse material
         int materialID = -1;
         if (blockJson.has("material")) {
             String materialPath = blockJson.get("material").getAsString();
             materialID = materialManager.getMaterialIDFromMaterialName(materialPath);
         }
 
-        // Parse textures
-        int upTexture = -1;
-        int downTexture = -1;
-        int northTexture = -1;
-        int southTexture = -1;
-        int eastTexture = -1;
-        int westTexture = -1;
+        // Build texture array indexed by Direction3Vector ordinal
+        int[] textures = new int[Direction3Vector.LENGTH];
+        for (int i = 0; i < Direction3Vector.LENGTH; i++)
+            textures[i] = -1;
 
         // Single texture for all faces
         if (blockJson.has("texture")) {
-            String texturePath = blockJson.get("texture").getAsString();
-            int textureID = textureManager.getTileIDFromTextureName(texturePath);
-
-            upTexture = textureID;
-            downTexture = textureID;
-            northTexture = textureID;
-            southTexture = textureID;
-            eastTexture = textureID;
-            westTexture = textureID;
+            int textureID = textureManager.getTileIDFromTextureName(
+                    blockJson.get("texture").getAsString());
+            for (int i = 0; i < Direction3Vector.LENGTH; i++)
+                textures[i] = textureID;
         }
 
-        // Individual face textures (override the single texture if specified)
-        if (blockJson.has("upTex"))
-            upTexture = textureManager.getTileIDFromTextureName(blockJson.get("upTex").getAsString());
-
-        if (blockJson.has("downTex"))
-            downTexture = textureManager.getTileIDFromTextureName(blockJson.get("downTex").getAsString());
-
-        if (blockJson.has("northTex"))
-            northTexture = textureManager.getTileIDFromTextureName(blockJson.get("northTex").getAsString());
-
-        if (blockJson.has("southTex"))
-            southTexture = textureManager.getTileIDFromTextureName(blockJson.get("southTex").getAsString());
-
-        if (blockJson.has("eastTex"))
-            eastTexture = textureManager.getTileIDFromTextureName(blockJson.get("eastTex").getAsString());
-
-        if (blockJson.has("westTex"))
-            westTexture = textureManager.getTileIDFromTextureName(blockJson.get("westTex").getAsString());
-
-        // Fill missing textures with highest defined texture
-        int highestTexture = findHighestDefinedTexture(
-                upTexture, downTexture, northTexture, southTexture, eastTexture, westTexture);
-
-        if (highestTexture == -1) {
-            upTexture = -1;
-            downTexture = -1;
-            northTexture = -1;
-            southTexture = -1;
-            eastTexture = -1;
-            westTexture = -1;
+        // Per-face overrides
+        for (Direction3Vector dir : Direction3Vector.VALUES) {
+            String key = dir.name().toLowerCase() + "Tex";
+            if (blockJson.has(key))
+                textures[dir.ordinal()] = textureManager.getTileIDFromTextureName(
+                        blockJson.get(key).getAsString());
         }
 
-        else { // Autofill missing faces with the best available texture
+        // Cascade — fill undefined faces from the previous defined face
+        int lastDefined = -1;
+        for (int i = 0; i < Direction3Vector.LENGTH; i++)
+            if (textures[i] != -1) {
+                lastDefined = textures[i];
+                break;
+            }
 
-            if (upTexture == -1)
-                upTexture = highestTexture;
-            if (downTexture == -1)
-                downTexture = highestTexture;
-            if (northTexture == -1)
-                northTexture = highestTexture;
-            if (southTexture == -1)
-                southTexture = highestTexture;
-            if (eastTexture == -1)
-                eastTexture = highestTexture;
-            if (westTexture == -1)
-                westTexture = highestTexture;
+        if (lastDefined != -1) {
+            for (int i = 0; i < Direction3Vector.LENGTH; i++) {
+                if (textures[i] == -1)
+                    textures[i] = lastDefined;
+                else
+                    lastDefined = textures[i];
+            }
         }
 
         // Create block
@@ -148,13 +129,14 @@ public class InternalBuildSystem extends SystemPackage {
                 blockName,
                 blockCount++,
                 blockType,
+                rotationType,
                 materialID,
-                upTexture,
-                downTexture,
-                northTexture,
-                southTexture,
-                eastTexture,
-                westTexture);
+                textures[Direction3Vector.NORTH.ordinal()],
+                textures[Direction3Vector.EAST.ordinal()],
+                textures[Direction3Vector.SOUTH.ordinal()],
+                textures[Direction3Vector.WEST.ordinal()],
+                textures[Direction3Vector.UP.ordinal()],
+                textures[Direction3Vector.DOWN.ordinal()]);
 
         return block;
     }
@@ -165,22 +147,9 @@ public class InternalBuildSystem extends SystemPackage {
 
         try {
             return DynamicGeometryType.valueOf(typeStr.toUpperCase());
-        }
-
-        catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             throwException("Invalid block type: " + typeStr);
             return null;
         }
-    }
-
-    private int findHighestDefinedTexture(int... textures) {
-
-        int highest = -1;
-
-        for (int texture : textures)
-            if (texture > highest)
-                highest = texture;
-
-        return highest;
     }
 }
