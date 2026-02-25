@@ -29,11 +29,9 @@ public class DumpBranch extends BranchPackage {
 
     // Accessible \\
 
-    public void dumpChunkData(ChunkInstance chunkInstance) {
+    public void dumpChunkData(ChunkInstance chunkInstance, GridSlotHandle gridSlotHandle) {
 
-        GridSlotHandle gridSlotHandle = chunkInstance.getGridSlotHandle();
         GridSlotDetailLevel targetLevel = gridSlotHandle.getDetailLevel();
-
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
 
         if (syncContainer.isLocked())
@@ -67,7 +65,6 @@ public class DumpBranch extends BranchPackage {
     private void dumpGenerationData(ChunkInstance chunkInstance, ChunkDataSyncContainer syncContainer) {
 
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
-
         for (SubChunkInstance subChunk : subChunks)
             subChunk.getBlockPaletteHandle().dumpInteriorBlocks(airBlockId);
 
@@ -78,7 +75,6 @@ public class DumpBranch extends BranchPackage {
     private void dumpBuildData(ChunkInstance chunkInstance, ChunkDataSyncContainer syncContainer) {
 
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
-
         for (SubChunkInstance subChunk : subChunks)
             subChunk.getDynamicPacketInstance().clear();
 
@@ -88,7 +84,6 @@ public class DumpBranch extends BranchPackage {
     private void dumpMergeData(ChunkInstance chunkInstance, ChunkDataSyncContainer syncContainer) {
 
         chunkInstance.getDynamicPacketInstance().clear();
-
         syncContainer.data[ChunkData.MERGE_DATA.index] = false;
     }
 }

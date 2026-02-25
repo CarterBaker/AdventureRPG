@@ -4,7 +4,7 @@ import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderType;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.settings.EngineSetting;
 
@@ -42,7 +42,7 @@ public class ChunkInstance extends WorldRenderInstance {
     }
 
     public void constructor(
-            WorldRenderSystem worldRenderSystem,
+            WorldRenderManager worldRenderSystem,
             WorldHandle worldHandle,
             long coordinate,
             VAOHandle vaoHandle,
@@ -74,7 +74,6 @@ public class ChunkInstance extends WorldRenderInstance {
 
         chunkDataSyncContainer.resetData();
         dynamicPacketInstance.clear();
-        setGridSlotHandle(null);
 
         for (SubChunkInstance subChunk : subChunks)
             subChunk.reset();

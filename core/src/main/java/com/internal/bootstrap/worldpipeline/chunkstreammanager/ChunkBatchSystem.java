@@ -2,11 +2,12 @@ package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaState;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.ThreadHandle;
 import com.internal.core.engine.settings.EngineSetting;
@@ -15,6 +16,7 @@ import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 import java.util.ArrayDeque;
 
@@ -22,9 +24,8 @@ public class ChunkBatchSystem extends SystemPackage {
 
     // Internal
     private ThreadHandle threadHandle;
-    private WorldRenderSystem worldRenderSystem;
+    private WorldRenderManager worldRenderSystem;
     private ChunkStreamManager chunkStreamManager;
-    private ChunkPositionSystem chunkPositionSystem;
     private GridManager gridManager;
 
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
@@ -42,9 +43,8 @@ public class ChunkBatchSystem extends SystemPackage {
     protected void get() {
 
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
-        this.worldRenderSystem = get(WorldRenderSystem.class);
+        this.worldRenderSystem = get(WorldRenderManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
-        this.chunkPositionSystem = get(ChunkPositionSystem.class);
         this.gridManager = get(GridManager.class);
 
         this.MEGA_CHUNK_SIZE = EngineSetting.MEGA_CHUNK_SIZE;
@@ -95,9 +95,6 @@ public class ChunkBatchSystem extends SystemPackage {
                 chunkStreamManager.getChunkVAO(),
                 megaScale);
 
-        GridSlotHandle gridSlotHandle = chunkPositionSystem.getGridSlotHandleForChunk(megaChunkCoordinate);
-        megaChunkInstance.setGridSlotHandle(gridSlotHandle);
-
         return megaChunkInstance;
     }
 
@@ -114,10 +111,8 @@ public class ChunkBatchSystem extends SystemPackage {
             MegaChunkInstance megaChunkInstance = entry.getValue();
             MegaState state = megaChunkInstance.getMegaState();
 
-            // Pending unload
             if (unloadRequests.contains(megaCoordinate)) {
 
-                // Thread is active - defer
                 if (state == MegaState.MERGING)
                     continue;
 
@@ -188,6 +183,16 @@ public class ChunkBatchSystem extends SystemPackage {
 
         if (activeMegaChunks.containsKey(megaChunkCoordinate))
             unloadRequests.add(megaChunkCoordinate);
+    }
+
+    // Called by ChunkQueueManager after a grid scan to unload megas no longer
+    // covered
+    public void pruneStaleMetaChunks(LongOpenHashSet expectedMegas) {
+
+        for (long megaCoordinate : activeMegaChunks.keySet()) {
+            if (!expectedMegas.contains(megaCoordinate))
+                unloadRequests.add(megaCoordinate);
+        }
     }
 
     // Accessible \\

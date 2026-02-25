@@ -13,7 +13,7 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
@@ -29,7 +29,7 @@ public class BlockPlacementSystem extends SystemPackage {
     private ChunkStreamManager chunkStreamManager;
     private DynamicGeometryManager dynamicGeometryManager;
     private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
-    private WorldRenderSystem worldRenderSystem;
+    private WorldRenderManager worldRenderSystem;
 
     private int CHUNK_SIZE;
     private int WORLD_HEIGHT;
@@ -65,7 +65,7 @@ public class BlockPlacementSystem extends SystemPackage {
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
-        this.worldRenderSystem = get(WorldRenderSystem.class);
+        this.worldRenderSystem = get(WorldRenderManager.class);
     }
 
     @Override

@@ -2,14 +2,17 @@ package com.internal.bootstrap.worldpipeline.gridmanager;
 
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.core.engine.HandlePackage;
+import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class GridSlotHandle extends HandlePackage {
 
     // Internal
-    private long gridCoordinate;
+    private long gridCoordinate; // Static offset from center — baked at build time
     private UBOHandle slotUBO;
     private GridSlotDetailLevel detailLevel;
+    private GridInstance gridInstance; // Back-reference for active coordinate lookup
 
     // Culling values from the center of the individual 1x1 chunk footprint
     private float chunkDistanceFromCenter;
@@ -20,8 +23,6 @@ public class GridSlotHandle extends HandlePackage {
     private float megaAngleFromCenter;
 
     // Mega coverage
-    private long chunkCoordinate;
-    private long megaCoordinate;
     private ObjectArrayList<GridSlotHandle> coveredSlots;
 
     // Internal \\
@@ -33,7 +34,8 @@ public class GridSlotHandle extends HandlePackage {
             float chunkAngleFromCenter,
             float megaDistanceFromCenter,
             float megaAngleFromCenter,
-            GridSlotDetailLevel detailLevel) {
+            GridSlotDetailLevel detailLevel,
+            GridInstance gridInstance) {
 
         this.gridCoordinate = gridCoordinate;
         this.slotUBO = slotUBO;
@@ -42,29 +44,26 @@ public class GridSlotHandle extends HandlePackage {
         this.megaDistanceFromCenter = megaDistanceFromCenter;
         this.megaAngleFromCenter = megaAngleFromCenter;
         this.detailLevel = detailLevel;
+        this.gridInstance = gridInstance;
         this.coveredSlots = new ObjectArrayList<>();
+    }
+
+    // Computed Coordinate Lookups \\
+
+    // Static offset + grid's current active chunk → current world chunk coordinate
+    public long getChunkCoordinate() {
+        return Coordinate2Long.add(gridInstance.getActiveChunkCoordinate(), gridCoordinate);
+    }
+
+    // Derived from current chunk coordinate → mega origin
+    public long getMegaCoordinate() {
+        return Coordinate2Long.toMegaChunkCoordinate(getChunkCoordinate());
     }
 
     // Accessible \\
 
     public long getGridCoordinate() {
         return gridCoordinate;
-    }
-
-    public long getChunkCoordinate() {
-        return chunkCoordinate;
-    }
-
-    public void setChunkCoordinate(long chunkCoordinate) {
-        this.chunkCoordinate = chunkCoordinate;
-    }
-
-    public long getMegaCoordinate() {
-        return megaCoordinate;
-    }
-
-    public void setMegaCoordinate(long megaCoordinate) {
-        this.megaCoordinate = megaCoordinate;
     }
 
     public UBOHandle getSlotUBO() {

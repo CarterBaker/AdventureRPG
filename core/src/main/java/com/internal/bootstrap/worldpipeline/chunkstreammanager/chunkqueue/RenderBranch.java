@@ -3,18 +3,18 @@ package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
 import com.internal.core.engine.BranchPackage;
 
 public class RenderBranch extends BranchPackage {
 
-    private WorldRenderSystem worldRenderSystem;
+    private WorldRenderManager worldRenderSystem;
     private int renderIndex;
 
     @Override
     protected void get() {
 
-        this.worldRenderSystem = get(WorldRenderSystem.class);
+        this.worldRenderSystem = get(WorldRenderManager.class);
         this.renderIndex = ChunkData.RENDER_DATA.index;
     }
 

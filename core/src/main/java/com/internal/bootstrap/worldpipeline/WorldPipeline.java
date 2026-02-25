@@ -5,7 +5,7 @@ import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.PipelinePackage;
 
@@ -21,6 +21,6 @@ public class WorldPipeline extends PipelinePackage {
         create(WorldGenerationManager.class);
         create(GridManager.class);
         create(ChunkStreamManager.class);
-        create(WorldRenderSystem.class);
+        create(WorldRenderManager.class);
     }
 }

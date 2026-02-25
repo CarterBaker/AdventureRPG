@@ -39,16 +39,18 @@ class GridBuildSystem extends SystemPackage {
 
         int totalSlots = gridSlotData.size();
         long[] loadOrder = assignLoadOrder(gridSlotData);
-
         LongOpenHashSet gridCoordinates = new LongOpenHashSet(gridSlotData.keySet());
+
+        // Create instance first so handles can hold a back-reference to it
+        GridInstance gridInstance = create(GridInstance.class);
 
         Long2ObjectOpenHashMap<GridSlotHandle> gridSlots = createGridSlotHandles(
                 gridCoordinates,
-                gridSlotData);
+                gridSlotData,
+                gridInstance);
 
         populateCoveredSlots(gridSlots);
 
-        GridInstance gridInstance = create(GridInstance.class);
         gridInstance.constructor(
                 totalSlots,
                 loadOrder,
@@ -73,7 +75,6 @@ class GridBuildSystem extends SystemPackage {
         for (int x = -(maxRenderDistance / 2); x < maxRenderDistance / 2; x++) {
             for (int y = -(maxRenderDistance / 2); y < maxRenderDistance / 2; y++) {
 
-                // Corner-based — used only for load order sorting
                 float distanceFromCenter = (x * x) + (y * y);
 
                 if (distanceFromCenter <= radiusSquared) {
@@ -116,7 +117,8 @@ class GridBuildSystem extends SystemPackage {
 
     private Long2ObjectOpenHashMap<GridSlotHandle> createGridSlotHandles(
             LongOpenHashSet gridCoordinates,
-            Long2ObjectOpenHashMap<GridSlotData> gridSlotData) {
+            Long2ObjectOpenHashMap<GridSlotData> gridSlotData,
+            GridInstance gridInstance) {
 
         Long2ObjectOpenHashMap<GridSlotHandle> gridSlots = new Long2ObjectOpenHashMap<>();
 
@@ -138,14 +140,11 @@ class GridBuildSystem extends SystemPackage {
             float absoluteChunkDistance = (float) Math.sqrt(chunkX * chunkX + chunkY * chunkY);
             GridSlotDetailLevel detailLevel = GridSlotDetailLevel.getDetailLevelForDistance(absoluteChunkDistance);
 
-            // Chunk culling center — this slot as a single 1x1 chunk, center is +0.5 on
-            // each axis
             float ccx = chunkX + 0.5f;
             float ccy = chunkY + 0.5f;
             float chunkDistanceFromCenter = ccx * ccx + ccy * ccy;
             float chunkAngleFromCenter = (float) Math.atan2(ccy, ccx);
 
-            // Mega culling center — this slot as an NxN mega, center is +N/2 on each axis
             float halfMega = MEGA_CHUNK_SIZE / 2f;
             float mcx = chunkX + halfMega;
             float mcy = chunkY + halfMega;
@@ -161,7 +160,8 @@ class GridBuildSystem extends SystemPackage {
                             chunkAngleFromCenter,
                             megaDistanceFromCenter,
                             megaAngleFromCenter,
-                            detailLevel));
+                            detailLevel,
+                            gridInstance));
         }
 
         return gridSlots;
@@ -174,7 +174,8 @@ class GridBuildSystem extends SystemPackage {
             float chunkAngleFromCenter,
             float megaDistanceFromCenter,
             float megaAngleFromCenter,
-            GridSlotDetailLevel detailLevel) {
+            GridSlotDetailLevel detailLevel,
+            GridInstance gridInstance) {
 
         GridSlotHandle handle = create(GridSlotHandle.class);
         handle.constructor(
@@ -184,7 +185,8 @@ class GridBuildSystem extends SystemPackage {
                 chunkAngleFromCenter,
                 megaDistanceFromCenter,
                 megaAngleFromCenter,
-                detailLevel);
+                detailLevel,
+                gridInstance);
 
         return handle;
     }

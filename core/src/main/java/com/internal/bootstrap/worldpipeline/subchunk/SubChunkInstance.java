@@ -4,7 +4,7 @@ import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderType;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderSystem;
+import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate3Int;
@@ -27,7 +27,7 @@ public class SubChunkInstance extends WorldRenderInstance {
     }
 
     public void constructor(
-            WorldRenderSystem worldRenderSystem,
+            WorldRenderManager worldRenderSystem,
             WorldHandle worldHandle,
             long coordinate,
             VAOHandle vaoHandle,
