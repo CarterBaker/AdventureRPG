@@ -404,7 +404,8 @@ public class FullGeometryBranch extends BranchPackage {
 
     // Returns the texture ID for this world face given block orientation
     private int resolveTextureID(BlockHandle blockHandle, Direction3Vector worldFace, int orientation) {
-        if (blockHandle.getRotationType() == BlockRotationType.NONE)
+        BlockRotationType rot = blockHandle.getRotationType();
+        if (rot == BlockRotationType.NONE || rot == BlockRotationType.NATURAL_FULL)
             return blockHandle.getTextureForFace(worldFace);
         Direction3Vector textureFace = Direction3Vector.VALUES[Direction3Vector.getEncodedFace(orientation, worldFace)
                 / 4];
@@ -413,8 +414,15 @@ public class FullGeometryBranch extends BranchPackage {
 
     // Returns the encoded face value (0-23) for the UBO lookup in the shader
     private int resolveEncodedFace(BlockHandle blockHandle, Direction3Vector worldFace, int orientation) {
-        if (blockHandle.getRotationType() == BlockRotationType.NONE)
-            return worldFace.ordinal() * 4; // no rotation, spin 0
+        BlockRotationType rot = blockHandle.getRotationType();
+        if (rot == BlockRotationType.NONE)
+            return worldFace.ordinal() * 4;
+        if (rot == BlockRotationType.NATURAL_FULL) {
+            if (worldFace == Direction3Vector.UP || worldFace == Direction3Vector.DOWN)
+                return 24 + worldFace.ordinal(); // sentinels 28 (UP=4) and 29 (DOWN=5)
+            else
+                return worldFace.ordinal() * 4; // sides always spin 0, upright as authored
+        }
         return Direction3Vector.getEncodedFace(orientation, worldFace);
     }
 

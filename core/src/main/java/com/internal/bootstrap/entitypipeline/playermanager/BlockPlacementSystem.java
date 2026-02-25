@@ -184,35 +184,30 @@ public class BlockPlacementSystem extends SystemPackage {
             Direction3Vector hitFace,
             Vector3 cameraDirection) {
 
-        if (blockHandle.getRotationType() == BlockRotationType.NONE)
+        BlockRotationType rot = blockHandle.getRotationType();
+
+        if (rot == BlockRotationType.NONE || rot == BlockRotationType.NATURAL_FULL)
             return DEFAULT_ORIENTATION;
 
         Direction3Vector facing;
-
-        if (blockHandle.getRotationType() == BlockRotationType.CARDINAL) {
-            // Cardinal blocks cannot face UP or DOWN — fall back to default
+        if (rot == BlockRotationType.CARDINAL) {
             if (hitFace == Direction3Vector.UP || hitFace == Direction3Vector.DOWN)
                 facing = Direction3Vector.VALUES[EngineSetting.DEFAULT_BLOCK_DIRECTION];
             else
                 facing = hitFace;
         } else {
-            // FULL — face toward the surface that was clicked
             facing = hitFace;
         }
 
-        // Derive spin from camera's horizontal direction when placing on UP or DOWN
-        // This lets blocks placed on flat surfaces rotate to face the player,
-        // creating a circular/pinwheel pattern when walking around placing blocks
         int spin = 0;
         if (facing == Direction3Vector.UP || facing == Direction3Vector.DOWN) {
             float ax = Math.abs(cameraDirection.x);
             float az = Math.abs(cameraDirection.z);
             if (ax >= az)
-                spin = cameraDirection.x > 0 ? 1 : 3; // looking east → spin 1, west → spin 3
+                spin = cameraDirection.x > 0 ? 1 : 3;
             else
-                spin = cameraDirection.z > 0 ? 0 : 2; // looking north → spin 0, south → spin 2
+                spin = cameraDirection.z > 0 ? 0 : 2;
         }
-        // Side placements use spin 0 — scroll wheel input can drive this later
 
         return (short) (facing.ordinal() * 4 + spin);
     }

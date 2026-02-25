@@ -19,7 +19,7 @@
         {
             "name": "Grass Block",
             "type": "FULL",
-            "rotation": "FULL",
+            "rotation": "NATURAL_FULL",
             "material": "standard/StandardSurface",
             "northTex": "surface/standard/GrassBlockNorth",
             "upTex": "surface/standard/GrassBlockUp",
