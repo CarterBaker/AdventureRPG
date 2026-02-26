@@ -16,11 +16,11 @@ public final class Vector4BooleanArrayUniform extends UniformAttribute<int[]> {
     private final IntBuffer intBuffer;
 
     public Vector4BooleanArrayUniform(int elementCount) {
-
         // Internal
         super(new int[elementCount * 4]);
         this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 4 * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 16); // bvec4 = 16 bytes per element, no padding needed
+                                                                    // (std140)
         this.intBuffer = buffer.asIntBuffer();
     }
 
@@ -36,42 +36,29 @@ public final class Vector4BooleanArrayUniform extends UniformAttribute<int[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         intBuffer.clear();
         intBuffer.put(value);
         intBuffer.flip();
-
         return buffer;
     }
 
     @Override
-    public void setObject(Object value) {
-
-        if (value instanceof Vector4Boolean[] vectors)
-            set(vectors);
-
-        else
-            set((int[]) value);
+    protected void applyValue(int[] value) {
+        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
     }
 
     @Override
-    public void set(int[] value) {
-        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-        super.set(value);
-    }
-
-    public void set(Vector4Boolean[] vectors) {
-
-        int idx = 0;
-
-        for (Vector4Boolean v : vectors) {
-            value[idx++] = v.x ? 1 : 0;
-            value[idx++] = v.y ? 1 : 0;
-            value[idx++] = v.z ? 1 : 0;
-            value[idx++] = v.w ? 1 : 0;
+    protected void applyObject(Object value) {
+        if (value instanceof Vector4Boolean[] vectors) {
+            for (int i = 0; i < vectors.length && i < elementCount; i++) {
+                this.value[i * 4] = vectors[i].x ? 1 : 0;
+                this.value[i * 4 + 1] = vectors[i].y ? 1 : 0;
+                this.value[i * 4 + 2] = vectors[i].z ? 1 : 0;
+                this.value[i * 4 + 3] = vectors[i].w ? 1 : 0;
+            }
+        } else {
+            applyValue((int[]) value);
         }
-
-        super.set(value);
     }
 
     public int elementCount() {

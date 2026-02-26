@@ -16,11 +16,11 @@ public final class Vector4DoubleArrayUniform extends UniformAttribute<float[]> {
     private final FloatBuffer floatBuffer;
 
     public Vector4DoubleArrayUniform(int elementCount) {
-
         // Internal
         super(new float[elementCount * 4]);
         this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 4 * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 16); // vec4 = 16 bytes per element, no padding needed
+                                                                    // (std140, doubles downcast to float for GLSL ES)
         this.floatBuffer = buffer.asFloatBuffer();
     }
 
@@ -36,42 +36,29 @@ public final class Vector4DoubleArrayUniform extends UniformAttribute<float[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         floatBuffer.clear();
         floatBuffer.put(value);
         floatBuffer.flip();
-
         return buffer;
     }
 
     @Override
-    public void setObject(Object value) {
-
-        if (value instanceof Vector4Double[] vectors)
-            set(vectors);
-
-        else
-            set((float[]) value);
+    protected void applyValue(float[] value) {
+        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
     }
 
     @Override
-    public void set(float[] value) {
-        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-        super.set(value);
-    }
-
-    public void set(Vector4Double[] vectors) {
-
-        int idx = 0;
-
-        for (Vector4Double v : vectors) {
-            value[idx++] = (float) v.x;
-            value[idx++] = (float) v.y;
-            value[idx++] = (float) v.z;
-            value[idx++] = (float) v.w;
+    protected void applyObject(Object value) {
+        if (value instanceof Vector4Double[] vectors) {
+            for (int i = 0; i < vectors.length && i < elementCount; i++) {
+                this.value[i * 4] = (float) vectors[i].x;
+                this.value[i * 4 + 1] = (float) vectors[i].y;
+                this.value[i * 4 + 2] = (float) vectors[i].z;
+                this.value[i * 4 + 3] = (float) vectors[i].w;
+            }
+        } else {
+            applyValue((float[]) value);
         }
-
-        super.set(value);
     }
 
     public int elementCount() {

@@ -13,7 +13,6 @@ public abstract class UniformAttribute<T> {
     }
 
     // Base \\
-
     protected UniformAttribute() {
         throw new UnsupportedOperationException(
                 "Empty constructor is not allowed. You must provide an initial value.");
@@ -24,7 +23,6 @@ public abstract class UniformAttribute<T> {
     }
 
     // UBO Utility \\
-
     public abstract UniformAttribute<?> createDefault();
 
     public ByteBuffer getByteBuffer() {
@@ -33,7 +31,6 @@ public abstract class UniformAttribute<T> {
     }
 
     // Sampler Utility \\
-
     public boolean isSampler() {
         return false;
     }
@@ -43,7 +40,6 @@ public abstract class UniformAttribute<T> {
     }
 
     // Uniform Utility \\
-
     final void push(int handle) {
         push(handle, value);
     }
@@ -51,12 +47,17 @@ public abstract class UniformAttribute<T> {
     protected abstract void push(int handle, T value);
 
     // Accessible \\
-
-    public void set(T value) {
-        uniform.set();
+    public final void set(T value) {
+        applyValue(value);
     }
 
-    public void setObject(Object value) {
+    protected abstract void applyValue(T value);
+
+    public final void setObject(Object value) {
+        applyObject(value);
+    }
+
+    protected void applyObject(Object value) {
         set((T) value);
     }
 }

@@ -5,6 +5,7 @@ import com.internal.bootstrap.entitypipeline.EntityPipeline;
 import com.internal.bootstrap.geometrypipeline.GeometryPipeline;
 import com.internal.bootstrap.inputpipeline.InputPipeline;
 import com.internal.bootstrap.lightingpipeline.LightingPipeline;
+import com.internal.bootstrap.menupipeline.MenuPipeline;
 import com.internal.bootstrap.physicspipeline.PhysicsPipeline;
 import com.internal.bootstrap.renderpipeline.RenderPipeline;
 import com.internal.bootstrap.shaderpipeline.ShaderPipeline;
@@ -29,6 +30,7 @@ public class GameEngine extends EnginePackage {
     private EntityPipeline entityPipeline;
     private CalendarPipeline calendarPipeline;
     private LightingPipeline lightingPipeline;
+    private MenuPipeline menuPipeline;
 
     // Runtime
     private DebugPipeline debugPipeline;
@@ -48,6 +50,7 @@ public class GameEngine extends EnginePackage {
         this.entityPipeline = create(EntityPipeline.class);
         this.calendarPipeline = create(CalendarPipeline.class);
         this.lightingPipeline = create(LightingPipeline.class);
+        this.menuPipeline = create(MenuPipeline.class);
     }
 
     // Runtime \\

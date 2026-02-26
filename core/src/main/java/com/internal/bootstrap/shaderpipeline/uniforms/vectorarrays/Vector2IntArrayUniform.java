@@ -16,11 +16,10 @@ public final class Vector2IntArrayUniform extends UniformAttribute<int[]> {
     private final IntBuffer intBuffer;
 
     public Vector2IntArrayUniform(int elementCount) {
-
         // Internal
         super(new int[elementCount * 2]);
         this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 4 * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 16); // ivec2 padded to 16 bytes per element (std140)
         this.intBuffer = buffer.asIntBuffer();
     }
 
@@ -36,45 +35,32 @@ public final class Vector2IntArrayUniform extends UniformAttribute<int[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         intBuffer.clear();
         for (int i = 0; i < elementCount; i++) {
-            intBuffer.put(value[i * 2]);
-            intBuffer.put(value[i * 2 + 1]);
-            intBuffer.put(0);
-            intBuffer.put(0);
+            intBuffer.put(value[i * 2]); // x
+            intBuffer.put(value[i * 2 + 1]); // y
+            intBuffer.put(0); // padding
+            intBuffer.put(0); // padding
         }
         intBuffer.flip();
-
         return buffer;
     }
 
     @Override
-    public void setObject(Object value) {
-
-        if (value instanceof Vector2Int[] vectors)
-            set(vectors);
-
-        else
-            set((int[]) value);
+    protected void applyValue(int[] value) {
+        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
     }
 
     @Override
-    public void set(int[] value) {
-        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-        super.set(value);
-    }
-
-    public void set(Vector2Int[] vectors) {
-
-        int idx = 0;
-
-        for (Vector2Int v : vectors) {
-            value[idx++] = v.x;
-            value[idx++] = v.y;
+    protected void applyObject(Object value) {
+        if (value instanceof Vector2Int[] vectors) {
+            for (int i = 0; i < vectors.length && i < elementCount; i++) {
+                this.value[i * 2] = vectors[i].x;
+                this.value[i * 2 + 1] = vectors[i].y;
+            }
+        } else {
+            applyValue((int[]) value);
         }
-
-        super.set(value);
     }
 
     public int elementCount() {

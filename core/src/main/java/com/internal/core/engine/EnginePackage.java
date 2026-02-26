@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.concurrent.Future;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
 import com.internal.core.engine.settings.Settings;
@@ -212,6 +213,10 @@ public class EnginePackage extends ManagerPackage {
                             "This system either doesn't exist, hasn't been created yet, or was already released.");
 
         return systemPackage;
+    }
+
+    public final <T> T getUnchecked(Class<T> type) {
+        return get(true, type);
     }
 
     // Thread Management \\
@@ -550,5 +555,9 @@ public class EnginePackage extends ManagerPackage {
 
     public final WindowInstance getWindowInstance() {
         return this.windowInstance;
+    }
+
+    public final void closeGame() {
+        Gdx.app.exit();
     }
 }

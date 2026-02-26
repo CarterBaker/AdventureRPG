@@ -17,12 +17,11 @@ public final class Vector3BooleanArrayUniform extends UniformAttribute<int[]> {
     private final IntBuffer uniformBuffer;
 
     public Vector3BooleanArrayUniform(int elementCount) {
-
         // Internal
-        super(new int[elementCount * 4]);
+        super(new int[elementCount * 4]); // padded: 3 ints + 1 padding per element
         this.elementCount = elementCount;
-        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 16);
-        this.uniformData = new int[elementCount * 3];
+        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 16); // bvec3 padded to 16 bytes per element (std140)
+        this.uniformData = new int[elementCount * 3]; // tightly packed for GL uniform upload
         this.uniformBuffer = uboBuffer.asIntBuffer();
     }
 
@@ -39,58 +38,41 @@ public final class Vector3BooleanArrayUniform extends UniformAttribute<int[]> {
     @Override
     public ByteBuffer getByteBuffer() {
         uniformBuffer.clear();
-
-        // Write each vector with padding
         for (int i = 0; i < elementCount; i++) {
             uniformBuffer.put(value[i * 4]); // x
             uniformBuffer.put(value[i * 4 + 1]); // y
             uniformBuffer.put(value[i * 4 + 2]); // z
             uniformBuffer.put(0); // padding
         }
-
         uniformBuffer.flip();
         return uboBuffer;
     }
 
     @Override
-    public void setObject(Object value) {
-
-        if (value instanceof Vector3Boolean[] vectors)
-            set(vectors);
-
-        else
-            set((int[]) value);
-    }
-
-    public void set(Vector3Boolean[] vectors) {
-
-        for (int i = 0; i < vectors.length && i < elementCount; i++) {
-
-            value[i * 4] = vectors[i].x ? 1 : 0;
-            value[i * 4 + 1] = vectors[i].y ? 1 : 0;
-            value[i * 4 + 2] = vectors[i].z ? 1 : 0;
-            value[i * 4 + 3] = 0;
-
-            uniformData[i * 3] = vectors[i].x ? 1 : 0;
-            uniformData[i * 3 + 1] = vectors[i].y ? 1 : 0;
-            uniformData[i * 3 + 2] = vectors[i].z ? 1 : 0;
-        }
-
-        super.set(value);
-    }
-
-    @Override
-    public void set(int[] value) {
-
+    protected void applyValue(int[] value) {
         System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-
         for (int i = 0; i < elementCount; i++) {
             uniformData[i * 3] = this.value[i * 4];
             uniformData[i * 3 + 1] = this.value[i * 4 + 1];
             uniformData[i * 3 + 2] = this.value[i * 4 + 2];
         }
+    }
 
-        super.set(value);
+    @Override
+    protected void applyObject(Object value) {
+        if (value instanceof Vector3Boolean[] vectors) {
+            for (int i = 0; i < vectors.length && i < elementCount; i++) {
+                this.value[i * 4] = vectors[i].x ? 1 : 0;
+                this.value[i * 4 + 1] = vectors[i].y ? 1 : 0;
+                this.value[i * 4 + 2] = vectors[i].z ? 1 : 0;
+                this.value[i * 4 + 3] = 0;
+                uniformData[i * 3] = vectors[i].x ? 1 : 0;
+                uniformData[i * 3 + 1] = vectors[i].y ? 1 : 0;
+                uniformData[i * 3 + 2] = vectors[i].z ? 1 : 0;
+            }
+        } else {
+            applyValue((int[]) value);
+        }
     }
 
     public int elementCount() {

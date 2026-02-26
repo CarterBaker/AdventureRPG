@@ -6,16 +6,15 @@ import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
 
 import java.nio.ByteBuffer;
 
-public class IntegerUniform extends UniformAttribute<Integer> {
+public final class IntegerUniform extends UniformAttribute<Integer> {
 
     // Internal
     private final ByteBuffer buffer;
 
     public IntegerUniform() {
-
         // Internal
         super(0);
-        this.buffer = BufferUtils.newByteBuffer(4);
+        this.buffer = BufferUtils.newByteBuffer(4); // 1 int * 4 bytes
     }
 
     @Override
@@ -30,18 +29,14 @@ public class IntegerUniform extends UniformAttribute<Integer> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         buffer.clear();
-
         buffer.putInt(value);
-
         buffer.flip();
         return buffer;
     }
 
     @Override
-    public void set(Integer value) {
+    protected void applyValue(Integer value) {
         this.value = value;
-        super.set(value);
     }
 }

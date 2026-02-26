@@ -3,6 +3,7 @@ package com.internal.bootstrap.shaderpipeline.materialmanager;
 import com.internal.bootstrap.shaderpipeline.shadermanager.ShaderManager;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
 import com.internal.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -81,26 +82,31 @@ public class MaterialManager extends ManagerPackage {
     public MaterialHandle cloneMaterial(int materialID) {
 
         MaterialHandle originalMaterial = getMaterialFromMaterialID(materialID);
-
         if (originalMaterial == null)
             throwException("Cannot clone material - materialID " + materialID + " not found");
 
-        // Clone UBOs map (shallow copy - UBOHandles themselves are shared)
+        // UBOs are shared — clones reference the same GPU buffers intentionally
         Object2ObjectOpenHashMap<String, UBOHandle> clonedBuffers = new Object2ObjectOpenHashMap<>(
                 originalMaterial.getUBOs());
 
-        // Clone uniforms map (shallow copy - Uniform objects themselves are shared)
-        Object2ObjectOpenHashMap<String, Uniform<?>> clonedUniforms = new Object2ObjectOpenHashMap<>(
-                originalMaterial.getUniforms());
+        // Deep copy uniforms — each clone gets its own Uniform instances so
+        // mutations on one clone do not affect the base material or other clones
+        Object2ObjectOpenHashMap<String, Uniform<?>> deepCopiedUniforms = new Object2ObjectOpenHashMap<>();
+        for (var entry : originalMaterial.getUniforms().object2ObjectEntrySet()) {
+            Uniform<?> original = entry.getValue();
+            UniformAttribute<?> freshAttr = original.attribute.createDefault();
+            Uniform<?> freshUniform = new Uniform<>(original.uniformHandle, original.offset, freshAttr);
+            deepCopiedUniforms.put(entry.getKey(), freshUniform);
+        }
 
-        // Create new material handle with cloned maps
+        // Create new material handle with deep copied uniforms
         MaterialHandle clonedMaterial = create(MaterialHandle.class);
         clonedMaterial.constructor(
                 originalMaterial.getMaterialName(),
                 originalMaterial.getMaterialID(),
                 originalMaterial.getShaderHandle(),
                 clonedBuffers,
-                clonedUniforms);
+                deepCopiedUniforms);
 
         return clonedMaterial;
     }

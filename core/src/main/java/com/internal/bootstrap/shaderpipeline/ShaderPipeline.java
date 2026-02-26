@@ -3,6 +3,7 @@ package com.internal.bootstrap.shaderpipeline;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.passmanager.PassManager;
 import com.internal.bootstrap.shaderpipeline.shadermanager.ShaderManager;
+import com.internal.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.PipelinePackage;
@@ -17,6 +18,7 @@ public class ShaderPipeline extends PipelinePackage {
         create(UBOManager.class);
         create(ShaderManager.class);
         create(MaterialManager.class);
+        create(SpriteManager.class);
         create(PassManager.class);
     }
 }

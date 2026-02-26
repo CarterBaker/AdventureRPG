@@ -35,6 +35,6 @@ public class Sky extends SystemPackage {
     @Override
     protected void update() {
         passmanager.pushPass(skyPass, -10);
-        passmanager.pushPass(debugPass, 10);
+        // passmanager.pushPass(debugPass, 10);
     }
 }

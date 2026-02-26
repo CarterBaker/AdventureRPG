@@ -6,16 +6,15 @@ import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
 
 import java.nio.ByteBuffer;
 
-public class DoubleUniform extends UniformAttribute<Double> {
+public final class DoubleUniform extends UniformAttribute<Double> {
 
     // Internal
     private final ByteBuffer buffer;
 
     public DoubleUniform() {
-
         // Internal
         super(0.0);
-        this.buffer = BufferUtils.newByteBuffer(4); // store as float for GPU
+        this.buffer = BufferUtils.newByteBuffer(4); // 1 float * 4 bytes (double downcast to float for GLSL ES)
     }
 
     @Override
@@ -30,18 +29,14 @@ public class DoubleUniform extends UniformAttribute<Double> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         buffer.clear();
-
-        buffer.putFloat(value.floatValue()); // convert double → float
-
+        buffer.putFloat(value.floatValue());
         buffer.flip();
         return buffer;
     }
 
     @Override
-    public void set(Double value) {
+    protected void applyValue(Double value) {
         this.value = value;
-        super.set(value);
     }
 }

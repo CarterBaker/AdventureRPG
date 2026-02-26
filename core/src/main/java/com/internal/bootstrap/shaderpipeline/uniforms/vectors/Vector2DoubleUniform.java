@@ -7,16 +7,15 @@ import com.internal.core.util.mathematics.vectors.Vector2Double;
 
 import java.nio.ByteBuffer;
 
-public class Vector2DoubleUniform extends UniformAttribute<Vector2Double> {
+public final class Vector2DoubleUniform extends UniformAttribute<Vector2Double> {
 
     // Internal
     private final ByteBuffer buffer;
 
     public Vector2DoubleUniform() {
-
         // Internal
         super(new Vector2Double());
-        this.buffer = BufferUtils.newByteBuffer(8); // 2 floats * 4 bytes
+        this.buffer = BufferUtils.newByteBuffer(8); // 2 floats * 4 bytes (doubles downcast to float for GLSL ES)
     }
 
     @Override
@@ -31,19 +30,15 @@ public class Vector2DoubleUniform extends UniformAttribute<Vector2Double> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         buffer.clear();
-
         buffer.putFloat((float) value.x);
         buffer.putFloat((float) value.y);
-
         buffer.flip();
         return buffer;
     }
 
     @Override
-    public void set(Vector2Double value) {
+    protected void applyValue(Vector2Double value) {
         this.value.set(value);
-        super.set(value);
     }
 }

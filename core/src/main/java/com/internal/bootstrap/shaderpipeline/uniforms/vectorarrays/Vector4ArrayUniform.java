@@ -16,11 +16,11 @@ public final class Vector4ArrayUniform extends UniformAttribute<float[]> {
     private final FloatBuffer floatBuffer;
 
     public Vector4ArrayUniform(int elementCount) {
-
         // Internal
         super(new float[elementCount * 4]);
         this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 4 * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 16); // vec4 = 16 bytes per element, no padding needed
+                                                                    // (std140)
         this.floatBuffer = buffer.asFloatBuffer();
     }
 
@@ -36,59 +36,36 @@ public final class Vector4ArrayUniform extends UniformAttribute<float[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         floatBuffer.clear();
         floatBuffer.put(value);
         floatBuffer.flip();
-
         return buffer;
     }
 
     @Override
-    public void setObject(Object value) {
-
-        if (value instanceof Vector4[] vectors)
-            set(vectors);
-
-        else if (value instanceof com.badlogic.gdx.math.Vector4[] vectors)
-            set(vectors);
-
-        else
-            set((float[]) value);
+    protected void applyValue(float[] value) {
+        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
     }
 
     @Override
-    public void set(float[] value) {
-        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-        super.set(value);
-    }
-
-    public void set(Vector4[] vectors) {
-
-        int idx = 0;
-
-        for (Vector4 v : vectors) {
-            value[idx++] = v.x;
-            value[idx++] = v.y;
-            value[idx++] = v.z;
-            value[idx++] = v.w;
+    protected void applyObject(Object value) {
+        if (value instanceof Vector4[] vectors) {
+            for (int i = 0; i < vectors.length && i < elementCount; i++) {
+                this.value[i * 4] = vectors[i].x;
+                this.value[i * 4 + 1] = vectors[i].y;
+                this.value[i * 4 + 2] = vectors[i].z;
+                this.value[i * 4 + 3] = vectors[i].w;
+            }
+        } else if (value instanceof com.badlogic.gdx.math.Vector4[] vectors) {
+            for (int i = 0; i < vectors.length && i < elementCount; i++) {
+                this.value[i * 4] = vectors[i].x;
+                this.value[i * 4 + 1] = vectors[i].y;
+                this.value[i * 4 + 2] = vectors[i].z;
+                this.value[i * 4 + 3] = vectors[i].w;
+            }
+        } else {
+            applyValue((float[]) value);
         }
-
-        super.set(value);
-    }
-
-    public void set(com.badlogic.gdx.math.Vector4[] vectors) {
-
-        int idx = 0;
-
-        for (com.badlogic.gdx.math.Vector4 v : vectors) {
-            value[idx++] = v.x;
-            value[idx++] = v.y;
-            value[idx++] = v.z;
-            value[idx++] = v.w;
-        }
-
-        super.set(value);
     }
 
     public int elementCount() {

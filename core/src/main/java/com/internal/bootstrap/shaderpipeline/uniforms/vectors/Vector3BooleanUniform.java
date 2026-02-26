@@ -7,16 +7,15 @@ import com.internal.core.util.mathematics.vectors.Vector3Boolean;
 
 import java.nio.ByteBuffer;
 
-public class Vector3BooleanUniform extends UniformAttribute<Vector3Boolean> {
+public final class Vector3BooleanUniform extends UniformAttribute<Vector3Boolean> {
 
     // Internal
     private final ByteBuffer buffer;
 
     public Vector3BooleanUniform() {
-
         // Internal
         super(new Vector3Boolean());
-        this.buffer = BufferUtils.newByteBuffer(16);
+        this.buffer = BufferUtils.newByteBuffer(16); // 3 ints * 4 bytes + 4 bytes padding (std140)
     }
 
     @Override
@@ -31,21 +30,17 @@ public class Vector3BooleanUniform extends UniformAttribute<Vector3Boolean> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         buffer.clear();
-
         buffer.putInt(value.x ? 1 : 0);
         buffer.putInt(value.y ? 1 : 0);
         buffer.putInt(value.z ? 1 : 0);
         buffer.putInt(0); // padding
-
         buffer.flip();
         return buffer;
     }
 
     @Override
-    public void set(Vector3Boolean value) {
+    protected void applyValue(Vector3Boolean value) {
         this.value.set(value);
-        super.set(value);
     }
 }

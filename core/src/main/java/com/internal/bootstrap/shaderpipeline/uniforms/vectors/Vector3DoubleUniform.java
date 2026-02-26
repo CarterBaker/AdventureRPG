@@ -7,16 +7,16 @@ import com.internal.core.util.mathematics.vectors.Vector3Double;
 
 import java.nio.ByteBuffer;
 
-public class Vector3DoubleUniform extends UniformAttribute<Vector3Double> {
+public final class Vector3DoubleUniform extends UniformAttribute<Vector3Double> {
 
     // Internal
     private final ByteBuffer buffer;
 
     public Vector3DoubleUniform() {
-
         // Internal
         super(new Vector3Double());
-        this.buffer = BufferUtils.newByteBuffer(16);
+        this.buffer = BufferUtils.newByteBuffer(16); // 3 floats * 4 bytes + 4 bytes padding (std140, doubles downcast
+                                                     // to float for GLSL ES)
     }
 
     @Override
@@ -31,21 +31,17 @@ public class Vector3DoubleUniform extends UniformAttribute<Vector3Double> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         buffer.clear();
-
         buffer.putFloat((float) value.x);
         buffer.putFloat((float) value.y);
         buffer.putFloat((float) value.z);
         buffer.putFloat(0f); // padding
-
         buffer.flip();
         return buffer;
     }
 
     @Override
-    public void set(Vector3Double value) {
+    protected void applyValue(Vector3Double value) {
         this.value.set(value);
-        super.set(value);
     }
 }

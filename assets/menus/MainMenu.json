@@ -1,0 +1,39 @@
+{
+    "lock_input": true,
+    "raycast_input": true,
+    "elements": [
+        {
+            "id":       "title",
+            "type":     "sprite",
+            "sprite":   "menus/Title",
+            "anchor":   "TOP_CENTER",
+            "pivot":    "TOP_CENTER",
+            "position": { "x": "0%", "y": "-5%" },
+            "size":     { "x": "40%", "y": "20%" },
+            "min_size": { "x": "300px", "y": "80px" }
+        },
+        {
+            "id":       "button_panel",
+            "type":     "container",
+            "anchor":   "CENTER",
+            "pivot":    "CENTER",
+            "position": { "x": "0%", "y": "0%" },
+            "size":     { "x": "20%", "y": "10%" },
+            "elements": [
+                {
+                    "id":       "quit_button",
+                    "type":     "button",
+                    "sprite":   "menus/Title",
+                    "anchor":   "CENTER",
+                    "pivot":    "CENTER",
+                    "position": { "x": "0%", "y": "0%" },
+                    "size":     { "x": "80%", "y": "60%" },
+                    "on_click": {
+                        "class":  "com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.MainMenuBranch",
+                        "method": "quitGame"
+                    }
+                }
+            ]
+        }
+    ]
+}

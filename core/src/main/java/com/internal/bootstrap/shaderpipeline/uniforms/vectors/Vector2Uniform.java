@@ -7,13 +7,12 @@ import com.internal.core.util.mathematics.vectors.Vector2;
 
 import java.nio.ByteBuffer;
 
-public class Vector2Uniform extends UniformAttribute<Object> {
+public final class Vector2Uniform extends UniformAttribute<Object> {
 
     // Internal
     private final ByteBuffer buffer;
 
     public Vector2Uniform() {
-
         // Internal
         super(new Vector2());
         this.buffer = BufferUtils.newByteBuffer(8); // 2 floats * 4 bytes
@@ -26,47 +25,36 @@ public class Vector2Uniform extends UniformAttribute<Object> {
 
     @Override
     protected void push(int handle, Object value) {
-
         // From libGDX vector
         if (value instanceof com.badlogic.gdx.math.Vector2 gdxVector)
             Gdx.gl.glUniform2f(handle, gdxVector.x, gdxVector.y);
-
         // From internal vector
         else if (value instanceof Vector2 internalVector)
             Gdx.gl.glUniform2f(handle, internalVector.x, internalVector.y);
-
-        else // TODO: Add my own error
+        else
             throw new IllegalArgumentException(
-                    "push(Int, Vector2): Expected Vector2 or com.badlogic.gdx.math.Vector2, got " + value.getClass());
+                    "push(int, Vector2): Expected Vector2 or com.badlogic.gdx.math.Vector2, got " + value.getClass());
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         buffer.clear();
-
         buffer.putFloat(((Vector2) value).x);
         buffer.putFloat(((Vector2) value).y);
-
         buffer.flip();
         return buffer;
     }
 
     @Override
-    public void set(Object value) {
-
+    protected void applyValue(Object value) {
         // From libGDX vector
         if (value instanceof com.badlogic.gdx.math.Vector2 gdxVector)
             ((Vector2) this.value).fromGDX(gdxVector);
-
         // From internal vector
         else if (value instanceof Vector2 internalVector)
-            ((Vector2) this.value).set((Vector2) internalVector);
-
-        else // TODO: Add my own error
+            ((Vector2) this.value).set(internalVector);
+        else
             throw new IllegalArgumentException(
-                    "set(Vector2): Expected Vector2 or com.badlogic.gdx.math.Vector2, got " + value.getClass());
-
-        super.set(value);
+                    "applyValue(Vector2): Expected Vector2 or com.badlogic.gdx.math.Vector2, got " + value.getClass());
     }
 }

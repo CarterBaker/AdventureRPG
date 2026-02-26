@@ -9,6 +9,7 @@ public class EngineSetting {
 
         // Path Settings
         public static final String BLOCK_TEXTURE_PATH = "textures";
+        public static final String SPRITE_PATH = "sprites";
         public static final String BLOCK_TEXTURE_ALIAS_PATH = "textureAliases";
         public static final String SHADER_PATH = "shaders";
         public static final String MATERIAL_JSON_PATH = "materials";
@@ -19,6 +20,7 @@ public class EngineSetting {
         public static final String BLOCK_JSON_PATH = "blocks";
         public static final String BIOME_JSON_PATH = "biomes";
         public static final String ENTITY_JSON_PATH = "entities";
+        public static final String MENU_JSON_PATH = "menus";
 
         // File Extension Settings
 
@@ -60,6 +62,10 @@ public class EngineSetting {
         // Atlas Settings
         public static final int BLOCK_TEXTURE_SIZE = 32;
         public static final int CHUNKS_PER_PIXEL = 32;
+
+        // Sprite Settings
+        public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
+        public static final String SPRITE_DEFAULT_MATERIAL = "util/Sprite";
 
         // Movement Settings
         public static final float BASE_WALKING_SPEED = 1.5f;

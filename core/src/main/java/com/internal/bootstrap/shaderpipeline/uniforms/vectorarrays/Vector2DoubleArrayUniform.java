@@ -16,11 +16,11 @@ public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
     private final FloatBuffer floatBuffer;
 
     public Vector2DoubleArrayUniform(int elementCount) {
-
         // Internal
         super(new float[elementCount * 2]);
         this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 4 * 4);
+        this.buffer = BufferUtils.newByteBuffer(elementCount * 16); // vec2 padded to 16 bytes per element (std140,
+                                                                    // doubles downcast to float for GLSL ES)
         this.floatBuffer = buffer.asFloatBuffer();
     }
 
@@ -36,35 +36,32 @@ public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         floatBuffer.clear();
         for (int i = 0; i < elementCount; i++) {
-            floatBuffer.put(value[i * 2]);
-            floatBuffer.put(value[i * 2 + 1]);
-            floatBuffer.put(0f);
-            floatBuffer.put(0f);
+            floatBuffer.put(value[i * 2]); // x
+            floatBuffer.put(value[i * 2 + 1]); // y
+            floatBuffer.put(0f); // padding
+            floatBuffer.put(0f); // padding
         }
         floatBuffer.flip();
-
         return buffer;
     }
 
     @Override
-    public void set(float[] value) {
+    protected void applyValue(float[] value) {
         System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-        super.set(value);
     }
 
-    public void set(Vector2Double[] vectors) {
-
-        int idx = 0;
-
-        for (Vector2Double v : vectors) {
-            value[idx++] = (float) v.x;
-            value[idx++] = (float) v.y;
+    @Override
+    protected void applyObject(Object value) {
+        if (value instanceof Vector2Double[] vectors) {
+            for (int i = 0; i < vectors.length && i < elementCount; i++) {
+                this.value[i * 2] = (float) vectors[i].x;
+                this.value[i * 2 + 1] = (float) vectors[i].y;
+            }
+        } else {
+            applyValue((float[]) value);
         }
-
-        super.set(value);
     }
 
     public int elementCount() {

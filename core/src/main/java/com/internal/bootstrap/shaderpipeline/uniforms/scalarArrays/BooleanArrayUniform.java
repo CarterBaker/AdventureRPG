@@ -11,17 +11,14 @@ public final class BooleanArrayUniform extends UniformAttribute<boolean[]> {
     // Internal
     private final int elementCount;
     private final ByteBuffer uboBuffer;
-
-    private final float[] elements;
+    private final int[] elements; // converted for GL upload
 
     public BooleanArrayUniform(int elementCount) {
-
         // Internal
         super(new boolean[elementCount]);
         this.elementCount = elementCount;
-        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 4);
-
-        this.elements = new float[elementCount];
+        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 4); // 1 int * 4 bytes per element
+        this.elements = new int[elementCount];
     }
 
     @Override
@@ -31,32 +28,23 @@ public final class BooleanArrayUniform extends UniformAttribute<boolean[]> {
 
     @Override
     protected void push(int handle, boolean[] data) {
-
-        for (int i = 0; i < elementCount; i++)
-            elements[i] = data[i] ? 1f : 0f;
-
-        Gdx.gl.glUniform1fv(handle, elementCount, elements, 0);
+        Gdx.gl.glUniform1iv(handle, elementCount, elements, 0);
     }
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         uboBuffer.clear();
-
         for (int i = 0; i < elementCount; i++)
-            uboBuffer.putFloat(value[i] ? 1f : 0f);
-
+            uboBuffer.putInt(value[i] ? 1 : 0);
         uboBuffer.flip();
         return uboBuffer;
     }
 
     @Override
-    public void set(boolean[] values) {
-
+    protected void applyValue(boolean[] values) {
+        System.arraycopy(values, 0, this.value, 0, Math.min(values.length, this.value.length));
         for (int i = 0; i < elementCount; i++)
-            elements[i] = values[i] ? 1f : 0f;
-
-        super.set(values);
+            elements[i] = this.value[i] ? 1 : 0;
     }
 
     public int elementCount() {

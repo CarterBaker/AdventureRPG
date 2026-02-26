@@ -7,13 +7,12 @@ import com.internal.core.util.mathematics.vectors.Vector2Boolean;
 
 import java.nio.ByteBuffer;
 
-public class Vector2BooleanUniform extends UniformAttribute<Vector2Boolean> {
+public final class Vector2BooleanUniform extends UniformAttribute<Vector2Boolean> {
 
     // Internal
     private final ByteBuffer buffer;
 
     public Vector2BooleanUniform() {
-
         // Internal
         super(new Vector2Boolean());
         this.buffer = BufferUtils.newByteBuffer(8); // 2 ints * 4 bytes
@@ -31,19 +30,15 @@ public class Vector2BooleanUniform extends UniformAttribute<Vector2Boolean> {
 
     @Override
     public ByteBuffer getByteBuffer() {
-
         buffer.clear();
-
         buffer.putInt(value.x ? 1 : 0);
         buffer.putInt(value.y ? 1 : 0);
-
         buffer.flip();
         return buffer;
     }
 
     @Override
-    public void set(Vector2Boolean value) {
+    protected void applyValue(Vector2Boolean value) {
         this.value.set(value);
-        super.set(value);
     }
 }

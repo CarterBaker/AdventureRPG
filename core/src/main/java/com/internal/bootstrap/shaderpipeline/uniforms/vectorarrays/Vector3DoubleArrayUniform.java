@@ -17,12 +17,12 @@ public final class Vector3DoubleArrayUniform extends UniformAttribute<float[]> {
     private final FloatBuffer uniformBuffer;
 
     public Vector3DoubleArrayUniform(int elementCount) {
-
         // Internal
-        super(new float[elementCount * 4]);
+        super(new float[elementCount * 4]); // padded: 3 floats + 1 padding per element
         this.elementCount = elementCount;
-        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 16);
-        this.uniformData = new float[elementCount * 3];
+        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 16); // vec3 padded to 16 bytes per element (std140,
+                                                                       // doubles downcast to float for GLSL ES)
+        this.uniformData = new float[elementCount * 3]; // tightly packed for GL uniform upload
         this.uniformBuffer = uboBuffer.asFloatBuffer();
     }
 
@@ -39,58 +39,41 @@ public final class Vector3DoubleArrayUniform extends UniformAttribute<float[]> {
     @Override
     public ByteBuffer getByteBuffer() {
         uniformBuffer.clear();
-
-        // Write each vector with padding
         for (int i = 0; i < elementCount; i++) {
             uniformBuffer.put(value[i * 4]); // x
             uniformBuffer.put(value[i * 4 + 1]); // y
             uniformBuffer.put(value[i * 4 + 2]); // z
             uniformBuffer.put(0f); // padding
         }
-
         uniformBuffer.flip();
         return uboBuffer;
     }
 
     @Override
-    public void setObject(Object value) {
-
-        if (value instanceof Vector3Double[] vectors)
-            set(vectors);
-
-        else
-            set((float[]) value);
-    }
-
-    public void set(Vector3Double[] vectors) {
-
-        for (int i = 0; i < vectors.length && i < elementCount; i++) {
-
-            value[i * 4] = (float) vectors[i].x;
-            value[i * 4 + 1] = (float) vectors[i].y;
-            value[i * 4 + 2] = (float) vectors[i].z;
-            value[i * 4 + 3] = 0f;
-
-            uniformData[i * 3] = (float) vectors[i].x;
-            uniformData[i * 3 + 1] = (float) vectors[i].y;
-            uniformData[i * 3 + 2] = (float) vectors[i].z;
-        }
-
-        super.set(value);
-    }
-
-    @Override
-    public void set(float[] value) {
-
+    protected void applyValue(float[] value) {
         System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-
         for (int i = 0; i < elementCount; i++) {
             uniformData[i * 3] = this.value[i * 4];
             uniformData[i * 3 + 1] = this.value[i * 4 + 1];
             uniformData[i * 3 + 2] = this.value[i * 4 + 2];
         }
+    }
 
-        super.set(value);
+    @Override
+    protected void applyObject(Object value) {
+        if (value instanceof Vector3Double[] vectors) {
+            for (int i = 0; i < vectors.length && i < elementCount; i++) {
+                this.value[i * 4] = (float) vectors[i].x;
+                this.value[i * 4 + 1] = (float) vectors[i].y;
+                this.value[i * 4 + 2] = (float) vectors[i].z;
+                this.value[i * 4 + 3] = 0f;
+                uniformData[i * 3] = (float) vectors[i].x;
+                uniformData[i * 3 + 1] = (float) vectors[i].y;
+                uniformData[i * 3 + 2] = (float) vectors[i].z;
+            }
+        } else {
+            applyValue((float[]) value);
+        }
     }
 
     public int elementCount() {

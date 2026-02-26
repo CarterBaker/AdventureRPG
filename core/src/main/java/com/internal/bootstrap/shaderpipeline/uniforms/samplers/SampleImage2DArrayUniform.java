@@ -8,7 +8,7 @@ import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
 
 import java.nio.ByteBuffer;
 
-public class SampleImage2DArrayUniform extends UniformAttribute<Integer> {
+public final class SampleImage2DArrayUniform extends UniformAttribute<Integer> {
 
     // Internal
     private final ByteBuffer buffer;
@@ -17,7 +17,7 @@ public class SampleImage2DArrayUniform extends UniformAttribute<Integer> {
 
     public SampleImage2DArrayUniform() {
         super(0);
-        this.buffer = BufferUtils.newByteBuffer(4);
+        this.buffer = BufferUtils.newByteBuffer(4); // 1 int * 4 bytes
     }
 
     @Override
@@ -26,7 +26,6 @@ public class SampleImage2DArrayUniform extends UniformAttribute<Integer> {
     }
 
     // Sampler \\
-
     @Override
     public boolean isSampler() {
         return true;
@@ -40,7 +39,6 @@ public class SampleImage2DArrayUniform extends UniformAttribute<Integer> {
     }
 
     // Push \\
-
     @Override
     protected void push(int handle, Integer value) {
         Gdx.gl.glUniform1i(handle, textureUnit);
@@ -55,9 +53,8 @@ public class SampleImage2DArrayUniform extends UniformAttribute<Integer> {
     }
 
     @Override
-    public void set(Integer value) {
+    protected void applyValue(Integer value) {
         this.gpuHandle = value;
         this.value = value;
-        super.set(value);
     }
 }

@@ -6,7 +6,6 @@ public class Uniform<T> {
     public final int uniformHandle; // Used for standalone uniforms
     public final int offset; // Used for UBO uniforms
     public final UniformAttribute<T> attribute;
-    private boolean hasData = true;
 
     // Constructor for standalone uniforms
     public Uniform(
@@ -28,21 +27,11 @@ public class Uniform<T> {
     }
 
     // Utility \\
-
-    public final void set() {
-        hasData = true;
-    }
-
     public final void push() {
-
-        if (hasData)
-            attribute.push(uniformHandle);
-
-        hasData = false;
+        attribute.push(uniformHandle);
     }
 
     // Accessible \\
-
     public UniformAttribute<T> attribute() {
         return attribute;
     }
