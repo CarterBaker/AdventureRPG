@@ -8,11 +8,12 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
 import com.internal.core.engine.settings.Settings;
+import com.internal.core.kernel.threadmanager.AsyncStructConsumer;
+import com.internal.core.kernel.threadmanager.AsyncStructConsumerMulti;
+import com.internal.core.kernel.threadmanager.BiSyncAsyncConsumer;
 import com.internal.core.kernel.threadmanager.InternalThreadManager;
-import com.internal.core.kernel.threadmanager.InternalThreadManager.AsyncStructConsumer;
-import com.internal.core.kernel.threadmanager.InternalThreadManager.AsyncStructConsumerMulti;
-import com.internal.core.kernel.threadmanager.InternalThreadManager.BiSyncAsyncConsumer;
-import com.internal.core.kernel.threadmanager.InternalThreadManager.SyncStructConsumer;
+import com.internal.core.kernel.threadmanager.SyncStructConsumer;
+import com.internal.core.kernel.threadmanager.ThreadHandle;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 
@@ -236,9 +237,8 @@ public class EnginePackage extends ManagerPackage {
     @Override
     protected final <T extends AsyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
-            AsyncContainerPackage asyncStruct,
+            T asyncStruct,
             AsyncStructConsumer<T> consumer) {
-
         return internalThreadManager.executeAsync(handle, asyncStruct, consumer);
     }
 
@@ -247,26 +247,23 @@ public class EnginePackage extends ManagerPackage {
             ThreadHandle handle,
             AsyncStructConsumerMulti consumer,
             AsyncContainerPackage... asyncStructs) {
-
         return internalThreadManager.executeAsync(handle, consumer, asyncStructs);
     }
 
     @Override
     protected final <T extends SyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
-            SyncContainerPackage syncStruct,
+            T syncStruct,
             SyncStructConsumer<T> consumer) {
-
         return internalThreadManager.executeAsync(handle, syncStruct, consumer);
     }
 
     @Override
     protected final <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
-            AsyncContainerPackage asyncStruct,
-            SyncContainerPackage syncStruct,
+            T asyncStruct,
+            S syncStruct,
             BiSyncAsyncConsumer<T, S> consumer) {
-
         return internalThreadManager.executeAsync(handle, asyncStruct, syncStruct, consumer);
     }
 

@@ -9,8 +9,8 @@ import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaState;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.engine.ThreadHandle;
 import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.kernel.threadmanager.ThreadHandle;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;

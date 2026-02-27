@@ -4,16 +4,14 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.ThreadHandle;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalLoadManager extends ManagerPackage {
 
@@ -26,13 +24,11 @@ class InternalLoadManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
         this.root = new File(EngineSetting.THREAD_DEFINITIONS);
     }
 
     @Override
     protected void get() {
-
         this.internalThreadManager = get(InternalThreadManager.class);
         this.internalBuildSystem = get(InternalBuildSystem.class);
     }
@@ -40,39 +36,28 @@ class InternalLoadManager extends ManagerPackage {
     // Thread Data Management \\
 
     void loadThreadData() {
-
-        List<File> jsonFiles = collectJsonFiles();
-
-        for (File file : jsonFiles)
-            processJsonFile(file);
+        ObjectArrayList<File> jsonFiles = collectJsonFiles();
+        for (int i = 0; i < jsonFiles.size(); i++)
+            processJsonFile(jsonFiles.get(i));
     }
 
     // File Collection \\
 
-    private List<File> collectJsonFiles() {
-
+    private ObjectArrayList<File> collectJsonFiles() {
         validateRootDirectory();
-
-        Path basePath = root.toPath();
-
-        try (var stream = Files.walk(basePath)) {
-
-            return stream
-                    .filter(Files::isRegularFile)
+        ObjectArrayList<File> result = new ObjectArrayList<>();
+        try (var stream = Files.walk(root.toPath())) {
+            stream.filter(Files::isRegularFile)
                     .map(Path::toFile)
                     .filter(this::isValidJsonFile)
-                    .collect(Collectors.toList());
+                    .forEach(result::add);
+            return result;
+        } catch (IOException e) {
+            return throwException("Failed to collect thread definition files from: " + root.getAbsolutePath(), e);
         }
-
-        catch (IOException e) {
-            throwException("Failed to collect thread definition files from: " + root.getAbsolutePath(), e);
-        }
-
-        return null;
     }
 
     private void validateRootDirectory() {
-
         if (!root.exists() || !root.isDirectory())
             throwException("Thread definitions directory not found: " + root.getAbsolutePath());
     }
@@ -84,33 +69,23 @@ class InternalLoadManager extends ManagerPackage {
     // File Processing \\
 
     private void processJsonFile(File file) {
-
         JsonObject json = JsonUtility.loadJsonObject(file);
-
         if (!json.has("threads"))
             return;
 
         JsonArray threads = JsonUtility.validateArray(json, "threads");
-
         for (int i = 0; i < threads.size(); i++)
             processThreadDefinition(threads.get(i).getAsJsonObject());
     }
 
     private void processThreadDefinition(JsonObject threadDef) {
-
         String threadName = JsonUtility.validateString(threadDef, "name");
-        int threadSize = threadDef.get("size").getAsInt();
+        int threadSize = JsonUtility.validateInt(threadDef, "size");
 
         if (threadSize <= 0)
-            return;
+            throwException("Thread '" + threadName + "' has invalid size: " + threadSize);
 
         ThreadHandle threadHandle = internalBuildSystem.buildThreadHandle(threadName, threadSize);
-
-        if (threadHandle != null)
-            createThreadData(threadName, threadHandle);
-    }
-
-    private void createThreadData(String threadName, ThreadHandle threadHandle) {
         internalThreadManager.addThreadHandle(threadName, threadHandle);
     }
 }

@@ -1,6 +1,8 @@
-package com.internal.core.engine;
+package com.internal.core.kernel.threadmanager;
 
 import java.util.concurrent.ExecutorService;
+
+import com.internal.core.engine.HandlePackage;
 
 public class ThreadHandle extends HandlePackage {
 

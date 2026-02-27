@@ -4,8 +4,8 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.engine.ThreadHandle;
-import com.internal.core.kernel.threadmanager.InternalThreadManager.SyncStructConsumer;
+import com.internal.core.kernel.threadmanager.SyncStructConsumer;
+import com.internal.core.kernel.threadmanager.ThreadHandle;
 
 public class MergeBranch extends BranchPackage {
 
@@ -13,12 +13,10 @@ public class MergeBranch extends BranchPackage {
     private ThreadHandle threadHandle;
     private int mergeIndex;
 
-    // internal \\
+    // Internal \\
 
     @Override
     protected void get() {
-
-        // Internal
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.mergeIndex = ChunkData.MERGE_DATA.index;
     }

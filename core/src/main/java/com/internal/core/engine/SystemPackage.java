@@ -3,10 +3,11 @@ package com.internal.core.engine;
 import java.util.concurrent.Future;
 
 import com.internal.core.engine.settings.Settings;
-import com.internal.core.kernel.threadmanager.InternalThreadManager.AsyncStructConsumer;
-import com.internal.core.kernel.threadmanager.InternalThreadManager.AsyncStructConsumerMulti;
-import com.internal.core.kernel.threadmanager.InternalThreadManager.BiSyncAsyncConsumer;
-import com.internal.core.kernel.threadmanager.InternalThreadManager.SyncStructConsumer;
+import com.internal.core.kernel.threadmanager.AsyncStructConsumer;
+import com.internal.core.kernel.threadmanager.AsyncStructConsumerMulti;
+import com.internal.core.kernel.threadmanager.BiSyncAsyncConsumer;
+import com.internal.core.kernel.threadmanager.SyncStructConsumer;
+import com.internal.core.kernel.threadmanager.ThreadHandle;
 
 public abstract class SystemPackage extends EngineUtility {
 
@@ -184,9 +185,8 @@ public abstract class SystemPackage extends EngineUtility {
 
     protected <T extends AsyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
-            AsyncContainerPackage asyncStruct,
+            T asyncStruct,
             AsyncStructConsumer<T> consumer) {
-
         return internal.executeAsync(handle, asyncStruct, consumer);
     }
 
@@ -194,24 +194,21 @@ public abstract class SystemPackage extends EngineUtility {
             ThreadHandle handle,
             AsyncStructConsumerMulti consumer,
             AsyncContainerPackage... asyncStructs) {
-
         return internal.executeAsync(handle, consumer, asyncStructs);
     }
 
     protected <T extends SyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
-            SyncContainerPackage syncStruct,
+            T syncStruct,
             SyncStructConsumer<T> consumer) {
-
         return internal.executeAsync(handle, syncStruct, consumer);
     }
 
     protected <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
-            AsyncContainerPackage asyncStruct,
-            SyncContainerPackage syncStruct,
+            T asyncStruct,
+            S syncStruct,
             BiSyncAsyncConsumer<T, S> consumer) {
-
         return internal.executeAsync(handle, asyncStruct, syncStruct, consumer);
     }
 

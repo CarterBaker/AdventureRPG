@@ -16,8 +16,7 @@ public class JsonUtility extends UtilityPackage {
         try (FileReader reader = new FileReader(file)) {
             return JsonParser.parseReader(reader).getAsJsonObject();
         } catch (Exception e) {
-            throwException("Failed to load JSON file: " + file.getAbsolutePath(), e);
-            return null;
+            return throwException("Failed to load JSON file: " + file.getAbsolutePath(), e);
         }
     }
 
@@ -25,23 +24,42 @@ public class JsonUtility extends UtilityPackage {
 
     public static String validateString(JsonObject json, String key) {
         if (!json.has(key))
-            throwException("Missing required field: '" + key + "'");
+            return throwException("Missing required field: '" + key + "'");
         return json.get(key).getAsString();
+    }
+
+    public static int validateInt(JsonObject json, String key) {
+        if (!json.has(key))
+            return throwException("Missing required field: '" + key + "'");
+        return json.get(key).getAsInt();
+    }
+
+    public static boolean validateBoolean(JsonObject json, String key) {
+        if (!json.has(key))
+            return throwException("Missing required field: '" + key + "'");
+        return json.get(key).getAsBoolean();
+    }
+
+    public static float validateFloat(JsonObject json, String key) {
+        if (!json.has(key))
+            return throwException("Missing required field: '" + key + "'");
+        return json.get(key).getAsFloat();
     }
 
     public static JsonArray validateArray(JsonObject json, String key) {
         if (!json.has(key))
-            throwException("Missing required array field: '" + key + "'");
-        JsonArray array = json.getAsJsonArray(key);
-        if (array == null)
-            throwException("Field '" + key + "' is not a valid JSON array");
-        return array;
+            return throwException("Missing required array field: '" + key + "'");
+        try {
+            return json.getAsJsonArray(key);
+        } catch (ClassCastException e) {
+            return throwException("Field '" + key + "' is not a valid JSON array", e);
+        }
     }
 
     public static JsonArray validateArray(JsonObject json, String key, int requiredSize) {
         JsonArray array = validateArray(json, key);
         if (requiredSize > 0 && array.size() != requiredSize)
-            throwException("Array '" + key + "' must have exactly "
+            return throwException("Array '" + key + "' must have exactly "
                     + requiredSize + " elements, found " + array.size());
         return array;
     }
@@ -52,15 +70,15 @@ public class JsonUtility extends UtilityPackage {
         return json.has(key) ? json.get(key).getAsString() : defaultValue;
     }
 
+    public static int getInt(JsonObject json, String key, int defaultValue) {
+        return json.has(key) ? json.get(key).getAsInt() : defaultValue;
+    }
+
     public static boolean getBoolean(JsonObject json, String key, boolean defaultValue) {
         return json.has(key) ? json.get(key).getAsBoolean() : defaultValue;
     }
 
     public static float getFloat(JsonObject json, String key, float defaultValue) {
         return json.has(key) ? json.get(key).getAsFloat() : defaultValue;
-    }
-
-    public static int getInt(JsonObject json, String key, int defaultValue) {
-        return json.has(key) ? json.get(key).getAsInt() : defaultValue;
     }
 }
