@@ -1,6 +1,6 @@
 package com.internal.runtime.debug;
 
-import com.internal.bootstrap.menupipeline.menumanager.MenuManager;
+import com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.MainMenuBranch;
 import com.internal.core.engine.PipelinePackage;
 
 public class DebugPipeline extends PipelinePackage {
@@ -9,7 +9,7 @@ public class DebugPipeline extends PipelinePackage {
     public Sky sky;
 
     // Internal
-    private MenuManager menuManager;
+    private MainMenuBranch mainMenu;
 
     // Base \\
 
@@ -20,11 +20,11 @@ public class DebugPipeline extends PipelinePackage {
 
     @Override
     protected void get() {
-        this.menuManager = get(MenuManager.class);
+        this.mainMenu = get(MainMenuBranch.class);
     }
 
     @Override
     protected void awake() {
-        menuManager.openMenu("MainMenu");
+        mainMenu.openMenu();
     }
 }

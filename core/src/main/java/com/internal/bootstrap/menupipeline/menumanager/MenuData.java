@@ -5,14 +5,14 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuData extends DataPackage {
 
-    private String name;
-    private ObjectArrayList<MenuElementData> elements;
-    private boolean lockInput;
-    private boolean raycastInput;
+    String name;
+    ObjectArrayList<ElementData> elements;
+    boolean lockInput;
+    boolean raycastInput;
 
     public void constructor(
             String name,
-            ObjectArrayList<MenuElementData> elements,
+            ObjectArrayList<ElementData> elements,
             boolean lockInput,
             boolean raycastInput) {
         this.name = name;
@@ -25,7 +25,7 @@ public class MenuData extends DataPackage {
         return name;
     }
 
-    public ObjectArrayList<MenuElementData> getElements() {
+    public ObjectArrayList<ElementData> getElements() {
         return elements;
     }
 

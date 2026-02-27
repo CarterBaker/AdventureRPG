@@ -5,12 +5,12 @@ import com.internal.core.util.mathematics.vectors.Vector2;
 
 public class LayoutStruct extends StructPackage {
 
-    public final Vector2 anchor; // point on parent to measure from
-    public final Vector2 pivot; // point on element placed at anchor + offset
-    public final DimensionVector2 position; // offset from anchor
+    public final Vector2 anchor;
+    public final Vector2 pivot;
+    public final DimensionVector2 position;
     public final DimensionVector2 size;
-    public final DimensionVector2 minSize; // null = unconstrained
-    public final DimensionVector2 maxSize; // null = unconstrained
+    public final DimensionVector2 minSize; // null = no minimum
+    public final DimensionVector2 maxSize; // null = no maximum
 
     public LayoutStruct(
             Vector2 anchor,
@@ -25,5 +25,15 @@ public class LayoutStruct extends StructPackage {
         this.size = size;
         this.minSize = minSize;
         this.maxSize = maxSize;
+    }
+
+    public static LayoutStruct merge(LayoutStruct base, LayoutStruct override) {
+        return new LayoutStruct(
+                override.anchor != null ? override.anchor : base.anchor,
+                override.pivot != null ? override.pivot : base.pivot,
+                override.position != null ? override.position : base.position,
+                override.size != null ? override.size : base.size,
+                override.minSize != null ? override.minSize : base.minSize,
+                override.maxSize != null ? override.maxSize : base.maxSize);
     }
 }

@@ -1,0 +1,15 @@
+{
+    "elements": [
+        {
+            "id":     "quit",
+            "type":   "button",
+            "sprite": "menus/Title",
+            "anchor": "CENTER",
+            "pivot":  "CENTER",
+            "on_click": {
+                "class":  "com.internal.bootstrap.menupipeline.buttoneventsmanager.util.GenericButtonBranch",
+                "method": "quitGame"
+            }
+        }
+    ]
+}

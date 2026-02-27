@@ -2,92 +2,129 @@ package com.internal.bootstrap.menupipeline.menumanager;
 
 import java.io.File;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.menupipeline.element.DimensionVector2;
-import com.internal.bootstrap.menupipeline.element.ElementOrigin;
-import com.internal.bootstrap.menupipeline.element.ElementType;
+import com.internal.bootstrap.menupipeline.element.ElementOverrideStruct;
+import com.internal.bootstrap.menupipeline.element.ElementPlacementHandle;
 import com.internal.bootstrap.menupipeline.element.LayoutStruct;
-import com.internal.bootstrap.menupipeline.element.MenuElementHandle;
+import com.internal.bootstrap.menupipeline.element.ElementHandle;
+import com.internal.bootstrap.menupipeline.element.ElementType;
+import com.internal.bootstrap.menupipeline.element.MenuAwareAction;
+import com.internal.bootstrap.menupipeline.elementsystem.ElementSystem;
 import com.internal.bootstrap.menupipeline.menu.MenuHandle;
+import com.internal.bootstrap.menupipeline.menu.MenuInstance;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
 import com.internal.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import com.internal.core.engine.SystemPackage;
+import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.JsonUtility;
-import com.internal.core.util.mathematics.vectors.Vector2;
-
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 class InternalBuildSystem extends SystemPackage {
 
-    // Internal
+    private static final String PARENT_ARG = "$parent";
+
     private SpriteManager spriteManager;
+    private ElementSystem elementSystem;
 
-    // Global element registry: "menuName/elementId" → handle
-    private Object2ObjectOpenHashMap<String, MenuElementHandle> elementRegistry;
-
-    // Filled during assembly, flushed after all menus are processed
-    private List<Runnable> deferredRefs;
+    private File root;
+    private ObjectOpenHashSet<String> registeredFiles;
+    private ObjectArrayList<Runnable> deferredRefs;
 
     // Base \\
 
     @Override
     protected void get() {
         this.spriteManager = get(SpriteManager.class);
+        this.elementSystem = get(ElementSystem.class);
     }
 
-    // Lifecycle \\
-
-    void init() {
-        this.elementRegistry = new Object2ObjectOpenHashMap<>();
-        this.deferredRefs = new ArrayList<>();
+    void init(File root) {
+        this.root = root;
+        this.registeredFiles = new ObjectOpenHashSet<>();
+        this.deferredRefs = new ObjectArrayList<>();
     }
 
-    // Entry Points \\
+    // Entry Point \\
 
-    MenuHandle parseAndAssemble(File file, String menuName) {
-        MenuData menuData = parseMenu(file, menuName);
-        return assembleMenu(menuData);
-    }
-
-    void resolveAllDeferredRefs() {
-        for (Runnable resolution : deferredRefs)
-            resolution.run();
-        deferredRefs.clear();
-    }
-
-    // Parse Phase \\
-
-    private MenuData parseMenu(File file, String menuName) {
+    ObjectArrayList<MenuHandle> processFile(File file, String filePath) {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
 
-        boolean lockInput = json.has("lock_input") && json.get("lock_input").getAsBoolean();
-        boolean raycastInput = json.has("raycast_input") && json.get("raycast_input").getAsBoolean();
+        if (!registeredFiles.contains(filePath)) {
+            if (elementSystem.isFileLoading(filePath))
+                throwException("Circular file dependency at: '" + filePath + "'");
+            elementSystem.beginFileLoad(filePath);
+            registeredFiles.add(filePath);
+            try {
+                registerTopLevelMasters(filePath, parseElements(json));
+            } finally {
+                elementSystem.endFileLoad(filePath);
+            }
+        }
 
-        ObjectArrayList<MenuElementData> elements = parseElements(json);
+        String fileName = filePath.contains("/")
+                ? filePath.substring(filePath.lastIndexOf('/') + 1)
+                : filePath;
 
-        MenuData menuData = create(MenuData.class);
-        menuData.constructor(menuName, elements, lockInput, raycastInput);
-        return menuData;
+        ObjectArrayList<MenuHandle> handles = new ObjectArrayList<>();
+        for (MenuData decl : parseMenus(json)) {
+            ObjectArrayList<ElementPlacementHandle> placements = new ObjectArrayList<>();
+            for (ElementData data : decl.elements)
+                placements.add(buildPlacement(filePath, data));
+            MenuHandle handle = create(MenuHandle.class);
+            handle.constructor(fileName + "/" + decl.name, placements,
+                    decl.lockInput, decl.raycastInput);
+            handles.add(handle);
+        }
+
+        return handles;
     }
 
-    private ObjectArrayList<MenuElementData> parseElements(JsonObject json) {
+    void resolveAllDeferredRefs() {
+        for (Runnable r : deferredRefs)
+            r.run();
+        deferredRefs.clear();
+    }
 
-        ObjectArrayList<MenuElementData> elements = new ObjectArrayList<>();
+    // Parsing — Menus \\
+
+    private ObjectArrayList<MenuData> parseMenus(JsonObject json) {
+
+        ObjectArrayList<MenuData> menus = new ObjectArrayList<>();
+
+        if (!json.has("menus"))
+            return menus;
+
+        JsonArray array = json.getAsJsonArray("menus");
+        for (int i = 0; i < array.size(); i++) {
+            JsonObject menuJson = array.get(i).getAsJsonObject();
+            String id = JsonUtility.validateString(menuJson, "id");
+            boolean lockInput = JsonUtility.getBoolean(menuJson, "lock_input", false);
+            boolean raycastInput = JsonUtility.getBoolean(menuJson, "raycast_input", false);
+            ObjectArrayList<ElementData> elements = parseElements(menuJson);
+            MenuData data = create(MenuData.class);
+            data.constructor(id, elements, raycastInput, lockInput);
+            menus.add(data);
+        }
+
+        return menus;
+    }
+
+    // Parsing — Elements \\
+
+    private ObjectArrayList<ElementData> parseElements(JsonObject json) {
+
+        ObjectArrayList<ElementData> elements = new ObjectArrayList<>();
 
         if (!json.has("elements"))
             return elements;
 
         JsonArray array = json.getAsJsonArray("elements");
-
         for (int i = 0; i < array.size(); i++) {
-            MenuElementData element = parseElement(array.get(i).getAsJsonObject());
+            ElementData element = parseElement(array.get(i).getAsJsonObject());
             if (element != null)
                 elements.add(element);
         }
@@ -95,210 +132,293 @@ class InternalBuildSystem extends SystemPackage {
         return elements;
     }
 
-    private MenuElementData parseElement(JsonObject json) {
+    private ElementData parseElement(JsonObject json) {
 
         String id = JsonUtility.validateString(json, "id");
 
-        // Reference element
-        if (json.has("ref")) {
-            MenuElementData refData = create(MenuElementData.class);
-            refData.constructorRef(id, json.get("ref").getAsString());
-            return refData;
-        }
+        if (json.has("ref"))
+            return parseRefElement(id, json);
+        if (json.has("use"))
+            return parseUseElement(id, json);
 
-        String type = JsonUtility.validateString(json, "type");
-        ElementType elementType = parseElementType(type, id);
-        String spritePath = json.has("sprite") ? json.get("sprite").getAsString() : null;
-        String text = json.has("text") ? json.get("text").getAsString() : null;
-        LayoutStruct layout = parseLayout(json);
-
-        String actionClass = null;
-        String actionMethod = null;
-        String actionArg = null;
-
-        if (json.has("on_click")) {
-            JsonObject clickJson = json.getAsJsonObject("on_click");
-            actionClass = JsonUtility.validateString(clickJson, "class");
-            actionMethod = JsonUtility.validateString(clickJson, "method");
-            actionArg = clickJson.has("arg") ? clickJson.get("arg").getAsString() : null;
-        }
-
-        // Recursive — containers define their children inline
-        ObjectArrayList<MenuElementData> children = parseElements(json);
-
-        MenuElementData elementData = create(MenuElementData.class);
-        elementData.constructor(id, elementType, spritePath, text, layout,
-                actionClass, actionMethod, actionArg, children);
-        return elementData;
+        return parseInlineElement(id, json);
     }
 
-    private ElementType parseElementType(String type, String id) {
-        return switch (type.toLowerCase()) {
-            case "sprite" -> ElementType.SPRITE;
-            case "texture" -> ElementType.TEXTURE;
-            case "button" -> ElementType.BUTTON;
-            case "label" -> ElementType.LABEL;
-            case "container" -> ElementType.CONTAINER;
-            default -> {
-                throwException("Unknown element type '" + type + "' on element '" + id + "'");
-                yield null;
-            }
-        };
+    private ElementData parseRefElement(String id, JsonObject json) {
+        LayoutStruct layout = FileParserUtility.parseLayoutOverride(json);
+        ElementData data = create(ElementData.class);
+        data.constructorRef(id, json.get("ref").getAsString(), layout);
+        return data;
     }
 
-    // Layout \\
+    private ElementData parseUseElement(String id, JsonObject json) {
 
-    private LayoutStruct parseLayout(JsonObject json) {
+        String usePath = json.get("use").getAsString();
+        String spritePath = JsonUtility.getString(json, "sprite", null);
+        String text = JsonUtility.getString(json, "text", null);
+        LayoutStruct layout = FileParserUtility.parseLayoutOverride(json);
+        String[] onClick = FileParserUtility.parseOnClick(json);
 
-        Vector2 anchor = parseOriginField(json, "anchor");
-        Vector2 pivot = parseOriginField(json, "pivot");
-        DimensionVector2 position = DimensionVector2.parse(json, "position", "0%", "0%");
-        DimensionVector2 size = DimensionVector2.parse(json, "size", "10%", "10%");
-        DimensionVector2 minSize = json.has("min_size") ? DimensionVector2.parse(json, "min_size", "0%", "0%") : null;
-        DimensionVector2 maxSize = json.has("max_size") ? DimensionVector2.parse(json, "max_size", "100%", "100%")
+        ObjectArrayList<ElementData> children = parseElements(json);
+
+        ElementData data = create(ElementData.class);
+        data.constructorUse(id, usePath, spritePath, text, layout,
+                onClick != null ? onClick[0] : null,
+                onClick != null ? onClick[1] : null,
+                onClick != null ? onClick[2] : null,
+                children);
+        return data;
+    }
+
+    private ElementData parseInlineElement(String id, JsonObject json) {
+
+        ElementType elementType = FileParserUtility.parseElementType(
+                JsonUtility.validateString(json, "type"), id);
+        String spritePath = JsonUtility.getString(json, "sprite", null);
+        String text = JsonUtility.getString(json, "text", null);
+        LayoutStruct layout = FileParserUtility.parseLayout(json);
+        String[] onClick = FileParserUtility.parseOnClick(json);
+
+        ObjectArrayList<ElementData> children = parseElements(json);
+
+        ElementData data = create(ElementData.class);
+        data.constructor(id, elementType, spritePath, text, layout,
+                onClick != null ? onClick[0] : null,
+                onClick != null ? onClick[1] : null,
+                onClick != null ? onClick[2] : null,
+                children);
+        return data;
+    }
+
+    // Master Registration \\
+
+    private void registerTopLevelMasters(String filePath, ObjectArrayList<ElementData> elements) {
+        for (ElementData data : elements)
+            if (!data.isRef() && !data.isUse())
+                elementSystem.registerMaster(filePath + "/" + data.getId(),
+                        buildMaster(filePath, data));
+    }
+
+    private ElementHandle buildMaster(String filePath, ElementData data) {
+        Object action = resolveClickActionRaw(data);
+        ElementHandle master = create(ElementHandle.class);
+        master.constructor(
+                data.getId(), data.getType(),
+                resolveSpriteHandle(data), data.getText(), data.getLayout(),
+                action instanceof Runnable r ? r : null,
+                action instanceof MenuAwareAction m ? m : null,
+                buildChildPlacements(filePath, data.getChildren()));
+        return master;
+    }
+
+    // Placement — unified path for top-level and children \\
+
+    private ElementPlacementHandle buildPlacement(String filePath, ElementData data) {
+        if (data.isRef())
+            return buildRefPlacement(filePath, data);
+        if (data.isUse())
+            return buildUsePlacement(filePath, data);
+        return buildInlinePlacement(filePath, data);
+    }
+
+    private ObjectArrayList<ElementPlacementHandle> buildChildPlacements(
+            String filePath, ObjectArrayList<ElementData> children) {
+        ObjectArrayList<ElementPlacementHandle> placements = new ObjectArrayList<>(children.size());
+        for (ElementData child : children)
+            placements.add(buildPlacement(filePath, child));
+        return placements;
+    }
+
+    private ElementPlacementHandle buildInlinePlacement(String filePath, ElementData data) {
+        String key = filePath + "/" + data.getId();
+        ElementHandle master = elementSystem.getMaster(key);
+        if (master == null) {
+            master = buildMaster(filePath, data);
+            elementSystem.registerMaster(key, master);
+        }
+        ElementPlacementHandle placement = create(ElementPlacementHandle.class);
+        placement.constructor(master, null);
+        return placement;
+    }
+
+    private ElementPlacementHandle buildUsePlacement(String filePath, ElementData data) {
+
+        ElementHandle template = resolveTemplate(data.getUsePath(), data.getId());
+
+        ElementHandle master;
+        if (!data.getChildren().isEmpty()) {
+            master = create(ElementHandle.class);
+            master.constructor(data.getId(), template.getType(),
+                    template.getSpriteHandle(), template.getText(), template.getLayout(),
+                    template.getClickAction(), template.getMenuAwareAction(),
+                    buildChildPlacements(filePath, data.getChildren()));
+            elementSystem.registerMaster(filePath + "/" + data.getId(), master);
+        } else {
+            master = template;
+        }
+
+        LayoutStruct layoutOverride = data.getLayout() != null
+                ? LayoutStruct.merge(template.getLayout(), data.getLayout())
+                : null;
+        SpriteHandle spriteOverride = data.getSpritePath() != null
+                ? resolveSpriteHandle(data)
                 : null;
 
-        return new LayoutStruct(anchor, pivot, position, size, minSize, maxSize);
-    }
-
-    private Vector2 parseOriginField(JsonObject json, String key) {
-
-        if (!json.has(key))
-            return new Vector2(0f, 0f);
-
-        JsonElement el = json.get(key);
-
-        if (el.isJsonPrimitive()) {
-            ElementOrigin o = ElementOrigin.fromString(el.getAsString());
-            return new Vector2(o.x, o.y);
+        Runnable clickOverride = null;
+        MenuAwareAction maaOverride = null;
+        if (data.getActionClass() != null) {
+            Object action = resolveClickActionRaw(data);
+            clickOverride = action instanceof Runnable r ? r : null;
+            maaOverride = action instanceof MenuAwareAction m ? m : null;
         }
 
-        if (el.isJsonObject()) {
-            JsonObject obj = el.getAsJsonObject();
-            float x = obj.has("x") ? obj.get("x").getAsFloat() : 0f;
-            float y = obj.has("y") ? obj.get("y").getAsFloat() : 0f;
-            return new Vector2(x, y);
-        }
+        boolean hasOverride = layoutOverride != null || spriteOverride != null
+                || data.getText() != null || clickOverride != null || maaOverride != null;
 
-        return new Vector2(0f, 0f);
+        ElementPlacementHandle placement = create(ElementPlacementHandle.class);
+        placement.constructor(master, hasOverride
+                ? new ElementOverrideStruct(spriteOverride, data.getText(),
+                        clickOverride, maaOverride, layoutOverride)
+                : null);
+        return placement;
     }
 
-    // Assembly Phase \\
+    private ElementPlacementHandle buildRefPlacement(String filePath, ElementData data) {
 
-    private MenuHandle assembleMenu(MenuData menuData) {
+        ElementOverrideStruct override = data.getLayout() != null
+                ? new ElementOverrideStruct(null, null, null, null, data.getLayout())
+                : null;
 
-        ObjectArrayList<MenuElementHandle> elements = new ObjectArrayList<>();
-        assembleElementList(menuData.getName(), menuData.getElements(), elements);
-
-        MenuHandle menuHandle = create(MenuHandle.class);
-        menuHandle.constructor(menuData.getName(), elements, menuData.isLockInput(), menuData.isRaycastInput());
-        return menuHandle;
-    }
-
-    private void assembleElementList(
-            String menuName,
-            ObjectArrayList<MenuElementData> dataList,
-            ObjectArrayList<MenuElementHandle> targetList) {
-
-        for (MenuElementData data : dataList) {
-            if (data.isRef())
-                assembleRef(data.getId(), data.getRefPath(), targetList);
-            else
-                targetList.add(assembleRealElement(menuName, data));
-        }
-    }
-
-    private MenuElementHandle assembleRealElement(String menuName, MenuElementData data) {
-
-        SpriteHandle spriteHandle = resolveSpriteHandle(data);
-        Runnable clickAction = resolveClickAction(data);
-
-        ObjectArrayList<MenuElementHandle> children = new ObjectArrayList<>();
-        assembleElementList(menuName, data.getChildren(), children);
-
-        MenuElementHandle handle = create(MenuElementHandle.class);
-        handle.constructor(
-                data.getId(),
-                data.getType(),
-                spriteHandle,
-                data.getText(),
-                data.getLayout(),
-                clickAction,
-                children);
-
-        elementRegistry.put(menuName + "/" + data.getId(), handle);
-
-        return handle;
-    }
-
-    private void assembleRef(String localId, String refPath, ObjectArrayList<MenuElementHandle> targetList) {
-
-        MenuElementHandle resolved = elementRegistry.get(refPath);
+        ElementHandle resolved = resolveRefKey(data.getRefPath());
 
         if (resolved != null) {
-            targetList.add(cloneHandle(resolved));
-            return;
+            ElementPlacementHandle placement = create(ElementPlacementHandle.class);
+            placement.constructor(resolved, override);
+            return placement;
         }
 
-        // Reserve the slot — filled after all menus are assembled
-        int slot = targetList.size();
-        targetList.add(null);
+        ElementPlacementHandle placeholder = create(ElementPlacementHandle.class);
+        placeholder.constructor(null, override);
 
+        final String finalRefKey = data.getRefPath();
+        final String finalId = data.getId();
         deferredRefs.add(() -> {
-            MenuElementHandle target = elementRegistry.get(refPath);
+            ElementHandle target = resolveRefKey(finalRefKey);
             if (target == null)
-                throwException("Unresolved element reference: '" + refPath + "' (id: '" + localId + "')");
-            targetList.set(slot, cloneHandle(target));
+                throwException("Unresolved ref: '" + finalRefKey + "' (id: '" + finalId + "')");
+            placeholder.setMaster(target);
         });
+
+        return placeholder;
     }
 
-    // Clone — each instance gets its own sprite clone (own material/transform
-    // state)
-    private MenuElementHandle cloneHandle(MenuElementHandle source) {
+    // Ref Key Resolution \\
 
-        SpriteHandle clonedSprite = source.getSpriteHandle() != null
-                ? spriteManager.cloneSprite(source.getSpriteHandle().getName())
-                : null;
+    private ElementHandle resolveRefKey(String refKey) {
+        ElementHandle resolved = elementSystem.getMaster(refKey);
+        if (resolved != null)
+            return resolved;
+        String suffix = "/" + refKey;
+        for (String key : elementSystem.getMasterKeys())
+            if (key.endsWith(suffix))
+                return elementSystem.getMaster(key);
+        return null;
+    }
 
-        MenuElementHandle clone = create(MenuElementHandle.class);
-        clone.constructor(
-                source.getId(),
-                source.getType(),
-                clonedSprite,
-                source.getText(),
-                source.getLayout(),
-                source.getClickAction(),
-                source.getChildren());
-        return clone;
+    // Template Resolution \\
+
+    private ElementHandle resolveTemplate(String usePath, String localId) {
+
+        String candidateKey = usePath + "/" + localId;
+        if (elementSystem.hasMaster(candidateKey))
+            return elementSystem.getMaster(candidateKey);
+
+        File fileByPath = tryResolveFile(usePath);
+        if (fileByPath != null) {
+            processFile(fileByPath, usePath);
+            ElementHandle master = elementSystem.getMaster(candidateKey);
+            if (master == null)
+                throwException("Element '" + localId + "' not found in file '" + usePath + "'");
+            return master;
+        }
+
+        if (elementSystem.hasMaster(usePath))
+            return elementSystem.getMaster(usePath);
+
+        int lastSlash = usePath.lastIndexOf('/');
+        if (lastSlash < 0)
+            throwException("Cannot resolve use path '" + usePath
+                    + "' — no file found and path has no slash.");
+
+        String filePath = usePath.substring(0, lastSlash);
+        processFile(resolveFile(filePath), filePath);
+
+        ElementHandle master = elementSystem.getMaster(usePath);
+        if (master == null)
+            throwException("Element '" + usePath + "' not found after loading '" + filePath + "'");
+        return master;
+    }
+
+    private File tryResolveFile(String filePath) {
+        for (String ext : EngineSetting.JSON_FILE_EXTENSIONS) {
+            File f = new File(root, filePath + (ext.startsWith(".") ? "" : ".") + ext);
+            if (f.exists())
+                return f;
+        }
+        return null;
+    }
+
+    private File resolveFile(String filePath) {
+        File f = tryResolveFile(filePath);
+        if (f == null)
+            throwException("File not found: '" + filePath + "' (root: " + root.getAbsolutePath() + ")");
+        return f;
     }
 
     // Sprite Resolution \\
 
-    private SpriteHandle resolveSpriteHandle(MenuElementData data) {
-
+    private SpriteHandle resolveSpriteHandle(ElementData data) {
         if (data.getSpritePath() == null)
             return null;
-
         if (!spriteManager.hasSprite(data.getSpritePath()))
             throwException("Sprite not found for element '" + data.getId()
                     + "': '" + data.getSpritePath() + "'");
-
-        return spriteManager.cloneSprite(data.getSpritePath());
+        return spriteManager.getSprite(data.getSpritePath());
     }
 
     // Click Action Resolution \\
 
-    private Runnable resolveClickAction(MenuElementData data) {
+    private Object resolveClickActionRaw(ElementData data) {
 
         if (data.getActionClass() == null)
             return null;
 
         Object target = resolveTarget(data.getActionClass(), data.getActionMethod());
-        Method method = resolveMethod(target, data.getActionClass(), data.getActionMethod(), data.getActionArg());
+
+        if (PARENT_ARG.equals(data.getActionArg())) {
+            Method method;
+            try {
+                method = target.getClass().getMethod(data.getActionMethod(), MenuInstance.class);
+            } catch (NoSuchMethodException e) {
+                throwException("$parent method '" + data.getActionMethod()
+                        + "' must accept MenuInstance on '" + data.getActionClass() + "'", e);
+                return null;
+            }
+            return (MenuAwareAction) parent -> {
+                try {
+                    method.invoke(target, parent);
+                } catch (Exception e) {
+                    throwException("Button action failed: " + data.getActionMethod(), e);
+                }
+            };
+        }
+
+        Method method = resolveMethod(target, data.getActionClass(),
+                data.getActionMethod(), data.getActionArg());
 
         if (data.getActionArg() != null) {
             String capturedArg = data.getActionArg();
-            return () -> {
+            return (Runnable) () -> {
                 try {
                     method.invoke(target, capturedArg);
                 } catch (Exception e) {
@@ -307,7 +427,7 @@ class InternalBuildSystem extends SystemPackage {
             };
         }
 
-        return () -> {
+        return (Runnable) () -> {
             try {
                 method.invoke(target);
             } catch (Exception e) {
@@ -321,10 +441,12 @@ class InternalBuildSystem extends SystemPackage {
             Class<?> clazz = Class.forName(className);
             Object target = internal.getUnchecked(clazz);
             if (target == null)
-                throwException("on_click class not registered: '" + className + "' (method: '" + methodName + "')");
+                throwException("on_click class not registered: '" + className
+                        + "' (method: '" + methodName + "')");
             return target;
         } catch (ClassNotFoundException e) {
-            throwException("on_click class not found: '" + className + "' (method: '" + methodName + "')", e);
+            throwException("on_click class not found: '" + className
+                    + "' (method: '" + methodName + "')", e);
             return null;
         }
     }
@@ -335,7 +457,8 @@ class InternalBuildSystem extends SystemPackage {
                     ? target.getClass().getMethod(methodName, String.class)
                     : target.getClass().getMethod(methodName);
         } catch (NoSuchMethodException e) {
-            throwException("on_click method not found: '" + methodName + "' on '" + className + "'", e);
+            throwException("on_click method not found: '" + methodName
+                    + "' on '" + className + "'", e);
             return null;
         }
     }

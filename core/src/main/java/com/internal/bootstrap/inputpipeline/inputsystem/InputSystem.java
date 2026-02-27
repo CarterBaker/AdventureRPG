@@ -24,11 +24,16 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     private boolean SHIFT = false;
     private boolean SPACE = false;
 
-    // Mouse
+    // Mouse — game, blocked when locked
     private boolean leftClick = false;
     private boolean rightClick = false;
 
-    // Internal \\
+    // Mouse — raw, always tracked, used by UI raycasting
+    private boolean rawLeftClick = false;
+    private float mouseX = 0f;
+    private float mouseY = 0f;
+
+    // Base \\
 
     @Override
     protected void create() {
@@ -111,6 +116,8 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        if (button == Input.Buttons.LEFT)
+            rawLeftClick = true;
         if (locked)
             return false;
         if (button == Input.Buttons.LEFT)
@@ -122,6 +129,8 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        if (button == Input.Buttons.LEFT)
+            rawLeftClick = false;
         if (locked)
             return false;
         if (button == Input.Buttons.LEFT)
@@ -129,6 +138,13 @@ public class InputSystem extends SystemPackage implements InputProcessor {
         if (button == Input.Buttons.RIGHT)
             rightClick = false;
         return true;
+    }
+
+    @Override
+    public boolean mouseMoved(int screenX, int screenY) {
+        this.mouseX = screenX;
+        this.mouseY = screenY;
+        return false;
     }
 
     @Override
@@ -142,11 +158,6 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     }
 
     @Override
-    public boolean mouseMoved(int screenX, int screenY) {
-        return false;
-    }
-
-    @Override
     public boolean scrolled(float amountX, float amountY) {
         return false;
     }
@@ -156,7 +167,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
         return false;
     }
 
-    // Input locking \\
+    // Input Locking \\
 
     public void lockInput(boolean input) {
         this.locked = input;
@@ -183,5 +194,17 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     public boolean isRightClick() {
         return rightClick;
+    }
+
+    public boolean isRawLeftClick() {
+        return rawLeftClick;
+    }
+
+    public float getMouseX() {
+        return mouseX;
+    }
+
+    public float getMouseY() {
+        return mouseY;
     }
 }

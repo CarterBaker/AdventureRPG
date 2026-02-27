@@ -1,31 +1,25 @@
 package com.internal.bootstrap.menupipeline.element;
 
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
-import com.internal.core.engine.HandlePackage;
+import com.internal.core.engine.InstancePackage;
 import com.internal.core.util.mathematics.matrices.Matrix4;
-
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class MenuElementHandle extends HandlePackage {
+public class ElementInstance extends InstancePackage {
 
-    // Identity
-    private String id;
-    private ElementType type;
+    // Source handle — pure immutable data, never mutated
+    private ElementHandle handle;
 
-    // Visuals
-    private SpriteHandle spriteHandle; // null if not visual
-    private String text; // null if not text
-
-    // Layout
-    private LayoutStruct layout;
-
-    // Interaction
-    private Runnable clickAction; // null if not interactive
+    // Per-instance overrides — set at spawn time, null means use handle's value
+    private SpriteHandle spriteHandle;
+    private String textOverride;
+    private Runnable clickActionOverride;
+    private LayoutStruct layoutOverride;
 
     // Hierarchy
-    private ObjectArrayList<MenuElementHandle> children;
+    private ObjectArrayList<ElementInstance> children;
 
-    // Computed each frame — updated before render
+    // Computed each frame
     private final Matrix4 transform = new Matrix4();
     private float computedLeft;
     private float computedTop;
@@ -33,27 +27,26 @@ public class MenuElementHandle extends HandlePackage {
     private float computedH;
 
     public void constructor(
-            String id,
-            ElementType type,
+            ElementHandle handle,
             SpriteHandle spriteHandle,
-            String text,
-            LayoutStruct layout,
-            Runnable clickAction,
-            ObjectArrayList<MenuElementHandle> children) {
-        this.id = id;
-        this.type = type;
+            String textOverride,
+            Runnable clickActionOverride,
+            LayoutStruct layoutOverride,
+            ObjectArrayList<ElementInstance> children) {
+        this.handle = handle;
         this.spriteHandle = spriteHandle;
-        this.text = text;
-        this.layout = layout;
-        this.clickAction = clickAction;
+        this.textOverride = textOverride;
+        this.clickActionOverride = clickActionOverride;
+        this.layoutOverride = layoutOverride;
         this.children = children;
     }
 
     // Layout \\
 
-    // parentLeft/Top: ortho-space top-left of parent
-    // parentW/H: parent pixel dimensions
+    // Reads layout directly — override wins if present, no handle allocation needed
     public void computeTransform(float parentLeft, float parentTop, float parentW, float parentH) {
+
+        LayoutStruct layout = layoutOverride != null ? layoutOverride : handle.getLayout();
 
         float posX = layout.position.x.resolve(parentW);
         float posY = layout.position.y.resolve(parentH);
@@ -71,18 +64,11 @@ public class MenuElementHandle extends HandlePackage {
             h = Math.min(h, layout.maxSize.y.resolve(parentH));
         }
 
-        // y-up: anchor.y=1.0 → top of parent, anchor.y=0.0 → bottom
         float anchorX = parentLeft + layout.anchor.x * parentW;
         float anchorY = parentTop + layout.anchor.y * parentH;
 
-        // position offset: positive y = up
-        float pointX = anchorX + posX;
-        float pointY = anchorY + posY;
-
-        // pivot.y=1.0 → top of element sits at point, pivot.y=0.0 → bottom sits at
-        // point
-        float tx = pointX - layout.pivot.x * w;
-        float ty = pointY - layout.pivot.y * h;
+        float tx = anchorX + posX - layout.pivot.x * w;
+        float ty = anchorY + posY - layout.pivot.y * h;
 
         this.computedLeft = tx;
         this.computedTop = ty;
@@ -99,18 +85,17 @@ public class MenuElementHandle extends HandlePackage {
     // Interaction \\
 
     public void execute() {
-        if (clickAction != null)
-            clickAction.run();
+        Runnable action = clickActionOverride != null
+                ? clickActionOverride
+                : handle.getClickAction();
+        if (action != null)
+            action.run();
     }
 
     // Accessible \\
 
-    public String getId() {
-        return id;
-    }
-
-    public ElementType getType() {
-        return type;
+    public ElementHandle getHandle() {
+        return handle;
     }
 
     public SpriteHandle getSpriteHandle() {
@@ -118,23 +103,15 @@ public class MenuElementHandle extends HandlePackage {
     }
 
     public String getText() {
-        return text;
+        return textOverride != null ? textOverride : handle.getText();
     }
 
-    public LayoutStruct getLayout() {
-        return layout;
-    }
-
-    public Runnable getClickAction() {
-        return clickAction;
+    public ObjectArrayList<ElementInstance> getChildren() {
+        return children;
     }
 
     public Matrix4 getTransform() {
         return transform;
-    }
-
-    public ObjectArrayList<MenuElementHandle> getChildren() {
-        return children;
     }
 
     public float getComputedLeft() {
@@ -155,14 +132,6 @@ public class MenuElementHandle extends HandlePackage {
 
     public boolean hasSprite() {
         return spriteHandle != null;
-    }
-
-    public boolean hasText() {
-        return text != null;
-    }
-
-    public boolean hasClickAction() {
-        return clickAction != null;
     }
 
     public boolean hasChildren() {

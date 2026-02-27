@@ -14,7 +14,6 @@ import com.internal.core.util.FileUtility;
 
 class InternalLoadManager extends ManagerPackage {
 
-    // Internal
     private File root;
     private MenuManager menuManager;
     private InternalBuildSystem internalBuildSystem;
@@ -41,23 +40,19 @@ class InternalLoadManager extends ManagerPackage {
 
     void loadMenuData() {
 
-        List<File> files = collectMenuFiles();
+        List<File> files = collectFiles();
+        internalBuildSystem.init(root);
 
-        internalBuildSystem.init();
-
-        // Pass 1: parse and assemble all menus — real elements registered, forward refs
-        // deferred
         for (File file : files)
-            processMenuFile(file);
+            processFile(file);
 
-        // Pass 2: resolve all deferred cross-menu element references
         internalBuildSystem.resolveAllDeferredRefs();
     }
 
-    private List<File> collectMenuFiles() {
+    private List<File> collectFiles() {
 
         FileUtility.verifyDirectory(root,
-                "Menu JSON directory not found: " + root.getAbsolutePath());
+                "Menu/element JSON directory not found: " + root.getAbsolutePath());
 
         try (var stream = Files.walk(root.toPath())) {
             return stream
@@ -67,21 +62,21 @@ class InternalLoadManager extends ManagerPackage {
                             .contains(FileUtility.getExtension(f)))
                     .collect(Collectors.toList());
         } catch (IOException e) {
-            throwException("Failed to walk menu directory: " + root.getAbsolutePath(), e);
+            throwException("Failed to walk directory: " + root.getAbsolutePath(), e);
             return null;
         }
     }
 
-    private void processMenuFile(File file) {
+    private void processFile(File file) {
 
-        String menuName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+        String filePath = FileUtility.getPathWithFileNameWithoutExtension(root, file);
 
         try {
-            MenuHandle menuHandle = internalBuildSystem.parseAndAssemble(file, menuName);
-            if (menuHandle != null)
-                menuManager.addMenu(menuName, menuHandle);
+            // One file can produce multiple MenuHandles — one per declared menu
+            for (MenuHandle handle : internalBuildSystem.processFile(file, filePath))
+                menuManager.addMenu(handle.getName(), handle);
         } catch (RuntimeException e) {
-            throwException("Failed to build menu: " + file.getAbsolutePath(), e);
+            throwException("Failed to process file: " + file.getAbsolutePath(), e);
         }
     }
 }

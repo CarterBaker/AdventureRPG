@@ -1,6 +1,7 @@
 package com.internal.bootstrap.menupipeline;
 
 import com.internal.bootstrap.menupipeline.buttoneventsmanager.ButtonEventsManager;
+import com.internal.bootstrap.menupipeline.elementsystem.ElementSystem;
 import com.internal.bootstrap.menupipeline.menumanager.MenuManager;
 import com.internal.core.engine.PipelinePackage;
 
@@ -13,6 +14,7 @@ public class MenuPipeline extends PipelinePackage {
 
         // Menu Pipeline
         create(ButtonEventsManager.class);
+        create(ElementSystem.class);
         create(MenuManager.class);
     }
 }

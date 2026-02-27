@@ -3,13 +3,13 @@ package com.internal.bootstrap.menupipeline.menumanager;
 import com.internal.bootstrap.menupipeline.element.ElementType;
 import com.internal.bootstrap.menupipeline.element.LayoutStruct;
 import com.internal.core.engine.DataPackage;
-
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class MenuElementData extends DataPackage {
+public class ElementData extends DataPackage {
 
-    // Set when this is a reference — all other fields null
+    // Discriminators
     private String refPath;
+    private String usePath;
 
     // Identity
     private String id;
@@ -28,19 +28,14 @@ public class MenuElementData extends DataPackage {
     private String actionArg;
 
     // Hierarchy
-    private ObjectArrayList<MenuElementData> children;
+    private ObjectArrayList<ElementData> children;
 
-    // Real element
+    // Constructors \\
+
     public void constructor(
-            String id,
-            ElementType type,
-            String spritePath,
-            String text,
-            LayoutStruct layout,
-            String actionClass,
-            String actionMethod,
-            String actionArg,
-            ObjectArrayList<MenuElementData> children) {
+            String id, ElementType type, String spritePath, String text,
+            LayoutStruct layout, String actionClass, String actionMethod,
+            String actionArg, ObjectArrayList<ElementData> children) {
         this.id = id;
         this.type = type;
         this.spritePath = spritePath;
@@ -51,18 +46,44 @@ public class MenuElementData extends DataPackage {
         this.actionArg = actionArg;
         this.children = children;
         this.refPath = null;
+        this.usePath = null;
     }
 
-    // Reference element
-    public void constructorRef(String id, String refPath) {
+    public void constructorRef(String id, String refPath, LayoutStruct layout) {
         this.id = id;
         this.refPath = refPath;
+        this.layout = layout;
         this.children = new ObjectArrayList<>();
+        this.usePath = null;
     }
+
+    public void constructorUse(
+            String id, String usePath, String spritePath, String text,
+            LayoutStruct layout, String actionClass, String actionMethod,
+            String actionArg, ObjectArrayList<ElementData> children) {
+        this.id = id;
+        this.usePath = usePath;
+        this.spritePath = spritePath;
+        this.text = text;
+        this.layout = layout;
+        this.actionClass = actionClass;
+        this.actionMethod = actionMethod;
+        this.actionArg = actionArg;
+        this.children = children;
+        this.refPath = null;
+    }
+
+    // Type Checks \\
 
     public boolean isRef() {
         return refPath != null;
     }
+
+    public boolean isUse() {
+        return usePath != null;
+    }
+
+    // Accessors \\
 
     public String getId() {
         return id;
@@ -70,6 +91,10 @@ public class MenuElementData extends DataPackage {
 
     public String getRefPath() {
         return refPath;
+    }
+
+    public String getUsePath() {
+        return usePath;
     }
 
     public ElementType getType() {
@@ -100,7 +125,7 @@ public class MenuElementData extends DataPackage {
         return actionArg;
     }
 
-    public ObjectArrayList<MenuElementData> getChildren() {
+    public ObjectArrayList<ElementData> getChildren() {
         return children;
     }
 }

@@ -1,0 +1,10 @@
+{
+    "elements": [
+        {
+            "id":     "empty",
+            "type":   "container",
+            "anchor": "CENTER",
+            "pivot":  "CENTER"
+        }
+    ]
+}
