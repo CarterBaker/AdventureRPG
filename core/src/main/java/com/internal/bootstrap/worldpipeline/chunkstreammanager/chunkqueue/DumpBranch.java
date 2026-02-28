@@ -9,12 +9,15 @@ import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.BranchPackage;
 
+/*
+ * Dumps chunk data that is no longer required at the chunk's current detail level,
+ * freeing memory for blocks, geometry packets, and merge packets as appropriate.
+ */
 public class DumpBranch extends BranchPackage {
 
     // Internal
     private BlockManager blockManager;
     private short airBlockId;
-
     // Internal \\
 
     @Override
@@ -33,9 +36,6 @@ public class DumpBranch extends BranchPackage {
 
         GridSlotDetailLevel targetLevel = gridSlotHandle.getDetailLevel();
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
-
-        if (syncContainer.isLocked())
-            return;
 
         if (!syncContainer.tryAcquire())
             return;
@@ -63,26 +63,21 @@ public class DumpBranch extends BranchPackage {
     // Dump Methods \\
 
     private void dumpGenerationData(ChunkInstance chunkInstance, ChunkDataSyncContainer syncContainer) {
-
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
         for (SubChunkInstance subChunk : subChunks)
             subChunk.getBlockPaletteHandle().dumpInteriorBlocks(airBlockId);
-
         syncContainer.data[ChunkData.GENERATION_DATA.index] = false;
         syncContainer.data[ChunkData.LOAD_DATA.index] = false;
     }
 
     private void dumpBuildData(ChunkInstance chunkInstance, ChunkDataSyncContainer syncContainer) {
-
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
         for (SubChunkInstance subChunk : subChunks)
             subChunk.getDynamicPacketInstance().clear();
-
         syncContainer.data[ChunkData.BUILD_DATA.index] = false;
     }
 
     private void dumpMergeData(ChunkInstance chunkInstance, ChunkDataSyncContainer syncContainer) {
-
         chunkInstance.getDynamicPacketInstance().clear();
         syncContainer.data[ChunkData.MERGE_DATA.index] = false;
     }

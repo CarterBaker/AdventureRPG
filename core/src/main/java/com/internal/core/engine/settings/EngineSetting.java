@@ -101,12 +101,13 @@ public class EngineSetting {
         public static final String CHUNK_VAO = "util/vao/ChunkVAO";
         public static final String STARTING_WORLD = "TerraArcana";
         public static final String GRID_COORDINATE_UBO = "GridCoordinateData";
-        public static final int MAX_CHUNK_STREAM_PER_QUEUE = 1024; // Total chunks allowed in memory at once
-        public static final int MAX_CHUNK_STREAM_PER_FRAME = 128; // Chunks to load per frame
-        public static final int MAX_CHUNK_STREAM_PER_BATCH = 32; // Chunks to load per batch
-        public static final int GRID_SLOTS_SCAN_PER_FRAME = 32; // Grid slots to scan for missing chunks per frame
+        public static final int MAX_CHUNK_STREAM_PER_QUEUE = 1024;
+        public static final int MAX_CHUNK_STREAM_PER_FRAME = 128;
+        public static final int MAX_CHUNK_STREAM_PER_BATCH = 32;
+        public static final int GRID_SLOTS_SCAN_PER_FRAME = 32;
         public static final int CHUNK_POOL_MAX_OVERFLOW = 32;
         public static final int MEGA_POOL_MAX_OVERFLOW = 8;
+        public static final int MEGA_ASSESS_PER_FRAME = GRID_SLOTS_SCAN_PER_FRAME / MEGA_CHUNK_SIZE;
 
         // Player
         public static final String DEFAULT_PLAYER_RACE = "humanoid";

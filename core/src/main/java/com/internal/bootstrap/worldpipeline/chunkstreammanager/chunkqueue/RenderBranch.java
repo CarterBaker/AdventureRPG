@@ -6,31 +6,34 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
 import com.internal.core.engine.BranchPackage;
 
+/*
+ * Registers a chunk with the render system once its geometry is ready.
+ * Sets RENDER_DATA on success.
+ */
 public class RenderBranch extends BranchPackage {
 
+    // Internal
     private WorldRenderManager worldRenderSystem;
     private int renderIndex;
+    // Internal \\
 
     @Override
     protected void get() {
-
         this.worldRenderSystem = get(WorldRenderManager.class);
         this.renderIndex = ChunkData.RENDER_DATA.index;
     }
+
+    // Chunk Render \\
 
     public void renderChunk(ChunkInstance chunkInstance) {
 
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
 
-        if (syncContainer.isLocked())
-            return;
-
         if (!syncContainer.tryAcquire())
             return;
 
         try {
-            boolean success = worldRenderSystem.addChunkInstance(chunkInstance);
-            syncContainer.data[renderIndex] = success;
+            syncContainer.data[renderIndex] = worldRenderSystem.addChunkInstance(chunkInstance);
         } finally {
             syncContainer.release();
         }

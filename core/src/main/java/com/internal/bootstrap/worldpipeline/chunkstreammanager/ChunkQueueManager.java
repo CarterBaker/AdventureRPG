@@ -22,20 +22,23 @@ import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.queue.QueueInstance;
 import com.internal.core.util.queue.QueueItemHandle;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 
 import java.util.ArrayDeque;
 
+/*
+ * Drives the per-frame chunk queue: scans grid slots for load requests, loads
+ * chunks from pool, and assesses active chunks to determine their next required
+ * operation. All branch dispatch happens here; branches own the implementation.
+ */
 class ChunkQueueManager extends ManagerPackage {
 
     // Internal
     private BlockManager blockManager;
     private GridManager gridManager;
     private ChunkStreamManager chunkStreamManager;
-    private ChunkBatchSystem chunkBatchSystem;
     private WorldRenderManager worldRenderSystem;
 
     private GenerationBranch generationBranch;
@@ -52,7 +55,6 @@ class ChunkQueueManager extends ManagerPackage {
     // Chunk Queue
     private QueueInstance chunkQueue;
     private Int2ObjectOpenHashMap<ChunkQueueItem> id2QueueItem;
-
     private LongLinkedOpenHashSet loadRequests;
     private LongLinkedOpenHashSet unloadRequests;
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
@@ -60,7 +62,6 @@ class ChunkQueueManager extends ManagerPackage {
     // Chunk Pool
     private ArrayDeque<ChunkInstance> chunkPool;
     private int CHUNK_POOL_MAX_OVERFLOW;
-
     // Internal \\
 
     @Override
@@ -84,18 +85,15 @@ class ChunkQueueManager extends ManagerPackage {
 
         this.loadRequests = new LongLinkedOpenHashSet();
         this.unloadRequests = new LongLinkedOpenHashSet();
-
         this.chunkPool = new ArrayDeque<>();
         this.CHUNK_POOL_MAX_OVERFLOW = EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
     }
 
     @Override
     protected void get() {
-
         this.blockManager = get(BlockManager.class);
         this.gridManager = get(GridManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
-        this.chunkBatchSystem = get(ChunkBatchSystem.class);
         this.worldRenderSystem = get(WorldRenderManager.class);
     }
 
@@ -107,6 +105,42 @@ class ChunkQueueManager extends ManagerPackage {
     @Override
     protected void update() {
         executeQueue();
+    }
+
+    // Grid Rebuild \\
+
+    void onGridRebuilt() {
+        loadRequests.clear();
+        unloadRequests.clear();
+        flushActiveChunks();
+    }
+
+    private void flushActiveChunks() {
+        var iterator = activeChunks.long2ObjectEntrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            long chunkCoordinate = entry.getLongKey();
+            ChunkInstance chunkInstance = entry.getValue();
+            iterator.remove();
+            ChunkDataSyncContainer sync = chunkInstance.getChunkDataSyncContainer();
+            if (!sync.tryAcquire()) {
+                // Still in use — defer to next assess cycle via unload request
+                activeChunks.put(chunkCoordinate, chunkInstance);
+                unloadRequests.add(chunkCoordinate);
+                continue;
+            }
+            try {
+                worldRenderSystem.removeChunkInstance(chunkCoordinate);
+                chunkInstance.reset();
+            } finally {
+                sync.release();
+            }
+            int newMax = gridManager.getGrid().getTotalSlots() + CHUNK_POOL_MAX_OVERFLOW;
+            if (chunkPool.size() < newMax)
+                chunkPool.push(chunkInstance);
+            else
+                chunkInstance.dispose();
+        }
     }
 
     // Chunk Queue System \\
@@ -193,7 +227,7 @@ class ChunkQueueManager extends ManagerPackage {
 
             ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
 
-            if (syncContainer.isLocked() || !syncContainer.tryAcquire()) {
+            if (!syncContainer.tryAcquire()) {
                 activeChunks.put(chunkCoordinate, chunkInstance);
                 return;
             }
@@ -246,9 +280,6 @@ class ChunkQueueManager extends ManagerPackage {
 
         GridSlotDetailLevel targetLevel = gridSlotHandle.getDetailLevel();
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
-
-        if (syncContainer.isLocked())
-            return QueueOperation.SKIP;
 
         if (!syncContainer.tryAcquire())
             return QueueOperation.SKIP;

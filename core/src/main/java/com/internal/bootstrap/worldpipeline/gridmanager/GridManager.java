@@ -7,13 +7,10 @@ public class GridManager extends ManagerPackage {
     // Internal
     private GridBuildSystem gridBuildSystem;
     private GridInstance grid;
-
     // Internal \\
 
     @Override
     protected void create() {
-
-        // Internal
         this.gridBuildSystem = create(GridBuildSystem.class);
     }
 
@@ -26,5 +23,9 @@ public class GridManager extends ManagerPackage {
 
     public GridInstance getGrid() {
         return grid;
+    }
+
+    public void rebuildGrid() {
+        this.grid = gridBuildSystem.buildGrid();
     }
 }
