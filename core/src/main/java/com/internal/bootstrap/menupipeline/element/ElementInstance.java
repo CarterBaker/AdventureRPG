@@ -1,17 +1,22 @@
 package com.internal.bootstrap.menupipeline.element;
 
-import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
+import com.internal.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import com.internal.core.engine.InstancePackage;
 import com.internal.core.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * A live UI element instance spawned from an ElementHandle. Owns its own
+ * SpriteInstance with independent material state. Overrides are applied at
+ * spawn time; null overrides fall back to the handle at read time.
+ */
 public class ElementInstance extends InstancePackage {
 
     // Source handle — pure immutable data, never mutated
     private ElementHandle handle;
 
-    // Per-instance overrides — set at spawn time, null means use handle's value
-    private SpriteHandle spriteHandle;
+    // Per-instance overrides — null means use handle's value
+    private SpriteInstance spriteInstance;
     private String textOverride;
     private Runnable clickActionOverride;
     private LayoutStruct layoutOverride;
@@ -26,15 +31,17 @@ public class ElementInstance extends InstancePackage {
     private float computedW;
     private float computedH;
 
+    // Internal \\
+
     public void constructor(
             ElementHandle handle,
-            SpriteHandle spriteHandle,
+            SpriteInstance spriteInstance,
             String textOverride,
             Runnable clickActionOverride,
             LayoutStruct layoutOverride,
             ObjectArrayList<ElementInstance> children) {
         this.handle = handle;
-        this.spriteHandle = spriteHandle;
+        this.spriteInstance = spriteInstance;
         this.textOverride = textOverride;
         this.clickActionOverride = clickActionOverride;
         this.layoutOverride = layoutOverride;
@@ -43,14 +50,12 @@ public class ElementInstance extends InstancePackage {
 
     // Layout \\
 
-    // Reads layout directly — override wins if present, no handle allocation needed
     public void computeTransform(float parentLeft, float parentTop, float parentW, float parentH) {
 
         LayoutStruct layout = layoutOverride != null ? layoutOverride : handle.getLayout();
 
         float posX = layout.position.x.resolve(parentW);
         float posY = layout.position.y.resolve(parentH);
-
         float w = layout.size.x.resolve(parentW);
         float h = layout.size.y.resolve(parentH);
 
@@ -66,7 +71,6 @@ public class ElementInstance extends InstancePackage {
 
         float anchorX = parentLeft + layout.anchor.x * parentW;
         float anchorY = parentTop + layout.anchor.y * parentH;
-
         float tx = anchorX + posX - layout.pivot.x * w;
         float ty = anchorY + posY - layout.pivot.y * h;
 
@@ -98,8 +102,8 @@ public class ElementInstance extends InstancePackage {
         return handle;
     }
 
-    public SpriteHandle getSpriteHandle() {
-        return spriteHandle;
+    public SpriteInstance getSpriteInstance() {
+        return spriteInstance;
     }
 
     public String getText() {
@@ -131,7 +135,7 @@ public class ElementInstance extends InstancePackage {
     }
 
     public boolean hasSprite() {
-        return spriteHandle != null;
+        return spriteInstance != null;
     }
 
     public boolean hasChildren() {

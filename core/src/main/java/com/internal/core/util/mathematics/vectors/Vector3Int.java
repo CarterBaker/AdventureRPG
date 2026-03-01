@@ -1,9 +1,10 @@
 package com.internal.core.util.mathematics.vectors;
 
+import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.mathematics.Extras.Coordinate3Long;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
-public final class Vector3Int {
+public class Vector3Int extends UtilityPackage {
 
     // Data
     public int x, y, z;
@@ -11,7 +12,6 @@ public final class Vector3Int {
     // Constructors \\
 
     public Vector3Int(int x, int y, int z) {
-
         this.x = x;
         this.y = y;
         this.z = z;
@@ -32,11 +32,9 @@ public final class Vector3Int {
     // Set \\
 
     public Vector3Int set(int x, int y, int z) {
-
         this.x = x;
         this.y = y;
         this.z = z;
-
         return this;
     }
 
@@ -51,11 +49,9 @@ public final class Vector3Int {
     // Addition \\
 
     public Vector3Int add(int x, int y, int z) {
-
         this.x += x;
         this.y += y;
         this.z += z;
-
         return this;
     }
 
@@ -70,11 +66,9 @@ public final class Vector3Int {
     // Subtraction \\
 
     public Vector3Int subtract(int x, int y, int z) {
-
         this.x -= x;
         this.y -= y;
         this.z -= z;
-
         return this;
     }
 
@@ -89,11 +83,9 @@ public final class Vector3Int {
     // Multiplication \\
 
     public Vector3Int multiply(int x, int y, int z) {
-
         this.x *= x;
         this.y *= y;
         this.z *= z;
-
         return this;
     }
 
@@ -108,14 +100,11 @@ public final class Vector3Int {
     // Division \\
 
     public Vector3Int divide(int x, int y, int z) {
-
-        if (x == 0 || y == 0 || z == 0) // TODO: make my own error
-            throw new ArithmeticException("Division by zero");
-
+        if (x == 0 || y == 0 || z == 0)
+            throwException("Division by zero");
         this.x /= x;
         this.y /= y;
         this.z /= z;
-
         return this;
     }
 
@@ -130,65 +119,51 @@ public final class Vector3Int {
     // Direction Mapping \\
 
     public Vector3Int up() {
-
         this.x = Direction3Vector.UP.x;
         this.y = Direction3Vector.UP.y;
         this.z = Direction3Vector.UP.z;
-
         return this;
     }
 
     public Vector3Int north() {
-
         this.x = Direction3Vector.NORTH.x;
         this.y = Direction3Vector.NORTH.y;
         this.z = Direction3Vector.NORTH.z;
-
         return this;
     }
 
     public Vector3Int south() {
-
         this.x = Direction3Vector.SOUTH.x;
         this.y = Direction3Vector.SOUTH.y;
         this.z = Direction3Vector.SOUTH.z;
-
         return this;
     }
 
     public Vector3Int east() {
-
         this.x = Direction3Vector.EAST.x;
         this.y = Direction3Vector.EAST.y;
         this.z = Direction3Vector.EAST.z;
-
         return this;
     }
 
     public Vector3Int west() {
-
         this.x = Direction3Vector.WEST.x;
         this.y = Direction3Vector.WEST.y;
         this.z = Direction3Vector.WEST.z;
-
         return this;
     }
 
     public Vector3Int down() {
-
         this.x = Direction3Vector.DOWN.x;
         this.y = Direction3Vector.DOWN.y;
         this.z = Direction3Vector.DOWN.z;
-
         return this;
     }
 
     // Utility \\
 
     public boolean hasValues() {
-        return x != 0 ||
-                y != 0 ||
-                z != 0;
+        return x != 0 || y != 0 || z != 0;
     }
 
     public long pack() {
@@ -199,27 +174,17 @@ public final class Vector3Int {
 
     @Override
     public boolean equals(Object obj) {
-
-        if (obj instanceof Vector3Int) {
-
-            Vector3Int v = (Vector3Int) obj;
-            return this.x == v.x &&
-                    this.y == v.y &&
-                    this.z == v.z;
-        }
-
+        if (obj instanceof Vector3Int v)
+            return this.x == v.x && this.y == v.y && this.z == v.z;
         return false;
     }
 
     @Override
     public int hashCode() {
-
         int result = 17;
-
-        result = 31 * result + Float.hashCode(x);
-        result = 31 * result + Float.hashCode(y);
-        result = 31 * result + Float.hashCode(z);
-
+        result = 31 * result + Integer.hashCode(x);
+        result = 31 * result + Integer.hashCode(y);
+        result = 31 * result + Integer.hashCode(z);
         return result;
     }
 

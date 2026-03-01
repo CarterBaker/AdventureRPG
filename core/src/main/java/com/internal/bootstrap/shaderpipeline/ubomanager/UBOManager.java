@@ -1,33 +1,40 @@
 package com.internal.bootstrap.shaderpipeline.ubomanager;
 
-import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-public final class UBOManager extends ManagerPackage {
+/*
+ * Single authority on UBO lifetime and binding point allocation.
+ * Handles are owned here and never leave this system — external callers
+ * receive a UBOInstance via cloneUBO(). Both shader-sourced and JSON-sourced
+ * UBO registrations go through buildBuffer(), which ensures the binding registry
+ * is never split across systems.
+ */
+public class UBOManager extends ManagerPackage {
 
     // Internal
     private InternalBuildSystem internalBuildSystem;
 
     private int nextAvailableBinding;
+    private IntOpenHashSet usedBindings;
     private IntOpenHashSet releasedBindings;
 
     // Retrieval Mapping
     private Object2ObjectOpenHashMap<String, UBOHandle> uboName2UBOHandle;
 
+    // Internal \\
+
     @Override
     protected void create() {
-
-        // Internal
         this.internalBuildSystem = create(InternalBuildSystem.class);
 
         this.nextAvailableBinding = 0;
+        this.usedBindings = new IntOpenHashSet();
         this.releasedBindings = new IntOpenHashSet();
 
-        // Retrieval Mapping
         this.uboName2UBOHandle = new Object2ObjectOpenHashMap<>();
     }
 
@@ -38,10 +45,14 @@ public final class UBOManager extends ManagerPackage {
 
     @Override
     protected void dispose() {
-        for (UBOHandle handle : uboName2UBOHandle.values())
-            GLSLUtility.deleteUniformBuffer(handle.getGpuHandle());
+
+        UBOHandle[] handles = uboName2UBOHandle.values().toArray(new UBOHandle[0]);
+
+        for (int i = 0; i < handles.length; i++)
+            GLSLUtility.deleteUniformBuffer(handles[i].getGpuHandle());
 
         uboName2UBOHandle.clear();
+        usedBindings.clear();
         releasedBindings.clear();
     }
 
@@ -50,24 +61,31 @@ public final class UBOManager extends ManagerPackage {
     public UBOHandle buildBuffer(UBOData data) {
 
         String blockName = data.getBlockName();
-
-        // Check if buffer already exists
         UBOHandle existing = uboName2UBOHandle.get(blockName);
 
         if (existing != null) {
-            // Validate it matches the existing structure
             internalBuildSystem.validate(existing, data);
-            return existing; // Reuse existing handle
+            return existing;
         }
 
-        // Build new handle from data
-        UBOHandle handle = internalBuildSystem.build(data);
+        int resolvedBinding = resolveBinding(data);
+
+        UBOHandle handle = internalBuildSystem.build(data, resolvedBinding);
         uboName2UBOHandle.put(blockName, handle);
 
-        // Track the binding point
-        trackBindingPoint(handle.getBindingPoint());
-
         return handle;
+    }
+
+    public UBOInstance cloneUBO(UBOHandle handle) {
+
+        if (handle == null)
+            throwException("Cannot clone UBO — handle is null");
+
+        return internalBuildSystem.cloneFromHandle(handle);
+    }
+
+    public void destroyInstance(UBOInstance instance) {
+        GLSLUtility.deleteUniformBuffer(instance.getGpuHandle());
     }
 
     public UBOHandle getUBOHandleFromUBOName(String blockName) {
@@ -75,81 +93,53 @@ public final class UBOManager extends ManagerPackage {
         UBOHandle handle = uboName2UBOHandle.get(blockName);
 
         if (handle == null)
-            throwException(
-                    "UBO not found: " + blockName);
+            throwException("UBO not found: " + blockName);
 
         return handle;
     }
 
-    public UBOHandle cloneUBO(UBOHandle source) {
+    // Binding Registry \\
 
-        // REUSE the source's binding point
-        int sharedBinding = source.getBindingPoint();
-        int newGpuHandle = GLSLUtility.createUniformBuffer();
+    private int resolveBinding(UBOData data) {
 
-        UBOHandle copy = create(UBOHandle.class);
-        copy.constructor(
-                source.getBufferName(),
-                source.getBufferID(),
-                newGpuHandle,
-                sharedBinding,
-                source.getTotalSizeBytes());
+        int requested = data.getBinding();
 
-        // Copy uniform structure
-        for (String uniformName : source.getUniforms().keySet()) {
-            Uniform<?> sourceUniform = source.getUniform(uniformName);
-            UniformAttribute<?> newAttribute = sourceUniform.attribute.createDefault();
-            Uniform<?> copiedUniform = createUniform(sourceUniform.offset, newAttribute);
-            copy.addUniform(uniformName, copiedUniform);
-        }
+        if (requested == UBOData.UNSPECIFIED_BINDING)
+            return allocateBindingPoint();
 
-        // Allocate GPU buffer
-        GLSLUtility.allocateUniformBuffer(newGpuHandle, source.getTotalSizeBytes());
+        if (usedBindings.contains(requested))
+            throwException(
+                    "Binding point collision: UBO '" + data.getBlockName() +
+                            "' requested binding " + requested +
+                            " which is already in use.");
 
-        return copy;
-    }
+        usedBindings.add(requested);
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private Uniform<?> createUniform(int offset, UniformAttribute<?> attribute) {
-        return new Uniform(0, offset, attribute);
-    }
+        // Keep the auto-counter ahead of any explicit bindings so future
+        // auto-assignments never collide with manually declared ones.
+        if (requested >= nextAvailableBinding)
+            nextAvailableBinding = requested + 1;
 
-    public void destroyUBO(UBOHandle handle) {
-
-        // Remove from tracking
-        uboName2UBOHandle.remove(handle.getBufferName());
-
-        // Delete GPU resource
-        GLSLUtility.deleteUniformBuffer(handle.getGpuHandle());
-
-        // Release the binding point for reuse
-        releaseBindingPoint(handle.getBindingPoint());
-    }
-
-    // Binding Point Management \\
-
-    private void trackBindingPoint(int binding) {
-        // If this is the current "next" binding, advance the counter
-        if (binding == nextAvailableBinding) {
-            nextAvailableBinding++;
-        }
-        // Otherwise it was explicitly specified or reused - no action needed
+        return requested;
     }
 
     private int allocateBindingPoint() {
-        // First, check if we have any released bindings to reuse
+
+        int binding;
+
         if (!releasedBindings.isEmpty()) {
-            int reusedBinding = releasedBindings.iterator().nextInt();
-            releasedBindings.remove(reusedBinding);
-            return reusedBinding;
+            binding = releasedBindings.iterator().nextInt();
+            releasedBindings.remove(binding);
+        } else {
+            binding = nextAvailableBinding++;
         }
 
-        // Otherwise, use the next available binding and increment
-        return nextAvailableBinding++;
+        usedBindings.add(binding);
+        return binding;
     }
 
     private void releaseBindingPoint(int binding) {
-        // Add to the pool of reusable bindings
+        usedBindings.remove(binding);
         releasedBindings.add(binding);
     }
 }

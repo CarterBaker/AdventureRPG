@@ -1,21 +1,23 @@
-package com.internal.bootstrap.worldpipeline.worldrendersystem;
+package com.internal.bootstrap.worldpipeline.worldrendermanager;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicModelHandle;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketState;
-import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
+import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
-import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
+import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -29,9 +31,11 @@ public class WorldRenderManager extends ManagerPackage {
     private GridManager gridManager;
     private FrustumCullingSystem frustumCullingSystem;
 
+    private int BATCHED_CHUNKS = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
+
     // GPU data
-    private Long2ObjectOpenHashMap<ObjectArrayList<ModelHandle>> chunkModels;
-    private Long2ObjectOpenHashMap<ObjectArrayList<ModelHandle>> megaModels;
+    private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> chunkModels;
+    private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> megaModels;
 
     // Render queues — coordinates only, slot resolved from grid at render time
     private LongLinkedOpenHashSet chunkRenderQueue;
@@ -72,13 +76,17 @@ public class WorldRenderManager extends ManagerPackage {
 
         GridInstance grid = gridManager.getGrid();
 
-        for (long coordinate : megaRenderQueue) {
+        LongIterator megaIt = megaRenderQueue.iterator();
+        while (megaIt.hasNext()) {
+            long coordinate = megaIt.nextLong();
             GridSlotHandle slot = grid.getGridSlotForChunk(coordinate);
             if (slot != null)
                 renderMega(coordinate, slot);
         }
 
-        for (long coordinate : chunkRenderQueue) {
+        LongIterator chunkIt = chunkRenderQueue.iterator();
+        while (chunkIt.hasNext()) {
+            long coordinate = chunkIt.nextLong();
             GridSlotHandle slot = grid.getGridSlotForChunk(coordinate);
             if (slot != null)
                 renderChunk(coordinate, slot);
@@ -90,13 +98,15 @@ public class WorldRenderManager extends ManagerPackage {
         if (!frustumCullingSystem.isMegaVisible(slot))
             return;
 
-        ObjectArrayList<ModelHandle> models = megaModels.get(megaCoordinate);
+        ObjectArrayList<ModelInstance> models = megaModels.get(megaCoordinate);
         if (models == null)
             return;
 
-        UBOHandle uboHandle = slot.getSlotUBO();
-        for (ModelHandle model : models) {
-            model.getMaterial().setUBO(EngineSetting.GRID_COORDINATE_UBO, uboHandle);
+        UBOInstance slotUBO = slot.getSlotUBO();
+
+        for (int i = 0; i < models.size(); i++) {
+            ModelInstance model = models.get(i);
+            model.getMaterial().setUBO(slotUBO);
             renderSystem.pushRenderCall(model, 0);
         }
     }
@@ -109,13 +119,15 @@ public class WorldRenderManager extends ManagerPackage {
         if (!frustumCullingSystem.isChunkVisible(slot))
             return;
 
-        ObjectArrayList<ModelHandle> models = chunkModels.get(chunkCoordinate);
+        ObjectArrayList<ModelInstance> models = chunkModels.get(chunkCoordinate);
         if (models == null)
             return;
 
-        UBOHandle uboHandle = slot.getSlotUBO();
-        for (ModelHandle model : models) {
-            model.getMaterial().setUBO(EngineSetting.GRID_COORDINATE_UBO, uboHandle);
+        UBOInstance slotUBO = slot.getSlotUBO();
+
+        for (int i = 0; i < models.size(); i++) {
+            ModelInstance model = models.get(i);
+            model.getMaterial().setUBO(slotUBO);
             renderSystem.pushRenderCall(model, 0);
         }
     }
@@ -152,17 +164,20 @@ public class WorldRenderManager extends ManagerPackage {
     }
 
     private void queueMega(GridSlotHandle slot) {
-
         long chunkCoordinate = slot.getChunkCoordinate();
         long megaCoordinate = slot.getMegaCoordinate();
 
         if (chunkCoordinate != megaCoordinate)
             return;
 
+        ObjectArrayList<GridSlotHandle> coveredSlots = slot.getCoveredSlots();
+        if (coveredSlots.size() != BATCHED_CHUNKS)
+            return;
+
         megaRenderQueue.add(megaCoordinate);
 
-        for (GridSlotHandle coveredSlot : slot.getCoveredSlots())
-            chunkRenderQueue.remove(coveredSlot.getChunkCoordinate());
+        for (int i = 0; i < coveredSlots.size(); i++)
+            chunkRenderQueue.remove(coveredSlots.get(i).getChunkCoordinate());
     }
 
     private void clearRenderQueue() {
@@ -182,7 +197,7 @@ public class WorldRenderManager extends ManagerPackage {
         if (chunkModels.containsKey(coordinate))
             removeChunkInstance(coordinate);
 
-        ObjectArrayList<ModelHandle> modelList = buildModelList(worldRenderInstance);
+        ObjectArrayList<ModelInstance> modelList = buildModelList(worldRenderInstance);
         if (modelList == null)
             return false;
 
@@ -200,7 +215,7 @@ public class WorldRenderManager extends ManagerPackage {
         if (megaModels.containsKey(coordinate))
             removeMegaInstance(coordinate);
 
-        ObjectArrayList<ModelHandle> modelList = buildModelList(worldRenderInstance);
+        ObjectArrayList<ModelInstance> modelList = buildModelList(worldRenderInstance);
         if (modelList == null)
             return false;
 
@@ -208,30 +223,33 @@ public class WorldRenderManager extends ManagerPackage {
         return true;
     }
 
-    private ObjectArrayList<ModelHandle> buildModelList(WorldRenderInstance worldRenderInstance) {
+    private ObjectArrayList<ModelInstance> buildModelList(WorldRenderInstance worldRenderInstance) {
 
         DynamicPacketInstance dynamicPacket = worldRenderInstance.getDynamicPacketInstance();
 
         if (dynamicPacket.getState() != DynamicPacketState.READY)
             return null;
 
-        ObjectArrayList<ModelHandle> modelList = new ObjectArrayList<>();
+        ObjectArrayList<ModelInstance> modelList = new ObjectArrayList<>();
 
-        for (var entry : dynamicPacket.getMaterialID2ModelCollection().int2ObjectEntrySet()) {
+        for (Int2ObjectMap.Entry<ObjectArrayList<DynamicModelHandle>> entry : dynamicPacket
+                .getMaterialID2ModelCollection().int2ObjectEntrySet()) {
 
             int materialID = entry.getIntKey();
             ObjectArrayList<DynamicModelHandle> dynamicModels = entry.getValue();
 
-            for (DynamicModelHandle dynamicModel : dynamicModels) {
+            for (int i = 0; i < dynamicModels.size(); i++) {
+
+                DynamicModelHandle dynamicModel = dynamicModels.get(i);
 
                 if (dynamicModel.isEmpty())
                     continue;
 
-                VAOHandle cloneVaoHandle = modelManager.cloneVAO(dynamicModel.getVAOHandle());
-                MaterialHandle clonedMaterial = materialManager.cloneMaterial(materialID);
+                VAOHandle clonedVAO = modelManager.cloneVAO(dynamicModel.getVAOHandle());
+                MaterialInstance clonedMaterial = materialManager.cloneMaterial(materialID);
 
                 modelList.add(modelManager.createModel(
-                        cloneVaoHandle,
+                        clonedVAO,
                         dynamicModel.getVertices(),
                         dynamicModel.getIndices(),
                         clonedMaterial));
@@ -243,12 +261,12 @@ public class WorldRenderManager extends ManagerPackage {
 
     public void removeChunkInstance(long coordinate) {
 
-        ObjectArrayList<ModelHandle> modelList = chunkModels.get(coordinate);
+        ObjectArrayList<ModelInstance> modelList = chunkModels.get(coordinate);
         if (modelList == null)
             return;
 
-        for (ModelHandle model : modelList)
-            modelManager.removeMesh(model);
+        for (int i = 0; i < modelList.size(); i++)
+            modelManager.removeMesh(modelList.get(i));
 
         modelList.clear();
         chunkModels.remove(coordinate);
@@ -256,12 +274,12 @@ public class WorldRenderManager extends ManagerPackage {
 
     public void removeMegaInstance(long coordinate) {
 
-        ObjectArrayList<ModelHandle> modelList = megaModels.get(coordinate);
+        ObjectArrayList<ModelInstance> modelList = megaModels.get(coordinate);
         if (modelList == null)
             return;
 
-        for (ModelHandle model : modelList)
-            modelManager.removeMesh(model);
+        for (int i = 0; i < modelList.size(); i++)
+            modelManager.removeMesh(modelList.get(i));
 
         modelList.clear();
         megaModels.remove(coordinate);

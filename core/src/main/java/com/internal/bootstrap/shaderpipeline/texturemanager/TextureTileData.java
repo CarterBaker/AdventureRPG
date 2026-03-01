@@ -2,9 +2,14 @@ package com.internal.bootstrap.shaderpipeline.texturemanager;
 
 import java.awt.image.BufferedImage;
 
-import com.internal.core.engine.InstancePackage;
+import com.internal.core.engine.DataPackage;
 
-public class TextureTileInstance extends InstancePackage {
+/*
+ * Bootstrap-only container for a single named texture tile. Holds per-alias
+ * source images and atlas position during the build phase. Must not be held
+ * after bootstrap completes.
+ */
+public class TextureTileData extends DataPackage {
 
     // Internal
     private int id;
@@ -18,19 +23,37 @@ public class TextureTileInstance extends InstancePackage {
     private int atlasX;
     private int atlasY;
 
-    void constructor(
-            int id,
-            String name,
-            String atlas,
-            int aliasCount) {
+    // Internal \\
 
-        // Internal
+    void constructor(int id, String name, String atlas, int aliasCount) {
         this.id = id;
         this.name = name;
         this.atlas = atlas;
-
-        // Image
         this.imageLayers = new BufferedImage[aliasCount];
+    }
+
+    // Image \\
+
+    void setImage(BufferedImage image, int layer) {
+        if (layer < 0 || layer >= imageLayers.length || imageLayers[layer] != null)
+            throwException("There was a problem trying to set an image to layer " + layer);
+        imageLayers[layer] = image;
+    }
+
+    BufferedImage getImage(int layer) {
+        return imageLayers[layer];
+    }
+
+    void clearImages() {
+        for (int i = 0; i < imageLayers.length; i++)
+            imageLayers[i] = null;
+    }
+
+    // Atlas \\
+
+    void setAtlasPosition(int x, int y) {
+        this.atlasX = x;
+        this.atlasY = y;
     }
 
     // Accessible \\
@@ -47,33 +70,11 @@ public class TextureTileInstance extends InstancePackage {
         return atlas;
     }
 
-    // Image \\
-
-    void setImage(BufferedImage image, int layer) {
-
-        if (layer < 0 || layer >= imageLayers.length || imageLayers[layer] != null)
-            throwException(
-                    "There was a problem trying to set an image to later " + layer);
-
-        imageLayers[layer] = image;
-    }
-
-    BufferedImage getImage(int layer) {
-        return imageLayers[layer];
-    }
-
-    // Atlas \\
-
-    public void setAtlasPosition(int x, int y) {
-        this.atlasX = x;
-        this.atlasY = y;
-    }
-
-    public int getAtlasX() {
+    int getAtlasX() {
         return atlasX;
     }
 
-    public int getAtlasY() {
+    int getAtlasY() {
         return atlasY;
     }
 }

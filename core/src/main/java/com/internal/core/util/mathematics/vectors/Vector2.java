@@ -1,8 +1,9 @@
 package com.internal.core.util.mathematics.vectors;
 
+import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
-public class Vector2 {
+public class Vector2 extends UtilityPackage {
 
     // Data
     public float x, y;
@@ -10,7 +11,6 @@ public class Vector2 {
     // Constructors \\
 
     public Vector2(float x, float y) {
-
         this.x = x;
         this.y = y;
     }
@@ -40,10 +40,8 @@ public class Vector2 {
     // Set \\
 
     public Vector2 set(float x, float y) {
-
         this.x = x;
         this.y = y;
-
         return this;
     }
 
@@ -58,10 +56,8 @@ public class Vector2 {
     // Addition \\
 
     public Vector2 add(float x, float y) {
-
         this.x += x;
         this.y += y;
-
         return this;
     }
 
@@ -76,10 +72,8 @@ public class Vector2 {
     // Subtraction \\
 
     public Vector2 subtract(float x, float y) {
-
         this.x -= x;
         this.y -= y;
-
         return this;
     }
 
@@ -94,10 +88,8 @@ public class Vector2 {
     // Multiplication \\
 
     public Vector2 multiply(float x, float y) {
-
         this.x *= x;
         this.y *= y;
-
         return this;
     }
 
@@ -112,13 +104,10 @@ public class Vector2 {
     // Division \\
 
     public Vector2 divide(float x, float y) {
-
-        if (x == 0 || y == 0) // TODO: make my own error
-            throw new ArithmeticException("Division by zero");
-
+        if (x == 0 || y == 0)
+            throwException("Division by zero");
         this.x /= x;
         this.y /= y;
-
         return this;
     }
 
@@ -142,79 +131,57 @@ public class Vector2 {
 
     public Vector2 normalize() {
         float len = length();
-
         if (len == 0)
             return this;
-
         this.x /= len;
         this.y /= len;
-
         return this;
     }
 
     // Direction Mapping \\
 
     public Vector2 up() {
-
         this.x = Direction2Vector.NORTH.x;
         this.y = Direction2Vector.NORTH.y;
-
         return this;
     }
 
     public Vector2 down() {
-
         this.x = Direction2Vector.SOUTH.x;
         this.y = Direction2Vector.SOUTH.y;
-
         return this;
     }
 
     public Vector2 left() {
-
         this.x = Direction2Vector.WEST.x;
         this.y = Direction2Vector.WEST.y;
-
         return this;
     }
 
     public Vector2 right() {
-
         this.x = Direction2Vector.EAST.x;
         this.y = Direction2Vector.EAST.y;
-
         return this;
     }
 
     // Utility \\
 
     public boolean hasValues() {
-        return x != 0 ||
-                y != 0;
+        return x != 0 || y != 0;
     }
 
     // Java \\
 
     @Override
     public boolean equals(Object obj) {
-
-        if (obj instanceof Vector2) {
-
-            Vector2 v = (Vector2) obj;
-            return this.x == v.x &&
-                    this.y == v.y;
-        }
-
+        if (obj instanceof Vector2 v)
+            return this.x == v.x && this.y == v.y;
         return false;
     }
 
     @Override
     public int hashCode() {
-
-        int result = Float.hashCode(x);
-        result = 31 * result + Float.hashCode(y);
-
-        return result;
+        return 31 * Float.hashCode(x) + Float.hashCode(y);
     }
 
     @Override

@@ -14,9 +14,9 @@ public class ShaderPipeline extends PipelinePackage {
     protected void create() {
 
         // Render Pipeline
-        create(TextureManager.class);
-        create(UBOManager.class);
         create(ShaderManager.class);
+        create(UBOManager.class);
+        create(TextureManager.class);
         create(MaterialManager.class);
         create(SpriteManager.class);
         create(PassManager.class);

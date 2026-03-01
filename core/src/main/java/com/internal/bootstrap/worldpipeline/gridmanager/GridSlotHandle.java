@@ -1,6 +1,6 @@
 package com.internal.bootstrap.worldpipeline.gridmanager;
 
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 
@@ -9,10 +9,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class GridSlotHandle extends HandlePackage {
 
     // Internal
-    private long gridCoordinate; // Static offset from center — baked at build time
-    private UBOHandle slotUBO;
+    private long gridCoordinate;
+    private UBOInstance slotUBO;
     private GridSlotDetailLevel detailLevel;
-    private GridInstance gridInstance; // Back-reference for active coordinate lookup
+    private GridInstance gridInstance;
 
     // Culling values from the center of the individual 1x1 chunk footprint
     private float chunkDistanceFromCenter;
@@ -29,14 +29,13 @@ public class GridSlotHandle extends HandlePackage {
 
     void constructor(
             long gridCoordinate,
-            UBOHandle slotUBO,
+            UBOInstance slotUBO,
             float chunkDistanceFromCenter,
             float chunkAngleFromCenter,
             float megaDistanceFromCenter,
             float megaAngleFromCenter,
             GridSlotDetailLevel detailLevel,
             GridInstance gridInstance) {
-
         this.gridCoordinate = gridCoordinate;
         this.slotUBO = slotUBO;
         this.chunkDistanceFromCenter = chunkDistanceFromCenter;
@@ -50,12 +49,10 @@ public class GridSlotHandle extends HandlePackage {
 
     // Computed Coordinate Lookups \\
 
-    // Static offset + grid's current active chunk → current world chunk coordinate
     public long getChunkCoordinate() {
         return Coordinate2Long.add(gridInstance.getActiveChunkCoordinate(), gridCoordinate);
     }
 
-    // Derived from current chunk coordinate → mega origin
     public long getMegaCoordinate() {
         return Coordinate2Long.toMegaChunkCoordinate(getChunkCoordinate());
     }
@@ -66,7 +63,7 @@ public class GridSlotHandle extends HandlePackage {
         return gridCoordinate;
     }
 
-    public UBOHandle getSlotUBO() {
+    public UBOInstance getSlotUBO() {
         return slotUBO;
     }
 

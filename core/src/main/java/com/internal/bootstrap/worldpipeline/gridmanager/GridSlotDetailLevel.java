@@ -1,7 +1,7 @@
 package com.internal.bootstrap.worldpipeline.gridmanager;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderType;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
 
 public enum GridSlotDetailLevel {
 
@@ -22,11 +22,12 @@ public enum GridSlotDetailLevel {
     }
 
     public static GridSlotDetailLevel getDetailLevelForDistance(float absoluteChunkDistance) {
-        for (GridSlotDetailLevel detailLevel : values()) {
-            if (absoluteChunkDistance > detailLevel.maxChunkDistance)
-                return detailLevel;
+        GridSlotDetailLevel[] levels = values();
+        for (int i = levels.length - 1; i >= 0; i--) {
+            if (absoluteChunkDistance <= levels[i].maxChunkDistance)
+                return levels[i];
         }
-        return IMMEDIATE;
+        return levels[0];
     }
 
     private boolean[] computeRequiredData() {

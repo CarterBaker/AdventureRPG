@@ -1,22 +1,32 @@
 package com.internal.bootstrap.renderpipeline.renderbatch;
 
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
-import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
+import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
+import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.core.engine.HandlePackage;
+
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * Batches all render calls sharing the same source MaterialHandle within a
+ * single depth layer. The representative MaterialInstance is the first one
+ * registered — its source is shared by all calls in the batch, so it drives
+ * shader binding and source UBO binding. Source UBOs are cached on first
+ * access so the draw loop never touches a live collection. Cleared after
+ * each draw flush — never holds calls across frames.
+ */
 public class RenderBatchHandle extends HandlePackage {
 
-    // Internal
-    private MaterialHandle materialHandle;
-    private ObjectArrayList<RenderCallHandle> renderCalls;
+    private static final UBOHandle[] EMPTY_UBOS = new UBOHandle[0];
 
+    // Internal
+    private MaterialInstance representativeMaterial;
+    private UBOHandle[] cachedSourceUBOs;
+    private ObjectArrayList<RenderCallHandle> renderCalls;
     // Internal \\
 
-    public void constructor(MaterialHandle materialHandle) {
-
-        // Internal
-        this.materialHandle = materialHandle;
+    public void constructor(MaterialInstance material) {
+        this.representativeMaterial = material;
         this.renderCalls = new ObjectArrayList<>();
     }
 
@@ -36,13 +46,35 @@ public class RenderBatchHandle extends HandlePackage {
 
     public void dispose() {
         renderCalls.clear();
-        this.materialHandle = null;
+        this.representativeMaterial = null;
+        this.cachedSourceUBOs = null;
     }
 
     // Accessible \\
 
-    public MaterialHandle getMaterial() {
-        return materialHandle;
+    /*
+     * Returns the array of source UBOs for this batch, cached on first call.
+     * Safe to cache permanently — source UBOs are owned by the MaterialHandle
+     * and do not change after bootstrap.
+     */
+    public UBOHandle[] getCachedSourceUBOs() {
+
+        if (cachedSourceUBOs != null)
+            return cachedSourceUBOs;
+
+        var handleUBOs = representativeMaterial.getSource().getUBOs();
+
+        if (handleUBOs == null || handleUBOs.isEmpty()) {
+            cachedSourceUBOs = EMPTY_UBOS;
+        } else {
+            cachedSourceUBOs = handleUBOs.values().toArray(new UBOHandle[0]);
+        }
+
+        return cachedSourceUBOs;
+    }
+
+    public MaterialInstance getRepresentativeMaterial() {
+        return representativeMaterial;
     }
 
     public ObjectArrayList<RenderCallHandle> getRenderCalls() {

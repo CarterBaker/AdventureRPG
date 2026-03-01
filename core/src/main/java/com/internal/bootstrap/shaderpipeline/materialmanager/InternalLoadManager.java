@@ -1,15 +1,17 @@
 package com.internal.bootstrap.shaderpipeline.materialmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.List;
 
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 
-class InternalLoadManager extends ManagerPackage {
+/*
+ * Drives the material bootstrap sequence: file discovery and handle assembly.
+ * Released after bootstrap so no parsing state persists into the runtime loop.
+ */
+public class InternalLoadManager extends ManagerPackage {
 
     // Internal
     private File root;
@@ -18,22 +20,17 @@ class InternalLoadManager extends ManagerPackage {
 
     private int materialCount;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void create() {
-
-        // Internal
         this.root = new File(EngineSetting.MATERIAL_JSON_PATH);
         this.internalBuildSystem = create(InternalBuildSystem.class);
-
         this.materialCount = 0;
     }
 
     @Override
     protected void get() {
-
-        // Internal
         this.materialManager = get(MaterialManager.class);
     }
 
@@ -42,39 +39,15 @@ class InternalLoadManager extends ManagerPackage {
         this.internalBuildSystem = release(InternalBuildSystem.class);
     }
 
-    // Material Management \\
+    // Bootstrap \\
 
     void loadMaterials() {
-        loadAllFiles();
-    }
+        FileUtility.verifyDirectory(root, "Material directory not found: " + root.getAbsolutePath());
 
-    // Load \\
+        List<File> jsonFiles = FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS);
 
-    private void loadAllFiles() {
-
-        if (!root.exists() || !root.isDirectory())
-            throwException("Shader directory not found: " + root.getAbsolutePath());
-
-        Path base = root.toPath();
-
-        try (var stream = Files.walk(base)) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .forEach(path -> buildMaterialFromFile(path.toFile()));
-        }
-
-        catch (IOException e) {
-            throwException("MaterialManager failed to load one or more files: ", e);
-        }
-    }
-
-    private void buildMaterialFromFile(File file) {
-
-        if (EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(file)))
-            compileMaterial(internalBuildSystem.buildMaterial(root, file, materialCount++));
-    }
-
-    private void compileMaterial(MaterialHandle material) {
-        materialManager.addMaterial(material);
+        for (int i = 0; i < jsonFiles.size(); i++)
+            materialManager.addMaterial(
+                    internalBuildSystem.buildMaterial(root, jsonFiles.get(i), materialCount++));
     }
 }

@@ -1,6 +1,8 @@
 package com.internal.core.util.mathematics.vectors;
 
-public class Vector2Boolean {
+import com.internal.core.engine.UtilityPackage;
+
+public class Vector2Boolean extends UtilityPackage {
 
     // Data
     public boolean x, y;
@@ -8,7 +10,6 @@ public class Vector2Boolean {
     // Constructors \\
 
     public Vector2Boolean(boolean x, boolean y) {
-
         this.x = x;
         this.y = y;
     }
@@ -28,10 +29,8 @@ public class Vector2Boolean {
     // Set \\
 
     public Vector2Boolean set(boolean x, boolean y) {
-
         this.x = x;
         this.y = y;
-
         return this;
     }
 
@@ -46,10 +45,8 @@ public class Vector2Boolean {
     // And \\
 
     public Vector2Boolean and(boolean x, boolean y) {
-
         this.x = this.x && x;
         this.y = this.y && y;
-
         return this;
     }
 
@@ -64,10 +61,8 @@ public class Vector2Boolean {
     // Or \\
 
     public Vector2Boolean or(boolean x, boolean y) {
-
         this.x = this.x || x;
         this.y = this.y || y;
-
         return this;
     }
 
@@ -82,10 +77,8 @@ public class Vector2Boolean {
     // Xor \\
 
     public Vector2Boolean xor(boolean x, boolean y) {
-
         this.x = this.x ^ x;
         this.y = this.y ^ y;
-
         return this;
     }
 
@@ -100,10 +93,8 @@ public class Vector2Boolean {
     // Not \\
 
     public Vector2Boolean not() {
-
         this.x = !this.x;
         this.y = !this.y;
-
         return this;
     }
 
@@ -121,21 +112,14 @@ public class Vector2Boolean {
 
     @Override
     public boolean equals(Object obj) {
-
-        if (!(obj instanceof Vector2Boolean))
-            return false;
-
-        Vector2Boolean v = (Vector2Boolean) obj;
-
-        return x == v.x && y == v.y;
+        if (obj instanceof Vector2Boolean v)
+            return x == v.x && y == v.y;
+        return false;
     }
 
     @Override
     public int hashCode() {
-
-        int h = Boolean.hashCode(x);
-
-        return 31 * h + Boolean.hashCode(y);
+        return 31 * Boolean.hashCode(x) + Boolean.hashCode(y);
     }
 
     @Override

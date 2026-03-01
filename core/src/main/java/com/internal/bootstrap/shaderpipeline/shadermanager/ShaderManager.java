@@ -1,5 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.shadermanager;
 
+import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.core.engine.ManagerPackage;
 
@@ -7,50 +8,63 @@ import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
+/*
+ * Owns all compiled ShaderHandle objects for the lifetime of the application.
+ * Delegates bootstrap compilation to InternalLoadManager, which is released once
+ * all shaders are assembled. UBOHandle references never enter this system —
+ * UBO binding is performed by name through UBOManager.
+ */
 public class ShaderManager extends ManagerPackage {
 
     // Internal
     private InternalLoadManager internalLoadManager;
+    private UBOManager uboManager;
 
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> shaderName2ShaderID;
     private Int2ObjectOpenHashMap<ShaderHandle> shaderID2Shader;
     private Int2IntArrayMap shaderID2GPUHandle;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void create() {
-
-        // Internal
         this.internalLoadManager = create(InternalLoadManager.class);
 
-        // Retrieval Mapping
         this.shaderName2ShaderID = new Object2IntOpenHashMap<>();
         this.shaderID2Shader = new Int2ObjectOpenHashMap<>();
         this.shaderID2GPUHandle = new Int2IntArrayMap();
     }
 
     @Override
+    protected void get() {
+        this.uboManager = get(UBOManager.class);
+    }
+
+    @Override
     protected void awake() {
-        compileShaders();
+        internalLoadManager.loadShaders();
     }
 
     @Override
     protected void release() {
-        internalLoadManager = release(InternalLoadManager.class);
+        this.internalLoadManager = release(InternalLoadManager.class);
     }
 
     @Override
     protected void dispose() {
-        disposeAllGPUResources();
+
+        ShaderHandle[] handles = shaderID2Shader.values().toArray(new ShaderHandle[0]);
+
+        for (int i = 0; i < handles.length; i++)
+            GLSLUtility.deleteShaderProgram(handles[i].getShaderHandle());
+
+        shaderName2ShaderID.clear();
+        shaderID2Shader.clear();
+        shaderID2GPUHandle.clear();
     }
 
     // ShaderHandle Management \\
-
-    private void compileShaders() {
-        internalLoadManager.loadShaders();
-    }
 
     void addShader(ShaderHandle shader) {
         shaderName2ShaderID.put(shader.getShaderName(), shader.getShaderID());
@@ -58,27 +72,14 @@ public class ShaderManager extends ManagerPackage {
         shaderID2GPUHandle.put(shader.getShaderID(), shader.getShaderHandle());
     }
 
-    public void bindShaderToUBO(
-            ShaderHandle shader,
-            UBOHandle ubo) {
+    public void bindShaderToUBO(ShaderHandle shader, String blockName) {
+
+        UBOHandle ubo = uboManager.getUBOHandleFromUBOName(blockName);
+
         GLSLUtility.bindUniformBlock(
                 shader.getShaderHandle(),
-                ubo.getBufferName(),
+                blockName,
                 ubo.getBindingPoint());
-    }
-
-    // Disposal \\
-
-    private void disposeAllGPUResources() {
-
-        // Dispose all shaders
-        for (ShaderHandle shader : shaderID2Shader.values())
-            GLSLUtility.deleteShaderProgram(shader.getShaderHandle());
-
-        // Clear all mappings
-        shaderName2ShaderID.clear();
-        shaderID2Shader.clear();
-        shaderID2GPUHandle.clear();
     }
 
     // Accessible \\
@@ -86,8 +87,7 @@ public class ShaderManager extends ManagerPackage {
     public int getShaderIDFromShaderName(String shaderName) {
 
         if (!shaderName2ShaderID.containsKey(shaderName))
-            throwException(
-                    "ShaderHandle not found: " + shaderName);
+            throwException("ShaderHandle not found: " + shaderName);
 
         return shaderName2ShaderID.getInt(shaderName);
     }
@@ -97,8 +97,7 @@ public class ShaderManager extends ManagerPackage {
         ShaderHandle shader = shaderID2Shader.get(shaderID);
 
         if (shader == null)
-            throwException(
-                    "ShaderHandle ID not found: " + shaderID);
+            throwException("ShaderHandle ID not found: " + shaderID);
 
         return shader;
     }

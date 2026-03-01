@@ -1,39 +1,40 @@
-package com.internal.bootstrap.geometrypipeline.modelmanager;
+package com.internal.bootstrap.geometrypipeline.model;
 
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;
-import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
-import com.internal.core.engine.HandlePackage;
+import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
+import com.internal.core.engine.InstancePackage;
 
-public class ModelHandle extends HandlePackage {
+/*
+ * Runtime model handed to external systems by ModelManager.createModel().
+ * Owns a MeshHandle reference and a MaterialInstance with independent uniform
+ * and UBO state. Never holds a MaterialHandle — material state is always
+ * instance-owned.
+ */
+public class ModelInstance extends InstancePackage {
 
     // Internal
     private MeshHandle meshHandle;
-    private MaterialHandle material;
+    private MaterialInstance material;
 
     // Internal \\
 
     public void constructor(
             MeshHandle meshHandle,
-            MaterialHandle material) {
-
-        // Internal
+            MaterialInstance material) {
         this.meshHandle = meshHandle;
         this.material = material;
     }
 
     // Accessible \\
 
-    // Mesh
     public MeshHandle getMeshHandle() {
         return meshHandle;
     }
 
-    // Material
-    public MaterialHandle getMaterial() {
+    public MaterialInstance getMaterial() {
         return material;
     }
 
-    // VAO
     public int getVAO() {
         return meshHandle.getVAO();
     }
@@ -42,7 +43,6 @@ public class ModelHandle extends HandlePackage {
         return meshHandle.getVertStride();
     }
 
-    // VBO
     public int getVBO() {
         return meshHandle.getVBO();
     }
@@ -51,7 +51,6 @@ public class ModelHandle extends HandlePackage {
         return meshHandle.getVertCount();
     }
 
-    // IBO
     public int getIBO() {
         return meshHandle.getIBO();
     }

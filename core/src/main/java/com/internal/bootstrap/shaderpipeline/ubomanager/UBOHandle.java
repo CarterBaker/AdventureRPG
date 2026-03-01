@@ -8,7 +8,13 @@ import com.internal.core.engine.HandlePackage;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-public final class UBOHandle extends HandlePackage {
+/*
+ * Persistent GPU-backed uniform buffer block owned exclusively by UBOManager.
+ * Never handed to external systems — external callers receive a UBOInstance via
+ * UBOManager.cloneUBO(). Holds the canonical std140 layout and serves as the
+ * template from which instances are built.
+ */
+public class UBOHandle extends HandlePackage {
 
     // Internal
     private String bufferName;
@@ -16,7 +22,6 @@ public final class UBOHandle extends HandlePackage {
     private int gpuHandle;
     private int bindingPoint;
     private int totalSizeBytes;
-
     private ByteBuffer stagingBuffer;
     private Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
 
@@ -28,16 +33,39 @@ public final class UBOHandle extends HandlePackage {
             int gpuHandle,
             int bindingPoint,
             int totalSizeBytes) {
-
-        // Internal
         this.bufferName = bufferName;
         this.bufferID = bufferID;
         this.gpuHandle = gpuHandle;
         this.bindingPoint = bindingPoint;
         this.totalSizeBytes = totalSizeBytes;
-
         this.stagingBuffer = BufferUtils.newByteBuffer(totalSizeBytes);
         this.uniforms = new Object2ObjectOpenHashMap<>();
+    }
+
+    // Utility \\
+
+    public void addUniform(String name, Uniform<?> uniform) {
+        uniforms.put(name, uniform);
+    }
+
+    public void updateUniform(String name, Object value) {
+
+        Uniform<?> uniform = uniforms.get(name);
+
+        if (uniform == null)
+            throwException("Uniform not found in UBO '" + bufferName + "': " + name);
+
+        uniform.attribute().setObject(value);
+
+        ByteBuffer data = uniform.attribute().getByteBuffer();
+        data.rewind();
+        stagingBuffer.position(uniform.offset);
+        stagingBuffer.put(data);
+    }
+
+    public void push() {
+        stagingBuffer.rewind();
+        GLSLUtility.updateUniformBuffer(gpuHandle, 0, stagingBuffer);
     }
 
     // Accessible \\
@@ -62,39 +90,11 @@ public final class UBOHandle extends HandlePackage {
         return totalSizeBytes;
     }
 
-    public void addUniform(String uniformName, Uniform<?> uniform) {
-        uniforms.put(uniformName, uniform);
-    }
-
-    public Uniform<?> getUniform(String uniformName) {
-        return uniforms.get(uniformName);
+    public Uniform<?> getUniform(String name) {
+        return uniforms.get(name);
     }
 
     public Object2ObjectOpenHashMap<String, Uniform<?>> getUniforms() {
         return uniforms;
-    }
-
-    public void updateUniform(String uniformName, Object value) {
-
-        Uniform<?> uniform = uniforms.get(uniformName);
-
-        if (uniform == null)
-            throwException(
-                    "Uniform not found in UBO '" + bufferName + "': " + uniformName);
-
-        // Set the value in the uniform's attribute
-        uniform.attribute().setObject(value);
-
-        // Copy to staging buffer at correct offset
-        ByteBuffer uniformData = uniform.attribute().getByteBuffer();
-        uniformData.rewind(); // ensure position is at start
-
-        stagingBuffer.position(uniform.offset);
-        stagingBuffer.put(uniformData);
-    }
-
-    public void push() {
-        stagingBuffer.rewind(); // reset to start
-        GLSLUtility.updateUniformBuffer(gpuHandle, 0, stagingBuffer);
     }
 }

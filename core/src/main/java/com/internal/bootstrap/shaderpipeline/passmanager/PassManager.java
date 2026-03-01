@@ -6,6 +6,10 @@ import com.internal.core.engine.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
+/*
+ * Owns all compiled PassHandle objects. Delegates bootstrap loading to
+ * InternalLoadManager. Passes are pushed into the render system by depth layer.
+ */
 public class PassManager extends ManagerPackage {
 
     // Internal
@@ -16,34 +20,28 @@ public class PassManager extends ManagerPackage {
     private Object2IntOpenHashMap<String> passName2PassID;
     private Int2ObjectOpenHashMap<PassHandle> passID2Pass;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void create() {
-
-        // Internal
         this.internalLoadManager = create(InternalLoadManager.class);
-
-        // Retrieval Mapping
         this.passName2PassID = new Object2IntOpenHashMap<>();
         this.passID2Pass = new Int2ObjectOpenHashMap<>();
     }
 
     @Override
     protected void get() {
-
-        // Internal
         this.renderSystem = get(RenderSystem.class);
     }
 
     @Override
     protected void awake() {
-        compilePasses();
+        internalLoadManager.loadPasses();
     }
 
     @Override
     protected void release() {
-        internalLoadManager = release(InternalLoadManager.class);
+        this.internalLoadManager = release(InternalLoadManager.class);
     }
 
     // Render Management \\
@@ -53,10 +51,6 @@ public class PassManager extends ManagerPackage {
     }
 
     // Pass Management \\
-
-    private void compilePasses() {
-        internalLoadManager.loadPasses();
-    }
 
     void addPass(PassHandle pass) {
         passName2PassID.put(pass.getPassName(), pass.getPassID());

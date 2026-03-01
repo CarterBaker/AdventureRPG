@@ -1,4 +1,4 @@
-package com.internal.bootstrap.worldpipeline.worldrendersystem;
+package com.internal.bootstrap.worldpipeline.worldrendermanager;
 
 public enum RenderOperation {
     NONE,

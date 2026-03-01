@@ -3,7 +3,7 @@ package com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaData;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.BranchPackage;
 
 /*

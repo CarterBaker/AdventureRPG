@@ -2,9 +2,14 @@ package com.internal.bootstrap.shaderpipeline.texturemanager;
 
 import java.awt.Color;
 
-import com.internal.core.engine.InstancePackage;
+import com.internal.core.engine.DataPackage;
 
-public class AliasInstance extends InstancePackage {
+/*
+ * Bootstrap-only container for a single alias type and its default fill
+ * colour. Held in AliasLibrarySystem during the build phase only. Must not
+ * be held after bootstrap completes.
+ */
+public class AliasData extends DataPackage {
 
     // Internal
     private String aliasType;
@@ -13,8 +18,6 @@ public class AliasInstance extends InstancePackage {
     // Internal \\
 
     void constructor(String aliasType, Color defaultColor) {
-
-        // Internal
         this.aliasType = aliasType;
         this.defaultColor = defaultColor;
     }

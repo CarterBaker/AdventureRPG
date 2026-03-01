@@ -4,6 +4,12 @@ import com.internal.core.engine.DataPackage;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * Bootstrap transfer container that assembles a complete shader program definition
+ * from a JSON descriptor. Holds references to the vert and frag ShaderData objects
+ * and the post-order flattened list of include dependencies used during source
+ * preprocessing. Never leaves the shadermanager bootstrap path.
+ */
 public class ShaderDefinitionData extends DataPackage {
 
     // Internal
@@ -16,8 +22,6 @@ public class ShaderDefinitionData extends DataPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.includes = new ObjectArrayList<>();
     }
 
@@ -25,16 +29,13 @@ public class ShaderDefinitionData extends DataPackage {
             String shaderName,
             ShaderData vert,
             ShaderData frag) {
-
-        // Internal
         this.shaderName = shaderName;
         this.vert = vert;
         this.frag = frag;
     }
 
-    // Utility \\
+    // Accessible \\
 
-    // Internal
     public String getShaderName() {
         return shaderName;
     }
@@ -47,7 +48,6 @@ public class ShaderDefinitionData extends DataPackage {
         return frag;
     }
 
-    // Includes
     public void addInclude(ShaderData include) {
         includes.add(include);
     }

@@ -146,7 +146,7 @@ class InternalBuildSystem extends SystemPackage {
 
         existing = vaoManager.getVAOHandleFromName(vaoName);
         if (existing == null)
-            throwException( // TODO: Add my own error
+            throwException(
                     "Failed to create VAO '" + vaoName + "' from file: " + referencedFile.getName());
 
         return existing;

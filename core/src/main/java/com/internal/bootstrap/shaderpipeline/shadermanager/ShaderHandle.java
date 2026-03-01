@@ -1,43 +1,44 @@
 package com.internal.bootstrap.shaderpipeline.shadermanager;
 
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.core.engine.HandlePackage;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * Compiled GPU shader program with its associated uniform and UBO block metadata.
+ * UBO blocks are tracked by block name only — UBOHandle references never leave
+ * UBOManager. Binding is performed at assembly time via UBOManager lookup.
+ */
 public class ShaderHandle extends HandlePackage {
 
     // Internal
     private String shaderName;
     private int shaderID;
     private int shaderHandle;
-
-    private Object2ObjectOpenHashMap<String, UBOHandle> buffers;
+    private ObjectArrayList<String> uboBlockNames;
     private Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
+
+    // Internal \\
 
     public void constructor(
             String shaderName,
             int shaderID,
             int shaderHandle) {
-
-        // Internal
         this.shaderName = shaderName;
         this.shaderID = shaderID;
         this.shaderHandle = shaderHandle;
-
-        this.buffers = new Object2ObjectOpenHashMap<>();
+        this.uboBlockNames = new ObjectArrayList<>();
         this.uniforms = new Object2ObjectOpenHashMap<>();
     }
 
     // Utility \\
 
-    // Buffers
-    public void addBuffer(String bufferName, UBOHandle buffer) {
-        buffers.put(bufferName, buffer);
+    public void addUBOBlock(String blockName) {
+        uboBlockNames.add(blockName);
     }
 
-    // Uniforms
     public void addUniform(String uniformName, Uniform<?> uniform) {
         uniforms.put(uniformName, uniform);
     }
@@ -56,8 +57,8 @@ public class ShaderHandle extends HandlePackage {
         return shaderHandle;
     }
 
-    public Object2ObjectOpenHashMap<String, UBOHandle> getBuffers() {
-        return buffers;
+    public ObjectArrayList<String> getUBOBlockNames() {
+        return uboBlockNames;
     }
 
     public Object2ObjectOpenHashMap<String, Uniform<?>> getUniforms() {

@@ -8,13 +8,18 @@ import com.internal.core.engine.DataPackage;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * Bootstrap transfer container for a single parsed GLSL source file.
+ * Carries the raw file reference, parsed version directive, discovered uniform
+ * declarations, UBO block declarations, and direct include dependencies.
+ * Lives with the shadermanager package — never handed outside bootstrap.
+ */
 public class ShaderData extends DataPackage {
 
     // Internal
     private ShaderType shaderType;
     private String shaderName;
     private File shaderFile;
-
     private String version;
     private ObjectArrayList<ShaderData> includes;
     private ObjectArrayList<UBOData> bufferBlocks;
@@ -24,20 +29,16 @@ public class ShaderData extends DataPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.version = null;
+        this.includes = new ObjectArrayList<>();
         this.bufferBlocks = new ObjectArrayList<>();
         this.uniforms = new ObjectArrayList<>();
-        this.includes = new ObjectArrayList<>();
     }
 
     public void constructor(
             ShaderType shaderType,
             String shaderName,
             File shaderFile) {
-
-        // Internal
         this.shaderType = shaderType;
         this.shaderName = shaderName;
         this.shaderFile = shaderFile;
@@ -45,7 +46,6 @@ public class ShaderData extends DataPackage {
 
     // Accessible \\
 
-    // Internal
     public ShaderType getShaderType() {
         return shaderType;
     }
@@ -58,7 +58,6 @@ public class ShaderData extends DataPackage {
         return shaderFile;
     }
 
-    // Version
     public String getVersion() {
         return version;
     }
@@ -67,7 +66,6 @@ public class ShaderData extends DataPackage {
         this.version = version;
     }
 
-    // Includes
     public void addIncludes(ShaderData include) {
         includes.add(include);
     }
@@ -76,7 +74,6 @@ public class ShaderData extends DataPackage {
         return includes;
     }
 
-    // Buffers
     public void addBufferBlock(UBOData block) {
         bufferBlocks.add(block);
     }
@@ -85,7 +82,6 @@ public class ShaderData extends DataPackage {
         return bufferBlocks;
     }
 
-    // Uniforms
     public void addUniform(UniformData uniform) {
         uniforms.add(uniform);
     }

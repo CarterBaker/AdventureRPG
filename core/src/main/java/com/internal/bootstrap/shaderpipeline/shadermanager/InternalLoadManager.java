@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOData;
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
@@ -25,6 +24,11 @@ import com.internal.core.util.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * Drives the full shader bootstrap sequence: file discovery, GLSL parsing,
+ * JSON-driven compilation, and final handle assembly. Released after bootstrap
+ * so no parsing state persists into the runtime loop.
+ */
 class InternalLoadManager extends ManagerPackage {
 
     // Internal
@@ -35,23 +39,19 @@ class InternalLoadManager extends ManagerPackage {
 
     private ObjectArrayList<ShaderData> glslFiles;
     private ObjectArrayList<File> jsonFiles;
-
     private Object2ObjectOpenHashMap<String, ShaderData> lookup;
 
     private int shaderCount;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void create() {
-
-        // Internal
         this.root = new File(EngineSetting.SHADER_PATH);
         this.internalBuildSystem = create(InternalBuildSystem.class);
 
         this.glslFiles = new ObjectArrayList<>();
         this.jsonFiles = new ObjectArrayList<>();
-
         this.lookup = new Object2ObjectOpenHashMap<>();
 
         this.shaderCount = 0;
@@ -59,24 +59,18 @@ class InternalLoadManager extends ManagerPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.shaderManager = get(ShaderManager.class);
         this.uboManager = get(UBOManager.class);
     }
 
     @Override
     protected void release() {
-
-        // Internal
         this.internalBuildSystem = release(InternalBuildSystem.class);
     }
 
-    // ShaderHandle Management \\
+    // Bootstrap \\
 
     void loadShaders() {
-
-        // First load all files and organize them
         loadAllFiles();
         buildShaderData();
         compileShaders();
@@ -87,7 +81,7 @@ class InternalLoadManager extends ManagerPackage {
     private void loadAllFiles() {
 
         if (!root.exists() || !root.isDirectory())
-            throwException("ShaderHandle directory not found: " + root.getAbsolutePath());
+            throwException("Shader directory not found: " + root.getAbsolutePath());
 
         Path base = root.toPath();
 
@@ -95,10 +89,8 @@ class InternalLoadManager extends ManagerPackage {
             stream
                     .filter(Files::isRegularFile)
                     .forEach(path -> categorizeFile(path.toFile()));
-        }
-
-        catch (IOException e) {
-            throwException("ShaderManager failed to load one or more files: ", e);
+        } catch (IOException e) {
+            throwException("ShaderManager failed to load files: ", e);
         }
     }
 
@@ -106,17 +98,17 @@ class InternalLoadManager extends ManagerPackage {
 
         String extension = FileUtility.getExtension(file);
 
-        if (extension == null)
+        if (extension == null || extension.isEmpty())
             return;
-
-        ShaderType shaderType = null;
 
         if (EngineSetting.JSON_FILE_EXTENSIONS.contains(extension)) {
             jsonFiles.add(file);
             return;
         }
 
-        else if (EngineSetting.VERT_FILE_EXTENSIONS.contains(extension))
+        ShaderType shaderType = null;
+
+        if (EngineSetting.VERT_FILE_EXTENSIONS.contains(extension))
             shaderType = ShaderType.VERT;
         else if (EngineSetting.FRAG_FILE_EXTENSIONS.contains(extension))
             shaderType = ShaderType.FRAG;
@@ -124,19 +116,13 @@ class InternalLoadManager extends ManagerPackage {
             shaderType = ShaderType.INCLUDE;
 
         if (shaderType == null)
-            throwException(
-                    "ShaderHandle: " + file.getName() + ", Has an unrecognized extension");
+            throwException("Unrecognized shader extension: " + file.getName());
 
-        ShaderData shaderDataInstance = create(ShaderData.class);
-        shaderDataInstance.constructor(
-                shaderType,
-                FileUtility.getFileName(file),
-                file);
+        ShaderData shaderData = create(ShaderData.class);
+        shaderData.constructor(shaderType, FileUtility.getFileName(file), file);
 
-        glslFiles.add(shaderDataInstance);
-
-        String filePath = FileUtility.getPathWithFileNameWithExtension(root, file);
-        lookup.put(filePath, shaderDataInstance);
+        glslFiles.add(shaderData);
+        lookup.put(FileUtility.getPathWithFileNameWithExtension(root, file), shaderData);
     }
 
     // Build \\
@@ -155,117 +141,90 @@ class InternalLoadManager extends ManagerPackage {
                             internalBuildSystem.compileShader(jsonFiles.get(i))));
     }
 
-    // ShaderHandle
-    private ShaderHandle assembleShader(ShaderDefinitionData shaderDefinition) {
+    // Assemble \\
 
-        String shaderName = shaderDefinition.getShaderName();
-        int shaderID = shaderCount++;
-        int shaderHandle = GLSLUtility.createShaderProgram(shaderDefinition);
+    private ShaderHandle assembleShader(ShaderDefinitionData definition) {
 
         ShaderHandle shader = create(ShaderHandle.class);
-
         shader.constructor(
-                shaderName,
-                shaderID,
-                shaderHandle);
+                definition.getShaderName(),
+                shaderCount++,
+                GLSLUtility.createShaderProgram(definition));
 
-        assembleBuffers(
-                shader,
-                shaderDefinition);
-
-        assembleUniforms(
-                shader,
-                shaderDefinition);
+        assembleBuffers(shader, definition);
+        assembleUniforms(shader, definition);
 
         return shader;
     }
 
     // Buffers
-    private void assembleBuffers(
-            ShaderHandle shader,
-            ShaderDefinitionData shaderDefinition) {
+    private void assembleBuffers(ShaderHandle shader, ShaderDefinitionData definition) {
 
-        addBuffersFromShaderData(
-                shaderDefinition.getVert(),
-                shader);
+        addBuffersFromShaderData(shader, definition.getVert());
+        addBuffersFromShaderData(shader, definition.getFrag());
 
-        addBuffersFromShaderData(
-                shaderDefinition.getFrag(),
-                shader);
-
-        ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
+        ObjectArrayList<ShaderData> includes = definition.getIncludes();
 
         for (int i = 0; i < includes.size(); i++)
-            addBuffersFromShaderData(includes.get(i), shader);
+            addBuffersFromShaderData(shader, includes.get(i));
     }
 
-    private void addBuffersFromShaderData(
-            ShaderData shaderData,
-            ShaderHandle shader) {
+    private void addBuffersFromShaderData(ShaderHandle shader, ShaderData shaderData) {
 
-        ObjectArrayList<UBOData> bufferBlocks = shaderData.getBufferBlocks();
+        ObjectArrayList<UBOData> blocks = shaderData.getBufferBlocks();
 
-        for (int i = 0; i < bufferBlocks.size(); i++)
-            addBufferFromBufferData(bufferBlocks.get(i), shader);
+        for (int i = 0; i < blocks.size(); i++)
+            addBuffer(shader, blocks.get(i));
     }
 
-    private void addBufferFromBufferData(
-            UBOData bufferData,
-            ShaderHandle shader) {
+    private void addBuffer(ShaderHandle shader, UBOData bufferData) {
 
-        UBOHandle ubo = uboManager.buildBuffer(bufferData);
+        // Register or retrieve the handle — UBOManager owns binding assignment
+        uboManager.buildBuffer(bufferData);
 
-        shaderManager.bindShaderToUBO(
-                shader,
-                ubo);
+        // Bind the shader program's block index to the UBO's binding point
+        shaderManager.bindShaderToUBO(shader, bufferData.getBlockName());
 
-        shader.addBuffer(
-                bufferData.getBlockName(),
-                ubo);
+        // Track by name only — no handle reference crosses into ShaderHandle
+        shader.addUBOBlock(bufferData.getBlockName());
     }
 
     // Uniforms
-    private void assembleUniforms(
-            ShaderHandle shader,
-            ShaderDefinitionData shaderDefinition) {
+    private void assembleUniforms(ShaderHandle shader, ShaderDefinitionData definition) {
 
-        addUniformsFromShaderData(
-                shaderDefinition.getVert(),
-                shader);
+        addUniformsFromShaderData(shader, definition.getVert());
+        addUniformsFromShaderData(shader, definition.getFrag());
 
-        addUniformsFromShaderData(
-                shaderDefinition.getFrag(),
-                shader);
-
-        ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
+        ObjectArrayList<ShaderData> includes = definition.getIncludes();
 
         for (int i = 0; i < includes.size(); i++)
-            addUniformsFromShaderData(includes.get(i), shader);
+            addUniformsFromShaderData(shader, includes.get(i));
     }
 
-    private void addUniformsFromShaderData(
-            ShaderData shaderData,
-            ShaderHandle shader) {
+    private void addUniformsFromShaderData(ShaderHandle shader, ShaderData shaderData) {
 
         ObjectArrayList<UniformData> uniforms = shaderData.getUniforms();
 
         for (int i = 0; i < uniforms.size(); i++)
-            addUniformFromUniformData(uniforms.get(i), shader);
+            addUniform(shader, uniforms.get(i));
     }
 
-    private void addUniformFromUniformData(UniformData uniformData, ShaderHandle shader) {
+    private void addUniform(ShaderHandle shader, UniformData uniformData) {
 
-        // Array uniforms must be queried as "name[0]", single uniforms just use "name"
+        // Query as "name[0]" for arrays; plain name for singles.
         String queryName = uniformData.getCount() > 1
                 ? uniformData.getUniformName() + "[0]"
                 : uniformData.getUniformName();
 
-        UniformAttribute<?> uniformAttribute = createUniformAttribute(uniformData);
-        Uniform<?> uniform = new Uniform<>(
-                GLSLUtility.getUniformHandle(shader.getShaderHandle(), queryName),
-                uniformAttribute);
+        // A location of -1 means the compiler removed the uniform as unused.
+        // We store the uniform with location -1 and rely on the upload path to
+        // no-op silently. This prevents crashes from shared include files where
+        // a uniform is declared but not used by every shader variant.
+        int location = GLSLUtility.getUniformLocation(shader.getShaderHandle(), queryName);
 
-        // Still store it under the plain name (no [0]) for lookup later
+        UniformAttribute<?> attribute = createUniformAttribute(uniformData);
+        Uniform<?> uniform = new Uniform<>(location, uniformData.getCount(), attribute);
+
         shader.addUniform(uniformData.getUniformName(), uniform);
     }
 
@@ -275,14 +234,10 @@ class InternalLoadManager extends ManagerPackage {
         boolean isArray = count > 1;
 
         return switch (uniformData.getUniformType()) {
-
-            // Scalars
             case FLOAT -> isArray ? new FloatArrayUniform(count) : new FloatUniform();
             case DOUBLE -> isArray ? new DoubleArrayUniform(count) : new DoubleUniform();
             case INT -> isArray ? new IntegerArrayUniform(count) : new IntegerUniform();
             case BOOL -> isArray ? new BooleanArrayUniform(count) : new BooleanUniform();
-
-            // Vectors
             case VECTOR2 -> isArray ? new Vector2ArrayUniform(count) : new Vector2Uniform();
             case VECTOR3 -> isArray ? new Vector3ArrayUniform(count) : new Vector3Uniform();
             case VECTOR4 -> isArray ? new Vector4ArrayUniform(count) : new Vector4Uniform();
@@ -295,21 +250,15 @@ class InternalLoadManager extends ManagerPackage {
             case VECTOR2_BOOLEAN -> isArray ? new Vector2BooleanArrayUniform(count) : new Vector2BooleanUniform();
             case VECTOR3_BOOLEAN -> isArray ? new Vector3BooleanArrayUniform(count) : new Vector3BooleanUniform();
             case VECTOR4_BOOLEAN -> isArray ? new Vector4BooleanArrayUniform(count) : new Vector4BooleanUniform();
-
-            // Matrices
             case MATRIX2 -> isArray ? new Matrix2ArrayUniform(count) : new Matrix2Uniform();
             case MATRIX3 -> isArray ? new Matrix3ArrayUniform(count) : new Matrix3Uniform();
             case MATRIX4 -> isArray ? new Matrix4ArrayUniform(count) : new Matrix4Uniform();
             case MATRIX2_DOUBLE -> isArray ? new Matrix2DoubleArrayUniform(count) : new Matrix2DoubleUniform();
             case MATRIX3_DOUBLE -> isArray ? new Matrix3DoubleArrayUniform(count) : new Matrix3DoubleUniform();
             case MATRIX4_DOUBLE -> isArray ? new Matrix4DoubleArrayUniform(count) : new Matrix4DoubleUniform();
-
-            // Samplers
             case SAMPLE_IMAGE_2D -> new SampleImage2DUniform();
-            case SAMPLE_IMAGE_2D_ARRAY -> new SampleImage2DArrayUniform(); // Already an array type
-
-            default -> throwException(
-                    "Unsupported uniform type: " + uniformData.getUniformType().toString());
+            case SAMPLE_IMAGE_2D_ARRAY -> new SampleImage2DArrayUniform();
+            default -> throwException("Unsupported uniform type: " + uniformData.getUniformType());
         };
     }
 
@@ -317,21 +266,17 @@ class InternalLoadManager extends ManagerPackage {
 
     ShaderData getShaderData(String key) {
 
-        // First try full path lookup
         ShaderData result = lookup.get(key);
+
         if (result != null)
             return result;
 
-        // Fallback try short stripped name
         for (int i = 0; i < glslFiles.size(); i++) {
-
-            ShaderData inst = glslFiles.get(i);
-            if (inst.getShaderName().equals(key))
-                return inst;
+            ShaderData data = glslFiles.get(i);
+            if (data.getShaderName().equals(key))
+                return data;
         }
 
-        return throwException(
-                "ShaderHandle data for key: " + key + ", Could not be found");
+        return throwException("Shader data not found for key: " + key);
     }
-
 }

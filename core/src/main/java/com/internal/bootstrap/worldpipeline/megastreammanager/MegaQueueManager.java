@@ -5,7 +5,6 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
-import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotDetailLevel;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaData;
@@ -15,7 +14,8 @@ import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaDump
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaMergeBranch;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaQueueOperation;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaRenderBranch;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.kernel.threadmanager.ThreadHandle;
@@ -30,10 +30,9 @@ import java.util.ArrayDeque;
  * total active + pooled instances are bounded exactly like chunks.
  * Assessment is cursor-driven per frame using the natural ordering of
  * Long2ObjectLinkedOpenHashMap, mirroring the chunk queue contract exactly.
- * Detail level is read directly from the grid slot — no custom distance math.
- * DISTANT        → assess → merge → render → dump CPU geometry
- * NEAR/IMMEDIATE → dump from GPU if rendered, skip otherwise
- * null slot       → unload entirely into pool
+ * Detail level renderMode is read directly from the grid slot — no hardcoded
+ * enum values. BATCHED → full mega pipeline. INDIVIDUAL → dump if rendered.
+ * null slot → unload entirely into pool.
  */
 class MegaQueueManager extends ManagerPackage {
 
@@ -116,7 +115,6 @@ class MegaQueueManager extends ManagerPackage {
             MegaChunkInstance mega = entry.getValue();
             iterator.remove();
             MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
-            // Wait for any in-flight merge to finish before resetting
             if (!sync.tryAcquire()) {
                 activeMegaChunks.put(megaCoord, mega);
                 continue;
@@ -229,20 +227,19 @@ class MegaQueueManager extends ManagerPackage {
             return MegaQueueOperation.SKIP;
         try {
             boolean[] data = sync.data;
-            boolean isDistant = gridSlotHandle.getDetailLevel() == GridSlotDetailLevel.DISTANT;
 
-            if (!isDistant) {
+            // Use renderMode from detail level — no hardcoded enum value matching
+            if (gridSlotHandle.getDetailLevel().renderMode == RenderType.INDIVIDUAL) {
                 if (data[MegaData.RENDER_DATA.index])
                     return MegaQueueOperation.DUMP;
                 return MegaQueueOperation.SKIP;
             }
 
-            if (!data[MegaData.BATCH_DATA.index])
-                return MegaQueueOperation.ASSESS;
-            if (!data[MegaData.MERGE_DATA.index])
-                return MegaQueueOperation.MERGE;
-            if (!data[MegaData.RENDER_DATA.index])
-                return MegaQueueOperation.RENDER;
+            // BATCHED — iterate MegaData entries, return operation for first unset flag
+            for (MegaData megaData : MegaData.VALUES) {
+                if (!data[megaData.index])
+                    return megaData.queueOperation;
+            }
 
             return MegaQueueOperation.SKIP;
         } finally {

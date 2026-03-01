@@ -1,23 +1,25 @@
 package com.internal.bootstrap.shaderpipeline.spritemanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
-import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
+import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
-import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
+import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 
+/*
+ * Discovers sprite image files, delegates image loading and GPU upload to
+ * subsystems, and registers each resulting SpriteHandle with the SpriteManager.
+ * Default mesh and material are resolved once at load time and shared across
+ * all sprite model instances.
+ */
 class InternalLoadManager extends ManagerPackage {
 
     // Internal
@@ -32,7 +34,7 @@ class InternalLoadManager extends ManagerPackage {
     private MeshHandle defaultMeshHandle;
     private int defaultMaterialID;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void create() {
@@ -57,15 +59,14 @@ class InternalLoadManager extends ManagerPackage {
 
     void loadSprites() {
 
-        FileUtility.verifyDirectory(root,
-                "Sprite directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Sprite directory not found: " + root.getAbsolutePath());
 
         resolveDefaults();
 
-        List<File> spriteFiles = collectSpriteFiles();
+        List<File> spriteFiles = FileUtility.collectFiles(root, EngineSetting.TEXTURE_FILE_EXTENSIONS);
 
-        for (File file : spriteFiles)
-            processSpriteFile(file);
+        for (int i = 0; i < spriteFiles.size(); i++)
+            processSpriteFile(spriteFiles.get(i));
     }
 
     // Default Resolution \\
@@ -78,27 +79,10 @@ class InternalLoadManager extends ManagerPackage {
         if (defaultMeshHandle == null)
             throwException("Default sprite mesh not found: '" + EngineSetting.SPRITE_DEFAULT_MESH + "'");
 
-        this.defaultMaterialID = materialManager.getMaterialIDFromMaterialName(
-                EngineSetting.SPRITE_DEFAULT_MATERIAL);
+        this.defaultMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.SPRITE_DEFAULT_MATERIAL);
 
         if (defaultMaterialID == -1)
             throwException("Default sprite material not found: '" + EngineSetting.SPRITE_DEFAULT_MATERIAL + "'");
-    }
-
-    // File Collection \\
-
-    private List<File> collectSpriteFiles() {
-        try (var stream = Files.walk(root.toPath())) {
-            return stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.TEXTURE_FILE_EXTENSIONS
-                            .contains(FileUtility.getExtension(f)))
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            throwException("Failed to walk sprite directory: " + root.getAbsolutePath(), e);
-            return null;
-        }
     }
 
     // File Processing \\
@@ -108,22 +92,18 @@ class InternalLoadManager extends ManagerPackage {
         String spriteName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
 
         try {
-            SpriteData spriteData = internalBuildSystem.buildSpriteData(file, spriteName);
 
+            SpriteData spriteData = internalBuildSystem.buildSpriteData(file, spriteName);
             int gpuHandle = GLSLUtility.pushSprite(spriteData.getImage());
 
-            MaterialHandle materialHandle = materialManager.cloneMaterial(defaultMaterialID);
-            materialHandle.setUniform("u_sprite", gpuHandle);
+            MaterialInstance material = materialManager.cloneMaterial(defaultMaterialID);
+            material.setUniform("u_sprite", gpuHandle);
 
-            ModelHandle modelHandle = modelManager.createModel(defaultMeshHandle, materialHandle);
+            ModelInstance modelInstance = modelManager.createModel(defaultMeshHandle, material);
 
             SpriteHandle spriteHandle = create(SpriteHandle.class);
-            spriteHandle.constructor(
-                    spriteName,
-                    gpuHandle,
-                    spriteData.getWidth(),
-                    spriteData.getHeight(),
-                    modelHandle);
+            spriteHandle.constructor(spriteName, gpuHandle, spriteData.getWidth(), spriteData.getHeight(),
+                    modelInstance);
 
             spriteManager.addSprite(spriteName, spriteHandle);
 

@@ -1,6 +1,8 @@
 package com.internal.core.util.mathematics.vectors;
 
-public class Vector3Boolean {
+import com.internal.core.engine.UtilityPackage;
+
+public class Vector3Boolean extends UtilityPackage {
 
     // Data
     public boolean x, y, z;
@@ -8,7 +10,6 @@ public class Vector3Boolean {
     // Constructors \\
 
     public Vector3Boolean(boolean x, boolean y, boolean z) {
-
         this.x = x;
         this.y = y;
         this.z = z;
@@ -29,11 +30,9 @@ public class Vector3Boolean {
     // Set \\
 
     public Vector3Boolean set(boolean x, boolean y, boolean z) {
-
         this.x = x;
         this.y = y;
         this.z = z;
-
         return this;
     }
 
@@ -48,11 +47,9 @@ public class Vector3Boolean {
     // And \\
 
     public Vector3Boolean and(boolean x, boolean y, boolean z) {
-
         this.x = this.x && x;
         this.y = this.y && y;
         this.z = this.z && z;
-
         return this;
     }
 
@@ -67,11 +64,9 @@ public class Vector3Boolean {
     // Or \\
 
     public Vector3Boolean or(boolean x, boolean y, boolean z) {
-
         this.x = this.x || x;
         this.y = this.y || y;
         this.z = this.z || z;
-
         return this;
     }
 
@@ -86,11 +81,9 @@ public class Vector3Boolean {
     // Xor \\
 
     public Vector3Boolean xor(boolean x, boolean y, boolean z) {
-
         this.x = this.x ^ x;
         this.y = this.y ^ y;
         this.z = this.z ^ z;
-
         return this;
     }
 
@@ -105,11 +98,9 @@ public class Vector3Boolean {
     // Not \\
 
     public Vector3Boolean not() {
-
         this.x = !this.x;
         this.y = !this.y;
         this.z = !this.z;
-
         return this;
     }
 
@@ -127,18 +118,13 @@ public class Vector3Boolean {
 
     @Override
     public boolean equals(Object obj) {
-
-        if (!(obj instanceof Vector3Boolean))
-            return false;
-
-        Vector3Boolean v = (Vector3Boolean) obj;
-
-        return x == v.x && y == v.y && z == v.z;
+        if (obj instanceof Vector3Boolean v)
+            return x == v.x && y == v.y && z == v.z;
+        return false;
     }
 
     @Override
     public int hashCode() {
-
         int h = Boolean.hashCode(x);
         h = 31 * h + Boolean.hashCode(y);
         return 31 * h + Boolean.hashCode(z);

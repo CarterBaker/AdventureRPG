@@ -1,6 +1,8 @@
 package com.internal.core.util.mathematics.vectors;
 
-public class Vector4Int {
+import com.internal.core.engine.UtilityPackage;
+
+public class Vector4Int extends UtilityPackage {
 
     // Data
     public int x, y, z, w;
@@ -8,7 +10,6 @@ public class Vector4Int {
     // Constructors \\
 
     public Vector4Int(int x, int y, int z, int w) {
-
         this.x = x;
         this.y = y;
         this.z = z;
@@ -30,12 +31,10 @@ public class Vector4Int {
     // Set \\
 
     public Vector4Int set(int x, int y, int z, int w) {
-
         this.x = x;
         this.y = y;
         this.z = z;
         this.w = w;
-
         return this;
     }
 
@@ -50,12 +49,10 @@ public class Vector4Int {
     // Addition \\
 
     public Vector4Int add(int x, int y, int z, int w) {
-
         this.x += x;
         this.y += y;
         this.z += z;
         this.w += w;
-
         return this;
     }
 
@@ -70,12 +67,10 @@ public class Vector4Int {
     // Subtraction \\
 
     public Vector4Int subtract(int x, int y, int z, int w) {
-
         this.x -= x;
         this.y -= y;
         this.z -= z;
         this.w -= w;
-
         return this;
     }
 
@@ -90,12 +85,10 @@ public class Vector4Int {
     // Multiplication \\
 
     public Vector4Int multiply(int x, int y, int z, int w) {
-
         this.x *= x;
         this.y *= y;
         this.z *= z;
         this.w *= w;
-
         return this;
     }
 
@@ -110,15 +103,12 @@ public class Vector4Int {
     // Division \\
 
     public Vector4Int divide(int x, int y, int z, int w) {
-
-        if (x == 0 || y == 0 || z == 0) // TODO: make my own error
-            throw new ArithmeticException("Division by zero");
-
+        if (x == 0 || y == 0 || z == 0 || w == 0)
+            throwException("Division by zero");
         this.x /= x;
         this.y /= y;
         this.z /= z;
         this.w /= w;
-
         return this;
     }
 
@@ -133,39 +123,25 @@ public class Vector4Int {
     // Utility \\
 
     public boolean hasValues() {
-        return x != 0 ||
-                y != 0 ||
-                z != 0 ||
-                w != 0;
+        return x != 0 || y != 0 || z != 0 || w != 0;
     }
 
     // Java \\
 
     @Override
     public boolean equals(Object obj) {
-
-        if (obj instanceof Vector4Int) {
-
-            Vector4Int v = (Vector4Int) obj;
-            return this.x == v.x &&
-                    this.y == v.y &&
-                    this.z == v.z &&
-                    this.w == v.w;
-        }
-
+        if (obj instanceof Vector4Int v)
+            return this.x == v.x && this.y == v.y && this.z == v.z && this.w == v.w;
         return false;
     }
 
     @Override
     public int hashCode() {
-
         int result = 17;
-
-        result = 31 * result + Float.hashCode(x);
-        result = 31 * result + Float.hashCode(y);
-        result = 31 * result + Float.hashCode(z);
-        result = 31 * result + Float.hashCode(w);
-
+        result = 31 * result + Integer.hashCode(x);
+        result = 31 * result + Integer.hashCode(y);
+        result = 31 * result + Integer.hashCode(z);
+        result = 31 * result + Integer.hashCode(w);
         return result;
     }
 

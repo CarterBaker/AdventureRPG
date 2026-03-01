@@ -1,8 +1,9 @@
 package com.internal.core.util.mathematics.vectors;
 
+import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
-public class Vector3 {
+public class Vector3 extends UtilityPackage {
 
     // Data
     public float x, y, z;
@@ -10,7 +11,6 @@ public class Vector3 {
     // Constructors \\
 
     public Vector3(float x, float y, float z) {
-
         this.x = x;
         this.y = y;
         this.z = z;
@@ -41,11 +41,9 @@ public class Vector3 {
     // Set \\
 
     public Vector3 set(float x, float y, float z) {
-
         this.x = x;
         this.y = y;
         this.z = z;
-
         return this;
     }
 
@@ -60,11 +58,9 @@ public class Vector3 {
     // Addition \\
 
     public Vector3 add(float x, float y, float z) {
-
         this.x += x;
         this.y += y;
         this.z += z;
-
         return this;
     }
 
@@ -79,11 +75,9 @@ public class Vector3 {
     // Subtraction \\
 
     public Vector3 subtract(float x, float y, float z) {
-
         this.x -= x;
         this.y -= y;
         this.z -= z;
-
         return this;
     }
 
@@ -98,11 +92,9 @@ public class Vector3 {
     // Multiplication \\
 
     public Vector3 multiply(float x, float y, float z) {
-
         this.x *= x;
         this.y *= y;
         this.z *= z;
-
         return this;
     }
 
@@ -117,14 +109,11 @@ public class Vector3 {
     // Division \\
 
     public Vector3 divide(float x, float y, float z) {
-
-        if (x == 0 || y == 0 || z == 0) // TODO: make my own error
-            throw new ArithmeticException("Division by zero");
-
+        if (x == 0 || y == 0 || z == 0)
+            throwException("Division by zero");
         this.x /= x;
         this.y /= y;
         this.z /= z;
-
         return this;
     }
 
@@ -148,106 +137,79 @@ public class Vector3 {
 
     public Vector3 normalize() {
         float len = length();
-
         if (len == 0)
             return this;
-
         this.x /= len;
         this.y /= len;
         this.z /= len;
-
         return this;
     }
 
     // Direction Mapping \\
 
     public Vector3 up() {
-
         this.x = Direction3Vector.UP.x;
         this.y = Direction3Vector.UP.y;
         this.z = Direction3Vector.UP.z;
-
         return this;
     }
 
     public Vector3 north() {
-
         this.x = Direction3Vector.NORTH.x;
         this.y = Direction3Vector.NORTH.y;
         this.z = Direction3Vector.NORTH.z;
-
         return this;
     }
 
     public Vector3 south() {
-
         this.x = Direction3Vector.SOUTH.x;
         this.y = Direction3Vector.SOUTH.y;
         this.z = Direction3Vector.SOUTH.z;
-
         return this;
     }
 
     public Vector3 east() {
-
         this.x = Direction3Vector.EAST.x;
         this.y = Direction3Vector.EAST.y;
         this.z = Direction3Vector.EAST.z;
-
         return this;
     }
 
     public Vector3 west() {
-
         this.x = Direction3Vector.WEST.x;
         this.y = Direction3Vector.WEST.y;
         this.z = Direction3Vector.WEST.z;
-
         return this;
     }
 
     public Vector3 down() {
-
         this.x = Direction3Vector.DOWN.x;
         this.y = Direction3Vector.DOWN.y;
         this.z = Direction3Vector.DOWN.z;
-
         return this;
     }
 
     // Utility \\
 
     public boolean hasValues() {
-        return x != 0 ||
-                y != 0 ||
-                z != 0;
+        return x != 0 || y != 0 || z != 0;
     }
 
     // Java \\
 
     @Override
     public boolean equals(Object obj) {
-
-        if (obj instanceof Vector3) {
-
-            Vector3 v = (Vector3) obj;
-            return this.x == v.x &&
-                    this.y == v.y &&
-                    this.z == v.z;
-        }
-
+        if (obj instanceof Vector3 v)
+            return this.x == v.x && this.y == v.y && this.z == v.z;
         return false;
     }
 
     @Override
     public int hashCode() {
-
         int result = 17;
-
         result = 31 * result + Float.hashCode(x);
         result = 31 * result + Float.hashCode(y);
         result = 31 * result + Float.hashCode(z);
-
         return result;
     }
 

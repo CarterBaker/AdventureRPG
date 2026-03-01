@@ -4,8 +4,8 @@ import java.util.BitSet;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertBlockNeighbor3Vector;
+import com.internal.bootstrap.shaderpipeline.texturemanager.TextureHandle;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
-import com.internal.bootstrap.shaderpipeline.texturemanager.UVRect;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
@@ -384,6 +384,7 @@ public class FullGeometryBranch extends BranchPackage {
         int materialID = blockHandle.getMaterialID();
         int orientation = resolveOrientation(rotationPaletteHandle, xyz);
         int textureID = resolveTextureID(blockHandle, direction3Vector, orientation);
+        TextureHandle textureHandle = textureManager.getHandleFromTileID(textureID);
         int encodedFace = resolveEncodedFace(blockHandle, direction3Vector, orientation);
 
         return finalizeFace(
@@ -391,7 +392,7 @@ public class FullGeometryBranch extends BranchPackage {
                 dynamicPacketInstance,
                 direction3Vector,
                 materialID,
-                textureID,
+                textureHandle,
                 vert0XYZ, vert1XYZ, vert2XYZ, vert3XYZ,
                 vert0Color, vert1Color, vert2Color, vert3Color,
                 encodedFace);
@@ -538,14 +539,13 @@ public class FullGeometryBranch extends BranchPackage {
             DynamicPacketInstance dynamicPacketInstance,
             Direction3Vector direction3Vector,
             int materialId,
-            int textureID,
+            TextureHandle textureHandle,
             int vert0XYZ, int vert1XYZ, int vert2XYZ, int vert3XYZ,
             float vert0Color, float vert1Color, float vert2Color, float vert3Color,
             int encodedFace) {
 
         FloatArrayList buffer = verts.computeIfAbsent(materialId, k -> new FloatArrayList());
 
-        UVRect uvRect = textureManager.getTextureArrayUVfromTileID(textureID);
         float nor = (float) direction3Vector.index;
         float fEncodedFace = (float) encodedFace;
 
@@ -559,8 +559,8 @@ public class FullGeometryBranch extends BranchPackage {
         buffer.add((float) Coordinate3Int.unpackZ(vert0XYZ));
         buffer.add(nor);
         buffer.add(vert0Color);
-        buffer.add(uvRect.u0);
-        buffer.add(uvRect.v0);
+        buffer.add(textureHandle.getU0());
+        buffer.add(textureHandle.getV0());
         buffer.add(fEncodedFace);
         buffer.add(0f);
 
@@ -570,8 +570,8 @@ public class FullGeometryBranch extends BranchPackage {
         buffer.add((float) Coordinate3Int.unpackZ(vert1XYZ));
         buffer.add(nor);
         buffer.add(vert1Color);
-        buffer.add(uvRect.u0);
-        buffer.add(uvRect.v0);
+        buffer.add(textureHandle.getU0());
+        buffer.add(textureHandle.getV0());
         buffer.add(fEncodedFace);
         buffer.add(0f);
 
@@ -581,8 +581,8 @@ public class FullGeometryBranch extends BranchPackage {
         buffer.add((float) Coordinate3Int.unpackZ(vert2XYZ));
         buffer.add(nor);
         buffer.add(vert2Color);
-        buffer.add(uvRect.u0);
-        buffer.add(uvRect.v0);
+        buffer.add(textureHandle.getU0());
+        buffer.add(textureHandle.getV0());
         buffer.add(fEncodedFace);
         buffer.add(0f);
 
@@ -592,8 +592,8 @@ public class FullGeometryBranch extends BranchPackage {
         buffer.add((float) Coordinate3Int.unpackZ(vert3XYZ));
         buffer.add(nor);
         buffer.add(vert3Color);
-        buffer.add(uvRect.u0);
-        buffer.add(uvRect.v0);
+        buffer.add(textureHandle.getU0());
+        buffer.add(textureHandle.getV0());
         buffer.add(fEncodedFace);
         buffer.add(0f);
 

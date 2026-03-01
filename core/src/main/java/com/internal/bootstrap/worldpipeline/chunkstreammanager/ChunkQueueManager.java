@@ -17,7 +17,7 @@ import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotDetailLevel;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.queue.QueueInstance;
@@ -124,7 +124,6 @@ class ChunkQueueManager extends ManagerPackage {
             iterator.remove();
             ChunkDataSyncContainer sync = chunkInstance.getChunkDataSyncContainer();
             if (!sync.tryAcquire()) {
-                // Still in use — defer to next assess cycle via unload request
                 activeChunks.put(chunkCoordinate, chunkInstance);
                 unloadRequests.add(chunkCoordinate);
                 continue;
@@ -285,18 +284,10 @@ class ChunkQueueManager extends ManagerPackage {
             return QueueOperation.SKIP;
 
         try {
-
+            // Use queueOperation field from ChunkData — no hardcoded enum value matching
             ChunkData nextRequired = targetLevel.getNextRequiredData(syncContainer.data);
-            if (nextRequired != null) {
-                return switch (nextRequired) {
-                    case LOAD_DATA, ESSENTIAL_DATA, GENERATION_DATA -> QueueOperation.LOAD;
-                    case NEIGHBOR_DATA -> QueueOperation.ASSESSMENT;
-                    case BUILD_DATA -> QueueOperation.BUILD;
-                    case MERGE_DATA -> QueueOperation.MERGE;
-                    case BATCH_DATA -> QueueOperation.BATCH;
-                    case RENDER_DATA -> QueueOperation.RENDER;
-                };
-            }
+            if (nextRequired != null)
+                return nextRequired.queueOperation;
 
             ChunkData nextToDump = targetLevel.getNextDataToDump(syncContainer.data);
             if (nextToDump != null)

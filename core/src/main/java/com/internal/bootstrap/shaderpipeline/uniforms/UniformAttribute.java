@@ -11,8 +11,10 @@ public abstract class UniformAttribute<T> {
     public void constructor(Uniform<?> uniform) {
         this.uniform = uniform;
     }
+    // Internal \\
 
     // Base \\
+
     protected UniformAttribute() {
         throw new UnsupportedOperationException(
                 "Empty constructor is not allowed. You must provide an initial value.");
@@ -23,6 +25,7 @@ public abstract class UniformAttribute<T> {
     }
 
     // UBO Utility \\
+
     public abstract UniformAttribute<?> createDefault();
 
     public ByteBuffer getByteBuffer() {
@@ -31,6 +34,7 @@ public abstract class UniformAttribute<T> {
     }
 
     // Sampler Utility \\
+
     public boolean isSampler() {
         return false;
     }
@@ -40,6 +44,7 @@ public abstract class UniformAttribute<T> {
     }
 
     // Uniform Utility \\
+
     final void push(int handle) {
         push(handle, value);
     }
@@ -47,6 +52,7 @@ public abstract class UniformAttribute<T> {
     protected abstract void push(int handle, T value);
 
     // Accessible \\
+
     public final void set(T value) {
         applyValue(value);
     }
@@ -57,6 +63,7 @@ public abstract class UniformAttribute<T> {
         applyObject(value);
     }
 
+    @SuppressWarnings("unchecked")
     protected void applyObject(Object value) {
         set((T) value);
     }

@@ -1,6 +1,5 @@
 package com.internal.bootstrap.shaderpipeline.shadermanager;
 
-import java.nio.file.Files;
 import java.nio.IntBuffer;
 
 import com.badlogic.gdx.Gdx;
@@ -11,31 +10,34 @@ import com.internal.core.engine.UtilityPackage;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * GL20/GL30 wrapper for shader program construction and UBO block binding.
+ * Handles include flattening, source preprocessing, compilation, linking,
+ * and uniform block index resolution.
+ */
 class GLSLUtility extends UtilityPackage {
 
-    // Shader Program Construction
+    // Shader Program Construction \\
+
     static int createShaderProgram(ShaderDefinitionData shaderDef) {
 
-        // Preprocess shaders to replace #include directives with actual content
         String vertSource = preprocessShaderSource(shaderDef, shaderDef.getVert());
         String fragSource = preprocessShaderSource(shaderDef, shaderDef.getFrag());
 
-        // Compile preprocessed shaders
-        int vertShader = compileShaderFromSource(GL20.GL_VERTEX_SHADER, vertSource,
-                shaderDef.getVert().getShaderName());
-        int fragShader = compileShaderFromSource(GL20.GL_FRAGMENT_SHADER, fragSource,
-                shaderDef.getFrag().getShaderName());
+        int vertShader = compileShaderFromSource(
+                GL20.GL_VERTEX_SHADER, vertSource, shaderDef.getVert().getShaderName());
+        int fragShader = compileShaderFromSource(
+                GL20.GL_FRAGMENT_SHADER, fragSource, shaderDef.getFrag().getShaderName());
 
         int program = Gdx.gl.glCreateProgram();
+
         if (program == 0)
-            throwException(
-                    "Failed to return a valid gpu handle for shader: " + shaderDef.getShaderName());
+            throwException("Failed to create shader program: " + shaderDef.getShaderName());
 
         Gdx.gl.glAttachShader(program, vertShader);
         Gdx.gl.glAttachShader(program, fragShader);
         Gdx.gl.glLinkProgram(program);
 
-        // Check link result
         IntBuffer statusBuf = BufferUtils.newIntBuffer(1);
         Gdx.gl.glGetProgramiv(program, GL20.GL_LINK_STATUS, statusBuf);
         statusBuf.rewind();
@@ -45,11 +47,9 @@ class GLSLUtility extends UtilityPackage {
             Gdx.gl.glDeleteProgram(program);
             Gdx.gl.glDeleteShader(vertShader);
             Gdx.gl.glDeleteShader(fragShader);
-            throwException(
-                    "Failed to link shader program " + shaderDef.getShaderName() + ": " + log);
+            throwException("Failed to link shader " + shaderDef.getShaderName() + ": " + log);
         }
 
-        // Cleanup - detach and delete shaders
         Gdx.gl.glDetachShader(program, vertShader);
         Gdx.gl.glDetachShader(program, fragShader);
         Gdx.gl.glDeleteShader(vertShader);
@@ -58,129 +58,90 @@ class GLSLUtility extends UtilityPackage {
         return program;
     }
 
-    // Shader Compilation
+    // Shader Compilation \\
+
     private static int compileShaderFromSource(int type, String source, String shaderName) {
 
         int shaderID = Gdx.gl.glCreateShader(type);
+
         if (shaderID == 0)
-            throwException(
-                    "Shader: " + shaderName + ", Contains an invalid shader ID");
+            throwException("Invalid shader ID for: " + shaderName);
 
         Gdx.gl.glShaderSource(shaderID, source);
         Gdx.gl.glCompileShader(shaderID);
 
-        IntBuffer compiledBuf = BufferUtils.newIntBuffer(1);
-        Gdx.gl.glGetShaderiv(shaderID, GL20.GL_COMPILE_STATUS, compiledBuf);
-        compiledBuf.rewind();
+        IntBuffer compiled = BufferUtils.newIntBuffer(1);
+        Gdx.gl.glGetShaderiv(shaderID, GL20.GL_COMPILE_STATUS, compiled);
+        compiled.rewind();
 
-        if (compiledBuf.get(0) == 0) {
+        if (compiled.get(0) == 0) {
             String log = Gdx.gl.glGetShaderInfoLog(shaderID);
             Gdx.gl.glDeleteShader(shaderID);
-            throwException(
-                    "Failed to compile shader " + shaderName + ": " + log);
+            throwException("Failed to compile shader " + shaderName + ": " + log);
         }
 
         return shaderID;
     }
 
+    // Source Preprocessing \\
+
     static String preprocessShaderSource(ShaderDefinitionData shaderDefinition, ShaderData shaderData) {
+
         StringBuilder result = new StringBuilder();
 
-        // 1. Add version directive first (only from main shader, not includes)
         String version = shaderData.getVersion();
-        if (version != null && !version.isEmpty()) {
+        if (version != null && !version.isEmpty())
             result.append(version).append("\n\n");
-        }
 
-        // 2. Add all includes' content (in the order they were collected)
         ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
+
         for (int i = 0; i < includes.size(); i++) {
             ShaderData include = includes.get(i);
-            String includeSource = FileParserUtility.convertFileToRawText(include.getShaderFile());
-
-            // Remove #version and #include directives from included files
-            includeSource = stripPreprocessorDirectives(includeSource);
-
+            String source = stripDirectives(FileParserUtility.convertFileToRawText(include.getShaderFile()));
             result.append("// -------- Include: ").append(include.getShaderName()).append(" --------\n");
-            result.append(includeSource).append("\n");
+            result.append(source).append("\n");
             result.append("// -------- End Include --------\n\n");
         }
 
-        // 3. Add main shader source (without #version and #include directives)
-        String mainSource = FileParserUtility.convertFileToRawText(shaderData.getShaderFile());
-        mainSource = stripPreprocessorDirectives(mainSource);
-
-        result.append(mainSource);
+        result.append(stripDirectives(FileParserUtility.convertFileToRawText(shaderData.getShaderFile())));
 
         return result.toString();
     }
 
-    private static String stripPreprocessorDirectives(String source) {
-        // Remove #version directives
+    private static String stripDirectives(String source) {
         source = source.replaceAll("(?m)^\\s*#version\\s+.*$", "");
-        // Remove #include directives
         source = source.replaceAll("(?m)^\\s*#include\\s+.*$", "");
-        // Clean up multiple blank lines
         source = source.replaceAll("\n{3,}", "\n\n");
         return source.trim();
     }
 
-    static int getUniformHandle(int programHandle, String uniformName) {
+    // Uniform Location \\
 
-        int handle = Gdx.gl.glGetUniformLocation(programHandle, uniformName);
-
-        if (handle == -1) // TODO: Make my own error
-            throwException("Uniform not found in shader program: " + uniformName);
-
-        return handle;
+    /*
+     * Returns the location of a uniform in the given program.
+     * A return value of -1 means the driver removed the uniform as unused — this is
+     * not an error. Callers must store -1 and no-op on upload when location is -1.
+     */
+    static int getUniformLocation(int programHandle, String uniformName) {
+        return Gdx.gl.glGetUniformLocation(programHandle, uniformName);
     }
 
-    // Create a uniform buffer object
-    static int createUniformBuffer() {
-        IntBuffer buffer = BufferUtils.newIntBuffer(1);
-        Gdx.gl30.glGenBuffers(1, buffer);
-        buffer.rewind();
-        return buffer.get(0);
-    }
+    // UBO Block Binding \\
 
-    // Bind uniform buffer to a binding point
-    static void bindUniformBuffer(int bufferHandle, int bindingPoint) {
-        Gdx.gl30.glBindBufferBase(GL30.GL_UNIFORM_BUFFER, bindingPoint, bufferHandle);
-    }
+    static void bindUniformBlock(int programHandle, String blockName, int bindingPoint) {
 
-    static void allocateUniformBuffer(int bufferHandle, int sizeInBytes) {
-        Gdx.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, bufferHandle);
-        Gdx.gl30.glBufferData(GL30.GL_UNIFORM_BUFFER, sizeInBytes, null, GL30.GL_DYNAMIC_DRAW);
-        Gdx.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, 0);
-    }
-
-    static void deleteShaderProgram(int programHandle) {
-        if (programHandle != 0) {
-            Gdx.gl.glDeleteProgram(programHandle);
-        }
-    }
-
-    static void deleteUniformBuffer(int bufferHandle) {
-        if (bufferHandle != 0) {
-            IntBuffer buffer = BufferUtils.newIntBuffer(1);
-            buffer.put(0, bufferHandle);
-            Gdx.gl30.glDeleteBuffers(1, buffer);
-        }
-    }
-
-    static void bindUniformBlock(
-            int programHandle,
-            String blockName,
-            int bindingPoint) {
         int blockIndex = Gdx.gl30.glGetUniformBlockIndex(programHandle, blockName);
 
-        if (blockIndex == -1)
-            throwException(
-                    "Uniform block not found in shader program: " + blockName);
+        if (blockIndex == GL30.GL_INVALID_INDEX)
+            throwException("Uniform block not found in shader program: " + blockName);
 
-        Gdx.gl30.glUniformBlockBinding(
-                programHandle,
-                blockIndex,
-                bindingPoint);
+        Gdx.gl30.glUniformBlockBinding(programHandle, blockIndex, bindingPoint);
+    }
+
+    // Shader Disposal \\
+
+    static void deleteShaderProgram(int programHandle) {
+        if (programHandle != 0)
+            Gdx.gl.glDeleteProgram(programHandle);
     }
 }

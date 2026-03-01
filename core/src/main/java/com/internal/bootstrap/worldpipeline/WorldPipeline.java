@@ -6,7 +6,7 @@ import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManage
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import com.internal.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.PipelinePackage;
 

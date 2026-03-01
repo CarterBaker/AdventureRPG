@@ -1,6 +1,8 @@
 package com.internal.core.util.mathematics.Extras;
 
-public class Color {
+import com.internal.core.engine.UtilityPackage;
+
+public class Color extends UtilityPackage {
 
     // Static Colors \\
 
@@ -21,7 +23,6 @@ public class Color {
     // Constructors \\
 
     public Color(float r, float g, float b, float a) {
-
         this.r = r;
         this.g = g;
         this.b = b;
@@ -57,12 +58,10 @@ public class Color {
     // Set \\
 
     public Color set(float r, float g, float b, float a) {
-
         this.r = r;
         this.g = g;
         this.b = b;
         this.a = a;
-
         return this;
     }
 
@@ -81,12 +80,10 @@ public class Color {
     // Addition \\
 
     public Color add(float r, float g, float b, float a) {
-
         this.r += r;
         this.g += g;
         this.b += b;
         this.a += a;
-
         return this;
     }
 
@@ -101,12 +98,10 @@ public class Color {
     // Subtraction \\
 
     public Color subtract(float r, float g, float b, float a) {
-
         this.r -= r;
         this.g -= g;
         this.b -= b;
         this.a -= a;
-
         return this;
     }
 
@@ -121,12 +116,10 @@ public class Color {
     // Multiplication \\
 
     public Color multiply(float r, float g, float b, float a) {
-
         this.r *= r;
         this.g *= g;
         this.b *= b;
         this.a *= a;
-
         return this;
     }
 
@@ -141,15 +134,12 @@ public class Color {
     // Division \\
 
     public Color divide(float r, float g, float b, float a) {
-
-        if (r == 0 || g == 0 || b == 0 || a == 0) // TODO: make my own error
-            throw new ArithmeticException("Division by zero");
-
+        if (r == 0 || g == 0 || b == 0 || a == 0)
+            throwException("Division by zero");
         this.r /= r;
         this.g /= g;
         this.b /= b;
         this.a /= a;
-
         return this;
     }
 
@@ -164,22 +154,18 @@ public class Color {
     // Color Operations \\
 
     public Color clamp() {
-
         this.r = Math.max(0.0f, Math.min(1.0f, r));
         this.g = Math.max(0.0f, Math.min(1.0f, g));
         this.b = Math.max(0.0f, Math.min(1.0f, b));
         this.a = Math.max(0.0f, Math.min(1.0f, a));
-
         return this;
     }
 
     public Color lerp(Color target, float t) {
-
         this.r += t * (target.r - this.r);
         this.g += t * (target.g - this.g);
         this.b += t * (target.b - this.b);
         this.a += t * (target.a - this.a);
-
         return this;
     }
 
@@ -190,19 +176,16 @@ public class Color {
         int g = (int) (this.g * 255.0f);
         int b = (int) (this.b * 255.0f);
         int a = (int) (this.a * 255.0f);
-
         int packed = (a << 24) | (b << 16) | (g << 8) | r;
         return Float.intBitsToFloat(packed & 0xfeffffff);
     }
 
     public Color fromPackedFloat(float packed) {
         int intBits = Float.floatToRawIntBits(packed);
-
         this.r = (intBits & 0xff) / 255.0f;
         this.g = ((intBits >>> 8) & 0xff) / 255.0f;
         this.b = ((intBits >>> 16) & 0xff) / 255.0f;
         this.a = ((intBits >>> 24) & 0xff) / 255.0f;
-
         return this;
     }
 
@@ -217,7 +200,6 @@ public class Color {
         int gi = (int) (g * 255.0f);
         int bi = (int) (b * 255.0f);
         int ai = (int) (a * 255.0f);
-
         int packed = (ai << 24) | (bi << 16) | (gi << 8) | ri;
         return Float.intBitsToFloat(packed & 0xfeffffff);
     }
@@ -225,39 +207,25 @@ public class Color {
     // Utility \\
 
     public boolean hasValues() {
-        return r != 0 ||
-                g != 0 ||
-                b != 0 ||
-                a != 1.0f;
+        return r != 0 || g != 0 || b != 0 || a != 1.0f;
     }
 
     // Java \\
 
     @Override
     public boolean equals(Object obj) {
-
-        if (obj instanceof Color) {
-
-            Color c = (Color) obj;
-            return this.r == c.r &&
-                    this.g == c.g &&
-                    this.b == c.b &&
-                    this.a == c.a;
-        }
-
+        if (obj instanceof Color c)
+            return this.r == c.r && this.g == c.g && this.b == c.b && this.a == c.a;
         return false;
     }
 
     @Override
     public int hashCode() {
-
         int result = 17;
-
         result = 31 * result + Float.hashCode(r);
         result = 31 * result + Float.hashCode(g);
         result = 31 * result + Float.hashCode(b);
         result = 31 * result + Float.hashCode(a);
-
         return result;
     }
 

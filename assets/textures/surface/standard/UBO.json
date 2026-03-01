@@ -1,0 +1,13 @@
+{
+    "ubo": "StandardTextureLayoutData",
+    "aliases": {
+        "u_layer_albedo":   "albedo",
+        "u_layer_ao":       "ao",
+        "u_layer_emission": "emission",
+        "u_layer_height":   "height",
+        "u_layer_metallic": "metallic",
+        "u_layer_normal":   "normal",
+        "u_layer_specular": "specular"
+    },
+    "uvPerBlock": "u_uvPerBlock"
+}

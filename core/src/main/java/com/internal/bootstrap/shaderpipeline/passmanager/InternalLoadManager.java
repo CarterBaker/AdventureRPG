@@ -1,14 +1,16 @@
 package com.internal.bootstrap.shaderpipeline.passmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.List;
 
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 
+/*
+ * Drives the pass bootstrap sequence: file discovery and handle assembly.
+ * Released after bootstrap so no parsing state persists into the runtime loop.
+ */
 class InternalLoadManager extends ManagerPackage {
 
     // Internal
@@ -18,22 +20,17 @@ class InternalLoadManager extends ManagerPackage {
 
     private int passCount;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void create() {
-
-        // Internal
         this.root = new File(EngineSetting.PASS_JSON_PATH);
         this.internalBuildSystem = create(InternalBuildSystem.class);
-
         this.passCount = 0;
     }
 
     @Override
     protected void get() {
-
-        // Internal
         this.passManager = get(PassManager.class);
     }
 
@@ -42,45 +39,14 @@ class InternalLoadManager extends ManagerPackage {
         this.internalBuildSystem = release(InternalBuildSystem.class);
     }
 
-    // Pass Management \\
+    // Bootstrap \\
 
     void loadPasses() {
-        assignMeshData();
-        loadAllFiles();
-    }
+        FileUtility.verifyDirectory(root, "Pass directory not found: " + root.getAbsolutePath());
 
-    // Necessary for the internal builder to have data correctly assigned
-    private void assignMeshData() {
-        internalBuildSystem.assignMeshData();
-    }
+        List<File> jsonFiles = FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS);
 
-    // Load \\
-
-    private void loadAllFiles() {
-
-        if (!root.exists() || !root.isDirectory())
-            throwException("Shader directory not found: " + root.getAbsolutePath());
-
-        Path base = root.toPath();
-
-        try (var stream = Files.walk(base)) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .forEach(path -> buildPassFromFile(path.toFile()));
-        }
-
-        catch (IOException e) {
-            throwException("PassManager failed to load one or more files: ", e);
-        }
-    }
-
-    private void buildPassFromFile(File file) {
-
-        if (EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(file)))
-            compilePass(internalBuildSystem.buildPass(root, file, passCount++));
-    }
-
-    private void compilePass(PassHandle processingPassHandle) {
-        passManager.addPass(processingPassHandle);
+        for (int i = 0; i < jsonFiles.size(); i++)
+            passManager.addPass(internalBuildSystem.buildPass(root, jsonFiles.get(i), passCount++));
     }
 }

@@ -7,7 +7,7 @@ import com.internal.bootstrap.menupipeline.element.ElementPlacementHandle;
 import com.internal.bootstrap.menupipeline.element.LayoutStruct;
 import com.internal.bootstrap.menupipeline.element.MenuAwareAction;
 import com.internal.bootstrap.menupipeline.menu.MenuInstance;
-import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
+import com.internal.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import com.internal.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import com.internal.core.engine.SystemPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -17,8 +17,14 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 import java.util.function.Supplier;
 
+/*
+ * Manages the master element registry and handles runtime instantiation of
+ * ElementInstances from ElementHandles. Sprite cloning happens here at spawn
+ * time — handles carry only names, instances own their SpriteInstance.
+ */
 public class ElementSystem extends SystemPackage {
 
+    // Internal
     private SpriteManager spriteManager;
 
     // String lookup once at build time — int from there
@@ -84,7 +90,6 @@ public class ElementSystem extends SystemPackage {
     public ObjectArrayList<ElementInstance> createInstances(
             ObjectArrayList<ElementPlacementHandle> placements,
             Supplier<MenuInstance> parentRef) {
-
         ObjectArrayList<ElementInstance> result = new ObjectArrayList<>(placements.size());
         for (ElementPlacementHandle placement : placements)
             result.add(createInstance(placement.getMaster(), placement.getOverride(), parentRef));
@@ -96,30 +101,28 @@ public class ElementSystem extends SystemPackage {
             ElementOverrideStruct override,
             Supplier<MenuInstance> parentRef) {
 
-        // Sprite — override wins, clone whichever is chosen
-        SpriteHandle sourceSprite = (override != null && override.getSpriteHandle() != null)
-                ? override.getSpriteHandle()
-                : master.getSpriteHandle();
-        SpriteHandle instanceSprite = sourceSprite != null
-                ? spriteManager.cloneSprite(sourceSprite.getName())
+        // Sprite — override name wins, clone whichever is chosen into a fresh instance
+        String sourceName = (override != null && override.getSpriteName() != null)
+                ? override.getSpriteName()
+                : master.getSpriteName();
+        SpriteInstance spriteInstance = sourceName != null
+                ? spriteManager.cloneSprite(sourceName)
                 : null;
 
-        // Action — bind $parent at spawn time if needed, null falls through to handle
-        // at execute()
+        // Action — bind $parent at spawn time if needed
         Runnable resolvedAction = resolveAction(master, override, parentRef);
 
         // Text and layout — null means fall back to handle at read time
         String textOverride = override != null ? override.getText() : null;
         LayoutStruct layoutOverride = override != null ? override.getLayout() : null;
 
-        // Children — uniform: every child is a placement carrying its own master +
-        // override
+        // Children — recurse uniformly
         ObjectArrayList<ElementInstance> childInstances = new ObjectArrayList<>(master.getChildren().size());
         for (ElementPlacementHandle child : master.getChildren())
             childInstances.add(createInstance(child.getMaster(), child.getOverride(), parentRef));
 
         ElementInstance instance = create(ElementInstance.class);
-        instance.constructor(master, instanceSprite,
+        instance.constructor(master, spriteInstance,
                 textOverride, resolvedAction, layoutOverride, childInstances);
         return instance;
     }

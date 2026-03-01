@@ -92,8 +92,8 @@ public class InternalBuildSystem extends SystemPackage {
 
         // Single texture for all faces
         if (blockJson.has("texture")) {
-            int textureID = textureManager.getTileIDFromTextureName(
-                    blockJson.get("texture").getAsString());
+            int textureID = textureManager.getHandleFromTextureName(
+                    blockJson.get("texture").getAsString()).getTileID();
             for (int i = 0; i < Direction3Vector.LENGTH; i++)
                 textures[i] = textureID;
         }
@@ -102,8 +102,8 @@ public class InternalBuildSystem extends SystemPackage {
         for (Direction3Vector dir : Direction3Vector.VALUES) {
             String key = dir.name().toLowerCase() + "Tex";
             if (blockJson.has(key))
-                textures[dir.ordinal()] = textureManager.getTileIDFromTextureName(
-                        blockJson.get(key).getAsString());
+                textures[dir.ordinal()] = textureManager.getHandleFromTextureName(
+                        blockJson.get(key).getAsString()).getTileID();
         }
 
         // Cascade — fill undefined faces from the previous defined face

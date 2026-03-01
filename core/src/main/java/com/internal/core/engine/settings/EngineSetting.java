@@ -59,9 +59,9 @@ public class EngineSetting {
         public static final ObjectArraySet<String> INCLUDE_FILE_EXTENSIONS = new ObjectArraySet<>(
                         INCLUDE_FILE_EXTENSIONS_INTERNAL);
 
-        // Atlas Settings
+        // Texture Settings
         public static final int BLOCK_TEXTURE_SIZE = 32;
-        public static final int CHUNKS_PER_PIXEL = 32;
+        public static final String TEXTURE_UBO_COMPANION_FILE = "UBO.json";
 
         // Sprite Settings
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
@@ -98,6 +98,7 @@ public class EngineSetting {
         public static final int MESH_VERT_LIMIT = 32767;
 
         // World
+        public static final int CHUNKS_PER_PIXEL = 32;
         public static final String CHUNK_VAO = "util/vao/ChunkVAO";
         public static final String STARTING_WORLD = "TerraArcana";
         public static final String GRID_COORDINATE_UBO = "GridCoordinateData";

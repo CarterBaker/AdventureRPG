@@ -11,8 +11,10 @@ import com.internal.core.engine.BranchPackage;
 public class MegaAssessBranch extends BranchPackage {
 
     public void assessMega(MegaChunkInstance mega) {
+
         if (!mega.isComplete())
             return;
+
         mega.getMegaDataSyncContainer().setData(MegaData.BATCH_DATA, true);
     }
 }

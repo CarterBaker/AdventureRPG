@@ -1,5 +1,6 @@
 package com.internal.bootstrap.worldpipeline.gridmanager;
 
+import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.SystemPackage;
@@ -8,6 +9,7 @@ import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector2;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -124,9 +126,13 @@ class GridBuildSystem extends SystemPackage {
 
         UBOHandle baseUBO = uboManager.getUBOHandleFromUBOName(EngineSetting.GRID_COORDINATE_UBO);
 
-        for (Long gridCoordinate : gridCoordinates) {
+        LongIterator it = gridCoordinates.iterator();
 
-            UBOHandle slotUBO = uboManager.cloneUBO(baseUBO);
+        while (it.hasNext()) {
+
+            long gridCoordinate = it.nextLong();
+
+            UBOInstance slotUBO = uboManager.cloneUBO(baseUBO);
 
             int gridX = Coordinate2Long.unpackX(gridCoordinate) * CHUNK_SIZE;
             int gridY = Coordinate2Long.unpackY(gridCoordinate) * CHUNK_SIZE;
@@ -169,7 +175,7 @@ class GridBuildSystem extends SystemPackage {
 
     private GridSlotHandle createGridSlotHandle(
             long gridCoordinate,
-            UBOHandle slotUBO,
+            UBOInstance slotUBO,
             float chunkDistanceFromCenter,
             float chunkAngleFromCenter,
             float megaDistanceFromCenter,

@@ -5,16 +5,15 @@ import java.lang.reflect.Method;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.internal.bootstrap.menupipeline.element.ElementHandle;
 import com.internal.bootstrap.menupipeline.element.ElementOverrideStruct;
 import com.internal.bootstrap.menupipeline.element.ElementPlacementHandle;
-import com.internal.bootstrap.menupipeline.element.LayoutStruct;
-import com.internal.bootstrap.menupipeline.element.ElementHandle;
 import com.internal.bootstrap.menupipeline.element.ElementType;
+import com.internal.bootstrap.menupipeline.element.LayoutStruct;
 import com.internal.bootstrap.menupipeline.element.MenuAwareAction;
 import com.internal.bootstrap.menupipeline.elementsystem.ElementSystem;
 import com.internal.bootstrap.menupipeline.menu.MenuHandle;
 import com.internal.bootstrap.menupipeline.menu.MenuInstance;
-import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
 import com.internal.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
@@ -22,13 +21,19 @@ import com.internal.core.util.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
+/*
+ * Parses menu JSON files into MenuHandles and ElementHandles during bootstrap.
+ * Sprite paths are validated here and stored as names — no handles or instances
+ * are held. All produced objects are HandlePackage types owned by the manager
+ * or DataPackage types that do not outlive bootstrap.
+ */
 class InternalBuildSystem extends SystemPackage {
 
     private static final String PARENT_ARG = "$parent";
 
+    // Internal
     private SpriteManager spriteManager;
     private ElementSystem elementSystem;
-
     private File root;
     private ObjectOpenHashSet<String> registeredFiles;
     private ObjectArrayList<Runnable> deferredRefs;
@@ -133,14 +138,11 @@ class InternalBuildSystem extends SystemPackage {
     }
 
     private ElementData parseElement(JsonObject json) {
-
         String id = JsonUtility.validateString(json, "id");
-
         if (json.has("ref"))
             return parseRefElement(id, json);
         if (json.has("use"))
             return parseUseElement(id, json);
-
         return parseInlineElement(id, json);
     }
 
@@ -152,15 +154,12 @@ class InternalBuildSystem extends SystemPackage {
     }
 
     private ElementData parseUseElement(String id, JsonObject json) {
-
         String usePath = json.get("use").getAsString();
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String text = JsonUtility.getString(json, "text", null);
         LayoutStruct layout = FileParserUtility.parseLayoutOverride(json);
         String[] onClick = FileParserUtility.parseOnClick(json);
-
         ObjectArrayList<ElementData> children = parseElements(json);
-
         ElementData data = create(ElementData.class);
         data.constructorUse(id, usePath, spritePath, text, layout,
                 onClick != null ? onClick[0] : null,
@@ -171,16 +170,13 @@ class InternalBuildSystem extends SystemPackage {
     }
 
     private ElementData parseInlineElement(String id, JsonObject json) {
-
         ElementType elementType = FileParserUtility.parseElementType(
                 JsonUtility.validateString(json, "type"), id);
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String text = JsonUtility.getString(json, "text", null);
         LayoutStruct layout = FileParserUtility.parseLayout(json);
         String[] onClick = FileParserUtility.parseOnClick(json);
-
         ObjectArrayList<ElementData> children = parseElements(json);
-
         ElementData data = create(ElementData.class);
         data.constructor(id, elementType, spritePath, text, layout,
                 onClick != null ? onClick[0] : null,
@@ -204,14 +200,14 @@ class InternalBuildSystem extends SystemPackage {
         ElementHandle master = create(ElementHandle.class);
         master.constructor(
                 data.getId(), data.getType(),
-                resolveSpriteHandle(data), data.getText(), data.getLayout(),
+                resolveSpriteName(data), data.getText(), data.getLayout(),
                 action instanceof Runnable r ? r : null,
                 action instanceof MenuAwareAction m ? m : null,
                 buildChildPlacements(filePath, data.getChildren()));
         return master;
     }
 
-    // Placement — unified path for top-level and children \\
+    // Placement \\
 
     private ElementPlacementHandle buildPlacement(String filePath, ElementData data) {
         if (data.isRef())
@@ -249,7 +245,7 @@ class InternalBuildSystem extends SystemPackage {
         if (!data.getChildren().isEmpty()) {
             master = create(ElementHandle.class);
             master.constructor(data.getId(), template.getType(),
-                    template.getSpriteHandle(), template.getText(), template.getLayout(),
+                    template.getSpriteName(), template.getText(), template.getLayout(),
                     template.getClickAction(), template.getMenuAwareAction(),
                     buildChildPlacements(filePath, data.getChildren()));
             elementSystem.registerMaster(filePath + "/" + data.getId(), master);
@@ -260,8 +256,8 @@ class InternalBuildSystem extends SystemPackage {
         LayoutStruct layoutOverride = data.getLayout() != null
                 ? LayoutStruct.merge(template.getLayout(), data.getLayout())
                 : null;
-        SpriteHandle spriteOverride = data.getSpritePath() != null
-                ? resolveSpriteHandle(data)
+        String spriteNameOverride = data.getSpritePath() != null
+                ? resolveSpriteName(data)
                 : null;
 
         Runnable clickOverride = null;
@@ -272,12 +268,12 @@ class InternalBuildSystem extends SystemPackage {
             maaOverride = action instanceof MenuAwareAction m ? m : null;
         }
 
-        boolean hasOverride = layoutOverride != null || spriteOverride != null
+        boolean hasOverride = layoutOverride != null || spriteNameOverride != null
                 || data.getText() != null || clickOverride != null || maaOverride != null;
 
         ElementPlacementHandle placement = create(ElementPlacementHandle.class);
         placement.constructor(master, hasOverride
-                ? new ElementOverrideStruct(spriteOverride, data.getText(),
+                ? new ElementOverrideStruct(spriteNameOverride, data.getText(),
                         clickOverride, maaOverride, layoutOverride)
                 : null);
         return placement;
@@ -377,13 +373,13 @@ class InternalBuildSystem extends SystemPackage {
 
     // Sprite Resolution \\
 
-    private SpriteHandle resolveSpriteHandle(ElementData data) {
+    private String resolveSpriteName(ElementData data) {
         if (data.getSpritePath() == null)
             return null;
         if (!spriteManager.hasSprite(data.getSpritePath()))
             throwException("Sprite not found for element '" + data.getId()
                     + "': '" + data.getSpritePath() + "'");
-        return spriteManager.getSprite(data.getSpritePath());
+        return data.getSpritePath();
     }
 
     // Click Action Resolution \\

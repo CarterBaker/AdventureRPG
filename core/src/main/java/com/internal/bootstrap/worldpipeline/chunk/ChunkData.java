@@ -1,15 +1,16 @@
 package com.internal.bootstrap.worldpipeline.chunk;
 
-public enum ChunkData {
+import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 
-    LOAD_DATA(0),
-    ESSENTIAL_DATA(0),
-    GENERATION_DATA(3),
-    NEIGHBOR_DATA(0),
-    BUILD_DATA(2),
-    MERGE_DATA(2),
-    BATCH_DATA(0),
-    RENDER_DATA(0);
+public enum ChunkData {
+    LOAD_DATA(0, QueueOperation.LOAD),
+    ESSENTIAL_DATA(0, QueueOperation.LOAD),
+    GENERATION_DATA(3, QueueOperation.LOAD),
+    NEIGHBOR_DATA(0, QueueOperation.ASSESSMENT),
+    BUILD_DATA(2, QueueOperation.BUILD),
+    MERGE_DATA(2, QueueOperation.MERGE),
+    BATCH_DATA(0, QueueOperation.BATCH),
+    RENDER_DATA(0, QueueOperation.RENDER);
 
     public static final int NOT_DUMPABLE = 0;
     public static final int DUMP_BELOW_DISTANT = 3;
@@ -17,13 +18,15 @@ public enum ChunkData {
 
     public final int index;
     public final int minimumDetailLevelRequired;
+    public final QueueOperation queueOperation;
 
     public static final ChunkData[] VALUES = values();
     public static final int LENGTH = values().length;
 
-    ChunkData(int minimumDetailLevelRequired) {
+    ChunkData(int minimumDetailLevelRequired, QueueOperation queueOperation) {
         this.index = this.ordinal();
         this.minimumDetailLevelRequired = minimumDetailLevelRequired;
+        this.queueOperation = queueOperation;
     }
 
     public boolean isDumpable() {

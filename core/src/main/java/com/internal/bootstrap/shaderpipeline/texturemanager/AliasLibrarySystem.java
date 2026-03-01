@@ -1,13 +1,9 @@
 package com.internal.bootstrap.shaderpipeline.texturemanager;
 
 import java.io.File;
-import java.io.FileReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
 import java.awt.Color;
+import java.util.List;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.internal.core.engine.SystemPackage;
@@ -17,13 +13,16 @@ import com.internal.core.util.JsonUtility;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
+/*
+ * Loads alias definitions from JSON files in the alias directory. Each file
+ * describes one alias type with a default fill colour and a list of accepted
+ * name variants. Alias IDs are assigned in load order and are stable for the
+ * lifetime of the TextureManager.
+ */
 public class AliasLibrarySystem extends SystemPackage {
 
-    // Engine
-    private Gson gson;
-
     // Internal
-    private AliasInstance[] aliases;
+    private AliasData[] aliases;
     private Object2IntOpenHashMap<String> aliasLookup;
     private int aliasCount;
     private File root;
@@ -32,13 +31,8 @@ public class AliasLibrarySystem extends SystemPackage {
 
     @Override
     protected void create() {
-
-        // Engine
-        this.gson = internal.gson;
-
-        // Internal
         this.aliasLookup = new Object2IntOpenHashMap<>();
-        this.aliases = new AliasInstance[16];
+        this.aliases = new AliasData[16];
         this.aliasCount = 0;
         this.root = new File(EngineSetting.BLOCK_TEXTURE_ALIAS_PATH);
     }
@@ -46,94 +40,56 @@ public class AliasLibrarySystem extends SystemPackage {
     // File Extraction \\
 
     void loadAliases() {
-
-        FileUtility.verifyDirectory(root, "[AliasLibraarySystem] The root folder could not be verified");
-
-        Path directory = root.toPath();
-
-        try (var stream = java.nio.file.Files.list(directory)) {
-
-            stream
-                    .filter(Files::isRegularFile)
-                    .forEach(p -> {
-
-                        File file = p.toFile();
-
-                        if (!FileUtility.hasExtension(file, EngineSetting.JSON_FILE_EXTENSIONS))
-                            return;
-
-                        loadAliasFile(file);
-                    });
-
-        }
-
-        catch (Exception e) {
-            throwException(
-                    "One or more json alias definitions could not be loaded", e);
-        }
+        FileUtility.verifyDirectory(root, "[AliasLibrarySystem] The root folder could not be verified");
+        List<File> aliasFiles = FileUtility.collectFilesShallow(root, EngineSetting.JSON_FILE_EXTENSIONS);
+        for (File file : aliasFiles)
+            loadAliasFile(file);
     }
 
-    // JSon Parsing \\
+    // JSON Parsing \\
 
     private void loadAliasFile(File file) {
-
-        try (FileReader reader = new FileReader(file)) {
-
-            // Extract alias name from filename
+        try {
             String aliasType = FileUtility.getFileName(file);
 
-            // Parse JSON
-            JsonObject json = gson.fromJson(reader, JsonObject.class);
-            JsonArray colorArray = JsonUtility.validateArray(json, "defaultColor");
+            JsonObject json = JsonUtility.loadJsonObject(file);
+            JsonArray colorArray = JsonUtility.validateArray(json, "defaultColor", 3);
             JsonArray aliasesArray = JsonUtility.validateArray(json, "aliases");
 
-            // Parse default color
             float r = colorArray.get(0).getAsFloat();
             float g = colorArray.get(1).getAsFloat();
             float b = colorArray.get(2).getAsFloat();
             Color defaultColor = new Color(r, g, b, 1.0f);
 
-            // Create alias instance
             int aliasId = aliasCount;
             ensureCapacity(aliasId + 1);
 
-            aliases[aliasId] = create(AliasInstance.class);
+            aliases[aliasId] = create(AliasData.class);
             aliases[aliasId].constructor(aliasType, defaultColor);
             aliasCount++;
 
-            // Register all alias variations in lookup map
-            for (int i = 0; i < aliasesArray.size(); i++) {
+            for (int i = 0; i < aliasesArray.size(); i++)
+                aliasLookup.put(aliasesArray.get(i).getAsString().toLowerCase(), aliasId);
 
-                String aliasVariation = aliasesArray.get(i).getAsString().toLowerCase();
-                aliasLookup.put(aliasVariation, aliasId);
-            }
-
-            // Also create the file name itself as an alias
             aliasLookup.put(aliasType.toLowerCase(), aliasId);
-        }
 
-        catch (Exception e) {
-            throwException(
-                    "One or more json alias definitions could not be loaded", e);
+        } catch (Exception e) {
+            throwException("One or more json alias definitions could not be loaded", e);
         }
     }
 
     private void ensureCapacity(int requiredCapacity) {
-
         if (requiredCapacity <= aliases.length)
             return;
-
         int newCapacity = aliases.length * 2;
-
         while (newCapacity < requiredCapacity)
             newCapacity *= 2;
-
-        aliases = Arrays.copyOf(aliases, newCapacity);
+        aliases = java.util.Arrays.copyOf(aliases, newCapacity);
     }
 
     // Accessible \\
 
-    public AliasInstance[] getAllAliases() {
+    public AliasData[] getAllAliases() {
         return aliases;
     }
 
@@ -144,19 +100,14 @@ public class AliasLibrarySystem extends SystemPackage {
     }
 
     public int getOrDefault(String aliasVariation) {
-
         if (aliasVariation == null)
             return -1;
-
-        String key = aliasVariation.toLowerCase();
-        return aliasLookup.getOrDefault(key, -1);
+        return aliasLookup.getOrDefault(aliasVariation.toLowerCase(), -1);
     }
 
-    public AliasInstance getAlias(int aliasId) {
-
+    public AliasData getAlias(int aliasId) {
         if (aliasId < 0 || aliasId >= aliasCount)
             return null;
-
         return aliases[aliasId];
     }
 

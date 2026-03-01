@@ -4,7 +4,7 @@ import com.internal.bootstrap.entitypipeline.entityManager.EntityData;
 import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entityManager.EntityManager;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
-import com.internal.bootstrap.physicspipeline.moevementmanager.MovementManager;
+import com.internal.bootstrap.physicspipeline.moveementmanager.MovementManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;

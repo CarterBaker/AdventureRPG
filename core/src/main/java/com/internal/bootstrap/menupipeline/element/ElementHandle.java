@@ -1,24 +1,31 @@
 package com.internal.bootstrap.menupipeline.element;
 
-import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
 import com.internal.core.engine.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * Immutable master definition for a UI element. Owns the sprite name rather
+ * than a sprite handle — cloning into a SpriteInstance happens at instantiation
+ * time inside ElementSystem. Shared across all placements that reference it.
+ */
 public class ElementHandle extends HandlePackage {
 
+    // Internal
     private String id;
     private ElementType type;
-    private SpriteHandle spriteHandle;
+    private String spriteName;
     private String text;
     private LayoutStruct layout;
     private Runnable clickAction;
     private MenuAwareAction menuAwareAction;
     private ObjectArrayList<ElementPlacementHandle> children;
 
+    // Internal \\
+
     public void constructor(
             String id,
             ElementType type,
-            SpriteHandle spriteHandle,
+            String spriteName,
             String text,
             LayoutStruct layout,
             Runnable clickAction,
@@ -26,13 +33,15 @@ public class ElementHandle extends HandlePackage {
             ObjectArrayList<ElementPlacementHandle> children) {
         this.id = id;
         this.type = type;
-        this.spriteHandle = spriteHandle;
+        this.spriteName = spriteName;
         this.text = text;
         this.layout = layout;
         this.clickAction = clickAction;
         this.menuAwareAction = menuAwareAction;
         this.children = children;
     }
+
+    // Accessible \\
 
     public String getId() {
         return id;
@@ -42,8 +51,8 @@ public class ElementHandle extends HandlePackage {
         return type;
     }
 
-    public SpriteHandle getSpriteHandle() {
-        return spriteHandle;
+    public String getSpriteName() {
+        return spriteName;
     }
 
     public String getText() {
@@ -67,7 +76,7 @@ public class ElementHandle extends HandlePackage {
     }
 
     public boolean hasSprite() {
-        return spriteHandle != null;
+        return spriteName != null;
     }
 
     public boolean hasText() {

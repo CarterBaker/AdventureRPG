@@ -1,9 +1,10 @@
 package com.internal.core.util.mathematics.vectors;
 
+import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
-public class Vector2Int {
+public class Vector2Int extends UtilityPackage {
 
     // Data
     public int x, y;
@@ -11,7 +12,6 @@ public class Vector2Int {
     // Constructors \\
 
     public Vector2Int(int x, int y) {
-
         this.x = x;
         this.y = y;
     }
@@ -31,10 +31,8 @@ public class Vector2Int {
     // Set \\
 
     public Vector2Int set(int x, int y) {
-
         this.x = x;
         this.y = y;
-
         return this;
     }
 
@@ -49,10 +47,8 @@ public class Vector2Int {
     // Addition \\
 
     public Vector2Int add(int x, int y) {
-
         this.x += x;
         this.y += y;
-
         return this;
     }
 
@@ -67,10 +63,8 @@ public class Vector2Int {
     // Subtraction \\
 
     public Vector2Int subtract(int x, int y) {
-
         this.x -= x;
         this.y -= y;
-
         return this;
     }
 
@@ -85,10 +79,8 @@ public class Vector2Int {
     // Multiplication \\
 
     public Vector2Int multiply(int x, int y) {
-
         this.x *= x;
         this.y *= y;
-
         return this;
     }
 
@@ -103,13 +95,10 @@ public class Vector2Int {
     // Division \\
 
     public Vector2Int divide(int x, int y) {
-
-        if (x == 0 || y == 0) // TODO: make my own error
-            throw new ArithmeticException("Division by zero");
-
+        if (x == 0 || y == 0)
+            throwException("Division by zero");
         this.x /= x;
         this.y /= y;
-
         return this;
     }
 
@@ -124,42 +113,33 @@ public class Vector2Int {
     // Direction Mapping \\
 
     public Vector2Int up() {
-
         this.x = Direction2Vector.NORTH.x;
         this.y = Direction2Vector.NORTH.y;
-
         return this;
     }
 
     public Vector2Int down() {
-
         this.x = Direction2Vector.SOUTH.x;
         this.y = Direction2Vector.SOUTH.y;
-
         return this;
     }
 
     public Vector2Int left() {
-
         this.x = Direction2Vector.WEST.x;
         this.y = Direction2Vector.WEST.y;
-
         return this;
     }
 
     public Vector2Int right() {
-
         this.x = Direction2Vector.EAST.x;
         this.y = Direction2Vector.EAST.y;
-
         return this;
     }
 
     // Utility \\
 
     public boolean hasValues() {
-        return x != 0 ||
-                y != 0;
+        return x != 0 || y != 0;
     }
 
     public long pack() {
@@ -170,14 +150,8 @@ public class Vector2Int {
 
     @Override
     public boolean equals(Object obj) {
-
-        if (obj instanceof Vector2Int) {
-
-            Vector2Int v = (Vector2Int) obj;
-            return this.x == v.x &&
-                    this.y == v.y;
-        }
-
+        if (obj instanceof Vector2Int v)
+            return this.x == v.x && this.y == v.y;
         return false;
     }
 

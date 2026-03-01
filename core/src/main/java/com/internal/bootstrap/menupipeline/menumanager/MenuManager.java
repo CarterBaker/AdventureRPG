@@ -9,6 +9,7 @@ import com.internal.bootstrap.menupipeline.raycastsystem.RaycastSystem;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.WindowInstance;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -39,7 +40,7 @@ public class MenuManager extends ManagerPackage {
     private int inputLockCount;
     private int raycastLockCount;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void create() {
@@ -87,8 +88,9 @@ public class MenuManager extends ManagerPackage {
             MenuInstance instance = activeMenus.get(i);
             if (!instance.isVisible())
                 continue;
-            for (ElementInstance element : instance.getElements())
-                renderElement(element, 0f, 0f, screenW, screenH);
+            ObjectArrayList<ElementInstance> elements = instance.getElements();
+            for (int j = 0; j < elements.size(); j++)
+                renderElement(elements.get(j), 0f, 0f, screenW, screenH);
         }
     }
 
@@ -104,19 +106,21 @@ public class MenuManager extends ManagerPackage {
         if (element.hasSprite())
             pushSpriteRenderCall(element);
 
-        if (element.hasChildren())
-            for (ElementInstance child : element.getChildren())
-                renderElement(child,
+        if (element.hasChildren()) {
+            ObjectArrayList<ElementInstance> children = element.getChildren();
+            for (int i = 0; i < children.size(); i++)
+                renderElement(children.get(i),
                         element.getComputedLeft(), element.getComputedTop(),
                         element.getComputedW(), element.getComputedH());
+        }
     }
 
     private void pushSpriteRenderCall(ElementInstance element) {
-        element.getSpriteHandle()
+        element.getSpriteInstance()
                 .getModelHandle()
                 .getMaterial()
                 .setUniform("u_transform", element.getTransform());
-        renderSystem.pushRenderCall(element.getSpriteHandle().getModelHandle(), 1);
+        renderSystem.pushRenderCall(element.getSpriteInstance().getModelHandle(), 1);
     }
 
     // Screen Size \\
@@ -163,11 +167,9 @@ public class MenuManager extends ManagerPackage {
 
         MenuHandle handle = menuID2Handle.get(id);
 
-        // Holder is null until the line after createInstances —
-        // safe because $parent actions only fire on click, never during construction
         MenuInstance[] holder = { null };
-        ObjectArrayList<ElementInstance> liveElements = elementSystem.createInstances(handle.getPlacements(),
-                () -> holder[0]);
+        ObjectArrayList<ElementInstance> liveElements = elementSystem.createInstances(
+                handle.getPlacements(), () -> holder[0]);
 
         MenuInstance instance = create(MenuInstance.class);
         instance.constructor(handle, liveElements);

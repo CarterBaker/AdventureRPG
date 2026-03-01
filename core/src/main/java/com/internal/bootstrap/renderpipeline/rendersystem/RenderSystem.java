@@ -1,23 +1,30 @@
 package com.internal.bootstrap.renderpipeline.rendersystem;
 
-import com.internal.bootstrap.geometrypipeline.modelmanager.ModelHandle;
+import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchHandle;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
-import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
+import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.WindowInstance;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * Collects render calls per frame, batches by source MaterialHandle ID and depth,
+ * and flushes the full draw sequence during draw(). Source UBOs are pushed once
+ * per batch; per-instance UBOs and uniforms are pushed per render call using
+ * arrays cached at push time — no collection iteration in the draw loop.
+ */
 public class RenderSystem extends SystemPackage {
 
     // Internal
     private WindowInstance windowInstance;
-    private Int2ObjectAVLTreeMap<Object2ObjectOpenHashMap<MaterialHandle, RenderBatchHandle>> depth2RenderBatchHandles;
-
+    private Int2ObjectAVLTreeMap<Int2ObjectOpenHashMap<RenderBatchHandle>> depth2RenderBatchHandles;
     // Internal \\
 
     @Override
@@ -54,24 +61,32 @@ public class RenderSystem extends SystemPackage {
 
             GLSLUtility.clearDepthBuffer();
 
-            for (var batchEntry : materialBatches.entrySet()) {
+            for (var batch : materialBatches.values()) {
 
-                MaterialHandle material = batchEntry.getKey();
-                RenderBatchHandle batch = batchEntry.getValue();
+                if (batch.isEmpty())
+                    continue;
 
-                bindMaterial(material, depth);
-                bindMaterialUBOs(material);
-                pushMaterialUniforms(material);
+                MaterialInstance representative = batch.getRepresentativeMaterial();
+                bindMaterial(representative, depth);
+                bindSourceUBOs(batch);
 
-                for (RenderCallHandle renderCall : batch.getRenderCalls())
+                ObjectArrayList<RenderCallHandle> renderCalls = batch.getRenderCalls();
+                Object[] elements = renderCalls.elements();
+                int size = renderCalls.size();
+
+                for (int i = 0; i < size; i++) {
+                    RenderCallHandle renderCall = (RenderCallHandle) elements[i];
+                    pushInstanceUBOs(renderCall);
+                    pushInstanceUniforms(renderCall);
                     drawBatchedRenderCall(renderCall);
+                }
 
                 batch.clear();
             }
         }
     }
 
-    private void bindMaterial(MaterialHandle material, int depth) {
+    private void bindMaterial(MaterialInstance material, int depth) {
 
         if (depth == 0)
             GLSLUtility.enableDepth();
@@ -81,34 +96,40 @@ public class RenderSystem extends SystemPackage {
         GLSLUtility.useShader(material.getShaderHandle().getShaderHandle());
     }
 
-    private void bindMaterialUBOs(MaterialHandle material) {
+    private void bindSourceUBOs(RenderBatchHandle batch) {
 
-        var ubos = material.getUBOs();
+        UBOHandle[] handles = batch.getCachedSourceUBOs();
 
-        if (ubos == null || ubos.isEmpty())
+        if (handles.length == 0)
             return;
 
-        for (UBOHandle ubo : ubos.values()) {
-            GLSLUtility.bindUniformBlockToProgram(
-                    material.getShaderHandle().getShaderHandle(),
-                    ubo.getBufferName(),
-                    ubo.getBindingPoint());
-            GLSLUtility.bindUniformBuffer(
-                    ubo.getBindingPoint(),
-                    ubo.getGpuHandle());
+        int shaderHandle = batch.getRepresentativeMaterial().getShaderHandle().getShaderHandle();
+
+        for (int i = 0; i < handles.length; i++) {
+            UBOHandle ubo = handles[i];
+            GLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBufferName(), ubo.getBindingPoint());
+            GLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
         }
     }
 
-    private void pushMaterialUniforms(MaterialHandle material) {
+    private void pushInstanceUBOs(RenderCallHandle renderCall) {
 
-        var uniforms = material.getUniforms();
+        UBOInstance[] instances = renderCall.getCachedInstanceUBOs();
 
-        if (uniforms == null || uniforms.isEmpty())
-            return;
+        for (int i = 0; i < instances.length; i++) {
+            UBOInstance ubo = instances[i];
+            GLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+        }
+    }
+
+    private void pushInstanceUniforms(RenderCallHandle renderCall) {
+
+        Uniform<?>[] uniforms = renderCall.getCachedUniforms();
 
         int textureUnit = 0;
 
-        for (Uniform<?> uniform : uniforms.values()) {
+        for (int i = 0; i < uniforms.length; i++) {
+            Uniform<?> uniform = uniforms[i];
 
             if (uniform.attribute().isSampler()) {
                 uniform.attribute().bindTexture(textureUnit);
@@ -121,27 +142,28 @@ public class RenderSystem extends SystemPackage {
 
     private void drawBatchedRenderCall(RenderCallHandle renderCall) {
 
-        ModelHandle modelHandle = renderCall.getModelHandle();
+        ModelInstance model = renderCall.getModelInstance();
 
-        GLSLUtility.bindVAO(modelHandle.getVAO());
-        GLSLUtility.drawElements(modelHandle.getIndexCount());
+        GLSLUtility.bindVAO(model.getVAO());
+        GLSLUtility.drawElements(model.getIndexCount());
         GLSLUtility.unbindVAO();
     }
 
     // Accessible \\
 
-    public RenderCallHandle pushRenderCall(ModelHandle modelHandle, int depth) {
+    public RenderCallHandle pushRenderCall(ModelInstance modelInstance, int depth) {
 
         RenderCallHandle renderCall = create(RenderCallHandle.class);
-        renderCall.constructor(modelHandle);
+        renderCall.constructor(modelInstance);
 
-        MaterialHandle material = modelHandle.getMaterial();
+        MaterialInstance material = modelInstance.getMaterial();
+        int materialID = material.getSource().getMaterialID();
 
-        Object2ObjectOpenHashMap<MaterialHandle, RenderBatchHandle> materialBatches = depth2RenderBatchHandles
-                .computeIfAbsent(depth, k -> new Object2ObjectOpenHashMap<>());
+        Int2ObjectOpenHashMap<RenderBatchHandle> materialBatches = depth2RenderBatchHandles
+                .computeIfAbsent(depth, k -> new Int2ObjectOpenHashMap<>());
 
         RenderBatchHandle batch = materialBatches.computeIfAbsent(
-                material,
+                materialID,
                 k -> {
                     RenderBatchHandle newBatch = create(RenderBatchHandle.class);
                     newBatch.constructor(material);

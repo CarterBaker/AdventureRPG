@@ -1,6 +1,8 @@
 package com.internal.core.util.mathematics.vectors;
 
-public class Vector4Boolean {
+import com.internal.core.engine.UtilityPackage;
+
+public class Vector4Boolean extends UtilityPackage {
 
     // Data
     public boolean x, y, z, w;
@@ -8,7 +10,6 @@ public class Vector4Boolean {
     // Constructors \\
 
     public Vector4Boolean(boolean x, boolean y, boolean z, boolean w) {
-
         this.x = x;
         this.y = y;
         this.z = z;
@@ -30,12 +31,10 @@ public class Vector4Boolean {
     // Set \\
 
     public Vector4Boolean set(boolean x, boolean y, boolean z, boolean w) {
-
         this.x = x;
         this.y = y;
         this.z = z;
         this.w = w;
-
         return this;
     }
 
@@ -50,12 +49,10 @@ public class Vector4Boolean {
     // And \\
 
     public Vector4Boolean and(boolean x, boolean y, boolean z, boolean w) {
-
         this.x = this.x && x;
         this.y = this.y && y;
         this.z = this.z && z;
         this.w = this.w && w;
-
         return this;
     }
 
@@ -70,12 +67,10 @@ public class Vector4Boolean {
     // Or \\
 
     public Vector4Boolean or(boolean x, boolean y, boolean z, boolean w) {
-
         this.x = this.x || x;
         this.y = this.y || y;
         this.z = this.z || z;
         this.w = this.w || w;
-
         return this;
     }
 
@@ -90,12 +85,10 @@ public class Vector4Boolean {
     // Xor \\
 
     public Vector4Boolean xor(boolean x, boolean y, boolean z, boolean w) {
-
         this.x = this.x ^ x;
         this.y = this.y ^ y;
         this.z = this.z ^ z;
         this.w = this.w ^ w;
-
         return this;
     }
 
@@ -110,12 +103,10 @@ public class Vector4Boolean {
     // Not \\
 
     public Vector4Boolean not() {
-
         this.x = !this.x;
         this.y = !this.y;
         this.z = !this.z;
         this.w = !this.w;
-
         return this;
     }
 
@@ -133,18 +124,13 @@ public class Vector4Boolean {
 
     @Override
     public boolean equals(Object obj) {
-
-        if (!(obj instanceof Vector4Boolean))
-            return false;
-
-        Vector4Boolean v = (Vector4Boolean) obj;
-
-        return x == v.x && y == v.y && z == v.z && w == v.w;
+        if (obj instanceof Vector4Boolean v)
+            return x == v.x && y == v.y && z == v.z && w == v.w;
+        return false;
     }
 
     @Override
     public int hashCode() {
-
         int h = Boolean.hashCode(x);
         h = 31 * h + Boolean.hashCode(y);
         h = 31 * h + Boolean.hashCode(z);

@@ -1,15 +1,20 @@
 package com.internal.bootstrap.worldpipeline.megachunk;
 
+import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaQueueOperation;
+
 public enum MegaData {
-    BATCH_DATA,
-    MERGE_DATA,
-    RENDER_DATA;
+    BATCH_DATA(MegaQueueOperation.ASSESS),
+    MERGE_DATA(MegaQueueOperation.MERGE),
+    RENDER_DATA(MegaQueueOperation.RENDER);
 
     public final int index;
+    public final MegaQueueOperation queueOperation;
+
     public static final MegaData[] VALUES = values();
     public static final int LENGTH = values().length;
 
-    MegaData() {
+    MegaData(MegaQueueOperation queueOperation) {
         this.index = this.ordinal();
+        this.queueOperation = queueOperation;
     }
 }

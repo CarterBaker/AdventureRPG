@@ -1,6 +1,6 @@
 package com.internal.bootstrap.physicspipeline;
 
-import com.internal.bootstrap.physicspipeline.moevementmanager.MovementManager;
+import com.internal.bootstrap.physicspipeline.moveementmanager.MovementManager;
 import com.internal.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import com.internal.core.engine.PipelinePackage;
 

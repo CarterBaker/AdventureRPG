@@ -2,9 +2,9 @@ package com.internal.bootstrap.worldpipeline.chunk;
 
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.RenderType;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderInstance;
-import com.internal.bootstrap.worldpipeline.worldrendersystem.WorldRenderManager;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstance;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.settings.EngineSetting;
 

@@ -1,8 +1,9 @@
 package com.internal.core.util.mathematics.vectors;
 
+import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.mathematics.Extras.Direction2Vector;
 
-public class Vector2Double {
+public class Vector2Double extends UtilityPackage {
 
     // Data
     public double x, y;
@@ -10,7 +11,6 @@ public class Vector2Double {
     // Constructors \\
 
     public Vector2Double(double x, double y) {
-
         this.x = x;
         this.y = y;
     }
@@ -30,10 +30,8 @@ public class Vector2Double {
     // Set \\
 
     public Vector2Double set(double x, double y) {
-
         this.x = x;
         this.y = y;
-
         return this;
     }
 
@@ -48,10 +46,8 @@ public class Vector2Double {
     // Addition \\
 
     public Vector2Double add(double x, double y) {
-
         this.x += x;
         this.y += y;
-
         return this;
     }
 
@@ -66,10 +62,8 @@ public class Vector2Double {
     // Subtraction \\
 
     public Vector2Double subtract(double x, double y) {
-
         this.x -= x;
         this.y -= y;
-
         return this;
     }
 
@@ -84,10 +78,8 @@ public class Vector2Double {
     // Multiplication \\
 
     public Vector2Double multiply(double x, double y) {
-
         this.x *= x;
         this.y *= y;
-
         return this;
     }
 
@@ -102,13 +94,10 @@ public class Vector2Double {
     // Division \\
 
     public Vector2Double divide(double x, double y) {
-
-        if (x == 0 || y == 0) // TODO: make my own error
-            throw new ArithmeticException("Division by zero");
-
+        if (x == 0 || y == 0)
+            throwException("Division by zero");
         this.x /= x;
         this.y /= y;
-
         return this;
     }
 
@@ -132,79 +121,57 @@ public class Vector2Double {
 
     public Vector2Double normalize() {
         double len = length();
-
         if (len == 0)
             return this;
-
         this.x /= len;
         this.y /= len;
-
         return this;
     }
 
     // Direction Mapping \\
 
     public Vector2Double up() {
-
         this.x = Direction2Vector.NORTH.x;
         this.y = Direction2Vector.NORTH.y;
-
         return this;
     }
 
     public Vector2Double down() {
-
         this.x = Direction2Vector.SOUTH.x;
         this.y = Direction2Vector.SOUTH.y;
-
         return this;
     }
 
     public Vector2Double left() {
-
         this.x = Direction2Vector.WEST.x;
         this.y = Direction2Vector.WEST.y;
-
         return this;
     }
 
     public Vector2Double right() {
-
         this.x = Direction2Vector.EAST.x;
         this.y = Direction2Vector.EAST.y;
-
         return this;
     }
 
     // Utility \\
 
     public boolean hasValues() {
-        return x != 0 ||
-                y != 0;
+        return x != 0 || y != 0;
     }
 
     // Java \\
 
     @Override
     public boolean equals(Object obj) {
-
-        if (obj instanceof Vector2Double) {
-
-            Vector2Double v = (Vector2Double) obj;
-            return this.x == v.x &&
-                    this.y == v.y;
-        }
-
+        if (obj instanceof Vector2Double v)
+            return this.x == v.x && this.y == v.y;
         return false;
     }
 
     @Override
     public int hashCode() {
-
-        int result = Double.hashCode(x);
-        result = 31 * result + Double.hashCode(y);
-
-        return result;
+        return 31 * Double.hashCode(x) + Double.hashCode(y);
     }
 
     @Override
