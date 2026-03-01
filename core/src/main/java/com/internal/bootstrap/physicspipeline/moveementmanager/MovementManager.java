@@ -1,7 +1,7 @@
 package com.internal.bootstrap.physicspipeline.moveementmanager;
 
-import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
-import com.internal.bootstrap.entitypipeline.entityManager.StatisticsStruct;
+import com.internal.bootstrap.entitypipeline.entitymanager.EntityHandle;
+import com.internal.bootstrap.entitypipeline.entitymanager.StatisticsStruct;
 import com.internal.bootstrap.physicspipeline.moveementmanager.movement.BlockCollisionBranch;
 import com.internal.bootstrap.physicspipeline.moveementmanager.movement.MovementBranch;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;

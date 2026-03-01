@@ -1,4 +1,4 @@
-package com.internal.bootstrap.entitypipeline.entityManager;
+package com.internal.bootstrap.entitypipeline.entitymanager;
 
 import com.internal.core.engine.DataPackage;
 import com.internal.core.util.mathematics.vectors.Vector3;

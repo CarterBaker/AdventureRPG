@@ -1,4 +1,4 @@
-package com.internal.bootstrap.entitypipeline.entityManager;
+package com.internal.bootstrap.entitypipeline.entitymanager;
 
 import com.internal.bootstrap.physicspipeline.util.BlockCompositionStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;

@@ -15,7 +15,8 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
  * Owns all compiled MaterialHandle objects for the lifetime of the application.
  * Delegates bootstrap compilation to InternalLoadManager, which is released once
  * all materials are assembled. Cloning produces a MaterialInstance with a back-reference
- * to the source handle, shared UBO state, and a deep-copied uniform map.
+ * to the source handle, shared UBO state, and a deep-copied uniform map with values
+ * transferred from the source — including GPU texture handles on sampler uniforms.
  */
 public class MaterialManager extends ManagerPackage {
 
@@ -87,6 +88,7 @@ public class MaterialManager extends ManagerPackage {
         for (int i = 0; i < keys.length; i++) {
             Uniform<?> source = sourceUniforms.get(keys[i]);
             UniformAttribute<?> freshAttr = source.attribute().createDefault();
+            freshAttr.setObject(source.attribute().getValue());
             deepCopiedUniforms.put(keys[i], new Uniform<>(source.uniformHandle, source.offset, freshAttr));
         }
 

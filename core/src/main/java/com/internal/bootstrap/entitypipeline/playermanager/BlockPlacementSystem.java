@@ -1,7 +1,7 @@
 package com.internal.bootstrap.entitypipeline.playermanager;
 
-import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
-import com.internal.bootstrap.entitypipeline.entityManager.StatisticsStruct;
+import com.internal.bootstrap.entitypipeline.entitymanager.EntityHandle;
+import com.internal.bootstrap.entitypipeline.entitymanager.StatisticsStruct;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import com.internal.bootstrap.physicspipeline.raycastmanager.RaycastManager;

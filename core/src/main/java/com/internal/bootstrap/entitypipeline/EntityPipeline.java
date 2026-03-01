@@ -1,6 +1,6 @@
 package com.internal.bootstrap.entitypipeline;
 
-import com.internal.bootstrap.entitypipeline.entityManager.EntityManager;
+import com.internal.bootstrap.entitypipeline.entitymanager.EntityManager;
 import com.internal.bootstrap.entitypipeline.playermanager.PlayerManager;
 import com.internal.core.engine.PipelinePackage;
 

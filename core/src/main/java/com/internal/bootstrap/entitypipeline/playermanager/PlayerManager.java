@@ -1,8 +1,8 @@
 package com.internal.bootstrap.entitypipeline.playermanager;
 
-import com.internal.bootstrap.entitypipeline.entityManager.EntityData;
-import com.internal.bootstrap.entitypipeline.entityManager.EntityHandle;
-import com.internal.bootstrap.entitypipeline.entityManager.EntityManager;
+import com.internal.bootstrap.entitypipeline.entitymanager.EntityData;
+import com.internal.bootstrap.entitypipeline.entitymanager.EntityHandle;
+import com.internal.bootstrap.entitypipeline.entitymanager.EntityManager;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
 import com.internal.bootstrap.physicspipeline.moveementmanager.MovementManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;

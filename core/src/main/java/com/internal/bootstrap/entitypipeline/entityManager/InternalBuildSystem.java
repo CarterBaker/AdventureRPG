@@ -1,4 +1,4 @@
-package com.internal.bootstrap.entitypipeline.entityManager;
+package com.internal.bootstrap.entitypipeline.entitymanager;
 
 import java.io.File;
 

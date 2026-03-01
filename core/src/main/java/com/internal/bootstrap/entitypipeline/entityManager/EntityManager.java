@@ -1,4 +1,4 @@
-package com.internal.bootstrap.entitypipeline.entityManager;
+package com.internal.bootstrap.entitypipeline.entitymanager;
 
 import com.internal.bootstrap.worldpipeline.util.WorldPositionUtility;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;

@@ -11,7 +11,6 @@ public abstract class UniformAttribute<T> {
     public void constructor(Uniform<?> uniform) {
         this.uniform = uniform;
     }
-    // Internal \\
 
     // Base \\
 
@@ -66,5 +65,9 @@ public abstract class UniformAttribute<T> {
     @SuppressWarnings("unchecked")
     protected void applyObject(Object value) {
         set((T) value);
+    }
+
+    public T getValue() {
+        return value;
     }
 }
