@@ -1,5 +1,6 @@
 package com.internal.bootstrap.geometrypipeline.vaomanager;
 
+import com.internal.bootstrap.geometrypipeline.vao.VAOStruct;
 import com.internal.core.engine.HandlePackage;
 
 /*

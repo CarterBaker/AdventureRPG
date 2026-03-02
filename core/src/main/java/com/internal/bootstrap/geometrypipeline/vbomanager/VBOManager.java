@@ -5,6 +5,7 @@ import java.io.File;
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOInstance;
+import com.internal.bootstrap.geometrypipeline.vbo.VBOStruct;
 import com.internal.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;

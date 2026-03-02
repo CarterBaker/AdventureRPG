@@ -4,6 +4,7 @@ import java.io.File;
 
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
+import com.internal.bootstrap.geometrypipeline.vao.VAOStruct;
 import com.internal.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;

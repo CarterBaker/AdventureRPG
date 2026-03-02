@@ -1,6 +1,5 @@
 package com.internal.bootstrap.geometrypipeline.ibo;
 
-import com.internal.bootstrap.geometrypipeline.ibomanager.IBOStruct;
 import com.internal.core.engine.InstancePackage;
 
 public class IBOInstance extends InstancePackage {

@@ -1,4 +1,4 @@
-package com.internal.bootstrap.geometrypipeline.vaomanager;
+package com.internal.bootstrap.geometrypipeline.vao;
 
 import com.internal.core.engine.StructPackage;
 

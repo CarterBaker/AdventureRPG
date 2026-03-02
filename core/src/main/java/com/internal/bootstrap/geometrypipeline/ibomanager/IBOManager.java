@@ -3,6 +3,7 @@ package com.internal.bootstrap.geometrypipeline.ibomanager;
 import java.io.File;
 
 import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
+import com.internal.bootstrap.geometrypipeline.ibo.IBOStruct;
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.core.engine.ManagerPackage;

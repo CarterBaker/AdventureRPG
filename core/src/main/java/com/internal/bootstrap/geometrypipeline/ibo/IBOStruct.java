@@ -1,4 +1,4 @@
-package com.internal.bootstrap.geometrypipeline.ibomanager;
+package com.internal.bootstrap.geometrypipeline.ibo;
 
 import com.internal.core.engine.StructPackage;
 

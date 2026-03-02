@@ -7,6 +7,7 @@ import java.nio.IntBuffer;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL30;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
+import com.internal.bootstrap.geometrypipeline.vao.VAOStruct;
 
 class GLSLUtility {
 

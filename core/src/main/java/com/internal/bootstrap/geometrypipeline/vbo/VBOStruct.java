@@ -1,4 +1,4 @@
-package com.internal.bootstrap.geometrypipeline.vbomanager;
+package com.internal.bootstrap.geometrypipeline.vbo;
 
 import com.internal.core.engine.StructPackage;
 

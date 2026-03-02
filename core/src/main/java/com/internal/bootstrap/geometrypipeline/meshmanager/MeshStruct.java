@@ -1,8 +1,8 @@
 package com.internal.bootstrap.geometrypipeline.meshmanager;
 
-import com.internal.bootstrap.geometrypipeline.ibomanager.IBOStruct;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOStruct;
-import com.internal.bootstrap.geometrypipeline.vbomanager.VBOStruct;
+import com.internal.bootstrap.geometrypipeline.ibo.IBOStruct;
+import com.internal.bootstrap.geometrypipeline.vao.VAOStruct;
+import com.internal.bootstrap.geometrypipeline.vbo.VBOStruct;
 import com.internal.core.engine.StructPackage;
 
 public class MeshStruct extends StructPackage {
