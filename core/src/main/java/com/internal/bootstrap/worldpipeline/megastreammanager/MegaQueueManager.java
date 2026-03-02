@@ -11,40 +11,34 @@ import com.internal.bootstrap.worldpipeline.megachunk.MegaData;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaAssessBranch;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaDumpBranch;
-import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaMergeBranch;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaQueueOperation;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaRenderBranch;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.kernel.threadmanager.ThreadHandle;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
 import java.util.ArrayDeque;
 
 /*
- * Drives the per-frame mega chunk pipeline. Megas are created when chunks
- * batch into them, capped at the expected mega slot count plus overflow so
- * total active + pooled instances are bounded exactly like chunks.
- * Assessment is cursor-driven per frame using the natural ordering of
- * Long2ObjectLinkedOpenHashMap, mirroring the chunk queue contract exactly.
- * Detail level renderMode is read directly from the grid slot — no hardcoded
- * enum values. BATCHED → full mega pipeline. INDIVIDUAL → dump if rendered.
- * null slot → unload entirely into pool.
+ * Drives the per-frame mega chunk pipeline. Geometry is accumulated
+ * incrementally — each chunk merges into the mega at batch time and has
+ * its BATCH_DATA set immediately after contributing. The mega is ready
+ * to render once all expected chunks are present in the merged set.
+ * On dump or invalidation, chunk BATCH_DATA flags are cleared and the
+ * merged set is reset so chunks re-contribute naturally when next batched.
  */
 class MegaQueueManager extends ManagerPackage {
 
     // Internal
-    private ThreadHandle threadHandle;
     private WorldRenderManager worldRenderSystem;
     private ChunkStreamManager chunkStreamManager;
     private GridManager gridManager;
 
     // Branches
     private MegaAssessBranch assessBranch;
-    private MegaMergeBranch mergeBranch;
     private MegaRenderBranch renderBranch;
     private MegaDumpBranch dumpBranch;
 
@@ -66,7 +60,6 @@ class MegaQueueManager extends ManagerPackage {
     @Override
     protected void create() {
         this.assessBranch = create(MegaAssessBranch.class);
-        this.mergeBranch = create(MegaMergeBranch.class);
         this.renderBranch = create(MegaRenderBranch.class);
         this.dumpBranch = create(MegaDumpBranch.class);
         this.megaPool = new ArrayDeque<>();
@@ -74,7 +67,6 @@ class MegaQueueManager extends ManagerPackage {
 
     @Override
     protected void get() {
-        this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.worldRenderSystem = get(WorldRenderManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.gridManager = get(GridManager.class);
@@ -136,16 +128,34 @@ class MegaQueueManager extends ManagerPackage {
 
     void batchChunk(ChunkInstance chunkInstance) {
         long megaCoord = Coordinate2Long.toMegaChunkCoordinate(chunkInstance.getCoordinate());
-        MegaChunkInstance mega = activeMegaChunks.computeIfAbsent(megaCoord, this::createMega);
+
+        MegaChunkInstance mega = activeMegaChunks.get(megaCoord);
         if (mega == null) {
-            activeMegaChunks.remove(megaCoord);
-            return;
+            mega = createMega(megaCoord);
+            if (mega == null)
+                return;
+            activeMegaChunks.put(megaCoord, mega);
         }
+
         MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
         if (sync.isLocked())
             return;
-        if (!mega.batchChunk(chunkInstance))
+
+        if (!mega.batchAndMerge(chunkInstance))
             return;
+
+        // Geometry has changed — clear render flag so mega re-uploads
+        if (!sync.tryAcquire())
+            return;
+        try {
+            sync.data[MegaData.RENDER_DATA.index] = false;
+            if (mega.isReadyToRender())
+                mega.finalizeGeometry();
+        } finally {
+            sync.release();
+        }
+
+        // Chunk has handed off its geometry — mark it done
         ChunkDataSyncContainer chunkSync = chunkInstance.getChunkDataSyncContainer();
         if (!chunkSync.tryAcquire())
             return;
@@ -157,10 +167,10 @@ class MegaQueueManager extends ManagerPackage {
     }
 
     private MegaChunkInstance createMega(long megaCoord) {
-        if (activeMegaChunks.size() + megaPool.size() >= megaMax)
-            return null;
         if (!megaPool.isEmpty())
             return configureMega(megaPool.poll(), megaCoord);
+        if (activeMegaChunks.size() >= megaMax)
+            return null;
         return configureMega(create(MegaChunkInstance.class), megaCoord);
     }
 
@@ -190,13 +200,6 @@ class MegaQueueManager extends ManagerPackage {
             iterator.remove();
 
             MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
-
-            if (sync.isLocked()) {
-                activeMegaChunks.put(megaCoord, mega);
-                assessed++;
-                continue;
-            }
-
             GridSlotHandle gridSlotHandle = gridManager.getGrid().getGridSlotForChunk(megaCoord);
 
             if (gridSlotHandle == null) {
@@ -208,7 +211,6 @@ class MegaQueueManager extends ManagerPackage {
             MegaQueueOperation op = determineOperation(sync, gridSlotHandle);
             switch (op) {
                 case ASSESS -> assessBranch.assessMega(mega);
-                case MERGE -> mergeBranch.mergeMega(mega, threadHandle);
                 case RENDER -> renderBranch.renderMega(mega, sync);
                 case DUMP -> dumpBranch.dumpMega(mega, sync, megaCoord);
                 case SKIP -> {
@@ -228,14 +230,12 @@ class MegaQueueManager extends ManagerPackage {
         try {
             boolean[] data = sync.data;
 
-            // Use renderMode from detail level — no hardcoded enum value matching
             if (gridSlotHandle.getDetailLevel().renderMode == RenderType.INDIVIDUAL) {
                 if (data[MegaData.RENDER_DATA.index])
                     return MegaQueueOperation.DUMP;
                 return MegaQueueOperation.SKIP;
             }
 
-            // BATCHED — iterate MegaData entries, return operation for first unset flag
             for (MegaData megaData : MegaData.VALUES) {
                 if (!data[megaData.index])
                     return megaData.queueOperation;
@@ -250,8 +250,17 @@ class MegaQueueManager extends ManagerPackage {
     // Unload \\
 
     private void unloadMega(MegaChunkInstance mega, long megaCoord) {
-        worldRenderSystem.removeMegaInstance(megaCoord);
-        mega.reset();
+        MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
+        if (!sync.tryAcquire()) {
+            activeMegaChunks.put(megaCoord, mega);
+            return;
+        }
+        try {
+            worldRenderSystem.removeMegaInstance(megaCoord);
+            mega.reset();
+        } finally {
+            sync.release();
+        }
         if (megaPool.size() < megaMax)
             megaPool.push(mega);
         else
@@ -269,12 +278,26 @@ class MegaQueueManager extends ManagerPackage {
         if (!sync.tryAcquire())
             return;
         try {
-            if (sync.data[MegaData.RENDER_DATA.index])
-                worldRenderSystem.removeMegaInstance(megaCoord);
-            sync.data[MegaData.MERGE_DATA.index] = false;
+            worldRenderSystem.removeMegaInstance(megaCoord);
+            clearChunkBatchFlags(mega);
+            mega.reset();
+            sync.data[MegaData.BATCH_DATA.index] = false;
             sync.data[MegaData.RENDER_DATA.index] = false;
         } finally {
             sync.release();
+        }
+    }
+
+    private void clearChunkBatchFlags(MegaChunkInstance mega) {
+        for (ChunkInstance chunk : mega.getBatchedChunks().values()) {
+            ChunkDataSyncContainer chunkSync = chunk.getChunkDataSyncContainer();
+            if (!chunkSync.tryAcquire())
+                continue;
+            try {
+                chunkSync.data[batchDataIndex] = false;
+            } finally {
+                chunkSync.release();
+            }
         }
     }
 

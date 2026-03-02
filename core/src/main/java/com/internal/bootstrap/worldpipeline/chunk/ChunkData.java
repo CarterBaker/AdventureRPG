@@ -3,18 +3,14 @@ package com.internal.bootstrap.worldpipeline.chunk;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 
 public enum ChunkData {
-    LOAD_DATA(0, QueueOperation.LOAD),
-    ESSENTIAL_DATA(0, QueueOperation.LOAD),
-    GENERATION_DATA(3, QueueOperation.LOAD),
-    NEIGHBOR_DATA(0, QueueOperation.ASSESSMENT),
-    BUILD_DATA(2, QueueOperation.BUILD),
-    MERGE_DATA(2, QueueOperation.MERGE),
-    BATCH_DATA(0, QueueOperation.BATCH),
-    RENDER_DATA(0, QueueOperation.RENDER);
-
-    public static final int NOT_DUMPABLE = 0;
-    public static final int DUMP_BELOW_DISTANT = 3;
-    public static final int DUMP_BELOW_NEAR = 2;
+    LOAD_DATA(ChunkDataUtility.NOT_DUMPABLE, QueueOperation.LOAD),
+    ESSENTIAL_DATA(ChunkDataUtility.NOT_DUMPABLE, QueueOperation.LOAD),
+    GENERATION_DATA(ChunkDataUtility.DUMP_BELOW_NEAR, QueueOperation.LOAD),
+    NEIGHBOR_DATA(ChunkDataUtility.NOT_DUMPABLE, QueueOperation.ASSESSMENT),
+    BUILD_DATA(ChunkDataUtility.DUMP_BELOW_NEAR, QueueOperation.BUILD),
+    MERGE_DATA(ChunkDataUtility.DUMP_BELOW_IMMEDIATE, QueueOperation.MERGE),
+    BATCH_DATA(ChunkDataUtility.NOT_DUMPABLE, QueueOperation.BATCH),
+    RENDER_DATA(ChunkDataUtility.NOT_DUMPABLE, QueueOperation.RENDER);
 
     public final int index;
     public final int minimumDetailLevelRequired;
@@ -30,6 +26,6 @@ public enum ChunkData {
     }
 
     public boolean isDumpable() {
-        return minimumDetailLevelRequired != NOT_DUMPABLE;
+        return minimumDetailLevelRequired != ChunkDataUtility.NOT_DUMPABLE;
     }
 }

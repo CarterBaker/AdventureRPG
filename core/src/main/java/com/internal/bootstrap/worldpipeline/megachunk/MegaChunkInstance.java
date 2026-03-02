@@ -12,9 +12,11 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /*
  * A merged geometry batch composed of MEGA_CHUNK_SIZE^2 adjacent ChunkInstances.
- * Threading is governed entirely by MegaDataSyncContainer — callers must check
- * isLocked() before reading or writing state or batch data. merge() runs on a
- * worker thread inside a SyncStructConsumer and must not be called directly.
+ * Geometry is accumulated incrementally via batchAndMerge() as each chunk
+ * contributes. If a chunk re-contributes (its geometry was rebuilt), the entire
+ * packet is cleared and all registered chunks are re-merged — partial un-merge
+ * is not supported. Once all chunks are present, finalizeGeometry() marks the
+ * packet ready for GPU upload. Threading is governed by MegaDataSyncContainer.
  */
 public class MegaChunkInstance extends WorldRenderInstance {
 
@@ -65,29 +67,59 @@ public class MegaChunkInstance extends WorldRenderInstance {
         megaBatchStruct.reset();
     }
 
-    // Utility \\
+    // Incremental Merge \\
 
-    public boolean merge() {
-        boolean success = true;
-        dynamicPacketInstance.clear();
-        Long2ObjectOpenHashMap<ChunkInstance> batchedChunks = megaBatchStruct.getBatchedChunks();
-        for (ChunkInstance chunkInstance : batchedChunks.values()) {
-            long chunkCoord = chunkInstance.getCoordinate();
-            int chunkX = Coordinate2Long.unpackX(chunkCoord);
-            int chunkZ = Coordinate2Long.unpackY(chunkCoord);
-            mergeOffsetValues[0] = (chunkX - megaX) * CHUNK_SIZE;
-            mergeOffsetValues[1] = (chunkZ - megaZ) * CHUNK_SIZE;
-            if (!dynamicPacketInstance.merge(
-                    chunkInstance.getDynamicPacketInstance(),
-                    vertPositionArray,
-                    mergeOffsetValues))
-                success = false;
+    /*
+     * Fresh contribution: merge the chunk's geometry into the packet and
+     * register it. Re-contribution: the packet is cleared and all registered
+     * chunks are re-merged in full, using the updated geometry for the
+     * changed chunk. Returns false if any geometry merge step fails.
+     */
+    public boolean batchAndMerge(ChunkInstance chunkInstance) {
+        long chunkCoord = chunkInstance.getCoordinate();
+        boolean isRemerge = megaBatchStruct.getBatchedChunks().containsKey(chunkCoord);
+
+        if (isRemerge) {
+            megaBatchStruct.getBatchedChunks().put(chunkCoord, chunkInstance);
+            megaBatchStruct.clearMerged();
+            dynamicPacketInstance.clear();
+            for (ChunkInstance batched : megaBatchStruct.getBatchedChunks().values()) {
+                if (!mergeChunk(batched))
+                    return false;
+                megaBatchStruct.recordMerged(batched.getCoordinate());
+            }
+            return true;
         }
-        if (success && dynamicPacketInstance.hasModels())
+
+        if (!megaBatchStruct.registerChunk(chunkInstance))
+            return false;
+        if (!mergeChunk(chunkInstance))
+            return false;
+        megaBatchStruct.recordMerged(chunkCoord);
+        return true;
+    }
+
+    private boolean mergeChunk(ChunkInstance chunkInstance) {
+        long chunkCoord = chunkInstance.getCoordinate();
+        int chunkX = Coordinate2Long.unpackX(chunkCoord);
+        int chunkZ = Coordinate2Long.unpackY(chunkCoord);
+        mergeOffsetValues[0] = (chunkX - megaX) * CHUNK_SIZE;
+        mergeOffsetValues[1] = (chunkZ - megaZ) * CHUNK_SIZE;
+        return dynamicPacketInstance.merge(
+                chunkInstance.getDynamicPacketInstance(),
+                vertPositionArray,
+                mergeOffsetValues);
+    }
+
+    /*
+     * Marks the packet ready for GPU upload once all chunks have contributed.
+     * If the mega is empty after a full re-merge, the packet is unlocked instead.
+     */
+    public void finalizeGeometry() {
+        if (dynamicPacketInstance.hasModels())
             dynamicPacketInstance.setReady();
-        else if (!dynamicPacketInstance.hasModels())
+        else
             dynamicPacketInstance.unlock();
-        return success;
     }
 
     // Accessible \\
@@ -96,12 +128,8 @@ public class MegaChunkInstance extends WorldRenderInstance {
         return megaDataSyncContainer;
     }
 
-    public boolean isComplete() {
-        return megaBatchStruct.isComplete();
-    }
-
-    public boolean batchChunk(ChunkInstance chunkInstance) {
-        return megaBatchStruct.batchChunk(chunkInstance);
+    public boolean isReadyToRender() {
+        return megaBatchStruct.isReadyToRender();
     }
 
     public Long2ObjectOpenHashMap<ChunkInstance> getBatchedChunks() {

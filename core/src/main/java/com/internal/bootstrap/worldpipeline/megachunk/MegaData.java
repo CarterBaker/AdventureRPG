@@ -4,7 +4,6 @@ import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaQueu
 
 public enum MegaData {
     BATCH_DATA(MegaQueueOperation.ASSESS),
-    MERGE_DATA(MegaQueueOperation.MERGE),
     RENDER_DATA(MegaQueueOperation.RENDER);
 
     public final int index;
