@@ -8,29 +8,30 @@ import com.internal.core.engine.HandlePackage;
 /*
  * Compiled fullscreen pass owned by PassManager. Holds a ModelInstance built
  * from the processing triangle mesh and a MaterialInstance for the pass shader.
- * The ModelInstance is constructed directly here since PassHandle owns it for
- * its lifetime and it is never handed to external systems.
+ * Retains the MeshHandle so PassManager.clonePass() can construct new ModelInstances
+ * for each PassInstance without duplicating mesh geometry.
  */
 public class PassHandle extends HandlePackage {
 
     // Internal
     private String passName;
     private int passID;
+    private MeshHandle meshHandle;
     private ModelInstance modelInstance;
     private MaterialInstance material;
-
     // Internal \\
 
     public void constructor(
             String passName,
             int passID,
             MaterialInstance material,
-            MeshHandle processingTriangle) {
+            MeshHandle meshHandle) {
         this.passName = passName;
         this.passID = passID;
+        this.meshHandle = meshHandle;
         this.material = material;
         this.modelInstance = create(ModelInstance.class);
-        this.modelInstance.constructor(processingTriangle.getMeshStruct(), material);
+        this.modelInstance.constructor(meshHandle.getMeshStruct(), material);
     }
 
     // Accessible \\
@@ -43,7 +44,11 @@ public class PassHandle extends HandlePackage {
         return passID;
     }
 
-    public ModelInstance getModelHandle() {
+    public MeshHandle getMeshHandle() {
+        return meshHandle;
+    }
+
+    public ModelInstance getModelInstance() {
         return modelInstance;
     }
 

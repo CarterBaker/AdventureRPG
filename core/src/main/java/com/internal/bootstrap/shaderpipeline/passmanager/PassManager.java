@@ -1,25 +1,28 @@
 package com.internal.bootstrap.shaderpipeline.passmanager;
 
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
+import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
+import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import com.internal.bootstrap.shaderpipeline.pass.PassInstance;
 import com.internal.core.engine.ManagerPackage;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 /*
  * Owns all compiled PassHandle objects. Delegates bootstrap loading to
  * InternalLoadManager. Passes are pushed into the render system by depth layer.
+ * Cloning produces a PassInstance with a shared mesh reference and a deep-copied
+ * MaterialInstance, mirroring the material cloning contract.
  */
 public class PassManager extends ManagerPackage {
 
     // Internal
     private InternalLoadManager internalLoadManager;
+    private MaterialManager materialManager;
     private RenderSystem renderSystem;
-
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> passName2PassID;
     private Int2ObjectOpenHashMap<PassHandle> passID2Pass;
-
     // Internal \\
 
     @Override
@@ -31,6 +34,7 @@ public class PassManager extends ManagerPackage {
 
     @Override
     protected void get() {
+        this.materialManager = get(MaterialManager.class);
         this.renderSystem = get(RenderSystem.class);
     }
 
@@ -44,12 +48,6 @@ public class PassManager extends ManagerPackage {
         this.internalLoadManager = release(InternalLoadManager.class);
     }
 
-    // Render Management \\
-
-    public void pushPass(PassHandle pass, int depth) {
-        renderSystem.pushRenderCall(pass.getModelHandle(), depth);
-    }
-
     // Pass Management \\
 
     void addPass(PassHandle pass) {
@@ -57,7 +55,28 @@ public class PassManager extends ManagerPackage {
         passID2Pass.put(pass.getPassID(), pass);
     }
 
+    // Render Management \\
+
+    public void pushPass(PassHandle pass, int depth) {
+        renderSystem.pushRenderCall(pass.getModelInstance(), depth);
+    }
+
+    public void pushPass(PassInstance pass, int depth) {
+        renderSystem.pushRenderCall(pass.getModelInstance(), depth);
+    }
+
     // Accessible \\
+
+    public PassInstance clonePass(int passID) {
+        PassHandle original = passID2Pass.get(passID);
+        if (original == null)
+            throwException("Cannot clone pass — passID " + passID + " not found");
+        MaterialInstance clonedMaterial = materialManager.cloneMaterial(
+                original.getMaterial().getMaterialID());
+        PassInstance instance = create(PassInstance.class);
+        instance.constructor(original, clonedMaterial);
+        return instance;
+    }
 
     public int getPassIDFromPassName(String passName) {
         return passName2PassID.getInt(passName);
