@@ -1,37 +1,54 @@
 package com.internal.bootstrap.geometrypipeline.vbomanager;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.GL30;
+import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOStruct;
+import com.internal.bootstrap.geometrypipeline.vbo.VBOInstance;
+
 class GLSLUtility {
 
-        static VBOHandle uploadVertexData(VAOHandle vaoHandle, VBOHandle vboHandle, float[] vertices) {
+        // Upload \\
+
+        static VBOHandle uploadVertexData(VAOInstance vaoInstance, VBOHandle vboHandle, float[] vertices) {
+                VBOStruct vboStruct = upload(vaoInstance, vertices);
+                vboHandle.constructor(vboStruct);
+                return vboHandle;
+        }
+
+        static VBOInstance uploadVertexData(VAOInstance vaoInstance, VBOInstance vboInstance, float[] vertices) {
+                VBOStruct vboStruct = upload(vaoInstance, vertices);
+                vboInstance.constructor(vboStruct);
+                return vboInstance;
+        }
+
+        private static VBOStruct upload(VAOInstance vaoInstance, float[] vertices) {
 
                 GL30 gl30 = Gdx.gl30;
                 GL20 gl20 = Gdx.gl20;
 
-                gl30.glBindVertexArray(vaoHandle.getAttributeHandle());
+                VAOStruct vaoStruct = vaoInstance.getVAOStruct();
+
+                gl30.glBindVertexArray(vaoStruct.attributeHandle);
 
                 int vbo = gl20.glGenBuffer();
                 gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
 
-                FloatBuffer vertexBuffer = ByteBuffer
+                FloatBuffer buffer = ByteBuffer
                                 .allocateDirect(vertices.length * 4)
                                 .order(ByteOrder.nativeOrder())
                                 .asFloatBuffer();
-                vertexBuffer.put(vertices).flip();
-                gl20.glBufferData(GL20.GL_ARRAY_BUFFER, vertices.length * 4,
-                                vertexBuffer, GL20.GL_STATIC_DRAW);
 
-                // VBO is now bound - apply attrib pointers dynamically from VAOHandle layout
-                int strideBytes = vaoHandle.getVertStride() * 4;
-                int[] attrSizes = vaoHandle.getAttrSizes();
+                buffer.put(vertices).flip();
+                gl20.glBufferData(GL20.GL_ARRAY_BUFFER, vertices.length * 4, buffer, GL20.GL_STATIC_DRAW);
+
+                int strideBytes = vaoStruct.vertStride * 4;
+                int[] attrSizes = vaoStruct.attrSizes;
                 int byteOffset = 0;
 
                 for (int i = 0; i < attrSizes.length; i++) {
@@ -43,13 +60,12 @@ class GLSLUtility {
                 gl30.glBindVertexArray(0);
                 gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
 
-                int vertexCount = vertices.length / vaoHandle.getVertStride();
-                vboHandle.constructor(vbo, vertexCount);
-
-                return vboHandle;
+                return new VBOStruct(vbo, vertices.length / vaoStruct.vertStride);
         }
 
-        static void removeVertexData(VBOHandle vboHandle) {
-                Gdx.gl20.glDeleteBuffer(vboHandle.getVertexHandle());
+        // Removal \\
+
+        static void removeVertexData(VBOStruct vboStruct) {
+                Gdx.gl20.glDeleteBuffer(vboStruct.vertexHandle);
         }
 }

@@ -4,28 +4,13 @@ import com.internal.core.engine.HandlePackage;
 
 public class IBOHandle extends HandlePackage {
 
-    // Internal
-    private int indexHandle;
-    private int indexCount;
+    private IBOStruct iboStruct;
 
-    // Internal \\
-
-    public void constructor(
-            int indexHandle,
-            int indexCount) {
-
-        // Internal
-        this.indexHandle = indexHandle;
-        this.indexCount = indexCount;
+    public void constructor(IBOStruct iboStruct) {
+        this.iboStruct = iboStruct;
     }
 
-    // Accessible \\
-
-    public int getIndexHandle() {
-        return indexHandle;
-    }
-
-    public int getIndexCount() {
-        return indexCount;
+    public IBOStruct getIBOStruct() {
+        return iboStruct;
     }
 }

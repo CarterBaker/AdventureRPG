@@ -30,7 +30,7 @@ public class PassHandle extends HandlePackage {
         this.passID = passID;
         this.material = material;
         this.modelInstance = create(ModelInstance.class);
-        this.modelInstance.constructor(processingTriangle, material);
+        this.modelInstance.constructor(processingTriangle.getMeshStruct(), material);
     }
 
     // Accessible \\

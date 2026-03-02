@@ -85,7 +85,7 @@ public class SpriteManager extends ManagerPackage {
         material.setUniform("u_sprite", original.getGPUHandle());
 
         ModelInstance clonedModel = modelManager.createModel(
-                original.getModelHandle().getMeshHandle(),
+                original.getModelHandle(),
                 material);
 
         SpriteInstance instance = create(SpriteInstance.class);

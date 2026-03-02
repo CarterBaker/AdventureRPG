@@ -18,14 +18,10 @@ public class DynamicModelHandle extends HandlePackage {
 
     // Internal \\
 
-    void constructor(
-            int materialID,
-            VAOHandle vaoHandle) {
-
-        // Internal
+    void constructor(int materialID, VAOHandle vaoHandle) {
         this.materialID = materialID;
         this.vaoHandle = vaoHandle;
-        this.vertStride = vaoHandle.getVertStride();
+        this.vertStride = vaoHandle.getVAOStruct().vertStride;
         this.vertices = new FloatArrayList();
         this.indices = new ShortArrayList();
     }
@@ -41,16 +37,13 @@ public class DynamicModelHandle extends HandlePackage {
 
         int currentVertCount = vertices.size() / vertStride;
         int availableVerts = EngineSetting.MESH_VERT_LIMIT - currentVertCount;
-
-        // Round down to nearest multiple of 4 (complete quads only)
         int availableQuads = availableVerts / 4;
 
         if (availableQuads <= 0)
-            return 0; // No room for even one quad
+            return 0;
 
         int quadsRequested = length / floatsPerQuad;
         int quadsFit = Math.min(availableQuads, quadsRequested);
-
         int floatsToAdd = quadsFit * floatsPerQuad;
 
         vertices.addElements(vertices.size(), sourceVerts.elements(), offset, floatsToAdd);
@@ -70,7 +63,6 @@ public class DynamicModelHandle extends HandlePackage {
         int quadCount = sourceVerts.size() / floatsPerQuad;
 
         vertices.addElements(vertices.size(), sourceVerts.elements(), 0, sourceVerts.size());
-
         appendQuadIndices(startVertex, quadCount);
     }
 
@@ -80,11 +72,9 @@ public class DynamicModelHandle extends HandlePackage {
 
         for (int q = 0; q < quadCount; q++) {
             int base = baseVertex + q * 4;
-
             indices.add((short) base);
             indices.add((short) (base + 1));
             indices.add((short) (base + 2));
-
             indices.add((short) base);
             indices.add((short) (base + 2));
             indices.add((short) (base + 3));
@@ -117,7 +107,7 @@ public class DynamicModelHandle extends HandlePackage {
     public boolean isFull() {
         int currentVertCount = vertices.size() / vertStride;
         int availableVerts = EngineSetting.MESH_VERT_LIMIT - currentVertCount;
-        return availableVerts < 4; // Need at least 4 verts for a quad
+        return availableVerts < 4;
     }
 
     public int getVertexCount() {

@@ -2,8 +2,9 @@ package com.internal.bootstrap.geometrypipeline.ibomanager;
 
 import java.io.File;
 
+import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -21,11 +22,7 @@ public class IBOManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Internal
         this.internalBuildSystem = create(InternalBuildSystem.class);
-
-        // Retrieval Mapping
         this.iboName2IBOHandle = new Object2ObjectOpenHashMap<>();
     }
 
@@ -34,25 +31,33 @@ public class IBOManager extends ManagerPackage {
         internalBuildSystem = release(InternalBuildSystem.class);
     }
 
-    // Utility \\
+    // Bootstrap \\
 
-    public void addIBO(String resourceName, File file, InternalLoadManager loadManager, VAOHandle vaoHandle) {
-        iboName2IBOHandle.put(resourceName, internalBuildSystem.addIBO(file, loadManager, vaoHandle));
+    public void addIBO(String resourceName, File file, InternalLoadManager loadManager, VAOInstance vaoInstance) {
+        iboName2IBOHandle.put(resourceName, internalBuildSystem.addIBO(file, loadManager, vaoInstance));
     }
 
     public IBOHandle getIBOHandleFromName(String iboName) {
         return iboName2IBOHandle.get(iboName);
     }
 
-    // Accessible \\
+    // Runtime \\
 
-    public IBOHandle createIBO(VAOHandle vaoHandle, ShortArrayList indices) {
-        IBOHandle iboHandle = create(IBOHandle.class);
-        short[] indexArray = indices.toShortArray();
-        return GLSLUtility.uploadIndexData(vaoHandle, iboHandle, indexArray);
+    public IBOInstance createIBOInstance(VAOInstance vaoInstance, ShortArrayList indices) {
+        return GLSLUtility.uploadIndexData(vaoInstance, create(IBOInstance.class), indices.toShortArray());
+    }
+
+    // Removal \\
+
+    public void removeIBO(IBOStruct iboStruct) {
+        GLSLUtility.removeIndexData(iboStruct);
     }
 
     public void removeIBO(IBOHandle iboHandle) {
-        GLSLUtility.removeIndexData(iboHandle);
+        GLSLUtility.removeIndexData(iboHandle.getIBOStruct());
+    }
+
+    public void removeIBOInstance(IBOInstance iboInstance) {
+        GLSLUtility.removeIndexData(iboInstance.getIBOStruct());
     }
 }

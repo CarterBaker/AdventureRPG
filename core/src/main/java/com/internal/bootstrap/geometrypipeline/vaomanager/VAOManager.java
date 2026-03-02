@@ -3,6 +3,7 @@ package com.internal.bootstrap.geometrypipeline.vaomanager;
 import java.io.File;
 
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
+import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -32,7 +33,7 @@ public class VAOManager extends ManagerPackage {
         internalBuildSystem = release(InternalBuildSystem.class);
     }
 
-    // Utility \\
+    // Layout Management \\
 
     public void addVAO(String resourceName, File file, InternalLoadManager loadManager) {
         vaoName2VAOHandle.put(resourceName, internalBuildSystem.addVAO(file, loadManager));
@@ -42,12 +43,17 @@ public class VAOManager extends ManagerPackage {
         return vaoName2VAOHandle.get(vaoName);
     }
 
-    public VAOHandle cloneVAO(VAOHandle templateVAO) {
-        VAOHandle newHandle = create(VAOHandle.class);
-        return GLSLUtility.cloneVAO(newHandle, templateVAO);
+    // Instance Management \\
+
+    public VAOInstance createVAOInstance(VAOHandle template) {
+        return GLSLUtility.createVAOInstance(create(VAOInstance.class), template);
     }
 
-    public void removeVAO(VAOHandle vaoHandle) {
-        GLSLUtility.removeVAO(vaoHandle);
+    public void removeVAOStruct(VAOStruct vaoStruct) {
+        GLSLUtility.removeVAOStruct(vaoStruct);
+    }
+
+    public void removeVAOInstance(VAOInstance vaoInstance) {
+        GLSLUtility.removeVAOInstance(vaoInstance);
     }
 }

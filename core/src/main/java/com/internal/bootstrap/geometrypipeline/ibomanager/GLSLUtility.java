@@ -1,51 +1,57 @@
 package com.internal.bootstrap.geometrypipeline.ibomanager;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
-import com.internal.core.engine.UtilityPackage;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 
-class GLSLUtility extends UtilityPackage {
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.GL30;
+import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
+import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 
-        // Uploads index data to a GPU buffer and binds it to the given VAO.
-        static IBOHandle uploadIndexData(VAOHandle vaoHandle, IBOHandle iboHandle, short[] indices) {
+class GLSLUtility {
+
+        // Upload \\
+
+        static IBOHandle uploadIndexData(VAOInstance vaoInstance, IBOHandle iboHandle, short[] indices) {
+                IBOStruct iboStruct = upload(vaoInstance, indices);
+                iboHandle.constructor(iboStruct);
+                return iboHandle;
+        }
+
+        static IBOInstance uploadIndexData(VAOInstance vaoInstance, IBOInstance iboInstance, short[] indices) {
+                IBOStruct iboStruct = upload(vaoInstance, indices);
+                iboInstance.constructor(iboStruct);
+                return iboInstance;
+        }
+
+        private static IBOStruct upload(VAOInstance vaoInstance, short[] indices) {
 
                 GL30 gl30 = Gdx.gl30;
                 GL20 gl20 = Gdx.gl20;
 
-                // Bind the VAO FIRST
-                gl30.glBindVertexArray(vaoHandle.getAttributeHandle());
+                gl30.glBindVertexArray(vaoInstance.getVAOStruct().attributeHandle);
 
-                // Create IBO
                 int ibo = gl20.glGenBuffer();
                 gl20.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, ibo);
 
-                // Upload data
-                ShortBuffer indexBuffer = ByteBuffer
+                ShortBuffer buffer = ByteBuffer
                                 .allocateDirect(indices.length * 2)
                                 .order(ByteOrder.nativeOrder())
                                 .asShortBuffer();
-                indexBuffer.put(indices).flip();
 
-                gl20.glBufferData(GL20.GL_ELEMENT_ARRAY_BUFFER, indices.length * 2,
-                                indexBuffer, GL20.GL_STATIC_DRAW);
+                buffer.put(indices).flip();
+                gl20.glBufferData(GL20.GL_ELEMENT_ARRAY_BUFFER, indices.length * 2, buffer, GL20.GL_STATIC_DRAW);
 
-                // The IBO binding is stored in the VAO state
                 gl30.glBindVertexArray(0);
 
-                int indexCount = indices.length;
-                iboHandle.constructor(ibo, indexCount);
-
-                return iboHandle;
+                return new IBOStruct(ibo, indices.length);
         }
 
-        static void removeIndexData(IBOHandle iboHandle) {
-                GL20 gl20 = Gdx.gl20;
-                gl20.glDeleteBuffer(iboHandle.getIndexHandle());
+        // Removal \\
+
+        static void removeIndexData(IBOStruct iboStruct) {
+                Gdx.gl20.glDeleteBuffer(iboStruct.indexHandle);
         }
 }

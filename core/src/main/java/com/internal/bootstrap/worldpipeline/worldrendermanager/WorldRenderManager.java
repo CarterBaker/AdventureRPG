@@ -5,7 +5,6 @@ import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPac
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketState;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
@@ -33,15 +32,15 @@ public class WorldRenderManager extends ManagerPackage {
 
     private int BATCHED_CHUNKS = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
 
-    // GPU data
+    // GPU Data
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> chunkModels;
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> megaModels;
 
-    // Render queues — coordinates only, slot resolved from grid at render time
+    // Render Queues
     private LongLinkedOpenHashSet chunkRenderQueue;
     private LongLinkedOpenHashSet megaRenderQueue;
 
-    // Internal \\
+    // Base \\
 
     @Override
     protected void create() {
@@ -56,7 +55,6 @@ public class WorldRenderManager extends ManagerPackage {
 
     @Override
     protected void get() {
-
         this.materialManager = get(MaterialManager.class);
         this.modelManager = get(ModelManager.class);
         this.renderSystem = get(RenderSystem.class);
@@ -164,6 +162,7 @@ public class WorldRenderManager extends ManagerPackage {
     }
 
     private void queueMega(GridSlotHandle slot) {
+
         long chunkCoordinate = slot.getChunkCoordinate();
         long megaCoordinate = slot.getMegaCoordinate();
 
@@ -245,11 +244,10 @@ public class WorldRenderManager extends ManagerPackage {
                 if (dynamicModel.isEmpty())
                     continue;
 
-                VAOHandle clonedVAO = modelManager.cloneVAO(dynamicModel.getVAOHandle());
                 MaterialInstance clonedMaterial = materialManager.cloneMaterial(materialID);
 
                 modelList.add(modelManager.createModel(
-                        clonedVAO,
+                        dynamicModel.getVAOHandle(),
                         dynamicModel.getVertices(),
                         dynamicModel.getIndices(),
                         clonedMaterial));

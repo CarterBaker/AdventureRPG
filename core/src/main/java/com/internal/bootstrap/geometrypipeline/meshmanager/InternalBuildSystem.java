@@ -5,6 +5,7 @@ import java.io.File;
 import com.google.gson.JsonObject;
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
+import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.geometrypipeline.vbomanager.VBOHandle;
@@ -16,62 +17,46 @@ import com.internal.core.util.JsonUtility;
 class InternalBuildSystem extends SystemPackage {
 
     // Internal
+    private VAOManager vaoManager;
     private VBOManager vboManager;
     private IBOManager iboManager;
-    private VAOManager vaoManager;
 
     // Base \\
 
     @Override
     protected void get() {
+        this.vaoManager = get(VAOManager.class);
         this.vboManager = get(VBOManager.class);
         this.iboManager = get(IBOManager.class);
-        this.vaoManager = get(VAOManager.class);
     }
 
     // Build \\
 
-    MeshHandle buildMeshHandle(
-            File root,
-            File file,
-            int meshID,
-            InternalLoadManager loadManager) {
+    MeshHandle buildMeshHandle(File root, File file, int meshID, InternalLoadManager loadManager) {
 
         JsonObject jsonObject = JsonUtility.loadJsonObject(file);
         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
 
-        VAOHandle vaoTemplate = buildVAOHandle(resourceName, jsonObject, file, loadManager);
-        VAOHandle vaoHandle = vaoManager.cloneVAO(vaoTemplate);
-        VBOHandle vboHandle = buildVBOHandle(resourceName, jsonObject, file, loadManager, vaoHandle);
-        IBOHandle iboHandle = buildIBOHandle(resourceName, jsonObject, file, loadManager, vaoHandle);
-
-        return createMeshHandle(
-                vaoHandle,
-                vboHandle,
-                iboHandle);
-    }
-
-    private MeshHandle createMeshHandle(
-            VAOHandle vaoHandle,
-            VBOHandle vboHandle,
-            IBOHandle iboHandle) {
-
-        if (vaoHandle == null || vboHandle == null || iboHandle == null) {
+        VAOHandle vaoTemplate = buildVAOTemplate(resourceName, jsonObject, file, loadManager);
+        if (vaoTemplate == null)
             return null;
-        }
+
+        VAOInstance vaoInstance = vaoManager.createVAOInstance(vaoTemplate);
+
+        VBOHandle vboHandle = buildVBOHandle(resourceName, jsonObject, file, loadManager, vaoInstance);
+        IBOHandle iboHandle = buildIBOHandle(resourceName, jsonObject, file, loadManager, vaoInstance);
+
+        if (vboHandle == null || iboHandle == null)
+            return null;
 
         MeshHandle meshHandle = create(MeshHandle.class);
-        meshHandle.constructor(
-                vaoHandle,
-                vboHandle,
-                iboHandle);
-
+        meshHandle.constructor(vaoInstance, vboHandle, iboHandle);
         return meshHandle;
     }
 
-    // VAO Building \\
+    // VAO \\
 
-    private VAOHandle buildVAOHandle(
+    private VAOHandle buildVAOTemplate(
             String resourceName,
             JsonObject jsonObject,
             File file,
@@ -80,14 +65,12 @@ class InternalBuildSystem extends SystemPackage {
         if (!hasValidElement(jsonObject, "vao"))
             return null;
 
-        // Check if the vao already exists
         VAOHandle existing = vaoManager.getVAOHandleFromName(resourceName);
         if (existing != null)
             return existing;
 
         var vaoElement = jsonObject.get("vao");
 
-        // Case 1: string reference
         if (vaoElement.isJsonPrimitive() && vaoElement.getAsJsonPrimitive().isString()) {
 
             String refName = vaoElement.getAsString();
@@ -96,42 +79,34 @@ class InternalBuildSystem extends SystemPackage {
             if (refFile == null)
                 throwException("Referenced VAO file not found: " + refName);
 
-            // Recursively build dependency
             loadManager.processMeshFile(refFile);
-
-            // Return handle now created in VAOManager
             return vaoManager.getVAOHandleFromName(refName);
         }
 
-        // Case 2: int (vert stride) or raw object — let VAOManager handle it
-        vaoManager.addVAO(
-                resourceName,
-                file,
-                loadManager);
+        vaoManager.addVAO(resourceName, file, loadManager);
         return vaoManager.getVAOHandleFromName(resourceName);
     }
 
-    // VBO Building \\
+    // VBO \\
 
     private VBOHandle buildVBOHandle(
             String resourceName,
             JsonObject jsonObject,
             File file,
             InternalLoadManager loadManager,
-            VAOHandle vaoHandle) { // ← Add this parameter
+            VAOInstance vaoInstance) {
 
         if (!hasValidElement(jsonObject, "vbo"))
             return null;
 
-        // Check if the vbo already exists
         VBOHandle existing = vboManager.getVBOHandleFromName(resourceName);
         if (existing != null)
             return existing;
 
         var vboElement = jsonObject.get("vbo");
 
-        // String reference
         if (vboElement.isJsonPrimitive() && vboElement.getAsJsonPrimitive().isString()) {
+
             String refName = vboElement.getAsString();
             File refFile = loadManager.getFileByResourceName(refName);
 
@@ -142,32 +117,30 @@ class InternalBuildSystem extends SystemPackage {
             return vboManager.getVBOHandleFromName(refName);
         }
 
-        // Raw data - FIX: Pass vaoHandle directly to addVBO
-        vboManager.addVBO(resourceName, file, loadManager, vaoHandle);
+        vboManager.addVBO(resourceName, file, loadManager, vaoInstance);
         return vboManager.getVBOHandleFromName(resourceName);
     }
 
-    // IBO Building \\
+    // IBO \\
 
     private IBOHandle buildIBOHandle(
             String resourceName,
             JsonObject jsonObject,
             File file,
             InternalLoadManager loadManager,
-            VAOHandle vaoHandle) { // ← Add this parameter
+            VAOInstance vaoInstance) {
 
         if (!hasValidElement(jsonObject, "ibo"))
             return null;
 
-        // Check if the ibo already exists
         IBOHandle existing = iboManager.getIBOHandleFromName(resourceName);
         if (existing != null)
             return existing;
 
         var iboElement = jsonObject.get("ibo");
 
-        // String reference
         if (iboElement.isJsonPrimitive() && iboElement.getAsJsonPrimitive().isString()) {
+
             String refName = iboElement.getAsString();
             File refFile = loadManager.getFileByResourceName(refName);
 
@@ -178,14 +151,13 @@ class InternalBuildSystem extends SystemPackage {
             return iboManager.getIBOHandleFromName(refName);
         }
 
-        // Raw data - FIX: Pass vaoHandle directly to addIBO
-        iboManager.addIBO(resourceName, file, loadManager, vaoHandle);
+        iboManager.addIBO(resourceName, file, loadManager, vaoInstance);
         return iboManager.getIBOHandleFromName(resourceName);
     }
 
     // Utility \\
 
-    private boolean hasValidElement(JsonObject jsonObject, String elementName) {
-        return jsonObject.has(elementName) && !jsonObject.get(elementName).isJsonNull();
+    private boolean hasValidElement(JsonObject jsonObject, String key) {
+        return jsonObject.has(key) && !jsonObject.get(key).isJsonNull();
     }
 }

@@ -3,7 +3,8 @@ package com.internal.bootstrap.geometrypipeline.vbomanager;
 import java.io.File;
 
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
+import com.internal.bootstrap.geometrypipeline.vbo.VBOInstance;
 import com.internal.core.engine.ManagerPackage;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -21,11 +22,7 @@ public class VBOManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Internal
         this.internalBuildSystem = create(InternalBuildSystem.class);
-
-        // Retrieval Mapping
         this.vboName2VBOHandle = new Object2ObjectOpenHashMap<>();
     }
 
@@ -34,26 +31,33 @@ public class VBOManager extends ManagerPackage {
         internalBuildSystem = release(InternalBuildSystem.class);
     }
 
-    // Utility \\
+    // Bootstrap \\
 
-    public void addVBO(String resourceName, File file, InternalLoadManager loadManager, VAOHandle vaoHandle) {
-        vboName2VBOHandle.put(resourceName, internalBuildSystem.addVBO(file, loadManager, vaoHandle));
+    public void addVBO(String resourceName, File file, InternalLoadManager loadManager, VAOInstance vaoInstance) {
+        vboName2VBOHandle.put(resourceName, internalBuildSystem.addVBO(file, loadManager, vaoInstance));
     }
 
     public VBOHandle getVBOHandleFromName(String vboName) {
         return vboName2VBOHandle.get(vboName);
     }
 
-    // Accessible \\
+    // Runtime \\
 
-    // Accessible \\
-    public VBOHandle createVBO(VAOHandle vaoHandle, FloatArrayList vertices) {
-        VBOHandle vboHandle = create(VBOHandle.class);
-        float[] vertexArray = vertices.toFloatArray();
-        return GLSLUtility.uploadVertexData(vaoHandle, vboHandle, vertexArray);
+    public VBOInstance createVBOInstance(VAOInstance vaoInstance, FloatArrayList vertices) {
+        return GLSLUtility.uploadVertexData(vaoInstance, create(VBOInstance.class), vertices.toFloatArray());
+    }
+
+    // Removal \\
+
+    public void removeVBO(VBOStruct vboStruct) {
+        GLSLUtility.removeVertexData(vboStruct);
     }
 
     public void removeVBO(VBOHandle vboHandle) {
-        GLSLUtility.removeVertexData(vboHandle);
+        GLSLUtility.removeVertexData(vboHandle.getVBOStruct());
+    }
+
+    public void removeVBOInstance(VBOInstance vboInstance) {
+        GLSLUtility.removeVertexData(vboInstance.getVBOStruct());
     }
 }

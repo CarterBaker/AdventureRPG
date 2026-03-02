@@ -1,68 +1,50 @@
 package com.internal.bootstrap.geometrypipeline.meshmanager;
 
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOHandle;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vbomanager.VBOHandle;
 import com.internal.core.engine.HandlePackage;
 
+/*
+ * A fully GPU-resident static mesh assembled from JSON at bootstrap. Owned
+ * exclusively by MeshManager for the engine lifetime. External systems receive
+ * a ModelInstance built from this handle's MeshStruct — never the handle itself.
+ */
 public class MeshHandle extends HandlePackage {
 
     // Internal
-    private VAOHandle vaoHandle;
+    private VAOInstance vaoInstance;
     private VBOHandle vboHandle;
     private IBOHandle iboHandle;
+    private MeshStruct meshStruct;
 
     // Internal \\
 
-    public void constructor(
-            VAOHandle vaoHandle,
-            VBOHandle vboHandle,
-            IBOHandle iboHandle) {
-
-        // Internal
-        this.vaoHandle = vaoHandle;
+    public void constructor(VAOInstance vaoInstance, VBOHandle vboHandle, IBOHandle iboHandle) {
+        this.vaoInstance = vaoInstance;
         this.vboHandle = vboHandle;
         this.iboHandle = iboHandle;
+        this.meshStruct = new MeshStruct(
+                vaoInstance.getVAOStruct(),
+                vboHandle.getVBOStruct(),
+                iboHandle.getIBOStruct());
     }
 
     // Accessible \\
 
-    // VAO
-    public VAOHandle getVAOHandle() {
-        return vaoHandle;
+    public VAOInstance getVAOInstance() {
+        return vaoInstance;
     }
 
-    public int getVAO() {
-        return vaoHandle.getAttributeHandle();
-    }
-
-    public int getVertStride() {
-        return vaoHandle.getVertStride();
-    }
-
-    // VBO
     public VBOHandle getVBOHandle() {
         return vboHandle;
     }
 
-    public int getVBO() {
-        return vboHandle.getVertexHandle();
-    }
-
-    public int getVertCount() {
-        return vboHandle.getVertexCount();
-    }
-
-    // IBO
     public IBOHandle getIBOHandle() {
         return iboHandle;
     }
 
-    public int getIBO() {
-        return iboHandle.getIndexHandle();
-    }
-
-    public int getIndexCount() {
-        return iboHandle.getIndexCount();
+    public MeshStruct getMeshStruct() {
+        return meshStruct;
     }
 }

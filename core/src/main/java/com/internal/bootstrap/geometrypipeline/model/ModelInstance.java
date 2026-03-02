@@ -1,34 +1,31 @@
 package com.internal.bootstrap.geometrypipeline.model;
 
-import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;
+import com.internal.bootstrap.geometrypipeline.meshmanager.MeshStruct;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.core.engine.InstancePackage;
 
 /*
- * Runtime model handed to external systems by ModelManager.createModel().
- * Owns a MeshHandle reference and a MaterialInstance with independent uniform
- * and UBO state. Never holds a MaterialHandle — material state is always
- * instance-owned.
+ * Runtime model handed to external systems by ModelManager. Stores render
+ * integers via MeshStruct and a MaterialInstance with independent uniform and
+ * UBO state. Carries no ownership over GPU resources.
  */
 public class ModelInstance extends InstancePackage {
 
     // Internal
-    private MeshHandle meshHandle;
+    private MeshStruct meshStruct;
     private MaterialInstance material;
 
     // Internal \\
 
-    public void constructor(
-            MeshHandle meshHandle,
-            MaterialInstance material) {
-        this.meshHandle = meshHandle;
+    public void constructor(MeshStruct meshStruct, MaterialInstance material) {
+        this.meshStruct = meshStruct;
         this.material = material;
     }
 
     // Accessible \\
 
-    public MeshHandle getMeshHandle() {
-        return meshHandle;
+    public MeshStruct getMeshStruct() {
+        return meshStruct;
     }
 
     public MaterialInstance getMaterial() {
@@ -36,26 +33,26 @@ public class ModelInstance extends InstancePackage {
     }
 
     public int getVAO() {
-        return meshHandle.getVAO();
+        return meshStruct.vaoStruct.attributeHandle;
     }
 
     public int getVertStride() {
-        return meshHandle.getVertStride();
+        return meshStruct.vaoStruct.vertStride;
     }
 
     public int getVBO() {
-        return meshHandle.getVBO();
+        return meshStruct.vboStruct.vertexHandle;
     }
 
     public int getVertCount() {
-        return meshHandle.getVertCount();
+        return meshStruct.vboStruct.vertexCount;
     }
 
     public int getIBO() {
-        return meshHandle.getIBO();
+        return meshStruct.iboStruct.indexHandle;
     }
 
     public int getIndexCount() {
-        return meshHandle.getIndexCount();
+        return meshStruct.iboStruct.indexCount;
     }
 }

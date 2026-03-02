@@ -2,40 +2,19 @@ package com.internal.bootstrap.geometrypipeline.vaomanager;
 
 import com.internal.core.engine.HandlePackage;
 
+/*
+ * Pure layout template. Carries no GPU object — VAOStruct.attributeHandle is 0.
+ * Used exclusively as the source from which VAOInstances are created.
+ */
 public class VAOHandle extends HandlePackage {
 
-    // Internal
-    private int attributeHandle;
-    private int vertStride;
-    private int[] attrSizes;
+    private VAOStruct vaoStruct;
 
-    // Internal \\
-
-    public void constructor(
-            int attributeHandle,
-            int[] attrSizes) {
-
-        this.attributeHandle = attributeHandle;
-        this.attrSizes = attrSizes;
-
-        // Derive stride from sum of attribute sizes
-        int stride = 0;
-        for (int size : attrSizes)
-            stride += size;
-        this.vertStride = stride;
+    public void constructor(int[] attrSizes) {
+        this.vaoStruct = new VAOStruct(0, attrSizes);
     }
 
-    // Accessible \\
-
-    public int getAttributeHandle() {
-        return attributeHandle;
-    }
-
-    public int getVertStride() {
-        return vertStride;
-    }
-
-    public int[] getAttrSizes() {
-        return attrSizes;
+    public VAOStruct getVAOStruct() {
+        return vaoStruct;
     }
 }

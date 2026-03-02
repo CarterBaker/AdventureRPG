@@ -15,18 +15,14 @@ public class DynamicPacketInstance extends InstancePackage {
     private AtomicReference<DynamicPacketState> state;
     private VAOHandle vaoHandle;
 
-    // model Management
+    // Model Management
     private Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> materialID2ModelCollection;
 
     // Internal \\
 
     public void constructor(VAOHandle vaoHandle) {
-
-        // Internal
         this.state = new AtomicReference<>(DynamicPacketState.EMPTY);
         this.vaoHandle = vaoHandle;
-
-        // model Management
         this.materialID2ModelCollection = new Int2ObjectOpenHashMap<>();
     }
 
@@ -46,13 +42,10 @@ public class DynamicPacketInstance extends InstancePackage {
 
     // Dynamic Packet \\
 
-    public boolean addVertices(
-            int materialId,
-            FloatArrayList vertList) {
+    public boolean addVertices(int materialId, FloatArrayList vertList) {
 
-        int floatsPerQuad = vaoHandle.getVertStride() * 4;
+        int floatsPerQuad = vaoHandle.getVAOStruct().vertStride * 4;
 
-        // Enforce quad alignment
         if (vertList.size() % floatsPerQuad != 0)
             return false;
 
@@ -64,7 +57,6 @@ public class DynamicPacketInstance extends InstancePackage {
 
         while (processed < total) {
 
-            // Find first model with remaining capacity
             DynamicModelHandle target = null;
             for (DynamicModelHandle model : modelList)
                 if (!model.isFull()) {
@@ -72,7 +64,6 @@ public class DynamicPacketInstance extends InstancePackage {
                     break;
                 }
 
-            // Allocate new model if all are full
             boolean addToMaterialBucket = false;
             if (target == null) {
                 target = create(DynamicModelHandle.class);
@@ -80,11 +71,7 @@ public class DynamicPacketInstance extends InstancePackage {
                 addToMaterialBucket = true;
             }
 
-            // Attempt to append vertices
-            int added = target.tryAddVertices(
-                    vertList,
-                    processed,
-                    total - processed);
+            int added = target.tryAddVertices(vertList, processed, total - processed);
 
             if (added <= 0)
                 return false;
@@ -99,21 +86,21 @@ public class DynamicPacketInstance extends InstancePackage {
     }
 
     public boolean merge(DynamicPacketInstance other, int[] offsetIndices, float[] offsets) {
+
         if (other == null || other.materialID2ModelCollection == null)
             return true;
 
-        int stride = vaoHandle.getVertStride();
+        int stride = vaoHandle.getVAOStruct().vertStride;
 
-        // Validation
         if (offsetIndices.length != offsets.length)
             throw new IllegalArgumentException("offsetIndices and offsets must have same length");
 
-        for (int index : offsetIndices) {
+        for (int index : offsetIndices)
             if (index >= stride)
                 throw new IllegalArgumentException("offsetIndex " + index + " exceeds vertStride " + stride);
-        }
 
         for (var entry : other.materialID2ModelCollection.int2ObjectEntrySet()) {
+
             int materialId = entry.getIntKey();
             ObjectArrayList<DynamicModelHandle> sourceModels = entry.getValue();
 
@@ -121,6 +108,7 @@ public class DynamicPacketInstance extends InstancePackage {
                 continue;
 
             for (DynamicModelHandle source : sourceModels) {
+
                 if (source == null || source.isEmpty())
                     continue;
 
@@ -128,9 +116,7 @@ public class DynamicPacketInstance extends InstancePackage {
                 if (vertices == null || vertices.isEmpty())
                     continue;
 
-                FloatArrayList offsetVertices = applyOffset(vertices, offsetIndices, offsets);
-
-                if (!addVertices(materialId, offsetVertices))
+                if (!addVertices(materialId, applyOffset(vertices, offsetIndices, offsets)))
                     return false;
             }
         }
@@ -139,22 +125,19 @@ public class DynamicPacketInstance extends InstancePackage {
     }
 
     private FloatArrayList applyOffset(FloatArrayList vertices, int[] offsetIndices, float[] offsets) {
-        int stride = vaoHandle.getVertStride();
+
+        int stride = vaoHandle.getVAOStruct().vertStride;
         FloatArrayList result = new FloatArrayList(vertices.size());
 
         for (int i = 0; i < vertices.size(); i += stride) {
-            // Copy entire vertex
             for (int j = 0; j < stride; j++) {
                 float value = vertices.getFloat(i + j);
-
-                // Apply offsets to specified indices
                 for (int k = 0; k < offsetIndices.length; k++) {
                     if (j == offsetIndices[k]) {
                         value += offsets[k];
                         break;
                     }
                 }
-
                 result.add(value);
             }
         }
@@ -165,15 +148,12 @@ public class DynamicPacketInstance extends InstancePackage {
     public void clear() {
 
         for (ObjectArrayList<DynamicModelHandle> modelList : materialID2ModelCollection.values()) {
-
             for (DynamicModelHandle model : modelList)
                 model.clear();
-
             modelList.clear();
         }
 
         materialID2ModelCollection.clear();
-
         unlock();
     }
 
@@ -184,11 +164,9 @@ public class DynamicPacketInstance extends InstancePackage {
     }
 
     public boolean hasModels() {
-
         for (ObjectArrayList<DynamicModelHandle> models : materialID2ModelCollection.values())
             if (models.size() > 0)
                 return true;
-
         return false;
     }
 
