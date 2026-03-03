@@ -9,7 +9,6 @@ import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.WindowInstance;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -157,7 +156,7 @@ public class RenderSystem extends SystemPackage {
         renderCall.constructor(modelInstance);
 
         MaterialInstance material = modelInstance.getMaterial();
-        int materialID = material.getSource().getMaterialID();
+        int materialID = material.getMaterialID();
 
         Int2ObjectOpenHashMap<RenderBatchHandle> materialBatches = depth2RenderBatchHandles
                 .computeIfAbsent(depth, k -> new Int2ObjectOpenHashMap<>());

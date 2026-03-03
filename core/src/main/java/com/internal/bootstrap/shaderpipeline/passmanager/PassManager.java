@@ -71,10 +71,16 @@ public class PassManager extends ManagerPackage {
         PassHandle original = passID2Pass.get(passID);
         if (original == null)
             throwException("Cannot clone pass — passID " + passID + " not found");
+
         MaterialInstance clonedMaterial = materialManager.cloneMaterial(
                 original.getMaterial().getMaterialID());
+
         PassInstance instance = create(PassInstance.class);
-        instance.constructor(original, clonedMaterial);
+        instance.constructor(
+                original.getPassName(),
+                original.getPassID(),
+                original.getMeshHandle(),
+                clonedMaterial);
         return instance;
     }
 

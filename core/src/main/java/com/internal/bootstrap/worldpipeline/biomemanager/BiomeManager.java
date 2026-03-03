@@ -2,9 +2,9 @@ package com.internal.bootstrap.worldpipeline.biomemanager;
 
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.core.engine.ManagerPackage;
-
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import com.internal.core.util.RegistryUtility;
+import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
 
 public class BiomeManager extends ManagerPackage {
 
@@ -12,20 +12,16 @@ public class BiomeManager extends ManagerPackage {
     private InternalLoadManager internalLoadManager;
 
     // Retrieval Mapping
-    private Object2IntOpenHashMap<String> biomeName2BiomeID;
-    private Int2ObjectOpenHashMap<BiomeHandle> biomeID2Biome;
+    private Object2ShortOpenHashMap<String> biomeName2BiomeID;
+    private Short2ObjectOpenHashMap<BiomeHandle> biomeID2Biome;
 
     // Base \\
 
     @Override
     protected void create() {
-
-        // Internal
         this.internalLoadManager = create(InternalLoadManager.class);
-
-        // Retrieval Mapping
-        this.biomeName2BiomeID = new Object2IntOpenHashMap<>();
-        this.biomeID2Biome = new Int2ObjectOpenHashMap<>();
+        this.biomeName2BiomeID = new Object2ShortOpenHashMap<>();
+        this.biomeID2Biome = new Short2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -45,27 +41,32 @@ public class BiomeManager extends ManagerPackage {
     }
 
     void addBiome(BiomeHandle biome) {
+
+        // Collision guard — same as BlockManager
+        if (biomeID2Biome.containsKey(biome.getBiomeID())) {
+            BiomeHandle existing = biomeID2Biome.get(biome.getBiomeID());
+            if (RegistryUtility.isCollision(biome.getBiomeName(), existing.getBiomeName(), biome.getBiomeID()))
+                throwException("Biome ID collision: '"
+                        + biome.getBiomeName() + "' collides with '"
+                        + existing.getBiomeName() + "' (ID " + biome.getBiomeID() + ") — rename one biome to resolve");
+        }
+
         biomeName2BiomeID.put(biome.getBiomeName(), biome.getBiomeID());
         biomeID2Biome.put(biome.getBiomeID(), biome);
     }
 
     // Accessible \\
 
-    public int getBiomeIDFromBiomeName(String biomeName) {
-
+    public short getBiomeIDFromBiomeName(String biomeName) {
         if (!biomeName2BiomeID.containsKey(biomeName))
             throwException("Biome not found: " + biomeName);
-
-        return biomeName2BiomeID.getInt(biomeName);
+        return biomeName2BiomeID.getShort(biomeName);
     }
 
-    public BiomeHandle getBiomeFromBiomeID(int biomeID) {
-
+    public BiomeHandle getBiomeFromBiomeID(short biomeID) {
         BiomeHandle biome = biomeID2Biome.get(biomeID);
-
         if (biome == null)
             throwException("Biome ID not found: " + biomeID);
-
         return biome;
     }
 }

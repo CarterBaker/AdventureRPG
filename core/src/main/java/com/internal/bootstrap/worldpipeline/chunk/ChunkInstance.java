@@ -7,7 +7,6 @@ import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstan
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.settings.EngineSetting;
-
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
 public class ChunkInstance extends WorldRenderInstance {
@@ -28,16 +27,13 @@ public class ChunkInstance extends WorldRenderInstance {
 
     @Override
     protected void create() {
-
         this.chunkDataSyncContainer = create(ChunkDataSyncContainer.class);
         this.vertPositionArray = new int[] { 1 };
         this.mergeOffsetValues = new float[1];
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
-
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
         for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
             subChunks[i] = create(SubChunkInstance.class);
-
         super.create();
     }
 
@@ -47,6 +43,7 @@ public class ChunkInstance extends WorldRenderInstance {
             long coordinate,
             VAOHandle vaoHandle,
             short airBlockId,
+            short defaultBiomeId,
             Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
 
         super.constructor(
@@ -62,7 +59,8 @@ public class ChunkInstance extends WorldRenderInstance {
                     worldHandle,
                     subChunkCoordinate,
                     vaoHandle,
-                    airBlockId);
+                    airBlockId,
+                    defaultBiomeId);
 
         this.chunkNeighbors = new ChunkNeighborStruct(
                 coordinate,
@@ -71,10 +69,8 @@ public class ChunkInstance extends WorldRenderInstance {
     }
 
     public void reset() {
-
         chunkDataSyncContainer.resetData();
         dynamicPacketInstance.clear();
-
         for (SubChunkInstance subChunk : subChunks)
             subChunk.reset();
     }
@@ -82,10 +78,8 @@ public class ChunkInstance extends WorldRenderInstance {
     // Utility \\
 
     public boolean merge() {
-
         boolean success = true;
         dynamicPacketInstance.clear();
-
         for (SubChunkInstance subChunkInstance : subChunks) {
             mergeOffsetValues[0] = subChunkInstance.getCoordinate() * CHUNK_SIZE;
             if (!dynamicPacketInstance.merge(
@@ -94,12 +88,10 @@ public class ChunkInstance extends WorldRenderInstance {
                     mergeOffsetValues))
                 success = false;
         }
-
         if (success && dynamicPacketInstance.hasModels())
             dynamicPacketInstance.setReady();
         else if (!dynamicPacketInstance.hasModels())
             dynamicPacketInstance.unlock();
-
         return success;
     }
 

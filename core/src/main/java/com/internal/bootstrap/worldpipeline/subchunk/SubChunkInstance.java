@@ -31,7 +31,8 @@ public class SubChunkInstance extends WorldRenderInstance {
             WorldHandle worldHandle,
             long coordinate,
             VAOHandle vaoHandle,
-            short airBlockId) {
+            short airBlockId,
+            short defaultBiomeId) {
 
         super.constructor(
                 worldRenderSystem,
@@ -43,17 +44,14 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.biomePaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE / EngineSetting.BIOME_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD / EngineSetting.BIOME_SIZE,
-                airBlockId);
+                defaultBiomeId);
 
         this.blockPaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD,
                 airBlockId);
 
-        // Default orientation = UP facing, spin 0
-        // Encoded as: facing * 4 + spin = UP.ordinal() * 4 + 0
         short defaultOrientation = (short) (EngineSetting.DEFAULT_BLOCK_DIRECTION * 4);
-
         this.blockRotationPaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD,

@@ -1,35 +1,35 @@
 package com.internal.bootstrap.shaderpipeline.pass;
 
+import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
-import com.internal.bootstrap.shaderpipeline.passmanager.PassHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
-import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.core.engine.InstancePackage;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /*
  * Runtime pass handed to external systems by PassManager.clonePass().
- * Holds a back-reference to its source PassHandle for shared state — mesh geometry
- * is never duplicated. Owns a cloned MaterialInstance and a ModelInstance constructed
- * from the shared mesh and that material.
+ * Owns all data it needs directly — name, ID, a cloned MaterialInstance, and a
+ * ModelInstance constructed from the shared mesh geometry and that material.
  */
 public class PassInstance extends InstancePackage {
 
     // Internal
-    private PassHandle source;
+    private String passName;
+    private int passID;
     private MaterialInstance material;
     private ModelInstance modelInstance;
     // Internal \\
 
     public void constructor(
-            PassHandle source,
+            String passName,
+            int passID,
+            MeshHandle meshHandle,
             MaterialInstance material) {
-        this.source = source;
+        this.passName = passName;
+        this.passID = passID;
         this.material = material;
         this.modelInstance = create(ModelInstance.class);
-        this.modelInstance.constructor(source.getMeshHandle().getMeshStruct(), material);
+        this.modelInstance.constructor(meshHandle.getMeshStruct(), material);
     }
 
     // Utility \\
@@ -44,16 +44,12 @@ public class PassInstance extends InstancePackage {
 
     // Accessible \\
 
-    public PassHandle getSource() {
-        return source;
-    }
-
     public String getPassName() {
-        return source.getPassName();
+        return passName;
     }
 
     public int getPassID() {
-        return source.getPassID();
+        return passID;
     }
 
     public MaterialInstance getMaterial() {

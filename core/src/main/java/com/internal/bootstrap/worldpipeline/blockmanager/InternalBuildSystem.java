@@ -11,6 +11,7 @@ import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockRotationType;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.JsonUtility;
+import com.internal.core.util.RegistryUtility;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -20,13 +21,12 @@ public class InternalBuildSystem extends SystemPackage {
     // Internal
     private TextureManager textureManager;
     private MaterialManager materialManager;
-    private int blockCount;
 
     // Base \\
 
     @Override
     protected void create() {
-        this.blockCount = 0;
+        // blockCount removed — IDs are now derived from the block name hash
     }
 
     @Override
@@ -45,10 +45,8 @@ public class InternalBuildSystem extends SystemPackage {
         ObjectArrayList<BlockHandle> blocks = new ObjectArrayList<>();
 
         for (int i = 0; i < blockArray.size(); i++) {
-
             JsonObject blockJson = blockArray.get(i).getAsJsonObject();
             BlockHandle block = parseBlock(blockJson, jsonFile);
-
             if (block != null)
                 blocks.add(block);
         }
@@ -62,6 +60,9 @@ public class InternalBuildSystem extends SystemPackage {
 
         // Parse name
         String blockName = JsonUtility.validateString(blockJson, "name");
+
+        // Derive stable ID from name — consistent across runs and load orders
+        short blockID = RegistryUtility.toShortID(blockName);
 
         // Parse geometry type
         String typeStr = blockJson.has("type") ? blockJson.get("type").getAsString() : "FULL";
@@ -123,11 +124,11 @@ public class InternalBuildSystem extends SystemPackage {
             }
         }
 
-        // Create block
+        // Create block — blockID is now a stable hash, not a counter
         BlockHandle block = create(BlockHandle.class);
         block.constructor(
                 blockName,
-                blockCount++,
+                blockID,
                 blockType,
                 rotationType,
                 materialID,
@@ -144,7 +145,6 @@ public class InternalBuildSystem extends SystemPackage {
     // Utility \\
 
     private DynamicGeometryType parseBlockType(String typeStr) {
-
         try {
             return DynamicGeometryType.valueOf(typeStr.toUpperCase());
         } catch (IllegalArgumentException e) {

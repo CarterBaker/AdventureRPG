@@ -4,15 +4,14 @@ import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.core.engine.HandlePackage;
-
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
  * Batches all render calls sharing the same source MaterialHandle within a
  * single depth layer. The representative MaterialInstance is the first one
- * registered — its source is shared by all calls in the batch, so it drives
- * shader binding and source UBO binding. Source UBOs are cached on first
- * access so the draw loop never touches a live collection. Cleared after
+ * registered — its source UBOs are shared by all calls in the batch, so it
+ * drives shader binding and source UBO binding. Source UBOs are cached on
+ * first access so the draw loop never touches a live collection. Cleared after
  * each draw flush — never holds calls across frames.
  */
 public class RenderBatchHandle extends HandlePackage {
@@ -58,18 +57,14 @@ public class RenderBatchHandle extends HandlePackage {
      * and do not change after bootstrap.
      */
     public UBOHandle[] getCachedSourceUBOs() {
-
         if (cachedSourceUBOs != null)
             return cachedSourceUBOs;
-
-        var handleUBOs = representativeMaterial.getSource().getUBOs();
-
-        if (handleUBOs == null || handleUBOs.isEmpty()) {
+        var sourceUBOs = representativeMaterial.getSourceUBOs();
+        if (sourceUBOs == null || sourceUBOs.isEmpty()) {
             cachedSourceUBOs = EMPTY_UBOS;
         } else {
-            cachedSourceUBOs = handleUBOs.values().toArray(new UBOHandle[0]);
+            cachedSourceUBOs = sourceUBOs.values().toArray(new UBOHandle[0]);
         }
-
         return cachedSourceUBOs;
     }
 

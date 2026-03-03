@@ -8,20 +8,19 @@ public class BlockHandle extends HandlePackage {
 
     // Identity
     private String blockName;
-    private int blockID;
+    private short blockID; // short — matches BlockPaletteHandle storage
     private DynamicGeometryType geometry;
 
     // Textures
     private int materialID;
     private int[] faceTextures;
-
     private BlockRotationType rotationType;
 
     // Constructor \\
 
     public void constructor(
             String blockName,
-            int blockID,
+            short blockID, // short — stable hash from RegistryUtility
             DynamicGeometryType geometry,
             BlockRotationType rotationType,
             int materialID,
@@ -49,9 +48,9 @@ public class BlockHandle extends HandlePackage {
         return blockName;
     }
 
-    public int getBlockID() {
+    public short getBlockID() {
         return blockID;
-    }
+    } // short — safe to write directly to chunk palette
 
     public DynamicGeometryType getGeometry() {
         return geometry;
@@ -61,11 +60,11 @@ public class BlockHandle extends HandlePackage {
         return materialID;
     }
 
-    public int getTextureForFace(Direction3Vector direction) {
-        return faceTextures[direction.ordinal()];
-    }
-
     public BlockRotationType getRotationType() {
         return rotationType;
+    }
+
+    public int getTextureForFace(Direction3Vector direction) {
+        return faceTextures[direction.ordinal()];
     }
 }

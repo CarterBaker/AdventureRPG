@@ -6,7 +6,6 @@ import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
 import com.internal.core.engine.ManagerPackage;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -14,20 +13,19 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 /*
  * Owns all compiled MaterialHandle objects for the lifetime of the application.
  * Delegates bootstrap compilation to InternalLoadManager, which is released once
- * all materials are assembled. Cloning produces a MaterialInstance with a back-reference
- * to the source handle, shared UBO state, and a deep-copied uniform map with values
- * transferred from the source — including GPU texture handles on sampler uniforms.
+ * all materials are assembled. Cloning produces a MaterialInstance with all data
+ * copied directly from the source handle — name, ID, shader, source UBO map by
+ * reference, and a deep-copied uniform map with values transferred from the source,
+ * including GPU texture handles on sampler uniforms.
  */
 public class MaterialManager extends ManagerPackage {
 
     // Internal
     private ShaderManager shaderManager;
     private InternalLoadManager internalLoadManager;
-
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> materialName2MaterialID;
     private Int2ObjectOpenHashMap<MaterialHandle> materialID2Material;
-
     // Internal \\
 
     @Override
@@ -74,9 +72,7 @@ public class MaterialManager extends ManagerPackage {
     }
 
     public MaterialInstance cloneMaterial(int materialID) {
-
         MaterialHandle original = getMaterialFromMaterialID(materialID);
-
         if (original == null)
             throwException("Cannot clone material — materialID " + materialID + " not found");
 
@@ -84,7 +80,6 @@ public class MaterialManager extends ManagerPackage {
         Object2ObjectOpenHashMap<String, Uniform<?>> deepCopiedUniforms = new Object2ObjectOpenHashMap<>();
 
         String[] keys = sourceUniforms.keySet().toArray(new String[0]);
-
         for (int i = 0; i < keys.length; i++) {
             Uniform<?> source = sourceUniforms.get(keys[i]);
             UniformAttribute<?> freshAttr = source.attribute().createDefault();
@@ -93,8 +88,12 @@ public class MaterialManager extends ManagerPackage {
         }
 
         MaterialInstance instance = create(MaterialInstance.class);
-        instance.constructor(original, deepCopiedUniforms);
-
+        instance.constructor(
+                original.getMaterialName(),
+                original.getMaterialID(),
+                original.getShaderHandle(),
+                original.getUBOs(),
+                deepCopiedUniforms);
         return instance;
     }
 }

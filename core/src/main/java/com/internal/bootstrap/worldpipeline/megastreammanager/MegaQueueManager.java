@@ -11,6 +11,7 @@ import com.internal.bootstrap.worldpipeline.megachunk.MegaData;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaAssessBranch;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaDumpBranch;
+import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaMergeBranch;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaQueueOperation;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaRenderBranch;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
@@ -23,12 +24,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import java.util.ArrayDeque;
 
 /*
- * Drives the per-frame mega chunk pipeline. Geometry is accumulated
- * incrementally — each chunk merges into the mega at batch time and has
- * its BATCH_DATA set immediately after contributing. The mega is ready
- * to render once all expected chunks are present in the merged set.
- * On dump or invalidation, chunk BATCH_DATA flags are cleared and the
- * merged set is reset so chunks re-contribute naturally when next batched.
+ * Drives the per-frame mega chunk pipeline. Owns lifecycle (create, pool,
+ * flush, unload) and assessment dispatch. All per-operation logic is
+ * delegated to branches — MegaMergeBranch owns the batch→merge→flag sequence.
  */
 class MegaQueueManager extends ManagerPackage {
 
@@ -38,6 +36,7 @@ class MegaQueueManager extends ManagerPackage {
     private GridManager gridManager;
 
     // Branches
+    private MegaMergeBranch mergeBranch;
     private MegaAssessBranch assessBranch;
     private MegaRenderBranch renderBranch;
     private MegaDumpBranch dumpBranch;
@@ -52,13 +51,11 @@ class MegaQueueManager extends ManagerPackage {
     private int MEGA_CHUNK_SIZE;
     private int megaScale;
     private int MEGA_ASSESS_PER_FRAME;
-
-    // Cached indices
-    private int batchDataIndex;
     // Internal \\
 
     @Override
     protected void create() {
+        this.mergeBranch = create(MegaMergeBranch.class);
         this.assessBranch = create(MegaAssessBranch.class);
         this.renderBranch = create(MegaRenderBranch.class);
         this.dumpBranch = create(MegaDumpBranch.class);
@@ -74,7 +71,6 @@ class MegaQueueManager extends ManagerPackage {
         this.megaScale = MEGA_CHUNK_SIZE * MEGA_CHUNK_SIZE;
         this.MEGA_POOL_MAX_OVERFLOW = EngineSetting.MEGA_POOL_MAX_OVERFLOW;
         this.MEGA_ASSESS_PER_FRAME = EngineSetting.MEGA_ASSESS_PER_FRAME;
-        this.batchDataIndex = ChunkData.BATCH_DATA.index;
     }
 
     @Override
@@ -137,33 +133,7 @@ class MegaQueueManager extends ManagerPackage {
             activeMegaChunks.put(megaCoord, mega);
         }
 
-        MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
-        if (sync.isLocked())
-            return;
-
-        if (!mega.batchAndMerge(chunkInstance))
-            return;
-
-        // Geometry has changed — clear render flag so mega re-uploads
-        if (!sync.tryAcquire())
-            return;
-        try {
-            sync.data[MegaData.RENDER_DATA.index] = false;
-            if (mega.isReadyToRender())
-                mega.finalizeGeometry();
-        } finally {
-            sync.release();
-        }
-
-        // Chunk has handed off its geometry — mark it done
-        ChunkDataSyncContainer chunkSync = chunkInstance.getChunkDataSyncContainer();
-        if (!chunkSync.tryAcquire())
-            return;
-        try {
-            chunkSync.data[batchDataIndex] = true;
-        } finally {
-            chunkSync.release();
-        }
+        mergeBranch.mergeChunkIntoMega(chunkInstance, mega);
     }
 
     private MegaChunkInstance createMega(long megaCoord) {
@@ -281,8 +251,6 @@ class MegaQueueManager extends ManagerPackage {
             worldRenderSystem.removeMegaInstance(megaCoord);
             clearChunkBatchFlags(mega);
             mega.reset();
-            sync.data[MegaData.BATCH_DATA.index] = false;
-            sync.data[MegaData.RENDER_DATA.index] = false;
         } finally {
             sync.release();
         }
@@ -294,7 +262,7 @@ class MegaQueueManager extends ManagerPackage {
             if (!chunkSync.tryAcquire())
                 continue;
             try {
-                chunkSync.data[batchDataIndex] = false;
+                chunkSync.data[ChunkData.BATCH_DATA.index] = false;
             } finally {
                 chunkSync.release();
             }

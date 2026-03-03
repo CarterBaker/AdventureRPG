@@ -1,5 +1,6 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
+import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
@@ -37,6 +38,7 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Internal
     private BlockManager blockManager;
+    private BiomeManager biomeManager;
     private GridManager gridManager;
     private ChunkStreamManager chunkStreamManager;
     private WorldRenderManager worldRenderSystem;
@@ -51,6 +53,7 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Block Management
     private short airBlockId;
+    private short defaultBiomeId;
 
     // Chunk Queue
     private QueueInstance chunkQueue;
@@ -62,6 +65,7 @@ class ChunkQueueManager extends ManagerPackage {
     // Chunk Pool
     private ArrayDeque<ChunkInstance> chunkPool;
     private int CHUNK_POOL_MAX_OVERFLOW;
+
     // Internal \\
 
     @Override
@@ -92,6 +96,7 @@ class ChunkQueueManager extends ManagerPackage {
     @Override
     protected void get() {
         this.blockManager = get(BlockManager.class);
+        this.biomeManager = get(BiomeManager.class);
         this.gridManager = get(GridManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.worldRenderSystem = get(WorldRenderManager.class);
@@ -100,6 +105,7 @@ class ChunkQueueManager extends ManagerPackage {
     @Override
     protected void awake() {
         this.airBlockId = (short) blockManager.getBlockIDFromBlockName("Air");
+        this.defaultBiomeId = biomeManager.getBiomeIDFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
     }
 
     @Override
@@ -170,10 +176,8 @@ class ChunkQueueManager extends ManagerPackage {
         GridInstance grid = gridManager.getGrid();
 
         for (int i = 0; i < EngineSetting.GRID_SLOTS_SCAN_PER_FRAME; i++) {
-
             GridSlotHandle slot = grid.getNextScanSlot();
             long chunkCoordinate = slot.getChunkCoordinate();
-
             if (!activeChunks.containsKey(chunkCoordinate))
                 loadRequests.add(chunkCoordinate);
         }
@@ -200,6 +204,7 @@ class ChunkQueueManager extends ManagerPackage {
                 chunkCoordinate,
                 chunkStreamManager.getChunkVAO(),
                 airBlockId,
+                defaultBiomeId,
                 activeChunks);
 
         activeChunks.put(chunkCoordinate, chunkInstance);
@@ -284,7 +289,6 @@ class ChunkQueueManager extends ManagerPackage {
             return QueueOperation.SKIP;
 
         try {
-            // Use queueOperation field from ChunkData — no hardcoded enum value matching
             ChunkData nextRequired = targetLevel.getNextRequiredData(syncContainer.data);
             if (nextRequired != null)
                 return nextRequired.queueOperation;

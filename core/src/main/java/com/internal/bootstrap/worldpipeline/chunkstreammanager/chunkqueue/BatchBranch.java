@@ -15,13 +15,14 @@ public class BatchBranch extends BranchPackage {
 
     // Internal
     private MegaStreamManager megaStreamManager;
-    private int batchDataIndex;
+
     // Internal \\
 
     @Override
     protected void get() {
+
+        // Internal
         this.megaStreamManager = get(MegaStreamManager.class);
-        this.batchDataIndex = ChunkData.BATCH_DATA.index;
     }
 
     // Chunk Batch \\

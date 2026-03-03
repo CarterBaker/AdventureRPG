@@ -4,6 +4,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 public class EngineSetting {
 
+        // Registry
+        public static final int FNV_OFFSET_BASIS = 0x811c9dc5;
+        public static final int FNV_PRIME = 0x01000193;
+        public static final short REGISTRY_RESERVED_ID = 0;
+
         // Internal Settings
         public static final String THREAD_DEFINITIONS = "internal/threads";
 
@@ -96,6 +101,9 @@ public class EngineSetting {
         public static final int DEFAULT_BLOCK_DIRECTION = 4;
         public static final int CHUNK_VERT_BUFFER = 128;
         public static final int MESH_VERT_LIMIT = 32767;
+
+        // Biome
+        public static final String DEFAULT_BIOME_NAME = "Empty";
 
         // World
         public static final int CHUNKS_PER_PIXEL = 32;

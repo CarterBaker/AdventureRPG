@@ -1,33 +1,40 @@
 package com.internal.bootstrap.shaderpipeline.material;
 
-import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialHandle;
-import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.shadermanager.ShaderHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
+import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.core.engine.InstancePackage;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /*
  * Runtime material handed to external systems by MaterialManager.cloneMaterial().
- * Holds a back-reference to its source MaterialHandle for shared state — shader and
- * shared UBOs are never duplicated. Owns a deep-copied uniform map and a per-instance
- * UBO map keyed by binding point so no name lookup is needed at render time.
+ * Owns all data it needs directly — shader handle, name, ID, source UBO map,
+ * a deep-copied uniform map, and a per-instance UBO map keyed by binding point
+ * for render-time access without name lookup.
  */
 public class MaterialInstance extends InstancePackage {
 
     // Internal
-    private MaterialHandle source;
+    private String materialName;
+    private int materialID;
+    private ShaderHandle shaderHandle;
+    private Object2ObjectOpenHashMap<String, UBOHandle> sourceUBOs;
     private Int2ObjectOpenHashMap<UBOInstance> instanceUBOs;
     private Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
-
     // Internal \\
 
     public void constructor(
-            MaterialHandle source,
+            String materialName,
+            int materialID,
+            ShaderHandle shaderHandle,
+            Object2ObjectOpenHashMap<String, UBOHandle> sourceUBOs,
             Object2ObjectOpenHashMap<String, Uniform<?>> uniforms) {
-        this.source = source;
+        this.materialName = materialName;
+        this.materialID = materialID;
+        this.shaderHandle = shaderHandle;
+        this.sourceUBOs = sourceUBOs;
         this.instanceUBOs = new Int2ObjectOpenHashMap<>();
         this.uniforms = uniforms;
     }
@@ -42,26 +49,26 @@ public class MaterialInstance extends InstancePackage {
     public <T> void setUniform(String uniformName, T value) {
         Uniform<?> uniform = uniforms.get(uniformName);
         if (uniform == null)
-            throwException("Uniform '" + uniformName + "' not found in material '" + source.getMaterialName() + "'");
+            throwException("Uniform '" + uniformName + "' not found in material '" + materialName + "'");
         ((Uniform<T>) uniform).attribute().set(value);
     }
 
     // Accessible \\
 
-    public MaterialHandle getSource() {
-        return source;
-    }
-
     public ShaderHandle getShaderHandle() {
-        return source.getShaderHandle();
+        return shaderHandle;
     }
 
     public String getMaterialName() {
-        return source.getMaterialName();
+        return materialName;
     }
 
     public int getMaterialID() {
-        return source.getMaterialID();
+        return materialID;
+    }
+
+    public Object2ObjectOpenHashMap<String, UBOHandle> getSourceUBOs() {
+        return sourceUBOs;
     }
 
     public Int2ObjectOpenHashMap<UBOInstance> getInstanceUBOs() {

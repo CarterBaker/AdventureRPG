@@ -7,13 +7,12 @@ public class BiomeHandle extends HandlePackage {
 
     // Identity
     private String biomeName;
-    private int biomeID;
+    private short biomeID;
     private Color biomeColor;
 
     // Constructor \\
 
-    public void constructor(String biomeName, int biomeID) {
-
+    public void constructor(String biomeName, short biomeID) {
         this.biomeName = biomeName;
         this.biomeID = biomeID;
         this.biomeColor = Color.WHITE;
@@ -25,7 +24,7 @@ public class BiomeHandle extends HandlePackage {
         return biomeName;
     }
 
-    public int getBiomeID() {
+    public short getBiomeID() {
         return biomeID;
     }
 
