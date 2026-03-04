@@ -1,6 +1,5 @@
-package com.internal.bootstrap.geometrypipeline.vbomanager;
+package com.internal.bootstrap.geometrypipeline.vbo;
 
-import com.internal.bootstrap.geometrypipeline.vbo.VBOStruct;
 import com.internal.core.engine.HandlePackage;
 
 public class VBOHandle extends HandlePackage {

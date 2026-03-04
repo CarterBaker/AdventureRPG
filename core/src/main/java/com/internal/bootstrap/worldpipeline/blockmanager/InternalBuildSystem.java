@@ -10,24 +10,20 @@ import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockRotationType;
 import com.internal.core.engine.SystemPackage;
+import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
 import com.internal.core.util.RegistryUtility;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
-
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class InternalBuildSystem extends SystemPackage {
 
     // Internal
+
     private TextureManager textureManager;
     private MaterialManager materialManager;
 
-    // Base \\
-
-    @Override
-    protected void create() {
-        // blockCount removed — IDs are now derived from the block name hash
-    }
+    // Base \
 
     @Override
     protected void get() {
@@ -35,9 +31,11 @@ public class InternalBuildSystem extends SystemPackage {
         this.materialManager = get(MaterialManager.class);
     }
 
-    // Compile \\
+    // Compile \
 
-    ObjectArrayList<BlockHandle> compileBlocks(File jsonFile) {
+    ObjectArrayList<BlockHandle> compileBlocks(File jsonFile, File root) {
+        // e.g. root=blocks/ file=blocks/natural/stone.json -> prefix="natural/stone"
+        String pathPrefix = FileUtility.getPathWithFileNameWithoutExtension(root, jsonFile);
 
         JsonObject rootJson = JsonUtility.loadJsonObject(jsonFile);
         JsonArray blockArray = JsonUtility.validateArray(rootJson, "blocks");
@@ -46,7 +44,7 @@ public class InternalBuildSystem extends SystemPackage {
 
         for (int i = 0; i < blockArray.size(); i++) {
             JsonObject blockJson = blockArray.get(i).getAsJsonObject();
-            BlockHandle block = parseBlock(blockJson, jsonFile);
+            BlockHandle block = parseBlock(blockJson, pathPrefix);
             if (block != null)
                 blocks.add(block);
         }
@@ -54,14 +52,12 @@ public class InternalBuildSystem extends SystemPackage {
         return blocks;
     }
 
-    // Parse \\
+    // Parse \
 
-    private BlockHandle parseBlock(JsonObject blockJson, File jsonFile) {
-
-        // Parse name
-        String blockName = JsonUtility.validateString(blockJson, "name");
-
-        // Derive stable ID from name — consistent across runs and load orders
+    private BlockHandle parseBlock(JsonObject blockJson, String pathPrefix) {
+        // Full name: "natural/stone/grass", "natural/stone/cobblestone", etc.
+        String localName = JsonUtility.validateString(blockJson, "name");
+        String blockName = pathPrefix + "/" + localName;
         short blockID = RegistryUtility.toShortID(blockName);
 
         // Parse geometry type
@@ -107,7 +103,7 @@ public class InternalBuildSystem extends SystemPackage {
                         blockJson.get(key).getAsString()).getTileID();
         }
 
-        // Cascade — fill undefined faces from the previous defined face
+        // Cascade — fill undefined faces from the first defined face
         int lastDefined = -1;
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             if (textures[i] != -1) {
@@ -124,7 +120,6 @@ public class InternalBuildSystem extends SystemPackage {
             }
         }
 
-        // Create block — blockID is now a stable hash, not a counter
         BlockHandle block = create(BlockHandle.class);
         block.constructor(
                 blockName,
@@ -142,7 +137,7 @@ public class InternalBuildSystem extends SystemPackage {
         return block;
     }
 
-    // Utility \\
+    // Utility \
 
     private DynamicGeometryType parseBlockType(String typeStr) {
         try {
@@ -152,4 +147,5 @@ public class InternalBuildSystem extends SystemPackage {
             return null;
         }
     }
+
 }

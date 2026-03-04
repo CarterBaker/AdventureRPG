@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vao.VAOStruct;
+import com.internal.bootstrap.geometrypipeline.vbo.VBOHandle;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOStruct;
 

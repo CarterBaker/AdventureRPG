@@ -70,8 +70,8 @@ public class BlockPlacementSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.AIR_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("Air");
-        this.GRASS_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("Grass Block");
+        this.AIR_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Air");
+        this.GRASS_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Grass Block");
 
         // UP facing, spin 0 — matches SubChunkInstance palette default
         this.DEFAULT_ORIENTATION = (short) (EngineSetting.DEFAULT_BLOCK_DIRECTION * 4);

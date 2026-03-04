@@ -3,6 +3,7 @@ package com.internal.bootstrap.geometrypipeline.vaomanager;
 import java.io.File;
 
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
+import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vao.VAOStruct;
 import com.internal.core.engine.ManagerPackage;

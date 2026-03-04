@@ -1,7 +1,7 @@
 package com.internal.bootstrap.worldpipeline.worldrendermanager;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
+import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.InstancePackage;
 

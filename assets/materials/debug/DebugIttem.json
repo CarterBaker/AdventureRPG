@@ -1,0 +1,7 @@
+{
+    "shader": "DebugItem",
+    "u_textureArray": {
+        "type": "SAMPLE_IMAGE_2D_ARRAY",
+        "value": "items/standard"
+    }
+}

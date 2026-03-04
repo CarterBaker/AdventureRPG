@@ -2,7 +2,7 @@ package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicge
 
 import java.util.BitSet;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
+import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockPaletteHandle;

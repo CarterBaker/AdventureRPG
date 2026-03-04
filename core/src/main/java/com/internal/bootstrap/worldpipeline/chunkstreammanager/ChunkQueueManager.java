@@ -104,7 +104,7 @@ class ChunkQueueManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        this.airBlockId = (short) blockManager.getBlockIDFromBlockName("Air");
+        this.airBlockId = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Air");
         this.defaultBiomeId = biomeManager.getBiomeIDFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
     }
 

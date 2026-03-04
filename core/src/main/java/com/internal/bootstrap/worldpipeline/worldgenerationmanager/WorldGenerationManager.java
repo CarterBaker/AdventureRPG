@@ -45,8 +45,8 @@ public class WorldGenerationManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        this.AIR_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("Air");
-        this.GRASS_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("Grass Block");
+        this.AIR_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Air");
+        this.GRASS_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Grass Block");
         this.DEFAULT_BIOME_ID = biomeManager.getBiomeIDFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
     }
 

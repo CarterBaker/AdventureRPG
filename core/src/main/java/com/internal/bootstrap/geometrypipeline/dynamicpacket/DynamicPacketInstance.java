@@ -1,8 +1,9 @@
-package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
+package com.internal.bootstrap.geometrypipeline.dynamicpacket;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.core.engine.InstancePackage;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;

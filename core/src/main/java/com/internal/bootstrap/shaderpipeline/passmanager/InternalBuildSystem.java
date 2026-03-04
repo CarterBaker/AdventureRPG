@@ -3,7 +3,7 @@ package com.internal.bootstrap.shaderpipeline.passmanager;
 import java.io.File;
 
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;
+import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;

@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.pass;
 
-import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;
+import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;

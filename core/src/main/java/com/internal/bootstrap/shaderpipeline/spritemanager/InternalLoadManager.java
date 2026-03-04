@@ -3,7 +3,7 @@ package com.internal.bootstrap.shaderpipeline.spritemanager;
 import java.io.File;
 import java.util.List;
 
-import com.internal.bootstrap.geometrypipeline.meshmanager.MeshHandle;
+import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;

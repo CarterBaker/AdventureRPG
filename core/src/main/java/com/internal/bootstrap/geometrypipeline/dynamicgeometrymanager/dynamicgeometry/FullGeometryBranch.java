@@ -2,8 +2,8 @@ package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicge
 
 import java.util.BitSet;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertBlockNeighbor3Vector;
+import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureHandle;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;

@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
+import com.internal.bootstrap.geometrypipeline.vbo.VBOHandle;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;

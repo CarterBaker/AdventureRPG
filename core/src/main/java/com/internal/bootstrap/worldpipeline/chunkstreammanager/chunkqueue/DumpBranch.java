@@ -27,7 +27,7 @@ public class DumpBranch extends BranchPackage {
 
     @Override
     protected void awake() {
-        this.airBlockId = (short) blockManager.getBlockIDFromBlockName("Air");
+        this.airBlockId = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Air");
     }
 
     // Accessible \\

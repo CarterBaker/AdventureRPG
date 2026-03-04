@@ -4,10 +4,10 @@ import java.io.File;
 
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
+import com.internal.bootstrap.geometrypipeline.vbo.VBOHandle;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOStruct;
 import com.internal.core.engine.ManagerPackage;
-
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -36,6 +36,14 @@ public class VBOManager extends ManagerPackage {
 
     public void addVBO(String resourceName, File file, InternalLoadManager loadManager, VAOInstance vaoInstance) {
         vboName2VBOHandle.put(resourceName, internalBuildSystem.addVBO(file, loadManager, vaoInstance));
+    }
+
+    // Bypasses JSON parsing. Used when vertex data has already been assembled
+    // by the quad expansion path in meshmanager.InternalBuildSystem.
+    public VBOHandle addVBOFromData(String resourceName, float[] vertices, VAOInstance vaoInstance) {
+        VBOHandle handle = GLSLUtility.uploadVertexData(vaoInstance, create(VBOHandle.class), vertices);
+        vboName2VBOHandle.put(resourceName, handle);
+        return handle;
     }
 
     public VBOHandle getVBOHandleFromName(String vboName) {

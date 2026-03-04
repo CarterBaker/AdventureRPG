@@ -1,6 +1,5 @@
-package com.internal.bootstrap.geometrypipeline.ibomanager;
+package com.internal.bootstrap.geometrypipeline.ibo;
 
-import com.internal.bootstrap.geometrypipeline.ibo.IBOStruct;
 import com.internal.core.engine.HandlePackage;
 
 public class IBOHandle extends HandlePackage {

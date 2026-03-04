@@ -26,6 +26,7 @@ public class EngineSetting {
         public static final String BIOME_JSON_PATH = "biomes";
         public static final String ENTITY_JSON_PATH = "entities";
         public static final String MENU_JSON_PATH = "menus";
+        public static final String ITEM_JSON_PATH = "items";
 
         // File Extension Settings
 

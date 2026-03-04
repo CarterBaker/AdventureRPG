@@ -1,4 +1,4 @@
-package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
+package com.internal.bootstrap.geometrypipeline.dynamicpacket;
 
 public enum DynamicPacketState {
     EMPTY,

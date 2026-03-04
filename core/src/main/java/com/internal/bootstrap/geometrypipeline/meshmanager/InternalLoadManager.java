@@ -8,10 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class InternalLoadManager extends ManagerPackage {
@@ -20,6 +20,7 @@ public class InternalLoadManager extends ManagerPackage {
     private File root;
     private MeshManager meshManager;
     private InternalBuildSystem internalBuildSystem;
+    private UVProvider uvProvider;
     private int meshDataCount;
 
     // File Registry
@@ -48,6 +49,7 @@ public class InternalLoadManager extends ManagerPackage {
     // MeshData Management \\
 
     void loadMeshData() {
+        this.uvProvider = meshManager.createUVProvider();
         List<File> meshFiles = collectMeshFiles();
         buildFileRegistry(meshFiles);
         processMeshFiles(meshFiles);
@@ -56,24 +58,18 @@ public class InternalLoadManager extends ManagerPackage {
     // File Collection \\
 
     private List<File> collectMeshFiles() {
-
         validateRootDirectory();
-
         Path basePath = root.toPath();
-
         try (var stream = Files.walk(basePath)) {
             return stream
                     .filter(Files::isRegularFile)
                     .map(Path::toFile)
                     .filter(this::isValidJsonFile)
                     .collect(Collectors.toList());
-        }
-
-        catch (IOException e) {
+        } catch (IOException e) {
             throwException(
                     "Failed to list mesh files in directory: " + root.getAbsolutePath(), e);
         }
-
         return null;
     }
 
@@ -90,11 +86,8 @@ public class InternalLoadManager extends ManagerPackage {
     // File Registry \\
 
     private void buildFileRegistry(List<File> meshFiles) {
-
         for (File file : meshFiles) {
-
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-
             resourceName2File.put(resourceName, file);
         }
     }
@@ -111,19 +104,13 @@ public class InternalLoadManager extends ManagerPackage {
     }
 
     public void processMeshFile(File file) {
-
         String meshName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-
         try {
-
             int meshID = meshDataCount++;
-            MeshHandle meshHandle = internalBuildSystem.buildMeshHandle(root, file, meshID, this);
-
+            MeshHandle meshHandle = internalBuildSystem.buildMeshHandle(root, file, meshID, this, uvProvider);
             if (meshHandle != null)
                 createMeshData(meshName, meshID, meshHandle);
-        }
-
-        catch (RuntimeException ex) {
+        } catch (RuntimeException ex) {
             throwException(
                     "Failed to build mesh from file: " + file.getAbsolutePath(), ex);
         }

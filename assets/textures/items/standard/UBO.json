@@ -1,0 +1,7 @@
+{
+    "ubo": "StandardItemLayoutData",
+    "aliases": {
+        "u_layer_albedo":   "albedo"
+    },
+    "uvPerBlock": "u_uvPerBlock"
+}

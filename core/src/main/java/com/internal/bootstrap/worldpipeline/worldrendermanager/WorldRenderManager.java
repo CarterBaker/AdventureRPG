@@ -1,8 +1,8 @@
 package com.internal.bootstrap.worldpipeline.worldrendermanager;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicModelHandle;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketInstance;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicPacketState;
+import com.internal.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
+import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
+import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;

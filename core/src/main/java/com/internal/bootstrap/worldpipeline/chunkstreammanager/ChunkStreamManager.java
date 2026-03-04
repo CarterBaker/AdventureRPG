@@ -1,7 +1,7 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 import com.internal.bootstrap.entitypipeline.playermanager.PlayerManager;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;

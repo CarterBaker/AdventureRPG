@@ -1,6 +1,6 @@
-package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
+package com.internal.bootstrap.geometrypipeline.dynamicmodel;
 
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.engine.settings.EngineSetting;
 
@@ -18,7 +18,7 @@ public class DynamicModelHandle extends HandlePackage {
 
     // Internal \\
 
-    void constructor(int materialID, VAOHandle vaoHandle) {
+    public void constructor(int materialID, VAOHandle vaoHandle) {
         this.materialID = materialID;
         this.vaoHandle = vaoHandle;
         this.vertStride = vaoHandle.getVAOStruct().vertStride;
@@ -28,7 +28,7 @@ public class DynamicModelHandle extends HandlePackage {
 
     // Utility \\
 
-    int tryAddVertices(FloatArrayList sourceVerts, int offset, int length) {
+    public int tryAddVertices(FloatArrayList sourceVerts, int offset, int length) {
 
         int floatsPerQuad = vertStride * 4;
 
@@ -52,7 +52,7 @@ public class DynamicModelHandle extends HandlePackage {
         return floatsToAdd;
     }
 
-    void addQuadVertices(FloatArrayList sourceVerts) {
+    public void addQuadVertices(FloatArrayList sourceVerts) {
 
         int floatsPerQuad = vertStride * 4;
 
@@ -81,7 +81,7 @@ public class DynamicModelHandle extends HandlePackage {
         }
     }
 
-    void clear() {
+    public void clear() {
         vertices.clear();
         indices.clear();
     }

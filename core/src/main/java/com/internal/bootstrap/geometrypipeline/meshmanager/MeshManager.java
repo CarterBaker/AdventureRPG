@@ -1,17 +1,17 @@
 package com.internal.bootstrap.geometrypipeline.meshmanager;
 
 import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
-import com.internal.bootstrap.geometrypipeline.ibomanager.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
+import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshInstance;
+import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOInstance;
-import com.internal.bootstrap.geometrypipeline.vbomanager.VBOHandle;
 import com.internal.bootstrap.geometrypipeline.vbomanager.VBOManager;
+import com.internal.bootstrap.shaderpipeline.texturemanager.TextureHandle;
+import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.core.engine.ManagerPackage;
-
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -21,10 +21,10 @@ public class MeshManager extends ManagerPackage {
 
     // Internal
     private InternalLoadManager internalLoadManager;
-
     private VAOManager vaoManager;
     private VBOManager vboManager;
     private IBOManager iboManager;
+    private TextureManager textureManager;
 
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> meshHandleName2MeshHandleID;
@@ -34,11 +34,7 @@ public class MeshManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Internal
         this.internalLoadManager = create(InternalLoadManager.class);
-
-        // Retrieval Mapping
         this.meshHandleName2MeshHandleID = new Object2IntOpenHashMap<>();
         this.meshHandleID2MeshHandle = new Int2ObjectOpenHashMap<>();
     }
@@ -48,6 +44,7 @@ public class MeshManager extends ManagerPackage {
         this.vaoManager = get(VAOManager.class);
         this.vboManager = get(VBOManager.class);
         this.iboManager = get(IBOManager.class);
+        this.textureManager = get(TextureManager.class);
     }
 
     @Override
@@ -67,6 +64,15 @@ public class MeshManager extends ManagerPackage {
         meshHandleID2MeshHandle.put(meshID, meshHandle);
     }
 
+    // UV Provider \\
+
+    UVProvider createUVProvider() {
+        return textureName -> {
+            TextureHandle handle = textureManager.getHandleFromTextureName(textureName);
+            return new float[] { handle.getU0(), handle.getV0(), handle.getU1(), handle.getV1() };
+        };
+    }
+
     // Static Mesh Accessors \\
 
     public int getMeshHandleIDFromMeshName(String meshName) {
@@ -80,11 +86,9 @@ public class MeshManager extends ManagerPackage {
     // Runtime Mesh Creation \\
 
     public MeshInstance createMesh(VAOHandle vaoTemplate, FloatArrayList vertices, ShortArrayList indices) {
-
         VAOInstance vaoInstance = vaoManager.createVAOInstance(vaoTemplate);
         VBOInstance vboInstance = vboManager.createVBOInstance(vaoInstance, vertices);
         IBOInstance iboInstance = iboManager.createIBOInstance(vaoInstance, indices);
-
         MeshInstance meshInstance = create(MeshInstance.class);
         meshInstance.constructor(vaoInstance, vboInstance, iboInstance);
         return meshInstance;

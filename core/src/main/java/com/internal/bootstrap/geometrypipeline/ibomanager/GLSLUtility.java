@@ -7,6 +7,7 @@ import java.nio.ShortBuffer;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
+import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOStruct;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;

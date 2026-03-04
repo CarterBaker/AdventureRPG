@@ -2,12 +2,12 @@ package com.internal.bootstrap.geometrypipeline.ibomanager;
 
 import java.io.File;
 
+import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOStruct;
 import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.core.engine.ManagerPackage;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
@@ -36,6 +36,14 @@ public class IBOManager extends ManagerPackage {
 
     public void addIBO(String resourceName, File file, InternalLoadManager loadManager, VAOInstance vaoInstance) {
         iboName2IBOHandle.put(resourceName, internalBuildSystem.addIBO(file, loadManager, vaoInstance));
+    }
+
+    // Bypasses JSON parsing. Used when index data has already been assembled
+    // by the quad expansion path in meshmanager.InternalBuildSystem.
+    public IBOHandle addIBOFromData(String resourceName, short[] indices, VAOInstance vaoInstance) {
+        IBOHandle handle = GLSLUtility.uploadIndexData(vaoInstance, create(IBOHandle.class), indices);
+        iboName2IBOHandle.put(resourceName, handle);
+        return handle;
     }
 
     public IBOHandle getIBOHandleFromName(String iboName) {
