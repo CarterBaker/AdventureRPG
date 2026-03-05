@@ -1,5 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.spritemanager;
 
+import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
@@ -13,23 +14,24 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 /*
  * Owns all loaded SpriteHandles and provides runtime access and cloning.
  * Cloning produces a SpriteInstance with independent material state backed
- * by the same shared GPU texture. GPU resources are released on dispose.
+ * by the same shared GPU texture. On accessor miss, triggers an immediate
+ * synchronous load through the active InternalLoadManager.
+ * GPU resources are released on dispose.
  */
 public class SpriteManager extends ManagerPackage {
 
     // Internal
     private MaterialManager materialManager;
     private ModelManager modelManager;
-    private InternalLoadManager internalLoadManager;
 
     // Data
     private Object2ObjectOpenHashMap<String, SpriteHandle> spriteName2SpriteHandle;
 
-    // Internal \\
+    // Base \\
 
     @Override
     protected void create() {
-        this.internalLoadManager = create(InternalLoadManager.class);
+        create(InternalLoadManager.class);
         this.spriteName2SpriteHandle = new Object2ObjectOpenHashMap<>();
     }
 
@@ -40,24 +42,17 @@ public class SpriteManager extends ManagerPackage {
     }
 
     @Override
-    protected void awake() {
-        internalLoadManager.loadSprites();
-    }
-
-    @Override
-    protected void release() {
-        this.internalLoadManager = release(InternalLoadManager.class);
-    }
-
-    @Override
-    public void dispose() {
-
+    protected void dispose() {
         SpriteHandle[] handles = spriteName2SpriteHandle.values().toArray(new SpriteHandle[0]);
-
         for (int i = 0; i < handles.length; i++)
             GLSLUtility.deleteSprite(handles[i].getGPUHandle());
-
         spriteName2SpriteHandle.clear();
+    }
+
+    // On-Demand Loading \\
+
+    public void request(String spriteName) {
+        ((InternalLoadManager) internalLoader).request(spriteName);
     }
 
     // Sprite Management \\
@@ -69,6 +64,8 @@ public class SpriteManager extends ManagerPackage {
     // Accessible \\
 
     public boolean hasSprite(String spriteName) {
+        if (!spriteName2SpriteHandle.containsKey(spriteName))
+            request(spriteName);
         return spriteName2SpriteHandle.containsKey(spriteName);
     }
 
@@ -76,17 +73,21 @@ public class SpriteManager extends ManagerPackage {
 
         SpriteHandle original = spriteName2SpriteHandle.get(spriteName);
 
+        if (original == null) {
+            request(spriteName);
+            original = spriteName2SpriteHandle.get(spriteName);
+        }
+
         if (original == null)
-            throwException("Sprite not found: '" + spriteName + "'");
+            throwException("Sprite not found after load: '" + spriteName + "'");
 
-        MaterialInstance material = materialManager.cloneMaterial(
-                original.getModelHandle().getMaterial().getMaterialID());
+        InternalLoadManager loader = (InternalLoadManager) internalLoader;
+        MeshHandle defaultMeshHandle = loader.getDefaultMeshHandle();
+        int defaultMaterialID = loader.getDefaultMaterialID();
 
+        MaterialInstance material = materialManager.cloneMaterial(defaultMaterialID);
         material.setUniform("u_sprite", original.getGPUHandle());
-
-        ModelInstance clonedModel = modelManager.createModel(
-                original.getModelHandle(),
-                material);
+        ModelInstance clonedModel = modelManager.createModel(defaultMeshHandle, material);
 
         SpriteInstance instance = create(SpriteInstance.class);
         instance.constructor(

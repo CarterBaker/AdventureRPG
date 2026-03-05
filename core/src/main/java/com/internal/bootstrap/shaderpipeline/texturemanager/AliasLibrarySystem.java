@@ -3,21 +3,32 @@ package com.internal.bootstrap.shaderpipeline.texturemanager;
 import java.io.File;
 import java.awt.Color;
 import java.util.List;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 /*
  * Loads alias definitions from JSON files in the alias directory. Each file
- * describes one alias type with a default fill colour and a list of accepted
- * name variants. Alias IDs are assigned in load order and are stable for the
- * lifetime of the TextureManager.
+ * describes one alias type with a default fill colour, a list of accepted
+ * name variants, and the UBO uniform name that receives this alias's layer
+ * index during texture UBO seeding.
+ *
+ * loadAliases() is called once in awake() before any texture load fires.
+ * The alias table is read-only for the remainder of the TextureManager lifetime.
+ *
+ * Expected JSON shape:
+ * {
+ *   "defaultColor": [r, g, b],
+ *   "uniformName": "uAlbedoLayer",
+ *   "aliases": ["albedo", "diffuse", "color"]
+ * }
+ *
+ * uniformName is optional — aliases with no uniform name are skipped during
+ * UBO seeding but are otherwise fully functional.
  */
 public class AliasLibrarySystem extends SystemPackage {
 
@@ -51,7 +62,6 @@ public class AliasLibrarySystem extends SystemPackage {
     private void loadAliasFile(File file) {
         try {
             String aliasType = FileUtility.getFileName(file);
-
             JsonObject json = JsonUtility.loadJsonObject(file);
             JsonArray colorArray = JsonUtility.validateArray(json, "defaultColor", 3);
             JsonArray aliasesArray = JsonUtility.validateArray(json, "aliases");
@@ -61,11 +71,15 @@ public class AliasLibrarySystem extends SystemPackage {
             float b = colorArray.get(2).getAsFloat();
             Color defaultColor = new Color(r, g, b, 1.0f);
 
+            String uniformName = json.has("uniformName")
+                    ? json.get("uniformName").getAsString()
+                    : null;
+
             int aliasId = aliasCount;
             ensureCapacity(aliasId + 1);
 
             aliases[aliasId] = create(AliasData.class);
-            aliases[aliasId].constructor(aliasType, defaultColor);
+            aliases[aliasId].constructor(aliasType, defaultColor, uniformName);
             aliasCount++;
 
             for (int i = 0; i < aliasesArray.size(); i++)
@@ -113,6 +127,12 @@ public class AliasLibrarySystem extends SystemPackage {
 
     public Color getDefaultColor(int id) {
         return aliases[id].getAliasColor();
+    }
+
+    public String getUniformName(int aliasId) {
+        if (aliasId < 0 || aliasId >= aliasCount)
+            return null;
+        return aliases[aliasId].getUniformName();
     }
 
     public int getAliasCount() {

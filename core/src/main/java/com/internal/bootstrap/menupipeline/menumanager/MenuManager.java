@@ -17,14 +17,13 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MenuManager extends ManagerPackage {
 
     // Internal
-    private InternalLoadManager internalLoadManager;
     private ElementSystem elementSystem;
     private RenderSystem renderSystem;
     private WindowInstance windowInstance;
     private InputSystem inputSystem;
     private RaycastSystem raycastSystem;
 
-    // Menu registry — string lookup once on open, int from there
+    // Menu registry
     private Object2IntOpenHashMap<String> menuName2MenuID;
     private Int2ObjectOpenHashMap<MenuHandle> menuID2Handle;
     private int nextMenuID;
@@ -40,11 +39,11 @@ public class MenuManager extends ManagerPackage {
     private int inputLockCount;
     private int raycastLockCount;
 
-    // Internal \\
+    // Base \\
 
     @Override
     protected void create() {
-        this.internalLoadManager = create(InternalLoadManager.class);
+        create(InternalLoadManager.class);
         this.raycastSystem = create(RaycastSystem.class);
         this.menuName2MenuID = new Object2IntOpenHashMap<>();
         this.menuID2Handle = new Int2ObjectOpenHashMap<>();
@@ -65,19 +64,13 @@ public class MenuManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        internalLoadManager.loadMenuData();
         cacheScreenSize();
-    }
-
-    @Override
-    protected void release() {
-        this.internalLoadManager = release(InternalLoadManager.class);
     }
 
     // Update \\
 
     @Override
-    public void update() {
+    protected void update() {
 
         if (activeMenus.isEmpty() || screenW == 0 || screenH == 0)
             return;
@@ -149,6 +142,12 @@ public class MenuManager extends ManagerPackage {
         raycastSystem.setActive(raycastLockCount > 0);
     }
 
+    // On-Demand Loading \\
+
+    public void request(String menuName) {
+        ((InternalLoadManager) internalLoader).request(menuName);
+    }
+
     // Menu Management \\
 
     void addMenu(String menuName, MenuHandle menuHandle) {
@@ -161,9 +160,12 @@ public class MenuManager extends ManagerPackage {
 
     public MenuInstance openMenu(String menuName) {
 
+        if (!menuName2MenuID.containsKey(menuName))
+            request(menuName);
+
         int id = menuName2MenuID.getInt(menuName);
         if (id == -1)
-            throwException("Menu not found: '" + menuName + "'");
+            throwException("Menu not found after load: '" + menuName + "'");
 
         MenuHandle handle = menuID2Handle.get(id);
 
@@ -200,6 +202,10 @@ public class MenuManager extends ManagerPackage {
     }
 
     public MenuHandle getMenuHandle(String menuName) {
+
+        if (!menuName2MenuID.containsKey(menuName))
+            request(menuName);
+
         int id = menuName2MenuID.getInt(menuName);
         return id == -1 ? null : menuID2Handle.get(id);
     }

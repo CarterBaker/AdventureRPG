@@ -1,10 +1,5 @@
 {
     "defaultColor": [0.0, 0.0, 0.0],
-    "aliases": [
-        "m",
-        "metal",
-        "metallic",
-        "metalness",
-        "mtl"
-    ]
+    "uniformName": "u_layer_metallic",
+    "aliases": ["m", "metal", "metallic", "metalness", "mtl"]
 }

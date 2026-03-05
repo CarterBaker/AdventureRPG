@@ -1,20 +1,19 @@
 package com.internal.bootstrap.geometrypipeline.ibomanager;
 
-import java.io.File;
-
+import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoader;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOStruct;
-import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.core.engine.ManagerPackage;
+
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 public class IBOManager extends ManagerPackage {
 
     // Internal
-    private InternalBuildSystem internalBuildSystem;
+    private InternalLoader meshLoader;
 
     // Retrieval Mapping
     private Object2ObjectOpenHashMap<String, IBOHandle> iboName2IBOHandle;
@@ -23,31 +22,61 @@ public class IBOManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        this.internalBuildSystem = create(InternalBuildSystem.class);
         this.iboName2IBOHandle = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
-    protected void release() {
-        internalBuildSystem = release(InternalBuildSystem.class);
+    protected void get() {
+        this.meshLoader = get(InternalLoader.class);
     }
 
-    // Bootstrap \\
+    // Handle Registration \\
 
-    public void addIBO(String resourceName, File file, InternalLoadManager loadManager, VAOInstance vaoInstance) {
-        iboName2IBOHandle.put(resourceName, internalBuildSystem.addIBO(file, loadManager, vaoInstance));
+    void registerIBO(String resourceName, IBOHandle handle) {
+        iboName2IBOHandle.put(resourceName, handle);
     }
 
-    // Bypasses JSON parsing. Used when index data has already been assembled
-    // by the quad expansion path in meshmanager.InternalBuildSystem.
+    /*
+     * Bypasses JSON parsing — used when index data was assembled by quad
+     * expansion.
+     */
     public IBOHandle addIBOFromData(String resourceName, short[] indices, VAOInstance vaoInstance) {
         IBOHandle handle = GLSLUtility.uploadIndexData(vaoInstance, create(IBOHandle.class), indices);
         iboName2IBOHandle.put(resourceName, handle);
         return handle;
     }
 
-    public IBOHandle getIBOHandleFromName(String iboName) {
+    // Accessible \\
+
+    /*
+     * Pure registry lookup — no load trigger. For use inside builders
+     * where the owning file is already mid-load.
+     */
+    public boolean hasIBO(String iboName) {
+        return iboName2IBOHandle.containsKey(iboName);
+    }
+
+    /*
+     * Direct registry lookup — no load trigger. For use inside builders
+     * that are themselves invoked by the mesh loader. Calling
+     * getIBOHandleFromName() from inside a builder would recurse infinitely.
+     */
+    public IBOHandle getIBOHandleDirect(String iboName) {
         return iboName2IBOHandle.get(iboName);
+    }
+
+    /*
+     * Auto-triggers load on miss. For external callers only —
+     * never call this from inside a builder that is itself invoked by
+     * the mesh loader, or you will recurse infinitely.
+     */
+    public IBOHandle getIBOHandleFromName(String iboName) {
+        IBOHandle handle = iboName2IBOHandle.get(iboName);
+        if (handle == null) {
+            meshLoader.request(iboName);
+            handle = iboName2IBOHandle.get(iboName);
+        }
+        return handle;
     }
 
     // Runtime \\

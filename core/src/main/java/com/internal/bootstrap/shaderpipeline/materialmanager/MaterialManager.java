@@ -6,31 +6,31 @@ import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
 import com.internal.core.engine.ManagerPackage;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /*
  * Owns all compiled MaterialHandle objects for the lifetime of the application.
- * Delegates bootstrap compilation to InternalLoadManager, which is released once
- * all materials are assembled. Cloning produces a MaterialInstance with all data
- * copied directly from the source handle — name, ID, shader, source UBO map by
- * reference, and a deep-copied uniform map with values transferred from the source,
- * including GPU texture handles on sampler uniforms.
+ * Delegates bootstrap compilation to InternalLoadManager, which self-releases
+ * once all materials are assembled. On accessor miss, triggers an immediate
+ * synchronous load through the active InternalLoadManager.
  */
 public class MaterialManager extends ManagerPackage {
 
     // Internal
     private ShaderManager shaderManager;
-    private InternalLoadManager internalLoadManager;
+
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> materialName2MaterialID;
     private Int2ObjectOpenHashMap<MaterialHandle> materialID2Material;
-    // Internal \\
+
+    // Base \\
 
     @Override
     protected void create() {
-        this.internalLoadManager = create(InternalLoadManager.class);
+        create(InternalLoadManager.class);
         this.materialName2MaterialID = new Object2IntOpenHashMap<>();
         this.materialID2Material = new Int2ObjectOpenHashMap<>();
     }
@@ -40,14 +40,10 @@ public class MaterialManager extends ManagerPackage {
         this.shaderManager = get(ShaderManager.class);
     }
 
-    @Override
-    protected void awake() {
-        internalLoadManager.loadMaterials();
-    }
+    // On-Demand Loading \\
 
-    @Override
-    protected void release() {
-        this.internalLoadManager = release(InternalLoadManager.class);
+    public void request(String materialName) {
+        ((InternalLoadManager) internalLoader).request(materialName);
     }
 
     // Material Management \\
@@ -64,6 +60,8 @@ public class MaterialManager extends ManagerPackage {
     }
 
     public int getMaterialIDFromMaterialName(String materialName) {
+        if (!materialName2MaterialID.containsKey(materialName))
+            request(materialName);
         return materialName2MaterialID.getInt(materialName);
     }
 
@@ -72,7 +70,9 @@ public class MaterialManager extends ManagerPackage {
     }
 
     public MaterialInstance cloneMaterial(int materialID) {
+
         MaterialHandle original = getMaterialFromMaterialID(materialID);
+
         if (original == null)
             throwException("Cannot clone material — materialID " + materialID + " not found");
 
@@ -80,6 +80,7 @@ public class MaterialManager extends ManagerPackage {
         Object2ObjectOpenHashMap<String, Uniform<?>> deepCopiedUniforms = new Object2ObjectOpenHashMap<>();
 
         String[] keys = sourceUniforms.keySet().toArray(new String[0]);
+
         for (int i = 0; i < keys.length; i++) {
             Uniform<?> source = sourceUniforms.get(keys[i]);
             UniformAttribute<?> freshAttr = source.attribute().createDefault();
@@ -94,6 +95,7 @@ public class MaterialManager extends ManagerPackage {
                 original.getShaderHandle(),
                 original.getUBOs(),
                 deepCopiedUniforms);
+
         return instance;
     }
 }

@@ -1,46 +1,74 @@
 package com.internal.bootstrap.shaderpipeline.texturemanager;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
-import com.google.gson.JsonObject;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import com.internal.core.engine.ManagerPackage;
+import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
-import com.internal.core.util.JsonUtility;
 import com.internal.core.util.mathematics.vectors.Vector2;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /*
- * Orchestrates the full texture-array loading pipeline during awake: discovers
- * atlas directories, delegates build work to subsystems, pushes results to the
- * GPU, then releases all intermediate image data to free heap. If a directory
- * contains a companion ubo.json, its declared UBO is seeded with alias layer
- * indices and uvPerBlock derived from the built atlas before GPU upload.
+ * Orchestrates the full texture-array loading pipeline: discovers atlas
+ * directories in scan(), processes one directory per load() call — building
+ * the atlas, seeding any companion UBO, pushing to GPU, and clearing heap
+ * images — then self-releases when the queue empties.
+ *
+ * UBO seeding is optional — gated by whether a UBO handle exists under the
+ * PascalCase form of the array name (e.g. "blocks/stone" → "BlocksStone").
+ * If no handle is found the array has no UBO and seeding is skipped silently.
+ * When a handle is found, only the alias IDs actually present in the atlas
+ * source files are written — aliases not found in this atlas are skipped,
+ * preventing writes to uniforms the UBO does not declare.
  */
-class InternalLoadManager extends ManagerPackage {
+class InternalLoadManager extends LoaderPackage {
 
     // Internal
+    private File root;
     private TextureManager textureManager;
     private UBOManager uboManager;
     private AliasLibrarySystem aliasLibrarySystem;
     private InternalBuildSystem internalBuildSystem;
-    private Int2ObjectOpenHashMap<TextureArrayData> arrayMap;
-    private File root;
+
+    // File Registry
+    private Object2ObjectOpenHashMap<String, File> resourceName2File;
 
     // Base \\
+
+    @Override
+    protected void scan() {
+
+        this.root = new File(EngineSetting.BLOCK_TEXTURE_PATH);
+        this.resourceName2File = new Object2ObjectOpenHashMap<>();
+
+        FileUtility.verifyDirectory(root, "[TextureManager] Root directory not found: " + root.getAbsolutePath());
+
+        try (var stream = Files.walk(root.toPath())) {
+            stream
+                    .filter(p -> Files.isDirectory(p) && !p.equals(root.toPath()))
+                    .map(Path::toFile)
+                    .forEach(directory -> {
+                        String arrayName = FileUtility.getPathWithFileNameWithoutExtension(root, directory);
+                        resourceName2File.put(arrayName, directory);
+                        fileQueue.offer(directory);
+                    });
+        } catch (IOException e) {
+            throwException("Failed to walk texture directory: " + root.getAbsolutePath(), e);
+        }
+    }
 
     @Override
     protected void create() {
         this.aliasLibrarySystem = create(AliasLibrarySystem.class);
         this.internalBuildSystem = create(InternalBuildSystem.class);
-        this.arrayMap = new Int2ObjectOpenHashMap<>();
-        this.root = new File(EngineSetting.BLOCK_TEXTURE_PATH);
     }
 
     @Override
@@ -50,78 +78,82 @@ class InternalLoadManager extends ManagerPackage {
     }
 
     @Override
-    protected void release() {
-        aliasLibrarySystem = release(AliasLibrarySystem.class);
-        internalBuildSystem = release(InternalBuildSystem.class);
-    }
-
-    // File Navigation \\
-
-    void loadTextureArrays() {
+    protected void awake() {
         aliasLibrarySystem.loadAliases();
-        FileUtility.verifyDirectory(root, "[TextureManager] The root folder could not be verified");
-        List<File> directories = FileUtility.collectAllSubdirectories(root);
-        for (File directory : directories)
-            createArrayFromDirectory(directory);
-        pushTexturesToGPU();
     }
 
-    // Categorisation \\
+    // Load \\
 
-    private void createArrayFromDirectory(File directory) {
+    @Override
+    protected void load(File directory) {
+
         List<File> imageFiles = FileUtility.collectFilesShallow(directory, EngineSetting.TEXTURE_FILE_EXTENSIONS);
+
         if (imageFiles.isEmpty())
             return;
+
         String arrayName = FileUtility.getPathWithFileNameWithoutExtension(root, directory);
-        TextureArrayData textureArrayData = internalBuildSystem.buildTextureArray(imageFiles, directory, arrayName);
-        arrayMap.put(textureArrayData.getID(), textureArrayData);
-        seedCompanionUBO(directory, textureArrayData);
+
+        TextureArrayData textureArrayData = internalBuildSystem.build(imageFiles, directory, arrayName);
+
+        seedUBO(arrayName, textureArrayData);
+        pushTextureToGPU(textureArrayData);
+        clearTextureImages(textureArrayData);
     }
 
-    // UBO Companion \\
+    // On-Demand Loading \\
 
-    private void seedCompanionUBO(File directory, TextureArrayData textureArrayData) {
-        File companionFile = new File(directory, EngineSetting.TEXTURE_UBO_COMPANION_FILE);
-        if (!companionFile.exists())
-            return;
-        JsonObject json = JsonUtility.loadJsonObject(companionFile);
-        String uboName = JsonUtility.validateString(json, "ubo");
+    void request(String arrayName) {
+
+        File directory = resourceName2File.get(arrayName);
+
+        if (directory == null)
+            throwException(
+                    "[TextureManager] On-demand texture load failed — array not found in scan registry: \""
+                            + arrayName + "\"");
+
+        request(directory);
+    }
+
+    // UBO Seeding \\
+
+    /*
+     * Converts the array name to PascalCase and asks UBOManager for a matching
+     * handle. If none exists this array has no UBO — skip silently.
+     * Only alias IDs that were actually found in the atlas source files are
+     * written — no uniform is touched unless this atlas provided that layer.
+     */
+    private void seedUBO(String arrayName, TextureArrayData textureArrayData) {
+
+        String uboName = FileUtility.toPascalCase(arrayName);
         UBOHandle ubo = uboManager.getUBOHandleFromUBOName(uboName);
+
         if (ubo == null)
-            throwException("[TextureManager] UBO not found for companion: \"" + uboName + "\"");
-        if (json.has("aliases")) {
-            JsonObject aliases = json.getAsJsonObject("aliases");
-            for (String uniformName : aliases.keySet()) {
-                String aliasName = aliases.get(uniformName).getAsString();
-                int aliasId = aliasLibrarySystem.get(aliasName);
-                if (aliasId == -1)
-                    throwException("[TextureManager] Alias not found in companion JSON: \"" + aliasName + "\"");
+            return;
+
+        IntIterator it = textureArrayData.getFoundAliasIds().iterator();
+        while (it.hasNext()) {
+            int aliasId = it.nextInt();
+            String uniformName = aliasLibrarySystem.getUniformName(aliasId);
+            if (uniformName != null && !uniformName.isEmpty())
                 ubo.updateUniform(uniformName, aliasId);
-            }
         }
-        if (json.has("uvPerBlock")) {
-            String uniformName = json.get("uvPerBlock").getAsString();
-            float uvPerBlock = 1.0f / textureArrayData.getAtlasSize();
-            ubo.updateUniform(uniformName, new Vector2(uvPerBlock, uvPerBlock));
-        }
+
+        float uvPerBlock = 1.0f / textureArrayData.getAtlasSize();
+        ubo.updateUniform(EngineSetting.TEXTURE_UV_SCALE_UNIFORM, new Vector2(uvPerBlock, uvPerBlock));
+
         ubo.push();
     }
 
     // GPU Upload \\
 
-    private void pushTexturesToGPU() {
-        for (TextureArrayData textureArrayData : arrayMap.values()) {
-            pushTextureToGPU(textureArrayData);
-            clearTextureImages(textureArrayData);
-        }
-    }
-
     private void pushTextureToGPU(TextureArrayData textureArrayData) {
+
         int gpuHandle = GLSLUtility.pushTextureArray(textureArrayData.getRawImageArray());
         int atlasSize = textureArrayData.getAtlasSize();
         float tileSize = 1.0f / atlasSize;
-        Object2ObjectOpenHashMap<String, TextureTileData> tileCoordinateMap = textureArrayData.getTileCoordinateMap();
-        for (Object2ObjectMap.Entry<String, TextureTileData> entry : tileCoordinateMap.object2ObjectEntrySet()) {
+
+        for (var entry : textureArrayData.getTileCoordinateMap().object2ObjectEntrySet()) {
             TextureTileData tile = entry.getValue();
             float u0 = tile.getAtlasX() * tileSize;
             float v0 = tile.getAtlasY() * tileSize;

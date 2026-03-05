@@ -1,10 +1,5 @@
 {
     "defaultColor": [0.0, 0.0, 0.0],
-    "aliases": [
-        "h",
-        "displacement",
-        "height",
-        "hmap",
-        "parallax"
-    ]
+    "uniformName": "u_layer_height",
+    "aliases": ["h", "displacement", "height", "hmap", "parallax"]
 }

@@ -4,36 +4,54 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
-import com.internal.core.engine.ManagerPackage;
+import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-class InternalLoadManager extends ManagerPackage {
+class InternalLoadManager extends LoaderPackage {
 
     // Internal
     private File root;
     private EntityManager entityManager;
     private InternalBuildSystem internalBuildSystem;
-
     private int templateDataCount;
 
     // File Registry
-    private Map<String, File> resourceName2File;
+    private Object2ObjectOpenHashMap<String, File> resourceName2File;
 
     // Base \\
 
     @Override
-    protected void create() {
+    protected void scan() {
+
         this.root = new File(EngineSetting.ENTITY_JSON_PATH);
+        this.resourceName2File = new Object2ObjectOpenHashMap<>();
+
+        if (!root.exists() || !root.isDirectory())
+            throwException("Entity template JSON directory not found: " + root.getAbsolutePath());
+
+        try (var stream = Files.walk(root.toPath())) {
+            stream
+                    .filter(Files::isRegularFile)
+                    .map(Path::toFile)
+                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
+                    .forEach(file -> {
+                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+                        resourceName2File.put(resourceName, file);
+                        fileQueue.offer(file);
+                    });
+        } catch (IOException e) {
+            throwException("EntityManager failed to walk directory: ", e);
+        }
+    }
+
+    @Override
+    protected void create() {
         this.internalBuildSystem = create(InternalBuildSystem.class);
         this.templateDataCount = 0;
-        this.resourceName2File = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -41,86 +59,31 @@ class InternalLoadManager extends ManagerPackage {
         this.entityManager = get(EntityManager.class);
     }
 
+    // Load \\
+
     @Override
-    protected void release() {
-        this.internalBuildSystem = release(InternalBuildSystem.class);
-    }
-
-    // Template Management \\
-
-    void loadTemplateData() {
-        List<File> templateFiles = collectTemplateFiles();
-        buildFileRegistry(templateFiles);
-        processTemplateFiles(templateFiles);
-    }
-
-    // File Collection \\
-
-    private List<File> collectTemplateFiles() {
-        validateRootDirectory();
-
-        Path basePath = root.toPath();
-
-        try (var stream = Files.walk(basePath)) {
-            return stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(this::isValidJsonFile)
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            throwException(
-                    "Failed to list entity template files in directory: " + root.getAbsolutePath(), e);
-        }
-
-        return null;
-    }
-
-    private void validateRootDirectory() {
-        if (!root.exists() || !root.isDirectory())
-            throwException("Entity template JSON directory not found: " + root.getAbsolutePath());
-    }
-
-    private boolean isValidJsonFile(File file) {
-        String extension = FileUtility.getExtension(file);
-        return EngineSetting.JSON_FILE_EXTENSIONS.contains(extension);
-    }
-
-    // File Registry \\
-
-    private void buildFileRegistry(List<File> templateFiles) {
-        for (File file : templateFiles) {
-            String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-            resourceName2File.put(resourceName, file);
-        }
-    }
-
-    public File getFileByResourceName(String resourceName) {
-        return resourceName2File.get(resourceName);
-    }
-
-    // File Processing \\
-
-    private void processTemplateFiles(List<File> templateFiles) {
-        for (File file : templateFiles)
-            processTemplateFile(file);
-    }
-
-    public void processTemplateFile(File file) {
+    protected void load(File file) {
         String templateName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-
         try {
             int templateID = templateDataCount++;
-            EntityData templateData = internalBuildSystem.buildTemplateData(root, file, templateID, this);
-
+            EntityData templateData = internalBuildSystem.build(root, file, templateID);
             if (templateData != null)
-                createTemplateData(templateName, templateID, templateData);
-        } catch (RuntimeException ex) {
-            throwException(
-                    "Failed to build entity template from file: " + file.getAbsolutePath(), ex);
+                entityManager.addEntityTemplate(templateName, templateID, templateData);
+        } catch (RuntimeException e) {
+            throwException("Failed to build entity template from file: " + file.getAbsolutePath(), e);
         }
     }
 
-    private void createTemplateData(String templateName, int templateID, EntityData templateData) {
-        entityManager.addEntityTemplate(templateName, templateID, templateData);
+    // On-Demand Loading \\
+
+    void request(String templateName) {
+
+        File file = resourceName2File.get(templateName);
+
+        if (file == null)
+            throwException(
+                    "On-demand entity load failed — resource not found in scan registry: \"" + templateName + "\"");
+
+        request(file);
     }
 }

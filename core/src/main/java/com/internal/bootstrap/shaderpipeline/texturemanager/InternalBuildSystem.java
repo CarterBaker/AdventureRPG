@@ -9,16 +9,20 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 
-import com.internal.core.engine.SystemPackage;
+import com.internal.core.engine.BuilderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 
 /*
- * Constructs TextureArrayData from raw image files during bootstrap. Handles
- * tile creation, atlas packing, and layer composition per alias. All produced
- * objects are DataPackage types and must not be held after bootstrap completes.
+ * Constructs TextureArrayData from raw image files. Handles tile creation,
+ * atlas packing, and layer composition per alias. All produced objects are
+ * DataPackage types and must not be held after bootstrap completes.
+ *
+ * Only the alias IDs actually encountered in the source files are registered
+ * on the resulting TextureArrayData — seedUBO uses this to write only the
+ * uniforms this atlas provides, rather than blindly writing all aliases.
  */
-class InternalBuildSystem extends SystemPackage {
+class InternalBuildSystem extends BuilderPackage {
 
     // Internal
     private AliasLibrarySystem aliasLibrarySystem;
@@ -35,12 +39,12 @@ class InternalBuildSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        aliasLibrarySystem = get(AliasLibrarySystem.class);
+        this.aliasLibrarySystem = get(AliasLibrarySystem.class);
     }
 
-    // Main \\
+    // Build \\
 
-    TextureArrayData buildTextureArray(List<File> imageFiles, File sourceDirectory, String arrayName) {
+    TextureArrayData build(List<File> imageFiles, File sourceDirectory, String arrayName) {
         LinkedHashMap<String, TextureTileData> textureTiles = createTextureTiles(imageFiles, sourceDirectory,
                 arrayName);
         TextureAtlasData[] textureAtlases = createTextureAtlases(textureTiles);
@@ -137,12 +141,11 @@ class InternalBuildSystem extends SystemPackage {
             int atlasSize,
             LinkedHashMap<String, TextureTileData> textureTiles) {
 
-        int atlasPixelWidth = atlasSize * EngineSetting.BLOCK_TEXTURE_SIZE;
-        int atlasPixelHeight = atlasSize * EngineSetting.BLOCK_TEXTURE_SIZE;
+        int atlasPixelSize = atlasSize * EngineSetting.BLOCK_TEXTURE_SIZE;
 
         BufferedImage atlasImage = new BufferedImage(
-                atlasPixelWidth,
-                atlasPixelHeight,
+                atlasPixelSize,
+                atlasPixelSize,
                 BufferedImage.TYPE_INT_ARGB);
 
         Graphics2D graphic = atlasImage.createGraphics();
@@ -152,7 +155,6 @@ class InternalBuildSystem extends SystemPackage {
 
             int x = tile.getAtlasX() * EngineSetting.BLOCK_TEXTURE_SIZE;
             int y = tile.getAtlasY() * EngineSetting.BLOCK_TEXTURE_SIZE;
-
             BufferedImage tileImage = tile.getImage(alias);
 
             if (tileImage != null) {
@@ -198,8 +200,17 @@ class InternalBuildSystem extends SystemPackage {
                 textureAtlases[0].getAtlasSize(),
                 textureAtlases);
 
-        for (TextureTileData tile : textureTiles.values())
+        for (TextureTileData tile : textureTiles.values()) {
             textureArrayData.createTile(tile.getAtlasX(), tile.getAtlasY(), tile);
+
+            // Register every alias ID this tile actually has an image for.
+            // This tells seedUBO which uniforms are valid for this atlas.
+            int aliasCount = aliasLibrarySystem.getAliasCount();
+            for (int aliasId = 0; aliasId < aliasCount; aliasId++) {
+                if (tile.getImage(aliasId) != null)
+                    textureArrayData.registerFoundAlias(aliasId);
+            }
+        }
 
         return textureArrayData;
     }

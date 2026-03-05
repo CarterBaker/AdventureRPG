@@ -5,25 +5,53 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.internal.core.engine.ManagerPackage;
+import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
+
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class InternalLoadManager extends ManagerPackage {
+class InternalLoadManager extends LoaderPackage {
 
     // Internal
-
+    private File root;
     private ItemDefinitionManager itemDefinitionManager;
     private InternalBuildSystem internalBuildSystem;
-    private File root;
 
-    // Base \
+    // File Registry
+    private Object2ObjectOpenHashMap<String, File> resourceName2File;
+    private Object2ObjectOpenHashMap<String, String> itemName2ResourceName;
+
+    // Base \\
+
+    @Override
+    protected void scan() {
+
+        this.root = new File(EngineSetting.ITEM_JSON_PATH);
+        this.resourceName2File = new Object2ObjectOpenHashMap<>();
+        this.itemName2ResourceName = new Object2ObjectOpenHashMap<>();
+
+        FileUtility.verifyDirectory(root, "[ItemDefinitionManager] The root folder could not be verified");
+
+        try (var stream = Files.walk(root.toPath())) {
+            stream
+                    .filter(Files::isRegularFile)
+                    .map(Path::toFile)
+                    .filter(f -> FileUtility.hasExtension(f, EngineSetting.JSON_FILE_EXTENSIONS))
+                    .forEach(file -> {
+                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+                        resourceName2File.put(resourceName, file);
+                        fileQueue.offer(file);
+                    });
+        } catch (IOException e) {
+            throwException("ItemDefinitionManager failed to walk directory: ", e);
+        }
+    }
 
     @Override
     protected void create() {
         this.internalBuildSystem = create(InternalBuildSystem.class);
-        this.root = new File(EngineSetting.ITEM_JSON_PATH);
     }
 
     @Override
@@ -31,32 +59,28 @@ public class InternalLoadManager extends ManagerPackage {
         this.itemDefinitionManager = get(ItemDefinitionManager.class);
     }
 
+    // Load \\
+
     @Override
-    protected void release() {
-        this.internalBuildSystem = release(InternalBuildSystem.class);
-    }
-
-    // Load \
-
-    void loadItems() {
-        FileUtility.verifyDirectory(root, "[ItemDefinitionManager] The root folder could not be verified");
-
-        Path rootPath = root.toPath();
-
-        try (var stream = Files.walk(rootPath)) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .filter(path -> FileUtility.hasExtension(path.toFile(), EngineSetting.JSON_FILE_EXTENSIONS))
-                    .forEach(path -> processJsonFile(path.toFile()));
-        } catch (IOException e) {
-            throwException("ItemDefinitionManager failed to load one or more files: ", e);
+    protected void load(File file) {
+        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+        ObjectArrayList<ItemDefinitionData> items = internalBuildSystem.build(file, root);
+        for (int i = 0; i < items.size(); i++) {
+            itemName2ResourceName.put(items.get(i).getItemName(), resourceName);
+            itemDefinitionManager.addItem(items.get(i));
         }
     }
 
-    private void processJsonFile(File jsonFile) {
-        ObjectArrayList<ItemDefinitionData> items = internalBuildSystem.compileItems(jsonFile, root);
-        for (int i = 0; i < items.size(); i++)
-            itemDefinitionManager.addItem(items.get(i));
-    }
+    // On-Demand Loading \\
 
+    void request(String itemName) {
+
+        String resourceName = itemName2ResourceName.get(itemName);
+
+        if (resourceName == null)
+            throwException(
+                    "On-demand item load failed — no file found for item: \"" + itemName + "\"");
+
+        request(resourceName2File.get(resourceName));
+    }
 }

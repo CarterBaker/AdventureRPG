@@ -1,8 +1,6 @@
 package com.internal.bootstrap.geometrypipeline.vaomanager;
 
-import java.io.File;
-
-import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoadManager;
+import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoader;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vao.VAOStruct;
@@ -13,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 public class VAOManager extends ManagerPackage {
 
     // Internal
-    private InternalBuildSystem internalBuildSystem;
+    private InternalLoader meshLoader;
 
     // Retrieval Mapping
     private Object2ObjectOpenHashMap<String, VAOHandle> vaoName2VAOHandle;
@@ -22,27 +20,51 @@ public class VAOManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Internal
-        this.internalBuildSystem = create(InternalBuildSystem.class);
-
-        // Retrieval Mapping
         this.vaoName2VAOHandle = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
-    protected void release() {
-        internalBuildSystem = release(InternalBuildSystem.class);
+    protected void get() {
+        this.meshLoader = get(InternalLoader.class);
     }
 
-    // Layout Management \\
+    // Handle Registration \\
 
-    public void addVAO(String resourceName, File file, InternalLoadManager loadManager) {
-        vaoName2VAOHandle.put(resourceName, internalBuildSystem.addVAO(file, loadManager));
+    void registerVAO(String resourceName, VAOHandle handle) {
+        vaoName2VAOHandle.put(resourceName, handle);
     }
 
-    public VAOHandle getVAOHandleFromName(String vaoName) {
+    // Accessible \\
+
+    /*
+     * Pure registry lookup — no load trigger. For use inside builders
+     * where the owning file is already mid-load.
+     */
+    public boolean hasVAO(String vaoName) {
+        return vaoName2VAOHandle.containsKey(vaoName);
+    }
+
+    /*
+     * Direct registry lookup — no load trigger. For use inside builders
+     * that are themselves invoked by the mesh loader. Calling
+     * getVAOHandleFromName() from inside a builder would recurse infinitely.
+     */
+    public VAOHandle getVAOHandleDirect(String vaoName) {
         return vaoName2VAOHandle.get(vaoName);
+    }
+
+    /*
+     * Auto-triggers load on miss. For external callers only —
+     * never call this from inside a builder that is itself invoked by
+     * the mesh loader, or you will recurse infinitely.
+     */
+    public VAOHandle getVAOHandleFromName(String vaoName) {
+        VAOHandle handle = vaoName2VAOHandle.get(vaoName);
+        if (handle == null) {
+            meshLoader.request(vaoName);
+            handle = vaoName2VAOHandle.get(vaoName);
+        }
+        return handle;
     }
 
     // Instance Management \\

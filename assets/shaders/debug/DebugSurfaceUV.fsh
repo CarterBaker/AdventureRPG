@@ -3,7 +3,7 @@
 in vec2 vTexCoord;
 in float vLayerIndex;
 
-#include "surface/includes/StandardTextureLayoutData.glsl"  // keeps your texture array references intact
+#include "surface/includes/SurfaceStandard.glsl"  // keeps your texture array references intact
 
 out vec4 FragColor;
 

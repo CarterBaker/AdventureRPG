@@ -1,0 +1,15 @@
+{
+    "blockName": "CameraData",
+    "uniforms": [
+        { "name": "u_projection",        "type": "MATRIX4" },
+        { "name": "u_view",              "type": "MATRIX4" },
+        { "name": "u_inverseProjection", "type": "MATRIX4" },
+        { "name": "u_inverseView",       "type": "MATRIX4" },
+        { "name": "u_viewProjection",    "type": "MATRIX4" },
+        { "name": "u_cameraPosition",    "type": "VECTOR3" },
+        { "name": "u_cameraFOV",         "type": "FLOAT"   },
+        { "name": "u_viewport",          "type": "VECTOR2" },
+        { "name": "u_nearPlane",         "type": "FLOAT"   },
+        { "name": "u_farPlane",          "type": "FLOAT"   }
+    ]
+}

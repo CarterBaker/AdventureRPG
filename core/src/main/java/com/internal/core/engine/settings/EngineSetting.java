@@ -10,6 +10,7 @@ public class EngineSetting {
         public static final short REGISTRY_RESERVED_ID = 0;
 
         // Internal Settings
+        public static final int LOADER_BATCH_SIZE = 32;
         public static final String THREAD_DEFINITIONS = "internal/threads";
 
         // Path Settings
@@ -17,6 +18,7 @@ public class EngineSetting {
         public static final String SPRITE_PATH = "sprites";
         public static final String BLOCK_TEXTURE_ALIAS_PATH = "textureAliases";
         public static final String SHADER_PATH = "shaders";
+        public static final String UBO_JSON_PATH = "ubos";
         public static final String MATERIAL_JSON_PATH = "materials";
         public static final String PASS_JSON_PATH = "processingPasses";
         public static final String MESH_JSON_PATH = "mesh";
@@ -67,7 +69,7 @@ public class EngineSetting {
 
         // Texture Settings
         public static final int BLOCK_TEXTURE_SIZE = 32;
-        public static final String TEXTURE_UBO_COMPANION_FILE = "UBO.json";
+        public static final String TEXTURE_UV_SCALE_UNIFORM = "u_uvPerBlock";
 
         // Sprite Settings
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";

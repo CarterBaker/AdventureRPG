@@ -1,5 +1,6 @@
 package com.internal.core.engine;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,6 +19,9 @@ public abstract class ManagerPackage extends SystemPackage {
      * - Child system registration and lifecycle management
      * - Garbage collection of released systems
      * - Lifecycle propagation to all created children
+     * - Automatic LoaderPackage reference assignment via internalLoader,
+     * both on create() and on get() so managers that retrieve a loader
+     * from a parent also have it wired correctly.
      */
 
     // System Management
@@ -25,24 +29,24 @@ public abstract class ManagerPackage extends SystemPackage {
     List<SystemPackage> systemCollection;
     List<Class<?>> garbageCollection;
 
+    // Loader
+    //
+    // Automatically assigned when any LoaderPackage subclass is created
+    // via create() or retrieved via get(). Access via `this.internalLoader`
+    // in any ManagerPackage subclass without any additional setup.
+    protected LoaderPackage internalLoader;
+
     // Internal \\
 
     protected ManagerPackage(Settings settings) {
-
-        // Internal
         super(settings);
-
         this.systemArray = new SystemPackage[0];
         this.systemCollection = new ArrayList<>();
         this.garbageCollection = new ArrayList<>();
     }
 
     protected ManagerPackage() {
-
-        // Internal System Package
         super();
-
-        // Internal
         this.systemArray = new SystemPackage[0];
         this.systemCollection = new ArrayList<>();
         this.garbageCollection = new ArrayList<>();
@@ -50,17 +54,68 @@ public abstract class ManagerPackage extends SystemPackage {
 
     // System Registry \\
 
-    @Override // From `SystemPackage`
+    @Override
     @SuppressWarnings("unchecked")
     protected <T extends EngineUtility> T create(Class<T> systemClass) {
 
         if (systemClass == EnginePackage.class)
             throwException("Only one engine package is allowed at any given time");
 
-        if (SystemPackage.class.isAssignableFrom(systemClass))
-            return (T) this.createSystem((Class<? extends SystemPackage>) systemClass);
+        if (SystemPackage.class.isAssignableFrom(systemClass)) {
+            T result = (T) this.createSystem((Class<? extends SystemPackage>) systemClass);
+
+            // Auto-assign the first LoaderPackage created on this manager.
+            // Subsequent create() calls overwrite internalLoader, allowing
+            // a manager to swap loaders across different lifecycle phases.
+            if (result instanceof LoaderPackage)
+                this.internalLoader = (LoaderPackage) result;
+
+            return result;
+        }
 
         return super.create(systemClass);
+    }
+
+    // System Retrieval \\
+
+    /*
+     * Overrides SystemPackage.get() to intercept LoaderPackage retrievals.
+     * When a manager fetches a loader via get(), internalLoader is assigned
+     * automatically — same guarantee as create().
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    protected <T> T get(Class<T> type) {
+
+        T result = this.internal.get(false, type);
+
+        if (result instanceof LoaderPackage)
+            this.internalLoader = (LoaderPackage) result;
+
+        return result;
+    }
+
+    // On-Demand Loading \\
+
+    /*
+     * Routes an immediate load request through the active loader.
+     * The concrete loader's request(File) pulls the file from the pending
+     * queue if still present and calls load() right now, in addition to
+     * whatever batch work happens this frame.
+     *
+     * Crashes clearly if the loader has already self-released — a missing
+     * resource requested after the loader is gone is always a logic error.
+     */
+    protected void requestFromLoader(File file) {
+
+        if (this.internalLoader == null)
+            throwException(
+                    "On-demand load requested but loader has already been released.\n" +
+                            "Requested file: " + file.getAbsolutePath() + "\n" +
+                            "Ensure the resource exists in the scan directory or " +
+                            "request it before the loader finishes.");
+
+        this.internalLoader.request(file);
     }
 
     @SuppressWarnings("unchecked")
@@ -75,8 +130,6 @@ public abstract class ManagerPackage extends SystemPackage {
                             "Allowed processes: KERNEL, BOOTSTRAP, CREATE");
 
         try {
-
-            // Prepare system creation context
             SystemPackage.setupConstructor(
                     this.settings,
                     this.internal,
@@ -108,10 +161,8 @@ public abstract class ManagerPackage extends SystemPackage {
 
     @SuppressWarnings("unchecked")
     protected <T extends SystemPackage> T registerSystem(T systemPackage) {
-
         this.internal.internalRegistry.put(systemPackage.getClass(), systemPackage);
         this.systemCollection.add(systemPackage);
-
         return systemPackage;
     }
 
@@ -155,6 +206,10 @@ public abstract class ManagerPackage extends SystemPackage {
 
             this.internal.internalRegistry.remove(systemClass);
             this.systemCollection.remove(systemPackage);
+
+            // Clear internalLoader reference if this loader is being released
+            if (systemPackage == this.internalLoader)
+                this.internalLoader = null;
         }
 
         this.garbageCollection.clear();
@@ -164,114 +219,92 @@ public abstract class ManagerPackage extends SystemPackage {
 
     // Create \\
 
-    @Override // From `SystemPackage`
+    @Override
     void internalCreate() {
-
         super.internalCreate();
-
         this.cacheSubSystems();
-
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalCreate();
     }
 
     // Get \\
 
-    @Override // From `SystemPackage`
+    @Override
     void internalGet() {
-
         super.internalGet();
-
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalGet();
     }
 
     // Awake \\
 
-    @Override // From `SystemPackage`
+    @Override
     void internalAwake() {
-
         super.internalAwake();
-
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalAwake();
     }
 
     // Release \\
 
-    @Override // From `SystemPackage`
+    @Override
     void internalRelease() {
-
         super.internalRelease();
-
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalRelease();
-
         this.clearGarbage();
     }
 
     // Start \\
 
-    @Override // From `SystemPackage`
+    @Override
     void internalStart() {
-
         super.internalStart();
-
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalStart();
     }
 
     // Update \\
 
-    @Override // From `SystemPackage`
+    @Override
     void internalUpdate() {
-
         super.internalUpdate();
-
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalUpdate();
     }
 
     // Fixed Update \\
 
-    @Override // From `SystemPackage`
+    @Override
     void internalFixedUpdate() {
-
         super.internalFixedUpdate();
-
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalFixedUpdate();
     }
 
     // Late Update \\
 
-    @Override // From `SystemPackage`
+    @Override
     void internalLateUpdate() {
-
         super.internalLateUpdate();
-
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalLateUpdate();
     }
 
     // Render \\
 
-    @Override // From `SystemPackage`
+    @Override
     void internalRender() {
-
         super.internalRender();
-
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalRender();
     }
 
     // Dispose \\
 
-    @Override // From `SystemPackage`
+    @Override
     void internalDispose() {
-
         super.internalDispose();
-
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalDispose();
     }

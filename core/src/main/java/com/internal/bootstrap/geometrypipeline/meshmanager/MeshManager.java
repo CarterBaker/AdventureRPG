@@ -20,7 +20,6 @@ import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 public class MeshManager extends ManagerPackage {
 
     // Internal
-    private InternalLoadManager internalLoadManager;
     private VAOManager vaoManager;
     private VBOManager vboManager;
     private IBOManager iboManager;
@@ -34,7 +33,7 @@ public class MeshManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        this.internalLoadManager = create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.meshHandleName2MeshHandleID = new Object2IntOpenHashMap<>();
         this.meshHandleID2MeshHandle = new Int2ObjectOpenHashMap<>();
     }
@@ -45,16 +44,6 @@ public class MeshManager extends ManagerPackage {
         this.vboManager = get(VBOManager.class);
         this.iboManager = get(IBOManager.class);
         this.textureManager = get(TextureManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        internalLoadManager.loadMeshData();
-    }
-
-    @Override
-    protected void release() {
-        internalLoadManager = release(InternalLoadManager.class);
     }
 
     // Bootstrap Management \\
@@ -73,9 +62,25 @@ public class MeshManager extends ManagerPackage {
         };
     }
 
+    // On-Demand Loading \\
+
+    /*
+     * Routes an on-demand load through the active InternalLoader.
+     * All 4 builders fire synchronously — VAO, VBO, IBO, and mesh handle
+     * are all registered by the time this returns.
+     */
+    public void request(String resourceName) {
+        ((InternalLoader) internalLoader).request(resourceName);
+    }
+
     // Static Mesh Accessors \\
 
     public int getMeshHandleIDFromMeshName(String meshName) {
+
+        if (!meshHandleName2MeshHandleID.containsKey(meshName)) {
+            request(meshName);
+        }
+
         return meshHandleName2MeshHandleID.getInt(meshName);
     }
 

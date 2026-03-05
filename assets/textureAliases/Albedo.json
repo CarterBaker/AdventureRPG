@@ -1,11 +1,5 @@
 {
     "defaultColor": [1.0, 1.0, 1.0],
-    "aliases": [
-        "a",
-        "albedo",
-        "albd",
-        "base",
-        "color",
-        "diffuse"
-    ]
+    "uniformName": "u_layer_albedo",
+    "aliases": ["a", "albedo", "albd", "base", "color", "diffuse"]
 }

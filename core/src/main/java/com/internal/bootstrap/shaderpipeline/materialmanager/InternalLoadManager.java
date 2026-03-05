@@ -1,30 +1,58 @@
 package com.internal.bootstrap.shaderpipeline.materialmanager;
 
 import java.io.File;
-import java.util.List;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
-import com.internal.core.engine.ManagerPackage;
+import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+
 /*
- * Drives the material bootstrap sequence: file discovery and handle assembly.
- * Released after bootstrap so no parsing state persists into the runtime loop.
+ * Drives the material bootstrap sequence: file discovery in scan(), one
+ * material assembled per load() call, self-releases when queue empties.
  */
-public class InternalLoadManager extends ManagerPackage {
+class InternalLoadManager extends LoaderPackage {
 
     // Internal
     private File root;
     private MaterialManager materialManager;
     private InternalBuildSystem internalBuildSystem;
-
     private int materialCount;
 
-    // Internal \\
+    // File Registry
+    private Object2ObjectOpenHashMap<String, File> resourceName2File;
+
+    // Base \\
+
+    @Override
+    protected void scan() {
+
+        this.root = new File(EngineSetting.MATERIAL_JSON_PATH);
+        this.resourceName2File = new Object2ObjectOpenHashMap<>();
+
+        FileUtility.verifyDirectory(root, "Material directory not found: " + root.getAbsolutePath());
+
+        try (var stream = Files.walk(root.toPath())) {
+            stream
+                    .filter(Files::isRegularFile)
+                    .map(Path::toFile)
+                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
+                    .forEach(file -> {
+                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+                        resourceName2File.put(resourceName, file);
+                        fileQueue.offer(file);
+                    });
+        } catch (IOException e) {
+            throwException("Material directory walk failed: " + root.getAbsolutePath(), e);
+        }
+    }
 
     @Override
     protected void create() {
-        this.root = new File(EngineSetting.MATERIAL_JSON_PATH);
         this.internalBuildSystem = create(InternalBuildSystem.class);
         this.materialCount = 0;
     }
@@ -34,20 +62,24 @@ public class InternalLoadManager extends ManagerPackage {
         this.materialManager = get(MaterialManager.class);
     }
 
+    // Load \\
+
     @Override
-    protected void release() {
-        this.internalBuildSystem = release(InternalBuildSystem.class);
+    protected void load(File file) {
+        materialManager.addMaterial(
+                internalBuildSystem.build(root, file, materialCount++));
     }
 
-    // Bootstrap \\
+    // On-Demand Loading \\
 
-    void loadMaterials() {
-        FileUtility.verifyDirectory(root, "Material directory not found: " + root.getAbsolutePath());
+    void request(String materialName) {
 
-        List<File> jsonFiles = FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS);
+        File file = resourceName2File.get(materialName);
 
-        for (int i = 0; i < jsonFiles.size(); i++)
-            materialManager.addMaterial(
-                    internalBuildSystem.buildMaterial(root, jsonFiles.get(i), materialCount++));
+        if (file == null)
+            throwException(
+                    "On-demand material load failed — resource not found in scan registry: \"" + materialName + "\"");
+
+        request(file);
     }
 }

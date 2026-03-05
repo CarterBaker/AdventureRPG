@@ -5,11 +5,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.internal.core.engine.ManagerPackage;
+import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 
-class InternalLoadManager extends ManagerPackage {
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+
+class InternalLoadManager extends LoaderPackage {
 
     // Internal
     private File root;
@@ -17,58 +19,62 @@ class InternalLoadManager extends ManagerPackage {
     private InternalBuildSystem internalBuildSystem;
     private int worldCount;
 
+    // File Registry
+    private Object2ObjectOpenHashMap<String, File> resourceName2File;
+
     // Base \\
 
     @Override
-    protected void create() {
+    protected void scan() {
 
-        // Internal
         this.root = new File(EngineSetting.WORLD_TEXTURE_PATH);
+        this.resourceName2File = new Object2ObjectOpenHashMap<>();
+
+        if (!root.exists() || !root.isDirectory())
+            throwException("World directory not found: " + root.getAbsolutePath());
+
+        try (var stream = Files.walk(root.toPath())) {
+            stream
+                    .filter(Files::isRegularFile)
+                    .map(Path::toFile)
+                    .filter(f -> EngineSetting.TEXTURE_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
+                    .forEach(file -> {
+                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+                        resourceName2File.put(resourceName, file);
+                        fileQueue.offer(file);
+                    });
+        } catch (IOException e) {
+            throwException("WorldStreamManager failed to walk directory: ", e);
+        }
+    }
+
+    @Override
+    protected void create() {
         this.internalBuildSystem = create(InternalBuildSystem.class);
         this.worldCount = 0;
     }
 
     @Override
     protected void get() {
-
-        // Internal
         this.worldStreamManager = get(WorldStreamManager.class);
-    }
-
-    @Override
-    protected void release() {
-        this.internalBuildSystem = release(InternalBuildSystem.class);
-    }
-
-    // World Management \\
-
-    void loadWorlds() {
-        loadAllFiles();
     }
 
     // Load \\
 
-    private void loadAllFiles() {
-        if (!root.exists() || !root.isDirectory())
-            throwException("World directory not found: " + root.getAbsolutePath());
-
-        Path base = root.toPath();
-
-        try (var stream = Files.walk(base)) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .forEach(path -> buildWorldFromFile(path.toFile()));
-        } catch (IOException e) {
-            throwException("WorldStreamManager failed to load one or more files: ", e);
-        }
-    }
-
-    private void buildWorldFromFile(File file) {
-        if (EngineSetting.TEXTURE_FILE_EXTENSIONS.contains(FileUtility.getExtension(file)))
-            compileWorld(internalBuildSystem.buildWorld(root, file, worldCount++));
-    }
-
-    private void compileWorld(WorldHandle world) {
+    @Override
+    protected void load(File file) {
+        WorldHandle world = internalBuildSystem.build(file, root, worldCount++);
         worldStreamManager.addWorld(world);
+    }
+
+    // On-Demand Loading \\
+
+    void request(String worldName) {
+        File file = resourceName2File.get(worldName);
+        if (file == null)
+            throwException(
+                    "[InternalLoadManager] On-demand world load failed — resource not found in scan registry: \""
+                            + worldName + "\"");
+        request(file);
     }
 }

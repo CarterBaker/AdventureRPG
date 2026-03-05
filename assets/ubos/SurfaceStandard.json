@@ -1,0 +1,13 @@
+{
+    "blockName": "SurfaceStandard",
+    "uniforms": [
+        { "name": "u_layer_albedo",   "type": "INT"     },
+        { "name": "u_layer_ao",       "type": "INT"     },
+        { "name": "u_layer_emission", "type": "INT"     },
+        { "name": "u_layer_height",   "type": "INT"     },
+        { "name": "u_layer_metallic", "type": "INT"     },
+        { "name": "u_layer_normal",   "type": "INT"     },
+        { "name": "u_layer_specular", "type": "INT"     },
+        { "name": "u_uvPerBlock",     "type": "VECTOR2" }
+    ]
+}

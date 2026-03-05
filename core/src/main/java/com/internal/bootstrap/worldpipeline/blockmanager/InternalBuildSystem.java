@@ -9,21 +9,21 @@ import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockRotationType;
-import com.internal.core.engine.SystemPackage;
+import com.internal.core.engine.BuilderPackage;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
 import com.internal.core.util.RegistryUtility;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
+
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class InternalBuildSystem extends SystemPackage {
+class InternalBuildSystem extends BuilderPackage {
 
     // Internal
-
     private TextureManager textureManager;
     private MaterialManager materialManager;
 
-    // Base \
+    // Base \\
 
     @Override
     protected void get() {
@@ -31,12 +31,11 @@ public class InternalBuildSystem extends SystemPackage {
         this.materialManager = get(MaterialManager.class);
     }
 
-    // Compile \
+    // Build \\
 
-    ObjectArrayList<BlockHandle> compileBlocks(File jsonFile, File root) {
-        // e.g. root=blocks/ file=blocks/natural/stone.json -> prefix="natural/stone"
+    ObjectArrayList<BlockHandle> build(File jsonFile, File root) {
+
         String pathPrefix = FileUtility.getPathWithFileNameWithoutExtension(root, jsonFile);
-
         JsonObject rootJson = JsonUtility.loadJsonObject(jsonFile);
         JsonArray blockArray = JsonUtility.validateArray(rootJson, "blocks");
 
@@ -52,19 +51,17 @@ public class InternalBuildSystem extends SystemPackage {
         return blocks;
     }
 
-    // Parse \
+    // Parse \\
 
     private BlockHandle parseBlock(JsonObject blockJson, String pathPrefix) {
-        // Full name: "natural/stone/grass", "natural/stone/cobblestone", etc.
+
         String localName = JsonUtility.validateString(blockJson, "name");
         String blockName = pathPrefix + "/" + localName;
         short blockID = RegistryUtility.toShortID(blockName);
 
-        // Parse geometry type
         String typeStr = blockJson.has("type") ? blockJson.get("type").getAsString() : "FULL";
         DynamicGeometryType blockType = parseBlockType(typeStr);
 
-        // Parse rotation type
         BlockRotationType rotationType = BlockRotationType.NONE;
         if (blockJson.has("rotation")) {
             try {
@@ -75,19 +72,16 @@ public class InternalBuildSystem extends SystemPackage {
             }
         }
 
-        // Parse material
         int materialID = -1;
         if (blockJson.has("material")) {
             String materialPath = blockJson.get("material").getAsString();
             materialID = materialManager.getMaterialIDFromMaterialName(materialPath);
         }
 
-        // Build texture array indexed by Direction3Vector ordinal
         int[] textures = new int[Direction3Vector.LENGTH];
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             textures[i] = -1;
 
-        // Single texture for all faces
         if (blockJson.has("texture")) {
             int textureID = textureManager.getHandleFromTextureName(
                     blockJson.get("texture").getAsString()).getTileID();
@@ -95,7 +89,6 @@ public class InternalBuildSystem extends SystemPackage {
                 textures[i] = textureID;
         }
 
-        // Per-face overrides
         for (Direction3Vector dir : Direction3Vector.VALUES) {
             String key = dir.name().toLowerCase() + "Tex";
             if (blockJson.has(key))
@@ -103,7 +96,6 @@ public class InternalBuildSystem extends SystemPackage {
                         blockJson.get(key).getAsString()).getTileID();
         }
 
-        // Cascade — fill undefined faces from the first defined face
         int lastDefined = -1;
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             if (textures[i] != -1) {
@@ -137,7 +129,7 @@ public class InternalBuildSystem extends SystemPackage {
         return block;
     }
 
-    // Utility \
+    // Utility \\
 
     private DynamicGeometryType parseBlockType(String typeStr) {
         try {
@@ -147,5 +139,4 @@ public class InternalBuildSystem extends SystemPackage {
             return null;
         }
     }
-
 }

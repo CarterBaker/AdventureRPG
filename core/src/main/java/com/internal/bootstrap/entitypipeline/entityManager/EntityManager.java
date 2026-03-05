@@ -12,61 +12,52 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 public class EntityManager extends ManagerPackage {
 
     // Internal
-    private InternalLoadManager internalLoadManager;
-
     private WorldStreamManager worldStreamManager;
 
     // Template Retrieval Mapping
     private Object2IntOpenHashMap<String> entityDataName2EntityDataID;
-    private Int2ObjectOpenHashMap<EntityData> entiityDataID2EntityData;
+    private Int2ObjectOpenHashMap<EntityData> entityDataID2EntityData;
 
     // Base \\
 
     @Override
     protected void create() {
-        // Internal
-        this.internalLoadManager = create(InternalLoadManager.class);
-
-        // Template Retrieval Mapping
+        create(InternalLoadManager.class);
         this.entityDataName2EntityDataID = new Object2IntOpenHashMap<>();
-        this.entiityDataID2EntityData = new Int2ObjectOpenHashMap<>();
+        this.entityDataID2EntityData = new Int2ObjectOpenHashMap<>();
     }
 
     @Override
     protected void get() {
-        // Internal
         this.worldStreamManager = get(WorldStreamManager.class);
     }
 
-    @Override
-    protected void awake() {
-        compileTemplateData();
-    }
+    // On-Demand Loading \\
 
-    @Override
-    protected void release() {
-        internalLoadManager = release(InternalLoadManager.class);
+    public void request(String templateName) {
+        ((InternalLoadManager) internalLoader).request(templateName);
     }
 
     // Template Management \\
 
-    void compileTemplateData() {
-        internalLoadManager.loadTemplateData();
-    }
-
     void addEntityTemplate(String templateName, int templateID, EntityData templateData) {
         entityDataName2EntityDataID.put(templateName, templateID);
-        entiityDataID2EntityData.put(templateID, templateData);
+        entityDataID2EntityData.put(templateID, templateData);
     }
 
     // Accessible \\
 
     public int getTemplateIDFromTemplateName(String templateName) {
+        if (!entityDataName2EntityDataID.containsKey(templateName))
+            request(templateName);
         return entityDataName2EntityDataID.getInt(templateName);
     }
 
     public EntityData getTemplateDataFromTemplateID(int templateID) {
-        return entiityDataID2EntityData.get(templateID);
+        EntityData data = entityDataID2EntityData.get(templateID);
+        if (data == null)
+            throwException("Entity template ID not found: " + templateID);
+        return data;
     }
 
     public EntityData getTemplateDataFromTemplateName(String templateName) {
@@ -75,12 +66,9 @@ public class EntityManager extends ManagerPackage {
     }
 
     public EntityHandle createEntity(EntityData entityData) {
-
         WorldHandle activeWorldHandle = worldStreamManager.getActiveWorld();
         long randomChunk = WorldPositionUtility.getRandomChunk(activeWorldHandle);
-
         EntityHandle entityHandle = create(EntityHandle.class);
-
         entityHandle.constructor(
                 entityData,
                 worldStreamManager.getActiveWorld(),
@@ -88,7 +76,6 @@ public class EntityManager extends ManagerPackage {
                 randomChunk,
                 entityData.getRandomSize(),
                 entityData.getRandomWeight());
-
         return entityHandle;
     }
 }

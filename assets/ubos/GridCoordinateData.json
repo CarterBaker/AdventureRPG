@@ -1,0 +1,6 @@
+{
+    "blockName": "GridCoordinateData",
+    "uniforms": [
+        { "name": "u_gridPosition", "type": "VECTOR2" }
+    ]
+}

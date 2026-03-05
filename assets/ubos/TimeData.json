@@ -1,0 +1,14 @@
+{
+    "blockName": "TimeData",
+    "uniforms": [
+        { "name": "u_timeOfDay",          "type": "FLOAT" },
+        { "name": "u_timeOfYear",         "type": "FLOAT" },
+        { "name": "u_rawTimeOfDay",       "type": "FLOAT" },
+        { "name": "u_time",               "type": "FLOAT" },
+        { "name": "u_randomNoiseFromDay", "type": "FLOAT" },
+        { "name": "u_deltaTime",          "type": "FLOAT" },
+        { "name": "u_currentHour",        "type": "INT"   },
+        { "name": "u_currentMinute",      "type": "INT"   },
+        { "name": "u_currentDay",         "type": "INT"   }
+    ]
+}

@@ -1,0 +1,7 @@
+{
+    "blockName": "ItemsStandard",
+    "uniforms": [
+        { "name": "u_layer_albedo",   "type": "INT"     },
+        { "name": "u_uvPerBlock",     "type": "VECTOR2" }
+    ]
+}

@@ -2,26 +2,43 @@ package com.internal.bootstrap.shaderpipeline.spritemanager;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+
 import javax.imageio.ImageIO;
 
-import com.internal.core.engine.SystemPackage;
+import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
+import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
+import com.internal.core.engine.BuilderPackage;
 
-class InternalBuildSystem extends SystemPackage {
+/*
+ * Loads a raw image from disk, wraps it in a SpriteData container,
+ * and constructs the final SpriteHandle. Owns all created children
+ * so they survive loader teardown.
+ */
+class InternalBuildSystem extends BuilderPackage {
 
     // Build \\
 
-    SpriteData buildSpriteData(File file, String spriteName) {
+    SpriteHandle build(File file, String spriteName, int gpuHandle, ModelInstance modelInstance) {
 
         BufferedImage image = loadImage(file);
 
         SpriteData spriteData = create(SpriteData.class);
         spriteData.constructor(spriteName, image);
-        return spriteData;
+
+        SpriteHandle spriteHandle = create(SpriteHandle.class);
+        spriteHandle.constructor(
+                spriteName,
+                gpuHandle,
+                spriteData.getWidth(),
+                spriteData.getHeight(),
+                modelInstance);
+
+        return spriteHandle;
     }
 
     // Image Loading \\
 
-    private BufferedImage loadImage(File file) {
+    BufferedImage loadImage(File file) {
         try {
             BufferedImage image = ImageIO.read(file);
             if (image == null)

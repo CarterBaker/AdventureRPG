@@ -1,7 +1,7 @@
-#ifndef TEXTURE_LAYER_DATA_GLSL
-#define TEXTURE_LAYER_DATA_GLSL
+#ifndef SURFACE_STANDARD_GLSL
+#define SURFACE_STANDARD_GLSL
 
-layout(std140) uniform StandardTextureLayoutData {
+layout(std140) uniform SurfaceStandard {
     int u_layer_albedo;
     int u_layer_ao;
     int u_layer_emission;

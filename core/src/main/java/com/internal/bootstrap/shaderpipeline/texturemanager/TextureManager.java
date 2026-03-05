@@ -7,12 +7,11 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 /*
  * Owns all texture array GPU handles and the full tile lookup chain.
  * Provides runtime retrieval of TextureHandle by texture name, tile ID,
- * array name, or array ID. GPU resources are released on dispose.
+ * array name, or array ID. On accessor miss, triggers an immediate
+ * synchronous load through the active InternalLoadManager.
+ * GPU resources are released on dispose.
  */
 public class TextureManager extends ManagerPackage {
-
-    // Internal
-    private InternalLoadManager internalLoadManager;
 
     // Retrieval Mapping
     private Object2ObjectOpenHashMap<String, TextureHandle> textureName2Handle;
@@ -24,7 +23,7 @@ public class TextureManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        this.internalLoadManager = create(InternalLoadManager.class);
+        create(InternalLoadManager.class);
         this.textureName2Handle = new Object2ObjectOpenHashMap<>();
         this.tileID2Handle = new Int2ObjectOpenHashMap<>();
         this.arrayName2Handle = new Object2ObjectOpenHashMap<>();
@@ -32,28 +31,26 @@ public class TextureManager extends ManagerPackage {
     }
 
     @Override
-    protected void awake() {
-        internalLoadManager.loadTextureArrays();
-    }
-
-    @Override
-    protected void release() {
-        internalLoadManager = release(InternalLoadManager.class);
-    }
-
-    @Override
-    public void dispose() {
+    protected void dispose() {
         disposeAllGPUResources();
+    }
+
+    // On-Demand Loading \\
+
+    public void request(String arrayName) {
+        ((InternalLoadManager) internalLoader).request(arrayName);
     }
 
     // Registration \\
 
     void registerTile(TextureTileData tile, float u0, float v0, float u1, float v1,
             TextureArrayData array, int gpuHandle) {
+
         TextureHandle handle = create(TextureHandle.class);
         handle.constructor(tile.getID(), array.getID(), gpuHandle, array.getAtlasSize(), u0, v0, u1, v1);
         textureName2Handle.put(tile.getName(), handle);
         tileID2Handle.put(tile.getID(), handle);
+
         if (!arrayID2Handle.containsKey(array.getID())) {
             arrayName2Handle.put(array.getName(), handle);
             arrayID2Handle.put(array.getID(), handle);
@@ -75,29 +72,40 @@ public class TextureManager extends ManagerPackage {
 
     public TextureHandle getHandleFromTextureName(String textureName) {
         TextureHandle handle = textureName2Handle.get(textureName);
+        if (handle == null) {
+            String arrayName = textureName.contains("/")
+                    ? textureName.substring(0, textureName.lastIndexOf('/'))
+                    : textureName;
+            request(arrayName);
+            handle = textureName2Handle.get(textureName);
+        }
         if (handle == null)
-            throw new RuntimeException("[TextureManager] Texture not found: \"" + textureName + "\"");
+            throwException("[TextureManager] Texture not found after load: \"" + textureName + "\"");
         return handle;
     }
 
     public TextureHandle getHandleFromTileID(int tileID) {
         TextureHandle handle = tileID2Handle.get(tileID);
         if (handle == null)
-            throw new RuntimeException("[TextureManager] No handle registered for tileID: " + tileID);
+            throwException("[TextureManager] No handle registered for tileID: " + tileID);
         return handle;
     }
 
     public TextureHandle getArrayHandleFromArrayName(String arrayName) {
         TextureHandle handle = arrayName2Handle.get(arrayName);
+        if (handle == null) {
+            request(arrayName);
+            handle = arrayName2Handle.get(arrayName);
+        }
         if (handle == null)
-            throw new RuntimeException("[TextureManager] Array not found: \"" + arrayName + "\"");
+            throwException("[TextureManager] Array not found after load: \"" + arrayName + "\"");
         return handle;
     }
 
     public TextureHandle getArrayHandleFromArrayID(int arrayID) {
         TextureHandle handle = arrayID2Handle.get(arrayID);
         if (handle == null)
-            throw new RuntimeException("[TextureManager] No array registered for arrayID: " + arrayID);
+            throwException("[TextureManager] No array registered for arrayID: " + arrayID);
         return handle;
     }
 }

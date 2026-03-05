@@ -1,10 +1,11 @@
 package com.internal.bootstrap.shaderpipeline.passmanager;
 
-import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.pass.PassInstance;
+import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.core.engine.ManagerPackage;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
@@ -17,17 +18,18 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 public class PassManager extends ManagerPackage {
 
     // Internal
-    private InternalLoadManager internalLoadManager;
     private MaterialManager materialManager;
     private RenderSystem renderSystem;
+
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> passName2PassID;
     private Int2ObjectOpenHashMap<PassHandle> passID2Pass;
-    // Internal \\
+
+    // Base \\
 
     @Override
     protected void create() {
-        this.internalLoadManager = create(InternalLoadManager.class);
+        create(InternalLoadManager.class);
         this.passName2PassID = new Object2IntOpenHashMap<>();
         this.passID2Pass = new Int2ObjectOpenHashMap<>();
     }
@@ -38,14 +40,10 @@ public class PassManager extends ManagerPackage {
         this.renderSystem = get(RenderSystem.class);
     }
 
-    @Override
-    protected void awake() {
-        internalLoadManager.loadPasses();
-    }
+    // On-Demand Loading \\
 
-    @Override
-    protected void release() {
-        this.internalLoadManager = release(InternalLoadManager.class);
+    public void request(String passName) {
+        ((InternalLoadManager) internalLoader).request(passName);
     }
 
     // Pass Management \\
@@ -71,10 +69,8 @@ public class PassManager extends ManagerPackage {
         PassHandle original = passID2Pass.get(passID);
         if (original == null)
             throwException("Cannot clone pass — passID " + passID + " not found");
-
         MaterialInstance clonedMaterial = materialManager.cloneMaterial(
                 original.getMaterial().getMaterialID());
-
         PassInstance instance = create(PassInstance.class);
         instance.constructor(
                 original.getPassName(),
@@ -85,6 +81,9 @@ public class PassManager extends ManagerPackage {
     }
 
     public int getPassIDFromPassName(String passName) {
+        if (!passName2PassID.containsKey(passName)) {
+            request(passName);
+        }
         return passName2PassID.getInt(passName);
     }
 

@@ -7,25 +7,26 @@ import com.google.gson.JsonObject;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOData;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformData;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
-import com.internal.core.engine.SystemPackage;
+import com.internal.core.engine.BuilderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.JsonUtility;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
- * Parses GLSL source files into ShaderData and assembles ShaderDefinitionData from
- * JSON descriptors. Produces UBOData with UNSPECIFIED_BINDING when no explicit
- * layout binding is present — UBOManager is the sole authority on binding assignment.
- * Include resolution uses a post-order traversal so dependencies always precede dependents.
+ * Parses GLSL source files into ShaderData and assembles ShaderDefinitionData
+ * from JSON descriptors. UBO block contents are intentionally skipped — structure
+ * is now owned by UBO JSON descriptors. The block name is still extracted so the
+ * shader can be bound to the correct binding point at assembly time.
+ * Include resolution uses post-order traversal so dependencies always precede dependents.
  */
-class InternalBuildSystem extends SystemPackage {
+class InternalBuildSystem extends BuilderPackage {
 
     // Internal
     private InternalLoadManager internalLoadManager;
     private File root;
 
-    // Internal \\
+    // Base \\
 
     @Override
     protected void get() {
@@ -49,11 +50,9 @@ class InternalBuildSystem extends SystemPackage {
     // Version \\
 
     private String parseVersionInfo(ObjectArrayList<String> lines) {
-
         for (int i = 0; i < lines.size(); i++)
             if (FileParserUtility.lineStartsWith(lines.get(i), "#version"))
                 return lines.get(i);
-
         return null;
     }
 
@@ -91,17 +90,18 @@ class InternalBuildSystem extends SystemPackage {
                         FileParserUtility.countCharInString(line, '}');
 
                 if (braceDepth <= 0) {
-
+                    // Block closed — register name only, contents are owned by UBO JSON
                     if (currentBuffer != null)
                         shaderData.addBufferBlock(currentBuffer);
-
                     currentBuffer = null;
                     insideBlock = false;
-                    continue;
                 }
+
+                // Skip all lines inside the block
+                continue;
             }
 
-            if (line.contains("uniform") || (insideBlock && !line.equals("}"))) {
+            if (line.contains("uniform")) {
 
                 String fullDeclaration = line;
 
@@ -112,7 +112,7 @@ class InternalBuildSystem extends SystemPackage {
                         fullDeclaration += " " + next;
                 }
 
-                parseUniformDeclaration(fullDeclaration, currentBuffer, shaderData);
+                parseUniformDeclaration(fullDeclaration, shaderData);
             }
         }
     }
@@ -128,9 +128,6 @@ class InternalBuildSystem extends SystemPackage {
 
         try {
 
-            // Extract explicit binding from layout qualifier, or mark as unspecified.
-            // FileParserUtility.extractBufferBinding must return -1 when no binding
-            // attribute is present. Binding 0 is a valid explicit value.
             int binding = UBOData.UNSPECIFIED_BINDING;
 
             if (line.contains("layout") || line.contains("buffer"))
@@ -157,10 +154,7 @@ class InternalBuildSystem extends SystemPackage {
         }
     }
 
-    private void parseUniformDeclaration(
-            String declaration,
-            UBOData currentBuffer,
-            ShaderData shaderData) {
+    private void parseUniformDeclaration(String declaration, ShaderData shaderData) {
 
         declaration = declaration.replace(";", "").trim();
 
@@ -169,7 +163,7 @@ class InternalBuildSystem extends SystemPackage {
                 declaration.startsWith("struct"))
             return;
 
-        if (currentBuffer == null && !declaration.contains("uniform"))
+        if (!declaration.contains("uniform"))
             return;
 
         declaration = declaration.replaceFirst("\\buniform\\b", "").trim();
@@ -185,13 +179,12 @@ class InternalBuildSystem extends SystemPackage {
         if (uniformType == null)
             return;
 
-        parseVariableNames(namesStr, uniformType, currentBuffer, shaderData);
+        parseVariableNames(namesStr, uniformType, shaderData);
     }
 
     private void parseVariableNames(
             String namesStr,
             UniformType uniformType,
-            UBOData currentBuffer,
             ShaderData shaderData) {
 
         String[] names = namesStr.split(",");
@@ -229,10 +222,7 @@ class InternalBuildSystem extends SystemPackage {
             UniformData uniform = create(UniformData.class);
             uniform.constructor(uniformType, variableName, arrayCount);
 
-            if (currentBuffer != null)
-                currentBuffer.addUniform(uniform);
-            else
-                shaderData.addUniform(uniform);
+            shaderData.addUniform(uniform);
         }
     }
 
@@ -249,9 +239,7 @@ class InternalBuildSystem extends SystemPackage {
                 String includePath = FileParserUtility.extractPayloadAfterToken(line, "#include");
 
                 if (includePath != null && !includePath.isEmpty()) {
-
                     ShaderData includeData = internalLoadManager.getShaderData(includePath);
-
                     if (includeData != null)
                         shaderData.addIncludes(includeData);
                 }
@@ -285,13 +273,6 @@ class InternalBuildSystem extends SystemPackage {
         return collectIncludes(definition);
     }
 
-    /*
-     * Post-order traversal: a dependency is added to the flat include list only
-     * after
-     * all of its own dependencies have been added. This guarantees that if include
-     * A
-     * depends on include B, B will always appear before A in the final source.
-     */
     private ShaderDefinitionData collectIncludes(ShaderDefinitionData definition) {
 
         ObjectArrayList<ShaderData> visited = new ObjectArrayList<>();
@@ -314,7 +295,6 @@ class InternalBuildSystem extends SystemPackage {
 
         ObjectArrayList<ShaderData> includes = shaderData.getIncludes();
 
-        // Recurse into dependencies before adding this node
         for (int i = 0; i < includes.size(); i++)
             collectPostOrder(definition, includes.get(i), visited);
 

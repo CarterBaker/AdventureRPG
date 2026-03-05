@@ -10,10 +10,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class InternalThreadManager extends ManagerPackage {
 
-    // Internal
-    private InternalLoadManager internalLoadManager;
-    private InternalBuildSystem internalBuildSystem;
-
     // Retrieval Mapping
     private Object2ObjectOpenHashMap<String, ThreadHandle> threadName2ThreadHandle;
 
@@ -21,20 +17,8 @@ public class InternalThreadManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        this.internalLoadManager = create(InternalLoadManager.class);
-        this.internalBuildSystem = create(InternalBuildSystem.class);
+        create(InternalLoadManager.class);
         this.threadName2ThreadHandle = new Object2ObjectOpenHashMap<>();
-    }
-
-    @Override
-    protected void awake() {
-        internalLoadManager.loadThreadData();
-    }
-
-    @Override
-    protected void release() {
-        this.internalLoadManager = release(InternalLoadManager.class);
-        this.internalBuildSystem = release(InternalBuildSystem.class);
     }
 
     @Override
@@ -42,6 +26,12 @@ public class InternalThreadManager extends ManagerPackage {
         for (ThreadHandle handle : threadName2ThreadHandle.values())
             handle.dispose();
         threadName2ThreadHandle.clear();
+    }
+
+    // On-Demand Loading \\
+
+    public void request(String resourceName) {
+        ((InternalLoadManager) internalLoader).request(resourceName);
     }
 
     // Thread Management \\
@@ -53,7 +43,19 @@ public class InternalThreadManager extends ManagerPackage {
     // Accessible \\
 
     public ThreadHandle getThreadHandleFromThreadName(String threadName) {
-        return threadName2ThreadHandle.get(threadName);
+
+        ThreadHandle handle = threadName2ThreadHandle.get(threadName);
+
+        if (handle == null) {
+
+            request(threadName);
+            handle = threadName2ThreadHandle.get(threadName);
+
+            if (handle == null)
+                throwException("[InternalThreadManager] Thread not found after load: \"" + threadName + "\"");
+        }
+
+        return handle;
     }
 
     public Future<?> executeAsync(ThreadHandle handle, Runnable task) {
@@ -98,8 +100,7 @@ public class InternalThreadManager extends ManagerPackage {
         return executeAsync(handle, () -> {
             if (syncStruct.tryAcquire()) {
                 try {
-                    T instance = syncStruct.getInstance();
-                    consumer.accept(instance);
+                    consumer.accept(syncStruct.getInstance());
                 } finally {
                     syncStruct.release();
                 }
@@ -117,8 +118,7 @@ public class InternalThreadManager extends ManagerPackage {
             try {
                 if (syncStruct.tryAcquire()) {
                     try {
-                        S syncInstance = syncStruct.getInstance();
-                        consumer.accept(asyncInstance, syncInstance);
+                        consumer.accept(asyncInstance, syncStruct.getInstance());
                     } finally {
                         syncStruct.release();
                     }

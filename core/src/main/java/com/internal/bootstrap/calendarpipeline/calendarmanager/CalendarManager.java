@@ -4,32 +4,17 @@ import com.internal.core.engine.ManagerPackage;
 
 public class CalendarManager extends ManagerPackage {
 
-    // Internal
-    private InternalLoadManager internalLoadManager;
+    // Data
     private CalendarHandle calendarHandle;
 
     // Base \\
 
     @Override
     protected void create() {
-        this.internalLoadManager = create(InternalLoadManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        loadCalendarData();
-    }
-
-    @Override
-    protected void release() {
-        this.internalLoadManager = release(InternalLoadManager.class);
+        create(InternalLoadManager.class);
     }
 
     // Calendar Management \\
-
-    private void loadCalendarData() {
-        internalLoadManager.loadCalendarData();
-    }
 
     void addCalendarHandle(CalendarHandle calendarHandle) {
         this.calendarHandle = calendarHandle;
@@ -37,7 +22,15 @@ public class CalendarManager extends ManagerPackage {
 
     // Accessible \\
 
+    /*
+     * Lazily resolves on first access — safe to call from awake() before
+     * the batch loader has processed the calendar file.
+     */
     public CalendarHandle getCalendarHandle() {
+        if (calendarHandle == null)
+            ((InternalLoadManager) internalLoader).loadNow();
+        if (calendarHandle == null)
+            throwException("[CalendarManager] Calendar could not be loaded.");
         return calendarHandle;
     }
 }

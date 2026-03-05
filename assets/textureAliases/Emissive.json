@@ -1,11 +1,5 @@
 {
     "defaultColor": [0.0, 0.0, 0.0],
-    "aliases": [
-        "e",
-        "emit",
-        "emission",
-        "emissive",
-        "glow",
-        "light"
-    ]
+    "uniformName": "u_layer_emission",
+    "aliases": ["e", "emit", "emission", "emissive", "glow", "light"]
 }

@@ -13,7 +13,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 /*
  * Filesystem helpers shared across all bootstrap loading paths. Covers
  * directory validation, filtered file collection at varying depths, extension
- * inspection, and path-relative name resolution.
+ * inspection, path-relative name resolution, and name format conversion.
  */
 public class FileUtility extends UtilityPackage {
 
@@ -170,5 +170,32 @@ public class FileUtility extends UtilityPackage {
                 fileName.substring(0, firstUnderscore),
                 fileName.substring(firstUnderscore + 1)
         };
+    }
+
+    // Name Format Conversion \\
+
+    /*
+     * Converts a slash-delimited resource path into PascalCase.
+     * Each segment's first character is uppercased and the segments are joined
+     * without a separator.
+     *
+     * Examples:
+     * "blocks/stone" → "BlocksStone"
+     * "world/blocks/dirt" → "WorldBlocksDirt"
+     * "Blocks" → "Blocks"
+     */
+    public static String toPascalCase(String path) {
+        if (path == null || path.isEmpty())
+            return "";
+        String[] segments = path.split("/");
+        StringBuilder sb = new StringBuilder();
+        for (String segment : segments) {
+            if (segment.isEmpty())
+                continue;
+            sb.append(Character.toUpperCase(segment.charAt(0)));
+            if (segment.length() > 1)
+                sb.append(segment.substring(1));
+        }
+        return sb.toString();
     }
 }

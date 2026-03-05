@@ -169,7 +169,7 @@ public abstract class SystemPackage extends EngineUtility {
     // System Retrieval \\
 
     @SuppressWarnings("unchecked")
-    protected final <T> T get(Class<T> type) {
+    protected <T> T get(Class<T> type) {
         return this.internal.get(false, type);
     }
 

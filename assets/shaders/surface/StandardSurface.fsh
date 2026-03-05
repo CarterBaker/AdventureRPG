@@ -5,7 +5,7 @@ in vec3       vNormal;
 flat in vec2  vUVOrigin;
 flat in float vOrient;
 
-#include "surface/includes/StandardTextureLayoutData.glsl"
+#include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
 #include "includes/DirectionalLightData.glsl"
 #include "surface/includes/TiledSampling.glsl"

@@ -2,14 +2,10 @@ package com.internal.bootstrap.worldpipeline.worldstreammanager;
 
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 public class WorldStreamManager extends ManagerPackage {
-
-    // Internal
-    private InternalLoadManager internalLoadManager;
 
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> worldName2WorldID;
@@ -22,38 +18,24 @@ public class WorldStreamManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Internal
-        this.internalLoadManager = create(InternalLoadManager.class);
-
-        // Retrieval Mapping
+        create(InternalLoadManager.class);
         this.worldName2WorldID = new Object2IntOpenHashMap<>();
         this.worldID2World = new Int2ObjectOpenHashMap<>();
     }
 
-    @Override
-    protected void awake() {
+    // On-Demand Loading \\
 
-        compileWorlds();
-
-        int worldID = getWorldIDFromWorldName(EngineSetting.STARTING_WORLD);
-        activeWorld = getWorldFromWorldID(worldID);
-    }
-
-    @Override
-    protected void release() {
-        internalLoadManager = release(InternalLoadManager.class);
+    public void request(String worldName) {
+        ((InternalLoadManager) internalLoader).request(worldName);
     }
 
     // World Management \\
 
-    private void compileWorlds() {
-        internalLoadManager.loadWorlds();
-    }
-
     void addWorld(WorldHandle world) {
         worldName2WorldID.put(world.getWorldName(), world.getWorldID());
         worldID2World.put(world.getWorldID(), world);
+        if (activeWorld == null && world.getWorldName().equals(EngineSetting.STARTING_WORLD))
+            activeWorld = world;
     }
 
     // Accessible \\
@@ -63,10 +45,22 @@ public class WorldStreamManager extends ManagerPackage {
     }
 
     public WorldHandle getActiveWorld() {
+
+        if (activeWorld == null) {
+            int worldID = getWorldIDFromWorldName(EngineSetting.STARTING_WORLD);
+            setActiveWorld(worldID);
+
+            if (activeWorld == null)
+                throwException("[WorldStreamManager] Starting world could not be loaded: \""
+                        + EngineSetting.STARTING_WORLD + "\"");
+        }
+
         return activeWorld;
     }
 
     public int getWorldIDFromWorldName(String worldName) {
+        if (!worldName2WorldID.containsKey(worldName))
+            request(worldName);
         return worldName2WorldID.getInt(worldName);
     }
 

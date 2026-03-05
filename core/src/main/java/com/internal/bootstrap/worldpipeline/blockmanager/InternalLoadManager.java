@@ -5,26 +5,58 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
-import com.internal.core.engine.ManagerPackage;
+import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
+import com.internal.core.util.JsonUtility;
+
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class InternalLoadManager extends ManagerPackage {
+class InternalLoadManager extends LoaderPackage {
 
     // Internal
-
+    private File root;
     private BlockManager blockManager;
     private InternalBuildSystem internalBuildSystem;
-    private File root;
 
-    // Base \
+    // File Registry
+    private Object2ObjectOpenHashMap<String, File> resourceName2File;
+    private Object2ObjectOpenHashMap<String, String> blockName2ResourceName;
+
+    // Base \\
+
+    @Override
+    protected void scan() {
+
+        this.root = new File(EngineSetting.BLOCK_JSON_PATH);
+        this.resourceName2File = new Object2ObjectOpenHashMap<>();
+        this.blockName2ResourceName = new Object2ObjectOpenHashMap<>();
+
+        FileUtility.verifyDirectory(root, "[BlockManager] The root folder could not be verified");
+
+        try (var stream = Files.walk(root.toPath())) {
+            stream
+                    .filter(Files::isRegularFile)
+                    .map(Path::toFile)
+                    .filter(f -> FileUtility.hasExtension(f, EngineSetting.JSON_FILE_EXTENSIONS))
+                    .forEach(file -> {
+                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+                        resourceName2File.put(resourceName, file);
+                        preRegisterBlockNames(file, resourceName);
+                        fileQueue.offer(file);
+                    });
+        } catch (IOException e) {
+            throwException("BlockManager failed to walk directory: ", e);
+        }
+    }
 
     @Override
     protected void create() {
         this.internalBuildSystem = create(InternalBuildSystem.class);
-        this.root = new File(EngineSetting.BLOCK_JSON_PATH);
     }
 
     @Override
@@ -32,32 +64,51 @@ public class InternalLoadManager extends ManagerPackage {
         this.blockManager = get(BlockManager.class);
     }
 
-    @Override
-    protected void release() {
-        this.internalBuildSystem = release(InternalBuildSystem.class);
-    }
+    // Pre-Registration \\
 
-    // Load \
-
-    void loadBlocks() {
-        FileUtility.verifyDirectory(root, "[BlockManager] The root folder could not be verified");
-
-        Path rootPath = root.toPath();
-
-        try (var stream = Files.walk(rootPath)) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .filter(path -> FileUtility.hasExtension(path.toFile(), EngineSetting.JSON_FILE_EXTENSIONS))
-                    .forEach(path -> processJsonFile(path.toFile()));
-        } catch (IOException e) {
-            throwException("BlockManager failed to load one or more files: ", e);
+    /*
+     * Peeks the JSON during scan to extract block names and build the reverse
+     * lookup before any load() fires. This is what allows on-demand requests
+     * from awake() to resolve correctly — the name → file mapping must be
+     * complete before the batch phase begins.
+     */
+    private void preRegisterBlockNames(File file, String resourceName) {
+        try {
+            JsonObject json = JsonUtility.loadJsonObject(file);
+            JsonArray blockArray = json.getAsJsonArray("blocks");
+            if (blockArray == null)
+                return;
+            for (int i = 0; i < blockArray.size(); i++) {
+                JsonObject blockJson = blockArray.get(i).getAsJsonObject();
+                if (!blockJson.has("name"))
+                    continue;
+                String localName = blockJson.get("name").getAsString();
+                String blockName = resourceName + "/" + localName;
+                blockName2ResourceName.put(blockName, resourceName);
+            }
+        } catch (Exception e) {
+            throwException("[BlockManager] Failed to pre-register block names from: " + file.getPath(), e);
         }
     }
 
-    private void processJsonFile(File jsonFile) {
-        ObjectArrayList<BlockHandle> blocks = internalBuildSystem.compileBlocks(jsonFile, root);
+    // Load \\
+
+    @Override
+    protected void load(File file) {
+        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+        ObjectArrayList<BlockHandle> blocks = internalBuildSystem.build(file, root);
         for (int i = 0; i < blocks.size(); i++)
             blockManager.addBlock(blocks.get(i));
     }
 
+    // On-Demand Loading \\
+
+    void request(String blockName) {
+        String resourceName = blockName2ResourceName.get(blockName);
+        if (resourceName == null)
+            throwException(
+                    "[InternalLoadManager] On-demand block load failed — no file found for block: \""
+                            + blockName + "\"");
+        request(resourceName2File.get(resourceName));
+    }
 }

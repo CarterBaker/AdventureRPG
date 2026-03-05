@@ -15,7 +15,7 @@ import com.internal.bootstrap.menupipeline.elementsystem.ElementSystem;
 import com.internal.bootstrap.menupipeline.menu.MenuHandle;
 import com.internal.bootstrap.menupipeline.menu.MenuInstance;
 import com.internal.bootstrap.shaderpipeline.spritemanager.SpriteManager;
-import com.internal.core.engine.SystemPackage;
+import com.internal.core.engine.BuilderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -27,7 +27,7 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
  * are held. All produced objects are HandlePackage types owned by the manager
  * or DataPackage types that do not outlive bootstrap.
  */
-class InternalBuildSystem extends SystemPackage {
+class InternalBuildSystem extends BuilderPackage {
 
     private static final String PARENT_ARG = "$parent";
 
