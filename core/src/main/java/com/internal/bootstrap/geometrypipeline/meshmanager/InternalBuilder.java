@@ -169,6 +169,7 @@ class InternalBuilder extends BuilderPackage {
             int posStride = vertStride - 2;
             TextureHandle textureHandle = textureManager.getHandleFromTextureName(
                     quadObj.get("texture").getAsString());
+
             UVHandle uv = textureHandle.getUVHandle();
             float[][] localUVs = resolveLocalUVs(quadObj, file);
 
