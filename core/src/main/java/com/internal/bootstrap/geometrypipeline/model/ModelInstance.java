@@ -1,6 +1,6 @@
 package com.internal.bootstrap.geometrypipeline.model;
 
-import com.internal.bootstrap.geometrypipeline.meshmanager.MeshStruct;
+import com.internal.bootstrap.geometrypipeline.mesh.MeshStruct;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.core.engine.InstancePackage;
 

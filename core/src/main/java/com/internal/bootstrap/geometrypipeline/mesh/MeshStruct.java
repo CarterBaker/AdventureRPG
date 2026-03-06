@@ -1,4 +1,4 @@
-package com.internal.bootstrap.geometrypipeline.meshmanager;
+package com.internal.bootstrap.geometrypipeline.mesh;
 
 import com.internal.bootstrap.geometrypipeline.ibo.IBOStruct;
 import com.internal.bootstrap.geometrypipeline.vao.VAOStruct;

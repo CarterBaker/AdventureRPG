@@ -6,6 +6,7 @@ import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertB
 import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureHandle;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import com.internal.bootstrap.shaderpipeline.texturemanager.UVHandle;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
@@ -548,10 +549,7 @@ public class FullGeometryBranch extends BranchPackage {
 
         float nor = (float) direction3Vector.index;
         float fEncodedFace = (float) encodedFace;
-
-        // Layout: POS(3) NOR(1) COL(1) UV(2) ORIENT(1) SPARE(1) = 9 floats
-        // ORIENT slot is now unused (was spin, now encoded in spare)
-        // SPARE slot carries encodedFace (0-23) for UBO lookup
+        UVHandle uv = textureHandle.getUVHandle();
 
         // Vert 0
         buffer.add((float) Coordinate3Int.unpackX(vert0XYZ));
@@ -559,8 +557,8 @@ public class FullGeometryBranch extends BranchPackage {
         buffer.add((float) Coordinate3Int.unpackZ(vert0XYZ));
         buffer.add(nor);
         buffer.add(vert0Color);
-        buffer.add(textureHandle.getU0());
-        buffer.add(textureHandle.getV0());
+        buffer.add(uv.u0);
+        buffer.add(uv.v0);
         buffer.add(fEncodedFace);
         buffer.add(0f);
 
@@ -570,8 +568,8 @@ public class FullGeometryBranch extends BranchPackage {
         buffer.add((float) Coordinate3Int.unpackZ(vert1XYZ));
         buffer.add(nor);
         buffer.add(vert1Color);
-        buffer.add(textureHandle.getU0());
-        buffer.add(textureHandle.getV0());
+        buffer.add(uv.u0);
+        buffer.add(uv.v0);
         buffer.add(fEncodedFace);
         buffer.add(0f);
 
@@ -581,8 +579,8 @@ public class FullGeometryBranch extends BranchPackage {
         buffer.add((float) Coordinate3Int.unpackZ(vert2XYZ));
         buffer.add(nor);
         buffer.add(vert2Color);
-        buffer.add(textureHandle.getU0());
-        buffer.add(textureHandle.getV0());
+        buffer.add(uv.u0);
+        buffer.add(uv.v0);
         buffer.add(fEncodedFace);
         buffer.add(0f);
 
@@ -592,8 +590,8 @@ public class FullGeometryBranch extends BranchPackage {
         buffer.add((float) Coordinate3Int.unpackZ(vert3XYZ));
         buffer.add(nor);
         buffer.add(vert3Color);
-        buffer.add(textureHandle.getU0());
-        buffer.add(textureHandle.getV0());
+        buffer.add(uv.u0);
+        buffer.add(uv.v0);
         buffer.add(fEncodedFace);
         buffer.add(0f);
 

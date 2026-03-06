@@ -7,9 +7,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
-import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.core.engine.BuilderPackage;
 import com.internal.core.util.JsonUtility;
 
@@ -17,19 +15,22 @@ public class InternalBuilder extends BuilderPackage {
 
     // Internal
     private IBOManager iboManager;
-    private VAOManager vaoManager;
 
     // Base \\
 
     @Override
     protected void get() {
         this.iboManager = get(IBOManager.class);
-        this.vaoManager = get(VAOManager.class);
     }
 
     // Build \\
 
-    public void build(String resourceName, File file, Map<String, File> registry) {
+    /*
+     * VAOInstance is provided by InternalLoader — the same instance that will
+     * be stored in the MeshHandle. IBO binding is recorded in the VAO state,
+     * so this must be the exact same VAOInstance the mesh assembler uses.
+     */
+    public void build(String resourceName, File file, Map<String, File> registry, VAOInstance vaoInstance) {
 
         if (iboManager.hasIBO(resourceName))
             return;
@@ -45,12 +46,13 @@ public class InternalBuilder extends BuilderPackage {
         JsonElement iboEl = json.get("ibo");
 
         if (iboEl.isJsonPrimitive() && iboEl.getAsJsonPrimitive().isString()) {
-            resolveRef(iboEl.getAsString(), resourceName, file, registry);
+            String refName = iboEl.getAsString();
+            resolveRef(refName, resourceName, file, registry, vaoInstance);
+            iboManager.registerIBO(resourceName, iboManager.getIBOHandleDirect(refName));
             return;
         }
 
         if (iboEl.isJsonArray()) {
-            VAOInstance vaoInstance = getVAOInstance(resourceName, file);
             iboManager.registerIBO(resourceName, buildFromData(iboEl.getAsJsonArray(), vaoInstance, file));
             return;
         }
@@ -60,7 +62,8 @@ public class InternalBuilder extends BuilderPackage {
 
     // Resolution \\
 
-    private void resolveRef(String refName, String sourceResourceName, File sourceFile, Map<String, File> registry) {
+    private void resolveRef(String refName, String sourceResourceName, File sourceFile,
+            Map<String, File> registry, VAOInstance vaoInstance) {
 
         if (iboManager.hasIBO(refName))
             return;
@@ -79,7 +82,6 @@ public class InternalBuilder extends BuilderPackage {
         if (!refEl.isJsonArray())
             throwException("Referenced IBO '" + refName + "' must contain an index array.");
 
-        VAOInstance vaoInstance = getVAOInstance(sourceResourceName, sourceFile);
         iboManager.registerIBO(refName, buildFromData(refEl.getAsJsonArray(), vaoInstance, refFile));
     }
 
@@ -104,13 +106,6 @@ public class InternalBuilder extends BuilderPackage {
     }
 
     // Utility \\
-
-    private VAOInstance getVAOInstance(String resourceName, File file) {
-        VAOHandle vaoHandle = vaoManager.getVAOHandleFromName(resourceName);
-        if (vaoHandle == null)
-            throwException("VAO not yet registered for '" + resourceName + "' when building IBO in: " + file.getName());
-        return vaoManager.createVAOInstance(vaoHandle);
-    }
 
     private boolean hasQuadEntries(JsonObject json) {
         if (!json.has("vbo") || json.get("vbo").isJsonNull())

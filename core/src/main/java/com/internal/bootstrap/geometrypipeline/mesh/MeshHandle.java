@@ -1,7 +1,6 @@
 package com.internal.bootstrap.geometrypipeline.mesh;
 
 import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
-import com.internal.bootstrap.geometrypipeline.meshmanager.MeshStruct;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOHandle;
 import com.internal.core.engine.HandlePackage;

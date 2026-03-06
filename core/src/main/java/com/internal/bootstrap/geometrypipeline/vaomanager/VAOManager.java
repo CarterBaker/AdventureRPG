@@ -1,17 +1,16 @@
 package com.internal.bootstrap.geometrypipeline.vaomanager;
 
-import com.internal.bootstrap.geometrypipeline.meshmanager.InternalLoader;
+import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vao.VAOStruct;
 import com.internal.core.engine.ManagerPackage;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class VAOManager extends ManagerPackage {
 
     // Internal
-    private InternalLoader meshLoader;
+    private MeshManager meshManager;
 
     // Retrieval Mapping
     private Object2ObjectOpenHashMap<String, VAOHandle> vaoName2VAOHandle;
@@ -25,7 +24,7 @@ public class VAOManager extends ManagerPackage {
 
     @Override
     protected void get() {
-        this.meshLoader = get(InternalLoader.class);
+        this.meshManager = get(MeshManager.class);
     }
 
     // Handle Registration \\
@@ -37,31 +36,30 @@ public class VAOManager extends ManagerPackage {
     // Accessible \\
 
     /*
-     * Pure registry lookup — no load trigger. For use inside builders
-     * where the owning file is already mid-load.
+     * Pure registry lookup — no load trigger. Safe to call from inside any
+     * builder that is already executing within a load() call.
      */
     public boolean hasVAO(String vaoName) {
         return vaoName2VAOHandle.containsKey(vaoName);
     }
 
     /*
-     * Direct registry lookup — no load trigger. For use inside builders
-     * that are themselves invoked by the mesh loader. Calling
-     * getVAOHandleFromName() from inside a builder would recurse infinitely.
+     * Direct registry lookup — no load trigger. Safe to call from inside any
+     * builder that is already executing within a load() call.
      */
     public VAOHandle getVAOHandleDirect(String vaoName) {
         return vaoName2VAOHandle.get(vaoName);
     }
 
     /*
-     * Auto-triggers load on miss. For external callers only —
-     * never call this from inside a builder that is itself invoked by
-     * the mesh loader, or you will recurse infinitely.
+     * Auto-triggers a full mesh load on miss via MeshManager.
+     * Safe for external callers only — never call from inside a builder
+     * that is itself invoked by the mesh loader or you will recurse infinitely.
      */
     public VAOHandle getVAOHandleFromName(String vaoName) {
         VAOHandle handle = vaoName2VAOHandle.get(vaoName);
         if (handle == null) {
-            meshLoader.request(vaoName);
+            meshManager.request(vaoName);
             handle = vaoName2VAOHandle.get(vaoName);
         }
         return handle;

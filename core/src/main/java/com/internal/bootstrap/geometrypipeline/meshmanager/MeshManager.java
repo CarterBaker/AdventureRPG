@@ -4,13 +4,12 @@ import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshInstance;
+import com.internal.bootstrap.geometrypipeline.mesh.MeshStruct;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOInstance;
 import com.internal.bootstrap.geometrypipeline.vbomanager.VBOManager;
-import com.internal.bootstrap.shaderpipeline.texturemanager.TextureHandle;
-import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.core.engine.ManagerPackage;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -23,7 +22,6 @@ public class MeshManager extends ManagerPackage {
     private VAOManager vaoManager;
     private VBOManager vboManager;
     private IBOManager iboManager;
-    private TextureManager textureManager;
 
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> meshHandleName2MeshHandleID;
@@ -43,7 +41,6 @@ public class MeshManager extends ManagerPackage {
         this.vaoManager = get(VAOManager.class);
         this.vboManager = get(VBOManager.class);
         this.iboManager = get(IBOManager.class);
-        this.textureManager = get(TextureManager.class);
     }
 
     // Bootstrap Management \\
@@ -53,22 +50,8 @@ public class MeshManager extends ManagerPackage {
         meshHandleID2MeshHandle.put(meshID, meshHandle);
     }
 
-    // UV Provider \\
-
-    UVProvider createUVProvider() {
-        return textureName -> {
-            TextureHandle handle = textureManager.getHandleFromTextureName(textureName);
-            return new float[] { handle.getU0(), handle.getV0(), handle.getU1(), handle.getV1() };
-        };
-    }
-
     // On-Demand Loading \\
 
-    /*
-     * Routes an on-demand load through the active InternalLoader.
-     * All 4 builders fire synchronously — VAO, VBO, IBO, and mesh handle
-     * are all registered by the time this returns.
-     */
     public void request(String resourceName) {
         ((InternalLoader) internalLoader).request(resourceName);
     }
@@ -76,11 +59,8 @@ public class MeshManager extends ManagerPackage {
     // Static Mesh Accessors \\
 
     public int getMeshHandleIDFromMeshName(String meshName) {
-
-        if (!meshHandleName2MeshHandleID.containsKey(meshName)) {
+        if (!meshHandleName2MeshHandleID.containsKey(meshName))
             request(meshName);
-        }
-
         return meshHandleName2MeshHandleID.getInt(meshName);
     }
 

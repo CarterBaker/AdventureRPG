@@ -45,12 +45,12 @@ public class TextureManager extends ManagerPackage {
 
     void registerTile(TextureTileData tile, float u0, float v0, float u1, float v1,
             TextureArrayData array, int gpuHandle) {
-
+        UVHandle uvHandle = create(UVHandle.class);
+        uvHandle.constructor(u0, v0, u1, v1);
         TextureHandle handle = create(TextureHandle.class);
-        handle.constructor(tile.getID(), array.getID(), gpuHandle, array.getAtlasSize(), u0, v0, u1, v1);
+        handle.constructor(tile.getID(), array.getID(), gpuHandle, array.getAtlasSize(), uvHandle);
         textureName2Handle.put(tile.getName(), handle);
         tileID2Handle.put(tile.getID(), handle);
-
         if (!arrayID2Handle.containsKey(array.getID())) {
             arrayName2Handle.put(array.getName(), handle);
             arrayID2Handle.put(array.getID(), handle);

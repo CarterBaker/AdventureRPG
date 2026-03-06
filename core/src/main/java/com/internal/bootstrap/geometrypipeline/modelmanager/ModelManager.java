@@ -2,8 +2,8 @@ package com.internal.bootstrap.geometrypipeline.modelmanager;
 
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshInstance;
+import com.internal.bootstrap.geometrypipeline.mesh.MeshStruct;
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
-import com.internal.bootstrap.geometrypipeline.meshmanager.MeshStruct;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;

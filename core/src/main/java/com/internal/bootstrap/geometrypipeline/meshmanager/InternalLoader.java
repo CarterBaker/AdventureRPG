@@ -6,6 +6,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
+import com.internal.bootstrap.geometrypipeline.vbomanager.VBOManager;
+import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
+import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
@@ -16,10 +22,11 @@ public class InternalLoader extends LoaderPackage {
     // Internal
     private File root;
     private MeshManager meshManager;
-    private UVProvider uvProvider;
+    private VAOManager vaoManager;
+    private TextureManager textureManager;
     private int meshDataCount;
 
-    // Builders — all 4 owned and driven by this loader
+    // Builders
     private InternalBuilder internalBuildSystem;
     private com.internal.bootstrap.geometrypipeline.vaomanager.InternalBuilder vaoBuildSystem;
     private com.internal.bootstrap.geometrypipeline.vbomanager.InternalBuilder vboBuildSystem;
@@ -56,16 +63,12 @@ public class InternalLoader extends LoaderPackage {
 
     @Override
     protected void create() {
-        // Buffer builders created here — loader has sole ownership.
-        // VAO must be first so VBO/IBO builders can rely on VAO
-        // already being registered when they run.
         this.vaoBuildSystem = create(
                 com.internal.bootstrap.geometrypipeline.vaomanager.InternalBuilder.class);
         this.vboBuildSystem = create(
                 com.internal.bootstrap.geometrypipeline.vbomanager.InternalBuilder.class);
         this.iboBuildSystem = create(
                 com.internal.bootstrap.geometrypipeline.ibomanager.InternalBuilder.class);
-        // Mesh builder last — assembles from whatever the buffer builders registered
         this.internalBuildSystem = create(InternalBuilder.class);
         this.meshDataCount = 0;
     }
@@ -73,11 +76,8 @@ public class InternalLoader extends LoaderPackage {
     @Override
     protected void get() {
         this.meshManager = get(MeshManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        this.uvProvider = meshManager.createUVProvider();
+        this.vaoManager = get(VAOManager.class);
+        this.textureManager = get(TextureManager.class);
     }
 
     @Override
@@ -85,16 +85,24 @@ public class InternalLoader extends LoaderPackage {
 
         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
 
-        // Feed all 3 buffer builders the file — each extracts only its own
-        // section, resolves any string refs via the registry below, and
-        // pushes the result to its manager. Mesh builder then assembles.
         vaoBuildSystem.build(resourceName, file, resourceName2File);
-        vboBuildSystem.build(resourceName, file, resourceName2File);
-        iboBuildSystem.build(resourceName, file, resourceName2File);
+
+        VAOHandle vaoHandle = vaoManager.getVAOHandleDirect(resourceName);
+
+        if (vaoHandle == null) {
+            meshDataCount++;
+            return;
+        }
+
+        VAOInstance vaoInstance = vaoManager.createVAOInstance(vaoHandle);
+
+        vboBuildSystem.build(resourceName, file, resourceName2File, vaoInstance);
+        iboBuildSystem.build(resourceName, file, resourceName2File, vaoInstance);
 
         try {
             int meshID = meshDataCount++;
-            MeshHandle meshHandle = internalBuildSystem.buildMeshHandle(root, file, meshID, uvProvider);
+            MeshHandle meshHandle = internalBuildSystem.buildMeshHandle(
+                    root, file, meshID, vaoInstance, textureManager);
             if (meshHandle != null)
                 meshManager.addMeshHandle(resourceName, meshID, meshHandle);
         } catch (RuntimeException ex) {
@@ -104,19 +112,13 @@ public class InternalLoader extends LoaderPackage {
 
     // On-Demand Loading \\
 
-    /*
-     * Resolves a resource name to its File and delegates to the engine's
-     * request(File), which removes it from the pending queue if present
-     * and calls load() immediately. Crashes if the resource name is unknown
-     * to this loader — it was never scanned and cannot be loaded on demand.
-     */
     public void request(String resourceName) {
 
         File file = resourceName2File.get(resourceName);
 
         if (file == null)
             throwException(
-                    "On-demand mesh load failed — resource not found in scan registry: \"" + resourceName + "\"");
+                    "On-demand load failed — resource not found in scan registry: \"" + resourceName + "\"");
 
         request(file);
     }

@@ -26,8 +26,6 @@ public class InternalBuilder extends BuilderPackage {
 
     public void build(String resourceName, File file, Map<String, File> registry) {
 
-        // hasVAO — pure lookup, no load trigger. Calling getVAOHandleFromName
-        // here would recurse back into the mesh loader that is calling us.
         if (vaoManager.hasVAO(resourceName))
             return;
 
@@ -39,7 +37,9 @@ public class InternalBuilder extends BuilderPackage {
         JsonElement vaoEl = json.get("vao");
 
         if (vaoEl.isJsonPrimitive() && vaoEl.getAsJsonPrimitive().isString()) {
-            resolveRef(vaoEl.getAsString(), file, registry);
+            String refName = vaoEl.getAsString();
+            resolveRef(refName, file, registry);
+            vaoManager.registerVAO(resourceName, vaoManager.getVAOHandleDirect(refName));
             return;
         }
 
@@ -55,9 +55,7 @@ public class InternalBuilder extends BuilderPackage {
 
     private void resolveRef(String refName, File sourceFile, Map<String, File> registry) {
 
-        // Ref points to a different resource — hasVAO is still correct here.
-        // If not present, we load the ref file directly rather than triggering
-        // the mesh loader's request path, so no recursion risk.
+        // Direct file parse below — no mesh loader trigger, no recursion risk.
         if (vaoManager.hasVAO(refName))
             return;
 

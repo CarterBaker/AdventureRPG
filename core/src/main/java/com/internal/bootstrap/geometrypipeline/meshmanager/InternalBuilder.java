@@ -8,32 +8,34 @@ import com.google.gson.JsonObject;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
-import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOHandle;
 import com.internal.bootstrap.geometrypipeline.vbomanager.VBOManager;
+import com.internal.bootstrap.shaderpipeline.texturemanager.TextureHandle;
+import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import com.internal.bootstrap.shaderpipeline.texturemanager.UVHandle;
 import com.internal.core.engine.BuilderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
-
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 class InternalBuilder extends BuilderPackage {
 
     /*
-     * Pure assembler. Buffer builders have already parsed, uploaded and
-     * registered their data before this is called. This builder retrieves
-     * handles from each manager using direct lookups only — never the
-     * load-triggering accessors — to avoid recursing back into the mesh loader.
+     * Pure assembler. All three buffer builders have already parsed, uploaded,
+     * and registered their data before this is called. Receives the single
+     * VAOInstance created in InternalLoader.load() — the same instance that
+     * had attribute pointers configured during VBO upload.
      */
 
     // Internal
     private VAOManager vaoManager;
     private VBOManager vboManager;
     private IBOManager iboManager;
+    private TextureManager textureManager;
 
     // Base \\
 
@@ -42,35 +44,25 @@ class InternalBuilder extends BuilderPackage {
         this.vaoManager = get(VAOManager.class);
         this.vboManager = get(VBOManager.class);
         this.iboManager = get(IBOManager.class);
+        this.textureManager = get(TextureManager.class);
     }
 
     // Build \\
 
-    MeshHandle buildMeshHandle(File root, File file, int meshID, UVProvider uvProvider) {
+    MeshHandle buildMeshHandle(File root, File file, int meshID, VAOInstance vaoInstance,
+            TextureManager textureManager) {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-
-        // Direct lookup only — getVAOHandleFromName() triggers meshLoader.request()
-        // which would recurse infinitely back into this builder.
-        VAOHandle vaoTemplate = vaoManager.getVAOHandleDirect(resourceName);
-        if (vaoTemplate == null)
-            return null;
-
-        VAOInstance vaoInstance = vaoManager.createVAOInstance(vaoTemplate);
 
         VBOHandle vboHandle;
         IBOHandle iboHandle;
 
         if (hasQuadEntries(json)) {
-            // Quad data is generated inline — buffer builders correctly skipped this
-            QuadExpansionResult expansion = expandVBO(json, vaoInstance, file, uvProvider);
+            QuadExpansionResult expansion = expandVBO(json, vaoInstance, file);
             vboHandle = vboManager.addVBOFromData(resourceName, expansion.vertices, vaoInstance);
             iboHandle = iboManager.addIBOFromData(resourceName, expansion.indices, vaoInstance);
         } else {
-            // Direct lookups only — buffer builders already registered these.
-            // Using getVBOHandleFromName/getIBOHandleFromName here would trigger
-            // meshLoader.request() and recurse infinitely.
             vboHandle = vboManager.getVBOHandleDirect(resourceName);
             iboHandle = iboManager.getIBOHandleDirect(resourceName);
         }
@@ -99,7 +91,7 @@ class InternalBuilder extends BuilderPackage {
 
     // Quad Expansion \\
 
-    private QuadExpansionResult expandVBO(JsonObject json, VAOInstance vaoInstance, File file, UVProvider uvProvider) {
+    private QuadExpansionResult expandVBO(JsonObject json, VAOInstance vaoInstance, File file) {
 
         int vertStride = vaoInstance.getVAOStruct().vertStride;
         FloatArrayList vertices = new FloatArrayList();
@@ -120,7 +112,7 @@ class InternalBuilder extends BuilderPackage {
 
             } else if (element.isJsonObject()) {
                 expandQuad(element.getAsJsonObject(), vertices, quadIndices, currentVertex, vertStride, vaoInstance,
-                        file, uvProvider);
+                        file);
                 currentVertex += 4;
 
             } else {
@@ -159,8 +151,7 @@ class InternalBuilder extends BuilderPackage {
             int baseVertex,
             int vertStride,
             VAOInstance vaoInstance,
-            File file,
-            UVProvider uvProvider) {
+            File file) {
 
         if (!quadObj.has("quad") || quadObj.get("quad").isJsonNull())
             throwException("Quad object missing 'quad' array in file: " + file.getName());
@@ -176,8 +167,9 @@ class InternalBuilder extends BuilderPackage {
             validateVAOUVCompatibility(vaoInstance, file);
 
             int posStride = vertStride - 2;
-            float[] uvs = uvProvider.getUVs(quadObj.get("texture").getAsString());
-            float u0 = uvs[0], v0 = uvs[1], u1 = uvs[2], v1 = uvs[3];
+            TextureHandle textureHandle = textureManager.getHandleFromTextureName(
+                    quadObj.get("texture").getAsString());
+            UVHandle uv = textureHandle.getUVHandle();
             float[][] localUVs = resolveLocalUVs(quadObj, file);
 
             for (int i = 0; i < 4; i++) {
@@ -187,8 +179,8 @@ class InternalBuilder extends BuilderPackage {
                             + " floats, expected " + posStride + " in file: " + file.getName());
                 for (JsonElement val : pos)
                     vertices.add(val.getAsFloat());
-                vertices.add(snapUV(localUVs[i][0], u0, u1));
-                vertices.add(snapUV(localUVs[i][1], v0, v1));
+                vertices.add(snapUV(localUVs[i][0], uv.u0, uv.u1));
+                vertices.add(snapUV(localUVs[i][1], uv.v0, uv.v1));
             }
 
         } else {

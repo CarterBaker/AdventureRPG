@@ -6,9 +6,7 @@ import java.util.Map;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOHandle;
 import com.internal.core.engine.BuilderPackage;
 import com.internal.core.util.JsonUtility;
@@ -17,19 +15,23 @@ public class InternalBuilder extends BuilderPackage {
 
     // Internal
     private VBOManager vboManager;
-    private VAOManager vaoManager;
 
     // Base \\
 
     @Override
     protected void get() {
         this.vboManager = get(VBOManager.class);
-        this.vaoManager = get(VAOManager.class);
     }
 
     // Build \\
 
-    public void build(String resourceName, File file, Map<String, File> registry) {
+    /*
+     * VAOInstance is provided by InternalLoader — the same instance that will
+     * be stored in the MeshHandle. GL attribute pointers are baked into the VAO
+     * when glVertexAttribPointer is called during upload, so this must be the
+     * exact same VAOInstance the mesh assembler uses or nothing draws.
+     */
+    public void build(String resourceName, File file, Map<String, File> registry, VAOInstance vaoInstance) {
 
         if (vboManager.hasVBO(resourceName))
             return;
@@ -45,12 +47,13 @@ public class InternalBuilder extends BuilderPackage {
             return;
 
         if (vboEl.isJsonPrimitive() && vboEl.getAsJsonPrimitive().isString()) {
-            resolveRef(vboEl.getAsString(), resourceName, file, registry);
+            String refName = vboEl.getAsString();
+            resolveRef(refName, resourceName, file, registry, vaoInstance);
+            vboManager.registerVBO(resourceName, vboManager.getVBOHandleDirect(refName));
             return;
         }
 
         if (vboEl.isJsonArray()) {
-            VAOInstance vaoInstance = getVAOInstance(resourceName, file);
             vboManager.registerVBO(resourceName, buildFromData(vboEl.getAsJsonArray(), vaoInstance, file));
             return;
         }
@@ -60,7 +63,8 @@ public class InternalBuilder extends BuilderPackage {
 
     // Resolution \\
 
-    private void resolveRef(String refName, String sourceResourceName, File sourceFile, Map<String, File> registry) {
+    private void resolveRef(String refName, String sourceResourceName, File sourceFile,
+            Map<String, File> registry, VAOInstance vaoInstance) {
 
         if (vboManager.hasVBO(refName))
             return;
@@ -79,7 +83,6 @@ public class InternalBuilder extends BuilderPackage {
         if (!refEl.isJsonArray())
             throwException("Referenced VBO '" + refName + "' must contain a vertex array.");
 
-        VAOInstance vaoInstance = getVAOInstance(sourceResourceName, sourceFile);
         vboManager.registerVBO(refName, buildFromData(refEl.getAsJsonArray(), vaoInstance, refFile));
     }
 
@@ -107,13 +110,6 @@ public class InternalBuilder extends BuilderPackage {
     }
 
     // Utility \\
-
-    private VAOInstance getVAOInstance(String resourceName, File file) {
-        VAOHandle vaoHandle = vaoManager.getVAOHandleFromName(resourceName);
-        if (vaoHandle == null)
-            throwException("VAO not yet registered for '" + resourceName + "' when building VBO in: " + file.getName());
-        return vaoManager.createVAOInstance(vaoHandle);
-    }
 
     private boolean containsQuadObjects(JsonArray array) {
         for (JsonElement el : array)
