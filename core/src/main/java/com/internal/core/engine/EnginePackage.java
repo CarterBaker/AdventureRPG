@@ -8,12 +8,12 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
 import com.internal.core.engine.settings.Settings;
-import com.internal.core.kernel.threadmanager.AsyncStructConsumer;
-import com.internal.core.kernel.threadmanager.AsyncStructConsumerMulti;
-import com.internal.core.kernel.threadmanager.BiSyncAsyncConsumer;
+import com.internal.core.kernel.SyncConsumer.AsyncStructConsumer;
+import com.internal.core.kernel.SyncConsumer.AsyncStructConsumerMulti;
+import com.internal.core.kernel.SyncConsumer.BiSyncAsyncConsumer;
+import com.internal.core.kernel.SyncConsumer.SyncStructConsumer;
+import com.internal.core.kernel.thread.ThreadHandle;
 import com.internal.core.kernel.threadmanager.InternalThreadManager;
-import com.internal.core.kernel.threadmanager.SyncStructConsumer;
-import com.internal.core.kernel.threadmanager.ThreadHandle;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 

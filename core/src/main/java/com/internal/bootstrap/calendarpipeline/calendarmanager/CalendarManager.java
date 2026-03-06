@@ -1,5 +1,6 @@
 package com.internal.bootstrap.calendarpipeline.calendarmanager;
 
+import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import com.internal.core.engine.ManagerPackage;
 
 public class CalendarManager extends ManagerPackage {
@@ -11,7 +12,7 @@ public class CalendarManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
     }
 
     // Calendar Management \\
@@ -28,7 +29,7 @@ public class CalendarManager extends ManagerPackage {
      */
     public CalendarHandle getCalendarHandle() {
         if (calendarHandle == null)
-            ((InternalLoadManager) internalLoader).loadNow();
+            ((InternalLoader) internalLoader).loadNow();
         if (calendarHandle == null)
             throwException("[CalendarManager] Calendar could not be loaded.");
         return calendarHandle;

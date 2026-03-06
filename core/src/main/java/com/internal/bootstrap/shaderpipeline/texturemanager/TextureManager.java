@@ -1,5 +1,9 @@
 package com.internal.bootstrap.shaderpipeline.texturemanager;
 
+import com.internal.bootstrap.shaderpipeline.Texture.TextureArrayData;
+import com.internal.bootstrap.shaderpipeline.Texture.TextureHandle;
+import com.internal.bootstrap.shaderpipeline.Texture.TextureTileData;
+import com.internal.bootstrap.shaderpipeline.Texture.UVHandle;
 import com.internal.core.engine.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -23,7 +27,7 @@ public class TextureManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.textureName2Handle = new Object2ObjectOpenHashMap<>();
         this.tileID2Handle = new Int2ObjectOpenHashMap<>();
         this.arrayName2Handle = new Object2ObjectOpenHashMap<>();
@@ -38,7 +42,7 @@ public class TextureManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String arrayName) {
-        ((InternalLoadManager) internalLoader).request(arrayName);
+        ((InternalLoader) internalLoader).request(arrayName);
     }
 
     // Registration \\

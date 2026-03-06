@@ -4,6 +4,8 @@ import java.io.File;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOData;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
@@ -47,7 +49,7 @@ public class UBOManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
 
         this.nextID = 0;
         this.nextAvailableBinding = 0;
@@ -73,7 +75,7 @@ public class UBOManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String blockName) {
-        ((InternalLoadManager) internalLoader).request(blockName);
+        ((InternalLoader) internalLoader).request(blockName);
     }
 
     // UBO Management \\

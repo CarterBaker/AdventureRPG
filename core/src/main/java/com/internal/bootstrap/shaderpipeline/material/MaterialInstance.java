@@ -1,8 +1,8 @@
 package com.internal.bootstrap.shaderpipeline.material;
 
-import com.internal.bootstrap.shaderpipeline.shadermanager.ShaderHandle;
+import com.internal.bootstrap.shaderpipeline.Shader.ShaderHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.core.engine.InstancePackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;

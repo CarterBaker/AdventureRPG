@@ -2,7 +2,7 @@ package com.internal.bootstrap.calendarpipeline.clockmanager;
 
 import java.time.Instant;
 
-import com.internal.bootstrap.calendarpipeline.calendarmanager.CalendarHandle;
+import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import com.internal.bootstrap.calendarpipeline.calendarmanager.CalendarManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;

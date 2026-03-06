@@ -2,7 +2,7 @@ package com.internal.bootstrap.worldpipeline.worldrendermanager;
 
 import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
-import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
+import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.InstancePackage;
 
 public class WorldRenderInstance extends InstancePackage {

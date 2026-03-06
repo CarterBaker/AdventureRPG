@@ -1,6 +1,6 @@
 package com.internal.bootstrap.calendarpipeline.clockmanager;
 
-import com.internal.bootstrap.calendarpipeline.calendarmanager.CalendarHandle;
+import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
 

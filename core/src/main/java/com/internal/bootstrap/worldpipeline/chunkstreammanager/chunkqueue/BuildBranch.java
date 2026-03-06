@@ -6,7 +6,7 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.kernel.threadmanager.ThreadHandle;
+import com.internal.core.kernel.thread.ThreadHandle;
 
 public class BuildBranch extends BranchPackage {
 

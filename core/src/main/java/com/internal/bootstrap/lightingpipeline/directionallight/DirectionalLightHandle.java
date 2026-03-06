@@ -1,6 +1,6 @@
 package com.internal.bootstrap.lightingpipeline.directionallight;
 
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.util.mathematics.vectors.Vector3;
 

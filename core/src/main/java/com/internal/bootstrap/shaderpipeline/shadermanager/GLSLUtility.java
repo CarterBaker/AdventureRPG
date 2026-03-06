@@ -6,6 +6,8 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.utils.BufferUtils;
+import com.internal.bootstrap.shaderpipeline.Shader.ShaderData;
+import com.internal.bootstrap.shaderpipeline.Shader.ShaderDefinitionData;
 import com.internal.core.engine.UtilityPackage;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

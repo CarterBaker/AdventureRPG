@@ -1,6 +1,6 @@
 package com.internal.runtime.debug;
 
-import com.internal.bootstrap.shaderpipeline.passmanager.PassHandle;
+import com.internal.bootstrap.shaderpipeline.pass.PassHandle;
 import com.internal.bootstrap.shaderpipeline.passmanager.PassManager;
 import com.internal.core.engine.SystemPackage;
 

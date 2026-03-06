@@ -7,7 +7,7 @@ import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
+import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;

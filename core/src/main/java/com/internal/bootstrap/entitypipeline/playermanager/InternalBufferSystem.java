@@ -1,6 +1,6 @@
 package com.internal.bootstrap.entitypipeline.playermanager;
 
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.core.engine.SystemPackage;

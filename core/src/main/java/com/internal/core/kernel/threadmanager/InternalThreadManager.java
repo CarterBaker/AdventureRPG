@@ -5,6 +5,11 @@ import java.util.concurrent.Future;
 import com.internal.core.engine.AsyncContainerPackage;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.SyncContainerPackage;
+import com.internal.core.kernel.SyncConsumer.AsyncStructConsumer;
+import com.internal.core.kernel.SyncConsumer.AsyncStructConsumerMulti;
+import com.internal.core.kernel.SyncConsumer.BiSyncAsyncConsumer;
+import com.internal.core.kernel.SyncConsumer.SyncStructConsumer;
+import com.internal.core.kernel.thread.ThreadHandle;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -17,7 +22,7 @@ public class InternalThreadManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.threadName2ThreadHandle = new Object2ObjectOpenHashMap<>();
     }
 
@@ -31,7 +36,7 @@ public class InternalThreadManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String resourceName) {
-        ((InternalLoadManager) internalLoader).request(resourceName);
+        ((InternalLoader) internalLoader).request(resourceName);
     }
 
     // Thread Management \\

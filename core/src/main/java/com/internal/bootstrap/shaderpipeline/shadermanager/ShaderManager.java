@@ -1,6 +1,7 @@
 package com.internal.bootstrap.shaderpipeline.shadermanager;
 
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.Shader.ShaderHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.ManagerPackage;
 
@@ -22,7 +23,7 @@ public class ShaderManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.shaderName2ShaderID = new Object2IntOpenHashMap<>();
         this.shaderID2Shader = new Int2ObjectOpenHashMap<>();
         this.shaderID2GPUHandle = new Int2IntArrayMap();
@@ -46,7 +47,7 @@ public class ShaderManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String shaderName) {
-        ((InternalLoadManager) internalLoader).request(shaderName);
+        ((InternalLoader) internalLoader).request(shaderName);
     }
 
     // Shader Management \\

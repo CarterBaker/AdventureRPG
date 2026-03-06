@@ -2,6 +2,7 @@ package com.internal.bootstrap.shaderpipeline.passmanager;
 
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import com.internal.bootstrap.shaderpipeline.pass.PassHandle;
 import com.internal.bootstrap.shaderpipeline.pass.PassInstance;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.core.engine.ManagerPackage;
@@ -29,7 +30,7 @@ public class PassManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.passName2PassID = new Object2IntOpenHashMap<>();
         this.passID2Pass = new Int2ObjectOpenHashMap<>();
     }
@@ -43,7 +44,7 @@ public class PassManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String passName) {
-        ((InternalLoadManager) internalLoader).request(passName);
+        ((InternalLoader) internalLoader).request(passName);
     }
 
     // Pass Management \\

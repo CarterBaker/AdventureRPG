@@ -1,8 +1,10 @@
 package com.internal.bootstrap.entitypipeline.entitymanager;
 
+import com.internal.bootstrap.entitypipeline.entity.EntityData;
+import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionUtility;
-import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
-import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
+import com.internal.bootstrap.worldpipeline.world.WorldHandle;
+import com.internal.bootstrap.worldpipeline.worldmanager.WorldManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
@@ -12,7 +14,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 public class EntityManager extends ManagerPackage {
 
     // Internal
-    private WorldStreamManager worldStreamManager;
+    private WorldManager worldManager;
 
     // Template Retrieval Mapping
     private Object2IntOpenHashMap<String> entityDataName2EntityDataID;
@@ -22,20 +24,20 @@ public class EntityManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.entityDataName2EntityDataID = new Object2IntOpenHashMap<>();
         this.entityDataID2EntityData = new Int2ObjectOpenHashMap<>();
     }
 
     @Override
     protected void get() {
-        this.worldStreamManager = get(WorldStreamManager.class);
+        this.worldManager = get(WorldManager.class);
     }
 
     // On-Demand Loading \\
 
     public void request(String templateName) {
-        ((InternalLoadManager) internalLoader).request(templateName);
+        ((InternalLoader) internalLoader).request(templateName);
     }
 
     // Template Management \\
@@ -66,12 +68,12 @@ public class EntityManager extends ManagerPackage {
     }
 
     public EntityHandle createEntity(EntityData entityData) {
-        WorldHandle activeWorldHandle = worldStreamManager.getActiveWorld();
+        WorldHandle activeWorldHandle = worldManager.getActiveWorld();
         long randomChunk = WorldPositionUtility.getRandomChunk(activeWorldHandle);
         EntityHandle entityHandle = create(EntityHandle.class);
         entityHandle.constructor(
                 entityData,
-                worldStreamManager.getActiveWorld(),
+                worldManager.getActiveWorld(),
                 new Vector3(),
                 randomChunk,
                 entityData.getRandomSize(),

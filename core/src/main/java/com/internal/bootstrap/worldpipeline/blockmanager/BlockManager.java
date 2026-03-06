@@ -20,7 +20,7 @@ public class BlockManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.internalBufferSystem = create(InternalBufferSystem.class);
         this.blockName2BlockID = new Object2IntOpenHashMap<>();
         this.blockID2Block = new Int2ObjectOpenHashMap<>();
@@ -29,7 +29,7 @@ public class BlockManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String blockName) {
-        ((InternalLoadManager) internalLoader).request(blockName);
+        ((InternalLoader) internalLoader).request(blockName);
     }
 
     // Block Management \\

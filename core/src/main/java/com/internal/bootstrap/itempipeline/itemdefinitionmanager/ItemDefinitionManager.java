@@ -1,5 +1,6 @@
 package com.internal.bootstrap.itempipeline.itemdefinitionmanager;
 
+import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionData;
 import com.internal.bootstrap.itempipeline.util.ItemRegistryUtility;
 import com.internal.core.engine.ManagerPackage;
 
@@ -16,7 +17,7 @@ public class ItemDefinitionManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.itemName2ItemID = new Object2IntOpenHashMap<>();
         this.itemID2Item = new Int2ObjectOpenHashMap<>();
     }
@@ -24,7 +25,7 @@ public class ItemDefinitionManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String itemName) {
-        ((InternalLoadManager) internalLoader).request(itemName);
+        ((InternalLoader) internalLoader).request(itemName);
     }
 
     // Item Management \\

@@ -1,6 +1,6 @@
 package com.internal.bootstrap.worldpipeline.blockmanager;
 
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;

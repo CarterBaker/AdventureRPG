@@ -2,10 +2,10 @@ package com.internal.bootstrap.worldpipeline.megachunk;
 
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstance;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
-import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;

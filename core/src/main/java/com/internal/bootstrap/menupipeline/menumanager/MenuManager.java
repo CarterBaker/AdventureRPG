@@ -43,7 +43,7 @@ public class MenuManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.raycastSystem = create(RaycastSystem.class);
         this.menuName2MenuID = new Object2IntOpenHashMap<>();
         this.menuID2Handle = new Int2ObjectOpenHashMap<>();
@@ -145,7 +145,7 @@ public class MenuManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String menuName) {
-        ((InternalLoadManager) internalLoader).request(menuName);
+        ((InternalLoader) internalLoader).request(menuName);
     }
 
     // Menu Management \\

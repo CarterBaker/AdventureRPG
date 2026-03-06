@@ -17,7 +17,7 @@ public class BiomeManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.biomeName2BiomeID = new Object2ShortOpenHashMap<>();
         this.biomeID2Biome = new Short2ObjectOpenHashMap<>();
     }
@@ -25,7 +25,7 @@ public class BiomeManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String biomeName) {
-        ((InternalLoadManager) internalLoader).request(biomeName);
+        ((InternalLoader) internalLoader).request(biomeName);
     }
 
     // Biome Management \\

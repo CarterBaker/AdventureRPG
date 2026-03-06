@@ -27,7 +27,7 @@ public class InternalLoader extends LoaderPackage {
     private int meshDataCount;
 
     // Builders
-    private InternalBuilder internalBuildSystem;
+    private InternalBuilder internalBuilder;
     private com.internal.bootstrap.geometrypipeline.vaomanager.InternalBuilder vaoBuildSystem;
     private com.internal.bootstrap.geometrypipeline.vbomanager.InternalBuilder vboBuildSystem;
     private com.internal.bootstrap.geometrypipeline.ibomanager.InternalBuilder iboBuildSystem;
@@ -69,7 +69,7 @@ public class InternalLoader extends LoaderPackage {
                 com.internal.bootstrap.geometrypipeline.vbomanager.InternalBuilder.class);
         this.iboBuildSystem = create(
                 com.internal.bootstrap.geometrypipeline.ibomanager.InternalBuilder.class);
-        this.internalBuildSystem = create(InternalBuilder.class);
+        this.internalBuilder = create(InternalBuilder.class);
         this.meshDataCount = 0;
     }
 
@@ -101,7 +101,7 @@ public class InternalLoader extends LoaderPackage {
 
         try {
             int meshID = meshDataCount++;
-            MeshHandle meshHandle = internalBuildSystem.buildMeshHandle(
+            MeshHandle meshHandle = internalBuilder.buildMeshHandle(
                     root, file, meshID, vaoInstance, textureManager);
             if (meshHandle != null)
                 meshManager.addMeshHandle(resourceName, meshID, meshHandle);

@@ -2,7 +2,7 @@ package com.internal.bootstrap.renderpipeline.renderbatch;
 
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.core.engine.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

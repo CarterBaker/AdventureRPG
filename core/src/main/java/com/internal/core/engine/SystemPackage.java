@@ -3,11 +3,11 @@ package com.internal.core.engine;
 import java.util.concurrent.Future;
 
 import com.internal.core.engine.settings.Settings;
-import com.internal.core.kernel.threadmanager.AsyncStructConsumer;
-import com.internal.core.kernel.threadmanager.AsyncStructConsumerMulti;
-import com.internal.core.kernel.threadmanager.BiSyncAsyncConsumer;
-import com.internal.core.kernel.threadmanager.SyncStructConsumer;
-import com.internal.core.kernel.threadmanager.ThreadHandle;
+import com.internal.core.kernel.SyncConsumer.AsyncStructConsumer;
+import com.internal.core.kernel.SyncConsumer.AsyncStructConsumerMulti;
+import com.internal.core.kernel.SyncConsumer.BiSyncAsyncConsumer;
+import com.internal.core.kernel.SyncConsumer.SyncStructConsumer;
+import com.internal.core.kernel.thread.ThreadHandle;
 
 public abstract class SystemPackage extends EngineUtility {
 

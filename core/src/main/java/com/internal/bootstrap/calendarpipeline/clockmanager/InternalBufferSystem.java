@@ -1,6 +1,6 @@
 package com.internal.bootstrap.calendarpipeline.clockmanager;
 
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.SystemPackage;
 

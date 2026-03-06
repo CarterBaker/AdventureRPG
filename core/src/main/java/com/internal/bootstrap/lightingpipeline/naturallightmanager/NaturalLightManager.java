@@ -2,7 +2,7 @@ package com.internal.bootstrap.lightingpipeline.naturallightmanager;
 
 import com.internal.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import com.internal.bootstrap.lightingpipeline.directionallight.DirectionalLightHandle;
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.ManagerPackage;
 

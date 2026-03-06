@@ -1,8 +1,9 @@
 package com.internal.bootstrap.shaderpipeline.materialmanager;
 
+import com.internal.bootstrap.shaderpipeline.material.MaterialHandle;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.shadermanager.ShaderManager;
-import com.internal.bootstrap.shaderpipeline.ubomanager.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
 import com.internal.core.engine.ManagerPackage;
@@ -30,7 +31,7 @@ public class MaterialManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.materialName2MaterialID = new Object2IntOpenHashMap<>();
         this.materialID2Material = new Int2ObjectOpenHashMap<>();
     }
@@ -43,7 +44,7 @@ public class MaterialManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String materialName) {
-        ((InternalLoadManager) internalLoader).request(materialName);
+        ((InternalLoader) internalLoader).request(materialName);
     }
 
     // Material Management \\

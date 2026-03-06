@@ -31,7 +31,7 @@ public class SpriteManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalLoadManager.class);
+        create(InternalLoader.class);
         this.spriteName2SpriteHandle = new Object2ObjectOpenHashMap<>();
     }
 
@@ -52,7 +52,7 @@ public class SpriteManager extends ManagerPackage {
     // On-Demand Loading \\
 
     public void request(String spriteName) {
-        ((InternalLoadManager) internalLoader).request(spriteName);
+        ((InternalLoader) internalLoader).request(spriteName);
     }
 
     // Sprite Management \\
@@ -81,7 +81,7 @@ public class SpriteManager extends ManagerPackage {
         if (original == null)
             throwException("Sprite not found after load: '" + spriteName + "'");
 
-        InternalLoadManager loader = (InternalLoadManager) internalLoader;
+        InternalLoader loader = (InternalLoader) internalLoader;
         MeshHandle defaultMeshHandle = loader.getDefaultMeshHandle();
         int defaultMaterialID = loader.getDefaultMaterialID();
 

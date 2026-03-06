@@ -1,6 +1,6 @@
 package com.internal.bootstrap.worldpipeline.util;
 
-import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldHandle;
+import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;

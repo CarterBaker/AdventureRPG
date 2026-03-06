@@ -1,6 +1,6 @@
 package com.internal.bootstrap.physicspipeline.moveementmanager.movement;
 
-import com.internal.bootstrap.entitypipeline.entitymanager.StatisticsStruct;
+import com.internal.bootstrap.entitypipeline.statistics.StatisticsStruct;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.util.mathematics.vectors.Vector3;
 import com.internal.core.util.mathematics.vectors.Vector3Int;
