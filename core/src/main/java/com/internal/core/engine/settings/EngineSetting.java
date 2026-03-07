@@ -23,12 +23,14 @@ public class EngineSetting {
         public static final String PASS_JSON_PATH = "processingPasses";
         public static final String MESH_JSON_PATH = "mesh";
         public static final String WORLD_TEXTURE_PATH = "worlds";
-        public static final String CALENDAR_JSON_PATH = "calendar/Calendar.json";
+        public static final String CALENDAR_JSON_PATH = "calendars";
         public static final String BLOCK_JSON_PATH = "blocks";
         public static final String BIOME_JSON_PATH = "biomes";
         public static final String ENTITY_JSON_PATH = "entities";
+        public static final String BEHAVIOR_JSON_PATH = "behaviors";
         public static final String MENU_JSON_PATH = "menus";
         public static final String ITEM_JSON_PATH = "items";
+        public static final String TOOL_TYPE_JSON_PATH = "tools";
 
         // File Extension Settings
 
@@ -100,15 +102,15 @@ public class EngineSetting {
         public static final int MEGA_CHUNK_SIZE = 4;
         public static final int WORLD_HEIGHT = 64;
 
-        // Mesh
+        // Mesh settings
         public static final int DEFAULT_BLOCK_DIRECTION = 4;
         public static final int CHUNK_VERT_BUFFER = 128;
         public static final int MESH_VERT_LIMIT = 32767;
 
-        // Biome
+        // Biome settings
         public static final String DEFAULT_BIOME_NAME = "Empty";
 
-        // World
+        // World settings
         public static final int CHUNKS_PER_PIXEL = 32;
         public static final String CHUNK_VAO = "util/vao/ChunkVAO";
         public static final String STARTING_WORLD = "TerraArcana";
@@ -121,10 +123,19 @@ public class EngineSetting {
         public static final int MEGA_POOL_MAX_OVERFLOW = 8;
         public static final int MEGA_ASSESS_PER_FRAME = GRID_SLOTS_SCAN_PER_FRAME / MEGA_CHUNK_SIZE;
 
-        // Player
-        public static final String DEFAULT_PLAYER_RACE = "humanoid";
+        // Player settings
+        public static final String DEFAULT_PLAYER_RACE = "Humanoid";
         public static final float BLOCK_PLACEMENT_INTERVAL = 0.1f;
 
-        // Lighting
+        // Movement Settings — BASE_WALKING_SPEED removed, superseded
+        public static final float MOVEMENT_SCALE = 1.5f; // multiplier on all movement speeds for game feel
+        public static final float JUMP_SCALE = 1.8f; // multiplier on jump impulse for game feel
+
+        // Physics settings
+        public static final float MOVEMENT_ACCELERATION = 8.0f;
+        public static final float GRAVITY_FORCE = 9.8f;
+        public static final float JUMP_HOLD_FRACTION = 0.4f; // hold force as fraction of impulse per second
+
+        // Lighting settings
         public static final int LUNAR_CYCLE_DAYS = 28;
 }

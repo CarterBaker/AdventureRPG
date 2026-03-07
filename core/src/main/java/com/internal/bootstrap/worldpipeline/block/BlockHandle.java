@@ -8,7 +8,7 @@ public class BlockHandle extends HandlePackage {
 
     // Identity
     private String blockName;
-    private short blockID; // short — matches BlockPaletteHandle storage
+    private short blockID;
     private DynamicGeometryType geometry;
 
     // Textures
@@ -16,23 +16,30 @@ public class BlockHandle extends HandlePackage {
     private int[] faceTextures;
     private BlockRotationType rotationType;
 
+    // Breaking
+    private int breakTier;
+    private short requiredToolTypeID;
+    private int durability;
+
     // Constructor \\
 
     public void constructor(
             String blockName,
-            short blockID, // short — stable hash from RegistryUtility
+            short blockID,
             DynamicGeometryType geometry,
             BlockRotationType rotationType,
             int materialID,
             int northTexture, int eastTexture, int southTexture,
-            int westTexture, int upTexture, int downTexture) {
+            int westTexture, int upTexture, int downTexture,
+            int breakTier,
+            short requiredToolTypeID,
+            int durability) {
 
         this.blockName = blockName;
         this.blockID = blockID;
         this.geometry = geometry;
         this.rotationType = rotationType;
         this.materialID = materialID;
-
         this.faceTextures = new int[Direction3Vector.LENGTH];
         this.faceTextures[Direction3Vector.NORTH.ordinal()] = northTexture;
         this.faceTextures[Direction3Vector.EAST.ordinal()] = eastTexture;
@@ -40,6 +47,9 @@ public class BlockHandle extends HandlePackage {
         this.faceTextures[Direction3Vector.WEST.ordinal()] = westTexture;
         this.faceTextures[Direction3Vector.UP.ordinal()] = upTexture;
         this.faceTextures[Direction3Vector.DOWN.ordinal()] = downTexture;
+        this.breakTier = breakTier;
+        this.requiredToolTypeID = requiredToolTypeID;
+        this.durability = durability;
     }
 
     // Accessible \\
@@ -50,7 +60,7 @@ public class BlockHandle extends HandlePackage {
 
     public short getBlockID() {
         return blockID;
-    } // short — safe to write directly to chunk palette
+    }
 
     public DynamicGeometryType getGeometry() {
         return geometry;
@@ -66,5 +76,21 @@ public class BlockHandle extends HandlePackage {
 
     public int getTextureForFace(Direction3Vector direction) {
         return faceTextures[direction.ordinal()];
+    }
+
+    public int getBreakTier() {
+        return breakTier;
+    }
+
+    public short getRequiredToolTypeID() {
+        return requiredToolTypeID;
+    }
+
+    public int getDurability() {
+        return durability;
+    }
+
+    public boolean isUnbreakable() {
+        return breakTier < 0;
     }
 }

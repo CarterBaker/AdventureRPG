@@ -1,0 +1,7 @@
+{
+  "tools": [
+    { "name": "Pickaxe", "model": "models/tools/pickaxe" },
+    { "name": "Shovel",  "model": "models/tools/shovel"  },
+    { "name": "Axe",     "model": "models/tools/axe"     }
+  ]
+}

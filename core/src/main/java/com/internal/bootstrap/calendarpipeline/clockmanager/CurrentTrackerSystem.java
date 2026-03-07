@@ -1,7 +1,5 @@
 package com.internal.bootstrap.calendarpipeline.clockmanager;
 
-import java.time.Instant;
-
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
 
@@ -10,12 +8,13 @@ public class CurrentTrackerSystem extends SystemPackage {
     // Internal
     private int MINUTES_PER_HOUR;
     private int HOURS_PER_DAY;
-    private int DAYS_PER_DAY;
     private float MIDDAY_OFFSET;
 
-    private ClockHandle clockHandle;
-
+    // Per-world — set on awake and on world switch
+    private float daysPerDay;
     private long gameEpochStart;
+
+    private ClockHandle clockHandle;
 
     // Tracking
     private long lastDay;
@@ -24,73 +23,71 @@ public class CurrentTrackerSystem extends SystemPackage {
 
     @Override
     protected void create() {
-
-        // Internal
         this.MINUTES_PER_HOUR = EngineSetting.MINUTES_PER_HOUR;
         this.HOURS_PER_DAY = EngineSetting.HOURS_PER_DAY;
-        this.DAYS_PER_DAY = EngineSetting.DAYS_PER_DAY;
         this.MIDDAY_OFFSET = EngineSetting.MIDDAY_OFFSET;
-
-        // Time Tracking
         this.lastDay = -1;
+    }
+
+    // Assignment \\
+
+    void assignTimeData(ClockHandle clockHandle, float daysPerDay, long gameEpochStart) {
+        this.clockHandle = clockHandle;
+        this.daysPerDay = daysPerDay;
+        this.gameEpochStart = gameEpochStart;
+    }
+
+    /** Called by ClockManager.switchWorld() */
+    void setDaysPerDay(float daysPerDay) {
+        this.daysPerDay = daysPerDay;
+    }
+
+    void setGameEpochStart(long gameEpochStart) {
+        this.gameEpochStart = gameEpochStart;
     }
 
     // Current Tracker \\
 
-    void assignTimeData(ClockHandle clockHandle) {
-        this.clockHandle = clockHandle;
-        this.gameEpochStart = clockHandle.getGameEpochStart();
-    }
-
     boolean advanceTime() {
 
-        // 1. Get current system time
-        long now = Instant.now().toEpochMilli();
+        long now = internal.getTime();
         long millisSinceEpoch = now - gameEpochStart;
-
-        // 2. Real-world days elapsed since epoch
         double realDaysElapsed = millisSinceEpoch / 86400000.0;
+        double totalGameDays = realDaysElapsed * daysPerDay;
 
-        // 3. Scale into game time
-        double totalGameDays = realDaysElapsed * DAYS_PER_DAY;
-
-        // 4. Split into whole days and fractional progress
         long totalDaysElapsed = (long) totalGameDays;
         double dayProgress = totalGameDays - totalDaysElapsed;
 
-        // 5. Calculate time values
         double rawTimeOfDay = calculateRawTimeOfDay(dayProgress);
         int currentMinute = calculateMinute(rawTimeOfDay);
         int currentHour = calculateHour(rawTimeOfDay);
         double yearProgress = clockHandle.getYearProgress();
         double visualTimeOfDay = calculateVisualTimeOfDay(rawTimeOfDay, yearProgress);
 
-        // 6. Update ClockHandle
         clockHandle.setDayProgress(dayProgress);
         clockHandle.setVisualTimeOfDay(visualTimeOfDay);
         clockHandle.setCurrentMinute(currentMinute);
         clockHandle.setCurrentHour(currentHour);
         clockHandle.setTotalDaysElapsed(totalDaysElapsed);
 
-        // 7. Check for changes and cascade
         boolean dayChanged = (lastDay != totalDaysElapsed);
         lastDay = totalDaysElapsed;
 
-        // Return true if day rolled over (triggers DayTracker)
         return dayChanged;
     }
 
     // Calculations \\
 
     double calculateDayProgress(int hour, int minute) {
-        return ((double) hour / HOURS_PER_DAY) + ((double) minute / (HOURS_PER_DAY * MINUTES_PER_HOUR));
+        return ((double) hour / HOURS_PER_DAY)
+                + ((double) minute / (HOURS_PER_DAY * MINUTES_PER_HOUR));
     }
 
     double calculateRawTimeOfDay(double dayProgress) {
-        double rawTimeOfDay = (dayProgress + MIDDAY_OFFSET) % 1.0;
-        if (rawTimeOfDay < 0)
-            rawTimeOfDay += 1.0;
-        return rawTimeOfDay;
+        double raw = (dayProgress + MIDDAY_OFFSET) % 1.0;
+        if (raw < 0)
+            raw += 1.0;
+        return raw;
     }
 
     int calculateMinute(double rawTimeOfDay) {
@@ -103,40 +100,22 @@ public class CurrentTrackerSystem extends SystemPackage {
 
     double calculateVisualTimeOfDay(double rawTimeOfDay, double yearProgress) {
 
-        // Seasonal effect: summer = +1, winter = -1
         double seasonEffect = Math.sin(yearProgress * 2 * Math.PI);
-
-        // Seasonal shift: how much to shift sunrise/sunset times
-        double maxShift = 0.15; // 15% shift max
+        double maxShift = 0.08; // was 0.15 — halved, winters noticeably shorter but not brutal
         double shift = seasonEffect * maxShift;
 
-        // Actual sunrise/sunset times in raw time
-        double actualSunrise = 0.25 - shift;
-        double actualSunset = 0.75 + shift;
+        double actualSunrise = Math.max(0.05, Math.min(0.40, 0.25 - shift));
+        double actualSunset = Math.max(0.60, Math.min(0.95, 0.75 + shift));
 
-        // Clamp to reasonable bounds
-        actualSunrise = Math.max(0.05, Math.min(0.40, actualSunrise));
-        actualSunset = Math.max(0.60, Math.min(0.95, actualSunset));
+        if (rawTimeOfDay < actualSunrise)
+            return (rawTimeOfDay / actualSunrise) * 0.25;
 
-        double bent;
+        if (rawTimeOfDay < 0.5)
+            return 0.25 + ((rawTimeOfDay - actualSunrise) / (0.5 - actualSunrise)) * 0.25;
 
-        if (rawTimeOfDay < actualSunrise) {
-            // Pre-sunrise night: [0, actualSunrise] → [0, 0.25]
-            bent = (rawTimeOfDay / actualSunrise) * 0.25;
+        if (rawTimeOfDay < actualSunset)
+            return 0.5 + ((rawTimeOfDay - 0.5) / (actualSunset - 0.5)) * 0.25;
 
-        } else if (rawTimeOfDay < 0.5) {
-            // Morning: [actualSunrise, 0.5] → [0.25, 0.5]
-            bent = 0.25 + ((rawTimeOfDay - actualSunrise) / (0.5 - actualSunrise)) * 0.25;
-
-        } else if (rawTimeOfDay < actualSunset) {
-            // Afternoon: [0.5, actualSunset] → [0.5, 0.75]
-            bent = 0.5 + ((rawTimeOfDay - 0.5) / (actualSunset - 0.5)) * 0.25;
-
-        } else {
-            // Post-sunset night: [actualSunset, 1.0] → [0.75, 1.0]
-            bent = 0.75 + ((rawTimeOfDay - actualSunset) / (1.0 - actualSunset)) * 0.25;
-        }
-
-        return bent;
+        return 0.75 + ((rawTimeOfDay - actualSunset) / (1.0 - actualSunset)) * 0.25;
     }
 }

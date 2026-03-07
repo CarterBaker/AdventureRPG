@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionData;
+import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
@@ -65,7 +65,7 @@ class InternalLoader extends LoaderPackage {
     @Override
     protected void load(File file) {
         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-        ObjectArrayList<ItemDefinitionData> items = internalBuilder.build(file, root);
+        ObjectArrayList<ItemDefinitionHandle> items = internalBuilder.build(file, root);
         for (int i = 0; i < items.size(); i++) {
             itemName2ResourceName.put(items.get(i).getItemName(), resourceName);
             itemDefinitionManager.addItem(items.get(i));

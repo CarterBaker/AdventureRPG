@@ -12,8 +12,10 @@ public class EntityData extends DataPackage {
     // Weight
     private float weightMin;
     private float weightMax;
-
     private float eyeLevel;
+
+    // Behavior
+    private String behaviorName;
 
     // Internal \\
 
@@ -28,13 +30,15 @@ public class EntityData extends DataPackage {
             Vector3 sizeMax,
             float weightMin,
             float weightMax,
-            float eyeLevel) {
+            float eyeLevel,
+            String behaviorName) {
 
         this.sizeMin.set(sizeMin);
         this.sizeMax.set(sizeMax);
         this.weightMin = weightMin;
         this.weightMax = weightMax;
         this.eyeLevel = eyeLevel;
+        this.behaviorName = behaviorName;
     }
 
     // Accessible \\
@@ -57,6 +61,10 @@ public class EntityData extends DataPackage {
 
     public float getEyeLevel() {
         return eyeLevel;
+    }
+
+    public String getBehaviorName() {
+        return behaviorName;
     }
 
     public Vector3 getRandomSize() {

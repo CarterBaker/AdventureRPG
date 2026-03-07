@@ -1,13 +1,13 @@
 package com.internal.bootstrap.calendarpipeline.calendar;
 
 import com.internal.core.engine.HandlePackage;
-
 import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CalendarHandle extends HandlePackage {
 
     // Internal
+    private String calendarName; // ← NEW — full path e.g. "standard/Overworld"
     private ObjectArrayList<String> daysOfWeek;
     private ObjectArrayList<String> monthNames;
     private Object2ByteOpenHashMap<String> monthDays;
@@ -18,11 +18,13 @@ public class CalendarHandle extends HandlePackage {
     // Constructor \\
 
     public void constructor(
+            String calendarName,
             ObjectArrayList<String> daysOfWeek,
             ObjectArrayList<String> monthNames,
             Object2ByteOpenHashMap<String> monthDays,
             int totalDaysInYear) {
 
+        this.calendarName = calendarName;
         this.daysOfWeek = daysOfWeek;
         this.monthNames = monthNames;
         this.monthDays = monthDays;
@@ -30,6 +32,10 @@ public class CalendarHandle extends HandlePackage {
     }
 
     // Accessible \\
+
+    public String getCalendarName() {
+        return calendarName;
+    }
 
     public int getDaysPerWeek() {
         return daysOfWeek.size();
@@ -39,7 +45,11 @@ public class CalendarHandle extends HandlePackage {
         return monthNames.size();
     }
 
-    public String getDayOfWeek(int index) {
+    public int getTotalDaysInYear() {
+        return totalDaysInYear;
+    }
+
+    public String getDay(int index) {
         return daysOfWeek.get(index);
     }
 
@@ -53,9 +63,5 @@ public class CalendarHandle extends HandlePackage {
 
     public byte getMonthDays(String monthName) {
         return monthDays.getByte(monthName);
-    }
-
-    public int getTotalDaysInYear() {
-        return totalDaysInYear;
     }
 }

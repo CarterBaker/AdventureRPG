@@ -1,6 +1,6 @@
 package com.internal.bootstrap.itempipeline.itemdefinitionmanager;
 
-import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionData;
+import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import com.internal.bootstrap.itempipeline.util.ItemRegistryUtility;
 import com.internal.core.engine.ManagerPackage;
 
@@ -11,7 +11,7 @@ public class ItemDefinitionManager extends ManagerPackage {
 
     // Retrieval Mapping
     private Object2IntOpenHashMap<String> itemName2ItemID;
-    private Int2ObjectOpenHashMap<ItemDefinitionData> itemID2Item;
+    private Int2ObjectOpenHashMap<ItemDefinitionHandle> itemID2Item;
 
     // Base \\
 
@@ -30,9 +30,9 @@ public class ItemDefinitionManager extends ManagerPackage {
 
     // Item Management \\
 
-    void addItem(ItemDefinitionData item) {
+    void addItem(ItemDefinitionHandle item) {
         if (itemID2Item.containsKey(item.getItemID())) {
-            ItemDefinitionData existing = itemID2Item.get(item.getItemID());
+            ItemDefinitionHandle existing = itemID2Item.get(item.getItemID());
             if (ItemRegistryUtility.isCollision(item.getItemName(), existing.getItemName(), item.getItemID()))
                 throwException("Item ID collision: '"
                         + item.getItemName() + "' collides with '"
@@ -54,8 +54,8 @@ public class ItemDefinitionManager extends ManagerPackage {
         return itemName2ItemID.getInt(itemName);
     }
 
-    public ItemDefinitionData getItemFromItemID(int itemID) {
-        ItemDefinitionData item = itemID2Item.get(itemID);
+    public ItemDefinitionHandle getItemFromItemID(int itemID) {
+        ItemDefinitionHandle item = itemID2Item.get(itemID);
         if (item == null)
             throwException("Item ID not found: " + itemID);
         return item;

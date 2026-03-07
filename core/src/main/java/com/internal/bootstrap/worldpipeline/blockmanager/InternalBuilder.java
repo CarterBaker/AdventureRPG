@@ -5,6 +5,7 @@ import java.io.File;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
+import com.internal.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
@@ -22,6 +23,7 @@ class InternalBuilder extends BuilderPackage {
     // Internal
     private TextureManager textureManager;
     private MaterialManager materialManager;
+    private ToolTypeManager toolTypeManager;
 
     // Base \\
 
@@ -29,6 +31,7 @@ class InternalBuilder extends BuilderPackage {
     protected void get() {
         this.textureManager = get(TextureManager.class);
         this.materialManager = get(MaterialManager.class);
+        this.toolTypeManager = get(ToolTypeManager.class);
     }
 
     // Build \\
@@ -55,13 +58,16 @@ class InternalBuilder extends BuilderPackage {
 
     private BlockHandle parseBlock(JsonObject blockJson, String pathPrefix) {
 
+        // Identity
         String localName = JsonUtility.validateString(blockJson, "name");
         String blockName = pathPrefix + "/" + localName;
         short blockID = RegistryUtility.toShortID(blockName);
 
-        String typeStr = blockJson.has("type") ? blockJson.get("type").getAsString() : "FULL";
+        // Geometry
+        String typeStr = JsonUtility.getString(blockJson, "type", "FULL");
         DynamicGeometryType blockType = parseBlockType(typeStr);
 
+        // Rotation
         BlockRotationType rotationType = BlockRotationType.NONE;
         if (blockJson.has("rotation")) {
             try {
@@ -72,12 +78,14 @@ class InternalBuilder extends BuilderPackage {
             }
         }
 
+        // Material
         int materialID = -1;
         if (blockJson.has("material")) {
             String materialPath = blockJson.get("material").getAsString();
             materialID = materialManager.getMaterialIDFromMaterialName(materialPath);
         }
 
+        // Textures
         int[] textures = new int[Direction3Vector.LENGTH];
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             textures[i] = -1;
@@ -112,6 +120,17 @@ class InternalBuilder extends BuilderPackage {
             }
         }
 
+        // Breaking
+        int breakTier = JsonUtility.getInt(blockJson, "break_tier", 0);
+        int durability = JsonUtility.getInt(blockJson, "durability", 1);
+
+        short requiredToolTypeID = ToolTypeManager.TOOL_NONE;
+        if (blockJson.has("required_tool")) {
+            String toolPath = blockJson.get("required_tool").getAsString();
+            requiredToolTypeID = toolTypeManager.getToolTypeIDFromName(toolPath);
+        }
+
+        // Construct
         BlockHandle block = create(BlockHandle.class);
         block.constructor(
                 blockName,
@@ -124,7 +143,10 @@ class InternalBuilder extends BuilderPackage {
                 textures[Direction3Vector.SOUTH.ordinal()],
                 textures[Direction3Vector.WEST.ordinal()],
                 textures[Direction3Vector.UP.ordinal()],
-                textures[Direction3Vector.DOWN.ordinal()]);
+                textures[Direction3Vector.DOWN.ordinal()],
+                breakTier,
+                requiredToolTypeID,
+                durability);
 
         return block;
     }

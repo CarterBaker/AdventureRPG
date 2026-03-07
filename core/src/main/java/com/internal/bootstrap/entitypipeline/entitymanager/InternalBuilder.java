@@ -21,12 +21,14 @@ class InternalBuilder extends BuilderPackage {
         float weightMin = parseWeightMin(json);
         float weightMax = parseWeightMax(json);
         float eyeLevel = parseEyeLevel(json);
+        String behaviorName = parseBehaviorName(json, file);
 
         if (sizeMin == null || sizeMax == null)
             return null;
 
         EntityData templateData = create(EntityData.class);
-        templateData.constructor(sizeMin, sizeMax, weightMin, weightMax, eyeLevel);
+        templateData.constructor(sizeMin, sizeMax, weightMin, weightMax, eyeLevel, behaviorName);
+
         return templateData;
     }
 
@@ -62,5 +64,11 @@ class InternalBuilder extends BuilderPackage {
 
     private float parseEyeLevel(JsonObject json) {
         return json.has("eye_level") ? json.get("eye_level").getAsFloat() : 0.91f;
+    }
+
+    private String parseBehaviorName(JsonObject json, File file) {
+        if (!json.has("behavior"))
+            throwException("Entity JSON missing 'behavior' field: " + file.getAbsolutePath());
+        return json.get("behavior").getAsString();
     }
 }

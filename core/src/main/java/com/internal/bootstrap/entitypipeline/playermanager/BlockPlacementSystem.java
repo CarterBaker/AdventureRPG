@@ -1,9 +1,18 @@
 package com.internal.bootstrap.entitypipeline.playermanager;
 
+// TODO: This class needs substantial reworking once the inventory and item systems are complete.
+//       - Rename to PlacementSystem and move to a more general package
+//       - Break logic should read held tool type and tier from InventoryHandle.getMainHand()
+//       - Place logic should read block ID from held item's linked block definition
+//       - Raycast should move to a shared InteractionSystem — chest, NPC, pickup all need it
+//       - GRASS_BLOCK_ID hardcode removed entirely once block items exist
+//       - getPlayerBreakTier() and isCorrectTool() stubs wired to real inventory data
+
 import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
 import com.internal.bootstrap.entitypipeline.statistics.StatisticsStruct;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
+import com.internal.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import com.internal.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import com.internal.bootstrap.physicspipeline.util.BlockCastStruct;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
@@ -37,13 +46,19 @@ public class BlockPlacementSystem extends SystemPackage {
 
     // Block IDs
     private short AIR_BLOCK_ID;
-    private short GRASS_BLOCK_ID;
+    private short GRASS_BLOCK_ID; // TODO: remove once block items exist — read from held item instead
 
     // Orientation
     private short DEFAULT_ORIENTATION;
 
-    // Elapsed time since last placement
+    // Placement cooldown
     private float timeSinceLastPlacement;
+
+    // Break tracking
+    private int currentHits;
+    private long targetChunkCoord;
+    private int targetPackedBlock;
+    private int targetSubChunkY;
 
     // Reused per frame
     private final BlockCastStruct castStruct = new BlockCastStruct();
@@ -56,6 +71,7 @@ public class BlockPlacementSystem extends SystemPackage {
         this.WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT;
         this.PLACEMENT_INTERVAL = EngineSetting.BLOCK_PLACEMENT_INTERVAL;
         this.timeSinceLastPlacement = PLACEMENT_INTERVAL;
+        resetBreakTarget();
     }
 
     @Override
@@ -72,8 +88,6 @@ public class BlockPlacementSystem extends SystemPackage {
     protected void awake() {
         this.AIR_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Air");
         this.GRASS_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Grass Block");
-
-        // UP facing, spin 0 — matches SubChunkInstance palette default
         this.DEFAULT_ORIENTATION = (short) (EngineSetting.DEFAULT_BLOCK_DIRECTION * 4);
     }
 
@@ -89,8 +103,18 @@ public class BlockPlacementSystem extends SystemPackage {
 
         timeSinceLastPlacement += internal.getDeltaTime();
 
-        if (!breakBlock && !placeBlock)
+        // Nothing to do if no input
+        if (!breakBlock && !placeBlock) {
+            resetBreakTarget();
             return;
+        }
+
+        // Nothing to do if nothing in hand
+        if (!player.getInventoryHandle().hasMainHand()) {
+            resetBreakTarget();
+            return;
+        }
+
         if (timeSinceLastPlacement < PLACEMENT_INTERVAL)
             return;
 
@@ -103,22 +127,84 @@ public class BlockPlacementSystem extends SystemPackage {
                 statistics.reach,
                 castStruct);
 
-        if (!castStruct.hit)
-            return;
-
-        if (breakBlock) {
-            ChunkInstance chunk = chunkStreamManager.getChunkInstance(castStruct.chunkCoordinate);
-            if (chunk == null)
-                return;
-            writeBlock(chunk, castStruct.blockX, castStruct.blockY, castStruct.blockZ,
-                    castStruct.subChunkY, AIR_BLOCK_ID);
-            rebuildAffected(chunk, castStruct.chunkCoordinate,
-                    castStruct.blockX, castStruct.blockY, castStruct.blockZ, castStruct.subChunkY);
-            timeSinceLastPlacement = 0f;
+        if (!castStruct.hit) {
+            resetBreakTarget();
             return;
         }
 
-        // Place on adjacent face
+        if (placeBlock) {
+            resetBreakTarget();
+            handlePlace(player, cameraDirection);
+            return;
+        }
+
+        handleBreak(player, statistics);
+    }
+
+    // Break \\
+
+    private void handleBreak(EntityHandle player, StatisticsStruct statistics) {
+
+        BlockHandle block = castStruct.block;
+
+        // Unbreakable — hard reject
+        if (block.isUnbreakable())
+            return;
+
+        int playerTier = getPlayerBreakTier(player);
+
+        // Negative tier bypasses all rules — dev/enchant overflow path
+        if (playerTier >= 0) {
+            if (playerTier < block.getBreakTier())
+                return;
+            if (!isCorrectTool(player, block))
+                return;
+        }
+
+        // Check if still targeting the same block
+        int packedTarget = Coordinate3Int.pack(
+                castStruct.blockX, castStruct.blockY, castStruct.blockZ);
+
+        boolean sameTarget = castStruct.chunkCoordinate == targetChunkCoord
+                && packedTarget == targetPackedBlock
+                && castStruct.subChunkY == targetSubChunkY;
+
+        if (!sameTarget) {
+            currentHits = 0;
+            targetChunkCoord = castStruct.chunkCoordinate;
+            targetPackedBlock = packedTarget;
+            targetSubChunkY = castStruct.subChunkY;
+        }
+
+        currentHits++;
+        timeSinceLastPlacement = 0f;
+
+        if (currentHits < block.getDurability())
+            return;
+
+        // Durability reached — break the block
+        ChunkInstance chunk = chunkStreamManager.getChunkInstance(castStruct.chunkCoordinate);
+        if (chunk == null)
+            return;
+
+        writeBlock(chunk,
+                castStruct.blockX, castStruct.blockY, castStruct.blockZ,
+                castStruct.subChunkY, AIR_BLOCK_ID);
+
+        rebuildAffected(chunk, castStruct.chunkCoordinate,
+                castStruct.blockX, castStruct.blockY, castStruct.blockZ,
+                castStruct.subChunkY);
+
+        resetBreakTarget();
+    }
+
+    // Place \\
+
+    private void handlePlace(EntityHandle player, Vector3 cameraDirection) {
+
+        // TODO: resolve block ID from player.getInventoryHandle().getMainHand()
+        // once block items exist — hardcoded grass removed at that point
+
         int placeX = castStruct.blockX + castStruct.hitFace.x;
         int placeY = castStruct.blockY + castStruct.hitFace.y;
         int placeZ = castStruct.blockZ + castStruct.hitFace.z;
@@ -153,7 +239,6 @@ public class BlockPlacementSystem extends SystemPackage {
 
         long placeChunkCoord = Coordinate2Long.pack(placeChunkX, placeChunkZ);
 
-        // Block if target is occupied by the player
         int packedPlaceCoord = Coordinate3Int.pack(placeX, placeY, placeZ);
         if (player.getBlockCompositionStruct().getBlockCompositionMap().containsKey(packedPlaceCoord))
             return;
@@ -162,7 +247,6 @@ public class BlockPlacementSystem extends SystemPackage {
         if (placeChunk == null)
             return;
 
-        // Facing from hit surface, spin from camera horizontal direction
         BlockHandle grassHandle = blockManager.getBlockFromBlockID(GRASS_BLOCK_ID);
         Direction3Vector hitFaceDir = Direction3Vector.getDirection(
                 castStruct.hitFace.x,
@@ -172,9 +256,32 @@ public class BlockPlacementSystem extends SystemPackage {
 
         writeBlock(placeChunk, placeX, placeY, placeZ, placeSubChunkY, GRASS_BLOCK_ID);
         writeOrientation(placeChunk, placeX, placeY, placeZ, placeSubChunkY, orientation);
-
         rebuildAffected(placeChunk, placeChunkCoord, placeX, placeY, placeZ, placeSubChunkY);
+
         timeSinceLastPlacement = 0f;
+    }
+
+    // Tool Helpers \\
+
+    private int getPlayerBreakTier(EntityHandle player) {
+        // TODO: read from player.getInventoryHandle().getMainHand() tool tier
+        // once tool items exist — returning 0 means bare hand only
+        return 0;
+    }
+
+    private boolean isCorrectTool(EntityHandle player, BlockHandle block) {
+        // TODO: read tool type from player.getInventoryHandle().getMainHand()
+        // once tool items exist — TOOL_NONE blocks always pass
+        return block.getRequiredToolTypeID() == ToolTypeManager.TOOL_NONE;
+    }
+
+    // Break Target \\
+
+    private void resetBreakTarget() {
+        currentHits = 0;
+        targetChunkCoord = Long.MIN_VALUE;
+        targetPackedBlock = Integer.MIN_VALUE;
+        targetSubChunkY = Integer.MIN_VALUE;
     }
 
     // Orientation \\
@@ -226,7 +333,6 @@ public class BlockPlacementSystem extends SystemPackage {
 
         if (blockY == 0 && subChunkY > 0)
             rebuildSubChunk(chunk, subChunkY - 1);
-
         if (blockY == CHUNK_SIZE - 1 && subChunkY < WORLD_HEIGHT - 1)
             rebuildSubChunk(chunk, subChunkY + 1);
 
@@ -270,12 +376,8 @@ public class BlockPlacementSystem extends SystemPackage {
 
     private void writeBlock(
             ChunkInstance chunk,
-            int blockX,
-            int blockY,
-            int blockZ,
-            int subChunkY,
-            short blockID) {
-
+            int blockX, int blockY, int blockZ,
+            int subChunkY, short blockID) {
         SubChunkInstance subChunk = chunk.getSubChunk(subChunkY);
         if (subChunk == null)
             return;
@@ -284,12 +386,8 @@ public class BlockPlacementSystem extends SystemPackage {
 
     private void writeOrientation(
             ChunkInstance chunk,
-            int blockX,
-            int blockY,
-            int blockZ,
-            int subChunkY,
-            short orientation) {
-
+            int blockX, int blockY, int blockZ,
+            int subChunkY, short orientation) {
         SubChunkInstance subChunk = chunk.getSubChunk(subChunkY);
         if (subChunk == null)
             return;

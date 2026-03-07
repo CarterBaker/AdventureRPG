@@ -2,36 +2,45 @@ package com.internal.bootstrap.calendarpipeline.calendarmanager;
 
 import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import com.internal.core.engine.ManagerPackage;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class CalendarManager extends ManagerPackage {
 
-    // Data
-    private CalendarHandle calendarHandle;
+    // Palette — keyed by full calendar name e.g. "standard/Overworld"
+    private Object2ObjectOpenHashMap<String, CalendarHandle> palette;
 
     // Base \\
 
     @Override
     protected void create() {
+        this.palette = new Object2ObjectOpenHashMap<>();
         create(InternalLoader.class);
     }
 
     // Calendar Management \\
 
     void addCalendarHandle(CalendarHandle calendarHandle) {
-        this.calendarHandle = calendarHandle;
+        palette.put(calendarHandle.getCalendarName(), calendarHandle);
     }
 
     // Accessible \\
 
-    /*
-     * Lazily resolves on first access — safe to call from awake() before
-     * the batch loader has processed the calendar file.
+    /**
+     * Returns the CalendarHandle for the given name.
+     * On-demand loads if not yet in palette — safe to call from any awake().
      */
-    public CalendarHandle getCalendarHandle() {
-        if (calendarHandle == null)
-            ((InternalLoader) internalLoader).loadNow();
-        if (calendarHandle == null)
-            throwException("[CalendarManager] Calendar could not be loaded.");
-        return calendarHandle;
+    public CalendarHandle getCalendar(String calendarName) {
+
+        CalendarHandle handle = palette.get(calendarName);
+
+        if (handle == null) {
+            ((InternalLoader) internalLoader).request(calendarName);
+            handle = palette.get(calendarName);
+        }
+
+        if (handle == null)
+            throwException("[CalendarManager] Calendar could not be loaded: \"" + calendarName + "\"");
+
+        return handle;
     }
 }

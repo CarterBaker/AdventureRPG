@@ -11,7 +11,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     // Internal
     private boolean locked = false;
-    private float sensitivity = 0.15f; // TODO: Move sensitivity to Settings
+    private float sensitivity = 0.15f;
 
     private Vector2 rotation;
     private Vector3Int input;
@@ -21,8 +21,9 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     private boolean A = false;
     private boolean S = false;
     private boolean D = false;
-    private boolean SHIFT = false;
-    private boolean SPACE = false;
+    private boolean CTRL = false; // walk — slowest
+    private boolean SHIFT = false; // sprint — fastest
+    private boolean SPACE = false; // jump
 
     // Mouse — game, blocked when locked
     private boolean leftClick = false;
@@ -77,9 +78,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
         if (D)
             input.x += 1;
         if (SPACE)
-            input.y += 1;
-        if (SHIFT)
-            input.y -= 1;
+            input.y = 1;
     }
 
     // Input Processor \\
@@ -93,6 +92,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
             case Input.Keys.A -> A = true;
             case Input.Keys.S -> S = true;
             case Input.Keys.D -> D = true;
+            case Input.Keys.CONTROL_LEFT -> CTRL = true;
             case Input.Keys.SHIFT_LEFT -> SHIFT = true;
             case Input.Keys.SPACE -> SPACE = true;
         }
@@ -108,6 +108,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
             case Input.Keys.A -> A = false;
             case Input.Keys.S -> S = false;
             case Input.Keys.D -> D = false;
+            case Input.Keys.CONTROL_LEFT -> CTRL = false;
             case Input.Keys.SHIFT_LEFT -> SHIFT = false;
             case Input.Keys.SPACE -> SPACE = false;
         }
@@ -198,6 +199,14 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     public boolean isRawLeftClick() {
         return rawLeftClick;
+    }
+
+    public boolean isWalkHeld() {
+        return CTRL;
+    }
+
+    public boolean isSprintHeld() {
+        return SHIFT;
     }
 
     public float getMouseX() {

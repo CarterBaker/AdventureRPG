@@ -8,7 +8,6 @@ import com.google.gson.JsonObject;
 import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import com.internal.core.engine.BuilderPackage;
 import com.internal.core.util.JsonUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -16,36 +15,47 @@ class InternalBuilder extends BuilderPackage {
 
     // Build \\
 
-    CalendarHandle build(File file) {
+    CalendarHandle build(File file, String calendarName) {
+
         JsonObject json = JsonUtility.loadJsonObject(file);
+
         ObjectArrayList<String> daysOfWeek = parseDaysOfWeek(json);
         ObjectArrayList<String> monthNames = new ObjectArrayList<>();
         Object2ByteOpenHashMap<String> monthDays = parseMonths(json, monthNames);
         int totalDaysInYear = calculateTotalDaysInYear(monthDays);
+
         CalendarHandle calendarHandle = create(CalendarHandle.class);
-        calendarHandle.constructor(daysOfWeek, monthNames, monthDays, totalDaysInYear);
+        calendarHandle.constructor(calendarName, daysOfWeek, monthNames, monthDays, totalDaysInYear);
+
         return calendarHandle;
     }
 
     // Parsing \\
 
     private ObjectArrayList<String> parseDaysOfWeek(JsonObject json) {
+
         if (!json.has("daysOfWeek"))
             throwException("Calendar JSON missing 'daysOfWeek' field");
+
         JsonArray daysArray = json.getAsJsonArray("daysOfWeek");
         ObjectArrayList<String> daysOfWeek = new ObjectArrayList<>(daysArray.size());
+
         for (JsonElement element : daysArray)
             daysOfWeek.add(element.getAsString());
+
         return daysOfWeek;
     }
 
     private Object2ByteOpenHashMap<String> parseMonths(
             JsonObject json,
             ObjectArrayList<String> monthNames) {
+
         if (!json.has("months"))
             throwException("Calendar JSON missing 'months' field");
+
         JsonArray monthsArray = json.getAsJsonArray("months");
         Object2ByteOpenHashMap<String> monthDays = new Object2ByteOpenHashMap<>(monthsArray.size());
+
         for (JsonElement element : monthsArray) {
             JsonObject monthObject = element.getAsJsonObject();
             String name = monthObject.get("name").getAsString();
@@ -53,6 +63,7 @@ class InternalBuilder extends BuilderPackage {
             monthNames.add(name);
             monthDays.put(name, days);
         }
+
         return monthDays;
     }
 

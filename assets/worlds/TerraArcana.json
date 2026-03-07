@@ -1,0 +1,6 @@
+{
+  "gravity_multiplier": 1.0,
+  "gravity_direction": [0, -1, 0],
+  "days_per_day": 20.0,
+  "calendar": "TerraArcana"
+}

@@ -49,6 +49,6 @@ public class DebugItemPipeline extends PipelinePackage {
             rotation -= (float) (Math.PI * 2);
 
         debugMaterial.setUniform("u_rotation", rotation);
-        renderSystem.pushRenderCall(debugModel, 0);
+        // renderSystem.pushRenderCall(debugModel, 0);
     }
 }

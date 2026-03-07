@@ -1,4 +1,4 @@
-{   
+{
     "blocks": [
         {
             "name": "Air",
@@ -7,12 +7,14 @@
         {
             "name": "Water",
             "type": "LIQUID",
+            "break_tier": -1,
             "material": "standard/StandardSurface",
             "texture": "surface/standard/Water"
         },
         {
             "name": "Lava",
             "type": "LIQUID",
+            "break_tier": -1,
             "material": "standard/StandardSurface",
             "texture": "surface/standard/Lava"
         },
@@ -20,6 +22,9 @@
             "name": "Grass Block",
             "type": "FULL",
             "rotation": "NATURAL_FULL",
+            "break_tier": 0,
+            "required_tool": "Standard/Shovel",
+            "durability": 3,
             "material": "standard/StandardSurface",
             "northTex": "surface/standard/GrassBlockNorth",
             "upTex": "surface/standard/GrassBlockUp",
@@ -28,42 +33,63 @@
         {
             "name": "Dirt Block",
             "type": "FULL",
+            "break_tier": 0,
+            "required_tool": "Standard/Shovel",
+            "durability": 2,
             "material": "standard/StandardSurface",
             "texture": "surface/standard/Dirt"
         },
         {
             "name": "Stone Block",
             "type": "FULL",
+            "break_tier": 1,
+            "required_tool": "Standard/Pickaxe",
+            "durability": 6,
             "material": "standard/StandardSurface",
             "texture": "surface/standard/Stone"
         },
         {
             "name": "Copper Ore",
             "type": "FULL",
+            "break_tier": 1,
+            "required_tool": "Standard/Pickaxe",
+            "durability": 8,
             "material": "standard/StandardSurface",
             "texture": "surface/standard/CopperOre"
         },
         {
             "name": "Iron Ore",
             "type": "FULL",
+            "break_tier": 2,
+            "required_tool": "Standard/Pickaxe",
+            "durability": 10,
             "material": "standard/StandardSurface",
             "texture": "surface/standard/IronOre"
         },
         {
             "name": "Gold Ore",
             "type": "FULL",
+            "break_tier": 2,
+            "required_tool": "Standard/Pickaxe",
+            "durability": 10,
             "material": "standard/StandardSurface",
             "texture": "surface/standard/GoldOre"
         },
         {
             "name": "Coal Ore",
             "type": "FULL",
+            "break_tier": 1,
+            "required_tool": "Standard/Pickaxe",
+            "durability": 5,
             "material": "standard/StandardSurface",
             "texture": "surface/standard/CoalOre"
         },
         {
             "name": "Sand",
             "type": "FULL",
+            "break_tier": 0,
+            "required_tool": "Standard/Shovel",
+            "durability": 2,
             "material": "standard/StandardSurface",
             "texture": "surface/standard/Sand"
         }

@@ -19,19 +19,13 @@ public class MonthTrackerSystem extends SystemPackage {
 
     @Override
     protected void create() {
-
-        // Internal
         this.STARTING_MONTH = EngineSetting.STARTING_MONTH;
-
-        // Tracking
         this.lastMonth = -1;
     }
 
     // Month Tracker \\
 
     void assignTimeData(CalendarHandle calendarHandle, ClockHandle clockHandle) {
-
-        // Internal
         this.calendarHandle = calendarHandle;
         this.clockHandle = clockHandle;
     }
@@ -40,15 +34,12 @@ public class MonthTrackerSystem extends SystemPackage {
 
         int currentMonth = clockHandle.getCurrentMonth();
 
-        // Check if month has changed
         if (lastMonth == currentMonth)
             return false;
 
         lastMonth = currentMonth;
 
-        // Month changed - check if year rolled over
-        // Year rolls over when we transition from last month (e.g., 12) to first month
-        // (1)
-        return (currentMonth == 1);
+        // Months are 0-indexed — year rolls when we return to month 0
+        return (currentMonth == 0);
     }
 }

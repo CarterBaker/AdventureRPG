@@ -1,5 +1,7 @@
 package com.internal.bootstrap.entitypipeline.entitymanager;
 
+import com.internal.bootstrap.entitypipeline.behavior.BehaviorHandle;
+import com.internal.bootstrap.entitypipeline.behaviormanager.BehaviorManager;
 import com.internal.bootstrap.entitypipeline.entity.EntityData;
 import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionUtility;
@@ -15,8 +17,9 @@ public class EntityManager extends ManagerPackage {
 
     // Internal
     private WorldManager worldManager;
+    private BehaviorManager behaviorManager;
 
-    // Template Retrieval Mapping
+    // Template Retrieval
     private Object2IntOpenHashMap<String> entityDataName2EntityDataID;
     private Int2ObjectOpenHashMap<EntityData> entityDataID2EntityData;
 
@@ -32,6 +35,7 @@ public class EntityManager extends ManagerPackage {
     @Override
     protected void get() {
         this.worldManager = get(WorldManager.class);
+        this.behaviorManager = get(BehaviorManager.class);
     }
 
     // On-Demand Loading \\
@@ -63,21 +67,25 @@ public class EntityManager extends ManagerPackage {
     }
 
     public EntityData getTemplateDataFromTemplateName(String templateName) {
-        int templateID = getTemplateIDFromTemplateName(templateName);
-        return getTemplateDataFromTemplateID(templateID);
+        return getTemplateDataFromTemplateID(getTemplateIDFromTemplateName(templateName));
     }
 
     public EntityHandle createEntity(EntityData entityData) {
-        WorldHandle activeWorldHandle = worldManager.getActiveWorld();
-        long randomChunk = WorldPositionUtility.getRandomChunk(activeWorldHandle);
+
+        WorldHandle activeWorld = worldManager.getActiveWorld();
+        BehaviorHandle behavior = behaviorManager.getBehavior(entityData.getBehaviorName());
+        long randomChunk = WorldPositionUtility.getRandomChunk(activeWorld);
+
         EntityHandle entityHandle = create(EntityHandle.class);
         entityHandle.constructor(
                 entityData,
-                worldManager.getActiveWorld(),
+                activeWorld,
+                behavior,
                 new Vector3(),
                 randomChunk,
                 entityData.getRandomSize(),
                 entityData.getRandomWeight());
+
         return entityHandle;
     }
 }

@@ -1,25 +1,53 @@
 package com.internal.bootstrap.calendarpipeline.calendarmanager;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.FileUtility;
+
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {
 
     // Internal
+    private File root;
     private CalendarManager calendarManager;
     private InternalBuilder internalBuilder;
+
+    // Registry for on-demand loading
+    private Object2ObjectOpenHashMap<String, File> calendarName2File;
 
     // Base \\
 
     @Override
     protected void scan() {
-        File calendarFile = new File(EngineSetting.CALENDAR_JSON_PATH);
-        if (!calendarFile.exists() || !calendarFile.isFile())
-            throwException("Calendar JSON file not found: " + calendarFile.getAbsolutePath());
-        fileQueue.offer(calendarFile);
+
+        // CALENDAR_DIR_PATH is the directory containing all calendar JSON files
+        this.root = new File(EngineSetting.CALENDAR_JSON_PATH);
+        this.calendarName2File = new Object2ObjectOpenHashMap<>();
+
+        if (!root.exists() || !root.isDirectory())
+            throwException("Calendar directory not found: " + root.getAbsolutePath());
+
+        try (var stream = Files.walk(root.toPath())) {
+            stream
+                    .filter(Files::isRegularFile)
+                    .map(Path::toFile)
+                    .filter(f -> FileUtility.getExtension(f).equals("json"))
+                    .forEach(file -> {
+                        String calendarName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+                        calendarName2File.put(calendarName, file);
+                        fileQueue.offer(file);
+                    });
+
+        } catch (IOException e) {
+            throwException("CalendarLoader failed to walk directory: ", e);
+        }
     }
 
     @Override
@@ -36,20 +64,20 @@ class InternalLoader extends LoaderPackage {
 
     @Override
     protected void load(File file) {
-        CalendarHandle calendarHandle = internalBuilder.build(file);
+        String calendarName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+        CalendarHandle calendarHandle = internalBuilder.build(file, calendarName);
         if (calendarHandle == null)
-            throwException("Failed to build calendar handle from file: " + file.getAbsolutePath());
+            throwException("Failed to build calendar from: " + file.getAbsolutePath());
         calendarManager.addCalendarHandle(calendarHandle);
     }
 
     // On-Demand \\
 
-    /*
-     * Forces the calendar file to load immediately regardless of batch cadence.
-     * Called by CalendarManager.getCalendarHandle() on first access.
-     */
-    void loadNow() {
-        File calendarFile = new File(EngineSetting.CALENDAR_JSON_PATH);
-        request(calendarFile);
+    void request(String calendarName) {
+        File file = calendarName2File.get(calendarName);
+        if (file == null)
+            throwException("[CalendarLoader] On-demand load failed — not found in scan registry: \""
+                    + calendarName + "\"");
+        request(file);
     }
 }

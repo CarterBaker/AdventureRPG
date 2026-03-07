@@ -1,6 +1,7 @@
 package com.internal.core.engine;
 
 import java.io.File;
+import java.time.Instant;
 import java.util.concurrent.Future;
 
 import com.badlogic.gdx.Game;
@@ -58,6 +59,8 @@ public class EnginePackage extends ManagerPackage {
     private float fixedInterval;
     private float elapsedTime;
     private int maxSteps;
+
+    private long frameTimeMillis;
 
     // Internal \\
 
@@ -445,6 +448,8 @@ public class EnginePackage extends ManagerPackage {
     @Override // From `ManagerPackage`
     protected final void internalUpdate() {
 
+        this.frameTimeMillis = Instant.now().toEpochMilli();
+
         this.setContext(SystemContext.UPDATE);
 
         super.internalUpdate();
@@ -544,6 +549,10 @@ public class EnginePackage extends ManagerPackage {
 
     public final float getDeltaTime() {
         return this.deltaTime;
+    }
+
+    public final long getTime() {
+        return frameTimeMillis;
     }
 
     public final Main getMain() {
