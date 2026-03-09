@@ -16,6 +16,7 @@
                     "type":   "label",
                     "font":   "MontserratAlternates",
                     "text":   "Close",
+                    "color":  [0, 0, 0, 1],
                     "anchor": "CENTER",
                     "pivot":  "CENTER",
                     "size":   { "x": "100%", "y": "100%" }
@@ -72,6 +73,7 @@
                                     "type":   "label",
                                     "font":   "MontserratAlternates",
                                     "text":   "Quit",
+                                    "color":  [0, 0, 0, 1],
                                     "anchor": "CENTER",
                                     "pivot":  "CENTER",
                                     "size":   { "x": "100%", "y": "100%" }

@@ -6,21 +6,10 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
-
 import com.internal.bootstrap.menupipeline.fonts.FontTileData;
 import com.internal.core.engine.UtilityPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Rasterizes a TTF/OTF font file into per-glyph BufferedImages using Java AWT.
- * This is the only class in the font pipeline that touches java.awt.Font.
- * All output is plain BufferedImage data feeding into the standard atlas
- * pipeline — no LibGDX, no external font libraries.
- *
- * Each glyph is rendered onto a tight-fitting ARGB canvas with sub-pixel
- * antialiasing. The canvas is sized to the glyph's actual ink bounds so
- * the atlas packer can work with accurate dimensions per character.
- */
 class FontRasterizerUtility extends UtilityPackage {
 
     static ObjectArrayList<FontTileData> rasterize(
@@ -28,13 +17,10 @@ class FontRasterizerUtility extends UtilityPackage {
 
         Font awtFont = loadFont(fontFile, size);
 
-        // Scratch canvas for metric measurement
         BufferedImage scratch = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
         Graphics2D scratchG = scratch.createGraphics();
         scratchG.setFont(awtFont);
         FontMetrics metrics = scratchG.getFontMetrics();
-        scratchG.dispose();
-
         ObjectArrayList<FontTileData> tiles = new ObjectArrayList<>();
 
         for (int i = 0; i < charset.length(); i++) {
@@ -43,7 +29,6 @@ class FontRasterizerUtility extends UtilityPackage {
             int advance = metrics.charWidth(c);
             int bearingY = metrics.getAscent();
 
-            // Glyph bounding box from per-char string bounds
             java.awt.geom.Rectangle2D bounds = metrics.getStringBounds(String.valueOf(c), scratchG);
             int gw = Math.max(1, (int) Math.ceil(bounds.getWidth()));
             int gh = Math.max(1, metrics.getAscent() + metrics.getDescent());
@@ -61,6 +46,8 @@ class FontRasterizerUtility extends UtilityPackage {
             tile.constructor(cp, glyphImage, 0, bearingY, advance);
             tiles.add(tile);
         }
+
+        scratchG.dispose(); // dispose after the loop, not before
 
         return tiles;
     }

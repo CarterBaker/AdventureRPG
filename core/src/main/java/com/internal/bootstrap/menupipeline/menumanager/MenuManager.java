@@ -14,6 +14,8 @@ import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.WindowInstance;
+import com.internal.core.util.mathematics.matrices.Matrix4;
+import com.internal.core.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -44,6 +46,9 @@ public class MenuManager extends ManagerPackage {
     // Lock reference counts
     private int inputLockCount;
     private int raycastLockCount;
+
+    // Cached font transform — translation only, no scaling
+    private final Matrix4 fontTransform = new Matrix4();
 
     // Base \\
 
@@ -131,20 +136,21 @@ public class MenuManager extends ManagerPackage {
         FontInstance font = element.getFontInstance();
         if (!font.hasModel() || font.getMergedModel().isEmpty())
             return;
+        float x = element.getComputedLeft() + (element.getComputedW() - font.getTextWidth()) * 0.5f;
+        float y = element.getComputedTop() + (element.getComputedH() - font.getTextHeight()) * 0.5f;
+        fontTransform.set(
+                1, 0, 0, x,
+                0, 1, 0, y,
+                0, 0, 1, 0,
+                0, 0, 0, 1);
         font.getModelInstance()
                 .getMaterial()
-                .setUniform("u_transform", element.getTransform());
+                .setUniform("u_transform", fontTransform);
         renderSystem.pushRenderCall(font.getModelInstance(), 0);
     }
 
     // Font GPU Upload \\
 
-    /*
-     * Uploads any dirty FontInstance merged models to GPU as ModelInstances.
-     * Called after element instantiation at menu open time. A FontInstance is
-     * dirty when setText() has been called but the GPU model has not yet been
-     * created or the text has changed since the last upload.
-     */
     private void uploadFontModels(ObjectArrayList<ElementInstance> elements) {
         for (int i = 0; i < elements.size(); i++) {
             ElementInstance el = elements.get(i);
@@ -165,6 +171,7 @@ public class MenuManager extends ManagerPackage {
         int materialID = font.getHandle().getMaterialID();
         MaterialInstance mat = materialManager.cloneMaterial(materialID);
         mat.setUniform("u_fontAtlas", font.getHandle().getGPUHandle());
+        mat.setUniform("u_color", font.getColor());
         ModelInstance model = modelManager.createModel(
                 font.getMergedModel().getVAOHandle(),
                 font.getMergedModel().getVertices(),
@@ -175,11 +182,6 @@ public class MenuManager extends ManagerPackage {
 
     // Font GPU Release \\
 
-    /*
-     * Releases GPU ModelInstances for all FontInstances when a menu closes.
-     * The merged DynamicModelHandle is kept — text does not need to be rebuilt
-     * if the same menu is reopened with the same text.
-     */
     private void releaseFontModels(ObjectArrayList<ElementInstance> elements) {
         for (int i = 0; i < elements.size(); i++) {
             ElementInstance el = elements.get(i);
@@ -260,7 +262,6 @@ public class MenuManager extends ManagerPackage {
         instance.constructor(handle, liveElements);
         holder[0] = instance;
 
-        // Upload font GPU models before first render
         uploadFontModels(liveElements);
 
         activeMenus.add(instance);

@@ -13,7 +13,7 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
  * geometry branches which receive a packet/model and fill it.
  *
  * VAO layout [2, 2, 1] — 5 floats per vertex:
- *   [0] x    [1] y    [2] u    [3] v    [4] color (1.0 = white)
+ *   [0] x    [1] y    [2] u    [3] v
  */
 public class FontGeometryBranch extends BranchPackage {
 
@@ -37,7 +37,6 @@ public class FontGeometryBranch extends BranchPackage {
         float y0 = 0f;
         float x1 = glyph.width;
         float y1 = glyph.height;
-        float color = 1.0f;
 
         FloatArrayList verts = new FloatArrayList(20);
 
@@ -46,25 +45,21 @@ public class FontGeometryBranch extends BranchPackage {
         verts.add(y0);
         verts.add(u0);
         verts.add(v0);
-        verts.add(color);
         // Vert 1 — top right
         verts.add(x1);
         verts.add(y0);
         verts.add(u1);
         verts.add(v0);
-        verts.add(color);
         // Vert 2 — bottom right
         verts.add(x1);
         verts.add(y1);
         verts.add(u1);
         verts.add(v1);
-        verts.add(color);
         // Vert 3 — bottom left
         verts.add(x0);
         verts.add(y1);
         verts.add(u0);
         verts.add(v1);
-        verts.add(color);
 
         model.addQuadVertices(verts);
     }
