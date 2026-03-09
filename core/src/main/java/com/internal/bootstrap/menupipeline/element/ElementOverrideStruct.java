@@ -1,17 +1,15 @@
 package com.internal.bootstrap.menupipeline.element;
 
-import com.internal.core.engine.StructPackage;
-
 /*
- * Carries per-placement overrides applied on top of an ElementHandle at
- * instantiation time. Sprite is stored as a name — cloning into a
- * SpriteInstance happens inside ElementSystem. Null fields mean no override
- * for that property.
+ * Optional overrides applied on top of a master ElementHandle at placement
+ * time. Any field that is null means "use the handle's value".
+ * color override is RGBA float[4], null means use handle color.
  */
-public class ElementOverrideStruct extends StructPackage {
+public class ElementOverrideStruct {
 
     private final String spriteName;
     private final String text;
+    private final float[] color;
     private final Runnable clickAction;
     private final MenuAwareAction menuAwareAction;
     private final LayoutStruct layout;
@@ -19,17 +17,17 @@ public class ElementOverrideStruct extends StructPackage {
     public ElementOverrideStruct(
             String spriteName,
             String text,
+            float[] color,
             Runnable clickAction,
             MenuAwareAction menuAwareAction,
             LayoutStruct layout) {
         this.spriteName = spriteName;
         this.text = text;
+        this.color = color;
         this.clickAction = clickAction;
         this.menuAwareAction = menuAwareAction;
         this.layout = layout;
     }
-
-    // Accessible \\
 
     public String getSpriteName() {
         return spriteName;
@@ -37,6 +35,10 @@ public class ElementOverrideStruct extends StructPackage {
 
     public String getText() {
         return text;
+    }
+
+    public float[] getColor() {
+        return color;
     }
 
     public Runnable getClickAction() {
@@ -49,5 +51,9 @@ public class ElementOverrideStruct extends StructPackage {
 
     public LayoutStruct getLayout() {
         return layout;
+    }
+
+    public boolean hasColor() {
+        return color != null;
     }
 }

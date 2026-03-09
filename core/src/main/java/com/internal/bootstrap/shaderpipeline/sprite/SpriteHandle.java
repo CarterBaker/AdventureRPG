@@ -11,29 +11,55 @@ import com.internal.core.engine.HandlePackage;
  */
 public class SpriteHandle extends HandlePackage {
 
-    // Internal
     private String name;
     private int gpuHandle;
     private int width;
     private int height;
     private ModelInstance modelInstance;
 
-    // Internal \\
+    // Nine-slice border: left, bottom, right, top — zero means no slicing
+    private float borderLeft;
+    private float borderBottom;
+    private float borderRight;
+    private float borderTop;
 
     public void constructor(
-            String name,
-            int gpuHandle,
-            int width,
-            int height,
-            ModelInstance modelInstance) {
+            String name, int gpuHandle,
+            int width, int height,
+            ModelInstance modelInstance,
+            float borderLeft, float borderBottom,
+            float borderRight, float borderTop) {
         this.name = name;
         this.gpuHandle = gpuHandle;
         this.width = width;
         this.height = height;
         this.modelInstance = modelInstance;
+        this.borderLeft = borderLeft;
+        this.borderBottom = borderBottom;
+        this.borderRight = borderRight;
+        this.borderTop = borderTop;
     }
 
-    // Accessible \\
+    public boolean hasSlice() {
+        return borderLeft != 0 || borderBottom != 0
+                || borderRight != 0 || borderTop != 0;
+    }
+
+    public float getBorderLeft() {
+        return borderLeft;
+    }
+
+    public float getBorderBottom() {
+        return borderBottom;
+    }
+
+    public float getBorderRight() {
+        return borderRight;
+    }
+
+    public float getBorderTop() {
+        return borderTop;
+    }
 
     public String getName() {
         return name;
@@ -51,7 +77,7 @@ public class SpriteHandle extends HandlePackage {
         return height;
     }
 
-    public ModelInstance getModelHandle() {
+    public ModelInstance getModelInstance() {
         return modelInstance;
     }
 }

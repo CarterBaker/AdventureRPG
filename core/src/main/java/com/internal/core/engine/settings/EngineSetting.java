@@ -31,6 +31,7 @@ public class EngineSetting {
         public static final String MENU_JSON_PATH = "menus";
         public static final String ITEM_JSON_PATH = "items";
         public static final String TOOL_TYPE_JSON_PATH = "tools";
+        public static final String FONT_PATH = "fonts";
 
         // File Extension Settings
 
@@ -47,6 +48,13 @@ public class EngineSetting {
         };
         public static final ObjectArraySet<String> TEXTURE_FILE_EXTENSIONS = new ObjectArraySet<>(
                         TEXTURE_FILE_EXTENSIONS_INTERNAL);
+
+        // Font extensions
+        private static final String[] FONT_FILE_EXTENSIONS_INTERNAL = {
+                        "ttf", "otf"
+        };
+        public static final ObjectArraySet<String> FONT_FILE_EXTENSIONS = new ObjectArraySet<>(
+                        FONT_FILE_EXTENSIONS_INTERNAL);
 
         // Vert shader extensions
         private static final String[] VERT_FILE_EXTENSIONS_INTERNAL = {
@@ -70,12 +78,20 @@ public class EngineSetting {
                         INCLUDE_FILE_EXTENSIONS_INTERNAL);
 
         // Texture Settings
-        public static final int BLOCK_TEXTURE_SIZE = 32;
         public static final String TEXTURE_UV_SCALE_UNIFORM = "u_uvPerBlock";
 
         // Sprite Settings
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
         public static final String SPRITE_DEFAULT_MATERIAL = "util/Sprite";
+
+        // Menu Settings
+        public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;
+        public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;
+        public static final String FONT_DEFAULT_VAO = "util/vao/LabelVAO";
+        public static final String FONT_DEFAULT_MATERIAL = "util/Label";
+        public static final int FONT_DEFAULT_SIZE = 24;
+        public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                        + "0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
 
         // Movement Settings
         public static final float BASE_WALKING_SPEED = 1.5f;
@@ -127,14 +143,14 @@ public class EngineSetting {
         public static final String DEFAULT_PLAYER_RACE = "Humanoid";
         public static final float BLOCK_PLACEMENT_INTERVAL = 0.1f;
 
-        // Movement Settings — BASE_WALKING_SPEED removed, superseded
-        public static final float MOVEMENT_SCALE = 1.5f; // multiplier on all movement speeds for game feel
-        public static final float JUMP_SCALE = 1.8f; // multiplier on jump impulse for game feel
+        // Movement Settings
+        public static final float MOVEMENT_SCALE = 1.5f;
+        public static final float JUMP_SCALE = 1.8f;
 
         // Physics settings
         public static final float MOVEMENT_ACCELERATION = 8.0f;
         public static final float GRAVITY_FORCE = 9.8f;
-        public static final float JUMP_HOLD_FRACTION = 0.4f; // hold force as fraction of impulse per second
+        public static final float JUMP_HOLD_FRACTION = 0.4f;
 
         // Lighting settings
         public static final int LUNAR_CYCLE_DAYS = 28;

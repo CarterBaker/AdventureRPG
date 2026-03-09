@@ -16,7 +16,6 @@ import com.internal.bootstrap.shaderpipeline.Texture.TextureHandle;
 import com.internal.bootstrap.shaderpipeline.Texture.UVHandle;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.core.engine.BuilderPackage;
-import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -111,12 +110,13 @@ class InternalBuilder extends BuilderPackage {
                 currentVertex++;
 
             } else if (element.isJsonObject()) {
-                expandQuad(element.getAsJsonObject(), vertices, quadIndices, currentVertex, vertStride, vaoInstance,
-                        file);
+                expandQuad(element.getAsJsonObject(), vertices, quadIndices,
+                        currentVertex, vertStride, vaoInstance, file);
                 currentVertex += 4;
 
             } else {
-                throwException("VBO element must be a vertex array or quad object in file: " + file.getName());
+                throwException("VBO element must be a vertex array or quad object in file: "
+                        + file.getName());
             }
         }
 
@@ -126,7 +126,8 @@ class InternalBuilder extends BuilderPackage {
             for (JsonElement idx : json.getAsJsonArray("ibo")) {
                 int value = idx.getAsInt();
                 if (value < 0 || value > 65535)
-                    throwException("Index out of 16-bit range: " + value + " in file: " + file.getName());
+                    throwException("Index out of 16-bit range: " + value
+                            + " in file: " + file.getName());
                 allIndices.add((short) value);
             }
         }
@@ -158,7 +159,8 @@ class InternalBuilder extends BuilderPackage {
 
         JsonArray positions = quadObj.getAsJsonArray("quad");
         if (positions.size() != 4)
-            throwException("Quad 'quad' array must have exactly 4 corners in file: " + file.getName());
+            throwException("Quad 'quad' array must have exactly 4 corners in file: "
+                    + file.getName());
 
         boolean hasTexture = quadObj.has("texture") && !quadObj.get("texture").isJsonNull();
 
@@ -171,6 +173,8 @@ class InternalBuilder extends BuilderPackage {
                     quadObj.get("texture").getAsString());
 
             UVHandle uv = textureHandle.getUVHandle();
+            int tileWidth = textureHandle.getTileWidth();
+            int tileHeight = textureHandle.getTileHeight();
             float[][] localUVs = resolveLocalUVs(quadObj, file);
 
             for (int i = 0; i < 4; i++) {
@@ -180,8 +184,8 @@ class InternalBuilder extends BuilderPackage {
                             + " floats, expected " + posStride + " in file: " + file.getName());
                 for (JsonElement val : pos)
                     vertices.add(val.getAsFloat());
-                vertices.add(snapUV(localUVs[i][0], uv.u0, uv.u1));
-                vertices.add(snapUV(localUVs[i][1], uv.v0, uv.v1));
+                vertices.add(snapUV(localUVs[i][0], uv.u0, uv.u1, tileWidth));
+                vertices.add(snapUV(localUVs[i][1], uv.v0, uv.v1, tileHeight));
             }
 
         } else {
@@ -190,7 +194,8 @@ class InternalBuilder extends BuilderPackage {
                 JsonArray corner = positions.get(i).getAsJsonArray();
                 if (corner.size() != vertStride)
                     throwException("Untextured quad corner " + i + " has " + corner.size()
-                            + " floats, expected " + vertStride + " in file: " + file.getName());
+                            + " floats, expected " + vertStride + " in file: "
+                            + file.getName());
                 for (JsonElement val : corner)
                     vertices.add(val.getAsFloat());
             }
@@ -209,7 +214,8 @@ class InternalBuilder extends BuilderPackage {
     private void validateVAOUVCompatibility(VAOInstance vaoInstance, File file) {
         int[] attrSizes = vaoInstance.getVAOStruct().attrSizes;
         if (attrSizes == null || attrSizes.length == 0)
-            throwException("VAO has no attribute layout — cannot inject UVs in file: " + file.getName());
+            throwException("VAO has no attribute layout — cannot inject UVs in file: "
+                    + file.getName());
         int lastAttr = attrSizes[attrSizes.length - 1];
         if (lastAttr != 2)
             throwException("Textured quad requires last VAO attribute size 2, found "
@@ -231,16 +237,22 @@ class InternalBuilder extends BuilderPackage {
         for (int i = 0; i < 4; i++) {
             JsonArray pair = uvsArray.get(i).getAsJsonArray();
             if (pair.size() != 2)
-                throwException("Quad 'uvs' entry " + i + " must have 2 values in file: " + file.getName());
+                throwException("Quad 'uvs' entry " + i + " must have 2 values in file: "
+                        + file.getName());
             localUVs[i][0] = pair.get(0).getAsFloat();
             localUVs[i][1] = pair.get(1).getAsFloat();
         }
         return localUVs;
     }
 
-    private float snapUV(float local, float tileMin, float tileMax) {
-        int pixel = Math.round(local * EngineSetting.BLOCK_TEXTURE_SIZE);
-        float snapped = pixel / (float) EngineSetting.BLOCK_TEXTURE_SIZE;
+    /*
+     * Snaps a local UV coordinate to the nearest pixel boundary within the
+     * tile's atlas region. Uses the tile's own pixel dimension from the handle
+     * rather than a global engine setting — works correctly for any tile size.
+     */
+    private float snapUV(float local, float tileMin, float tileMax, int tilePixelSize) {
+        int pixel = Math.round(local * tilePixelSize);
+        float snapped = pixel / (float) tilePixelSize;
         return tileMin + snapped * (tileMax - tileMin);
     }
 

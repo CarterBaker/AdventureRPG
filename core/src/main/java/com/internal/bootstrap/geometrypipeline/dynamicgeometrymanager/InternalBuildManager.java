@@ -3,11 +3,14 @@ package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 import java.util.BitSet;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.ComplexGeometryBranch;
+import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.FontGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.FullGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.LiquidGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.PartialGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
+import com.internal.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
+import com.internal.bootstrap.menupipeline.fonts.GlyphMetricStruct;
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
@@ -19,7 +22,6 @@ import com.internal.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.mathematics.Extras.Color;
 import com.internal.core.util.mathematics.Extras.Direction3Vector;
-
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
@@ -30,6 +32,7 @@ class InternalBuildManager extends ManagerPackage {
     private PartialGeometryBranch partialGeometryBranch;
     private ComplexGeometryBranch complexGeometryBranch;
     private LiquidGeometryBranch liquidGeometryBranch;
+    private FontGeometryBranch fontGeometryBranch;
 
     private BiomeManager biomeManager;
     private BlockManager blockManager;
@@ -40,25 +43,21 @@ class InternalBuildManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Internal
         this.fullGeometryBranch = create(FullGeometryBranch.class);
         this.partialGeometryBranch = create(PartialGeometryBranch.class);
         this.complexGeometryBranch = create(ComplexGeometryBranch.class);
         this.liquidGeometryBranch = create(LiquidGeometryBranch.class);
-
+        this.fontGeometryBranch = create(FontGeometryBranch.class);
         this.BLOCK_COORDINATE_COUNT = ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT;
     }
 
     @Override
     protected void get() {
-
-        // Internal
         this.biomeManager = get(BiomeManager.class);
         this.blockManager = get(BlockManager.class);
     }
 
-    // Geometry Builder \\
+    // Chunk Geometry \\
 
     public boolean build(
             DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
@@ -73,7 +72,6 @@ class InternalBuildManager extends ManagerPackage {
         dynamicPacketInstance.clear();
         dynamicGeometryAsyncContainer.reset();
 
-        // Fetch all three palettes once up front
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
         BlockPaletteHandle rotationPaletteHandle = subChunkInstance.getBlockRotationPaletteHandle();
@@ -81,7 +79,6 @@ class InternalBuildManager extends ManagerPackage {
         Int2ObjectOpenHashMap<FloatArrayList> verts = dynamicGeometryAsyncContainer.getVerts();
         BitSet[] directionalBatches = dynamicGeometryAsyncContainer.getDirectionalBatches();
         BitSet batchReturn = dynamicGeometryAsyncContainer.getBatchReturn();
-
         Color[] vertColors = dynamicGeometryAsyncContainer.getVertColors();
 
         for (int i = 0; i < BLOCK_COORDINATE_COUNT; i++) {
@@ -101,7 +98,6 @@ class InternalBuildManager extends ManagerPackage {
             for (int direction = 0; direction < Direction3Vector.LENGTH; direction++) {
 
                 batchReturn.clear();
-
                 BitSet accumulatedBatch = directionalBatches[direction];
 
                 if (accumulatedBatch.get(i))
@@ -109,20 +105,12 @@ class InternalBuildManager extends ManagerPackage {
 
                 if (!assembleQuads(
                         blockGeometry,
-                        chunkInstance,
-                        subChunkInstance,
-                        biomePaletteHandle,
-                        blockPaletteHandle,
-                        rotationPaletteHandle,
+                        chunkInstance, subChunkInstance,
+                        biomePaletteHandle, blockPaletteHandle, rotationPaletteHandle,
                         dynamicPacketInstance,
-                        xyz,
-                        Direction3Vector.VALUES[direction],
-                        biomeHandle,
-                        blockHandle,
-                        verts,
-                        accumulatedBatch,
-                        batchReturn,
-                        vertColors))
+                        xyz, Direction3Vector.VALUES[direction],
+                        biomeHandle, blockHandle,
+                        verts, accumulatedBatch, batchReturn, vertColors))
                     continue;
             }
         }
@@ -160,70 +148,42 @@ class InternalBuildManager extends ManagerPackage {
         return switch (geometry) {
 
             case FULL -> fullGeometryBranch.assembleQuads(
-                    chunkInstance,
-                    subChunkInstance,
-                    biomePaletteHandle,
-                    blockPaletteHandle,
-                    rotationPaletteHandle,
-                    dynamicPacketInstance,
-                    xyz,
-                    direction3Vector,
-                    biomeHandle,
-                    blockHandle,
-                    verts,
-                    accumulatedBatch,
-                    batchReturn,
-                    vertColors);
+                    chunkInstance, subChunkInstance,
+                    biomePaletteHandle, blockPaletteHandle, rotationPaletteHandle,
+                    dynamicPacketInstance, xyz, direction3Vector,
+                    biomeHandle, blockHandle, verts, accumulatedBatch, batchReturn, vertColors);
 
             case PARTIAL -> partialGeometryBranch.assembleQuads(
-                    chunkInstance,
-                    subChunkInstance,
-                    biomePaletteHandle,
-                    blockPaletteHandle,
-                    rotationPaletteHandle,
-                    dynamicPacketInstance,
-                    xyz,
-                    direction3Vector,
-                    biomeHandle,
-                    blockHandle,
-                    verts,
-                    accumulatedBatch,
-                    batchReturn,
-                    vertColors);
+                    chunkInstance, subChunkInstance,
+                    biomePaletteHandle, blockPaletteHandle, rotationPaletteHandle,
+                    dynamicPacketInstance, xyz, direction3Vector,
+                    biomeHandle, blockHandle, verts, accumulatedBatch, batchReturn, vertColors);
 
             case COMPLEX -> complexGeometryBranch.assembleQuads(
-                    chunkInstance,
-                    subChunkInstance,
-                    biomePaletteHandle,
-                    blockPaletteHandle,
-                    rotationPaletteHandle,
-                    dynamicPacketInstance,
-                    xyz,
-                    direction3Vector,
-                    biomeHandle,
-                    blockHandle,
-                    verts,
-                    accumulatedBatch,
-                    batchReturn,
-                    vertColors);
+                    chunkInstance, subChunkInstance,
+                    biomePaletteHandle, blockPaletteHandle, rotationPaletteHandle,
+                    dynamicPacketInstance, xyz, direction3Vector,
+                    biomeHandle, blockHandle, verts, accumulatedBatch, batchReturn, vertColors);
 
             case LIQUID -> liquidGeometryBranch.assembleQuads(
-                    chunkInstance,
-                    subChunkInstance,
-                    biomePaletteHandle,
-                    blockPaletteHandle,
-                    rotationPaletteHandle,
-                    dynamicPacketInstance,
-                    xyz,
-                    direction3Vector,
-                    biomeHandle,
-                    blockHandle,
-                    verts,
-                    accumulatedBatch,
-                    batchReturn,
-                    vertColors);
+                    chunkInstance, subChunkInstance,
+                    biomePaletteHandle, blockPaletteHandle, rotationPaletteHandle,
+                    dynamicPacketInstance, xyz, direction3Vector,
+                    biomeHandle, blockHandle, verts, accumulatedBatch, batchReturn, vertColors);
 
-            case NONE -> true; // Not reachable
+            case NONE -> true;
         };
+    }
+
+    // Font Geometry \\
+
+    /*
+     * Caller creates and owns the DynamicModelHandle — branch just fills verts.
+     */
+    public void buildGlyphModel(
+            DynamicModelHandle model,
+            GlyphMetricStruct glyph,
+            int atlasPixelSize) {
+        fontGeometryBranch.buildGlyphModel(model, glyph, atlasPixelSize);
     }
 }

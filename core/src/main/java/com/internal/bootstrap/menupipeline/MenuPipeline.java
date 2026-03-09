@@ -2,6 +2,7 @@ package com.internal.bootstrap.menupipeline;
 
 import com.internal.bootstrap.menupipeline.buttoneventsmanager.ButtonEventsManager;
 import com.internal.bootstrap.menupipeline.elementsystem.ElementSystem;
+import com.internal.bootstrap.menupipeline.fontmanager.FontManager;
 import com.internal.bootstrap.menupipeline.menumanager.MenuManager;
 import com.internal.core.engine.PipelinePackage;
 
@@ -11,10 +12,9 @@ public class MenuPipeline extends PipelinePackage {
 
     @Override
     protected void create() {
-
-        // Menu Pipeline
         create(ButtonEventsManager.class);
         create(ElementSystem.class);
+        create(FontManager.class);
         create(MenuManager.class);
     }
 }

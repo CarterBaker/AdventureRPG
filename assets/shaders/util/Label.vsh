@@ -1,5 +1,4 @@
 #version 330 core
-
 #include "includes/OrthoData.glsl"
 
 layout (location = 0) in vec2 a_position;

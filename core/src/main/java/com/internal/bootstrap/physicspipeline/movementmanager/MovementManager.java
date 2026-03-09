@@ -1,9 +1,9 @@
-package com.internal.bootstrap.physicspipeline.moveementmanager;
+package com.internal.bootstrap.physicspipeline.movementmanager;
 
 import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
-import com.internal.bootstrap.physicspipeline.moveementmanager.movement.BlockCollisionBranch;
-import com.internal.bootstrap.physicspipeline.moveementmanager.movement.GravityBranch;
-import com.internal.bootstrap.physicspipeline.moveementmanager.movement.MovementBranch;
+import com.internal.bootstrap.physicspipeline.movementmanager.movement.BlockCollisionBranch;
+import com.internal.bootstrap.physicspipeline.movementmanager.movement.GravityBranch;
+import com.internal.bootstrap.physicspipeline.movementmanager.movement.MovementBranch;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.core.engine.ManagerPackage;
@@ -19,7 +19,9 @@ public class MovementManager extends ManagerPackage {
     private GravityBranch gravityBranch;
     private BlockCollisionBranch blockCollisionBranch;
 
+    // Cached vectors — no per-frame allocation
     private Vector3 movement;
+    private Vector3 preCollisionSnapshot;
 
     // Settings
     private int CHUNK_SIZE;
@@ -32,6 +34,7 @@ public class MovementManager extends ManagerPackage {
         this.gravityBranch = create(GravityBranch.class);
         this.blockCollisionBranch = create(BlockCollisionBranch.class);
         this.movement = new Vector3();
+        this.preCollisionSnapshot = new Vector3();
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
     }
 
@@ -39,8 +42,7 @@ public class MovementManager extends ManagerPackage {
 
     /**
      * Moves an entity based on a normalized Vector3Int input.
-     * Does not know or care if input came from a player or AI.
-     * All physics, gravity, and collision are self-contained here.
+     * Does not know or care if input came from player or AI.
      */
     public void move(Vector3Int input, Vector3 direction, EntityHandle entity) {
 
@@ -52,29 +54,37 @@ public class MovementManager extends ManagerPackage {
 
         entity.update();
 
-        // 1. Horizontal — movement.y left at 0 here
+        // Reset movement each frame — prevents stale data carrying over between
+        // branches
+        movement.set(0, 0, 0);
+
+        // 1. Horizontal — x, z only
         movementBranch.calculate(input, direction, movement, entity);
 
-        // 2. Vertical — gravity always acts, jump when input.y == 1
-        float preCollisionY = gravityBranch.calculate(input.y, entity);
-        movement.y = preCollisionY;
+        // 2. Gravity — adds to all three axes, direction and magnitude from WorldHandle
+        Vector3 gravDisp = gravityBranch.calculate(input.y, entity);
+        movement.x += gravDisp.x;
+        movement.y += gravDisp.y;
+        movement.z += gravDisp.z;
 
-        // 3. Collision — all axes
+        // 3. Snapshot before collision
+        preCollisionSnapshot.set(movement.x, movement.y, movement.z);
+
+        // 4. Collision
         blockCollisionBranch.calculate(position, movement, entity);
-        float postCollisionY = movement.y;
 
-        // 4. Post-collision — resolve landing and ceiling hits
-        gravityBranch.postCollision(preCollisionY, postCollisionY, entity);
+        // 5. Post-collision
+        gravityBranch.postCollision(preCollisionSnapshot, movement, entity);
 
-        // 5. Apply movement
+        // 6. Apply
         position.x += movement.x;
         position.y += movement.y;
         position.z += movement.z;
 
-        // 6. Chunk coordinate update
+        // 7. Chunk update
         chunkCoordinate = updateChunkCoordinateFrom(position, chunkCoordinateX, chunkCoordinateY);
 
-        // 7. World wrap
+        // 8. World wrap
         WorldWrapUtility.wrapAroundChunk(position);
         chunkCoordinate = WorldWrapUtility.wrapAroundWorld(entity.getWorldHandle(), chunkCoordinate);
 

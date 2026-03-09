@@ -1,0 +1,7 @@
+{
+  "blockName": "SliceData",
+  "uniforms": [
+    { "name": "u_border",  "type": "VECTOR4" },
+    { "name": "u_texSize", "type": "VECTOR2" }
+  ]
+}

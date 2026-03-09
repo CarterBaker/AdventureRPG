@@ -25,9 +25,9 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 /*
  * Parses menu JSON files into MenuHandles and ElementHandles during bootstrap.
- * Sprite paths are validated here and stored as names — no handles or instances
- * are held. All produced objects are HandlePackage types owned by the manager
- * or DataPackage types that do not outlive bootstrap.
+ *
+ * Color JSON field: "color": [r, g, b, a] — floats 0.0–1.0 on any LABEL element.
+ * If omitted the FontInstance defaults to white (1, 1, 1, 1).
  */
 class InternalBuilder extends BuilderPackage {
 
@@ -161,11 +161,13 @@ class InternalBuilder extends BuilderPackage {
         String usePath = json.get("use").getAsString();
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String text = JsonUtility.getString(json, "text", null);
+        String fontName = JsonUtility.getString(json, "font", null);
+        float[] color = parseColor(json);
         LayoutStruct layout = FileParserUtility.parseLayoutOverride(json);
         String[] onClick = FileParserUtility.parseOnClick(json);
         ObjectArrayList<ElementData> children = parseElements(json);
         ElementData data = create(ElementData.class);
-        data.constructorUse(id, usePath, spritePath, text, layout,
+        data.constructorUse(id, usePath, spritePath, text, fontName, color, layout,
                 onClick != null ? onClick[0] : null,
                 onClick != null ? onClick[1] : null,
                 onClick != null ? onClick[2] : null,
@@ -178,11 +180,13 @@ class InternalBuilder extends BuilderPackage {
                 JsonUtility.validateString(json, "type"), id);
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String text = JsonUtility.getString(json, "text", null);
+        String fontName = parseFontName(json, elementType, id);
+        float[] color = elementType == ElementType.LABEL ? parseColor(json) : null;
         LayoutStruct layout = FileParserUtility.parseLayout(json);
         String[] onClick = FileParserUtility.parseOnClick(json);
         ObjectArrayList<ElementData> children = parseElements(json);
         ElementData data = create(ElementData.class);
-        data.constructor(id, elementType, spritePath, text, layout,
+        data.constructor(id, elementType, spritePath, text, fontName, color, layout,
                 onClick != null ? onClick[0] : null,
                 onClick != null ? onClick[1] : null,
                 onClick != null ? onClick[2] : null,
@@ -190,9 +194,40 @@ class InternalBuilder extends BuilderPackage {
         return data;
     }
 
+    // Font / Color Parsing \\
+
+    private String parseFontName(JsonObject json, ElementType type, String elementId) {
+        String fontName = JsonUtility.getString(json, "font", null);
+        if (fontName == null)
+            return null;
+        if (type != ElementType.LABEL)
+            throwException("Element '" + elementId + "' has 'font' field but is not type LABEL");
+        return fontName;
+    }
+
+    /*
+     * Parses "color": [r, g, b, a] from JSON. Returns null if field absent —
+     * FontInstance will default to white. Throws if the array is not exactly
+     * 4 elements.
+     */
+    private float[] parseColor(JsonObject json) {
+        if (!json.has("color"))
+            return null;
+        JsonArray arr = json.getAsJsonArray("color");
+        if (arr.size() != 4)
+            throwException("'color' field must be an array of exactly 4 floats [r, g, b, a]");
+        return new float[] {
+                arr.get(0).getAsFloat(),
+                arr.get(1).getAsFloat(),
+                arr.get(2).getAsFloat(),
+                arr.get(3).getAsFloat()
+        };
+    }
+
     // Master Registration \\
 
-    private void registerTopLevelMasters(String filePath, ObjectArrayList<ElementData> elements) {
+    private void registerTopLevelMasters(
+            String filePath, ObjectArrayList<ElementData> elements) {
         for (ElementData data : elements)
             if (!data.isRef() && !data.isUse())
                 elementSystem.registerMaster(filePath + "/" + data.getId(),
@@ -204,7 +239,11 @@ class InternalBuilder extends BuilderPackage {
         ElementHandle master = create(ElementHandle.class);
         master.constructor(
                 data.getId(), data.getType(),
-                resolveSpriteName(data), data.getText(), data.getLayout(),
+                resolveSpriteName(data),
+                data.getText(),
+                data.getFontName(),
+                data.getColor(),
+                data.getLayout(),
                 action instanceof Runnable r ? r : null,
                 action instanceof MenuAwareAction m ? m : null,
                 buildChildPlacements(filePath, data.getChildren()));
@@ -249,8 +288,10 @@ class InternalBuilder extends BuilderPackage {
         if (!data.getChildren().isEmpty()) {
             master = create(ElementHandle.class);
             master.constructor(data.getId(), template.getType(),
-                    template.getSpriteName(), template.getText(), template.getLayout(),
-                    template.getClickAction(), template.getMenuAwareAction(),
+                    template.getSpriteName(), template.getText(),
+                    template.getFontName(), template.getColor(),
+                    template.getLayout(), template.getClickAction(),
+                    template.getMenuAwareAction(),
                     buildChildPlacements(filePath, data.getChildren()));
             elementSystem.registerMaster(filePath + "/" + data.getId(), master);
         } else {
@@ -272,13 +313,17 @@ class InternalBuilder extends BuilderPackage {
             maaOverride = action instanceof MenuAwareAction m ? m : null;
         }
 
+        // Color override — use data color if specified
+        float[] colorOverride = data.hasColor() ? data.getColor() : null;
+
         boolean hasOverride = layoutOverride != null || spriteNameOverride != null
-                || data.getText() != null || clickOverride != null || maaOverride != null;
+                || data.getText() != null || clickOverride != null
+                || maaOverride != null || colorOverride != null;
 
         ElementPlacementHandle placement = create(ElementPlacementHandle.class);
         placement.constructor(master, hasOverride
                 ? new ElementOverrideStruct(spriteNameOverride, data.getText(),
-                        clickOverride, maaOverride, layoutOverride)
+                        colorOverride, clickOverride, maaOverride, layoutOverride)
                 : null);
         return placement;
     }
@@ -286,7 +331,7 @@ class InternalBuilder extends BuilderPackage {
     private ElementPlacementHandle buildRefPlacement(String filePath, ElementData data) {
 
         ElementOverrideStruct override = data.getLayout() != null
-                ? new ElementOverrideStruct(null, null, null, null, data.getLayout())
+                ? new ElementOverrideStruct(null, null, null, null, null, data.getLayout())
                 : null;
 
         ElementHandle resolved = resolveRefKey(data.getRefPath());

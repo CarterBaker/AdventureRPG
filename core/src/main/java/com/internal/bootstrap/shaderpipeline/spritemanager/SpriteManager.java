@@ -7,7 +7,12 @@ import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteInstance;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
+import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.ManagerPackage;
+import com.internal.core.util.mathematics.vectors.Vector2;
+import com.internal.core.util.mathematics.vectors.Vector4;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -23,6 +28,7 @@ public class SpriteManager extends ManagerPackage {
     // Internal
     private MaterialManager materialManager;
     private ModelManager modelManager;
+    private UBOManager uboManager;
 
     // Data
     private Object2ObjectOpenHashMap<String, SpriteHandle> spriteName2SpriteHandle;
@@ -39,6 +45,7 @@ public class SpriteManager extends ManagerPackage {
     protected void get() {
         this.materialManager = get(MaterialManager.class);
         this.modelManager = get(ModelManager.class);
+        this.uboManager = get(UBOManager.class);
     }
 
     @Override
@@ -72,22 +79,33 @@ public class SpriteManager extends ManagerPackage {
     public SpriteInstance cloneSprite(String spriteName) {
 
         SpriteHandle original = spriteName2SpriteHandle.get(spriteName);
-
         if (original == null) {
             request(spriteName);
             original = spriteName2SpriteHandle.get(spriteName);
         }
-
         if (original == null)
             throwException("Sprite not found after load: '" + spriteName + "'");
 
         InternalLoader loader = (InternalLoader) internalLoader;
-        MeshHandle defaultMeshHandle = loader.getDefaultMeshHandle();
-        int defaultMaterialID = loader.getDefaultMaterialID();
 
-        MaterialInstance material = materialManager.cloneMaterial(defaultMaterialID);
+        MaterialInstance material = materialManager.cloneMaterial(loader.getDefaultMaterialID());
         material.setUniform("u_sprite", original.getGPUHandle());
-        ModelInstance clonedModel = modelManager.createModel(defaultMeshHandle, material);
+
+        UBOHandle sliceHandle = uboManager.getUBOHandleFromUBOName("SliceData");
+        UBOInstance sliceData = uboManager.cloneUBO(sliceHandle);
+        sliceData.updateUniform("u_border", new Vector4(
+                original.getBorderLeft(),
+                original.getBorderBottom(),
+                original.getBorderRight(),
+                original.getBorderTop()));
+        sliceData.updateUniform("u_texSize", new Vector2(
+                (float) original.getWidth(),
+                (float) original.getHeight()));
+        sliceData.push();
+
+        material.setUBO(sliceData);
+
+        ModelInstance clonedModel = modelManager.createModel(loader.getDefaultMeshHandle(), material);
 
         SpriteInstance instance = create(SpriteInstance.class);
         instance.constructor(
@@ -95,7 +113,8 @@ public class SpriteManager extends ManagerPackage {
                 original.getGPUHandle(),
                 original.getWidth(),
                 original.getHeight(),
-                clonedModel);
+                clonedModel,
+                sliceData);
 
         return instance;
     }

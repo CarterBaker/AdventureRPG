@@ -6,6 +6,8 @@ import com.internal.bootstrap.menupipeline.element.ElementOverrideStruct;
 import com.internal.bootstrap.menupipeline.element.ElementPlacementHandle;
 import com.internal.bootstrap.menupipeline.element.LayoutStruct;
 import com.internal.bootstrap.menupipeline.element.MenuAwareAction;
+import com.internal.bootstrap.menupipeline.fonts.FontInstance;
+import com.internal.bootstrap.menupipeline.fontmanager.FontManager;
 import com.internal.bootstrap.menupipeline.menu.MenuInstance;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import com.internal.bootstrap.shaderpipeline.spritemanager.SpriteManager;
@@ -17,17 +19,13 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 import java.util.function.Supplier;
 
-/*
- * Manages the master element registry and handles runtime instantiation of
- * ElementInstances from ElementHandles. Sprite cloning happens here at spawn
- * time — handles carry only names, instances own their SpriteInstance.
- */
 public class ElementSystem extends SystemPackage {
 
     // Internal
     private SpriteManager spriteManager;
+    private FontManager fontManager;
 
-    // String lookup once at build time — int from there
+    // Registry
     private Object2IntOpenHashMap<String> masterKey2ID;
     private Int2ObjectOpenHashMap<ElementHandle> masterID2Handle;
     private int nextMasterID;
@@ -48,6 +46,7 @@ public class ElementSystem extends SystemPackage {
     @Override
     protected void get() {
         this.spriteManager = get(SpriteManager.class);
+        this.fontManager = get(FontManager.class);
     }
 
     // Master Registry \\
@@ -101,7 +100,7 @@ public class ElementSystem extends SystemPackage {
             ElementOverrideStruct override,
             Supplier<MenuInstance> parentRef) {
 
-        // Sprite — override name wins, clone whichever is chosen into a fresh instance
+        // Sprite
         String sourceName = (override != null && override.getSpriteName() != null)
                 ? override.getSpriteName()
                 : master.getSpriteName();
@@ -109,20 +108,40 @@ public class ElementSystem extends SystemPackage {
                 ? spriteManager.cloneSprite(sourceName)
                 : null;
 
-        // Action — bind $parent at spawn time if needed
+        // Font + color
+        FontInstance fontInstance = null;
+        if (master.hasFont()) {
+            fontInstance = fontManager.cloneFont(master.getFontName());
+
+            // Color — override wins, then handle, then default white
+            float[] color = (override != null && override.hasColor())
+                    ? override.getColor()
+                    : master.hasColor() ? master.getColor() : null;
+            if (color != null)
+                fontInstance.setColor(color[0], color[1], color[2], color[3]);
+
+            // Text — override wins, then handle
+            String text = (override != null && override.getText() != null)
+                    ? override.getText()
+                    : master.getText();
+            if (text != null)
+                fontInstance.setText(text);
+        }
+
+        // Action
         Runnable resolvedAction = resolveAction(master, override, parentRef);
 
-        // Text and layout — null means fall back to handle at read time
+        // Layout and text overrides stored for read-time fallback
         String textOverride = override != null ? override.getText() : null;
         LayoutStruct layoutOverride = override != null ? override.getLayout() : null;
 
-        // Children — recurse uniformly
+        // Children
         ObjectArrayList<ElementInstance> childInstances = new ObjectArrayList<>(master.getChildren().size());
         for (ElementPlacementHandle child : master.getChildren())
             childInstances.add(createInstance(child.getMaster(), child.getOverride(), parentRef));
 
         ElementInstance instance = create(ElementInstance.class);
-        instance.constructor(master, spriteInstance,
+        instance.constructor(master, spriteInstance, fontInstance,
                 textOverride, resolvedAction, layoutOverride, childInstances);
         return instance;
     }
@@ -146,7 +165,6 @@ public class ElementSystem extends SystemPackage {
             return () -> maa.execute(parentRef.get());
         }
 
-        // Normal Runnable — ElementInstance.execute() reads it from the handle directly
         return null;
     }
 }

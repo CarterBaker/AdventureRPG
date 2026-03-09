@@ -2,22 +2,23 @@ package com.internal.bootstrap.entitypipeline.entity;
 
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.util.mathematics.vectors.Vector2;
+import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class EntityStateHandle extends HandlePackage {
 
-    // State — what the entity is currently doing
+    // State
     private EntityState movementState;
 
-    // Velocity — owned here because velocity and state are directly coupled
-    private float verticalVelocity;
-    private Vector2 horizontalVelocity;
+    // Velocity
+    private Vector3 gravityVelocity; // accumulates along gravity axes
+    private Vector2 horizontalVelocity; // accumulates along movement plane
     private long jumpStartTime;
 
     // Constructor \\
 
     public void constructor() {
         this.movementState = EntityState.IDLE;
-        this.verticalVelocity = 0f;
+        this.gravityVelocity = new Vector3();
         this.horizontalVelocity = new Vector2();
         this.jumpStartTime = 0L;
     }
@@ -28,8 +29,8 @@ public class EntityStateHandle extends HandlePackage {
         return movementState;
     }
 
-    public float getVerticalVelocity() {
-        return verticalVelocity;
+    public Vector3 getGravityVelocity() {
+        return gravityVelocity;
     }
 
     public Vector2 getHorizontalVelocity() {
@@ -44,10 +45,6 @@ public class EntityStateHandle extends HandlePackage {
 
     public void setMovementState(EntityState movementState) {
         this.movementState = movementState;
-    }
-
-    public void setVerticalVelocity(float verticalVelocity) {
-        this.verticalVelocity = verticalVelocity;
     }
 
     public void setJumpStartTime(long jumpStartTime) {

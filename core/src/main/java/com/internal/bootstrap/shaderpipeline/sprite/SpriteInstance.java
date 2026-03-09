@@ -1,6 +1,7 @@
 package com.internal.bootstrap.shaderpipeline.sprite;
 
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.core.engine.InstancePackage;
 
 /*
@@ -11,29 +12,25 @@ import com.internal.core.engine.InstancePackage;
  */
 public class SpriteInstance extends InstancePackage {
 
-    // Internal
     private String name;
     private int gpuHandle;
     private int width;
     private int height;
     private ModelInstance modelInstance;
-
-    // Internal \\
+    private UBOInstance sliceData;
 
     public void constructor(
-            String name,
-            int gpuHandle,
-            int width,
-            int height,
-            ModelInstance modelInstance) {
+            String name, int gpuHandle,
+            int width, int height,
+            ModelInstance modelInstance,
+            UBOInstance sliceData) {
         this.name = name;
         this.gpuHandle = gpuHandle;
         this.width = width;
         this.height = height;
         this.modelInstance = modelInstance;
+        this.sliceData = sliceData;
     }
-
-    // Accessible \\
 
     public String getName() {
         return name;
@@ -53,5 +50,9 @@ public class SpriteInstance extends InstancePackage {
 
     public ModelInstance getModelHandle() {
         return modelInstance;
+    }
+
+    public UBOInstance getSliceData() {
+        return sliceData;
     }
 }

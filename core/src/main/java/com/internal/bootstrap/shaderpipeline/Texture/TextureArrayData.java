@@ -1,11 +1,8 @@
 package com.internal.bootstrap.shaderpipeline.Texture;
 
 import java.awt.image.BufferedImage;
-import java.util.Collections;
-import java.util.Set;
 
 import com.internal.core.engine.DataPackage;
-
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -13,17 +10,16 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 /*
  * Bootstrap-only container grouping all alias layers for one texture array
  * directory alongside the tile coordinate map used for UV registration.
- * Also carries the set of alias IDs that were actually found in this atlas —
- * used by seedUBO to write only the uniforms this atlas provides.
- * Atlas image data is cleared after GPU upload. Must not be held after
- * bootstrap completes.
+ * Also carries the set of alias IDs actually found in this atlas — used by
+ * seedUBO to write only the uniforms this atlas provides. Atlas image data
+ * is cleared after GPU upload. Must not be held after bootstrap completes.
  */
 public class TextureArrayData extends DataPackage {
 
     // Internal
     private int id;
     private String name;
-    private int atlasSize;
+    private int atlasPixelSize;
     private TextureAtlasData[] textureArray;
 
     // Tiles
@@ -34,10 +30,10 @@ public class TextureArrayData extends DataPackage {
 
     // Internal \\
 
-    public void constructor(int id, String name, int atlasSize, TextureAtlasData[] textureArray) {
+    public void constructor(int id, String name, int atlasPixelSize, TextureAtlasData[] textureArray) {
         this.id = id;
         this.name = name;
-        this.atlasSize = atlasSize;
+        this.atlasPixelSize = atlasPixelSize;
         this.textureArray = textureArray;
         this.tileCoordinateMap = new Object2ObjectOpenHashMap<>();
         this.foundAliasIds = new IntOpenHashSet();
@@ -64,12 +60,8 @@ public class TextureArrayData extends DataPackage {
 
     // Tiles \\
 
-    public void createTile(int x, int y, TextureTileData tile) {
-        tileCoordinateMap.put(x + "," + y, tile);
-    }
-
-    TextureTileData getTileAt(int x, int y) {
-        return tileCoordinateMap.get(x + "," + y);
+    public void registerTile(TextureTileData tile) {
+        tileCoordinateMap.put(tile.getName(), tile);
     }
 
     public Object2ObjectOpenHashMap<String, TextureTileData> getTileCoordinateMap() {
@@ -86,8 +78,8 @@ public class TextureArrayData extends DataPackage {
         return name;
     }
 
-    public int getAtlasSize() {
-        return atlasSize;
+    public int getAtlasPixelSize() {
+        return atlasPixelSize;
     }
 
     public BufferedImage[] getRawImageArray() {

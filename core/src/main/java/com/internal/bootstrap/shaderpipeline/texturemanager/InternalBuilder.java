@@ -1,12 +1,13 @@
 package com.internal.bootstrap.shaderpipeline.texturemanager;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
+
 import javax.imageio.ImageIO;
 
 import com.internal.bootstrap.shaderpipeline.Texture.TextureArrayData;
@@ -14,17 +15,19 @@ import com.internal.bootstrap.shaderpipeline.Texture.TextureAtlasData;
 import com.internal.bootstrap.shaderpipeline.Texture.TextureTileData;
 import com.internal.bootstrap.shaderpipeline.texturemanager.aliassystem.AliasLibrarySystem;
 import com.internal.core.engine.BuilderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.AtlasUtility;
 import com.internal.core.util.FileUtility;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
  * Constructs TextureArrayData from raw image files. Handles tile creation,
- * atlas packing, and layer composition per alias. All produced objects are
- * DataPackage types and must not be held after bootstrap completes.
+ * atlas packing via AtlasUtility, and layer compositing per alias. All
+ * produced objects are DataPackage types and must not be held after bootstrap
+ * completes.
  *
  * Only the alias IDs actually encountered in the source files are registered
  * on the resulting TextureArrayData — seedUBO uses this to write only the
- * uniforms this atlas provides, rather than blindly writing all aliases.
+ * uniforms this atlas provides.
  */
 class InternalBuilder extends BuilderPackage {
 
@@ -49,10 +52,20 @@ class InternalBuilder extends BuilderPackage {
     // Build \\
 
     TextureArrayData build(List<File> imageFiles, File sourceDirectory, String arrayName) {
-        LinkedHashMap<String, TextureTileData> textureTiles = createTextureTiles(imageFiles, sourceDirectory,
-                arrayName);
-        TextureAtlasData[] textureAtlases = createTextureAtlases(textureTiles);
-        return createTextureArray(textureTiles, arrayName, textureAtlases);
+
+        LinkedHashMap<String, TextureTileData> tileMap = createTextureTiles(imageFiles, sourceDirectory, arrayName);
+
+        if (tileMap.isEmpty())
+            return null;
+
+        ObjectArrayList<TextureTileData> tiles = new ObjectArrayList<>(tileMap.values());
+
+        // Pack — writes pixel-space atlasX/Y back onto each tile, returns canvas size
+        int atlasPixelSize = AtlasUtility.pack(tiles);
+
+        TextureAtlasData[] atlasLayers = compositeAtlasLayers(tiles, atlasPixelSize);
+
+        return createTextureArray(tileMap, arrayName, atlasPixelSize, atlasLayers);
     }
 
     // Texture Tiles \\
@@ -62,160 +75,124 @@ class InternalBuilder extends BuilderPackage {
             File sourceDirectory,
             String arrayName) {
 
-        LinkedHashMap<String, TextureTileData> textureTiles = new LinkedHashMap<>();
+        LinkedHashMap<String, TextureTileData> tileMap = new LinkedHashMap<>();
         String atlasName = sourceDirectory.getName();
         int aliasCount = aliasLibrarySystem.getAliasCount();
 
         for (File file : imageFiles) {
 
             BufferedImage img;
-
             try {
                 img = ImageIO.read(file);
             } catch (Exception e) {
-                return throwException("File: " + file + ", could not be read as an image");
+                return throwException("File: " + file + " could not be read as an image");
             }
 
             String fileName = FileUtility.getFileName(file);
             String[] parts = FileUtility.splitFileNameByUnderscore(fileName);
-
             String instanceName = parts[0];
             String aliasType = parts[1];
             String fullName = arrayName + "/" + instanceName;
-
             int aliasId = aliasLibrarySystem.getOrDefault(aliasType);
 
             if (aliasId == -1)
-                throwException("Alias: " + aliasType + ", could not be found in the system");
+                throwException("Alias: " + aliasType + " could not be found in the system");
 
-            TextureTileData textureTile = textureTiles.get(fullName);
-
-            if (textureTile == null) {
-                textureTile = create(TextureTileData.class);
-                textureTile.constructor(textureCount++, fullName, atlasName, aliasCount);
-                textureTiles.put(fullName, textureTile);
+            TextureTileData tile = tileMap.get(fullName);
+            if (tile == null) {
+                tile = create(TextureTileData.class);
+                tile.constructor(textureCount++, fullName, atlasName, aliasCount);
+                tileMap.put(fullName, tile);
             }
 
-            textureTile.setImage(img, aliasId);
+            tile.setImage(img, aliasId);
         }
 
-        return organizeTextureTiles(textureTiles);
+        return organizeTextureTiles(tileMap);
     }
 
     private LinkedHashMap<String, TextureTileData> organizeTextureTiles(
-            LinkedHashMap<String, TextureTileData> textureTiles) {
+            LinkedHashMap<String, TextureTileData> tileMap) {
 
-        LinkedHashMap<String, TextureTileData> sortedTiles = new LinkedHashMap<>();
-        textureTiles.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue((t1, t2) -> Integer.compare(t1.getID(), t2.getID())))
-                .forEachOrdered(entry -> sortedTiles.put(entry.getKey(), entry.getValue()));
-
-        return sortedTiles;
+        LinkedHashMap<String, TextureTileData> sorted = new LinkedHashMap<>();
+        tileMap.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue((a, b) -> Integer.compare(a.getID(), b.getID())))
+                .forEachOrdered(e -> sorted.put(e.getKey(), e.getValue()));
+        return sorted;
     }
 
-    // Texture Atlas \\
+    // Atlas Compositing \\
 
-    private TextureAtlasData[] createTextureAtlases(LinkedHashMap<String, TextureTileData> textureTiles) {
+    /*
+     * Composites one BufferedImage per alias layer. Each tile is drawn at its
+     * packed pixel position. Missing alias layers are filled with the alias
+     * default colour at that tile's own pixel dimensions. Tiles are flipped
+     * vertically to match GL bottom-left origin.
+     */
+    private TextureAtlasData[] compositeAtlasLayers(
+            ObjectArrayList<TextureTileData> tiles, int atlasPixelSize) {
 
-        TextureAtlasData[] textureAtlases = new TextureAtlasData[aliasLibrarySystem.getAliasCount()];
-        int atlasSize = calculateAtlasSize(textureTiles.size());
+        int aliasCount = aliasLibrarySystem.getAliasCount();
+        TextureAtlasData[] atlasLayers = new TextureAtlasData[aliasCount];
 
-        assignTilePositions(textureTiles, atlasSize);
+        for (int alias = 0; alias < aliasCount; alias++) {
 
-        for (int alias = 0; alias < aliasLibrarySystem.getAliasCount(); alias++)
-            textureAtlases[alias] = createTextureAtlas(alias, atlasSize, textureTiles);
+            BufferedImage canvas = new BufferedImage(
+                    atlasPixelSize, atlasPixelSize, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = canvas.createGraphics();
 
-        return textureAtlases;
-    }
+            for (int i = 0; i < tiles.size(); i++) {
+                TextureTileData tile = tiles.get(i);
+                BufferedImage layer = tile.getImage(alias);
+                int x = tile.getAtlasX();
+                int y = tile.getAtlasY();
+                int w = tile.getTileWidth();
+                int h = tile.getTileHeight();
 
-    private void assignTilePositions(LinkedHashMap<String, TextureTileData> textureTiles, int atlasSize) {
-
-        int currentIndex = 0;
-
-        for (TextureTileData tile : textureTiles.values()) {
-            int x = currentIndex % atlasSize;
-            int y = currentIndex / atlasSize;
-            tile.setAtlasPosition(x, y);
-            currentIndex++;
-        }
-    }
-
-    private TextureAtlasData createTextureAtlas(
-            int alias,
-            int atlasSize,
-            LinkedHashMap<String, TextureTileData> textureTiles) {
-
-        int atlasPixelSize = atlasSize * EngineSetting.BLOCK_TEXTURE_SIZE;
-
-        BufferedImage atlasImage = new BufferedImage(
-                atlasPixelSize,
-                atlasPixelSize,
-                BufferedImage.TYPE_INT_ARGB);
-
-        Graphics2D graphic = atlasImage.createGraphics();
-        Color defaultColor = aliasLibrarySystem.getDefaultColor(alias);
-
-        for (TextureTileData tile : textureTiles.values()) {
-
-            int x = tile.getAtlasX() * EngineSetting.BLOCK_TEXTURE_SIZE;
-            int y = tile.getAtlasY() * EngineSetting.BLOCK_TEXTURE_SIZE;
-            BufferedImage tileImage = tile.getImage(alias);
-
-            if (tileImage != null) {
-                graphic.drawImage(tileImage,
-                        x, y + EngineSetting.BLOCK_TEXTURE_SIZE,
-                        x + EngineSetting.BLOCK_TEXTURE_SIZE, y,
-                        0, 0, tileImage.getWidth(), tileImage.getHeight(),
-                        null);
-            } else {
-                graphic.setColor(new Color(
-                        defaultColor.getRed(),
-                        defaultColor.getGreen(),
-                        defaultColor.getBlue(),
-                        defaultColor.getAlpha()));
-                graphic.fillRect(x, y, EngineSetting.BLOCK_TEXTURE_SIZE, EngineSetting.BLOCK_TEXTURE_SIZE);
+                if (layer != null) {
+                    // Flip vertically for GL bottom-left origin
+                    g.drawImage(layer,
+                            x, y + h,
+                            x + w, y,
+                            0, 0, layer.getWidth(), layer.getHeight(), null);
+                } else {
+                    Color fill = aliasLibrarySystem.getDefaultColor(alias);
+                    g.setColor(new Color(fill.getRed(), fill.getGreen(),
+                            fill.getBlue(), fill.getAlpha()));
+                    g.fillRect(x, y, w, h);
+                }
             }
+
+            g.dispose();
+
+            TextureAtlasData atlasData = create(TextureAtlasData.class);
+            atlasData.constructor(atlasPixelSize, canvas);
+            atlasLayers[alias] = atlasData;
         }
 
-        graphic.dispose();
-
-        TextureAtlasData textureAtlasData = create(TextureAtlasData.class);
-        textureAtlasData.constructor(atlasSize, atlasImage);
-
-        return textureAtlasData;
-    }
-
-    private int calculateAtlasSize(int tileCount) {
-        int dimension = (int) Math.ceil(Math.sqrt(tileCount));
-        return (int) Math.pow(2, Math.ceil(Math.log(dimension) / Math.log(2)));
+        return atlasLayers;
     }
 
     // Texture Array \\
 
     private TextureArrayData createTextureArray(
-            LinkedHashMap<String, TextureTileData> textureTiles,
+            LinkedHashMap<String, TextureTileData> tileMap,
             String arrayName,
-            TextureAtlasData[] textureAtlases) {
+            int atlasPixelSize,
+            TextureAtlasData[] atlasLayers) {
 
-        TextureArrayData textureArrayData = create(TextureArrayData.class);
-        textureArrayData.constructor(
-                arrayCount++,
-                arrayName,
-                textureAtlases[0].getAtlasSize(),
-                textureAtlases);
+        TextureArrayData arrayData = create(TextureArrayData.class);
+        arrayData.constructor(arrayCount++, arrayName, atlasPixelSize, atlasLayers);
 
-        for (TextureTileData tile : textureTiles.values()) {
-            textureArrayData.createTile(tile.getAtlasX(), tile.getAtlasY(), tile);
+        int aliasCount = aliasLibrarySystem.getAliasCount();
 
-            // Register every alias ID this tile actually has an image for.
-            // This tells seedUBO which uniforms are valid for this atlas.
-            int aliasCount = aliasLibrarySystem.getAliasCount();
-            for (int aliasId = 0; aliasId < aliasCount; aliasId++) {
-                if (tile.getImage(aliasId) != null)
-                    textureArrayData.registerFoundAlias(aliasId);
-            }
+        for (TextureTileData tile : tileMap.values()) {
+            arrayData.registerTile(tile);
+            for (int alias = 0; alias < aliasCount; alias++)
+                if (tile.getImage(alias) != null)
+                    arrayData.registerFoundAlias(alias);
         }
 
-        return textureArrayData;
+        return arrayData;
     }
 }

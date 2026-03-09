@@ -12,7 +12,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
  * Owns all texture array GPU handles and the full tile lookup chain.
  * Provides runtime retrieval of TextureHandle by texture name, tile ID,
  * array name, or array ID. On accessor miss, triggers an immediate
- * synchronous load through the active InternalLoadManager.
+ * synchronous load through the active InternalLoader.
  * GPU resources are released on dispose.
  */
 public class TextureManager extends ManagerPackage {
@@ -49,12 +49,19 @@ public class TextureManager extends ManagerPackage {
 
     void registerTile(TextureTileData tile, float u0, float v0, float u1, float v1,
             TextureArrayData array, int gpuHandle) {
+
         UVHandle uvHandle = create(UVHandle.class);
         uvHandle.constructor(u0, v0, u1, v1);
+
         TextureHandle handle = create(TextureHandle.class);
-        handle.constructor(tile.getID(), array.getID(), gpuHandle, array.getAtlasSize(), uvHandle);
+        handle.constructor(
+                tile.getID(), array.getID(), gpuHandle,
+                array.getAtlasPixelSize(), tile.getTileWidth(), tile.getTileHeight(),
+                uvHandle);
+
         textureName2Handle.put(tile.getName(), handle);
         tileID2Handle.put(tile.getID(), handle);
+
         if (!arrayID2Handle.containsKey(array.getID())) {
             arrayName2Handle.put(array.getName(), handle);
             arrayID2Handle.put(array.getID(), handle);

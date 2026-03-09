@@ -5,7 +5,8 @@ import com.internal.core.engine.HandlePackage;
 /*
  * Persistent resource owned by TextureManager. Carries all data needed for a
  * single named texture tile: its tile ID, parent array ID, GPU handle, atlas
- * size, and normalised UV region via UVHandle. Handed out at runtime; never cloned.
+ * pixel size, individual tile pixel dimensions, and normalised UV region via
+ * UVHandle. Handed out at runtime; never cloned.
  */
 public class TextureHandle extends HandlePackage {
 
@@ -13,16 +14,23 @@ public class TextureHandle extends HandlePackage {
     private int tileID;
     private int arrayID;
     private int gpuHandle;
-    private int atlasSize;
+    private int atlasPixelSize;
+    private int tileWidth;
+    private int tileHeight;
     private UVHandle uvHandle;
 
     // Internal \\
 
-    public void constructor(int tileID, int arrayID, int gpuHandle, int atlasSize, UVHandle uvHandle) {
+    public void constructor(
+            int tileID, int arrayID, int gpuHandle,
+            int atlasPixelSize, int tileWidth, int tileHeight,
+            UVHandle uvHandle) {
         this.tileID = tileID;
         this.arrayID = arrayID;
         this.gpuHandle = gpuHandle;
-        this.atlasSize = atlasSize;
+        this.atlasPixelSize = atlasPixelSize;
+        this.tileWidth = tileWidth;
+        this.tileHeight = tileHeight;
         this.uvHandle = uvHandle;
     }
 
@@ -40,8 +48,16 @@ public class TextureHandle extends HandlePackage {
         return gpuHandle;
     }
 
-    public int getAtlasSize() {
-        return atlasSize;
+    public int getAtlasPixelSize() {
+        return atlasPixelSize;
+    }
+
+    public int getTileWidth() {
+        return tileWidth;
+    }
+
+    public int getTileHeight() {
+        return tileHeight;
     }
 
     public UVHandle getUVHandle() {

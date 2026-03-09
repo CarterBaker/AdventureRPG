@@ -3,13 +3,24 @@
         {
             "id":     "close",
             "type":   "button",
-            "sprite": "menus/Title",
+            "sprite": "menus/DebugElement",
             "anchor": "CENTER",
             "pivot":  "CENTER",
             "on_click": {
                 "class":  "com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.MainMenuBranch",
                 "method": "closeMenu"
-            }
+            },
+            "elements": [
+                {
+                    "id":     "label",
+                    "type":   "label",
+                    "font":   "MontserratAlternates",
+                    "text":   "Close",
+                    "anchor": "CENTER",
+                    "pivot":  "CENTER",
+                    "size":   { "x": "100%", "y": "100%" }
+                }
+            ]
         },
         {
             "id":   "title",
@@ -54,7 +65,18 @@
                             "anchor":   "CENTER",
                             "pivot":    "CENTER",
                             "position": { "x": "0%", "y": "0%"  },
-                            "size":     { "x": "80%", "y": "60%" }
+                            "size":     { "x": "80%", "y": "60%" },
+                            "elements": [
+                                {
+                                    "id":     "label",
+                                    "type":   "label",
+                                    "font":   "MontserratAlternates",
+                                    "text":   "Quit",
+                                    "anchor": "CENTER",
+                                    "pivot":  "CENTER",
+                                    "size":   { "x": "100%", "y": "100%" }
+                                }
+                            ]
                         }
                     ]
                 }

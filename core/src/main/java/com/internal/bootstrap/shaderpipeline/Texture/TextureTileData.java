@@ -2,14 +2,15 @@ package com.internal.bootstrap.shaderpipeline.Texture;
 
 import java.awt.image.BufferedImage;
 
-import com.internal.core.engine.DataPackage;
+import com.internal.core.util.atlas.AtlasTileData;
 
 /*
  * Bootstrap-only container for a single named texture tile. Holds per-alias
- * source images and atlas position during the build phase. Must not be held
- * after bootstrap completes.
+ * source images during the build phase. Derives its own pixel dimensions from
+ * the first image assigned — all subsequent alias layers for the same tile
+ * must match that size exactly. Must not be held after bootstrap completes.
  */
-public class TextureTileData extends DataPackage {
+public class TextureTileData extends AtlasTileData {
 
     // Internal
     private int id;
@@ -18,10 +19,6 @@ public class TextureTileData extends DataPackage {
 
     // Image
     private BufferedImage[] imageLayers;
-
-    // Atlas
-    private int atlasX;
-    private int atlasY;
 
     // Internal \\
 
@@ -35,8 +32,19 @@ public class TextureTileData extends DataPackage {
     // Image \\
 
     public void setImage(BufferedImage image, int layer) {
-        if (layer < 0 || layer >= imageLayers.length || imageLayers[layer] != null)
-            throwException("There was a problem trying to set an image to layer " + layer);
+
+        if (layer < 0 || layer >= imageLayers.length)
+            throwException("Layer index out of bounds on tile '" + name + "': " + layer);
+        if (imageLayers[layer] != null)
+            throwException("Layer " + layer + " already set on tile '" + name + "'");
+
+        if (getTileWidth() == 0)
+            setTileDimensions(image.getWidth(), image.getHeight());
+        else if (image.getWidth() != getTileWidth() || image.getHeight() != getTileHeight())
+            throwException("Alias layer size mismatch on tile '" + name
+                    + "': expected " + getTileWidth() + "x" + getTileHeight()
+                    + ", got " + image.getWidth() + "x" + image.getHeight());
+
         imageLayers[layer] = image;
     }
 
@@ -47,13 +55,6 @@ public class TextureTileData extends DataPackage {
     public void clearImages() {
         for (int i = 0; i < imageLayers.length; i++)
             imageLayers[i] = null;
-    }
-
-    // Atlas \\
-
-    public void setAtlasPosition(int x, int y) {
-        this.atlasX = x;
-        this.atlasY = y;
     }
 
     // Accessible \\
@@ -68,13 +69,5 @@ public class TextureTileData extends DataPackage {
 
     String getAtlas() {
         return atlas;
-    }
-
-    public int getAtlasX() {
-        return atlasX;
-    }
-
-    public int getAtlasY() {
-        return atlasY;
     }
 }

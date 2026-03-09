@@ -1,5 +1,6 @@
 package com.internal.bootstrap.menupipeline.element;
 
+import com.internal.bootstrap.menupipeline.fonts.FontInstance;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import com.internal.core.engine.InstancePackage;
 import com.internal.core.util.mathematics.matrices.Matrix4;
@@ -7,8 +8,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
  * A live UI element instance spawned from an ElementHandle. Owns its own
- * SpriteInstance with independent material state. Overrides are applied at
- * spawn time; null overrides fall back to the handle at read time.
+ * SpriteInstance and optionally a FontInstance for LABEL type elements.
+ * Overrides are applied at spawn time; null overrides fall back to the handle.
  */
 public class ElementInstance extends InstancePackage {
 
@@ -17,6 +18,7 @@ public class ElementInstance extends InstancePackage {
 
     // Per-instance overrides — null means use handle's value
     private SpriteInstance spriteInstance;
+    private FontInstance fontInstance;
     private String textOverride;
     private Runnable clickActionOverride;
     private LayoutStruct layoutOverride;
@@ -36,12 +38,14 @@ public class ElementInstance extends InstancePackage {
     public void constructor(
             ElementHandle handle,
             SpriteInstance spriteInstance,
+            FontInstance fontInstance,
             String textOverride,
             Runnable clickActionOverride,
             LayoutStruct layoutOverride,
             ObjectArrayList<ElementInstance> children) {
         this.handle = handle;
         this.spriteInstance = spriteInstance;
+        this.fontInstance = fontInstance;
         this.textOverride = textOverride;
         this.clickActionOverride = clickActionOverride;
         this.layoutOverride = layoutOverride;
@@ -106,8 +110,8 @@ public class ElementInstance extends InstancePackage {
         return spriteInstance;
     }
 
-    public String getText() {
-        return textOverride != null ? textOverride : handle.getText();
+    public FontInstance getFontInstance() {
+        return fontInstance;
     }
 
     public ObjectArrayList<ElementInstance> getChildren() {
@@ -138,7 +142,15 @@ public class ElementInstance extends InstancePackage {
         return spriteInstance != null;
     }
 
+    public boolean hasFont() {
+        return fontInstance != null;
+    }
+
     public boolean hasChildren() {
         return !children.isEmpty();
+    }
+
+    public String getText() {
+        return textOverride != null ? textOverride : handle.getText();
     }
 }

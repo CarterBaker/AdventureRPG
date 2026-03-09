@@ -3,7 +3,6 @@ package com.internal.bootstrap.geometrypipeline.dynamicmodel;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.engine.settings.EngineSetting;
-
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
@@ -31,14 +30,12 @@ public class DynamicModelHandle extends HandlePackage {
     public int tryAddVertices(FloatArrayList sourceVerts, int offset, int length) {
 
         int floatsPerQuad = vertStride * 4;
-
         if (length % floatsPerQuad != 0)
             throwException("Vertex data must be quad-aligned");
 
         int currentVertCount = vertices.size() / vertStride;
         int availableVerts = EngineSetting.MESH_VERT_LIMIT - currentVertCount;
         int availableQuads = availableVerts / 4;
-
         if (availableQuads <= 0)
             return 0;
 
@@ -48,28 +45,59 @@ public class DynamicModelHandle extends HandlePackage {
 
         vertices.addElements(vertices.size(), sourceVerts.elements(), offset, floatsToAdd);
         appendQuadIndices(currentVertCount, quadsFit);
-
         return floatsToAdd;
     }
 
     public void addQuadVertices(FloatArrayList sourceVerts) {
 
         int floatsPerQuad = vertStride * 4;
-
         if (sourceVerts.size() % floatsPerQuad != 0)
             throwException("Vertex data must be quad-aligned");
 
         int startVertex = vertices.size() / vertStride;
         int quadCount = sourceVerts.size() / floatsPerQuad;
-
         vertices.addElements(vertices.size(), sourceVerts.elements(), 0, sourceVerts.size());
         appendQuadIndices(startVertex, quadCount);
+    }
+
+    /*
+     * Merges all quads from source into this model, applying per-vertex offsets
+     * at the specified attribute indices before writing. Used by the font system
+     * to position per-glyph origin-space quads at cursor positions within a
+     * label's merged model. offsetIndices and offsets must be the same length.
+     */
+    public void mergeWithOffset(DynamicModelHandle source, int[] offsetIndices, float[] offsets) {
+
+        if (source == null || source.isEmpty())
+            return;
+
+        if (offsetIndices.length != offsets.length)
+            throwException("offsetIndices and offsets must have the same length");
+
+        FloatArrayList src = source.vertices;
+        int total = src.size();
+
+        FloatArrayList shifted = new FloatArrayList(total);
+
+        for (int i = 0; i < total; i += vertStride) {
+            for (int j = 0; j < vertStride; j++) {
+                float value = src.getFloat(i + j);
+                for (int k = 0; k < offsetIndices.length; k++) {
+                    if (j == offsetIndices[k]) {
+                        value += offsets[k];
+                        break;
+                    }
+                }
+                shifted.add(value);
+            }
+        }
+
+        addQuadVertices(shifted);
     }
 
     private void appendQuadIndices(int baseVertex, int quadCount) {
 
         indices.ensureCapacity(indices.size() + quadCount * 6);
-
         for (int q = 0; q < quadCount; q++) {
             int base = baseVertex + q * 4;
             indices.add((short) base);
@@ -88,6 +116,10 @@ public class DynamicModelHandle extends HandlePackage {
 
     // Accessible \\
 
+    public int getMaterialID() {
+        return materialID;
+    }
+
     public VAOHandle getVAOHandle() {
         return vaoHandle;
     }
@@ -104,13 +136,13 @@ public class DynamicModelHandle extends HandlePackage {
         return vertices.isEmpty();
     }
 
+    public int getVertexCount() {
+        return vertices.size() / vertStride;
+    }
+
     public boolean isFull() {
         int currentVertCount = vertices.size() / vertStride;
         int availableVerts = EngineSetting.MESH_VERT_LIMIT - currentVertCount;
         return availableVerts < 4;
-    }
-
-    public int getVertexCount() {
-        return vertices.size() / vertStride;
     }
 }

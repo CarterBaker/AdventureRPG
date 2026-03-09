@@ -1,6 +1,8 @@
 package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
+import com.internal.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
+import com.internal.bootstrap.menupipeline.fonts.GlyphMetricStruct;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.ManagerPackage;
@@ -17,12 +19,12 @@ public class DynamicGeometryManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Internal
         this.dynamicGeometryAsyncContainer = create(DynamicGeometryAsyncContainer.class);
         this.internalBuildManager = create(InternalBuildManager.class);
         this.worldHeight = EngineSetting.WORLD_HEIGHT;
     }
+
+    // Chunk Geometry \\
 
     public boolean build(
             DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
@@ -30,14 +32,12 @@ public class DynamicGeometryManager extends ManagerPackage {
 
         boolean success = true;
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
-
         for (int i = 0; i < worldHeight; i++)
             if (!internalBuildManager.build(
                     dynamicGeometryAsyncContainer,
                     chunkInstance,
                     subChunks[i]))
                 success = false;
-
         return success;
     }
 
@@ -45,11 +45,23 @@ public class DynamicGeometryManager extends ManagerPackage {
             DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
             ChunkInstance chunkInstance,
             int subChunkIndex) {
-
         return internalBuildManager.build(
                 dynamicGeometryAsyncContainer,
                 chunkInstance,
                 chunkInstance.getSubChunks()[subChunkIndex]);
+    }
+
+    // Font Geometry \\
+
+    /*
+     * Caller creates the DynamicModelHandle with the correct materialID and
+     * VAOHandle, then passes it here to be filled with glyph quad verts.
+     */
+    public void buildGlyphModel(
+            DynamicModelHandle model,
+            GlyphMetricStruct glyph,
+            int atlasPixelSize) {
+        internalBuildManager.buildGlyphModel(model, glyph, atlasPixelSize);
     }
 
     // Accessible \\
