@@ -1,5 +1,6 @@
 package com.internal.bootstrap.itempipeline.itemdefinition;
 
+import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.core.engine.HandlePackage;
 
 public class ItemDefinitionHandle extends HandlePackage {
@@ -13,14 +14,22 @@ public class ItemDefinitionHandle extends HandlePackage {
     private boolean twoHanded;
     private boolean isBackpack;
 
+    // Render
+    private MeshHandle meshHandle;
+    private int materialID;
+
     // Constructor \\
 
-    public void constructor(String itemName, int itemID, float weight, boolean twoHanded, boolean isBackpack) {
+    public void constructor(String itemName, int itemID, float weight,
+            boolean twoHanded, boolean isBackpack,
+            MeshHandle meshHandle, int materialID) {
         this.itemName = itemName;
         this.itemID = itemID;
         this.weight = weight;
         this.twoHanded = twoHanded;
         this.isBackpack = isBackpack;
+        this.meshHandle = meshHandle;
+        this.materialID = materialID;
     }
 
     // Accessible \\
@@ -51,5 +60,13 @@ public class ItemDefinitionHandle extends HandlePackage {
 
     public boolean isBackpack() {
         return isBackpack;
+    }
+
+    public MeshHandle getMeshHandle() {
+        return meshHandle;
+    }
+
+    public int getMaterialID() {
+        return materialID;
     }
 }

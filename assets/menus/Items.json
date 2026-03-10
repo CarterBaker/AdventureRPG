@@ -1,0 +1,28 @@
+{
+    "elements": [
+        {
+            "id": "item_slot",
+            "type": "button",
+            "sprite": "menus/DebugElement",
+            "size": { "x": "100%", "y": "50px" },
+            "on_click": {
+                "class":  "com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.InventoryBranch",
+                "method": "selectItem"
+            },
+            "elements": [
+                {
+                    "id":     "item_label",
+                    "type":   "label",
+                    "font":   "MontserratAlternates",
+                    "text":   "Item",
+                    "color":  [0, 0, 0, 1],
+                    "align":  "left",
+                    "anchor": "CENTER_LEFT",
+                    "pivot":  "CENTER_LEFT",
+                    "position": { "x": "5%", "y": "0%" },
+                    "size":     { "x": "90%", "y": "100%" }
+                }
+            ]
+        }
+    ]
+}

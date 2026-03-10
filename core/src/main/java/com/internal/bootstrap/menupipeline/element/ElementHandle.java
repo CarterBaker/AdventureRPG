@@ -2,11 +2,6 @@ package com.internal.bootstrap.menupipeline.element;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Immutable master definition of an element. Produced at bootstrap, never
- * modified at runtime. Instances are cloned from handles at menu open time.
- * color is RGBA float[4], null means white default.
- */
 public class ElementHandle extends com.internal.core.engine.HandlePackage {
 
     private String id;
@@ -16,16 +11,20 @@ public class ElementHandle extends com.internal.core.engine.HandlePackage {
     private String fontName;
     private float[] color;
     private LayoutStruct layout;
+    private boolean mask;
+    private StackDirection stackDirection;
+    private DimensionValue spacing;
+    private TextAlign textAlign;
     private Runnable clickAction;
     private MenuAwareAction menuAwareAction;
     private ObjectArrayList<ElementPlacementHandle> children;
-
-    // Constructor \\
 
     public void constructor(
             String id, ElementType type,
             String spriteName, String text, String fontName, float[] color,
             LayoutStruct layout,
+            boolean mask, StackDirection stackDirection, DimensionValue spacing,
+            TextAlign textAlign,
             Runnable clickAction, MenuAwareAction menuAwareAction,
             ObjectArrayList<ElementPlacementHandle> children) {
         this.id = id;
@@ -35,12 +34,14 @@ public class ElementHandle extends com.internal.core.engine.HandlePackage {
         this.fontName = fontName;
         this.color = color;
         this.layout = layout;
+        this.mask = mask;
+        this.stackDirection = stackDirection != null ? stackDirection : StackDirection.NONE;
+        this.spacing = spacing;
+        this.textAlign = textAlign != null ? textAlign : TextAlign.CENTER;
         this.clickAction = clickAction;
         this.menuAwareAction = menuAwareAction;
         this.children = children;
     }
-
-    // Accessors \\
 
     public String getId() {
         return id;
@@ -68,6 +69,22 @@ public class ElementHandle extends com.internal.core.engine.HandlePackage {
 
     public LayoutStruct getLayout() {
         return layout;
+    }
+
+    public boolean isMask() {
+        return mask;
+    }
+
+    public StackDirection getStackDirection() {
+        return stackDirection;
+    }
+
+    public DimensionValue getSpacing() {
+        return spacing;
+    }
+
+    public TextAlign getTextAlign() {
+        return textAlign;
     }
 
     public Runnable getClickAction() {

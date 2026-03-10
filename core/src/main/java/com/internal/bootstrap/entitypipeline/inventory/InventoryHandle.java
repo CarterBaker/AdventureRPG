@@ -6,17 +6,19 @@ import com.internal.core.engine.HandlePackage;
 
 public class InventoryHandle extends HandlePackage {
 
-    // Slots
     private ItemDefinitionHandle mainHand;
     private ItemDefinitionHandle offHand;
     private BackpackInstance backpack;
 
-    // Constructor \\
+    @Override
+    protected void create() {
+        // Backpack always present — no null checks needed downstream
+        this.backpack = create(BackpackInstance.class);
+    }
 
     public void constructor() {
         this.mainHand = null;
         this.offHand = null;
-        this.backpack = null;
     }
 
     // Accessible \\
@@ -41,19 +43,11 @@ public class InventoryHandle extends HandlePackage {
         this.offHand = item;
     }
 
-    public void setBackpack(BackpackInstance backpack) {
-        this.backpack = backpack;
-    }
-
     public boolean hasMainHand() {
         return mainHand != null;
     }
 
     public boolean hasOffHand() {
         return offHand != null;
-    }
-
-    public boolean hasBackpack() {
-        return backpack != null;
     }
 }

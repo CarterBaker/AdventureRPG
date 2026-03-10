@@ -1,5 +1,6 @@
 package com.internal.bootstrap.menupipeline.buttoneventsmanager;
 
+import com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.InventoryBranch;
 import com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.MainMenuBranch;
 import com.internal.bootstrap.menupipeline.buttoneventsmanager.util.GenericButtonBranch;
 import com.internal.core.engine.ManagerPackage;
@@ -14,5 +15,6 @@ public class ButtonEventsManager extends ManagerPackage {
 
         // Menus
         create(MainMenuBranch.class);
+        create(InventoryBranch.class);
     }
 }

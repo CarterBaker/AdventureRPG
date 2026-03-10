@@ -3,6 +3,7 @@ package com.internal.bootstrap.worldpipeline.chunk;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
+import com.internal.bootstrap.worldpipeline.worlditem.WorldItemInstancePaletteHandle;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstance;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
@@ -23,6 +24,9 @@ public class ChunkInstance extends WorldRenderInstance {
     // Neighbors
     private ChunkNeighborStruct chunkNeighbors;
 
+    // Items
+    private WorldItemInstancePaletteHandle worldItemInstancePaletteHandle;
+
     // Internal \\
 
     @Override
@@ -34,6 +38,8 @@ public class ChunkInstance extends WorldRenderInstance {
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
         for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
             subChunks[i] = create(SubChunkInstance.class);
+        this.worldItemInstancePaletteHandle = create(WorldItemInstancePaletteHandle.class);
+        this.worldItemInstancePaletteHandle.constructor();
         super.create();
     }
 
@@ -45,14 +51,12 @@ public class ChunkInstance extends WorldRenderInstance {
             short airBlockId,
             short defaultBiomeId,
             Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
-
         super.constructor(
                 worldRenderSystem,
                 worldHandle,
                 RenderType.INDIVIDUAL,
                 coordinate,
                 vaoHandle);
-
         for (byte subChunkCoordinate = 0; subChunkCoordinate < EngineSetting.WORLD_HEIGHT; subChunkCoordinate++)
             subChunks[subChunkCoordinate].constructor(
                     worldRenderSystem,
@@ -61,7 +65,6 @@ public class ChunkInstance extends WorldRenderInstance {
                     vaoHandle,
                     airBlockId,
                     defaultBiomeId);
-
         this.chunkNeighbors = new ChunkNeighborStruct(
                 coordinate,
                 this,
@@ -71,6 +74,7 @@ public class ChunkInstance extends WorldRenderInstance {
     public void reset() {
         chunkDataSyncContainer.resetData();
         dynamicPacketInstance.clear();
+        worldItemInstancePaletteHandle.clear();
         for (SubChunkInstance subChunk : subChunks)
             subChunk.reset();
     }
@@ -111,5 +115,9 @@ public class ChunkInstance extends WorldRenderInstance {
 
     public ChunkNeighborStruct getChunkNeighbors() {
         return chunkNeighbors;
+    }
+
+    public WorldItemInstancePaletteHandle getWorldItemInstancePaletteHandle() {
+        return worldItemInstancePaletteHandle;
     }
 }

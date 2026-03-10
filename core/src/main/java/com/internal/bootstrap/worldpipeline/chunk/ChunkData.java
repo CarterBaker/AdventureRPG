@@ -9,6 +9,7 @@ public enum ChunkData {
     NEIGHBOR_DATA(ChunkDataUtility.NOT_DUMPABLE, QueueOperation.ASSESSMENT),
     BUILD_DATA(ChunkDataUtility.DUMP_BELOW_NEAR, QueueOperation.BUILD),
     MERGE_DATA(ChunkDataUtility.DUMP_BELOW_IMMEDIATE, QueueOperation.MERGE),
+    ITEM_DATA(ChunkDataUtility.DUMP_BELOW_IMMEDIATE, QueueOperation.ITEM_LOAD),
     BATCH_DATA(ChunkDataUtility.NOT_DUMPABLE, QueueOperation.BATCH),
     RENDER_DATA(ChunkDataUtility.NOT_DUMPABLE, QueueOperation.RENDER);
 

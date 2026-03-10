@@ -2,11 +2,6 @@ package com.internal.bootstrap.menupipeline.element;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Bootstrap-only data carrier parsed from JSON. Consumed by InternalBuilder
- * to produce ElementHandles. Does not outlive bootstrap.
- * color is RGBA float[4], null means inherit default (white).
- */
 public class ElementData extends com.internal.core.engine.DataPackage {
 
     private String id;
@@ -16,22 +11,24 @@ public class ElementData extends com.internal.core.engine.DataPackage {
     private String fontName;
     private float[] color;
     private LayoutStruct layout;
+    private boolean mask;
+    private StackDirection stackDirection;
+    private DimensionValue spacing;
+    private TextAlign textAlign;
     private String actionClass;
     private String actionMethod;
     private String actionArg;
     private ObjectArrayList<ElementData> children;
-
-    // Ref / Use flags
     private String refPath;
     private String usePath;
-
-    // Constructors \\
 
     // Inline element
     public void constructor(
             String id, ElementType type,
             String spritePath, String text, String fontName, float[] color,
             LayoutStruct layout,
+            boolean mask, StackDirection stackDirection, DimensionValue spacing,
+            TextAlign textAlign,
             String actionClass, String actionMethod, String actionArg,
             ObjectArrayList<ElementData> children) {
         this.id = id;
@@ -41,17 +38,23 @@ public class ElementData extends com.internal.core.engine.DataPackage {
         this.fontName = fontName;
         this.color = color;
         this.layout = layout;
+        this.mask = mask;
+        this.stackDirection = stackDirection != null ? stackDirection : StackDirection.NONE;
+        this.spacing = spacing;
+        this.textAlign = textAlign != null ? textAlign : TextAlign.CENTER;
         this.actionClass = actionClass;
         this.actionMethod = actionMethod;
         this.actionArg = actionArg;
         this.children = children;
     }
 
-    // Ref element — no font/color/sprite/action, only layout override
+    // Ref element
     public void constructorRef(String id, String refPath, LayoutStruct layout) {
         this.id = id;
         this.refPath = refPath;
         this.layout = layout;
+        this.stackDirection = StackDirection.NONE;
+        this.textAlign = TextAlign.CENTER;
     }
 
     // Use element
@@ -59,6 +62,8 @@ public class ElementData extends com.internal.core.engine.DataPackage {
             String id, String usePath,
             String spritePath, String text, String fontName, float[] color,
             LayoutStruct layout,
+            boolean mask, StackDirection stackDirection, DimensionValue spacing,
+            TextAlign textAlign,
             String actionClass, String actionMethod, String actionArg,
             ObjectArrayList<ElementData> children) {
         this.id = id;
@@ -68,13 +73,15 @@ public class ElementData extends com.internal.core.engine.DataPackage {
         this.fontName = fontName;
         this.color = color;
         this.layout = layout;
+        this.mask = mask;
+        this.stackDirection = stackDirection != null ? stackDirection : StackDirection.NONE;
+        this.spacing = spacing;
+        this.textAlign = textAlign != null ? textAlign : TextAlign.CENTER;
         this.actionClass = actionClass;
         this.actionMethod = actionMethod;
         this.actionArg = actionArg;
         this.children = children;
     }
-
-    // Accessors \\
 
     public String getId() {
         return id;
@@ -104,6 +111,22 @@ public class ElementData extends com.internal.core.engine.DataPackage {
         return layout;
     }
 
+    public boolean isMask() {
+        return mask;
+    }
+
+    public StackDirection getStackDirection() {
+        return stackDirection;
+    }
+
+    public DimensionValue getSpacing() {
+        return spacing;
+    }
+
+    public TextAlign getTextAlign() {
+        return textAlign;
+    }
+
     public String getActionClass() {
         return actionClass;
     }
@@ -114,10 +137,6 @@ public class ElementData extends com.internal.core.engine.DataPackage {
 
     public String getActionArg() {
         return actionArg;
-    }
-
-    public ObjectArrayList<ElementData> getChildren() {
-        return children != null ? children : new ObjectArrayList<>();
     }
 
     public String getRefPath() {
@@ -142,5 +161,9 @@ public class ElementData extends com.internal.core.engine.DataPackage {
 
     public boolean hasColor() {
         return color != null;
+    }
+
+    public ObjectArrayList<ElementData> getChildren() {
+        return children != null ? children : new ObjectArrayList<>();
     }
 }

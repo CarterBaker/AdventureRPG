@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.GL30;
 class GLSLUtility {
 
     // Buffer \\
-
     static void clearBuffer() {
         Gdx.gl.glClearColor(0, 0, 0, 0);
         Gdx.gl.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
@@ -18,7 +17,6 @@ class GLSLUtility {
     }
 
     // Depth \\
-
     static void enableDepth() {
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
         Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
@@ -35,7 +33,6 @@ class GLSLUtility {
     }
 
     // Blending \\
-
     static void enableBlending() {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -46,7 +43,6 @@ class GLSLUtility {
     }
 
     // Culling \\
-
     static void enableCulling() {
         Gdx.gl.glEnable(GL20.GL_CULL_FACE);
         Gdx.gl.glCullFace(GL20.GL_BACK);
@@ -57,14 +53,22 @@ class GLSLUtility {
         Gdx.gl.glDisable(GL20.GL_CULL_FACE);
     }
 
-    // Shader \\
+    // Scissor \\
+    static void enableScissor(int x, int y, int w, int h) {
+        Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+        Gdx.gl.glScissor(x, y, w, h);
+    }
 
+    static void disableScissor() {
+        Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+    }
+
+    // Shader \\
     static void useShader(int shaderHandle) {
         Gdx.gl.glUseProgram(shaderHandle);
     }
 
     // VAO \\
-
     static void bindVAO(int vaoHandle) {
         Gdx.gl30.glBindVertexArray(vaoHandle);
     }
@@ -74,13 +78,11 @@ class GLSLUtility {
     }
 
     // Drawing \\
-
     static void drawElements(int indexCount) {
         Gdx.gl.glDrawElements(GL20.GL_TRIANGLES, indexCount, GL20.GL_UNSIGNED_SHORT, 0);
     }
 
     // UBO \\
-
     static void bindUniformBuffer(int bindingPoint, int gpuHandle) {
         Gdx.gl30.glBindBufferBase(GL30.GL_UNIFORM_BUFFER, bindingPoint, gpuHandle);
     }

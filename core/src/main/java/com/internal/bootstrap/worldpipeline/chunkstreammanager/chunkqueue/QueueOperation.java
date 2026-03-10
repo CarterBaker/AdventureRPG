@@ -5,6 +5,7 @@ public enum QueueOperation {
     ASSESSMENT,
     BUILD,
     MERGE,
+    ITEM_LOAD,
     BATCH,
     RENDER,
     DUMP,

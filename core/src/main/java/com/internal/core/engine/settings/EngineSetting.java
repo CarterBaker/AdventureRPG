@@ -154,4 +154,7 @@ public class EngineSetting {
 
         // Lighting settings
         public static final int LUNAR_CYCLE_DAYS = 28;
+
+        // Item Settings
+        public static final String DEFAULT_ITEM_MATERIAL = "debug/DebugItem";
 }

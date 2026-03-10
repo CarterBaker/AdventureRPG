@@ -21,9 +21,9 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     private boolean A = false;
     private boolean S = false;
     private boolean D = false;
-    private boolean CTRL = false; // walk — slowest
-    private boolean SHIFT = false; // sprint — fastest
-    private boolean SPACE = false; // jump
+    private boolean CTRL = false;
+    private boolean SHIFT = false;
+    private boolean SPACE = false;
 
     // Mouse — game, blocked when locked
     private boolean leftClick = false;
@@ -33,6 +33,18 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     private boolean rawLeftClick = false;
     private float mouseX = 0f;
     private float mouseY = 0f;
+
+    // UI keys — always tracked regardless of lock
+    private boolean inventoryJustPressed = false;
+    private boolean inventoryDown = false;
+
+    // =========================================================
+    // DEBUG — remove when real item system is wired
+    private boolean debugItem1JustPressed = false;
+    private boolean debugItem1Down = false;
+    private boolean debugItem2JustPressed = false;
+    private boolean debugItem2Down = false;
+    // =========================================================
 
     // Base \\
 
@@ -85,8 +97,27 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     @Override
     public boolean keyDown(int keycode) {
+
+        // UI keys — always tracked regardless of lock
+        if (keycode == Input.Keys.I && !inventoryDown) {
+            inventoryDown = true;
+            inventoryJustPressed = true;
+        }
+
+        // DEBUG
+        if (keycode == Input.Keys.NUM_1 && !debugItem1Down) {
+            debugItem1Down = true;
+            debugItem1JustPressed = true;
+        }
+        if (keycode == Input.Keys.NUM_2 && !debugItem2Down) {
+            debugItem2Down = true;
+            debugItem2JustPressed = true;
+        }
+        // END DEBUG
+
         if (locked)
             return false;
+
         switch (keycode) {
             case Input.Keys.W -> W = true;
             case Input.Keys.A -> A = true;
@@ -101,8 +132,18 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     @Override
     public boolean keyUp(int keycode) {
+        if (keycode == Input.Keys.I)
+            inventoryDown = false;
+        // DEBUG
+        if (keycode == Input.Keys.NUM_1)
+            debugItem1Down = false;
+        if (keycode == Input.Keys.NUM_2)
+            debugItem2Down = false;
+        // END DEBUG
+
         if (locked)
             return false;
+
         switch (keycode) {
             case Input.Keys.W -> W = false;
             case Input.Keys.A -> A = false;
@@ -175,11 +216,33 @@ public class InputSystem extends SystemPackage implements InputProcessor {
         Gdx.input.setCursorCatched(!input);
     }
 
+    // Consume — reads and clears in one call so update order does not matter \\
+
+    public boolean consumeInventoryJustPressed() {
+        boolean val = inventoryJustPressed;
+        inventoryJustPressed = false;
+        return val;
+    }
+
+    // DEBUG — remove with 1/2 key handling in PlayerManager
+    public boolean consumeDebugItem1JustPressed() {
+        boolean val = debugItem1JustPressed;
+        debugItem1JustPressed = false;
+        return val;
+    }
+
+    public boolean consumeDebugItem2JustPressed() {
+        boolean val = debugItem2JustPressed;
+        debugItem2JustPressed = false;
+        return val;
+    }
+    // END DEBUG
+
+    // Accessible \\
+
     public boolean isLocked() {
         return locked;
     }
-
-    // Accessible \\
 
     public Vector2 getRotation() {
         return rotation;

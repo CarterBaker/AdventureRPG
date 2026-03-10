@@ -167,4 +167,8 @@ public class ElementSystem extends SystemPackage {
 
         return null;
     }
+
+    public ElementInstance createDetachedInstance(ElementPlacementHandle placement) {
+        return createInstance(placement.getMaster(), placement.getOverride(), () -> null);
+    }
 }

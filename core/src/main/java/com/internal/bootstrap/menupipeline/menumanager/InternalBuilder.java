@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.internal.bootstrap.menupipeline.element.DimensionValue;
 import com.internal.bootstrap.menupipeline.element.ElementData;
 import com.internal.bootstrap.menupipeline.element.ElementHandle;
 import com.internal.bootstrap.menupipeline.element.ElementOverrideStruct;
@@ -12,6 +13,8 @@ import com.internal.bootstrap.menupipeline.element.ElementPlacementHandle;
 import com.internal.bootstrap.menupipeline.element.ElementType;
 import com.internal.bootstrap.menupipeline.element.LayoutStruct;
 import com.internal.bootstrap.menupipeline.element.MenuAwareAction;
+import com.internal.bootstrap.menupipeline.element.StackDirection;
+import com.internal.bootstrap.menupipeline.element.TextAlign;
 import com.internal.bootstrap.menupipeline.elementsystem.ElementSystem;
 import com.internal.bootstrap.menupipeline.menu.MenuData;
 import com.internal.bootstrap.menupipeline.menu.MenuHandle;
@@ -85,7 +88,8 @@ class InternalBuilder extends BuilderPackage {
             handle.constructor(fileName + "/" + decl.getName(),
                     placements,
                     decl.isLockInput(),
-                    decl.isRaycastInput());
+                    decl.isRaycastInput(),
+                    decl.getEntryPoints());
             handles.add(handle);
         }
 
@@ -101,24 +105,26 @@ class InternalBuilder extends BuilderPackage {
     // Parsing — Menus \\
 
     private ObjectArrayList<MenuData> parseMenus(JsonObject json) {
-
         ObjectArrayList<MenuData> menus = new ObjectArrayList<>();
-
         if (!json.has("menus"))
             return menus;
-
         JsonArray array = json.getAsJsonArray("menus");
         for (int i = 0; i < array.size(); i++) {
             JsonObject menuJson = array.get(i).getAsJsonObject();
             String id = JsonUtility.validateString(menuJson, "id");
             boolean lockInput = JsonUtility.getBoolean(menuJson, "lock_input", false);
             boolean raycastInput = JsonUtility.getBoolean(menuJson, "raycast_input", false);
+            ObjectArrayList<String> entryPoints = new ObjectArrayList<>();
+            if (menuJson.has("entry_points")) {
+                JsonArray eps = menuJson.getAsJsonArray("entry_points");
+                for (int j = 0; j < eps.size(); j++)
+                    entryPoints.add(eps.get(j).getAsString());
+            }
             ObjectArrayList<ElementData> elements = parseElements(menuJson);
             MenuData data = create(MenuData.class);
-            data.constructor(id, elements, raycastInput, lockInput);
+            data.constructor(id, elements, lockInput, raycastInput, entryPoints);
             menus.add(data);
         }
-
         return menus;
     }
 
@@ -165,9 +171,20 @@ class InternalBuilder extends BuilderPackage {
         float[] color = parseColor(json);
         LayoutStruct layout = FileParserUtility.parseLayoutOverride(json);
         String[] onClick = FileParserUtility.parseOnClick(json);
+        boolean mask = JsonUtility.getBoolean(json, "mask", false);
+        StackDirection stackDirection = json.has("stack")
+                ? StackDirection.fromString(json.get("stack").getAsString())
+                : StackDirection.NONE;
+        DimensionValue spacing = json.has("spacing")
+                ? DimensionValue.parse(json.get("spacing").getAsString())
+                : null;
+        TextAlign textAlign = json.has("align")
+                ? TextAlign.fromString(json.get("align").getAsString())
+                : TextAlign.CENTER;
         ObjectArrayList<ElementData> children = parseElements(json);
         ElementData data = create(ElementData.class);
         data.constructorUse(id, usePath, spritePath, text, fontName, color, layout,
+                mask, stackDirection, spacing, textAlign,
                 onClick != null ? onClick[0] : null,
                 onClick != null ? onClick[1] : null,
                 onClick != null ? onClick[2] : null,
@@ -184,9 +201,20 @@ class InternalBuilder extends BuilderPackage {
         float[] color = elementType == ElementType.LABEL ? parseColor(json) : null;
         LayoutStruct layout = FileParserUtility.parseLayout(json);
         String[] onClick = FileParserUtility.parseOnClick(json);
+        boolean mask = JsonUtility.getBoolean(json, "mask", false);
+        StackDirection stackDirection = json.has("stack")
+                ? StackDirection.fromString(json.get("stack").getAsString())
+                : StackDirection.NONE;
+        DimensionValue spacing = json.has("spacing")
+                ? DimensionValue.parse(json.get("spacing").getAsString())
+                : null;
+        TextAlign textAlign = json.has("align")
+                ? TextAlign.fromString(json.get("align").getAsString())
+                : TextAlign.CENTER;
         ObjectArrayList<ElementData> children = parseElements(json);
         ElementData data = create(ElementData.class);
         data.constructor(id, elementType, spritePath, text, fontName, color, layout,
+                mask, stackDirection, spacing, textAlign,
                 onClick != null ? onClick[0] : null,
                 onClick != null ? onClick[1] : null,
                 onClick != null ? onClick[2] : null,
@@ -244,6 +272,10 @@ class InternalBuilder extends BuilderPackage {
                 data.getFontName(),
                 data.getColor(),
                 data.getLayout(),
+                data.isMask(),
+                data.getStackDirection(),
+                data.getSpacing(),
+                data.getTextAlign(),
                 action instanceof Runnable r ? r : null,
                 action instanceof MenuAwareAction m ? m : null,
                 buildChildPlacements(filePath, data.getChildren()));
@@ -290,10 +322,11 @@ class InternalBuilder extends BuilderPackage {
             master.constructor(data.getId(), template.getType(),
                     template.getSpriteName(), template.getText(),
                     template.getFontName(), template.getColor(),
-                    template.getLayout(), template.getClickAction(),
-                    template.getMenuAwareAction(),
+                    template.getLayout(),
+                    template.isMask(), template.getStackDirection(), template.getSpacing(),
+                    template.getTextAlign(),
+                    template.getClickAction(), template.getMenuAwareAction(),
                     buildChildPlacements(filePath, data.getChildren()));
-            elementSystem.registerMaster(filePath + "/" + data.getId(), master);
         } else {
             master = template;
         }

@@ -11,13 +11,14 @@ import com.internal.core.engine.BranchPackage;
 
 /*
  * Dumps chunk data that is no longer required at the chunk's current detail level,
- * freeing memory for blocks, geometry packets, and merge packets as appropriate.
+ * freeing memory for blocks, geometry packets, merge packets, and item data as appropriate.
  */
 public class DumpBranch extends BranchPackage {
 
     // Internal
     private BlockManager blockManager;
     private short airBlockId;
+
     // Internal \\
 
     @Override
@@ -41,9 +42,7 @@ public class DumpBranch extends BranchPackage {
             return;
 
         try {
-
             ChunkData dataToDump = targetLevel.getNextDataToDump(syncContainer.data);
-
             if (dataToDump == null)
                 return;
 
@@ -54,7 +53,6 @@ public class DumpBranch extends BranchPackage {
                 default -> {
                 }
             }
-
         } finally {
             syncContainer.release();
         }
@@ -62,23 +60,30 @@ public class DumpBranch extends BranchPackage {
 
     // Dump Methods \\
 
-    private void dumpGenerationData(ChunkInstance chunkInstance, ChunkDataSyncContainer syncContainer) {
+    private void dumpGenerationData(ChunkInstance chunkInstance,
+            ChunkDataSyncContainer syncContainer) {
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
-        for (SubChunkInstance subChunk : subChunks)
+        for (SubChunkInstance subChunk : subChunks) {
             subChunk.getBlockPaletteHandle().dumpInteriorBlocks(airBlockId);
+            subChunk.getWorldItemPaletteHandle().clear();
+        }
         syncContainer.data[ChunkData.GENERATION_DATA.index] = false;
         syncContainer.data[ChunkData.LOAD_DATA.index] = false;
     }
 
-    private void dumpBuildData(ChunkInstance chunkInstance, ChunkDataSyncContainer syncContainer) {
+    private void dumpBuildData(ChunkInstance chunkInstance,
+            ChunkDataSyncContainer syncContainer) {
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
         for (SubChunkInstance subChunk : subChunks)
             subChunk.getDynamicPacketInstance().clear();
         syncContainer.data[ChunkData.BUILD_DATA.index] = false;
     }
 
-    private void dumpMergeData(ChunkInstance chunkInstance, ChunkDataSyncContainer syncContainer) {
+    private void dumpMergeData(ChunkInstance chunkInstance,
+            ChunkDataSyncContainer syncContainer) {
         chunkInstance.getDynamicPacketInstance().clear();
+        chunkInstance.getWorldItemInstancePaletteHandle().clear();
         syncContainer.data[ChunkData.MERGE_DATA.index] = false;
+        syncContainer.data[ChunkData.ITEM_DATA.index] = false;
     }
 }

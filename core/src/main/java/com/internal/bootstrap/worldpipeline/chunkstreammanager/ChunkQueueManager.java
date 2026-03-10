@@ -11,6 +11,7 @@ import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BuildB
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.ChunkQueueItem;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.DumpBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.GenerationBranch;
+import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.ItemLoadBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.MergeBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.RenderBranch;
@@ -47,6 +48,7 @@ class ChunkQueueManager extends ManagerPackage {
     private AssessmentBranch assessmentBranch;
     private BuildBranch buildBranch;
     private MergeBranch mergeBranch;
+    private ItemLoadBranch itemLoadBranch;
     private BatchBranch batchBranch;
     private RenderBranch renderBranch;
     private DumpBranch dumpBranch;
@@ -75,6 +77,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.assessmentBranch = create(AssessmentBranch.class);
         this.buildBranch = create(BuildBranch.class);
         this.mergeBranch = create(MergeBranch.class);
+        this.itemLoadBranch = create(ItemLoadBranch.class);
         this.batchBranch = create(BatchBranch.class);
         this.renderBranch = create(RenderBranch.class);
         this.dumpBranch = create(DumpBranch.class);
@@ -268,6 +271,7 @@ class ChunkQueueManager extends ManagerPackage {
             case ASSESSMENT -> assessmentBranch.assessChunk(chunkInstance);
             case BUILD -> buildBranch.buildChunk(chunkInstance);
             case MERGE -> mergeBranch.mergeChunk(chunkInstance);
+            case ITEM_LOAD -> itemLoadBranch.loadItems(chunkInstance);
             case BATCH -> batchBranch.batchChunk(chunkInstance);
             case RENDER -> renderBranch.renderChunk(chunkInstance);
             case DUMP -> dumpBranch.dumpChunkData(chunkInstance, gridSlotHandle);
@@ -280,7 +284,9 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Queue Operation \\
 
-    private QueueOperation determineQueueOperation(ChunkInstance chunkInstance, GridSlotHandle gridSlotHandle) {
+    private QueueOperation determineQueueOperation(
+            ChunkInstance chunkInstance,
+            GridSlotHandle gridSlotHandle) {
 
         GridSlotDetailLevel targetLevel = gridSlotHandle.getDetailLevel();
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();

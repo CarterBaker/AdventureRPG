@@ -6,28 +6,23 @@ import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
 import com.internal.core.engine.HandlePackage;
 
-/*
- * Single render submission pairing a ModelInstance with its per-instance
- * material data. Uniform and instance UBO arrays are cached at construction
- * time so the draw loop iterates plain arrays with no collection access.
- * Owned by RenderBatchHandle and cleared after each draw flush.
- */
 public class RenderCallHandle extends HandlePackage {
 
     private static final Uniform<?>[] EMPTY_UNIFORMS = new Uniform[0];
     private static final UBOInstance[] EMPTY_UBOS = new UBOInstance[0];
 
-    // Internal
     private ModelInstance modelInstance;
     private MaterialInstance materialInstance;
     private Uniform<?>[] cachedUniforms;
     private UBOInstance[] cachedInstanceUBOs;
-    // Internal \\
+    private MaskStruct mask; // null = no mask
 
-    public void constructor(ModelInstance modelInstance) {
+    // Constructor \\
 
+    public void constructor(ModelInstance modelInstance, MaskStruct mask) {
         this.modelInstance = modelInstance;
         this.materialInstance = modelInstance.getMaterial();
+        this.mask = mask;
 
         var uniforms = materialInstance.getUniforms();
         this.cachedUniforms = (uniforms != null && !uniforms.isEmpty())
@@ -45,6 +40,7 @@ public class RenderCallHandle extends HandlePackage {
         this.materialInstance = null;
         this.cachedUniforms = null;
         this.cachedInstanceUBOs = null;
+        this.mask = null;
     }
 
     // Accessible \\
@@ -63,5 +59,13 @@ public class RenderCallHandle extends HandlePackage {
 
     public UBOInstance[] getCachedInstanceUBOs() {
         return cachedInstanceUBOs;
+    }
+
+    public MaskStruct getMask() {
+        return mask;
+    }
+
+    public boolean hasMask() {
+        return mask != null;
     }
 }

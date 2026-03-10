@@ -3,7 +3,11 @@ package com.internal.bootstrap.menupipeline.fonts;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.FontGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
+import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
+import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.core.engine.InstancePackage;
+import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector4;
 
 public class FontInstance extends InstancePackage {
@@ -33,37 +37,44 @@ public class FontInstance extends InstancePackage {
         mergedModel.clear();
         textWidth = 0f;
         textHeight = 0f;
+
         if (text == null || text.isEmpty()) {
             dirty = true;
             return;
         }
+
         float cursorX = 0f;
         float cursorY = 0f;
-        for (int i = 0; i < text.length(); i++) {
+
+        for (int i = 0; i < text.length();) {
             int codepoint = text.codePointAt(i);
+            i += Character.charCount(codepoint);
+
             if (codepoint == ' ') {
                 GlyphMetricStruct space = handle.getGlyph(codepoint);
-                if (space != null)
-                    cursorX += space.advance;
-                else
-                    cursorX += handle.getAtlasPixelSize() * 0.25f;
+                cursorX += (space != null) ? space.advance : handle.getAtlasPixelSize() * 0.25f;
                 continue;
             }
+
             DynamicModelHandle glyphModel = handle.getGlyphModel(codepoint);
             GlyphMetricStruct metric = handle.getGlyph(codepoint);
             if (glyphModel == null || metric == null)
                 continue;
+
             float offsetX = cursorX + metric.bearingX;
-            float offsetY = cursorY + (metric.bearingY - metric.height);
+            float offsetY = cursorY + (metric.bearingY - metric.height); // was cursorX — typo
+
             mergedModel.mergeWithOffset(
                     glyphModel,
-                    new int[] { FontGeometryBranch.OFFSET_INDEX_X,
-                            FontGeometryBranch.OFFSET_INDEX_Y },
+                    new int[] { FontGeometryBranch.OFFSET_INDEX_X, FontGeometryBranch.OFFSET_INDEX_Y },
                     new float[] { offsetX, offsetY });
+
             cursorX += metric.advance;
-            if (metric.bearingY > textHeight)
-                textHeight = metric.bearingY;
+
+            if (metric.height > textHeight)
+                textHeight = metric.height;
         }
+
         textWidth = cursorX;
         dirty = true;
     }
@@ -80,23 +91,29 @@ public class FontInstance extends InstancePackage {
         return color;
     }
 
-    // Model \\
+    // GPU Lifecycle — owns its own upload and release \\
 
-    public void setModelInstance(ModelInstance modelInstance) {
-        this.modelInstance = modelInstance;
-        this.dirty = false;
+    public void upload(ModelManager modelManager, MaterialManager materialManager) {
+        if (!dirty || mergedModel.isEmpty())
+            return;
+        if (modelInstance != null)
+            modelManager.removeMesh(modelInstance);
+        MaterialInstance mat = materialManager.cloneMaterial(handle.getMaterialID());
+        mat.setUniform("u_fontAtlas", handle.getGPUHandle());
+        mat.setUniform("u_color", color);
+        modelInstance = modelManager.createModel(
+                mergedModel.getVAOHandle(),
+                mergedModel.getVertices(),
+                mergedModel.getIndices(),
+                mat);
+        dirty = false;
     }
 
-    public void clearModelInstance() {
-        this.modelInstance = null;
-    }
-
-    public boolean hasModel() {
-        return modelInstance != null;
-    }
-
-    public boolean isDirty() {
-        return dirty;
+    public void release(ModelManager modelManager) {
+        if (modelInstance == null)
+            return;
+        modelManager.removeMesh(modelInstance);
+        modelInstance = null;
     }
 
     // Accessors \\
@@ -119,5 +136,13 @@ public class FontInstance extends InstancePackage {
 
     public float getTextHeight() {
         return textHeight;
+    }
+
+    public boolean hasModel() {
+        return modelInstance != null;
+    }
+
+    public boolean isDirty() {
+        return dirty;
     }
 }

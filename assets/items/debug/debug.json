@@ -1,6 +1,14 @@
 {
   "items": [
-    { "name": "debugApple" },
-    { "name": "debugTable" }
+    {
+      "name": "debugApple",
+      "mesh": "items/Apple",
+      "weight": 0.3
+    },
+    {
+      "name": "debugTable",
+      "mesh": "items/Table",
+      "weight": 8.0
+    }
   ]
 }

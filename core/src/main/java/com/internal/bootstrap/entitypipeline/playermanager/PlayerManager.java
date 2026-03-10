@@ -6,6 +6,9 @@ import com.internal.bootstrap.entitypipeline.entity.EntityState;
 import com.internal.bootstrap.entitypipeline.entity.EntityStateHandle;
 import com.internal.bootstrap.entitypipeline.entitymanager.EntityManager;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
+import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import com.internal.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
+import com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.InventoryBranch;
 import com.internal.bootstrap.physicspipeline.movementmanager.MovementManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
@@ -29,6 +32,8 @@ public class PlayerManager extends ManagerPackage {
     private EntityManager entityManager;
     private BlockManager blockManager;
     private ChunkStreamManager chunkStreamManager;
+    private InventoryBranch inventoryBranch;
+    private ItemDefinitionManager itemDefinitionManager;
 
     private InternalBufferSystem internalBufferSystem;
     private BlockPlacementSystem blockPlacementSystem;
@@ -59,6 +64,8 @@ public class PlayerManager extends ManagerPackage {
         this.entityManager = get(EntityManager.class);
         this.blockManager = get(BlockManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.inventoryBranch = get(InventoryBranch.class);
+        this.itemDefinitionManager = get(ItemDefinitionManager.class);
     }
 
     @Override
@@ -73,8 +80,38 @@ public class PlayerManager extends ManagerPackage {
 
     @Override
     protected void update() {
+        handleInventoryInput();
         calculatePlayerPosition();
     }
+
+    // Inventory Input \\
+
+    private void handleInventoryInput() {
+        if (inputSystem.consumeInventoryJustPressed())
+            inventoryBranch.toggleInventory(player);
+
+        // =====================================================
+        // DEBUG — remove entire block when item acquisition
+        // is implemented via gameplay systems
+        if (inputSystem.consumeDebugItem1JustPressed()) {
+            debugAddToBackpack("debug/debug/debugApple");
+        }
+        if (inputSystem.consumeDebugItem2JustPressed()) {
+            debugAddToBackpack("debug/debug/debugTable");
+        }
+        // =====================================================
+    }
+
+    // =========================================================
+    // DEBUG — remove when real item acquisition is implemented
+    private void debugAddToBackpack(String itemName) {
+        ItemDefinitionHandle item = itemDefinitionManager.getItemFromItemID(
+                itemDefinitionManager.getItemIDFromItemName(itemName));
+        player.getInventoryHandle().getBackpack().addItem(item);
+        inventoryBranch.rebuildUI(player.getInventoryHandle());
+    }
+    // END DEBUG
+    // =========================================================
 
     // Player \\
 
@@ -91,20 +128,13 @@ public class PlayerManager extends ManagerPackage {
         CameraInstance camera = cameraManager.getMainCamera();
         Vector3 direction = camera.getDirection();
 
-        // Write movement state intent from input modifiers
-        // Vertical state (JUMPING/FALLING) is owned by GravityBranch — not touched here
         writeMovementState(input);
-
-        // Hand input vector and entity to MovementManager — no physics logic here
-        // AI systems will call movementManager.move() directly with their own input
         movementManager.move(input, direction, player);
 
-        // Camera follow
         cameraPosition.set(worldPositionStruct.getPosition());
         cameraPosition.add(cameraOffset);
         camera.setPosition(cameraPosition);
 
-        // Block interaction
         blockPlacementSystem.update(
                 player,
                 cameraPosition,
@@ -116,26 +146,15 @@ public class PlayerManager extends ManagerPackage {
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }
 
-    /**
-     * Translates input modifier keys into movement state.
-     * Only sets horizontal state — vertical state is owned by GravityBranch.
-     * This is the only place InputSystem touches EntityStateHandle.
-     */
     private void writeMovementState(Vector3Int input) {
-
         EntityStateHandle state = player.getEntityStateHandle();
-
-        // Never override vertical state
         if (!state.isGrounded())
             return;
-
         boolean moving = input.x != 0 || input.z != 0;
-
         if (!moving) {
             state.setMovementState(EntityState.IDLE);
             return;
         }
-
         if (inputSystem.isWalkHeld())
             state.setMovementState(EntityState.WALKING);
         else if (inputSystem.isSprintHeld())
@@ -147,31 +166,23 @@ public class PlayerManager extends ManagerPackage {
     // Spawn Verification \\
 
     private boolean verifyPlayerPosition(WorldPositionStruct worldPositionStruct) {
-
         ChunkInstance activeChunkInstance = chunkStreamManager.getChunkInstance(
                 worldPositionStruct.getChunkCoordinate());
-
         if (activeChunkInstance == null)
             return true;
-
         if (!activeChunkInstance.getChunkDataSyncContainer().hasData(ChunkData.GENERATION_DATA))
             return true;
-
         Vector3 position = worldPositionStruct.getPosition();
         int blockX = (int) position.x;
         int totalY = (int) position.y;
         int blockZ = (int) position.z;
-
         int safeY = WorldPositionUtility.findSafeSpawnHeight(
                 activeChunkInstance, blockManager, blockX, totalY, blockZ);
-
         if (safeY == -1)
             return true;
-
         position.x = blockX;
         position.y = safeY;
         position.z = blockZ;
-
         return false;
     }
 

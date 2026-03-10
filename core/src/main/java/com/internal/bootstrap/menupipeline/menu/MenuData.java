@@ -10,16 +10,19 @@ public class MenuData extends DataPackage {
     private ObjectArrayList<ElementData> elements;
     private boolean lockInput;
     private boolean raycastInput;
+    private ObjectArrayList<String> entryPoints;
 
     public void constructor(
             String name,
             ObjectArrayList<ElementData> elements,
             boolean lockInput,
-            boolean raycastInput) {
+            boolean raycastInput,
+            ObjectArrayList<String> entryPoints) {
         this.name = name;
         this.elements = elements;
         this.lockInput = lockInput;
         this.raycastInput = raycastInput;
+        this.entryPoints = entryPoints;
     }
 
     public String getName() {
@@ -36,5 +39,9 @@ public class MenuData extends DataPackage {
 
     public boolean isRaycastInput() {
         return raycastInput;
+    }
+
+    public ObjectArrayList<String> getEntryPoints() {
+        return entryPoints;
     }
 }

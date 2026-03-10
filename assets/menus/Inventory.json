@@ -1,0 +1,53 @@
+{
+    "elements": [],
+    "menus": [
+        {
+            "id": "Inventory",
+            "lock_input":    true,
+            "raycast_input": true,
+            "entry_points": ["item_list", "scroll_handle"],
+            "elements": [
+                {
+                    "id": "panel",
+                    "type": "sprite",
+                    "sprite": "menus/DebugElement",
+                    "anchor": "CENTER_LEFT",
+                    "pivot": "CENTER_LEFT",
+                    "position": { "x": "1%", "y": "0%" },
+                    "size": { "x": "20%", "y": "80%" },
+                    "elements": [
+                        {
+                            "id": "item_list",
+                            "type": "container",
+                            "mask": true,
+                            "stack": "vertical",
+                            "spacing": "2px",
+                            "anchor": "TOP_LEFT",
+                            "pivot":  "TOP_LEFT",
+                            "size": { "x": "88%", "y": "100%" }
+                        },
+                        {
+                            "id": "scrollbar_track",
+                            "type": "sprite",
+                            "sprite": "menus/DebugElement",
+                            "anchor": "TOP_RIGHT",
+                            "pivot":  "TOP_RIGHT",
+                            "size":   { "x": "10%", "y": "100%" },
+                            "elements": [
+                                {
+                                    "id": "scroll_handle",
+                                    "type": "sprite",
+                                    "sprite": "menus/DebugElement",
+                                    "anchor":   "TOP_LEFT",
+                                    "pivot":    "TOP_LEFT",
+                                    "position": { "x": "0%", "y": "0%" },
+                                    "size":     { "x": "100%", "y": "20%" }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
