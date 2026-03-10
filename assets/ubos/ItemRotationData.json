@@ -1,0 +1,6 @@
+{
+    "blockName": "ItemRotationData",
+    "uniforms": [
+        { "name": "u_rotations", "type": "MATRIX4", "count": 24 }
+    ]
+}

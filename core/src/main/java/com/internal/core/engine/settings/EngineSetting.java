@@ -13,6 +13,9 @@ public class EngineSetting {
         public static final int LOADER_BATCH_SIZE = 32;
         public static final String THREAD_DEFINITIONS = "internal/threads";
 
+        // Raycast Settings
+        public static final float REACH_SCALE = 4.0f; // 1 reach unit = N blocks
+
         // Path Settings
         public static final String BLOCK_TEXTURE_PATH = "textures";
         public static final String SPRITE_PATH = "sprites";
@@ -156,5 +159,5 @@ public class EngineSetting {
         public static final int LUNAR_CYCLE_DAYS = 28;
 
         // Item Settings
-        public static final String DEFAULT_ITEM_MATERIAL = "debug/DebugItem";
+        public static final String DEFAULT_ITEM_MATERIAL = "items/StandardItems";
 }

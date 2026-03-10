@@ -16,13 +16,6 @@ import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
-/*
- * Root manager for chunk and mega lifecycle. Owns both activeChunks and
- * activeMegaChunks maps and dispatches them to their respective queue managers.
- * rebuildGrid() is the single gateway for any runtime settings change that
- * affects render distance or grid scale — all dependent systems are notified
- * from here.
- */
 public class ChunkStreamManager extends ManagerPackage {
 
     // Internal
@@ -36,6 +29,7 @@ public class ChunkStreamManager extends ManagerPackage {
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
     private ChunkQueueManager chunkQueueManager;
+
     // Internal \\
 
     @Override
@@ -86,26 +80,19 @@ public class ChunkStreamManager extends ManagerPackage {
         return true;
     }
 
-    // Runtime Grid Rebuild — single gateway for all settings changes \\
+    // Runtime Grid Rebuild \\
 
     public void rebuildGrid() {
-        // 1. Rebuild the grid itself
         gridManager.rebuildGrid();
         gridManager.getGrid().setWorldHandle(playerManager.getPlayer().getWorldHandle());
         gridManager.getGrid().setActiveChunkCoordinate(activeChunkCoordinate);
 
-        // 2. Flush and resize active chunk map
         int maxChunks = gridManager.getGrid().getTotalSlots() + EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
         activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);
         chunkQueueManager.setActiveChunks(activeChunks);
 
-        // 3. Notify chunk queue — flushes active chunks and clears requests
         chunkQueueManager.onGridRebuilt();
-
-        // 4. Notify mega queue — recomputes cap and flushes active megas
         megaStreamManager.onGridRebuilt();
-
-        // 5. Rebuild render queue with new grid
         worldRenderSystem.rebuildRenderQueue();
     }
 
@@ -141,5 +128,9 @@ public class ChunkStreamManager extends ManagerPackage {
 
     public ChunkInstance getChunkInstance(long chunkCoordinate) {
         return activeChunks.get(chunkCoordinate);
+    }
+
+    public Long2ObjectLinkedOpenHashMap<ChunkInstance> getActiveChunks() {
+        return activeChunks;
     }
 }

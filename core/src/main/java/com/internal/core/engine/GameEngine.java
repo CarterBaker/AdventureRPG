@@ -11,7 +11,6 @@ import com.internal.bootstrap.physicspipeline.PhysicsPipeline;
 import com.internal.bootstrap.renderpipeline.RenderPipeline;
 import com.internal.bootstrap.shaderpipeline.ShaderPipeline;
 import com.internal.bootstrap.worldpipeline.WorldPipeline;
-import com.internal.runtime.debug.DebugItemPipeline;
 import com.internal.runtime.debug.DebugPipeline;
 
 public class GameEngine extends EnginePackage {
@@ -37,7 +36,6 @@ public class GameEngine extends EnginePackage {
 
     // Runtime
     private DebugPipeline debugPipeline;
-    private DebugItemPipeline debugItemPipeline;
 
     // BootStrap \\
 
@@ -65,7 +63,6 @@ public class GameEngine extends EnginePackage {
 
         // Runtime
         this.debugPipeline = create(DebugPipeline.class);
-        this.debugItemPipeline = create(DebugItemPipeline.class);
     }
 
     @Override

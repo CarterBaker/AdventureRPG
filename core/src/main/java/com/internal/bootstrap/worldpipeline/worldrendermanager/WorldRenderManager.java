@@ -5,6 +5,7 @@ import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstan
 import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
+import com.internal.bootstrap.itempipeline.itemrotationmanager.ItemRotationManager;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
@@ -12,13 +13,13 @@ import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
+import com.internal.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRenderSystem;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldRenderManager extends ManagerPackage {
@@ -29,6 +30,8 @@ public class WorldRenderManager extends ManagerPackage {
     private RenderSystem renderSystem;
     private GridManager gridManager;
     private FrustumCullingSystem frustumCullingSystem;
+    private ItemRotationManager itemRenderRotationSystem;
+    private WorldItemRenderSystem itemRenderManager;
 
     private int BATCHED_CHUNKS = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
 
@@ -44,12 +47,10 @@ public class WorldRenderManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
         this.chunkModels = new Long2ObjectOpenHashMap<>();
         this.megaModels = new Long2ObjectOpenHashMap<>();
         this.chunkRenderQueue = new LongLinkedOpenHashSet();
         this.megaRenderQueue = new LongLinkedOpenHashSet();
-
         this.frustumCullingSystem = create(FrustumCullingSystem.class);
     }
 
@@ -59,11 +60,14 @@ public class WorldRenderManager extends ManagerPackage {
         this.modelManager = get(ModelManager.class);
         this.renderSystem = get(RenderSystem.class);
         this.gridManager = get(GridManager.class);
+        this.itemRenderRotationSystem = get(ItemRotationManager.class);
+        this.itemRenderManager = get(WorldItemRenderSystem.class);
     }
 
     @Override
     protected void update() {
         renderWorld();
+        itemRenderManager.renderItems();
     }
 
     // Render \\
@@ -151,30 +155,22 @@ public class WorldRenderManager extends ManagerPackage {
     }
 
     private void queueChunk(GridSlotHandle slot) {
-
         long chunkCoordinate = slot.getChunkCoordinate();
         long megaCoordinate = slot.getMegaCoordinate();
-
         if (megaRenderQueue.contains(megaCoordinate))
             return;
-
         chunkRenderQueue.add(chunkCoordinate);
     }
 
     private void queueMega(GridSlotHandle slot) {
-
         long chunkCoordinate = slot.getChunkCoordinate();
         long megaCoordinate = slot.getMegaCoordinate();
-
         if (chunkCoordinate != megaCoordinate)
             return;
-
         ObjectArrayList<GridSlotHandle> coveredSlots = slot.getCoveredSlots();
         if (coveredSlots.size() != BATCHED_CHUNKS)
             return;
-
         megaRenderQueue.add(megaCoordinate);
-
         for (int i = 0; i < coveredSlots.size(); i++)
             chunkRenderQueue.remove(coveredSlots.get(i).getChunkCoordinate());
     }

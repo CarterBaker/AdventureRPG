@@ -1,0 +1,4 @@
+{
+    "vert": "items/StandardItems.vsh",
+    "frag": "items/StandardItems.fsh"
+}
