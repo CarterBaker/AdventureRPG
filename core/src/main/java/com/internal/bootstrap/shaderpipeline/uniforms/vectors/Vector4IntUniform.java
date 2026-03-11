@@ -1,21 +1,14 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectors;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector4Int;
-
-import java.nio.ByteBuffer;
 
 public final class Vector4IntUniform extends UniformAttribute<Vector4Int> {
 
-    // Internal
-    private final ByteBuffer buffer;
-
     public Vector4IntUniform() {
-        // Internal
-        super(new Vector4Int());
-        this.buffer = BufferUtils.newByteBuffer(16); // 4 ints * 4 bytes
+        super(UniformType.VECTOR4_INT, new Vector4Int());
     }
 
     @Override
@@ -26,17 +19,6 @@ public final class Vector4IntUniform extends UniformAttribute<Vector4Int> {
     @Override
     protected void push(int handle, Vector4Int value) {
         Gdx.gl.glUniform4i(handle, value.x, value.y, value.z, value.w);
-    }
-
-    @Override
-    public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        buffer.putInt(value.x);
-        buffer.putInt(value.y);
-        buffer.putInt(value.z);
-        buffer.putInt(value.w);
-        buffer.flip();
-        return buffer;
     }
 
     @Override

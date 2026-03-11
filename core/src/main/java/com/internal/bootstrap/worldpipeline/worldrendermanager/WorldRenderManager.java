@@ -5,7 +5,6 @@ import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstan
 import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
-import com.internal.bootstrap.itempipeline.itemrotationmanager.ItemRotationManager;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
@@ -13,7 +12,6 @@ import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
-import com.internal.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRenderSystem;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -30,8 +28,6 @@ public class WorldRenderManager extends ManagerPackage {
     private RenderSystem renderSystem;
     private GridManager gridManager;
     private FrustumCullingSystem frustumCullingSystem;
-    private ItemRotationManager itemRenderRotationSystem;
-    private WorldItemRenderSystem itemRenderManager;
 
     private int BATCHED_CHUNKS = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
 
@@ -60,14 +56,11 @@ public class WorldRenderManager extends ManagerPackage {
         this.modelManager = get(ModelManager.class);
         this.renderSystem = get(RenderSystem.class);
         this.gridManager = get(GridManager.class);
-        this.itemRenderRotationSystem = get(ItemRotationManager.class);
-        this.itemRenderManager = get(WorldItemRenderSystem.class);
     }
 
     @Override
     protected void update() {
         renderWorld();
-        itemRenderManager.renderItems();
     }
 
     // Render \\

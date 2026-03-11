@@ -11,6 +11,10 @@ public class WorldItemInstance extends InstancePackage {
     private long packedPosition;
     private int packedItem;
 
+    // Render slot — index into the CompositeBufferInstance for this item's type.
+    // -1 means not currently registered in any buffer.
+    private int instanceSlot;
+
     // Constructor \\
 
     public void constructor(
@@ -24,6 +28,7 @@ public class WorldItemInstance extends InstancePackage {
         this.packedBlockCoordinate = packedBlockCoordinate;
         this.packedPosition = packedPosition;
         this.packedItem = packedItem;
+        this.instanceSlot = -1;
     }
 
     // Accessible \\
@@ -46,5 +51,17 @@ public class WorldItemInstance extends InstancePackage {
 
     public int getPackedItem() {
         return packedItem;
+    }
+
+    public int getInstanceSlot() {
+        return instanceSlot;
+    }
+
+    public void setInstanceSlot(int slot) {
+        this.instanceSlot = slot;
+    }
+
+    public void clearInstanceSlot() {
+        this.instanceSlot = -1;
     }
 }

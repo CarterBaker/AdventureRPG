@@ -1,27 +1,19 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector4;
 
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
+public final class Vector4ArrayUniform extends UniformAttribute<Object[]> {
 
-public final class Vector4ArrayUniform extends UniformAttribute<float[]> {
-
-    // Internal
     private final int elementCount;
-    private final ByteBuffer buffer;
-    private final FloatBuffer floatBuffer;
 
     public Vector4ArrayUniform(int elementCount) {
-        // Internal
-        super(new float[elementCount * 4]);
+        super(UniformType.VECTOR4, elementCount, new Vector4[elementCount]);
         this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 16); // vec4 = 16 bytes per element, no padding needed
-                                                                    // (std140)
-        this.floatBuffer = buffer.asFloatBuffer();
+        for (int i = 0; i < elementCount; i++)
+            ((Vector4[]) value)[i] = new Vector4();
     }
 
     @Override
@@ -30,42 +22,39 @@ public final class Vector4ArrayUniform extends UniformAttribute<float[]> {
     }
 
     @Override
-    protected void push(int handle, float[] data) {
-        Gdx.gl.glUniform4fv(handle, elementCount, data, 0);
+    protected void push(int handle, Object[] value) {
+        float[] flat = new float[elementCount * 4];
+        for (int i = 0; i < elementCount; i++) {
+            Vector4 v = (Vector4) value[i];
+            flat[i * 4] = v.x;
+            flat[i * 4 + 1] = v.y;
+            flat[i * 4 + 2] = v.z;
+            flat[i * 4 + 3] = v.w;
+        }
+        Gdx.gl.glUniform4fv(handle, elementCount, flat, 0);
     }
 
     @Override
-    public ByteBuffer getByteBuffer() {
-        floatBuffer.clear();
-        floatBuffer.put(value);
-        floatBuffer.flip();
-        return buffer;
-    }
-
-    @Override
-    protected void applyValue(float[] value) {
-        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
+    protected void applyValue(Object[] value) {
+        Vector4[] dst = (Vector4[]) this.value;
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            dst[i].set((Vector4) value[i]);
     }
 
     @Override
     protected void applyObject(Object value) {
-        if (value instanceof Vector4[] vectors) {
-            for (int i = 0; i < vectors.length && i < elementCount; i++) {
-                this.value[i * 4] = vectors[i].x;
-                this.value[i * 4 + 1] = vectors[i].y;
-                this.value[i * 4 + 2] = vectors[i].z;
-                this.value[i * 4 + 3] = vectors[i].w;
+        if (value instanceof Vector4[] v)
+            applyValue(v);
+        else if (value instanceof com.badlogic.gdx.math.Vector4[] vectors) {
+            Vector4[] dst = (Vector4[]) this.value;
+            for (int i = 0; i < Math.min(vectors.length, elementCount); i++) {
+                dst[i].x = vectors[i].x;
+                dst[i].y = vectors[i].y;
+                dst[i].z = vectors[i].z;
+                dst[i].w = vectors[i].w;
             }
-        } else if (value instanceof com.badlogic.gdx.math.Vector4[] vectors) {
-            for (int i = 0; i < vectors.length && i < elementCount; i++) {
-                this.value[i * 4] = vectors[i].x;
-                this.value[i * 4 + 1] = vectors[i].y;
-                this.value[i * 4 + 2] = vectors[i].z;
-                this.value[i * 4 + 3] = vectors[i].w;
-            }
-        } else {
-            applyValue((float[]) value);
-        }
+        } else
+            throw new IllegalArgumentException("applyObject(Vector4Array): got " + value.getClass());
     }
 
     public int elementCount() {

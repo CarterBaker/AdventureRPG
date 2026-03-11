@@ -1,5 +1,6 @@
 package com.internal.bootstrap.geometrypipeline;
 
+import com.internal.bootstrap.geometrypipeline.compositebuffermanager.CompositeBufferManager;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
@@ -12,13 +13,12 @@ public class GeometryPipeline extends PipelinePackage {
 
     @Override
     protected void create() {
-
-        // Geometry Pipeline
         create(VBOManager.class);
         create(IBOManager.class);
         create(VAOManager.class);
         create(MeshManager.class);
         create(ModelManager.class);
         create(DynamicGeometryManager.class);
+        create(CompositeBufferManager.class);
     }
 }

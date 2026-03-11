@@ -1,24 +1,18 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalarArrays;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
-import java.nio.ByteBuffer;
+public final class BooleanArrayUniform extends UniformAttribute<Object[]> {
 
-public final class BooleanArrayUniform extends UniformAttribute<boolean[]> {
-
-    // Internal
     private final int elementCount;
-    private final ByteBuffer uboBuffer;
-    private final int[] elements; // converted for GL upload
 
     public BooleanArrayUniform(int elementCount) {
-        // Internal
-        super(new boolean[elementCount]);
+        super(UniformType.BOOL, elementCount, new Boolean[elementCount]);
         this.elementCount = elementCount;
-        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 4); // 1 int * 4 bytes per element
-        this.elements = new int[elementCount];
+        for (int i = 0; i < elementCount; i++)
+            ((Boolean[]) value)[i] = false;
     }
 
     @Override
@@ -27,24 +21,18 @@ public final class BooleanArrayUniform extends UniformAttribute<boolean[]> {
     }
 
     @Override
-    protected void push(int handle, boolean[] data) {
-        Gdx.gl.glUniform1iv(handle, elementCount, elements, 0);
+    protected void push(int handle, Object[] value) {
+        int[] flat = new int[elementCount];
+        for (int i = 0; i < elementCount; i++)
+            flat[i] = (Boolean) value[i] ? 1 : 0;
+        Gdx.gl.glUniform1iv(handle, elementCount, flat, 0);
     }
 
     @Override
-    public ByteBuffer getByteBuffer() {
-        uboBuffer.clear();
-        for (int i = 0; i < elementCount; i++)
-            uboBuffer.putInt(value[i] ? 1 : 0);
-        uboBuffer.flip();
-        return uboBuffer;
-    }
-
-    @Override
-    protected void applyValue(boolean[] values) {
-        System.arraycopy(values, 0, this.value, 0, Math.min(values.length, this.value.length));
-        for (int i = 0; i < elementCount; i++)
-            elements[i] = this.value[i] ? 1 : 0;
+    protected void applyValue(Object[] value) {
+        Boolean[] dst = (Boolean[]) this.value;
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            dst[i] = (Boolean) value[i];
     }
 
     public int elementCount() {

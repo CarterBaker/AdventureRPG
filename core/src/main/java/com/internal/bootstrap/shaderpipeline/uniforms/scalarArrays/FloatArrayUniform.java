@@ -1,22 +1,18 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalarArrays;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
-import java.nio.ByteBuffer;
+public final class FloatArrayUniform extends UniformAttribute<Object[]> {
 
-public final class FloatArrayUniform extends UniformAttribute<float[]> {
-
-    // Internal
     private final int elementCount;
-    private final ByteBuffer uboBuffer;
 
     public FloatArrayUniform(int elementCount) {
-        // Internal
-        super(new float[elementCount]);
+        super(UniformType.FLOAT, elementCount, new Float[elementCount]);
         this.elementCount = elementCount;
-        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 4); // 1 float * 4 bytes per element
+        for (int i = 0; i < elementCount; i++)
+            ((Float[]) value)[i] = 0f;
     }
 
     @Override
@@ -25,22 +21,18 @@ public final class FloatArrayUniform extends UniformAttribute<float[]> {
     }
 
     @Override
-    protected void push(int handle, float[] data) {
-        Gdx.gl.glUniform1fv(handle, elementCount, data, 0);
-    }
-
-    @Override
-    public ByteBuffer getByteBuffer() {
-        uboBuffer.clear();
+    protected void push(int handle, Object[] value) {
+        float[] flat = new float[elementCount];
         for (int i = 0; i < elementCount; i++)
-            uboBuffer.putFloat(value[i]);
-        uboBuffer.flip();
-        return uboBuffer;
+            flat[i] = (Float) value[i];
+        Gdx.gl.glUniform1fv(handle, elementCount, flat, 0);
     }
 
     @Override
-    protected void applyValue(float[] values) {
-        System.arraycopy(values, 0, this.value, 0, Math.min(values.length, this.value.length));
+    protected void applyValue(Object[] value) {
+        Float[] dst = (Float[]) this.value;
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            dst[i] = (Float) value[i];
     }
 
     public int elementCount() {

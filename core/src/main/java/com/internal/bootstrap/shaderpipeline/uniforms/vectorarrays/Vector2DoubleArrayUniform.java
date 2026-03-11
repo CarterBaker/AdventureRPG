@@ -1,27 +1,19 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector2Double;
 
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
+public final class Vector2DoubleArrayUniform extends UniformAttribute<Object[]> {
 
-public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
-
-    // Internal
     private final int elementCount;
-    private final ByteBuffer buffer;
-    private final FloatBuffer floatBuffer;
 
     public Vector2DoubleArrayUniform(int elementCount) {
-        // Internal
-        super(new float[elementCount * 2]);
+        super(UniformType.VECTOR2_DOUBLE, elementCount, new Vector2Double[elementCount]);
         this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 16); // vec2 padded to 16 bytes per element (std140,
-                                                                    // doubles downcast to float for GLSL ES)
-        this.floatBuffer = buffer.asFloatBuffer();
+        for (int i = 0; i < elementCount; i++)
+            ((Vector2Double[]) value)[i] = new Vector2Double();
     }
 
     @Override
@@ -30,38 +22,21 @@ public final class Vector2DoubleArrayUniform extends UniformAttribute<float[]> {
     }
 
     @Override
-    protected void push(int handle, float[] data) {
-        Gdx.gl.glUniform2fv(handle, elementCount, data, 0);
-    }
-
-    @Override
-    public ByteBuffer getByteBuffer() {
-        floatBuffer.clear();
+    protected void push(int handle, Object[] value) {
+        float[] flat = new float[elementCount * 2];
         for (int i = 0; i < elementCount; i++) {
-            floatBuffer.put(value[i * 2]); // x
-            floatBuffer.put(value[i * 2 + 1]); // y
-            floatBuffer.put(0f); // padding
-            floatBuffer.put(0f); // padding
+            Vector2Double v = (Vector2Double) value[i];
+            flat[i * 2] = (float) v.x;
+            flat[i * 2 + 1] = (float) v.y;
         }
-        floatBuffer.flip();
-        return buffer;
+        Gdx.gl.glUniform2fv(handle, elementCount, flat, 0);
     }
 
     @Override
-    protected void applyValue(float[] value) {
-        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-    }
-
-    @Override
-    protected void applyObject(Object value) {
-        if (value instanceof Vector2Double[] vectors) {
-            for (int i = 0; i < vectors.length && i < elementCount; i++) {
-                this.value[i * 2] = (float) vectors[i].x;
-                this.value[i * 2 + 1] = (float) vectors[i].y;
-            }
-        } else {
-            applyValue((float[]) value);
-        }
+    protected void applyValue(Object[] value) {
+        Vector2Double[] dst = (Vector2Double[]) this.value;
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            dst[i].set((Vector2Double) value[i]);
     }
 
     public int elementCount() {

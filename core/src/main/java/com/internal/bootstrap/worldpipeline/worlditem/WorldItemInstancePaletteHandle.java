@@ -1,7 +1,6 @@
 package com.internal.bootstrap.worldpipeline.worlditem;
 
 import com.internal.core.engine.HandlePackage;
-import com.internal.core.util.mathematics.Extras.Coordinate3Int;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

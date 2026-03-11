@@ -13,18 +13,25 @@ public class EngineSetting {
         public static final int LOADER_BATCH_SIZE = 32;
         public static final String THREAD_DEFINITIONS = "internal/threads";
 
-        // Raycast Settings
-        public static final float REACH_SCALE = 4.0f; // 1 reach unit = N blocks
+        // Scale Settings
+        public static final float BLOCK_SIZE = 1.0f;
+        public static final int CHUNK_SIZE = 16;
+        public static final int MEGA_CHUNK_SIZE = 4;
+        public static final int WORLD_HEIGHT = 64;
+        public static final int BIOME_SIZE = 4;
+        public static final int BLOCK_PALETTE_THRESHOLD = 512;
+        public static final int CHUNKS_PER_PIXEL = 32;
 
         // Path Settings
         public static final String BLOCK_TEXTURE_PATH = "textures";
-        public static final String SPRITE_PATH = "sprites";
         public static final String BLOCK_TEXTURE_ALIAS_PATH = "textureAliases";
+        public static final String SPRITE_PATH = "sprites";
         public static final String SHADER_PATH = "shaders";
         public static final String UBO_JSON_PATH = "ubos";
         public static final String MATERIAL_JSON_PATH = "materials";
         public static final String PASS_JSON_PATH = "processingPasses";
         public static final String MESH_JSON_PATH = "mesh";
+        public static final String FONT_PATH = "fonts";
         public static final String WORLD_TEXTURE_PATH = "worlds";
         public static final String CALENDAR_JSON_PATH = "calendars";
         public static final String BLOCK_JSON_PATH = "blocks";
@@ -34,7 +41,6 @@ public class EngineSetting {
         public static final String MENU_JSON_PATH = "menus";
         public static final String ITEM_JSON_PATH = "items";
         public static final String TOOL_TYPE_JSON_PATH = "tools";
-        public static final String FONT_PATH = "fonts";
 
         // File Extension Settings
 
@@ -87,53 +93,16 @@ public class EngineSetting {
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
         public static final String SPRITE_DEFAULT_MATERIAL = "util/Sprite";
 
-        // Menu Settings
-        public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;
-        public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;
-        public static final String FONT_DEFAULT_VAO = "util/vao/LabelVAO";
-        public static final String FONT_DEFAULT_MATERIAL = "util/Label";
-        public static final int FONT_DEFAULT_SIZE = 24;
-        public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-                        + "0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
-
-        // Movement Settings
-        public static final float BASE_WALKING_SPEED = 1.5f;
-
-        // Time Settings
-        public static final int MINUTES_PER_HOUR = 60;
-        public static final int HOURS_PER_DAY = 24;
-        public static final float MIDDAY_OFFSET = 0.5f;
-        public static final int DAYS_PER_DAY = 20;
-        public static final int YEARS_PER_AGE = 1500;
-
-        public static final int STARTING_MINUTE = 30;
-        public static final int STARTING_HOUR = 12;
-        public static final int STARTING_MONTH = 6;
-        public static final int STARTING_DAY_OF_MONTH = 15;
-        public static final int STARTING_YEAR = 1356;
-        public static final int STARTING_AGE = 3;
-
-        // Scale Settings
-        public static final float BLOCK_SIZE = 1.0f;
-        public static final int BLOCK_PALETTE_THRESHOLD = 512;
-        public static final int BIOME_SIZE = 4;
-        public static final int CHUNK_SIZE = 16;
-        public static final int MEGA_CHUNK_SIZE = 4;
-        public static final int WORLD_HEIGHT = 64;
-
-        // Mesh settings
+        // Mesh Settings
         public static final int DEFAULT_BLOCK_DIRECTION = 4;
         public static final int CHUNK_VERT_BUFFER = 128;
         public static final int MESH_VERT_LIMIT = 32767;
 
-        // Biome settings
+        // World Settings
         public static final String DEFAULT_BIOME_NAME = "Empty";
-
-        // World settings
-        public static final int CHUNKS_PER_PIXEL = 32;
-        public static final String CHUNK_VAO = "util/vao/ChunkVAO";
         public static final String STARTING_WORLD = "TerraArcana";
         public static final String GRID_COORDINATE_UBO = "GridCoordinateData";
+        public static final String CHUNK_VAO = "util/vao/ChunkVAO";
         public static final int MAX_CHUNK_STREAM_PER_QUEUE = 1024;
         public static final int MAX_CHUNK_STREAM_PER_FRAME = 128;
         public static final int MAX_CHUNK_STREAM_PER_BATCH = 32;
@@ -142,22 +111,49 @@ public class EngineSetting {
         public static final int MEGA_POOL_MAX_OVERFLOW = 8;
         public static final int MEGA_ASSESS_PER_FRAME = GRID_SLOTS_SCAN_PER_FRAME / MEGA_CHUNK_SIZE;
 
-        // Player settings
+        // Time Settings
+        public static final int MINUTES_PER_HOUR = 60;
+        public static final int HOURS_PER_DAY = 24;
+        public static final int DAYS_PER_DAY = 20;
+        public static final float MIDDAY_OFFSET = 0.5f;
+        public static final int LUNAR_CYCLE_DAYS = 28;
+        public static final int YEARS_PER_AGE = 1500;
+
+        public static final int STARTING_MINUTE = 30;
+        public static final int STARTING_HOUR = 12;
+        public static final int STARTING_DAY_OF_MONTH = 15;
+        public static final int STARTING_MONTH = 6;
+        public static final int STARTING_YEAR = 1356;
+        public static final int STARTING_AGE = 3;
+
+        // Player Settings
         public static final String DEFAULT_PLAYER_RACE = "Humanoid";
         public static final float BLOCK_PLACEMENT_INTERVAL = 0.1f;
 
+        // Raycast Settings
+        public static final float REACH_SCALE = 4.0f;
+
         // Movement Settings
+        public static final float BASE_WALKING_SPEED = 1.5f;
         public static final float MOVEMENT_SCALE = 1.5f;
         public static final float JUMP_SCALE = 1.8f;
 
-        // Physics settings
+        // Physics Settings
         public static final float MOVEMENT_ACCELERATION = 8.0f;
         public static final float GRAVITY_FORCE = 9.8f;
         public static final float JUMP_HOLD_FRACTION = 0.4f;
 
-        // Lighting settings
-        public static final int LUNAR_CYCLE_DAYS = 28;
-
         // Item Settings
         public static final String DEFAULT_ITEM_MATERIAL = "items/StandardItems";
+        public static final String ITEM_ROTATION_UBO = "ItemRotationData";
+
+        // Menu Settings
+        public static final String FONT_DEFAULT_VAO = "util/vao/LabelVAO";
+        public static final String FONT_DEFAULT_MATERIAL = "util/Label";
+        public static final int FONT_DEFAULT_SIZE = 24;
+        public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;
+        public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;
+        public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                        + "0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
+
 }

@@ -1,26 +1,19 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector2Int;
 
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
+public final class Vector2IntArrayUniform extends UniformAttribute<Object[]> {
 
-public final class Vector2IntArrayUniform extends UniformAttribute<int[]> {
-
-    // Internal
     private final int elementCount;
-    private final ByteBuffer buffer;
-    private final IntBuffer intBuffer;
 
     public Vector2IntArrayUniform(int elementCount) {
-        // Internal
-        super(new int[elementCount * 2]);
+        super(UniformType.VECTOR2_INT, elementCount, new Vector2Int[elementCount]);
         this.elementCount = elementCount;
-        this.buffer = BufferUtils.newByteBuffer(elementCount * 16); // ivec2 padded to 16 bytes per element (std140)
-        this.intBuffer = buffer.asIntBuffer();
+        for (int i = 0; i < elementCount; i++)
+            ((Vector2Int[]) value)[i] = new Vector2Int();
     }
 
     @Override
@@ -29,38 +22,21 @@ public final class Vector2IntArrayUniform extends UniformAttribute<int[]> {
     }
 
     @Override
-    protected void push(int handle, int[] data) {
-        Gdx.gl.glUniform2iv(handle, elementCount, data, 0);
-    }
-
-    @Override
-    public ByteBuffer getByteBuffer() {
-        intBuffer.clear();
+    protected void push(int handle, Object[] value) {
+        int[] flat = new int[elementCount * 2];
         for (int i = 0; i < elementCount; i++) {
-            intBuffer.put(value[i * 2]); // x
-            intBuffer.put(value[i * 2 + 1]); // y
-            intBuffer.put(0); // padding
-            intBuffer.put(0); // padding
+            Vector2Int v = (Vector2Int) value[i];
+            flat[i * 2] = v.x;
+            flat[i * 2 + 1] = v.y;
         }
-        intBuffer.flip();
-        return buffer;
+        Gdx.gl.glUniform2iv(handle, elementCount, flat, 0);
     }
 
     @Override
-    protected void applyValue(int[] value) {
-        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-    }
-
-    @Override
-    protected void applyObject(Object value) {
-        if (value instanceof Vector2Int[] vectors) {
-            for (int i = 0; i < vectors.length && i < elementCount; i++) {
-                this.value[i * 2] = vectors[i].x;
-                this.value[i * 2 + 1] = vectors[i].y;
-            }
-        } else {
-            applyValue((int[]) value);
-        }
+    protected void applyValue(Object[] value) {
+        Vector2Int[] dst = (Vector2Int[]) this.value;
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            dst[i].set((Vector2Int) value[i]);
     }
 
     public int elementCount() {

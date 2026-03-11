@@ -1,29 +1,19 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector3Double;
 
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
+public final class Vector3DoubleArrayUniform extends UniformAttribute<Object[]> {
 
-public final class Vector3DoubleArrayUniform extends UniformAttribute<float[]> {
-
-    // Internal
     private final int elementCount;
-    private final ByteBuffer uboBuffer;
-    private final float[] uniformData;
-    private final FloatBuffer uniformBuffer;
 
     public Vector3DoubleArrayUniform(int elementCount) {
-        // Internal
-        super(new float[elementCount * 4]); // padded: 3 floats + 1 padding per element
+        super(UniformType.VECTOR3_DOUBLE, elementCount, new Vector3Double[elementCount]);
         this.elementCount = elementCount;
-        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 16); // vec3 padded to 16 bytes per element (std140,
-                                                                       // doubles downcast to float for GLSL ES)
-        this.uniformData = new float[elementCount * 3]; // tightly packed for GL uniform upload
-        this.uniformBuffer = uboBuffer.asFloatBuffer();
+        for (int i = 0; i < elementCount; i++)
+            ((Vector3Double[]) value)[i] = new Vector3Double();
     }
 
     @Override
@@ -32,48 +22,22 @@ public final class Vector3DoubleArrayUniform extends UniformAttribute<float[]> {
     }
 
     @Override
-    protected void push(int handle, float[] data) {
-        Gdx.gl.glUniform3fv(handle, elementCount, uniformData, 0);
-    }
-
-    @Override
-    public ByteBuffer getByteBuffer() {
-        uniformBuffer.clear();
+    protected void push(int handle, Object[] value) {
+        float[] flat = new float[elementCount * 3];
         for (int i = 0; i < elementCount; i++) {
-            uniformBuffer.put(value[i * 4]); // x
-            uniformBuffer.put(value[i * 4 + 1]); // y
-            uniformBuffer.put(value[i * 4 + 2]); // z
-            uniformBuffer.put(0f); // padding
+            Vector3Double v = (Vector3Double) value[i];
+            flat[i * 3] = (float) v.x;
+            flat[i * 3 + 1] = (float) v.y;
+            flat[i * 3 + 2] = (float) v.z;
         }
-        uniformBuffer.flip();
-        return uboBuffer;
+        Gdx.gl.glUniform3fv(handle, elementCount, flat, 0);
     }
 
     @Override
-    protected void applyValue(float[] value) {
-        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-        for (int i = 0; i < elementCount; i++) {
-            uniformData[i * 3] = this.value[i * 4];
-            uniformData[i * 3 + 1] = this.value[i * 4 + 1];
-            uniformData[i * 3 + 2] = this.value[i * 4 + 2];
-        }
-    }
-
-    @Override
-    protected void applyObject(Object value) {
-        if (value instanceof Vector3Double[] vectors) {
-            for (int i = 0; i < vectors.length && i < elementCount; i++) {
-                this.value[i * 4] = (float) vectors[i].x;
-                this.value[i * 4 + 1] = (float) vectors[i].y;
-                this.value[i * 4 + 2] = (float) vectors[i].z;
-                this.value[i * 4 + 3] = 0f;
-                uniformData[i * 3] = (float) vectors[i].x;
-                uniformData[i * 3 + 1] = (float) vectors[i].y;
-                uniformData[i * 3 + 2] = (float) vectors[i].z;
-            }
-        } else {
-            applyValue((float[]) value);
-        }
+    protected void applyValue(Object[] value) {
+        Vector3Double[] dst = (Vector3Double[]) this.value;
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            dst[i].set((Vector3Double) value[i]);
     }
 
     public int elementCount() {

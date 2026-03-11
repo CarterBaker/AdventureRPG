@@ -1,21 +1,14 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectors;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector4Double;
-
-import java.nio.ByteBuffer;
 
 public final class Vector4DoubleUniform extends UniformAttribute<Vector4Double> {
 
-    // Internal
-    private final ByteBuffer buffer;
-
     public Vector4DoubleUniform() {
-        // Internal
-        super(new Vector4Double());
-        this.buffer = BufferUtils.newByteBuffer(16); // 4 floats * 4 bytes (doubles downcast to float for GLSL ES)
+        super(UniformType.VECTOR4_DOUBLE, new Vector4Double());
     }
 
     @Override
@@ -25,22 +18,7 @@ public final class Vector4DoubleUniform extends UniformAttribute<Vector4Double> 
 
     @Override
     protected void push(int handle, Vector4Double value) {
-        Gdx.gl.glUniform4f(handle,
-                (float) value.x,
-                (float) value.y,
-                (float) value.z,
-                (float) value.w);
-    }
-
-    @Override
-    public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        buffer.putFloat((float) value.x);
-        buffer.putFloat((float) value.y);
-        buffer.putFloat((float) value.z);
-        buffer.putFloat((float) value.w);
-        buffer.flip();
-        return buffer;
+        Gdx.gl.glUniform4f(handle, (float) value.x, (float) value.y, (float) value.z, (float) value.w);
     }
 
     @Override

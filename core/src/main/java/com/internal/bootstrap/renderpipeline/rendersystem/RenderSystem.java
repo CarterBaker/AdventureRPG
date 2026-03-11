@@ -1,6 +1,9 @@
 package com.internal.bootstrap.renderpipeline.rendersystem;
 
+import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
+import com.internal.bootstrap.renderpipeline.compositebatch.CompositeBatchInstance;
+import com.internal.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
 import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchHandle;
 import com.internal.bootstrap.renderpipeline.rendercall.MaskStruct;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallHandle;
@@ -17,6 +20,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RenderSystem extends SystemPackage {
 
     private WindowInstance windowInstance;
+    private CompositeRenderSystem compositeRenderSystem;
     private Int2ObjectAVLTreeMap<Int2ObjectOpenHashMap<RenderBatchHandle>> depth2RenderBatchHandles;
 
     @Override
@@ -27,6 +31,7 @@ public class RenderSystem extends SystemPackage {
     @Override
     protected void get() {
         this.windowInstance = internal.getWindowInstance();
+        this.compositeRenderSystem = get(CompositeRenderSystem.class);
     }
 
     @Override
@@ -71,7 +76,6 @@ public class RenderSystem extends SystemPackage {
                 for (int i = 0; i < size; i++) {
                     RenderCallHandle renderCall = (RenderCallHandle) elements[i];
 
-                    // Apply mask if changed
                     MaskStruct callMask = renderCall.getMask();
                     if (callMask != activeMask) {
                         if (callMask != null)
@@ -89,11 +93,24 @@ public class RenderSystem extends SystemPackage {
                 batch.clear();
             }
 
-            // Clean up scissor state at end of depth layer
             if (activeMask != null)
                 GLSLUtility.disableScissor();
         }
     }
+
+    // Bridge \\
+
+    /*
+     * Routes an instanced draw submission to CompositeRenderSystem.
+     * Called during update() by any system that needs instanced rendering —
+     * never call CompositeRenderSystem.submit() directly from outside the
+     * render pipeline.
+     */
+    public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer) {
+        compositeRenderSystem.submit(material, buffer);
+    }
+
+    // Internal \\
 
     private void bindMaterial(MaterialInstance material, int depth) {
         if (depth == 0)

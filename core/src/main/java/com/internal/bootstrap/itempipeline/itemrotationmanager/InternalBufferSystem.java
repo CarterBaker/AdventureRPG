@@ -20,20 +20,15 @@ public class InternalBufferSystem extends SystemPackage {
         pushItemRotationData();
     }
 
-    // Item Rotation Data \\
-
     private void pushItemRotationData() {
         UBOHandle ubo = uboManager.getUBOHandleFromUBOName("ItemRotationData");
-
         Matrix4[] rotations = new Matrix4[24];
-
         for (Direction3Vector face : Direction3Vector.VALUES) {
             for (int spin = 0; spin < 4; spin++) {
                 int index = face.ordinal() * 4 + spin;
                 rotations[index] = buildRotation(face, spin);
             }
         }
-
         ubo.updateUniform("u_rotations", rotations);
         ubo.push();
     }
@@ -44,19 +39,27 @@ public class InternalBufferSystem extends SystemPackage {
         return spinRot.multiply(faceRot);
     }
 
-    // Rotation around Y axis by degrees
-    private Matrix4 rotY(float deg) {
-        float r = (float) Math.toRadians(deg);
-        float c = (float) Math.cos(r);
-        float s = (float) Math.sin(r);
-        return new Matrix4(
-                c, 0, s, 0,
-                0, 1, 0, 0,
-                -s, 0, c, 0,
-                0, 0, 0, 1);
+    private Matrix4 faceRotation(Direction3Vector face) {
+        // UP = identity: item sits on ground as modeled, matching
+        // DEFAULT_BLOCK_DIRECTION = 4 (UP)
+        switch (face) {
+            case UP:
+                return new Matrix4();
+            case DOWN:
+                return rotX(180f);
+            case NORTH:
+                return rotX(90f);
+            case SOUTH:
+                return rotX(-90f);
+            case EAST:
+                return rotZ(-90f);
+            case WEST:
+                return rotZ(90f);
+            default:
+                return new Matrix4();
+        }
     }
 
-    // Rotation around X axis by degrees
     private Matrix4 rotX(float deg) {
         float r = (float) Math.toRadians(deg);
         float c = (float) Math.cos(r);
@@ -68,7 +71,17 @@ public class InternalBufferSystem extends SystemPackage {
                 0, 0, 0, 1);
     }
 
-    // Rodrigues axis-angle rotation
+    private Matrix4 rotZ(float deg) {
+        float r = (float) Math.toRadians(deg);
+        float c = (float) Math.cos(r);
+        float s = (float) Math.sin(r);
+        return new Matrix4(
+                c, -s, 0, 0,
+                s, c, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1);
+    }
+
     private Matrix4 axisRotation(float ax, float ay, float az, float deg) {
         float r = (float) Math.toRadians(deg);
         float c = (float) Math.cos(r);
@@ -85,24 +98,5 @@ public class InternalBufferSystem extends SystemPackage {
                 t * ax * ay + s * az, t * ay * ay + c, t * ay * az - s * ax, 0,
                 t * ax * az - s * ay, t * ay * az + s * ax, t * az * az + c, 0,
                 0, 0, 0, 1);
-    }
-
-    private Matrix4 faceRotation(Direction3Vector face) {
-        switch (face) {
-            case SOUTH:
-                return new Matrix4(); // identity
-            case EAST:
-                return rotY(-90f);
-            case NORTH:
-                return rotY(180f);
-            case WEST:
-                return rotY(90f);
-            case UP:
-                return rotX(-90f);
-            case DOWN:
-                return rotX(90f);
-            default:
-                return new Matrix4();
-        }
     }
 }

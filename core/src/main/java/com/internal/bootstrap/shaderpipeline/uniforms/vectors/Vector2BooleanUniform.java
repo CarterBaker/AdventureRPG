@@ -1,21 +1,14 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectors;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector2Boolean;
-
-import java.nio.ByteBuffer;
 
 public final class Vector2BooleanUniform extends UniformAttribute<Vector2Boolean> {
 
-    // Internal
-    private final ByteBuffer buffer;
-
     public Vector2BooleanUniform() {
-        // Internal
-        super(new Vector2Boolean());
-        this.buffer = BufferUtils.newByteBuffer(8); // 2 ints * 4 bytes
+        super(UniformType.VECTOR2_BOOLEAN, new Vector2Boolean());
     }
 
     @Override
@@ -26,15 +19,6 @@ public final class Vector2BooleanUniform extends UniformAttribute<Vector2Boolean
     @Override
     protected void push(int handle, Vector2Boolean value) {
         Gdx.gl.glUniform2i(handle, value.x ? 1 : 0, value.y ? 1 : 0);
-    }
-
-    @Override
-    public ByteBuffer getByteBuffer() {
-        buffer.clear();
-        buffer.putInt(value.x ? 1 : 0);
-        buffer.putInt(value.y ? 1 : 0);
-        buffer.flip();
-        return buffer;
     }
 
     @Override

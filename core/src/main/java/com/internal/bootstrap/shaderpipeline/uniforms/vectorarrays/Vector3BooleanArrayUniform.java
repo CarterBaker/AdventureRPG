@@ -1,28 +1,19 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector3Boolean;
 
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
+public final class Vector3BooleanArrayUniform extends UniformAttribute<Object[]> {
 
-public final class Vector3BooleanArrayUniform extends UniformAttribute<int[]> {
-
-    // Internal
     private final int elementCount;
-    private final ByteBuffer uboBuffer;
-    private final int[] uniformData;
-    private final IntBuffer uniformBuffer;
 
     public Vector3BooleanArrayUniform(int elementCount) {
-        // Internal
-        super(new int[elementCount * 4]); // padded: 3 ints + 1 padding per element
+        super(UniformType.VECTOR3_BOOLEAN, elementCount, new Vector3Boolean[elementCount]);
         this.elementCount = elementCount;
-        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 16); // bvec3 padded to 16 bytes per element (std140)
-        this.uniformData = new int[elementCount * 3]; // tightly packed for GL uniform upload
-        this.uniformBuffer = uboBuffer.asIntBuffer();
+        for (int i = 0; i < elementCount; i++)
+            ((Vector3Boolean[]) value)[i] = new Vector3Boolean();
     }
 
     @Override
@@ -31,48 +22,22 @@ public final class Vector3BooleanArrayUniform extends UniformAttribute<int[]> {
     }
 
     @Override
-    protected void push(int handle, int[] data) {
-        Gdx.gl.glUniform3iv(handle, elementCount, uniformData, 0);
-    }
-
-    @Override
-    public ByteBuffer getByteBuffer() {
-        uniformBuffer.clear();
+    protected void push(int handle, Object[] value) {
+        int[] flat = new int[elementCount * 3];
         for (int i = 0; i < elementCount; i++) {
-            uniformBuffer.put(value[i * 4]); // x
-            uniformBuffer.put(value[i * 4 + 1]); // y
-            uniformBuffer.put(value[i * 4 + 2]); // z
-            uniformBuffer.put(0); // padding
+            Vector3Boolean v = (Vector3Boolean) value[i];
+            flat[i * 3] = v.x ? 1 : 0;
+            flat[i * 3 + 1] = v.y ? 1 : 0;
+            flat[i * 3 + 2] = v.z ? 1 : 0;
         }
-        uniformBuffer.flip();
-        return uboBuffer;
+        Gdx.gl.glUniform3iv(handle, elementCount, flat, 0);
     }
 
     @Override
-    protected void applyValue(int[] value) {
-        System.arraycopy(value, 0, this.value, 0, Math.min(value.length, this.value.length));
-        for (int i = 0; i < elementCount; i++) {
-            uniformData[i * 3] = this.value[i * 4];
-            uniformData[i * 3 + 1] = this.value[i * 4 + 1];
-            uniformData[i * 3 + 2] = this.value[i * 4 + 2];
-        }
-    }
-
-    @Override
-    protected void applyObject(Object value) {
-        if (value instanceof Vector3Boolean[] vectors) {
-            for (int i = 0; i < vectors.length && i < elementCount; i++) {
-                this.value[i * 4] = vectors[i].x ? 1 : 0;
-                this.value[i * 4 + 1] = vectors[i].y ? 1 : 0;
-                this.value[i * 4 + 2] = vectors[i].z ? 1 : 0;
-                this.value[i * 4 + 3] = 0;
-                uniformData[i * 3] = vectors[i].x ? 1 : 0;
-                uniformData[i * 3 + 1] = vectors[i].y ? 1 : 0;
-                uniformData[i * 3 + 2] = vectors[i].z ? 1 : 0;
-            }
-        } else {
-            applyValue((int[]) value);
-        }
+    protected void applyValue(Object[] value) {
+        Vector3Boolean[] dst = (Vector3Boolean[]) this.value;
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            dst[i].set((Vector3Boolean) value[i]);
     }
 
     public int elementCount() {

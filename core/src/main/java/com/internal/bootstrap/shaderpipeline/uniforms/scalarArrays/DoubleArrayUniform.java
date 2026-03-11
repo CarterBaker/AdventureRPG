@@ -1,25 +1,18 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalarArrays;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
-import java.nio.ByteBuffer;
+public final class DoubleArrayUniform extends UniformAttribute<Object[]> {
 
-public final class DoubleArrayUniform extends UniformAttribute<double[]> {
-
-    // Internal
     private final int elementCount;
-    private final ByteBuffer uboBuffer;
-    private final float[] elements; // downcast for GL upload
 
     public DoubleArrayUniform(int elementCount) {
-        // Internal
-        super(new double[elementCount]);
+        super(UniformType.DOUBLE, elementCount, new Double[elementCount]);
         this.elementCount = elementCount;
-        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 4); // 1 float * 4 bytes per element (doubles downcast
-                                                                      // to float for GLSL ES)
-        this.elements = new float[elementCount];
+        for (int i = 0; i < elementCount; i++)
+            ((Double[]) value)[i] = 0.0;
     }
 
     @Override
@@ -28,24 +21,18 @@ public final class DoubleArrayUniform extends UniformAttribute<double[]> {
     }
 
     @Override
-    protected void push(int handle, double[] data) {
-        Gdx.gl.glUniform1fv(handle, elementCount, elements, 0);
+    protected void push(int handle, Object[] value) {
+        float[] flat = new float[elementCount];
+        for (int i = 0; i < elementCount; i++)
+            flat[i] = ((Double) value[i]).floatValue();
+        Gdx.gl.glUniform1fv(handle, elementCount, flat, 0);
     }
 
     @Override
-    public ByteBuffer getByteBuffer() {
-        uboBuffer.clear();
-        for (int i = 0; i < elementCount; i++)
-            uboBuffer.putFloat((float) value[i]);
-        uboBuffer.flip();
-        return uboBuffer;
-    }
-
-    @Override
-    protected void applyValue(double[] values) {
-        System.arraycopy(values, 0, this.value, 0, Math.min(values.length, this.value.length));
-        for (int i = 0; i < elementCount; i++)
-            elements[i] = (float) this.value[i];
+    protected void applyValue(Object[] value) {
+        Double[] dst = (Double[]) this.value;
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            dst[i] = (Double) value[i];
     }
 
     public int elementCount() {

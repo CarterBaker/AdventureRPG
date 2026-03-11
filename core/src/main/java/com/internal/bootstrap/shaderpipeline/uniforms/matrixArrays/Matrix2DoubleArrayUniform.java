@@ -3,28 +3,22 @@ package com.internal.bootstrap.shaderpipeline.uniforms.matrixArrays;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.matrices.Matrix2Double;
 
-import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-public final class Matrix2DoubleArrayUniform extends UniformAttribute<Matrix2Double[]> {
+public final class Matrix2DoubleArrayUniform extends UniformAttribute<Object[]> {
 
-    // Internal
     private final int elementCount;
-    private final ByteBuffer uboBuffer;
     private final FloatBuffer uniformBuffer;
 
     public Matrix2DoubleArrayUniform(int elementCount) {
-        // Internal
-        super(new Matrix2Double[elementCount]);
+        super(UniformType.MATRIX2_DOUBLE, elementCount, new Matrix2Double[elementCount]);
         this.elementCount = elementCount;
-        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 32); // (std140): 2 columns * (vec4 padded) 4 floats *
-                                                                       // 4 bytes = 32 bytes per element (doubles
-                                                                       // downcast to float for GLSL ES)
-        this.uniformBuffer = uboBuffer.asFloatBuffer();
+        this.uniformBuffer = BufferUtils.newFloatBuffer(elementCount * 4);
         for (int i = 0; i < elementCount; i++)
-            value[i] = new Matrix2Double();
+            ((Matrix2Double[]) value)[i] = new Matrix2Double();
     }
 
     @Override
@@ -33,45 +27,24 @@ public final class Matrix2DoubleArrayUniform extends UniformAttribute<Matrix2Dou
     }
 
     @Override
-    protected void push(int handle, Matrix2Double[] matrices) {
+    protected void push(int handle, Object[] value) {
         uniformBuffer.clear();
         for (int i = 0; i < elementCount; i++) {
-            Matrix2Double m = matrices[i];
-            // Column 0
-            uniformBuffer.put((float) m.val[0]); // m00
-            uniformBuffer.put((float) m.val[1]); // m10
-            // Column 1
-            uniformBuffer.put((float) m.val[2]); // m01
-            uniformBuffer.put((float) m.val[3]); // m11
+            Matrix2Double m = (Matrix2Double) value[i];
+            uniformBuffer.put((float) m.val[0]);
+            uniformBuffer.put((float) m.val[1]);
+            uniformBuffer.put((float) m.val[2]);
+            uniformBuffer.put((float) m.val[3]);
         }
         uniformBuffer.flip();
         Gdx.gl.glUniformMatrix2fv(handle, elementCount, false, uniformBuffer);
     }
 
     @Override
-    public ByteBuffer getByteBuffer() {
-        uboBuffer.clear();
-        for (int i = 0; i < elementCount; i++) {
-            Matrix2Double m = value[i];
-            // Column 0
-            uboBuffer.putFloat((float) m.val[0]); // m00
-            uboBuffer.putFloat((float) m.val[1]); // m10
-            uboBuffer.putFloat(0f); // padding
-            uboBuffer.putFloat(0f); // padding
-            // Column 1
-            uboBuffer.putFloat((float) m.val[2]); // m01
-            uboBuffer.putFloat((float) m.val[3]); // m11
-            uboBuffer.putFloat(0f); // padding
-            uboBuffer.putFloat(0f); // padding
-        }
-        uboBuffer.flip();
-        return uboBuffer;
-    }
-
-    @Override
-    protected void applyValue(Matrix2Double[] matrices) {
-        for (int i = 0; i < elementCount; i++)
-            this.value[i].set(matrices[i]);
+    protected void applyValue(Object[] value) {
+        Matrix2Double[] dst = (Matrix2Double[]) this.value;
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            dst[i].set((Matrix2Double) value[i]);
     }
 
     public int elementCount() {

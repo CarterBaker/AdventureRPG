@@ -1,22 +1,14 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.matrices;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.matrices.Matrix3;
-
-import java.nio.ByteBuffer;
 
 public final class Matrix3Uniform extends UniformAttribute<Object> {
 
-    // Internal
-    private final ByteBuffer uboBuffer;
-
     public Matrix3Uniform() {
-        // Internal
-        super(new Matrix3());
-        this.uboBuffer = BufferUtils.newByteBuffer(48); // (std140): 3 columns * (vec4 padded) 4 floats * 4 bytes = 48
-                                                        // bytes
+        super(UniformType.MATRIX3, new Matrix3());
     }
 
     @Override
@@ -26,50 +18,23 @@ public final class Matrix3Uniform extends UniformAttribute<Object> {
 
     @Override
     protected void push(int handle, Object value) {
-        // Push libGDX matrix
-        if (value instanceof com.badlogic.gdx.math.Matrix3 gdxMatrix)
-            Gdx.gl.glUniformMatrix3fv(handle, 1, false, gdxMatrix.val, 0);
-        // Push internal matrix
-        else if (value instanceof Matrix3 internalMatrix)
-            Gdx.gl.glUniformMatrix3fv(handle, 1, false, internalMatrix.val, 0);
+        if (value instanceof com.badlogic.gdx.math.Matrix3 m)
+            Gdx.gl.glUniformMatrix3fv(handle, 1, false, m.val, 0);
+        else if (value instanceof Matrix3 m)
+            Gdx.gl.glUniformMatrix3fv(handle, 1, false, m.val, 0);
         else
-            throw new IllegalArgumentException(
-                    "push(int, Matrix3): Expected Matrix3 or com.badlogic.gdx.math.Matrix3, got " + value.getClass());
-    }
-
-    @Override
-    public ByteBuffer getByteBuffer() {
-        Matrix3 matrix = (Matrix3) value;
-        uboBuffer.clear();
-        // Column 0
-        uboBuffer.putFloat(matrix.val[0]); // m00
-        uboBuffer.putFloat(matrix.val[1]); // m10
-        uboBuffer.putFloat(matrix.val[2]); // m20
-        uboBuffer.putFloat(0f); // padding
-        // Column 1
-        uboBuffer.putFloat(matrix.val[3]); // m01
-        uboBuffer.putFloat(matrix.val[4]); // m11
-        uboBuffer.putFloat(matrix.val[5]); // m21
-        uboBuffer.putFloat(0f); // padding
-        // Column 2
-        uboBuffer.putFloat(matrix.val[6]); // m02
-        uboBuffer.putFloat(matrix.val[7]); // m12
-        uboBuffer.putFloat(matrix.val[8]); // m22
-        uboBuffer.putFloat(0f); // padding
-        uboBuffer.flip();
-        return uboBuffer;
+            throw new IllegalArgumentException("push(Matrix3): got " + value.getClass());
     }
 
     @Override
     protected void applyValue(Object value) {
         Matrix3 target = (Matrix3) this.value;
-        if (value instanceof com.badlogic.gdx.math.Matrix3 gdxMatrix)
-            target.fromGDX(gdxMatrix);
-        else if (value instanceof Matrix3 internalMatrix)
-            target.set(internalMatrix);
+        if (value instanceof com.badlogic.gdx.math.Matrix3 m)
+            target.fromGDX(m);
+        else if (value instanceof Matrix3 m)
+            target.set(m);
         else
-            throw new IllegalArgumentException(
-                    "applyValue(Matrix3): Expected Matrix3 or com.badlogic.gdx.math.Matrix3, got " + value.getClass());
+            throw new IllegalArgumentException("applyValue(Matrix3): got " + value.getClass());
     }
 
     @Override

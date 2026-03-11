@@ -1,22 +1,18 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalarArrays;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
-import java.nio.ByteBuffer;
+public final class IntegerArrayUniform extends UniformAttribute<Object[]> {
 
-public final class IntegerArrayUniform extends UniformAttribute<int[]> {
-
-    // Internal
     private final int elementCount;
-    private final ByteBuffer uboBuffer;
 
     public IntegerArrayUniform(int elementCount) {
-        // Internal
-        super(new int[elementCount]);
+        super(UniformType.INT, elementCount, new Integer[elementCount]);
         this.elementCount = elementCount;
-        this.uboBuffer = BufferUtils.newByteBuffer(elementCount * 4); // 1 int * 4 bytes per element
+        for (int i = 0; i < elementCount; i++)
+            ((Integer[]) value)[i] = 0;
     }
 
     @Override
@@ -25,22 +21,18 @@ public final class IntegerArrayUniform extends UniformAttribute<int[]> {
     }
 
     @Override
-    protected void push(int handle, int[] data) {
-        Gdx.gl.glUniform1iv(handle, elementCount, data, 0);
-    }
-
-    @Override
-    public ByteBuffer getByteBuffer() {
-        uboBuffer.clear();
+    protected void push(int handle, Object[] value) {
+        int[] flat = new int[elementCount];
         for (int i = 0; i < elementCount; i++)
-            uboBuffer.putInt(value[i]);
-        uboBuffer.flip();
-        return uboBuffer;
+            flat[i] = (Integer) value[i];
+        Gdx.gl.glUniform1iv(handle, elementCount, flat, 0);
     }
 
     @Override
-    protected void applyValue(int[] values) {
-        System.arraycopy(values, 0, this.value, 0, Math.min(values.length, this.value.length));
+    protected void applyValue(Object[] value) {
+        Integer[] dst = (Integer[]) this.value;
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            dst[i] = (Integer) value[i];
     }
 
     public int elementCount() {

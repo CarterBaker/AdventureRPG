@@ -2,7 +2,7 @@
 layout(location = 0) in vec3  aPos;
 layout(location = 1) in float aNorIndex;
 layout(location = 2) in vec2  aUV;
-layout(location = 3) in vec4  aInstance0; // chunkX, chunkZ, localX, localZ
+layout(location = 3) in vec4  aInstance0; // chunkX(intBits), chunkZ(intBits), localX, localZ
 layout(location = 4) in vec2  aInstance1; // localY, orientation
 
 #include "includes/CameraData.glsl"
@@ -22,8 +22,10 @@ void main() {
     vNormal     = normalize(mat3(R) * NORMALS[int(aNorIndex)]);
     vUV         = aUV;
 
-    float relChunkX = float(int(aInstance0.x) - u_playerChunkX);
-    float relChunkZ = float(int(aInstance0.y) - u_playerChunkZ);
+    int chunkX = floatBitsToInt(aInstance0.x);
+    int chunkZ = floatBitsToInt(aInstance0.y);
+    float relChunkX = float(chunkX - u_playerChunkX);
+    float relChunkZ = float(chunkZ - u_playerChunkZ);
 
     vec3 worldPos = vec3(
         relChunkX * 16.0 + aInstance0.z + rotPos.x,
