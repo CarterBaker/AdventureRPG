@@ -5,20 +5,16 @@ import com.internal.bootstrap.entitypipeline.statistics.StatisticsStruct;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
-import com.internal.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import com.internal.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import com.internal.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import com.internal.bootstrap.physicspipeline.util.BlockCastStruct;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
-import com.internal.bootstrap.worldpipeline.block.BlockRotationType;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
-import com.internal.bootstrap.worldpipeline.worlditem.WorldItemInstance;
-import com.internal.bootstrap.worldpipeline.worlditem.WorldItemStruct;
-import com.internal.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRenderSystem;
+import com.internal.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
@@ -37,8 +33,7 @@ public class BlockPlacementSystem extends SystemPackage {
     private DynamicGeometryManager dynamicGeometryManager;
     private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
     private WorldRenderManager worldRenderSystem;
-    private WorldItemRenderSystem itemRenderSystem;
-    private ItemDefinitionManager itemDefinitionManager;
+    private WorldItemPlacementSystem worldItemPlacementSystem;
 
     private int CHUNK_SIZE;
     private int WORLD_HEIGHT;
@@ -46,9 +41,6 @@ public class BlockPlacementSystem extends SystemPackage {
 
     // Block IDs
     private short AIR_BLOCK_ID;
-
-    // Orientation
-    private short DEFAULT_ORIENTATION;
 
     // Placement cooldown
     private float timeSinceLastPlacement;
@@ -81,14 +73,12 @@ public class BlockPlacementSystem extends SystemPackage {
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
         this.worldRenderSystem = get(WorldRenderManager.class);
-        this.itemRenderSystem = get(WorldItemRenderSystem.class);
-        this.itemDefinitionManager = get(ItemDefinitionManager.class);
+        this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
     }
 
     @Override
     protected void awake() {
         this.AIR_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Air");
-        this.DEFAULT_ORIENTATION = (short) (EngineSetting.DEFAULT_BLOCK_DIRECTION * 4);
     }
 
     // Update \\
@@ -237,32 +227,20 @@ public class BlockPlacementSystem extends SystemPackage {
         if (placeChunk == null)
             return;
 
-        SubChunkInstance subChunk = placeChunk.getSubChunk(placeSubChunkY);
-        if (subChunk == null)
-            return;
-
         Direction3Vector hitFaceDir = Direction3Vector.getDirection(
                 castStruct.hitFace.x, castStruct.hitFace.y, castStruct.hitFace.z);
         int rotation = resolveItemOrientation(hitFaceDir, cameraDirection);
 
         int chunkLocalY = placeSubChunkY * CHUNK_SIZE + placeY;
         int subX = placeX * 32 + 16;
-        int subY = (chunkLocalY + 1) * 32;
+        int subY = chunkLocalY * 32;
         int subZ = placeZ * 32 + 16;
 
-        ItemDefinitionHandle item = player.getInventoryHandle().getBackpack().getItems().get(0);
-        int packedItem = item.getItemID();
+        ItemDefinitionHandle def = player.getInventoryHandle().getBackpack().getItems().get(0);
+        int packedItem = def.getItemID();
         long packedPosition = Coordinate4Long.pack(subX, subY, subZ, rotation);
-        int packedBlockCoordinate = Coordinate3Int.pack(placeX, chunkLocalY, placeZ);
 
-        WorldItemStruct struct = new WorldItemStruct(packedPosition, packedItem);
-        subChunk.getWorldItemPaletteHandle().addItem(struct);
-
-        WorldItemInstance instance = create(WorldItemInstance.class);
-        instance.constructor(item, placeChunkCoord, packedBlockCoordinate, packedPosition, packedItem);
-        placeChunk.getWorldItemInstancePaletteHandle().addItem(instance);
-
-        itemRenderSystem.addItem(instance, placeChunkCoord);
+        worldItemPlacementSystem.placeItem(placeChunk, placeSubChunkY, packedPosition, packedItem, def);
 
         timeSinceLastPlacement = 0f;
     }

@@ -18,9 +18,7 @@ public class RenderPipeline extends PipelinePackage {
         this.compositeRenderSystem = create(CompositeRenderSystem.class);
     }
 
-    // TODO: Not happy with this here
     public void draw() {
         renderSystem.draw();
-        compositeRenderSystem.draw();
     }
 }

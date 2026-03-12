@@ -6,41 +6,53 @@ import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
-import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
-import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.worlditem.WorldItemCompositeInstance;
 import com.internal.bootstrap.worldpipeline.worlditem.WorldItemInstance;
-import com.internal.bootstrap.worldpipeline.worlditem.WorldItemInstancePaletteHandle;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate4Long;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * Owns all composite buffer state for world items.
+ * Push and pull operate on entire chunks — O(1) chunk lookup via coord map.
+ * Single instance add/remove available for runtime placement.
+ * Submit loop each frame pushes live buffers to the render system.
+ *
+ * Swap-remove fixup uses itemDefID2SlotMap (slot → instance per composite)
+ * so displaced instances are always found in O(1) regardless of which chunk
+ * they belong to. chunkCoord2Items is purely for chunk-scoped bookkeeping.
+ */
 public class WorldItemRenderSystem extends ManagerPackage {
 
     private static final int[] INSTANCE_ATTR_SIZES = { 4, 2 };
 
-    private ChunkStreamManager chunkStreamManager;
     private MaterialManager materialManager;
     private CompositeBufferManager compositeBufferManager;
     private RenderSystem renderSystem;
 
+    // Per item definition — composite buffer + material
     private Int2ObjectOpenHashMap<WorldItemCompositeInstance> itemDefID2Composite;
-    private LongOpenHashSet registeredChunks;
+
+    // Per item definition — slot → instance, kept in sync with the composite buffer
+    private Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<WorldItemInstance>> itemDefID2SlotMap;
+
+    // Per chunk — tracks which instances belong to each chunk for O(1) pull
+    private Long2ObjectOpenHashMap<ObjectArrayList<WorldItemInstance>> chunkCoord2Items;
+
+    // Internal \\
 
     @Override
     protected void create() {
         this.itemDefID2Composite = new Int2ObjectOpenHashMap<>();
-        this.registeredChunks = new LongOpenHashSet();
+        this.itemDefID2SlotMap = new Int2ObjectOpenHashMap<>();
+        this.chunkCoord2Items = new Long2ObjectOpenHashMap<>();
     }
 
     @Override
     protected void get() {
-        this.chunkStreamManager = get(ChunkStreamManager.class);
         this.materialManager = get(MaterialManager.class);
         this.compositeBufferManager = get(CompositeBufferManager.class);
         this.renderSystem = get(RenderSystem.class);
@@ -48,79 +60,67 @@ public class WorldItemRenderSystem extends ManagerPackage {
 
     @Override
     protected void update() {
-        Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = chunkStreamManager.getActiveChunks();
-
-        for (var entry : activeChunks.long2ObjectEntrySet()) {
-            long coord = entry.getLongKey();
-            ChunkInstance chunk = entry.getValue();
-            if (registeredChunks.contains(coord))
-                continue;
-            if (!chunk.getChunkDataSyncContainer().hasData(ChunkData.ITEM_DATA))
-                continue;
-            registerChunk(chunk, coord);
-        }
-
-        var it = registeredChunks.iterator();
-        while (it.hasNext()) {
-            long coord = it.nextLong();
-            ChunkInstance chunk = activeChunks.get(coord);
-            if (chunk == null || !chunk.getChunkDataSyncContainer().hasData(ChunkData.ITEM_DATA)) {
-                unregisterChunk(chunk);
-                it.remove();
-            }
-        }
-
         for (var entry : itemDefID2Composite.int2ObjectEntrySet()) {
-            WorldItemCompositeInstance composite = entry.getValue();
-            CompositeBufferInstance buffer = composite.getCompositeBuffer();
+            CompositeBufferInstance buffer = entry.getValue().getCompositeBuffer();
             if (buffer.isEmpty())
                 continue;
-            renderSystem.pushCompositeCall(composite.getMaterial(), buffer);
+            renderSystem.pushCompositeCall(entry.getValue().getMaterial(), buffer);
         }
     }
 
-    private void registerChunk(ChunkInstance chunk, long chunkCoordinate) {
-        WorldItemInstancePaletteHandle palette = chunk.getWorldItemInstancePaletteHandle();
-        ObjectArrayList<WorldItemInstance> items = palette.getItems();
+    // Chunk Push / Pull \\
+
+    /*
+     * Adds all items for a chunk into the composite buffers in one call.
+     * Stores the list under the chunk coordinate for O(1) pull later.
+     */
+    public void push(long chunkCoordinate, ObjectArrayList<WorldItemInstance> items) {
+        if (items.isEmpty())
+            return;
+        debug("pushing chunk to renderer: " + Coordinate2Long.toString(chunkCoordinate));
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
-        for (int i = 0; i < items.size(); i++)
-            addToBuffer(items.get(i), chunkX, chunkZ);
-        registeredChunks.add(chunkCoordinate);
+        ObjectArrayList<WorldItemInstance> stored = new ObjectArrayList<>(items.size());
+        for (int i = 0; i < items.size(); i++) {
+            WorldItemInstance instance = items.get(i);
+            addToBuffer(instance, chunkX, chunkZ);
+            stored.add(instance);
+        }
+        chunkCoord2Items.put(chunkCoordinate, stored);
     }
 
-    private void unregisterChunk(ChunkInstance chunk) {
-        if (chunk == null)
+    /*
+     * Removes all items for a chunk from the composite buffers in one call.
+     * O(1) chunk lookup, O(n) over items in that chunk only.
+     */
+    public void pull(long chunkCoordinate) {
+        ObjectArrayList<WorldItemInstance> items = chunkCoord2Items.remove(chunkCoordinate);
+        if (items == null)
             return;
-        ObjectArrayList<WorldItemInstance> items = chunk.getWorldItemInstancePaletteHandle().getItems();
+        debug("pulling chunk from renderer: " + Coordinate2Long.toString(chunkCoordinate));
         for (int i = 0; i < items.size(); i++)
-            removeItem(items.get(i));
+            removeFromBuffer(items.get(i));
     }
+
+    // Runtime Single Instance \\
 
     public void addItem(WorldItemInstance instance, long chunkCoordinate) {
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
         addToBuffer(instance, chunkX, chunkZ);
+        chunkCoord2Items
+                .computeIfAbsent(chunkCoordinate, k -> new ObjectArrayList<>())
+                .add(instance);
     }
 
     public void removeItem(WorldItemInstance instance) {
-        int itemDefID = instance.getItemDefinitionHandle().getItemID();
-        WorldItemCompositeInstance composite = itemDefID2Composite.get(itemDefID);
-        if (composite == null)
-            return;
-        int slot = instance.getInstanceSlot();
-        if (slot == -1)
-            return;
-        CompositeBufferInstance buffer = composite.getCompositeBuffer();
-        int movedFromSlot = buffer.removeInstance(slot);
-        instance.clearInstanceSlot();
-        if (slot != movedFromSlot) {
-            // Scoped to this definition's item type — slot indices are per-buffer
-            WorldItemInstance moved = findInstanceBySlot(itemDefID, movedFromSlot);
-            if (moved != null)
-                moved.setInstanceSlot(slot);
-        }
+        removeFromBuffer(instance);
+        ObjectArrayList<WorldItemInstance> list = chunkCoord2Items.get(instance.getChunkCoordinate());
+        if (list != null)
+            list.remove(instance);
     }
+
+    // Buffer \\
 
     private void addToBuffer(WorldItemInstance instance, int chunkX, int chunkZ) {
         long packed = instance.getPackedPosition();
@@ -129,20 +129,59 @@ public class WorldItemRenderSystem extends ManagerPackage {
         int subZ = Coordinate4Long.unpackZ(packed);
         int orientation = Coordinate4Long.unpackW(packed);
 
-        float localX = subX / 32.0f;
-        float localY = subY / 32.0f;
-        float localZ = subZ / 32.0f;
-
         WorldItemCompositeInstance composite = getOrCreateComposite(instance.getItemDefinitionHandle());
+        int itemDefID = instance.getItemDefinitionHandle().getItemID();
+
         float[] data = {
                 Float.intBitsToFloat(chunkX),
                 Float.intBitsToFloat(chunkZ),
-                localX, localZ,
-                localY, orientation
+                subX / 32.0f, subZ / 32.0f,
+                subY / 32.0f, orientation
         };
         int slot = composite.getCompositeBuffer().addInstance(data);
         instance.setInstanceSlot(slot);
+
+        // Register in the slot map so swap-remove fixup is O(1) and cross-chunk correct
+        itemDefID2SlotMap
+                .computeIfAbsent(itemDefID, k -> new Int2ObjectOpenHashMap<>())
+                .put(slot, instance);
     }
+
+    /*
+     * Removes the instance from its composite buffer.
+     * If the buffer performed a swap-remove, the displaced instance is found
+     * via the slot map in O(1) and its slot is updated in place — no chunk scan.
+     */
+    private void removeFromBuffer(WorldItemInstance instance) {
+        int itemDefID = instance.getItemDefinitionHandle().getItemID();
+        WorldItemCompositeInstance composite = itemDefID2Composite.get(itemDefID);
+        if (composite == null)
+            return;
+        int slot = instance.getInstanceSlot();
+        if (slot == -1)
+            return;
+
+        CompositeBufferInstance buffer = composite.getCompositeBuffer();
+        int movedFromSlot = buffer.removeInstance(slot);
+        instance.clearInstanceSlot();
+
+        Int2ObjectOpenHashMap<WorldItemInstance> slotMap = itemDefID2SlotMap.get(itemDefID);
+        if (slotMap == null)
+            return;
+
+        slotMap.remove(slot);
+
+        if (slot != movedFromSlot) {
+            // The instance that occupied movedFromSlot is now at slot — update it
+            WorldItemInstance displaced = slotMap.remove(movedFromSlot);
+            if (displaced != null) {
+                displaced.setInstanceSlot(slot);
+                slotMap.put(slot, displaced);
+            }
+        }
+    }
+
+    // Composite \\
 
     private WorldItemCompositeInstance getOrCreateComposite(ItemDefinitionHandle def) {
         int itemDefID = def.getItemID();
@@ -156,24 +195,5 @@ public class WorldItemRenderSystem extends ManagerPackage {
             itemDefID2Composite.put(itemDefID, composite);
         }
         return composite;
-    }
-
-    // Scoped to a specific item definition — slot indices are per-buffer, not
-    // global
-    private WorldItemInstance findInstanceBySlot(int itemDefID, int slot) {
-        Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = chunkStreamManager.getActiveChunks();
-        for (long coord : registeredChunks) {
-            ChunkInstance chunk = activeChunks.get(coord);
-            if (chunk == null)
-                continue;
-            ObjectArrayList<WorldItemInstance> items = chunk.getWorldItemInstancePaletteHandle().getItems();
-            for (int i = 0; i < items.size(); i++) {
-                WorldItemInstance item = items.get(i);
-                if (item.getItemDefinitionHandle().getItemID() == itemDefID
-                        && item.getInstanceSlot() == slot)
-                    return item;
-            }
-        }
-        return null;
     }
 }

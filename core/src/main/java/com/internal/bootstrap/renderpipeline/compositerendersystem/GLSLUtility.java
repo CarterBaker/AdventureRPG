@@ -12,6 +12,14 @@ import java.nio.FloatBuffer;
  */
 class GLSLUtility {
 
+    // Depth \\
+
+    static void enableDepth() {
+        Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
+        Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
+        Gdx.gl.glDepthMask(true);
+    }
+
     // Upload \\
 
     static void updateInstanceVBO(int vbo, FloatBuffer data, int floatCount) {

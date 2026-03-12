@@ -6,12 +6,14 @@ import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManage
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import com.internal.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
+import com.internal.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import com.internal.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRenderSystem;
 import com.internal.bootstrap.worldpipeline.worldmanager.WorldManager;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.PipelinePackage;
 
 public class WorldPipeline extends PipelinePackage {
+
     @Override
     protected void create() {
         create(WorldManager.class);
@@ -23,5 +25,6 @@ public class WorldPipeline extends PipelinePackage {
         create(MegaStreamManager.class);
         create(WorldRenderManager.class);
         create(WorldItemRenderSystem.class);
+        create(WorldItemPlacementSystem.class);
     }
 }

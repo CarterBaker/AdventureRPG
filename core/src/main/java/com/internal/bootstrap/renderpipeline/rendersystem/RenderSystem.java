@@ -95,6 +95,11 @@ public class RenderSystem extends SystemPackage {
 
             if (activeMask != null)
                 GLSLUtility.disableScissor();
+
+            // Composite instanced draws (world items etc.) share layer 0's
+            // depth buffer so they occlude and are occluded by world geometry.
+            if (depth == 0)
+                compositeRenderSystem.draw();
         }
     }
 

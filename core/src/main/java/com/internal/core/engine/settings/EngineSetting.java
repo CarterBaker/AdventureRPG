@@ -98,6 +98,9 @@ public class EngineSetting {
         public static final int CHUNK_VERT_BUFFER = 128;
         public static final int MESH_VERT_LIMIT = 32767;
 
+        // Geometry Settings
+        public static final int COMPOSITE_BUFFER_INITIAL_CAPACITY = 64;
+
         // World Settings
         public static final String DEFAULT_BIOME_NAME = "Empty";
         public static final String STARTING_WORLD = "TerraArcana";
@@ -155,5 +158,4 @@ public class EngineSetting {
         public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;
         public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                         + "0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
-
 }

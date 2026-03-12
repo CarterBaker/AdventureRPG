@@ -2,6 +2,7 @@ package com.internal.bootstrap.geometrypipeline.compositebuffer;
 
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.core.engine.InstancePackage;
+import com.internal.core.engine.settings.EngineSetting;
 
 import java.util.Arrays;
 
@@ -13,10 +14,13 @@ import java.util.Arrays;
  *
  * Instance layout is caller-defined via instanceAttrSizes passed to
  * CompositeBufferManager.constructor(), e.g. [4, 2] for vec4 + vec2.
+ *
+ * Upload tracking uses a version counter rather than a boolean flag.
+ * cpuVersion increments on every write. uploadedVersion tracks what the
+ * GPU last saw. needsUpload() is true whenever they differ — no silent
+ * no-ops, no ambiguity on first upload.
  */
 public class CompositeBufferInstance extends InstancePackage {
-
-    private static final int INITIAL_CAPACITY = 64;
 
     // GPU handles — written by CompositeBufferManager
     private int compositeVAO;
@@ -33,8 +37,11 @@ public class CompositeBufferInstance extends InstancePackage {
     private int instanceCount;
     private int maxInstances;
 
-    // State flags
-    private boolean dirty;
+    // Version tracking — replaces dirty flag
+    private int cpuVersion;
+    private int uploadedVersion;
+
+    // Realloc flag — separate concern from upload tracking
     private boolean needsGpuRealloc;
 
     // Internal — called by CompositeBufferManager.constructor() \\
@@ -49,10 +56,11 @@ public class CompositeBufferInstance extends InstancePackage {
             floats += s;
         this.floatsPerInstance = floats;
 
-        this.maxInstances = INITIAL_CAPACITY;
+        this.maxInstances = EngineSetting.COMPOSITE_BUFFER_INITIAL_CAPACITY;
         this.instanceData = new float[maxInstances * floatsPerInstance];
         this.instanceCount = 0;
-        this.dirty = false;
+        this.cpuVersion = 0;
+        this.uploadedVersion = 0;
         this.needsGpuRealloc = false;
     }
 
@@ -64,8 +72,8 @@ public class CompositeBufferInstance extends InstancePackage {
         this.instanceVBO = vbo;
     }
 
-    public void clearDirty() {
-        this.dirty = false;
+    public void markUploaded() {
+        this.uploadedVersion = cpuVersion;
     }
 
     public void clearNeedsGpuRealloc() {
@@ -74,45 +82,32 @@ public class CompositeBufferInstance extends InstancePackage {
 
     // Instance Management \\
 
-    /*
-     * Appends one instance. Returns the slot index — store it on the owning
-     * instance (e.g. WorldItemInstance) to enable O(1) removal later.
-     */
     public int addInstance(float[] data) {
         if (instanceCount >= maxInstances)
             grow();
         System.arraycopy(data, 0, instanceData, instanceCount * floatsPerInstance, floatsPerInstance);
-        dirty = true;
+        cpuVersion++;
         return instanceCount++;
     }
 
-    /*
-     * Overwrites an existing slot in-place. No reallocation.
-     */
     public void updateInstance(int index, float[] data) {
         System.arraycopy(data, 0, instanceData, index * floatsPerInstance, floatsPerInstance);
-        dirty = true;
+        cpuVersion++;
     }
 
-    /*
-     * Swap-removes by slot index. O(1).
-     * Returns the slot that was swapped into the vacated position so the
-     * caller can update its owner's stored slot index.
-     * If the removed slot was already the last, returns index unchanged.
-     */
     public int removeInstance(int index) {
         int last = instanceCount - 1;
         if (index != last)
             System.arraycopy(instanceData, last * floatsPerInstance,
                     instanceData, index * floatsPerInstance, floatsPerInstance);
         instanceCount--;
-        dirty = true;
+        cpuVersion++;
         return last;
     }
 
     public void clear() {
         instanceCount = 0;
-        dirty = true;
+        cpuVersion++;
     }
 
     // Grow \\
@@ -124,6 +119,10 @@ public class CompositeBufferInstance extends InstancePackage {
     }
 
     // Accessible \\
+
+    public boolean needsUpload() {
+        return cpuVersion != uploadedVersion;
+    }
 
     public MeshHandle getMeshHandle() {
         return meshHandle;
@@ -159,10 +158,6 @@ public class CompositeBufferInstance extends InstancePackage {
 
     public int getMaxInstances() {
         return maxInstances;
-    }
-
-    public boolean isDirty() {
-        return dirty;
     }
 
     public boolean needsGpuRealloc() {

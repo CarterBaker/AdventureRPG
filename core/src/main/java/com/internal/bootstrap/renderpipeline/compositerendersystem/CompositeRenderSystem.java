@@ -62,6 +62,7 @@ public class CompositeRenderSystem extends SystemPackage {
     public void draw() {
         if (materialID2Batch.isEmpty())
             return;
+        GLSLUtility.enableDepth();
         for (var entry : materialID2Batch.int2ObjectEntrySet()) {
             CompositeBatchInstance batch = entry.getValue();
             if (batch.isEmpty())
@@ -89,7 +90,7 @@ public class CompositeRenderSystem extends SystemPackage {
     }
 
     private void upload(CompositeBufferInstance buffer) {
-        if (!buffer.isDirty())
+        if (!buffer.needsUpload())
             return;
         int floatCount = buffer.getInstanceCount() * buffer.getFloatsPerInstance();
         ensureUploadBuffer(floatCount);
@@ -97,7 +98,7 @@ public class CompositeRenderSystem extends SystemPackage {
         uploadBuffer.put(buffer.getInstanceData(), 0, floatCount);
         uploadBuffer.flip();
         GLSLUtility.updateInstanceVBO(buffer.getInstanceVBO(), uploadBuffer, floatCount);
-        buffer.clearDirty();
+        buffer.markUploaded();
     }
 
     // Bind \\

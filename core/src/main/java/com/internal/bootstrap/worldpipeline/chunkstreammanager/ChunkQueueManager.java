@@ -12,6 +12,7 @@ import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.ChunkQ
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.DumpBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.GenerationBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.ItemLoadBranch;
+import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.ItemRenderBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.MergeBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.QueueOperation;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.RenderBranch;
@@ -49,6 +50,7 @@ class ChunkQueueManager extends ManagerPackage {
     private BuildBranch buildBranch;
     private MergeBranch mergeBranch;
     private ItemLoadBranch itemLoadBranch;
+    private ItemRenderBranch itemRenderBranch;
     private BatchBranch batchBranch;
     private RenderBranch renderBranch;
     private DumpBranch dumpBranch;
@@ -78,6 +80,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.buildBranch = create(BuildBranch.class);
         this.mergeBranch = create(MergeBranch.class);
         this.itemLoadBranch = create(ItemLoadBranch.class);
+        this.itemRenderBranch = create(ItemRenderBranch.class);
         this.batchBranch = create(BatchBranch.class);
         this.renderBranch = create(RenderBranch.class);
         this.dumpBranch = create(DumpBranch.class);
@@ -154,16 +157,11 @@ class ChunkQueueManager extends ManagerPackage {
     // Chunk Queue System \\
 
     private void executeQueue() {
-
         while (true) {
-
             QueueItemHandle nextItem = chunkQueue.getNextQueueItem();
-
             if (nextItem == null)
                 break;
-
             ChunkQueueItem queueItem = id2QueueItem.get(nextItem.getQueueItemID());
-
             switch (queueItem) {
                 case SCAN_GRID_SLOTS -> scanGridSlots();
                 case LOAD -> loadQueue();
@@ -175,9 +173,7 @@ class ChunkQueueManager extends ManagerPackage {
     // Grid Scan \\
 
     private void scanGridSlots() {
-
         GridInstance grid = gridManager.getGrid();
-
         for (int i = 0; i < EngineSetting.GRID_SLOTS_SCAN_PER_FRAME; i++) {
             GridSlotHandle slot = grid.getNextScanSlot();
             long chunkCoordinate = slot.getChunkCoordinate();
@@ -189,18 +185,14 @@ class ChunkQueueManager extends ManagerPackage {
     // Load Queue \\
 
     private void loadQueue() {
-
         var iterator = loadRequests.iterator();
         if (!iterator.hasNext())
             return;
-
         long chunkCoordinate = iterator.nextLong();
         iterator.remove();
-
         ChunkInstance chunkInstance = chunkPool.isEmpty()
                 ? create(ChunkInstance.class)
                 : chunkPool.poll();
-
         chunkInstance.constructor(
                 worldRenderSystem,
                 chunkStreamManager.getActiveWorldHandle(),
@@ -209,7 +201,6 @@ class ChunkQueueManager extends ManagerPackage {
                 airBlockId,
                 defaultBiomeId,
                 activeChunks);
-
         activeChunks.put(chunkCoordinate, chunkInstance);
     }
 
@@ -231,14 +222,11 @@ class ChunkQueueManager extends ManagerPackage {
         iterator.remove();
 
         if (unloadRequests.contains(chunkCoordinate)) {
-
             ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
-
             if (!syncContainer.tryAcquire()) {
                 activeChunks.put(chunkCoordinate, chunkInstance);
                 return;
             }
-
             try {
                 unloadRequests.remove(chunkCoordinate);
                 worldRenderSystem.removeChunkInstance(chunkCoordinate);
@@ -246,13 +234,11 @@ class ChunkQueueManager extends ManagerPackage {
             } finally {
                 syncContainer.release();
             }
-
             GridInstance grid = gridManager.getGrid();
             if (chunkPool.size() < grid.getTotalSlots() + CHUNK_POOL_MAX_OVERFLOW)
                 chunkPool.push(chunkInstance);
             else
                 chunkInstance.dispose();
-
             return;
         }
 
@@ -272,6 +258,7 @@ class ChunkQueueManager extends ManagerPackage {
             case BUILD -> buildBranch.buildChunk(chunkInstance);
             case MERGE -> mergeBranch.mergeChunk(chunkInstance);
             case ITEM_LOAD -> itemLoadBranch.loadItems(chunkInstance);
+            case ITEM_RENDER -> itemRenderBranch.renderItems(chunkInstance);
             case BATCH -> batchBranch.batchChunk(chunkInstance);
             case RENDER -> renderBranch.renderChunk(chunkInstance);
             case DUMP -> dumpBranch.dumpChunkData(chunkInstance, gridSlotHandle);
