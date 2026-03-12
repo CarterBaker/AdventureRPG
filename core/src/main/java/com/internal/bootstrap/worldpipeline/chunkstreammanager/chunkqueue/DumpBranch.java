@@ -3,36 +3,41 @@ package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkDataUtility;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotDetailLevel;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.BranchPackage;
 
 /*
- * Dumps chunk data that is no longer required at the current detail level.
- * Each data stage has its own dedicated dump method.
- * Always tryAcquire — safe on any thread.
+ * Executes a single dump step per call.
+ * ChunkDataUtility determines which stage to shed based on the leadsTo/requires
+ * graph and the slot's detail level. cascadeClear runs before any side-effecting
+ * work so concurrent or retry dispatches see the stage as already gone.
  *
- * Flag ordering rule: always clear the sync flag BEFORE performing the
- * external side-effecting work (e.g. pulling from the renderer). This
- * ensures that a concurrent or retry dispatch sees the stage as already
- * complete under the lock and cannot race into the same operation.
+ * Data lifetime per level:
+ *   IMMEDIATE — everything held
+ *   NEAR      — item instances and render dumped; block and item structs held
+ *   DISTANT   — everything dumped
+ *
+ * Item structs (subchunk palette) are owned by ITEM_DATA, not GENERATION_DATA.
+ * They survive a GENERATION dump so ITEM_DATA can rebuild correctly when the
+ * chunk returns to IMMEDIATE range without needing a full re-generation.
  */
 public class DumpBranch extends BranchPackage {
 
-    // Internal
     private BlockManager blockManager;
     private WorldItemPlacementSystem worldItemPlacementSystem;
+    private WorldRenderManager worldRenderManager;
     private short airBlockId;
-
-    // Internal \\
 
     @Override
     protected void get() {
         this.blockManager = get(BlockManager.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
+        this.worldRenderManager = get(WorldRenderManager.class);
     }
 
     @Override
@@ -40,67 +45,74 @@ public class DumpBranch extends BranchPackage {
         this.airBlockId = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Air");
     }
 
-    // Dump \\
-
     public void dumpChunkData(ChunkInstance chunkInstance, GridSlotHandle gridSlotHandle) {
-        GridSlotDetailLevel targetLevel = gridSlotHandle.getDetailLevel();
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
         if (!syncContainer.tryAcquire())
             return;
         try {
-            ChunkData dataToDump = targetLevel.getNextDataToDump(syncContainer.data);
-            if (dataToDump == null)
+            ChunkData toDump = ChunkDataUtility.nextToDump(
+                    syncContainer.data,
+                    gridSlotHandle.getDetailLevel());
+            if (toDump == null)
                 return;
-            switch (dataToDump) {
-                case GENERATION_DATA -> dumpGenerationData(chunkInstance, syncContainer);
-                case BUILD_DATA -> dumpBuildData(chunkInstance, syncContainer);
-                case MERGE_DATA -> dumpMergeData(chunkInstance, syncContainer);
-                case ITEM_RENDER_DATA -> dumpItemRenderData(chunkInstance, syncContainer);
-                case ITEM_DATA -> dumpItemData(chunkInstance, syncContainer);
-                default -> {
-                }
-            }
+            ChunkDataUtility.cascadeClear(toDump, syncContainer.data);
+            executeDump(chunkInstance, toDump);
         } finally {
             syncContainer.release();
         }
     }
 
-    // Dump Methods \\
-
-    private void dumpGenerationData(ChunkInstance chunkInstance,
-            ChunkDataSyncContainer syncContainer) {
-        SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
-        for (SubChunkInstance subChunk : subChunks) {
-            subChunk.getBlockPaletteHandle().dumpInteriorBlocks(airBlockId);
-            subChunk.getWorldItemPaletteHandle().clear();
+    private void executeDump(ChunkInstance chunkInstance, ChunkData stage) {
+        switch (stage) {
+            case GENERATION_DATA -> dumpGenerationData(chunkInstance);
+            case BUILD_DATA -> dumpBuildData(chunkInstance);
+            case MERGE_DATA -> dumpMergeData(chunkInstance);
+            case RENDER_DATA -> dumpRenderData(chunkInstance);
+            case ITEM_DATA -> dumpItemData(chunkInstance);
+            case ITEM_RENDER_DATA -> dumpItemRenderData(chunkInstance);
+            default -> {
+            }
         }
-        syncContainer.data[ChunkData.GENERATION_DATA.index] = false;
-        syncContainer.data[ChunkData.LOAD_DATA.index] = false;
     }
 
-    private void dumpBuildData(ChunkInstance chunkInstance,
-            ChunkDataSyncContainer syncContainer) {
+    /*
+     * Only clears block palette — item structs on subchunks are left intact.
+     * They are the source of truth for ITEM_DATA rebuilds and are owned
+     * exclusively by dumpItemData.
+     */
+    private void dumpGenerationData(ChunkInstance chunkInstance) {
+        SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
+        for (SubChunkInstance subChunk : subChunks)
+            subChunk.getBlockPaletteHandle().dumpInteriorBlocks(airBlockId);
+    }
+
+    private void dumpBuildData(ChunkInstance chunkInstance) {
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
         for (SubChunkInstance subChunk : subChunks)
             subChunk.getDynamicPacketInstance().clear();
-        syncContainer.data[ChunkData.BUILD_DATA.index] = false;
     }
 
-    private void dumpMergeData(ChunkInstance chunkInstance,
-            ChunkDataSyncContainer syncContainer) {
+    private void dumpMergeData(ChunkInstance chunkInstance) {
         chunkInstance.getDynamicPacketInstance().clear();
-        syncContainer.data[ChunkData.MERGE_DATA.index] = false;
     }
 
-    private void dumpItemRenderData(ChunkInstance chunkInstance,
-            ChunkDataSyncContainer syncContainer) {
-        syncContainer.data[ChunkData.ITEM_RENDER_DATA.index] = false;
-        worldItemPlacementSystem.pullChunkFromRenderer(chunkInstance.getCoordinate());
+    private void dumpRenderData(ChunkInstance chunkInstance) {
+        worldRenderManager.removeChunkInstance(chunkInstance.getCoordinate());
     }
 
-    private void dumpItemData(ChunkInstance chunkInstance,
-            ChunkDataSyncContainer syncContainer) {
+    /*
+     * Clears both the chunk instance palette and the subchunk struct palette.
+     * These are one logical unit — struct palette only exists to rebuild the
+     * instance palette, so both go together.
+     */
+    private void dumpItemData(ChunkInstance chunkInstance) {
         chunkInstance.getWorldItemInstancePaletteHandle().clear();
-        syncContainer.data[ChunkData.ITEM_DATA.index] = false;
+        SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
+        for (SubChunkInstance subChunk : subChunks)
+            subChunk.getWorldItemPaletteHandle().clear();
+    }
+
+    private void dumpItemRenderData(ChunkInstance chunkInstance) {
+        worldItemPlacementSystem.pullChunkFromRenderer(chunkInstance.getCoordinate());
     }
 }

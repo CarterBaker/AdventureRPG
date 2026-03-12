@@ -5,16 +5,17 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotDetailLevel;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaData;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
+import com.internal.bootstrap.worldpipeline.megachunk.MegaDataUtility;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaAssessBranch;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaDumpBranch;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaMergeBranch;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaQueueOperation;
 import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaRenderBranch;
-import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
@@ -198,22 +199,30 @@ class MegaQueueManager extends ManagerPackage {
         if (!sync.tryAcquire())
             return MegaQueueOperation.SKIP;
         try {
-            boolean[] data = sync.data;
+            GridSlotDetailLevel slotLevel = gridSlotHandle.getDetailLevel();
 
-            if (gridSlotHandle.getDetailLevel().renderMode == RenderType.INDIVIDUAL) {
-                if (data[MegaData.RENDER_DATA.index])
-                    return MegaQueueOperation.DUMP;
-                return MegaQueueOperation.SKIP;
-            }
+            MegaData toDump = MegaDataUtility.nextToDump(sync.data, slotLevel);
+            if (toDump != null)
+                return MegaQueueOperation.DUMP;
 
-            for (MegaData megaData : MegaData.VALUES) {
-                if (!data[megaData.index])
-                    return megaData.queueOperation;
-            }
+            MegaData toLoad = MegaDataUtility.nextToLoad(sync.data, slotLevel);
+            if (toLoad != null)
+                return toOperation(toLoad);
 
             return MegaQueueOperation.SKIP;
         } finally {
             sync.release();
+        }
+    }
+
+    private MegaQueueOperation toOperation(MegaData stage) {
+        switch (stage) {
+            case BATCH_DATA:
+                return MegaQueueOperation.ASSESS;
+            case RENDER_DATA:
+                return MegaQueueOperation.RENDER;
+            default:
+                return MegaQueueOperation.SKIP;
         }
     }
 

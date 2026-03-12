@@ -1,19 +1,58 @@
 package com.internal.bootstrap.worldpipeline.megachunk;
 
-import com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue.MegaQueueOperation;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotDetailLevel;
 
 public enum MegaData {
-    BATCH_DATA(MegaQueueOperation.ASSESS),
-    RENDER_DATA(MegaQueueOperation.RENDER);
 
+    BATCH_DATA(
+            false, null,
+            new String[] {},
+            new String[] { "RENDER_DATA" }),
+
+    RENDER_DATA(
+            true, GridSlotDetailLevel.NEAR,
+            new String[] { "BATCH_DATA" },
+            new String[] {});
+
+    /*
+     * maximumLevel — the most detailed level at which this stage must remain.
+     * Dump when slotLevel.level < maximumLevel.level (slot became more detailed).
+     * Load when slotLevel.level >= maximumLevel.level.
+     * null = never dump.
+     */
     public final int index;
-    public final MegaQueueOperation queueOperation;
+    public final boolean dumpable;
+    public final GridSlotDetailLevel maximumLevel;
+
+    public MegaData[] requires;
+    public MegaData[] leadsTo;
+
+    private final String[] requiresNames;
+    private final String[] leadsToNames;
 
     public static final MegaData[] VALUES = values();
-    public static final int LENGTH = values().length;
+    public static final int LENGTH = VALUES.length;
 
-    MegaData(MegaQueueOperation queueOperation) {
+    static {
+        for (MegaData stage : VALUES)
+            stage.link();
+    }
+
+    MegaData(boolean dumpable, GridSlotDetailLevel maximumLevel,
+            String[] requiresNames, String[] leadsToNames) {
         this.index = this.ordinal();
-        this.queueOperation = queueOperation;
+        this.dumpable = dumpable;
+        this.maximumLevel = maximumLevel;
+        this.requiresNames = requiresNames;
+        this.leadsToNames = leadsToNames;
+    }
+
+    private void link() {
+        this.requires = new MegaData[requiresNames.length];
+        for (int i = 0; i < requiresNames.length; i++)
+            this.requires[i] = MegaData.valueOf(requiresNames[i]);
+        this.leadsTo = new MegaData[leadsToNames.length];
+        for (int i = 0; i < leadsToNames.length; i++)
+            this.leadsTo[i] = MegaData.valueOf(leadsToNames[i]);
     }
 }

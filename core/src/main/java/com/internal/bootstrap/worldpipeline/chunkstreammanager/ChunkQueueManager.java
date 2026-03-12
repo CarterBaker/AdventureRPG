@@ -4,6 +4,7 @@ import com.internal.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
+import com.internal.bootstrap.worldpipeline.chunk.ChunkDataUtility;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.AssessmentBranch;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue.BatchBranch;
@@ -35,6 +36,9 @@ import java.util.ArrayDeque;
  * Drives the per-frame chunk queue: scans grid slots for load requests, loads
  * chunks from pool, and assesses active chunks to determine their next required
  * operation. All branch dispatch happens here; branches own the implementation.
+ *
+ * Load/dump decisions are fully delegated to ChunkDataUtility which walks the
+ * requires/leadsTo graph declared on ChunkData. No stage ordering logic lives here.
  */
 class ChunkQueueManager extends ManagerPackage {
 
@@ -275,25 +279,52 @@ class ChunkQueueManager extends ManagerPackage {
             ChunkInstance chunkInstance,
             GridSlotHandle gridSlotHandle) {
 
-        GridSlotDetailLevel targetLevel = gridSlotHandle.getDetailLevel();
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
-
         if (!syncContainer.tryAcquire())
             return QueueOperation.SKIP;
 
         try {
-            ChunkData nextRequired = targetLevel.getNextRequiredData(syncContainer.data);
-            if (nextRequired != null)
-                return nextRequired.queueOperation;
+            GridSlotDetailLevel slotLevel = gridSlotHandle.getDetailLevel();
 
-            ChunkData nextToDump = targetLevel.getNextDataToDump(syncContainer.data);
-            if (nextToDump != null)
+            ChunkData toDump = ChunkDataUtility.nextToDump(syncContainer.data, slotLevel);
+            if (toDump != null)
                 return QueueOperation.DUMP;
+
+            ChunkData toLoad = ChunkDataUtility.nextToLoad(syncContainer.data, slotLevel);
+            if (toLoad != null)
+                return toOperation(toLoad);
 
             return QueueOperation.SKIP;
 
         } finally {
             syncContainer.release();
+        }
+    }
+
+    private QueueOperation toOperation(ChunkData stage) {
+        switch (stage) {
+            case LOAD_DATA:
+                return QueueOperation.LOAD;
+            case ESSENTIAL_DATA:
+                return QueueOperation.LOAD;
+            case GENERATION_DATA:
+                return QueueOperation.LOAD;
+            case NEIGHBOR_DATA:
+                return QueueOperation.ASSESSMENT;
+            case BUILD_DATA:
+                return QueueOperation.BUILD;
+            case MERGE_DATA:
+                return QueueOperation.MERGE;
+            case RENDER_DATA:
+                return QueueOperation.RENDER;
+            case BATCH_DATA:
+                return QueueOperation.BATCH;
+            case ITEM_DATA:
+                return QueueOperation.ITEM_LOAD;
+            case ITEM_RENDER_DATA:
+                return QueueOperation.ITEM_RENDER;
+            default:
+                return QueueOperation.SKIP;
         }
     }
 
