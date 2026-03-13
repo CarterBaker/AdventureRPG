@@ -1,16 +1,16 @@
 package com.internal.bootstrap.calendarpipeline.clockmanager;
 
 import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
-import com.internal.core.engine.SystemPackage;
+import com.internal.bootstrap.calendarpipeline.clock.ClockHandle;
+import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 
-public class YearTrackerSystem extends SystemPackage {
+class YearTrackerBranch extends BranchPackage {
 
     // Internal
     private int STARTING_YEAR;
     private int STARTING_AGE;
     private int YEARS_PER_AGE;
-
     private CalendarHandle calendarHandle;
     private ClockHandle clockHandle;
 
@@ -31,40 +31,33 @@ public class YearTrackerSystem extends SystemPackage {
         this.lastYear = -1;
     }
 
-    // Year Tracker \\
+    // Assignment \\
 
-    void assignTimeData(CalendarHandle calendarHandle, ClockHandle clockHandle) {
-
-        // Internal
+    void assignData(CalendarHandle calendarHandle, ClockHandle clockHandle) {
         this.calendarHandle = calendarHandle;
         this.clockHandle = clockHandle;
     }
 
+    // Year Tracker \\
+
     boolean advanceTime() {
 
-        // Calculate total days with offset
         long totalDaysWithOffset = clockHandle.getTotalDaysWithOffset();
-
-        // Calculate year
         int totalDaysInYear = calendarHandle.getTotalDaysInYear();
         long dayOfAge = totalDaysWithOffset % (YEARS_PER_AGE * totalDaysInYear);
         int currentYear = (int) (dayOfAge / totalDaysInYear) + STARTING_YEAR;
 
-        // Check if year has changed
         if (lastYear == currentYear)
             return false;
 
         lastYear = currentYear;
 
-        // Calculate age
         int currentAge = (int) (totalDaysWithOffset / (YEARS_PER_AGE * totalDaysInYear)) + STARTING_AGE;
+        int yearsElapsed = currentYear - STARTING_YEAR;
 
-        // Update ClockHandle
         clockHandle.setCurrentYear(currentYear);
         clockHandle.setCurrentAge(currentAge);
 
-        // Age changed if currentYear - STARTING_YEAR is a multiple of YEARS_PER_AGE
-        int yearsElapsed = currentYear - STARTING_YEAR;
         return (yearsElapsed % YEARS_PER_AGE == 0);
     }
 }

@@ -4,12 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {
@@ -23,11 +21,9 @@ class InternalLoader extends LoaderPackage {
     private Object2ObjectOpenHashMap<String, File> calendarName2File;
 
     // Base \\
-
     @Override
     protected void scan() {
 
-        // CALENDAR_DIR_PATH is the directory containing all calendar JSON files
         this.root = new File(EngineSetting.CALENDAR_JSON_PATH);
         this.calendarName2File = new Object2ObjectOpenHashMap<>();
 
@@ -44,8 +40,9 @@ class InternalLoader extends LoaderPackage {
                         calendarName2File.put(calendarName, file);
                         fileQueue.offer(file);
                     });
+        }
 
-        } catch (IOException e) {
+        catch (IOException e) {
             throwException("CalendarLoader failed to walk directory: ", e);
         }
     }
@@ -61,23 +58,27 @@ class InternalLoader extends LoaderPackage {
     }
 
     // Load \\
-
     @Override
     protected void load(File file) {
+
         String calendarName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
         CalendarHandle calendarHandle = internalBuilder.build(file, calendarName);
+
         if (calendarHandle == null)
             throwException("Failed to build calendar from: " + file.getAbsolutePath());
+
         calendarManager.addCalendarHandle(calendarHandle);
     }
 
     // On-Demand \\
-
     void request(String calendarName) {
+
         File file = calendarName2File.get(calendarName);
+
         if (file == null)
             throwException("[CalendarLoader] On-demand load failed — not found in scan registry: \""
                     + calendarName + "\"");
+
         request(file);
     }
 }

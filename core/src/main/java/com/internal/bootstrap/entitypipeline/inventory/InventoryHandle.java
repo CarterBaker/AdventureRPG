@@ -6,20 +6,12 @@ import com.internal.core.engine.HandlePackage;
 
 public class InventoryHandle extends HandlePackage {
 
+    // Items
     private ItemDefinitionHandle mainHand;
     private ItemDefinitionHandle offHand;
+
+    // Storage
     private BackpackInstance backpack;
-
-    @Override
-    protected void create() {
-        // Backpack always present — no null checks needed downstream
-        this.backpack = create(BackpackInstance.class);
-    }
-
-    public void constructor() {
-        this.mainHand = null;
-        this.offHand = null;
-    }
 
     // Accessible \\
 
@@ -27,27 +19,35 @@ public class InventoryHandle extends HandlePackage {
         return mainHand;
     }
 
-    public ItemDefinitionHandle getOffHand() {
-        return offHand;
-    }
-
-    public BackpackInstance getBackpack() {
-        return backpack;
-    }
-
-    public void setMainHand(ItemDefinitionHandle item) {
-        this.mainHand = item;
-    }
-
-    public void setOffHand(ItemDefinitionHandle item) {
-        this.offHand = item;
+    public void setMainHand(ItemDefinitionHandle mainHand) {
+        this.mainHand = mainHand;
     }
 
     public boolean hasMainHand() {
         return mainHand != null;
     }
 
+    public ItemDefinitionHandle getOffHand() {
+        return offHand;
+    }
+
+    public void setOffHand(ItemDefinitionHandle offHand) {
+        this.offHand = offHand;
+    }
+
     public boolean hasOffHand() {
         return offHand != null;
+    }
+
+    public BackpackInstance getBackpack() {
+        return backpack;
+    }
+
+    public void setBackpack(BackpackInstance backpack) {
+        this.backpack = backpack;
+    }
+
+    public boolean hasBackpack() {
+        return backpack != null;
     }
 }

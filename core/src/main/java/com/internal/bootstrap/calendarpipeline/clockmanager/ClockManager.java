@@ -1,9 +1,9 @@
 package com.internal.bootstrap.calendarpipeline.clockmanager;
 
-import java.time.Instant;
-
 import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import com.internal.bootstrap.calendarpipeline.calendarmanager.CalendarManager;
+import com.internal.bootstrap.calendarpipeline.clock.ClockData;
+import com.internal.bootstrap.calendarpipeline.clock.ClockHandle;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.bootstrap.worldpipeline.worldmanager.WorldManager;
 import com.internal.core.engine.ManagerPackage;
@@ -15,13 +15,14 @@ public class ClockManager extends ManagerPackage {
     private CalendarManager calendarManager;
     private WorldManager worldManager;
 
-    private CurrentTrackerSystem currentTracker;
-    private DayTrackerSystem dayTracker;
-    private MonthTrackerSystem monthTracker;
-    private YearTrackerSystem yearTracker;
+    // Branches
+    private CurrentTrackerBranch currentTracker;
+    private DayTrackerBranch dayTracker;
+    private MonthTrackerBranch monthTracker;
+    private YearTrackerBranch yearTracker;
+    private InternalBufferBranch internalBuffer;
 
-    private InternalBufferSystem internalBufferSystem;
-
+    // Clock
     private CalendarHandle calendarHandle;
     private ClockHandle clockHandle;
 
@@ -29,16 +30,22 @@ public class ClockManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        this.currentTracker = create(CurrentTrackerSystem.class);
-        this.dayTracker = create(DayTrackerSystem.class);
-        this.monthTracker = create(MonthTrackerSystem.class);
-        this.yearTracker = create(YearTrackerSystem.class);
-        this.internalBufferSystem = create(InternalBufferSystem.class);
+
+        // Branches
+        this.currentTracker = create(CurrentTrackerBranch.class);
+        this.dayTracker = create(DayTrackerBranch.class);
+        this.monthTracker = create(MonthTrackerBranch.class);
+        this.yearTracker = create(YearTrackerBranch.class);
+        this.internalBuffer = create(InternalBufferBranch.class);
+
+        // Clock
         this.clockHandle = create(ClockHandle.class);
     }
 
     @Override
     protected void get() {
+
+        // Internal
         this.calendarManager = get(CalendarManager.class);
         this.worldManager = get(WorldManager.class);
     }
@@ -47,27 +54,16 @@ public class ClockManager extends ManagerPackage {
     protected void awake() {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
-
-        // Resolve calendar from active world
         this.calendarHandle = calendarManager.getCalendar(activeWorld.getCalendarName());
 
-        // Stamp epoch if this world has never been played
-        if (activeWorld.getWorldEpochStart() == -1L) {
-            activeWorld.setWorldEpochStart(Instant.now().toEpochMilli());
-            // TODO: persist to save file here
-        }
+        if (activeWorld.getWorldEpochStart() == -1L)
+            activeWorld.setWorldEpochStart(System.currentTimeMillis());
 
-        // Wire systems
-        currentTracker.assignTimeData(clockHandle, activeWorld.getDaysPerDay(),
-                activeWorld.getWorldEpochStart());
+        ClockData clockData = new ClockData(activeWorld.getWorldEpochStart());
+        clockHandle.constructor(clockData);
 
-        dayTracker.assignTimeData(calendarHandle, clockHandle);
-        monthTracker.assignTimeData(calendarHandle, clockHandle);
-        yearTracker.assignTimeData(calendarHandle, clockHandle);
-
-        internalBufferSystem.assignTimeData(clockHandle);
-
-        verifyClockHandle(activeWorld);
+        validateSettings();
+        wireData(activeWorld);
     }
 
     @Override
@@ -77,54 +73,29 @@ public class ClockManager extends ManagerPackage {
 
     // Clock \\
 
-    private void verifyClockHandle(WorldHandle activeWorld) {
+    private void validateSettings() {
 
-        // Epoch comes from the world (either restored from save or just stamped above)
-        long gameEpochStart = activeWorld.getWorldEpochStart();
+        int startingMonth = EngineSetting.STARTING_MONTH;
+        int startingDayOfMonth = EngineSetting.STARTING_DAY_OF_MONTH;
 
-        int STARTING_DAY_OF_MONTH = EngineSetting.STARTING_DAY_OF_MONTH;
-        int STARTING_MONTH = EngineSetting.STARTING_MONTH;
-        int STARTING_YEAR = EngineSetting.STARTING_YEAR;
-        int STARTING_AGE = EngineSetting.STARTING_AGE;
-        int STARTING_HOUR = EngineSetting.STARTING_HOUR;
-        int STARTING_MINUTE = EngineSetting.STARTING_MINUTE;
-
-        if (STARTING_MONTH < 0 || STARTING_MONTH >= calendarHandle.getMonthCount())
-            throwException("Invalid STARTING_MONTH: " + STARTING_MONTH +
+        if (startingMonth < 0 || startingMonth >= calendarHandle.getMonthCount())
+            throwException("Invalid STARTING_MONTH: " + startingMonth +
                     ". Must be between 0 and " + (calendarHandle.getMonthCount() - 1));
 
-        int daysInStartingMonth = calendarHandle.getMonthDays(STARTING_MONTH);
-        if (STARTING_DAY_OF_MONTH < 1 || STARTING_DAY_OF_MONTH > daysInStartingMonth)
-            throwException("Invalid STARTING_DAY_OF_MONTH: " + STARTING_DAY_OF_MONTH +
+        int daysInStartingMonth = calendarHandle.getMonthDays(startingMonth);
+
+        if (startingDayOfMonth < 1 || startingDayOfMonth > daysInStartingMonth)
+            throwException("Invalid STARTING_DAY_OF_MONTH: " + startingDayOfMonth +
                     ". Must be between 1 and " + daysInStartingMonth +
-                    " for month " + calendarHandle.getMonthName(STARTING_MONTH));
+                    " for month " + calendarHandle.getMonthName(startingMonth));
+    }
 
-        long totalDaysElapsed = 0;
-        double dayProgress = currentTracker.calculateDayProgress(STARTING_HOUR, STARTING_MINUTE);
-        double rawTimeOfDay = currentTracker.calculateRawTimeOfDay(dayProgress);
-        long totalDaysWithOffset = dayTracker.calculateTotalDaysWithOffset(totalDaysElapsed);
-        double yearProgress = dayTracker.calculateYearProgress(totalDaysWithOffset);
-        double visualYearProgress = dayTracker.calculateVisualYearProgress(yearProgress);
-        int dayOfWeek = dayTracker.calculateDayOfWeek(totalDaysWithOffset);
-        float randomNoise = dayTracker.calculateRandomNoise(totalDaysWithOffset);
-        double visualTimeOfDay = currentTracker.calculateVisualTimeOfDay(rawTimeOfDay, yearProgress);
-
-        clockHandle.constructor(
-                gameEpochStart,
-                totalDaysElapsed,
-                totalDaysWithOffset,
-                dayProgress,
-                visualTimeOfDay,
-                yearProgress,
-                visualYearProgress,
-                STARTING_MINUTE,
-                STARTING_HOUR,
-                dayOfWeek,
-                STARTING_DAY_OF_MONTH,
-                STARTING_MONTH,
-                STARTING_YEAR,
-                STARTING_AGE,
-                randomNoise);
+    private void wireData(WorldHandle activeWorld) {
+        currentTracker.assignData(clockHandle, activeWorld.getDaysPerDay());
+        dayTracker.assignData(calendarHandle, clockHandle);
+        monthTracker.assignData(clockHandle);
+        yearTracker.assignData(calendarHandle, clockHandle);
+        internalBuffer.assignData(clockHandle);
     }
 
     private void advanceGameClock() {
@@ -136,26 +107,24 @@ public class ClockManager extends ManagerPackage {
 
     // World Switch \\
 
-    /**
+    /*
      * Call when the player travels to a different world.
-     * Swaps calendar and time rate. Epoch is world-specific and already in
-     * WorldHandle.
+     * Swaps calendar, time rate, and epoch anchor.
+     * Time of day will immediately reflect the new world's game day cycle.
      */
     public void switchWorld(WorldHandle newWorld) {
 
         this.calendarHandle = calendarManager.getCalendar(newWorld.getCalendarName());
 
-        if (newWorld.getWorldEpochStart() == -1L) {
-            newWorld.setWorldEpochStart(Instant.now().toEpochMilli());
-            // TODO: persist to save file here
-        }
+        if (newWorld.getWorldEpochStart() == -1L)
+            newWorld.setWorldEpochStart(System.currentTimeMillis());
 
+        clockHandle.setWorldEpochStart(newWorld.getWorldEpochStart());
         currentTracker.setDaysPerDay(newWorld.getDaysPerDay());
-        currentTracker.setGameEpochStart(newWorld.getWorldEpochStart());
 
-        dayTracker.assignTimeData(calendarHandle, clockHandle);
-        monthTracker.assignTimeData(calendarHandle, clockHandle);
-        yearTracker.assignTimeData(calendarHandle, clockHandle);
+        dayTracker.assignData(calendarHandle, clockHandle);
+        monthTracker.assignData(clockHandle);
+        yearTracker.assignData(calendarHandle, clockHandle);
     }
 
     // Accessible \\

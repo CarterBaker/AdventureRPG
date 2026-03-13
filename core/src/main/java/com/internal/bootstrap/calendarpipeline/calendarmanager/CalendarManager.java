@@ -10,7 +10,6 @@ public class CalendarManager extends ManagerPackage {
     private Object2ObjectOpenHashMap<String, CalendarHandle> palette;
 
     // Base \\
-
     @Override
     protected void create() {
         this.palette = new Object2ObjectOpenHashMap<>();
@@ -18,16 +17,15 @@ public class CalendarManager extends ManagerPackage {
     }
 
     // Calendar Management \\
-
     void addCalendarHandle(CalendarHandle calendarHandle) {
         palette.put(calendarHandle.getCalendarName(), calendarHandle);
     }
 
     // Accessible \\
 
-    /**
-     * Returns the CalendarHandle for the given name.
-     * On-demand loads if not yet in palette — safe to call from any awake().
+    /*
+     * Auto-triggers an on-demand load on miss.
+     * Safe for external callers only — never call from inside a builder.
      */
     public CalendarHandle getCalendar(String calendarName) {
 

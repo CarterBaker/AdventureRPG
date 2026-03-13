@@ -1,20 +1,19 @@
 package com.internal.bootstrap.calendarpipeline.clockmanager;
 
 import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
-import com.internal.core.engine.SystemPackage;
+import com.internal.bootstrap.calendarpipeline.clock.ClockHandle;
+import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
-
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-public class DayTrackerSystem extends SystemPackage {
+class DayTrackerBranch extends BranchPackage {
 
     // Internal
     private int STARTING_DAY_OF_MONTH;
     private int STARTING_MONTH;
     private int STARTING_YEAR;
     private int YEARS_PER_AGE;
-
     private CalendarHandle calendarHandle;
     private ClockHandle clockHandle;
 
@@ -46,15 +45,14 @@ public class DayTrackerSystem extends SystemPackage {
         this.lastDayElapsed = -1;
     }
 
-    // Day Tracker \\
+    // Assignment \\
 
-    void assignTimeData(CalendarHandle calendarHandle, ClockHandle clockHandle) {
+    void assignData(CalendarHandle calendarHandle, ClockHandle clockHandle) {
 
         // Internal
         this.calendarHandle = calendarHandle;
         this.clockHandle = clockHandle;
 
-        // Build conversion tables
         buildDayConversionTables();
     }
 
@@ -65,18 +63,12 @@ public class DayTrackerSystem extends SystemPackage {
         for (int monthIndex = 0; monthIndex < calendarHandle.getMonthCount(); monthIndex++) {
 
             int daysInMonth = calendarHandle.getMonthDays(monthIndex);
-
             Int2IntOpenHashMap dayToYear = new Int2IntOpenHashMap(daysInMonth);
 
             for (int dayOfMonth = 1; dayOfMonth <= daysInMonth; dayOfMonth++) {
 
-                // month → dayOfMonth → dayOfYear
                 dayToYear.put(dayOfMonth, runningDayOfYear);
-
-                // dayOfYear → month
                 dayOfYearToMonth.put(runningDayOfYear, monthIndex);
-
-                // dayOfYear → dayOfMonth
                 dayOfYearToDayOfMonth.put(runningDayOfYear, dayOfMonth);
 
                 runningDayOfYear++;
@@ -86,20 +78,18 @@ public class DayTrackerSystem extends SystemPackage {
         }
     }
 
+    // Day Tracker \\
+
     boolean advanceTime() {
+
         long totalDaysElapsed = clockHandle.getTotalDaysElapsed();
 
-        // Check if day has changed
         if (lastDayElapsed == totalDaysElapsed)
             return false;
 
         lastDayElapsed = totalDaysElapsed;
 
-        // ✨ Calculate ONCE and store in ClockHandle
         long totalDaysWithOffset = calculateTotalDaysWithOffset(totalDaysElapsed);
-        clockHandle.setTotalDaysWithOffset(totalDaysWithOffset); // Add this!
-
-        // Now use the local variable as before
         float randomNoise = calculateRandomNoise(totalDaysWithOffset);
         double yearProgress = calculateYearProgress(totalDaysWithOffset);
         double visualYearProgress = calculateVisualYearProgress(yearProgress);
@@ -110,7 +100,7 @@ public class DayTrackerSystem extends SystemPackage {
         int currentMonth = getMonthFromDayOfYear(dayOfYear);
         int currentDayOfMonth = getDayOfMonthFromDayOfYear(dayOfYear);
 
-        // Update ClockHandle
+        clockHandle.setTotalDaysWithOffset(totalDaysWithOffset);
         clockHandle.setRandomNoiseFromDay(randomNoise);
         clockHandle.setYearProgress(yearProgress);
         clockHandle.setVisualYearProgress(visualYearProgress);
@@ -125,7 +115,6 @@ public class DayTrackerSystem extends SystemPackage {
 
     long calculateTotalDaysWithOffset(long totalDaysElapsed) {
 
-        // Calculate starting day offset
         int dayOfYear = 0;
 
         for (int i = 0; i < STARTING_MONTH - 1; i++)
@@ -160,7 +149,6 @@ public class DayTrackerSystem extends SystemPackage {
     }
 
     double calculateVisualYearProgress(double yearProgress) {
-        // For now, just linear (can add bending later)
         return yearProgress;
     }
 

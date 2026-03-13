@@ -1,19 +1,18 @@
 package com.internal.bootstrap.calendarpipeline.clockmanager;
 
-import com.internal.core.engine.SystemPackage;
+import com.internal.bootstrap.calendarpipeline.clock.ClockHandle;
+import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 
-public class CurrentTrackerSystem extends SystemPackage {
+class CurrentTrackerBranch extends BranchPackage {
 
     // Internal
     private int MINUTES_PER_HOUR;
     private int HOURS_PER_DAY;
     private float MIDDAY_OFFSET;
 
-    // Per-world — set on awake and on world switch
+    // Per-world
     private float daysPerDay;
-    private long gameEpochStart;
-
     private ClockHandle clockHandle;
 
     // Tracking
@@ -23,52 +22,55 @@ public class CurrentTrackerSystem extends SystemPackage {
 
     @Override
     protected void create() {
+
+        // Internal
         this.MINUTES_PER_HOUR = EngineSetting.MINUTES_PER_HOUR;
         this.HOURS_PER_DAY = EngineSetting.HOURS_PER_DAY;
         this.MIDDAY_OFFSET = EngineSetting.MIDDAY_OFFSET;
+
+        // Tracking
         this.lastDay = -1;
     }
 
     // Assignment \\
 
-    void assignTimeData(ClockHandle clockHandle, float daysPerDay, long gameEpochStart) {
+    void assignData(ClockHandle clockHandle, float daysPerDay) {
         this.clockHandle = clockHandle;
         this.daysPerDay = daysPerDay;
-        this.gameEpochStart = gameEpochStart;
     }
 
-    /** Called by ClockManager.switchWorld() */
     void setDaysPerDay(float daysPerDay) {
         this.daysPerDay = daysPerDay;
     }
 
-    void setGameEpochStart(long gameEpochStart) {
-        this.gameEpochStart = gameEpochStart;
-    }
-
     // Current Tracker \\
 
+    /*
+     * Day progress is derived from the current system clock mod the game day
+     * length — not from the epoch. This ensures time of day always reflects
+     * real time divided by daysPerDay regardless of when the world was created.
+     *
+     * Total days elapsed uses the epoch so the in-game date accumulates
+     * correctly from world creation and survives across sessions.
+     */
     boolean advanceTime() {
 
-        long now = internal.getTime();
-        long millisSinceEpoch = now - gameEpochStart;
-        double realDaysElapsed = millisSinceEpoch / 86400000.0;
-        double totalGameDays = realDaysElapsed * daysPerDay;
+        long now = System.currentTimeMillis();
+        long millisPerGameDay = (long) (86400000.0 / daysPerDay);
 
-        long totalDaysElapsed = (long) totalGameDays;
-        double dayProgress = totalGameDays - totalDaysElapsed;
-
+        long totalDaysElapsed = (now - clockHandle.getWorldEpochStart()) / millisPerGameDay;
+        double dayProgress = (double) (now % millisPerGameDay) / millisPerGameDay;
         double rawTimeOfDay = calculateRawTimeOfDay(dayProgress);
         int currentMinute = calculateMinute(rawTimeOfDay);
         int currentHour = calculateHour(rawTimeOfDay);
         double yearProgress = clockHandle.getYearProgress();
         double visualTimeOfDay = calculateVisualTimeOfDay(rawTimeOfDay, yearProgress);
 
+        clockHandle.setTotalDaysElapsed(totalDaysElapsed);
         clockHandle.setDayProgress(dayProgress);
         clockHandle.setVisualTimeOfDay(visualTimeOfDay);
         clockHandle.setCurrentMinute(currentMinute);
         clockHandle.setCurrentHour(currentHour);
-        clockHandle.setTotalDaysElapsed(totalDaysElapsed);
 
         boolean dayChanged = (lastDay != totalDaysElapsed);
         lastDay = totalDaysElapsed;
@@ -78,15 +80,13 @@ public class CurrentTrackerSystem extends SystemPackage {
 
     // Calculations \\
 
-    double calculateDayProgress(int hour, int minute) {
-        return ((double) hour / HOURS_PER_DAY)
-                + ((double) minute / (HOURS_PER_DAY * MINUTES_PER_HOUR));
-    }
-
     double calculateRawTimeOfDay(double dayProgress) {
+
         double raw = (dayProgress + MIDDAY_OFFSET) % 1.0;
+
         if (raw < 0)
             raw += 1.0;
+
         return raw;
     }
 
@@ -98,12 +98,17 @@ public class CurrentTrackerSystem extends SystemPackage {
         return (int) (rawTimeOfDay * HOURS_PER_DAY);
     }
 
+    /*
+     * Bends raw time of day using seasonal sunrise/sunset offsets so that
+     * summers have longer days and winters have longer nights.
+     * 0.0 and 1.0 are always midnight. 0.5 is always visual noon.
+     * The bend only affects the rate at which time moves between those anchors.
+     */
     double calculateVisualTimeOfDay(double rawTimeOfDay, double yearProgress) {
 
         double seasonEffect = Math.sin(yearProgress * 2 * Math.PI);
-        double maxShift = 0.08; // was 0.15 — halved, winters noticeably shorter but not brutal
+        double maxShift = 0.08;
         double shift = seasonEffect * maxShift;
-
         double actualSunrise = Math.max(0.05, Math.min(0.40, 0.25 - shift));
         double actualSunset = Math.max(0.60, Math.min(0.95, 0.75 + shift));
 

@@ -10,23 +10,32 @@ public class EntityStateHandle extends HandlePackage {
     private EntityState movementState;
 
     // Velocity
-    private Vector3 gravityVelocity; // accumulates along gravity axes
-    private Vector2 horizontalVelocity; // accumulates along movement plane
+    private Vector3 gravityVelocity;
+    private Vector2 horizontalVelocity;
     private long jumpStartTime;
 
-    // Constructor \\
+    // Internal \\
 
-    public void constructor() {
+    @Override
+    protected void create() {
+
+        // State
         this.movementState = EntityState.IDLE;
+
+        // Velocity
         this.gravityVelocity = new Vector3();
         this.horizontalVelocity = new Vector2();
         this.jumpStartTime = 0L;
     }
 
-    // Getters \\
+    // Accessible \\
 
     public EntityState getMovementState() {
         return movementState;
+    }
+
+    public void setMovementState(EntityState movementState) {
+        this.movementState = movementState;
     }
 
     public Vector3 getGravityVelocity() {
@@ -39,12 +48,6 @@ public class EntityStateHandle extends HandlePackage {
 
     public long getJumpStartTime() {
         return jumpStartTime;
-    }
-
-    // Setters \\
-
-    public void setMovementState(EntityState movementState) {
-        this.movementState = movementState;
     }
 
     public void setJumpStartTime(long jumpStartTime) {

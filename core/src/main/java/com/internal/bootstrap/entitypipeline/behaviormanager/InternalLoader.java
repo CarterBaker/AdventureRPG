@@ -4,12 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import com.internal.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {
@@ -25,10 +23,26 @@ class InternalLoader extends LoaderPackage {
     // Base \\
 
     @Override
-    protected void scan() {
+    protected void create() {
 
+        // Internal
         this.root = new File(EngineSetting.BEHAVIOR_JSON_PATH);
+
+        // File Registry
         this.behaviorName2File = new Object2ObjectOpenHashMap<>();
+
+        this.internalBuilder = create(InternalBuilder.class);
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.behaviorManager = get(BehaviorManager.class);
+    }
+
+    @Override
+    protected void scan() {
 
         if (!root.exists() || !root.isDirectory())
             throwException("Behavior directory not found: " + root.getAbsolutePath());
@@ -43,20 +57,11 @@ class InternalLoader extends LoaderPackage {
                         behaviorName2File.put(behaviorName, file);
                         fileQueue.offer(file);
                     });
+        }
 
-        } catch (IOException e) {
+        catch (IOException e) {
             throwException("BehaviorLoader failed to walk directory: ", e);
         }
-    }
-
-    @Override
-    protected void create() {
-        this.internalBuilder = create(InternalBuilder.class);
-    }
-
-    @Override
-    protected void get() {
-        this.behaviorManager = get(BehaviorManager.class);
     }
 
     // Load \\

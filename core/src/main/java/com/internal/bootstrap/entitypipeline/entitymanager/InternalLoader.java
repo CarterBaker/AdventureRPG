@@ -4,12 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
-import com.internal.bootstrap.entitypipeline.entity.EntityData;
+import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {
@@ -18,18 +16,34 @@ class InternalLoader extends LoaderPackage {
     private File root;
     private EntityManager entityManager;
     private InternalBuilder internalBuilder;
-    private int templateDataCount;
+    private int templateCount;
 
     // File Registry
-    private Object2ObjectOpenHashMap<String, File> resourceName2File;
+    private Object2ObjectOpenHashMap<String, File> templateName2File;
 
     // Base \\
 
     @Override
-    protected void scan() {
+    protected void create() {
 
+        // Internal
         this.root = new File(EngineSetting.ENTITY_JSON_PATH);
-        this.resourceName2File = new Object2ObjectOpenHashMap<>();
+        this.templateCount = 0;
+
+        // File Registry
+        this.templateName2File = new Object2ObjectOpenHashMap<>();
+        this.internalBuilder = create(InternalBuilder.class);
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.entityManager = get(EntityManager.class);
+    }
+
+    @Override
+    protected void scan() {
 
         if (!root.exists() || !root.isDirectory())
             throwException("Entity template JSON directory not found: " + root.getAbsolutePath());
@@ -40,50 +54,40 @@ class InternalLoader extends LoaderPackage {
                     .map(Path::toFile)
                     .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
                     .forEach(file -> {
-                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        resourceName2File.put(resourceName, file);
+                        String templateName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+                        templateName2File.put(templateName, file);
                         fileQueue.offer(file);
                     });
-        } catch (IOException e) {
-            throwException("EntityManager failed to walk directory: ", e);
         }
-    }
 
-    @Override
-    protected void create() {
-        this.internalBuilder = create(InternalBuilder.class);
-        this.templateDataCount = 0;
-    }
-
-    @Override
-    protected void get() {
-        this.entityManager = get(EntityManager.class);
+        catch (IOException e) {
+            throwException("EntityLoader failed to walk directory: ", e);
+        }
     }
 
     // Load \\
 
     @Override
     protected void load(File file) {
+
         String templateName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-        try {
-            int templateID = templateDataCount++;
-            EntityData templateData = internalBuilder.build(root, file, templateID);
-            if (templateData != null)
-                entityManager.addEntityTemplate(templateName, templateID, templateData);
-        } catch (RuntimeException e) {
-            throwException("Failed to build entity template from file: " + file.getAbsolutePath(), e);
-        }
+        int templateID = templateCount++;
+        EntityHandle entityHandle = internalBuilder.build(file);
+
+        if (entityHandle == null)
+            throwException("Failed to build entity template from: " + file.getAbsolutePath());
+
+        entityManager.addEntityTemplate(templateName, templateID, entityHandle);
     }
 
-    // On-Demand Loading \\
+    // On-Demand \\
 
     void request(String templateName) {
 
-        File file = resourceName2File.get(templateName);
+        File file = templateName2File.get(templateName);
 
         if (file == null)
-            throwException(
-                    "On-demand entity load failed — resource not found in scan registry: \"" + templateName + "\"");
+            throwException("On-demand entity load failed — not found in scan registry: \"" + templateName + "\"");
 
         request(file);
     }

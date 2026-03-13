@@ -1,13 +1,12 @@
 package com.internal.core.engine;
 
-public class DataPackage extends InstancePackage {
-
+public abstract class DataPackage extends StructPackage {
     /*
-     * DataPackages are intended for temporary data storage during
-     * the internal BOOTSTRAP phase of the engine.
+     * DataPackages are intended to serve as the raw data payload held
+     * within a HandlePackage or InstancePackage.
      *
-     * The data contained is typically used to construct a
-     * persistent HandlePackage and is not expected to survive
-     * beyond initialization.
+     * They are simple, durable data containers with no lifecycle or
+     * engine timing rules, and may persist for as long as the owning
+     * Handle or Instance requires them.
      */
 }

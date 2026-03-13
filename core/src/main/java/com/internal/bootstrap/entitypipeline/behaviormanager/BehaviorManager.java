@@ -2,7 +2,6 @@ package com.internal.bootstrap.entitypipeline.behaviormanager;
 
 import com.internal.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import com.internal.core.engine.ManagerPackage;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
@@ -16,8 +15,11 @@ public class BehaviorManager extends ManagerPackage {
 
     @Override
     protected void create() {
+
+        // Palette
         this.name2Behavior = new Object2ObjectOpenHashMap<>();
         this.id2Behavior = new Short2ObjectOpenHashMap<>();
+
         create(InternalLoader.class);
     }
 
@@ -30,6 +32,10 @@ public class BehaviorManager extends ManagerPackage {
 
     // Accessible \\
 
+    /*
+     * Auto-triggers an on-demand load on miss.
+     * Safe for external callers only — never call from inside a builder.
+     */
     public BehaviorHandle getBehavior(String behaviorName) {
 
         BehaviorHandle handle = name2Behavior.get(behaviorName);

@@ -4,36 +4,31 @@ import com.internal.core.engine.HandlePackage;
 
 public class BehaviorHandle extends HandlePackage {
 
-    // Identity
-    private String behaviorName;
-    private short behaviorID;
-
-    // Rules
-    private float jumpDuration; // seconds — -1 = uncapped (flyers)
+    // Internal
+    private BehaviorData behaviorData;
 
     // Constructor \\
+    public void constructor(BehaviorData behaviorData) {
 
-    public void constructor(
-            String behaviorName,
-            short behaviorID,
-            float jumpDuration) {
-
-        this.behaviorName = behaviorName;
-        this.behaviorID = behaviorID;
-        this.jumpDuration = jumpDuration;
+        // Internal
+        this.behaviorData = behaviorData;
     }
 
-    // Getters \\
+    // Accessible \\
+
+    public BehaviorData getBehaviorData() {
+        return behaviorData;
+    }
 
     public String getBehaviorName() {
-        return behaviorName;
+        return behaviorData.behaviorName;
     }
 
     public short getBehaviorID() {
-        return behaviorID;
+        return behaviorData.behaviorID;
     }
 
     public float getJumpDuration() {
-        return jumpDuration;
+        return behaviorData.jumpDuration;
     }
 }
