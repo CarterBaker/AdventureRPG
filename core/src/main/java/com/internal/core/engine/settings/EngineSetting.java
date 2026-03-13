@@ -147,6 +147,7 @@ public class EngineSetting {
         public static final float JUMP_HOLD_FRACTION = 0.4f;
 
         // Item Settings
+        public static final int SUB_VOXEL_RESOLUTION = 16;
         public static final String DEFAULT_ITEM_MATERIAL = "items/StandardItems";
         public static final String ITEM_ROTATION_UBO = "ItemRotationData";
 

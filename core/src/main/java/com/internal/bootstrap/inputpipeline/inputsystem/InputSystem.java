@@ -38,14 +38,6 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     private boolean inventoryJustPressed = false;
     private boolean inventoryDown = false;
 
-    // =========================================================
-    // DEBUG — remove when real item system is wired
-    private boolean debugItem1JustPressed = false;
-    private boolean debugItem1Down = false;
-    private boolean debugItem2JustPressed = false;
-    private boolean debugItem2Down = false;
-    // =========================================================
-
     // Base \\
 
     @Override
@@ -97,23 +89,10 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     @Override
     public boolean keyDown(int keycode) {
-
-        // UI keys — always tracked regardless of lock
         if (keycode == Input.Keys.I && !inventoryDown) {
             inventoryDown = true;
             inventoryJustPressed = true;
         }
-
-        // DEBUG
-        if (keycode == Input.Keys.NUM_1 && !debugItem1Down) {
-            debugItem1Down = true;
-            debugItem1JustPressed = true;
-        }
-        if (keycode == Input.Keys.NUM_2 && !debugItem2Down) {
-            debugItem2Down = true;
-            debugItem2JustPressed = true;
-        }
-        // END DEBUG
 
         if (locked)
             return false;
@@ -134,12 +113,6 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     public boolean keyUp(int keycode) {
         if (keycode == Input.Keys.I)
             inventoryDown = false;
-        // DEBUG
-        if (keycode == Input.Keys.NUM_1)
-            debugItem1Down = false;
-        if (keycode == Input.Keys.NUM_2)
-            debugItem2Down = false;
-        // END DEBUG
 
         if (locked)
             return false;
@@ -216,27 +189,13 @@ public class InputSystem extends SystemPackage implements InputProcessor {
         Gdx.input.setCursorCatched(!input);
     }
 
-    // Consume — reads and clears in one call so update order does not matter \\
+    // Consume \\
 
     public boolean consumeInventoryJustPressed() {
         boolean val = inventoryJustPressed;
         inventoryJustPressed = false;
         return val;
     }
-
-    // DEBUG — remove with 1/2 key handling in PlayerManager
-    public boolean consumeDebugItem1JustPressed() {
-        boolean val = debugItem1JustPressed;
-        debugItem1JustPressed = false;
-        return val;
-    }
-
-    public boolean consumeDebugItem2JustPressed() {
-        boolean val = debugItem2JustPressed;
-        debugItem2JustPressed = false;
-        return val;
-    }
-    // END DEBUG
 
     // Accessible \\
 

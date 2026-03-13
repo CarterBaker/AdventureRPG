@@ -5,9 +5,8 @@ import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
 import com.internal.bootstrap.entitypipeline.entity.EntityState;
 import com.internal.bootstrap.entitypipeline.entity.EntityStateHandle;
 import com.internal.bootstrap.entitypipeline.entitymanager.EntityManager;
+import com.internal.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
-import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
-import com.internal.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.InventoryBranch;
 import com.internal.bootstrap.physicspipeline.movementmanager.MovementManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
@@ -33,10 +32,9 @@ public class PlayerManager extends ManagerPackage {
     private BlockManager blockManager;
     private ChunkStreamManager chunkStreamManager;
     private InventoryBranch inventoryBranch;
-    private ItemDefinitionManager itemDefinitionManager;
 
     private InternalBufferSystem internalBufferSystem;
-    private BlockPlacementSystem blockPlacementSystem;
+    private PlacementManager placementManager;
 
     // Active Player
     private EntityData entityData;
@@ -50,7 +48,7 @@ public class PlayerManager extends ManagerPackage {
     @Override
     protected void create() {
         this.internalBufferSystem = create(InternalBufferSystem.class);
-        this.blockPlacementSystem = create(BlockPlacementSystem.class);
+        this.placementManager = create(PlacementManager.class);
         this.verifyPlayerPosition = true;
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
@@ -65,7 +63,6 @@ public class PlayerManager extends ManagerPackage {
         this.blockManager = get(BlockManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.inventoryBranch = get(InventoryBranch.class);
-        this.itemDefinitionManager = get(ItemDefinitionManager.class);
     }
 
     @Override
@@ -89,29 +86,7 @@ public class PlayerManager extends ManagerPackage {
     private void handleInventoryInput() {
         if (inputSystem.consumeInventoryJustPressed())
             inventoryBranch.toggleInventory(player);
-
-        // =====================================================
-        // DEBUG — remove entire block when item acquisition
-        // is implemented via gameplay systems
-        if (inputSystem.consumeDebugItem1JustPressed()) {
-            debugAddToBackpack("debug/debug/debugApple");
-        }
-        if (inputSystem.consumeDebugItem2JustPressed()) {
-            debugAddToBackpack("debug/debug/debugTable");
-        }
-        // =====================================================
     }
-
-    // =========================================================
-    // DEBUG — remove when real item acquisition is implemented
-    private void debugAddToBackpack(String itemName) {
-        ItemDefinitionHandle item = itemDefinitionManager.getItemFromItemID(
-                itemDefinitionManager.getItemIDFromItemName(itemName));
-        player.getInventoryHandle().getBackpack().addItem(item);
-        inventoryBranch.rebuildUI(player.getInventoryHandle());
-    }
-    // END DEBUG
-    // =========================================================
 
     // Player \\
 
@@ -135,11 +110,10 @@ public class PlayerManager extends ManagerPackage {
         cameraPosition.add(cameraOffset);
         camera.setPosition(cameraPosition);
 
-        blockPlacementSystem.update(
+        placementManager.update(
                 player,
                 cameraPosition,
                 direction,
-                player.getStatisticsInstance(),
                 inputSystem.isLeftClick(),
                 inputSystem.isRightClick());
 

@@ -119,7 +119,7 @@ public class WorldItemPlacementSystem extends ManagerPackage {
 
         // 3. SubChunk
         int subY = Coordinate4Long.unpackY(instance.getPackedPosition());
-        int subChunkCoordinate = (subY >> 5) / EngineSetting.CHUNK_SIZE;
+        int subChunkCoordinate = (subY / EngineSetting.SUB_VOXEL_RESOLUTION) / EngineSetting.CHUNK_SIZE;
         SubChunkInstance subChunk = chunk.getSubChunk(subChunkCoordinate);
         removeMatchingStruct(subChunk, instance.getPackedPosition(), instance.getPackedItem());
     }
@@ -127,7 +127,9 @@ public class WorldItemPlacementSystem extends ManagerPackage {
     // Build \\
 
     private WorldItemInstance buildInstance(WorldItemStruct struct, long chunkCoordinate) {
-        int itemID = struct.packedItem & 0xFFF;
+        int itemID = struct.packedItem & 0xFFFF0000;
+        if (itemID == EngineSetting.REGISTRY_RESERVED_ID)
+            return null;
         ItemDefinitionHandle def = itemDefinitionManager.getItemFromItemID(itemID);
         if (def == null)
             return null;
@@ -138,10 +140,11 @@ public class WorldItemPlacementSystem extends ManagerPackage {
             WorldItemStruct struct,
             long chunkCoordinate,
             ItemDefinitionHandle def) {
+        int SVR = EngineSetting.SUB_VOXEL_RESOLUTION;
         int subX = Coordinate4Long.unpackX(struct.packedPosition);
         int subY = Coordinate4Long.unpackY(struct.packedPosition);
         int subZ = Coordinate4Long.unpackZ(struct.packedPosition);
-        int packedBlockCoordinate = Coordinate3Int.pack(subX >> 5, subY >> 5, subZ >> 5);
+        int packedBlockCoordinate = Coordinate3Int.pack(subX / SVR, subY / SVR, subZ / SVR);
         WorldItemInstance instance = create(WorldItemInstance.class);
         instance.constructor(def, chunkCoordinate, packedBlockCoordinate,
                 struct.packedPosition, struct.packedItem);

@@ -8,14 +8,17 @@ public class BlockCastStruct extends StructPackage {
 
     public boolean hit;
     public float distance;
+    public Direction3Vector hitFace;
 
     public long chunkCoordinate;
     public int subChunkY;
 
+    public BlockHandle block;
     public int blockX;
     public int blockY;
     public int blockZ;
 
-    public Direction3Vector hitFace;
-    public BlockHandle block;
+    public int hitSubX;
+    public int hitSubY;
+    public int hitSubZ;
 }

@@ -49,8 +49,13 @@ public class ItemDefinitionManager extends ManagerPackage {
     }
 
     public int getItemIDFromItemName(String itemName) {
+
         if (!itemName2ItemID.containsKey(itemName))
             request(itemName);
+
+        if (!itemName2ItemID.containsKey(itemName))
+            throwException("Item name not found after request: " + itemName);
+
         return itemName2ItemID.getInt(itemName);
     }
 

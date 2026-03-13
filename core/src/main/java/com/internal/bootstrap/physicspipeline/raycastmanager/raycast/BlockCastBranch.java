@@ -21,6 +21,7 @@ public class BlockCastBranch extends BranchPackage {
     private BlockManager blockManager;
 
     private int CHUNK_SIZE;
+
     // Internal \\
 
     @Override
@@ -45,8 +46,11 @@ public class BlockCastBranch extends BranchPackage {
 
         out.hit = false;
 
-        int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
-        int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
+        int startChunkX = Coordinate2Long.unpackX(chunkCoordinate);
+        int startChunkZ = Coordinate2Long.unpackY(chunkCoordinate);
+
+        int chunkX = startChunkX;
+        int chunkZ = startChunkZ;
 
         int blockX = (int) Math.floor(rayOrigin.x);
         int blockColumnY = (int) Math.floor(rayOrigin.y);
@@ -129,6 +133,22 @@ public class BlockCastBranch extends BranchPackage {
             BlockHandle block = blockManager.getBlockFromBlockID(blockID);
 
             if (block != null && block.getGeometry() != DynamicGeometryType.NONE) {
+
+                // Hit point in same space as rayOrigin (chunk-local to start chunk)
+                float hitX = rayOrigin.x + direction.x * t;
+                float hitY = rayOrigin.y + direction.y * t;
+                float hitZ = rayOrigin.z + direction.z * t;
+
+                // Block origin in same space — relative to start chunk, not absolute world
+                float relBlockX = (chunkX - startChunkX) * CHUNK_SIZE + blockX;
+                float relBlockZ = (chunkZ - startChunkZ) * CHUNK_SIZE + blockZ;
+
+                int SVR = EngineSetting.SUB_VOXEL_RESOLUTION;
+
+                out.hitSubX = Math.max(0, Math.min(SVR - 1, (int) ((hitX - relBlockX) * SVR)));
+                out.hitSubY = Math.max(0, Math.min(SVR - 1, (int) ((hitY - blockColumnY) * SVR)));
+                out.hitSubZ = Math.max(0, Math.min(SVR - 1, (int) ((hitZ - relBlockZ) * SVR)));
+
                 out.hit = true;
                 out.chunkCoordinate = currentChunkCoord;
                 out.blockX = blockX;

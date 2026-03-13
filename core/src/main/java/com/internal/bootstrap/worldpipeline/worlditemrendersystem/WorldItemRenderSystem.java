@@ -9,6 +9,7 @@ import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.worldpipeline.worlditem.WorldItemCompositeInstance;
 import com.internal.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import com.internal.core.engine.ManagerPackage;
+import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.Extras.Coordinate2Long;
 import com.internal.core.util.mathematics.Extras.Coordinate4Long;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -129,14 +130,15 @@ public class WorldItemRenderSystem extends ManagerPackage {
         int subZ = Coordinate4Long.unpackZ(packed);
         int orientation = Coordinate4Long.unpackW(packed);
 
+        float svr = EngineSetting.SUB_VOXEL_RESOLUTION;
         WorldItemCompositeInstance composite = getOrCreateComposite(instance.getItemDefinitionHandle());
         int itemDefID = instance.getItemDefinitionHandle().getItemID();
 
         float[] data = {
                 Float.intBitsToFloat(chunkX),
                 Float.intBitsToFloat(chunkZ),
-                subX / 32.0f, subZ / 32.0f,
-                subY / 32.0f, orientation
+                subX / svr, subZ / svr,
+                subY / svr, orientation
         };
         int slot = composite.getCompositeBuffer().addInstance(data);
         instance.setInstanceSlot(slot);
