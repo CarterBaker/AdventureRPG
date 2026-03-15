@@ -38,7 +38,6 @@ public class MainMenuBranch extends BranchPackage {
 
     public MenuInstance closeMenu() {
         mainMenu = menuManager.closeMenu(mainMenu);
-        debug();
         return mainMenu;
     }
 }

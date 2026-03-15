@@ -4,17 +4,17 @@ import com.internal.bootstrap.entitypipeline.entity.EntityInstance;
 import com.internal.bootstrap.entitypipeline.entity.EntityState;
 import com.internal.bootstrap.entitypipeline.entity.EntityStateHandle;
 import com.internal.bootstrap.entitypipeline.statistics.StatisticsHandle;
+import com.internal.bootstrap.inputpipeline.input.InputHandle;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import com.internal.core.util.mathematics.vectors.Vector3;
-import com.internal.core.util.mathematics.vectors.Vector3Int;
 
 public class MovementBranch extends BranchPackage {
 
     /*
-     * Computes horizontal movement displacement each frame from directional input
-     * and camera orientation. Smoothly accelerates toward target velocity via lerp.
+     * Computes horizontal movement displacement each frame from the entity's
+     * InputHandle. Smoothly accelerates toward target velocity via lerp.
      * Y axis is not touched — owned entirely by GravityBranch.
      */
 
@@ -42,26 +42,19 @@ public class MovementBranch extends BranchPackage {
 
     // Movement \\
 
-    /*
-     * Horizontal movement only — Y is owned by GravityBranch.
-     * Real-world speeds from StatisticsHandle are scaled by movementScale for
-     * game feel. Does not know or care if input came from player or AI.
-     */
-    void calculate(
-            Vector3Int input,
-            Vector3 cameraDirection,
-            Vector3 movement,
-            EntityInstance entity) {
+    void calculate(Vector3 movement, EntityInstance entity) {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         StatisticsHandle stats = entity.getStatisticsHandle();
+        InputHandle input = entity.getInputHandle();
         Vector2 vel = state.getHorizontalVelocity();
+        Vector3 facing = input.getFacingDirection();
         float delta = internal.getDeltaTime();
 
         // Forward — flatten pitch to horizontal plane
-        forward.x = cameraDirection.x;
+        forward.x = facing.x;
         forward.y = 0f;
-        forward.z = cameraDirection.z;
+        forward.z = facing.z;
         forward.normalize();
 
         // Right — perpendicular to forward
@@ -69,9 +62,12 @@ public class MovementBranch extends BranchPackage {
         right.y = 0f;
         right.z = forward.x;
 
+        int inputX = input.getHorizontalX();
+        int inputZ = input.getHorizontalZ();
+
         // Target direction from input
-        float targetX = forward.x * input.z + right.x * input.x;
-        float targetZ = forward.z * input.z + right.z * input.x;
+        float targetX = forward.x * inputZ + right.x * inputX;
+        float targetZ = forward.z * inputZ + right.z * inputX;
 
         // Normalize target direction
         float len = (float) Math.sqrt(targetX * targetX + targetZ * targetZ);

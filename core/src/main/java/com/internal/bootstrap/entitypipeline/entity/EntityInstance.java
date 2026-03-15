@@ -3,6 +3,7 @@ package com.internal.bootstrap.entitypipeline.entity;
 import com.internal.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import com.internal.bootstrap.entitypipeline.inventory.InventoryHandle;
 import com.internal.bootstrap.entitypipeline.statistics.StatisticsHandle;
+import com.internal.bootstrap.inputpipeline.input.InputHandle;
 import com.internal.bootstrap.physicspipeline.util.BlockCompositionStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
@@ -15,7 +16,7 @@ public class EntityInstance extends InstancePackage {
     /*
      * Runtime entity handed out by EntityManager.spawnEntity(). Holds a
      * reference to its template EntityData plus all per-instance runtime
-     * state — position, physics, statistics, inventory, and movement state.
+     * state — position, physics, statistics, inventory, movement state, and input.
      */
 
     // Internal
@@ -27,6 +28,9 @@ public class EntityInstance extends InstancePackage {
     private EntityStateHandle entityStateHandle;
     private StatisticsHandle statisticsHandle;
     private InventoryHandle inventoryHandle;
+
+    // Input
+    private InputHandle inputHandle;
 
     // Physics
     private WorldPositionStruct worldPositionStruct;
@@ -46,6 +50,9 @@ public class EntityInstance extends InstancePackage {
         this.entityStateHandle = create(EntityStateHandle.class);
         this.statisticsHandle = create(StatisticsHandle.class);
         this.inventoryHandle = create(InventoryHandle.class);
+
+        // Input
+        this.inputHandle = create(InputHandle.class);
 
         // Physics
         this.worldPositionStruct = new WorldPositionStruct();
@@ -125,6 +132,10 @@ public class EntityInstance extends InstancePackage {
 
     public InventoryHandle getInventoryHandle() {
         return inventoryHandle;
+    }
+
+    public InputHandle getInputHandle() {
+        return inputHandle;
     }
 
     public WorldPositionStruct getWorldPositionStruct() {

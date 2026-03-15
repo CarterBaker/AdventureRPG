@@ -5,6 +5,7 @@ import com.internal.bootstrap.entitypipeline.entity.EntityInstance;
 import com.internal.bootstrap.entitypipeline.entity.EntityState;
 import com.internal.bootstrap.entitypipeline.entity.EntityStateHandle;
 import com.internal.bootstrap.entitypipeline.statistics.StatisticsHandle;
+import com.internal.bootstrap.inputpipeline.input.InputHandle;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
@@ -14,8 +15,9 @@ public class GravityBranch extends BranchPackage {
 
     /*
      * Applies gravity and jump force along all three axes based on the world
-     * gravity direction each frame. Writes displacement directly into the
-     * shared movement vector passed by MovementManager.
+     * gravity direction each frame. Reads jump input from the entity's InputHandle.
+     * Writes displacement directly into the shared movement vector passed by
+     * MovementManager.
      */
 
     // Settings
@@ -36,23 +38,18 @@ public class GravityBranch extends BranchPackage {
 
     // Gravity \\
 
-    /*
-     * Applies gravity and jump force along all three axes based on world gravity
-     * direction. Jump direction is always opposite to gravity direction.
-     * State is derived from dot product of gravity velocity against gravity
-     * direction — negative dot means moving against gravity (JUMPING), positive
-     * means falling. Writes displacement directly into movement.
-     */
-    void calculate(int verticalInput, Vector3 movement, EntityInstance entity) {
+    void calculate(Vector3 movement, EntityInstance entity) {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         BehaviorHandle behavior = entity.getBehaviorHandle();
         WorldHandle world = entity.getWorldHandle();
         StatisticsHandle stats = entity.getStatisticsHandle();
+        InputHandle input = entity.getInputHandle();
         Vector3 gravVel = state.getGravityVelocity();
         Vector3 gravDir = world.getGravityDirection();
         float delta = internal.getDeltaTime();
         float gravMult = world.getGravityMultiplier();
+        int verticalInput = input.getVertical();
 
         float gravLen = (float) Math.sqrt(
                 gravDir.x * gravDir.x + gravDir.y * gravDir.y + gravDir.z * gravDir.z);
@@ -103,11 +100,6 @@ public class GravityBranch extends BranchPackage {
         movement.z += gravVel.z * delta;
     }
 
-    /*
-     * Call after collision with pre-collision movement snapshot and post-collision
-     * movement. For each non-zero gravity axis, checks if that component was
-     * blocked. Uses gravity velocity direction to determine landing vs ceiling hit.
-     */
     void postCollision(Vector3 pre, Vector3 post, EntityInstance entity) {
 
         EntityStateHandle state = entity.getEntityStateHandle();

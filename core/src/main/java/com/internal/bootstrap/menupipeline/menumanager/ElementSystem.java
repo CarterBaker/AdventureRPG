@@ -190,6 +190,9 @@ class ElementSystem extends SystemPackage {
             return () -> maa.execute(parentRef.get());
         }
 
+        if (master.hasClickAction())
+            return master.getClickAction();
+
         return null;
     }
 

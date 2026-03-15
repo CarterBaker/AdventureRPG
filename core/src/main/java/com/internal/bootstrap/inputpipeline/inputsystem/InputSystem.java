@@ -3,8 +3,10 @@ package com.internal.bootstrap.inputpipeline.inputsystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.internal.bootstrap.inputpipeline.input.InputHandle;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.mathematics.vectors.Vector2;
+import com.internal.core.util.mathematics.vectors.Vector3;
 import com.internal.core.util.mathematics.vectors.Vector3Int;
 
 public class InputSystem extends SystemPackage implements InputProcessor {
@@ -13,6 +15,8 @@ public class InputSystem extends SystemPackage implements InputProcessor {
      * Handles all raw input from LibGDX and exposes clean state to the engine.
      * Movement and camera rotation are blocked when the input is locked.
      * UI keys and raw mouse state are always tracked regardless of lock state.
+     * writeToHandle() translates current frame state into any InputHandle —
+     * used by PlayerManager for the player entity each frame.
      */
 
     // Internal
@@ -221,6 +225,25 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     public void lockInput(boolean input) {
         this.locked = input;
         Gdx.input.setCursorCatched(!input);
+    }
+
+    // Write \\
+
+    public void writeToHandle(InputHandle handle, Vector3 facingDirection) {
+
+        handle.setForward(W);
+        handle.setBack(S);
+        handle.setLeft(A);
+        handle.setRight(D);
+        handle.setJump(SPACE);
+        handle.setWalk(CTRL);
+        handle.setSprint(SHIFT);
+        handle.setPrimaryAction(leftClick);
+        handle.setSecondaryAction(rightClick);
+        handle.setFacingDirection(
+                facingDirection.x,
+                facingDirection.y,
+                facingDirection.z);
     }
 
     // Consume \\

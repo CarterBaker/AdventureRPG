@@ -7,14 +7,14 @@ import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector3;
-import com.internal.core.util.mathematics.vectors.Vector3Int;
 
 public class MovementManager extends ManagerPackage {
 
     /*
      * Drives the full movement pipeline for any entity each frame. Coordinates
      * horizontal movement, gravity, collision, post-collision correction, position
-     * application, and chunk boundary updates in a fixed order.
+     * application, and chunk boundary updates in a fixed order. Reads all input
+     * from the entity's InputHandle — never touches InputSystem directly.
      */
 
     // Internal
@@ -49,11 +49,7 @@ public class MovementManager extends ManagerPackage {
 
     // Movement \\
 
-    /*
-     * Moves an entity based on a normalized Vector3Int input.
-     * Does not know or care if input came from player or AI.
-     */
-    public void move(Vector3Int input, Vector3 direction, EntityInstance entity) {
+    public void move(EntityInstance entity) {
 
         WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
         Vector3 position = worldPosition.getPosition();
@@ -64,10 +60,10 @@ public class MovementManager extends ManagerPackage {
         movement.set(0, 0, 0);
 
         // 1. Horizontal — x, z only
-        movementBranch.calculate(input, direction, movement, entity);
+        movementBranch.calculate(movement, entity);
 
         // 2. Gravity — adds to all three axes
-        gravityBranch.calculate(input.y, movement, entity);
+        gravityBranch.calculate(movement, entity);
 
         // 3. Snapshot before collision
         preCollisionSnapshot.set(movement.x, movement.y, movement.z);

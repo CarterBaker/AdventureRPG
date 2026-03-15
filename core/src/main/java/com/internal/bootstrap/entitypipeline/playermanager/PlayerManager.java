@@ -5,6 +5,7 @@ import com.internal.bootstrap.entitypipeline.entity.EntityState;
 import com.internal.bootstrap.entitypipeline.entity.EntityStateHandle;
 import com.internal.bootstrap.entitypipeline.entitymanager.EntityManager;
 import com.internal.bootstrap.entitypipeline.placementmanager.PlacementManager;
+import com.internal.bootstrap.inputpipeline.input.InputHandle;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
 import com.internal.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
 import com.internal.bootstrap.physicspipeline.movementmanager.MovementManager;
@@ -19,15 +20,15 @@ import com.internal.bootstrap.worldpipeline.util.WorldPositionUtility;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector3;
-import com.internal.core.util.mathematics.vectors.Vector3Int;
 
 public class PlayerManager extends ManagerPackage {
 
     /*
-     * Owns and drives the player entity. Handles spawn verification, camera
-     * synchronization, movement state, inventory input, and placement input
-     * each frame. Entity-agnostic input routing means AI can use the same
-     * PlacementManager path as the player.
+     * Owns and drives the player entity. Writes raw input from InputSystem into
+     * the player entity's InputHandle each frame, then delegates movement to
+     * MovementManager. Handles spawn verification, camera synchronization,
+     * inventory input, and placement input. Switching the active player entity
+     * only requires pointing at a different EntityInstance.
      */
 
     // Internal
@@ -91,14 +92,21 @@ public class PlayerManager extends ManagerPackage {
     @Override
     protected void update() {
         handleInventoryInput();
+        writePlayerInput();
         calculatePlayerPosition();
     }
 
-    // Inventory Input \\
+    // Input \\
 
     private void handleInventoryInput() {
         if (inputSystem.consumeInventoryJustPressed())
             inventoryBranch.toggleInventory(player);
+    }
+
+    private void writePlayerInput() {
+        inputSystem.writeToHandle(
+                player.getInputHandle(),
+                cameraManager.getMainCamera().getDirection());
     }
 
     // Player \\
@@ -112,12 +120,10 @@ public class PlayerManager extends ManagerPackage {
             return;
         }
 
-        Vector3Int input = inputSystem.getInput();
         CameraInstance camera = cameraManager.getMainCamera();
-        Vector3 direction = camera.getDirection();
 
-        writeMovementState(input);
-        movementManager.move(input, direction, player);
+        writeMovementState();
+        movementManager.move(player);
 
         cameraPosition.set(worldPositionStruct.getPosition());
         cameraPosition.add(cameraOffset);
@@ -126,30 +132,29 @@ public class PlayerManager extends ManagerPackage {
         placementManager.update(
                 player,
                 cameraPosition,
-                direction,
+                camera.getDirection(),
                 inputSystem.isLeftClick(),
                 inputSystem.isRightClick());
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }
 
-    private void writeMovementState(Vector3Int input) {
+    private void writeMovementState() {
 
         EntityStateHandle state = player.getEntityStateHandle();
+        InputHandle input = player.getInputHandle();
 
         if (!state.isGrounded())
             return;
 
-        boolean moving = input.x != 0 || input.z != 0;
-
-        if (!moving) {
+        if (!input.hasHorizontalInput()) {
             state.setMovementState(EntityState.IDLE);
             return;
         }
 
-        if (inputSystem.isWalkHeld())
+        if (input.isWalk())
             state.setMovementState(EntityState.WALKING);
-        else if (inputSystem.isSprintHeld())
+        else if (input.isSprint())
             state.setMovementState(EntityState.RUNNING);
         else
             state.setMovementState(EntityState.MOVING);
