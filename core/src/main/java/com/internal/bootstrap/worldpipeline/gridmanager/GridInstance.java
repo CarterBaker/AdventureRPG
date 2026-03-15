@@ -3,7 +3,7 @@ package com.internal.bootstrap.worldpipeline.gridmanager;
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.InstancePackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;

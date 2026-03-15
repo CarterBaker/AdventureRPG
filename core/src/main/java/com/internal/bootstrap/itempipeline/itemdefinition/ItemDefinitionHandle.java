@@ -5,68 +5,62 @@ import com.internal.core.engine.HandlePackage;
 
 public class ItemDefinitionHandle extends HandlePackage {
 
-    // Identity
-    private String itemName;
-    private int itemID;
+    /*
+     * Persistent reference to a loaded item definition. Registered and owned
+     * by ItemDefinitionManager. Delegates all accessors through
+     * ItemDefinitionData.
+     */
 
-    // Properties
-    private float weight;
-    private boolean twoHanded;
-    private boolean isBackpack;
-
-    // Render
-    private MeshHandle meshHandle;
-    private int materialID;
+    // Internal
+    private ItemDefinitionData itemDefinitionData;
 
     // Constructor \\
 
-    public void constructor(String itemName, int itemID, float weight,
-            boolean twoHanded, boolean isBackpack,
-            MeshHandle meshHandle, int materialID) {
-        this.itemName = itemName;
-        this.itemID = itemID;
-        this.weight = weight;
-        this.twoHanded = twoHanded;
-        this.isBackpack = isBackpack;
-        this.meshHandle = meshHandle;
-        this.materialID = materialID;
+    public void constructor(ItemDefinitionData itemDefinitionData) {
+
+        // Internal
+        this.itemDefinitionData = itemDefinitionData;
     }
 
     // Accessible \\
 
+    public ItemDefinitionData getItemDefinitionData() {
+        return itemDefinitionData;
+    }
+
     public String getItemName() {
-        return itemName;
+        return itemDefinitionData.getItemName();
     }
 
     public int getItemID() {
-        return itemID;
+        return itemDefinitionData.getItemID();
     }
 
     public short getNameShort() {
-        return (short) ((itemID >> 16) & 0xFFFF);
+        return (short) ((itemDefinitionData.getItemID() >> 16) & 0xFFFF);
     }
 
     public short getEnchantShort() {
-        return (short) (itemID & 0xFFFF);
+        return (short) (itemDefinitionData.getItemID() & 0xFFFF);
     }
 
     public float getWeight() {
-        return weight;
+        return itemDefinitionData.getWeight();
     }
 
     public boolean isTwoHanded() {
-        return twoHanded;
+        return itemDefinitionData.isTwoHanded();
     }
 
     public boolean isBackpack() {
-        return isBackpack;
+        return itemDefinitionData.isBackpack();
     }
 
     public MeshHandle getMeshHandle() {
-        return meshHandle;
+        return itemDefinitionData.getMeshHandle();
     }
 
     public int getMaterialID() {
-        return materialID;
+        return itemDefinitionData.getMaterialID();
     }
 }

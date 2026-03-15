@@ -12,6 +12,12 @@ import com.internal.core.util.mathematics.vectors.Vector3Int;
 
 public class EntityInstance extends InstancePackage {
 
+    /*
+     * Runtime entity handed out by EntityManager.spawnEntity(). Holds a
+     * reference to its template EntityData plus all per-instance runtime
+     * state — position, physics, statistics, inventory, and movement state.
+     */
+
     // Internal
     private EntityData entityData;
     private WorldHandle worldHandle;
@@ -146,6 +152,6 @@ public class EntityInstance extends InstancePackage {
     }
 
     public float getEyeHeight() {
-        return size.y * entityData.eyeLevel;
+        return size.y * entityData.getEyeLevel();
     }
 }

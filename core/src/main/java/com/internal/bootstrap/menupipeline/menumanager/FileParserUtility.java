@@ -2,22 +2,31 @@ package com.internal.bootstrap.menupipeline.menumanager;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.menupipeline.element.DimensionVector2;
 import com.internal.bootstrap.menupipeline.element.ElementOrigin;
 import com.internal.bootstrap.menupipeline.element.ElementType;
-import com.internal.bootstrap.menupipeline.element.LayoutStruct;
+import com.internal.bootstrap.menupipeline.util.DimensionVector2;
+import com.internal.bootstrap.menupipeline.util.LayoutStruct;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.JsonUtility;
 import com.internal.core.util.mathematics.vectors.Vector2;
 
 class FileParserUtility extends UtilityPackage {
 
+    /*
+     * Stateless JSON parsing helpers shared by InternalBuilder. Handles
+     * on_click resolution, element type mapping, layout parsing, and
+     * origin field parsing. Package-private — only InternalBuilder may call these.
+     */
+
     // On Click \\
 
     static String[] parseOnClick(JsonObject json) {
+
         if (!json.has("on_click"))
             return null;
+
         JsonObject clickJson = json.getAsJsonObject("on_click");
+
         return new String[] {
                 JsonUtility.validateString(clickJson, "class"),
                 JsonUtility.validateString(clickJson, "method"),
@@ -83,7 +92,7 @@ class FileParserUtility extends UtilityPackage {
 
         if (el.isJsonPrimitive()) {
             ElementOrigin o = ElementOrigin.fromString(el.getAsString());
-            return new Vector2(o.x, o.y);
+            return new Vector2(o.getX(), o.getY());
         }
 
         if (el.isJsonObject()) {

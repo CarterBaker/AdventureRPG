@@ -4,8 +4,15 @@ import com.internal.bootstrap.calendarpipeline.clock.ClockHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.BranchPackage;
+import com.internal.core.engine.settings.EngineSetting;
 
 class InternalBufferBranch extends BranchPackage {
+
+    /*
+     * Pushes clock state to the GPU time UBO each frame. Accumulates elapsed
+     * real time for the shader u_time uniform. Wired to the active ClockHandle
+     * via assignData() after awake.
+     */
 
     // Internal
     private UBOManager uboManager;
@@ -21,31 +28,23 @@ class InternalBufferBranch extends BranchPackage {
 
     @Override
     protected void create() {
-
-        // Frame Tracking
         this.elapsedTime = 0;
     }
 
     @Override
     protected void get() {
-
-        // Internal
         this.uboManager = get(UBOManager.class);
     }
 
     @Override
     protected void awake() {
-
-        // UBO
-        this.timeData = uboManager.getUBOHandleFromUBOName("TimeData");
+        this.timeData = uboManager.getUBOHandleFromUBOName(EngineSetting.UBO_TIME_DATA_NAME);
     }
 
     @Override
     protected void update() {
-
         float deltaTime = internal.getDeltaTime();
-        this.elapsedTime += deltaTime;
-
+        elapsedTime += deltaTime;
         pushData(deltaTime);
     }
 
@@ -67,6 +66,6 @@ class InternalBufferBranch extends BranchPackage {
         timeData.updateUniform("u_currentHour", clockHandle.getCurrentHour());
         timeData.updateUniform("u_currentMinute", clockHandle.getCurrentMinute());
         timeData.updateUniform("u_currentDay", clockHandle.getCurrentDayOfMonth());
-        timeData.push();
+        uboManager.push(timeData);
     }
 }

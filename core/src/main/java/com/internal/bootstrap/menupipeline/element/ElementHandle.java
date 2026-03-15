@@ -1,90 +1,90 @@
 package com.internal.bootstrap.menupipeline.element;
 
+import com.internal.bootstrap.menupipeline.util.DimensionValue;
+import com.internal.bootstrap.menupipeline.util.LayoutStruct;
+import com.internal.bootstrap.menupipeline.util.MenuAwareAction;
+import com.internal.bootstrap.menupipeline.util.StackDirection;
+import com.internal.bootstrap.menupipeline.util.TextAlign;
+import com.internal.core.engine.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class ElementHandle extends com.internal.core.engine.HandlePackage {
+public class ElementHandle extends HandlePackage {
 
-    private String id;
-    private ElementType type;
-    private String spriteName;
-    private String text;
-    private String fontName;
-    private float[] color;
-    private LayoutStruct layout;
-    private boolean mask;
-    private StackDirection stackDirection;
-    private DimensionValue spacing;
-    private TextAlign textAlign;
+    /*
+     * Immutable master definition for one UI element. Registered in ElementSystem
+     * keyed by file path and element ID. Shared across all instances — never
+     * mutated after bootstrap completes.
+     */
+
+    // Internal
+    private ElementData data;
     private Runnable clickAction;
     private MenuAwareAction menuAwareAction;
-    private ObjectArrayList<ElementPlacementHandle> children;
+    private ObjectArrayList<ElementPlacementStruct> children;
+
+    // Constructor \\
 
     public void constructor(
-            String id, ElementType type,
-            String spriteName, String text, String fontName, float[] color,
-            LayoutStruct layout,
-            boolean mask, StackDirection stackDirection, DimensionValue spacing,
-            TextAlign textAlign,
-            Runnable clickAction, MenuAwareAction menuAwareAction,
-            ObjectArrayList<ElementPlacementHandle> children) {
-        this.id = id;
-        this.type = type;
-        this.spriteName = spriteName;
-        this.text = text;
-        this.fontName = fontName;
-        this.color = color;
-        this.layout = layout;
-        this.mask = mask;
-        this.stackDirection = stackDirection != null ? stackDirection : StackDirection.NONE;
-        this.spacing = spacing;
-        this.textAlign = textAlign != null ? textAlign : TextAlign.CENTER;
+            ElementData data,
+            Runnable clickAction,
+            MenuAwareAction menuAwareAction,
+            ObjectArrayList<ElementPlacementStruct> children) {
+
+        // Internal
+        this.data = data;
         this.clickAction = clickAction;
         this.menuAwareAction = menuAwareAction;
         this.children = children;
     }
 
+    // Accessible \\
+
+    public ElementData getElementData() {
+        return data;
+    }
+
     public String getId() {
-        return id;
+        return data.getId();
     }
 
     public ElementType getType() {
-        return type;
+        return data.getType();
     }
 
     public String getSpriteName() {
-        return spriteName;
+        return data.getSpriteName();
     }
 
     public String getText() {
-        return text;
+        return data.getText();
     }
 
     public String getFontName() {
-        return fontName;
+        return data.getFontName();
     }
 
     public float[] getColor() {
-        return color;
+        return data.getColor();
     }
 
     public LayoutStruct getLayout() {
-        return layout;
+        return data.getLayout();
     }
 
     public boolean isMask() {
-        return mask;
+        return data.isMask();
     }
 
     public StackDirection getStackDirection() {
-        return stackDirection;
+        return data.getStackDirection();
     }
 
     public DimensionValue getSpacing() {
-        return spacing;
+        return data.getSpacing();
     }
 
     public TextAlign getTextAlign() {
-        return textAlign;
+        return data.getTextAlign();
     }
 
     public Runnable getClickAction() {
@@ -95,24 +95,24 @@ public class ElementHandle extends com.internal.core.engine.HandlePackage {
         return menuAwareAction;
     }
 
-    public ObjectArrayList<ElementPlacementHandle> getChildren() {
+    public ObjectArrayList<ElementPlacementStruct> getChildren() {
         return children;
     }
 
     public boolean hasSprite() {
-        return spriteName != null;
+        return data.hasSprite();
     }
 
     public boolean hasText() {
-        return text != null;
+        return data.hasText();
     }
 
     public boolean hasFont() {
-        return fontName != null;
+        return data.hasFont();
     }
 
     public boolean hasColor() {
-        return color != null;
+        return data.hasColor();
     }
 
     public boolean hasClickAction() {

@@ -4,35 +4,35 @@ import com.internal.core.engine.DataPackage;
 
 public class UniformData extends DataPackage {
 
-    // Internal
-    private UniformType uniformType;
-    private String uniformName;
-    private int count;
+    /*
+     * Parsed uniform descriptor. Holds type, name, and array count.
+     * Created with new during shader bootstrap — discarded after
+     * UniformAttributeStruct
+     * creation.
+     */
 
     // Internal
+    private final UniformType uniformType;
+    private final String uniformName;
+    private final int count;
 
-    public void constructor(
-            UniformType uniformType,
-            String uniformName) {
+    // Constructor — single \\
 
-        // Internal
+    public UniformData(UniformType uniformType, String uniformName) {
         this.uniformType = uniformType;
         this.uniformName = uniformName;
         this.count = 1;
     }
 
-    public void constructor(
-            UniformType uniformType,
-            String uniformName,
-            int count) {
+    // Constructor — array \\
 
-        // Internal
+    public UniformData(UniformType uniformType, String uniformName, int count) {
         this.uniformType = uniformType;
         this.uniformName = uniformName;
         this.count = count;
     }
 
-    // Data \\
+    // Accessible \\
 
     public UniformType getUniformType() {
         return uniformType;

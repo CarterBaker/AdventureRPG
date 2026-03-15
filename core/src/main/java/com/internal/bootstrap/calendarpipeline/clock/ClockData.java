@@ -4,6 +4,13 @@ import com.internal.core.engine.DataPackage;
 
 public class ClockData extends DataPackage {
 
+    /*
+     * Mutable runtime clock state for one world. Holds the epoch anchor used
+     * to derive all time values, plus all calculated current time fields updated
+     * each frame by the clock branches. The epoch is the only field that needs
+     * to be persisted to disk to fully restore session state.
+     */
+
     // Epoch
     private long worldEpochStart;
 

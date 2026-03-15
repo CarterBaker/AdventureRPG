@@ -7,16 +7,24 @@ import com.internal.core.engine.PipelinePackage;
 
 public class RenderPipeline extends PipelinePackage {
 
-    private CameraManager cameraManager;
+    /*
+     * Registers all render pipeline managers and systems in dependency order.
+     * Exposes draw() as the single entry point for the engine's render loop.
+     */
+
+    // Internal
     private RenderSystem renderSystem;
-    private CompositeRenderSystem compositeRenderSystem;
+
+    // Internal \\
 
     @Override
     protected void create() {
-        this.cameraManager = create(CameraManager.class);
+        create(CameraManager.class);
+        create(CompositeRenderSystem.class);
         this.renderSystem = create(RenderSystem.class);
-        this.compositeRenderSystem = create(CompositeRenderSystem.class);
     }
+
+    // Accessible \\
 
     public void draw() {
         renderSystem.draw();

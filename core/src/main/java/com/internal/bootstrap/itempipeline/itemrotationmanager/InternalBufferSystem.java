@@ -3,12 +3,20 @@ package com.internal.bootstrap.itempipeline.itemrotationmanager;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.util.mathematics.Extras.Direction3Vector;
+import com.internal.core.util.mathematics.extras.Direction3Vector;
 import com.internal.core.util.mathematics.matrices.Matrix4;
 
 public class InternalBufferSystem extends SystemPackage {
 
+    /*
+     * Pushes the 24 item face-spin rotation matrices to the ItemRotationData
+     * UBO once at awake. Never updated again — rotation data is static.
+     */
+
+    // Internal
     private UBOManager uboManager;
+
+    // Internal \\
 
     @Override
     protected void get() {
@@ -20,17 +28,23 @@ public class InternalBufferSystem extends SystemPackage {
         pushItemRotationData();
     }
 
+    // Buffer \\
+
     private void pushItemRotationData() {
+
         UBOHandle ubo = uboManager.getUBOHandleFromUBOName("ItemRotationData");
+
         Matrix4[] rotations = new Matrix4[24];
+
         for (Direction3Vector face : Direction3Vector.VALUES) {
             for (int spin = 0; spin < 4; spin++) {
                 int index = face.ordinal() * 4 + spin;
                 rotations[index] = buildRotation(face, spin);
             }
         }
+
         ubo.updateUniform("u_rotations", rotations);
-        ubo.push();
+        uboManager.push(ubo);
     }
 
     private Matrix4 buildRotation(Direction3Vector face, int spin) {
@@ -40,8 +54,6 @@ public class InternalBufferSystem extends SystemPackage {
     }
 
     private Matrix4 faceRotation(Direction3Vector face) {
-        // UP = identity: item sits on ground as modeled, matching
-        // DEFAULT_BLOCK_DIRECTION = 4 (UP)
         switch (face) {
             case UP:
                 return new Matrix4();
@@ -83,16 +95,20 @@ public class InternalBufferSystem extends SystemPackage {
     }
 
     private Matrix4 axisRotation(float ax, float ay, float az, float deg) {
+
         float r = (float) Math.toRadians(deg);
         float c = (float) Math.cos(r);
         float s = (float) Math.sin(r);
         float t = 1f - c;
         float len = (float) Math.sqrt(ax * ax + ay * ay + az * az);
+
         if (len == 0f)
             return new Matrix4();
+
         ax /= len;
         ay /= len;
         az /= len;
+
         return new Matrix4(
                 t * ax * ax + c, t * ax * ay - s * az, t * ax * az + s * ay, 0,
                 t * ax * ay + s * az, t * ay * ay + c, t * ay * az - s * ax, 0,

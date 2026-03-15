@@ -4,32 +4,37 @@ import com.internal.core.engine.HandlePackage;
 
 public class ToolTypeHandle extends HandlePackage {
 
-    // Identity
-    private String toolTypeName;
-    private short toolTypeID;
+    /*
+     * Persistent reference to a loaded tool type definition. Registered and
+     * owned by ToolTypeManager. Delegates all accessors through ToolTypeData.
+     */
 
-    // Model
-    private String defaultModelPath;
+    // Internal
+    private ToolTypeData toolTypeData;
 
     // Constructor \\
 
-    public void constructor(String toolTypeName, short toolTypeID, String defaultModelPath) {
-        this.toolTypeName = toolTypeName;
-        this.toolTypeID = toolTypeID;
-        this.defaultModelPath = defaultModelPath;
+    public void constructor(ToolTypeData toolTypeData) {
+
+        // Internal
+        this.toolTypeData = toolTypeData;
     }
 
     // Accessible \\
 
+    public ToolTypeData getToolTypeData() {
+        return toolTypeData;
+    }
+
     public String getToolTypeName() {
-        return toolTypeName;
+        return toolTypeData.getToolTypeName();
     }
 
     public short getToolTypeID() {
-        return toolTypeID;
+        return toolTypeData.getToolTypeID();
     }
 
     public String getDefaultModelPath() {
-        return defaultModelPath;
+        return toolTypeData.getDefaultModelPath();
     }
 }

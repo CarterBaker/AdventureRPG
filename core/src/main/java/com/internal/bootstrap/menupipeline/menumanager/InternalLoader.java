@@ -4,23 +4,21 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import com.internal.bootstrap.menupipeline.menu.MenuHandle;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-/*
- * Discovers menu JSON files in scan(), processes one file per load() call —
- * each file may produce multiple MenuHandles — then resolves all deferred
- * element refs in onComplete() once every file has been processed.
- * On-demand: resolves the owning file from the menu name, loads it
- * immediately, then resolves deferred refs for that file right away.
- * Self-releases when the queue empties.
- */
 class InternalLoader extends LoaderPackage {
+
+    /*
+     * Discovers menu JSON files in scan(), processes one file per load() call —
+     * each file may produce multiple MenuHandles — then resolves all deferred
+     * element refs in onComplete() once every file has been processed.
+     * On-demand: resolves the owning file from the menu name, loads it immediately,
+     * then resolves deferred refs for that file.
+     */
 
     // Internal
     private File root;
@@ -29,8 +27,6 @@ class InternalLoader extends LoaderPackage {
 
     // File Registry
     private Object2ObjectOpenHashMap<String, File> resourceName2File;
-
-    // Reverse map — menu name → owning file resource name
     private Object2ObjectOpenHashMap<String, String> menuName2ResourceName;
 
     // Base \\
@@ -43,7 +39,7 @@ class InternalLoader extends LoaderPackage {
         this.menuName2ResourceName = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root,
-                "Menu/element JSON directory not found: " + root.getAbsolutePath());
+                "Menu JSON directory not found: " + root.getAbsolutePath());
 
         try (var stream = Files.walk(root.toPath())) {
             stream
@@ -97,15 +93,12 @@ class InternalLoader extends LoaderPackage {
         internalBuilder.resolveAllDeferredRefs();
     }
 
-    // On-Demand Loading \\
+    // On-Demand \\
 
     void request(String menuName) {
 
-        // If we already tracked this menu name to a file, use it directly
         String resourceName = menuName2ResourceName.get(menuName);
 
-        // Otherwise scan resourceName2File for the owning file —
-        // menu names are fileName/menuId so the file stem is the prefix
         if (resourceName == null) {
             String prefix = menuName.contains("/")
                     ? menuName.substring(0, menuName.lastIndexOf('/'))
@@ -119,16 +112,9 @@ class InternalLoader extends LoaderPackage {
         }
 
         if (resourceName == null)
-            throwException(
-                    "On-demand menu load failed — no file found for menu: \"" + menuName + "\"");
+            throwException("On-demand menu load failed — no file found for: \"" + menuName + "\"");
 
-        File file = resourceName2File.get(resourceName);
-
-        request(file);
-
-        // Deferred refs must resolve immediately — onComplete() may have
-        // already fired or will fire only after all remaining queued files
-        // are processed, which is too late for this synchronous request.
+        request(resourceName2File.get(resourceName));
         internalBuilder.resolveAllDeferredRefs();
     }
 }

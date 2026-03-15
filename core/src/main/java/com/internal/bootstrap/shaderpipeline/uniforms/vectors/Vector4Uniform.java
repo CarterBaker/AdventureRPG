@@ -1,18 +1,18 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectors;
 
 import com.badlogic.gdx.Gdx;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector4;
 
-public final class Vector4Uniform extends UniformAttribute<Object> {
+public final class Vector4Uniform extends UniformAttributeStruct<Object> {
 
     public Vector4Uniform() {
         super(UniformType.VECTOR4, new Vector4());
     }
 
     @Override
-    public UniformAttribute<?> createDefault() {
+    public UniformAttributeStruct<?> createDefault() {
         return new Vector4Uniform();
     }
 

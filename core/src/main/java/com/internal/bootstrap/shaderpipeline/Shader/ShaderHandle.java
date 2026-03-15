@@ -1,67 +1,61 @@
-package com.internal.bootstrap.shaderpipeline.Shader;
+package com.internal.bootstrap.shaderpipeline.shader;
 
-import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.core.engine.HandlePackage;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Compiled GPU shader program with its associated uniform and UBO block metadata.
- * UBO blocks are tracked by block name only — UBOHandle references never leave
- * UBOManager. Binding is performed at assembly time via UBOManager lookup.
- */
 public class ShaderHandle extends HandlePackage {
 
+    /*
+     * Persistent compiled shader program. Wraps ShaderData and delegates all
+     * access through it. Registered in ShaderManager from compile time to
+     * shutdown. Source phase data never reaches this class — it lives and dies
+     * in ShaderSourceStruct during bootstrap.
+     */
+
     // Internal
-    private String shaderName;
-    private int shaderID;
-    private int shaderHandle;
-    private ObjectArrayList<String> uboBlockNames;
-    private Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
+    private ShaderData shaderData;
 
     // Internal \\
 
-    public void constructor(
-            String shaderName,
-            int shaderID,
-            int shaderHandle) {
-        this.shaderName = shaderName;
-        this.shaderID = shaderID;
-        this.shaderHandle = shaderHandle;
-        this.uboBlockNames = new ObjectArrayList<>();
-        this.uniforms = new Object2ObjectOpenHashMap<>();
+    public void constructor(ShaderData shaderData) {
+        this.shaderData = shaderData;
     }
 
-    // Utility \\
+    // Management \\
 
-    public void addUBOBlock(String blockName) {
-        uboBlockNames.add(blockName);
+    public void addCompiledUniform(String name, UniformStruct<?> uniform) {
+        shaderData.addCompiledUniform(name, uniform);
     }
 
-    public void addUniform(String uniformName, Uniform<?> uniform) {
-        uniforms.put(uniformName, uniform);
+    public void addCompiledUBOBlockName(String blockName) {
+        shaderData.addCompiledUBOBlockName(blockName);
     }
 
     // Accessible \\
 
+    public ShaderData getShaderData() {
+        return shaderData;
+    }
+
     public String getShaderName() {
-        return shaderName;
+        return shaderData.getShaderName();
     }
 
     public int getShaderID() {
-        return shaderID;
+        return shaderData.getShaderID();
     }
 
-    public int getShaderHandle() {
-        return shaderHandle;
+    public int getGpuHandle() {
+        return shaderData.getGpuHandle();
     }
 
-    public ObjectArrayList<String> getUBOBlockNames() {
-        return uboBlockNames;
+    public Object2ObjectOpenHashMap<String, UniformStruct<?>> getCompiledUniforms() {
+        return shaderData.getCompiledUniforms();
     }
 
-    public Object2ObjectOpenHashMap<String, Uniform<?>> getUniforms() {
-        return uniforms;
+    public ObjectArrayList<String> getCompiledUBOBlockNames() {
+        return shaderData.getCompiledUBOBlockNames();
     }
 }

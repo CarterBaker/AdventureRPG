@@ -1,6 +1,8 @@
 package com.internal.bootstrap.menupipeline.element;
 
 import com.internal.bootstrap.menupipeline.fonts.FontInstance;
+import com.internal.bootstrap.menupipeline.util.DimensionVector2;
+import com.internal.bootstrap.menupipeline.util.LayoutStruct;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import com.internal.core.engine.InstancePackage;
 import com.internal.core.util.mathematics.matrices.Matrix4;
@@ -8,76 +10,100 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ElementInstance extends InstancePackage {
 
-    private ElementHandle handle;
+    /*
+     * Runtime instance of a UI element. Holds a reference to the shared
+     * ElementData definition, resolved sprite and font instances, a pre-resolved
+     * click action, optional placement overrides, computed layout values updated
+     * each frame, and scroll and content state for stacked containers.
+     */
+
+    // Internal
+    private ElementData data;
     private SpriteInstance spriteInstance;
     private FontInstance fontInstance;
-    private String textOverride;
-    private Runnable clickActionOverride;
+    private Runnable resolvedAction;
     private LayoutStruct layoutOverride;
-    private DimensionVector2 positionOverride; // null = use layout
+    private DimensionVector2 positionOverride;
 
+    // Text
+    private String textOverride;
+
+    // Children
     private ObjectArrayList<ElementInstance> children;
 
-    // Computed each frame
-    private final Matrix4 transform = new Matrix4();
+    // Computed
+    private Matrix4 transform;
     private float computedLeft;
     private float computedTop;
     private float computedW;
     private float computedH;
 
-    // Scroll — set externally, clamped on read
+    // Scroll
     private float scrollX;
     private float scrollY;
 
-    // Content size — written by renderer each frame for stacked containers
+    // Content Size
     private float contentW;
     private float contentH;
+
+    // Internal \\
+
+    @Override
+    protected void create() {
+        this.transform = new Matrix4();
+    }
 
     // Constructor \\
 
     public void constructor(
-            ElementHandle handle,
+            ElementData data,
             SpriteInstance spriteInstance,
             FontInstance fontInstance,
             String textOverride,
-            Runnable clickActionOverride,
+            Runnable resolvedAction,
             LayoutStruct layoutOverride,
             ObjectArrayList<ElementInstance> children) {
-        this.handle = handle;
+
+        // Internal
+        this.data = data;
         this.spriteInstance = spriteInstance;
         this.fontInstance = fontInstance;
         this.textOverride = textOverride;
-        this.clickActionOverride = clickActionOverride;
+        this.resolvedAction = resolvedAction;
         this.layoutOverride = layoutOverride;
+
+        // Children
         this.children = children;
     }
 
     // Layout \\
 
-    public void computeTransform(float parentLeft, float parentTop, float parentW, float parentH) {
+    public void computeTransform(
+            float parentLeft, float parentTop,
+            float parentW, float parentH) {
 
-        LayoutStruct layout = layoutOverride != null ? layoutOverride : handle.getLayout();
+        LayoutStruct layout = layoutOverride != null ? layoutOverride : data.getLayout();
+        DimensionVector2 pos = positionOverride != null ? positionOverride : layout.getPosition();
 
-        DimensionVector2 pos = positionOverride != null ? positionOverride : layout.position;
-        float posX = pos.x.resolve(parentW);
-        float posY = pos.y.resolve(parentH);
+        float posX = pos.getX().resolve(parentW);
+        float posY = pos.getY().resolve(parentH);
+        float w = layout.getSize().getX().resolve(parentW);
+        float h = layout.getSize().getY().resolve(parentH);
 
-        float w = layout.size.x.resolve(parentW);
-        float h = layout.size.y.resolve(parentH);
-
-        if (layout.minSize != null) {
-            w = Math.max(w, layout.minSize.x.resolve(parentW));
-            h = Math.max(h, layout.minSize.y.resolve(parentH));
-        }
-        if (layout.maxSize != null) {
-            w = Math.min(w, layout.maxSize.x.resolve(parentW));
-            h = Math.min(h, layout.maxSize.y.resolve(parentH));
+        if (layout.hasMinSize()) {
+            w = Math.max(w, layout.getMinSize().getX().resolve(parentW));
+            h = Math.max(h, layout.getMinSize().getY().resolve(parentH));
         }
 
-        float anchorX = parentLeft + layout.anchor.x * parentW;
-        float anchorY = parentTop + layout.anchor.y * parentH;
-        float tx = anchorX + posX - layout.pivot.x * w;
-        float ty = anchorY + posY - layout.pivot.y * h;
+        if (layout.hasMaxSize()) {
+            w = Math.min(w, layout.getMaxSize().getX().resolve(parentW));
+            h = Math.min(h, layout.getMaxSize().getY().resolve(parentH));
+        }
+
+        float anchorX = parentLeft + layout.getAnchor().x * parentW;
+        float anchorY = parentTop + layout.getAnchor().y * parentH;
+        float tx = anchorX + posX - layout.getPivot().x * w;
+        float ty = anchorY + posY - layout.getPivot().y * h;
 
         this.computedLeft = tx;
         this.computedTop = ty;
@@ -92,23 +118,26 @@ public class ElementInstance extends InstancePackage {
     }
 
     /*
-     * Used by stacked containers — ignores anchor/pivot/position, places element
-     * at the given cursor position. Size still resolves from layout.
+     * Used by stacked containers — ignores anchor, pivot, and position. Places
+     * the element at the given cursor. Size still resolves from layout.
      */
-    public void computeStackedTransform(float left, float top, float parentW, float parentH) {
+    public void computeStackedTransform(
+            float left, float top,
+            float parentW, float parentH) {
 
-        LayoutStruct layout = layoutOverride != null ? layoutOverride : handle.getLayout();
+        LayoutStruct layout = layoutOverride != null ? layoutOverride : data.getLayout();
 
-        float w = layout.size.x.resolve(parentW);
-        float h = layout.size.y.resolve(parentH);
+        float w = layout.getSize().getX().resolve(parentW);
+        float h = layout.getSize().getY().resolve(parentH);
 
-        if (layout.minSize != null) {
-            w = Math.max(w, layout.minSize.x.resolve(parentW));
-            h = Math.max(h, layout.minSize.y.resolve(parentH));
+        if (layout.hasMinSize()) {
+            w = Math.max(w, layout.getMinSize().getX().resolve(parentW));
+            h = Math.max(h, layout.getMinSize().getY().resolve(parentH));
         }
-        if (layout.maxSize != null) {
-            w = Math.min(w, layout.maxSize.x.resolve(parentW));
-            h = Math.min(h, layout.maxSize.y.resolve(parentH));
+
+        if (layout.hasMaxSize()) {
+            w = Math.min(w, layout.getMaxSize().getX().resolve(parentW));
+            h = Math.min(h, layout.getMaxSize().getY().resolve(parentH));
         }
 
         this.computedLeft = left;
@@ -126,14 +155,11 @@ public class ElementInstance extends InstancePackage {
     // Interaction \\
 
     public void execute() {
-        Runnable action = clickActionOverride != null
-                ? clickActionOverride
-                : handle.getClickAction();
-        if (action != null)
-            action.run();
+        if (resolvedAction != null)
+            resolvedAction.run();
     }
 
-    // Child Mutation — for runtime injection \\
+    // Child Mutation \\
 
     public void addChild(ElementInstance child) {
         children.add(child);
@@ -144,13 +170,20 @@ public class ElementInstance extends InstancePackage {
     }
 
     public ElementInstance findChildById(String id) {
+
         for (int i = 0; i < children.size(); i++) {
-            if (children.get(i).getHandle().getId().equals(id))
-                return children.get(i);
-            ElementInstance found = children.get(i).findChildById(id);
+
+            ElementInstance child = children.get(i);
+
+            if (child.getElementData().getId().equals(id))
+                return child;
+
+            ElementInstance found = child.findChildById(id);
+
             if (found != null)
                 return found;
         }
+
         return null;
     }
 
@@ -180,7 +213,7 @@ public class ElementInstance extends InstancePackage {
         return Math.max(0f, contentH - computedH);
     }
 
-    // Content Size — written by renderer each frame for stacked containers \\
+    // Content Size \\
 
     public void setContentW(float w) {
         this.contentW = w;
@@ -198,7 +231,7 @@ public class ElementInstance extends InstancePackage {
         return contentH;
     }
 
-    // Position Override — for programmatic positioning (e.g. scrollbar handle) \\
+    // Position Override \\
 
     public void setPositionOverride(DimensionVector2 pos) {
         this.positionOverride = pos;
@@ -210,8 +243,8 @@ public class ElementInstance extends InstancePackage {
 
     // Accessible \\
 
-    public ElementHandle getHandle() {
-        return handle;
+    public ElementData getElementData() {
+        return data;
     }
 
     public SpriteInstance getSpriteInstance() {
@@ -259,6 +292,6 @@ public class ElementInstance extends InstancePackage {
     }
 
     public String getText() {
-        return textOverride != null ? textOverride : handle.getText();
+        return textOverride != null ? textOverride : data.getText();
     }
 }

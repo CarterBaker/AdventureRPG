@@ -78,7 +78,9 @@ C:.
 ¦   ¦       TerraArcana.json
 ¦   ¦       
 ¦   +---documentation
-¦   ¦       ENGINE_CONTEXT.md
+¦   ¦       EngineRefactorContext_v8.md
+¦   ¦       ENGINE_CLEANUP_PLAN_V3.md
+¦   ¦       ProjectIndex.docx
 ¦   ¦       
 ¦   +---entities
 ¦   ¦       Humanoid.json
@@ -289,6 +291,7 @@ C:.
 ¦   ¦               ¦   ¦   ¦   CalendarPipeline.class
 ¦   ¦               ¦   ¦   ¦   
 ¦   ¦               ¦   ¦   +---calendar
+¦   ¦               ¦   ¦   ¦       CalendarData.class
 ¦   ¦               ¦   ¦   ¦       CalendarHandle.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---calendarmanager
@@ -296,19 +299,23 @@ C:.
 ¦   ¦               ¦   ¦   ¦       InternalBuilder.class
 ¦   ¦               ¦   ¦   ¦       InternalLoader.class
 ¦   ¦               ¦   ¦   ¦       
+¦   ¦               ¦   ¦   +---clock
+¦   ¦               ¦   ¦   ¦       ClockData.class
+¦   ¦               ¦   ¦   ¦       ClockHandle.class
+¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---clockmanager
-¦   ¦               ¦   ¦           ClockHandle.class
 ¦   ¦               ¦   ¦           ClockManager.class
-¦   ¦               ¦   ¦           CurrentTrackerSystem.class
-¦   ¦               ¦   ¦           DayTrackerSystem.class
-¦   ¦               ¦   ¦           InternalBufferSystem.class
-¦   ¦               ¦   ¦           MonthTrackerSystem.class
-¦   ¦               ¦   ¦           YearTrackerSystem.class
+¦   ¦               ¦   ¦           CurrentTrackerBranch.class
+¦   ¦               ¦   ¦           DayTrackerBranch.class
+¦   ¦               ¦   ¦           InternalBufferBranch.class
+¦   ¦               ¦   ¦           MonthTrackerBranch.class
+¦   ¦               ¦   ¦           YearTrackerBranch.class
 ¦   ¦               ¦   ¦           
 ¦   ¦               ¦   +---entitypipeline
 ¦   ¦               ¦   ¦   ¦   EntityPipeline.class
 ¦   ¦               ¦   ¦   ¦   
 ¦   ¦               ¦   ¦   +---behavior
+¦   ¦               ¦   ¦   ¦       BehaviorData.class
 ¦   ¦               ¦   ¦   ¦       BehaviorHandle.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---behaviormanager
@@ -319,6 +326,7 @@ C:.
 ¦   ¦               ¦   ¦   +---entity
 ¦   ¦               ¦   ¦   ¦       EntityData.class
 ¦   ¦               ¦   ¦   ¦       EntityHandle.class
+¦   ¦               ¦   ¦   ¦       EntityInstance.class
 ¦   ¦               ¦   ¦   ¦       EntityState.class
 ¦   ¦               ¦   ¦   ¦       EntityStateHandle.class
 ¦   ¦               ¦   ¦   ¦       
@@ -330,29 +338,39 @@ C:.
 ¦   ¦               ¦   ¦   +---inventory
 ¦   ¦               ¦   ¦   ¦       InventoryHandle.class
 ¦   ¦               ¦   ¦   ¦       
+¦   ¦               ¦   ¦   +---placementmanager
+¦   ¦               ¦   ¦   ¦       BlockBranch.class
+¦   ¦               ¦   ¦   ¦       ItemBranch.class
+¦   ¦               ¦   ¦   ¦       PlacementManager.class
+¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---playermanager
-¦   ¦               ¦   ¦   ¦       BlockPlacementSystem.class
 ¦   ¦               ¦   ¦   ¦       InternalBufferSystem.class
 ¦   ¦               ¦   ¦   ¦       PlayerManager.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---statistics
-¦   ¦               ¦   ¦           StatisticsStruct.class
+¦   ¦               ¦   ¦           StatisticsHandle.class
 ¦   ¦               ¦   ¦           
 ¦   ¦               ¦   +---geometrypipeline
 ¦   ¦               ¦   ¦   ¦   GeometryPipeline.class
 ¦   ¦               ¦   ¦   ¦   
+¦   ¦               ¦   ¦   +---compositebuffer
+¦   ¦               ¦   ¦   ¦       CompositeBufferData.class
+¦   ¦               ¦   ¦   ¦       CompositeBufferInstance.class
+¦   ¦               ¦   ¦   ¦       
+¦   ¦               ¦   ¦   +---compositebuffermanager
+¦   ¦               ¦   ¦   ¦       CompositeBufferManager.class
+¦   ¦               ¦   ¦   ¦       GLSLUtility.class
+¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---dynamicgeometrymanager
+¦   ¦               ¦   ¦   ¦   ¦   ComplexGeometryBranch.class
 ¦   ¦               ¦   ¦   ¦   ¦   DynamicGeometryManager.class
 ¦   ¦               ¦   ¦   ¦   ¦   DynamicGeometryType.class
+¦   ¦               ¦   ¦   ¦   ¦   FontGeometryBranch.class
+¦   ¦               ¦   ¦   ¦   ¦   FullGeometryBranch.class
 ¦   ¦               ¦   ¦   ¦   ¦   InternalBuildManager.class
+¦   ¦               ¦   ¦   ¦   ¦   LiquidGeometryBranch.class
+¦   ¦               ¦   ¦   ¦   ¦   PartialGeometryBranch.class
 ¦   ¦               ¦   ¦   ¦   ¦   
-¦   ¦               ¦   ¦   ¦   +---dynamicgeometry
-¦   ¦               ¦   ¦   ¦   ¦       ComplexGeometryBranch.class
-¦   ¦               ¦   ¦   ¦   ¦       FontGeometryBranch.class
-¦   ¦               ¦   ¦   ¦   ¦       FullGeometryBranch.class
-¦   ¦               ¦   ¦   ¦   ¦       LiquidGeometryBranch.class
-¦   ¦               ¦   ¦   ¦   ¦       PartialGeometryBranch.class
-¦   ¦               ¦   ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   ¦   +---util
 ¦   ¦               ¦   ¦   ¦           DynamicGeometryAsyncContainer.class
 ¦   ¦               ¦   ¦   ¦           VertBlockNeighbor3Vector.class
@@ -365,9 +383,9 @@ C:.
 ¦   ¦               ¦   ¦   ¦       DynamicPacketState.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---ibo
+¦   ¦               ¦   ¦   ¦       IBOData.class
 ¦   ¦               ¦   ¦   ¦       IBOHandle.class
 ¦   ¦               ¦   ¦   ¦       IBOInstance.class
-¦   ¦               ¦   ¦   ¦       IBOStruct.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---ibomanager
 ¦   ¦               ¦   ¦   ¦       GLSLUtility.class
@@ -375,15 +393,15 @@ C:.
 ¦   ¦               ¦   ¦   ¦       InternalBuilder.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---mesh
+¦   ¦               ¦   ¦   ¦       MeshData.class
 ¦   ¦               ¦   ¦   ¦       MeshHandle.class
 ¦   ¦               ¦   ¦   ¦       MeshInstance.class
-¦   ¦               ¦   ¦   ¦       MeshStruct.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---meshmanager
-¦   ¦               ¦   ¦   ¦       InternalBuilder$QuadExpansionResult.class
 ¦   ¦               ¦   ¦   ¦       InternalBuilder.class
 ¦   ¦               ¦   ¦   ¦       InternalLoader.class
 ¦   ¦               ¦   ¦   ¦       MeshManager.class
+¦   ¦               ¦   ¦   ¦       QuadExpansionStruct.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---model
 ¦   ¦               ¦   ¦   ¦       ModelInstance.class
@@ -392,9 +410,9 @@ C:.
 ¦   ¦               ¦   ¦   ¦       ModelManager.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---vao
+¦   ¦               ¦   ¦   ¦       VAOData.class
 ¦   ¦               ¦   ¦   ¦       VAOHandle.class
 ¦   ¦               ¦   ¦   ¦       VAOInstance.class
-¦   ¦               ¦   ¦   ¦       VAOStruct.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---vaomanager
 ¦   ¦               ¦   ¦   ¦       GLSLUtility.class
@@ -402,9 +420,9 @@ C:.
 ¦   ¦               ¦   ¦   ¦       VAOManager.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---vbo
+¦   ¦               ¦   ¦   ¦       VBOData.class
 ¦   ¦               ¦   ¦   ¦       VBOHandle.class
 ¦   ¦               ¦   ¦   ¦       VBOInstance.class
-¦   ¦               ¦   ¦   ¦       VBOStruct.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---vbomanager
 ¦   ¦               ¦   ¦           GLSLUtility.class
@@ -424,6 +442,7 @@ C:.
 ¦   ¦               ¦   ¦   ¦       BackpackInstance.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---itemdefinition
+¦   ¦               ¦   ¦   ¦       ItemDefinitionData.class
 ¦   ¦               ¦   ¦   ¦       ItemDefinitionHandle.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---itemdefinitionmanager
@@ -436,6 +455,7 @@ C:.
 ¦   ¦               ¦   ¦   ¦       ItemRotationManager.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---tooltype
+¦   ¦               ¦   ¦   ¦       ToolTypeData.class
 ¦   ¦               ¦   ¦   ¦       ToolTypeHandle.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---tooltypemanager
@@ -471,22 +491,12 @@ C:.
 ¦   ¦               ¦   ¦   ¦           GenericButtonBranch.class
 ¦   ¦               ¦   ¦   ¦           
 ¦   ¦               ¦   ¦   +---element
-¦   ¦               ¦   ¦   ¦       DimensionValue.class
-¦   ¦               ¦   ¦   ¦       DimensionVector2.class
 ¦   ¦               ¦   ¦   ¦       ElementData.class
 ¦   ¦               ¦   ¦   ¦       ElementHandle.class
 ¦   ¦               ¦   ¦   ¦       ElementInstance.class
 ¦   ¦               ¦   ¦   ¦       ElementOrigin.class
-¦   ¦               ¦   ¦   ¦       ElementOverrideStruct.class
-¦   ¦               ¦   ¦   ¦       ElementPlacementHandle.class
+¦   ¦               ¦   ¦   ¦       ElementPlacementStruct.class
 ¦   ¦               ¦   ¦   ¦       ElementType.class
-¦   ¦               ¦   ¦   ¦       LayoutStruct.class
-¦   ¦               ¦   ¦   ¦       MenuAwareAction.class
-¦   ¦               ¦   ¦   ¦       StackDirection.class
-¦   ¦               ¦   ¦   ¦       TextAlign.class
-¦   ¦               ¦   ¦   ¦       
-¦   ¦               ¦   ¦   +---elementsystem
-¦   ¦               ¦   ¦   ¦       ElementSystem.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---fontmanager
 ¦   ¦               ¦   ¦   ¦       FontManager.class
@@ -507,31 +517,36 @@ C:.
 ¦   ¦               ¦   ¦   ¦       MenuInstance.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---menumanager
+¦   ¦               ¦   ¦   ¦       ElementSystem.class
 ¦   ¦               ¦   ¦   ¦       FileParserUtility.class
 ¦   ¦               ¦   ¦   ¦       InternalBuilder.class
 ¦   ¦               ¦   ¦   ¦       InternalLoader.class
 ¦   ¦               ¦   ¦   ¦       MenuManager.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---raycastsystem
-¦   ¦               ¦   ¦           RaycastSystem.class
+¦   ¦               ¦   ¦   ¦       RaycastSystem.class
+¦   ¦               ¦   ¦   ¦       
+¦   ¦               ¦   ¦   +---util
+¦   ¦               ¦   ¦           DimensionValue.class
+¦   ¦               ¦   ¦           DimensionVector2.class
+¦   ¦               ¦   ¦           LayoutStruct.class
+¦   ¦               ¦   ¦           MenuAwareAction.class
+¦   ¦               ¦   ¦           StackDirection.class
+¦   ¦               ¦   ¦           TextAlign.class
 ¦   ¦               ¦   ¦           
 ¦   ¦               ¦   +---physicspipeline
 ¦   ¦               ¦   ¦   ¦   PhysicsPipeline.class
 ¦   ¦               ¦   ¦   ¦   
 ¦   ¦               ¦   ¦   +---movementmanager
-¦   ¦               ¦   ¦   ¦   ¦   MovementManager.class
-¦   ¦               ¦   ¦   ¦   ¦   
-¦   ¦               ¦   ¦   ¦   +---movement
-¦   ¦               ¦   ¦   ¦           BlockCollisionBranch.class
-¦   ¦               ¦   ¦   ¦           GravityBranch.class
-¦   ¦               ¦   ¦   ¦           MovementBranch.class
-¦   ¦               ¦   ¦   ¦           
+¦   ¦               ¦   ¦   ¦       BlockCollisionBranch.class
+¦   ¦               ¦   ¦   ¦       GravityBranch.class
+¦   ¦               ¦   ¦   ¦       MovementBranch.class
+¦   ¦               ¦   ¦   ¦       MovementManager.class
+¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---raycastmanager
-¦   ¦               ¦   ¦   ¦   ¦   RaycastManager.class
-¦   ¦               ¦   ¦   ¦   ¦   
-¦   ¦               ¦   ¦   ¦   +---raycast
-¦   ¦               ¦   ¦   ¦           BlockCastBranch.class
-¦   ¦               ¦   ¦   ¦           
+¦   ¦               ¦   ¦   ¦       BlockCastBranch.class
+¦   ¦               ¦   ¦   ¦       RaycastManager.class
+¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---util
 ¦   ¦               ¦   ¦           BlockCastStruct.class
 ¦   ¦               ¦   ¦           BlockCompositionStruct.class
@@ -540,28 +555,40 @@ C:.
 ¦   ¦               ¦   ¦   ¦   RenderPipeline.class
 ¦   ¦               ¦   ¦   ¦   
 ¦   ¦               ¦   ¦   +---camera
+¦   ¦               ¦   ¦   ¦       CameraData.class
 ¦   ¦               ¦   ¦   ¦       CameraInstance.class
+¦   ¦               ¦   ¦   ¦       OrthographicCameraData.class
 ¦   ¦               ¦   ¦   ¦       OrthographicCameraInstance.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---cameramanager
 ¦   ¦               ¦   ¦   ¦       CameraManager.class
 ¦   ¦               ¦   ¦   ¦       InternalBufferSystem.class
 ¦   ¦               ¦   ¦   ¦       
+¦   ¦               ¦   ¦   +---compositebatch
+¦   ¦               ¦   ¦   ¦       CompositeBatchStruct.class
+¦   ¦               ¦   ¦   ¦       
+¦   ¦               ¦   ¦   +---compositerendersystem
+¦   ¦               ¦   ¦   ¦       CompositeRenderSystem.class
+¦   ¦               ¦   ¦   ¦       GLSLUtility.class
+¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---renderbatch
-¦   ¦               ¦   ¦   ¦       RenderBatchHandle.class
+¦   ¦               ¦   ¦   ¦       RenderBatchStruct.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---rendercall
-¦   ¦               ¦   ¦   ¦       MaskStruct.class
-¦   ¦               ¦   ¦   ¦       RenderCallHandle.class
+¦   ¦               ¦   ¦   ¦       RenderCallStruct.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---rendersystem
-¦   ¦               ¦   ¦           GLSLUtility.class
-¦   ¦               ¦   ¦           RenderSystem.class
+¦   ¦               ¦   ¦   ¦       GLSLUtility.class
+¦   ¦               ¦   ¦   ¦       RenderSystem.class
+¦   ¦               ¦   ¦   ¦       
+¦   ¦               ¦   ¦   +---util
+¦   ¦               ¦   ¦           MaskStruct.class
 ¦   ¦               ¦   ¦           
 ¦   ¦               ¦   +---shaderpipeline
 ¦   ¦               ¦   ¦   ¦   ShaderPipeline.class
 ¦   ¦               ¦   ¦   ¦   
 ¦   ¦               ¦   ¦   +---material
+¦   ¦               ¦   ¦   ¦       MaterialData.class
 ¦   ¦               ¦   ¦   ¦       MaterialHandle.class
 ¦   ¦               ¦   ¦   ¦       MaterialInstance.class
 ¦   ¦               ¦   ¦   ¦       
@@ -571,6 +598,7 @@ C:.
 ¦   ¦               ¦   ¦   ¦       MaterialManager.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---pass
+¦   ¦               ¦   ¦   ¦       PassData.class
 ¦   ¦               ¦   ¦   ¦       PassHandle.class
 ¦   ¦               ¦   ¦   ¦       PassInstance.class
 ¦   ¦               ¦   ¦   ¦       
@@ -579,10 +607,10 @@ C:.
 ¦   ¦               ¦   ¦   ¦       InternalLoader.class
 ¦   ¦               ¦   ¦   ¦       PassManager.class
 ¦   ¦               ¦   ¦   ¦       
-¦   ¦               ¦   ¦   +---Shader
+¦   ¦               ¦   ¦   +---shader
 ¦   ¦               ¦   ¦   ¦       ShaderData.class
-¦   ¦               ¦   ¦   ¦       ShaderDefinitionData.class
 ¦   ¦               ¦   ¦   ¦       ShaderHandle.class
+¦   ¦               ¦   ¦   ¦       ShaderSourceStruct.class
 ¦   ¦               ¦   ¦   ¦       ShaderType.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---shadermanager
@@ -603,25 +631,21 @@ C:.
 ¦   ¦               ¦   ¦   ¦       InternalLoader.class
 ¦   ¦               ¦   ¦   ¦       SpriteManager.class
 ¦   ¦               ¦   ¦   ¦       
-¦   ¦               ¦   ¦   +---Texture
-¦   ¦               ¦   ¦   ¦       TextureArrayData.class
-¦   ¦               ¦   ¦   ¦       TextureAtlasData.class
+¦   ¦               ¦   ¦   +---texture
+¦   ¦               ¦   ¦   ¦       TextureArrayStruct.class
+¦   ¦               ¦   ¦   ¦       TextureAtlasStruct.class
+¦   ¦               ¦   ¦   ¦       TextureData.class
 ¦   ¦               ¦   ¦   ¦       TextureHandle.class
-¦   ¦               ¦   ¦   ¦       TextureTileData.class
-¦   ¦               ¦   ¦   ¦       UVHandle.class
+¦   ¦               ¦   ¦   ¦       TextureTileStruct.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---texturemanager
-¦   ¦               ¦   ¦   ¦   ¦   GLSLUtility.class
-¦   ¦               ¦   ¦   ¦   ¦   InternalBuilder.class
-¦   ¦               ¦   ¦   ¦   ¦   InternalLoader.class
-¦   ¦               ¦   ¦   ¦   ¦   TextureManager.class
-¦   ¦               ¦   ¦   ¦   ¦   
-¦   ¦               ¦   ¦   ¦   +---alias
-¦   ¦               ¦   ¦   ¦   ¦       AliasData.class
-¦   ¦               ¦   ¦   ¦   ¦       
-¦   ¦               ¦   ¦   ¦   +---aliassystem
-¦   ¦               ¦   ¦   ¦           AliasLibrarySystem.class
-¦   ¦               ¦   ¦   ¦           
+¦   ¦               ¦   ¦   ¦       AliasLibrarySystem.class
+¦   ¦               ¦   ¦   ¦       AliasStruct.class
+¦   ¦               ¦   ¦   ¦       GLSLUtility.class
+¦   ¦               ¦   ¦   ¦       InternalBuilder.class
+¦   ¦               ¦   ¦   ¦       InternalLoader.class
+¦   ¦               ¦   ¦   ¦       TextureManager.class
+¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---ubo
 ¦   ¦               ¦   ¦   ¦       UBOData.class
 ¦   ¦               ¦   ¦   ¦       UBOHandle.class
@@ -634,9 +658,33 @@ C:.
 ¦   ¦               ¦   ¦   ¦       UBOManager.class
 ¦   ¦               ¦   ¦   ¦       
 ¦   ¦               ¦   ¦   +---uniforms
-¦   ¦               ¦   ¦       ¦   Uniform.class
-¦   ¦               ¦   ¦       ¦   UniformAttribute.class
+¦   ¦               ¦   ¦       ¦   UniformAttributeStruct.class
 ¦   ¦               ¦   ¦       ¦   UniformData.class
+¦   ¦               ¦   ¦       ¦   UniformStruct.class
+¦   ¦               ¦   ¦       ¦   UniformType$1.class
+¦   ¦               ¦   ¦       ¦   UniformType$10.class
+¦   ¦               ¦   ¦       ¦   UniformType$11.class
+¦   ¦               ¦   ¦       ¦   UniformType$12.class
+¦   ¦               ¦   ¦       ¦   UniformType$13.class
+¦   ¦               ¦   ¦       ¦   UniformType$14.class
+¦   ¦               ¦   ¦       ¦   UniformType$15.class
+¦   ¦               ¦   ¦       ¦   UniformType$16.class
+¦   ¦               ¦   ¦       ¦   UniformType$17.class
+¦   ¦               ¦   ¦       ¦   UniformType$18.class
+¦   ¦               ¦   ¦       ¦   UniformType$19.class
+¦   ¦               ¦   ¦       ¦   UniformType$2.class
+¦   ¦               ¦   ¦       ¦   UniformType$20.class
+¦   ¦               ¦   ¦       ¦   UniformType$21.class
+¦   ¦               ¦   ¦       ¦   UniformType$22.class
+¦   ¦               ¦   ¦       ¦   UniformType$23.class
+¦   ¦               ¦   ¦       ¦   UniformType$24.class
+¦   ¦               ¦   ¦       ¦   UniformType$3.class
+¦   ¦               ¦   ¦       ¦   UniformType$4.class
+¦   ¦               ¦   ¦       ¦   UniformType$5.class
+¦   ¦               ¦   ¦       ¦   UniformType$6.class
+¦   ¦               ¦   ¦       ¦   UniformType$7.class
+¦   ¦               ¦   ¦       ¦   UniformType$8.class
+¦   ¦               ¦   ¦       ¦   UniformType$9.class
 ¦   ¦               ¦   ¦       ¦   UniformType.class
 ¦   ¦               ¦   ¦       ¦   UniformUtility.class
 ¦   ¦               ¦   ¦       ¦   
@@ -741,6 +789,7 @@ C:.
 ¦   ¦               ¦       ¦           DumpBranch.class
 ¦   ¦               ¦       ¦           GenerationBranch.class
 ¦   ¦               ¦       ¦           ItemLoadBranch.class
+¦   ¦               ¦       ¦           ItemRenderBranch.class
 ¦   ¦               ¦       ¦           MergeBranch.class
 ¦   ¦               ¦       ¦           QueueOperation.class
 ¦   ¦               ¦       ¦           RenderBranch.class
@@ -758,6 +807,7 @@ C:.
 ¦   ¦               ¦       ¦       MegaChunkInstance.class
 ¦   ¦               ¦       ¦       MegaData.class
 ¦   ¦               ¦       ¦       MegaDataSyncContainer.class
+¦   ¦               ¦       ¦       MegaDataUtility.class
 ¦   ¦               ¦       ¦       
 ¦   ¦               ¦       +---megastreammanager
 ¦   ¦               ¦       ¦   ¦   MegaQueueManager.class
@@ -786,14 +836,16 @@ C:.
 ¦   ¦               ¦       ¦       WorldGenerationManager.class
 ¦   ¦               ¦       ¦       
 ¦   ¦               ¦       +---worlditem
+¦   ¦               ¦       ¦       WorldItemCompositeInstance.class
 ¦   ¦               ¦       ¦       WorldItemInstance.class
 ¦   ¦               ¦       ¦       WorldItemInstancePaletteHandle.class
 ¦   ¦               ¦       ¦       WorldItemPaletteHandle.class
 ¦   ¦               ¦       ¦       WorldItemStruct.class
 ¦   ¦               ¦       ¦       
+¦   ¦               ¦       +---worlditemplacementsystem
+¦   ¦               ¦       ¦       WorldItemPlacementSystem.class
+¦   ¦               ¦       ¦       
 ¦   ¦               ¦       +---worlditemrendersystem
-¦   ¦               ¦       ¦       GLSLUtility.class
-¦   ¦               ¦       ¦       ItemInstanceBuffer.class
 ¦   ¦               ¦       ¦       WorldItemRenderSystem.class
 ¦   ¦               ¦       ¦       
 ¦   ¦               ¦       +---worldmanager
@@ -871,7 +923,7 @@ C:.
 ¦   ¦               ¦       ¦       AtlasTileData.class
 ¦   ¦               ¦       ¦       
 ¦   ¦               ¦       +---mathematics
-¦   ¦               ¦       ¦   +---Extras
+¦   ¦               ¦       ¦   +---extras
 ¦   ¦               ¦       ¦   ¦       Color.class
 ¦   ¦               ¦       ¦   ¦       Coordinate2Long.class
 ¦   ¦               ¦       ¦   ¦       Coordinate3Int.class
@@ -925,101 +977,39 @@ C:.
 ¦   ¦   ¦                   ¦   ¦   ¦   CalendarPipeline.class
 ¦   ¦   ¦                   ¦   ¦   ¦   
 ¦   ¦   ¦                   ¦   ¦   +---calendar
-¦   ¦   ¦                   ¦   ¦   ¦       CalendarHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---calendarmanager
-¦   ¦   ¦                   ¦   ¦   ¦       CalendarManager.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---clockmanager
-¦   ¦   ¦                   ¦   ¦           ClockHandle.class
-¦   ¦   ¦                   ¦   ¦           ClockManager.class
-¦   ¦   ¦                   ¦   ¦           CurrentTrackerSystem.class
-¦   ¦   ¦                   ¦   ¦           DayTrackerSystem.class
-¦   ¦   ¦                   ¦   ¦           InternalBufferSystem.class
-¦   ¦   ¦                   ¦   ¦           MonthTrackerSystem.class
-¦   ¦   ¦                   ¦   ¦           YearTrackerSystem.class
+¦   ¦   ¦                   ¦   ¦           CalendarData.class
+¦   ¦   ¦                   ¦   ¦           CalendarHandle.class
 ¦   ¦   ¦                   ¦   ¦           
 ¦   ¦   ¦                   ¦   +---entitypipeline
-¦   ¦   ¦                   ¦   ¦   ¦   EntityPipeline.class
-¦   ¦   ¦                   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   +---behavior
-¦   ¦   ¦                   ¦   ¦   ¦       BehaviorHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---behaviormanager
-¦   ¦   ¦                   ¦   ¦   ¦       BehaviorManager.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---entity
-¦   ¦   ¦                   ¦   ¦   ¦       EntityData.class
-¦   ¦   ¦                   ¦   ¦   ¦       EntityHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       EntityState.class
-¦   ¦   ¦                   ¦   ¦   ¦       EntityStateHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---entitymanager
-¦   ¦   ¦                   ¦   ¦   ¦       EntityManager.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---inventory
-¦   ¦   ¦                   ¦   ¦   ¦       InventoryHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---playermanager
-¦   ¦   ¦                   ¦   ¦   ¦       BlockPlacementSystem.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBufferSystem.class
-¦   ¦   ¦                   ¦   ¦   ¦       PlayerManager.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---statistics
-¦   ¦   ¦                   ¦   ¦           StatisticsStruct.class
-¦   ¦   ¦                   ¦   ¦           
+¦   ¦   ¦                   ¦   ¦       EntityPipeline.class
+¦   ¦   ¦                   ¦   ¦       
 ¦   ¦   ¦                   ¦   +---geometrypipeline
 ¦   ¦   ¦                   ¦   ¦   ¦   GeometryPipeline.class
 ¦   ¦   ¦                   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   +---dynamicgeometrymanager
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   DynamicGeometryManager.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   DynamicGeometryType.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   InternalBuildManager$1.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   InternalBuildManager.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   ¦   +---dynamicgeometry
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       ComplexGeometryBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       FontGeometryBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       FullGeometryBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       LiquidGeometryBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       PartialGeometryBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   ¦   +---util
-¦   ¦   ¦                   ¦   ¦   ¦           DynamicGeometryAsyncContainer.class
-¦   ¦   ¦                   ¦   ¦   ¦           VertBlockNeighbor3Vector.class
-¦   ¦   ¦                   ¦   ¦   ¦           
+¦   ¦   ¦                   ¦   ¦   +---compositebuffer
+¦   ¦   ¦                   ¦   ¦   ¦       CompositeBufferData.class
+¦   ¦   ¦                   ¦   ¦   ¦       CompositeBufferInstance.class
+¦   ¦   ¦                   ¦   ¦   ¦       
+¦   ¦   ¦                   ¦   ¦   +---compositebuffermanager
+¦   ¦   ¦                   ¦   ¦   ¦       CompositeBufferManager.class
+¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---dynamicmodel
 ¦   ¦   ¦                   ¦   ¦   ¦       DynamicModelHandle.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---dynamicpacket
-¦   ¦   ¦                   ¦   ¦   ¦       DynamicPacketInstance.class
-¦   ¦   ¦                   ¦   ¦   ¦       DynamicPacketState.class
-¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---ibo
+¦   ¦   ¦                   ¦   ¦   ¦       IBOData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       IBOHandle.class
 ¦   ¦   ¦                   ¦   ¦   ¦       IBOInstance.class
-¦   ¦   ¦                   ¦   ¦   ¦       IBOStruct.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---ibomanager
-¦   ¦   ¦                   ¦   ¦   ¦       GLSLUtility.class
 ¦   ¦   ¦                   ¦   ¦   ¦       IBOManager.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---mesh
+¦   ¦   ¦                   ¦   ¦   ¦       MeshData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       MeshHandle.class
 ¦   ¦   ¦                   ¦   ¦   ¦       MeshInstance.class
-¦   ¦   ¦                   ¦   ¦   ¦       MeshStruct.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---meshmanager
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder$QuadExpansionResult.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
 ¦   ¦   ¦                   ¦   ¦   ¦       MeshManager.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---model
@@ -1029,23 +1019,19 @@ C:.
 ¦   ¦   ¦                   ¦   ¦   ¦       ModelManager.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---vao
+¦   ¦   ¦                   ¦   ¦   ¦       VAOData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       VAOHandle.class
 ¦   ¦   ¦                   ¦   ¦   ¦       VAOInstance.class
-¦   ¦   ¦                   ¦   ¦   ¦       VAOStruct.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---vaomanager
-¦   ¦   ¦                   ¦   ¦   ¦       GLSLUtility.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
 ¦   ¦   ¦                   ¦   ¦   ¦       VAOManager.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---vbo
+¦   ¦   ¦                   ¦   ¦   ¦       VBOData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       VBOHandle.class
 ¦   ¦   ¦                   ¦   ¦   ¦       VBOInstance.class
-¦   ¦   ¦                   ¦   ¦   ¦       VBOStruct.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---vbomanager
-¦   ¦   ¦                   ¦   ¦           GLSLUtility.class
-¦   ¦   ¦                   ¦   ¦           InternalBuilder.class
 ¦   ¦   ¦                   ¦   ¦           VBOManager.class
 ¦   ¦   ¦                   ¦   ¦           
 ¦   ¦   ¦                   ¦   +---inputpipeline
@@ -1055,88 +1041,27 @@ C:.
 ¦   ¦   ¦                   ¦   ¦           InputSystem.class
 ¦   ¦   ¦                   ¦   ¦           
 ¦   ¦   ¦                   ¦   +---itempipeline
-¦   ¦   ¦                   ¦   ¦   ¦   ItemPipeline.class
-¦   ¦   ¦                   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   +---backpack
-¦   ¦   ¦                   ¦   ¦   ¦       BackpackInstance.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---itemdefinition
-¦   ¦   ¦                   ¦   ¦   ¦       ItemDefinitionHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---itemdefinitionmanager
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
-¦   ¦   ¦                   ¦   ¦   ¦       ItemDefinitionManager.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---itemrotationmanager
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBufferSystem$1.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBufferSystem.class
-¦   ¦   ¦                   ¦   ¦   ¦       ItemRotationManager.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---tooltype
-¦   ¦   ¦                   ¦   ¦   ¦       ToolTypeHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---tooltypemanager
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
-¦   ¦   ¦                   ¦   ¦   ¦       ToolTypeManager.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---util
-¦   ¦   ¦                   ¦   ¦           ItemRegistryUtility.class
-¦   ¦   ¦                   ¦   ¦           
+¦   ¦   ¦                   ¦   ¦       ItemPipeline.class
+¦   ¦   ¦                   ¦   ¦       
 ¦   ¦   ¦                   ¦   +---lightingpipeline
-¦   ¦   ¦                   ¦   ¦   ¦   LightingPipeline.class
-¦   ¦   ¦                   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   +---directionallight
-¦   ¦   ¦                   ¦   ¦   ¦       DirectionalLightHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---naturallightmanager
-¦   ¦   ¦                   ¦   ¦           MoonLightSystem.class
-¦   ¦   ¦                   ¦   ¦           NaturalLightManager.class
-¦   ¦   ¦                   ¦   ¦           SunLightSystem.class
-¦   ¦   ¦                   ¦   ¦           
+¦   ¦   ¦                   ¦   ¦       LightingPipeline.class
+¦   ¦   ¦                   ¦   ¦       
 ¦   ¦   ¦                   ¦   +---menupipeline
 ¦   ¦   ¦                   ¦   ¦   ¦   MenuPipeline.class
 ¦   ¦   ¦                   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   +---buttoneventsmanager
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   ButtonEventsManager.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   ¦   +---menus
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       InventoryBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       MainMenuBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   ¦   +---util
-¦   ¦   ¦                   ¦   ¦   ¦           GenericButtonBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦           
 ¦   ¦   ¦                   ¦   ¦   +---element
-¦   ¦   ¦                   ¦   ¦   ¦       DimensionValue.class
-¦   ¦   ¦                   ¦   ¦   ¦       DimensionVector2.class
 ¦   ¦   ¦                   ¦   ¦   ¦       ElementData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       ElementHandle.class
 ¦   ¦   ¦                   ¦   ¦   ¦       ElementInstance.class
-¦   ¦   ¦                   ¦   ¦   ¦       ElementOrigin.class
-¦   ¦   ¦                   ¦   ¦   ¦       ElementOverrideStruct.class
-¦   ¦   ¦                   ¦   ¦   ¦       ElementPlacementHandle.class
+¦   ¦   ¦                   ¦   ¦   ¦       ElementPlacementStruct.class
 ¦   ¦   ¦                   ¦   ¦   ¦       ElementType.class
-¦   ¦   ¦                   ¦   ¦   ¦       LayoutStruct.class
-¦   ¦   ¦                   ¦   ¦   ¦       MenuAwareAction.class
-¦   ¦   ¦                   ¦   ¦   ¦       StackDirection.class
-¦   ¦   ¦                   ¦   ¦   ¦       TextAlign.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---elementsystem
-¦   ¦   ¦                   ¦   ¦   ¦       ElementSystem.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---fontmanager
 ¦   ¦   ¦                   ¦   ¦   ¦       FontManager.class
-¦   ¦   ¦                   ¦   ¦   ¦       FontRasterizerUtility.class
-¦   ¦   ¦                   ¦   ¦   ¦       GLSLUtility.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---fonts
 ¦   ¦   ¦                   ¦   ¦   ¦       FontHandle.class
 ¦   ¦   ¦                   ¦   ¦   ¦       FontInstance.class
-¦   ¦   ¦                   ¦   ¦   ¦       FontTileData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       GlyphMetricStruct.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---menu
@@ -1145,91 +1070,68 @@ C:.
 ¦   ¦   ¦                   ¦   ¦   ¦       MenuInstance.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---menumanager
-¦   ¦   ¦                   ¦   ¦   ¦       FileParserUtility.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
+¦   ¦   ¦                   ¦   ¦   ¦       ElementSystem.class
 ¦   ¦   ¦                   ¦   ¦   ¦       MenuManager.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---raycastsystem
-¦   ¦   ¦                   ¦   ¦           RaycastSystem.class
+¦   ¦   ¦                   ¦   ¦   ¦       RaycastSystem.class
+¦   ¦   ¦                   ¦   ¦   ¦       
+¦   ¦   ¦                   ¦   ¦   +---util
+¦   ¦   ¦                   ¦   ¦           DimensionValue.class
+¦   ¦   ¦                   ¦   ¦           DimensionVector2.class
+¦   ¦   ¦                   ¦   ¦           LayoutStruct.class
+¦   ¦   ¦                   ¦   ¦           MenuAwareAction.class
+¦   ¦   ¦                   ¦   ¦           StackDirection.class
+¦   ¦   ¦                   ¦   ¦           TextAlign.class
 ¦   ¦   ¦                   ¦   ¦           
 ¦   ¦   ¦                   ¦   +---physicspipeline
-¦   ¦   ¦                   ¦   ¦   ¦   PhysicsPipeline.class
-¦   ¦   ¦                   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   +---movementmanager
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   MovementManager.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   ¦   +---movement
-¦   ¦   ¦                   ¦   ¦   ¦           BlockCollisionBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦           GravityBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦           MovementBranch$1.class
-¦   ¦   ¦                   ¦   ¦   ¦           MovementBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦           
-¦   ¦   ¦                   ¦   ¦   +---raycastmanager
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   RaycastManager.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   ¦   +---raycast
-¦   ¦   ¦                   ¦   ¦   ¦           BlockCastBranch.class
-¦   ¦   ¦                   ¦   ¦   ¦           
-¦   ¦   ¦                   ¦   ¦   +---util
-¦   ¦   ¦                   ¦   ¦           BlockCastStruct.class
-¦   ¦   ¦                   ¦   ¦           BlockCompositionStruct.class
-¦   ¦   ¦                   ¦   ¦           
+¦   ¦   ¦                   ¦   ¦       PhysicsPipeline.class
+¦   ¦   ¦                   ¦   ¦       
 ¦   ¦   ¦                   ¦   +---renderpipeline
 ¦   ¦   ¦                   ¦   ¦   ¦   RenderPipeline.class
 ¦   ¦   ¦                   ¦   ¦   ¦   
 ¦   ¦   ¦                   ¦   ¦   +---camera
+¦   ¦   ¦                   ¦   ¦   ¦       CameraData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       CameraInstance.class
+¦   ¦   ¦                   ¦   ¦   ¦       OrthographicCameraData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       OrthographicCameraInstance.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---cameramanager
 ¦   ¦   ¦                   ¦   ¦   ¦       CameraManager.class
 ¦   ¦   ¦                   ¦   ¦   ¦       InternalBufferSystem.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
+¦   ¦   ¦                   ¦   ¦   +---compositebatch
+¦   ¦   ¦                   ¦   ¦   ¦       CompositeBatchStruct.class
+¦   ¦   ¦                   ¦   ¦   ¦       
+¦   ¦   ¦                   ¦   ¦   +---compositerendersystem
+¦   ¦   ¦                   ¦   ¦   ¦       CompositeRenderSystem.class
+¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---renderbatch
-¦   ¦   ¦                   ¦   ¦   ¦       RenderBatchHandle.class
+¦   ¦   ¦                   ¦   ¦   ¦       RenderBatchStruct.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---rendercall
-¦   ¦   ¦                   ¦   ¦   ¦       MaskStruct.class
-¦   ¦   ¦                   ¦   ¦   ¦       RenderCallHandle.class
+¦   ¦   ¦                   ¦   ¦   ¦       RenderCallStruct.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---rendersystem
-¦   ¦   ¦                   ¦   ¦           GLSLUtility.class
-¦   ¦   ¦                   ¦   ¦           RenderSystem.class
+¦   ¦   ¦                   ¦   ¦   ¦       RenderSystem.class
+¦   ¦   ¦                   ¦   ¦   ¦       
+¦   ¦   ¦                   ¦   ¦   +---util
+¦   ¦   ¦                   ¦   ¦           MaskStruct.class
 ¦   ¦   ¦                   ¦   ¦           
 ¦   ¦   ¦                   ¦   +---shaderpipeline
 ¦   ¦   ¦                   ¦   ¦   ¦   ShaderPipeline.class
 ¦   ¦   ¦                   ¦   ¦   ¦   
 ¦   ¦   ¦                   ¦   ¦   +---material
+¦   ¦   ¦                   ¦   ¦   ¦       MaterialData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       MaterialHandle.class
 ¦   ¦   ¦                   ¦   ¦   ¦       MaterialInstance.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---materialmanager
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
 ¦   ¦   ¦                   ¦   ¦   ¦       MaterialManager.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---pass
-¦   ¦   ¦                   ¦   ¦   ¦       PassHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       PassInstance.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---passmanager
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
-¦   ¦   ¦                   ¦   ¦   ¦       PassManager.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---Shader
+¦   ¦   ¦                   ¦   ¦   +---shader
 ¦   ¦   ¦                   ¦   ¦   ¦       ShaderData.class
-¦   ¦   ¦                   ¦   ¦   ¦       ShaderDefinitionData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       ShaderHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       ShaderType.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---shadermanager
-¦   ¦   ¦                   ¦   ¦   ¦       FileParserUtility.class
-¦   ¦   ¦                   ¦   ¦   ¦       GLSLUtility.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
-¦   ¦   ¦                   ¦   ¦   ¦       ShaderManager.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---sprite
 ¦   ¦   ¦                   ¦   ¦   ¦       SpriteData.class
@@ -1237,225 +1139,52 @@ C:.
 ¦   ¦   ¦                   ¦   ¦   ¦       SpriteInstance.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---spritemanager
-¦   ¦   ¦                   ¦   ¦   ¦       GLSLUtility.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
 ¦   ¦   ¦                   ¦   ¦   ¦       SpriteManager.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---Texture
-¦   ¦   ¦                   ¦   ¦   ¦       TextureArrayData.class
-¦   ¦   ¦                   ¦   ¦   ¦       TextureAtlasData.class
-¦   ¦   ¦                   ¦   ¦   ¦       TextureHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       TextureTileData.class
-¦   ¦   ¦                   ¦   ¦   ¦       UVHandle.class
-¦   ¦   ¦                   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   +---texturemanager
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   GLSLUtility.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   InternalLoader.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   TextureManager.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦   
-¦   ¦   ¦                   ¦   ¦   ¦   +---alias
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       AliasData.class
-¦   ¦   ¦                   ¦   ¦   ¦   ¦       
-¦   ¦   ¦                   ¦   ¦   ¦   +---aliassystem
-¦   ¦   ¦                   ¦   ¦   ¦           AliasLibrarySystem.class
-¦   ¦   ¦                   ¦   ¦   ¦           
 ¦   ¦   ¦                   ¦   ¦   +---ubo
 ¦   ¦   ¦                   ¦   ¦   ¦       UBOData.class
 ¦   ¦   ¦                   ¦   ¦   ¦       UBOHandle.class
 ¦   ¦   ¦                   ¦   ¦   ¦       UBOInstance.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---ubomanager
-¦   ¦   ¦                   ¦   ¦   ¦       GLSLUtility.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦   ¦       InternalLoader.class
 ¦   ¦   ¦                   ¦   ¦   ¦       UBOManager.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---uniforms
-¦   ¦   ¦                   ¦   ¦       ¦   Uniform.class
-¦   ¦   ¦                   ¦   ¦       ¦   UniformAttribute.class
-¦   ¦   ¦                   ¦   ¦       ¦   UniformData.class
-¦   ¦   ¦                   ¦   ¦       ¦   UniformType.class
-¦   ¦   ¦                   ¦   ¦       ¦   UniformUtility$1.class
-¦   ¦   ¦                   ¦   ¦       ¦   UniformUtility.class
-¦   ¦   ¦                   ¦   ¦       ¦   
-¦   ¦   ¦                   ¦   ¦       +---matrices
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix2DoubleUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix2Uniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix3DoubleUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix3Uniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix4DoubleUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix4Uniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       
-¦   ¦   ¦                   ¦   ¦       +---matrixArrays
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix2ArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix2DoubleArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix3ArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix3DoubleArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix4ArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Matrix4DoubleArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       
-¦   ¦   ¦                   ¦   ¦       +---samplers
-¦   ¦   ¦                   ¦   ¦       ¦       SampleImage2DArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       SampleImage2DUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       
-¦   ¦   ¦                   ¦   ¦       +---scalarArrays
-¦   ¦   ¦                   ¦   ¦       ¦       BooleanArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       DoubleArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       FloatArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       IntegerArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       
-¦   ¦   ¦                   ¦   ¦       +---scalars
-¦   ¦   ¦                   ¦   ¦       ¦       BooleanUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       DoubleUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       FloatUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       IntegerUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       
-¦   ¦   ¦                   ¦   ¦       +---vectorarrays
-¦   ¦   ¦                   ¦   ¦       ¦       Vector2ArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector2BooleanArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector2DoubleArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector2IntArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector3ArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector3BooleanArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector3DoubleArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector3IntArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector4ArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector4BooleanArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector4DoubleArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       Vector4IntArrayUniform.class
-¦   ¦   ¦                   ¦   ¦       ¦       
-¦   ¦   ¦                   ¦   ¦       +---vectors
-¦   ¦   ¦                   ¦   ¦               Vector2BooleanUniform.class
-¦   ¦   ¦                   ¦   ¦               Vector2DoubleUniform.class
-¦   ¦   ¦                   ¦   ¦               Vector2IntUniform.class
-¦   ¦   ¦                   ¦   ¦               Vector2Uniform.class
-¦   ¦   ¦                   ¦   ¦               Vector3BooleanUniform.class
-¦   ¦   ¦                   ¦   ¦               Vector3DoubleUniform.class
-¦   ¦   ¦                   ¦   ¦               Vector3IntUniform.class
-¦   ¦   ¦                   ¦   ¦               Vector3Uniform.class
-¦   ¦   ¦                   ¦   ¦               Vector4BooleanUniform.class
-¦   ¦   ¦                   ¦   ¦               Vector4DoubleUniform.class
-¦   ¦   ¦                   ¦   ¦               Vector4IntUniform.class
-¦   ¦   ¦                   ¦   ¦               Vector4Uniform.class
-¦   ¦   ¦                   ¦   ¦               
+¦   ¦   ¦                   ¦   ¦           UniformAttributeStruct.class
+¦   ¦   ¦                   ¦   ¦           UniformData.class
+¦   ¦   ¦                   ¦   ¦           UniformStruct.class
+¦   ¦   ¦                   ¦   ¦           UniformType$1.class
+¦   ¦   ¦                   ¦   ¦           UniformType$10.class
+¦   ¦   ¦                   ¦   ¦           UniformType$11.class
+¦   ¦   ¦                   ¦   ¦           UniformType$12.class
+¦   ¦   ¦                   ¦   ¦           UniformType$13.class
+¦   ¦   ¦                   ¦   ¦           UniformType$14.class
+¦   ¦   ¦                   ¦   ¦           UniformType$15.class
+¦   ¦   ¦                   ¦   ¦           UniformType$16.class
+¦   ¦   ¦                   ¦   ¦           UniformType$17.class
+¦   ¦   ¦                   ¦   ¦           UniformType$18.class
+¦   ¦   ¦                   ¦   ¦           UniformType$19.class
+¦   ¦   ¦                   ¦   ¦           UniformType$2.class
+¦   ¦   ¦                   ¦   ¦           UniformType$20.class
+¦   ¦   ¦                   ¦   ¦           UniformType$21.class
+¦   ¦   ¦                   ¦   ¦           UniformType$22.class
+¦   ¦   ¦                   ¦   ¦           UniformType$23.class
+¦   ¦   ¦                   ¦   ¦           UniformType$24.class
+¦   ¦   ¦                   ¦   ¦           UniformType$3.class
+¦   ¦   ¦                   ¦   ¦           UniformType$4.class
+¦   ¦   ¦                   ¦   ¦           UniformType$5.class
+¦   ¦   ¦                   ¦   ¦           UniformType$6.class
+¦   ¦   ¦                   ¦   ¦           UniformType$7.class
+¦   ¦   ¦                   ¦   ¦           UniformType$8.class
+¦   ¦   ¦                   ¦   ¦           UniformType$9.class
+¦   ¦   ¦                   ¦   ¦           UniformType.class
+¦   ¦   ¦                   ¦   ¦           
 ¦   ¦   ¦                   ¦   +---worldpipeline
-¦   ¦   ¦                   ¦       ¦   WorldPipeline.class
-¦   ¦   ¦                   ¦       ¦   
-¦   ¦   ¦                   ¦       +---biome
-¦   ¦   ¦                   ¦       ¦       BiomeHandle.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---biomemanager
-¦   ¦   ¦                   ¦       ¦       BiomeManager.class
-¦   ¦   ¦                   ¦       ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦       ¦       InternalLoader.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---block
-¦   ¦   ¦                   ¦       ¦       BlockHandle.class
-¦   ¦   ¦                   ¦       ¦       BlockPaletteHandle.class
-¦   ¦   ¦                   ¦       ¦       BlockRotationType.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---blockmanager
-¦   ¦   ¦                   ¦       ¦       BlockManager.class
-¦   ¦   ¦                   ¦       ¦       InternalBufferSystem.class
-¦   ¦   ¦                   ¦       ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦       ¦       InternalLoader.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---chunk
-¦   ¦   ¦                   ¦       ¦       ChunkData.class
-¦   ¦   ¦                   ¦       ¦       ChunkDataSyncContainer.class
-¦   ¦   ¦                   ¦       ¦       ChunkDataUtility.class
-¦   ¦   ¦                   ¦       ¦       ChunkInstance.class
-¦   ¦   ¦                   ¦       ¦       ChunkNeighborStruct.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---chunkstreammanager
-¦   ¦   ¦                   ¦       ¦   ¦   ChunkQueueManager$1.class
-¦   ¦   ¦                   ¦       ¦   ¦   ChunkQueueManager.class
-¦   ¦   ¦                   ¦       ¦   ¦   ChunkStreamManager.class
-¦   ¦   ¦                   ¦       ¦   ¦   
-¦   ¦   ¦                   ¦       ¦   +---chunkqueue
-¦   ¦   ¦                   ¦       ¦           AssessmentBranch.class
-¦   ¦   ¦                   ¦       ¦           BatchBranch.class
-¦   ¦   ¦                   ¦       ¦           BuildBranch.class
-¦   ¦   ¦                   ¦       ¦           ChunkQueueItem.class
-¦   ¦   ¦                   ¦       ¦           DumpBranch$1.class
-¦   ¦   ¦                   ¦       ¦           DumpBranch.class
-¦   ¦   ¦                   ¦       ¦           GenerationBranch.class
-¦   ¦   ¦                   ¦       ¦           ItemLoadBranch.class
-¦   ¦   ¦                   ¦       ¦           MergeBranch.class
-¦   ¦   ¦                   ¦       ¦           QueueOperation.class
-¦   ¦   ¦                   ¦       ¦           RenderBranch.class
-¦   ¦   ¦                   ¦       ¦           
-¦   ¦   ¦                   ¦       +---gridmanager
-¦   ¦   ¦                   ¦       ¦       GridBuildSystem.class
-¦   ¦   ¦                   ¦       ¦       GridInstance.class
-¦   ¦   ¦                   ¦       ¦       GridManager.class
-¦   ¦   ¦                   ¦       ¦       GridSlotData.class
-¦   ¦   ¦                   ¦       ¦       GridSlotDetailLevel.class
-¦   ¦   ¦                   ¦       ¦       GridSlotHandle.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---megachunk
-¦   ¦   ¦                   ¦       ¦       MegaBatchStruct.class
-¦   ¦   ¦                   ¦       ¦       MegaChunkInstance.class
-¦   ¦   ¦                   ¦       ¦       MegaData.class
-¦   ¦   ¦                   ¦       ¦       MegaDataSyncContainer.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---megastreammanager
-¦   ¦   ¦                   ¦       ¦   ¦   MegaQueueManager$1.class
-¦   ¦   ¦                   ¦       ¦   ¦   MegaQueueManager.class
-¦   ¦   ¦                   ¦       ¦   ¦   MegaStreamManager.class
-¦   ¦   ¦                   ¦       ¦   ¦   
-¦   ¦   ¦                   ¦       ¦   +---megaqueue
-¦   ¦   ¦                   ¦       ¦           MegaAssessBranch.class
-¦   ¦   ¦                   ¦       ¦           MegaDumpBranch.class
-¦   ¦   ¦                   ¦       ¦           MegaMergeBranch.class
-¦   ¦   ¦                   ¦       ¦           MegaQueueOperation.class
-¦   ¦   ¦                   ¦       ¦           MegaRenderBranch.class
-¦   ¦   ¦                   ¦       ¦           
-¦   ¦   ¦                   ¦       +---subchunk
-¦   ¦   ¦                   ¦       ¦       SubChunkInstance.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---util
-¦   ¦   ¦                   ¦       ¦       ChunkCoordinate3Int.class
-¦   ¦   ¦                   ¦       ¦       WorldPositionStruct.class
-¦   ¦   ¦                   ¦       ¦       WorldPositionUtility.class
-¦   ¦   ¦                   ¦       ¦       WorldWrapUtility.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---world
-¦   ¦   ¦                   ¦       ¦       WorldHandle.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---worldgenerationmanager
-¦   ¦   ¦                   ¦       ¦       WorldGenerationManager.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---worlditem
-¦   ¦   ¦                   ¦       ¦       WorldItemInstance.class
-¦   ¦   ¦                   ¦       ¦       WorldItemInstancePaletteHandle.class
-¦   ¦   ¦                   ¦       ¦       WorldItemPaletteHandle.class
-¦   ¦   ¦                   ¦       ¦       WorldItemStruct.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---worlditemrendersystem
-¦   ¦   ¦                   ¦       ¦       GLSLUtility.class
-¦   ¦   ¦                   ¦       ¦       ItemInstanceBuffer.class
-¦   ¦   ¦                   ¦       ¦       WorldItemRenderSystem.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---worldmanager
-¦   ¦   ¦                   ¦       ¦       InternalBuilder.class
-¦   ¦   ¦                   ¦       ¦       InternalLoader.class
-¦   ¦   ¦                   ¦       ¦       WorldManager.class
-¦   ¦   ¦                   ¦       ¦       
-¦   ¦   ¦                   ¦       +---worldrendermanager
-¦   ¦   ¦                   ¦               FrustumCullingSystem.class
-¦   ¦   ¦                   ¦               RenderOperation.class
-¦   ¦   ¦                   ¦               RenderType.class
-¦   ¦   ¦                   ¦               WorldRenderInstance.class
-¦   ¦   ¦                   ¦               WorldRenderManager.class
-¦   ¦   ¦                   ¦               
+¦   ¦   ¦                   ¦           WorldPipeline.class
+¦   ¦   ¦                   ¦           
 ¦   ¦   ¦                   +---core
 ¦   ¦   ¦                   ¦   +---engine
 ¦   ¦   ¦                   ¦   ¦   ¦   AsyncContainerPackage.class
-¦   ¦   ¦                   ¦   ¦   ¦   BranchPackage.class
-¦   ¦   ¦                   ¦   ¦   ¦   BuilderPackage.class
 ¦   ¦   ¦                   ¦   ¦   ¦   DataPackage.class
 ¦   ¦   ¦                   ¦   ¦   ¦   EnginePackage$1.class
 ¦   ¦   ¦                   ¦   ¦   ¦   EnginePackage$EngineStruct.class
@@ -1467,7 +1196,6 @@ C:.
 ¦   ¦   ¦                   ¦   ¦   ¦   HandlePackage.class
 ¦   ¦   ¦                   ¦   ¦   ¦   InstancePackage$CreationStruct.class
 ¦   ¦   ¦                   ¦   ¦   ¦   InstancePackage.class
-¦   ¦   ¦                   ¦   ¦   ¦   LoaderPackage.class
 ¦   ¦   ¦                   ¦   ¦   ¦   Main.class
 ¦   ¦   ¦                   ¦   ¦   ¦   ManagerPackage.class
 ¦   ¦   ¦                   ¦   ¦   ¦   PipelinePackage.class
@@ -1481,11 +1209,8 @@ C:.
 ¦   ¦   ¦                   ¦   ¦   ¦   WindowInstance.class
 ¦   ¦   ¦                   ¦   ¦   ¦   
 ¦   ¦   ¦                   ¦   ¦   +---settings
-¦   ¦   ¦                   ¦   ¦           EngineSetting.class
-¦   ¦   ¦                   ¦   ¦           Loader.class
 ¦   ¦   ¦                   ¦   ¦           Settings$Builder.class
 ¦   ¦   ¦                   ¦   ¦           Settings.class
-¦   ¦   ¦                   ¦   ¦           SettingsDeserializer.class
 ¦   ¦   ¦                   ¦   ¦           
 ¦   ¦   ¦                   ¦   +---kernel
 ¦   ¦   ¦                   ¦   ¦   +---SyncConsumer
@@ -1498,65 +1223,22 @@ C:.
 ¦   ¦   ¦                   ¦   ¦   ¦       ThreadHandle.class
 ¦   ¦   ¦                   ¦   ¦   ¦       
 ¦   ¦   ¦                   ¦   ¦   +---threadmanager
-¦   ¦   ¦                   ¦   ¦           InternalBuilder.class
-¦   ¦   ¦                   ¦   ¦           InternalLoader.class
 ¦   ¦   ¦                   ¦   ¦           InternalThreadManager.class
-¦   ¦   ¦                   ¦   ¦           NamedThreadFactory.class
 ¦   ¦   ¦                   ¦   ¦           
 ¦   ¦   ¦                   ¦   +---util
-¦   ¦   ¦                   ¦       ¦   AtlasUtility.class
-¦   ¦   ¦                   ¦       ¦   FileUtility.class
-¦   ¦   ¦                   ¦       ¦   JsonUtility.class
-¦   ¦   ¦                   ¦       ¦   OpenSimplex2.class
-¦   ¦   ¦                   ¦       ¦   PixmapUtility.class
-¦   ¦   ¦                   ¦       ¦   RegistryUtility.class
-¦   ¦   ¦                   ¦       ¦   
-¦   ¦   ¦                   ¦       +---atlas
-¦   ¦   ¦                   ¦       ¦       AtlasTileData.class
-¦   ¦   ¦                   ¦       ¦       
 ¦   ¦   ¦                   ¦       +---mathematics
-¦   ¦   ¦                   ¦       ¦   +---Extras
-¦   ¦   ¦                   ¦       ¦   ¦       Color.class
-¦   ¦   ¦                   ¦       ¦   ¦       Coordinate2Long.class
-¦   ¦   ¦                   ¦       ¦   ¦       Coordinate3Int.class
-¦   ¦   ¦                   ¦       ¦   ¦       Coordinate3Long.class
-¦   ¦   ¦                   ¦       ¦   ¦       Coordinate4Long.class
-¦   ¦   ¦                   ¦       ¦   ¦       Direction2Vector.class
-¦   ¦   ¦                   ¦       ¦   ¦       Direction3Vector.class
-¦   ¦   ¦                   ¦       ¦   ¦       
-¦   ¦   ¦                   ¦       ¦   +---matrices
-¦   ¦   ¦                   ¦       ¦   ¦       Matrix2.class
-¦   ¦   ¦                   ¦       ¦   ¦       Matrix2Double.class
-¦   ¦   ¦                   ¦       ¦   ¦       Matrix3.class
-¦   ¦   ¦                   ¦       ¦   ¦       Matrix3Double.class
-¦   ¦   ¦                   ¦       ¦   ¦       Matrix4.class
-¦   ¦   ¦                   ¦       ¦   ¦       Matrix4Double.class
-¦   ¦   ¦                   ¦       ¦   ¦       
-¦   ¦   ¦                   ¦       ¦   +---quaternions
-¦   ¦   ¦                   ¦       ¦   ¦       Quaternion.class
-¦   ¦   ¦                   ¦       ¦   ¦       
-¦   ¦   ¦                   ¦       ¦   +---vectors
-¦   ¦   ¦                   ¦       ¦           Vector2.class
-¦   ¦   ¦                   ¦       ¦           Vector2Boolean.class
-¦   ¦   ¦                   ¦       ¦           Vector2Double.class
-¦   ¦   ¦                   ¦       ¦           Vector2Int.class
-¦   ¦   ¦                   ¦       ¦           Vector3.class
-¦   ¦   ¦                   ¦       ¦           Vector3Boolean.class
-¦   ¦   ¦                   ¦       ¦           Vector3Double.class
-¦   ¦   ¦                   ¦       ¦           Vector3Int.class
-¦   ¦   ¦                   ¦       ¦           Vector4.class
-¦   ¦   ¦                   ¦       ¦           Vector4Boolean.class
-¦   ¦   ¦                   ¦       ¦           Vector4Double.class
-¦   ¦   ¦                   ¦       ¦           Vector4Int.class
-¦   ¦   ¦                   ¦       ¦           
-¦   ¦   ¦                   ¦       +---queue
-¦   ¦   ¦                   ¦               QueueInstance.class
-¦   ¦   ¦                   ¦               QueueItemHandle.class
-¦   ¦   ¦                   ¦               
+¦   ¦   ¦                   ¦           +---matrices
+¦   ¦   ¦                   ¦           ¦       Matrix4.class
+¦   ¦   ¦                   ¦           ¦       
+¦   ¦   ¦                   ¦           +---vectors
+¦   ¦   ¦                   ¦                   Vector2.class
+¦   ¦   ¦                   ¦                   Vector3.class
+¦   ¦   ¦                   ¦                   Vector3Int.class
+¦   ¦   ¦                   ¦                   Vector4.class
+¦   ¦   ¦                   ¦                   
 ¦   ¦   ¦                   +---runtime
 ¦   ¦   ¦                       +---debug
 ¦   ¦   ¦                               DebugPipeline.class
-¦   ¦   ¦                               Sky.class
 ¦   ¦   ¦                               
 ¦   ¦   +---generated
 ¦   ¦   ¦   +---sources
@@ -1566,29 +1248,8 @@ C:.
 ¦   ¦   ¦       +---headers
 ¦   ¦   ¦           +---java
 ¦   ¦   ¦               +---main
-¦   ¦   +---libs
-¦   ¦   ¦       core-1.0.0.jar
-¦   ¦   ¦       
 ¦   ¦   +---tmp
 ¦   ¦       +---compileJava
-¦   ¦       ¦   ¦   previous-compilation-data.bin
-¦   ¦       ¦   ¦   
-¦   ¦       ¦   +---compileTransaction
-¦   ¦       ¦       +---backup-dir
-¦   ¦       ¦       +---stash-dir
-¦   ¦       ¦               BlockPlacementSystem.class.uniqueId1
-¦   ¦       ¦               InternalBufferSystem$1.class.uniqueId2
-¦   ¦       ¦               InternalBufferSystem.class.uniqueId0
-¦   ¦       ¦               ItemPipeline.class.uniqueId6
-¦   ¦       ¦               ItemRotationManager$1.class.uniqueId7
-¦   ¦       ¦               ItemRotationManager.class.uniqueId5
-¦   ¦       ¦               WorldItemRenderSystem.class.uniqueId4
-¦   ¦       ¦               WorldPipeline.class.uniqueId3
-¦   ¦       ¦               WorldRenderManager.class.uniqueId8
-¦   ¦       ¦               
-¦   ¦       +---jar
-¦   ¦               MANIFEST.MF
-¦   ¦               
 ¦   +---src
 ¦       +---main
 ¦           +---java
@@ -1599,6 +1260,7 @@ C:.
 ¦                       ¦   ¦   ¦   CalendarPipeline.java
 ¦                       ¦   ¦   ¦   
 ¦                       ¦   ¦   +---calendar
+¦                       ¦   ¦   ¦       CalendarData.java
 ¦                       ¦   ¦   ¦       CalendarHandle.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---calendarmanager
@@ -1606,19 +1268,23 @@ C:.
 ¦                       ¦   ¦   ¦       InternalBuilder.java
 ¦                       ¦   ¦   ¦       InternalLoader.java
 ¦                       ¦   ¦   ¦       
+¦                       ¦   ¦   +---clock
+¦                       ¦   ¦   ¦       ClockData.java
+¦                       ¦   ¦   ¦       ClockHandle.java
+¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---clockmanager
-¦                       ¦   ¦           ClockHandle.java
 ¦                       ¦   ¦           ClockManager.java
-¦                       ¦   ¦           CurrentTrackerSystem.java
-¦                       ¦   ¦           DayTrackerSystem.java
+¦                       ¦   ¦           CurrentTrackerBranch.java
+¦                       ¦   ¦           DayTrackerBranch.java
 ¦                       ¦   ¦           InternalBufferSystem.java
-¦                       ¦   ¦           MonthTrackerSystem.java
-¦                       ¦   ¦           YearTrackerSystem.java
+¦                       ¦   ¦           MonthTrackerBranch.java
+¦                       ¦   ¦           YearTrackerBranch.java
 ¦                       ¦   ¦           
 ¦                       ¦   +---entitypipeline
 ¦                       ¦   ¦   ¦   EntityPipeline.java
 ¦                       ¦   ¦   ¦   
 ¦                       ¦   ¦   +---behavior
+¦                       ¦   ¦   ¦       BehaviorData.java
 ¦                       ¦   ¦   ¦       BehaviorHandle.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---behaviormanager
@@ -1629,6 +1295,7 @@ C:.
 ¦                       ¦   ¦   +---entity
 ¦                       ¦   ¦   ¦       EntityData.java
 ¦                       ¦   ¦   ¦       EntityHandle.java
+¦                       ¦   ¦   ¦       EntityInstance.java
 ¦                       ¦   ¦   ¦       EntityState.java
 ¦                       ¦   ¦   ¦       EntityStateHandle.java
 ¦                       ¦   ¦   ¦       
@@ -1640,29 +1307,39 @@ C:.
 ¦                       ¦   ¦   +---inventory
 ¦                       ¦   ¦   ¦       InventoryHandle.java
 ¦                       ¦   ¦   ¦       
+¦                       ¦   ¦   +---placementmanager
+¦                       ¦   ¦   ¦       BlockBranch.java
+¦                       ¦   ¦   ¦       ItemBranch.java
+¦                       ¦   ¦   ¦       PlacementManager.java
+¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---playermanager
-¦                       ¦   ¦   ¦       BlockPlacementSystem.java
 ¦                       ¦   ¦   ¦       InternalBufferSystem.java
 ¦                       ¦   ¦   ¦       PlayerManager.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---statistics
-¦                       ¦   ¦           StatisticsStruct.java
+¦                       ¦   ¦           StatisticsHandle.java
 ¦                       ¦   ¦           
 ¦                       ¦   +---geometrypipeline
 ¦                       ¦   ¦   ¦   GeometryPipeline.java
 ¦                       ¦   ¦   ¦   
+¦                       ¦   ¦   +---compositebuffer
+¦                       ¦   ¦   ¦       CompositeBufferData.java
+¦                       ¦   ¦   ¦       CompositeBufferInstance.java
+¦                       ¦   ¦   ¦       
+¦                       ¦   ¦   +---compositebuffermanager
+¦                       ¦   ¦   ¦       CompositeBufferManager.java
+¦                       ¦   ¦   ¦       GLSLUtility.java
+¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---dynamicgeometrymanager
+¦                       ¦   ¦   ¦   ¦   ComplexGeometryBranch.java
 ¦                       ¦   ¦   ¦   ¦   DynamicGeometryManager.java
 ¦                       ¦   ¦   ¦   ¦   DynamicGeometryType.java
+¦                       ¦   ¦   ¦   ¦   FontGeometryBranch.java
+¦                       ¦   ¦   ¦   ¦   FullGeometryBranch.java
 ¦                       ¦   ¦   ¦   ¦   InternalBuildManager.java
+¦                       ¦   ¦   ¦   ¦   LiquidGeometryBranch.java
+¦                       ¦   ¦   ¦   ¦   PartialGeometryBranch.java
 ¦                       ¦   ¦   ¦   ¦   
-¦                       ¦   ¦   ¦   +---dynamicgeometry
-¦                       ¦   ¦   ¦   ¦       ComplexGeometryBranch.java
-¦                       ¦   ¦   ¦   ¦       FontGeometryBranch.java
-¦                       ¦   ¦   ¦   ¦       FullGeometryBranch.java
-¦                       ¦   ¦   ¦   ¦       LiquidGeometryBranch.java
-¦                       ¦   ¦   ¦   ¦       PartialGeometryBranch.java
-¦                       ¦   ¦   ¦   ¦       
 ¦                       ¦   ¦   ¦   +---util
 ¦                       ¦   ¦   ¦           DynamicGeometryAsyncContainer.java
 ¦                       ¦   ¦   ¦           VertBlockNeighbor3Vector.java
@@ -1675,9 +1352,9 @@ C:.
 ¦                       ¦   ¦   ¦       DynamicPacketState.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---ibo
+¦                       ¦   ¦   ¦       IBOData.java
 ¦                       ¦   ¦   ¦       IBOHandle.java
 ¦                       ¦   ¦   ¦       IBOInstance.java
-¦                       ¦   ¦   ¦       IBOStruct.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---ibomanager
 ¦                       ¦   ¦   ¦       GLSLUtility.java
@@ -1685,14 +1362,15 @@ C:.
 ¦                       ¦   ¦   ¦       InternalBuilder.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---mesh
+¦                       ¦   ¦   ¦       MeshData.java
 ¦                       ¦   ¦   ¦       MeshHandle.java
 ¦                       ¦   ¦   ¦       MeshInstance.java
-¦                       ¦   ¦   ¦       MeshStruct.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---meshmanager
 ¦                       ¦   ¦   ¦       InternalBuilder.java
 ¦                       ¦   ¦   ¦       InternalLoader.java
 ¦                       ¦   ¦   ¦       MeshManager.java
+¦                       ¦   ¦   ¦       QuadExpansionStruct.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---model
 ¦                       ¦   ¦   ¦       ModelInstance.java
@@ -1701,9 +1379,9 @@ C:.
 ¦                       ¦   ¦   ¦       ModelManager.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---vao
+¦                       ¦   ¦   ¦       VAOData.java
 ¦                       ¦   ¦   ¦       VAOHandle.java
 ¦                       ¦   ¦   ¦       VAOInstance.java
-¦                       ¦   ¦   ¦       VAOStruct.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---vaomanager
 ¦                       ¦   ¦   ¦       GLSLUtility.java
@@ -1711,9 +1389,9 @@ C:.
 ¦                       ¦   ¦   ¦       VAOManager.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---vbo
+¦                       ¦   ¦   ¦       VBOData.java
 ¦                       ¦   ¦   ¦       VBOHandle.java
 ¦                       ¦   ¦   ¦       VBOInstance.java
-¦                       ¦   ¦   ¦       VBOStruct.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---vbomanager
 ¦                       ¦   ¦           GLSLUtility.java
@@ -1733,6 +1411,7 @@ C:.
 ¦                       ¦   ¦   ¦       BackpackInstance.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---itemdefinition
+¦                       ¦   ¦   ¦       ItemDefinitionData.java
 ¦                       ¦   ¦   ¦       ItemDefinitionHandle.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---itemdefinitionmanager
@@ -1745,6 +1424,7 @@ C:.
 ¦                       ¦   ¦   ¦       ItemRotationManager.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---tooltype
+¦                       ¦   ¦   ¦       ToolTypeData.java
 ¦                       ¦   ¦   ¦       ToolTypeHandle.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---tooltypemanager
@@ -1780,22 +1460,12 @@ C:.
 ¦                       ¦   ¦   ¦           GenericButtonBranch.java
 ¦                       ¦   ¦   ¦           
 ¦                       ¦   ¦   +---element
-¦                       ¦   ¦   ¦       DimensionValue.java
-¦                       ¦   ¦   ¦       DimensionVector2.java
 ¦                       ¦   ¦   ¦       ElementData.java
 ¦                       ¦   ¦   ¦       ElementHandle.java
 ¦                       ¦   ¦   ¦       ElementInstance.java
 ¦                       ¦   ¦   ¦       ElementOrigin.java
-¦                       ¦   ¦   ¦       ElementOverrideStruct.java
-¦                       ¦   ¦   ¦       ElementPlacementHandle.java
+¦                       ¦   ¦   ¦       ElementPlacementStruct.java
 ¦                       ¦   ¦   ¦       ElementType.java
-¦                       ¦   ¦   ¦       LayoutStruct.java
-¦                       ¦   ¦   ¦       MenuAwareAction.java
-¦                       ¦   ¦   ¦       StackDirection.java
-¦                       ¦   ¦   ¦       TextAlign.java
-¦                       ¦   ¦   ¦       
-¦                       ¦   ¦   +---elementsystem
-¦                       ¦   ¦   ¦       ElementSystem.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---fontmanager
 ¦                       ¦   ¦   ¦       FontManager.java
@@ -1816,31 +1486,36 @@ C:.
 ¦                       ¦   ¦   ¦       MenuInstance.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---menumanager
+¦                       ¦   ¦   ¦       ElementSystem.java
 ¦                       ¦   ¦   ¦       FileParserUtility.java
 ¦                       ¦   ¦   ¦       InternalBuilder.java
 ¦                       ¦   ¦   ¦       InternalLoader.java
 ¦                       ¦   ¦   ¦       MenuManager.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---raycastsystem
-¦                       ¦   ¦           RaycastSystem.java
+¦                       ¦   ¦   ¦       RaycastSystem.java
+¦                       ¦   ¦   ¦       
+¦                       ¦   ¦   +---util
+¦                       ¦   ¦           DimensionValue.java
+¦                       ¦   ¦           DimensionVector2.java
+¦                       ¦   ¦           LayoutStruct.java
+¦                       ¦   ¦           MenuAwareAction.java
+¦                       ¦   ¦           StackDirection.java
+¦                       ¦   ¦           TextAlign.java
 ¦                       ¦   ¦           
 ¦                       ¦   +---physicspipeline
 ¦                       ¦   ¦   ¦   PhysicsPipeline.java
 ¦                       ¦   ¦   ¦   
 ¦                       ¦   ¦   +---movementmanager
-¦                       ¦   ¦   ¦   ¦   MovementManager.java
-¦                       ¦   ¦   ¦   ¦   
-¦                       ¦   ¦   ¦   +---movement
-¦                       ¦   ¦   ¦           BlockCollisionBranch.java
-¦                       ¦   ¦   ¦           GravityBranch.java
-¦                       ¦   ¦   ¦           MovementBranch.java
-¦                       ¦   ¦   ¦           
+¦                       ¦   ¦   ¦       BlockCollisionBranch.java
+¦                       ¦   ¦   ¦       GravityBranch.java
+¦                       ¦   ¦   ¦       MovementBranch.java
+¦                       ¦   ¦   ¦       MovementManager.java
+¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---raycastmanager
-¦                       ¦   ¦   ¦   ¦   RaycastManager.java
-¦                       ¦   ¦   ¦   ¦   
-¦                       ¦   ¦   ¦   +---raycast
-¦                       ¦   ¦   ¦           BlockCastBranch.java
-¦                       ¦   ¦   ¦           
+¦                       ¦   ¦   ¦       BlockCastBranch.java
+¦                       ¦   ¦   ¦       RaycastManager.java
+¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---util
 ¦                       ¦   ¦           BlockCastStruct.java
 ¦                       ¦   ¦           BlockCompositionStruct.java
@@ -1849,28 +1524,40 @@ C:.
 ¦                       ¦   ¦   ¦   RenderPipeline.java
 ¦                       ¦   ¦   ¦   
 ¦                       ¦   ¦   +---camera
+¦                       ¦   ¦   ¦       CameraData.java
 ¦                       ¦   ¦   ¦       CameraInstance.java
+¦                       ¦   ¦   ¦       OrthographicCameraData.java
 ¦                       ¦   ¦   ¦       OrthographicCameraInstance.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---cameramanager
 ¦                       ¦   ¦   ¦       CameraManager.java
 ¦                       ¦   ¦   ¦       InternalBufferSystem.java
 ¦                       ¦   ¦   ¦       
+¦                       ¦   ¦   +---compositebatch
+¦                       ¦   ¦   ¦       CompositeBatchStruct.java
+¦                       ¦   ¦   ¦       
+¦                       ¦   ¦   +---compositerendersystem
+¦                       ¦   ¦   ¦       CompositeRenderSystem.java
+¦                       ¦   ¦   ¦       GLSLUtility.java
+¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---renderbatch
-¦                       ¦   ¦   ¦       RenderBatchHandle.java
+¦                       ¦   ¦   ¦       RenderBatchStruct.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---rendercall
-¦                       ¦   ¦   ¦       MaskStruct.java
-¦                       ¦   ¦   ¦       RenderCallHandle.java
+¦                       ¦   ¦   ¦       RenderCallStruct.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---rendersystem
-¦                       ¦   ¦           GLSLUtility.java
-¦                       ¦   ¦           RenderSystem.java
+¦                       ¦   ¦   ¦       GLSLUtility.java
+¦                       ¦   ¦   ¦       RenderSystem.java
+¦                       ¦   ¦   ¦       
+¦                       ¦   ¦   +---util
+¦                       ¦   ¦           MaskStruct.java
 ¦                       ¦   ¦           
 ¦                       ¦   +---shaderpipeline
 ¦                       ¦   ¦   ¦   ShaderPipeline.java
 ¦                       ¦   ¦   ¦   
 ¦                       ¦   ¦   +---material
+¦                       ¦   ¦   ¦       MaterialData.java
 ¦                       ¦   ¦   ¦       MaterialHandle.java
 ¦                       ¦   ¦   ¦       MaterialInstance.java
 ¦                       ¦   ¦   ¦       
@@ -1880,6 +1567,7 @@ C:.
 ¦                       ¦   ¦   ¦       MaterialManager.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---pass
+¦                       ¦   ¦   ¦       PassData.java
 ¦                       ¦   ¦   ¦       PassHandle.java
 ¦                       ¦   ¦   ¦       PassInstance.java
 ¦                       ¦   ¦   ¦       
@@ -1888,10 +1576,10 @@ C:.
 ¦                       ¦   ¦   ¦       InternalLoader.java
 ¦                       ¦   ¦   ¦       PassManager.java
 ¦                       ¦   ¦   ¦       
-¦                       ¦   ¦   +---Shader
+¦                       ¦   ¦   +---shader
 ¦                       ¦   ¦   ¦       ShaderData.java
-¦                       ¦   ¦   ¦       ShaderDefinitionData.java
 ¦                       ¦   ¦   ¦       ShaderHandle.java
+¦                       ¦   ¦   ¦       ShaderSourceStruct.java
 ¦                       ¦   ¦   ¦       ShaderType.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---shadermanager
@@ -1912,25 +1600,21 @@ C:.
 ¦                       ¦   ¦   ¦       InternalLoader.java
 ¦                       ¦   ¦   ¦       SpriteManager.java
 ¦                       ¦   ¦   ¦       
-¦                       ¦   ¦   +---Texture
-¦                       ¦   ¦   ¦       TextureArrayData.java
-¦                       ¦   ¦   ¦       TextureAtlasData.java
+¦                       ¦   ¦   +---texture
+¦                       ¦   ¦   ¦       TextureArrayStruct.java
+¦                       ¦   ¦   ¦       TextureAtlasStruct.java
+¦                       ¦   ¦   ¦       TextureData.java
 ¦                       ¦   ¦   ¦       TextureHandle.java
-¦                       ¦   ¦   ¦       TextureTileData.java
-¦                       ¦   ¦   ¦       UVHandle.java
+¦                       ¦   ¦   ¦       TextureTileStruct.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---texturemanager
-¦                       ¦   ¦   ¦   ¦   GLSLUtility.java
-¦                       ¦   ¦   ¦   ¦   InternalBuilder.java
-¦                       ¦   ¦   ¦   ¦   InternalLoader.java
-¦                       ¦   ¦   ¦   ¦   TextureManager.java
-¦                       ¦   ¦   ¦   ¦   
-¦                       ¦   ¦   ¦   +---alias
-¦                       ¦   ¦   ¦   ¦       AliasData.java
-¦                       ¦   ¦   ¦   ¦       
-¦                       ¦   ¦   ¦   +---aliassystem
-¦                       ¦   ¦   ¦           AliasLibrarySystem.java
-¦                       ¦   ¦   ¦           
+¦                       ¦   ¦   ¦       AliasLibrarySystem.java
+¦                       ¦   ¦   ¦       AliasStruct.java
+¦                       ¦   ¦   ¦       GLSLUtility.java
+¦                       ¦   ¦   ¦       InternalBuilder.java
+¦                       ¦   ¦   ¦       InternalLoader.java
+¦                       ¦   ¦   ¦       TextureManager.java
+¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---ubo
 ¦                       ¦   ¦   ¦       UBOData.java
 ¦                       ¦   ¦   ¦       UBOHandle.java
@@ -1943,9 +1627,9 @@ C:.
 ¦                       ¦   ¦   ¦       UBOManager.java
 ¦                       ¦   ¦   ¦       
 ¦                       ¦   ¦   +---uniforms
-¦                       ¦   ¦       ¦   Uniform.java
-¦                       ¦   ¦       ¦   UniformAttribute.java
+¦                       ¦   ¦       ¦   UniformAttributeStruct.java
 ¦                       ¦   ¦       ¦   UniformData.java
+¦                       ¦   ¦       ¦   UniformStruct.java
 ¦                       ¦   ¦       ¦   UniformType.java
 ¦                       ¦   ¦       ¦   UniformUtility.java
 ¦                       ¦   ¦       ¦   
@@ -2050,6 +1734,7 @@ C:.
 ¦                       ¦       ¦           DumpBranch.java
 ¦                       ¦       ¦           GenerationBranch.java
 ¦                       ¦       ¦           ItemLoadBranch.java
+¦                       ¦       ¦           ItemRenderBranch.java
 ¦                       ¦       ¦           MergeBranch.java
 ¦                       ¦       ¦           QueueOperation.java
 ¦                       ¦       ¦           RenderBranch.java
@@ -2067,6 +1752,7 @@ C:.
 ¦                       ¦       ¦       MegaChunkInstance.java
 ¦                       ¦       ¦       MegaData.java
 ¦                       ¦       ¦       MegaDataSyncContainer.java
+¦                       ¦       ¦       MegaDataUtility.java
 ¦                       ¦       ¦       
 ¦                       ¦       +---megastreammanager
 ¦                       ¦       ¦   ¦   MegaQueueManager.java
@@ -2095,14 +1781,16 @@ C:.
 ¦                       ¦       ¦       WorldGenerationManager.java
 ¦                       ¦       ¦       
 ¦                       ¦       +---worlditem
+¦                       ¦       ¦       WorldItemCompositeInstance.java
 ¦                       ¦       ¦       WorldItemInstance.java
 ¦                       ¦       ¦       WorldItemInstancePaletteHandle.java
 ¦                       ¦       ¦       WorldItemPaletteHandle.java
 ¦                       ¦       ¦       WorldItemStruct.java
 ¦                       ¦       ¦       
+¦                       ¦       +---worlditemplacementsystem
+¦                       ¦       ¦       WorldItemPlacementSystem.java
+¦                       ¦       ¦       
 ¦                       ¦       +---worlditemrendersystem
-¦                       ¦       ¦       GLSLUtility.java
-¦                       ¦       ¦       ItemInstanceBuffer.java
 ¦                       ¦       ¦       WorldItemRenderSystem.java
 ¦                       ¦       ¦       
 ¦                       ¦       +---worldmanager
@@ -2174,7 +1862,7 @@ C:.
 ¦                       ¦       ¦       AtlasTileData.java
 ¦                       ¦       ¦       
 ¦                       ¦       +---mathematics
-¦                       ¦       ¦   +---Extras
+¦                       ¦       ¦   +---extras
 ¦                       ¦       ¦   ¦       Color.java
 ¦                       ¦       ¦   ¦       Coordinate2Long.java
 ¦                       ¦       ¦   ¦       Coordinate3Int.java
@@ -2230,7 +1918,6 @@ C:.
     ¦   
     +---bin
     ¦   +---main
-    ¦       ¦   assets.txt
     ¦       ¦   libgdx128.png
     ¦       ¦   libgdx16.png
     ¦       ¦   libgdx32.png
@@ -2256,7 +1943,9 @@ C:.
     ¦       ¦               StartupHelper.class
     ¦       ¦               
     ¦       +---documentation
-    ¦       ¦       ENGINE_CONTEXT.md
+    ¦       ¦       EngineRefactorContext_v8.md
+    ¦       ¦       ENGINE_CLEANUP_PLAN_V3.md
+    ¦       ¦       ProjectIndex.docx
     ¦       ¦       
     ¦       +---entities
     ¦       ¦       Humanoid.json
@@ -2449,320 +2138,6 @@ C:.
     ¦       +---worlds
     ¦               TerraArcana.json
     ¦               TerraArcana.png
-    ¦               
-    +---build
-    ¦   +---classes
-    ¦   ¦   +---java
-    ¦   ¦       +---main
-    ¦   ¦           +---com
-    ¦   ¦               +---AdventureRPG
-    ¦   ¦                   +---lwjgl3
-    ¦   ¦                           Lwjgl3Launcher$1.class
-    ¦   ¦                           Lwjgl3Launcher.class
-    ¦   ¦                           StartupHelper.class
-    ¦   ¦                           
-    ¦   +---distributions
-    ¦   ¦       lwjgl3-1.0.0.tar
-    ¦   ¦       lwjgl3-1.0.0.zip
-    ¦   ¦       
-    ¦   +---generated
-    ¦   ¦   +---sources
-    ¦   ¦       +---annotationProcessor
-    ¦   ¦       ¦   +---java
-    ¦   ¦       ¦       +---main
-    ¦   ¦       +---headers
-    ¦   ¦           +---java
-    ¦   ¦               +---main
-    ¦   +---libs
-    ¦   ¦       AdventureRPG-1.0.0-win.jar
-    ¦   ¦       
-    ¦   +---resources
-    ¦   ¦   +---main
-    ¦   ¦       ¦   assets.txt
-    ¦   ¦       ¦   libgdx128.png
-    ¦   ¦       ¦   libgdx16.png
-    ¦   ¦       ¦   libgdx32.png
-    ¦   ¦       ¦   libgdx64.png
-    ¦   ¦       ¦   
-    ¦   ¦       +---behaviors
-    ¦   ¦       ¦       Bipedal.json
-    ¦   ¦       ¦       
-    ¦   ¦       +---biomes
-    ¦   ¦       ¦       Empty.json
-    ¦   ¦       ¦       
-    ¦   ¦       +---blocks
-    ¦   ¦       ¦       TerraArcana.json
-    ¦   ¦       ¦       
-    ¦   ¦       +---calendars
-    ¦   ¦       ¦       TerraArcana.json
-    ¦   ¦       ¦       
-    ¦   ¦       +---documentation
-    ¦   ¦       ¦       ENGINE_CONTEXT.md
-    ¦   ¦       ¦       
-    ¦   ¦       +---entities
-    ¦   ¦       ¦       Humanoid.json
-    ¦   ¦       ¦       
-    ¦   ¦       +---fonts
-    ¦   ¦       ¦       MontserratAlternates.ttf
-    ¦   ¦       ¦       
-    ¦   ¦       +---internal
-    ¦   ¦       ¦   +---threads
-    ¦   ¦       ¦           ThreadPools.json
-    ¦   ¦       ¦           
-    ¦   ¦       +---items
-    ¦   ¦       ¦   +---debug
-    ¦   ¦       ¦           debug.json
-    ¦   ¦       ¦           
-    ¦   ¦       +---materials
-    ¦   ¦       ¦   +---debug
-    ¦   ¦       ¦   ¦       DebugCameraOrientationBase.json
-    ¦   ¦       ¦   ¦       DebugCameraOrientationHUD.json
-    ¦   ¦       ¦   ¦       DebugSurface.json
-    ¦   ¦       ¦   ¦       DebugSurfaceUV.json
-    ¦   ¦       ¦   ¦       DebugUV.json
-    ¦   ¦       ¦   ¦       
-    ¦   ¦       ¦   +---fullscreen
-    ¦   ¦       ¦   ¦       Sky.json
-    ¦   ¦       ¦   ¦       
-    ¦   ¦       ¦   +---items
-    ¦   ¦       ¦   ¦       StandardItems.json
-    ¦   ¦       ¦   ¦       
-    ¦   ¦       ¦   +---standard
-    ¦   ¦       ¦   ¦       StandardSurface.json
-    ¦   ¦       ¦   ¦       
-    ¦   ¦       ¦   +---util
-    ¦   ¦       ¦           Label.json
-    ¦   ¦       ¦           Sprite.json
-    ¦   ¦       ¦           
-    ¦   ¦       +---menus
-    ¦   ¦       ¦   ¦   Inventory.json
-    ¦   ¦       ¦   ¦   Items.json
-    ¦   ¦       ¦   ¦   MainMenu.json
-    ¦   ¦       ¦   ¦   
-    ¦   ¦       ¦   +---util
-    ¦   ¦       ¦           Containers.json
-    ¦   ¦       ¦           GenericButtons.json
-    ¦   ¦       ¦           
-    ¦   ¦       +---mesh
-    ¦   ¦       ¦   +---items
-    ¦   ¦       ¦   ¦       Apple.json
-    ¦   ¦       ¦   ¦       Table.json
-    ¦   ¦       ¦   ¦       
-    ¦   ¦       ¦   +---util
-    ¦   ¦       ¦       ¦   LensPass.json
-    ¦   ¦       ¦       ¦   PlanarPass.json
-    ¦   ¦       ¦       ¦   Sprite.json
-    ¦   ¦       ¦       ¦   
-    ¦   ¦       ¦       +---vao
-    ¦   ¦       ¦               ChunkVAO.json
-    ¦   ¦       ¦               ItemVAO.json
-    ¦   ¦       ¦               LabelVAO.json
-    ¦   ¦       ¦               
-    ¦   ¦       +---processingpasses
-    ¦   ¦       ¦       DebugCameraOrientationBase.json
-    ¦   ¦       ¦       DebugCameraOrientationHUD.json
-    ¦   ¦       ¦       DebugUV.json
-    ¦   ¦       ¦       Sky.json
-    ¦   ¦       ¦       
-    ¦   ¦       +---shaders
-    ¦   ¦       ¦   ¦   DebugCameraOrientationBase.json
-    ¦   ¦       ¦   ¦   DebugCameraOrientationHUD.json
-    ¦   ¦       ¦   ¦   DebugSurface.json
-    ¦   ¦       ¦   ¦   DebugSurfaceUV.json
-    ¦   ¦       ¦   ¦   DebugUV.json
-    ¦   ¦       ¦   ¦   Label.json
-    ¦   ¦       ¦   ¦   Sky.json
-    ¦   ¦       ¦   ¦   Sprite.json
-    ¦   ¦       ¦   ¦   StandardItems.json
-    ¦   ¦       ¦   ¦   StandardSurface.json
-    ¦   ¦       ¦   ¦   
-    ¦   ¦       ¦   +---debug
-    ¦   ¦       ¦   ¦       DebugCameraOrientationBase.fsh
-    ¦   ¦       ¦   ¦       DebugCameraOrientationHUD.fsh
-    ¦   ¦       ¦   ¦       DebugSurface.fsh
-    ¦   ¦       ¦   ¦       DebugSurface.vsh
-    ¦   ¦       ¦   ¦       DebugSurfaceUV.fsh
-    ¦   ¦       ¦   ¦       DebugSurfaceUV.vsh
-    ¦   ¦       ¦   ¦       DebugUV.fsh
-    ¦   ¦       ¦   ¦       DebugUV.vsh
-    ¦   ¦       ¦   ¦       
-    ¦   ¦       ¦   +---includes
-    ¦   ¦       ¦   ¦       BlockOrientationMapData.glsl
-    ¦   ¦       ¦   ¦       CameraData.glsl
-    ¦   ¦       ¦   ¦       DirectionalLightData.glsl
-    ¦   ¦       ¦   ¦       GridCoordinateData.glsl
-    ¦   ¦       ¦   ¦       ItemRotationData.glsl
-    ¦   ¦       ¦   ¦       NoiseUtility.glsl
-    ¦   ¦       ¦   ¦       OrthoData.glsl
-    ¦   ¦       ¦   ¦       PlayerPositionData.glsl
-    ¦   ¦       ¦   ¦       SliceData.glsl
-    ¦   ¦       ¦   ¦       TimeData.glsl
-    ¦   ¦       ¦   ¦       
-    ¦   ¦       ¦   +---items
-    ¦   ¦       ¦   ¦   ¦   StandardItems.fsh
-    ¦   ¦       ¦   ¦   ¦   StandardItems.vsh
-    ¦   ¦       ¦   ¦   ¦   
-    ¦   ¦       ¦   ¦   +---includes
-    ¦   ¦       ¦   ¦           ItemsStandard.glsl
-    ¦   ¦       ¦   ¦           
-    ¦   ¦       ¦   +---sky
-    ¦   ¦       ¦   ¦       Clouds.glsl
-    ¦   ¦       ¦   ¦       DayNightCycle.glsl
-    ¦   ¦       ¦   ¦       Nebula.glsl
-    ¦   ¦       ¦   ¦       SeasonCycle.glsl
-    ¦   ¦       ¦   ¦       Sky.fsh
-    ¦   ¦       ¦   ¦       Sky.vsh
-    ¦   ¦       ¦   ¦       SkyColor.glsl
-    ¦   ¦       ¦   ¦       SkyNoise.glsl
-    ¦   ¦       ¦   ¦       SkyRotation.glsl
-    ¦   ¦       ¦   ¦       Stars.glsl
-    ¦   ¦       ¦   ¦       
-    ¦   ¦       ¦   +---surface
-    ¦   ¦       ¦   ¦   ¦   StandardSurface.fsh
-    ¦   ¦       ¦   ¦   ¦   StandardSurface.vsh
-    ¦   ¦       ¦   ¦   ¦   
-    ¦   ¦       ¦   ¦   +---includes
-    ¦   ¦       ¦   ¦           Albedo.glsl
-    ¦   ¦       ¦   ¦           SurfaceStandard.glsl
-    ¦   ¦       ¦   ¦           TiledSampling.glsl
-    ¦   ¦       ¦   ¦           
-    ¦   ¦       ¦   +---util
-    ¦   ¦       ¦           Label.fsh
-    ¦   ¦       ¦           Label.vsh
-    ¦   ¦       ¦           PlanarPass.vsh
-    ¦   ¦       ¦           SphericalPass.vsh
-    ¦   ¦       ¦           Sprite.fsh
-    ¦   ¦       ¦           Sprite.vsh
-    ¦   ¦       ¦           
-    ¦   ¦       +---sprites
-    ¦   ¦       ¦   +---menus
-    ¦   ¦       ¦           DebugElement.json
-    ¦   ¦       ¦           DebugElement.png
-    ¦   ¦       ¦           Title.png
-    ¦   ¦       ¦           
-    ¦   ¦       +---textureAliases
-    ¦   ¦       ¦       Albedo.json
-    ¦   ¦       ¦       AO.json
-    ¦   ¦       ¦       Emissive.json
-    ¦   ¦       ¦       Height.json
-    ¦   ¦       ¦       Metal.json
-    ¦   ¦       ¦       Normal.json
-    ¦   ¦       ¦       Specular.json
-    ¦   ¦       ¦       
-    ¦   ¦       +---textures
-    ¦   ¦       ¦   +---items
-    ¦   ¦       ¦   ¦   +---standard
-    ¦   ¦       ¦   ¦           Apple_A.png
-    ¦   ¦       ¦   ¦           Stem_A.png
-    ¦   ¦       ¦   ¦           Table_A.png
-    ¦   ¦       ¦   ¦           
-    ¦   ¦       ¦   +---surface
-    ¦   ¦       ¦       +---standard
-    ¦   ¦       ¦               CoalOre_a.png
-    ¦   ¦       ¦               CopperOre_a.png
-    ¦   ¦       ¦               Dirt_a.png
-    ¦   ¦       ¦               GoldOre_a.png
-    ¦   ¦       ¦               GrassBlockNorth_a.png
-    ¦   ¦       ¦               GrassBlockUp_a.png
-    ¦   ¦       ¦               IronOre_a.png
-    ¦   ¦       ¦               Lava_a.png
-    ¦   ¦       ¦               OakLogNorth_a.png
-    ¦   ¦       ¦               Sand_a.png
-    ¦   ¦       ¦               Stone_a.png
-    ¦   ¦       ¦               Water_a.png
-    ¦   ¦       ¦               
-    ¦   ¦       +---tools
-    ¦   ¦       ¦       Standard.json
-    ¦   ¦       ¦       
-    ¦   ¦       +---ubos
-    ¦   ¦       ¦       BlockOrientationMapData.json
-    ¦   ¦       ¦       CameraData.json
-    ¦   ¦       ¦       DirectionalLightData.json
-    ¦   ¦       ¦       GridCoordinateData.json
-    ¦   ¦       ¦       ItemRotationData.json
-    ¦   ¦       ¦       ItemsStandard.json
-    ¦   ¦       ¦       OrthoData.json
-    ¦   ¦       ¦       PlayerPositionData.json
-    ¦   ¦       ¦       SliceData.json
-    ¦   ¦       ¦       SurfaceStandard.json
-    ¦   ¦       ¦       TimeData.json
-    ¦   ¦       ¦       
-    ¦   ¦       +---worlds
-    ¦   ¦               TerraArcana.json
-    ¦   ¦               TerraArcana.png
-    ¦   ¦               
-    ¦   +---scripts
-    ¦   ¦       lwjgl3
-    ¦   ¦       lwjgl3.bat
-    ¦   ¦       
-    ¦   +---tmp
-    ¦       +---.cache
-    ¦       ¦   +---expanded
-    ¦       ¦       +---zip_0218d9ff464bb7c41603be5502370e4e
-    ¦       ¦       +---zip_03ddc65f4a00cf4c071a5c5adf136620
-    ¦       ¦       +---zip_08b5d33c3e585faef733df8fdaa683a4
-    ¦       ¦       +---zip_0d2fd87b9562cd62f2e2025bc59af7b9
-    ¦       ¦       +---zip_0df29157ef1e03dedb6c6a0871fbf56b
-    ¦       ¦       +---zip_14924cc778b3e313cb9d587d96c1c470
-    ¦       ¦       +---zip_185d7aa0c3b307fc549a861287956f17
-    ¦       ¦       +---zip_19cf913630e74e6e07a11f13cd39191b
-    ¦       ¦       +---zip_1b51aa7f44e67364ac2a909d2b1b8bb3
-    ¦       ¦       +---zip_1cb5102a8f2bc94dc9ef090b83947e54
-    ¦       ¦       +---zip_27e44c8d5bafac0c78183f3ecb01b8a8
-    ¦       ¦       +---zip_29793a86dcf9f562818343ff5c757a1e
-    ¦       ¦       +---zip_2aee1f5ad01f7e90655a3e0f9af640f3
-    ¦       ¦       +---zip_2dc74d984bcf4771cd6660458a64c3a9
-    ¦       ¦       +---zip_37df22ff8752bb3fd765d30a4489ef06
-    ¦       ¦       +---zip_3c25c4e71e5b73cf7e816add5bfa51ae
-    ¦       ¦       +---zip_4055ecb3a9b89afb4e6b24eb7139877e
-    ¦       ¦       +---zip_42562bc9a99ed930d83d6e40d1f3d6af
-    ¦       ¦       +---zip_46295e12a154e44b5764de0f45e16f7b
-    ¦       ¦       +---zip_4f450e39a495852a439f3092dd7b9af3
-    ¦       ¦       +---zip_52630be9f78d760eb2d2e218cadaf2ec
-    ¦       ¦       +---zip_59436115a2e296cb8d1a99c3bbb6ab48
-    ¦       ¦       +---zip_5a02843a29827d3b5c67db034a52c556
-    ¦       ¦       +---zip_6e35fc937db6c56313260f270927b426
-    ¦       ¦       +---zip_6e98a8e810021a41a2fca60e77c314b9
-    ¦       ¦       +---zip_798d12f7bb826d68ad46f60cecbf056f
-    ¦       ¦       +---zip_7a3c079d0b9536e4255e75396876655c
-    ¦       ¦       +---zip_839b9dadba6d253e0dedd31fba089531
-    ¦       ¦       +---zip_840fcf48793125082e2e82a1b866e2d3
-    ¦       ¦       +---zip_8423e5ca779647603d373a0d9889c481
-    ¦       ¦       +---zip_85cb4c99990ebbe824fbb1a2d717fb05
-    ¦       ¦       +---zip_91ed3d6ddaf3898b789d6ec791c4ef67
-    ¦       ¦       +---zip_95290bfaf928c37dfc36b0df1e56f4ee
-    ¦       ¦       +---zip_9d1b2da2d3a96add5a6ea74d0c8dc46c
-    ¦       ¦       +---zip_9e6f1c4bc63af2a792aa67ceda8960bc
-    ¦       ¦       +---zip_a4816d51b7ee7958b007a24163b0f9db
-    ¦       ¦       +---zip_b2c9a0d5fde51a4cb3b5f1ce037d4cb0
-    ¦       ¦       +---zip_b93184e2fc2d3330cfea95897cc4743b
-    ¦       ¦       +---zip_bb486390b3e17f16ba8f59e1bcd9e948
-    ¦       ¦       +---zip_c55e08ba400c10475af70497d791a23b
-    ¦       ¦       +---zip_c713bc60ad374f562baad7f30d5c5e4d
-    ¦       ¦       +---zip_cc316803f8b8c4bd3f17c755532ad1f2
-    ¦       ¦       +---zip_cd27b6b414199858f834b109c420f090
-    ¦       ¦       +---zip_cd5439c9f9a7473f8c7414937ee04df5
-    ¦       ¦       +---zip_cdfc7c9e8f2cd01205935aa9993c26e4
-    ¦       ¦       +---zip_d08f041928ac01872a3c742506e2ed4b
-    ¦       ¦       +---zip_d284745ffbec706764880a797a3b402d
-    ¦       ¦       +---zip_d514f4f2ea3b93684de4c5e4d6e5f3fa
-    ¦       ¦       +---zip_d5ac062b5f141557ad4eeefa212a80e7
-    ¦       ¦       +---zip_e8b0ff657920f753ab8ad26dac7f48cb
-    ¦       ¦       +---zip_f259e1dfbfe9e1bf6f70091e6ec21cc1
-    ¦       ¦       +---zip_f283899060a16de28225e137684b17e2
-    ¦       ¦       +---zip_f2e2e5116d534fab3804f65e66d4357e
-    ¦       ¦       +---zip_f506f63171df2b88e44135cd91c88bb9
-    ¦       ¦       +---zip_fa34cba8ea8efc7f4568ba9e674347c7
-    ¦       ¦       +---zip_fa8289c4efdb5cc5e98ac89cfee7f223
-    ¦       ¦       +---zip_ffb2eb3806ffde20c8a41810d630747a
-    ¦       +---compileJava
-    ¦       ¦   ¦   previous-compilation-data.bin
-    ¦       ¦   ¦   
-    ¦       ¦   +---compileTransaction
-    ¦       ¦       +---backup-dir
-    ¦       ¦       +---stash-dir
-    ¦       +---jar
-    ¦               MANIFEST.MF
     ¦               
     +---icons
     ¦       logo.icns

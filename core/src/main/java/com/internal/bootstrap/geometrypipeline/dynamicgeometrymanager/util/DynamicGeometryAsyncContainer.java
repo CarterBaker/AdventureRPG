@@ -1,25 +1,30 @@
 package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
 import java.util.BitSet;
-
 import com.internal.core.engine.AsyncContainerPackage;
-import com.internal.core.util.mathematics.Extras.Color;
-import com.internal.core.util.mathematics.Extras.Direction3Vector;
+import com.internal.core.util.mathematics.extras.Color;
+import com.internal.core.util.mathematics.extras.Direction3Vector;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
 
+    /*
+     * Reusable scratch container for one geometry build pass. Holds per-material
+     * vertex buffers, directional greedy-mesh bitsets, and per-vertex color
+     * scratch space. Reset between passes via reset() — no allocations at runtime.
+     */
+
     // Internal
     private Int2ObjectOpenHashMap<FloatArrayList> verts;
     private BitSet[] directionalBatches;
     private BitSet batchReturn;
-
     private Color[] vertColors;
 
     // Internal \\
 
+    @Override
     protected void create() {
 
         // Internal
@@ -28,7 +33,6 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             directionalBatches[i] = new BitSet();
         this.batchReturn = new BitSet();
-
         this.vertColors = new Color[VertBlockNeighbor3Vector.LENGTH];
     }
 
@@ -37,7 +41,6 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
     @Override
     public void reset() {
 
-        // Internal
         for (FloatArrayList buffer : verts.values())
             buffer.clear();
 

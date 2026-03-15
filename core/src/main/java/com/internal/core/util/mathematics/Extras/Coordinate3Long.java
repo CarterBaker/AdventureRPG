@@ -1,4 +1,4 @@
-package com.internal.core.util.mathematics.Extras;
+package com.internal.core.util.mathematics.extras;
 
 public final class Coordinate3Long {
 

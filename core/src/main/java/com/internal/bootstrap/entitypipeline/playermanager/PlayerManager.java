@@ -1,7 +1,6 @@
 package com.internal.bootstrap.entitypipeline.playermanager;
 
-import com.internal.bootstrap.entitypipeline.entity.EntityData;
-import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
+import com.internal.bootstrap.entitypipeline.entity.EntityInstance;
 import com.internal.bootstrap.entitypipeline.entity.EntityState;
 import com.internal.bootstrap.entitypipeline.entity.EntityStateHandle;
 import com.internal.bootstrap.entitypipeline.entitymanager.EntityManager;
@@ -24,6 +23,13 @@ import com.internal.core.util.mathematics.vectors.Vector3Int;
 
 public class PlayerManager extends ManagerPackage {
 
+    /*
+     * Owns and drives the player entity. Handles spawn verification, camera
+     * synchronization, movement state, inventory input, and placement input
+     * each frame. Entity-agnostic input routing means AI can use the same
+     * PlacementManager path as the player.
+     */
+
     // Internal
     private CameraManager cameraManager;
     private InputSystem inputSystem;
@@ -33,12 +39,12 @@ public class PlayerManager extends ManagerPackage {
     private ChunkStreamManager chunkStreamManager;
     private InventoryBranch inventoryBranch;
 
+    // Systems
     private InternalBufferSystem internalBufferSystem;
     private PlacementManager placementManager;
 
-    // Active Player
-    private EntityData entityData;
-    private EntityHandle player;
+    // Player
+    private EntityInstance player;
     private boolean verifyPlayerPosition;
     private Vector3 cameraPosition;
     private Vector3 cameraOffset;
@@ -47,8 +53,12 @@ public class PlayerManager extends ManagerPackage {
 
     @Override
     protected void create() {
+
+        // Systems
         this.internalBufferSystem = create(InternalBufferSystem.class);
         this.placementManager = create(PlacementManager.class);
+
+        // Player
         this.verifyPlayerPosition = true;
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
@@ -56,6 +66,8 @@ public class PlayerManager extends ManagerPackage {
 
     @Override
     protected void get() {
+
+        // Internal
         this.cameraManager = get(CameraManager.class);
         this.inputSystem = get(InputSystem.class);
         this.movementManager = get(MovementManager.class);
@@ -67,8 +79,9 @@ public class PlayerManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        this.entityData = entityManager.getTemplateDataFromTemplateName(EngineSetting.DEFAULT_PLAYER_RACE);
-        this.player = entityManager.createEntity(entityData);
+
+        // Player
+        this.player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
         this.cameraOffset.set(
                 player.getSize().x / 2,
                 player.getEyeHeight(),
@@ -121,14 +134,19 @@ public class PlayerManager extends ManagerPackage {
     }
 
     private void writeMovementState(Vector3Int input) {
+
         EntityStateHandle state = player.getEntityStateHandle();
+
         if (!state.isGrounded())
             return;
+
         boolean moving = input.x != 0 || input.z != 0;
+
         if (!moving) {
             state.setMovementState(EntityState.IDLE);
             return;
         }
+
         if (inputSystem.isWalkHeld())
             state.setMovementState(EntityState.WALKING);
         else if (inputSystem.isSprintHeld())
@@ -140,29 +158,37 @@ public class PlayerManager extends ManagerPackage {
     // Spawn Verification \\
 
     private boolean verifyPlayerPosition(WorldPositionStruct worldPositionStruct) {
+
         ChunkInstance activeChunkInstance = chunkStreamManager.getChunkInstance(
                 worldPositionStruct.getChunkCoordinate());
+
         if (activeChunkInstance == null)
             return true;
+
         if (!activeChunkInstance.getChunkDataSyncContainer().hasData(ChunkData.GENERATION_DATA))
             return true;
+
         Vector3 position = worldPositionStruct.getPosition();
         int blockX = (int) position.x;
         int totalY = (int) position.y;
         int blockZ = (int) position.z;
+
         int safeY = WorldPositionUtility.findSafeSpawnHeight(
                 activeChunkInstance, blockManager, blockX, totalY, blockZ);
+
         if (safeY == -1)
             return true;
+
         position.x = blockX;
         position.y = safeY;
         position.z = blockZ;
+
         return false;
     }
 
     // Accessible \\
 
-    public EntityHandle getPlayer() {
+    public EntityInstance getPlayer() {
         return player;
     }
 

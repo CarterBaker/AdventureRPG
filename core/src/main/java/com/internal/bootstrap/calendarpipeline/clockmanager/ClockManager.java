@@ -11,6 +11,13 @@ import com.internal.core.engine.settings.EngineSetting;
 
 public class ClockManager extends ManagerPackage {
 
+    /*
+     * Drives the in-game clock for the active world. Owns the ClockHandle and
+     * all tracker branches. Validates calendar settings on awake, wires branches
+     * to the active world's epoch, and advances time each update frame.
+     * Supports world switching by rewiring branches to the new world's data.
+     */
+
     // Internal
     private CalendarManager calendarManager;
     private WorldManager worldManager;
@@ -54,7 +61,7 @@ public class ClockManager extends ManagerPackage {
     protected void awake() {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
-        this.calendarHandle = calendarManager.getCalendar(activeWorld.getCalendarName());
+        this.calendarHandle = calendarManager.getCalendarHandleFromCalendarName(activeWorld.getCalendarName());
 
         if (activeWorld.getWorldEpochStart() == -1L)
             activeWorld.setWorldEpochStart(System.currentTimeMillis());
@@ -77,10 +84,11 @@ public class ClockManager extends ManagerPackage {
 
         int startingMonth = EngineSetting.STARTING_MONTH;
         int startingDayOfMonth = EngineSetting.STARTING_DAY_OF_MONTH;
+        int monthCount = calendarHandle.getMonthCount();
 
-        if (startingMonth < 0 || startingMonth >= calendarHandle.getMonthCount())
+        if (startingMonth < 0 || startingMonth >= monthCount)
             throwException("Invalid STARTING_MONTH: " + startingMonth +
-                    ". Must be between 0 and " + (calendarHandle.getMonthCount() - 1));
+                    ". Must be between 0 and " + (monthCount - 1));
 
         int daysInStartingMonth = calendarHandle.getMonthDays(startingMonth);
 
@@ -114,7 +122,7 @@ public class ClockManager extends ManagerPackage {
      */
     public void switchWorld(WorldHandle newWorld) {
 
-        this.calendarHandle = calendarManager.getCalendar(newWorld.getCalendarName());
+        this.calendarHandle = calendarManager.getCalendarHandleFromCalendarName(newWorld.getCalendarName());
 
         if (newWorld.getWorldEpochStart() == -1L)
             newWorld.setWorldEpochStart(System.currentTimeMillis());

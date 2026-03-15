@@ -4,13 +4,26 @@ import com.internal.core.engine.HandlePackage;
 
 public class IBOHandle extends HandlePackage {
 
-    private IBOStruct iboStruct;
+    /*
+     * Persistent shared reference to an index buffer. Registered and owned
+     * by IBOManager for the engine lifetime. Never handed out directly —
+     * external systems access index data through MeshHandle.
+     */
 
-    public void constructor(IBOStruct iboStruct) {
-        this.iboStruct = iboStruct;
+    // Internal
+    private IBOData iboData;
+
+    // Constructor \\
+
+    public void constructor(IBOData iboData) {
+
+        // Internal
+        this.iboData = iboData;
     }
 
-    public IBOStruct getIBOStruct() {
-        return iboStruct;
+    // Accessible \\
+
+    public IBOData getIBOData() {
+        return iboData;
     }
 }

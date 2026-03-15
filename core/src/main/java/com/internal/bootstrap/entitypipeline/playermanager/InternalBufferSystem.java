@@ -4,12 +4,24 @@ import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
 
-public class InternalBufferSystem extends SystemPackage {
+class InternalBufferSystem extends SystemPackage {
 
+    /*
+     * Pushes the player's current chunk coordinate and world position to the
+     * PlayerPositionData UBO each frame. Wired to the player's
+     * WorldPositionStruct via updatePlayerPosition().
+     */
+
+    // Internal
     private UBOManager uboManager;
+
+    // UBO
     private UBOHandle playerChunkUBO;
+
+    // Internal \\
 
     @Override
     protected void get() {
@@ -18,15 +30,21 @@ public class InternalBufferSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.playerChunkUBO = uboManager.getUBOHandleFromUBOName("PlayerPositionData");
+        this.playerChunkUBO = uboManager.getUBOHandleFromUBOName(EngineSetting.PLAYER_POSITION_UBO);
     }
 
-    public void updatePlayerPosition(WorldPositionStruct playerPosition) {
-        int chunkX = Coordinate2Long.unpackX(playerPosition.getChunkCoordinate());
-        int chunkZ = Coordinate2Long.unpackY(playerPosition.getChunkCoordinate());
+    // Buffer \\
+
+    void updatePlayerPosition(WorldPositionStruct playerPosition) {
+
+        long chunkCoordinate = playerPosition.getChunkCoordinate();
+        int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
+        int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
+
         playerChunkUBO.updateUniform("u_playerChunkX", chunkX);
         playerChunkUBO.updateUniform("u_playerChunkZ", chunkZ);
         playerChunkUBO.updateUniform("u_playerPosition", playerPosition.getPosition());
-        playerChunkUBO.push();
+
+        uboManager.push(playerChunkUBO);
     }
 }

@@ -1,16 +1,21 @@
 package com.internal.bootstrap.geometrypipeline.dynamicpacket;
 
 import java.util.concurrent.atomic.AtomicReference;
-
 import com.internal.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.core.engine.InstancePackage;
-
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class DynamicPacketInstance extends InstancePackage {
+
+    /*
+     * Thread-safe geometry packet for one sub-chunk. Accumulates dynamic quad
+     * geometry into per-material DynamicModelHandle buckets during a build pass.
+     * State transitions are atomic — EMPTY → GENERATING → READY — to prevent
+     * concurrent writes from the build thread and reads from the render thread.
+     */
 
     // Internal
     private AtomicReference<DynamicPacketState> state;
@@ -19,11 +24,15 @@ public class DynamicPacketInstance extends InstancePackage {
     // Model Management
     private Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> materialID2ModelCollection;
 
-    // Internal \\
+    // Constructor \\
 
     public void constructor(VAOHandle vaoHandle) {
+
+        // Internal
         this.state = new AtomicReference<>(DynamicPacketState.EMPTY);
         this.vaoHandle = vaoHandle;
+
+        // Model Management
         this.materialID2ModelCollection = new Int2ObjectOpenHashMap<>();
     }
 
@@ -45,7 +54,7 @@ public class DynamicPacketInstance extends InstancePackage {
 
     public boolean addVertices(int materialId, FloatArrayList vertList) {
 
-        int floatsPerQuad = vaoHandle.getVAOStruct().vertStride * 4;
+        int floatsPerQuad = vaoHandle.getVAOData().getVertStride() * 4;
 
         if (vertList.size() % floatsPerQuad != 0)
             return false;
@@ -59,13 +68,16 @@ public class DynamicPacketInstance extends InstancePackage {
         while (processed < total) {
 
             DynamicModelHandle target = null;
-            for (DynamicModelHandle model : modelList)
+
+            for (DynamicModelHandle model : modelList) {
                 if (!model.isFull()) {
                     target = model;
                     break;
                 }
+            }
 
             boolean addToMaterialBucket = false;
+
             if (target == null) {
                 target = create(DynamicModelHandle.class);
                 target.constructor(materialId, vaoHandle);
@@ -76,7 +88,6 @@ public class DynamicPacketInstance extends InstancePackage {
 
             if (added <= 0)
                 return false;
-
             else if (addToMaterialBucket)
                 modelList.add(target);
 
@@ -91,14 +102,15 @@ public class DynamicPacketInstance extends InstancePackage {
         if (other == null || other.materialID2ModelCollection == null)
             return true;
 
-        int stride = vaoHandle.getVAOStruct().vertStride;
+        int stride = vaoHandle.getVAOData().getVertStride();
 
         if (offsetIndices.length != offsets.length)
-            throw new IllegalArgumentException("offsetIndices and offsets must have same length");
+            throwException("offsetIndices and offsets must have same length");
 
-        for (int index : offsetIndices)
+        for (int index : offsetIndices) {
             if (index >= stride)
-                throw new IllegalArgumentException("offsetIndex " + index + " exceeds vertStride " + stride);
+                throwException("offsetIndex " + index + " exceeds vertStride " + stride);
+        }
 
         for (var entry : other.materialID2ModelCollection.int2ObjectEntrySet()) {
 
@@ -114,6 +126,7 @@ public class DynamicPacketInstance extends InstancePackage {
                     continue;
 
                 FloatArrayList vertices = source.getVertices();
+
                 if (vertices == null || vertices.isEmpty())
                     continue;
 
@@ -127,18 +140,21 @@ public class DynamicPacketInstance extends InstancePackage {
 
     private FloatArrayList applyOffset(FloatArrayList vertices, int[] offsetIndices, float[] offsets) {
 
-        int stride = vaoHandle.getVAOStruct().vertStride;
+        int stride = vaoHandle.getVAOData().getVertStride();
         FloatArrayList result = new FloatArrayList(vertices.size());
 
         for (int i = 0; i < vertices.size(); i += stride) {
             for (int j = 0; j < stride; j++) {
+
                 float value = vertices.getFloat(i + j);
+
                 for (int k = 0; k < offsetIndices.length; k++) {
                     if (j == offsetIndices[k]) {
                         value += offsets[k];
                         break;
                     }
                 }
+
                 result.add(value);
             }
         }

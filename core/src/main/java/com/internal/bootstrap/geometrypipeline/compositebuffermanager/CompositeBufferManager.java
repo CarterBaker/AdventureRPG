@@ -1,26 +1,32 @@
 package com.internal.bootstrap.geometrypipeline.compositebuffermanager;
 
+import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferData;
 import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.core.engine.ManagerPackage;
 
-/*
- * Handles creation and disposal of CompositeBufferInstances only.
- * Upload and draw belong to CompositeRenderSystem.
- */
 public class CompositeBufferManager extends ManagerPackage {
+
+    /*
+     * Creates, grows, and disposes CompositeBufferInstances.
+     * Upload and draw are the responsibility of CompositeRenderSystem.
+     */
 
     // Constructor \\
 
     public void constructor(CompositeBufferInstance buffer, MeshHandle meshHandle, int[] instanceAttrSizes) {
-        buffer.init(meshHandle, instanceAttrSizes);
+
+        CompositeBufferData compositeBufferData = new CompositeBufferData(meshHandle, instanceAttrSizes);
+        buffer.constructor(compositeBufferData);
+
         int vbo = GLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(), buffer.getFloatsPerInstance());
         int vao = GLSLUtility.createInstancedVAO(
-                meshHandle.getVBOHandle().getVBOStruct().vertexHandle,
-                meshHandle.getVAOInstance().getVAOStruct().attrSizes,
-                meshHandle.getIBOHandle().getIBOStruct().indexHandle,
+                meshHandle.getVBOHandle().getVBOData().getVertexHandle(),
+                meshHandle.getVAOInstance().getVAOData().getAttrSizes(),
+                meshHandle.getIBOHandle().getIBOData().getIndexHandle(),
                 vbo,
                 instanceAttrSizes);
+
         buffer.setInstanceVBO(vbo);
         buffer.setCompositeVAO(vao);
     }
@@ -28,15 +34,18 @@ public class CompositeBufferManager extends ManagerPackage {
     // Grow \\
 
     public void grow(CompositeBufferInstance buffer) {
+
         GLSLUtility.deleteBuffer(buffer.getInstanceVBO());
         GLSLUtility.deleteVAO(buffer.getCompositeVAO());
+
         int vbo = GLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(), buffer.getFloatsPerInstance());
         int vao = GLSLUtility.createInstancedVAO(
-                buffer.getMeshHandle().getVBOHandle().getVBOStruct().vertexHandle,
-                buffer.getMeshHandle().getVAOInstance().getVAOStruct().attrSizes,
-                buffer.getMeshHandle().getIBOHandle().getIBOStruct().indexHandle,
+                buffer.getMeshHandle().getVBOHandle().getVBOData().getVertexHandle(),
+                buffer.getMeshHandle().getVAOInstance().getVAOData().getAttrSizes(),
+                buffer.getMeshHandle().getIBOHandle().getIBOData().getIndexHandle(),
                 vbo,
                 buffer.getInstanceAttrSizes());
+
         buffer.setInstanceVBO(vbo);
         buffer.setCompositeVAO(vao);
         buffer.clearNeedsGpuRealloc();

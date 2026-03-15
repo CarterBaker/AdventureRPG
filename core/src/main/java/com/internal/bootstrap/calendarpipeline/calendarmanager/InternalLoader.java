@@ -12,15 +12,22 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {
 
+    /*
+     * Scans the calendar JSON directory and loads all calendar definitions into
+     * CalendarManager. Supports on-demand loading for calendars not yet in the
+     * palette at runtime.
+     */
+
     // Internal
     private File root;
     private CalendarManager calendarManager;
     private InternalBuilder internalBuilder;
 
-    // Registry for on-demand loading
+    // File Registry
     private Object2ObjectOpenHashMap<String, File> calendarName2File;
 
     // Base \\
+
     @Override
     protected void scan() {
 
@@ -40,10 +47,8 @@ class InternalLoader extends LoaderPackage {
                         calendarName2File.put(calendarName, file);
                         fileQueue.offer(file);
                     });
-        }
-
-        catch (IOException e) {
-            throwException("CalendarLoader failed to walk directory: ", e);
+        } catch (IOException e) {
+            throwException("Failed to walk calendar directory: " + root.getAbsolutePath(), e);
         }
     }
 
@@ -58,6 +63,7 @@ class InternalLoader extends LoaderPackage {
     }
 
     // Load \\
+
     @Override
     protected void load(File file) {
 
@@ -71,13 +77,13 @@ class InternalLoader extends LoaderPackage {
     }
 
     // On-Demand \\
+
     void request(String calendarName) {
 
         File file = calendarName2File.get(calendarName);
 
         if (file == null)
-            throwException("[CalendarLoader] On-demand load failed — not found in scan registry: \""
-                    + calendarName + "\"");
+            throwException("On-demand calendar load failed — not found in scan registry: \"" + calendarName + "\"");
 
         request(file);
     }

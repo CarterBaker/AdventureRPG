@@ -5,10 +5,10 @@ import java.util.concurrent.Future;
 import com.internal.core.engine.AsyncContainerPackage;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.SyncContainerPackage;
-import com.internal.core.kernel.SyncConsumer.AsyncStructConsumer;
-import com.internal.core.kernel.SyncConsumer.AsyncStructConsumerMulti;
-import com.internal.core.kernel.SyncConsumer.BiSyncAsyncConsumer;
-import com.internal.core.kernel.SyncConsumer.SyncStructConsumer;
+import com.internal.core.kernel.syncconsumer.AsyncStructConsumer;
+import com.internal.core.kernel.syncconsumer.AsyncStructConsumerMulti;
+import com.internal.core.kernel.syncconsumer.BiSyncAsyncConsumer;
+import com.internal.core.kernel.syncconsumer.SyncStructConsumer;
 import com.internal.core.kernel.thread.ThreadHandle;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;

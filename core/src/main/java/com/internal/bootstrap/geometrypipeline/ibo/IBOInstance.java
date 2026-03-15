@@ -4,13 +4,26 @@ import com.internal.core.engine.InstancePackage;
 
 public class IBOInstance extends InstancePackage {
 
-    private IBOStruct iboStruct;
+    /*
+     * Runtime index buffer created on demand for dynamic meshes. Holds its
+     * own IBOData independently of the manager palette. Released via
+     * IBOManager.removeIBOInstance() by whoever created it.
+     */
 
-    public void constructor(IBOStruct iboStruct) {
-        this.iboStruct = iboStruct;
+    // Internal
+    private IBOData iboData;
+
+    // Constructor \\
+
+    public void constructor(IBOData iboData) {
+
+        // Internal
+        this.iboData = iboData;
     }
 
-    public IBOStruct getIBOStruct() {
-        return iboStruct;
+    // Accessible \\
+
+    public IBOData getIBOData() {
+        return iboData;
     }
 }

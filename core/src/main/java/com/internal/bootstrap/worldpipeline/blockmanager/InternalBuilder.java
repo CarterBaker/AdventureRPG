@@ -1,21 +1,21 @@
 package com.internal.bootstrap.worldpipeline.blockmanager;
 
 import java.io.File;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import com.internal.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import com.internal.bootstrap.worldpipeline.block.BlockData;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockRotationType;
 import com.internal.core.engine.BuilderPackage;
+import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
 import com.internal.core.util.RegistryUtility;
-import com.internal.core.util.mathematics.Extras.Direction3Vector;
-
+import com.internal.core.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {
@@ -36,10 +36,10 @@ class InternalBuilder extends BuilderPackage {
 
     // Build \\
 
-    ObjectArrayList<BlockHandle> build(File jsonFile, File root) {
+    ObjectArrayList<BlockHandle> build(File file, File root) {
 
-        String pathPrefix = FileUtility.getPathWithFileNameWithoutExtension(root, jsonFile);
-        JsonObject rootJson = JsonUtility.loadJsonObject(jsonFile);
+        String pathPrefix = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+        JsonObject rootJson = JsonUtility.loadJsonObject(file);
         JsonArray blockArray = JsonUtility.validateArray(rootJson, "blocks");
 
         ObjectArrayList<BlockHandle> blocks = new ObjectArrayList<>();
@@ -91,7 +91,7 @@ class InternalBuilder extends BuilderPackage {
             textures[i] = -1;
 
         if (blockJson.has("texture")) {
-            int textureID = textureManager.getHandleFromTextureName(
+            int textureID = textureManager.getTextureHandleFromTextureName(
                     blockJson.get("texture").getAsString()).getTileID();
             for (int i = 0; i < Direction3Vector.LENGTH; i++)
                 textures[i] = textureID;
@@ -100,7 +100,7 @@ class InternalBuilder extends BuilderPackage {
         for (Direction3Vector dir : Direction3Vector.VALUES) {
             String key = dir.name().toLowerCase() + "Tex";
             if (blockJson.has(key))
-                textures[dir.ordinal()] = textureManager.getHandleFromTextureName(
+                textures[dir.ordinal()] = textureManager.getTextureHandleFromTextureName(
                         blockJson.get(key).getAsString()).getTileID();
         }
 
@@ -111,32 +111,28 @@ class InternalBuilder extends BuilderPackage {
                 break;
             }
 
-        if (lastDefined != -1) {
+        if (lastDefined != -1)
             for (int i = 0; i < Direction3Vector.LENGTH; i++) {
                 if (textures[i] == -1)
                     textures[i] = lastDefined;
                 else
                     lastDefined = textures[i];
             }
-        }
 
         // Breaking
         int breakTier = JsonUtility.getInt(blockJson, "break_tier", 0);
         int durability = JsonUtility.getInt(blockJson, "durability", 1);
 
-        short requiredToolTypeID = ToolTypeManager.TOOL_NONE;
+        short requiredToolTypeID = EngineSetting.TOOL_NONE;
         if (blockJson.has("required_tool")) {
             String toolPath = blockJson.get("required_tool").getAsString();
-            requiredToolTypeID = toolTypeManager.getToolTypeIDFromName(toolPath);
+            requiredToolTypeID = toolTypeManager.getToolTypeIDFromToolTypeName(toolPath);
         }
 
         // Construct
-        BlockHandle block = create(BlockHandle.class);
-        block.constructor(
-                blockName,
-                blockID,
-                blockType,
-                rotationType,
+        BlockData blockData = new BlockData(
+                blockName, blockID,
+                blockType, rotationType,
                 materialID,
                 textures[Direction3Vector.NORTH.ordinal()],
                 textures[Direction3Vector.EAST.ordinal()],
@@ -144,11 +140,12 @@ class InternalBuilder extends BuilderPackage {
                 textures[Direction3Vector.WEST.ordinal()],
                 textures[Direction3Vector.UP.ordinal()],
                 textures[Direction3Vector.DOWN.ordinal()],
-                breakTier,
-                requiredToolTypeID,
-                durability);
+                breakTier, requiredToolTypeID, durability);
 
-        return block;
+        BlockHandle blockHandle = create(BlockHandle.class);
+        blockHandle.constructor(blockData);
+
+        return blockHandle;
     }
 
     // Utility \\

@@ -4,26 +4,22 @@ import java.io.File;
 import java.nio.file.Path;
 
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.shaderpipeline.Shader.ShaderData;
-import com.internal.bootstrap.shaderpipeline.Shader.ShaderDefinitionData;
-import com.internal.bootstrap.shaderpipeline.Shader.ShaderType;
-import com.internal.bootstrap.shaderpipeline.ubo.UBOData;
+import com.internal.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
+import com.internal.bootstrap.shaderpipeline.shader.ShaderType;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformData;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.engine.BuilderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.JsonUtility;
-
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Parses GLSL source files into ShaderData and assembles ShaderDefinitionData
- * from JSON descriptors. UBO block contents are intentionally skipped — structure
- * is now owned by UBO JSON descriptors. The block name is still extracted so the
- * shader can be bound to the correct binding point at assembly time.
- * Include resolution uses post-order traversal so dependencies always precede dependents.
- */
 class InternalBuilder extends BuilderPackage {
+
+    /*
+     * Populates ShaderSourceStructs during scan and assembles program-level
+     * ShaderSourceStructs from JSON descriptors. Everything produced here is
+     * bootstrap-only and GCs when InternalLoader self-destructs.
+     */
 
     // Internal
     private InternalLoader internalLoader;
@@ -39,15 +35,15 @@ class InternalBuilder extends BuilderPackage {
 
     // Parse \\
 
-    void parseShaderFile(ShaderData shaderData) {
+    void parseShaderFile(ShaderSourceStruct source) {
 
-        String rawText = FileParserUtility.convertFileToRawText(shaderData.getShaderFile());
+        String rawText = FileParserUtility.convertFileToRawText(source.getShaderFile());
         ObjectArrayList<String> lines = FileParserUtility.convertRawTextToArray(rawText);
 
-        shaderData.setVersion(parseVersionInfo(lines));
+        source.setVersion(parseVersionInfo(lines));
 
-        parseUniforms(shaderData, lines);
-        parseIncludes(shaderData, lines);
+        parseUniforms(source, lines);
+        parseIncludes(source, lines);
     }
 
     // Version \\
@@ -61,10 +57,10 @@ class InternalBuilder extends BuilderPackage {
 
     // Uniforms \\
 
-    private void parseUniforms(ShaderData shaderData, ObjectArrayList<String> lines) {
+    private void parseUniforms(ShaderSourceStruct source, ObjectArrayList<String> lines) {
 
         boolean insideBlock = false;
-        UBOData currentBuffer = null;
+        String currentBlockName = null;
         int braceDepth = 0;
 
         for (int i = 0; i < lines.size(); i++) {
@@ -76,9 +72,9 @@ class InternalBuilder extends BuilderPackage {
 
             if (isUniformBlockStart(line)) {
 
-                currentBuffer = parseUniformBlockStart(line);
+                currentBlockName = parseUniformBlockName(line);
 
-                if (currentBuffer != null) {
+                if (currentBlockName != null) {
                     insideBlock = true;
                     braceDepth = FileParserUtility.countCharInString(line, '{') -
                             FileParserUtility.countCharInString(line, '}');
@@ -93,14 +89,12 @@ class InternalBuilder extends BuilderPackage {
                         FileParserUtility.countCharInString(line, '}');
 
                 if (braceDepth <= 0) {
-                    // Block closed — register name only, contents are owned by UBO JSON
-                    if (currentBuffer != null)
-                        shaderData.addBufferBlock(currentBuffer);
-                    currentBuffer = null;
+                    if (currentBlockName != null)
+                        source.addBufferBlockName(currentBlockName);
+                    currentBlockName = null;
                     insideBlock = false;
                 }
 
-                // Skip all lines inside the block
                 continue;
             }
 
@@ -115,7 +109,7 @@ class InternalBuilder extends BuilderPackage {
                         fullDeclaration += " " + next;
                 }
 
-                parseUniformDeclaration(fullDeclaration, shaderData);
+                parseUniformDeclaration(fullDeclaration, source);
             }
         }
     }
@@ -127,14 +121,9 @@ class InternalBuilder extends BuilderPackage {
                 !line.matches(".*\\buniform\\s+\\w+\\s+\\w+.*");
     }
 
-    private UBOData parseUniformBlockStart(String line) {
+    private String parseUniformBlockName(String line) {
 
         try {
-
-            int binding = UBOData.UNSPECIFIED_BINDING;
-
-            if (line.contains("layout") || line.contains("buffer"))
-                binding = FileParserUtility.extractBufferBinding(line);
 
             int uniformIdx = line.indexOf("uniform");
             int braceIdx = line.indexOf("{");
@@ -145,19 +134,13 @@ class InternalBuilder extends BuilderPackage {
             String blockName = line.substring(uniformIdx + 7, braceIdx).trim();
             blockName = blockName.replaceAll("\\(.*?\\)", "").trim();
 
-            UBOData uboData = create(UBOData.class);
-            uboData.constructor(blockName, binding);
-
-            return uboData;
-
-        } catch (InternalException e) {
-            throw e;
+            return blockName.isEmpty() ? null : blockName;
         } catch (Exception e) {
-            return throwException("Failed to parse uniform block: " + line, e);
+            return throwException("Failed to parse uniform block name: " + line, e);
         }
     }
 
-    private void parseUniformDeclaration(String declaration, ShaderData shaderData) {
+    private void parseUniformDeclaration(String declaration, ShaderSourceStruct source) {
 
         declaration = declaration.replace(";", "").trim();
 
@@ -172,6 +155,7 @@ class InternalBuilder extends BuilderPackage {
         declaration = declaration.replaceFirst("\\buniform\\b", "").trim();
 
         int lastDelimiter = FileParserUtility.findLastTypeDelimiter(declaration);
+
         if (lastDelimiter == -1)
             return;
 
@@ -179,22 +163,24 @@ class InternalBuilder extends BuilderPackage {
         String namesStr = declaration.substring(lastDelimiter).trim();
 
         UniformType uniformType = UniformType.fromString(typeStr);
+
         if (uniformType == null)
             return;
 
-        parseVariableNames(namesStr, uniformType, shaderData);
+        parseVariableNames(namesStr, uniformType, source);
     }
 
     private void parseVariableNames(
             String namesStr,
             UniformType uniformType,
-            ShaderData shaderData) {
+            ShaderSourceStruct source) {
 
         String[] names = namesStr.split(",");
 
         for (int i = 0; i < names.length; i++) {
 
             String name = names[i].trim();
+
             if (name.isEmpty())
                 continue;
 
@@ -222,16 +208,13 @@ class InternalBuilder extends BuilderPackage {
                 }
             }
 
-            UniformData uniform = create(UniformData.class);
-            uniform.constructor(uniformType, variableName, arrayCount);
-
-            shaderData.addUniform(uniform);
+            source.addUniformDeclaration(new UniformData(uniformType, variableName, arrayCount));
         }
     }
 
     // Includes \\
 
-    private void parseIncludes(ShaderData shaderData, ObjectArrayList<String> lines) {
+    private void parseIncludes(ShaderSourceStruct source, ObjectArrayList<String> lines) {
 
         for (int i = 0; i < lines.size(); i++) {
 
@@ -242,17 +225,17 @@ class InternalBuilder extends BuilderPackage {
                 String includePath = FileParserUtility.extractPayloadAfterToken(line, "#include");
 
                 if (includePath != null && !includePath.isEmpty()) {
-                    ShaderData includeData = internalLoader.getShaderData(includePath);
-                    if (includeData != null)
-                        shaderData.addIncludes(includeData);
+                    ShaderSourceStruct include = internalLoader.getSourceStruct(includePath);
+                    if (include != null)
+                        source.addDirectInclude(include);
                 }
             }
         }
     }
 
-    // Compile \\
+    // Build Assembly \\
 
-    ShaderDefinitionData compileShader(File jsonFile) {
+    ShaderSourceStruct buildAssembly(File jsonFile) {
 
         Path rootPath = root.toPath();
         String relativePath = rootPath.relativize(jsonFile.toPath()).toString().replace("\\", "/");
@@ -261,48 +244,49 @@ class InternalBuilder extends BuilderPackage {
                 : relativePath;
 
         JsonObject obj = JsonUtility.loadJsonObject(jsonFile);
-        ShaderData vertData = internalLoader.getShaderData(obj.get("vert").getAsString());
-        ShaderData fragData = internalLoader.getShaderData(obj.get("frag").getAsString());
+        ShaderSourceStruct vertSource = internalLoader.getSourceStruct(obj.get("vert").getAsString());
+        ShaderSourceStruct fragSource = internalLoader.getSourceStruct(obj.get("frag").getAsString());
 
-        if (vertData == null || fragData == null)
-            throwException("Json error: " + jsonFile.getName() + " — vert or frag file not found.");
+        if (vertSource == null || fragSource == null)
+            throwException("JSON error: " + jsonFile.getName() + " — vert or frag file not found.");
 
-        if (vertData.getShaderType() != ShaderType.VERT || fragData.getShaderType() != ShaderType.FRAG)
-            throwException("Json error: " + jsonFile.getName() + " — vert/frag type mismatch.");
+        if (vertSource.getShaderType() != ShaderType.VERT || fragSource.getShaderType() != ShaderType.FRAG)
+            throwException("JSON error: " + jsonFile.getName() + " — vert/frag type mismatch.");
 
-        ShaderDefinitionData definition = create(ShaderDefinitionData.class);
-        definition.constructor(shaderName, vertData, fragData);
+        ShaderSourceStruct assembly = new ShaderSourceStruct(ShaderType.PROGRAM, shaderName, null);
+        assembly.setVert(vertSource);
+        assembly.setFrag(fragSource);
 
-        return collectIncludes(definition);
+        return collectIncludes(assembly);
     }
 
-    private ShaderDefinitionData collectIncludes(ShaderDefinitionData definition) {
+    private ShaderSourceStruct collectIncludes(ShaderSourceStruct assembly) {
 
-        ObjectArrayList<ShaderData> visited = new ObjectArrayList<>();
+        ObjectArrayList<ShaderSourceStruct> visited = new ObjectArrayList<>();
 
-        collectPostOrder(definition, definition.getVert(), visited);
-        collectPostOrder(definition, definition.getFrag(), visited);
+        collectPostOrder(assembly, assembly.getVert(), visited);
+        collectPostOrder(assembly, assembly.getFrag(), visited);
 
-        return definition;
+        return assembly;
     }
 
     private void collectPostOrder(
-            ShaderDefinitionData definition,
-            ShaderData shaderData,
-            ObjectArrayList<ShaderData> visited) {
+            ShaderSourceStruct assembly,
+            ShaderSourceStruct source,
+            ObjectArrayList<ShaderSourceStruct> visited) {
 
-        if (visited.contains(shaderData))
+        if (visited.contains(source))
             return;
 
-        visited.add(shaderData);
+        visited.add(source);
 
-        ObjectArrayList<ShaderData> includes = shaderData.getIncludes();
+        ObjectArrayList<ShaderSourceStruct> directIncludes = source.getDirectIncludes();
 
-        for (int i = 0; i < includes.size(); i++)
-            collectPostOrder(definition, includes.get(i), visited);
+        for (int i = 0; i < directIncludes.size(); i++)
+            collectPostOrder(assembly, directIncludes.get(i), visited);
 
-        if (shaderData.getShaderType() == ShaderType.INCLUDE &&
-                !definition.getIncludes().contains(shaderData))
-            definition.addInclude(shaderData);
+        if (source.getShaderType() == ShaderType.INCLUDE &&
+                !assembly.getFlattenedIncludes().contains(source))
+            assembly.addFlattenedInclude(source);
     }
 }

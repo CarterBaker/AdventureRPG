@@ -1,38 +1,43 @@
 package com.internal.bootstrap.shaderpipeline.passmanager;
 
+import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import com.internal.bootstrap.shaderpipeline.pass.PassData;
 import com.internal.bootstrap.shaderpipeline.pass.PassHandle;
 import com.internal.bootstrap.shaderpipeline.pass.PassInstance;
 import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.core.engine.ManagerPackage;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
-/*
- * Owns all compiled PassHandle objects. Delegates bootstrap loading to
- * InternalLoadManager. Passes are pushed into the render system by depth layer.
- * Cloning produces a PassInstance with a shared mesh reference and a deep-copied
- * MaterialInstance, mirroring the material cloning contract.
- */
 public class PassManager extends ManagerPackage {
+
+    /*
+     * Owns all compiled PassHandles. Drives bootstrap via InternalLoader.
+     * Passes are pushed into the render system by depth layer. Cloning produces
+     * a PassInstance with a shared mesh reference and a deep-copied
+     * MaterialInstance,
+     * mirroring the material cloning contract.
+     */
 
     // Internal
     private MaterialManager materialManager;
     private RenderSystem renderSystem;
 
-    // Retrieval Mapping
+    // Palette
     private Object2IntOpenHashMap<String> passName2PassID;
-    private Int2ObjectOpenHashMap<PassHandle> passID2Pass;
+    private Int2ObjectOpenHashMap<PassHandle> passID2PassHandle;
 
     // Base \\
 
     @Override
     protected void create() {
-        create(InternalLoader.class);
+
         this.passName2PassID = new Object2IntOpenHashMap<>();
-        this.passID2Pass = new Int2ObjectOpenHashMap<>();
+        this.passID2PassHandle = new Int2ObjectOpenHashMap<>();
+
+        create(InternalLoader.class);
     }
 
     @Override
@@ -41,20 +46,14 @@ public class PassManager extends ManagerPackage {
         this.renderSystem = get(RenderSystem.class);
     }
 
-    // On-Demand Loading \\
+    // Management \\
 
-    public void request(String passName) {
-        ((InternalLoader) internalLoader).request(passName);
+    void addPassHandle(PassHandle handle) {
+        passName2PassID.put(handle.getPassName(), handle.getPassID());
+        passID2PassHandle.put(handle.getPassID(), handle);
     }
 
-    // Pass Management \\
-
-    void addPass(PassHandle pass) {
-        passName2PassID.put(pass.getPassName(), pass.getPassID());
-        passID2Pass.put(pass.getPassID(), pass);
-    }
-
-    // Render Management \\
+    // Render \\
 
     public void pushPass(PassHandle pass, int depth) {
         renderSystem.pushRenderCall(pass.getModelInstance(), depth);
@@ -66,29 +65,59 @@ public class PassManager extends ManagerPackage {
 
     // Accessible \\
 
-    public PassInstance clonePass(int passID) {
-        PassHandle original = passID2Pass.get(passID);
-        if (original == null)
-            throwException("Cannot clone pass — passID " + passID + " not found");
-        MaterialInstance clonedMaterial = materialManager.cloneMaterial(
-                original.getMaterial().getMaterialID());
-        PassInstance instance = create(PassInstance.class);
-        instance.constructor(
-                original.getPassName(),
-                original.getPassID(),
-                original.getMeshHandle(),
-                clonedMaterial);
-        return instance;
+    public void request(String passName) {
+        ((InternalLoader) internalLoader).request(passName);
+    }
+
+    public boolean hasPass(String passName) {
+        return passName2PassID.containsKey(passName);
     }
 
     public int getPassIDFromPassName(String passName) {
-        if (!passName2PassID.containsKey(passName)) {
+
+        if (!passName2PassID.containsKey(passName))
             request(passName);
-        }
+
         return passName2PassID.getInt(passName);
     }
 
-    public PassHandle getPassFromPassID(int passID) {
-        return passID2Pass.get(passID);
+    public PassHandle getPassHandleFromPassID(int passID) {
+
+        PassHandle handle = passID2PassHandle.get(passID);
+
+        if (handle == null)
+            throwException("Pass ID not found: " + passID);
+
+        return handle;
+    }
+
+    public PassHandle getPassHandleFromPassName(String passName) {
+        return getPassHandleFromPassID(getPassIDFromPassName(passName));
+    }
+
+    public PassInstance clonePass(int passID) {
+
+        PassHandle handle = getPassHandleFromPassID(passID);
+        MaterialInstance clonedMaterial = materialManager.cloneMaterial(
+                handle.getMaterial().getMaterialID());
+
+        ModelInstance modelInstance = create(ModelInstance.class);
+        modelInstance.constructor(handle.getMeshHandle().getMeshData(), clonedMaterial);
+
+        PassData clonedData = new PassData(
+                handle.getPassName(),
+                handle.getPassID(),
+                handle.getMeshHandle(),
+                clonedMaterial,
+                modelInstance);
+
+        PassInstance instance = create(PassInstance.class);
+        instance.constructor(clonedData);
+
+        return instance;
+    }
+
+    public PassInstance clonePass(String passName) {
+        return clonePass(getPassIDFromPassName(passName));
     }
 }

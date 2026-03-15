@@ -3,13 +3,25 @@ package com.internal.bootstrap.renderpipeline.rendersystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
+import com.internal.core.engine.UtilityPackage;
 
-class GLSLUtility {
+class GLSLUtility extends UtilityPackage {
+
+    /*
+     * Stateless OpenGL state management helpers for RenderSystem. Covers buffer
+     * clearing, depth and blend state, scissor, shader binding, VAO operations,
+     * UBO binding, and draw calls. Package-private.
+     */
 
     // Buffer \\
+
     static void clearBuffer() {
         Gdx.gl.glClearColor(0, 0, 0, 0);
         Gdx.gl.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
+    }
+
+    static void clearDepthBuffer() {
+        Gdx.gl.glClear(GL30.GL_DEPTH_BUFFER_BIT);
     }
 
     static void setViewport(int width, int height) {
@@ -17,6 +29,7 @@ class GLSLUtility {
     }
 
     // Depth \\
+
     static void enableDepth() {
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
         Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
@@ -28,11 +41,8 @@ class GLSLUtility {
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
     }
 
-    static void clearDepthBuffer() {
-        Gdx.gl.glClear(GL30.GL_DEPTH_BUFFER_BIT);
-    }
-
     // Blending \\
+
     static void enableBlending() {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -43,6 +53,7 @@ class GLSLUtility {
     }
 
     // Culling \\
+
     static void enableCulling() {
         Gdx.gl.glEnable(GL20.GL_CULL_FACE);
         Gdx.gl.glCullFace(GL20.GL_BACK);
@@ -54,6 +65,7 @@ class GLSLUtility {
     }
 
     // Scissor \\
+
     static void enableScissor(int x, int y, int w, int h) {
         Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
         Gdx.gl.glScissor(x, y, w, h);
@@ -64,11 +76,13 @@ class GLSLUtility {
     }
 
     // Shader \\
+
     static void useShader(int shaderHandle) {
         Gdx.gl.glUseProgram(shaderHandle);
     }
 
     // VAO \\
+
     static void bindVAO(int vaoHandle) {
         Gdx.gl30.glBindVertexArray(vaoHandle);
     }
@@ -77,12 +91,14 @@ class GLSLUtility {
         Gdx.gl30.glBindVertexArray(0);
     }
 
-    // Drawing \\
+    // Draw \\
+
     static void drawElements(int indexCount) {
         Gdx.gl.glDrawElements(GL20.GL_TRIANGLES, indexCount, GL20.GL_UNSIGNED_SHORT, 0);
     }
 
     // UBO \\
+
     static void bindUniformBuffer(int bindingPoint, int gpuHandle) {
         Gdx.gl30.glBindBufferBase(GL30.GL_UNIFORM_BUFFER, bindingPoint, gpuHandle);
     }

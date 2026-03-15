@@ -12,11 +12,16 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {
 
+    /*
+     * Scans the entity template JSON directory and loads all definitions into
+     * EntityManager. IDs are derived from template names via RegistryUtility.
+     * Supports on-demand loading for templates not yet in the palette at runtime.
+     */
+
     // Internal
     private File root;
     private EntityManager entityManager;
     private InternalBuilder internalBuilder;
-    private int templateCount;
 
     // File Registry
     private Object2ObjectOpenHashMap<String, File> templateName2File;
@@ -24,29 +29,13 @@ class InternalLoader extends LoaderPackage {
     // Base \\
 
     @Override
-    protected void create() {
-
-        // Internal
-        this.root = new File(EngineSetting.ENTITY_JSON_PATH);
-        this.templateCount = 0;
-
-        // File Registry
-        this.templateName2File = new Object2ObjectOpenHashMap<>();
-        this.internalBuilder = create(InternalBuilder.class);
-    }
-
-    @Override
-    protected void get() {
-
-        // Internal
-        this.entityManager = get(EntityManager.class);
-    }
-
-    @Override
     protected void scan() {
 
+        this.root = new File(EngineSetting.ENTITY_JSON_PATH);
+        this.templateName2File = new Object2ObjectOpenHashMap<>();
+
         if (!root.exists() || !root.isDirectory())
-            throwException("Entity template JSON directory not found: " + root.getAbsolutePath());
+            throwException("Entity template directory not found: " + root.getAbsolutePath());
 
         try (var stream = Files.walk(root.toPath())) {
             stream
@@ -58,11 +47,19 @@ class InternalLoader extends LoaderPackage {
                         templateName2File.put(templateName, file);
                         fileQueue.offer(file);
                     });
+        } catch (IOException e) {
+            throwException("Failed to walk entity directory: " + root.getAbsolutePath(), e);
         }
+    }
 
-        catch (IOException e) {
-            throwException("EntityLoader failed to walk directory: ", e);
-        }
+    @Override
+    protected void create() {
+        this.internalBuilder = create(InternalBuilder.class);
+    }
+
+    @Override
+    protected void get() {
+        this.entityManager = get(EntityManager.class);
     }
 
     // Load \\
@@ -71,13 +68,12 @@ class InternalLoader extends LoaderPackage {
     protected void load(File file) {
 
         String templateName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-        int templateID = templateCount++;
         EntityHandle entityHandle = internalBuilder.build(file);
 
         if (entityHandle == null)
             throwException("Failed to build entity template from: " + file.getAbsolutePath());
 
-        entityManager.addEntityTemplate(templateName, templateID, entityHandle);
+        entityManager.addEntityTemplate(templateName, entityHandle);
     }
 
     // On-Demand \\

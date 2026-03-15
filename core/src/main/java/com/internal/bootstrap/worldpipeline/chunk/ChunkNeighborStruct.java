@@ -2,8 +2,8 @@ package com.internal.bootstrap.worldpipeline.chunk;
 
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.core.engine.StructPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
-import com.internal.core.util.mathematics.Extras.Direction2Vector;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Direction2Vector;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 

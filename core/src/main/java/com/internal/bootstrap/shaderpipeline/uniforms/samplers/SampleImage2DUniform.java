@@ -2,10 +2,10 @@ package com.internal.bootstrap.shaderpipeline.uniforms.samplers;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
-public final class SampleImage2DUniform extends UniformAttribute<Integer> {
+public final class SampleImage2DUniform extends UniformAttributeStruct<Integer> {
 
     private int textureUnit = 0;
 
@@ -14,7 +14,7 @@ public final class SampleImage2DUniform extends UniformAttribute<Integer> {
     }
 
     @Override
-    public UniformAttribute<?> createDefault() {
+    public UniformAttributeStruct<?> createDefault() {
         return new SampleImage2DUniform();
     }
 

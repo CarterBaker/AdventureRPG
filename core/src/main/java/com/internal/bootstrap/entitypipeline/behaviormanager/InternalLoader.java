@@ -12,6 +12,12 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {
 
+    /*
+     * Scans the behavior JSON directory and loads all behavior definitions into
+     * BehaviorManager. Supports on-demand loading for behaviors not yet in the
+     * palette at runtime.
+     */
+
     // Internal
     private File root;
     private BehaviorManager behaviorManager;
@@ -23,26 +29,10 @@ class InternalLoader extends LoaderPackage {
     // Base \\
 
     @Override
-    protected void create() {
-
-        // Internal
-        this.root = new File(EngineSetting.BEHAVIOR_JSON_PATH);
-
-        // File Registry
-        this.behaviorName2File = new Object2ObjectOpenHashMap<>();
-
-        this.internalBuilder = create(InternalBuilder.class);
-    }
-
-    @Override
-    protected void get() {
-
-        // Internal
-        this.behaviorManager = get(BehaviorManager.class);
-    }
-
-    @Override
     protected void scan() {
+
+        this.root = new File(EngineSetting.BEHAVIOR_JSON_PATH);
+        this.behaviorName2File = new Object2ObjectOpenHashMap<>();
 
         if (!root.exists() || !root.isDirectory())
             throwException("Behavior directory not found: " + root.getAbsolutePath());
@@ -57,11 +47,19 @@ class InternalLoader extends LoaderPackage {
                         behaviorName2File.put(behaviorName, file);
                         fileQueue.offer(file);
                     });
+        } catch (IOException e) {
+            throwException("Failed to walk behavior directory: " + root.getAbsolutePath(), e);
         }
+    }
 
-        catch (IOException e) {
-            throwException("BehaviorLoader failed to walk directory: ", e);
-        }
+    @Override
+    protected void create() {
+        this.internalBuilder = create(InternalBuilder.class);
+    }
+
+    @Override
+    protected void get() {
+        this.behaviorManager = get(BehaviorManager.class);
     }
 
     // Load \\
@@ -85,8 +83,7 @@ class InternalLoader extends LoaderPackage {
         File file = behaviorName2File.get(behaviorName);
 
         if (file == null)
-            throwException("[BehaviorLoader] On-demand load failed — not found in scan registry: \""
-                    + behaviorName + "\"");
+            throwException("On-demand behavior load failed — not found in scan registry: \"" + behaviorName + "\"");
 
         request(file);
     }

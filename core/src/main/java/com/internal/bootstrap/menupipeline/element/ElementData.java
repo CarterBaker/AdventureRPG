@@ -1,87 +1,70 @@
 package com.internal.bootstrap.menupipeline.element;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import com.internal.bootstrap.menupipeline.util.DimensionValue;
+import com.internal.bootstrap.menupipeline.util.LayoutStruct;
+import com.internal.bootstrap.menupipeline.util.StackDirection;
+import com.internal.bootstrap.menupipeline.util.TextAlign;
+import com.internal.core.engine.DataPackage;
 
-public class ElementData extends com.internal.core.engine.DataPackage {
+public class ElementData extends DataPackage {
 
-    private String id;
-    private ElementType type;
-    private String spritePath;
-    private String text;
-    private String fontName;
-    private float[] color;
-    private LayoutStruct layout;
-    private boolean mask;
-    private StackDirection stackDirection;
-    private DimensionValue spacing;
-    private TextAlign textAlign;
-    private String actionClass;
-    private String actionMethod;
-    private String actionArg;
-    private ObjectArrayList<ElementData> children;
-    private String refPath;
-    private String usePath;
+    /*
+     * Persistent element definition. Holds all immutable visual and layout
+     * fields shared across every instance of this element. Owned by ElementHandle,
+     * created with new during bootstrap.
+     */
 
-    // Inline element
-    public void constructor(
-            String id, ElementType type,
-            String spritePath, String text, String fontName, float[] color,
+    // Identity
+    private final String id;
+    private final ElementType type;
+
+    // Visuals
+    private final String spriteName;
+    private final String text;
+    private final String fontName;
+    private final float[] color;
+
+    // Layout
+    private final LayoutStruct layout;
+    private final boolean mask;
+    private final StackDirection stackDirection;
+    private final DimensionValue spacing;
+    private final TextAlign textAlign;
+
+    // Constructor \\
+
+    public ElementData(
+            String id,
+            ElementType type,
+            String spriteName,
+            String text,
+            String fontName,
+            float[] color,
             LayoutStruct layout,
-            boolean mask, StackDirection stackDirection, DimensionValue spacing,
-            TextAlign textAlign,
-            String actionClass, String actionMethod, String actionArg,
-            ObjectArrayList<ElementData> children) {
+            boolean mask,
+            StackDirection stackDirection,
+            DimensionValue spacing,
+            TextAlign textAlign) {
+
+        // Identity
         this.id = id;
         this.type = type;
-        this.spritePath = spritePath;
+
+        // Visuals
+        this.spriteName = spriteName;
         this.text = text;
         this.fontName = fontName;
         this.color = color;
+
+        // Layout
         this.layout = layout;
         this.mask = mask;
-        this.stackDirection = stackDirection != null ? stackDirection : StackDirection.NONE;
+        this.stackDirection = stackDirection;
         this.spacing = spacing;
-        this.textAlign = textAlign != null ? textAlign : TextAlign.CENTER;
-        this.actionClass = actionClass;
-        this.actionMethod = actionMethod;
-        this.actionArg = actionArg;
-        this.children = children;
+        this.textAlign = textAlign;
     }
 
-    // Ref element
-    public void constructorRef(String id, String refPath, LayoutStruct layout) {
-        this.id = id;
-        this.refPath = refPath;
-        this.layout = layout;
-        this.stackDirection = StackDirection.NONE;
-        this.textAlign = TextAlign.CENTER;
-    }
-
-    // Use element
-    public void constructorUse(
-            String id, String usePath,
-            String spritePath, String text, String fontName, float[] color,
-            LayoutStruct layout,
-            boolean mask, StackDirection stackDirection, DimensionValue spacing,
-            TextAlign textAlign,
-            String actionClass, String actionMethod, String actionArg,
-            ObjectArrayList<ElementData> children) {
-        this.id = id;
-        this.usePath = usePath;
-        this.spritePath = spritePath;
-        this.text = text;
-        this.fontName = fontName;
-        this.color = color;
-        this.layout = layout;
-        this.mask = mask;
-        this.stackDirection = stackDirection != null ? stackDirection : StackDirection.NONE;
-        this.spacing = spacing;
-        this.textAlign = textAlign != null ? textAlign : TextAlign.CENTER;
-        this.actionClass = actionClass;
-        this.actionMethod = actionMethod;
-        this.actionArg = actionArg;
-        this.children = children;
-    }
+    // Accessible \\
 
     public String getId() {
         return id;
@@ -91,8 +74,8 @@ public class ElementData extends com.internal.core.engine.DataPackage {
         return type;
     }
 
-    public String getSpritePath() {
-        return spritePath;
+    public String getSpriteName() {
+        return spriteName;
     }
 
     public String getText() {
@@ -127,32 +110,12 @@ public class ElementData extends com.internal.core.engine.DataPackage {
         return textAlign;
     }
 
-    public String getActionClass() {
-        return actionClass;
+    public boolean hasSprite() {
+        return spriteName != null;
     }
 
-    public String getActionMethod() {
-        return actionMethod;
-    }
-
-    public String getActionArg() {
-        return actionArg;
-    }
-
-    public String getRefPath() {
-        return refPath;
-    }
-
-    public String getUsePath() {
-        return usePath;
-    }
-
-    public boolean isRef() {
-        return refPath != null;
-    }
-
-    public boolean isUse() {
-        return usePath != null;
+    public boolean hasText() {
+        return text != null;
     }
 
     public boolean hasFont() {
@@ -161,9 +124,5 @@ public class ElementData extends com.internal.core.engine.DataPackage {
 
     public boolean hasColor() {
         return color != null;
-    }
-
-    public ObjectArrayList<ElementData> getChildren() {
-        return children != null ? children : new ObjectArrayList<>();
     }
 }

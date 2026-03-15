@@ -1,12 +1,6 @@
 package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import java.util.BitSet;
-
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.ComplexGeometryBranch;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.FontGeometryBranch;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.FullGeometryBranch;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.LiquidGeometryBranch;
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.PartialGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import com.internal.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
@@ -20,12 +14,19 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.util.mathematics.Extras.Color;
-import com.internal.core.util.mathematics.Extras.Direction3Vector;
+import com.internal.core.util.mathematics.extras.Color;
+import com.internal.core.util.mathematics.extras.Direction3Vector;
+
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 class InternalBuildManager extends ManagerPackage {
+
+    /*
+     * Routes per-block geometry assembly to the correct branch based on block
+     * geometry type. Drives the full subchunk build loop and delegates font
+     * glyph assembly to FontGeometryBranch.
+     */
 
     // Internal
     private FullGeometryBranch fullGeometryBranch;
@@ -33,33 +34,39 @@ class InternalBuildManager extends ManagerPackage {
     private ComplexGeometryBranch complexGeometryBranch;
     private LiquidGeometryBranch liquidGeometryBranch;
     private FontGeometryBranch fontGeometryBranch;
-
     private BiomeManager biomeManager;
     private BlockManager blockManager;
 
+    // Settings
     private int BLOCK_COORDINATE_COUNT;
 
     // Internal \\
 
     @Override
     protected void create() {
+
+        // Internal
         this.fullGeometryBranch = create(FullGeometryBranch.class);
         this.partialGeometryBranch = create(PartialGeometryBranch.class);
         this.complexGeometryBranch = create(ComplexGeometryBranch.class);
         this.liquidGeometryBranch = create(LiquidGeometryBranch.class);
         this.fontGeometryBranch = create(FontGeometryBranch.class);
+
+        // Settings
         this.BLOCK_COORDINATE_COUNT = ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT;
     }
 
     @Override
     protected void get() {
+
+        // Internal
         this.biomeManager = get(BiomeManager.class);
         this.blockManager = get(BlockManager.class);
     }
 
     // Chunk Geometry \\
 
-    public boolean build(
+    boolean build(
             DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance) {
@@ -75,7 +82,6 @@ class InternalBuildManager extends ManagerPackage {
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
         BlockPaletteHandle rotationPaletteHandle = subChunkInstance.getBlockRotationPaletteHandle();
-
         Int2ObjectOpenHashMap<FloatArrayList> verts = dynamicGeometryAsyncContainer.getVerts();
         BitSet[] directionalBatches = dynamicGeometryAsyncContainer.getDirectionalBatches();
         BitSet batchReturn = dynamicGeometryAsyncContainer.getBatchReturn();
@@ -84,14 +90,12 @@ class InternalBuildManager extends ManagerPackage {
         for (int i = 0; i < BLOCK_COORDINATE_COUNT; i++) {
 
             int xyz = ChunkCoordinate3Int.getBlockCoordinate(i);
-
             short biomeID = biomePaletteHandle.getBlock(xyz);
-            BiomeHandle biomeHandle = biomeManager.getBiomeFromBiomeID(biomeID);
-
+            BiomeHandle biomeHandle = biomeManager.getBiomeHandleFromBiomeID(biomeID);
             short blockID = blockPaletteHandle.getBlock(xyz);
-            BlockHandle blockHandle = blockManager.getBlockFromBlockID(blockID);
-
+            BlockHandle blockHandle = blockManager.getBlockHandleFromBlockID(blockID);
             DynamicGeometryType blockGeometry = blockHandle.getGeometry();
+
             if (blockGeometry == DynamicGeometryType.NONE)
                 continue;
 
@@ -105,20 +109,30 @@ class InternalBuildManager extends ManagerPackage {
 
                 if (!assembleQuads(
                         blockGeometry,
-                        chunkInstance, subChunkInstance,
-                        biomePaletteHandle, blockPaletteHandle, rotationPaletteHandle,
+                        chunkInstance,
+                        subChunkInstance,
+                        biomePaletteHandle,
+                        blockPaletteHandle,
+                        rotationPaletteHandle,
                         dynamicPacketInstance,
-                        xyz, Direction3Vector.VALUES[direction],
-                        biomeHandle, blockHandle,
-                        verts, accumulatedBatch, batchReturn, vertColors))
+                        xyz,
+                        Direction3Vector.VALUES[direction],
+                        biomeHandle,
+                        blockHandle,
+                        verts,
+                        accumulatedBatch,
+                        batchReturn,
+                        vertColors))
                     continue;
             }
         }
 
         boolean success = true;
-        for (int materialID : verts.keySet())
+
+        for (int materialID : verts.keySet()) {
             if (!dynamicPacketInstance.addVertices(materialID, verts.get(materialID)))
                 success = false;
+        }
 
         if (dynamicPacketInstance.hasModels())
             dynamicPacketInstance.setReady();
@@ -146,31 +160,66 @@ class InternalBuildManager extends ManagerPackage {
             Color[] vertColors) {
 
         return switch (geometry) {
-
             case FULL -> fullGeometryBranch.assembleQuads(
-                    chunkInstance, subChunkInstance,
-                    biomePaletteHandle, blockPaletteHandle, rotationPaletteHandle,
-                    dynamicPacketInstance, xyz, direction3Vector,
-                    biomeHandle, blockHandle, verts, accumulatedBatch, batchReturn, vertColors);
-
+                    chunkInstance,
+                    subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
+                    rotationPaletteHandle,
+                    dynamicPacketInstance,
+                    xyz,
+                    direction3Vector,
+                    biomeHandle,
+                    blockHandle,
+                    verts,
+                    accumulatedBatch,
+                    batchReturn,
+                    vertColors);
             case PARTIAL -> partialGeometryBranch.assembleQuads(
-                    chunkInstance, subChunkInstance,
-                    biomePaletteHandle, blockPaletteHandle, rotationPaletteHandle,
-                    dynamicPacketInstance, xyz, direction3Vector,
-                    biomeHandle, blockHandle, verts, accumulatedBatch, batchReturn, vertColors);
-
+                    chunkInstance,
+                    subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
+                    rotationPaletteHandle,
+                    dynamicPacketInstance,
+                    xyz,
+                    direction3Vector,
+                    biomeHandle,
+                    blockHandle,
+                    verts,
+                    accumulatedBatch,
+                    batchReturn,
+                    vertColors);
             case COMPLEX -> complexGeometryBranch.assembleQuads(
-                    chunkInstance, subChunkInstance,
-                    biomePaletteHandle, blockPaletteHandle, rotationPaletteHandle,
-                    dynamicPacketInstance, xyz, direction3Vector,
-                    biomeHandle, blockHandle, verts, accumulatedBatch, batchReturn, vertColors);
-
+                    chunkInstance,
+                    subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
+                    rotationPaletteHandle,
+                    dynamicPacketInstance,
+                    xyz,
+                    direction3Vector,
+                    biomeHandle,
+                    blockHandle,
+                    verts,
+                    accumulatedBatch,
+                    batchReturn,
+                    vertColors);
             case LIQUID -> liquidGeometryBranch.assembleQuads(
-                    chunkInstance, subChunkInstance,
-                    biomePaletteHandle, blockPaletteHandle, rotationPaletteHandle,
-                    dynamicPacketInstance, xyz, direction3Vector,
-                    biomeHandle, blockHandle, verts, accumulatedBatch, batchReturn, vertColors);
-
+                    chunkInstance,
+                    subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
+                    rotationPaletteHandle,
+                    dynamicPacketInstance,
+                    xyz,
+                    direction3Vector,
+                    biomeHandle,
+                    blockHandle,
+                    verts,
+                    accumulatedBatch,
+                    batchReturn,
+                    vertColors);
             case NONE -> true;
         };
     }
@@ -180,7 +229,7 @@ class InternalBuildManager extends ManagerPackage {
     /*
      * Caller creates and owns the DynamicModelHandle — branch just fills verts.
      */
-    public void buildGlyphModel(
+    void buildGlyphModel(
             DynamicModelHandle model,
             GlyphMetricStruct glyph,
             int atlasPixelSize) {

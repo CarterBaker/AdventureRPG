@@ -4,6 +4,12 @@ import com.internal.core.engine.HandlePackage;
 
 public class ClockHandle extends HandlePackage {
 
+    /*
+     * Runtime handle wrapping ClockData. Owned by ClockManager and passed to
+     * all clock branches for reading and writing time state each frame.
+     * Delegates all accessors and mutators through ClockData.
+     */
+
     // Internal
     private ClockData clockData;
 

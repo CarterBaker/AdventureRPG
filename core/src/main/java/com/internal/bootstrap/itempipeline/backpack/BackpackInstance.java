@@ -6,12 +6,25 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class BackpackInstance extends InstancePackage {
 
+    /*
+     * Per-entity runtime inventory container. Holds an ordered list of item
+     * definition handles representing the contents of a backpack slot. No
+     * manager owns this — it lives directly on InventoryHandle.
+     */
+
+    // Internal
     private ObjectArrayList<ItemDefinitionHandle> items;
+
+    // Internal \\
 
     @Override
     protected void create() {
+
+        // Internal
         this.items = new ObjectArrayList<>();
     }
+
+    // Accessible \\
 
     public void addItem(ItemDefinitionHandle item) {
         items.add(item);

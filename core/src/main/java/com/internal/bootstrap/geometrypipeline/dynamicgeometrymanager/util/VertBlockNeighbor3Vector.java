@@ -1,11 +1,19 @@
 package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
-import com.internal.core.util.mathematics.Extras.Coordinate3Long;
-import com.internal.core.util.mathematics.Extras.Coordinate3Int;
-import com.internal.core.util.mathematics.Extras.Direction2Vector;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Coordinate3Int;
+import com.internal.core.util.mathematics.extras.Coordinate3Long;
+import com.internal.core.util.mathematics.extras.Direction2Vector;
 
 public enum VertBlockNeighbor3Vector {
+
+    /*
+     * Encodes the eight block-space neighbors of a vertex corner, each offset
+     * by (-1, 0) on each axis relative to the vertex. Used during ambient
+     * occlusion color sampling to gather biome colors from surrounding blocks.
+     * Public final fields are intentional — accessed directly in hot geometry
+     * loops to avoid getter overhead.
+     */
 
     UPPER_NORTH_EAST(0, 0, 0),
     UPPER_NORTH_WEST(-1, 0, 0),
@@ -19,7 +27,6 @@ public enum VertBlockNeighbor3Vector {
     // Internal
     public final int index;
     public final int x, y, z;
-
     public final long coordinate2Long;
     public final long coordinate3Long;
     public final int vertOffset3Int;
@@ -49,7 +56,6 @@ public enum VertBlockNeighbor3Vector {
         this.x = x;
         this.y = y;
         this.z = z;
-
         this.coordinate2Long = Coordinate2Long.pack(x, z);
         this.coordinate3Long = Coordinate3Long.pack(x, y, z);
 

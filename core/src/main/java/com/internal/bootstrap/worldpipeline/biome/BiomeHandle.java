@@ -1,34 +1,39 @@
 package com.internal.bootstrap.worldpipeline.biome;
 
 import com.internal.core.engine.HandlePackage;
-import com.internal.core.util.mathematics.Extras.Color;
+import com.internal.core.util.mathematics.extras.Color;
 
 public class BiomeHandle extends HandlePackage {
 
-    // Identity
-    private String biomeName;
-    private short biomeID;
-    private Color biomeColor;
+    /*
+     * Persistent biome record. Wraps BiomeData and delegates all access
+     * through it. Registered in BiomeManager from bootstrap to shutdown.
+     */
+
+    // Internal
+    private BiomeData biomeData;
 
     // Constructor \\
 
-    public void constructor(String biomeName, short biomeID) {
-        this.biomeName = biomeName;
-        this.biomeID = biomeID;
-        this.biomeColor = Color.WHITE;
+    public void constructor(BiomeData biomeData) {
+        this.biomeData = biomeData;
     }
 
     // Accessible \\
 
+    public BiomeData getBiomeData() {
+        return biomeData;
+    }
+
     public String getBiomeName() {
-        return biomeName;
+        return biomeData.getBiomeName();
     }
 
     public short getBiomeID() {
-        return biomeID;
+        return biomeData.getBiomeID();
     }
 
     public Color getBiomeColor() {
-        return biomeColor;
+        return biomeData.getBiomeColor();
     }
 }

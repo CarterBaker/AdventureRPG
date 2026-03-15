@@ -10,10 +10,16 @@ import com.internal.bootstrap.shaderpipeline.uniforms.scalarArrays.*;
 import com.internal.bootstrap.shaderpipeline.uniforms.scalars.*;
 import com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays.*;
 import com.internal.bootstrap.shaderpipeline.uniforms.vectors.*;
+import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.mathematics.matrices.*;
 import com.internal.core.util.mathematics.vectors.*;
 
-public final class UniformUtility {
+public final class UniformUtility extends UtilityPackage {
+
+    /*
+     * Stateless helpers for std140 layout calculation, UniformAttributeStruct
+     * construction, and JSON value parsing. Never instantiated.
+     */
 
     private UniformUtility() {
     }
@@ -39,7 +45,7 @@ public final class UniformUtility {
 
     // Attribute Creation \\
 
-    public static UniformAttribute<?> createUniformAttribute(UniformData ud) {
+    public static UniformAttributeStruct<?> createUniformAttribute(UniformData ud) {
 
         int count = ud.getCount();
         boolean isArray = count > 1;
@@ -69,21 +75,25 @@ public final class UniformUtility {
             case MATRIX4_DOUBLE -> isArray ? new Matrix4DoubleArrayUniform(count) : new Matrix4DoubleUniform();
             case SAMPLE_IMAGE_2D -> new SampleImage2DUniform();
             case SAMPLE_IMAGE_2D_ARRAY -> new SampleImage2DArrayUniform();
-            default -> throw new IllegalArgumentException("Unsupported uniform type: " + ud.getUniformType());
+            default -> {
+                throwException("Unsupported uniform type: " + ud.getUniformType());
+                yield null;
+            }
         };
     }
 
     // Apply — JSON Object \\
 
     public static void applyFromJsonObject(
-            UniformAttribute<?> attribute,
+            UniformAttributeStruct<?> attribute,
             String uniformName,
             JsonObject uniformData) {
 
         if (!uniformData.has("type"))
-            throw new IllegalArgumentException("Uniform '" + uniformName + "' missing required 'type' field");
+            throwException("UniformStruct '" + uniformName + "' missing required 'type' field");
+
         if (!uniformData.has("value"))
-            throw new IllegalArgumentException("Uniform '" + uniformName + "' missing required 'value' field");
+            throwException("UniformStruct '" + uniformName + "' missing required 'value' field");
 
         String type = uniformData.get("type").getAsString();
         JsonElement value = uniformData.get("value");
@@ -98,53 +108,55 @@ public final class UniformUtility {
     // Apply — Single \\
 
     @SuppressWarnings("unchecked")
-    public static void applySingle(UniformAttribute<?> attribute, String type, JsonElement value) {
+    public static void applySingle(UniformAttributeStruct<?> attribute, String type, JsonElement value) {
         switch (type) {
-            case "FLOAT" -> ((UniformAttribute<Float>) attribute).set(value.getAsFloat());
-            case "DOUBLE" -> ((UniformAttribute<Double>) attribute).set(value.getAsDouble());
-            case "INT" -> ((UniformAttribute<Integer>) attribute).set(value.getAsInt());
-            case "BOOL" -> ((UniformAttribute<Boolean>) attribute).set(value.getAsBoolean());
-            case "VECTOR2" -> ((UniformAttribute<Vector2>) attribute).set(parseVector2(value.getAsJsonArray()));
+            case "FLOAT" -> ((UniformAttributeStruct<Float>) attribute).set(value.getAsFloat());
+            case "DOUBLE" -> ((UniformAttributeStruct<Double>) attribute).set(value.getAsDouble());
+            case "INT" -> ((UniformAttributeStruct<Integer>) attribute).set(value.getAsInt());
+            case "BOOL" -> ((UniformAttributeStruct<Boolean>) attribute).set(value.getAsBoolean());
+            case "VECTOR2" -> ((UniformAttributeStruct<Vector2>) attribute).set(parseVector2(value.getAsJsonArray()));
             case "VECTOR2_DOUBLE" ->
-                ((UniformAttribute<Vector2Double>) attribute).set(parseVector2Double(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Vector2Double>) attribute).set(parseVector2Double(value.getAsJsonArray()));
             case "VECTOR2_INT" ->
-                ((UniformAttribute<Vector2Int>) attribute).set(parseVector2Int(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Vector2Int>) attribute).set(parseVector2Int(value.getAsJsonArray()));
             case "VECTOR2_BOOLEAN" ->
-                ((UniformAttribute<Vector2Boolean>) attribute).set(parseVector2Boolean(value.getAsJsonArray()));
-            case "VECTOR3" -> ((UniformAttribute<Vector3>) attribute).set(parseVector3(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Vector2Boolean>) attribute).set(parseVector2Boolean(value.getAsJsonArray()));
+            case "VECTOR3" -> ((UniformAttributeStruct<Vector3>) attribute).set(parseVector3(value.getAsJsonArray()));
             case "VECTOR3_DOUBLE" ->
-                ((UniformAttribute<Vector3Double>) attribute).set(parseVector3Double(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Vector3Double>) attribute).set(parseVector3Double(value.getAsJsonArray()));
             case "VECTOR3_INT" ->
-                ((UniformAttribute<Vector3Int>) attribute).set(parseVector3Int(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Vector3Int>) attribute).set(parseVector3Int(value.getAsJsonArray()));
             case "VECTOR3_BOOLEAN" ->
-                ((UniformAttribute<Vector3Boolean>) attribute).set(parseVector3Boolean(value.getAsJsonArray()));
-            case "VECTOR4" -> ((UniformAttribute<Vector4>) attribute).set(parseVector4(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Vector3Boolean>) attribute).set(parseVector3Boolean(value.getAsJsonArray()));
+            case "VECTOR4" -> ((UniformAttributeStruct<Vector4>) attribute).set(parseVector4(value.getAsJsonArray()));
             case "VECTOR4_DOUBLE" ->
-                ((UniformAttribute<Vector4Double>) attribute).set(parseVector4Double(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Vector4Double>) attribute).set(parseVector4Double(value.getAsJsonArray()));
             case "VECTOR4_INT" ->
-                ((UniformAttribute<Vector4Int>) attribute).set(parseVector4Int(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Vector4Int>) attribute).set(parseVector4Int(value.getAsJsonArray()));
             case "VECTOR4_BOOLEAN" ->
-                ((UniformAttribute<Vector4Boolean>) attribute).set(parseVector4Boolean(value.getAsJsonArray()));
-            case "MATRIX2" -> ((UniformAttribute<Matrix2>) attribute).set(parseMatrix2(value.getAsJsonArray()));
-            case "MATRIX3" -> ((UniformAttribute<Matrix3>) attribute).set(parseMatrix3(value.getAsJsonArray()));
-            case "MATRIX4" -> ((UniformAttribute<Matrix4>) attribute).set(parseMatrix4(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Vector4Boolean>) attribute).set(parseVector4Boolean(value.getAsJsonArray()));
+            case "MATRIX2" -> ((UniformAttributeStruct<Matrix2>) attribute).set(parseMatrix2(value.getAsJsonArray()));
+            case "MATRIX3" -> ((UniformAttributeStruct<Matrix3>) attribute).set(parseMatrix3(value.getAsJsonArray()));
+            case "MATRIX4" -> ((UniformAttributeStruct<Matrix4>) attribute).set(parseMatrix4(value.getAsJsonArray()));
             case "MATRIX2_DOUBLE" ->
-                ((UniformAttribute<Matrix2Double>) attribute).set(parseMatrix2Double(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Matrix2Double>) attribute).set(parseMatrix2Double(value.getAsJsonArray()));
             case "MATRIX3_DOUBLE" ->
-                ((UniformAttribute<Matrix3Double>) attribute).set(parseMatrix3Double(value.getAsJsonArray()));
+                ((UniformAttributeStruct<Matrix3Double>) attribute).set(parseMatrix3Double(value.getAsJsonArray()));
             case "MATRIX4_DOUBLE" ->
-                ((UniformAttribute<Matrix4Double>) attribute).set(parseMatrix4Double(value.getAsJsonArray()));
-            default -> throw new IllegalArgumentException("Unsupported uniform type: " + type);
+                ((UniformAttributeStruct<Matrix4Double>) attribute).set(parseMatrix4Double(value.getAsJsonArray()));
+            default -> {
+                throwException("Unsupported uniform type: " + type);
+            }
         }
     }
 
     // Apply — Array \\
 
     @SuppressWarnings("unchecked")
-    public static void applyArray(UniformAttribute<?> attribute, String type, JsonElement valueElement) {
+    public static void applyArray(UniformAttributeStruct<?> attribute, String type, JsonElement valueElement) {
 
         if (!valueElement.isJsonArray())
-            throw new IllegalArgumentException("Array uniform value must be a JSON array");
+            throwException("Array uniform value must be a JSON array");
 
         JsonArray array = valueElement.getAsJsonArray();
 
@@ -153,135 +165,135 @@ public final class UniformUtility {
                 float[] v = new float[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = array.get(i).getAsFloat();
-                ((UniformAttribute<float[]>) attribute).set(v);
+                ((UniformAttributeStruct<float[]>) attribute).set(v);
             }
             case "DOUBLE" -> {
                 double[] v = new double[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = array.get(i).getAsDouble();
-                ((UniformAttribute<double[]>) attribute).set(v);
+                ((UniformAttributeStruct<double[]>) attribute).set(v);
             }
             case "INT" -> {
                 Integer[] v = new Integer[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = array.get(i).getAsInt();
-                ((UniformAttribute<Integer[]>) attribute).set(v);
+                ((UniformAttributeStruct<Integer[]>) attribute).set(v);
             }
             case "BOOL" -> {
                 Boolean[] v = new Boolean[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = array.get(i).getAsBoolean();
-                ((UniformAttribute<Boolean[]>) attribute).set(v);
+                ((UniformAttributeStruct<Boolean[]>) attribute).set(v);
             }
             case "VECTOR2" -> {
                 Vector2[] v = new Vector2[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector2(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector2[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector2[]>) attribute).set(v);
             }
             case "VECTOR3" -> {
                 Vector3[] v = new Vector3[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector3(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector3[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector3[]>) attribute).set(v);
             }
             case "VECTOR4" -> {
                 Vector4[] v = new Vector4[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector4(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector4[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector4[]>) attribute).set(v);
             }
             case "VECTOR2_DOUBLE" -> {
                 Vector2Double[] v = new Vector2Double[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector2Double(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector2Double[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector2Double[]>) attribute).set(v);
             }
             case "VECTOR3_DOUBLE" -> {
                 Vector3Double[] v = new Vector3Double[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector3Double(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector3Double[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector3Double[]>) attribute).set(v);
             }
             case "VECTOR4_DOUBLE" -> {
                 Vector4Double[] v = new Vector4Double[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector4Double(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector4Double[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector4Double[]>) attribute).set(v);
             }
             case "VECTOR2_INT" -> {
                 Vector2Int[] v = new Vector2Int[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector2Int(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector2Int[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector2Int[]>) attribute).set(v);
             }
             case "VECTOR3_INT" -> {
                 Vector3Int[] v = new Vector3Int[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector3Int(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector3Int[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector3Int[]>) attribute).set(v);
             }
             case "VECTOR4_INT" -> {
                 Vector4Int[] v = new Vector4Int[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector4Int(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector4Int[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector4Int[]>) attribute).set(v);
             }
             case "VECTOR2_BOOLEAN" -> {
                 Vector2Boolean[] v = new Vector2Boolean[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector2Boolean(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector2Boolean[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector2Boolean[]>) attribute).set(v);
             }
             case "VECTOR3_BOOLEAN" -> {
                 Vector3Boolean[] v = new Vector3Boolean[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector3Boolean(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector3Boolean[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector3Boolean[]>) attribute).set(v);
             }
             case "VECTOR4_BOOLEAN" -> {
                 Vector4Boolean[] v = new Vector4Boolean[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseVector4Boolean(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Vector4Boolean[]>) attribute).set(v);
+                ((UniformAttributeStruct<Vector4Boolean[]>) attribute).set(v);
             }
             case "MATRIX2" -> {
                 Matrix2[] v = new Matrix2[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseMatrix2(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Matrix2[]>) attribute).set(v);
+                ((UniformAttributeStruct<Matrix2[]>) attribute).set(v);
             }
             case "MATRIX3" -> {
                 Matrix3[] v = new Matrix3[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseMatrix3(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Matrix3[]>) attribute).set(v);
+                ((UniformAttributeStruct<Matrix3[]>) attribute).set(v);
             }
             case "MATRIX4" -> {
                 Matrix4[] v = new Matrix4[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseMatrix4(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Matrix4[]>) attribute).set(v);
+                ((UniformAttributeStruct<Matrix4[]>) attribute).set(v);
             }
             case "MATRIX2_DOUBLE" -> {
                 Matrix2Double[] v = new Matrix2Double[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseMatrix2Double(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Matrix2Double[]>) attribute).set(v);
+                ((UniformAttributeStruct<Matrix2Double[]>) attribute).set(v);
             }
             case "MATRIX3_DOUBLE" -> {
                 Matrix3Double[] v = new Matrix3Double[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseMatrix3Double(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Matrix3Double[]>) attribute).set(v);
+                ((UniformAttributeStruct<Matrix3Double[]>) attribute).set(v);
             }
             case "MATRIX4_DOUBLE" -> {
                 Matrix4Double[] v = new Matrix4Double[array.size()];
                 for (int i = 0; i < array.size(); i++)
                     v[i] = parseMatrix4Double(array.get(i).getAsJsonArray());
-                ((UniformAttribute<Matrix4Double[]>) attribute).set(v);
+                ((UniformAttributeStruct<Matrix4Double[]>) attribute).set(v);
             }
-            default -> throw new IllegalArgumentException("Unsupported uniform array type: " + type);
+            default -> throwException("Unsupported uniform array type: " + type);
         }
     }
 
@@ -289,25 +301,25 @@ public final class UniformUtility {
 
     public static Vector2 parseVector2(JsonArray array) {
         if (array.size() != 2)
-            throw new IllegalArgumentException("Vector2 requires 2 values, got " + array.size());
+            throwException("Vector2 requires 2 values, got " + array.size());
         return new Vector2(array.get(0).getAsFloat(), array.get(1).getAsFloat());
     }
 
     public static Vector2Double parseVector2Double(JsonArray array) {
         if (array.size() != 2)
-            throw new IllegalArgumentException("Vector2Double requires 2 values, got " + array.size());
+            throwException("Vector2Double requires 2 values, got " + array.size());
         return new Vector2Double(array.get(0).getAsDouble(), array.get(1).getAsDouble());
     }
 
     public static Vector2Int parseVector2Int(JsonArray array) {
         if (array.size() != 2)
-            throw new IllegalArgumentException("Vector2Int requires 2 values, got " + array.size());
+            throwException("Vector2Int requires 2 values, got " + array.size());
         return new Vector2Int(array.get(0).getAsInt(), array.get(1).getAsInt());
     }
 
     public static Vector2Boolean parseVector2Boolean(JsonArray array) {
         if (array.size() != 2)
-            throw new IllegalArgumentException("Vector2Boolean requires 2 values, got " + array.size());
+            throwException("Vector2Boolean requires 2 values, got " + array.size());
         return new Vector2Boolean(array.get(0).getAsBoolean(), array.get(1).getAsBoolean());
     }
 
@@ -315,26 +327,28 @@ public final class UniformUtility {
 
     public static Vector3 parseVector3(JsonArray array) {
         if (array.size() != 3)
-            throw new IllegalArgumentException("Vector3 requires 3 values, got " + array.size());
+            throwException("Vector3 requires 3 values, got " + array.size());
         return new Vector3(array.get(0).getAsFloat(), array.get(1).getAsFloat(), array.get(2).getAsFloat());
     }
 
     public static Vector3Double parseVector3Double(JsonArray array) {
         if (array.size() != 3)
-            throw new IllegalArgumentException("Vector3Double requires 3 values, got " + array.size());
+            throwException("Vector3Double requires 3 values, got " + array.size());
         return new Vector3Double(array.get(0).getAsDouble(), array.get(1).getAsDouble(), array.get(2).getAsDouble());
     }
 
     public static Vector3Int parseVector3Int(JsonArray array) {
         if (array.size() != 3)
-            throw new IllegalArgumentException("Vector3Int requires 3 values, got " + array.size());
+            throwException("Vector3Int requires 3 values, got " + array.size());
         return new Vector3Int(array.get(0).getAsInt(), array.get(1).getAsInt(), array.get(2).getAsInt());
     }
 
     public static Vector3Boolean parseVector3Boolean(JsonArray array) {
         if (array.size() != 3)
-            throw new IllegalArgumentException("Vector3Boolean requires 3 values, got " + array.size());
-        return new Vector3Boolean(array.get(0).getAsBoolean(), array.get(1).getAsBoolean(),
+            throwException("Vector3Boolean requires 3 values, got " + array.size());
+        return new Vector3Boolean(
+                array.get(0).getAsBoolean(),
+                array.get(1).getAsBoolean(),
                 array.get(2).getAsBoolean());
     }
 
@@ -342,37 +356,41 @@ public final class UniformUtility {
 
     public static Vector4 parseVector4(JsonArray array) {
         if (array.size() != 4)
-            throw new IllegalArgumentException("Vector4 requires 4 values, got " + array.size());
-        return new Vector4(array.get(0).getAsFloat(), array.get(1).getAsFloat(), array.get(2).getAsFloat(),
-                array.get(3).getAsFloat());
+            throwException("Vector4 requires 4 values, got " + array.size());
+        return new Vector4(
+                array.get(0).getAsFloat(), array.get(1).getAsFloat(),
+                array.get(2).getAsFloat(), array.get(3).getAsFloat());
     }
 
     public static Vector4Double parseVector4Double(JsonArray array) {
         if (array.size() != 4)
-            throw new IllegalArgumentException("Vector4Double requires 4 values, got " + array.size());
-        return new Vector4Double(array.get(0).getAsDouble(), array.get(1).getAsDouble(), array.get(2).getAsDouble(),
-                array.get(3).getAsDouble());
+            throwException("Vector4Double requires 4 values, got " + array.size());
+        return new Vector4Double(
+                array.get(0).getAsDouble(), array.get(1).getAsDouble(),
+                array.get(2).getAsDouble(), array.get(3).getAsDouble());
     }
 
     public static Vector4Int parseVector4Int(JsonArray array) {
         if (array.size() != 4)
-            throw new IllegalArgumentException("Vector4Int requires 4 values, got " + array.size());
-        return new Vector4Int(array.get(0).getAsInt(), array.get(1).getAsInt(), array.get(2).getAsInt(),
-                array.get(3).getAsInt());
+            throwException("Vector4Int requires 4 values, got " + array.size());
+        return new Vector4Int(
+                array.get(0).getAsInt(), array.get(1).getAsInt(),
+                array.get(2).getAsInt(), array.get(3).getAsInt());
     }
 
     public static Vector4Boolean parseVector4Boolean(JsonArray array) {
         if (array.size() != 4)
-            throw new IllegalArgumentException("Vector4Boolean requires 4 values, got " + array.size());
-        return new Vector4Boolean(array.get(0).getAsBoolean(), array.get(1).getAsBoolean(), array.get(2).getAsBoolean(),
-                array.get(3).getAsBoolean());
+            throwException("Vector4Boolean requires 4 values, got " + array.size());
+        return new Vector4Boolean(
+                array.get(0).getAsBoolean(), array.get(1).getAsBoolean(),
+                array.get(2).getAsBoolean(), array.get(3).getAsBoolean());
     }
 
     // Parse — Matrix \\
 
     public static Matrix2 parseMatrix2(JsonArray array) {
         if (array.size() != 4)
-            throw new IllegalArgumentException("Matrix2 requires 4 values, got " + array.size());
+            throwException("Matrix2 requires 4 values, got " + array.size());
         float[] v = new float[4];
         for (int i = 0; i < 4; i++)
             v[i] = array.get(i).getAsFloat();
@@ -381,7 +399,7 @@ public final class UniformUtility {
 
     public static Matrix3 parseMatrix3(JsonArray array) {
         if (array.size() != 9)
-            throw new IllegalArgumentException("Matrix3 requires 9 values, got " + array.size());
+            throwException("Matrix3 requires 9 values, got " + array.size());
         float[] v = new float[9];
         for (int i = 0; i < 9; i++)
             v[i] = array.get(i).getAsFloat();
@@ -390,7 +408,7 @@ public final class UniformUtility {
 
     public static Matrix4 parseMatrix4(JsonArray array) {
         if (array.size() != 16)
-            throw new IllegalArgumentException("Matrix4 requires 16 values, got " + array.size());
+            throwException("Matrix4 requires 16 values, got " + array.size());
         float[] v = new float[16];
         for (int i = 0; i < 16; i++)
             v[i] = array.get(i).getAsFloat();
@@ -399,7 +417,7 @@ public final class UniformUtility {
 
     public static Matrix2Double parseMatrix2Double(JsonArray array) {
         if (array.size() != 4)
-            throw new IllegalArgumentException("Matrix2Double requires 4 values, got " + array.size());
+            throwException("Matrix2Double requires 4 values, got " + array.size());
         double[] v = new double[4];
         for (int i = 0; i < 4; i++)
             v[i] = array.get(i).getAsDouble();
@@ -408,7 +426,7 @@ public final class UniformUtility {
 
     public static Matrix3Double parseMatrix3Double(JsonArray array) {
         if (array.size() != 9)
-            throw new IllegalArgumentException("Matrix3Double requires 9 values, got " + array.size());
+            throwException("Matrix3Double requires 9 values, got " + array.size());
         double[] v = new double[9];
         for (int i = 0; i < 9; i++)
             v[i] = array.get(i).getAsDouble();
@@ -417,7 +435,7 @@ public final class UniformUtility {
 
     public static Matrix4Double parseMatrix4Double(JsonArray array) {
         if (array.size() != 16)
-            throw new IllegalArgumentException("Matrix4Double requires 16 values, got " + array.size());
+            throwException("Matrix4Double requires 16 values, got " + array.size());
         double[] v = new double[16];
         for (int i = 0; i < 16; i++)
             v[i] = array.get(i).getAsDouble();

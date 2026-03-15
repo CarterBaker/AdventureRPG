@@ -1,12 +1,13 @@
-package com.internal.bootstrap.shaderpipeline.Shader;
+package com.internal.bootstrap.shaderpipeline.shader;
 
 /*
- * Classifies a GLSL source file by its role in the pipeline.
- * INCLUDE files are flattened into vert and frag sources during preprocessing
- * and never compiled as standalone programs.
+ * Classifies a shader record by its role. VERT, FRAG, and INCLUDE are source
+ * files parsed from disk. PROGRAM is a compiled GPU program assembled from a
+ * JSON descriptor.
  */
 public enum ShaderType {
     VERT,
     FRAG,
-    INCLUDE
+    INCLUDE,
+    PROGRAM
 }

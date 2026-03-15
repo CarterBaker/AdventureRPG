@@ -13,7 +13,8 @@ import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
+
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
 public class ChunkStreamManager extends ManagerPackage {
@@ -50,7 +51,7 @@ public class ChunkStreamManager extends ManagerPackage {
 
     @Override
     protected void start() {
-        this.chunkVAO = vaoManager.getVAOHandleFromName(EngineSetting.CHUNK_VAO);
+        this.chunkVAO = vaoManager.getVAOHandleFromVAOName(EngineSetting.CHUNK_VAO);
         gridManager.getGrid().setWorldHandle(playerManager.getPlayer().getWorldHandle());
         int maxChunks = gridManager.getGrid().getTotalSlots() + EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
         this.activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);

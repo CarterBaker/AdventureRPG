@@ -1,4 +1,4 @@
-package com.internal.core.util.mathematics.Extras;
+package com.internal.core.util.mathematics.extras;
 
 import com.internal.core.engine.settings.EngineSetting;
 

@@ -2,13 +2,13 @@ package com.internal.bootstrap.shaderpipeline.uniforms.matrixArrays;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.BufferUtils;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.matrices.Matrix4;
 
 import java.nio.FloatBuffer;
 
-public final class Matrix4ArrayUniform extends UniformAttribute<Object[]> {
+public final class Matrix4ArrayUniform extends UniformAttributeStruct<Object[]> {
 
     private final int elementCount;
     private final FloatBuffer uniformBuffer;
@@ -22,7 +22,7 @@ public final class Matrix4ArrayUniform extends UniformAttribute<Object[]> {
     }
 
     @Override
-    public UniformAttribute<?> createDefault() {
+    public UniformAttributeStruct<?> createDefault() {
         return new Matrix4ArrayUniform(elementCount);
     }
 

@@ -6,16 +6,23 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CalendarData extends DataPackage {
 
+    /*
+     * Immutable calendar definition loaded from JSON. Holds the day and month
+     * layout for one named calendar. Owned by CalendarHandle for the engine
+     * lifetime.
+     */
+
     // Internal
-    public final String calendarName;
-    public final ObjectArrayList<String> daysOfWeek;
-    public final ObjectArrayList<String> monthNames;
-    public final Object2ByteOpenHashMap<String> monthDays;
+    private final String calendarName;
+    private final ObjectArrayList<String> daysOfWeek;
+    private final ObjectArrayList<String> monthNames;
+    private final Object2ByteOpenHashMap<String> monthDays;
 
     // Calculated
-    public final int totalDaysInYear;
+    private final int totalDaysInYear;
 
     // Constructor \\
+
     public CalendarData(
             String calendarName,
             ObjectArrayList<String> daysOfWeek,
@@ -23,10 +30,35 @@ public class CalendarData extends DataPackage {
             Object2ByteOpenHashMap<String> monthDays,
             int totalDaysInYear) {
 
+        // Internal
         this.calendarName = calendarName;
         this.daysOfWeek = daysOfWeek;
         this.monthNames = monthNames;
         this.monthDays = monthDays;
+
+        // Calculated
         this.totalDaysInYear = totalDaysInYear;
+    }
+
+    // Accessible \\
+
+    public String getCalendarName() {
+        return calendarName;
+    }
+
+    public ObjectArrayList<String> getDaysOfWeek() {
+        return daysOfWeek;
+    }
+
+    public ObjectArrayList<String> getMonthNames() {
+        return monthNames;
+    }
+
+    public Object2ByteOpenHashMap<String> getMonthDays() {
+        return monthDays;
+    }
+
+    public int getTotalDaysInYear() {
+        return totalDaysInYear;
     }
 }

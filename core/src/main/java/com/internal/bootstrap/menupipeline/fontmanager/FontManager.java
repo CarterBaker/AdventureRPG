@@ -7,77 +7,110 @@ import com.internal.bootstrap.menupipeline.fonts.FontHandle;
 import com.internal.bootstrap.menupipeline.fonts.FontInstance;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.util.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 public class FontManager extends ManagerPackage {
 
-    // Registry
-    private Object2IntOpenHashMap<String> fontName2FontID;
-    private Int2ObjectOpenHashMap<FontHandle> fontID2FontHandle;
-    private int nextFontID;
+    /*
+     * Owns the font palette for the engine lifetime. Drives font rasterization
+     * and atlas upload via InternalLoader. Provides FontInstance cloning for
+     * per-label use. Releases all GPU texture handles on dispose.
+     */
 
     // Internal
     private VAOManager vaoManager;
     private VAOHandle labelVAOHandle;
 
+    // Palette
+    private Object2IntOpenHashMap<String> fontName2FontID;
+    private Int2ObjectOpenHashMap<FontHandle> fontID2FontHandle;
+
     // Base \\
 
     @Override
     protected void create() {
-        create(InternalLoader.class);
+
+        // Palette
         this.fontName2FontID = new Object2IntOpenHashMap<>();
         this.fontID2FontHandle = new Int2ObjectOpenHashMap<>();
         this.fontName2FontID.defaultReturnValue(-1);
-        this.nextFontID = 0;
+        create(InternalLoader.class);
     }
 
     @Override
     protected void get() {
+
+        // Internal
         this.vaoManager = get(VAOManager.class);
     }
 
     @Override
     protected void dispose() {
+
         for (FontHandle handle : fontID2FontHandle.values())
             GLSLUtility.deleteTexture2D(handle.getGPUHandle());
+
         fontName2FontID.clear();
         fontID2FontHandle.clear();
     }
 
-    // Bootstrap Registration \\
+    // Management \\
 
     void addFont(String fontName, FontHandle fontHandle) {
-        fontName2FontID.put(fontName, nextFontID);
-        fontID2FontHandle.put(nextFontID, fontHandle);
-        nextFontID++;
+
+        int id = RegistryUtility.toIntID(fontName);
+
+        fontName2FontID.put(fontName, id);
+        fontID2FontHandle.put(id, fontHandle);
     }
 
-    // On-Demand Loading \\
+    // Accessible \\
 
-    public void request(String fontName) {
-        ((InternalLoader) internalLoader).request(fontName);
+    public boolean hasFont(String fontName) {
+        return fontName2FontID.containsKey(fontName);
     }
 
-    // Accessors \\
+    public int getFontIDFromFontName(String fontName) {
 
-    public FontHandle getFontHandleFromFontName(String fontName) {
         if (!fontName2FontID.containsKey(fontName))
             request(fontName);
-        return fontID2FontHandle.get(fontName2FontID.getInt(fontName));
+
+        return fontName2FontID.getInt(fontName);
+    }
+
+    public FontHandle getFontHandleFromFontID(int fontID) {
+
+        FontHandle handle = fontID2FontHandle.get(fontID);
+
+        if (handle == null)
+            throwException("Font ID not found: " + fontID);
+
+        return handle;
+    }
+
+    public FontHandle getFontHandleFromFontName(String fontName) {
+        return getFontHandleFromFontID(getFontIDFromFontName(fontName));
     }
 
     public FontInstance cloneFont(String fontName) {
+
         FontHandle handle = getFontHandleFromFontName(fontName);
 
         if (labelVAOHandle == null)
-            labelVAOHandle = vaoManager.getVAOHandleFromName(EngineSetting.FONT_DEFAULT_VAO);
+            labelVAOHandle = vaoManager.getVAOHandleFromVAOName(EngineSetting.FONT_DEFAULT_VAO);
 
         DynamicModelHandle mergedModel = create(DynamicModelHandle.class);
         mergedModel.constructor(handle.getMaterialID(), labelVAOHandle);
 
         FontInstance instance = create(FontInstance.class);
         instance.constructor(handle, mergedModel);
+
         return instance;
+    }
+
+    public void request(String fontName) {
+        ((InternalLoader) internalLoader).request(fontName);
     }
 }

@@ -5,21 +5,24 @@ import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector2;
-
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-
 import java.util.Comparator;
 
 class GridBuildSystem extends SystemPackage {
 
+    // Internal
     private UBOManager uboManager;
+
+    // Config
     private int CHUNK_SIZE;
     private int MEGA_CHUNK_SIZE;
+
+    // Base \\
 
     @Override
     protected void create() {
@@ -31,6 +34,8 @@ class GridBuildSystem extends SystemPackage {
     protected void get() {
         this.uboManager = get(UBOManager.class);
     }
+
+    // Build \\
 
     GridInstance buildGrid() {
 
@@ -63,9 +68,13 @@ class GridBuildSystem extends SystemPackage {
         return gridInstance;
     }
 
+    // Radius \\
+
     private float calculateRadius() {
         return settings.maxRenderDistance / 2f;
     }
+
+    // Grid Slot Data \\
 
     private Long2ObjectOpenHashMap<GridSlotData> createGridSlotData(float radius) {
 
@@ -105,6 +114,8 @@ class GridBuildSystem extends SystemPackage {
         return data;
     }
 
+    // Load Order \\
+
     private long[] assignLoadOrder(Long2ObjectOpenHashMap<GridSlotData> gridSlotData) {
 
         ObjectArrayList<GridSlotData> slots = new ObjectArrayList<>(gridSlotData.values());
@@ -116,6 +127,8 @@ class GridBuildSystem extends SystemPackage {
 
         return coordinates;
     }
+
+    // Grid Slot Handles \\
 
     private Long2ObjectOpenHashMap<GridSlotHandle> createGridSlotHandles(
             LongOpenHashSet gridCoordinates,
@@ -132,13 +145,13 @@ class GridBuildSystem extends SystemPackage {
 
             long gridCoordinate = it.nextLong();
 
-            UBOInstance slotUBO = uboManager.cloneUBO(baseUBO);
+            UBOInstance slotUBO = uboManager.createUBOInstance(baseUBO);
 
             int gridX = Coordinate2Long.unpackX(gridCoordinate) * CHUNK_SIZE;
             int gridY = Coordinate2Long.unpackY(gridCoordinate) * CHUNK_SIZE;
 
             slotUBO.updateUniform("u_gridPosition", new Vector2(gridX, gridY));
-            slotUBO.push();
+            uboManager.push(slotUBO);
 
             int chunkX = Coordinate2Long.unpackX(gridCoordinate);
             int chunkY = Coordinate2Long.unpackY(gridCoordinate);
@@ -196,6 +209,8 @@ class GridBuildSystem extends SystemPackage {
 
         return handle;
     }
+
+    // Covered Slots \\
 
     private void populateCoveredSlots(Long2ObjectOpenHashMap<GridSlotHandle> gridSlots) {
 

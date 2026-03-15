@@ -1,47 +1,55 @@
 package com.internal.bootstrap.menupipeline.menu;
 
-import com.internal.bootstrap.menupipeline.element.ElementPlacementHandle;
+import com.internal.bootstrap.menupipeline.element.ElementPlacementStruct;
 import com.internal.core.engine.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuHandle extends HandlePackage {
 
-    private String name;
-    private ObjectArrayList<ElementPlacementHandle> placements;
-    private boolean lockInput;
-    private boolean raycastInput;
-    private ObjectArrayList<String> entryPoints;
+    /*
+     * Persistent reference to a loaded menu definition. Registered and owned by
+     * MenuManager. Wraps MenuData and holds the placement tree needed to
+     * instantiate a MenuInstance at runtime.
+     */
+
+    // Internal
+    private MenuData data;
+    private ObjectArrayList<ElementPlacementStruct> placements;
+
+    // Constructor \\
 
     public void constructor(
-            String name,
-            ObjectArrayList<ElementPlacementHandle> placements,
-            boolean lockInput,
-            boolean raycastInput,
-            ObjectArrayList<String> entryPoints) {
-        this.name = name;
+            MenuData data,
+            ObjectArrayList<ElementPlacementStruct> placements) {
+
+        // Internal
+        this.data = data;
         this.placements = placements;
-        this.lockInput = lockInput;
-        this.raycastInput = raycastInput;
-        this.entryPoints = entryPoints;
+    }
+
+    // Accessible \\
+
+    public MenuData getMenuData() {
+        return data;
     }
 
     public String getName() {
-        return name;
-    }
-
-    public ObjectArrayList<ElementPlacementHandle> getPlacements() {
-        return placements;
+        return data.getName();
     }
 
     public boolean isLockInput() {
-        return lockInput;
+        return data.isLockInput();
     }
 
     public boolean isRaycastInput() {
-        return raycastInput;
+        return data.isRaycastInput();
     }
 
     public ObjectArrayList<String> getEntryPoints() {
-        return entryPoints;
+        return data.getEntryPoints();
+    }
+
+    public ObjectArrayList<ElementPlacementStruct> getPlacements() {
+        return placements;
     }
 }

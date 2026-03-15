@@ -8,11 +8,12 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
+import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.engine.settings.Settings;
-import com.internal.core.kernel.SyncConsumer.AsyncStructConsumer;
-import com.internal.core.kernel.SyncConsumer.AsyncStructConsumerMulti;
-import com.internal.core.kernel.SyncConsumer.BiSyncAsyncConsumer;
-import com.internal.core.kernel.SyncConsumer.SyncStructConsumer;
+import com.internal.core.kernel.syncconsumer.AsyncStructConsumer;
+import com.internal.core.kernel.syncconsumer.AsyncStructConsumerMulti;
+import com.internal.core.kernel.syncconsumer.BiSyncAsyncConsumer;
+import com.internal.core.kernel.syncconsumer.SyncStructConsumer;
 import com.internal.core.kernel.thread.ThreadHandle;
 import com.internal.core.kernel.threadmanager.InternalThreadManager;
 
@@ -92,7 +93,7 @@ public class EnginePackage extends ManagerPackage {
         // Timing
         this.frameCount = 0L;
         this.deltaTime = 0f;
-        this.fixedInterval = data.settings.FIXED_TIME_STEP;
+        this.fixedInterval = EngineSetting.FIXED_TIME_STEP;
         this.elapsedTime = 0f;
         this.maxSteps = 5;
     }

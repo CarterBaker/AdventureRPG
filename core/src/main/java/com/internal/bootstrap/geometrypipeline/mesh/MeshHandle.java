@@ -5,29 +5,35 @@ import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOHandle;
 import com.internal.core.engine.HandlePackage;
 
-/*
- * A fully GPU-resident static mesh assembled from JSON at bootstrap. Owned
- * exclusively by MeshManager for the engine lifetime. External systems receive
- * a ModelInstance built from this handle's MeshStruct — never the handle itself.
- */
 public class MeshHandle extends HandlePackage {
+
+    /*
+     * A fully GPU-resident static mesh assembled from JSON at bootstrap. Owned
+     * exclusively by MeshManager for the engine lifetime. External systems receive
+     * a ModelInstance built from this handle's MeshData — never the handle itself.
+     */
 
     // Internal
     private VAOInstance vaoInstance;
     private VBOHandle vboHandle;
     private IBOHandle iboHandle;
-    private MeshStruct meshStruct;
+    private MeshData meshData;
 
-    // Internal \\
+    // Constructor \\
 
-    public void constructor(VAOInstance vaoInstance, VBOHandle vboHandle, IBOHandle iboHandle) {
+    public void constructor(
+            VAOInstance vaoInstance,
+            VBOHandle vboHandle,
+            IBOHandle iboHandle) {
+
+        // Internal
         this.vaoInstance = vaoInstance;
         this.vboHandle = vboHandle;
         this.iboHandle = iboHandle;
-        this.meshStruct = new MeshStruct(
-                vaoInstance.getVAOStruct(),
-                vboHandle.getVBOStruct(),
-                iboHandle.getIBOStruct());
+        this.meshData = new MeshData(
+                vaoInstance.getVAOData(),
+                vboHandle.getVBOData(),
+                iboHandle.getIBOData());
     }
 
     // Accessible \\
@@ -44,7 +50,7 @@ public class MeshHandle extends HandlePackage {
         return iboHandle;
     }
 
-    public MeshStruct getMeshStruct() {
-        return meshStruct;
+    public MeshData getMeshData() {
+        return meshData;
     }
 }

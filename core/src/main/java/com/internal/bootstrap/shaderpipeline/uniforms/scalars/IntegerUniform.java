@@ -1,17 +1,17 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalars;
 
 import com.badlogic.gdx.Gdx;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
-public final class IntegerUniform extends UniformAttribute<Integer> {
+public final class IntegerUniform extends UniformAttributeStruct<Integer> {
 
     public IntegerUniform() {
         super(UniformType.INT, 0);
     }
 
     @Override
-    public UniformAttribute<?> createDefault() {
+    public UniformAttributeStruct<?> createDefault() {
         return new IntegerUniform();
     }
 

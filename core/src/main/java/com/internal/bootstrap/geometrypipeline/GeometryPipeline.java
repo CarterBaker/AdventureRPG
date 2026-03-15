@@ -11,6 +11,12 @@ import com.internal.core.engine.PipelinePackage;
 
 public class GeometryPipeline extends PipelinePackage {
 
+    /*
+     * Registers all geometry pipeline managers in dependency order. VAO,
+     * VBO, and IBO managers are registered before MeshManager since mesh
+     * assembly depends on all three buffer systems being available.
+     */
+
     @Override
     protected void create() {
         create(VBOManager.class);

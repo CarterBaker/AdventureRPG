@@ -10,8 +10,9 @@ import com.internal.bootstrap.worldpipeline.worlditem.WorldItemCompositeInstance
 import com.internal.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
-import com.internal.core.util.mathematics.Extras.Coordinate4Long;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Coordinate4Long;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

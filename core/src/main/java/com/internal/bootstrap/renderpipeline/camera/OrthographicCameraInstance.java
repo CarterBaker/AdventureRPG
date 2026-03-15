@@ -1,41 +1,40 @@
 package com.internal.bootstrap.renderpipeline.camera;
 
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.internal.core.engine.InstancePackage;
 import com.internal.core.util.mathematics.matrices.Matrix4;
 import com.internal.core.util.mathematics.vectors.Vector2;
 
 public class OrthographicCameraInstance extends InstancePackage {
 
-    private OrthographicCamera orthographicCamera;
+    /*
+     * Runtime orthographic camera. Wraps OrthographicCameraData and delegates
+     * all mutation and access through it. Owned by CameraManager.
+     */
 
-    // Cached values
-    private Matrix4 projectionMat = new Matrix4();
-    private Vector2 screenSize = new Vector2();
+    // Internal
+    private OrthographicCameraData data;
 
-    public void constructor(float width, float height) {
-        orthographicCamera = new OrthographicCamera();
-        orthographicCamera.setToOrtho(false, width, height);
-        orthographicCamera.update();
-        updateCachedValues(width, height);
+    // Constructor \\
+
+    public void constructor(OrthographicCameraData data) {
+        this.data = data;
+    }
+
+    // Accessible \\
+
+    public OrthographicCameraData getOrthographicCameraData() {
+        return data;
     }
 
     public void updateViewport(float width, float height) {
-        orthographicCamera.setToOrtho(false, width, height);
-        orthographicCamera.update();
-        updateCachedValues(width, height);
-    }
-
-    private void updateCachedValues(float width, float height) {
-        projectionMat.fromGDX(orthographicCamera.combined);
-        screenSize.set(width, height);
+        data.updateViewport(width, height);
     }
 
     public Matrix4 getProjection() {
-        return projectionMat;
+        return data.getProjection();
     }
 
     public Vector2 getScreenSize() {
-        return screenSize;
+        return data.getScreenSize();
     }
 }

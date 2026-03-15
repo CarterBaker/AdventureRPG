@@ -1,8 +1,8 @@
 package com.internal.core.util.mathematics.vectors;
 
 import com.internal.core.engine.UtilityPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
-import com.internal.core.util.mathematics.Extras.Direction2Vector;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Direction2Vector;
 
 public class Vector2Int extends UtilityPackage {
 

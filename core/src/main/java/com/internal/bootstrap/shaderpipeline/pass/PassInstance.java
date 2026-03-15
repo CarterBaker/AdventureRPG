@@ -6,57 +6,56 @@ import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.core.engine.InstancePackage;
 
-/*
- * Runtime pass handed to external systems by PassManager.clonePass().
- * Owns all data it needs directly — name, ID, a cloned MaterialInstance, and a
- * ModelInstance constructed from the shared mesh geometry and that material.
- */
 public class PassInstance extends InstancePackage {
 
+    /*
+     * Runtime pass handed to external systems by PassManager.clonePass().
+     * Wraps a PassData built from a deep-copied MaterialInstance and a fresh
+     * ModelInstance. Safe to mutate — discard when no longer needed.
+     */
+
     // Internal
-    private String passName;
-    private int passID;
-    private MaterialInstance material;
-    private ModelInstance modelInstance;
+    private PassData passData;
+
     // Internal \\
 
-    public void constructor(
-            String passName,
-            int passID,
-            MeshHandle meshHandle,
-            MaterialInstance material) {
-        this.passName = passName;
-        this.passID = passID;
-        this.material = material;
-        this.modelInstance = create(ModelInstance.class);
-        this.modelInstance.constructor(meshHandle.getMeshStruct(), material);
+    public void constructor(PassData passData) {
+        this.passData = passData;
     }
 
     // Utility \\
 
     public void setUBO(UBOInstance ubo) {
-        material.setUBO(ubo);
+        passData.getMaterial().setUBO(ubo);
     }
 
     public <T> void setUniform(String uniformName, T value) {
-        material.setUniform(uniformName, value);
+        passData.setUniform(uniformName, value);
     }
 
     // Accessible \\
 
+    public PassData getPassData() {
+        return passData;
+    }
+
     public String getPassName() {
-        return passName;
+        return passData.getPassName();
     }
 
     public int getPassID() {
-        return passID;
+        return passData.getPassID();
+    }
+
+    public MeshHandle getMeshHandle() {
+        return passData.getMeshHandle();
     }
 
     public MaterialInstance getMaterial() {
-        return material;
+        return passData.getMaterial();
     }
 
     public ModelInstance getModelInstance() {
-        return modelInstance;
+        return passData.getModelInstance();
     }
 }

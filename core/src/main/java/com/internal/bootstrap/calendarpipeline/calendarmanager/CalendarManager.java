@@ -2,38 +2,68 @@ package com.internal.bootstrap.calendarpipeline.calendarmanager;
 
 import com.internal.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import com.internal.core.engine.ManagerPackage;
+import com.internal.core.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class CalendarManager extends ManagerPackage {
 
-    // Palette — keyed by full calendar name e.g. "standard/Overworld"
-    private Object2ObjectOpenHashMap<String, CalendarHandle> palette;
+    /*
+     * Owns the calendar palette for the engine lifetime. Supports on-demand
+     * loading via InternalLoader on a cache miss. Keyed by full calendar name
+     * e.g. "standard/Overworld".
+     */
+
+    // Palette
+    private Object2ObjectOpenHashMap<String, CalendarHandle> calendarName2CalendarHandle;
+    private Short2ObjectOpenHashMap<CalendarHandle> calendarID2CalendarHandle;
 
     // Base \\
+
     @Override
     protected void create() {
-        this.palette = new Object2ObjectOpenHashMap<>();
+
+        // Palette
+        this.calendarName2CalendarHandle = new Object2ObjectOpenHashMap<>();
+        this.calendarID2CalendarHandle = new Short2ObjectOpenHashMap<>();
         create(InternalLoader.class);
     }
 
-    // Calendar Management \\
+    // Management \\
+
     void addCalendarHandle(CalendarHandle calendarHandle) {
-        palette.put(calendarHandle.getCalendarName(), calendarHandle);
+
+        short id = RegistryUtility.toShortID(calendarHandle.getCalendarName());
+
+        calendarName2CalendarHandle.put(calendarHandle.getCalendarName(), calendarHandle);
+        calendarID2CalendarHandle.put(id, calendarHandle);
     }
 
     // Accessible \\
 
-    /*
-     * Auto-triggers an on-demand load on miss.
-     * Safe for external callers only — never call from inside a builder.
-     */
-    public CalendarHandle getCalendar(String calendarName) {
+    public boolean hasCalendar(String calendarName) {
+        return calendarName2CalendarHandle.containsKey(calendarName);
+    }
 
-        CalendarHandle handle = palette.get(calendarName);
+    public short getCalendarIDFromCalendarName(String calendarName) {
+
+        if (!calendarName2CalendarHandle.containsKey(calendarName))
+            ((InternalLoader) internalLoader).request(calendarName);
+
+        return RegistryUtility.toShortID(calendarName);
+    }
+
+    public CalendarHandle getCalendarHandleFromCalendarID(short calendarID) {
+        return calendarID2CalendarHandle.get(calendarID);
+    }
+
+    public CalendarHandle getCalendarHandleFromCalendarName(String calendarName) {
+
+        CalendarHandle handle = calendarName2CalendarHandle.get(calendarName);
 
         if (handle == null) {
             ((InternalLoader) internalLoader).request(calendarName);
-            handle = palette.get(calendarName);
+            handle = calendarName2CalendarHandle.get(calendarName);
         }
 
         if (handle == null)

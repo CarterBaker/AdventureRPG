@@ -13,6 +13,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {
 
+    /*
+     * Parses calendar JSON into a CalendarData and wraps it in a CalendarHandle.
+     * Computes total days in year from parsed month data. Bootstrap-only.
+     */
+
     // Build \\
 
     CalendarHandle build(File file, String calendarName) {
@@ -28,6 +33,7 @@ class InternalBuilder extends BuilderPackage {
 
         CalendarHandle calendarHandle = create(CalendarHandle.class);
         calendarHandle.constructor(calendarData);
+
         return calendarHandle;
     }
 
@@ -58,9 +64,11 @@ class InternalBuilder extends BuilderPackage {
         Object2ByteOpenHashMap<String> monthDays = new Object2ByteOpenHashMap<>(monthsArray.size());
 
         for (JsonElement element : monthsArray) {
+
             JsonObject monthObject = element.getAsJsonObject();
             String name = monthObject.get("name").getAsString();
             byte days = (byte) monthObject.get("days").getAsInt();
+
             monthNames.add(name);
             monthDays.put(name, days);
         }

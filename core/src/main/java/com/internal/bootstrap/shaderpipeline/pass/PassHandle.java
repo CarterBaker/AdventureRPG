@@ -3,56 +3,60 @@ package com.internal.bootstrap.shaderpipeline.pass;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.core.engine.HandlePackage;
 
-/*
- * Compiled fullscreen pass owned by PassManager. Holds a ModelInstance built
- * from the processing triangle mesh and a MaterialInstance for the pass shader.
- * Retains the MeshHandle so PassManager.clonePass() can construct new ModelInstances
- * for each PassInstance without duplicating mesh geometry.
- */
 public class PassHandle extends HandlePackage {
 
+    /*
+     * Compiled fullscreen pass owned by PassManager. Wraps PassData holding
+     * the original material and ModelInstance. Retains the MeshHandle so
+     * PassManager.clonePass() can construct new ModelInstances per PassInstance
+     * without duplicating geometry.
+     */
+
     // Internal
-    private String passName;
-    private int passID;
-    private MeshHandle meshHandle;
-    private ModelInstance modelInstance;
-    private MaterialInstance material;
+    private PassData passData;
+
     // Internal \\
 
-    public void constructor(
-            String passName,
-            int passID,
-            MaterialInstance material,
-            MeshHandle meshHandle) {
-        this.passName = passName;
-        this.passID = passID;
-        this.meshHandle = meshHandle;
-        this.material = material;
-        this.modelInstance = create(ModelInstance.class);
-        this.modelInstance.constructor(meshHandle.getMeshStruct(), material);
+    public void constructor(PassData passData) {
+        this.passData = passData;
+    }
+
+    // Utility \\
+
+    public void setUBO(UBOInstance ubo) {
+        passData.getMaterial().setUBO(ubo);
+    }
+
+    public <T> void setUniform(String uniformName, T value) {
+        passData.setUniform(uniformName, value);
     }
 
     // Accessible \\
 
+    public PassData getPassData() {
+        return passData;
+    }
+
     public String getPassName() {
-        return passName;
+        return passData.getPassName();
     }
 
     public int getPassID() {
-        return passID;
+        return passData.getPassID();
     }
 
     public MeshHandle getMeshHandle() {
-        return meshHandle;
-    }
-
-    public ModelInstance getModelInstance() {
-        return modelInstance;
+        return passData.getMeshHandle();
     }
 
     public MaterialInstance getMaterial() {
-        return material;
+        return passData.getMaterial();
+    }
+
+    public ModelInstance getModelInstance() {
+        return passData.getModelInstance();
     }
 }

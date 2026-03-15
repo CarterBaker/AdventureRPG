@@ -4,46 +4,60 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.internal.core.engine.SystemPackage;
+import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import com.internal.core.util.mathematics.vectors.Vector3Int;
 
 public class InputSystem extends SystemPackage implements InputProcessor {
 
-    // Internal
-    private boolean locked = false;
-    private float sensitivity = 0.15f;
+    /*
+     * Handles all raw input from LibGDX and exposes clean state to the engine.
+     * Movement and camera rotation are blocked when the input is locked.
+     * UI keys and raw mouse state are always tracked regardless of lock state.
+     */
 
+    // Internal
+    private boolean locked;
+    private float sensitivity;
+
+    // Vectors
     private Vector2 rotation;
     private Vector3Int input;
 
     // Movement
-    private boolean W = false;
-    private boolean A = false;
-    private boolean S = false;
-    private boolean D = false;
-    private boolean CTRL = false;
-    private boolean SHIFT = false;
-    private boolean SPACE = false;
+    private boolean W;
+    private boolean A;
+    private boolean S;
+    private boolean D;
+    private boolean CTRL;
+    private boolean SHIFT;
+    private boolean SPACE;
 
     // Mouse — game, blocked when locked
-    private boolean leftClick = false;
-    private boolean rightClick = false;
+    private boolean leftClick;
+    private boolean rightClick;
 
     // Mouse — raw, always tracked, used by UI raycasting
-    private boolean rawLeftClick = false;
-    private float mouseX = 0f;
-    private float mouseY = 0f;
+    private boolean rawLeftClick;
+    private float mouseX;
+    private float mouseY;
 
-    // UI keys — always tracked regardless of lock
-    private boolean inventoryJustPressed = false;
-    private boolean inventoryDown = false;
+    // UI Keys — always tracked regardless of lock
+    private boolean inventoryJustPressed;
+    private boolean inventoryDown;
 
     // Base \\
 
     @Override
     protected void create() {
-        rotation = new Vector2();
-        input = new Vector3Int();
+
+        // Internal
+        this.locked = false;
+        this.sensitivity = internal.settings.mouseSensitivity;
+
+        // Vectors
+        this.rotation = new Vector2();
+        this.input = new Vector3Int();
     }
 
     @Override
@@ -61,18 +75,25 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     // Input \\
 
     private void updateRotation() {
+
         rotation.set(0, 0);
+
         if (locked)
             return;
+
         float deltaX = Gdx.input.getDeltaX() * sensitivity;
         float deltaY = Gdx.input.getDeltaY() * sensitivity;
+
         rotation.set(deltaX, deltaY);
     }
 
     private void updateMovement() {
+
         input.set(0, 0, 0);
+
         if (locked)
             return;
+
         if (W)
             input.z += 1;
         if (S)
@@ -89,6 +110,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     @Override
     public boolean keyDown(int keycode) {
+
         if (keycode == Input.Keys.I && !inventoryDown) {
             inventoryDown = true;
             inventoryJustPressed = true;
@@ -106,11 +128,13 @@ public class InputSystem extends SystemPackage implements InputProcessor {
             case Input.Keys.SHIFT_LEFT -> SHIFT = true;
             case Input.Keys.SPACE -> SPACE = true;
         }
+
         return true;
     }
 
     @Override
     public boolean keyUp(int keycode) {
+
         if (keycode == Input.Keys.I)
             inventoryDown = false;
 
@@ -126,32 +150,43 @@ public class InputSystem extends SystemPackage implements InputProcessor {
             case Input.Keys.SHIFT_LEFT -> SHIFT = false;
             case Input.Keys.SPACE -> SPACE = false;
         }
+
         return true;
     }
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+
         if (button == Input.Buttons.LEFT)
             rawLeftClick = true;
+
         if (locked)
             return false;
+
         if (button == Input.Buttons.LEFT)
             leftClick = true;
+
         if (button == Input.Buttons.RIGHT)
             rightClick = true;
+
         return true;
     }
 
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+
         if (button == Input.Buttons.LEFT)
             rawLeftClick = false;
+
         if (locked)
             return false;
+
         if (button == Input.Buttons.LEFT)
             leftClick = false;
+
         if (button == Input.Buttons.RIGHT)
             rightClick = false;
+
         return true;
     }
 

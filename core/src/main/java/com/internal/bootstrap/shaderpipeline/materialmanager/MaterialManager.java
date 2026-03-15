@@ -1,102 +1,95 @@
 package com.internal.bootstrap.shaderpipeline.materialmanager;
 
+import com.internal.bootstrap.shaderpipeline.material.MaterialData;
 import com.internal.bootstrap.shaderpipeline.material.MaterialHandle;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
-import com.internal.bootstrap.shaderpipeline.shadermanager.ShaderManager;
-import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
-import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
 import com.internal.core.engine.ManagerPackage;
-
+import com.internal.core.util.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-/*
- * Owns all compiled MaterialHandle objects for the lifetime of the application.
- * Delegates bootstrap compilation to InternalLoadManager, which self-releases
- * once all materials are assembled. On accessor miss, triggers an immediate
- * synchronous load through the active InternalLoadManager.
- */
 public class MaterialManager extends ManagerPackage {
 
-    // Internal
-    private ShaderManager shaderManager;
+    /*
+     * Owns all material handles. Drives loading via InternalLoader and exposes
+     * cloneMaterial() for runtime instance creation. Handles are persistent —
+     * instances are cloned on demand and discarded by the caller.
+     */
 
-    // Retrieval Mapping
+    // Palette
     private Object2IntOpenHashMap<String> materialName2MaterialID;
-    private Int2ObjectOpenHashMap<MaterialHandle> materialID2Material;
+    private Int2ObjectOpenHashMap<MaterialHandle> materialID2MaterialHandle;
 
     // Base \\
 
     @Override
     protected void create() {
-        create(InternalLoader.class);
+
         this.materialName2MaterialID = new Object2IntOpenHashMap<>();
-        this.materialID2Material = new Int2ObjectOpenHashMap<>();
+        this.materialID2MaterialHandle = new Int2ObjectOpenHashMap<>();
+        this.materialName2MaterialID.defaultReturnValue(-1);
+
+        create(InternalLoader.class);
     }
 
-    @Override
-    protected void get() {
-        this.shaderManager = get(ShaderManager.class);
+    // Management \\
+
+    void addMaterial(String materialName, MaterialHandle handle) {
+        int id = RegistryUtility.toIntID(materialName);
+        materialName2MaterialID.put(materialName, id);
+        materialID2MaterialHandle.put(id, handle);
     }
 
-    // On-Demand Loading \\
+    // On-Demand \\
 
     public void request(String materialName) {
         ((InternalLoader) internalLoader).request(materialName);
     }
 
-    // Material Management \\
-
-    void addMaterial(MaterialHandle material) {
-        materialName2MaterialID.put(material.getMaterialName(), material.getMaterialID());
-        materialID2Material.put(material.getMaterialID(), material);
-    }
-
     // Accessible \\
 
-    public void bindShaderToUBO(MaterialHandle material, UBOHandle ubo) {
-        shaderManager.bindShaderToUBO(material.getShaderHandle(), ubo.getBufferName());
+    public boolean hasMaterial(String materialName) {
+        return materialName2MaterialID.containsKey(materialName);
     }
 
     public int getMaterialIDFromMaterialName(String materialName) {
+
         if (!materialName2MaterialID.containsKey(materialName))
             request(materialName);
+
+        if (!materialName2MaterialID.containsKey(materialName))
+            throwException("Material not found after load: '" + materialName + "'");
+
         return materialName2MaterialID.getInt(materialName);
     }
 
-    public MaterialHandle getMaterialFromMaterialID(int materialID) {
-        return materialID2Material.get(materialID);
+    public MaterialHandle getMaterialHandleFromMaterialID(int materialID) {
+
+        MaterialHandle handle = materialID2MaterialHandle.get(materialID);
+
+        if (handle == null)
+            throwException("No handle registered for material ID: " + materialID);
+
+        return handle;
+    }
+
+    public MaterialHandle getMaterialHandleFromMaterialName(String materialName) {
+        return getMaterialHandleFromMaterialID(getMaterialIDFromMaterialName(materialName));
+    }
+
+    public MaterialInstance cloneMaterial(String materialName) {
+        MaterialHandle handle = getMaterialHandleFromMaterialName(materialName);
+        MaterialData clonedData = new MaterialData(handle.getMaterialData());
+        MaterialInstance instance = create(MaterialInstance.class);
+        instance.constructor(clonedData);
+        return instance;
     }
 
     public MaterialInstance cloneMaterial(int materialID) {
-
-        MaterialHandle original = getMaterialFromMaterialID(materialID);
-
-        if (original == null)
-            throwException("Cannot clone material — materialID " + materialID + " not found");
-
-        Object2ObjectOpenHashMap<String, Uniform<?>> sourceUniforms = original.getUniforms();
-        Object2ObjectOpenHashMap<String, Uniform<?>> deepCopiedUniforms = new Object2ObjectOpenHashMap<>();
-
-        String[] keys = sourceUniforms.keySet().toArray(new String[0]);
-
-        for (int i = 0; i < keys.length; i++) {
-            Uniform<?> source = sourceUniforms.get(keys[i]);
-            UniformAttribute<?> freshAttr = source.attribute().createDefault();
-            freshAttr.setObject(source.attribute().getValue());
-            deepCopiedUniforms.put(keys[i], new Uniform<>(source.uniformHandle, source.offset, freshAttr));
-        }
-
+        MaterialHandle handle = getMaterialHandleFromMaterialID(materialID);
+        MaterialData clonedData = new MaterialData(handle.getMaterialData());
         MaterialInstance instance = create(MaterialInstance.class);
-        instance.constructor(
-                original.getMaterialName(),
-                original.getMaterialID(),
-                original.getShaderHandle(),
-                original.getUBOs(),
-                deepCopiedUniforms);
-
+        instance.constructor(clonedData);
         return instance;
     }
 }

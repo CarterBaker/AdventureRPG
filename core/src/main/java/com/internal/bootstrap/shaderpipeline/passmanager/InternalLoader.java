@@ -4,17 +4,15 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import com.internal.bootstrap.shaderpipeline.pass.PassHandle;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /*
- * Drives the pass bootstrap sequence: file discovery in scan(), one pass
- * assembled per load() call, self-releases when queue empties.
+ * Drives the pass bootstrap sequence: directory walked in scan(), one pass
+ * assembled per load() call, self-releases when the queue empties.
  */
 class InternalLoader extends LoaderPackage {
 
@@ -22,10 +20,9 @@ class InternalLoader extends LoaderPackage {
     private File root;
     private PassManager passManager;
     private InternalBuilder internalBuilder;
-    private int passCount;
 
     // File Registry
-    private Object2ObjectOpenHashMap<String, File> resourceName2File;
+    private Object2ObjectOpenHashMap<String, File> passName2File;
 
     // Base \\
 
@@ -33,7 +30,7 @@ class InternalLoader extends LoaderPackage {
     protected void scan() {
 
         this.root = new File(EngineSetting.PASS_JSON_PATH);
-        this.resourceName2File = new Object2ObjectOpenHashMap<>();
+        this.passName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Pass directory not found: " + root.getAbsolutePath());
 
@@ -44,7 +41,7 @@ class InternalLoader extends LoaderPackage {
                     .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
                     .forEach(file -> {
                         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        resourceName2File.put(resourceName, file);
+                        passName2File.put(resourceName, file);
                         fileQueue.offer(file);
                     });
         } catch (IOException e) {
@@ -55,7 +52,6 @@ class InternalLoader extends LoaderPackage {
     @Override
     protected void create() {
         this.internalBuilder = create(InternalBuilder.class);
-        this.passCount = 0;
     }
 
     @Override
@@ -67,20 +63,18 @@ class InternalLoader extends LoaderPackage {
 
     @Override
     protected void load(File file) {
-        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-        PassHandle pass = internalBuilder.build(file, resourceName, passCount++);
-        passManager.addPass(pass);
+        String passName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+        passManager.addPassHandle(internalBuilder.build(file, passName));
     }
 
-    // On-Demand Loading \\
+    // On-Demand \\
 
     void request(String passName) {
 
-        File file = resourceName2File.get(passName);
+        File file = passName2File.get(passName);
 
         if (file == null)
-            throwException(
-                    "On-demand pass load failed — resource not found in scan registry: \"" + passName + "\"");
+            throwException("On-demand pass load failed — not found in scan registry: \"" + passName + "\"");
 
         request(file);
     }

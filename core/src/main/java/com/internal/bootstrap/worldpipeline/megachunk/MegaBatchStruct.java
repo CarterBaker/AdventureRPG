@@ -2,7 +2,8 @@ package com.internal.bootstrap.worldpipeline.megachunk;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.core.engine.StructPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
+
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 

@@ -1,11 +1,11 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
 import com.badlogic.gdx.Gdx;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector3Double;
 
-public final class Vector3DoubleArrayUniform extends UniformAttribute<Object[]> {
+public final class Vector3DoubleArrayUniform extends UniformAttributeStruct<Object[]> {
 
     private final int elementCount;
 
@@ -17,7 +17,7 @@ public final class Vector3DoubleArrayUniform extends UniformAttribute<Object[]> 
     }
 
     @Override
-    public UniformAttribute<?> createDefault() {
+    public UniformAttributeStruct<?> createDefault() {
         return new Vector3DoubleArrayUniform(elementCount);
     }
 

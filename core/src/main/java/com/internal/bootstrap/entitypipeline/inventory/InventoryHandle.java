@@ -6,6 +6,12 @@ import com.internal.core.engine.HandlePackage;
 
 public class InventoryHandle extends HandlePackage {
 
+    /*
+     * Per-entity inventory state. Holds main hand, off hand, and backpack
+     * references. All fields default to null — no backpack is assigned until
+     * explicitly set. No manager owns this — it lives directly on EntityInstance.
+     */
+
     // Items
     private ItemDefinitionHandle mainHand;
     private ItemDefinitionHandle offHand;

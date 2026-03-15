@@ -2,37 +2,38 @@ package com.internal.bootstrap.menupipeline.menumanager;
 
 import java.io.File;
 import java.lang.reflect.Method;
-
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.menupipeline.element.DimensionValue;
 import com.internal.bootstrap.menupipeline.element.ElementData;
 import com.internal.bootstrap.menupipeline.element.ElementHandle;
-import com.internal.bootstrap.menupipeline.element.ElementOverrideStruct;
-import com.internal.bootstrap.menupipeline.element.ElementPlacementHandle;
+import com.internal.bootstrap.menupipeline.element.ElementOrigin;
+import com.internal.bootstrap.menupipeline.element.ElementPlacementStruct;
 import com.internal.bootstrap.menupipeline.element.ElementType;
-import com.internal.bootstrap.menupipeline.element.LayoutStruct;
-import com.internal.bootstrap.menupipeline.element.MenuAwareAction;
-import com.internal.bootstrap.menupipeline.element.StackDirection;
-import com.internal.bootstrap.menupipeline.element.TextAlign;
-import com.internal.bootstrap.menupipeline.elementsystem.ElementSystem;
 import com.internal.bootstrap.menupipeline.menu.MenuData;
 import com.internal.bootstrap.menupipeline.menu.MenuHandle;
 import com.internal.bootstrap.menupipeline.menu.MenuInstance;
+import com.internal.bootstrap.menupipeline.util.DimensionValue;
+import com.internal.bootstrap.menupipeline.util.DimensionVector2;
+import com.internal.bootstrap.menupipeline.util.LayoutStruct;
+import com.internal.bootstrap.menupipeline.util.MenuAwareAction;
+import com.internal.bootstrap.menupipeline.util.StackDirection;
+import com.internal.bootstrap.menupipeline.util.TextAlign;
 import com.internal.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import com.internal.core.engine.BuilderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.JsonUtility;
+import com.internal.core.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
-/*
- * Parses menu JSON files into MenuHandles and ElementHandles during bootstrap.
- *
- * Color JSON field: "color": [r, g, b, a] — floats 0.0–1.0 on any LABEL element.
- * If omitted the FontInstance defaults to white (1, 1, 1, 1).
- */
 class InternalBuilder extends BuilderPackage {
+
+    /*
+     * Parses menu JSON files into MenuHandles and ElementHandles during bootstrap.
+     * Builds all handles directly from JSON locals — no intermediate parse structs.
+     * Deferred ref resolution runs after all files are processed.
+     */
 
     private static final String PARENT_ARG = "$parent";
 
@@ -43,15 +44,19 @@ class InternalBuilder extends BuilderPackage {
     private ObjectOpenHashSet<String> registeredFiles;
     private ObjectArrayList<Runnable> deferredRefs;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void get() {
+
+        // Internal
         this.spriteManager = get(SpriteManager.class);
         this.elementSystem = get(ElementSystem.class);
     }
 
     void init(File root) {
+
+        // Internal
         this.root = root;
         this.registeredFiles = new ObjectOpenHashSet<>();
         this.deferredRefs = new ObjectArrayList<>();
@@ -64,12 +69,15 @@ class InternalBuilder extends BuilderPackage {
         JsonObject json = JsonUtility.loadJsonObject(file);
 
         if (!registeredFiles.contains(filePath)) {
+
             if (elementSystem.isFileLoading(filePath))
                 throwException("Circular file dependency at: '" + filePath + "'");
+
             elementSystem.beginFileLoad(filePath);
             registeredFiles.add(filePath);
+
             try {
-                registerTopLevelMasters(filePath, parseElements(json));
+                registerTopLevelMasters(filePath, json);
             } finally {
                 elementSystem.endFileLoad(filePath);
             }
@@ -80,326 +88,281 @@ class InternalBuilder extends BuilderPackage {
                 : filePath;
 
         ObjectArrayList<MenuHandle> handles = new ObjectArrayList<>();
-        for (MenuData decl : parseMenus(json)) {
-            ObjectArrayList<ElementPlacementHandle> placements = new ObjectArrayList<>();
-            for (ElementData data : decl.getElements())
-                placements.add(buildPlacement(filePath, data));
-            MenuHandle handle = create(MenuHandle.class);
-            handle.constructor(fileName + "/" + decl.getName(),
-                    placements,
-                    decl.isLockInput(),
-                    decl.isRaycastInput(),
-                    decl.getEntryPoints());
-            handles.add(handle);
-        }
+
+        if (!json.has("menus"))
+            return handles;
+
+        JsonArray menuArray = json.getAsJsonArray("menus");
+
+        for (int i = 0; i < menuArray.size(); i++)
+            handles.add(buildMenuHandle(fileName, filePath, menuArray.get(i).getAsJsonObject()));
 
         return handles;
     }
 
     void resolveAllDeferredRefs() {
-        for (Runnable r : deferredRefs)
-            r.run();
+        for (int i = 0; i < deferredRefs.size(); i++)
+            deferredRefs.get(i).run();
         deferredRefs.clear();
     }
 
-    // Parsing — Menus \\
+    // Menu Building \\
 
-    private ObjectArrayList<MenuData> parseMenus(JsonObject json) {
-        ObjectArrayList<MenuData> menus = new ObjectArrayList<>();
-        if (!json.has("menus"))
-            return menus;
-        JsonArray array = json.getAsJsonArray("menus");
-        for (int i = 0; i < array.size(); i++) {
-            JsonObject menuJson = array.get(i).getAsJsonObject();
-            String id = JsonUtility.validateString(menuJson, "id");
-            boolean lockInput = JsonUtility.getBoolean(menuJson, "lock_input", false);
-            boolean raycastInput = JsonUtility.getBoolean(menuJson, "raycast_input", false);
-            ObjectArrayList<String> entryPoints = new ObjectArrayList<>();
-            if (menuJson.has("entry_points")) {
-                JsonArray eps = menuJson.getAsJsonArray("entry_points");
-                for (int j = 0; j < eps.size(); j++)
-                    entryPoints.add(eps.get(j).getAsString());
-            }
-            ObjectArrayList<ElementData> elements = parseElements(menuJson);
-            MenuData data = create(MenuData.class);
-            data.constructor(id, elements, lockInput, raycastInput, entryPoints);
-            menus.add(data);
+    private MenuHandle buildMenuHandle(
+            String fileName,
+            String filePath,
+            JsonObject menuJson) {
+
+        String id = JsonUtility.validateString(menuJson, "id");
+        boolean lockInput = JsonUtility.getBoolean(menuJson, "lock_input", false);
+        boolean raycastInput = JsonUtility.getBoolean(menuJson, "raycast_input", false);
+
+        ObjectArrayList<String> entryPoints = new ObjectArrayList<>();
+
+        if (menuJson.has("entry_points")) {
+            JsonArray eps = menuJson.getAsJsonArray("entry_points");
+            for (int i = 0; i < eps.size(); i++)
+                entryPoints.add(eps.get(i).getAsString());
         }
-        return menus;
+
+        ObjectArrayList<ElementPlacementStruct> placements = buildPlacements(filePath, menuJson);
+
+        MenuData data = new MenuData(fileName + "/" + id, lockInput, raycastInput, entryPoints);
+        MenuHandle handle = create(MenuHandle.class);
+        handle.constructor(data, placements);
+
+        return handle;
     }
 
-    // Parsing — Elements \\
+    // Top-Level Master Registration \\
 
-    private ObjectArrayList<ElementData> parseElements(JsonObject json) {
-
-        ObjectArrayList<ElementData> elements = new ObjectArrayList<>();
+    private void registerTopLevelMasters(String filePath, JsonObject json) {
 
         if (!json.has("elements"))
-            return elements;
+            return;
 
-        JsonArray array = json.getAsJsonArray("elements");
-        for (int i = 0; i < array.size(); i++) {
-            ElementData element = parseElement(array.get(i).getAsJsonObject());
-            if (element != null)
-                elements.add(element);
+        JsonArray elements = json.getAsJsonArray("elements");
+
+        for (int i = 0; i < elements.size(); i++) {
+
+            JsonObject el = elements.get(i).getAsJsonObject();
+
+            if (el.has("ref") || el.has("use"))
+                continue;
+
+            String id = JsonUtility.validateString(el, "id");
+            String key = filePath + "/" + id;
+
+            if (!elementSystem.hasMaster(key))
+                elementSystem.registerMaster(key, buildMasterFromJson(filePath, id, el));
         }
-
-        return elements;
     }
 
-    private ElementData parseElement(JsonObject json) {
-        String id = JsonUtility.validateString(json, "id");
-        if (json.has("ref"))
-            return parseRefElement(id, json);
-        if (json.has("use"))
-            return parseUseElement(id, json);
-        return parseInlineElement(id, json);
-    }
+    // Placement Building \\
 
-    private ElementData parseRefElement(String id, JsonObject json) {
-        LayoutStruct layout = FileParserUtility.parseLayoutOverride(json);
-        ElementData data = create(ElementData.class);
-        data.constructorRef(id, json.get("ref").getAsString(), layout);
-        return data;
-    }
+    private ObjectArrayList<ElementPlacementStruct> buildPlacements(
+            String filePath,
+            JsonObject parent) {
 
-    private ElementData parseUseElement(String id, JsonObject json) {
-        String usePath = json.get("use").getAsString();
-        String spritePath = JsonUtility.getString(json, "sprite", null);
-        String text = JsonUtility.getString(json, "text", null);
-        String fontName = JsonUtility.getString(json, "font", null);
-        float[] color = parseColor(json);
-        LayoutStruct layout = FileParserUtility.parseLayoutOverride(json);
-        String[] onClick = FileParserUtility.parseOnClick(json);
-        boolean mask = JsonUtility.getBoolean(json, "mask", false);
-        StackDirection stackDirection = json.has("stack")
-                ? StackDirection.fromString(json.get("stack").getAsString())
-                : StackDirection.NONE;
-        DimensionValue spacing = json.has("spacing")
-                ? DimensionValue.parse(json.get("spacing").getAsString())
-                : null;
-        TextAlign textAlign = json.has("align")
-                ? TextAlign.fromString(json.get("align").getAsString())
-                : TextAlign.CENTER;
-        ObjectArrayList<ElementData> children = parseElements(json);
-        ElementData data = create(ElementData.class);
-        data.constructorUse(id, usePath, spritePath, text, fontName, color, layout,
-                mask, stackDirection, spacing, textAlign,
-                onClick != null ? onClick[0] : null,
-                onClick != null ? onClick[1] : null,
-                onClick != null ? onClick[2] : null,
-                children);
-        return data;
-    }
+        if (!parent.has("elements"))
+            return new ObjectArrayList<>();
 
-    private ElementData parseInlineElement(String id, JsonObject json) {
-        ElementType elementType = FileParserUtility.parseElementType(
-                JsonUtility.validateString(json, "type"), id);
-        String spritePath = JsonUtility.getString(json, "sprite", null);
-        String text = JsonUtility.getString(json, "text", null);
-        String fontName = parseFontName(json, elementType, id);
-        float[] color = elementType == ElementType.LABEL ? parseColor(json) : null;
-        LayoutStruct layout = FileParserUtility.parseLayout(json);
-        String[] onClick = FileParserUtility.parseOnClick(json);
-        boolean mask = JsonUtility.getBoolean(json, "mask", false);
-        StackDirection stackDirection = json.has("stack")
-                ? StackDirection.fromString(json.get("stack").getAsString())
-                : StackDirection.NONE;
-        DimensionValue spacing = json.has("spacing")
-                ? DimensionValue.parse(json.get("spacing").getAsString())
-                : null;
-        TextAlign textAlign = json.has("align")
-                ? TextAlign.fromString(json.get("align").getAsString())
-                : TextAlign.CENTER;
-        ObjectArrayList<ElementData> children = parseElements(json);
-        ElementData data = create(ElementData.class);
-        data.constructor(id, elementType, spritePath, text, fontName, color, layout,
-                mask, stackDirection, spacing, textAlign,
-                onClick != null ? onClick[0] : null,
-                onClick != null ? onClick[1] : null,
-                onClick != null ? onClick[2] : null,
-                children);
-        return data;
-    }
+        JsonArray array = parent.getAsJsonArray("elements");
+        ObjectArrayList<ElementPlacementStruct> placements = new ObjectArrayList<>(array.size());
 
-    // Font / Color Parsing \\
+        for (int i = 0; i < array.size(); i++)
+            placements.add(buildPlacement(filePath, array.get(i).getAsJsonObject()));
 
-    private String parseFontName(JsonObject json, ElementType type, String elementId) {
-        String fontName = JsonUtility.getString(json, "font", null);
-        if (fontName == null)
-            return null;
-        if (type != ElementType.LABEL)
-            throwException("Element '" + elementId + "' has 'font' field but is not type LABEL");
-        return fontName;
-    }
-
-    /*
-     * Parses "color": [r, g, b, a] from JSON. Returns null if field absent —
-     * FontInstance will default to white. Throws if the array is not exactly
-     * 4 elements.
-     */
-    private float[] parseColor(JsonObject json) {
-        if (!json.has("color"))
-            return null;
-        JsonArray arr = json.getAsJsonArray("color");
-        if (arr.size() != 4)
-            throwException("'color' field must be an array of exactly 4 floats [r, g, b, a]");
-        return new float[] {
-                arr.get(0).getAsFloat(),
-                arr.get(1).getAsFloat(),
-                arr.get(2).getAsFloat(),
-                arr.get(3).getAsFloat()
-        };
-    }
-
-    // Master Registration \\
-
-    private void registerTopLevelMasters(
-            String filePath, ObjectArrayList<ElementData> elements) {
-        for (ElementData data : elements)
-            if (!data.isRef() && !data.isUse())
-                elementSystem.registerMaster(filePath + "/" + data.getId(),
-                        buildMaster(filePath, data));
-    }
-
-    private ElementHandle buildMaster(String filePath, ElementData data) {
-        Object action = resolveClickActionRaw(data);
-        ElementHandle master = create(ElementHandle.class);
-        master.constructor(
-                data.getId(), data.getType(),
-                resolveSpriteName(data),
-                data.getText(),
-                data.getFontName(),
-                data.getColor(),
-                data.getLayout(),
-                data.isMask(),
-                data.getStackDirection(),
-                data.getSpacing(),
-                data.getTextAlign(),
-                action instanceof Runnable r ? r : null,
-                action instanceof MenuAwareAction m ? m : null,
-                buildChildPlacements(filePath, data.getChildren()));
-        return master;
-    }
-
-    // Placement \\
-
-    private ElementPlacementHandle buildPlacement(String filePath, ElementData data) {
-        if (data.isRef())
-            return buildRefPlacement(filePath, data);
-        if (data.isUse())
-            return buildUsePlacement(filePath, data);
-        return buildInlinePlacement(filePath, data);
-    }
-
-    private ObjectArrayList<ElementPlacementHandle> buildChildPlacements(
-            String filePath, ObjectArrayList<ElementData> children) {
-        ObjectArrayList<ElementPlacementHandle> placements = new ObjectArrayList<>(children.size());
-        for (ElementData child : children)
-            placements.add(buildPlacement(filePath, child));
         return placements;
     }
 
-    private ElementPlacementHandle buildInlinePlacement(String filePath, ElementData data) {
-        String key = filePath + "/" + data.getId();
-        ElementHandle master = elementSystem.getMaster(key);
-        if (master == null) {
-            master = buildMaster(filePath, data);
-            elementSystem.registerMaster(key, master);
-        }
-        ElementPlacementHandle placement = create(ElementPlacementHandle.class);
-        placement.constructor(master, null);
-        return placement;
+    private ElementPlacementStruct buildPlacement(String filePath, JsonObject json) {
+
+        String id = JsonUtility.validateString(json, "id");
+
+        if (json.has("ref"))
+            return buildRefPlacement(filePath, id, json);
+
+        if (json.has("use"))
+            return buildUsePlacement(filePath, id, json);
+
+        return buildInlinePlacement(filePath, id, json);
     }
 
-    private ElementPlacementHandle buildUsePlacement(String filePath, ElementData data) {
+    private ElementPlacementStruct buildInlinePlacement(
+            String filePath,
+            String id,
+            JsonObject json) {
 
-        ElementHandle template = resolveTemplate(data.getUsePath(), data.getId());
+        String key = filePath + "/" + id;
+        ElementHandle master = elementSystem.getMaster(key);
 
+        if (master == null) {
+            master = buildMasterFromJson(filePath, id, json);
+            elementSystem.registerMaster(key, master);
+        }
+
+        return new ElementPlacementStruct(master);
+    }
+
+    private ElementPlacementStruct buildUsePlacement(
+            String filePath,
+            String id,
+            JsonObject json) {
+
+        String usePath = json.get("use").getAsString();
+        ElementHandle template = resolveTemplate(usePath, id);
+        ObjectArrayList<ElementPlacementStruct> children = buildPlacements(filePath, json);
         ElementHandle master;
-        if (!data.getChildren().isEmpty()) {
-            master = create(ElementHandle.class);
-            master.constructor(data.getId(), template.getType(),
-                    template.getSpriteName(), template.getText(),
-                    template.getFontName(), template.getColor(),
+
+        if (!children.isEmpty()) {
+
+            ElementData data = new ElementData(
+                    id,
+                    template.getType(),
+                    template.getSpriteName(),
+                    template.getText(),
+                    template.getFontName(),
+                    template.getColor(),
                     template.getLayout(),
-                    template.isMask(), template.getStackDirection(), template.getSpacing(),
-                    template.getTextAlign(),
-                    template.getClickAction(), template.getMenuAwareAction(),
-                    buildChildPlacements(filePath, data.getChildren()));
+                    template.isMask(),
+                    template.getStackDirection(),
+                    template.getSpacing(),
+                    template.getTextAlign());
+
+            master = create(ElementHandle.class);
+            master.constructor(
+                    data,
+                    template.getClickAction(),
+                    template.getMenuAwareAction(),
+                    children);
         } else {
             master = template;
         }
 
-        LayoutStruct layoutOverride = data.getLayout() != null
-                ? LayoutStruct.merge(template.getLayout(), data.getLayout())
-                : null;
-        String spriteNameOverride = data.getSpritePath() != null
-                ? resolveSpriteName(data)
+        LayoutStruct partialOverride = parseLayoutOverride(json);
+        LayoutStruct layoutOverride = partialOverride != null
+                ? LayoutStruct.merge(template.getLayout(), partialOverride)
                 : null;
 
+        String spritePath = JsonUtility.getString(json, "sprite", null);
+        String spriteNameOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
+        String textOverride = JsonUtility.getString(json, "text", null);
+        float[] colorOverride = json.has("color") ? parseColor(json) : null;
+
+        String[] onClick = parseOnClick(json);
         Runnable clickOverride = null;
         MenuAwareAction maaOverride = null;
-        if (data.getActionClass() != null) {
-            Object action = resolveClickActionRaw(data);
+
+        if (onClick != null) {
+            Object action = resolveClickActionRaw(onClick[0], onClick[1], onClick[2]);
             clickOverride = action instanceof Runnable r ? r : null;
             maaOverride = action instanceof MenuAwareAction m ? m : null;
         }
 
-        // Color override — use data color if specified
-        float[] colorOverride = data.hasColor() ? data.getColor() : null;
-
         boolean hasOverride = layoutOverride != null || spriteNameOverride != null
-                || data.getText() != null || clickOverride != null
+                || textOverride != null || clickOverride != null
                 || maaOverride != null || colorOverride != null;
 
-        ElementPlacementHandle placement = create(ElementPlacementHandle.class);
-        placement.constructor(master, hasOverride
-                ? new ElementOverrideStruct(spriteNameOverride, data.getText(),
-                        colorOverride, clickOverride, maaOverride, layoutOverride)
-                : null);
-        return placement;
+        if (!hasOverride)
+            return new ElementPlacementStruct(master);
+
+        return new ElementPlacementStruct(
+                master,
+                spriteNameOverride,
+                textOverride,
+                colorOverride,
+                clickOverride,
+                maaOverride,
+                layoutOverride);
     }
 
-    private ElementPlacementHandle buildRefPlacement(String filePath, ElementData data) {
+    private ElementPlacementStruct buildRefPlacement(
+            String filePath,
+            String id,
+            JsonObject json) {
 
-        ElementOverrideStruct override = data.getLayout() != null
-                ? new ElementOverrideStruct(null, null, null, null, null, data.getLayout())
-                : null;
+        String refKey = json.get("ref").getAsString();
+        LayoutStruct layoutOverride = parseLayoutOverride(json);
+        ElementHandle resolved = resolveRefKey(refKey);
 
-        ElementHandle resolved = resolveRefKey(data.getRefPath());
+        if (resolved != null)
+            return layoutOverride != null
+                    ? new ElementPlacementStruct(resolved, null, null, null, null, null, layoutOverride)
+                    : new ElementPlacementStruct(resolved);
 
-        if (resolved != null) {
-            ElementPlacementHandle placement = create(ElementPlacementHandle.class);
-            placement.constructor(resolved, override);
-            return placement;
-        }
+        ElementPlacementStruct placeholder = layoutOverride != null
+                ? new ElementPlacementStruct(null, null, null, null, null, null, layoutOverride)
+                : new ElementPlacementStruct(null);
 
-        ElementPlacementHandle placeholder = create(ElementPlacementHandle.class);
-        placeholder.constructor(null, override);
-
-        final String finalRefKey = data.getRefPath();
-        final String finalId = data.getId();
         deferredRefs.add(() -> {
-            ElementHandle target = resolveRefKey(finalRefKey);
+            ElementHandle target = resolveRefKey(refKey);
             if (target == null)
-                throwException("Unresolved ref: '" + finalRefKey + "' (id: '" + finalId + "')");
+                throwException("Unresolved ref: '" + refKey + "' (id: '" + id + "')");
             placeholder.setMaster(target);
         });
 
         return placeholder;
     }
 
+    // Master Building \\
+
+    private ElementHandle buildMasterFromJson(String filePath, String id, JsonObject json) {
+
+        ElementType type = parseElementType(JsonUtility.validateString(json, "type"), id);
+        String spritePath = JsonUtility.getString(json, "sprite", null);
+        String text = JsonUtility.getString(json, "text", null);
+        String fontName = parseFontName(json, type, id);
+        float[] color = type == ElementType.LABEL ? parseColor(json) : null;
+        LayoutStruct layout = parseLayout(json);
+        boolean mask = JsonUtility.getBoolean(json, "mask", false);
+        StackDirection stackDirection = json.has("stack")
+                ? StackDirection.fromString(json.get("stack").getAsString())
+                : StackDirection.NONE;
+        DimensionValue spacing = json.has("spacing")
+                ? DimensionValue.parse(json.get("spacing").getAsString())
+                : null;
+        TextAlign textAlign = json.has("align")
+                ? TextAlign.fromString(json.get("align").getAsString())
+                : TextAlign.CENTER;
+        String spriteName = resolveSpriteName(id, spritePath);
+
+        String[] onClick = parseOnClick(json);
+        Object action = onClick != null
+                ? resolveClickActionRaw(onClick[0], onClick[1], onClick[2])
+                : null;
+
+        ObjectArrayList<ElementPlacementStruct> children = buildPlacements(filePath, json);
+
+        ElementData data = new ElementData(
+                id, type, spriteName, text, fontName, color,
+                layout, mask, stackDirection, spacing, textAlign);
+
+        ElementHandle master = create(ElementHandle.class);
+        master.constructor(
+                data,
+                action instanceof Runnable r ? r : null,
+                action instanceof MenuAwareAction m ? m : null,
+                children);
+
+        return master;
+    }
+
     // Ref Key Resolution \\
 
     private ElementHandle resolveRefKey(String refKey) {
+
         ElementHandle resolved = elementSystem.getMaster(refKey);
+
         if (resolved != null)
             return resolved;
+
         String suffix = "/" + refKey;
+
         for (String key : elementSystem.getMasterKeys())
             if (key.endsWith(suffix))
                 return elementSystem.getMaster(key);
+
         return null;
     }
 
@@ -408,10 +371,12 @@ class InternalBuilder extends BuilderPackage {
     private ElementHandle resolveTemplate(String usePath, String localId) {
 
         String candidateKey = usePath + "/" + localId;
+
         if (elementSystem.hasMaster(candidateKey))
             return elementSystem.getMaster(candidateKey);
 
         File fileByPath = tryResolveFile(usePath);
+
         if (fileByPath != null) {
             processFile(fileByPath, usePath);
             ElementHandle master = elementSystem.getMaster(candidateKey);
@@ -424,6 +389,7 @@ class InternalBuilder extends BuilderPackage {
             return elementSystem.getMaster(usePath);
 
         int lastSlash = usePath.lastIndexOf('/');
+
         if (lastSlash < 0)
             throwException("Cannot resolve use path '" + usePath
                     + "' — no file found and path has no slash.");
@@ -432,75 +398,88 @@ class InternalBuilder extends BuilderPackage {
         processFile(resolveFile(filePath), filePath);
 
         ElementHandle master = elementSystem.getMaster(usePath);
+
         if (master == null)
             throwException("Element '" + usePath + "' not found after loading '" + filePath + "'");
+
         return master;
     }
 
     private File tryResolveFile(String filePath) {
+
         for (String ext : EngineSetting.JSON_FILE_EXTENSIONS) {
             File f = new File(root, filePath + (ext.startsWith(".") ? "" : ".") + ext);
             if (f.exists())
                 return f;
         }
+
         return null;
     }
 
     private File resolveFile(String filePath) {
+
         File f = tryResolveFile(filePath);
+
         if (f == null)
-            throwException("File not found: '" + filePath + "' (root: " + root.getAbsolutePath() + ")");
+            throwException("File not found: '" + filePath
+                    + "' (root: " + root.getAbsolutePath() + ")");
+
         return f;
     }
 
     // Sprite Resolution \\
 
-    private String resolveSpriteName(ElementData data) {
-        if (data.getSpritePath() == null)
+    private String resolveSpriteName(String elementId, String spritePath) {
+
+        if (spritePath == null)
             return null;
-        if (!spriteManager.hasSprite(data.getSpritePath()))
-            throwException("Sprite not found for element '" + data.getId()
-                    + "': '" + data.getSpritePath() + "'");
-        return data.getSpritePath();
+
+        if (!spriteManager.hasSprite(spritePath))
+            throwException("Sprite not found for element '" + elementId
+                    + "': '" + spritePath + "'");
+
+        return spritePath;
     }
 
     // Click Action Resolution \\
 
-    private Object resolveClickActionRaw(ElementData data) {
+    private Object resolveClickActionRaw(
+            String actionClass,
+            String actionMethod,
+            String actionArg) {
 
-        if (data.getActionClass() == null)
-            return null;
+        Object target = resolveTarget(actionClass, actionMethod);
 
-        Object target = resolveTarget(data.getActionClass(), data.getActionMethod());
+        if (PARENT_ARG.equals(actionArg)) {
 
-        if (PARENT_ARG.equals(data.getActionArg())) {
             Method method;
+
             try {
-                method = target.getClass().getMethod(data.getActionMethod(), MenuInstance.class);
+                method = target.getClass().getMethod(actionMethod, MenuInstance.class);
             } catch (NoSuchMethodException e) {
-                throwException("$parent method '" + data.getActionMethod()
-                        + "' must accept MenuInstance on '" + data.getActionClass() + "'", e);
+                throwException("$parent method '" + actionMethod
+                        + "' must accept MenuInstance on '" + actionClass + "'", e);
                 return null;
             }
+
             return (MenuAwareAction) parent -> {
                 try {
                     method.invoke(target, parent);
                 } catch (Exception e) {
-                    throwException("Button action failed: " + data.getActionMethod(), e);
+                    throwException("Button action failed: " + actionMethod, e);
                 }
             };
         }
 
-        Method method = resolveMethod(target, data.getActionClass(),
-                data.getActionMethod(), data.getActionArg());
+        Method method = resolveMethod(target, actionClass, actionMethod, actionArg);
 
-        if (data.getActionArg() != null) {
-            String capturedArg = data.getActionArg();
+        if (actionArg != null) {
+            String capturedArg = actionArg;
             return (Runnable) () -> {
                 try {
                     method.invoke(target, capturedArg);
                 } catch (Exception e) {
-                    throwException("Button action failed: " + data.getActionMethod(), e);
+                    throwException("Button action failed: " + actionMethod, e);
                 }
             };
         }
@@ -509,18 +488,21 @@ class InternalBuilder extends BuilderPackage {
             try {
                 method.invoke(target);
             } catch (Exception e) {
-                throwException("Button action failed: " + data.getActionMethod(), e);
+                throwException("Button action failed: " + actionMethod, e);
             }
         };
     }
 
     private Object resolveTarget(String className, String methodName) {
+
         try {
             Class<?> clazz = Class.forName(className);
             Object target = internal.getUnchecked(clazz);
+
             if (target == null)
                 throwException("on_click class not registered: '" + className
                         + "' (method: '" + methodName + "')");
+
             return target;
         } catch (ClassNotFoundException e) {
             throwException("on_click class not found: '" + className
@@ -529,7 +511,12 @@ class InternalBuilder extends BuilderPackage {
         }
     }
 
-    private Method resolveMethod(Object target, String className, String methodName, String arg) {
+    private Method resolveMethod(
+            Object target,
+            String className,
+            String methodName,
+            String arg) {
+
         try {
             return arg != null
                     ? target.getClass().getMethod(methodName, String.class)
@@ -539,5 +526,121 @@ class InternalBuilder extends BuilderPackage {
                     + "' on '" + className + "'", e);
             return null;
         }
+    }
+
+    // Layout Parsing \\
+
+    private LayoutStruct parseLayout(JsonObject json) {
+        return new LayoutStruct(
+                parseOriginField(json, "anchor"),
+                parseOriginField(json, "pivot"),
+                DimensionVector2.parse(json, "position", "0%", "0%"),
+                DimensionVector2.parse(json, "size", "10%", "10%"),
+                json.has("min_size") ? DimensionVector2.parse(json, "min_size", "0%", "0%") : null,
+                json.has("max_size") ? DimensionVector2.parse(json, "max_size", "100%", "100%") : null);
+    }
+
+    private LayoutStruct parseLayoutOverride(JsonObject json) {
+
+        boolean hasAny = json.has("anchor") || json.has("pivot") || json.has("position")
+                || json.has("size") || json.has("min_size") || json.has("max_size");
+
+        if (!hasAny)
+            return null;
+
+        return new LayoutStruct(
+                json.has("anchor") ? parseOriginField(json, "anchor") : null,
+                json.has("pivot") ? parseOriginField(json, "pivot") : null,
+                json.has("position") ? DimensionVector2.parse(json, "position", "0%", "0%") : null,
+                json.has("size") ? DimensionVector2.parse(json, "size", "10%", "10%") : null,
+                json.has("min_size") ? DimensionVector2.parse(json, "min_size", "0%", "0%") : null,
+                json.has("max_size") ? DimensionVector2.parse(json, "max_size", "100%", "100%") : null);
+    }
+
+    private Vector2 parseOriginField(JsonObject json, String key) {
+
+        if (!json.has(key))
+            return new Vector2(0f, 0f);
+
+        JsonElement el = json.get(key);
+
+        if (el.isJsonPrimitive()) {
+            ElementOrigin o = ElementOrigin.fromString(el.getAsString());
+            return new Vector2(o.getX(), o.getY());
+        }
+
+        if (el.isJsonObject()) {
+            JsonObject obj = el.getAsJsonObject();
+            return new Vector2(
+                    JsonUtility.getFloat(obj, "x", 0f),
+                    JsonUtility.getFloat(obj, "y", 0f));
+        }
+
+        return new Vector2(0f, 0f);
+    }
+
+    // Element Type Parsing \\
+
+    private ElementType parseElementType(String type, String id) {
+        return switch (type.toLowerCase()) {
+            case "sprite" -> ElementType.SPRITE;
+            case "texture" -> ElementType.TEXTURE;
+            case "button" -> ElementType.BUTTON;
+            case "label" -> ElementType.LABEL;
+            case "container" -> ElementType.CONTAINER;
+            default -> {
+                throwException("Unknown element type '" + type + "' on element '" + id + "'");
+                yield null;
+            }
+        };
+    }
+
+    // On Click Parsing \\
+
+    private String[] parseOnClick(JsonObject json) {
+
+        if (!json.has("on_click"))
+            return null;
+
+        JsonObject clickJson = json.getAsJsonObject("on_click");
+
+        return new String[] {
+                JsonUtility.validateString(clickJson, "class"),
+                JsonUtility.validateString(clickJson, "method"),
+                JsonUtility.getString(clickJson, "arg", null)
+        };
+    }
+
+    // Font / Color Parsing \\
+
+    private String parseFontName(JsonObject json, ElementType type, String elementId) {
+
+        String fontName = JsonUtility.getString(json, "font", null);
+
+        if (fontName == null)
+            return null;
+
+        if (type != ElementType.LABEL)
+            throwException("Element '" + elementId + "' has 'font' field but is not type LABEL");
+
+        return fontName;
+    }
+
+    private float[] parseColor(JsonObject json) {
+
+        if (!json.has("color"))
+            return null;
+
+        JsonArray arr = json.getAsJsonArray("color");
+
+        if (arr.size() != 4)
+            throwException("'color' must be exactly 4 floats [r, g, b, a]");
+
+        return new float[] {
+                arr.get(0).getAsFloat(),
+                arr.get(1).getAsFloat(),
+                arr.get(2).getAsFloat(),
+                arr.get(3).getAsFloat()
+        };
     }
 }

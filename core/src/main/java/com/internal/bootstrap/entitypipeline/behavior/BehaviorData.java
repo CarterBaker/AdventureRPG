@@ -4,12 +4,18 @@ import com.internal.core.engine.DataPackage;
 
 public class BehaviorData extends DataPackage {
 
+    /*
+     * Immutable behavior definition loaded from JSON. Holds the identity and
+     * movement rules for one named behavior type. Owned by BehaviorHandle
+     * for the engine lifetime.
+     */
+
     // Identity
-    public final String behaviorName;
-    public final short behaviorID;
+    private final String behaviorName;
+    private final short behaviorID;
 
     // Rules
-    public final float jumpDuration; // seconds — -1 = uncapped (flyers)
+    private final float jumpDuration;
 
     // Constructor \\
 
@@ -24,5 +30,19 @@ public class BehaviorData extends DataPackage {
 
         // Rules
         this.jumpDuration = jumpDuration;
+    }
+
+    // Accessible \\
+
+    public String getBehaviorName() {
+        return behaviorName;
+    }
+
+    public short getBehaviorID() {
+        return behaviorID;
+    }
+
+    public float getJumpDuration() {
+        return jumpDuration;
     }
 }

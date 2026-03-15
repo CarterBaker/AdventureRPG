@@ -11,8 +11,9 @@ import com.internal.bootstrap.worldpipeline.worlditem.WorldItemStruct;
 import com.internal.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRenderSystem;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate3Int;
-import com.internal.core.util.mathematics.Extras.Coordinate4Long;
+import com.internal.core.util.mathematics.extras.Coordinate3Int;
+import com.internal.core.util.mathematics.extras.Coordinate4Long;
+
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
@@ -130,7 +131,7 @@ public class WorldItemPlacementSystem extends ManagerPackage {
         int itemID = struct.packedItem & 0xFFFF0000;
         if (itemID == EngineSetting.REGISTRY_RESERVED_ID)
             return null;
-        ItemDefinitionHandle def = itemDefinitionManager.getItemFromItemID(itemID);
+        ItemDefinitionHandle def = itemDefinitionManager.getItemHandleFromItemID(itemID);
         if (def == null)
             return null;
         return buildInstance(struct, chunkCoordinate, def);

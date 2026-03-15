@@ -1,6 +1,5 @@
 package com.internal.bootstrap.menupipeline.fonts;
 
-import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.dynamicgeometry.FontGeometryBranch;
 import com.internal.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
@@ -12,28 +11,44 @@ import com.internal.core.util.mathematics.vectors.Vector4;
 
 public class FontInstance extends InstancePackage {
 
+    /*
+     * Per-label runtime font state. Holds a reference to the shared FontHandle,
+     * a merged DynamicModelHandle assembled from per-glyph origin-space models,
+     * and the uploaded ModelInstance pushed to the GPU. Text changes accumulate
+     * into the merged model and are uploaded lazily on the next render cycle.
+     */
+
+    // Internal
     private FontHandle handle;
     private DynamicModelHandle mergedModel;
     private ModelInstance modelInstance;
+
+    // State
     private final Vector4 color = new Vector4(1f, 1f, 1f, 1f);
     private float textWidth;
     private float textHeight;
     private boolean dirty;
 
+    // Scratch — cached to avoid allocation per glyph per setText call
+    private final int[] offsetIndices = new int[] {
+            EngineSetting.FONT_DEFAULT_OFFSET_INDEX_X,
+            EngineSetting.FONT_DEFAULT_OFFSET_INDEX_Y
+    };
+    private final float[] offsets = new float[2];
+
     // Constructor \\
 
     public void constructor(FontHandle handle, DynamicModelHandle mergedModel) {
+
+        // Internal
         this.handle = handle;
         this.mergedModel = mergedModel;
-        this.color.set(1f, 1f, 1f, 1f);
-        this.textWidth = 0f;
-        this.textHeight = 0f;
-        this.dirty = false;
     }
 
     // Text \\
 
     public void setText(String text) {
+
         mergedModel.clear();
         textWidth = 0f;
         textHeight = 0f;
@@ -47,27 +62,26 @@ public class FontInstance extends InstancePackage {
         float cursorY = 0f;
 
         for (int i = 0; i < text.length();) {
+
             int codepoint = text.codePointAt(i);
             i += Character.charCount(codepoint);
 
             if (codepoint == ' ') {
                 GlyphMetricStruct space = handle.getGlyph(codepoint);
-                cursorX += (space != null) ? space.advance : handle.getAtlasPixelSize() * 0.25f;
+                cursorX += space != null ? space.advance : handle.getAtlasPixelSize() * 0.25f;
                 continue;
             }
 
             DynamicModelHandle glyphModel = handle.getGlyphModel(codepoint);
             GlyphMetricStruct metric = handle.getGlyph(codepoint);
+
             if (glyphModel == null || metric == null)
                 continue;
 
-            float offsetX = cursorX + metric.bearingX;
-            float offsetY = cursorY + (metric.bearingY - metric.height); // was cursorX — typo
+            offsets[0] = cursorX + metric.bearingX;
+            offsets[1] = cursorY + (metric.bearingY - metric.height);
 
-            mergedModel.mergeWithOffset(
-                    glyphModel,
-                    new int[] { FontGeometryBranch.OFFSET_INDEX_X, FontGeometryBranch.OFFSET_INDEX_Y },
-                    new float[] { offsetX, offsetY });
+            mergedModel.mergeWithOffset(glyphModel, offsetIndices, offsets);
 
             cursorX += metric.advance;
 
@@ -82,7 +96,9 @@ public class FontInstance extends InstancePackage {
     // Color \\
 
     public void setColor(float r, float g, float b, float a) {
+
         color.set(r, g, b, a);
+
         if (modelInstance != null)
             modelInstance.getMaterial().setUniform("u_color", color);
     }
@@ -91,32 +107,39 @@ public class FontInstance extends InstancePackage {
         return color;
     }
 
-    // GPU Lifecycle — owns its own upload and release \\
+    // GPU Lifecycle \\
 
     public void upload(ModelManager modelManager, MaterialManager materialManager) {
+
         if (!dirty || mergedModel.isEmpty())
             return;
+
         if (modelInstance != null)
             modelManager.removeMesh(modelInstance);
+
         MaterialInstance mat = materialManager.cloneMaterial(handle.getMaterialID());
         mat.setUniform("u_fontAtlas", handle.getGPUHandle());
         mat.setUniform("u_color", color);
+
         modelInstance = modelManager.createModel(
                 mergedModel.getVAOHandle(),
                 mergedModel.getVertices(),
                 mergedModel.getIndices(),
                 mat);
+
         dirty = false;
     }
 
     public void release(ModelManager modelManager) {
+
         if (modelInstance == null)
             return;
+
         modelManager.removeMesh(modelInstance);
         modelInstance = null;
     }
 
-    // Accessors \\
+    // Accessible \\
 
     public FontHandle getHandle() {
         return handle;

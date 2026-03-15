@@ -4,12 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import com.internal.bootstrap.worldpipeline.biome.BiomeHandle;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {
@@ -25,12 +23,22 @@ class InternalLoader extends LoaderPackage {
     // Base \\
 
     @Override
+    protected void create() {
+        this.internalBuilder = create(InternalBuilder.class);
+    }
+
+    @Override
+    protected void get() {
+        this.biomeManager = get(BiomeManager.class);
+    }
+
+    @Override
     protected void scan() {
 
         this.root = new File(EngineSetting.BIOME_JSON_PATH);
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
 
-        FileUtility.verifyDirectory(root, "[BiomeManager] The root folder could not be verified");
+        FileUtility.verifyDirectory(root, "Biome root directory not found: " + root.getAbsolutePath());
 
         try (var stream = Files.walk(root.toPath())) {
             stream
@@ -43,37 +51,30 @@ class InternalLoader extends LoaderPackage {
                         fileQueue.offer(file);
                     });
         } catch (IOException e) {
-            throwException("BiomeManager failed to walk directory: ", e);
+            throwException("Failed to walk biome directory: " + root.getAbsolutePath(), e);
         }
-    }
-
-    @Override
-    protected void create() {
-        this.internalBuilder = create(InternalBuilder.class);
-    }
-
-    @Override
-    protected void get() {
-        this.biomeManager = get(BiomeManager.class);
     }
 
     // Load \\
 
     @Override
     protected void load(File file) {
-        BiomeHandle biome = internalBuilder.build(file, root);
-        if (biome != null)
-            biomeManager.addBiome(biome);
+
+        BiomeHandle biomeHandle = internalBuilder.build(file, root);
+
+        if (biomeHandle != null)
+            biomeManager.addBiome(biomeHandle);
     }
 
-    // On-Demand Loading \\
+    // On-Demand \\
 
     void request(String biomeName) {
+
         File file = resourceName2File.get(biomeName);
+
         if (file == null)
-            throwException(
-                    "[InternalLoadManager] On-demand biome load failed — no file found for biome: \""
-                            + biomeName + "\"");
+            throwException("On-demand biome load failed — no file found for: \"" + biomeName + "\"");
+
         request(file);
     }
 }

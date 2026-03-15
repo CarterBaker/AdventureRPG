@@ -5,6 +5,12 @@ import com.internal.core.engine.BranchPackage;
 
 class MonthTrackerBranch extends BranchPackage {
 
+    /*
+     * Detects month rollovers by comparing the current month set by
+     * DayTrackerBranch against the last seen value. Returns true when the
+     * month resets to 0, signalling a year rollover to YearTrackerBranch.
+     */
+
     // Internal
     private ClockHandle clockHandle;
 
@@ -28,11 +34,6 @@ class MonthTrackerBranch extends BranchPackage {
 
     // Month Tracker \\
 
-    /*
-     * Month is already set by DayTrackerBranch before this is called.
-     * Returns true when the month resets to 0 — signals a year rollover
-     * to YearTrackerBranch.
-     */
     boolean advanceTime() {
 
         int currentMonth = clockHandle.getCurrentMonth();
@@ -42,6 +43,6 @@ class MonthTrackerBranch extends BranchPackage {
 
         lastMonth = currentMonth;
 
-        return (currentMonth == 0);
+        return currentMonth == 0;
     }
 }

@@ -2,7 +2,6 @@ package com.internal.bootstrap.geometrypipeline.vbomanager;
 
 import java.io.File;
 import java.util.Map;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -13,6 +12,13 @@ import com.internal.core.util.JsonUtility;
 
 public class InternalBuilder extends BuilderPackage {
 
+    /*
+     * Parses the 'vbo' field from mesh JSON and uploads vertex data into a
+     * VBOHandle. Supports direct vertex arrays and string references to other
+     * registered meshes. Skips files whose VBO contains quad objects — those
+     * are handled by quad expansion in the mesh builder. Bootstrap-only.
+     */
+
     // Internal
     private VBOManager vboManager;
 
@@ -20,6 +26,8 @@ public class InternalBuilder extends BuilderPackage {
 
     @Override
     protected void get() {
+
+        // Internal
         this.vboManager = get(VBOManager.class);
     }
 
@@ -31,7 +39,11 @@ public class InternalBuilder extends BuilderPackage {
      * when glVertexAttribPointer is called during upload, so this must be the
      * exact same VAOInstance the mesh assembler uses or nothing draws.
      */
-    public void build(String resourceName, File file, Map<String, File> registry, VAOInstance vaoInstance) {
+    public void build(
+            String resourceName,
+            File file,
+            Map<String, File> registry,
+            VAOInstance vaoInstance) {
 
         if (vboManager.hasVBO(resourceName))
             return;
@@ -63,13 +75,18 @@ public class InternalBuilder extends BuilderPackage {
 
     // Resolution \\
 
-    private void resolveRef(String refName, String sourceResourceName, File sourceFile,
-            Map<String, File> registry, VAOInstance vaoInstance) {
+    private void resolveRef(
+            String refName,
+            String sourceResourceName,
+            File sourceFile,
+            Map<String, File> registry,
+            VAOInstance vaoInstance) {
 
         if (vboManager.hasVBO(refName))
             return;
 
         File refFile = registry.get(refName);
+
         if (refFile == null)
             throwException("Referenced VBO '" + refName + "' not found. Source: " + sourceFile.getName());
 
@@ -88,12 +105,15 @@ public class InternalBuilder extends BuilderPackage {
 
     // Creation \\
 
-    private VBOHandle buildFromData(JsonArray verticesArray, VAOInstance vaoInstance, File file) {
+    private VBOHandle buildFromData(
+            JsonArray verticesArray,
+            VAOInstance vaoInstance,
+            File file) {
 
         if (verticesArray.size() == 0)
             throwException("Vertex data array cannot be empty in file: " + file.getName());
 
-        int floatsPerVertex = vaoInstance.getVAOStruct().vertStride;
+        int floatsPerVertex = vaoInstance.getVAOData().getVertStride();
         float[] vertices = new float[verticesArray.size() * floatsPerVertex];
         int index = 0;
 

@@ -1,17 +1,17 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalars;
 
 import com.badlogic.gdx.Gdx;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
-public final class DoubleUniform extends UniformAttribute<Double> {
+public final class DoubleUniform extends UniformAttributeStruct<Double> {
 
     public DoubleUniform() {
         super(UniformType.DOUBLE, 0.0);
     }
 
     @Override
-    public UniformAttribute<?> createDefault() {
+    public UniformAttributeStruct<?> createDefault() {
         return new DoubleUniform();
     }
 

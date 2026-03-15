@@ -2,7 +2,6 @@ package com.internal.bootstrap.geometrypipeline.ibomanager;
 
 import java.io.File;
 import java.util.Map;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -13,6 +12,13 @@ import com.internal.core.util.JsonUtility;
 
 public class InternalBuilder extends BuilderPackage {
 
+    /*
+     * Parses the 'ibo' field from mesh JSON and uploads index data into an
+     * IBOHandle. Supports direct index arrays and string references to other
+     * registered meshes. Skips files that contain quad objects — those are
+     * handled by quad expansion in the mesh builder. Bootstrap-only.
+     */
+
     // Internal
     private IBOManager iboManager;
 
@@ -20,6 +26,8 @@ public class InternalBuilder extends BuilderPackage {
 
     @Override
     protected void get() {
+
+        // Internal
         this.iboManager = get(IBOManager.class);
     }
 
@@ -30,7 +38,11 @@ public class InternalBuilder extends BuilderPackage {
      * be stored in the MeshHandle. IBO binding is recorded in the VAO state,
      * so this must be the exact same VAOInstance the mesh assembler uses.
      */
-    public void build(String resourceName, File file, Map<String, File> registry, VAOInstance vaoInstance) {
+    public void build(
+            String resourceName,
+            File file,
+            Map<String, File> registry,
+            VAOInstance vaoInstance) {
 
         if (iboManager.hasIBO(resourceName))
             return;
@@ -62,13 +74,18 @@ public class InternalBuilder extends BuilderPackage {
 
     // Resolution \\
 
-    private void resolveRef(String refName, String sourceResourceName, File sourceFile,
-            Map<String, File> registry, VAOInstance vaoInstance) {
+    private void resolveRef(
+            String refName,
+            String sourceResourceName,
+            File sourceFile,
+            Map<String, File> registry,
+            VAOInstance vaoInstance) {
 
         if (iboManager.hasIBO(refName))
             return;
 
         File refFile = registry.get(refName);
+
         if (refFile == null)
             throwException("Referenced IBO '" + refName + "' not found. Source: " + sourceFile.getName());
 
@@ -87,7 +104,10 @@ public class InternalBuilder extends BuilderPackage {
 
     // Creation \\
 
-    private IBOHandle buildFromData(JsonArray indicesArray, VAOInstance vaoInstance, File file) {
+    private IBOHandle buildFromData(
+            JsonArray indicesArray,
+            VAOInstance vaoInstance,
+            File file) {
 
         if (indicesArray.size() == 0)
             throwException("Index data array cannot be empty in file: " + file.getName());
@@ -97,25 +117,33 @@ public class InternalBuilder extends BuilderPackage {
 
         for (JsonElement indexEl : indicesArray) {
             int value = indexEl.getAsInt();
-            if (value < 0 || value > 65535)
+            if (value < 0 || value > 0xFFFF)
                 throwException("Index out of 16-bit range: " + value + " in file: " + file.getName());
             indices[index++] = (short) value;
         }
 
-        return GLSLUtility.uploadIndexData(vaoInstance, create(IBOHandle.class), indices);
+        return GLSLUtility.uploadIndexData(
+                vaoInstance,
+                create(IBOHandle.class),
+                indices);
     }
 
     // Utility \\
 
     private boolean hasQuadEntries(JsonObject json) {
+
         if (!json.has("vbo") || json.get("vbo").isJsonNull())
             return false;
+
         JsonElement vboEl = json.get("vbo");
+
         if (!vboEl.isJsonArray())
             return false;
+
         for (JsonElement el : vboEl.getAsJsonArray())
             if (el.isJsonObject())
                 return true;
+
         return false;
     }
 }

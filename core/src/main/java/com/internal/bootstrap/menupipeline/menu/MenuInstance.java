@@ -6,48 +6,74 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuInstance extends InstancePackage {
 
-    private MenuHandle handle;
+    /*
+     * Runtime menu created by MenuManager.openMenu(). Holds the shared MenuData
+     * definition and the live element tree for this session. Visible by default.
+     */
+
+    // Internal
+    private MenuData data;
     private ObjectArrayList<ElementInstance> elements;
+
+    // State
     private boolean visible;
 
-    public void constructor(MenuHandle handle, ObjectArrayList<ElementInstance> elements) {
-        this.handle = handle;
+    // Constructor \\
+
+    public void constructor(MenuData data, ObjectArrayList<ElementInstance> elements) {
+
+        // Internal
+        this.data = data;
         this.elements = elements;
+
+        // State
         this.visible = true;
     }
 
     // Entry Points \\
 
     public ElementInstance getEntryPoint(int index) {
-        ObjectArrayList<String> eps = handle.getEntryPoints();
+
+        ObjectArrayList<String> eps = data.getEntryPoints();
+
         if (eps == null || index >= eps.size())
             return null;
+
         return findById(elements, eps.get(index));
     }
 
     public void addToEntryPoint(int index, ElementInstance element) {
+
         ElementInstance container = getEntryPoint(index);
+
         if (container != null)
             container.addChild(element);
     }
 
     public void removeFromEntryPoint(int index, ElementInstance element) {
+
         ElementInstance container = getEntryPoint(index);
+
         if (container != null)
             container.removeChild(element);
     }
 
     private ElementInstance findById(ObjectArrayList<ElementInstance> list, String id) {
+
         for (int i = 0; i < list.size(); i++) {
+
             ElementInstance el = list.get(i);
-            if (el.getHandle().getId().equals(id))
+
+            if (el.getElementData().getId().equals(id))
                 return el;
+
             if (el.hasChildren()) {
                 ElementInstance found = findById(el.getChildren(), id);
                 if (found != null)
                     return found;
             }
         }
+
         return null;
     }
 
@@ -63,8 +89,8 @@ public class MenuInstance extends InstancePackage {
 
     // Accessible \\
 
-    public MenuHandle getHandle() {
-        return handle;
+    public MenuData getMenuData() {
+        return data;
     }
 
     public ObjectArrayList<ElementInstance> getElements() {

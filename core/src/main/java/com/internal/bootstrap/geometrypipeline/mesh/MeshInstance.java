@@ -5,28 +5,34 @@ import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOInstance;
 import com.internal.core.engine.InstancePackage;
 
-/*
- * A fully GPU-resident mesh created at runtime. Owns its VAO, VBO, and IBO
- * instances. Freed via MeshManager.removeMesh() by whoever created it.
- */
 public class MeshInstance extends InstancePackage {
+
+    /*
+     * A fully GPU-resident mesh created at runtime. Owns its VAO, VBO, and IBO
+     * instances. Freed via MeshManager.removeMesh() by whoever created it.
+     */
 
     // Internal
     private VAOInstance vaoInstance;
     private VBOInstance vboInstance;
     private IBOInstance iboInstance;
-    private MeshStruct meshStruct;
+    private MeshData meshData;
 
-    // Internal \\
+    // Constructor \\
 
-    public void constructor(VAOInstance vaoInstance, VBOInstance vboInstance, IBOInstance iboInstance) {
+    public void constructor(
+            VAOInstance vaoInstance,
+            VBOInstance vboInstance,
+            IBOInstance iboInstance) {
+
+        // Internal
         this.vaoInstance = vaoInstance;
         this.vboInstance = vboInstance;
         this.iboInstance = iboInstance;
-        this.meshStruct = new MeshStruct(
-                vaoInstance.getVAOStruct(),
-                vboInstance.getVBOStruct(),
-                iboInstance.getIBOStruct());
+        this.meshData = new MeshData(
+                vaoInstance.getVAOData(),
+                vboInstance.getVBOData(),
+                iboInstance.getIBOData());
     }
 
     // Accessible \\
@@ -43,7 +49,7 @@ public class MeshInstance extends InstancePackage {
         return iboInstance;
     }
 
-    public MeshStruct getMeshStruct() {
-        return meshStruct;
+    public MeshData getMeshData() {
+        return meshData;
     }
 }

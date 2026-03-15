@@ -1,4 +1,4 @@
-package com.internal.core.kernel.SyncConsumer;
+package com.internal.core.kernel.syncconsumer;
 
 import com.internal.core.engine.AsyncContainerPackage;
 import com.internal.core.engine.SyncContainerPackage;

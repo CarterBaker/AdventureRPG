@@ -12,23 +12,33 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class FontRasterizerUtility extends UtilityPackage {
 
+    /*
+     * Rasterizes a TTF/OTF font file into a list of per-glyph FontTileData
+     * instances using AWT. Each tile holds the rendered glyph image and the
+     * metrics needed to build the GlyphMetricStruct table after atlas packing.
+     * Package-private — only InternalBuilder may call these.
+     */
+
     static ObjectArrayList<FontTileData> rasterize(
-            File fontFile, int size, String charset, InternalBuilder builder) {
+            File fontFile,
+            int size,
+            String charset,
+            InternalBuilder builder) {
 
         Font awtFont = loadFont(fontFile, size);
-
         BufferedImage scratch = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
         Graphics2D scratchG = scratch.createGraphics();
         scratchG.setFont(awtFont);
+
         FontMetrics metrics = scratchG.getFontMetrics();
         ObjectArrayList<FontTileData> tiles = new ObjectArrayList<>();
 
         for (int i = 0; i < charset.length(); i++) {
+
             char c = charset.charAt(i);
             int cp = (int) c;
             int advance = metrics.charWidth(c);
             int bearingY = metrics.getAscent();
-
             java.awt.geom.Rectangle2D bounds = metrics.getStringBounds(String.valueOf(c), scratchG);
             int gw = Math.max(1, (int) Math.ceil(bounds.getWidth()));
             int gh = Math.max(1, metrics.getAscent() + metrics.getDescent());
@@ -47,12 +57,13 @@ class FontRasterizerUtility extends UtilityPackage {
             tiles.add(tile);
         }
 
-        scratchG.dispose(); // dispose after the loop, not before
+        scratchG.dispose();
 
         return tiles;
     }
 
     private static Font loadFont(File fontFile, int size) {
+
         try {
             Font base = Font.createFont(Font.TRUETYPE_FONT, fontFile);
             return base.deriveFont(Font.PLAIN, (float) size);

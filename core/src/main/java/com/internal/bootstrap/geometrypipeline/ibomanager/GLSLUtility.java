@@ -3,57 +3,71 @@ package com.internal.bootstrap.geometrypipeline.ibomanager;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
-
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
+import com.internal.bootstrap.geometrypipeline.ibo.IBOData;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
-import com.internal.bootstrap.geometrypipeline.ibo.IBOStruct;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 
 class GLSLUtility {
 
+        /*
+         * GL upload and deletion operations for IBOManager.
+         * Package-private — only IBOManager may call these.
+         */
+
         // Upload \\
 
-        static IBOHandle uploadIndexData(VAOInstance vaoInstance, IBOHandle iboHandle, short[] indices) {
-                IBOStruct iboStruct = upload(vaoInstance, indices);
-                iboHandle.constructor(iboStruct);
+        static IBOHandle uploadIndexData(
+                        VAOInstance vaoInstance,
+                        IBOHandle iboHandle,
+                        short[] indices) {
+
+                IBOData iboData = upload(vaoInstance, indices);
+                iboHandle.constructor(iboData);
+
                 return iboHandle;
         }
 
-        static IBOInstance uploadIndexData(VAOInstance vaoInstance, IBOInstance iboInstance, short[] indices) {
-                IBOStruct iboStruct = upload(vaoInstance, indices);
-                iboInstance.constructor(iboStruct);
+        static IBOInstance uploadIndexData(
+                        VAOInstance vaoInstance,
+                        IBOInstance iboInstance,
+                        short[] indices) {
+
+                IBOData iboData = upload(vaoInstance, indices);
+                iboInstance.constructor(iboData);
+
                 return iboInstance;
         }
 
-        private static IBOStruct upload(VAOInstance vaoInstance, short[] indices) {
+        private static IBOData upload(VAOInstance vaoInstance, short[] indices) {
 
                 GL30 gl30 = Gdx.gl30;
                 GL20 gl20 = Gdx.gl20;
+                int size = indices.length * Short.BYTES;
 
-                gl30.glBindVertexArray(vaoInstance.getVAOStruct().attributeHandle);
+                gl30.glBindVertexArray(vaoInstance.getVAOData().getAttributeHandle());
 
                 int ibo = gl20.glGenBuffer();
                 gl20.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, ibo);
 
                 ShortBuffer buffer = ByteBuffer
-                                .allocateDirect(indices.length * 2)
+                                .allocateDirect(size)
                                 .order(ByteOrder.nativeOrder())
                                 .asShortBuffer();
-
                 buffer.put(indices).flip();
-                gl20.glBufferData(GL20.GL_ELEMENT_ARRAY_BUFFER, indices.length * 2, buffer, GL20.GL_STATIC_DRAW);
 
+                gl20.glBufferData(GL20.GL_ELEMENT_ARRAY_BUFFER, size, buffer, GL20.GL_STATIC_DRAW);
                 gl30.glBindVertexArray(0);
 
-                return new IBOStruct(ibo, indices.length);
+                return new IBOData(ibo, indices.length);
         }
 
         // Removal \\
 
-        static void removeIndexData(IBOStruct iboStruct) {
-                Gdx.gl20.glDeleteBuffer(iboStruct.indexHandle);
+        static void removeIndexData(IBOData iboData) {
+                Gdx.gl20.glDeleteBuffer(iboData.getIndexHandle());
         }
 }

@@ -10,7 +10,7 @@ import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector2Int;
 
 public class WorldPositionUtility extends UtilityPackage {
@@ -43,7 +43,7 @@ public class WorldPositionUtility extends UtilityPackage {
 
             SubChunkInstance subChunk = chunkInstance.getSubChunk(subChunkIndex);
             short blockId = subChunk.getBlock(blockX, localY, blockZ);
-            BlockHandle block = blockManager.getBlockFromBlockID(blockId);
+            BlockHandle block = blockManager.getBlockHandleFromBlockID(blockId);
 
             if (block.getGeometry() == DynamicGeometryType.NONE && totalY > 0) {
 
@@ -52,7 +52,7 @@ public class WorldPositionUtility extends UtilityPackage {
 
                 SubChunkInstance belowChunk = chunkInstance.getSubChunk(belowSubChunk);
                 short belowBlockId = belowChunk.getBlock(blockX, belowLocalY, blockZ);
-                BlockHandle belowBlock = blockManager.getBlockFromBlockID(belowBlockId);
+                BlockHandle belowBlock = blockManager.getBlockHandleFromBlockID(belowBlockId);
 
                 if (belowBlock.getGeometry() != DynamicGeometryType.NONE)
                     return totalY;
@@ -65,7 +65,7 @@ public class WorldPositionUtility extends UtilityPackage {
 
             for (int localY = EngineSetting.CHUNK_SIZE - 1; localY >= 0; localY--) {
                 short blockId = subChunk.getBlock(blockX, localY, blockZ);
-                BlockHandle block = blockManager.getBlockFromBlockID(blockId);
+                BlockHandle block = blockManager.getBlockHandleFromBlockID(blockId);
 
                 if (block.getGeometry() != DynamicGeometryType.NONE) {
                     int totalYHere = subChunkIndex * EngineSetting.CHUNK_SIZE + localY;
@@ -73,7 +73,7 @@ public class WorldPositionUtility extends UtilityPackage {
                     if (localY + 1 < EngineSetting.CHUNK_SIZE) {
                         // Above block is in same subchunk
                         short aboveBlockId = subChunk.getBlock(blockX, localY + 1, blockZ);
-                        BlockHandle aboveBlock = blockManager.getBlockFromBlockID(aboveBlockId);
+                        BlockHandle aboveBlock = blockManager.getBlockHandleFromBlockID(aboveBlockId);
 
                         if (aboveBlock.getGeometry() == DynamicGeometryType.NONE) {
                             return totalYHere + 1;
@@ -82,7 +82,7 @@ public class WorldPositionUtility extends UtilityPackage {
                         // Above block is in next subchunk
                         SubChunkInstance aboveChunk = chunkInstance.getSubChunk(subChunkIndex + 1);
                         short aboveBlockId = aboveChunk.getBlock(blockX, 0, blockZ);
-                        BlockHandle aboveBlock = blockManager.getBlockFromBlockID(aboveBlockId);
+                        BlockHandle aboveBlock = blockManager.getBlockHandleFromBlockID(aboveBlockId);
 
                         if (aboveBlock.getGeometry() == DynamicGeometryType.NONE) {
                             return totalYHere + 1;

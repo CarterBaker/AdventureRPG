@@ -1,18 +1,18 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.matrices;
 
 import com.badlogic.gdx.Gdx;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.matrices.Matrix3;
 
-public final class Matrix3Uniform extends UniformAttribute<Object> {
+public final class Matrix3Uniform extends UniformAttributeStruct<Object> {
 
     public Matrix3Uniform() {
         super(UniformType.MATRIX3, new Matrix3());
     }
 
     @Override
-    public UniformAttribute<?> createDefault() {
+    public UniformAttributeStruct<?> createDefault() {
         return new Matrix3Uniform();
     }
 

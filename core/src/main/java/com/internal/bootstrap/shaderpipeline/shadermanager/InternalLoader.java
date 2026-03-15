@@ -3,41 +3,41 @@ package com.internal.bootstrap.shaderpipeline.shadermanager;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-
-import com.internal.bootstrap.shaderpipeline.Shader.ShaderData;
-import com.internal.bootstrap.shaderpipeline.Shader.ShaderDefinitionData;
-import com.internal.bootstrap.shaderpipeline.Shader.ShaderHandle;
-import com.internal.bootstrap.shaderpipeline.Shader.ShaderType;
-import com.internal.bootstrap.shaderpipeline.ubo.UBOData;
-import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.shader.ShaderData;
+import com.internal.bootstrap.shaderpipeline.shader.ShaderHandle;
+import com.internal.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
+import com.internal.bootstrap.shaderpipeline.shader.ShaderType;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformData;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformUtility;
-import com.internal.bootstrap.shaderpipeline.uniforms.samplers.*;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
-
+import com.internal.core.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalLoader extends LoaderPackage {
+
+    /*
+     * Scans the shader directory, builds ShaderSourceStructs for all GLSL files,
+     * parses their content, then batch-assembles compiled ShaderHandles from JSON
+     * definitions each frame. ShaderSourceStructs GC with this loader when the
+     * queue empties — nothing from the parse phase survives bootstrap.
+     */
 
     // Internal
     private File root;
     private ShaderManager shaderManager;
     private InternalBuilder internalBuilder;
 
-    // GLSL state
-    private ObjectArrayList<ShaderData> glslFiles;
-    private Object2ObjectOpenHashMap<String, ShaderData> lookup;
+    // Source Registry — bootstrap only, GCs with loader
+    private ObjectArrayList<ShaderSourceStruct> glslSources;
+    private Object2ObjectOpenHashMap<String, ShaderSourceStruct> glslKey2Source;
 
     // File Registry
-    private Object2ObjectOpenHashMap<String, File> resourceName2File;
-
-    // Counter
-    private int shaderCount;
+    private Object2ObjectOpenHashMap<String, File> shaderName2File;
 
     // Base \\
 
@@ -45,9 +45,9 @@ class InternalLoader extends LoaderPackage {
     protected void scan() {
 
         this.root = new File(EngineSetting.SHADER_PATH);
-        this.glslFiles = new ObjectArrayList<>();
-        this.lookup = new Object2ObjectOpenHashMap<>();
-        this.resourceName2File = new Object2ObjectOpenHashMap<>();
+        this.glslSources = new ObjectArrayList<>();
+        this.glslKey2Source = new Object2ObjectOpenHashMap<>();
+        this.shaderName2File = new Object2ObjectOpenHashMap<>();
 
         if (!root.exists() || !root.isDirectory())
             throwException("Shader directory not found: " + root.getAbsolutePath());
@@ -57,9 +57,27 @@ class InternalLoader extends LoaderPackage {
                     .filter(Files::isRegularFile)
                     .forEach(path -> categorizeFile(path.toFile()));
         } catch (IOException e) {
-            throwException("ShaderManager failed to walk directory: ", e);
+            throwException("Failed to walk shader directory: ", e);
         }
     }
+
+    @Override
+    protected void create() {
+        this.internalBuilder = create(InternalBuilder.class);
+    }
+
+    @Override
+    protected void get() {
+        this.shaderManager = get(ShaderManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        for (int i = 0; i < glslSources.size(); i++)
+            internalBuilder.parseShaderFile(glslSources.get(i));
+    }
+
+    // Categorize \\
 
     private void categorizeFile(File file) {
 
@@ -70,7 +88,7 @@ class InternalLoader extends LoaderPackage {
 
         if (EngineSetting.JSON_FILE_EXTENSIONS.contains(extension)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-            resourceName2File.put(resourceName, file);
+            shaderName2File.put(resourceName, file);
             fileQueue.offer(file);
             return;
         }
@@ -87,131 +105,123 @@ class InternalLoader extends LoaderPackage {
         if (shaderType == null)
             throwException("Unrecognized shader extension: " + file.getName());
 
-        ShaderData shaderData = create(ShaderData.class);
-        shaderData.constructor(shaderType, FileUtility.getFileName(file), file);
+        String key = FileUtility.getPathWithFileNameWithExtension(root, file);
+        ShaderSourceStruct source = new ShaderSourceStruct(
+                shaderType,
+                FileUtility.getFileName(file),
+                file);
 
-        glslFiles.add(shaderData);
-        lookup.put(FileUtility.getPathWithFileNameWithExtension(root, file), shaderData);
-    }
-
-    @Override
-    protected void create() {
-        this.internalBuilder = create(InternalBuilder.class);
-        this.shaderCount = 0;
-    }
-
-    @Override
-    protected void get() {
-        this.shaderManager = get(ShaderManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        for (int i = 0; i < glslFiles.size(); i++)
-            internalBuilder.parseShaderFile(glslFiles.get(i));
+        glslSources.add(source);
+        glslKey2Source.put(key, source);
     }
 
     // Load \\
 
     @Override
     protected void load(File file) {
-        shaderManager.addShader(
-                assembleShader(
-                        internalBuilder.compileShader(file)));
+        shaderManager.addShaderHandle(
+                assembleShader(internalBuilder.buildAssembly(file)));
     }
 
-    // On-Demand Loading \\
+    // On-Demand \\
 
     void request(String shaderName) {
 
-        File file = resourceName2File.get(shaderName);
+        File file = shaderName2File.get(shaderName);
 
         if (file == null)
-            throwException(
-                    "On-demand shader load failed — resource not found in scan registry: \"" + shaderName + "\"");
+            throwException("On-demand shader load failed — not found in scan registry: \"" + shaderName + "\"");
 
         request(file);
     }
 
     // Assemble \\
 
-    private ShaderHandle assembleShader(ShaderDefinitionData definition) {
+    private ShaderHandle assembleShader(ShaderSourceStruct assembly) {
 
+        int shaderID = RegistryUtility.toIntID(assembly.getShaderName());
+        int gpuHandle = GLSLUtility.createShaderProgram(assembly);
+
+        ShaderData data = new ShaderData(assembly.getShaderName(), shaderID, gpuHandle);
         ShaderHandle shader = create(ShaderHandle.class);
-        shader.constructor(
-                definition.getShaderName(),
-                shaderCount++,
-                GLSLUtility.createShaderProgram(definition));
+        shader.constructor(data);
 
-        assembleBuffers(shader, definition);
-        assembleUniforms(shader, definition);
+        assembleBuffers(shader, assembly);
+        assembleUniforms(shader, assembly);
 
         return shader;
     }
 
     // Buffers \\
 
-    private void assembleBuffers(ShaderHandle shader, ShaderDefinitionData definition) {
-        addBuffersFromShaderData(shader, definition.getVert());
-        addBuffersFromShaderData(shader, definition.getFrag());
-        ObjectArrayList<ShaderData> includes = definition.getIncludes();
+    private void assembleBuffers(ShaderHandle shader, ShaderSourceStruct assembly) {
+
+        addBuffersFromSource(shader, assembly.getVert());
+        addBuffersFromSource(shader, assembly.getFrag());
+
+        ObjectArrayList<ShaderSourceStruct> includes = assembly.getFlattenedIncludes();
+
         for (int i = 0; i < includes.size(); i++)
-            addBuffersFromShaderData(shader, includes.get(i));
+            addBuffersFromSource(shader, includes.get(i));
     }
 
-    private void addBuffersFromShaderData(ShaderHandle shader, ShaderData shaderData) {
-        ObjectArrayList<UBOData> blocks = shaderData.getBufferBlocks();
-        for (int i = 0; i < blocks.size(); i++)
-            addBuffer(shader, blocks.get(i));
-    }
+    private void addBuffersFromSource(ShaderHandle shader, ShaderSourceStruct source) {
 
-    private void addBuffer(ShaderHandle shader, UBOData bufferData) {
-        // UBO is already registered via JSON — just bind and track the block name
-        shaderManager.bindShaderToUBO(shader, bufferData.getBlockName());
-        shader.addUBOBlock(bufferData.getBlockName());
+        ObjectArrayList<String> blockNames = source.getBufferBlockNames();
+
+        for (int i = 0; i < blockNames.size(); i++) {
+            shaderManager.bindShaderToUBO(shader, blockNames.get(i));
+            shader.addCompiledUBOBlockName(blockNames.get(i));
+        }
     }
 
     // Uniforms \\
 
-    private void assembleUniforms(ShaderHandle shader, ShaderDefinitionData definition) {
-        addUniformsFromShaderData(shader, definition.getVert());
-        addUniformsFromShaderData(shader, definition.getFrag());
-        ObjectArrayList<ShaderData> includes = definition.getIncludes();
+    private void assembleUniforms(ShaderHandle shader, ShaderSourceStruct assembly) {
+
+        addUniformsFromSource(shader, assembly.getVert());
+        addUniformsFromSource(shader, assembly.getFrag());
+
+        ObjectArrayList<ShaderSourceStruct> includes = assembly.getFlattenedIncludes();
+
         for (int i = 0; i < includes.size(); i++)
-            addUniformsFromShaderData(shader, includes.get(i));
+            addUniformsFromSource(shader, includes.get(i));
     }
 
-    private void addUniformsFromShaderData(ShaderHandle shader, ShaderData shaderData) {
-        ObjectArrayList<UniformData> uniforms = shaderData.getUniforms();
-        for (int i = 0; i < uniforms.size(); i++)
-            addUniform(shader, uniforms.get(i));
+    private void addUniformsFromSource(ShaderHandle shader, ShaderSourceStruct source) {
+
+        ObjectArrayList<UniformData> declarations = source.getUniformDeclarations();
+
+        for (int i = 0; i < declarations.size(); i++)
+            addUniform(shader, declarations.get(i));
     }
 
     private void addUniform(ShaderHandle shader, UniformData uniformData) {
+
         String queryName = uniformData.getCount() > 1
                 ? uniformData.getUniformName() + "[0]"
                 : uniformData.getUniformName();
-        int location = GLSLUtility.getUniformLocation(shader.getShaderHandle(), queryName);
-        UniformAttribute<?> attribute = UniformUtility.createUniformAttribute(uniformData);
-        Uniform<?> uniform = new Uniform<>(location, uniformData.getCount(), attribute);
-        shader.addUniform(uniformData.getUniformName(), uniform);
+
+        int location = GLSLUtility.getUniformLocation(shader.getGpuHandle(), queryName);
+        UniformAttributeStruct<?> attribute = UniformUtility.createUniformAttribute(uniformData);
+        UniformStruct<?> uniform = new UniformStruct<>(location, attribute);
+
+        shader.addCompiledUniform(uniformData.getUniformName(), uniform);
     }
 
     // Utility \\
 
-    ShaderData getShaderData(String key) {
+    ShaderSourceStruct getSourceStruct(String key) {
 
-        ShaderData result = lookup.get(key);
+        ShaderSourceStruct result = glslKey2Source.get(key);
 
         if (result != null)
             return result;
 
-        for (int i = 0; i < glslFiles.size(); i++) {
-            ShaderData data = glslFiles.get(i);
-            if (data.getShaderName().equals(key))
-                return data;
-        }
+        for (int i = 0; i < glslSources.size(); i++)
+            if (glslSources.get(i).getShaderName().equals(key))
+                return glslSources.get(i);
 
-        return throwException("Shader data not found for key: " + key);
+        return throwException("Shader source not found for key: " + key);
     }
 }

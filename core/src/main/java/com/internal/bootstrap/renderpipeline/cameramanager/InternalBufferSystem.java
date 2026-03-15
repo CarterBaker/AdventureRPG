@@ -8,22 +8,33 @@ import com.internal.core.engine.SystemPackage;
 
 class InternalBufferSystem extends SystemPackage {
 
+    /*
+     * Pushes camera matrices and vectors to GPU UBOs each frame. Reads from
+     * CameraManager and writes to the CameraData and OrthoData UBO handles.
+     */
+
+    // Internal
     private UBOManager uboManager;
     private CameraManager cameraManager;
 
+    // UBOs
     private UBOHandle cameraDataUBO;
     private UBOHandle orthoDataUBO;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void get() {
+
+        // Internal
         this.uboManager = get(UBOManager.class);
         this.cameraManager = get(CameraManager.class);
     }
 
     @Override
     protected void awake() {
+
+        // UBOs
         this.cameraDataUBO = uboManager.getUBOHandleFromUBOName("CameraData");
         this.orthoDataUBO = uboManager.getUBOHandleFromUBOName("OrthoData");
     }
@@ -53,7 +64,8 @@ class InternalBufferSystem extends SystemPackage {
         cameraDataUBO.updateUniform("u_viewport", mainCam.getViewport());
         cameraDataUBO.updateUniform("u_nearPlane", mainCam.getNearPlane());
         cameraDataUBO.updateUniform("u_farPlane", mainCam.getFarPlane());
-        cameraDataUBO.push();
+
+        uboManager.push(cameraDataUBO);
     }
 
     // Ortho \\
@@ -67,6 +79,7 @@ class InternalBufferSystem extends SystemPackage {
 
         orthoDataUBO.updateUniform("u_orthoProjection", orthoCam.getProjection());
         orthoDataUBO.updateUniform("u_screenSize", orthoCam.getScreenSize());
-        orthoDataUBO.push();
+
+        uboManager.push(orthoDataUBO);
     }
 }

@@ -1,50 +1,59 @@
 package com.internal.bootstrap.physicspipeline.movementmanager;
 
-import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
-import com.internal.bootstrap.physicspipeline.movementmanager.movement.BlockCollisionBranch;
-import com.internal.bootstrap.physicspipeline.movementmanager.movement.GravityBranch;
-import com.internal.bootstrap.physicspipeline.movementmanager.movement.MovementBranch;
+import com.internal.bootstrap.entitypipeline.entity.EntityInstance;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector3;
 import com.internal.core.util.mathematics.vectors.Vector3Int;
 
 public class MovementManager extends ManagerPackage {
+
+    /*
+     * Drives the full movement pipeline for any entity each frame. Coordinates
+     * horizontal movement, gravity, collision, post-collision correction, position
+     * application, and chunk boundary updates in a fixed order.
+     */
 
     // Internal
     private MovementBranch movementBranch;
     private GravityBranch gravityBranch;
     private BlockCollisionBranch blockCollisionBranch;
 
-    // Cached vectors — no per-frame allocation
+    // Cached Vectors
     private Vector3 movement;
     private Vector3 preCollisionSnapshot;
 
     // Settings
-    private int CHUNK_SIZE;
+    private int chunkSize;
 
     // Internal \\
 
     @Override
     protected void create() {
+
+        // Branches
         this.movementBranch = create(MovementBranch.class);
         this.gravityBranch = create(GravityBranch.class);
         this.blockCollisionBranch = create(BlockCollisionBranch.class);
+
+        // Cached Vectors
         this.movement = new Vector3();
         this.preCollisionSnapshot = new Vector3();
-        this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
+
+        // Settings
+        this.chunkSize = EngineSetting.CHUNK_SIZE;
     }
 
     // Movement \\
 
-    /**
+    /*
      * Moves an entity based on a normalized Vector3Int input.
      * Does not know or care if input came from player or AI.
      */
-    public void move(Vector3Int input, Vector3 direction, EntityHandle entity) {
+    public void move(Vector3Int input, Vector3 direction, EntityInstance entity) {
 
         WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
         Vector3 position = worldPosition.getPosition();
@@ -52,20 +61,13 @@ public class MovementManager extends ManagerPackage {
         int chunkCoordinateX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkCoordinateY = Coordinate2Long.unpackY(chunkCoordinate);
 
-        entity.update();
-
-        // Reset movement each frame — prevents stale data carrying over between
-        // branches
         movement.set(0, 0, 0);
 
         // 1. Horizontal — x, z only
         movementBranch.calculate(input, direction, movement, entity);
 
-        // 2. Gravity — adds to all three axes, direction and magnitude from WorldHandle
-        Vector3 gravDisp = gravityBranch.calculate(input.y, entity);
-        movement.x += gravDisp.x;
-        movement.y += gravDisp.y;
-        movement.z += gravDisp.z;
+        // 2. Gravity — adds to all three axes
+        gravityBranch.calculate(input.y, movement, entity);
 
         // 3. Snapshot before collision
         preCollisionSnapshot.set(movement.x, movement.y, movement.z);
@@ -94,23 +96,32 @@ public class MovementManager extends ManagerPackage {
 
     // Chunk \\
 
-    private long updateChunkCoordinateFrom(Vector3 position, int chunkCoordinateX, int chunkCoordinateY) {
+    private long updateChunkCoordinateFrom(
+            Vector3 position,
+            int chunkCoordinateX,
+            int chunkCoordinateY) {
+
         chunkCoordinateX += calculateChunkCoordinateAxisFrom(position.x);
         chunkCoordinateY += calculateChunkCoordinateAxisFrom(position.z);
+
         return Coordinate2Long.pack(chunkCoordinateX, chunkCoordinateY);
     }
 
     private int calculateChunkCoordinateAxisFrom(float axis) {
+
         float axisInput = axis;
         int newChunkAxis = 0;
+
         while (axisInput < 0) {
-            axisInput += CHUNK_SIZE;
+            axisInput += chunkSize;
             newChunkAxis -= 1;
         }
-        while (axisInput >= CHUNK_SIZE) {
-            axisInput -= CHUNK_SIZE;
+
+        while (axisInput >= chunkSize) {
+            axisInput -= chunkSize;
             newChunkAxis += 1;
         }
+
         return newChunkAxis;
     }
 }

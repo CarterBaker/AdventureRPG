@@ -2,7 +2,7 @@ package com.internal.bootstrap.worldpipeline.gridmanager;
 
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.core.engine.HandlePackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

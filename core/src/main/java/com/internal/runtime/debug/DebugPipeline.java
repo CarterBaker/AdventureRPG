@@ -5,11 +5,9 @@ import com.internal.core.engine.PipelinePackage;
 
 public class DebugPipeline extends PipelinePackage {
 
-    // Lighting
-    public Sky sky;
-
     // Internal
-    private MainMenuBranch mainMenu;
+    private Sky sky;
+    private MainMenuBranch mainMenuBranch;
 
     // Base \\
 
@@ -20,11 +18,11 @@ public class DebugPipeline extends PipelinePackage {
 
     @Override
     protected void get() {
-        this.mainMenu = get(MainMenuBranch.class);
+        this.mainMenuBranch = get(MainMenuBranch.class);
     }
 
     @Override
     protected void awake() {
-        mainMenu.openMenu();
+        mainMenuBranch.openMenu();
     }
 }

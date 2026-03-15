@@ -4,21 +4,20 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import com.internal.bootstrap.menupipeline.fonts.FontHandle;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-/*
- * Scans the fonts directory for TTF/OTF files directly — same pattern as
- * the texture loader scanning for image files. Font name is derived from the
- * file stem. No JSON config bridge — size, material, and charset fall back
- * to EngineSetting defaults. On-demand load resolves by font name to file.
- * Self-releases when queue empties.
- */
 class InternalLoader extends LoaderPackage {
+
+    /*
+     * Scans the fonts directory for TTF/OTF files and loads each one into
+     * FontManager via InternalBuilder. Font name is derived from the file stem.
+     * No JSON config — size, material, and charset fall back to EngineSetting
+     * defaults. Supports on-demand loading by font name to file resolution.
+     */
 
     // Internal
     private File root;
@@ -36,8 +35,7 @@ class InternalLoader extends LoaderPackage {
         this.root = new File(EngineSetting.FONT_PATH);
         this.fontName2File = new Object2ObjectOpenHashMap<>();
 
-        FileUtility.verifyDirectory(root,
-                "[FontManager] Font directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Font directory not found: " + root.getAbsolutePath());
 
         try (var stream = Files.walk(root.toPath())) {
             stream
@@ -79,14 +77,14 @@ class InternalLoader extends LoaderPackage {
         }
     }
 
-    // On-Demand Loading \\
+    // On-Demand \\
 
     void request(String fontName) {
 
         File file = fontName2File.get(fontName);
 
         if (file == null)
-            throwException("[FontManager] On-demand load failed — font not found: \"" + fontName + "\"");
+            throwException("On-demand font load failed — not found in scan registry: \"" + fontName + "\"");
 
         request(file);
     }

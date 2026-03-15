@@ -1,14 +1,20 @@
 package com.internal.bootstrap.physicspipeline.raycastmanager;
 
-import com.internal.bootstrap.physicspipeline.raycastmanager.raycast.BlockCastBranch;
 import com.internal.bootstrap.physicspipeline.util.BlockCastStruct;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class RaycastManager extends ManagerPackage {
 
+    /*
+     * Owns block raycasting for the physics pipeline. Delegates all DDA
+     * traversal to BlockCastBranch and exposes a single typed cast method
+     * to the rest of the engine.
+     */
+
     // Internal
     private BlockCastBranch blockCastBranch;
+
     // Internal \\
 
     @Override
@@ -16,7 +22,7 @@ public class RaycastManager extends ManagerPackage {
         this.blockCastBranch = create(BlockCastBranch.class);
     }
 
-    // Block Raycasting \\
+    // Accessible \\
 
     public void castBlock(
             long chunkCoordinate,
@@ -24,7 +30,6 @@ public class RaycastManager extends ManagerPackage {
             Vector3 direction,
             float maxDistance,
             BlockCastStruct out) {
-
         blockCastBranch.cast(chunkCoordinate, rayOrigin, direction, maxDistance, out);
     }
 }

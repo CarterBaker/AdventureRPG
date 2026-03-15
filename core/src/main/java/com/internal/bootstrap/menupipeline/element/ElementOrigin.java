@@ -1,6 +1,14 @@
 package com.internal.bootstrap.menupipeline.element;
 
+import com.internal.core.engine.UtilityPackage;
+
 public enum ElementOrigin {
+
+    /*
+     * Named anchor/pivot presets mapping semantic positions to normalized
+     * [0,1] x/y coordinates.
+     */
+
     BOTTOM_LEFT(0f, 0f),
     BOTTOM_CENTER(0.5f, 0f),
     BOTTOM_RIGHT(1f, 0f),
@@ -11,18 +19,34 @@ public enum ElementOrigin {
     TOP_CENTER(0.5f, 1f),
     TOP_RIGHT(1f, 1f);
 
-    public final float x;
-    public final float y;
+    // Internal
+    private final float x;
+    private final float y;
+
+    // Constructor \\
 
     ElementOrigin(float x, float y) {
         this.x = x;
         this.y = y;
     }
 
+    // Factory \\
+
     public static ElementOrigin fromString(String name) {
         for (ElementOrigin o : values())
             if (o.name().equalsIgnoreCase(name))
                 return o;
-        throw new IllegalArgumentException("Unknown origin: '" + name + "'");
+        UtilityPackage.throwException("Unknown origin: '" + name + "'");
+        return null;
+    }
+
+    // Accessible \\
+
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
     }
 }

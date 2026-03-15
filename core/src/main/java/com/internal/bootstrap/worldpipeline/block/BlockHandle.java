@@ -2,95 +2,67 @@ package com.internal.bootstrap.worldpipeline.block;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import com.internal.core.engine.HandlePackage;
-import com.internal.core.util.mathematics.Extras.Direction3Vector;
+import com.internal.core.util.mathematics.extras.Direction3Vector;
 
 public class BlockHandle extends HandlePackage {
 
-    // Identity
-    private String blockName;
-    private short blockID;
-    private DynamicGeometryType geometry;
+    /*
+     * Persistent block definition record. Wraps BlockData and delegates all
+     * access through it. Registered in BlockManager from bootstrap to shutdown.
+     */
 
-    // Textures
-    private int materialID;
-    private int[] faceTextures;
-    private BlockRotationType rotationType;
-
-    // Breaking
-    private int breakTier;
-    private short requiredToolTypeID;
-    private int durability;
+    // Internal
+    private BlockData blockData;
 
     // Constructor \\
 
-    public void constructor(
-            String blockName,
-            short blockID,
-            DynamicGeometryType geometry,
-            BlockRotationType rotationType,
-            int materialID,
-            int northTexture, int eastTexture, int southTexture,
-            int westTexture, int upTexture, int downTexture,
-            int breakTier,
-            short requiredToolTypeID,
-            int durability) {
-
-        this.blockName = blockName;
-        this.blockID = blockID;
-        this.geometry = geometry;
-        this.rotationType = rotationType;
-        this.materialID = materialID;
-        this.faceTextures = new int[Direction3Vector.LENGTH];
-        this.faceTextures[Direction3Vector.NORTH.ordinal()] = northTexture;
-        this.faceTextures[Direction3Vector.EAST.ordinal()] = eastTexture;
-        this.faceTextures[Direction3Vector.SOUTH.ordinal()] = southTexture;
-        this.faceTextures[Direction3Vector.WEST.ordinal()] = westTexture;
-        this.faceTextures[Direction3Vector.UP.ordinal()] = upTexture;
-        this.faceTextures[Direction3Vector.DOWN.ordinal()] = downTexture;
-        this.breakTier = breakTier;
-        this.requiredToolTypeID = requiredToolTypeID;
-        this.durability = durability;
+    public void constructor(BlockData blockData) {
+        this.blockData = blockData;
     }
 
     // Accessible \\
 
+    public BlockData getBlockData() {
+        return blockData;
+    }
+
     public String getBlockName() {
-        return blockName;
+        return blockData.getBlockName();
     }
 
     public short getBlockID() {
-        return blockID;
+        return blockData.getBlockID();
     }
 
     public DynamicGeometryType getGeometry() {
-        return geometry;
-    }
-
-    public int getMaterialID() {
-        return materialID;
+        return blockData.getGeometry();
     }
 
     public BlockRotationType getRotationType() {
-        return rotationType;
+        return blockData.getRotationType();
+    }
+
+    public int getMaterialID() {
+        return blockData.getMaterialID();
     }
 
     public int getTextureForFace(Direction3Vector direction) {
-        return faceTextures[direction.ordinal()];
+        return blockData.getTextureForFace(direction);
     }
 
     public int getBreakTier() {
-        return breakTier;
+        return blockData.getBreakTier();
     }
 
     public short getRequiredToolTypeID() {
-        return requiredToolTypeID;
+        return blockData.getRequiredToolTypeID();
     }
 
     public int getDurability() {
-        return durability;
+        return blockData.getDurability();
     }
 
     public boolean isUnbreakable() {
-        return breakTier < 0;
+        return blockData.isUnbreakable();
     }
 }

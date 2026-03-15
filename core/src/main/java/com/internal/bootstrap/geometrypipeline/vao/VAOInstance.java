@@ -4,13 +4,26 @@ import com.internal.core.engine.InstancePackage;
 
 public class VAOInstance extends InstancePackage {
 
-    private VAOStruct vaoStruct;
+    /*
+     * A live GPU vertex array object created from a VAOHandle template.
+     * Holds a fully initialized VAOData with a real GL handle. Owned by
+     * whoever created it — released via VAOManager.removeVAOInstance().
+     */
 
-    public void constructor(VAOStruct vaoStruct) {
-        this.vaoStruct = vaoStruct;
+    // Internal
+    private VAOData vaoData;
+
+    // Constructor \\
+
+    public void constructor(VAOData vaoData) {
+
+        // Internal
+        this.vaoData = vaoData;
     }
 
-    public VAOStruct getVAOStruct() {
-        return vaoStruct;
+    // Accessible \\
+
+    public VAOData getVAOData() {
+        return vaoData;
     }
 }

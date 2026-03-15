@@ -7,6 +7,12 @@ import com.internal.core.engine.settings.EngineSetting;
 
 class YearTrackerBranch extends BranchPackage {
 
+    /*
+     * Detects year and age rollovers from total days with offset. Updates the
+     * current year and age on the ClockHandle when a year change is detected.
+     * Returns true when an age boundary is crossed.
+     */
+
     // Internal
     private int STARTING_YEAR;
     private int STARTING_AGE;
@@ -44,7 +50,8 @@ class YearTrackerBranch extends BranchPackage {
 
         long totalDaysWithOffset = clockHandle.getTotalDaysWithOffset();
         int totalDaysInYear = calendarHandle.getTotalDaysInYear();
-        long dayOfAge = totalDaysWithOffset % (YEARS_PER_AGE * totalDaysInYear);
+        long yearsPerAgeDays = (long) YEARS_PER_AGE * totalDaysInYear;
+        long dayOfAge = totalDaysWithOffset % yearsPerAgeDays;
         int currentYear = (int) (dayOfAge / totalDaysInYear) + STARTING_YEAR;
 
         if (lastYear == currentYear)
@@ -52,12 +59,12 @@ class YearTrackerBranch extends BranchPackage {
 
         lastYear = currentYear;
 
-        int currentAge = (int) (totalDaysWithOffset / (YEARS_PER_AGE * totalDaysInYear)) + STARTING_AGE;
+        int currentAge = (int) (totalDaysWithOffset / yearsPerAgeDays) + STARTING_AGE;
         int yearsElapsed = currentYear - STARTING_YEAR;
 
         clockHandle.setCurrentYear(currentYear);
         clockHandle.setCurrentAge(currentAge);
 
-        return (yearsElapsed % YEARS_PER_AGE == 0);
+        return yearsElapsed % YEARS_PER_AGE == 0;
     }
 }

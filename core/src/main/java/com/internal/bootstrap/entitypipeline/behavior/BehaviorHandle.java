@@ -4,10 +4,16 @@ import com.internal.core.engine.HandlePackage;
 
 public class BehaviorHandle extends HandlePackage {
 
+    /*
+     * Persistent reference to a loaded behavior definition. Registered and
+     * owned by BehaviorManager. Delegates all accessors through BehaviorData.
+     */
+
     // Internal
     private BehaviorData behaviorData;
 
     // Constructor \\
+
     public void constructor(BehaviorData behaviorData) {
 
         // Internal
@@ -21,14 +27,14 @@ public class BehaviorHandle extends HandlePackage {
     }
 
     public String getBehaviorName() {
-        return behaviorData.behaviorName;
+        return behaviorData.getBehaviorName();
     }
 
     public short getBehaviorID() {
-        return behaviorData.behaviorID;
+        return behaviorData.getBehaviorID();
     }
 
     public float getJumpDuration() {
-        return behaviorData.jumpDuration;
+        return behaviorData.getJumpDuration();
     }
 }

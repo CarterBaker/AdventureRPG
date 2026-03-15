@@ -9,9 +9,8 @@ import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.PixmapUtility;
 
 /*
- * Handles GL20 texture operations for individual sprite images: uploading to
- * the GPU as a sampler2D and releasing handles on disposal. Pixel conversion
- * and vertical flip are delegated to PixmapUtility.
+ * GL20 wrapper for individual sprite texture operations. Handles upload
+ * and deletion only — format conversion is delegated to PixmapUtility.
  */
 class GLSLUtility extends UtilityPackage {
 
@@ -52,8 +51,10 @@ class GLSLUtility extends UtilityPackage {
     // GPU Disposal \\
 
     static void deleteSprite(int handle) {
+
         if (handle == 0)
             return;
+
         Gdx.gl.glBindTexture(GL20.GL_TEXTURE_2D, 0);
         Gdx.gl.glDeleteTexture(handle);
     }

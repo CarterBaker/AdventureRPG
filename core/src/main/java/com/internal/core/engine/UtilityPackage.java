@@ -50,27 +50,27 @@ public abstract class UtilityPackage {
 
     // Exception Handling \\
 
-    protected static <T> T throwException() {
+    public static <T> T throwException() {
         return ENGINE.throwException();
     }
 
-    protected static <T> T throwException(String message) {
+    public static <T> T throwException(String message) {
         return ENGINE.throwException(message);
     }
 
-    protected static <T> T throwException(Throwable cause) {
+    public static <T> T throwException(Throwable cause) {
         return ENGINE.throwException(cause);
     }
 
-    protected static <T> T throwException(String message, Throwable cause) {
+    public static <T> T throwException(String message, Throwable cause) {
         return ENGINE.throwException(message, cause);
     }
 
-    protected static <T> T throwException(Object input) {
+    public static <T> T throwException(Object input) {
         return ENGINE.throwException(input);
     }
 
-    protected static <T> T throwException(Object input, Throwable cause) {
+    public static <T> T throwException(Object input, Throwable cause) {
         return ENGINE.throwException(input, cause);
     }
 }

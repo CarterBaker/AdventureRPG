@@ -3,66 +3,84 @@ package com.internal.bootstrap.itempipeline.tooltypemanager;
 import com.internal.bootstrap.itempipeline.tooltype.ToolTypeHandle;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.RegistryUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class ToolTypeManager extends ManagerPackage {
 
-    // Sentinel — no tool required
-    public static final short TOOL_NONE = 0;
+    /*
+     * Owns the tool type palette for the engine lifetime. Detects and rejects
+     * ID collisions on registration. Supports on-demand loading via
+     * InternalLoader for tool types not yet in the palette at runtime.
+     * TOOL_NONE (0) is a reserved sentinel meaning no tool required.
+     */
 
-    // Retrieval Mapping
-    private Object2ShortOpenHashMap<String> toolTypeName2ID;
-    private Short2ObjectOpenHashMap<ToolTypeHandle> toolTypeID2Handle;
+    // Palette
+    private Object2ShortOpenHashMap<String> toolTypeName2ToolTypeID;
+    private Short2ObjectOpenHashMap<ToolTypeHandle> toolTypeID2ToolTypeHandle;
 
     // Base \\
 
     @Override
     protected void create() {
+
+        // Palette
+        this.toolTypeName2ToolTypeID = new Object2ShortOpenHashMap<>();
+        this.toolTypeID2ToolTypeHandle = new Short2ObjectOpenHashMap<>();
         create(InternalLoader.class);
-        this.toolTypeName2ID = new Object2ShortOpenHashMap<>();
-        this.toolTypeID2Handle = new Short2ObjectOpenHashMap<>();
     }
 
-    // On-Demand Loading \\
-
-    public void request(String toolTypeName) {
-        ((InternalLoader) internalLoader).request(toolTypeName);
-    }
-
-    // Tool Management \\
+    // Management \\
 
     void addToolType(ToolTypeHandle tool) {
-        if (toolTypeID2Handle.containsKey(tool.getToolTypeID())) {
-            ToolTypeHandle existing = toolTypeID2Handle.get(tool.getToolTypeID());
+
+        short id = tool.getToolTypeID();
+
+        if (toolTypeID2ToolTypeHandle.containsKey(id)) {
+            ToolTypeHandle existing = toolTypeID2ToolTypeHandle.get(id);
             if (RegistryUtility.isCollision(
-                    tool.getToolTypeName(), existing.getToolTypeName(), tool.getToolTypeID()))
+                    tool.getToolTypeName(),
+                    existing.getToolTypeName(),
+                    id))
                 throwException("ToolType ID collision: '"
                         + tool.getToolTypeName() + "' collides with '"
                         + existing.getToolTypeName()
-                        + "' (ID " + tool.getToolTypeID() + ") — rename one to resolve");
+                        + "' (ID " + id + ") — rename one to resolve");
         }
-        toolTypeName2ID.put(tool.getToolTypeName(), tool.getToolTypeID());
-        toolTypeID2Handle.put(tool.getToolTypeID(), tool);
+
+        toolTypeName2ToolTypeID.put(tool.getToolTypeName(), id);
+        toolTypeID2ToolTypeHandle.put(id, tool);
     }
 
     // Accessible \\
 
-    public short getToolTypeIDFromName(String toolTypeName) {
-        if (!toolTypeName2ID.containsKey(toolTypeName))
-            request(toolTypeName);
-        return toolTypeName2ID.getShort(toolTypeName);
+    public boolean hasToolType(String toolTypeName) {
+        return toolTypeName2ToolTypeID.containsKey(toolTypeName);
     }
 
-    public ToolTypeHandle getToolTypeFromID(short toolTypeID) {
-        ToolTypeHandle handle = toolTypeID2Handle.get(toolTypeID);
+    public short getToolTypeIDFromToolTypeName(String toolTypeName) {
+
+        if (!toolTypeName2ToolTypeID.containsKey(toolTypeName))
+            request(toolTypeName);
+
+        return toolTypeName2ToolTypeID.getShort(toolTypeName);
+    }
+
+    public ToolTypeHandle getToolTypeHandleFromToolTypeID(short toolTypeID) {
+
+        ToolTypeHandle handle = toolTypeID2ToolTypeHandle.get(toolTypeID);
+
         if (handle == null)
             throwException("ToolType ID not found: " + toolTypeID);
+
         return handle;
     }
 
-    public boolean hasToolType(String toolTypeName) {
-        return toolTypeName2ID.containsKey(toolTypeName);
+    public ToolTypeHandle getToolTypeHandleFromToolTypeName(String toolTypeName) {
+        return getToolTypeHandleFromToolTypeID(getToolTypeIDFromToolTypeName(toolTypeName));
+    }
+
+    public void request(String toolTypeName) {
+        ((InternalLoader) internalLoader).request(toolTypeName);
     }
 }

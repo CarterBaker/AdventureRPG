@@ -4,27 +4,29 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
-import com.internal.bootstrap.geometrypipeline.vbomanager.VBOManager;
-import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
-import com.internal.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-public class InternalLoader extends LoaderPackage {
+class InternalLoader extends LoaderPackage {
+
+    /*
+     * Drives the full mesh bootstrap pipeline per file. Creates a shared
+     * VAOInstance per mesh, then delegates to the VAO, VBO, and IBO builders
+     * before assembling the final MeshHandle via InternalBuilder. IDs are
+     * derived from resource names via RegistryUtility. Supports on-demand
+     * loading for meshes not yet in the palette at runtime.
+     */
 
     // Internal
     private File root;
     private MeshManager meshManager;
     private VAOManager vaoManager;
-    private TextureManager textureManager;
-    private int meshDataCount;
 
     // Builders
     private InternalBuilder internalBuilder;
@@ -63,6 +65,7 @@ public class InternalLoader extends LoaderPackage {
 
     @Override
     protected void create() {
+
         this.vaoBuildSystem = create(
                 com.internal.bootstrap.geometrypipeline.vaomanager.InternalBuilder.class);
         this.vboBuildSystem = create(
@@ -70,15 +73,16 @@ public class InternalLoader extends LoaderPackage {
         this.iboBuildSystem = create(
                 com.internal.bootstrap.geometrypipeline.ibomanager.InternalBuilder.class);
         this.internalBuilder = create(InternalBuilder.class);
-        this.meshDataCount = 0;
     }
 
     @Override
     protected void get() {
+
         this.meshManager = get(MeshManager.class);
         this.vaoManager = get(VAOManager.class);
-        this.textureManager = get(TextureManager.class);
     }
+
+    // Load \\
 
     @Override
     protected void load(File file) {
@@ -89,10 +93,8 @@ public class InternalLoader extends LoaderPackage {
 
         VAOHandle vaoHandle = vaoManager.getVAOHandleDirect(resourceName);
 
-        if (vaoHandle == null) {
-            meshDataCount++;
+        if (vaoHandle == null)
             return;
-        }
 
         VAOInstance vaoInstance = vaoManager.createVAOInstance(vaoHandle);
 
@@ -100,25 +102,23 @@ public class InternalLoader extends LoaderPackage {
         iboBuildSystem.build(resourceName, file, resourceName2File, vaoInstance);
 
         try {
-            int meshID = meshDataCount++;
-            MeshHandle meshHandle = internalBuilder.buildMeshHandle(
-                    root, file, meshID, vaoInstance, textureManager);
+            MeshHandle meshHandle = internalBuilder.buildMeshHandle(root, file, vaoInstance);
             if (meshHandle != null)
-                meshManager.addMeshHandle(resourceName, meshID, meshHandle);
+                meshManager.addMeshHandle(resourceName, meshHandle);
         } catch (RuntimeException ex) {
             throwException("Failed to build mesh from file: " + file.getAbsolutePath(), ex);
         }
     }
 
-    // On-Demand Loading \\
+    // On-Demand \\
 
-    public void request(String resourceName) {
+    void request(String resourceName) {
 
         File file = resourceName2File.get(resourceName);
 
         if (file == null)
-            throwException(
-                    "On-demand load failed — resource not found in scan registry: \"" + resourceName + "\"");
+            throwException("On-demand load failed — resource not found in scan registry: \""
+                    + resourceName + "\"");
 
         request(file);
     }

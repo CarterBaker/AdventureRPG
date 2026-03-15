@@ -15,38 +15,58 @@ public class RegistryUtility extends UtilityPackage {
     private static final int FNV_OFFSET_BASIS = EngineSetting.FNV_OFFSET_BASIS;
     private static final int FNV_PRIME = EngineSetting.FNV_PRIME;
 
-    // ID 0 is reserved as a sentinel (air / null block)
     public static final short RESERVED_ID = EngineSetting.REGISTRY_RESERVED_ID;
 
     // Hashing \\
 
     /*
-     * Converts a registry name (e.g. "grass", "stone_brick") into a stable
-     * short ID in the range [1, 32767]. The same name will always produce the
-     * same ID regardless of load order or session.
-     *
+     * Converts a registry name into a stable short ID in the range [1, 32767].
      * ID 0 is reserved — if the hash resolves to 0 it is remapped to 1.
      */
     public static short toShortID(String name) {
+
         if (name == null || name.isEmpty())
             throwException("Registry name cannot be null or empty");
 
         int hash = FNV_OFFSET_BASIS;
+
         for (int i = 0; i < name.length(); i++) {
             hash ^= name.charAt(i);
             hash *= FNV_PRIME;
         }
 
-        // Mask to positive short range [0, 32767], then reserve 0
         short id = (short) (hash & 0x7FFF);
+
         return id == RESERVED_ID ? 1 : id;
     }
 
     /*
-     * Validates that two names do not hash to the same ID.
-     * Call this inside addBlock() at startup to catch collisions immediately.
+     * Converts a registry name into a stable int ID.
+     * Used for systems that need a larger ID range than short allows.
+     * 0 is reserved — if the hash resolves to 0 it is remapped to 1.
      */
+    public static int toIntID(String name) {
+
+        if (name == null || name.isEmpty())
+            throwException("Registry name cannot be null or empty");
+
+        int hash = FNV_OFFSET_BASIS;
+
+        for (int i = 0; i < name.length(); i++) {
+            hash ^= name.charAt(i);
+            hash *= FNV_PRIME;
+        }
+
+        return hash == 0 ? 1 : hash;
+    }
+
+    // Collision Detection \\
+
     public static boolean isCollision(String incomingName, String existingName, short id) {
         return toShortID(incomingName) == id && !incomingName.equals(existingName);
+    }
+
+    public static boolean isCollision(String incomingName, String existingName, int id) {
+        return toIntID(incomingName) == id && !incomingName.equals(existingName);
     }
 }

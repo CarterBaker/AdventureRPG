@@ -6,10 +6,12 @@ import com.internal.core.engine.PipelinePackage;
 
 public class PhysicsPipeline extends PipelinePackage {
 
+    /*
+     * Registers all physics pipeline managers in dependency order.
+     */
+
     @Override
     protected void create() {
-
-        // Entity Pipeline
         create(MovementManager.class);
         create(RaycastManager.class);
     }

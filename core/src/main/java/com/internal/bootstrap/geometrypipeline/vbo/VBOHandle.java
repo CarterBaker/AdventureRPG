@@ -4,13 +4,26 @@ import com.internal.core.engine.HandlePackage;
 
 public class VBOHandle extends HandlePackage {
 
-    private VBOStruct vboStruct;
+    /*
+     * Persistent shared reference to a vertex buffer. Registered and owned
+     * by VBOManager for the engine lifetime. External systems access vertex
+     * data through MeshHandle.
+     */
 
-    public void constructor(VBOStruct vboStruct) {
-        this.vboStruct = vboStruct;
+    // Internal
+    private VBOData vboData;
+
+    // Constructor \\
+
+    public void constructor(VBOData vboData) {
+
+        // Internal
+        this.vboData = vboData;
     }
 
-    public VBOStruct getVBOStruct() {
-        return vboStruct;
+    // Accessible \\
+
+    public VBOData getVBOData() {
+        return vboData;
     }
 }

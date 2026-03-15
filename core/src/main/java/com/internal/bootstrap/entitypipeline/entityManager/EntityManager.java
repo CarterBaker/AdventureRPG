@@ -9,19 +9,26 @@ import com.internal.bootstrap.worldpipeline.util.WorldPositionUtility;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.bootstrap.worldpipeline.worldmanager.WorldManager;
 import com.internal.core.engine.ManagerPackage;
+import com.internal.core.util.RegistryUtility;
 import com.internal.core.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 public class EntityManager extends ManagerPackage {
 
+    /*
+     * Owns the entity template palette and drives the entity bootstrap pipeline.
+     * Handles on-demand template loading and provides the spawnEntity() factory
+     * for creating runtime EntityInstances from template handles.
+     */
+
     // Internal
     private WorldManager worldManager;
     private BehaviorManager behaviorManager;
 
     // Palette
-    private Object2IntOpenHashMap<String> name2TemplateID;
-    private Int2ObjectOpenHashMap<EntityHandle> id2EntityHandle;
+    private Object2IntOpenHashMap<String> templateName2TemplateID;
+    private Int2ObjectOpenHashMap<EntityHandle> templateID2EntityHandle;
 
     // Base \\
 
@@ -29,9 +36,8 @@ public class EntityManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.name2TemplateID = new Object2IntOpenHashMap<>();
-        this.id2EntityHandle = new Int2ObjectOpenHashMap<>();
-
+        this.templateName2TemplateID = new Object2IntOpenHashMap<>();
+        this.templateID2EntityHandle = new Int2ObjectOpenHashMap<>();
         create(InternalLoader.class);
     }
 
@@ -43,26 +49,33 @@ public class EntityManager extends ManagerPackage {
         this.behaviorManager = get(BehaviorManager.class);
     }
 
-    // Template Management \\
+    // Management \\
 
-    void addEntityTemplate(String templateName, int templateID, EntityHandle entityHandle) {
-        name2TemplateID.put(templateName, templateID);
-        id2EntityHandle.put(templateID, entityHandle);
+    void addEntityTemplate(String templateName, EntityHandle entityHandle) {
+
+        int id = RegistryUtility.toIntID(templateName);
+
+        templateName2TemplateID.put(templateName, id);
+        templateID2EntityHandle.put(id, entityHandle);
     }
 
     // Accessible \\
 
-    public int getTemplateID(String templateName) {
-
-        if (!name2TemplateID.containsKey(templateName))
-            ((InternalLoader) internalLoader).request(templateName);
-
-        return name2TemplateID.getInt(templateName);
+    public boolean hasTemplate(String templateName) {
+        return templateName2TemplateID.containsKey(templateName);
     }
 
-    public EntityHandle getEntityHandle(int templateID) {
+    public int getTemplateIDFromTemplateName(String templateName) {
 
-        EntityHandle handle = id2EntityHandle.get(templateID);
+        if (!templateName2TemplateID.containsKey(templateName))
+            ((InternalLoader) internalLoader).request(templateName);
+
+        return templateName2TemplateID.getInt(templateName);
+    }
+
+    public EntityHandle getEntityHandleFromTemplateID(int templateID) {
+
+        EntityHandle handle = templateID2EntityHandle.get(templateID);
 
         if (handle == null)
             throwException("Entity template ID not found: " + templateID);
@@ -70,15 +83,16 @@ public class EntityManager extends ManagerPackage {
         return handle;
     }
 
-    public EntityHandle getEntityHandle(String templateName) {
-        return getEntityHandle(getTemplateID(templateName));
+    public EntityHandle getEntityHandleFromTemplateName(String templateName) {
+        return getEntityHandleFromTemplateID(getTemplateIDFromTemplateName(templateName));
     }
 
     public EntityInstance spawnEntity(EntityHandle entityHandle) {
 
         EntityData entityData = entityHandle.getEntityData();
         WorldHandle activeWorld = worldManager.getActiveWorld();
-        BehaviorHandle behavior = behaviorManager.getBehavior(entityData.behaviorName);
+        BehaviorHandle behavior = behaviorManager.getBehaviorHandleFromBehaviorName(
+                entityData.getBehaviorName());
         long randomChunk = WorldPositionUtility.getRandomChunk(activeWorld);
 
         EntityInstance entityInstance = create(EntityInstance.class);
@@ -95,6 +109,6 @@ public class EntityManager extends ManagerPackage {
     }
 
     public EntityInstance spawnEntity(String templateName) {
-        return spawnEntity(getEntityHandle(templateName));
+        return spawnEntity(getEntityHandleFromTemplateName(templateName));
     }
 }

@@ -2,29 +2,37 @@ package com.internal.bootstrap.worldpipeline.block;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import com.internal.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.Extras.Coordinate3Int;
+import com.internal.core.util.mathematics.extras.Coordinate3Int;
 
 public final class BlockPaletteHandle extends HandlePackage {
 
+    /*
+     * Compressed block palette for a single sub-chunk region. Stores block IDs
+     * using a bit-packed indirect palette that expands automatically as new block
+     * types are introduced. Converts to a flat direct array once the palette
+     * exceeds the configured threshold. Rename to BlockPaletteInstance pending
+     * — this is mutable per-subchunk state, not a shared manager-registered record.
+     */
+
+    // Palette Config
     private int chunkSize;
     private int blocksPerCell;
     private int paletteAxisSize;
     private int scaleBits;
-
     private int totalCells;
     private int maxPaletteSize;
+    private short defaultBlockId;
 
+    // Storage — packed palette mode
     private List<Short> palette;
     private long[] packedData;
     private int bitsPerEntry;
 
+    // Storage — direct mode (post-threshold)
     private short[] directData;
-
-    private short defaultBlockId;
 
     // Construction \\
 
@@ -48,7 +56,6 @@ public final class BlockPaletteHandle extends HandlePackage {
 
         this.palette = new ArrayList<>();
         this.palette.add(defaultBlockId);
-
         this.bitsPerEntry = 1;
 
         allocatePackedArray();
@@ -105,7 +112,8 @@ public final class BlockPaletteHandle extends HandlePackage {
         long mask = (1L << bitsPerEntry) - 1L;
 
         if (bitOffset + bitsPerEntry <= 64) {
-            packedData[longIndex] = (packedData[longIndex] & ~(mask << bitOffset)) | ((long) value << bitOffset);
+            packedData[longIndex] = (packedData[longIndex] & ~(mask << bitOffset))
+                    | ((long) value << bitOffset);
             return;
         }
 
@@ -115,7 +123,8 @@ public final class BlockPaletteHandle extends HandlePackage {
 
         packedData[longIndex] = (packedData[longIndex] & ~(lowMask << bitOffset))
                 | (((long) value & lowMask) << bitOffset);
-        packedData[longIndex + 1] = (packedData[longIndex + 1] & ~highMask) | ((long) value >>> lowBits);
+        packedData[longIndex + 1] = (packedData[longIndex + 1] & ~highMask)
+                | ((long) value >>> lowBits);
     }
 
     private void expandBits(int newBits) {
@@ -157,6 +166,7 @@ public final class BlockPaletteHandle extends HandlePackage {
     }
 
     private void convertToDirect() {
+
         directData = new short[totalCells];
 
         for (int i = 0; i < totalCells; i++)
@@ -202,6 +212,8 @@ public final class BlockPaletteHandle extends HandlePackage {
         }
     }
 
+    // Management \\
+
     public void dumpInteriorBlocks(short airBlockId) {
 
         int[] interiorCoordinates = ChunkCoordinate3Int.getInteriorBlockCoordinates();
@@ -215,7 +227,6 @@ public final class BlockPaletteHandle extends HandlePackage {
                 palette.add(airBlockId);
                 airPaletteIndex = palette.size() - 1;
             }
-
             for (int packedXYZ : interiorCoordinates)
                 writePackedValue(getCellIndex(packedXYZ), airPaletteIndex);
         }

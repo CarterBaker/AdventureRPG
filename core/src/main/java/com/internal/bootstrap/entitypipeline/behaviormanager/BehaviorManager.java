@@ -2,14 +2,21 @@ package com.internal.bootstrap.entitypipeline.behaviormanager;
 
 import com.internal.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import com.internal.core.engine.ManagerPackage;
+import com.internal.core.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class BehaviorManager extends ManagerPackage {
 
+    /*
+     * Owns the behavior palette for the engine lifetime. Supports lookup by
+     * both name and short ID. Auto-triggers an on-demand load via
+     * InternalLoader on a name-based cache miss.
+     */
+
     // Palette
-    private Object2ObjectOpenHashMap<String, BehaviorHandle> name2Behavior;
-    private Short2ObjectOpenHashMap<BehaviorHandle> id2Behavior;
+    private Object2ObjectOpenHashMap<String, BehaviorHandle> behaviorName2BehaviorHandle;
+    private Short2ObjectOpenHashMap<BehaviorHandle> behaviorID2BehaviorHandle;
 
     // Base \\
 
@@ -17,41 +24,49 @@ public class BehaviorManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.name2Behavior = new Object2ObjectOpenHashMap<>();
-        this.id2Behavior = new Short2ObjectOpenHashMap<>();
-
+        this.behaviorName2BehaviorHandle = new Object2ObjectOpenHashMap<>();
+        this.behaviorID2BehaviorHandle = new Short2ObjectOpenHashMap<>();
         create(InternalLoader.class);
     }
 
     // Management \\
 
     void addBehavior(BehaviorHandle handle) {
-        name2Behavior.put(handle.getBehaviorName(), handle);
-        id2Behavior.put(handle.getBehaviorID(), handle);
+
+        behaviorName2BehaviorHandle.put(handle.getBehaviorName(), handle);
+        behaviorID2BehaviorHandle.put(handle.getBehaviorID(), handle);
     }
 
     // Accessible \\
 
-    /*
-     * Auto-triggers an on-demand load on miss.
-     * Safe for external callers only — never call from inside a builder.
-     */
-    public BehaviorHandle getBehavior(String behaviorName) {
+    public boolean hasBehavior(String behaviorName) {
+        return behaviorName2BehaviorHandle.containsKey(behaviorName);
+    }
 
-        BehaviorHandle handle = name2Behavior.get(behaviorName);
+    public short getBehaviorIDFromBehaviorName(String behaviorName) {
+
+        if (!behaviorName2BehaviorHandle.containsKey(behaviorName))
+            ((InternalLoader) internalLoader).request(behaviorName);
+
+        return RegistryUtility.toShortID(behaviorName);
+    }
+
+    public BehaviorHandle getBehaviorHandleFromBehaviorID(short behaviorID) {
+        return behaviorID2BehaviorHandle.get(behaviorID);
+    }
+
+    public BehaviorHandle getBehaviorHandleFromBehaviorName(String behaviorName) {
+
+        BehaviorHandle handle = behaviorName2BehaviorHandle.get(behaviorName);
 
         if (handle == null) {
             ((InternalLoader) internalLoader).request(behaviorName);
-            handle = name2Behavior.get(behaviorName);
+            handle = behaviorName2BehaviorHandle.get(behaviorName);
         }
 
         if (handle == null)
             throwException("[BehaviorManager] Behavior could not be loaded: \"" + behaviorName + "\"");
 
         return handle;
-    }
-
-    public BehaviorHandle getBehavior(short behaviorID) {
-        return id2Behavior.get(behaviorID);
     }
 }

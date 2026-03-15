@@ -9,11 +9,21 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 class DayTrackerBranch extends BranchPackage {
 
+    /*
+     * Advances the day-level clock when the day rolls over. Builds lookup
+     * tables from the calendar definition for fast day-of-year to month and
+     * day-of-month resolution. Returns true when the month advances.
+     */
+
     // Internal
     private int STARTING_DAY_OF_MONTH;
     private int STARTING_MONTH;
     private int STARTING_YEAR;
     private int YEARS_PER_AGE;
+    private long NOISE_MASK;
+    private double NOISE_DIVISOR;
+    private long NOISE_MULTIPLIER;
+    private double NOISE_MIN;
     private CalendarHandle calendarHandle;
     private ClockHandle clockHandle;
 
@@ -35,6 +45,10 @@ class DayTrackerBranch extends BranchPackage {
         this.STARTING_MONTH = EngineSetting.STARTING_MONTH;
         this.STARTING_YEAR = EngineSetting.STARTING_YEAR;
         this.YEARS_PER_AGE = EngineSetting.YEARS_PER_AGE;
+        this.NOISE_MASK = EngineSetting.CLOCK_NOISE_MASK;
+        this.NOISE_DIVISOR = EngineSetting.CLOCK_NOISE_DIVISOR;
+        this.NOISE_MULTIPLIER = EngineSetting.CLOCK_NOISE_MULTIPLIER;
+        this.NOISE_MIN = EngineSetting.CLOCK_NOISE_MIN;
 
         // Conversion Tables
         this.monthToDayOfMonthToDayOfYear = new Int2ObjectOpenHashMap<>();
@@ -59,8 +73,9 @@ class DayTrackerBranch extends BranchPackage {
     private void buildDayConversionTables() {
 
         int runningDayOfYear = 1;
+        int monthCount = calendarHandle.getMonthCount();
 
-        for (int monthIndex = 0; monthIndex < calendarHandle.getMonthCount(); monthIndex++) {
+        for (int monthIndex = 0; monthIndex < monthCount; monthIndex++) {
 
             int daysInMonth = calendarHandle.getMonthDays(monthIndex);
             Int2IntOpenHashMap dayToYear = new Int2IntOpenHashMap(daysInMonth);
@@ -108,7 +123,7 @@ class DayTrackerBranch extends BranchPackage {
         clockHandle.setCurrentDayOfMonth(currentDayOfMonth);
         clockHandle.setCurrentMonth(currentMonth);
 
-        return (currentDayOfMonth == 1);
+        return currentDayOfMonth == 1;
     }
 
     // Calculations \\
@@ -122,7 +137,7 @@ class DayTrackerBranch extends BranchPackage {
 
         dayOfYear += STARTING_DAY_OF_MONTH - 1;
 
-        long dayOffset = STARTING_YEAR * calendarHandle.getTotalDaysInYear() + dayOfYear;
+        long dayOffset = (long) STARTING_YEAR * calendarHandle.getTotalDaysInYear() + dayOfYear;
 
         return totalDaysElapsed + dayOffset;
     }
@@ -132,18 +147,18 @@ class DayTrackerBranch extends BranchPackage {
         long mixed = totalDaysWithOffset ^ System.currentTimeMillis();
 
         mixed ^= mixed >>> 33;
-        mixed *= -49064778989728563L;
+        mixed *= NOISE_MULTIPLIER;
         mixed ^= mixed >>> 33;
 
-        double normalized = (double) (mixed & 16777215L) / 1.6777216E7;
+        double normalized = (double) (mixed & NOISE_MASK) / NOISE_DIVISOR;
 
-        return (float) Math.max(0.001, normalized);
+        return (float) Math.max(NOISE_MIN, normalized);
     }
 
     double calculateYearProgress(long totalDaysWithOffset) {
 
         int totalDaysInYear = calendarHandle.getTotalDaysInYear();
-        long dayOfAge = totalDaysWithOffset % (YEARS_PER_AGE * totalDaysInYear);
+        long dayOfAge = totalDaysWithOffset % ((long) YEARS_PER_AGE * totalDaysInYear);
 
         return (double) (dayOfAge % totalDaysInYear) / totalDaysInYear;
     }

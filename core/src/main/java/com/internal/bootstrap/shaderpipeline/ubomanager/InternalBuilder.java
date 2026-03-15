@@ -5,34 +5,53 @@ import java.io.File;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOData;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformData;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.engine.BuilderPackage;
 import com.internal.core.util.JsonUtility;
 
 /*
- * Parses UBO JSON descriptors into UBOData during bootstrap.
- * Owned by InternalLoadManager and self-releases with it when the queue empties.
+ * Parses UBO JSON descriptors into UBOHandles during bootstrap. Checks the
+ * manager palette before creating anything — if the block is already registered
+ * the existing handle is returned immediately and nothing is allocated.
  */
 class InternalBuilder extends BuilderPackage {
 
+    // Internal
+    private UBOManager uboManager;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.uboManager = get(UBOManager.class);
+    }
+
     // Build \\
 
-    UBOData parse(File file) {
+    UBOHandle parse(File file) {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
         String blockName = JsonUtility.validateString(json, "blockName");
-        int binding = json.has("binding") ? json.get("binding").getAsInt() : UBOData.UNSPECIFIED_BINDING;
 
-        UBOData data = create(UBOData.class);
-        data.constructor(blockName, binding);
+        if (uboManager.hasUBO(blockName))
+            return uboManager.getUBOHandleFromUBOName(blockName);
 
-        parseUniforms(json, data, blockName);
+        int binding = json.has("binding")
+                ? json.get("binding").getAsInt()
+                : UBOData.UNSPECIFIED_BINDING;
 
-        return data;
+        UBOData data = new UBOData(blockName, binding);
+        UBOHandle handle = create(UBOHandle.class);
+        handle.constructor(data);
+
+        parseUniforms(json, handle, blockName);
+
+        return handle;
     }
 
-    private void parseUniforms(JsonObject json, UBOData data, String blockName) {
+    private void parseUniforms(JsonObject json, UBOHandle handle, String blockName) {
 
         if (!json.has("uniforms"))
             throwException("UBO '" + blockName + "' JSON is missing required 'uniforms' array");
@@ -52,21 +71,19 @@ class InternalBuilder extends BuilderPackage {
             String name = entry.get("name").getAsString();
             String type = entry.get("type").getAsString();
             int count = entry.has("count") ? entry.get("count").getAsInt() : 1;
-            UniformType uniformType = parseUniformType(blockName, name, type);
 
-            UniformData uniform = create(UniformData.class);
-            uniform.constructor(uniformType, name, count);
-
-            data.addUniform(uniform);
+            handle.addUniformDeclaration(
+                    new UniformData(parseUniformType(blockName, name, type), name, count));
         }
     }
 
     private UniformType parseUniformType(String blockName, String uniformName, String raw) {
+
         try {
             return UniformType.valueOf(raw);
         } catch (IllegalArgumentException e) {
             throwException("UBO '" + blockName + "' uniform '" + uniformName + "' has unknown type: " + raw);
-            return null; // unreachable
+            return null;
         }
     }
 }

@@ -4,16 +4,14 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import com.internal.core.engine.LoaderPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /*
- * Drives the UBO bootstrap sequence: file discovery in scan(), one UBO
- * assembled per load() call, self-releases when the queue empties.
+ * Drives the UBO bootstrap sequence: walks the JSON directory in scan(),
+ * assembles one UBO per load() call, and self-releases when the queue empties.
  */
 class InternalLoader extends LoaderPackage {
 
@@ -23,7 +21,7 @@ class InternalLoader extends LoaderPackage {
     private InternalBuilder internalBuilder;
 
     // File Registry
-    private Object2ObjectOpenHashMap<String, File> resourceName2File;
+    private Object2ObjectOpenHashMap<String, File> uboName2File;
 
     // Base \\
 
@@ -31,7 +29,7 @@ class InternalLoader extends LoaderPackage {
     protected void scan() {
 
         this.root = new File(EngineSetting.UBO_JSON_PATH);
-        this.resourceName2File = new Object2ObjectOpenHashMap<>();
+        this.uboName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "UBO directory not found: " + root.getAbsolutePath());
 
@@ -42,7 +40,7 @@ class InternalLoader extends LoaderPackage {
                     .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
                     .forEach(file -> {
                         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        resourceName2File.put(resourceName, file);
+                        uboName2File.put(resourceName, file);
                         fileQueue.offer(file);
                     });
         } catch (IOException e) {
@@ -71,11 +69,10 @@ class InternalLoader extends LoaderPackage {
 
     void request(String blockName) {
 
-        File file = resourceName2File.get(blockName);
+        File file = uboName2File.get(blockName);
 
         if (file == null)
-            throwException(
-                    "On-demand UBO load failed — resource not found in scan registry: \"" + blockName + "\"");
+            throwException("On-demand UBO load failed — not found in scan registry: \"" + blockName + "\"");
 
         request(file);
     }

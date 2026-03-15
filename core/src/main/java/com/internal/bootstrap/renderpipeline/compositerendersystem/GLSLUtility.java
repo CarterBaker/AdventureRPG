@@ -3,14 +3,16 @@ package com.internal.bootstrap.renderpipeline.compositerendersystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
-
+import com.internal.core.engine.UtilityPackage;
 import java.nio.FloatBuffer;
 
-/*
- * GL operations for CompositeRenderSystem — upload, draw, shader and UBO binding.
- * Package-private — only CompositeRenderSystem may call these.
- */
-class GLSLUtility {
+class GLSLUtility extends UtilityPackage {
+
+    /*
+     * Stateless OpenGL helpers for CompositeRenderSystem. Covers depth state,
+     * instance VBO upload, instanced draw calls, shader binding, and UBO binding.
+     * Package-private — only CompositeRenderSystem may call these.
+     */
 
     // Depth \\
 
@@ -23,10 +25,9 @@ class GLSLUtility {
     // Upload \\
 
     static void updateInstanceVBO(int vbo, FloatBuffer data, int floatCount) {
-        GL20 gl = Gdx.gl20;
-        gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
-        gl.glBufferSubData(GL20.GL_ARRAY_BUFFER, 0, floatCount * 4, data);
-        gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+        Gdx.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
+        Gdx.gl20.glBufferSubData(GL20.GL_ARRAY_BUFFER, 0, floatCount * Float.BYTES, data);
+        Gdx.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
     }
 
     // Draw \\

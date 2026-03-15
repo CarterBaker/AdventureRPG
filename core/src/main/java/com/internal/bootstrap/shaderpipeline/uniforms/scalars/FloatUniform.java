@@ -1,17 +1,17 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalars;
 
 import com.badlogic.gdx.Gdx;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
-public final class FloatUniform extends UniformAttribute<Float> {
+public final class FloatUniform extends UniformAttributeStruct<Float> {
 
     public FloatUniform() {
         super(UniformType.FLOAT, 0f);
     }
 
     @Override
-    public UniformAttribute<?> createDefault() {
+    public UniformAttributeStruct<?> createDefault() {
         return new FloatUniform();
     }
 

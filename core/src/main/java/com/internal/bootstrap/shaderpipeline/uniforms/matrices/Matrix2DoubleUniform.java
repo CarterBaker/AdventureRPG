@@ -1,13 +1,13 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.matrices;
 
 import com.badlogic.gdx.Gdx;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.matrices.Matrix2Double;
 
 import java.nio.FloatBuffer;
 
-public final class Matrix2DoubleUniform extends UniformAttribute<Matrix2Double> {
+public final class Matrix2DoubleUniform extends UniformAttributeStruct<Matrix2Double> {
 
     private final FloatBuffer uniformBuffer;
 
@@ -17,7 +17,7 @@ public final class Matrix2DoubleUniform extends UniformAttribute<Matrix2Double> 
     }
 
     @Override
-    public UniformAttribute<?> createDefault() {
+    public UniformAttributeStruct<?> createDefault() {
         return new Matrix2DoubleUniform();
     }
 

@@ -1,38 +1,44 @@
 package com.internal.bootstrap.menupipeline.fonts;
 
 import java.awt.image.BufferedImage;
-
 import com.internal.core.util.atlas.AtlasTileData;
 
-/*
- * Bootstrap-only container for a single rasterized glyph tile. Holds the
- * glyph's rendered image and the metrics needed to build GlyphMetricStruct
- * after packing. Derives tile dimensions from the rasterized image on
- * construction. Must not be held after bootstrap completes.
- */
 public class FontTileData extends AtlasTileData {
+
+    /*
+     * Bootstrap-only container for a single rasterized glyph tile. Holds the
+     * glyph's rendered image and the metrics needed to build GlyphMetricStruct
+     * after atlas packing. Image reference is cleared after upload to free
+     * heap memory. Must not be held after bootstrap completes.
+     */
 
     // Internal
     private int codepoint;
     private BufferedImage image;
 
-    // Metrics — from rasterizer, used post-pack to build GlyphMetricStruct
+    // Metrics
     private int bearingX;
     private int bearingY;
     private int advance;
 
-    // Internal \\
+    // Constructor \\
 
     public void constructor(
             int codepoint,
             BufferedImage image,
-            int bearingX, int bearingY,
+            int bearingX,
+            int bearingY,
             int advance) {
+
+        // Internal
         this.codepoint = codepoint;
         this.image = image;
+
+        // Metrics
         this.bearingX = bearingX;
         this.bearingY = bearingY;
         this.advance = advance;
+
         setTileDimensions(image.getWidth(), image.getHeight());
     }
 

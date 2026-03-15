@@ -2,7 +2,6 @@ package com.internal.bootstrap.geometrypipeline.vaomanager;
 
 import java.io.File;
 import java.util.Map;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -12,6 +11,12 @@ import com.internal.core.util.JsonUtility;
 
 public class InternalBuilder extends BuilderPackage {
 
+    /*
+     * Parses the 'vao' field from mesh JSON and constructs a VAOHandle layout
+     * template. Supports direct attribute size arrays and string references to
+     * other registered VAOs. Bootstrap-only.
+     */
+
     // Internal
     private VAOManager vaoManager;
 
@@ -19,12 +24,17 @@ public class InternalBuilder extends BuilderPackage {
 
     @Override
     protected void get() {
+
+        // Internal
         this.vaoManager = get(VAOManager.class);
     }
 
     // Build \\
 
-    public void build(String resourceName, File file, Map<String, File> registry) {
+    public void build(
+            String resourceName,
+            File file,
+            Map<String, File> registry) {
 
         if (vaoManager.hasVAO(resourceName))
             return;
@@ -53,13 +63,16 @@ public class InternalBuilder extends BuilderPackage {
 
     // Resolution \\
 
-    private void resolveRef(String refName, File sourceFile, Map<String, File> registry) {
+    private void resolveRef(
+            String refName,
+            File sourceFile,
+            Map<String, File> registry) {
 
-        // Direct file parse below — no mesh loader trigger, no recursion risk.
         if (vaoManager.hasVAO(refName))
             return;
 
         File refFile = registry.get(refName);
+
         if (refFile == null)
             throwException("Referenced VAO '" + refName + "' not found. Source: " + sourceFile.getName());
 
@@ -84,6 +97,7 @@ public class InternalBuilder extends BuilderPackage {
             throwException("VAO attribute size array must not be empty in file: " + file.getName());
 
         int[] attrSizes = new int[jsonArray.size()];
+
         for (int i = 0; i < jsonArray.size(); i++) {
             attrSizes[i] = jsonArray.get(i).getAsInt();
             if (attrSizes[i] <= 0)
@@ -92,6 +106,7 @@ public class InternalBuilder extends BuilderPackage {
 
         VAOHandle handle = create(VAOHandle.class);
         handle.constructor(attrSizes);
+
         return handle;
     }
 }

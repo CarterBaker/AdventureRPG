@@ -5,6 +5,12 @@ import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class EntityHandle extends HandlePackage {
 
+    /*
+     * Persistent reference to a loaded entity template. Registered and owned
+     * by EntityManager. Used only as a template source — runtime entities are
+     * always handed out as EntityInstance, never EntityHandle.
+     */
+
     // Internal
     private EntityData entityData;
 
@@ -23,19 +29,19 @@ public class EntityHandle extends HandlePackage {
     }
 
     public float getWeightMin() {
-        return entityData.weightMin;
+        return entityData.getWeightMin();
     }
 
     public float getWeightMax() {
-        return entityData.weightMax;
+        return entityData.getWeightMax();
     }
 
     public float getEyeLevel() {
-        return entityData.eyeLevel;
+        return entityData.getEyeLevel();
     }
 
     public String getBehaviorName() {
-        return entityData.behaviorName;
+        return entityData.getBehaviorName();
     }
 
     public Vector3 getRandomSize() {

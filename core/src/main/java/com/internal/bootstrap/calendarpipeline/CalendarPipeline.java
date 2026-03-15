@@ -6,10 +6,14 @@ import com.internal.core.engine.PipelinePackage;
 
 public class CalendarPipeline extends PipelinePackage {
 
+    /*
+     * Registers the calendar and clock managers. CalendarManager is registered
+     * first since ClockManager depends on it to resolve the active world's
+     * calendar definition during awake.
+     */
+
     @Override
     protected void create() {
-
-        // Calendar Pipeline
         create(CalendarManager.class);
         create(ClockManager.class);
     }

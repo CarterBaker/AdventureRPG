@@ -1,18 +1,23 @@
 package com.internal.bootstrap.itempipeline.tooltypemanager;
 
 import java.io.File;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.internal.bootstrap.itempipeline.tooltype.ToolTypeData;
 import com.internal.bootstrap.itempipeline.tooltype.ToolTypeHandle;
 import com.internal.core.engine.BuilderPackage;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
 import com.internal.core.util.RegistryUtility;
-
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {
+
+    /*
+     * Parses tool type JSON files and builds ToolTypeHandle instances. Each
+     * JSON file may contain multiple tool entries under a 'tools' array.
+     * Bootstrap-only.
+     */
 
     // Build \\
 
@@ -21,7 +26,6 @@ class InternalBuilder extends BuilderPackage {
         String pathPrefix = FileUtility.getPathWithFileNameWithoutExtension(root, jsonFile);
         JsonObject rootJson = JsonUtility.loadJsonObject(jsonFile);
         JsonArray toolArray = JsonUtility.validateArray(rootJson, "tools");
-
         ObjectArrayList<ToolTypeHandle> tools = new ObjectArrayList<>();
 
         for (int i = 0; i < toolArray.size(); i++) {
@@ -43,8 +47,11 @@ class InternalBuilder extends BuilderPackage {
         short toolTypeID = RegistryUtility.toShortID(toolTypeName);
         String defaultModelPath = JsonUtility.getString(toolJson, "model", "");
 
+        ToolTypeData toolTypeData = new ToolTypeData(toolTypeName, toolTypeID, defaultModelPath);
+
         ToolTypeHandle tool = create(ToolTypeHandle.class);
-        tool.constructor(toolTypeName, toolTypeID, defaultModelPath);
+        tool.constructor(toolTypeData);
+
         return tool;
     }
 }

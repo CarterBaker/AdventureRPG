@@ -3,81 +3,67 @@ package com.internal.bootstrap.shaderpipeline.sprite;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.core.engine.HandlePackage;
 
-/*
- * Persistent GPU sprite resource owned exclusively by SpriteManager.
- * Never handed to external systems — callers receive a SpriteInstance
- * via SpriteManager.cloneSprite(). Holds the canonical ModelInstance
- * used as the clone template.
- */
 public class SpriteHandle extends HandlePackage {
 
-    private String name;
-    private int gpuHandle;
-    private int width;
-    private int height;
-    private ModelInstance modelInstance;
+    /*
+     * Persistent GPU sprite resource owned exclusively by SpriteManager.
+     * Wraps SpriteData holding the canonical template. External systems
+     * receive a SpriteInstance via SpriteManager.cloneSprite(). GPU texture
+     * handle is shared and never disposed by the instance.
+     */
 
-    // Nine-slice border: left, bottom, right, top — zero means no slicing
-    private float borderLeft;
-    private float borderBottom;
-    private float borderRight;
-    private float borderTop;
+    // Internal
+    private SpriteData spriteData;
 
-    public void constructor(
-            String name, int gpuHandle,
-            int width, int height,
-            ModelInstance modelInstance,
-            float borderLeft, float borderBottom,
-            float borderRight, float borderTop) {
-        this.name = name;
-        this.gpuHandle = gpuHandle;
-        this.width = width;
-        this.height = height;
-        this.modelInstance = modelInstance;
-        this.borderLeft = borderLeft;
-        this.borderBottom = borderBottom;
-        this.borderRight = borderRight;
-        this.borderTop = borderTop;
+    // Internal \\
+
+    public void constructor(SpriteData spriteData) {
+        this.spriteData = spriteData;
     }
 
-    public boolean hasSlice() {
-        return borderLeft != 0 || borderBottom != 0
-                || borderRight != 0 || borderTop != 0;
-    }
+    // Accessible \\
 
-    public float getBorderLeft() {
-        return borderLeft;
-    }
-
-    public float getBorderBottom() {
-        return borderBottom;
-    }
-
-    public float getBorderRight() {
-        return borderRight;
-    }
-
-    public float getBorderTop() {
-        return borderTop;
+    public SpriteData getSpriteData() {
+        return spriteData;
     }
 
     public String getName() {
-        return name;
+        return spriteData.getName();
     }
 
-    public int getGPUHandle() {
-        return gpuHandle;
+    public int getGpuHandle() {
+        return spriteData.getGpuHandle();
     }
 
     public int getWidth() {
-        return width;
+        return spriteData.getWidth();
     }
 
     public int getHeight() {
-        return height;
+        return spriteData.getHeight();
+    }
+
+    public float getBorderLeft() {
+        return spriteData.getBorderLeft();
+    }
+
+    public float getBorderBottom() {
+        return spriteData.getBorderBottom();
+    }
+
+    public float getBorderRight() {
+        return spriteData.getBorderRight();
+    }
+
+    public float getBorderTop() {
+        return spriteData.getBorderTop();
+    }
+
+    public boolean hasSlice() {
+        return spriteData.hasSlice();
     }
 
     public ModelInstance getModelInstance() {
-        return modelInstance;
+        return spriteData.getModelInstance();
     }
 }

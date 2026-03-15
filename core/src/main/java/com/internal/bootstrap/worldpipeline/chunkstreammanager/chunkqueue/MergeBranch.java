@@ -4,7 +4,7 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.kernel.SyncConsumer.SyncStructConsumer;
+import com.internal.core.kernel.syncconsumer.SyncStructConsumer;
 import com.internal.core.kernel.thread.ThreadHandle;
 
 public class MergeBranch extends BranchPackage {

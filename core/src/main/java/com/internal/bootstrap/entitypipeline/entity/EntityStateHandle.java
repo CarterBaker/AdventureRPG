@@ -6,6 +6,12 @@ import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class EntityStateHandle extends HandlePackage {
 
+    /*
+     * Per-entity runtime movement state. Holds current movement state, gravity
+     * and horizontal velocity accumulators, and jump start time. No manager
+     * owns this — it lives directly on EntityInstance.
+     */
+
     // State
     private EntityState movementState;
 

@@ -5,17 +5,23 @@ import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class EntityData extends DataPackage {
 
+    /*
+     * Immutable entity template definition loaded from JSON. Holds the size
+     * range, weight range, eye level, and behavior name for one entity type.
+     * Owned by EntityHandle in the manager palette for the engine lifetime.
+     */
+
     // Size
-    public final Vector3 sizeMin;
-    public final Vector3 sizeMax;
+    private final Vector3 sizeMin;
+    private final Vector3 sizeMax;
 
     // Weight
-    public final float weightMin;
-    public final float weightMax;
-    public final float eyeLevel;
+    private final float weightMin;
+    private final float weightMax;
+    private final float eyeLevel;
 
     // Behavior
-    public final String behaviorName;
+    private final String behaviorName;
 
     // Constructor \\
 
@@ -26,6 +32,7 @@ public class EntityData extends DataPackage {
             float weightMax,
             float eyeLevel,
             String behaviorName) {
+
         // Size
         this.sizeMin = sizeMin;
         this.sizeMax = sizeMax;
@@ -37,6 +44,32 @@ public class EntityData extends DataPackage {
 
         // Behavior
         this.behaviorName = behaviorName;
+    }
+
+    // Accessible \\
+
+    public Vector3 getSizeMin() {
+        return sizeMin;
+    }
+
+    public Vector3 getSizeMax() {
+        return sizeMax;
+    }
+
+    public float getWeightMin() {
+        return weightMin;
+    }
+
+    public float getWeightMax() {
+        return weightMax;
+    }
+
+    public float getEyeLevel() {
+        return eyeLevel;
+    }
+
+    public String getBehaviorName() {
+        return behaviorName;
     }
 
     // Utility \\

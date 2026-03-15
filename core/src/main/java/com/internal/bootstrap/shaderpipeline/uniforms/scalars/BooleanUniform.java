@@ -1,17 +1,17 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalars;
 
 import com.badlogic.gdx.Gdx;
-import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttribute;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
-public final class BooleanUniform extends UniformAttribute<Boolean> {
+public final class BooleanUniform extends UniformAttributeStruct<Boolean> {
 
     public BooleanUniform() {
         super(UniformType.BOOL, false);
     }
 
     @Override
-    public UniformAttribute<?> createDefault() {
+    public UniformAttributeStruct<?> createDefault() {
         return new BooleanUniform();
     }
 

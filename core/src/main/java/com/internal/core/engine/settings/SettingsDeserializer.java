@@ -37,12 +37,6 @@ public class SettingsDeserializer implements JsonDeserializer<Settings> {
         if (obj.has("maxRenderDistance"))
             builder.maxRenderDistance(obj.get("maxRenderDistance").getAsInt());
 
-        // Constant Settings \\
-
-        // Physics Settings
-        if (obj.has("FIXED_TIME_STEP"))
-            builder.FIXED_TIME_STEP(obj.get("FIXED_TIME_STEP").getAsFloat());
-
         return builder.build();
     }
 }

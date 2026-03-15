@@ -11,21 +11,20 @@ import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.PixmapUtility;
 
 /*
- * Handles all GL30 texture-array operations: uploading atlas layer stacks to
- * the GPU and releasing handles on disposal. Pixel conversion is delegated to
- * PixmapUtility. Flip is not applied here — atlas images are already flipped
- * at draw time inside InternalBuildSystem.
+ * GL30 wrapper for texture array operations. Handles upload and deletion only.
+ * Pixel conversion is delegated to PixmapUtility. Atlas images are already
+ * flipped at composite time — no flip applied here.
  */
 class GLSLUtility extends UtilityPackage {
 
-    // Texture Management \\
+    // GPU Upload \\
 
     static int pushTextureArray(BufferedImage[] layers) {
 
         int depth = layers.length;
 
         if (depth == 0)
-            throwException("There are no defined layers in the texture array");
+            throwException("No layers defined in texture array");
 
         BufferedImage first = layers[0];
         int width = first.getWidth();
@@ -34,18 +33,17 @@ class GLSLUtility extends UtilityPackage {
         for (int i = 1; i < depth; i++) {
             BufferedImage b = layers[i];
             if (b.getWidth() != width || b.getHeight() != height)
-                throwException("All images must be the same width and height");
+                throwException("All texture array layers must have identical dimensions");
         }
 
         if (!(Gdx.gl instanceof GL30))
             throwException("GL30 required for texture arrays");
 
         GL30 gl30 = (GL30) Gdx.gl;
-
         int handle = Gdx.gl.glGenTexture();
 
         if (handle == 0)
-            throwException("The GPU handle for the texture array could not be generated");
+            throwException("GPU handle could not be generated for texture array");
 
         Gdx.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, handle);
 
@@ -84,9 +82,13 @@ class GLSLUtility extends UtilityPackage {
         return handle;
     }
 
+    // GPU Disposal \\
+
     static void deleteTextureArray(int handle) {
+
         if (handle == 0)
             return;
+
         Gdx.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
         Gdx.gl.glDeleteTexture(handle);
     }

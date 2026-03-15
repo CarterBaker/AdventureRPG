@@ -1,7 +1,7 @@
 package com.internal.bootstrap.worldpipeline.util;
 
 import com.internal.core.engine.StructPackage;
-import com.internal.core.util.mathematics.Extras.Coordinate2Long;
+import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class WorldPositionStruct extends StructPackage {

@@ -1,44 +1,48 @@
 package com.internal.bootstrap.shaderpipeline.spritemanager;
 
-import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import com.internal.bootstrap.shaderpipeline.sprite.SpriteData;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.ManagerPackage;
+import com.internal.core.util.RegistryUtility;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import com.internal.core.util.mathematics.vectors.Vector4;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-
-/*
- * Owns all loaded SpriteHandles and provides runtime access and cloning.
- * Cloning produces a SpriteInstance with independent material state backed
- * by the same shared GPU texture. On accessor miss, triggers an immediate
- * synchronous load through the active InternalLoadManager.
- * GPU resources are released on dispose.
- */
 public class SpriteManager extends ManagerPackage {
+
+    /*
+     * Owns all loaded SpriteHandles. Drives loading via InternalLoader and
+     * exposes cloneSprite() for runtime instance creation. On palette miss,
+     * triggers an immediate on-demand load. GPU textures are released on dispose.
+     */
 
     // Internal
     private MaterialManager materialManager;
     private ModelManager modelManager;
     private UBOManager uboManager;
 
-    // Data
-    private Object2ObjectOpenHashMap<String, SpriteHandle> spriteName2SpriteHandle;
+    // Palette
+    private Object2IntOpenHashMap<String> spriteName2SpriteID;
+    private Int2ObjectOpenHashMap<SpriteHandle> spriteID2SpriteHandle;
 
     // Base \\
 
     @Override
     protected void create() {
+
+        this.spriteName2SpriteID = new Object2IntOpenHashMap<>();
+        this.spriteID2SpriteHandle = new Int2ObjectOpenHashMap<>();
+
         create(InternalLoader.class);
-        this.spriteName2SpriteHandle = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -50,71 +54,94 @@ public class SpriteManager extends ManagerPackage {
 
     @Override
     protected void dispose() {
-        SpriteHandle[] handles = spriteName2SpriteHandle.values().toArray(new SpriteHandle[0]);
-        for (int i = 0; i < handles.length; i++)
-            GLSLUtility.deleteSprite(handles[i].getGPUHandle());
-        spriteName2SpriteHandle.clear();
+
+        for (SpriteHandle handle : spriteID2SpriteHandle.values())
+            GLSLUtility.deleteSprite(handle.getGpuHandle());
+
+        spriteName2SpriteID.clear();
+        spriteID2SpriteHandle.clear();
     }
 
-    // On-Demand Loading \\
+    // Management \\
+
+    void addSpriteHandle(String spriteName, SpriteHandle handle) {
+        int id = RegistryUtility.toIntID(spriteName);
+        spriteName2SpriteID.put(spriteName, id);
+        spriteID2SpriteHandle.put(id, handle);
+    }
+
+    // Accessible \\
 
     public void request(String spriteName) {
         ((InternalLoader) internalLoader).request(spriteName);
     }
 
-    // Sprite Management \\
+    public boolean hasSprite(String spriteName) {
 
-    void addSprite(String spriteName, SpriteHandle spriteHandle) {
-        spriteName2SpriteHandle.put(spriteName, spriteHandle);
+        if (!spriteName2SpriteID.containsKey(spriteName))
+            request(spriteName);
+
+        return spriteName2SpriteID.containsKey(spriteName);
     }
 
-    // Accessible \\
+    public int getSpriteIDFromSpriteName(String spriteName) {
 
-    public boolean hasSprite(String spriteName) {
-        if (!spriteName2SpriteHandle.containsKey(spriteName))
+        if (!spriteName2SpriteID.containsKey(spriteName))
             request(spriteName);
-        return spriteName2SpriteHandle.containsKey(spriteName);
+
+        return spriteName2SpriteID.getInt(spriteName);
+    }
+
+    public SpriteHandle getSpriteHandleFromSpriteID(int spriteID) {
+
+        SpriteHandle handle = spriteID2SpriteHandle.get(spriteID);
+
+        if (handle == null)
+            throwException("Sprite ID not found: " + spriteID);
+
+        return handle;
+    }
+
+    public SpriteHandle getSpriteHandleFromSpriteName(String spriteName) {
+        return getSpriteHandleFromSpriteID(getSpriteIDFromSpriteName(spriteName));
     }
 
     public SpriteInstance cloneSprite(String spriteName) {
 
-        SpriteHandle original = spriteName2SpriteHandle.get(spriteName);
-        if (original == null) {
-            request(spriteName);
-            original = spriteName2SpriteHandle.get(spriteName);
-        }
-        if (original == null)
-            throwException("Sprite not found after load: '" + spriteName + "'");
+        SpriteHandle handle = getSpriteHandleFromSpriteName(spriteName);
 
         InternalLoader loader = (InternalLoader) internalLoader;
 
         MaterialInstance material = materialManager.cloneMaterial(loader.getDefaultMaterialID());
-        material.setUniform("u_sprite", original.getGPUHandle());
+        material.setUniform("u_sprite", handle.getGpuHandle());
 
         UBOHandle sliceHandle = uboManager.getUBOHandleFromUBOName("SliceData");
-        UBOInstance sliceData = uboManager.cloneUBO(sliceHandle);
+        UBOInstance sliceData = uboManager.createUBOInstance(sliceHandle);
+
         sliceData.updateUniform("u_border", new Vector4(
-                original.getBorderLeft(),
-                original.getBorderBottom(),
-                original.getBorderRight(),
-                original.getBorderTop()));
+                handle.getBorderLeft(),
+                handle.getBorderBottom(),
+                handle.getBorderRight(),
+                handle.getBorderTop()));
         sliceData.updateUniform("u_texSize", new Vector2(
-                (float) original.getWidth(),
-                (float) original.getHeight()));
-        sliceData.push();
+                (float) handle.getWidth(),
+                (float) handle.getHeight()));
+
+        uboManager.push(sliceData);
 
         material.setUBO(sliceData);
 
-        ModelInstance clonedModel = modelManager.createModel(loader.getDefaultMeshHandle(), material);
+        ModelInstance modelInstance = modelManager.createModel(
+                loader.getDefaultMeshHandle(),
+                material);
+
+        SpriteData clonedData = new SpriteData(
+                handle.getSpriteData(),
+                modelInstance,
+                sliceData);
 
         SpriteInstance instance = create(SpriteInstance.class);
-        instance.constructor(
-                original.getName(),
-                original.getGPUHandle(),
-                original.getWidth(),
-                original.getHeight(),
-                clonedModel,
-                sliceData);
+        instance.constructor(clonedData);
 
         return instance;
     }

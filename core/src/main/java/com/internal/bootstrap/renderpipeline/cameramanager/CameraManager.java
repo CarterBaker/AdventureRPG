@@ -1,19 +1,27 @@
 package com.internal.bootstrap.renderpipeline.cameramanager;
 
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
+import com.internal.bootstrap.renderpipeline.camera.CameraData;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
+import com.internal.bootstrap.renderpipeline.camera.OrthographicCameraData;
 import com.internal.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
 import com.internal.core.engine.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 
 public class CameraManager extends ManagerPackage {
 
+    /*
+     * Owns all camera instances and drives rotation updates each frame.
+     * The main perspective camera and orthographic camera are created on awake
+     * once the window size is known. Resize propagates to both cameras.
+     */
+
     // Internal
     private InternalBufferSystem internalBufferSystem;
     private InputSystem inputSystem;
 
     // Perspective
-    private final ObjectLinkedOpenHashSet<CameraInstance> cameraInstances = new ObjectLinkedOpenHashSet<>();
+    private ObjectLinkedOpenHashSet<CameraInstance> cameraInstances;
     private CameraInstance mainCamera;
 
     // Orthographic
@@ -23,54 +31,74 @@ public class CameraManager extends ManagerPackage {
     private int width;
     private int height;
 
-    // Base \\
+    // Internal \\
 
     @Override
-    public void create() {
+    protected void create() {
+
+        // Palette
+        this.cameraInstances = new ObjectLinkedOpenHashSet<>();
+
+        // Systems
         this.internalBufferSystem = create(InternalBufferSystem.class);
-        createCamera(settings.FOV, width, height);
     }
 
     @Override
-    public void get() {
+    protected void get() {
+
+        // Internal
         this.inputSystem = get(InputSystem.class);
     }
 
     @Override
     protected void awake() {
+
         float w = internal.getWindowInstance().getWidth();
         float h = internal.getWindowInstance().getHeight();
+
+        createCamera(internal.settings.FOV, w, h);
         createOrthoCamera(w, h);
     }
 
     @Override
     protected void update() {
+
         if (mainCamera == null)
             return;
+
         mainCamera.setRotation(inputSystem.getRotation());
     }
 
     // Camera Management \\
 
     public CameraInstance createCamera(float fov, float width, float height) {
-        CameraInstance createdCamera = create(CameraInstance.class);
-        createdCamera.constructor(fov, width, height);
-        cameraInstances.add(createdCamera);
+
+        CameraData data = new CameraData(fov, width, height);
+        CameraInstance instance = create(CameraInstance.class);
+        instance.constructor(data);
+        cameraInstances.add(instance);
+
         if (mainCamera == null)
-            mainCamera = createdCamera;
-        return createdCamera;
+            mainCamera = instance;
+
+        return instance;
     }
 
     private void createOrthoCamera(float width, float height) {
+
+        OrthographicCameraData data = new OrthographicCameraData(width, height);
         orthoCamera = create(OrthographicCameraInstance.class);
-        orthoCamera.constructor(width, height);
+        orthoCamera.constructor(data);
     }
 
     public void resize(int width, int height) {
+
         this.width = width;
         this.height = height;
+
         if (mainCamera != null)
             mainCamera.updateViewport(width, height);
+
         if (orthoCamera != null)
             orthoCamera.updateViewport(width, height);
     }
@@ -82,8 +110,10 @@ public class CameraManager extends ManagerPackage {
     }
 
     public void setMainCamera(CameraInstance cam) {
+
         if (cam == null)
             return;
+
         mainCamera = cam;
     }
 

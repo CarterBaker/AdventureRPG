@@ -3,12 +3,18 @@ package com.internal.bootstrap.shaderpipeline.uniforms;
 import com.internal.core.util.mathematics.matrices.*;
 import com.internal.core.util.mathematics.vectors.*;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-
 import java.nio.ByteBuffer;
 
 public enum UniformType {
 
-    // Scalars
+    /*
+     * All supported GLSL uniform types with their std140 alignment and size
+     * rules. Each constant implements writeElement() to serialize its value
+     * into a ByteBuffer for UBO upload.
+     */
+
+    // Scalars \\
+
     FLOAT("float", 4, 4) {
         public void writeElement(ByteBuffer buffer, Object value) {
             buffer.putFloat((Float) value);
@@ -30,7 +36,8 @@ public enum UniformType {
         }
     },
 
-    // Vectors
+    // Vectors \\
+
     VECTOR2("vec2", 8, 8) {
         public void writeElement(ByteBuffer buffer, Object value) {
             Vector2 v = (Vector2) value;
@@ -128,7 +135,8 @@ public enum UniformType {
         }
     },
 
-    // Matrices — column-major, each column padded to vec4 boundary
+    // Matrices \\
+
     MATRIX2("mat2", 16, 32) {
         public void writeElement(ByteBuffer buffer, Object value) {
             float[] m = ((Matrix2) value).val;
@@ -202,7 +210,8 @@ public enum UniformType {
         }
     },
 
-    // Samplers
+    // Samplers \\
+
     SAMPLE_IMAGE_2D("sampler2D", 4, 4) {
         public void writeElement(ByteBuffer buffer, Object value) {
             buffer.putInt((Integer) value);

@@ -2,12 +2,16 @@ package com.internal.core.engine.settings;
 
 public class Settings {
 
-    // Debug Settings
-    public final boolean debug = true; // Not accessible through json
+    /*
+     * Runtime configuration for the engine. Populated at startup via
+     * Settings.Builder before the engine initialises. Accessible throughout
+     * the engine via internal.settings.
+     */
 
-    // Runtime Settings \\
+    // Debug
+    public final boolean debug = true;
 
-    // Window Settings
+    // Window
     public float FOV;
     public int windowWidth;
     public int windowHeight;
@@ -15,22 +19,17 @@ public class Settings {
     public int windowY;
     public boolean fullscreen;
 
-    // Render Settings
-    public int maxRenderDistance; // How many chunks around player
+    // Render
+    public int maxRenderDistance;
 
-    // Constant Settings \\
+    // Input
+    public float mouseSensitivity;
 
-    // Phsyics Settings
-    public final float FIXED_TIME_STEP;
+    // Constructor \\
 
-    // Base \\
-
-    // TODO: I will need to add system wide safety rails here
     public Settings(Builder builder) {
 
-        // Runtime Settings \\
-
-        // Window Settings
+        // Window
         this.FOV = builder.FOV;
         this.windowWidth = builder.windowWidth;
         this.windowHeight = builder.windowHeight;
@@ -38,22 +37,18 @@ public class Settings {
         this.windowY = builder.windowY;
         this.fullscreen = builder.fullscreen;
 
-        // Render Settings
+        // Render
         this.maxRenderDistance = builder.maxRenderDistance;
 
-        // Constant Settings \\
-
-        // Phsyics Settings
-        this.FIXED_TIME_STEP = builder.FIXED_TIME_STEP;
+        // Input
+        this.mouseSensitivity = builder.mouseSensitivity;
     }
 
     // Builder \\
 
     public static class Builder {
 
-        // Runtime Settings \\
-
-        // Window Settings
+        // Window
         public float FOV = 70;
         public int windowWidth = 1280;
         public int windowHeight = 720;
@@ -61,19 +56,13 @@ public class Settings {
         public int windowY = -1;
         public boolean fullscreen = false;
 
-        // Render Settings
+        // Render
         public int maxRenderDistance = 64;
 
-        // Constant Settings \\
+        // Input
+        public float mouseSensitivity = 0.15f;
 
-        // Physics Settings
-        private float FIXED_TIME_STEP = 0.02f;
-
-        // Base \\
-
-        // Runtime Settings \\
-
-        // Window Settings \\
+        // Window \\
 
         public Builder FOV(float FOV) {
             this.FOV = FOV;
@@ -105,23 +94,21 @@ public class Settings {
             return this;
         }
 
-        // Render Settings \\
+        // Render \\
 
         public Builder maxRenderDistance(int maxRenderDistance) {
             this.maxRenderDistance = maxRenderDistance;
             return this;
         }
 
-        // Constant Settings \\
+        // Input \\
 
-        // Physics Settings \\
-
-        public Builder FIXED_TIME_STEP(float FIXED_TIME_STEP) {
-            this.FIXED_TIME_STEP = FIXED_TIME_STEP;
+        public Builder mouseSensitivity(float mouseSensitivity) {
+            this.mouseSensitivity = mouseSensitivity;
             return this;
         }
 
-        // Builder \\
+        // Build \\
 
         public Settings build() {
             return new Settings(this);

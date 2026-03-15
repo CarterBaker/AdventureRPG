@@ -1,12 +1,22 @@
 package com.internal.bootstrap.lightingpipeline.directionallight;
 
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
+import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class DirectionalLightHandle extends HandlePackage {
 
-    // Light properties — readable for future entity light level queries
+    /*
+     * Runtime directional light state pushed to the GPU each frame. Holds
+     * direction, color, and intensity for the active dominant light source.
+     * Owned by NaturalLightManager — push routes through UBOManager.
+     */
+
+    // Internal
+    private UBOManager uboManager;
+
+    // Light Properties
     private Vector3 direction;
     private Vector3 color;
     private float intensity;
@@ -20,8 +30,14 @@ public class DirectionalLightHandle extends HandlePackage {
     protected void create() {
         this.direction = new Vector3();
         this.color = new Vector3();
-        this.intensity = 0f;
     }
+
+    @Override
+    protected void get() {
+        this.uboManager = get(UBOManager.class);
+    }
+
+    // Constructor \\
 
     public void constructor(UBOHandle uboHandle) {
         this.uboHandle = uboHandle;
@@ -33,7 +49,7 @@ public class DirectionalLightHandle extends HandlePackage {
         uboHandle.updateUniform("u_lightDirection", direction);
         uboHandle.updateUniform("u_lightColor", color);
         uboHandle.updateUniform("u_lightIntensity", intensity);
-        uboHandle.push();
+        uboManager.push(uboHandle);
     }
 
     // Accessible \\
@@ -50,6 +66,10 @@ public class DirectionalLightHandle extends HandlePackage {
         return intensity;
     }
 
+    public UBOHandle getUBOHandle() {
+        return uboHandle;
+    }
+
     public void setDirection(float x, float y, float z) {
         direction.set(x, y, z);
     }
@@ -60,9 +80,5 @@ public class DirectionalLightHandle extends HandlePackage {
 
     public void setIntensity(float intensity) {
         this.intensity = intensity;
-    }
-
-    public UBOHandle getUBOHandle() {
-        return uboHandle;
     }
 }

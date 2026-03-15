@@ -10,39 +10,30 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 
-import com.internal.bootstrap.shaderpipeline.Texture.TextureArrayData;
-import com.internal.bootstrap.shaderpipeline.Texture.TextureAtlasData;
-import com.internal.bootstrap.shaderpipeline.Texture.TextureTileData;
-import com.internal.bootstrap.shaderpipeline.texturemanager.aliassystem.AliasLibrarySystem;
+import com.internal.bootstrap.shaderpipeline.texture.TextureArrayStruct;
+import com.internal.bootstrap.shaderpipeline.texture.TextureAtlasStruct;
+import com.internal.bootstrap.shaderpipeline.texture.TextureTileStruct;
 import com.internal.core.engine.BuilderPackage;
 import com.internal.core.util.AtlasUtility;
 import com.internal.core.util.FileUtility;
+import com.internal.core.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
- * Constructs TextureArrayData from raw image files. Handles tile creation,
- * atlas packing via AtlasUtility, and layer compositing per alias. All
- * produced objects are DataPackage types and must not be held after bootstrap
- * completes.
+ * Constructs TextureArrayStructs from raw image files. Handles tile creation,
+ * atlas packing via AtlasUtility, and layer compositing per alias. All produced
+ * objects are StructPackage types and GC with the loader after bootstrap.
  *
- * Only the alias IDs actually encountered in the source files are registered
- * on the resulting TextureArrayData — seedUBO uses this to write only the
- * uniforms this atlas provides.
+ * Only alias IDs actually encountered in source files are registered on the
+ * resulting TextureArrayStruct — seedUBO uses this to write only the uniforms
+ * this atlas provides.
  */
 class InternalBuilder extends BuilderPackage {
 
     // Internal
     private AliasLibrarySystem aliasLibrarySystem;
-    private int textureCount;
-    private int arrayCount;
 
     // Base \\
-
-    @Override
-    protected void create() {
-        this.textureCount = 0;
-        this.arrayCount = 0;
-    }
 
     @Override
     protected void get() {
@@ -51,31 +42,29 @@ class InternalBuilder extends BuilderPackage {
 
     // Build \\
 
-    TextureArrayData build(List<File> imageFiles, File sourceDirectory, String arrayName) {
+    TextureArrayStruct build(List<File> imageFiles, File sourceDirectory, String arrayName) {
 
-        LinkedHashMap<String, TextureTileData> tileMap = createTextureTiles(imageFiles, sourceDirectory, arrayName);
+        LinkedHashMap<String, TextureTileStruct> tileMap = createTextureTiles(
+                imageFiles, sourceDirectory, arrayName);
 
         if (tileMap.isEmpty())
             return null;
 
-        ObjectArrayList<TextureTileData> tiles = new ObjectArrayList<>(tileMap.values());
-
-        // Pack — writes pixel-space atlasX/Y back onto each tile, returns canvas size
+        ObjectArrayList<TextureTileStruct> tiles = new ObjectArrayList<>(tileMap.values());
         int atlasPixelSize = AtlasUtility.pack(tiles);
-
-        TextureAtlasData[] atlasLayers = compositeAtlasLayers(tiles, atlasPixelSize);
+        TextureAtlasStruct[] atlasLayers = compositeAtlasLayers(tiles, atlasPixelSize);
 
         return createTextureArray(tileMap, arrayName, atlasPixelSize, atlasLayers);
     }
 
     // Texture Tiles \\
 
-    private LinkedHashMap<String, TextureTileData> createTextureTiles(
+    private LinkedHashMap<String, TextureTileStruct> createTextureTiles(
             List<File> imageFiles,
             File sourceDirectory,
             String arrayName) {
 
-        LinkedHashMap<String, TextureTileData> tileMap = new LinkedHashMap<>();
+        LinkedHashMap<String, TextureTileStruct> tileMap = new LinkedHashMap<>();
         String atlasName = sourceDirectory.getName();
         int aliasCount = aliasLibrarySystem.getAliasCount();
 
@@ -98,10 +87,14 @@ class InternalBuilder extends BuilderPackage {
             if (aliasId == -1)
                 throwException("Alias: " + aliasType + " could not be found in the system");
 
-            TextureTileData tile = tileMap.get(fullName);
+            TextureTileStruct tile = tileMap.get(fullName);
+
             if (tile == null) {
-                tile = create(TextureTileData.class);
-                tile.constructor(textureCount++, fullName, atlasName, aliasCount);
+                tile = new TextureTileStruct(
+                        RegistryUtility.toIntID(fullName),
+                        fullName,
+                        atlasName,
+                        aliasCount);
                 tileMap.put(fullName, tile);
             }
 
@@ -111,10 +104,10 @@ class InternalBuilder extends BuilderPackage {
         return organizeTextureTiles(tileMap);
     }
 
-    private LinkedHashMap<String, TextureTileData> organizeTextureTiles(
-            LinkedHashMap<String, TextureTileData> tileMap) {
+    private LinkedHashMap<String, TextureTileStruct> organizeTextureTiles(
+            LinkedHashMap<String, TextureTileStruct> tileMap) {
 
-        LinkedHashMap<String, TextureTileData> sorted = new LinkedHashMap<>();
+        LinkedHashMap<String, TextureTileStruct> sorted = new LinkedHashMap<>();
         tileMap.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue((a, b) -> Integer.compare(a.getID(), b.getID())))
                 .forEachOrdered(e -> sorted.put(e.getKey(), e.getValue()));
@@ -123,17 +116,12 @@ class InternalBuilder extends BuilderPackage {
 
     // Atlas Compositing \\
 
-    /*
-     * Composites one BufferedImage per alias layer. Each tile is drawn at its
-     * packed pixel position. Missing alias layers are filled with the alias
-     * default colour at that tile's own pixel dimensions. Tiles are flipped
-     * vertically to match GL bottom-left origin.
-     */
-    private TextureAtlasData[] compositeAtlasLayers(
-            ObjectArrayList<TextureTileData> tiles, int atlasPixelSize) {
+    private TextureAtlasStruct[] compositeAtlasLayers(
+            ObjectArrayList<TextureTileStruct> tiles,
+            int atlasPixelSize) {
 
         int aliasCount = aliasLibrarySystem.getAliasCount();
-        TextureAtlasData[] atlasLayers = new TextureAtlasData[aliasCount];
+        TextureAtlasStruct[] atlasLayers = new TextureAtlasStruct[aliasCount];
 
         for (int alias = 0; alias < aliasCount; alias++) {
 
@@ -142,7 +130,8 @@ class InternalBuilder extends BuilderPackage {
             Graphics2D g = canvas.createGraphics();
 
             for (int i = 0; i < tiles.size(); i++) {
-                TextureTileData tile = tiles.get(i);
+
+                TextureTileStruct tile = tiles.get(i);
                 BufferedImage layer = tile.getImage(alias);
                 int x = tile.getAtlasX();
                 int y = tile.getAtlasY();
@@ -150,24 +139,21 @@ class InternalBuilder extends BuilderPackage {
                 int h = tile.getTileHeight();
 
                 if (layer != null) {
-                    // Flip vertically for GL bottom-left origin
                     g.drawImage(layer,
                             x, y + h,
                             x + w, y,
                             0, 0, layer.getWidth(), layer.getHeight(), null);
                 } else {
                     Color fill = aliasLibrarySystem.getDefaultColor(alias);
-                    g.setColor(new Color(fill.getRed(), fill.getGreen(),
+                    g.setColor(new Color(
+                            fill.getRed(), fill.getGreen(),
                             fill.getBlue(), fill.getAlpha()));
                     g.fillRect(x, y, w, h);
                 }
             }
 
             g.dispose();
-
-            TextureAtlasData atlasData = create(TextureAtlasData.class);
-            atlasData.constructor(atlasPixelSize, canvas);
-            atlasLayers[alias] = atlasData;
+            atlasLayers[alias] = new TextureAtlasStruct(atlasPixelSize, canvas);
         }
 
         return atlasLayers;
@@ -175,24 +161,27 @@ class InternalBuilder extends BuilderPackage {
 
     // Texture Array \\
 
-    private TextureArrayData createTextureArray(
-            LinkedHashMap<String, TextureTileData> tileMap,
+    private TextureArrayStruct createTextureArray(
+            LinkedHashMap<String, TextureTileStruct> tileMap,
             String arrayName,
             int atlasPixelSize,
-            TextureAtlasData[] atlasLayers) {
+            TextureAtlasStruct[] atlasLayers) {
 
-        TextureArrayData arrayData = create(TextureArrayData.class);
-        arrayData.constructor(arrayCount++, arrayName, atlasPixelSize, atlasLayers);
+        TextureArrayStruct arrayStruct = new TextureArrayStruct(
+                RegistryUtility.toIntID(arrayName),
+                arrayName,
+                atlasPixelSize,
+                atlasLayers);
 
         int aliasCount = aliasLibrarySystem.getAliasCount();
 
-        for (TextureTileData tile : tileMap.values()) {
-            arrayData.registerTile(tile);
+        for (TextureTileStruct tile : tileMap.values()) {
+            arrayStruct.registerTile(tile);
             for (int alias = 0; alias < aliasCount; alias++)
                 if (tile.getImage(alias) != null)
-                    arrayData.registerFoundAlias(alias);
+                    arrayStruct.registerFoundAlias(alias);
         }
 
-        return arrayData;
+        return arrayStruct;
     }
 }

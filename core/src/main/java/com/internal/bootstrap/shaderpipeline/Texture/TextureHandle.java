@@ -1,66 +1,75 @@
-package com.internal.bootstrap.shaderpipeline.Texture;
+package com.internal.bootstrap.shaderpipeline.texture;
 
 import com.internal.core.engine.HandlePackage;
 
-/*
- * Persistent resource owned by TextureManager. Carries all data needed for a
- * single named texture tile: its tile ID, parent array ID, GPU handle, atlas
- * pixel size, individual tile pixel dimensions, and normalised UV region via
- * UVHandle. Handed out at runtime; never cloned.
- */
 public class TextureHandle extends HandlePackage {
 
+    /*
+     * Persistent texture tile record. Wraps TextureData and delegates all
+     * access through it. Registered in TextureManager from bootstrap to shutdown.
+     * UV coordinates are accessed directly — no separate UV object.
+     */
+
     // Internal
-    private int tileID;
-    private int arrayID;
-    private int gpuHandle;
-    private int atlasPixelSize;
-    private int tileWidth;
-    private int tileHeight;
-    private UVHandle uvHandle;
+    private TextureData textureData;
 
     // Internal \\
 
-    public void constructor(
-            int tileID, int arrayID, int gpuHandle,
-            int atlasPixelSize, int tileWidth, int tileHeight,
-            UVHandle uvHandle) {
-        this.tileID = tileID;
-        this.arrayID = arrayID;
-        this.gpuHandle = gpuHandle;
-        this.atlasPixelSize = atlasPixelSize;
-        this.tileWidth = tileWidth;
-        this.tileHeight = tileHeight;
-        this.uvHandle = uvHandle;
+    public void constructor(TextureData textureData) {
+        this.textureData = textureData;
     }
 
     // Accessible \\
 
+    public TextureData getTextureData() {
+        return textureData;
+    }
+
+    public String getTileName() {
+        return textureData.getTileName();
+    }
+
     public int getTileID() {
-        return tileID;
+        return textureData.getTileID();
     }
 
     public int getArrayID() {
-        return arrayID;
+        return textureData.getArrayID();
     }
 
-    public int getGPUHandle() {
-        return gpuHandle;
+    public String getArrayName() {
+        return textureData.getArrayName();
+    }
+
+    public int getGpuHandle() {
+        return textureData.getGpuHandle();
     }
 
     public int getAtlasPixelSize() {
-        return atlasPixelSize;
+        return textureData.getAtlasPixelSize();
     }
 
     public int getTileWidth() {
-        return tileWidth;
+        return textureData.getTileWidth();
     }
 
     public int getTileHeight() {
-        return tileHeight;
+        return textureData.getTileHeight();
     }
 
-    public UVHandle getUVHandle() {
-        return uvHandle;
+    public float getU0() {
+        return textureData.getU0();
+    }
+
+    public float getV0() {
+        return textureData.getV0();
+    }
+
+    public float getU1() {
+        return textureData.getU1();
+    }
+
+    public float getV1() {
+        return textureData.getV1();
     }
 }

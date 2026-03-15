@@ -6,13 +6,27 @@ import com.internal.core.engine.BranchPackage;
 
 public class MainMenuBranch extends BranchPackage {
 
+    /*
+     * Handles open and close actions for the main menu. Holds the active
+     * MenuInstance so the same instance is reused across open/close cycles.
+     */
+
+    // Internal
     private MenuManager menuManager;
+
+    // State
     private MenuInstance mainMenu;
+
+    // Internal \\
 
     @Override
     protected void get() {
+
+        // Internal
         this.menuManager = get(MenuManager.class);
     }
+
+    // Accessible \\
 
     public MenuInstance openMenu() {
 

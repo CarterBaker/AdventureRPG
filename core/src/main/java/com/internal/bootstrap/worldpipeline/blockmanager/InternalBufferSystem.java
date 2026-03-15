@@ -3,7 +3,7 @@ package com.internal.bootstrap.worldpipeline.blockmanager;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.util.mathematics.Extras.Direction3Vector;
+import com.internal.core.util.mathematics.extras.Direction3Vector;
 import com.internal.core.util.mathematics.vectors.Vector2;
 
 /*
@@ -16,6 +16,8 @@ public class InternalBufferSystem extends SystemPackage {
 
     // Internal
     private UBOManager uboManager;
+
+    // Base \\
 
     @Override
     protected void get() {
@@ -30,9 +32,13 @@ public class InternalBufferSystem extends SystemPackage {
     // Block Orientation Map \\
 
     private void pushBlockOrientationMap() {
+
         UBOHandle ubo = uboManager.getUBOHandleFromUBOName("BlockOrientationMapData");
+
         Vector2[] faceOrientations = new Vector2[24];
+
         for (Direction3Vector face : Direction3Vector.VALUES) {
+
             int axisMode;
             if (face == Direction3Vector.UP || face == Direction3Vector.DOWN)
                 axisMode = 0;
@@ -40,12 +46,14 @@ public class InternalBufferSystem extends SystemPackage {
                 axisMode = 1;
             else
                 axisMode = 2;
+
             for (int spin = 0; spin < 4; spin++) {
                 int index = face.ordinal() * 4 + spin;
                 faceOrientations[index] = new Vector2(axisMode, spin);
             }
         }
+
         ubo.updateUniform("u_faceOrientations", faceOrientations);
-        ubo.push();
+        uboManager.push(ubo);
     }
 }

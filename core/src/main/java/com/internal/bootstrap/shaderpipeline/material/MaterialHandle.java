@@ -1,82 +1,80 @@
 package com.internal.bootstrap.shaderpipeline.material;
 
-import com.internal.bootstrap.shaderpipeline.Shader.ShaderHandle;
+import com.internal.bootstrap.shaderpipeline.shader.ShaderHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
-import com.internal.bootstrap.shaderpipeline.uniforms.Uniform;
+import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
+import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.core.engine.HandlePackage;
-
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Compiled material owned exclusively by MaterialManager. Holds the shader reference
- * and the canonical UBO map populated at bootstrap. Never handed to external systems
- * directly — callers receive a MaterialInstance via MaterialManager.cloneMaterial().
- */
 public class MaterialHandle extends HandlePackage {
 
+    /*
+     * Persistent material definition. Registered and owned by MaterialManager
+     * from bootstrap until shutdown. Wraps the original MaterialData — the
+     * authoritative source used to clone instances at runtime.
+     */
+
     // Internal
-    private String materialName;
-    private int materialID;
-    private ShaderHandle shaderHandle;
-    private Object2ObjectOpenHashMap<String, UBOHandle> buffers;
-    private Object2ObjectOpenHashMap<String, Uniform<?>> uniforms;
+    private MaterialData data;
 
-    // Internal \\
+    // Constructor \\
 
-    public void constructor(
-            String materialName,
-            int materialID,
-            ShaderHandle shaderHandle,
-            Object2ObjectOpenHashMap<String, UBOHandle> buffers,
-            Object2ObjectOpenHashMap<String, Uniform<?>> uniforms) {
-        this.materialName = materialName;
-        this.materialID = materialID;
-        this.shaderHandle = shaderHandle;
-        this.buffers = buffers;
-        this.uniforms = uniforms;
+    public void constructor(MaterialData data) {
+        this.data = data;
     }
 
     // Utility \\
 
-    public void setUBO(String uboName, UBOHandle uboHandle) {
-        buffers.put(uboName, uboHandle);
+    public void setUBO(UBOInstance ubo) {
+        data.setUBO(ubo);
     }
 
-    @SuppressWarnings("unchecked")
     public <T> void setUniform(String uniformName, T value) {
-        Uniform<?> uniform = uniforms.get(uniformName);
-        if (uniform == null)
-            throwException("Uniform '" + uniformName + "' not found in material '" + materialName + "'");
-        ((Uniform<T>) uniform).attribute().set(value);
+        data.setUniform(uniformName, value);
     }
 
     // Accessible \\
 
+    public MaterialData getMaterialData() {
+        return data;
+    }
+
     public String getMaterialName() {
-        return materialName;
+        return data.getMaterialName();
     }
 
     public int getMaterialID() {
-        return materialID;
+        return data.getMaterialID();
     }
 
     public ShaderHandle getShaderHandle() {
-        return shaderHandle;
+        return data.getShaderHandle();
     }
 
-    public Object2ObjectOpenHashMap<String, UBOHandle> getUBOs() {
-        return buffers;
+    public Object2ObjectOpenHashMap<String, UBOHandle> getSourceUBOs() {
+        return data.getSourceUBOs();
     }
 
-    public UBOHandle getUBO(String uboName) {
-        return buffers.get(uboName);
+    public Int2ObjectOpenHashMap<UBOInstance> getInstanceUBOs() {
+        return data.getInstanceUBOs();
     }
 
-    public Object2ObjectOpenHashMap<String, Uniform<?>> getUniforms() {
-        return uniforms;
+    public UBOInstance getInstanceUBO(int bindingPoint) {
+        return data.getInstanceUBO(bindingPoint);
     }
 
-    public Uniform<?> getUniform(String uniformName) {
-        return uniforms.get(uniformName);
+    public Object2ObjectOpenHashMap<String, UniformStruct<?>> getUniforms() {
+        return data.getUniforms();
+    }
+
+    public ObjectArrayList<String> getUniformKeys() {
+        return data.getUniformKeys();
+    }
+
+    public UniformStruct<?> getUniform(String uniformName) {
+        return data.getUniform(uniformName);
     }
 }

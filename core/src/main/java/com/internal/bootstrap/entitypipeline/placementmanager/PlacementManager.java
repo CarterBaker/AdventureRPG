@@ -1,8 +1,6 @@
 package com.internal.bootstrap.entitypipeline.placementmanager;
 
-import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
-import com.internal.bootstrap.entitypipeline.placementmanager.placement.BlockBranch;
-import com.internal.bootstrap.entitypipeline.placementmanager.placement.ItemBranch;
+import com.internal.bootstrap.entitypipeline.entity.EntityInstance;
 import com.internal.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import com.internal.bootstrap.physicspipeline.util.BlockCastStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
@@ -10,43 +8,56 @@ import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
-/*
- * Entity-agnostic placement manager.
- * Owns the raycast and cooldown, routes to BlockBranch or ItemBranch.
- * Player passes mouse input. Enemies will pass AI input. Same code path either way.
- */
 public class PlacementManager extends ManagerPackage {
+
+    /*
+     * Entity-agnostic placement manager. Owns the raycast result, placement
+     * cooldown, and routes to BlockBranch or ItemBranch based on the action.
+     * Player passes mouse input. Enemies pass AI input. Same code path either way.
+     */
 
     // Internal
     private RaycastManager raycastManager;
+
+    // Branches
     private BlockBranch blockBranch;
     private ItemBranch itemBranch;
 
-    private float PLACEMENT_INTERVAL;
-    private float timeSinceLastPlacement;
+    // Settings
+    private float placementInterval;
 
-    // Reused per frame
-    private final BlockCastStruct castStruct = new BlockCastStruct();
+    // State
+    private float timeSinceLastPlacement;
+    private BlockCastStruct castStruct;
 
     // Internal \\
 
     @Override
     protected void create() {
+
+        // Branches
         this.blockBranch = create(BlockBranch.class);
         this.itemBranch = create(ItemBranch.class);
-        this.PLACEMENT_INTERVAL = EngineSetting.BLOCK_PLACEMENT_INTERVAL;
-        this.timeSinceLastPlacement = PLACEMENT_INTERVAL;
+
+        // Settings
+        this.placementInterval = EngineSetting.BLOCK_PLACEMENT_INTERVAL;
+
+        // State
+        this.castStruct = new BlockCastStruct();
+        this.timeSinceLastPlacement = placementInterval;
     }
 
     @Override
     protected void get() {
+
+        // Internal
         this.raycastManager = get(RaycastManager.class);
     }
 
     // Update \\
 
     public void update(
-            EntityHandle entity,
+            EntityInstance entity,
             Vector3 origin,
             Vector3 direction,
             boolean breakAction,
@@ -59,7 +70,7 @@ public class PlacementManager extends ManagerPackage {
             return;
         }
 
-        if (timeSinceLastPlacement < PLACEMENT_INTERVAL)
+        if (timeSinceLastPlacement < placementInterval)
             return;
 
         WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
@@ -68,33 +79,38 @@ public class PlacementManager extends ManagerPackage {
                 worldPosition.getChunkCoordinate(),
                 origin,
                 direction,
-                entity.getStatisticsInstance().reach * EngineSetting.REACH_SCALE,
+                entity.getStatisticsHandle().getReach() * EngineSetting.REACH_SCALE,
                 castStruct);
 
-        if (!castStruct.hit) {
+        if (!castStruct.isHit()) {
             blockBranch.resetBreakTarget();
             return;
         }
 
         if (breakAction) {
             blockBranch.resetBreakTarget();
-            handleBreakAction(entity, castStruct);
+            if (handleBreakAction(entity, castStruct))
+                timeSinceLastPlacement = 0;
             return;
         }
 
         if (placeAction) {
             blockBranch.resetBreakTarget();
-            handlePlaceAction(entity, direction, castStruct);
+            if (handlePlaceAction(entity, direction, castStruct))
+                timeSinceLastPlacement = 0;
         }
     }
 
-    // Routing — TODO: route based on main hand contents \\
+    // Routing \\
 
-    private void handleBreakAction(EntityHandle entity, BlockCastStruct castStruct) {
+    // TODO: route based on main hand contents
+    private boolean handleBreakAction(EntityInstance entity, BlockCastStruct castStruct) {
         // TODO: check main hand — tool routes to BlockBranch, etc.
+        return false;
     }
 
-    private void handlePlaceAction(EntityHandle entity, Vector3 direction, BlockCastStruct castStruct) {
+    private boolean handlePlaceAction(EntityInstance entity, Vector3 direction, BlockCastStruct castStruct) {
         // TODO: check main hand — world item routes to ItemBranch, etc.
+        return false;
     }
 }

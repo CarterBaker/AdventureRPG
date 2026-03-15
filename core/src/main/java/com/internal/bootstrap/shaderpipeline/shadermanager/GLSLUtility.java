@@ -6,35 +6,37 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.utils.BufferUtils;
-import com.internal.bootstrap.shaderpipeline.Shader.ShaderData;
-import com.internal.bootstrap.shaderpipeline.Shader.ShaderDefinitionData;
+import com.internal.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
 import com.internal.core.engine.UtilityPackage;
-
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
- * GL20/GL30 wrapper for shader program construction and UBO block binding.
- * Handles include flattening, source preprocessing, compilation, linking,
- * and uniform block index resolution.
+ * GL20/GL30 wrapper for shader program construction, source preprocessing,
+ * uniform location queries, UBO block binding, and program deletion.
+ * Stateless — all methods are package-private statics.
  */
 class GLSLUtility extends UtilityPackage {
 
     // Shader Program Construction \\
 
-    static int createShaderProgram(ShaderDefinitionData shaderDef) {
+    static int createShaderProgram(ShaderSourceStruct assembly) {
 
-        String vertSource = preprocessShaderSource(shaderDef, shaderDef.getVert());
-        String fragSource = preprocessShaderSource(shaderDef, shaderDef.getFrag());
+        String vertSource = preprocessShaderSource(assembly, assembly.getVert());
+        String fragSource = preprocessShaderSource(assembly, assembly.getFrag());
 
         int vertShader = compileShaderFromSource(
-                GL20.GL_VERTEX_SHADER, vertSource, shaderDef.getVert().getShaderName());
+                GL20.GL_VERTEX_SHADER,
+                vertSource,
+                assembly.getVert().getShaderName());
         int fragShader = compileShaderFromSource(
-                GL20.GL_FRAGMENT_SHADER, fragSource, shaderDef.getFrag().getShaderName());
+                GL20.GL_FRAGMENT_SHADER,
+                fragSource,
+                assembly.getFrag().getShaderName());
 
         int program = Gdx.gl.glCreateProgram();
 
         if (program == 0)
-            throwException("Failed to create shader program: " + shaderDef.getShaderName());
+            throwException("Failed to create shader program: " + assembly.getShaderName());
 
         Gdx.gl.glAttachShader(program, vertShader);
         Gdx.gl.glAttachShader(program, fragShader);
@@ -49,7 +51,7 @@ class GLSLUtility extends UtilityPackage {
             Gdx.gl.glDeleteProgram(program);
             Gdx.gl.glDeleteShader(vertShader);
             Gdx.gl.glDeleteShader(fragShader);
-            throwException("Failed to link shader " + shaderDef.getShaderName() + ": " + log);
+            throwException("Failed to link shader " + assembly.getShaderName() + ": " + log);
         }
 
         Gdx.gl.glDetachShader(program, vertShader);
@@ -87,25 +89,27 @@ class GLSLUtility extends UtilityPackage {
 
     // Source Preprocessing \\
 
-    static String preprocessShaderSource(ShaderDefinitionData shaderDefinition, ShaderData shaderData) {
+    static String preprocessShaderSource(ShaderSourceStruct assembly, ShaderSourceStruct source) {
 
         StringBuilder result = new StringBuilder();
 
-        String version = shaderData.getVersion();
+        String version = source.getVersion();
+
         if (version != null && !version.isEmpty())
             result.append(version).append("\n\n");
 
-        ObjectArrayList<ShaderData> includes = shaderDefinition.getIncludes();
+        ObjectArrayList<ShaderSourceStruct> includes = assembly.getFlattenedIncludes();
 
         for (int i = 0; i < includes.size(); i++) {
-            ShaderData include = includes.get(i);
-            String source = stripDirectives(FileParserUtility.convertFileToRawText(include.getShaderFile()));
+            ShaderSourceStruct include = includes.get(i);
+            String includeSource = stripDirectives(
+                    FileParserUtility.convertFileToRawText(include.getShaderFile()));
             result.append("// -------- Include: ").append(include.getShaderName()).append(" --------\n");
-            result.append(source).append("\n");
+            result.append(includeSource).append("\n");
             result.append("// -------- End Include --------\n\n");
         }
 
-        result.append(stripDirectives(FileParserUtility.convertFileToRawText(shaderData.getShaderFile())));
+        result.append(stripDirectives(FileParserUtility.convertFileToRawText(source.getShaderFile())));
 
         return result.toString();
     }
@@ -120,9 +124,8 @@ class GLSLUtility extends UtilityPackage {
     // Uniform Location \\
 
     /*
-     * Returns the location of a uniform in the given program.
-     * A return value of -1 means the driver removed the uniform as unused — this is
-     * not an error. Callers must store -1 and no-op on upload when location is -1.
+     * Returns -1 if the driver removed the uniform as unused — not an error.
+     * Callers store -1 and no-op on upload when location is -1.
      */
     static int getUniformLocation(int programHandle, String uniformName) {
         return Gdx.gl.glGetUniformLocation(programHandle, uniformName);
