@@ -4,10 +4,17 @@ import com.internal.core.engine.ManagerPackage;
 
 public class GridManager extends ManagerPackage {
 
+    /*
+     * Owns the active GridInstance. Delegates all grid construction to
+     * GridBuildSystem. Exposes the grid for world streaming and chunk
+     * management systems.
+     */
+
     // Internal
     private GridBuildSystem gridBuildSystem;
     private GridInstance grid;
-    // Internal \\
+
+    // Base \\
 
     @Override
     protected void create() {

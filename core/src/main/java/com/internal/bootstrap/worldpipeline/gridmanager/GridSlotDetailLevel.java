@@ -4,6 +4,12 @@ import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
 
 public enum GridSlotDetailLevel {
 
+    /*
+     * Defines the level of rendering detail applied to a grid slot based on
+     * its distance from the active chunk. Used by WorldRenderManager to
+     * select individual vs batched render paths per slot.
+     */
+
     IMMEDIATE(1, 8, RenderType.INDIVIDUAL),
     NEAR(2, 16, RenderType.BATCHED),
     DISTANT(3, Integer.MAX_VALUE, RenderType.BATCHED);
@@ -19,9 +25,11 @@ public enum GridSlotDetailLevel {
     }
 
     public static GridSlotDetailLevel getDetailLevelForDistance(float absoluteChunkDistance) {
+
         for (GridSlotDetailLevel detailLevel : values())
             if (absoluteChunkDistance <= detailLevel.maxChunkDistance)
                 return detailLevel;
+
         return DISTANT;
     }
 }

@@ -1,11 +1,11 @@
-package com.internal.bootstrap.menupipeline.buttoneventsmanager;
+package com.internal.bootstrap.menupipeline.menueventsmanager;
 
-import com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.InventoryBranch;
-import com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.MainMenuBranch;
-import com.internal.bootstrap.menupipeline.buttoneventsmanager.util.GenericButtonBranch;
+import com.internal.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
+import com.internal.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
+import com.internal.bootstrap.menupipeline.menueventsmanager.util.GenericButtonBranch;
 import com.internal.core.engine.ManagerPackage;
 
-public class ButtonEventsManager extends ManagerPackage {
+public class MenuEventsManager extends ManagerPackage {
 
     /*
      * Groups all button action handlers into branches by domain. Generic

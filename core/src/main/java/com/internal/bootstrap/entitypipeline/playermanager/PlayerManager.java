@@ -6,7 +6,7 @@ import com.internal.bootstrap.entitypipeline.entity.EntityStateHandle;
 import com.internal.bootstrap.entitypipeline.entitymanager.EntityManager;
 import com.internal.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
-import com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.InventoryBranch;
+import com.internal.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
 import com.internal.bootstrap.physicspipeline.movementmanager.MovementManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;

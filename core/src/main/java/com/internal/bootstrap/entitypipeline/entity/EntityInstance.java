@@ -90,7 +90,7 @@ public class EntityInstance extends InstancePackage {
         updateBlockComposition();
     }
 
-    private void updateBlockComposition() {
+    public void updateBlockComposition() {
         this.blockCompositionStruct.updateBlockComposition(
                 blockComposition,
                 worldPositionStruct.getPosition(),

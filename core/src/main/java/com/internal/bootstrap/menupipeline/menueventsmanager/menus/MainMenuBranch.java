@@ -1,4 +1,4 @@
-package com.internal.bootstrap.menupipeline.buttoneventsmanager.menus;
+package com.internal.bootstrap.menupipeline.menueventsmanager.menus;
 
 import com.internal.bootstrap.menupipeline.menu.MenuInstance;
 import com.internal.bootstrap.menupipeline.menumanager.MenuManager;
@@ -38,6 +38,7 @@ public class MainMenuBranch extends BranchPackage {
 
     public MenuInstance closeMenu() {
         mainMenu = menuManager.closeMenu(mainMenu);
+        debug();
         return mainMenu;
     }
 }

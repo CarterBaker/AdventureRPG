@@ -7,27 +7,33 @@ import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector2;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.Comparator;
 
 class GridBuildSystem extends SystemPackage {
+
+    /*
+     * Constructs the GridInstance and all GridSlotHandles at bootstrap and on
+     * rebuild. Derives load order by sorting coordinates by distance from
+     * center. Allocates one UBOInstance per slot for GPU grid position data.
+     */
 
     // Internal
     private UBOManager uboManager;
 
     // Config
-    private int CHUNK_SIZE;
-    private int MEGA_CHUNK_SIZE;
+    private int chunkSize;
+    private int megaChunkSize;
 
     // Base \\
 
     @Override
     protected void create() {
-        this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
-        this.MEGA_CHUNK_SIZE = EngineSetting.MEGA_CHUNK_SIZE;
+        this.chunkSize = EngineSetting.CHUNK_SIZE;
+        this.megaChunkSize = EngineSetting.MEGA_CHUNK_SIZE;
     }
 
     @Override
@@ -42,18 +48,19 @@ class GridBuildSystem extends SystemPackage {
         float radius = calculateRadius();
         float radiusSquared = radius * radius;
 
-        Long2ObjectOpenHashMap<GridSlotData> gridSlotData = createGridSlotData(radius);
+        long[] loadOrder = assignLoadOrder(radius);
 
-        int totalSlots = gridSlotData.size();
-        long[] loadOrder = assignLoadOrder(gridSlotData);
-        LongOpenHashSet gridCoordinates = new LongOpenHashSet(gridSlotData.keySet());
+        LongOpenHashSet gridCoordinates = new LongOpenHashSet();
+        for (long coord : loadOrder)
+            gridCoordinates.add(coord);
+
+        int totalSlots = loadOrder.length;
 
         // Create instance first so handles can hold a back-reference to it
         GridInstance gridInstance = create(GridInstance.class);
 
         Long2ObjectOpenHashMap<GridSlotHandle> gridSlots = createGridSlotHandles(
                 gridCoordinates,
-                gridSlotData,
                 gridInstance);
 
         populateCoveredSlots(gridSlots);
@@ -74,65 +81,46 @@ class GridBuildSystem extends SystemPackage {
         return settings.maxRenderDistance / 2f;
     }
 
-    // Grid Slot Data \\
+    // Load Order \\
 
-    private Long2ObjectOpenHashMap<GridSlotData> createGridSlotData(float radius) {
-
-        Long2ObjectOpenHashMap<GridSlotData> gridSlotData = new Long2ObjectOpenHashMap<>();
+    private long[] assignLoadOrder(float radius) {
 
         int maxRenderDistance = settings.maxRenderDistance;
         float radiusSquared = radius * radius;
 
+        LongArrayList coordinates = new LongArrayList();
+        FloatArrayList distances = new FloatArrayList();
+
         for (int x = -(maxRenderDistance / 2); x < maxRenderDistance / 2; x++) {
             for (int y = -(maxRenderDistance / 2); y < maxRenderDistance / 2; y++) {
 
-                float distanceFromCenter = (x * x) + (y * y);
+                float d = (x * x) + (y * y);
 
-                if (distanceFromCenter <= radiusSquared) {
-
-                    float angleRadians = (float) Math.atan2(y, x);
-                    long gridCoordinate = Coordinate2Long.pack(x, y);
-
-                    gridSlotData.put(gridCoordinate, createGridSlotData(
-                            gridCoordinate,
-                            distanceFromCenter,
-                            angleRadians));
+                if (d <= radiusSquared) {
+                    coordinates.add(Coordinate2Long.pack(x, y));
+                    distances.add(d);
                 }
             }
         }
 
-        return gridSlotData;
-    }
+        Integer[] indices = new Integer[coordinates.size()];
+        for (int i = 0; i < indices.length; i++)
+            indices[i] = i;
 
-    private GridSlotData createGridSlotData(
-            long gridCoordinate,
-            float distanceFromCenter,
-            float angleRadians) {
+        java.util.Arrays.sort(indices,
+                (a, b) -> Float.compare(distances.getFloat(a), distances.getFloat(b)));
 
-        GridSlotData data = create(GridSlotData.class);
-        data.constructor(gridCoordinate, distanceFromCenter, angleRadians);
-        return data;
-    }
+        long[] sorted = new long[indices.length];
+        for (int i = 0; i < indices.length; i++)
+            sorted[i] = coordinates.getLong(indices[i]);
 
-    // Load Order \\
-
-    private long[] assignLoadOrder(Long2ObjectOpenHashMap<GridSlotData> gridSlotData) {
-
-        ObjectArrayList<GridSlotData> slots = new ObjectArrayList<>(gridSlotData.values());
-        slots.sort(Comparator.comparingDouble(GridSlotData::getDistanceFromCenter));
-
-        long[] coordinates = new long[slots.size()];
-        for (int i = 0; i < slots.size(); i++)
-            coordinates[i] = slots.get(i).getGridCoordinate();
-
-        return coordinates;
+        return sorted;
     }
 
     // Grid Slot Handles \\
 
     private Long2ObjectOpenHashMap<GridSlotHandle> createGridSlotHandles(
             LongOpenHashSet gridCoordinates,
-            Long2ObjectOpenHashMap<GridSlotData> gridSlotData,
             GridInstance gridInstance) {
 
         Long2ObjectOpenHashMap<GridSlotHandle> gridSlots = new Long2ObjectOpenHashMap<>();
@@ -147,8 +135,8 @@ class GridBuildSystem extends SystemPackage {
 
             UBOInstance slotUBO = uboManager.createUBOInstance(baseUBO);
 
-            int gridX = Coordinate2Long.unpackX(gridCoordinate) * CHUNK_SIZE;
-            int gridY = Coordinate2Long.unpackY(gridCoordinate) * CHUNK_SIZE;
+            int gridX = Coordinate2Long.unpackX(gridCoordinate) * chunkSize;
+            int gridY = Coordinate2Long.unpackY(gridCoordinate) * chunkSize;
 
             slotUBO.updateUniform("u_gridPosition", new Vector2(gridX, gridY));
             uboManager.push(slotUBO);
@@ -164,7 +152,7 @@ class GridBuildSystem extends SystemPackage {
             float chunkDistanceFromCenter = ccx * ccx + ccy * ccy;
             float chunkAngleFromCenter = (float) Math.atan2(ccy, ccx);
 
-            float halfMega = MEGA_CHUNK_SIZE / 2f;
+            float halfMega = megaChunkSize / 2f;
             float mcx = chunkX + halfMega;
             float mcy = chunkY + halfMega;
             float megaDistanceFromCenter = mcx * mcx + mcy * mcy;
@@ -222,8 +210,8 @@ class GridBuildSystem extends SystemPackage {
             int originX = Coordinate2Long.unpackX(gridCoordinate);
             int originY = Coordinate2Long.unpackY(gridCoordinate);
 
-            for (int x = 0; x < MEGA_CHUNK_SIZE; x++) {
-                for (int y = 0; y < MEGA_CHUNK_SIZE; y++) {
+            for (int x = 0; x < megaChunkSize; x++) {
+                for (int y = 0; y < megaChunkSize; y++) {
 
                     long coveredCoordinate = Coordinate2Long.pack(originX + x, originY + y);
                     GridSlotHandle coveredSlot = gridSlots.get(coveredCoordinate);

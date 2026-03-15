@@ -1,4 +1,4 @@
-package com.internal.bootstrap.menupipeline.buttoneventsmanager.util;
+package com.internal.bootstrap.menupipeline.menueventsmanager.util;
 
 import com.internal.core.engine.BranchPackage;
 

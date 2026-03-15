@@ -4,7 +4,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import com.internal.core.util.mathematics.vectors.Vector3Int;
 

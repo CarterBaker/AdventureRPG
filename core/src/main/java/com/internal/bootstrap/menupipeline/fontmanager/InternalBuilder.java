@@ -153,6 +153,6 @@ class InternalBuilder extends BuilderPackage {
     // Helpers \\
 
     FontTileData createFontTile() {
-        return create(FontTileData.class);
+        return new FontTileData();
     }
 }

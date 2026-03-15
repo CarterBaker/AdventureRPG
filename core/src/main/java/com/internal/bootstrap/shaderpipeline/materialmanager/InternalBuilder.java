@@ -1,7 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.materialmanager;
 
 import java.io.File;
-
 import com.google.gson.JsonObject;
 import com.internal.bootstrap.shaderpipeline.material.MaterialData;
 import com.internal.bootstrap.shaderpipeline.material.MaterialHandle;
@@ -20,8 +19,9 @@ class InternalBuilder extends BuilderPackage {
 
     /*
      * Parses material JSON files into MaterialHandles during bootstrap.
-     * Resolves shader and UBO references, clones uniforms from the compiled
-     * shader and applies JSON default values. Created and owned by InternalLoader.
+     * Clones all uniforms from the compiled shader — the JSON uniforms block
+     * is optional and only applies default values to named uniforms.
+     * Created and owned by InternalLoader.
      */
 
     // Internal
@@ -29,7 +29,7 @@ class InternalBuilder extends BuilderPackage {
     private UBOManager uboManager;
     private MaterialManager materialManager;
 
-    // Internal \\
+    // Base \\
 
     @Override
     protected void get() {
@@ -49,6 +49,7 @@ class InternalBuilder extends BuilderPackage {
         String shaderName = JsonUtility.validateString(json, "shader");
         ShaderHandle shaderHandle = shaderManager.getShaderHandleFromShaderName(shaderName);
 
+        // UBOs
         Object2ObjectOpenHashMap<String, UBOHandle> sourceUBOs = new Object2ObjectOpenHashMap<>();
 
         if (json.has("ubos")) {
@@ -57,31 +58,27 @@ class InternalBuilder extends BuilderPackage {
                 sourceUBOs.put(uboName, uboManager.getUBOHandleFromUBOName(uboName));
         }
 
+        // Uniforms — clone all from shader, apply JSON defaults where declared
+        Object2ObjectOpenHashMap<String, UniformStruct<?>> shaderUniforms = shaderHandle.getCompiledUniforms();
         Object2ObjectOpenHashMap<String, UniformStruct<?>> uniforms = new Object2ObjectOpenHashMap<>();
 
+        for (String uniformName : shaderUniforms.keySet())
+            uniforms.put(uniformName, shaderUniforms.get(uniformName).clone());
+
         if (json.has("uniforms")) {
-
             JsonObject uniformsJson = json.getAsJsonObject("uniforms");
-            Object2ObjectOpenHashMap<String, UniformStruct<?>> shaderUniforms = shaderHandle.getCompiledUniforms();
-
             for (String uniformName : uniformsJson.keySet()) {
-
-                UniformStruct<?> source = shaderUniforms.get(uniformName);
-
-                if (source == null)
+                UniformStruct<?> uniform = uniforms.get(uniformName);
+                if (uniform == null)
                     throwException("Material '" + materialName + "' references unknown uniform: " + uniformName);
-
-                UniformStruct<?> cloned = source.clone();
-
                 UniformUtility.applyFromJsonObject(
-                        cloned.attribute(),
+                        uniform.attribute(),
                         uniformName,
                         uniformsJson.getAsJsonObject(uniformName));
-
-                uniforms.put(uniformName, cloned);
             }
         }
 
+        // Construct
         int materialID = RegistryUtility.toIntID(materialName);
 
         MaterialData data = new MaterialData(

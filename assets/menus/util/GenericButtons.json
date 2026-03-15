@@ -7,7 +7,7 @@
             "anchor": "CENTER",
             "pivot":  "CENTER",
             "on_click": {
-                "class":  "com.internal.bootstrap.menupipeline.buttoneventsmanager.util.GenericButtonBranch",
+                "class":  "com.internal.bootstrap.menupipeline.menueventsmanager.util.GenericButtonBranch",
                 "method": "quitGame"
             }
         }

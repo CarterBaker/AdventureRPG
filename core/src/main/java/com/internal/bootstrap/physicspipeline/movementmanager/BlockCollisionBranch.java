@@ -52,6 +52,8 @@ public class BlockCollisionBranch extends BranchPackage {
 
     void calculate(Vector3 position, Vector3 movement, EntityInstance entity) {
 
+        entity.updateBlockComposition();
+
         BlockCompositionStruct blockCompositionStruct = entity.getBlockCompositionStruct();
         Vector3 size = entity.getSize();
 

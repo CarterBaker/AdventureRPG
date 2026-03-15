@@ -4,11 +4,16 @@ import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.InstancePackage;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
-
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 public class GridInstance extends InstancePackage {
+
+    /*
+     * The active spatial grid. Owns the load order array and the full map of
+     * GridSlotHandles. Tracks the active chunk coordinate and cycles through
+     * slots via a persistent scan cursor for streaming.
+     */
 
     // Internal
     private int totalSlots;
@@ -21,10 +26,10 @@ public class GridInstance extends InstancePackage {
     private long activeChunkCoordinate;
     private WorldHandle worldHandle;
 
-    // Internal scan cursor — cycles through loadOrder continuously
+    // Scan cursor — cycles through loadOrder continuously
     private int scanCursor;
 
-    // Internal \\
+    // Constructor \\
 
     protected void constructor(
             int totalSlots,
@@ -58,7 +63,6 @@ public class GridInstance extends InstancePackage {
 
     // Scan Iteration \\
 
-    // Returns the next GridSlotHandle in load-order, cycling back to the front
     public GridSlotHandle getNextScanSlot() {
 
         if (scanCursor >= totalSlots)
@@ -72,19 +76,15 @@ public class GridInstance extends InstancePackage {
 
     // Computed Slot Lookups \\
 
-    // Returns the world chunk coordinate this grid slot currently maps to
     public long getChunkCoordinateForSlot(long gridCoordinate) {
         long raw = Coordinate2Long.add(activeChunkCoordinate, gridCoordinate);
         return WorldWrapUtility.wrapAroundWorld(worldHandle, raw);
     }
 
-    // Returns the mega coordinate for the chunk this grid slot currently maps to
     public long getMegaCoordinateForSlot(long gridCoordinate) {
         return Coordinate2Long.toMegaChunkCoordinate(getChunkCoordinateForSlot(gridCoordinate));
     }
 
-    // Given a world chunk coordinate, returns the GridSlotHandle it maps to,
-    // or null if the coordinate is not currently within the grid
     public GridSlotHandle getGridSlotForChunk(long chunkCoordinate) {
         long gridCoordinate = Coordinate2Long.subtract(chunkCoordinate, activeChunkCoordinate);
         return gridSlots.get(gridCoordinate);

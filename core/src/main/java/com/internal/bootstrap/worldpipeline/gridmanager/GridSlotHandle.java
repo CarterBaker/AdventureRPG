@@ -3,29 +3,35 @@ package com.internal.bootstrap.worldpipeline.gridmanager;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
-
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class GridSlotHandle extends HandlePackage {
 
-    // Internal
+    /*
+     * Persistent slot record for a single grid coordinate. Owns a UBOInstance
+     * pre-seeded with the GPU grid position. Holds culling metrics for both
+     * the individual chunk footprint and the full mega-chunk footprint, plus
+     * a list of all grid slots covered by this mega-chunk origin.
+     */
+
+    // Identity
     private long gridCoordinate;
     private UBOInstance slotUBO;
     private GridSlotDetailLevel detailLevel;
     private GridInstance gridInstance;
 
-    // Culling values from the center of the individual 1x1 chunk footprint
+    // Chunk culling
     private float chunkDistanceFromCenter;
     private float chunkAngleFromCenter;
 
-    // Culling values from the center of the full NxN mega footprint
+    // Mega culling
     private float megaDistanceFromCenter;
     private float megaAngleFromCenter;
 
     // Mega coverage
     private ObjectArrayList<GridSlotHandle> coveredSlots;
 
-    // Internal \\
+    // Constructor \\
 
     void constructor(
             long gridCoordinate,
@@ -36,6 +42,7 @@ public class GridSlotHandle extends HandlePackage {
             float megaAngleFromCenter,
             GridSlotDetailLevel detailLevel,
             GridInstance gridInstance) {
+
         this.gridCoordinate = gridCoordinate;
         this.slotUBO = slotUBO;
         this.chunkDistanceFromCenter = chunkDistanceFromCenter;

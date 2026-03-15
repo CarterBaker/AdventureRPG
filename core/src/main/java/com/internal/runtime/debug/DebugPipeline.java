@@ -1,6 +1,6 @@
 package com.internal.runtime.debug;
 
-import com.internal.bootstrap.menupipeline.buttoneventsmanager.menus.MainMenuBranch;
+import com.internal.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
 import com.internal.core.engine.PipelinePackage;
 
 public class DebugPipeline extends PipelinePackage {
