@@ -7,19 +7,28 @@ import com.internal.core.engine.InstancePackage;
 
 public class WorldRenderInstance extends InstancePackage {
 
-    // Internal
-    protected WorldRenderManager worldRenderSystem;
-    protected WorldHandle worldHandle;
-    protected RenderType renderType;
-    protected long coordinate;
+    /*
+     * Base class for all world geometry instances. Owns a DynamicPacketInstance
+     * for GPU-ready geometry and holds the coordinate, world handle, and render
+     * type needed for registration and disposal. Extended by ChunkInstance,
+     * SubChunkInstance, and MegaChunkInstance.
+     */
 
-    // Dynamic Mesh
-    protected DynamicPacketInstance dynamicPacketInstance;
+    // Internal
+    private WorldRenderManager worldRenderSystem;
+    private WorldHandle worldHandle;
+    private RenderType renderType;
+    private long coordinate;
+    private DynamicPacketInstance dynamicPacketInstance;
+
+    // Internal \\
 
     @Override
     protected void create() {
         this.dynamicPacketInstance = create(DynamicPacketInstance.class);
     }
+
+    // Constructor \\
 
     public void constructor(
             WorldRenderManager worldRenderSystem,
@@ -34,6 +43,8 @@ public class WorldRenderInstance extends InstancePackage {
         this.coordinate = coordinate;
         this.dynamicPacketInstance.constructor(vaoHandle);
     }
+
+    // Dispose \\
 
     public void dispose() {
         if (renderType == RenderType.INDIVIDUAL)
@@ -53,6 +64,10 @@ public class WorldRenderInstance extends InstancePackage {
     }
 
     public DynamicPacketInstance getDynamicPacketInstance() {
+        return dynamicPacketInstance;
+    }
+
+    protected DynamicPacketInstance getDynamicPacket() {
         return dynamicPacketInstance;
     }
 }

@@ -9,20 +9,22 @@ import com.internal.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.BranchPackage;
 
-/*
- * Uploads merged mega geometry to the GPU then clears the CPU-side buffer.
- * Sets BATCH_DATA on all batched chunks only after confirmed GPU upload —
- * this is the signal that individual chunk RENDER_DATA is safe to dump.
- * Setting BATCH_DATA here rather than at merge time closes the gap between
- * merge and GPU upload where neither individual nor mega render would be active.
- */
 public class MegaRenderBranch extends BranchPackage {
+
+    /*
+     * Uploads merged mega geometry to the GPU then clears the CPU-side buffer.
+     * Sets BATCH_DATA on all batched chunks only after confirmed GPU upload —
+     * this is the signal that individual chunk RENDER_DATA is safe to dump.
+     * Setting BATCH_DATA here rather than at merge time closes the gap between
+     * merge and GPU upload where neither individual nor mega render would be
+     * active.
+     */
 
     // Internal
     private WorldRenderManager worldRenderSystem;
 
     // Settings
-    private int renderIndex;
+    private int renderDataIndex;
     private int chunkBatchDataIndex;
 
     // Internal \\
@@ -34,7 +36,7 @@ public class MegaRenderBranch extends BranchPackage {
         this.worldRenderSystem = get(WorldRenderManager.class);
 
         // Settings
-        this.renderIndex = MegaData.RENDER_DATA.index;
+        this.renderDataIndex = MegaData.RENDER_DATA.index;
         this.chunkBatchDataIndex = ChunkData.BATCH_DATA.index;
     }
 
@@ -50,12 +52,12 @@ public class MegaRenderBranch extends BranchPackage {
                 return;
 
             mega.getDynamicPacketInstance().clear();
-            sync.data[renderIndex] = true;
+            sync.getData()[renderDataIndex] = true;
         } finally {
             sync.release();
         }
 
-        // Mega is confirmed on GPU — now safe to remove individual chunk renders
+        // Mega confirmed on GPU — now safe to remove individual chunk renders
         for (ChunkInstance chunk : mega.getBatchedChunks().values()) {
 
             ChunkDataSyncContainer chunkSync = chunk.getChunkDataSyncContainer();
@@ -64,7 +66,7 @@ public class MegaRenderBranch extends BranchPackage {
                 continue;
 
             try {
-                chunkSync.data[chunkBatchDataIndex] = true;
+                chunkSync.getData()[chunkBatchDataIndex] = true;
             } finally {
                 chunkSync.release();
             }

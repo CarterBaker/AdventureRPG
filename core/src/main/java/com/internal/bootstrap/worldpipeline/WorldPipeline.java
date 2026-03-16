@@ -14,6 +14,12 @@ import com.internal.core.engine.PipelinePackage;
 
 public class WorldPipeline extends PipelinePackage {
 
+    /*
+     * Registers all world pipeline managers in dependency order. Cross-system
+     * references resolve in each manager's get() phase after all managers are
+     * created.
+     */
+
     @Override
     protected void create() {
         create(WorldManager.class);

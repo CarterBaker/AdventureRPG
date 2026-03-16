@@ -22,14 +22,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldRenderManager extends ManagerPackage {
 
+    /*
+     * Drives the world render pipeline each frame. Maintains GPU model lists for
+     * individual chunks and batched megas, manages render queues rebuilt on each
+     * player chunk crossing, and delegates frustum culling to FrustumCullingSystem.
+     */
+
     // Internal
     private MaterialManager materialManager;
     private ModelManager modelManager;
     private RenderSystem renderSystem;
     private GridManager gridManager;
     private FrustumCullingSystem frustumCullingSystem;
-
-    private int BATCHED_CHUNKS = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
 
     // GPU Data
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> chunkModels;
@@ -39,19 +43,33 @@ public class WorldRenderManager extends ManagerPackage {
     private LongLinkedOpenHashSet chunkRenderQueue;
     private LongLinkedOpenHashSet megaRenderQueue;
 
-    // Base \\
+    // Settings
+    private int batchedChunks;
+
+    // Internal \\
 
     @Override
     protected void create() {
+
+        // Internal
+        this.frustumCullingSystem = create(FrustumCullingSystem.class);
+
+        // GPU Data
         this.chunkModels = new Long2ObjectOpenHashMap<>();
         this.megaModels = new Long2ObjectOpenHashMap<>();
+
+        // Render Queues
         this.chunkRenderQueue = new LongLinkedOpenHashSet();
         this.megaRenderQueue = new LongLinkedOpenHashSet();
-        this.frustumCullingSystem = create(FrustumCullingSystem.class);
+
+        // Settings
+        this.batchedChunks = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
     }
 
     @Override
     protected void get() {
+
+        // Internal
         this.materialManager = get(MaterialManager.class);
         this.modelManager = get(ModelManager.class);
         this.renderSystem = get(RenderSystem.class);
@@ -94,6 +112,7 @@ public class WorldRenderManager extends ManagerPackage {
             return;
 
         ObjectArrayList<ModelInstance> models = megaModels.get(megaCoordinate);
+
         if (models == null)
             return;
 
@@ -115,6 +134,7 @@ public class WorldRenderManager extends ManagerPackage {
             return;
 
         ObjectArrayList<ModelInstance> models = chunkModels.get(chunkCoordinate);
+
         if (models == null)
             return;
 
@@ -148,22 +168,31 @@ public class WorldRenderManager extends ManagerPackage {
     }
 
     private void queueChunk(GridSlotHandle slot) {
+
         long chunkCoordinate = slot.getChunkCoordinate();
         long megaCoordinate = slot.getMegaCoordinate();
+
         if (megaRenderQueue.contains(megaCoordinate))
             return;
+
         chunkRenderQueue.add(chunkCoordinate);
     }
 
     private void queueMega(GridSlotHandle slot) {
+
         long chunkCoordinate = slot.getChunkCoordinate();
         long megaCoordinate = slot.getMegaCoordinate();
+
         if (chunkCoordinate != megaCoordinate)
             return;
+
         ObjectArrayList<GridSlotHandle> coveredSlots = slot.getCoveredSlots();
-        if (coveredSlots.size() != BATCHED_CHUNKS)
+
+        if (coveredSlots.size() != batchedChunks)
             return;
+
         megaRenderQueue.add(megaCoordinate);
+
         for (int i = 0; i < coveredSlots.size(); i++)
             chunkRenderQueue.remove(coveredSlots.get(i).getChunkCoordinate());
     }
@@ -186,6 +215,7 @@ public class WorldRenderManager extends ManagerPackage {
             removeChunkInstance(coordinate);
 
         ObjectArrayList<ModelInstance> modelList = buildModelList(worldRenderInstance);
+
         if (modelList == null)
             return false;
 
@@ -204,6 +234,7 @@ public class WorldRenderManager extends ManagerPackage {
             removeMegaInstance(coordinate);
 
         ObjectArrayList<ModelInstance> modelList = buildModelList(worldRenderInstance);
+
         if (modelList == null)
             return false;
 
@@ -249,6 +280,7 @@ public class WorldRenderManager extends ManagerPackage {
     public void removeChunkInstance(long coordinate) {
 
         ObjectArrayList<ModelInstance> modelList = chunkModels.get(coordinate);
+
         if (modelList == null)
             return;
 
@@ -262,6 +294,7 @@ public class WorldRenderManager extends ManagerPackage {
     public void removeMegaInstance(long coordinate) {
 
         ObjectArrayList<ModelInstance> modelList = megaModels.get(coordinate);
+
         if (modelList == null)
             return;
 

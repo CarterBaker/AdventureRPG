@@ -1,6 +1,13 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
-public enum QueueOperation {
+enum QueueOperation {
+
+    /*
+     * Branch dispatch targets returned by
+     * ChunkQueueManager.determineQueueOperation.
+     * Maps each ChunkData stage to the branch responsible for executing it.
+     */
+
     LOAD,
     ASSESSMENT,
     BUILD,
@@ -10,5 +17,5 @@ public enum QueueOperation {
     BATCH,
     RENDER,
     DUMP,
-    SKIP;
+    SKIP
 }

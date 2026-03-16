@@ -4,23 +4,27 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
+import com.internal.bootstrap.worldpipeline.megachunk.MegaData;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.BranchPackage;
 
-/*
- * Fires when a mega's slot transitions to IMMEDIATE — chunks are close enough
- * to render individually. Removes the mega from the GPU and clears BATCH_DATA
- * on all registered chunks so they re-contribute when the slot returns to NEAR.
- * BATCH_DATA on the mega itself is not dumpable — the chunk registry is kept
- * so re-contribution can happen without a full re-registration cycle.
- */
 public class MegaDumpBranch extends BranchPackage {
+
+    /*
+     * Fires when a mega's slot transitions to IMMEDIATE — chunks are close enough
+     * to render individually. Removes the mega from the GPU, clears chunk
+     * BATCH_DATA
+     * flags so they re-contribute when the slot returns to NEAR, and clears
+     * RENDER_DATA. BATCH_DATA on the mega is not dumpable — the chunk registry is
+     * kept so re-contribution can happen without a full re-registration cycle.
+     */
 
     // Internal
     private WorldRenderManager worldRenderSystem;
 
     // Settings
+    private int renderDataIndex;
     private int chunkBatchDataIndex;
 
     // Internal \\
@@ -32,6 +36,7 @@ public class MegaDumpBranch extends BranchPackage {
         this.worldRenderSystem = get(WorldRenderManager.class);
 
         // Settings
+        this.renderDataIndex = MegaData.RENDER_DATA.index;
         this.chunkBatchDataIndex = ChunkData.BATCH_DATA.index;
     }
 
@@ -46,7 +51,7 @@ public class MegaDumpBranch extends BranchPackage {
             worldRenderSystem.removeMegaInstance(megaCoord);
             clearChunkBatchFlags(mega);
             mega.getDynamicPacketInstance().clear();
-            sync.data[com.internal.bootstrap.worldpipeline.megachunk.MegaData.RENDER_DATA.index] = false;
+            sync.getData()[renderDataIndex] = false;
         } finally {
             sync.release();
         }
@@ -62,7 +67,7 @@ public class MegaDumpBranch extends BranchPackage {
                 continue;
 
             try {
-                chunkSync.data[chunkBatchDataIndex] = false;
+                chunkSync.getData()[chunkBatchDataIndex] = false;
             } finally {
                 chunkSync.release();
             }

@@ -15,14 +15,13 @@ public enum MegaData {
 
     /*
      * BATCH_DATA — never dumps automatically. Marks that chunks are registered
-     * in this mega. Cleared per-chunk by MegaDumpBranch when RENDER_DATA dumps,
-     * and by invalidation when a block changes. This forces re-contribution
-     * when the mega next enters NEAR range.
+     * in this mega. Cleared per-chunk by MegaDumpBranch when RENDER_DATA dumps
+     * and by invalidation when a block changes. Forces re-contribution when the
+     * mega next enters NEAR range.
      *
      * RENDER_DATA — dumps at IMMEDIATE so the mega goes dormant and chunks
      * render individually at close range. Rebuilt when the slot returns to NEAR
-     * and all chunks re-contribute. Never manually removed — only dumps via the
-     * graph or full unload.
+     * and all chunks re-contribute.
      *
      * maximumLevel — the most detailed level at which this stage must remain.
      * Dump when slotLevel.level < maximumLevel.level (slot became more detailed).
@@ -46,8 +45,11 @@ public enum MegaData {
             stage.link();
     }
 
-    MegaData(boolean dumpable, GridSlotDetailLevel maximumLevel,
-            String[] requiresNames, String[] leadsToNames) {
+    MegaData(
+            boolean dumpable,
+            GridSlotDetailLevel maximumLevel,
+            String[] requiresNames,
+            String[] leadsToNames) {
         this.index = this.ordinal();
         this.dumpable = dumpable;
         this.maximumLevel = maximumLevel;

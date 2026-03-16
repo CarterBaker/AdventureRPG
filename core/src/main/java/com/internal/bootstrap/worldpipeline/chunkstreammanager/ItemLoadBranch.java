@@ -8,37 +8,46 @@ import com.internal.core.engine.BranchPackage;
 import com.internal.core.kernel.syncconsumer.SyncStructConsumer;
 import com.internal.core.kernel.thread.ThreadHandle;
 
-/*
- * Async — CPU only under the lock.
- * Builds WorldItemInstances from subchunk structs into the chunk palette.
- * Does not touch the renderer — that is ItemRenderBranch's responsibility.
- */
 public class ItemLoadBranch extends BranchPackage {
+
+    /*
+     * Async — builds WorldItemInstances from subchunk structs into the chunk
+     * palette on the WorldStreaming thread. Does not touch the renderer — that
+     * is ItemRenderBranch's responsibility. Sets ITEM_DATA on success.
+     */
 
     // Internal
     private ThreadHandle threadHandle;
     private WorldItemPlacementSystem worldItemPlacementSystem;
+
+    // Settings
     private int itemDataIndex;
 
     // Internal \\
 
     @Override
     protected void get() {
+
+        // Internal
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
+
+        // Settings
         this.itemDataIndex = ChunkData.ITEM_DATA.index;
     }
 
     // Item Load \\
 
     public void loadItems(ChunkInstance chunkInstance) {
+
         long chunkCoordinate = chunkInstance.getCoordinate();
+
         executeAsync(
                 threadHandle,
                 chunkInstance.getChunkDataSyncContainer(),
                 (SyncStructConsumer<ChunkDataSyncContainer>) container -> {
                     worldItemPlacementSystem.buildChunkInstances(chunkInstance, chunkCoordinate);
-                    container.data[itemDataIndex] = true;
+                    container.getData()[itemDataIndex] = true;
                 });
     }
 }

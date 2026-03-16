@@ -72,6 +72,18 @@ public class EngineSetting {
         public static final float CAMERA_FAR_PLANE = 1000f;
         public static final float CAMERA_MAX_PITCH_DEGREES = 89f;
 
+        // Frustum Culling \\
+
+        public static final float FRUSTUM_TWO_PI = (float) (Math.PI * 2f);
+        public static final float FRUSTUM_PI = (float) Math.PI;
+        public static final float FRUSTUM_HALF_PI = (float) (Math.PI / 2f);
+        public static final float FRUSTUM_MIN_BLEED = 0.1f;
+        public static final float FRUSTUM_CHUNK_BLEED_SCALE = 0.75f;
+        public static final float FRUSTUM_ALWAYS_VISIBLE_DIST_SQ = 4.5f;
+        public static final float FRUSTUM_PITCH_MIN_DIST_SQ = 25f;
+        public static final float FRUSTUM_PITCH_POWER_ANGLE = 1f;
+        public static final float FRUSTUM_PITCH_POWER_DISTANCE = 6f;
+
         // Texture \\
 
         public static final String TEXTURE_UV_SCALE_UNIFORM = "u_uvPerBlock";
@@ -95,6 +107,7 @@ public class EngineSetting {
 
         public static final String AIR_BLOCK_NAME = "TerraArcana/Air";
         public static final int ENCODED_FACE_NATURAL_FULL_OFFSET = 24;
+        public static final short DEFAULT_BLOCK_ORIENTATION = (short) (DEFAULT_BLOCK_DIRECTION * 4);
 
         // World \\
 

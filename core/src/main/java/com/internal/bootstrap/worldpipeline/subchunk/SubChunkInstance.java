@@ -12,6 +12,13 @@ import com.internal.core.util.mathematics.extras.Coordinate3Int;
 
 public class SubChunkInstance extends WorldRenderInstance {
 
+    /*
+     * One vertical slice of a chunk covering CHUNK_SIZE^3 blocks. Owns block,
+     * biome, and rotation palettes plus a world item palette. Permanently owned
+     * by its parent ChunkInstance — never pooled or transferred independently.
+     * Dirty-region geometry rebuilds operate at this granularity.
+     */
+
     // Internal
     private BlockPaletteHandle biomePaletteHandle;
     private BlockPaletteHandle blockPaletteHandle;
@@ -22,7 +29,10 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     @Override
     protected void create() {
+
         super.create();
+
+        // Internal
         this.biomePaletteHandle = create(BlockPaletteHandle.class);
         this.blockPaletteHandle = create(BlockPaletteHandle.class);
         this.blockRotationPaletteHandle = create(BlockPaletteHandle.class);
@@ -30,40 +40,47 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.worldItemPaletteHandle.constructor();
     }
 
+    // Constructor \\
+
     public void constructor(
-            WorldRenderManager worldRenderSystem,
+            WorldRenderManager worldRenderManager,
             WorldHandle worldHandle,
             long coordinate,
             VAOHandle vaoHandle,
             short airBlockId,
             short defaultBiomeId) {
+
         super.constructor(
-                worldRenderSystem,
+                worldRenderManager,
                 worldHandle,
                 RenderType.INVALID,
                 coordinate,
                 vaoHandle);
+
         this.biomePaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE / EngineSetting.BIOME_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD / EngineSetting.BIOME_SIZE,
                 defaultBiomeId);
+
         this.blockPaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD,
                 airBlockId);
-        short defaultOrientation = (short) (EngineSetting.DEFAULT_BLOCK_DIRECTION * 4);
+
         this.blockRotationPaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD,
-                defaultOrientation);
+                EngineSetting.DEFAULT_BLOCK_ORIENTATION);
     }
+
+    // Reset \\
 
     public void reset() {
         biomePaletteHandle.clear();
         blockPaletteHandle.clear();
         blockRotationPaletteHandle.clear();
         worldItemPaletteHandle.clear();
-        dynamicPacketInstance.clear();
+        getDynamicPacket().clear();
     }
 
     // Accessible \\

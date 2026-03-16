@@ -12,90 +12,115 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
 public class ChunkInstance extends WorldRenderInstance {
 
+    /*
+     * A single 16x16 column of subchunks representing one loaded world chunk.
+     * Owns its subchunks permanently — they are never pooled separately.
+     * Pooled and reused by ChunkQueueManager. Must be reset via reset() before
+     * reuse. Geometry is assembled by merging all subchunk packets into one packet.
+     */
+
     // Internal
     private ChunkDataSyncContainer chunkDataSyncContainer;
+    private SubChunkInstance[] subChunks;
+    private ChunkNeighborStruct chunkNeighbors;
+    private WorldItemInstancePaletteHandle worldItemInstancePaletteHandle;
+
+    // Scratch — pre-allocated, reused per merge call
     private int[] vertPositionArray;
     private float[] mergeOffsetValues;
-    private int CHUNK_SIZE;
 
-    // SubChunks
-    private SubChunkInstance[] subChunks;
-
-    // Neighbors
-    private ChunkNeighborStruct chunkNeighbors;
-
-    // Items
-    private WorldItemInstancePaletteHandle worldItemInstancePaletteHandle;
+    // Settings
+    private int chunkSize;
 
     // Internal \\
 
     @Override
     protected void create() {
+
+        // Internal
         this.chunkDataSyncContainer = create(ChunkDataSyncContainer.class);
-        this.vertPositionArray = new int[] { 1 };
-        this.mergeOffsetValues = new float[1];
-        this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
+        this.worldItemInstancePaletteHandle = create(WorldItemInstancePaletteHandle.class);
+        this.worldItemInstancePaletteHandle.constructor();
+
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
         for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
             subChunks[i] = create(SubChunkInstance.class);
-        this.worldItemInstancePaletteHandle = create(WorldItemInstancePaletteHandle.class);
-        this.worldItemInstancePaletteHandle.constructor();
+
+        // Scratch
+        this.vertPositionArray = new int[] { 1 };
+        this.mergeOffsetValues = new float[1];
+
+        // Settings
+        this.chunkSize = EngineSetting.CHUNK_SIZE;
+
         super.create();
     }
 
+    // Constructor \\
+
     public void constructor(
-            WorldRenderManager worldRenderSystem,
+            WorldRenderManager worldRenderManager,
             WorldHandle worldHandle,
             long coordinate,
             VAOHandle vaoHandle,
             short airBlockId,
             short defaultBiomeId,
             Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
+
         super.constructor(
-                worldRenderSystem,
+                worldRenderManager,
                 worldHandle,
                 RenderType.INDIVIDUAL,
                 coordinate,
                 vaoHandle);
+
         for (byte subChunkCoordinate = 0; subChunkCoordinate < EngineSetting.WORLD_HEIGHT; subChunkCoordinate++)
             subChunks[subChunkCoordinate].constructor(
-                    worldRenderSystem,
+                    worldRenderManager,
                     worldHandle,
                     subChunkCoordinate,
                     vaoHandle,
                     airBlockId,
                     defaultBiomeId);
+
         this.chunkNeighbors = new ChunkNeighborStruct(
                 coordinate,
                 this,
                 activeChunks);
     }
 
+    // Reset \\
+
     public void reset() {
         chunkDataSyncContainer.resetData();
-        dynamicPacketInstance.clear();
+        getDynamicPacket().clear();
         worldItemInstancePaletteHandle.clear();
+
         for (SubChunkInstance subChunk : subChunks)
             subChunk.reset();
     }
 
-    // Utility \\
+    // Geometry \\
 
     public boolean merge() {
+
         boolean success = true;
-        dynamicPacketInstance.clear();
-        for (SubChunkInstance subChunkInstance : subChunks) {
-            mergeOffsetValues[0] = subChunkInstance.getCoordinate() * CHUNK_SIZE;
-            if (!dynamicPacketInstance.merge(
-                    subChunkInstance.getDynamicPacketInstance(),
+        getDynamicPacket().clear();
+
+        for (SubChunkInstance subChunk : subChunks) {
+            mergeOffsetValues[0] = subChunk.getCoordinate() * chunkSize;
+            if (!getDynamicPacket().merge(
+                    subChunk.getDynamicPacketInstance(),
                     vertPositionArray,
                     mergeOffsetValues))
                 success = false;
         }
-        if (success && dynamicPacketInstance.hasModels())
-            dynamicPacketInstance.setReady();
-        else if (!dynamicPacketInstance.hasModels())
-            dynamicPacketInstance.unlock();
+
+        if (success && getDynamicPacket().hasModels())
+            getDynamicPacket().setReady();
+        else if (!getDynamicPacket().hasModels())
+            getDynamicPacket().unlock();
+
         return success;
     }
 

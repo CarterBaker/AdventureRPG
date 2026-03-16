@@ -10,31 +10,32 @@ import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.BranchPackage;
+import com.internal.core.engine.settings.EngineSetting;
 
-/*
- * Executes a single dump step per call.
- * ChunkDataUtility determines which stage to shed based on the leadsTo/requires
- * graph and the slot's detail level. cascadeClear runs before any side-effecting
- * work so concurrent or retry dispatches see the stage as already gone.
- *
- * Data lifetime per level:
- *   IMMEDIATE — everything held
- *   NEAR      — item instances and render dumped; block and item structs held
- *   DISTANT   — everything dumped
- *
- * Item structs (subchunk palette) are owned by ITEM_DATA, not GENERATION_DATA.
- * They survive a GENERATION dump so ITEM_DATA can rebuild correctly when the
- * chunk returns to IMMEDIATE range without needing a full re-generation.
- */
 public class DumpBranch extends BranchPackage {
 
+    /*
+     * Executes a single dump step per call. ChunkDataUtility determines which
+     * stage to shed based on the leadsTo/requires graph and the slot detail level.
+     * cascadeClear runs before side-effecting work so concurrent dispatches see
+     * the stage as already gone. Item structs survive a GENERATION dump so
+     * ITEM_DATA can rebuild without a full re-generation.
+     */
+
+    // Internal
     private BlockManager blockManager;
     private WorldItemPlacementSystem worldItemPlacementSystem;
     private WorldRenderManager worldRenderManager;
+
+    // State
     private short airBlockId;
+
+    // Internal \\
 
     @Override
     protected void get() {
+
+        // Internal
         this.blockManager = get(BlockManager.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.worldRenderManager = get(WorldRenderManager.class);
@@ -42,20 +43,27 @@ public class DumpBranch extends BranchPackage {
 
     @Override
     protected void awake() {
-        this.airBlockId = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Air");
+        this.airBlockId = (short) blockManager.getBlockIDFromBlockName(EngineSetting.AIR_BLOCK_NAME);
     }
 
+    // Dump \\
+
     public void dumpChunkData(ChunkInstance chunkInstance, GridSlotHandle gridSlotHandle) {
+
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
+
         if (!syncContainer.tryAcquire())
             return;
+
         try {
             ChunkData toDump = ChunkDataUtility.nextToDump(
-                    syncContainer.data,
+                    syncContainer.getData(),
                     gridSlotHandle.getDetailLevel());
+
             if (toDump == null)
                 return;
-            ChunkDataUtility.cascadeClear(toDump, syncContainer.data);
+
+            ChunkDataUtility.cascadeClear(toDump, syncContainer.getData());
             executeDump(chunkInstance, toDump);
         } finally {
             syncContainer.release();
@@ -75,11 +83,6 @@ public class DumpBranch extends BranchPackage {
         }
     }
 
-    /*
-     * Only clears block palette — item structs on subchunks are left intact.
-     * They are the source of truth for ITEM_DATA rebuilds and are owned
-     * exclusively by dumpItemData.
-     */
     private void dumpGenerationData(ChunkInstance chunkInstance) {
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
         for (SubChunkInstance subChunk : subChunks)

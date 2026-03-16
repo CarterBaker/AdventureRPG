@@ -8,50 +8,41 @@ public enum ChunkData {
                         false, null,
                         new String[] {},
                         new String[] { "ESSENTIAL_DATA" }),
-
         ESSENTIAL_DATA(
                         false, null,
                         new String[] { "LOAD_DATA" },
                         new String[] { "GENERATION_DATA" }),
-
         GENERATION_DATA(
                         true, GridSlotDetailLevel.NEAR,
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA" },
                         new String[] { "NEIGHBOR_DATA", "ITEM_DATA" }),
-
         NEIGHBOR_DATA(
                         false, null,
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA" },
                         new String[] { "BUILD_DATA" }),
-
         BUILD_DATA(
                         true, GridSlotDetailLevel.NEAR,
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA" },
                         new String[] { "MERGE_DATA" }),
-
         MERGE_DATA(
                         true, GridSlotDetailLevel.IMMEDIATE,
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA",
                                         "BUILD_DATA" },
                         new String[] { "RENDER_DATA" }),
-
         RENDER_DATA(
                         true, GridSlotDetailLevel.IMMEDIATE,
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA", "BUILD_DATA",
                                         "MERGE_DATA" },
                         new String[] { "BATCH_DATA" }),
-
         BATCH_DATA(
                         false, null,
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA", "BUILD_DATA",
                                         "MERGE_DATA", "RENDER_DATA" },
                         new String[] {}),
-
         ITEM_DATA(
                         true, GridSlotDetailLevel.NEAR,
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA" },
                         new String[] { "ITEM_RENDER_DATA" }),
-
         ITEM_RENDER_DATA(
                         true, GridSlotDetailLevel.IMMEDIATE,
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "ITEM_DATA" },
@@ -60,7 +51,6 @@ public enum ChunkData {
         public final int index;
         public final boolean dumpable;
         public final GridSlotDetailLevel minimumLevel;
-
         public ChunkData[] requires;
         public ChunkData[] leadsTo;
 
@@ -75,8 +65,11 @@ public enum ChunkData {
                         stage.link();
         }
 
-        ChunkData(boolean dumpable, GridSlotDetailLevel minimumLevel,
-                        String[] requiresNames, String[] leadsToNames) {
+        ChunkData(
+                        boolean dumpable,
+                        GridSlotDetailLevel minimumLevel,
+                        String[] requiresNames,
+                        String[] leadsToNames) {
                 this.index = this.ordinal();
                 this.dumpable = dumpable;
                 this.minimumLevel = minimumLevel;

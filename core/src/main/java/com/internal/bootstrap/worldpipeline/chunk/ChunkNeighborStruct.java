@@ -4,16 +4,21 @@ import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.core.engine.StructPackage;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import com.internal.core.util.mathematics.extras.Direction2Vector;
-
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
 public class ChunkNeighborStruct extends StructPackage {
+
+    /*
+     * Pre-computed neighbor coordinates and a shared reference to the active
+     * chunk map for fast neighbor lookups during assessment. Coordinates are
+     * wrapped at construction time so world boundary handling is free at runtime.
+     */
 
     // Internal
     private final long[] neighborCoordinates;
     private final Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
 
-    // Internal \\
+    // Constructor \\
 
     public ChunkNeighborStruct(
             long chunkCoordinate,

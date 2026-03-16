@@ -18,18 +18,17 @@ import com.internal.core.util.queue.QueueItemHandle;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
-
 import java.util.ArrayDeque;
 
-/*
- * Drives the per-frame chunk queue: scans grid slots for load requests, loads
- * chunks from pool, and assesses active chunks to determine their next required
- * operation. All branch dispatch happens here; branches own the implementation.
- *
- * Load/dump decisions are fully delegated to ChunkDataUtility which walks the
- * requires/leadsTo graph declared on ChunkData. No stage ordering logic lives here.
- */
 class ChunkQueueManager extends ManagerPackage {
+
+    /*
+     * Drives the per-frame chunk queue. Scans grid slots for load requests,
+     * loads chunks from the pool, and assesses active chunks to determine their
+     * next required operation. All branch dispatch happens here — branches own
+     * the implementation. Load and dump decisions are fully delegated to
+     * ChunkDataUtility which walks the requires/leadsTo graph on ChunkData.
+     */
 
     // Internal
     private BlockManager blockManager;
@@ -38,6 +37,7 @@ class ChunkQueueManager extends ManagerPackage {
     private ChunkStreamManager chunkStreamManager;
     private WorldRenderManager worldRenderSystem;
 
+    // Branches
     private GenerationBranch generationBranch;
     private AssessmentBranch assessmentBranch;
     private BuildBranch buildBranch;
@@ -48,26 +48,27 @@ class ChunkQueueManager extends ManagerPackage {
     private RenderBranch renderBranch;
     private DumpBranch dumpBranch;
 
-    // Block Management
+    // Block IDs
     private short airBlockId;
     private short defaultBiomeId;
 
-    // Chunk Queue
+    // Queue
     private QueueInstance chunkQueue;
     private Int2ObjectOpenHashMap<ChunkQueueItem> id2QueueItem;
     private LongLinkedOpenHashSet loadRequests;
     private LongLinkedOpenHashSet unloadRequests;
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
 
-    // Chunk Pool
+    // Pool
     private ArrayDeque<ChunkInstance> chunkPool;
-    private int CHUNK_POOL_MAX_OVERFLOW;
+    private int chunkPoolMaxOverflow;
 
     // Internal \\
 
     @Override
     protected void create() {
 
+        // Branches
         this.generationBranch = create(GenerationBranch.class);
         this.assessmentBranch = create(AssessmentBranch.class);
         this.buildBranch = create(BuildBranch.class);
@@ -78,6 +79,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.renderBranch = create(RenderBranch.class);
         this.dumpBranch = create(DumpBranch.class);
 
+        // Queue
         this.chunkQueue = create(QueueInstance.class);
         this.id2QueueItem = new Int2ObjectOpenHashMap<>();
 
@@ -89,11 +91,15 @@ class ChunkQueueManager extends ManagerPackage {
         this.loadRequests = new LongLinkedOpenHashSet();
         this.unloadRequests = new LongLinkedOpenHashSet();
         this.chunkPool = new ArrayDeque<>();
-        this.CHUNK_POOL_MAX_OVERFLOW = EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
+
+        // Settings
+        this.chunkPoolMaxOverflow = EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
     }
 
     @Override
     protected void get() {
+
+        // Internal
         this.blockManager = get(BlockManager.class);
         this.biomeManager = get(BiomeManager.class);
         this.gridManager = get(GridManager.class);
@@ -103,7 +109,7 @@ class ChunkQueueManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        this.airBlockId = (short) blockManager.getBlockIDFromBlockName("TerraArcana/Air");
+        this.airBlockId = (short) blockManager.getBlockIDFromBlockName(EngineSetting.AIR_BLOCK_NAME);
         this.defaultBiomeId = biomeManager.getBiomeIDFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
     }
 
@@ -121,25 +127,33 @@ class ChunkQueueManager extends ManagerPackage {
     }
 
     private void flushActiveChunks() {
+
         var iterator = activeChunks.long2ObjectEntrySet().iterator();
+
         while (iterator.hasNext()) {
+
             var entry = iterator.next();
             long chunkCoordinate = entry.getLongKey();
             ChunkInstance chunkInstance = entry.getValue();
             iterator.remove();
+
             ChunkDataSyncContainer sync = chunkInstance.getChunkDataSyncContainer();
+
             if (!sync.tryAcquire()) {
                 activeChunks.put(chunkCoordinate, chunkInstance);
                 unloadRequests.add(chunkCoordinate);
                 continue;
             }
+
             try {
                 worldRenderSystem.removeChunkInstance(chunkCoordinate);
                 chunkInstance.reset();
             } finally {
                 sync.release();
             }
-            int newMax = gridManager.getGrid().getTotalSlots() + CHUNK_POOL_MAX_OVERFLOW;
+
+            int newMax = gridManager.getGrid().getTotalSlots() + chunkPoolMaxOverflow;
+
             if (chunkPool.size() < newMax)
                 chunkPool.push(chunkInstance);
             else
@@ -147,14 +161,19 @@ class ChunkQueueManager extends ManagerPackage {
         }
     }
 
-    // Chunk Queue System \\
+    // Queue Execution \\
 
     private void executeQueue() {
+
         while (true) {
+
             QueueItemHandle nextItem = chunkQueue.getNextQueueItem();
+
             if (nextItem == null)
                 break;
+
             ChunkQueueItem queueItem = id2QueueItem.get(nextItem.getQueueItemID());
+
             switch (queueItem) {
                 case SCAN_GRID_SLOTS -> scanGridSlots();
                 case LOAD -> loadQueue();
@@ -166,7 +185,9 @@ class ChunkQueueManager extends ManagerPackage {
     // Grid Scan \\
 
     private void scanGridSlots() {
+
         GridInstance grid = gridManager.getGrid();
+
         for (int i = 0; i < EngineSetting.GRID_SLOTS_SCAN_PER_FRAME; i++) {
             GridSlotHandle slot = grid.getNextScanSlot();
             long chunkCoordinate = slot.getChunkCoordinate();
@@ -175,17 +196,22 @@ class ChunkQueueManager extends ManagerPackage {
         }
     }
 
-    // Load Queue \\
+    // Load \\
 
     private void loadQueue() {
+
         var iterator = loadRequests.iterator();
+
         if (!iterator.hasNext())
             return;
+
         long chunkCoordinate = iterator.nextLong();
         iterator.remove();
+
         ChunkInstance chunkInstance = chunkPool.isEmpty()
                 ? create(ChunkInstance.class)
                 : chunkPool.poll();
+
         chunkInstance.constructor(
                 worldRenderSystem,
                 chunkStreamManager.getActiveWorldHandle(),
@@ -194,10 +220,11 @@ class ChunkQueueManager extends ManagerPackage {
                 airBlockId,
                 defaultBiomeId,
                 activeChunks);
+
         activeChunks.put(chunkCoordinate, chunkInstance);
     }
 
-    // Assess Active Chunks \\
+    // Assessment \\
 
     private void assessActiveChunks() {
 
@@ -205,21 +232,24 @@ class ChunkQueueManager extends ManagerPackage {
             return;
 
         var iterator = activeChunks.long2ObjectEntrySet().iterator();
+
         if (!iterator.hasNext())
             return;
 
         var entry = iterator.next();
         long chunkCoordinate = entry.getLongKey();
         ChunkInstance chunkInstance = entry.getValue();
-
         iterator.remove();
 
         if (unloadRequests.contains(chunkCoordinate)) {
+
             ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
+
             if (!syncContainer.tryAcquire()) {
                 activeChunks.put(chunkCoordinate, chunkInstance);
                 return;
             }
+
             try {
                 unloadRequests.remove(chunkCoordinate);
                 worldRenderSystem.removeChunkInstance(chunkCoordinate);
@@ -227,11 +257,14 @@ class ChunkQueueManager extends ManagerPackage {
             } finally {
                 syncContainer.release();
             }
+
             GridInstance grid = gridManager.getGrid();
-            if (chunkPool.size() < grid.getTotalSlots() + CHUNK_POOL_MAX_OVERFLOW)
+
+            if (chunkPool.size() < grid.getTotalSlots() + chunkPoolMaxOverflow)
                 chunkPool.push(chunkInstance);
             else
                 chunkInstance.dispose();
+
             return;
         }
 
@@ -262,64 +295,55 @@ class ChunkQueueManager extends ManagerPackage {
         activeChunks.put(chunkCoordinate, chunkInstance);
     }
 
-    // Queue Operation \\
+    // Operation \\
 
     private QueueOperation determineQueueOperation(
             ChunkInstance chunkInstance,
             GridSlotHandle gridSlotHandle) {
 
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
+
         if (!syncContainer.tryAcquire())
             return QueueOperation.SKIP;
 
         try {
             GridSlotDetailLevel slotLevel = gridSlotHandle.getDetailLevel();
 
-            ChunkData toDump = ChunkDataUtility.nextToDump(syncContainer.data, slotLevel);
+            ChunkData toDump = ChunkDataUtility.nextToDump(syncContainer.getData(), slotLevel);
+
             if (toDump != null)
                 return QueueOperation.DUMP;
 
-            ChunkData toLoad = ChunkDataUtility.nextToLoad(syncContainer.data, slotLevel);
+            ChunkData toLoad = ChunkDataUtility.nextToLoad(syncContainer.getData(), slotLevel);
+
             if (toLoad != null)
                 return toOperation(toLoad);
 
             return QueueOperation.SKIP;
-
         } finally {
             syncContainer.release();
         }
     }
 
     private QueueOperation toOperation(ChunkData stage) {
-        switch (stage) {
-            case LOAD_DATA:
-                return QueueOperation.LOAD;
-            case ESSENTIAL_DATA:
-                return QueueOperation.LOAD;
-            case GENERATION_DATA:
-                return QueueOperation.LOAD;
-            case NEIGHBOR_DATA:
-                return QueueOperation.ASSESSMENT;
-            case BUILD_DATA:
-                return QueueOperation.BUILD;
-            case MERGE_DATA:
-                return QueueOperation.MERGE;
-            case RENDER_DATA:
-                return QueueOperation.RENDER;
-            case BATCH_DATA:
-                return QueueOperation.BATCH;
-            case ITEM_DATA:
-                return QueueOperation.ITEM_LOAD;
-            case ITEM_RENDER_DATA:
-                return QueueOperation.ITEM_RENDER;
-            default:
-                return QueueOperation.SKIP;
-        }
+        return switch (stage) {
+            case LOAD_DATA -> QueueOperation.LOAD;
+            case ESSENTIAL_DATA -> QueueOperation.LOAD;
+            case GENERATION_DATA -> QueueOperation.LOAD;
+            case NEIGHBOR_DATA -> QueueOperation.ASSESSMENT;
+            case BUILD_DATA -> QueueOperation.BUILD;
+            case MERGE_DATA -> QueueOperation.MERGE;
+            case RENDER_DATA -> QueueOperation.RENDER;
+            case BATCH_DATA -> QueueOperation.BATCH;
+            case ITEM_DATA -> QueueOperation.ITEM_LOAD;
+            case ITEM_RENDER_DATA -> QueueOperation.ITEM_RENDER;
+            default -> QueueOperation.SKIP;
+        };
     }
 
     // Utility \\
 
-    public void setActiveChunks(Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
+    void setActiveChunks(Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
         this.activeChunks = activeChunks;
     }
 }

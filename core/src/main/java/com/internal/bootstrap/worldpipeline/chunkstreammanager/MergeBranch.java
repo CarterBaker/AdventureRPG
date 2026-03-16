@@ -9,19 +9,30 @@ import com.internal.core.kernel.thread.ThreadHandle;
 
 public class MergeBranch extends BranchPackage {
 
+    /*
+     * Async — merges all subchunk geometry packets into the chunk's single
+     * geometry packet on the WorldStreaming thread. Sets MERGE_DATA on success.
+     */
+
     // Internal
     private ThreadHandle threadHandle;
+
+    // Settings
     private int mergeIndex;
 
     // Internal \\
 
     @Override
     protected void get() {
+
+        // Internal
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
+
+        // Settings
         this.mergeIndex = ChunkData.MERGE_DATA.index;
     }
 
-    // Chunk Merge \\
+    // Merge \\
 
     public void mergeChunk(ChunkInstance chunkInstance) {
         executeAsync(
@@ -29,7 +40,7 @@ public class MergeBranch extends BranchPackage {
                 chunkInstance.getChunkDataSyncContainer(),
                 (SyncStructConsumer<ChunkDataSyncContainer>) container -> {
                     boolean success = chunkInstance.merge();
-                    container.data[mergeIndex] = success;
+                    container.getData()[mergeIndex] = success;
                 });
     }
 }

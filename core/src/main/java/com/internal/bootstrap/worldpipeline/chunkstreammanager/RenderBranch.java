@@ -6,24 +6,32 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.BranchPackage;
 
-/*
- * Registers a chunk with the render system once its geometry is ready.
- * Sets RENDER_DATA on success.
- */
 public class RenderBranch extends BranchPackage {
+
+    /*
+     * Main thread — registers the chunk with the render system once its merged
+     * geometry is ready. Sets RENDER_DATA on success.
+     */
 
     // Internal
     private WorldRenderManager worldRenderSystem;
+
+    // Settings
     private int renderIndex;
+
     // Internal \\
 
     @Override
     protected void get() {
+
+        // Internal
         this.worldRenderSystem = get(WorldRenderManager.class);
+
+        // Settings
         this.renderIndex = ChunkData.RENDER_DATA.index;
     }
 
-    // Chunk Render \\
+    // Render \\
 
     public void renderChunk(ChunkInstance chunkInstance) {
 
@@ -33,7 +41,7 @@ public class RenderBranch extends BranchPackage {
             return;
 
         try {
-            syncContainer.data[renderIndex] = worldRenderSystem.addChunkInstance(chunkInstance);
+            syncContainer.getData()[renderIndex] = worldRenderSystem.addChunkInstance(chunkInstance);
         } finally {
             syncContainer.release();
         }

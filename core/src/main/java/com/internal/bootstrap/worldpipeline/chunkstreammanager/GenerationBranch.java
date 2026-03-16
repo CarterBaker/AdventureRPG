@@ -12,9 +12,18 @@ import com.internal.core.kernel.thread.ThreadHandle;
 
 public class GenerationBranch extends BranchPackage {
 
+    /*
+     * Async — attempts to load the chunk from disk/cache first, then falls back
+     * to procedural generation. Sets LOAD_DATA, ESSENTIAL_DATA, and
+     * GENERATION_DATA on the sync container once the chunk is fully populated.
+     * Runs on the WorldStreaming thread.
+     */
+
     // Internal
     private ThreadHandle threadHandle;
     private WorldGenerationManager worldGenerationManager;
+
+    // Settings
     private int loadIndex;
     private int essentialIndex;
     private int generationIndex;
@@ -23,26 +32,35 @@ public class GenerationBranch extends BranchPackage {
 
     @Override
     protected void get() {
+
+        // Internal
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.worldGenerationManager = get(WorldGenerationManager.class);
+
+        // Settings
         this.loadIndex = ChunkData.LOAD_DATA.index;
         this.essentialIndex = ChunkData.ESSENTIAL_DATA.index;
         this.generationIndex = ChunkData.GENERATION_DATA.index;
     }
 
-    // Chunk Creation \\
+    // Generation \\
 
     public void getNewChunk(ChunkInstance chunkInstance) {
+
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
+
         executeAsync(
                 threadHandle,
                 syncContainer,
                 (SyncStructConsumer<ChunkDataSyncContainer>) container -> {
+
                     boolean loaded = false;
-                    if (!container.data[loadIndex]) {
+
+                    if (!container.getData()[loadIndex]) {
                         loaded = loadChunk(chunkInstance, container);
-                        container.data[loadIndex] = true;
+                        container.getData()[loadIndex] = true;
                     }
+
                     if (!loaded)
                         generateChunk(chunkInstance, container);
                 });
@@ -57,6 +75,7 @@ public class GenerationBranch extends BranchPackage {
     private void generateChunk(
             ChunkInstance chunkInstance,
             ChunkDataSyncContainer container) {
+
         boolean success = true;
         long chunkCoordinate = chunkInstance.getCoordinate();
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
@@ -70,8 +89,8 @@ public class GenerationBranch extends BranchPackage {
         }
 
         if (success) {
-            container.data[essentialIndex] = true;
-            container.data[generationIndex] = true;
+            container.getData()[essentialIndex] = true;
+            container.getData()[generationIndex] = true;
         }
     }
 }
