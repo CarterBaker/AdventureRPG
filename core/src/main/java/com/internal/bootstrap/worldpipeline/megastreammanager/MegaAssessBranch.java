@@ -1,4 +1,4 @@
-package com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue;
+package com.internal.bootstrap.worldpipeline.megastreammanager;
 
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaData;

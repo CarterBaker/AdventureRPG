@@ -17,29 +17,18 @@ public class EngineSetting {
 
         // File Extensions \\
 
-        private static final String[] FONT_FILE_EXTENSIONS_INTERNAL = { "ttf", "otf" };
         public static final ObjectArraySet<String> FONT_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        FONT_FILE_EXTENSIONS_INTERNAL);
-
-        private static final String[] FRAG_FILE_EXTENSIONS_INTERNAL = { "fsh", "frag", "fs", "fragment", "pixel" };
+                        new String[] { "ttf", "otf" });
         public static final ObjectArraySet<String> FRAG_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        FRAG_FILE_EXTENSIONS_INTERNAL);
-
-        private static final String[] INCLUDE_FILE_EXTENSIONS_INTERNAL = { "glsl", "inc", "glslinc" };
+                        new String[] { "fsh", "frag", "fs", "fragment", "pixel" });
         public static final ObjectArraySet<String> INCLUDE_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        INCLUDE_FILE_EXTENSIONS_INTERNAL);
-
-        private static final String[] JSON_FILE_EXTENSIONS_INTERNAL = { "json" };
+                        new String[] { "glsl", "inc", "glslinc" });
         public static final ObjectArraySet<String> JSON_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        JSON_FILE_EXTENSIONS_INTERNAL);
-
-        private static final String[] TEXTURE_FILE_EXTENSIONS_INTERNAL = { "png", "jpg", "jpeg", "tga", "bmp" };
+                        new String[] { "json" });
         public static final ObjectArraySet<String> TEXTURE_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        TEXTURE_FILE_EXTENSIONS_INTERNAL);
-
-        private static final String[] VERT_FILE_EXTENSIONS_INTERNAL = { "vsh", "vert", "vs", "vertex" };
+                        new String[] { "png", "jpg", "jpeg", "tga", "bmp" });
         public static final ObjectArraySet<String> VERT_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        VERT_FILE_EXTENSIONS_INTERNAL);
+                        new String[] { "vsh", "vert", "vs", "vertex" });
 
         // Asset Paths \\
 
@@ -71,6 +60,7 @@ public class EngineSetting {
         public static final int MEGA_CHUNK_SIZE = 4;
         public static final int WORLD_HEIGHT = 64;
         public static final int BLOCK_PALETTE_THRESHOLD = 512;
+        public static final int SUB_VOXEL_RESOLUTION = 16;
 
         // Rendering \\
 
@@ -108,9 +98,9 @@ public class EngineSetting {
 
         // World \\
 
-        public static final String DEFAULT_BIOME_NAME = "Empty";
         public static final String STARTING_WORLD = "TerraArcana";
         public static final String CHUNK_VAO = "util/vao/ChunkVAO";
+        public static final String DEFAULT_BIOME_NAME = "Empty";
         public static final int CHUNK_POOL_MAX_OVERFLOW = 32;
         public static final int GRID_SLOTS_SCAN_PER_FRAME = 32;
         public static final int MAX_CHUNK_STREAM_PER_BATCH = 32;
@@ -118,6 +108,15 @@ public class EngineSetting {
         public static final int MAX_CHUNK_STREAM_PER_QUEUE = 1024;
         public static final int MEGA_ASSESS_PER_FRAME = GRID_SLOTS_SCAN_PER_FRAME / MEGA_CHUNK_SIZE;
         public static final int MEGA_POOL_MAX_OVERFLOW = 8;
+
+        // World Defaults \\
+
+        public static final float DEFAULT_GRAVITY_MULTIPLIER = 1.0f;
+        public static final float DEFAULT_GRAVITY_X = 0.0f;
+        public static final float DEFAULT_GRAVITY_Y = -1.0f;
+        public static final float DEFAULT_GRAVITY_Z = 0.0f;
+        public static final float DEFAULT_DAYS_PER_DAY = 20.0f;
+        public static final String DEFAULT_CALENDAR_NAME = "standard/Default";
 
         // UBOs \\
 
@@ -216,10 +215,9 @@ public class EngineSetting {
         // Item \\
 
         public static final String DEFAULT_ITEM_MATERIAL = "items/StandardItems";
-        public static final int SUB_VOXEL_RESOLUTION = 16;
         public static final short TOOL_NONE = 0;
 
-        // Menu \\
+        // Font \\
 
         public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                         + "0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
@@ -228,5 +226,8 @@ public class EngineSetting {
         public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;
         public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;
         public static final int FONT_DEFAULT_SIZE = 24;
+
+        // Menu \\
+
         public static final int MAX_MASK_DEPTH = 8;
 }

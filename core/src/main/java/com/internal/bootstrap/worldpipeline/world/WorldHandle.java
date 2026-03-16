@@ -7,96 +7,64 @@ import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class WorldHandle extends HandlePackage {
 
-    // Existing
-    private String worldName;
-    private int worldID;
-    private Pixmap world;
-    private Vector2Int worldScale;
+    /*
+     * Persistent world definition owned by WorldManager for the engine lifetime.
+     * Wraps WorldData and delegates all access through it. worldEpochStart is
+     * the only mutable value — written once from the save file at runtime.
+     */
 
-    // Gravity
-    private float gravityMultiplier = 1.0f;
-    private Vector3 gravityDirection = new Vector3(0, -1, 0);
-
-    // Time
-    private float daysPerDay = 20.0f;
-    private long worldEpochStart = -1L;
-    private String calendarName = "standard/Default";
+    // Internal
+    private WorldData data;
 
     // Constructor \\
 
-    public void constructor(
-            String worldName,
-            int worldID,
-            Pixmap world,
-            Vector2Int worldScale) {
-
-        this.worldName = worldName;
-        this.worldID = worldID;
-        this.world = world;
-        this.worldScale = worldScale;
+    public void constructor(WorldData data) {
+        this.data = data;
     }
 
-    // Getters — Existing \\
+    // Accessible \\
+
+    public WorldData getWorldData() {
+        return data;
+    }
 
     public String getWorldName() {
-        return worldName;
+        return data.getWorldName();
     }
 
     public int getWorldID() {
-        return worldID;
+        return data.getWorldID();
     }
 
     public Pixmap getWorld() {
-        return world;
+        return data.getWorld();
     }
 
     public Vector2Int getWorldScale() {
-        return worldScale;
+        return data.getWorldScale();
     }
 
-    // Getters — Gravity \\
-
     public float getGravityMultiplier() {
-        return gravityMultiplier;
+        return data.getGravityMultiplier();
     }
 
     public Vector3 getGravityDirection() {
-        return gravityDirection;
+        return data.getGravityDirection();
     }
-
-    // Getters — Time \\
 
     public float getDaysPerDay() {
-        return daysPerDay;
-    }
-
-    public long getWorldEpochStart() {
-        return worldEpochStart;
+        return data.getDaysPerDay();
     }
 
     public String getCalendarName() {
-        return calendarName;
+        return data.getCalendarName();
     }
 
-    // Setters \\
-
-    public void setGravityMultiplier(float gravityMultiplier) {
-        this.gravityMultiplier = gravityMultiplier;
-    }
-
-    public void setGravityDirection(Vector3 gravityDirection) {
-        this.gravityDirection = gravityDirection;
-    }
-
-    public void setDaysPerDay(float daysPerDay) {
-        this.daysPerDay = daysPerDay;
-    }
-
-    public void setCalendarName(String calendarName) {
-        this.calendarName = calendarName;
+    public long getWorldEpochStart() {
+        return data.getWorldEpochStart();
     }
 
     public void setWorldEpochStart(long worldEpochStart) {
-        this.worldEpochStart = worldEpochStart;
+        data.setWorldEpochStart(worldEpochStart);
     }
 }

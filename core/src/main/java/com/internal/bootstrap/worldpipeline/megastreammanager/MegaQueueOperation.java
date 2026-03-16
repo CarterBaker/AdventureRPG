@@ -1,4 +1,4 @@
-package com.internal.bootstrap.worldpipeline.megastreammanager.megaqueue;
+package com.internal.bootstrap.worldpipeline.megastreammanager;
 
 public enum MegaQueueOperation {
     ASSESS,

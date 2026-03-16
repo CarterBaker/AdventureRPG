@@ -1,4 +1,4 @@
-package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
+package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 public enum QueueOperation {
     LOAD,

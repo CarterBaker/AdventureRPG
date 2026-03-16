@@ -1,4 +1,4 @@
-package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
+package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;

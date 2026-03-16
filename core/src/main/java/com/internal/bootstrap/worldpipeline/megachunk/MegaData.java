@@ -8,22 +8,30 @@ public enum MegaData {
             false, null,
             new String[] {},
             new String[] { "RENDER_DATA" }),
-
     RENDER_DATA(
             true, GridSlotDetailLevel.NEAR,
             new String[] { "BATCH_DATA" },
             new String[] {});
 
     /*
+     * BATCH_DATA — never dumps automatically. Marks that chunks are registered
+     * in this mega. Cleared per-chunk by MegaDumpBranch when RENDER_DATA dumps,
+     * and by invalidation when a block changes. This forces re-contribution
+     * when the mega next enters NEAR range.
+     *
+     * RENDER_DATA — dumps at IMMEDIATE so the mega goes dormant and chunks
+     * render individually at close range. Rebuilt when the slot returns to NEAR
+     * and all chunks re-contribute. Never manually removed — only dumps via the
+     * graph or full unload.
+     *
      * maximumLevel — the most detailed level at which this stage must remain.
      * Dump when slotLevel.level < maximumLevel.level (slot became more detailed).
-     * Load when slotLevel.level >= maximumLevel.level.
-     * null = never dump.
+     * null = never dump automatically.
      */
+
     public final int index;
     public final boolean dumpable;
     public final GridSlotDetailLevel maximumLevel;
-
     public MegaData[] requires;
     public MegaData[] leadsTo;
 

@@ -1,4 +1,4 @@
-package com.internal.bootstrap.worldpipeline.chunkstreammanager.chunkqueue;
+package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
