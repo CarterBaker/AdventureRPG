@@ -11,9 +11,9 @@ import com.internal.bootstrap.physicspipeline.PhysicsPipeline;
 import com.internal.bootstrap.renderpipeline.RenderPipeline;
 import com.internal.bootstrap.shaderpipeline.ShaderPipeline;
 import com.internal.bootstrap.worldpipeline.WorldPipeline;
-import com.internal.core.engine.PipelinePackage;
+import com.internal.core.engine.AssemblyPackage;
 
-public class BootstrapPipeline extends PipelinePackage {
+public class BootstrapAssembly extends AssemblyPackage {
 
     // BootStrap
     private GeometryPipeline geometryPipeline;

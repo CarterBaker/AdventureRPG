@@ -7,7 +7,7 @@ public class PlayerSystem extends SystemPackage {
 
     /*
      * Triggers player spawning at runtime startup.
-     * Owned by RuntimePipeline. Delegates entirely to PlayerManager.
+     * Owned by RuntimeContext. Delegates entirely to PlayerManager.
      */
 
     // Internal

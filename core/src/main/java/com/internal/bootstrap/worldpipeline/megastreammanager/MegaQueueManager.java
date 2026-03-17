@@ -4,7 +4,7 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
-import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotDetailLevel;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
@@ -12,6 +12,7 @@ import com.internal.bootstrap.worldpipeline.megachunk.MegaData;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaDataUtility;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
@@ -22,16 +23,15 @@ import java.util.ArrayDeque;
 class MegaQueueManager extends ManagerPackage {
 
     /*
-     * Drives the per-frame mega chunk pipeline. Owns lifecycle — create, pool,
-     * flush, unload — and assessment dispatch. All per-operation logic is
-     * delegated to branches. MegaMergeBranch owns the batch→merge→finalize
-     * sequence. MegaRenderBranch sets chunk BATCH_DATA after confirmed GPU upload.
+     * Drives the per-frame mega chunk pipeline across all active grids. Each
+     * grid owns its own activeMegaChunks map. The mega pool is shared across
+     * all grids for efficiency.
      */
 
     // Internal
-    private WorldRenderManager worldRenderSystem;
+    private WorldRenderManager worldRenderManager;
+    private WorldStreamManager worldStreamManager;
     private ChunkStreamManager chunkStreamManager;
-    private GridManager gridManager;
 
     // Branches
     private MegaMergeBranch mergeBranch;
@@ -39,12 +39,8 @@ class MegaQueueManager extends ManagerPackage {
     private MegaRenderBranch renderBranch;
     private MegaDumpBranch dumpBranch;
 
-    // Active Megas
-    private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
-
-    // Pool
+    // Pool — shared across all grids
     private ArrayDeque<MegaChunkInstance> megaPool;
-    private int megaMax;
 
     // Settings
     private int megaPoolMaxOverflow;
@@ -77,34 +73,44 @@ class MegaQueueManager extends ManagerPackage {
     protected void get() {
 
         // Internal
-        this.worldRenderSystem = get(WorldRenderManager.class);
+        this.worldRenderManager = get(WorldRenderManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
-        this.gridManager = get(GridManager.class);
-    }
-
-    @Override
-    protected void start() {
-        computeMegaMax();
     }
 
     @Override
     protected void update() {
-        assessActiveMegas();
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++)
+            assessActiveMegas((GridInstance) elements[i]);
     }
 
-    // Grid Rebuild \\
+    // Grid Events \\
 
-    void onGridRebuilt() {
-        computeMegaMax();
-        flushActiveMegas();
+    void onGridRebuilt(GridInstance grid) {
+        flushActiveMegas(grid);
     }
 
-    private void computeMegaMax() {
-        int megaSlots = gridManager.getGrid().getTotalSlots() / megaScale;
-        this.megaMax = megaSlots + megaPoolMaxOverflow;
+    void onGridRemoved(GridInstance grid) {
+        flushActiveMegas(grid);
     }
 
-    private void flushActiveMegas() {
+    // Mega Max \\
+
+    private int computeMegaMax(GridInstance grid) {
+        return (grid.getTotalSlots() / megaScale) + megaPoolMaxOverflow;
+    }
+
+    // Flush \\
+
+    private void flushActiveMegas(GridInstance grid) {
+
+        Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks = grid.getActiveMegaChunks();
+        int megaMax = computeMegaMax(grid);
 
         var iterator = activeMegaChunks.long2ObjectEntrySet().iterator();
 
@@ -123,7 +129,7 @@ class MegaQueueManager extends ManagerPackage {
             }
 
             try {
-                worldRenderSystem.removeMegaInstance(megaCoord);
+                worldRenderManager.removeMegaInstance(megaCoord);
                 mega.reset();
             } finally {
                 sync.release();
@@ -138,13 +144,16 @@ class MegaQueueManager extends ManagerPackage {
 
     // Batching \\
 
-    void batchChunk(ChunkInstance chunkInstance) {
+    void batchChunk(ChunkInstance chunkInstance, GridInstance grid) {
+
+        Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks = grid.getActiveMegaChunks();
+        int megaMax = computeMegaMax(grid);
 
         long megaCoord = Coordinate2Long.toMegaChunkCoordinate(chunkInstance.getCoordinate());
         MegaChunkInstance mega = activeMegaChunks.get(megaCoord);
 
         if (mega == null) {
-            mega = createMega(megaCoord);
+            mega = createMega(megaCoord, grid, megaMax, activeMegaChunks);
             if (mega == null)
                 return;
             activeMegaChunks.put(megaCoord, mega);
@@ -153,34 +162,46 @@ class MegaQueueManager extends ManagerPackage {
         mergeBranch.mergeChunkIntoMega(chunkInstance, mega);
     }
 
-    private MegaChunkInstance createMega(long megaCoord) {
+    private MegaChunkInstance createMega(
+            long megaCoord,
+            GridInstance grid,
+            int megaMax,
+            Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
 
         if (!megaPool.isEmpty())
-            return configureMega(megaPool.poll(), megaCoord);
+            return configureMega(megaPool.poll(), megaCoord, grid);
 
         if (activeMegaChunks.size() >= megaMax)
             return null;
 
-        return configureMega(create(MegaChunkInstance.class), megaCoord);
+        return configureMega(create(MegaChunkInstance.class), megaCoord, grid);
     }
 
-    private MegaChunkInstance configureMega(MegaChunkInstance mega, long megaCoord) {
+    private MegaChunkInstance configureMega(
+            MegaChunkInstance mega,
+            long megaCoord,
+            GridInstance grid) {
+
         mega.constructor(
-                worldRenderSystem,
-                chunkStreamManager.getActiveWorldHandle(),
+                worldRenderManager,
+                grid.getWorldHandle(),
                 megaCoord,
                 chunkStreamManager.getChunkVAO(),
                 megaScale);
+
         return mega;
     }
 
     // Assessment \\
 
-    private void assessActiveMegas() {
+    private void assessActiveMegas(GridInstance grid) {
+
+        Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks = grid.getActiveMegaChunks();
 
         if (activeMegaChunks.isEmpty())
             return;
 
+        int megaMax = computeMegaMax(grid);
         int assessed = 0;
         var iterator = activeMegaChunks.long2ObjectEntrySet().iterator();
 
@@ -192,10 +213,10 @@ class MegaQueueManager extends ManagerPackage {
             iterator.remove();
 
             MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
-            GridSlotHandle gridSlotHandle = gridManager.getGrid().getGridSlotForChunk(megaCoord);
+            GridSlotHandle gridSlotHandle = grid.getGridSlotForChunk(megaCoord);
 
             if (gridSlotHandle == null) {
-                unloadMega(mega, megaCoord);
+                unloadMega(mega, megaCoord, megaMax);
                 assessed++;
                 continue;
             }
@@ -251,17 +272,15 @@ class MegaQueueManager extends ManagerPackage {
 
     // Unload \\
 
-    private void unloadMega(MegaChunkInstance mega, long megaCoord) {
+    private void unloadMega(MegaChunkInstance mega, long megaCoord, int megaMax) {
 
         MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
 
-        if (!sync.tryAcquire()) {
-            activeMegaChunks.put(megaCoord, mega);
+        if (!sync.tryAcquire())
             return;
-        }
 
         try {
-            worldRenderSystem.removeMegaInstance(megaCoord);
+            worldRenderManager.removeMegaInstance(megaCoord);
             mega.reset();
         } finally {
             sync.release();
@@ -278,22 +297,33 @@ class MegaQueueManager extends ManagerPackage {
     void invalidateMegaForChunk(long chunkCoordinate) {
 
         long megaCoord = Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate);
-        MegaChunkInstance mega = activeMegaChunks.get(megaCoord);
 
-        if (mega == null)
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++) {
+
+            GridInstance grid = (GridInstance) elements[i];
+            MegaChunkInstance mega = grid.getActiveMegaChunks().get(megaCoord);
+
+            if (mega == null)
+                continue;
+
+            MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
+
+            if (!sync.tryAcquire())
+                continue;
+
+            try {
+                worldRenderManager.removeMegaInstance(megaCoord);
+                clearChunkBatchFlags(mega);
+                mega.reset();
+            } finally {
+                sync.release();
+            }
+
             return;
-
-        MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
-
-        if (!sync.tryAcquire())
-            return;
-
-        try {
-            worldRenderSystem.removeMegaInstance(megaCoord);
-            clearChunkBatchFlags(mega);
-            mega.reset();
-        } finally {
-            sync.release();
         }
     }
 
@@ -317,11 +347,5 @@ class MegaQueueManager extends ManagerPackage {
                 chunkSync.release();
             }
         }
-    }
-
-    // Utility \\
-
-    void setActiveMegaChunks(Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
-        this.activeMegaChunks = activeMegaChunks;
     }
 }

@@ -1,11 +1,12 @@
 package com.internal.runtime;
 
-import com.internal.core.engine.PipelinePackage;
+import com.internal.core.engine.ContextPackage;
 import com.internal.runtime.menu.MenuSystem;
 import com.internal.runtime.player.PlayerSystem;
+import com.internal.runtime.world.WorldSystem;
 import com.internal.runtime.lighting.SkySystem;
 
-public class RuntimePipeline extends PipelinePackage {
+public class RuntimeContext extends ContextPackage {
 
     /*
      * Game runtime entry point. Creates and owns all runtime systems.
@@ -17,6 +18,7 @@ public class RuntimePipeline extends PipelinePackage {
     private SkySystem skySystem;
     private PlayerSystem playerSystem;
     private MenuSystem menuSystem;
+    private WorldSystem worldSystem;
 
     // Runtime \\
 
@@ -27,5 +29,6 @@ public class RuntimePipeline extends PipelinePackage {
         this.skySystem = create(SkySystem.class);
         this.playerSystem = create(PlayerSystem.class);
         this.menuSystem = create(MenuSystem.class);
+        this.worldSystem = create(WorldSystem.class);
     }
 }

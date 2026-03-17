@@ -1,7 +1,7 @@
 package com.internal.core.engine;
 
-import com.internal.bootstrap.BootstrapPipeline;
-import com.internal.runtime.RuntimePipeline;
+import com.internal.bootstrap.BootstrapAssembly;
+import com.internal.runtime.RuntimeContext;
 
 public class GameEngine extends EnginePackage {
 
@@ -12,10 +12,10 @@ public class GameEngine extends EnginePackage {
      */
 
     // BootStrap
-    private BootstrapPipeline bootstrapPipeline;
+    private BootstrapAssembly bootstrapAssembly;
 
     // Runtime
-    private RuntimePipeline runtimePipeline;
+    private RuntimeContext runtimeContext;
 
     // BootStrap \\
 
@@ -23,7 +23,7 @@ public class GameEngine extends EnginePackage {
     protected void bootstrap() {
 
         // BootStrap
-        this.bootstrapPipeline = create(BootstrapPipeline.class);
+        this.bootstrapAssembly = create(BootstrapAssembly.class);
     }
 
     // Runtime \\
@@ -32,11 +32,11 @@ public class GameEngine extends EnginePackage {
     protected void create() {
 
         // Runtime
-        this.runtimePipeline = create(RuntimePipeline.class);
+        this.runtimeContext = create(RuntimeContext.class);
     }
 
     @Override
     void draw() {
-        this.bootstrapPipeline.draw();
+        this.bootstrapAssembly.draw();
     }
 }

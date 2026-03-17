@@ -5,8 +5,8 @@ import com.internal.bootstrap.physicspipeline.util.BlockCastStruct;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
@@ -23,7 +23,7 @@ class BlockCastBranch extends BranchPackage {
      */
 
     // Internal
-    private ChunkStreamManager chunkStreamManager;
+    private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
 
     // Settings
@@ -44,7 +44,7 @@ class BlockCastBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
     }
 
@@ -133,7 +133,7 @@ class BlockCastBranch extends BranchPackage {
             int localY = blockColumnY % chunkSize;
 
             long currentChunkCoord = Coordinate2Long.pack(chunkX, chunkZ);
-            ChunkInstance chunk = chunkStreamManager.getChunkInstance(currentChunkCoord);
+            ChunkInstance chunk = worldStreamManager.getChunkInstance(currentChunkCoord);
 
             if (chunk == null)
                 continue;

@@ -1,6 +1,6 @@
 package com.internal.core.engine;
 
-import com.internal.editor.runtime.RuntimePipeline;
+import com.internal.editor.runtime.RuntimeContext;
 
 public class EditorEngine extends EnginePackage {
 
@@ -11,11 +11,11 @@ public class EditorEngine extends EnginePackage {
      */
 
     // Bootstrap
-    private com.internal.bootstrap.BootstrapPipeline bootstrapPipeline;
-    private com.internal.editor.bootstrap.BootstrapPipeline editorBootstrapPipeline;
+    private com.internal.bootstrap.BootstrapAssembly bootstrapAssembly;
+    private com.internal.editor.bootstrap.BootstrapAssembly editorBootstrapPipeline;
 
     // Runtime
-    private RuntimePipeline runtimePipeline;
+    private RuntimeContext runtimeContext;
 
     // Bootstrap \\
 
@@ -23,8 +23,8 @@ public class EditorEngine extends EnginePackage {
     protected void bootstrap() {
 
         // Bootstrap
-        this.bootstrapPipeline = create(com.internal.bootstrap.BootstrapPipeline.class);
-        this.editorBootstrapPipeline = create(com.internal.editor.bootstrap.BootstrapPipeline.class);
+        this.bootstrapAssembly = create(com.internal.bootstrap.BootstrapAssembly.class);
+        this.editorBootstrapPipeline = create(com.internal.editor.bootstrap.BootstrapAssembly.class);
     }
 
     // Runtime \\
@@ -33,11 +33,11 @@ public class EditorEngine extends EnginePackage {
     protected void create() {
 
         // Runtime
-        this.runtimePipeline = create(RuntimePipeline.class);
+        this.runtimeContext = create(RuntimeContext.class);
     }
 
     @Override
     void draw() {
-        this.bootstrapPipeline.draw();
+        this.bootstrapAssembly.draw();
     }
 }

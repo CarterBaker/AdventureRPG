@@ -1,16 +1,15 @@
 package com.internal.bootstrap.worldpipeline.megastreammanager;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
 import com.internal.core.engine.ManagerPackage;
-import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
 public class MegaStreamManager extends ManagerPackage {
 
     /*
-     * Public facade for the mega chunk pipeline. Owns no state directly —
-     * activeMegaChunks is dispatched from ChunkStreamManager. All logic
-     * is delegated to MegaQueueManager.
+     * Internal mega chunk pipeline facade. Owned and created by
+     * WorldStreamManager. All operations are per-GridInstance — each grid
+     * owns its own activeMegaChunks map. The mega pool is shared internally.
      */
 
     // Internal
@@ -23,20 +22,20 @@ public class MegaStreamManager extends ManagerPackage {
         this.megaQueueManager = create(MegaQueueManager.class);
     }
 
-    // Management \\
+    // Grid Events \\
 
-    public void setActiveMegaChunks(Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
-        megaQueueManager.setActiveMegaChunks(activeMegaChunks);
+    public void onGridRebuilt(GridInstance grid) {
+        megaQueueManager.onGridRebuilt(grid);
     }
 
-    public void onGridRebuilt() {
-        megaQueueManager.onGridRebuilt();
+    public void onGridRemoved(GridInstance grid) {
+        megaQueueManager.onGridRemoved(grid);
     }
 
     // Accessible \\
 
-    public void batchChunk(ChunkInstance chunkInstance) {
-        megaQueueManager.batchChunk(chunkInstance);
+    public void batchChunk(ChunkInstance chunkInstance, GridInstance grid) {
+        megaQueueManager.batchChunk(chunkInstance, grid);
     }
 
     public void invalidateMegaForChunk(long chunkCoordinate) {

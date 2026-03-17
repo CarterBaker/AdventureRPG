@@ -14,9 +14,9 @@ import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionStruct;
 import com.internal.bootstrap.worldpipeline.util.WorldPositionUtility;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector3;
@@ -38,7 +38,7 @@ public class PlayerManager extends ManagerPackage {
     private MovementManager movementManager;
     private EntityManager entityManager;
     private BlockManager blockManager;
-    private ChunkStreamManager chunkStreamManager;
+    private WorldStreamManager worldStreamManager;
     private InventoryBranch inventoryBranch;
 
     // Systems
@@ -77,7 +77,7 @@ public class PlayerManager extends ManagerPackage {
         this.movementManager = get(MovementManager.class);
         this.entityManager = get(EntityManager.class);
         this.blockManager = get(BlockManager.class);
-        this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
         this.inventoryBranch = get(InventoryBranch.class);
     }
 
@@ -184,7 +184,7 @@ public class PlayerManager extends ManagerPackage {
 
     private boolean verifyPlayerPosition(WorldPositionStruct worldPositionStruct) {
 
-        ChunkInstance activeChunkInstance = chunkStreamManager.getChunkInstance(
+        ChunkInstance activeChunkInstance = worldStreamManager.getChunkInstance(
                 worldPositionStruct.getChunkCoordinate());
 
         if (activeChunkInstance == null)

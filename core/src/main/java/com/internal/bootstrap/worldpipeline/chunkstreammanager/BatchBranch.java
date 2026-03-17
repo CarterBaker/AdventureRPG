@@ -2,6 +2,7 @@ package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
 import com.internal.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import com.internal.core.engine.BranchPackage;
 
@@ -28,8 +29,8 @@ public class BatchBranch extends BranchPackage {
 
     // Batch \\
 
-    public void batchChunk(ChunkInstance chunkInstance) {
+    public void batchChunk(ChunkInstance chunkInstance, GridInstance grid) {
         chunkInstance.getChunkDataSyncContainer().setData(ChunkData.BATCH_DATA, false);
-        megaStreamManager.batchChunk(chunkInstance);
+        megaStreamManager.batchChunk(chunkInstance, grid);
     }
 }

@@ -7,9 +7,9 @@ import com.internal.bootstrap.physicspipeline.util.BlockCastStruct;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
@@ -25,7 +25,7 @@ class BlockBranch extends BranchPackage {
 
     // Internal
     private BlockManager blockManager;
-    private ChunkStreamManager chunkStreamManager;
+    private WorldStreamManager worldStreamManager;
     private DynamicGeometryManager dynamicGeometryManager;
     private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
     private WorldRenderManager worldRenderManager;
@@ -60,7 +60,7 @@ class BlockBranch extends BranchPackage {
 
         // Internal
         this.blockManager = get(BlockManager.class);
-        this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
         this.worldRenderManager = get(WorldRenderManager.class);
@@ -75,9 +75,6 @@ class BlockBranch extends BranchPackage {
 
     // Break \\
 
-    /*
-     * Returns true if a hit was registered (caller should reset placement timer).
-     */
     boolean tryBreak(EntityInstance entity, BlockCastStruct castStruct) {
 
         BlockHandle block = castStruct.getBlock();
@@ -117,7 +114,7 @@ class BlockBranch extends BranchPackage {
         if (currentHits < block.getDurability())
             return true;
 
-        ChunkInstance chunk = chunkStreamManager.getChunkInstance(castStruct.getChunkCoordinate());
+        ChunkInstance chunk = worldStreamManager.getChunkInstance(castStruct.getChunkCoordinate());
 
         if (chunk == null)
             return true;
@@ -155,12 +152,10 @@ class BlockBranch extends BranchPackage {
     // Tool Helpers \\
 
     private int getBreakTier(EntityInstance entity) {
-        // TODO: read from entity.getInventoryHandle().getMainHand() tool tier
         return 0;
     }
 
     private boolean isCorrectTool(EntityInstance entity, BlockHandle block) {
-        // TODO: read tool type from entity.getInventoryHandle().getMainHand()
         return block.getRequiredToolTypeID() == EngineSetting.TOOL_NONE;
     }
 
@@ -206,7 +201,7 @@ class BlockBranch extends BranchPackage {
     private void rebuildNeighbour(int chunkX, int chunkZ, int subChunkY) {
 
         long coord = Coordinate2Long.pack(chunkX, chunkZ);
-        ChunkInstance neighbour = chunkStreamManager.getChunkInstance(coord);
+        ChunkInstance neighbour = worldStreamManager.getChunkInstance(coord);
 
         if (neighbour == null)
             return;
@@ -218,8 +213,8 @@ class BlockBranch extends BranchPackage {
     private void mergeAndRender(ChunkInstance chunk, long chunkCoordinate) {
         chunk.merge();
         worldRenderManager.addChunkInstance(chunk);
-        chunkStreamManager.invalidateMegaForChunk(chunkCoordinate);
-        chunkStreamManager.invalidateChunkBatch(chunkCoordinate);
+        worldStreamManager.invalidateMegaForChunk(chunkCoordinate);
+        worldStreamManager.invalidateChunkBatch(chunkCoordinate);
     }
 
     // Write \\

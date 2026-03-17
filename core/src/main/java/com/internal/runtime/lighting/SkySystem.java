@@ -8,7 +8,7 @@ public class SkySystem extends SystemPackage {
 
     /*
      * Pushes the sky pass to the render pipeline each frame.
-     * Owned by RuntimePipeline.
+     * Owned by RuntimeContext.
      */
 
     // Internal

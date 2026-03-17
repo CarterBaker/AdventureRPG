@@ -7,7 +7,7 @@ public class MenuSystem extends SystemPackage {
 
     /*
      * Triggers the main menu on runtime startup.
-     * Owned by RuntimePipeline. Delegates entirely to MainMenuBranch.
+     * Owned by RuntimeContext. Delegates entirely to MainMenuBranch.
      */
 
     // Internal

@@ -4,8 +4,8 @@ import com.internal.bootstrap.entitypipeline.entity.EntityInstance;
 import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import com.internal.bootstrap.physicspipeline.util.BlockCastStruct;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
@@ -22,7 +22,7 @@ class ItemBranch extends BranchPackage {
      */
 
     // Internal
-    private ChunkStreamManager chunkStreamManager;
+    private WorldStreamManager worldStreamManager;
     private WorldItemPlacementSystem worldItemPlacementSystem;
 
     // Settings
@@ -43,15 +43,12 @@ class ItemBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
     }
 
     // Place \\
 
-    /*
-     * Returns true if placement succeeded (caller should reset placement timer).
-     */
     boolean place(EntityInstance entity, Vector3 direction, BlockCastStruct castStruct) {
 
         if (entity.getInventoryHandle().getBackpack().isEmpty())
@@ -92,7 +89,7 @@ class ItemBranch extends BranchPackage {
         }
 
         long placeChunkCoord = Coordinate2Long.pack(placeChunkX, placeChunkZ);
-        ChunkInstance placeChunk = chunkStreamManager.getChunkInstance(placeChunkCoord);
+        ChunkInstance placeChunk = worldStreamManager.getChunkInstance(placeChunkCoord);
 
         if (placeChunk == null)
             return false;

@@ -1,5 +1,6 @@
 package com.internal.bootstrap.worldpipeline.gridmanager;
 
+import com.internal.bootstrap.entitypipeline.entity.EntityInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
@@ -16,9 +17,9 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 class GridBuildSystem extends SystemPackage {
 
     /*
-     * Constructs the GridInstance and all GridSlotHandles at bootstrap and on
-     * rebuild. Derives load order by sorting coordinates by distance from
-     * center. Allocates one UBOInstance per slot for GPU grid position data.
+     * Constructs a GridInstance and all GridSlotHandles for a given focal entity.
+     * Derives load order by sorting coordinates by distance from center.
+     * Allocates one UBOInstance per slot for GPU grid position data.
      */
 
     // Internal
@@ -27,13 +28,15 @@ class GridBuildSystem extends SystemPackage {
     // Config
     private int chunkSize;
     private int megaChunkSize;
+    private int chunkPoolMaxOverflow;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void create() {
         this.chunkSize = EngineSetting.CHUNK_SIZE;
         this.megaChunkSize = EngineSetting.MEGA_CHUNK_SIZE;
+        this.chunkPoolMaxOverflow = EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
     }
 
     @Override
@@ -43,7 +46,7 @@ class GridBuildSystem extends SystemPackage {
 
     // Build \\
 
-    GridInstance buildGrid() {
+    GridInstance buildGrid(EntityInstance focalEntity) {
 
         float radius = calculateRadius();
         float radiusSquared = radius * radius;
@@ -55,8 +58,8 @@ class GridBuildSystem extends SystemPackage {
             gridCoordinates.add(coord);
 
         int totalSlots = loadOrder.length;
+        int maxChunks = totalSlots + chunkPoolMaxOverflow;
 
-        // Create instance first so handles can hold a back-reference to it
         GridInstance gridInstance = create(GridInstance.class);
 
         Long2ObjectOpenHashMap<GridSlotHandle> gridSlots = createGridSlotHandles(
@@ -66,11 +69,13 @@ class GridBuildSystem extends SystemPackage {
         populateCoveredSlots(gridSlots);
 
         gridInstance.constructor(
+                focalEntity,
                 totalSlots,
                 loadOrder,
                 gridCoordinates,
                 gridSlots,
-                radiusSquared);
+                radiusSquared,
+                maxChunks);
 
         return gridInstance;
     }

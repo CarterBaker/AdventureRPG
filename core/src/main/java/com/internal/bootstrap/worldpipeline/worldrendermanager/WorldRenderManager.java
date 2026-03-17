@@ -10,8 +10,8 @@ import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
-import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
 import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -26,13 +26,14 @@ public class WorldRenderManager extends ManagerPackage {
      * Drives the world render pipeline each frame. Maintains GPU model lists for
      * individual chunks and batched megas, manages render queues rebuilt on each
      * player chunk crossing, and delegates frustum culling to FrustumCullingSystem.
+     * Loops all active grids — one grid in game, multiple in editor.
      */
 
     // Internal
     private MaterialManager materialManager;
     private ModelManager modelManager;
     private RenderSystem renderSystem;
-    private GridManager gridManager;
+    private WorldStreamManager worldStreamManager;
     private FrustumCullingSystem frustumCullingSystem;
 
     // GPU Data
@@ -73,7 +74,7 @@ public class WorldRenderManager extends ManagerPackage {
         this.materialManager = get(MaterialManager.class);
         this.modelManager = get(ModelManager.class);
         this.renderSystem = get(RenderSystem.class);
-        this.gridManager = get(GridManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     @Override
@@ -85,24 +86,43 @@ public class WorldRenderManager extends ManagerPackage {
 
     private void renderWorld() {
 
+        if (!worldStreamManager.hasGrids())
+            return;
+
         frustumCullingSystem.refresh();
 
-        GridInstance grid = gridManager.getGrid();
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] gridElements = grids.elements();
+        int gridCount = grids.size();
 
         LongIterator megaIt = megaRenderQueue.iterator();
+
         while (megaIt.hasNext()) {
+
             long coordinate = megaIt.nextLong();
-            GridSlotHandle slot = grid.getGridSlotForChunk(coordinate);
-            if (slot != null)
-                renderMega(coordinate, slot);
+
+            for (int i = 0; i < gridCount; i++) {
+                GridSlotHandle slot = ((GridInstance) gridElements[i]).getGridSlotForChunk(coordinate);
+                if (slot != null) {
+                    renderMega(coordinate, slot);
+                    break;
+                }
+            }
         }
 
         LongIterator chunkIt = chunkRenderQueue.iterator();
+
         while (chunkIt.hasNext()) {
+
             long coordinate = chunkIt.nextLong();
-            GridSlotHandle slot = grid.getGridSlotForChunk(coordinate);
-            if (slot != null)
-                renderChunk(coordinate, slot);
+
+            for (int i = 0; i < gridCount; i++) {
+                GridSlotHandle slot = ((GridInstance) gridElements[i]).getGridSlotForChunk(coordinate);
+                if (slot != null) {
+                    renderChunk(coordinate, slot);
+                    break;
+                }
+            }
         }
     }
 
@@ -153,17 +173,27 @@ public class WorldRenderManager extends ManagerPackage {
 
         clearRenderQueue();
 
-        GridInstance grid = gridManager.getGrid();
+        if (!worldStreamManager.hasGrids())
+            return;
 
-        for (int i = 0; i < grid.getTotalSlots(); i++) {
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
 
-            long gridCoordinate = grid.getGridCoordinate(i);
-            GridSlotHandle slot = grid.getGridSlot(gridCoordinate);
+        for (int g = 0; g < size; g++) {
 
-            queueChunk(slot);
+            GridInstance grid = (GridInstance) elements[g];
 
-            if (slot.getDetailLevel().renderMode == RenderType.BATCHED)
-                queueMega(slot);
+            for (int i = 0; i < grid.getTotalSlots(); i++) {
+
+                long gridCoordinate = grid.getGridCoordinate(i);
+                GridSlotHandle slot = grid.getGridSlot(gridCoordinate);
+
+                queueChunk(slot);
+
+                if (slot.getDetailLevel().renderMode == RenderType.BATCHED)
+                    queueMega(slot);
+            }
         }
     }
 
@@ -208,7 +238,7 @@ public class WorldRenderManager extends ManagerPackage {
 
         long coordinate = worldRenderInstance.getCoordinate();
 
-        if (gridManager.getGrid().getGridSlotForChunk(coordinate) == null)
+        if (!hasGridSlotForChunk(coordinate))
             return false;
 
         if (chunkModels.containsKey(coordinate))
@@ -227,7 +257,7 @@ public class WorldRenderManager extends ManagerPackage {
 
         long coordinate = worldRenderInstance.getCoordinate();
 
-        if (gridManager.getGrid().getGridSlotForChunk(coordinate) == null)
+        if (!hasGridSlotForChunk(coordinate))
             return false;
 
         if (megaModels.containsKey(coordinate))
@@ -240,6 +270,20 @@ public class WorldRenderManager extends ManagerPackage {
 
         megaModels.put(coordinate, modelList);
         return true;
+    }
+
+    private boolean hasGridSlotForChunk(long coordinate) {
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++) {
+            if (((GridInstance) elements[i]).getGridSlotForChunk(coordinate) != null)
+                return true;
+        }
+
+        return false;
     }
 
     private ObjectArrayList<ModelInstance> buildModelList(WorldRenderInstance worldRenderInstance) {

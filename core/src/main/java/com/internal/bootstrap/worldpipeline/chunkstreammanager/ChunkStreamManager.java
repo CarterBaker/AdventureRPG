@@ -1,53 +1,37 @@
 package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
-import com.internal.bootstrap.entitypipeline.playermanager.PlayerManager;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
-import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
-import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
-import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
-import com.internal.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
-import com.internal.bootstrap.worldpipeline.world.WorldHandle;
+import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.util.mathematics.extras.Coordinate2Long;
-import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ChunkStreamManager extends ManagerPackage {
 
     /*
-     * Public facade for the chunk streaming pipeline. Tracks the active chunk
-     * coordinate, owns the active chunk and mega chunk maps, and drives grid
-     * updates when the player crosses a chunk boundary. All per-frame queue
-     * logic is delegated to ChunkQueueManager.
+     * Internal chunk streaming implementation. Owned and created by
+     * WorldStreamManager. Drives per-frame grid coordinate tracking and
+     * triggers render queue rebuilds on boundary crossings. All queue logic
+     * is delegated to ChunkQueueManager.
      */
 
     // Internal
     private VAOManager vaoManager;
-    private PlayerManager playerManager;
-    private GridManager gridManager;
-    private WorldRenderManager worldRenderSystem;
-    private MegaStreamManager megaStreamManager;
+    private WorldStreamManager worldStreamManager;
+    private WorldRenderManager worldRenderManager;
     private ChunkQueueManager chunkQueueManager;
 
     // State
     private VAOHandle chunkVAO;
-    private long activeChunkCoordinate;
-    private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
-    private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
 
     // Internal \\
 
     @Override
     protected void create() {
-
-        // State
-        this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
-        this.activeMegaChunks = new Long2ObjectLinkedOpenHashMap<>();
-
         this.chunkQueueManager = create(ChunkQueueManager.class);
     }
 
@@ -56,109 +40,78 @@ public class ChunkStreamManager extends ManagerPackage {
 
         // Internal
         this.vaoManager = get(VAOManager.class);
-        this.playerManager = get(PlayerManager.class);
-        this.gridManager = get(GridManager.class);
-        this.worldRenderSystem = get(WorldRenderManager.class);
-        this.megaStreamManager = get(MegaStreamManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
+        this.worldRenderManager = get(WorldRenderManager.class);
     }
 
     @Override
     protected void start() {
-
         this.chunkVAO = vaoManager.getVAOHandleFromVAOName(EngineSetting.CHUNK_VAO);
-        gridManager.getGrid().setWorldHandle(playerManager.getPlayer().getWorldHandle());
-
-        int maxChunks = gridManager.getGrid().getTotalSlots() + EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
-        this.activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);
-
-        chunkQueueManager.setActiveChunks(activeChunks);
-        megaStreamManager.setActiveMegaChunks(activeMegaChunks);
     }
 
     @Override
     protected void update() {
-        streamChunks();
+        streamAllGrids();
     }
 
     // Streaming \\
 
-    private void streamChunks() {
+    private void streamAllGrids() {
 
-        if (!newActiveChunk())
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++)
+            streamGrid((GridInstance) elements[i]);
+    }
+
+    private void streamGrid(GridInstance grid) {
+
+        long entityChunkCoordinate = grid.getFocalEntity()
+                .getWorldPositionStruct()
+                .getChunkCoordinate();
+
+        if (grid.getActiveChunkCoordinate() == entityChunkCoordinate)
             return;
 
-        gridManager.getGrid().setActiveChunkCoordinate(activeChunkCoordinate);
-        worldRenderSystem.rebuildRenderQueue();
+        grid.setActiveChunkCoordinate(entityChunkCoordinate);
+        worldRenderManager.rebuildRenderQueue();
     }
 
-    private boolean newActiveChunk() {
+    // Grid Events \\
 
-        long playerChunkCoordinate = playerManager.getPlayerPosition().getChunkCoordinate();
-
-        if (activeChunkCoordinate == playerChunkCoordinate)
-            return false;
-
-        activeChunkCoordinate = playerChunkCoordinate;
-        return true;
+    public void onGridRebuilt(GridInstance grid) {
+        chunkQueueManager.onGridRebuilt(grid);
     }
 
-    // Grid Rebuild \\
-
-    public void rebuildGrid() {
-
-        gridManager.rebuildGrid();
-        gridManager.getGrid().setWorldHandle(playerManager.getPlayer().getWorldHandle());
-        gridManager.getGrid().setActiveChunkCoordinate(activeChunkCoordinate);
-
-        int maxChunks = gridManager.getGrid().getTotalSlots() + EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
-        activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);
-        chunkQueueManager.setActiveChunks(activeChunks);
-
-        chunkQueueManager.onGridRebuilt();
-        megaStreamManager.onGridRebuilt();
-        worldRenderSystem.rebuildRenderQueue();
+    public void onGridRemoved(GridInstance grid) {
+        chunkQueueManager.onGridRemoved(grid);
     }
 
     // Utility \\
 
     public void invalidateChunkBatch(long chunkCoordinate) {
 
-        ChunkInstance chunk = activeChunks.get(chunkCoordinate);
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
 
-        if (chunk == null)
-            return;
+        for (int i = 0; i < size; i++) {
 
-        ChunkDataSyncContainer sync = chunk.getChunkDataSyncContainer();
+            GridInstance grid = (GridInstance) elements[i];
+            ChunkInstance chunk = grid.getActiveChunks().get(chunkCoordinate);
 
-        if (!sync.tryAcquire())
-            return;
-
-        try {
-            sync.getData()[ChunkData.BATCH_DATA.index] = false;
-        } finally {
-            sync.release();
+            if (chunk != null) {
+                chunkQueueManager.invalidateChunkBatch(chunk);
+                return;
+            }
         }
-    }
-
-    public void invalidateMegaForChunk(long chunkCoordinate) {
-        megaStreamManager.invalidateMegaForChunk(chunkCoordinate);
     }
 
     // Accessible \\
 
     public VAOHandle getChunkVAO() {
         return chunkVAO;
-    }
-
-    public WorldHandle getActiveWorldHandle() {
-        return playerManager.getPlayer().getWorldHandle();
-    }
-
-    public ChunkInstance getChunkInstance(long chunkCoordinate) {
-        return activeChunks.get(chunkCoordinate);
-    }
-
-    public Long2ObjectLinkedOpenHashMap<ChunkInstance> getActiveChunks() {
-        return activeChunks;
     }
 }

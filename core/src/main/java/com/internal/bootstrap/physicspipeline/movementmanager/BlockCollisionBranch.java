@@ -6,8 +6,8 @@ import com.internal.bootstrap.physicspipeline.util.BlockCompositionStruct;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate3Int;
@@ -25,7 +25,7 @@ public class BlockCollisionBranch extends BranchPackage {
      */
 
     // Internal
-    private ChunkStreamManager chunkStreamManager;
+    private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
 
     // Settings
@@ -44,7 +44,7 @@ public class BlockCollisionBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
     }
 
@@ -96,7 +96,7 @@ public class BlockCollisionBranch extends BranchPackage {
             int blockCoordinate = entry.getIntKey();
             long chunkCoordinate = entry.getLongValue();
 
-            ChunkInstance chunk = chunkStreamManager.getChunkInstance(chunkCoordinate);
+            ChunkInstance chunk = worldStreamManager.getChunkInstance(chunkCoordinate);
 
             if (chunk == null)
                 continue;
