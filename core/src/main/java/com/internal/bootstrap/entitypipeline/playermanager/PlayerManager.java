@@ -24,11 +24,12 @@ import com.internal.core.util.mathematics.vectors.Vector3;
 public class PlayerManager extends ManagerPackage {
 
     /*
-     * Owns and drives the player entity. Writes raw input from InputSystem into
-     * the player entity's InputHandle each frame, then delegates movement to
-     * MovementManager. Handles spawn verification, camera synchronization,
-     * inventory input, and placement input. Switching the active player entity
-     * only requires pointing at a different EntityInstance.
+     * Owns and drives the player entity and its camera. Player spawning is
+     * explicit via spawnPlayer() — called by PlayerSystem at runtime startup
+     * or by the editor play panel when previewing the game. Drives camera
+     * rotation from mouse delta and synchronizes camera position to the player
+     * eye position each frame. Switching the active player only requires
+     * pointing at a different EntityInstance.
      */
 
     // Internal
@@ -50,6 +51,9 @@ public class PlayerManager extends ManagerPackage {
     private Vector3 cameraPosition;
     private Vector3 cameraOffset;
 
+    // Camera
+    private CameraInstance camera;
+
     // Internal \\
 
     @Override
@@ -60,7 +64,6 @@ public class PlayerManager extends ManagerPackage {
         this.placementManager = create(PlacementManager.class);
 
         // Player
-        this.verifyPlayerPosition = true;
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
     }
@@ -79,21 +82,36 @@ public class PlayerManager extends ManagerPackage {
     }
 
     @Override
-    protected void awake() {
+    protected void update() {
 
-        // Player
+        if (player == null)
+            return;
+
+        handleInventoryInput();
+        updateCameraRotation();
+        writePlayerInput();
+        calculatePlayerPosition();
+    }
+
+    // Spawn \\
+
+    public EntityInstance spawnPlayer() {
+
         this.player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
+        this.verifyPlayerPosition = true;
         this.cameraOffset.set(
                 player.getSize().x / 2,
                 player.getEyeHeight(),
                 player.getSize().z / 2);
-    }
 
-    @Override
-    protected void update() {
-        handleInventoryInput();
-        writePlayerInput();
-        calculatePlayerPosition();
+        this.camera = cameraManager.createCamera(
+                internal.settings.FOV,
+                internal.getWindowInstance().getWidth(),
+                internal.getWindowInstance().getHeight());
+
+        cameraManager.setMainCamera(camera);
+
+        return player;
     }
 
     // Input \\
@@ -103,10 +121,14 @@ public class PlayerManager extends ManagerPackage {
             inventoryBranch.toggleInventory(player);
     }
 
+    private void updateCameraRotation() {
+        camera.setRotation(inputSystem.getRotation());
+    }
+
     private void writePlayerInput() {
         inputSystem.writeToHandle(
                 player.getInputHandle(),
-                cameraManager.getMainCamera().getDirection());
+                camera.getDirection());
     }
 
     // Player \\
@@ -119,8 +141,6 @@ public class PlayerManager extends ManagerPackage {
             verifyPlayerPosition = verifyPlayerPosition(worldPositionStruct);
             return;
         }
-
-        CameraInstance camera = cameraManager.getMainCamera();
 
         writeMovementState();
         movementManager.move(player);
@@ -195,6 +215,10 @@ public class PlayerManager extends ManagerPackage {
 
     public EntityInstance getPlayer() {
         return player;
+    }
+
+    public boolean hasPlayer() {
+        return player != null;
     }
 
     public WorldPositionStruct getPlayerPosition() {

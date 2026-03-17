@@ -1,10 +1,15 @@
-package com.internal.runtime.debug;
+package com.internal.runtime.lighting;
 
 import com.internal.bootstrap.shaderpipeline.pass.PassHandle;
 import com.internal.bootstrap.shaderpipeline.passmanager.PassManager;
 import com.internal.core.engine.SystemPackage;
 
-public class Sky extends SystemPackage {
+public class SkySystem extends SystemPackage {
+
+    /*
+     * Pushes the sky pass to the render pipeline each frame.
+     * Owned by RuntimePipeline.
+     */
 
     // Internal
     private PassManager passManager;
@@ -17,6 +22,7 @@ public class Sky extends SystemPackage {
     @Override
     protected void get() {
 
+        // Internal
         this.passManager = get(PassManager.class);
         this.skyPass = passManager.getPassHandleFromPassName("Sky");
     }

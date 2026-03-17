@@ -9,6 +9,7 @@ import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManage
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MegaChunkInstance extends WorldRenderInstance {
 
@@ -102,11 +103,16 @@ public class MegaChunkInstance extends WorldRenderInstance {
         boolean isRemerge = megaBatchStruct.getBatchedChunks().containsKey(chunkCoord);
 
         if (isRemerge) {
-            megaBatchStruct.getBatchedChunks().put(chunkCoord, chunkInstance);
+            megaBatchStruct.updateChunk(chunkCoord, chunkInstance);
             megaBatchStruct.clearMerged();
             getDynamicPacket().clear();
 
-            for (ChunkInstance batched : megaBatchStruct.getBatchedChunks().values()) {
+            ObjectArrayList<ChunkInstance> list = megaBatchStruct.getBatchedChunkList();
+            Object[] elements = list.elements();
+            int size = list.size();
+
+            for (int i = 0; i < size; i++) {
+                ChunkInstance batched = (ChunkInstance) elements[i];
                 if (!mergeChunk(batched))
                     return false;
                 megaBatchStruct.recordMerged(batched.getCoordinate());
@@ -163,5 +169,9 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
     public Long2ObjectOpenHashMap<ChunkInstance> getBatchedChunks() {
         return megaBatchStruct.getBatchedChunks();
+    }
+
+    public ObjectArrayList<ChunkInstance> getBatchedChunkList() {
+        return megaBatchStruct.getBatchedChunkList();
     }
 }

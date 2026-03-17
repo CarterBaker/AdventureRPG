@@ -1,0 +1,3164 @@
+Folder PATH listing for volume OS
+Volume serial number is 3C8C-ADD4
+C:.
+|   .clang-format
+|   .editorconfig
+|   .gitattributes
+|   .gitignore
+|   build.gradle
+|   CleanBuild.bat
+|   gradle.properties
+|   gradlew
+|   gradlew.bat
+|   Index.txt
+|   Launcher.bat
+|   README.md
+|   settings.gradle
+|   
++---.github
+|   \---java-upgrade
+|       |   .gitignore
+|       |   
+|       \---20250924123941
+|           |   progress.md
+|           |   
+|           \---logs
+|                   0.log
+|                   
++---.gradle
+|   |   file-system.probe
+|   |   
+|   +---8.14.1
+|   |   |   gc.properties
+|   |   |   
+|   |   +---checksums
+|   |   |       checksums.lock
+|   |   |       sha1-checksums.bin
+|   |   |       
+|   |   +---executionHistory
+|   |   |       executionHistory.bin
+|   |   |       executionHistory.lock
+|   |   |       
+|   |   +---expanded
+|   |   |       expanded.lock
+|   |   |       
+|   |   +---fileChanges
+|   |   |       last-build.bin
+|   |   |       
+|   |   +---fileHashes
+|   |   |       fileHashes.bin
+|   |   |       fileHashes.lock
+|   |   |       resourceHashesCache.bin
+|   |   |       
+|   |   \---vcsMetadata
+|   +---buildOutputCleanup
+|   |       buildOutputCleanup.lock
+|   |       cache.properties
+|   |       outputFiles.bin
+|   |       
+|   \---vcs-1
+|           gc.properties
+|           
++---.vscode
+|       settings.json
+|       
++---assets
+|   |   assets.txt
+|   |   
+|   +---behaviors
+|   |       Bipedal.json
+|   |       
+|   +---biomes
+|   |       Empty.json
+|   |       
+|   +---blocks
+|   |       TerraArcana.json
+|   |       
+|   +---calendars
+|   |       TerraArcana.json
+|   |       
+|   +---documentation
+|   |       EngineContext.md
+|   |       EngineDocumentationContext.md
+|   |       
+|   +---entities
+|   |       Humanoid.json
+|   |       
+|   +---fonts
+|   |       MontserratAlternates.ttf
+|   |       
+|   +---internal
+|   |   \---threads
+|   |           ThreadPools.json
+|   |           
+|   +---items
+|   |   \---debug
+|   |           debug.json
+|   |           
+|   +---materials
+|   |   +---debug
+|   |   |       DebugCameraOrientationBase.json
+|   |   |       DebugCameraOrientationHUD.json
+|   |   |       DebugSurface.json
+|   |   |       DebugSurfaceUV.json
+|   |   |       DebugUV.json
+|   |   |       
+|   |   +---fullscreen
+|   |   |       Sky.json
+|   |   |       
+|   |   +---items
+|   |   |       StandardItems.json
+|   |   |       
+|   |   +---standard
+|   |   |       StandardSurface.json
+|   |   |       
+|   |   \---util
+|   |           Label.json
+|   |           Sprite.json
+|   |           
+|   +---menus
+|   |   |   Inventory.json
+|   |   |   Items.json
+|   |   |   MainMenu.json
+|   |   |   
+|   |   \---util
+|   |           Containers.json
+|   |           GenericButtons.json
+|   |           
+|   +---mesh
+|   |   +---items
+|   |   |       Apple.json
+|   |   |       Table.json
+|   |   |       
+|   |   \---util
+|   |       |   LensPass.json
+|   |       |   PlanarPass.json
+|   |       |   Sprite.json
+|   |       |   
+|   |       \---vao
+|   |               ChunkVAO.json
+|   |               ItemVAO.json
+|   |               LabelVAO.json
+|   |               
+|   +---processingpasses
+|   |       DebugCameraOrientationBase.json
+|   |       DebugCameraOrientationHUD.json
+|   |       DebugUV.json
+|   |       Sky.json
+|   |       
+|   +---shaders
+|   |   |   DebugCameraOrientationBase.json
+|   |   |   DebugCameraOrientationHUD.json
+|   |   |   DebugSurface.json
+|   |   |   DebugSurfaceUV.json
+|   |   |   DebugUV.json
+|   |   |   Label.json
+|   |   |   Sky.json
+|   |   |   Sprite.json
+|   |   |   StandardItems.json
+|   |   |   StandardSurface.json
+|   |   |   
+|   |   +---debug
+|   |   |       DebugCameraOrientationBase.fsh
+|   |   |       DebugCameraOrientationHUD.fsh
+|   |   |       DebugSurface.fsh
+|   |   |       DebugSurface.vsh
+|   |   |       DebugSurfaceUV.fsh
+|   |   |       DebugSurfaceUV.vsh
+|   |   |       DebugUV.fsh
+|   |   |       DebugUV.vsh
+|   |   |       
+|   |   +---includes
+|   |   |       BlockOrientationMapData.glsl
+|   |   |       CameraData.glsl
+|   |   |       DirectionalLightData.glsl
+|   |   |       GridCoordinateData.glsl
+|   |   |       ItemRotationData.glsl
+|   |   |       NoiseUtility.glsl
+|   |   |       OrthoData.glsl
+|   |   |       PlayerPositionData.glsl
+|   |   |       SliceData.glsl
+|   |   |       TimeData.glsl
+|   |   |       
+|   |   +---items
+|   |   |   |   StandardItems.fsh
+|   |   |   |   StandardItems.vsh
+|   |   |   |   
+|   |   |   \---includes
+|   |   |           ItemsStandard.glsl
+|   |   |           
+|   |   +---sky
+|   |   |       Clouds.glsl
+|   |   |       DayNightCycle.glsl
+|   |   |       Nebula.glsl
+|   |   |       SeasonCycle.glsl
+|   |   |       Sky.fsh
+|   |   |       Sky.vsh
+|   |   |       SkyColor.glsl
+|   |   |       SkyNoise.glsl
+|   |   |       SkyRotation.glsl
+|   |   |       Stars.glsl
+|   |   |       
+|   |   +---surface
+|   |   |   |   StandardSurface.fsh
+|   |   |   |   StandardSurface.vsh
+|   |   |   |   
+|   |   |   \---includes
+|   |   |           Albedo.glsl
+|   |   |           SurfaceStandard.glsl
+|   |   |           TiledSampling.glsl
+|   |   |           
+|   |   \---util
+|   |           Label.fsh
+|   |           Label.vsh
+|   |           PlanarPass.vsh
+|   |           SphericalPass.vsh
+|   |           Sprite.fsh
+|   |           Sprite.vsh
+|   |           
+|   +---sprites
+|   |   \---menus
+|   |           DebugElement.json
+|   |           DebugElement.png
+|   |           Title.png
+|   |           
+|   +---textureAliases
+|   |       Albedo.json
+|   |       AO.json
+|   |       Emissive.json
+|   |       Height.json
+|   |       Metal.json
+|   |       Normal.json
+|   |       Specular.json
+|   |       
+|   +---textures
+|   |   +---items
+|   |   |   \---standard
+|   |   |           Apple_A.png
+|   |   |           Stem_A.png
+|   |   |           Table_A.png
+|   |   |           
+|   |   \---surface
+|   |       \---standard
+|   |               CoalOre_a.png
+|   |               CopperOre_a.png
+|   |               Dirt_a.png
+|   |               GoldOre_a.png
+|   |               GrassBlockNorth_a.png
+|   |               GrassBlockUp_a.png
+|   |               IronOre_a.png
+|   |               Lava_a.png
+|   |               OakLogNorth_a.png
+|   |               Sand_a.png
+|   |               Stone_a.png
+|   |               Water_a.png
+|   |               
+|   +---tools
+|   |       Standard.json
+|   |       
+|   +---ubos
+|   |       BlockOrientationMapData.json
+|   |       CameraData.json
+|   |       DirectionalLightData.json
+|   |       GridCoordinateData.json
+|   |       ItemRotationData.json
+|   |       ItemsStandard.json
+|   |       OrthoData.json
+|   |       PlayerPositionData.json
+|   |       SliceData.json
+|   |       SurfaceStandard.json
+|   |       TimeData.json
+|   |       
+|   \---worlds
+|           TerraArcana.json
+|           TerraArcana.png
+|           
++---build
+|   \---reports
+|       \---problems
+|               problems-report.html
+|               
++---core
+|   |   build.gradle
+|   |   
+|   +---bin
+|   |   \---main
+|   |       \---com
+|   |           \---internal
+|   |               +---bootstrap
+|   |               |   +---calendarpipeline
+|   |               |   |   |   CalendarPipeline.class
+|   |               |   |   |   
+|   |               |   |   +---calendar
+|   |               |   |   |       CalendarData.class
+|   |               |   |   |       CalendarHandle.class
+|   |               |   |   |       
+|   |               |   |   +---calendarmanager
+|   |               |   |   |       CalendarManager.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       
+|   |               |   |   +---clock
+|   |               |   |   |       ClockData.class
+|   |               |   |   |       ClockHandle.class
+|   |               |   |   |       
+|   |               |   |   \---clockmanager
+|   |               |   |           ClockManager.class
+|   |               |   |           CurrentTrackerBranch.class
+|   |               |   |           DayTrackerBranch.class
+|   |               |   |           InternalBufferBranch.class
+|   |               |   |           MonthTrackerBranch.class
+|   |               |   |           YearTrackerBranch.class
+|   |               |   |           
+|   |               |   +---entitypipeline
+|   |               |   |   |   EntityPipeline.class
+|   |               |   |   |   
+|   |               |   |   +---behavior
+|   |               |   |   |       BehaviorData.class
+|   |               |   |   |       BehaviorHandle.class
+|   |               |   |   |       
+|   |               |   |   +---behaviormanager
+|   |               |   |   |       BehaviorManager.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       
+|   |               |   |   +---entity
+|   |               |   |   |       EntityData.class
+|   |               |   |   |       EntityHandle.class
+|   |               |   |   |       EntityInstance.class
+|   |               |   |   |       EntityState.class
+|   |               |   |   |       EntityStateHandle.class
+|   |               |   |   |       
+|   |               |   |   +---entitymanager
+|   |               |   |   |       EntityManager.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       
+|   |               |   |   +---inventory
+|   |               |   |   |       InventoryHandle.class
+|   |               |   |   |       
+|   |               |   |   +---placementmanager
+|   |               |   |   |       BlockBranch.class
+|   |               |   |   |       ItemBranch.class
+|   |               |   |   |       PlacementManager.class
+|   |               |   |   |       
+|   |               |   |   +---playermanager
+|   |               |   |   |       InternalBufferSystem.class
+|   |               |   |   |       PlayerManager.class
+|   |               |   |   |       
+|   |               |   |   \---statistics
+|   |               |   |           StatisticsHandle.class
+|   |               |   |           
+|   |               |   +---geometrypipeline
+|   |               |   |   |   GeometryPipeline.class
+|   |               |   |   |   
+|   |               |   |   +---compositebuffer
+|   |               |   |   |       CompositeBufferData.class
+|   |               |   |   |       CompositeBufferInstance.class
+|   |               |   |   |       
+|   |               |   |   +---compositebuffermanager
+|   |               |   |   |       CompositeBufferManager.class
+|   |               |   |   |       GLSLUtility.class
+|   |               |   |   |       
+|   |               |   |   +---dynamicgeometrymanager
+|   |               |   |   |   |   ComplexGeometryBranch.class
+|   |               |   |   |   |   DynamicGeometryManager.class
+|   |               |   |   |   |   DynamicGeometryType.class
+|   |               |   |   |   |   FontGeometryBranch.class
+|   |               |   |   |   |   FullGeometryBranch.class
+|   |               |   |   |   |   InternalBuildManager.class
+|   |               |   |   |   |   LiquidGeometryBranch.class
+|   |               |   |   |   |   PartialGeometryBranch.class
+|   |               |   |   |   |   
+|   |               |   |   |   \---util
+|   |               |   |   |           DynamicGeometryAsyncContainer.class
+|   |               |   |   |           VertBlockNeighbor3Vector.class
+|   |               |   |   |           
+|   |               |   |   +---dynamicmodel
+|   |               |   |   |       DynamicModelHandle.class
+|   |               |   |   |       
+|   |               |   |   +---dynamicpacket
+|   |               |   |   |       DynamicPacketInstance.class
+|   |               |   |   |       DynamicPacketState.class
+|   |               |   |   |       
+|   |               |   |   +---ibo
+|   |               |   |   |       IBOData.class
+|   |               |   |   |       IBOHandle.class
+|   |               |   |   |       IBOInstance.class
+|   |               |   |   |       
+|   |               |   |   +---ibomanager
+|   |               |   |   |       GLSLUtility.class
+|   |               |   |   |       IBOManager.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       
+|   |               |   |   +---mesh
+|   |               |   |   |       MeshData.class
+|   |               |   |   |       MeshHandle.class
+|   |               |   |   |       MeshInstance.class
+|   |               |   |   |       
+|   |               |   |   +---meshmanager
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       MeshManager.class
+|   |               |   |   |       QuadExpansionStruct.class
+|   |               |   |   |       
+|   |               |   |   +---model
+|   |               |   |   |       ModelInstance.class
+|   |               |   |   |       
+|   |               |   |   +---modelmanager
+|   |               |   |   |       ModelManager.class
+|   |               |   |   |       
+|   |               |   |   +---vao
+|   |               |   |   |       VAOData.class
+|   |               |   |   |       VAOHandle.class
+|   |               |   |   |       VAOInstance.class
+|   |               |   |   |       
+|   |               |   |   +---vaomanager
+|   |               |   |   |       GLSLUtility.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       VAOManager.class
+|   |               |   |   |       
+|   |               |   |   +---vbo
+|   |               |   |   |       VBOData.class
+|   |               |   |   |       VBOHandle.class
+|   |               |   |   |       VBOInstance.class
+|   |               |   |   |       
+|   |               |   |   \---vbomanager
+|   |               |   |           GLSLUtility.class
+|   |               |   |           InternalBuilder.class
+|   |               |   |           VBOManager.class
+|   |               |   |           
+|   |               |   +---inputpipeline
+|   |               |   |   |   InputPipeline.class
+|   |               |   |   |   
+|   |               |   |   +---input
+|   |               |   |   |       InputHandle.class
+|   |               |   |   |       
+|   |               |   |   \---inputsystem
+|   |               |   |           InputSystem.class
+|   |               |   |           
+|   |               |   +---itempipeline
+|   |               |   |   |   ItemPipeline.class
+|   |               |   |   |   
+|   |               |   |   +---backpack
+|   |               |   |   |       BackpackInstance.class
+|   |               |   |   |       
+|   |               |   |   +---itemdefinition
+|   |               |   |   |       ItemDefinitionData.class
+|   |               |   |   |       ItemDefinitionHandle.class
+|   |               |   |   |       
+|   |               |   |   +---itemdefinitionmanager
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       ItemDefinitionManager.class
+|   |               |   |   |       
+|   |               |   |   +---itemrotationmanager
+|   |               |   |   |       InternalBufferSystem.class
+|   |               |   |   |       ItemRotationManager.class
+|   |               |   |   |       
+|   |               |   |   +---tooltype
+|   |               |   |   |       ToolTypeData.class
+|   |               |   |   |       ToolTypeHandle.class
+|   |               |   |   |       
+|   |               |   |   +---tooltypemanager
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       ToolTypeManager.class
+|   |               |   |   |       
+|   |               |   |   \---util
+|   |               |   |           ItemRegistryUtility.class
+|   |               |   |           
+|   |               |   +---lightingpipeline
+|   |               |   |   |   LightingPipeline.class
+|   |               |   |   |   
+|   |               |   |   +---directionallight
+|   |               |   |   |       DirectionalLightHandle.class
+|   |               |   |   |       
+|   |               |   |   \---naturallightmanager
+|   |               |   |           MoonLightSystem.class
+|   |               |   |           NaturalLightManager.class
+|   |               |   |           SunLightSystem.class
+|   |               |   |           
+|   |               |   +---menupipeline
+|   |               |   |   |   MenuPipeline.class
+|   |               |   |   |   
+|   |               |   |   +---element
+|   |               |   |   |       ElementData.class
+|   |               |   |   |       ElementHandle.class
+|   |               |   |   |       ElementInstance.class
+|   |               |   |   |       ElementOrigin.class
+|   |               |   |   |       ElementPlacementStruct.class
+|   |               |   |   |       ElementType.class
+|   |               |   |   |       
+|   |               |   |   +---fontmanager
+|   |               |   |   |       FontManager.class
+|   |               |   |   |       FontRasterizerUtility.class
+|   |               |   |   |       GLSLUtility.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       
+|   |               |   |   +---fonts
+|   |               |   |   |       FontHandle.class
+|   |               |   |   |       FontInstance.class
+|   |               |   |   |       FontTileData.class
+|   |               |   |   |       GlyphMetricStruct.class
+|   |               |   |   |       
+|   |               |   |   +---menu
+|   |               |   |   |       MenuData.class
+|   |               |   |   |       MenuHandle.class
+|   |               |   |   |       MenuInstance.class
+|   |               |   |   |       
+|   |               |   |   +---menueventsmanager
+|   |               |   |   |   |   MenuEventsManager.class
+|   |               |   |   |   |   
+|   |               |   |   |   +---menus
+|   |               |   |   |   |       InventoryBranch.class
+|   |               |   |   |   |       MainMenuBranch.class
+|   |               |   |   |   |       
+|   |               |   |   |   \---util
+|   |               |   |   |           GenericButtonBranch.class
+|   |               |   |   |           
+|   |               |   |   +---menumanager
+|   |               |   |   |       ElementSystem.class
+|   |               |   |   |       FileParserUtility.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       MenuManager.class
+|   |               |   |   |       
+|   |               |   |   +---raycastsystem
+|   |               |   |   |       RaycastSystem.class
+|   |               |   |   |       
+|   |               |   |   \---util
+|   |               |   |           DimensionValue.class
+|   |               |   |           DimensionVector2.class
+|   |               |   |           LayoutStruct.class
+|   |               |   |           MenuAwareAction.class
+|   |               |   |           StackDirection.class
+|   |               |   |           TextAlign.class
+|   |               |   |           
+|   |               |   +---physicspipeline
+|   |               |   |   |   PhysicsPipeline.class
+|   |               |   |   |   
+|   |               |   |   +---movementmanager
+|   |               |   |   |       BlockCollisionBranch.class
+|   |               |   |   |       GravityBranch.class
+|   |               |   |   |       MovementBranch.class
+|   |               |   |   |       MovementManager.class
+|   |               |   |   |       
+|   |               |   |   +---raycastmanager
+|   |               |   |   |       BlockCastBranch.class
+|   |               |   |   |       RaycastManager.class
+|   |               |   |   |       
+|   |               |   |   \---util
+|   |               |   |           BlockCastStruct.class
+|   |               |   |           BlockCompositionStruct.class
+|   |               |   |           
+|   |               |   +---renderpipeline
+|   |               |   |   |   RenderPipeline.class
+|   |               |   |   |   
+|   |               |   |   +---camera
+|   |               |   |   |       CameraData.class
+|   |               |   |   |       CameraInstance.class
+|   |               |   |   |       OrthographicCameraData.class
+|   |               |   |   |       OrthographicCameraInstance.class
+|   |               |   |   |       
+|   |               |   |   +---cameramanager
+|   |               |   |   |       CameraManager.class
+|   |               |   |   |       InternalBufferSystem.class
+|   |               |   |   |       
+|   |               |   |   +---compositebatch
+|   |               |   |   |       CompositeBatchStruct.class
+|   |               |   |   |       
+|   |               |   |   +---compositerendersystem
+|   |               |   |   |       CompositeRenderSystem.class
+|   |               |   |   |       GLSLUtility.class
+|   |               |   |   |       
+|   |               |   |   +---renderbatch
+|   |               |   |   |       RenderBatchStruct.class
+|   |               |   |   |       
+|   |               |   |   +---rendercall
+|   |               |   |   |       RenderCallStruct.class
+|   |               |   |   |       
+|   |               |   |   +---rendersystem
+|   |               |   |   |       GLSLUtility.class
+|   |               |   |   |       RenderSystem.class
+|   |               |   |   |       
+|   |               |   |   \---util
+|   |               |   |           MaskStruct.class
+|   |               |   |           
+|   |               |   +---shaderpipeline
+|   |               |   |   |   ShaderPipeline.class
+|   |               |   |   |   
+|   |               |   |   +---material
+|   |               |   |   |       MaterialData.class
+|   |               |   |   |       MaterialHandle.class
+|   |               |   |   |       MaterialInstance.class
+|   |               |   |   |       
+|   |               |   |   +---materialmanager
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       MaterialManager.class
+|   |               |   |   |       
+|   |               |   |   +---pass
+|   |               |   |   |       PassData.class
+|   |               |   |   |       PassHandle.class
+|   |               |   |   |       PassInstance.class
+|   |               |   |   |       
+|   |               |   |   +---passmanager
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       PassManager.class
+|   |               |   |   |       
+|   |               |   |   +---shader
+|   |               |   |   |       ShaderData.class
+|   |               |   |   |       ShaderHandle.class
+|   |               |   |   |       ShaderSourceStruct.class
+|   |               |   |   |       ShaderType.class
+|   |               |   |   |       
+|   |               |   |   +---shadermanager
+|   |               |   |   |       FileParserUtility.class
+|   |               |   |   |       GLSLUtility.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       ShaderManager.class
+|   |               |   |   |       
+|   |               |   |   +---sprite
+|   |               |   |   |       SpriteData.class
+|   |               |   |   |       SpriteHandle.class
+|   |               |   |   |       SpriteInstance.class
+|   |               |   |   |       
+|   |               |   |   +---spritemanager
+|   |               |   |   |       GLSLUtility.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       SpriteManager.class
+|   |               |   |   |       
+|   |               |   |   +---texture
+|   |               |   |   |       TextureArrayStruct.class
+|   |               |   |   |       TextureAtlasStruct.class
+|   |               |   |   |       TextureData.class
+|   |               |   |   |       TextureHandle.class
+|   |               |   |   |       TextureTileStruct.class
+|   |               |   |   |       
+|   |               |   |   +---texturemanager
+|   |               |   |   |       AliasLibrarySystem.class
+|   |               |   |   |       AliasStruct.class
+|   |               |   |   |       GLSLUtility.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       TextureManager.class
+|   |               |   |   |       
+|   |               |   |   +---ubo
+|   |               |   |   |       UBOData.class
+|   |               |   |   |       UBOHandle.class
+|   |               |   |   |       UBOInstance.class
+|   |               |   |   |       
+|   |               |   |   +---ubomanager
+|   |               |   |   |       GLSLUtility.class
+|   |               |   |   |       InternalBuilder.class
+|   |               |   |   |       InternalLoader.class
+|   |               |   |   |       UBOManager.class
+|   |               |   |   |       
+|   |               |   |   \---uniforms
+|   |               |   |       |   UniformAttributeStruct.class
+|   |               |   |       |   UniformData.class
+|   |               |   |       |   UniformStruct.class
+|   |               |   |       |   UniformType$1.class
+|   |               |   |       |   UniformType$10.class
+|   |               |   |       |   UniformType$11.class
+|   |               |   |       |   UniformType$12.class
+|   |               |   |       |   UniformType$13.class
+|   |               |   |       |   UniformType$14.class
+|   |               |   |       |   UniformType$15.class
+|   |               |   |       |   UniformType$16.class
+|   |               |   |       |   UniformType$17.class
+|   |               |   |       |   UniformType$18.class
+|   |               |   |       |   UniformType$19.class
+|   |               |   |       |   UniformType$2.class
+|   |               |   |       |   UniformType$20.class
+|   |               |   |       |   UniformType$21.class
+|   |               |   |       |   UniformType$22.class
+|   |               |   |       |   UniformType$23.class
+|   |               |   |       |   UniformType$24.class
+|   |               |   |       |   UniformType$3.class
+|   |               |   |       |   UniformType$4.class
+|   |               |   |       |   UniformType$5.class
+|   |               |   |       |   UniformType$6.class
+|   |               |   |       |   UniformType$7.class
+|   |               |   |       |   UniformType$8.class
+|   |               |   |       |   UniformType$9.class
+|   |               |   |       |   UniformType.class
+|   |               |   |       |   UniformUtility.class
+|   |               |   |       |   
+|   |               |   |       +---matrices
+|   |               |   |       |       Matrix2DoubleUniform.class
+|   |               |   |       |       Matrix2Uniform.class
+|   |               |   |       |       Matrix3DoubleUniform.class
+|   |               |   |       |       Matrix3Uniform.class
+|   |               |   |       |       Matrix4DoubleUniform.class
+|   |               |   |       |       Matrix4Uniform.class
+|   |               |   |       |       
+|   |               |   |       +---matrixArrays
+|   |               |   |       |       Matrix2ArrayUniform.class
+|   |               |   |       |       Matrix2DoubleArrayUniform.class
+|   |               |   |       |       Matrix3ArrayUniform.class
+|   |               |   |       |       Matrix3DoubleArrayUniform.class
+|   |               |   |       |       Matrix4ArrayUniform.class
+|   |               |   |       |       Matrix4DoubleArrayUniform.class
+|   |               |   |       |       
+|   |               |   |       +---samplers
+|   |               |   |       |       SampleImage2DArrayUniform.class
+|   |               |   |       |       SampleImage2DUniform.class
+|   |               |   |       |       
+|   |               |   |       +---scalarArrays
+|   |               |   |       |       BooleanArrayUniform.class
+|   |               |   |       |       DoubleArrayUniform.class
+|   |               |   |       |       FloatArrayUniform.class
+|   |               |   |       |       IntegerArrayUniform.class
+|   |               |   |       |       
+|   |               |   |       +---scalars
+|   |               |   |       |       BooleanUniform.class
+|   |               |   |       |       DoubleUniform.class
+|   |               |   |       |       FloatUniform.class
+|   |               |   |       |       IntegerUniform.class
+|   |               |   |       |       
+|   |               |   |       +---vectorarrays
+|   |               |   |       |       Vector2ArrayUniform.class
+|   |               |   |       |       Vector2BooleanArrayUniform.class
+|   |               |   |       |       Vector2DoubleArrayUniform.class
+|   |               |   |       |       Vector2IntArrayUniform.class
+|   |               |   |       |       Vector3ArrayUniform.class
+|   |               |   |       |       Vector3BooleanArrayUniform.class
+|   |               |   |       |       Vector3DoubleArrayUniform.class
+|   |               |   |       |       Vector3IntArrayUniform.class
+|   |               |   |       |       Vector4ArrayUniform.class
+|   |               |   |       |       Vector4BooleanArrayUniform.class
+|   |               |   |       |       Vector4DoubleArrayUniform.class
+|   |               |   |       |       Vector4IntArrayUniform.class
+|   |               |   |       |       
+|   |               |   |       \---vectors
+|   |               |   |               Vector2BooleanUniform.class
+|   |               |   |               Vector2DoubleUniform.class
+|   |               |   |               Vector2IntUniform.class
+|   |               |   |               Vector2Uniform.class
+|   |               |   |               Vector3BooleanUniform.class
+|   |               |   |               Vector3DoubleUniform.class
+|   |               |   |               Vector3IntUniform.class
+|   |               |   |               Vector3Uniform.class
+|   |               |   |               Vector4BooleanUniform.class
+|   |               |   |               Vector4DoubleUniform.class
+|   |               |   |               Vector4IntUniform.class
+|   |               |   |               Vector4Uniform.class
+|   |               |   |               
+|   |               |   \---worldpipeline
+|   |               |       |   WorldPipeline.class
+|   |               |       |   
+|   |               |       +---biome
+|   |               |       |       BiomeData.class
+|   |               |       |       BiomeHandle.class
+|   |               |       |       
+|   |               |       +---biomemanager
+|   |               |       |       BiomeManager.class
+|   |               |       |       InternalBuilder.class
+|   |               |       |       InternalLoader.class
+|   |               |       |       
+|   |               |       +---block
+|   |               |       |       BlockData.class
+|   |               |       |       BlockHandle.class
+|   |               |       |       BlockPaletteHandle.class
+|   |               |       |       BlockRotationType.class
+|   |               |       |       
+|   |               |       +---blockmanager
+|   |               |       |       BlockManager.class
+|   |               |       |       InternalBufferSystem.class
+|   |               |       |       InternalBuilder.class
+|   |               |       |       InternalLoader.class
+|   |               |       |       
+|   |               |       +---chunk
+|   |               |       |       ChunkData.class
+|   |               |       |       ChunkDataSyncContainer.class
+|   |               |       |       ChunkDataUtility.class
+|   |               |       |       ChunkInstance.class
+|   |               |       |       ChunkNeighborStruct.class
+|   |               |       |       
+|   |               |       +---chunkstreammanager
+|   |               |       |       AssessmentBranch.class
+|   |               |       |       BatchBranch.class
+|   |               |       |       BuildBranch.class
+|   |               |       |       ChunkQueueItem.class
+|   |               |       |       ChunkQueueManager.class
+|   |               |       |       ChunkStreamManager.class
+|   |               |       |       DumpBranch.class
+|   |               |       |       GenerationBranch.class
+|   |               |       |       ItemLoadBranch.class
+|   |               |       |       ItemRenderBranch.class
+|   |               |       |       MergeBranch.class
+|   |               |       |       QueueOperation.class
+|   |               |       |       RenderBranch.class
+|   |               |       |       
+|   |               |       +---gridmanager
+|   |               |       |       GridBuildSystem.class
+|   |               |       |       GridInstance.class
+|   |               |       |       GridManager.class
+|   |               |       |       GridSlotDetailLevel.class
+|   |               |       |       GridSlotHandle.class
+|   |               |       |       
+|   |               |       +---megachunk
+|   |               |       |       MegaBatchStruct.class
+|   |               |       |       MegaChunkInstance.class
+|   |               |       |       MegaData.class
+|   |               |       |       MegaDataSyncContainer.class
+|   |               |       |       MegaDataUtility.class
+|   |               |       |       
+|   |               |       +---megastreammanager
+|   |               |       |       MegaAssessBranch.class
+|   |               |       |       MegaDumpBranch.class
+|   |               |       |       MegaMergeBranch.class
+|   |               |       |       MegaQueueManager.class
+|   |               |       |       MegaQueueOperation.class
+|   |               |       |       MegaRenderBranch.class
+|   |               |       |       MegaStreamManager.class
+|   |               |       |       
+|   |               |       +---subchunk
+|   |               |       |       SubChunkInstance.class
+|   |               |       |       
+|   |               |       +---util
+|   |               |       |       ChunkCoordinate3Int.class
+|   |               |       |       WorldPositionStruct.class
+|   |               |       |       WorldPositionUtility.class
+|   |               |       |       WorldWrapUtility.class
+|   |               |       |       
+|   |               |       +---world
+|   |               |       |       WorldData.class
+|   |               |       |       WorldHandle.class
+|   |               |       |       
+|   |               |       +---worldgenerationmanager
+|   |               |       |       WorldGenerationManager.class
+|   |               |       |       
+|   |               |       +---worlditem
+|   |               |       |       WorldItemCompositeInstance.class
+|   |               |       |       WorldItemInstance.class
+|   |               |       |       WorldItemInstancePaletteHandle.class
+|   |               |       |       WorldItemPaletteHandle.class
+|   |               |       |       WorldItemStruct.class
+|   |               |       |       
+|   |               |       +---worlditemplacementsystem
+|   |               |       |       WorldItemPlacementSystem.class
+|   |               |       |       
+|   |               |       +---worlditemrendersystem
+|   |               |       |       WorldItemRenderSystem.class
+|   |               |       |       
+|   |               |       +---worldmanager
+|   |               |       |       InternalBuilder.class
+|   |               |       |       InternalLoader.class
+|   |               |       |       WorldManager.class
+|   |               |       |       
+|   |               |       \---worldrendermanager
+|   |               |               FrustumCullingSystem.class
+|   |               |               RenderOperation.class
+|   |               |               RenderType.class
+|   |               |               WorldRenderInstance.class
+|   |               |               WorldRenderManager.class
+|   |               |               
+|   |               +---core
+|   |               |   +---engine
+|   |               |   |   |   AsyncContainerPackage.class
+|   |               |   |   |   BranchPackage.class
+|   |               |   |   |   BuilderPackage.class
+|   |               |   |   |   DataPackage.class
+|   |               |   |   |   EnginePackage$EngineStruct.class
+|   |               |   |   |   EnginePackage.class
+|   |               |   |   |   EngineState.class
+|   |               |   |   |   EngineUtility$InternalException.class
+|   |               |   |   |   EngineUtility.class
+|   |               |   |   |   GameEngine.class
+|   |               |   |   |   HandlePackage.class
+|   |               |   |   |   InstancePackage$CreationStruct.class
+|   |               |   |   |   InstancePackage.class
+|   |               |   |   |   LoaderPackage.class
+|   |               |   |   |   Main.class
+|   |               |   |   |   ManagerPackage.class
+|   |               |   |   |   PipelinePackage.class
+|   |               |   |   |   StructPackage.class
+|   |               |   |   |   SyncContainerPackage.class
+|   |               |   |   |   SystemContext.class
+|   |               |   |   |   SystemPackage$SystemStruct.class
+|   |               |   |   |   SystemPackage.class
+|   |               |   |   |   UtilityPackage$1.class
+|   |               |   |   |   UtilityPackage.class
+|   |               |   |   |   WindowInstance.class
+|   |               |   |   |   
+|   |               |   |   \---settings
+|   |               |   |           EngineSetting.class
+|   |               |   |           Loader.class
+|   |               |   |           Settings$Builder.class
+|   |               |   |           Settings.class
+|   |               |   |           SettingsDeserializer.class
+|   |               |   |           
+|   |               |   +---kernel
+|   |               |   |   +---syncconsumer
+|   |               |   |   |       AsyncStructConsumer.class
+|   |               |   |   |       AsyncStructConsumerMulti.class
+|   |               |   |   |       BiSyncAsyncConsumer.class
+|   |               |   |   |       SyncStructConsumer.class
+|   |               |   |   |       
+|   |               |   |   +---thread
+|   |               |   |   |       ThreadHandle.class
+|   |               |   |   |       
+|   |               |   |   \---threadmanager
+|   |               |   |           InternalBuilder.class
+|   |               |   |           InternalLoader.class
+|   |               |   |           InternalThreadManager.class
+|   |               |   |           NamedThreadFactory.class
+|   |               |   |           
+|   |               |   \---util
+|   |               |       |   AtlasUtility.class
+|   |               |       |   FileUtility.class
+|   |               |       |   JsonUtility.class
+|   |               |       |   OpenSimplex2.class
+|   |               |       |   PixmapUtility.class
+|   |               |       |   RegistryUtility.class
+|   |               |       |   
+|   |               |       +---atlas
+|   |               |       |       AtlasTileData.class
+|   |               |       |       
+|   |               |       +---mathematics
+|   |               |       |   +---extras
+|   |               |       |   |       Color.class
+|   |               |       |   |       Coordinate2Long.class
+|   |               |       |   |       Coordinate3Int.class
+|   |               |       |   |       Coordinate3Long.class
+|   |               |       |   |       Coordinate4Long.class
+|   |               |       |   |       Direction2Vector.class
+|   |               |       |   |       Direction3Vector.class
+|   |               |       |   |       
+|   |               |       |   +---matrices
+|   |               |       |   |       Matrix2.class
+|   |               |       |   |       Matrix2Double.class
+|   |               |       |   |       Matrix3.class
+|   |               |       |   |       Matrix3Double.class
+|   |               |       |   |       Matrix4.class
+|   |               |       |   |       Matrix4Double.class
+|   |               |       |   |       
+|   |               |       |   +---quaternions
+|   |               |       |   |       Quaternion.class
+|   |               |       |   |       
+|   |               |       |   \---vectors
+|   |               |       |           Vector2.class
+|   |               |       |           Vector2Boolean.class
+|   |               |       |           Vector2Double.class
+|   |               |       |           Vector2Int.class
+|   |               |       |           Vector3.class
+|   |               |       |           Vector3Boolean.class
+|   |               |       |           Vector3Double.class
+|   |               |       |           Vector3Int.class
+|   |               |       |           Vector4.class
+|   |               |       |           Vector4Boolean.class
+|   |               |       |           Vector4Double.class
+|   |               |       |           Vector4Int.class
+|   |               |       |           
+|   |               |       \---queue
+|   |               |               QueueInstance.class
+|   |               |               QueueItemHandle.class
+|   |               |               
+|   |               \---runtime
+|   |                   \---debug
+|   |                           DebugPipeline.class
+|   |                           Sky.class
+|   |                           
+|   +---build
+|   |   +---classes
+|   |   |   \---java
+|   |   |       \---main
+|   |   |           \---com
+|   |   |               \---internal
+|   |   |                   +---bootstrap
+|   |   |                   |   +---calendarpipeline
+|   |   |                   |   |   |   CalendarPipeline.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   +---calendar
+|   |   |                   |   |   |       CalendarData.class
+|   |   |                   |   |   |       CalendarHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---calendarmanager
+|   |   |                   |   |   |       CalendarManager.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---clock
+|   |   |                   |   |   |       ClockData.class
+|   |   |                   |   |   |       ClockHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---clockmanager
+|   |   |                   |   |           ClockManager.class
+|   |   |                   |   |           CurrentTrackerBranch.class
+|   |   |                   |   |           DayTrackerBranch.class
+|   |   |                   |   |           InternalBufferBranch.class
+|   |   |                   |   |           MonthTrackerBranch.class
+|   |   |                   |   |           YearTrackerBranch.class
+|   |   |                   |   |           
+|   |   |                   |   +---entitypipeline
+|   |   |                   |   |   |   EntityPipeline.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   +---behavior
+|   |   |                   |   |   |       BehaviorData.class
+|   |   |                   |   |   |       BehaviorHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---behaviormanager
+|   |   |                   |   |   |       BehaviorManager.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---entity
+|   |   |                   |   |   |       EntityData.class
+|   |   |                   |   |   |       EntityHandle.class
+|   |   |                   |   |   |       EntityInstance.class
+|   |   |                   |   |   |       EntityState.class
+|   |   |                   |   |   |       EntityStateHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---entitymanager
+|   |   |                   |   |   |       EntityManager.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---inventory
+|   |   |                   |   |   |       InventoryHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---placementmanager
+|   |   |                   |   |   |       BlockBranch.class
+|   |   |                   |   |   |       ItemBranch.class
+|   |   |                   |   |   |       PlacementManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---playermanager
+|   |   |                   |   |   |       InternalBufferSystem.class
+|   |   |                   |   |   |       PlayerManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---statistics
+|   |   |                   |   |           StatisticsHandle.class
+|   |   |                   |   |           
+|   |   |                   |   +---geometrypipeline
+|   |   |                   |   |   |   GeometryPipeline.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   +---compositebuffer
+|   |   |                   |   |   |       CompositeBufferData.class
+|   |   |                   |   |   |       CompositeBufferInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---compositebuffermanager
+|   |   |                   |   |   |       CompositeBufferManager.class
+|   |   |                   |   |   |       GLSLUtility.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---dynamicgeometrymanager
+|   |   |                   |   |   |   |   ComplexGeometryBranch.class
+|   |   |                   |   |   |   |   DynamicGeometryManager.class
+|   |   |                   |   |   |   |   DynamicGeometryType.class
+|   |   |                   |   |   |   |   FontGeometryBranch.class
+|   |   |                   |   |   |   |   FullGeometryBranch.class
+|   |   |                   |   |   |   |   InternalBuildManager$1.class
+|   |   |                   |   |   |   |   InternalBuildManager.class
+|   |   |                   |   |   |   |   LiquidGeometryBranch.class
+|   |   |                   |   |   |   |   PartialGeometryBranch.class
+|   |   |                   |   |   |   |   
+|   |   |                   |   |   |   \---util
+|   |   |                   |   |   |           DynamicGeometryAsyncContainer.class
+|   |   |                   |   |   |           VertBlockNeighbor3Vector.class
+|   |   |                   |   |   |           
+|   |   |                   |   |   +---dynamicmodel
+|   |   |                   |   |   |       DynamicModelHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---dynamicpacket
+|   |   |                   |   |   |       DynamicPacketInstance.class
+|   |   |                   |   |   |       DynamicPacketState.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---ibo
+|   |   |                   |   |   |       IBOData.class
+|   |   |                   |   |   |       IBOHandle.class
+|   |   |                   |   |   |       IBOInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---ibomanager
+|   |   |                   |   |   |       GLSLUtility.class
+|   |   |                   |   |   |       IBOManager.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---mesh
+|   |   |                   |   |   |       MeshData.class
+|   |   |                   |   |   |       MeshHandle.class
+|   |   |                   |   |   |       MeshInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---meshmanager
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       MeshManager.class
+|   |   |                   |   |   |       QuadExpansionStruct.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---model
+|   |   |                   |   |   |       ModelInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---modelmanager
+|   |   |                   |   |   |       ModelManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---vao
+|   |   |                   |   |   |       VAOData.class
+|   |   |                   |   |   |       VAOHandle.class
+|   |   |                   |   |   |       VAOInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---vaomanager
+|   |   |                   |   |   |       GLSLUtility.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       VAOManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---vbo
+|   |   |                   |   |   |       VBOData.class
+|   |   |                   |   |   |       VBOHandle.class
+|   |   |                   |   |   |       VBOInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---vbomanager
+|   |   |                   |   |           GLSLUtility.class
+|   |   |                   |   |           InternalBuilder.class
+|   |   |                   |   |           VBOManager.class
+|   |   |                   |   |           
+|   |   |                   |   +---inputpipeline
+|   |   |                   |   |   |   InputPipeline.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   +---input
+|   |   |                   |   |   |       InputHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---inputsystem
+|   |   |                   |   |           InputSystem.class
+|   |   |                   |   |           
+|   |   |                   |   +---itempipeline
+|   |   |                   |   |   |   ItemPipeline.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   +---backpack
+|   |   |                   |   |   |       BackpackInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---itemdefinition
+|   |   |                   |   |   |       ItemDefinitionData.class
+|   |   |                   |   |   |       ItemDefinitionHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---itemdefinitionmanager
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       ItemDefinitionManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---itemrotationmanager
+|   |   |                   |   |   |       InternalBufferSystem$1.class
+|   |   |                   |   |   |       InternalBufferSystem.class
+|   |   |                   |   |   |       ItemRotationManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---tooltype
+|   |   |                   |   |   |       ToolTypeData.class
+|   |   |                   |   |   |       ToolTypeHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---tooltypemanager
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       ToolTypeManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---util
+|   |   |                   |   |           ItemRegistryUtility.class
+|   |   |                   |   |           
+|   |   |                   |   +---lightingpipeline
+|   |   |                   |   |   |   LightingPipeline.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   +---directionallight
+|   |   |                   |   |   |       DirectionalLightHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---naturallightmanager
+|   |   |                   |   |           MoonLightSystem.class
+|   |   |                   |   |           NaturalLightManager.class
+|   |   |                   |   |           SunLightSystem.class
+|   |   |                   |   |           
+|   |   |                   |   +---menupipeline
+|   |   |                   |   |   |   MenuPipeline.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   +---element
+|   |   |                   |   |   |       ElementData.class
+|   |   |                   |   |   |       ElementHandle.class
+|   |   |                   |   |   |       ElementInstance.class
+|   |   |                   |   |   |       ElementOrigin.class
+|   |   |                   |   |   |       ElementPlacementStruct.class
+|   |   |                   |   |   |       ElementType.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---fontmanager
+|   |   |                   |   |   |       FontManager.class
+|   |   |                   |   |   |       FontRasterizerUtility.class
+|   |   |                   |   |   |       GLSLUtility.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---fonts
+|   |   |                   |   |   |       FontHandle.class
+|   |   |                   |   |   |       FontInstance.class
+|   |   |                   |   |   |       FontTileData.class
+|   |   |                   |   |   |       GlyphMetricStruct.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---menu
+|   |   |                   |   |   |       MenuData.class
+|   |   |                   |   |   |       MenuHandle.class
+|   |   |                   |   |   |       MenuInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---menueventsmanager
+|   |   |                   |   |   |   |   MenuEventsManager.class
+|   |   |                   |   |   |   |   
+|   |   |                   |   |   |   +---menus
+|   |   |                   |   |   |   |       InventoryBranch.class
+|   |   |                   |   |   |   |       MainMenuBranch.class
+|   |   |                   |   |   |   |       
+|   |   |                   |   |   |   \---util
+|   |   |                   |   |   |           GenericButtonBranch.class
+|   |   |                   |   |   |           
+|   |   |                   |   |   +---menumanager
+|   |   |                   |   |   |       ElementSystem.class
+|   |   |                   |   |   |       FileParserUtility.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       MenuManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---raycastsystem
+|   |   |                   |   |   |       RaycastSystem.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---util
+|   |   |                   |   |           DimensionValue.class
+|   |   |                   |   |           DimensionVector2.class
+|   |   |                   |   |           LayoutStruct.class
+|   |   |                   |   |           MenuAwareAction.class
+|   |   |                   |   |           StackDirection.class
+|   |   |                   |   |           TextAlign.class
+|   |   |                   |   |           
+|   |   |                   |   +---physicspipeline
+|   |   |                   |   |   |   PhysicsPipeline.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   +---movementmanager
+|   |   |                   |   |   |       BlockCollisionBranch.class
+|   |   |                   |   |   |       GravityBranch.class
+|   |   |                   |   |   |       MovementBranch$1.class
+|   |   |                   |   |   |       MovementBranch.class
+|   |   |                   |   |   |       MovementManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---raycastmanager
+|   |   |                   |   |   |       BlockCastBranch.class
+|   |   |                   |   |   |       RaycastManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---util
+|   |   |                   |   |           BlockCastStruct.class
+|   |   |                   |   |           BlockCompositionStruct.class
+|   |   |                   |   |           
+|   |   |                   |   +---renderpipeline
+|   |   |                   |   |   |   RenderPipeline.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   +---camera
+|   |   |                   |   |   |       CameraData.class
+|   |   |                   |   |   |       CameraInstance.class
+|   |   |                   |   |   |       OrthographicCameraData.class
+|   |   |                   |   |   |       OrthographicCameraInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---cameramanager
+|   |   |                   |   |   |       CameraManager.class
+|   |   |                   |   |   |       InternalBufferSystem.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---compositebatch
+|   |   |                   |   |   |       CompositeBatchStruct.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---compositerendersystem
+|   |   |                   |   |   |       CompositeRenderSystem.class
+|   |   |                   |   |   |       GLSLUtility.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---renderbatch
+|   |   |                   |   |   |       RenderBatchStruct.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---rendercall
+|   |   |                   |   |   |       RenderCallStruct.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---rendersystem
+|   |   |                   |   |   |       GLSLUtility.class
+|   |   |                   |   |   |       RenderSystem.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---util
+|   |   |                   |   |           MaskStruct.class
+|   |   |                   |   |           
+|   |   |                   |   +---shaderpipeline
+|   |   |                   |   |   |   ShaderPipeline.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   +---material
+|   |   |                   |   |   |       MaterialData.class
+|   |   |                   |   |   |       MaterialHandle.class
+|   |   |                   |   |   |       MaterialInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---materialmanager
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       MaterialManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---pass
+|   |   |                   |   |   |       PassData.class
+|   |   |                   |   |   |       PassHandle.class
+|   |   |                   |   |   |       PassInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---passmanager
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       PassManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---shader
+|   |   |                   |   |   |       ShaderData.class
+|   |   |                   |   |   |       ShaderHandle.class
+|   |   |                   |   |   |       ShaderSourceStruct.class
+|   |   |                   |   |   |       ShaderType.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---shadermanager
+|   |   |                   |   |   |       FileParserUtility.class
+|   |   |                   |   |   |       GLSLUtility.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       ShaderManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---sprite
+|   |   |                   |   |   |       SpriteData.class
+|   |   |                   |   |   |       SpriteHandle.class
+|   |   |                   |   |   |       SpriteInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---spritemanager
+|   |   |                   |   |   |       GLSLUtility.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       SpriteManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---texture
+|   |   |                   |   |   |       TextureArrayStruct.class
+|   |   |                   |   |   |       TextureAtlasStruct.class
+|   |   |                   |   |   |       TextureData.class
+|   |   |                   |   |   |       TextureHandle.class
+|   |   |                   |   |   |       TextureTileStruct.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---texturemanager
+|   |   |                   |   |   |       AliasLibrarySystem.class
+|   |   |                   |   |   |       AliasStruct.class
+|   |   |                   |   |   |       GLSLUtility.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       TextureManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---ubo
+|   |   |                   |   |   |       UBOData.class
+|   |   |                   |   |   |       UBOHandle.class
+|   |   |                   |   |   |       UBOInstance.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---ubomanager
+|   |   |                   |   |   |       GLSLUtility.class
+|   |   |                   |   |   |       InternalBuilder.class
+|   |   |                   |   |   |       InternalLoader.class
+|   |   |                   |   |   |       UBOManager.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---uniforms
+|   |   |                   |   |       |   UniformAttributeStruct.class
+|   |   |                   |   |       |   UniformData.class
+|   |   |                   |   |       |   UniformStruct.class
+|   |   |                   |   |       |   UniformType$1.class
+|   |   |                   |   |       |   UniformType$10.class
+|   |   |                   |   |       |   UniformType$11.class
+|   |   |                   |   |       |   UniformType$12.class
+|   |   |                   |   |       |   UniformType$13.class
+|   |   |                   |   |       |   UniformType$14.class
+|   |   |                   |   |       |   UniformType$15.class
+|   |   |                   |   |       |   UniformType$16.class
+|   |   |                   |   |       |   UniformType$17.class
+|   |   |                   |   |       |   UniformType$18.class
+|   |   |                   |   |       |   UniformType$19.class
+|   |   |                   |   |       |   UniformType$2.class
+|   |   |                   |   |       |   UniformType$20.class
+|   |   |                   |   |       |   UniformType$21.class
+|   |   |                   |   |       |   UniformType$22.class
+|   |   |                   |   |       |   UniformType$23.class
+|   |   |                   |   |       |   UniformType$24.class
+|   |   |                   |   |       |   UniformType$3.class
+|   |   |                   |   |       |   UniformType$4.class
+|   |   |                   |   |       |   UniformType$5.class
+|   |   |                   |   |       |   UniformType$6.class
+|   |   |                   |   |       |   UniformType$7.class
+|   |   |                   |   |       |   UniformType$8.class
+|   |   |                   |   |       |   UniformType$9.class
+|   |   |                   |   |       |   UniformType.class
+|   |   |                   |   |       |   UniformUtility$1.class
+|   |   |                   |   |       |   UniformUtility.class
+|   |   |                   |   |       |   
+|   |   |                   |   |       +---matrices
+|   |   |                   |   |       |       Matrix2DoubleUniform.class
+|   |   |                   |   |       |       Matrix2Uniform.class
+|   |   |                   |   |       |       Matrix3DoubleUniform.class
+|   |   |                   |   |       |       Matrix3Uniform.class
+|   |   |                   |   |       |       Matrix4DoubleUniform.class
+|   |   |                   |   |       |       Matrix4Uniform.class
+|   |   |                   |   |       |       
+|   |   |                   |   |       +---matrixArrays
+|   |   |                   |   |       |       Matrix2ArrayUniform.class
+|   |   |                   |   |       |       Matrix2DoubleArrayUniform.class
+|   |   |                   |   |       |       Matrix3ArrayUniform.class
+|   |   |                   |   |       |       Matrix3DoubleArrayUniform.class
+|   |   |                   |   |       |       Matrix4ArrayUniform.class
+|   |   |                   |   |       |       Matrix4DoubleArrayUniform.class
+|   |   |                   |   |       |       
+|   |   |                   |   |       +---samplers
+|   |   |                   |   |       |       SampleImage2DArrayUniform.class
+|   |   |                   |   |       |       SampleImage2DUniform.class
+|   |   |                   |   |       |       
+|   |   |                   |   |       +---scalarArrays
+|   |   |                   |   |       |       BooleanArrayUniform.class
+|   |   |                   |   |       |       DoubleArrayUniform.class
+|   |   |                   |   |       |       FloatArrayUniform.class
+|   |   |                   |   |       |       IntegerArrayUniform.class
+|   |   |                   |   |       |       
+|   |   |                   |   |       +---scalars
+|   |   |                   |   |       |       BooleanUniform.class
+|   |   |                   |   |       |       DoubleUniform.class
+|   |   |                   |   |       |       FloatUniform.class
+|   |   |                   |   |       |       IntegerUniform.class
+|   |   |                   |   |       |       
+|   |   |                   |   |       +---vectorarrays
+|   |   |                   |   |       |       Vector2ArrayUniform.class
+|   |   |                   |   |       |       Vector2BooleanArrayUniform.class
+|   |   |                   |   |       |       Vector2DoubleArrayUniform.class
+|   |   |                   |   |       |       Vector2IntArrayUniform.class
+|   |   |                   |   |       |       Vector3ArrayUniform.class
+|   |   |                   |   |       |       Vector3BooleanArrayUniform.class
+|   |   |                   |   |       |       Vector3DoubleArrayUniform.class
+|   |   |                   |   |       |       Vector3IntArrayUniform.class
+|   |   |                   |   |       |       Vector4ArrayUniform.class
+|   |   |                   |   |       |       Vector4BooleanArrayUniform.class
+|   |   |                   |   |       |       Vector4DoubleArrayUniform.class
+|   |   |                   |   |       |       Vector4IntArrayUniform.class
+|   |   |                   |   |       |       
+|   |   |                   |   |       \---vectors
+|   |   |                   |   |               Vector2BooleanUniform.class
+|   |   |                   |   |               Vector2DoubleUniform.class
+|   |   |                   |   |               Vector2IntUniform.class
+|   |   |                   |   |               Vector2Uniform.class
+|   |   |                   |   |               Vector3BooleanUniform.class
+|   |   |                   |   |               Vector3DoubleUniform.class
+|   |   |                   |   |               Vector3IntUniform.class
+|   |   |                   |   |               Vector3Uniform.class
+|   |   |                   |   |               Vector4BooleanUniform.class
+|   |   |                   |   |               Vector4DoubleUniform.class
+|   |   |                   |   |               Vector4IntUniform.class
+|   |   |                   |   |               Vector4Uniform.class
+|   |   |                   |   |               
+|   |   |                   |   \---worldpipeline
+|   |   |                   |       |   WorldPipeline.class
+|   |   |                   |       |   
+|   |   |                   |       +---biome
+|   |   |                   |       |       BiomeData.class
+|   |   |                   |       |       BiomeHandle.class
+|   |   |                   |       |       
+|   |   |                   |       +---biomemanager
+|   |   |                   |       |       BiomeManager.class
+|   |   |                   |       |       InternalBuilder.class
+|   |   |                   |       |       InternalLoader.class
+|   |   |                   |       |       
+|   |   |                   |       +---block
+|   |   |                   |       |       BlockData.class
+|   |   |                   |       |       BlockHandle.class
+|   |   |                   |       |       BlockPaletteHandle.class
+|   |   |                   |       |       BlockRotationType.class
+|   |   |                   |       |       
+|   |   |                   |       +---blockmanager
+|   |   |                   |       |       BlockManager.class
+|   |   |                   |       |       InternalBufferSystem.class
+|   |   |                   |       |       InternalBuilder.class
+|   |   |                   |       |       InternalLoader.class
+|   |   |                   |       |       
+|   |   |                   |       +---chunk
+|   |   |                   |       |       ChunkData.class
+|   |   |                   |       |       ChunkDataSyncContainer.class
+|   |   |                   |       |       ChunkDataUtility.class
+|   |   |                   |       |       ChunkInstance.class
+|   |   |                   |       |       ChunkNeighborStruct.class
+|   |   |                   |       |       
+|   |   |                   |       +---chunkstreammanager
+|   |   |                   |       |       AssessmentBranch.class
+|   |   |                   |       |       BatchBranch.class
+|   |   |                   |       |       BuildBranch.class
+|   |   |                   |       |       ChunkQueueItem.class
+|   |   |                   |       |       ChunkQueueManager$1.class
+|   |   |                   |       |       ChunkQueueManager.class
+|   |   |                   |       |       ChunkStreamManager.class
+|   |   |                   |       |       DumpBranch$1.class
+|   |   |                   |       |       DumpBranch.class
+|   |   |                   |       |       GenerationBranch.class
+|   |   |                   |       |       ItemLoadBranch.class
+|   |   |                   |       |       ItemRenderBranch.class
+|   |   |                   |       |       MergeBranch.class
+|   |   |                   |       |       QueueOperation.class
+|   |   |                   |       |       RenderBranch.class
+|   |   |                   |       |       
+|   |   |                   |       +---gridmanager
+|   |   |                   |       |       GridBuildSystem.class
+|   |   |                   |       |       GridInstance.class
+|   |   |                   |       |       GridManager.class
+|   |   |                   |       |       GridSlotDetailLevel.class
+|   |   |                   |       |       GridSlotHandle.class
+|   |   |                   |       |       
+|   |   |                   |       +---megachunk
+|   |   |                   |       |       MegaBatchStruct.class
+|   |   |                   |       |       MegaChunkInstance.class
+|   |   |                   |       |       MegaData.class
+|   |   |                   |       |       MegaDataSyncContainer.class
+|   |   |                   |       |       MegaDataUtility.class
+|   |   |                   |       |       
+|   |   |                   |       +---megastreammanager
+|   |   |                   |       |       MegaAssessBranch.class
+|   |   |                   |       |       MegaDumpBranch.class
+|   |   |                   |       |       MegaMergeBranch.class
+|   |   |                   |       |       MegaQueueManager$1.class
+|   |   |                   |       |       MegaQueueManager.class
+|   |   |                   |       |       MegaQueueOperation.class
+|   |   |                   |       |       MegaRenderBranch.class
+|   |   |                   |       |       MegaStreamManager.class
+|   |   |                   |       |       
+|   |   |                   |       +---subchunk
+|   |   |                   |       |       SubChunkInstance.class
+|   |   |                   |       |       
+|   |   |                   |       +---util
+|   |   |                   |       |       ChunkCoordinate3Int.class
+|   |   |                   |       |       WorldPositionStruct.class
+|   |   |                   |       |       WorldPositionUtility.class
+|   |   |                   |       |       WorldWrapUtility.class
+|   |   |                   |       |       
+|   |   |                   |       +---world
+|   |   |                   |       |       WorldData.class
+|   |   |                   |       |       WorldHandle.class
+|   |   |                   |       |       
+|   |   |                   |       +---worldgenerationmanager
+|   |   |                   |       |       WorldGenerationManager.class
+|   |   |                   |       |       
+|   |   |                   |       +---worlditem
+|   |   |                   |       |       WorldItemCompositeInstance.class
+|   |   |                   |       |       WorldItemInstance.class
+|   |   |                   |       |       WorldItemInstancePaletteHandle.class
+|   |   |                   |       |       WorldItemPaletteHandle.class
+|   |   |                   |       |       WorldItemStruct.class
+|   |   |                   |       |       
+|   |   |                   |       +---worlditemplacementsystem
+|   |   |                   |       |       WorldItemPlacementSystem.class
+|   |   |                   |       |       
+|   |   |                   |       +---worlditemrendersystem
+|   |   |                   |       |       WorldItemRenderSystem.class
+|   |   |                   |       |       
+|   |   |                   |       +---worldmanager
+|   |   |                   |       |       InternalBuilder.class
+|   |   |                   |       |       InternalLoader.class
+|   |   |                   |       |       WorldManager.class
+|   |   |                   |       |       
+|   |   |                   |       \---worldrendermanager
+|   |   |                   |               FrustumCullingSystem.class
+|   |   |                   |               RenderOperation.class
+|   |   |                   |               RenderType.class
+|   |   |                   |               WorldRenderInstance.class
+|   |   |                   |               WorldRenderManager.class
+|   |   |                   |               
+|   |   |                   +---core
+|   |   |                   |   +---engine
+|   |   |                   |   |   |   AsyncContainerPackage.class
+|   |   |                   |   |   |   BranchPackage.class
+|   |   |                   |   |   |   BuilderPackage.class
+|   |   |                   |   |   |   DataPackage.class
+|   |   |                   |   |   |   EnginePackage$1.class
+|   |   |                   |   |   |   EnginePackage$EngineStruct.class
+|   |   |                   |   |   |   EnginePackage.class
+|   |   |                   |   |   |   EngineState.class
+|   |   |                   |   |   |   EngineUtility$InternalException.class
+|   |   |                   |   |   |   EngineUtility.class
+|   |   |                   |   |   |   GameEngine.class
+|   |   |                   |   |   |   HandlePackage.class
+|   |   |                   |   |   |   InstancePackage$CreationStruct.class
+|   |   |                   |   |   |   InstancePackage.class
+|   |   |                   |   |   |   LoaderPackage.class
+|   |   |                   |   |   |   Main.class
+|   |   |                   |   |   |   ManagerPackage.class
+|   |   |                   |   |   |   PipelinePackage.class
+|   |   |                   |   |   |   StructPackage.class
+|   |   |                   |   |   |   SyncContainerPackage.class
+|   |   |                   |   |   |   SystemContext.class
+|   |   |                   |   |   |   SystemPackage$SystemStruct.class
+|   |   |                   |   |   |   SystemPackage.class
+|   |   |                   |   |   |   UtilityPackage$1.class
+|   |   |                   |   |   |   UtilityPackage.class
+|   |   |                   |   |   |   WindowInstance.class
+|   |   |                   |   |   |   
+|   |   |                   |   |   \---settings
+|   |   |                   |   |           EngineSetting.class
+|   |   |                   |   |           Loader.class
+|   |   |                   |   |           Settings$Builder.class
+|   |   |                   |   |           Settings.class
+|   |   |                   |   |           SettingsDeserializer.class
+|   |   |                   |   |           
+|   |   |                   |   +---kernel
+|   |   |                   |   |   +---syncconsumer
+|   |   |                   |   |   |       AsyncStructConsumer.class
+|   |   |                   |   |   |       AsyncStructConsumerMulti.class
+|   |   |                   |   |   |       BiSyncAsyncConsumer.class
+|   |   |                   |   |   |       SyncStructConsumer.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   +---thread
+|   |   |                   |   |   |       ThreadHandle.class
+|   |   |                   |   |   |       
+|   |   |                   |   |   \---threadmanager
+|   |   |                   |   |           InternalBuilder.class
+|   |   |                   |   |           InternalLoader.class
+|   |   |                   |   |           InternalThreadManager.class
+|   |   |                   |   |           NamedThreadFactory.class
+|   |   |                   |   |           
+|   |   |                   |   \---util
+|   |   |                   |       |   AtlasUtility.class
+|   |   |                   |       |   FileUtility.class
+|   |   |                   |       |   JsonUtility.class
+|   |   |                   |       |   OpenSimplex2.class
+|   |   |                   |       |   PixmapUtility.class
+|   |   |                   |       |   RegistryUtility.class
+|   |   |                   |       |   
+|   |   |                   |       +---atlas
+|   |   |                   |       |       AtlasTileData.class
+|   |   |                   |       |       
+|   |   |                   |       +---mathematics
+|   |   |                   |       |   +---extras
+|   |   |                   |       |   |       Color.class
+|   |   |                   |       |   |       Coordinate2Long.class
+|   |   |                   |       |   |       Coordinate3Int.class
+|   |   |                   |       |   |       Coordinate3Long.class
+|   |   |                   |       |   |       Coordinate4Long.class
+|   |   |                   |       |   |       Direction2Vector.class
+|   |   |                   |       |   |       Direction3Vector.class
+|   |   |                   |       |   |       
+|   |   |                   |       |   +---matrices
+|   |   |                   |       |   |       Matrix2.class
+|   |   |                   |       |   |       Matrix2Double.class
+|   |   |                   |       |   |       Matrix3.class
+|   |   |                   |       |   |       Matrix3Double.class
+|   |   |                   |       |   |       Matrix4.class
+|   |   |                   |       |   |       Matrix4Double.class
+|   |   |                   |       |   |       
+|   |   |                   |       |   +---quaternions
+|   |   |                   |       |   |       Quaternion.class
+|   |   |                   |       |   |       
+|   |   |                   |       |   \---vectors
+|   |   |                   |       |           Vector2.class
+|   |   |                   |       |           Vector2Boolean.class
+|   |   |                   |       |           Vector2Double.class
+|   |   |                   |       |           Vector2Int.class
+|   |   |                   |       |           Vector3.class
+|   |   |                   |       |           Vector3Boolean.class
+|   |   |                   |       |           Vector3Double.class
+|   |   |                   |       |           Vector3Int.class
+|   |   |                   |       |           Vector4.class
+|   |   |                   |       |           Vector4Boolean.class
+|   |   |                   |       |           Vector4Double.class
+|   |   |                   |       |           Vector4Int.class
+|   |   |                   |       |           
+|   |   |                   |       \---queue
+|   |   |                   |               QueueInstance.class
+|   |   |                   |               QueueItemHandle.class
+|   |   |                   |               
+|   |   |                   \---runtime
+|   |   |                       \---debug
+|   |   |                               DebugPipeline.class
+|   |   |                               Sky.class
+|   |   |                               
+|   |   +---generated
+|   |   |   \---sources
+|   |   |       +---annotationProcessor
+|   |   |       |   \---java
+|   |   |       |       \---main
+|   |   |       \---headers
+|   |   |           \---java
+|   |   |               \---main
+|   |   +---libs
+|   |   |       core-1.0.0.jar
+|   |   |       
+|   |   \---tmp
+|   |       +---compileJava
+|   |       |   |   previous-compilation-data.bin
+|   |       |   |   
+|   |       |   \---compileTransaction
+|   |       |       +---backup-dir
+|   |       |       \---stash-dir
+|   |       |               AliasLibrarySystem.class.uniqueId114
+|   |       |               AssessmentBranch.class.uniqueId106
+|   |       |               AsyncContainerPackage.class.uniqueId31
+|   |       |               AsyncStructConsumer.class.uniqueId97
+|   |       |               AsyncStructConsumerMulti.class.uniqueId92
+|   |       |               BackpackInstance.class.uniqueId164
+|   |       |               BatchBranch.class.uniqueId129
+|   |       |               BehaviorHandle.class.uniqueId252
+|   |       |               BehaviorManager.class.uniqueId146
+|   |       |               BiomeHandle.class.uniqueId100
+|   |       |               BiomeManager.class.uniqueId135
+|   |       |               BiSyncAsyncConsumer.class.uniqueId210
+|   |       |               BlockBranch.class.uniqueId110
+|   |       |               BlockCastBranch.class.uniqueId144
+|   |       |               BlockCastStruct.class.uniqueId195
+|   |       |               BlockCollisionBranch.class.uniqueId151
+|   |       |               BlockHandle.class.uniqueId159
+|   |       |               BlockManager.class.uniqueId168
+|   |       |               BlockPaletteHandle.class.uniqueId200
+|   |       |               BranchPackage.class.uniqueId109
+|   |       |               BuildBranch.class.uniqueId133
+|   |       |               BuilderPackage.class.uniqueId95
+|   |       |               CalendarHandle.class.uniqueId117
+|   |       |               CalendarManager.class.uniqueId16
+|   |       |               CalendarPipeline.class.uniqueId170
+|   |       |               CameraInstance.class.uniqueId231
+|   |       |               CameraManager.class.uniqueId181
+|   |       |               ChunkDataSyncContainer.class.uniqueId228
+|   |       |               ChunkInstance.class.uniqueId105
+|   |       |               ChunkNeighborStruct.class.uniqueId126
+|   |       |               ChunkQueueManager$1.class.uniqueId13
+|   |       |               ChunkQueueManager.class.uniqueId238
+|   |       |               ChunkStreamManager.class.uniqueId239
+|   |       |               ClockHandle.class.uniqueId188
+|   |       |               ClockManager.class.uniqueId21
+|   |       |               ComplexGeometryBranch.class.uniqueId40
+|   |       |               CompositeBatchStruct.class.uniqueId35
+|   |       |               CompositeBufferData.class.uniqueId215
+|   |       |               CompositeBufferInstance.class.uniqueId75
+|   |       |               CompositeBufferManager.class.uniqueId78
+|   |       |               CompositeRenderSystem.class.uniqueId172
+|   |       |               CurrentTrackerBranch.class.uniqueId2
+|   |       |               DayTrackerBranch.class.uniqueId123
+|   |       |               DebugPipeline.class.uniqueId230
+|   |       |               DirectionalLightHandle.class.uniqueId128
+|   |       |               DumpBranch$1.class.uniqueId227
+|   |       |               DumpBranch.class.uniqueId157
+|   |       |               DynamicGeometryAsyncContainer.class.uniqueId51
+|   |       |               DynamicGeometryManager.class.uniqueId46
+|   |       |               DynamicModelHandle.class.uniqueId41
+|   |       |               DynamicPacketInstance.class.uniqueId254
+|   |       |               ElementHandle.class.uniqueId158
+|   |       |               ElementInstance.class.uniqueId145
+|   |       |               ElementPlacementStruct.class.uniqueId30
+|   |       |               ElementSystem.class.uniqueId150
+|   |       |               EnginePackage$1.class.uniqueId249
+|   |       |               EnginePackage$EngineStruct.class.uniqueId59
+|   |       |               EnginePackage.class.uniqueId101
+|   |       |               EntityHandle.class.uniqueId176
+|   |       |               EntityInstance.class.uniqueId15
+|   |       |               EntityManager.class.uniqueId88
+|   |       |               EntityPipeline.class.uniqueId22
+|   |       |               EntityStateHandle.class.uniqueId74
+|   |       |               FontGeometryBranch.class.uniqueId169
+|   |       |               FontHandle.class.uniqueId147
+|   |       |               FontInstance.class.uniqueId148
+|   |       |               FontManager.class.uniqueId69
+|   |       |               FontRasterizerUtility.class.uniqueId136
+|   |       |               FrustumCullingSystem.class.uniqueId132
+|   |       |               FullGeometryBranch.class.uniqueId26
+|   |       |               GameEngine.class.uniqueId160
+|   |       |               GenerationBranch.class.uniqueId87
+|   |       |               GenericButtonBranch.class.uniqueId76
+|   |       |               GeometryPipeline.class.uniqueId89
+|   |       |               GLSLUtility.class.uniqueId108
+|   |       |               GLSLUtility.class.uniqueId20
+|   |       |               GLSLUtility.class.uniqueId86
+|   |       |               GravityBranch.class.uniqueId94
+|   |       |               GridBuildSystem.class.uniqueId242
+|   |       |               GridInstance.class.uniqueId174
+|   |       |               GridManager.class.uniqueId66
+|   |       |               GridSlotHandle.class.uniqueId77
+|   |       |               HandlePackage.class.uniqueId205
+|   |       |               IBOHandle.class.uniqueId102
+|   |       |               IBOInstance.class.uniqueId79
+|   |       |               IBOManager.class.uniqueId53
+|   |       |               InputHandle.class.uniqueId219
+|   |       |               InputPipeline.class.uniqueId44
+|   |       |               InputSystem.class.uniqueId65
+|   |       |               InstancePackage$CreationStruct.class.uniqueId199
+|   |       |               InstancePackage.class.uniqueId193
+|   |       |               InternalBufferBranch.class.uniqueId93
+|   |       |               InternalBufferSystem$1.class.uniqueId84
+|   |       |               InternalBufferSystem.class.uniqueId112
+|   |       |               InternalBufferSystem.class.uniqueId191
+|   |       |               InternalBufferSystem.class.uniqueId42
+|   |       |               InternalBufferSystem.class.uniqueId55
+|   |       |               InternalBuilder.class.uniqueId0
+|   |       |               InternalBuilder.class.uniqueId119
+|   |       |               InternalBuilder.class.uniqueId152
+|   |       |               InternalBuilder.class.uniqueId154
+|   |       |               InternalBuilder.class.uniqueId163
+|   |       |               InternalBuilder.class.uniqueId167
+|   |       |               InternalBuilder.class.uniqueId182
+|   |       |               InternalBuilder.class.uniqueId196
+|   |       |               InternalBuilder.class.uniqueId214
+|   |       |               InternalBuilder.class.uniqueId218
+|   |       |               InternalBuilder.class.uniqueId223
+|   |       |               InternalBuilder.class.uniqueId236
+|   |       |               InternalBuilder.class.uniqueId25
+|   |       |               InternalBuilder.class.uniqueId38
+|   |       |               InternalBuilder.class.uniqueId43
+|   |       |               InternalBuilder.class.uniqueId47
+|   |       |               InternalBuilder.class.uniqueId49
+|   |       |               InternalBuilder.class.uniqueId52
+|   |       |               InternalBuilder.class.uniqueId6
+|   |       |               InternalBuilder.class.uniqueId9
+|   |       |               InternalBuilder.class.uniqueId99
+|   |       |               InternalBuildManager$1.class.uniqueId5
+|   |       |               InternalBuildManager.class.uniqueId7
+|   |       |               InternalLoader.class.uniqueId11
+|   |       |               InternalLoader.class.uniqueId115
+|   |       |               InternalLoader.class.uniqueId12
+|   |       |               InternalLoader.class.uniqueId131
+|   |       |               InternalLoader.class.uniqueId134
+|   |       |               InternalLoader.class.uniqueId141
+|   |       |               InternalLoader.class.uniqueId142
+|   |       |               InternalLoader.class.uniqueId149
+|   |       |               InternalLoader.class.uniqueId153
+|   |       |               InternalLoader.class.uniqueId161
+|   |       |               InternalLoader.class.uniqueId165
+|   |       |               InternalLoader.class.uniqueId175
+|   |       |               InternalLoader.class.uniqueId186
+|   |       |               InternalLoader.class.uniqueId187
+|   |       |               InternalLoader.class.uniqueId204
+|   |       |               InternalLoader.class.uniqueId207
+|   |       |               InternalLoader.class.uniqueId37
+|   |       |               InternalLoader.class.uniqueId56
+|   |       |               InternalThreadManager.class.uniqueId10
+|   |       |               InventoryBranch.class.uniqueId71
+|   |       |               InventoryHandle.class.uniqueId139
+|   |       |               ItemBranch.class.uniqueId80
+|   |       |               ItemDefinitionData.class.uniqueId197
+|   |       |               ItemDefinitionHandle.class.uniqueId155
+|   |       |               ItemDefinitionManager.class.uniqueId57
+|   |       |               ItemLoadBranch.class.uniqueId216
+|   |       |               ItemPipeline.class.uniqueId34
+|   |       |               ItemRenderBranch.class.uniqueId178
+|   |       |               ItemRotationManager.class.uniqueId116
+|   |       |               LightingPipeline.class.uniqueId229
+|   |       |               LiquidGeometryBranch.class.uniqueId211
+|   |       |               Loader.class.uniqueId166
+|   |       |               LoaderPackage.class.uniqueId120
+|   |       |               Main.class.uniqueId85
+|   |       |               MainMenuBranch.class.uniqueId98
+|   |       |               ManagerPackage.class.uniqueId107
+|   |       |               MaterialData.class.uniqueId198
+|   |       |               MaterialHandle.class.uniqueId103
+|   |       |               MaterialInstance.class.uniqueId253
+|   |       |               MaterialManager.class.uniqueId121
+|   |       |               MegaAssessBranch.class.uniqueId62
+|   |       |               MegaBatchStruct.class.uniqueId19
+|   |       |               MegaChunkInstance.class.uniqueId232
+|   |       |               MegaDataSyncContainer.class.uniqueId14
+|   |       |               MegaDumpBranch.class.uniqueId24
+|   |       |               MegaMergeBranch.class.uniqueId245
+|   |       |               MegaQueueManager$1.class.uniqueId221
+|   |       |               MegaQueueManager.class.uniqueId124
+|   |       |               MegaRenderBranch.class.uniqueId202
+|   |       |               MegaStreamManager.class.uniqueId64
+|   |       |               MenuAwareAction.class.uniqueId39
+|   |       |               MenuEventsManager.class.uniqueId243
+|   |       |               MenuHandle.class.uniqueId82
+|   |       |               MenuInstance.class.uniqueId63
+|   |       |               MenuManager.class.uniqueId111
+|   |       |               MenuPipeline.class.uniqueId162
+|   |       |               MergeBranch.class.uniqueId122
+|   |       |               MeshHandle.class.uniqueId201
+|   |       |               MeshInstance.class.uniqueId28
+|   |       |               MeshManager.class.uniqueId190
+|   |       |               ModelInstance.class.uniqueId237
+|   |       |               ModelManager.class.uniqueId233
+|   |       |               MonthTrackerBranch.class.uniqueId36
+|   |       |               MoonLightSystem.class.uniqueId247
+|   |       |               MovementBranch$1.class.uniqueId58
+|   |       |               MovementBranch.class.uniqueId72
+|   |       |               MovementManager.class.uniqueId140
+|   |       |               NaturalLightManager.class.uniqueId240
+|   |       |               OrthographicCameraInstance.class.uniqueId246
+|   |       |               PartialGeometryBranch.class.uniqueId96
+|   |       |               PassData.class.uniqueId138
+|   |       |               PassHandle.class.uniqueId173
+|   |       |               PassInstance.class.uniqueId194
+|   |       |               PassManager.class.uniqueId222
+|   |       |               PhysicsPipeline.class.uniqueId209
+|   |       |               PipelinePackage.class.uniqueId8
+|   |       |               PlacementManager.class.uniqueId48
+|   |       |               PlayerManager.class.uniqueId224
+|   |       |               QueueInstance.class.uniqueId137
+|   |       |               QueueItemHandle.class.uniqueId212
+|   |       |               RaycastManager.class.uniqueId17
+|   |       |               RaycastSystem.class.uniqueId203
+|   |       |               RenderBatchStruct.class.uniqueId4
+|   |       |               RenderBranch.class.uniqueId91
+|   |       |               RenderCallStruct.class.uniqueId248
+|   |       |               RenderPipeline.class.uniqueId156
+|   |       |               RenderSystem.class.uniqueId225
+|   |       |               Settings$Builder.class.uniqueId185
+|   |       |               Settings.class.uniqueId130
+|   |       |               SettingsDeserializer.class.uniqueId45
+|   |       |               ShaderHandle.class.uniqueId50
+|   |       |               ShaderManager.class.uniqueId184
+|   |       |               ShaderPipeline.class.uniqueId189
+|   |       |               Sky.class.uniqueId18
+|   |       |               SpriteData.class.uniqueId241
+|   |       |               SpriteHandle.class.uniqueId244
+|   |       |               SpriteInstance.class.uniqueId104
+|   |       |               SpriteManager.class.uniqueId67
+|   |       |               StatisticsHandle.class.uniqueId81
+|   |       |               SubChunkInstance.class.uniqueId83
+|   |       |               SunLightSystem.class.uniqueId183
+|   |       |               SyncContainerPackage.class.uniqueId90
+|   |       |               SyncStructConsumer.class.uniqueId213
+|   |       |               SystemPackage$SystemStruct.class.uniqueId235
+|   |       |               SystemPackage.class.uniqueId70
+|   |       |               TextureHandle.class.uniqueId29
+|   |       |               TextureManager.class.uniqueId3
+|   |       |               ThreadHandle.class.uniqueId206
+|   |       |               ToolTypeHandle.class.uniqueId118
+|   |       |               ToolTypeManager.class.uniqueId113
+|   |       |               UBOHandle.class.uniqueId217
+|   |       |               UBOInstance.class.uniqueId220
+|   |       |               UBOManager.class.uniqueId23
+|   |       |               VAOHandle.class.uniqueId60
+|   |       |               VAOInstance.class.uniqueId127
+|   |       |               VAOManager.class.uniqueId251
+|   |       |               VBOHandle.class.uniqueId61
+|   |       |               VBOInstance.class.uniqueId33
+|   |       |               VBOManager.class.uniqueId125
+|   |       |               WindowInstance.class.uniqueId179
+|   |       |               WorldGenerationManager.class.uniqueId180
+|   |       |               WorldHandle.class.uniqueId73
+|   |       |               WorldItemCompositeInstance.class.uniqueId171
+|   |       |               WorldItemInstance.class.uniqueId54
+|   |       |               WorldItemInstancePaletteHandle.class.uniqueId68
+|   |       |               WorldItemPaletteHandle.class.uniqueId208
+|   |       |               WorldItemPlacementSystem.class.uniqueId177
+|   |       |               WorldItemRenderSystem.class.uniqueId234
+|   |       |               WorldManager.class.uniqueId32
+|   |       |               WorldPipeline.class.uniqueId143
+|   |       |               WorldPositionUtility.class.uniqueId192
+|   |       |               WorldRenderInstance.class.uniqueId250
+|   |       |               WorldRenderManager.class.uniqueId27
+|   |       |               WorldWrapUtility.class.uniqueId1
+|   |       |               YearTrackerBranch.class.uniqueId226
+|   |       |               
+|   |       \---jar
+|   |               MANIFEST.MF
+|   |               
+|   \---src
+|       \---main
+|           \---java
+|               \---com
+|                   \---internal
+|                       +---bootstrap
+|                       |   +---calendarpipeline
+|                       |   |   |   CalendarPipeline.java
+|                       |   |   |   
+|                       |   |   +---calendar
+|                       |   |   |       CalendarData.java
+|                       |   |   |       CalendarHandle.java
+|                       |   |   |       
+|                       |   |   +---calendarmanager
+|                       |   |   |       CalendarManager.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       
+|                       |   |   +---clock
+|                       |   |   |       ClockData.java
+|                       |   |   |       ClockHandle.java
+|                       |   |   |       
+|                       |   |   \---clockmanager
+|                       |   |           ClockManager.java
+|                       |   |           CurrentTrackerBranch.java
+|                       |   |           DayTrackerBranch.java
+|                       |   |           InternalBufferSystem.java
+|                       |   |           MonthTrackerBranch.java
+|                       |   |           YearTrackerBranch.java
+|                       |   |           
+|                       |   +---entitypipeline
+|                       |   |   |   EntityPipeline.java
+|                       |   |   |   
+|                       |   |   +---behavior
+|                       |   |   |       BehaviorData.java
+|                       |   |   |       BehaviorHandle.java
+|                       |   |   |       
+|                       |   |   +---behaviormanager
+|                       |   |   |       BehaviorManager.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       
+|                       |   |   +---entity
+|                       |   |   |       EntityData.java
+|                       |   |   |       EntityHandle.java
+|                       |   |   |       EntityInstance.java
+|                       |   |   |       EntityState.java
+|                       |   |   |       EntityStateHandle.java
+|                       |   |   |       
+|                       |   |   +---entitymanager
+|                       |   |   |       EntityManager.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       
+|                       |   |   +---inventory
+|                       |   |   |       InventoryHandle.java
+|                       |   |   |       
+|                       |   |   +---placementmanager
+|                       |   |   |       BlockBranch.java
+|                       |   |   |       ItemBranch.java
+|                       |   |   |       PlacementManager.java
+|                       |   |   |       
+|                       |   |   +---playermanager
+|                       |   |   |       InternalBufferSystem.java
+|                       |   |   |       PlayerManager.java
+|                       |   |   |       
+|                       |   |   \---statistics
+|                       |   |           StatisticsHandle.java
+|                       |   |           
+|                       |   +---geometrypipeline
+|                       |   |   |   GeometryPipeline.java
+|                       |   |   |   
+|                       |   |   +---compositebuffer
+|                       |   |   |       CompositeBufferData.java
+|                       |   |   |       CompositeBufferInstance.java
+|                       |   |   |       
+|                       |   |   +---compositebuffermanager
+|                       |   |   |       CompositeBufferManager.java
+|                       |   |   |       GLSLUtility.java
+|                       |   |   |       
+|                       |   |   +---dynamicgeometrymanager
+|                       |   |   |   |   ComplexGeometryBranch.java
+|                       |   |   |   |   DynamicGeometryManager.java
+|                       |   |   |   |   DynamicGeometryType.java
+|                       |   |   |   |   FontGeometryBranch.java
+|                       |   |   |   |   FullGeometryBranch.java
+|                       |   |   |   |   InternalBuildManager.java
+|                       |   |   |   |   LiquidGeometryBranch.java
+|                       |   |   |   |   PartialGeometryBranch.java
+|                       |   |   |   |   
+|                       |   |   |   \---util
+|                       |   |   |           DynamicGeometryAsyncContainer.java
+|                       |   |   |           VertBlockNeighbor3Vector.java
+|                       |   |   |           
+|                       |   |   +---dynamicmodel
+|                       |   |   |       DynamicModelHandle.java
+|                       |   |   |       
+|                       |   |   +---dynamicpacket
+|                       |   |   |       DynamicPacketInstance.java
+|                       |   |   |       DynamicPacketState.java
+|                       |   |   |       
+|                       |   |   +---ibo
+|                       |   |   |       IBOData.java
+|                       |   |   |       IBOHandle.java
+|                       |   |   |       IBOInstance.java
+|                       |   |   |       
+|                       |   |   +---ibomanager
+|                       |   |   |       GLSLUtility.java
+|                       |   |   |       IBOManager.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       
+|                       |   |   +---mesh
+|                       |   |   |       MeshData.java
+|                       |   |   |       MeshHandle.java
+|                       |   |   |       MeshInstance.java
+|                       |   |   |       
+|                       |   |   +---meshmanager
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       MeshManager.java
+|                       |   |   |       QuadExpansionStruct.java
+|                       |   |   |       
+|                       |   |   +---model
+|                       |   |   |       ModelInstance.java
+|                       |   |   |       
+|                       |   |   +---modelmanager
+|                       |   |   |       ModelManager.java
+|                       |   |   |       
+|                       |   |   +---vao
+|                       |   |   |       VAOData.java
+|                       |   |   |       VAOHandle.java
+|                       |   |   |       VAOInstance.java
+|                       |   |   |       
+|                       |   |   +---vaomanager
+|                       |   |   |       GLSLUtility.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       VAOManager.java
+|                       |   |   |       
+|                       |   |   +---vbo
+|                       |   |   |       VBOData.java
+|                       |   |   |       VBOHandle.java
+|                       |   |   |       VBOInstance.java
+|                       |   |   |       
+|                       |   |   \---vbomanager
+|                       |   |           GLSLUtility.java
+|                       |   |           InternalBuilder.java
+|                       |   |           VBOManager.java
+|                       |   |           
+|                       |   +---inputpipeline
+|                       |   |   |   InputPipeline.java
+|                       |   |   |   
+|                       |   |   +---input
+|                       |   |   |       InputHandle.java
+|                       |   |   |       
+|                       |   |   \---inputsystem
+|                       |   |           InputSystem.java
+|                       |   |           
+|                       |   +---itempipeline
+|                       |   |   |   ItemPipeline.java
+|                       |   |   |   
+|                       |   |   +---backpack
+|                       |   |   |       BackpackInstance.java
+|                       |   |   |       
+|                       |   |   +---itemdefinition
+|                       |   |   |       ItemDefinitionData.java
+|                       |   |   |       ItemDefinitionHandle.java
+|                       |   |   |       
+|                       |   |   +---itemdefinitionmanager
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       ItemDefinitionManager.java
+|                       |   |   |       
+|                       |   |   +---itemrotationmanager
+|                       |   |   |       InternalBufferSystem.java
+|                       |   |   |       ItemRotationManager.java
+|                       |   |   |       
+|                       |   |   +---tooltype
+|                       |   |   |       ToolTypeData.java
+|                       |   |   |       ToolTypeHandle.java
+|                       |   |   |       
+|                       |   |   +---tooltypemanager
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       ToolTypeManager.java
+|                       |   |   |       
+|                       |   |   \---util
+|                       |   |           ItemRegistryUtility.java
+|                       |   |           
+|                       |   +---lightingpipeline
+|                       |   |   |   LightingPipeline.java
+|                       |   |   |   
+|                       |   |   +---directionallight
+|                       |   |   |       DirectionalLightHandle.java
+|                       |   |   |       
+|                       |   |   \---naturallightmanager
+|                       |   |           MoonLightSystem.java
+|                       |   |           NaturalLightManager.java
+|                       |   |           SunLightSystem.java
+|                       |   |           
+|                       |   +---menupipeline
+|                       |   |   |   MenuPipeline.java
+|                       |   |   |   
+|                       |   |   +---element
+|                       |   |   |       ElementData.java
+|                       |   |   |       ElementHandle.java
+|                       |   |   |       ElementInstance.java
+|                       |   |   |       ElementOrigin.java
+|                       |   |   |       ElementPlacementStruct.java
+|                       |   |   |       ElementType.java
+|                       |   |   |       
+|                       |   |   +---fontmanager
+|                       |   |   |       FontManager.java
+|                       |   |   |       FontRasterizerUtility.java
+|                       |   |   |       GLSLUtility.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       
+|                       |   |   +---fonts
+|                       |   |   |       FontHandle.java
+|                       |   |   |       FontInstance.java
+|                       |   |   |       FontTileData.java
+|                       |   |   |       GlyphMetricStruct.java
+|                       |   |   |       
+|                       |   |   +---menu
+|                       |   |   |       MenuData.java
+|                       |   |   |       MenuHandle.java
+|                       |   |   |       MenuInstance.java
+|                       |   |   |       
+|                       |   |   +---menueventsmanager
+|                       |   |   |   |   MenuEventsManager.java
+|                       |   |   |   |   
+|                       |   |   |   +---menus
+|                       |   |   |   |       InventoryBranch.java
+|                       |   |   |   |       MainMenuBranch.java
+|                       |   |   |   |       
+|                       |   |   |   \---util
+|                       |   |   |           GenericButtonBranch.java
+|                       |   |   |           
+|                       |   |   +---menumanager
+|                       |   |   |       ElementSystem.java
+|                       |   |   |       FileParserUtility.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       MenuManager.java
+|                       |   |   |       
+|                       |   |   +---raycastsystem
+|                       |   |   |       RaycastSystem.java
+|                       |   |   |       
+|                       |   |   \---util
+|                       |   |           DimensionValue.java
+|                       |   |           DimensionVector2.java
+|                       |   |           LayoutStruct.java
+|                       |   |           MenuAwareAction.java
+|                       |   |           StackDirection.java
+|                       |   |           TextAlign.java
+|                       |   |           
+|                       |   +---physicspipeline
+|                       |   |   |   PhysicsPipeline.java
+|                       |   |   |   
+|                       |   |   +---movementmanager
+|                       |   |   |       BlockCollisionBranch.java
+|                       |   |   |       GravityBranch.java
+|                       |   |   |       MovementBranch.java
+|                       |   |   |       MovementManager.java
+|                       |   |   |       
+|                       |   |   +---raycastmanager
+|                       |   |   |       BlockCastBranch.java
+|                       |   |   |       RaycastManager.java
+|                       |   |   |       
+|                       |   |   \---util
+|                       |   |           BlockCastStruct.java
+|                       |   |           BlockCompositionStruct.java
+|                       |   |           
+|                       |   +---renderpipeline
+|                       |   |   |   RenderPipeline.java
+|                       |   |   |   
+|                       |   |   +---camera
+|                       |   |   |       CameraData.java
+|                       |   |   |       CameraInstance.java
+|                       |   |   |       OrthographicCameraData.java
+|                       |   |   |       OrthographicCameraInstance.java
+|                       |   |   |       
+|                       |   |   +---cameramanager
+|                       |   |   |       CameraManager.java
+|                       |   |   |       InternalBufferSystem.java
+|                       |   |   |       
+|                       |   |   +---compositebatch
+|                       |   |   |       CompositeBatchStruct.java
+|                       |   |   |       
+|                       |   |   +---compositerendersystem
+|                       |   |   |       CompositeRenderSystem.java
+|                       |   |   |       GLSLUtility.java
+|                       |   |   |       
+|                       |   |   +---renderbatch
+|                       |   |   |       RenderBatchStruct.java
+|                       |   |   |       
+|                       |   |   +---rendercall
+|                       |   |   |       RenderCallStruct.java
+|                       |   |   |       
+|                       |   |   +---rendersystem
+|                       |   |   |       GLSLUtility.java
+|                       |   |   |       RenderSystem.java
+|                       |   |   |       
+|                       |   |   \---util
+|                       |   |           MaskStruct.java
+|                       |   |           
+|                       |   +---shaderpipeline
+|                       |   |   |   ShaderPipeline.java
+|                       |   |   |   
+|                       |   |   +---material
+|                       |   |   |       MaterialData.java
+|                       |   |   |       MaterialHandle.java
+|                       |   |   |       MaterialInstance.java
+|                       |   |   |       
+|                       |   |   +---materialmanager
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       MaterialManager.java
+|                       |   |   |       
+|                       |   |   +---pass
+|                       |   |   |       PassData.java
+|                       |   |   |       PassHandle.java
+|                       |   |   |       PassInstance.java
+|                       |   |   |       
+|                       |   |   +---passmanager
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       PassManager.java
+|                       |   |   |       
+|                       |   |   +---shader
+|                       |   |   |       ShaderData.java
+|                       |   |   |       ShaderHandle.java
+|                       |   |   |       ShaderSourceStruct.java
+|                       |   |   |       ShaderType.java
+|                       |   |   |       
+|                       |   |   +---shadermanager
+|                       |   |   |       FileParserUtility.java
+|                       |   |   |       GLSLUtility.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       ShaderManager.java
+|                       |   |   |       
+|                       |   |   +---sprite
+|                       |   |   |       SpriteData.java
+|                       |   |   |       SpriteHandle.java
+|                       |   |   |       SpriteInstance.java
+|                       |   |   |       
+|                       |   |   +---spritemanager
+|                       |   |   |       GLSLUtility.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       SpriteManager.java
+|                       |   |   |       
+|                       |   |   +---texture
+|                       |   |   |       TextureArrayStruct.java
+|                       |   |   |       TextureAtlasStruct.java
+|                       |   |   |       TextureData.java
+|                       |   |   |       TextureHandle.java
+|                       |   |   |       TextureTileStruct.java
+|                       |   |   |       
+|                       |   |   +---texturemanager
+|                       |   |   |       AliasLibrarySystem.java
+|                       |   |   |       AliasStruct.java
+|                       |   |   |       GLSLUtility.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       TextureManager.java
+|                       |   |   |       
+|                       |   |   +---ubo
+|                       |   |   |       UBOData.java
+|                       |   |   |       UBOHandle.java
+|                       |   |   |       UBOInstance.java
+|                       |   |   |       
+|                       |   |   +---ubomanager
+|                       |   |   |       GLSLUtility.java
+|                       |   |   |       InternalBuilder.java
+|                       |   |   |       InternalLoader.java
+|                       |   |   |       UBOManager.java
+|                       |   |   |       
+|                       |   |   \---uniforms
+|                       |   |       |   UniformAttributeStruct.java
+|                       |   |       |   UniformData.java
+|                       |   |       |   UniformStruct.java
+|                       |   |       |   UniformType.java
+|                       |   |       |   UniformUtility.java
+|                       |   |       |   
+|                       |   |       +---matrices
+|                       |   |       |       Matrix2DoubleUniform.java
+|                       |   |       |       Matrix2Uniform.java
+|                       |   |       |       Matrix3DoubleUniform.java
+|                       |   |       |       Matrix3Uniform.java
+|                       |   |       |       Matrix4DoubleUniform.java
+|                       |   |       |       Matrix4Uniform.java
+|                       |   |       |       
+|                       |   |       +---matrixArrays
+|                       |   |       |       Matrix2ArrayUniform.java
+|                       |   |       |       Matrix2DoubleArrayUniform.java
+|                       |   |       |       Matrix3ArrayUniform.java
+|                       |   |       |       Matrix3DoubleArrayUniform.java
+|                       |   |       |       Matrix4ArrayUniform.java
+|                       |   |       |       Matrix4DoubleArrayUniform.java
+|                       |   |       |       
+|                       |   |       +---samplers
+|                       |   |       |       SampleImage2DArrayUniform.java
+|                       |   |       |       SampleImage2DUniform.java
+|                       |   |       |       
+|                       |   |       +---scalarArrays
+|                       |   |       |       BooleanArrayUniform.java
+|                       |   |       |       DoubleArrayUniform.java
+|                       |   |       |       FloatArrayUniform.java
+|                       |   |       |       IntegerArrayUniform.java
+|                       |   |       |       
+|                       |   |       +---scalars
+|                       |   |       |       BooleanUniform.java
+|                       |   |       |       DoubleUniform.java
+|                       |   |       |       FloatUniform.java
+|                       |   |       |       IntegerUniform.java
+|                       |   |       |       
+|                       |   |       +---vectorarrays
+|                       |   |       |       Vector2ArrayUniform.java
+|                       |   |       |       Vector2BooleanArrayUniform.java
+|                       |   |       |       Vector2DoubleArrayUniform.java
+|                       |   |       |       Vector2IntArrayUniform.java
+|                       |   |       |       Vector3ArrayUniform.java
+|                       |   |       |       Vector3BooleanArrayUniform.java
+|                       |   |       |       Vector3DoubleArrayUniform.java
+|                       |   |       |       Vector3IntArrayUniform.java
+|                       |   |       |       Vector4ArrayUniform.java
+|                       |   |       |       Vector4BooleanArrayUniform.java
+|                       |   |       |       Vector4DoubleArrayUniform.java
+|                       |   |       |       Vector4IntArrayUniform.java
+|                       |   |       |       
+|                       |   |       \---vectors
+|                       |   |               Vector2BooleanUniform.java
+|                       |   |               Vector2DoubleUniform.java
+|                       |   |               Vector2IntUniform.java
+|                       |   |               Vector2Uniform.java
+|                       |   |               Vector3BooleanUniform.java
+|                       |   |               Vector3DoubleUniform.java
+|                       |   |               Vector3IntUniform.java
+|                       |   |               Vector3Uniform.java
+|                       |   |               Vector4BooleanUniform.java
+|                       |   |               Vector4DoubleUniform.java
+|                       |   |               Vector4IntUniform.java
+|                       |   |               Vector4Uniform.java
+|                       |   |               
+|                       |   \---worldpipeline
+|                       |       |   WorldPipeline.java
+|                       |       |   
+|                       |       +---biome
+|                       |       |       BiomeData.java
+|                       |       |       BiomeHandle.java
+|                       |       |       
+|                       |       +---biomemanager
+|                       |       |       BiomeManager.java
+|                       |       |       InternalBuilder.java
+|                       |       |       InternalLoader.java
+|                       |       |       
+|                       |       +---block
+|                       |       |       BlockData.java
+|                       |       |       BlockHandle.java
+|                       |       |       BlockPaletteHandle.java
+|                       |       |       BlockRotationType.java
+|                       |       |       
+|                       |       +---blockmanager
+|                       |       |       BlockManager.java
+|                       |       |       InternalBufferSystem.java
+|                       |       |       InternalBuilder.java
+|                       |       |       InternalLoader.java
+|                       |       |       
+|                       |       +---chunk
+|                       |       |       ChunkData.java
+|                       |       |       ChunkDataSyncContainer.java
+|                       |       |       ChunkDataUtility.java
+|                       |       |       ChunkInstance.java
+|                       |       |       ChunkNeighborStruct.java
+|                       |       |       
+|                       |       +---chunkstreammanager
+|                       |       |       AssessmentBranch.java
+|                       |       |       BatchBranch.java
+|                       |       |       BuildBranch.java
+|                       |       |       ChunkQueueItem.java
+|                       |       |       ChunkQueueManager.java
+|                       |       |       ChunkStreamManager.java
+|                       |       |       DumpBranch.java
+|                       |       |       GenerationBranch.java
+|                       |       |       ItemLoadBranch.java
+|                       |       |       ItemRenderBranch.java
+|                       |       |       MergeBranch.java
+|                       |       |       QueueOperation.java
+|                       |       |       RenderBranch.java
+|                       |       |       
+|                       |       +---gridmanager
+|                       |       |       GridBuildSystem.java
+|                       |       |       GridInstance.java
+|                       |       |       GridManager.java
+|                       |       |       GridSlotDetailLevel.java
+|                       |       |       GridSlotHandle.java
+|                       |       |       
+|                       |       +---megachunk
+|                       |       |       MegaBatchStruct.java
+|                       |       |       MegaChunkInstance.java
+|                       |       |       MegaData.java
+|                       |       |       MegaDataSyncContainer.java
+|                       |       |       MegaDataUtility.java
+|                       |       |       
+|                       |       +---megastreammanager
+|                       |       |       MegaAssessBranch.java
+|                       |       |       MegaDumpBranch.java
+|                       |       |       MegaMergeBranch.java
+|                       |       |       MegaQueueManager.java
+|                       |       |       MegaQueueOperation.java
+|                       |       |       MegaRenderBranch.java
+|                       |       |       MegaStreamManager.java
+|                       |       |       
+|                       |       +---subchunk
+|                       |       |       SubChunkInstance.java
+|                       |       |       
+|                       |       +---util
+|                       |       |       ChunkCoordinate3Int.java
+|                       |       |       WorldPositionStruct.java
+|                       |       |       WorldPositionUtility.java
+|                       |       |       WorldWrapUtility.java
+|                       |       |       
+|                       |       +---world
+|                       |       |       WorldData.java
+|                       |       |       WorldHandle.java
+|                       |       |       
+|                       |       +---worldgenerationmanager
+|                       |       |       WorldGenerationManager.java
+|                       |       |       
+|                       |       +---worlditem
+|                       |       |       WorldItemCompositeInstance.java
+|                       |       |       WorldItemInstance.java
+|                       |       |       WorldItemInstancePaletteHandle.java
+|                       |       |       WorldItemPaletteHandle.java
+|                       |       |       WorldItemStruct.java
+|                       |       |       
+|                       |       +---worlditemplacementsystem
+|                       |       |       WorldItemPlacementSystem.java
+|                       |       |       
+|                       |       +---worlditemrendersystem
+|                       |       |       WorldItemRenderSystem.java
+|                       |       |       
+|                       |       +---worldmanager
+|                       |       |       InternalBuilder.java
+|                       |       |       InternalLoader.java
+|                       |       |       WorldManager.java
+|                       |       |       
+|                       |       \---worldrendermanager
+|                       |               FrustumCullingSystem.java
+|                       |               RenderOperation.java
+|                       |               RenderType.java
+|                       |               WorldRenderInstance.java
+|                       |               WorldRenderManager.java
+|                       |               
+|                       +---core
+|                       |   +---engine
+|                       |   |   |   AsyncContainerPackage.java
+|                       |   |   |   BranchPackage.java
+|                       |   |   |   BuilderPackage.java
+|                       |   |   |   DataPackage.java
+|                       |   |   |   EnginePackage.java
+|                       |   |   |   EngineState.java
+|                       |   |   |   EngineUtility.java
+|                       |   |   |   GameEngine.java
+|                       |   |   |   HandlePackage.java
+|                       |   |   |   InstancePackage.java
+|                       |   |   |   LoaderPackage.java
+|                       |   |   |   Main.java
+|                       |   |   |   ManagerPackage.java
+|                       |   |   |   PipelinePackage.java
+|                       |   |   |   StructPackage.java
+|                       |   |   |   SyncContainerPackage.java
+|                       |   |   |   SystemContext.java
+|                       |   |   |   SystemPackage.java
+|                       |   |   |   UtilityPackage.java
+|                       |   |   |   WindowInstance.java
+|                       |   |   |   
+|                       |   |   \---settings
+|                       |   |           EngineSetting.java
+|                       |   |           Loader.java
+|                       |   |           Settings.java
+|                       |   |           SettingsDeserializer.java
+|                       |   |           
+|                       |   +---kernel
+|                       |   |   +---syncconsumer
+|                       |   |   |       AsyncStructConsumer.java
+|                       |   |   |       AsyncStructConsumerMulti.java
+|                       |   |   |       BiSyncAsyncConsumer.java
+|                       |   |   |       SyncStructConsumer.java
+|                       |   |   |       
+|                       |   |   +---thread
+|                       |   |   |       ThreadHandle.java
+|                       |   |   |       
+|                       |   |   \---threadmanager
+|                       |   |           InternalBuilder.java
+|                       |   |           InternalLoader.java
+|                       |   |           InternalThreadManager.java
+|                       |   |           NamedThreadFactory.java
+|                       |   |           
+|                       |   \---util
+|                       |       |   AtlasUtility.java
+|                       |       |   FileUtility.java
+|                       |       |   JsonUtility.java
+|                       |       |   OpenSimplex2.java
+|                       |       |   PixmapUtility.java
+|                       |       |   RegistryUtility.java
+|                       |       |   
+|                       |       +---atlas
+|                       |       |       AtlasTileData.java
+|                       |       |       
+|                       |       +---mathematics
+|                       |       |   +---extras
+|                       |       |   |       Color.java
+|                       |       |   |       Coordinate2Long.java
+|                       |       |   |       Coordinate3Int.java
+|                       |       |   |       Coordinate3Long.java
+|                       |       |   |       Coordinate4Long.java
+|                       |       |   |       Direction2Vector.java
+|                       |       |   |       Direction3Vector.java
+|                       |       |   |       
+|                       |       |   +---matrices
+|                       |       |   |       Matrix2.java
+|                       |       |   |       Matrix2Double.java
+|                       |       |   |       Matrix3.java
+|                       |       |   |       Matrix3Double.java
+|                       |       |   |       Matrix4.java
+|                       |       |   |       Matrix4Double.java
+|                       |       |   |       
+|                       |       |   +---quaternions
+|                       |       |   |       Quaternion.java
+|                       |       |   |       
+|                       |       |   \---vectors
+|                       |       |           Vector2.java
+|                       |       |           Vector2Boolean.java
+|                       |       |           Vector2Double.java
+|                       |       |           Vector2Int.java
+|                       |       |           Vector3.java
+|                       |       |           Vector3Boolean.java
+|                       |       |           Vector3Double.java
+|                       |       |           Vector3Int.java
+|                       |       |           Vector4.java
+|                       |       |           Vector4Boolean.java
+|                       |       |           Vector4Double.java
+|                       |       |           Vector4Int.java
+|                       |       |           
+|                       |       \---queue
+|                       |               QueueInstance.java
+|                       |               QueueItemHandle.java
+|                       |               
+|                       \---runtime
+|                           \---debug
+|                                   DebugPipeline.java
+|                                   Sky.java
+|                                   
++---gradle
+|   |   gradle-daemon-jvm.properties
+|   |   
+|   \---wrapper
+|           gradle-wrapper.jar
+|           gradle-wrapper.properties
+|           
+\---lwjgl3
+    |   build.gradle
+    |   nativeimage.gradle
+    |   
+    +---bin
+    |   \---main
+    |       |   libgdx128.png
+    |       |   libgdx16.png
+    |       |   libgdx32.png
+    |       |   libgdx64.png
+    |       |   
+    |       +---behaviors
+    |       |       Bipedal.json
+    |       |       
+    |       +---biomes
+    |       |       Empty.json
+    |       |       
+    |       +---blocks
+    |       |       TerraArcana.json
+    |       |       
+    |       +---calendars
+    |       |       TerraArcana.json
+    |       |       
+    |       +---com
+    |       |   \---AdventureRPG
+    |       |       \---lwjgl3
+    |       |               Lwjgl3Launcher$1.class
+    |       |               Lwjgl3Launcher.class
+    |       |               StartupHelper.class
+    |       |               
+    |       +---documentation
+    |       |       EngineContext.md
+    |       |       EngineDocumentationContext.md
+    |       |       
+    |       +---entities
+    |       |       Humanoid.json
+    |       |       
+    |       +---fonts
+    |       |       MontserratAlternates.ttf
+    |       |       
+    |       +---internal
+    |       |   \---threads
+    |       |           ThreadPools.json
+    |       |           
+    |       +---items
+    |       |   \---debug
+    |       |           debug.json
+    |       |           
+    |       +---materials
+    |       |   +---debug
+    |       |   |       DebugCameraOrientationBase.json
+    |       |   |       DebugCameraOrientationHUD.json
+    |       |   |       DebugSurface.json
+    |       |   |       DebugSurfaceUV.json
+    |       |   |       DebugUV.json
+    |       |   |       
+    |       |   +---fullscreen
+    |       |   |       Sky.json
+    |       |   |       
+    |       |   +---items
+    |       |   |       StandardItems.json
+    |       |   |       
+    |       |   +---standard
+    |       |   |       StandardSurface.json
+    |       |   |       
+    |       |   \---util
+    |       |           Label.json
+    |       |           Sprite.json
+    |       |           
+    |       +---menus
+    |       |   |   Inventory.json
+    |       |   |   Items.json
+    |       |   |   MainMenu.json
+    |       |   |   
+    |       |   \---util
+    |       |           Containers.json
+    |       |           GenericButtons.json
+    |       |           
+    |       +---mesh
+    |       |   +---items
+    |       |   |       Apple.json
+    |       |   |       Table.json
+    |       |   |       
+    |       |   \---util
+    |       |       |   LensPass.json
+    |       |       |   PlanarPass.json
+    |       |       |   Sprite.json
+    |       |       |   
+    |       |       \---vao
+    |       |               ChunkVAO.json
+    |       |               ItemVAO.json
+    |       |               LabelVAO.json
+    |       |               
+    |       +---processingpasses
+    |       |       DebugCameraOrientationBase.json
+    |       |       DebugCameraOrientationHUD.json
+    |       |       DebugUV.json
+    |       |       Sky.json
+    |       |       
+    |       +---shaders
+    |       |   |   DebugCameraOrientationBase.json
+    |       |   |   DebugCameraOrientationHUD.json
+    |       |   |   DebugSurface.json
+    |       |   |   DebugSurfaceUV.json
+    |       |   |   DebugUV.json
+    |       |   |   Label.json
+    |       |   |   Sky.json
+    |       |   |   Sprite.json
+    |       |   |   StandardItems.json
+    |       |   |   StandardSurface.json
+    |       |   |   
+    |       |   +---debug
+    |       |   |       DebugCameraOrientationBase.fsh
+    |       |   |       DebugCameraOrientationHUD.fsh
+    |       |   |       DebugSurface.fsh
+    |       |   |       DebugSurface.vsh
+    |       |   |       DebugSurfaceUV.fsh
+    |       |   |       DebugSurfaceUV.vsh
+    |       |   |       DebugUV.fsh
+    |       |   |       DebugUV.vsh
+    |       |   |       
+    |       |   +---includes
+    |       |   |       BlockOrientationMapData.glsl
+    |       |   |       CameraData.glsl
+    |       |   |       DirectionalLightData.glsl
+    |       |   |       GridCoordinateData.glsl
+    |       |   |       ItemRotationData.glsl
+    |       |   |       NoiseUtility.glsl
+    |       |   |       OrthoData.glsl
+    |       |   |       PlayerPositionData.glsl
+    |       |   |       SliceData.glsl
+    |       |   |       TimeData.glsl
+    |       |   |       
+    |       |   +---items
+    |       |   |   |   StandardItems.fsh
+    |       |   |   |   StandardItems.vsh
+    |       |   |   |   
+    |       |   |   \---includes
+    |       |   |           ItemsStandard.glsl
+    |       |   |           
+    |       |   +---sky
+    |       |   |       Clouds.glsl
+    |       |   |       DayNightCycle.glsl
+    |       |   |       Nebula.glsl
+    |       |   |       SeasonCycle.glsl
+    |       |   |       Sky.fsh
+    |       |   |       Sky.vsh
+    |       |   |       SkyColor.glsl
+    |       |   |       SkyNoise.glsl
+    |       |   |       SkyRotation.glsl
+    |       |   |       Stars.glsl
+    |       |   |       
+    |       |   +---surface
+    |       |   |   |   StandardSurface.fsh
+    |       |   |   |   StandardSurface.vsh
+    |       |   |   |   
+    |       |   |   \---includes
+    |       |   |           Albedo.glsl
+    |       |   |           SurfaceStandard.glsl
+    |       |   |           TiledSampling.glsl
+    |       |   |           
+    |       |   \---util
+    |       |           Label.fsh
+    |       |           Label.vsh
+    |       |           PlanarPass.vsh
+    |       |           SphericalPass.vsh
+    |       |           Sprite.fsh
+    |       |           Sprite.vsh
+    |       |           
+    |       +---sprites
+    |       |   \---menus
+    |       |           DebugElement.json
+    |       |           DebugElement.png
+    |       |           Title.png
+    |       |           
+    |       +---textureAliases
+    |       |       Albedo.json
+    |       |       AO.json
+    |       |       Emissive.json
+    |       |       Height.json
+    |       |       Metal.json
+    |       |       Normal.json
+    |       |       Specular.json
+    |       |       
+    |       +---textures
+    |       |   +---items
+    |       |   |   \---standard
+    |       |   |           Apple_A.png
+    |       |   |           Stem_A.png
+    |       |   |           Table_A.png
+    |       |   |           
+    |       |   \---surface
+    |       |       \---standard
+    |       |               CoalOre_a.png
+    |       |               CopperOre_a.png
+    |       |               Dirt_a.png
+    |       |               GoldOre_a.png
+    |       |               GrassBlockNorth_a.png
+    |       |               GrassBlockUp_a.png
+    |       |               IronOre_a.png
+    |       |               Lava_a.png
+    |       |               OakLogNorth_a.png
+    |       |               Sand_a.png
+    |       |               Stone_a.png
+    |       |               Water_a.png
+    |       |               
+    |       +---tools
+    |       |       Standard.json
+    |       |       
+    |       +---ubos
+    |       |       BlockOrientationMapData.json
+    |       |       CameraData.json
+    |       |       DirectionalLightData.json
+    |       |       GridCoordinateData.json
+    |       |       ItemRotationData.json
+    |       |       ItemsStandard.json
+    |       |       OrthoData.json
+    |       |       PlayerPositionData.json
+    |       |       SliceData.json
+    |       |       SurfaceStandard.json
+    |       |       TimeData.json
+    |       |       
+    |       \---worlds
+    |               TerraArcana.json
+    |               TerraArcana.png
+    |               
+    +---build
+    |   +---classes
+    |   |   \---java
+    |   |       \---main
+    |   |           \---com
+    |   |               \---AdventureRPG
+    |   |                   \---lwjgl3
+    |   |                           Lwjgl3Launcher$1.class
+    |   |                           Lwjgl3Launcher.class
+    |   |                           StartupHelper.class
+    |   |                           
+    |   +---distributions
+    |   |       lwjgl3-1.0.0.tar
+    |   |       lwjgl3-1.0.0.zip
+    |   |       
+    |   +---generated
+    |   |   \---sources
+    |   |       +---annotationProcessor
+    |   |       |   \---java
+    |   |       |       \---main
+    |   |       \---headers
+    |   |           \---java
+    |   |               \---main
+    |   +---libs
+    |   |       AdventureRPG-1.0.0-win.jar
+    |   |       
+    |   +---resources
+    |   |   \---main
+    |   |       |   assets.txt
+    |   |       |   libgdx128.png
+    |   |       |   libgdx16.png
+    |   |       |   libgdx32.png
+    |   |       |   libgdx64.png
+    |   |       |   
+    |   |       +---behaviors
+    |   |       |       Bipedal.json
+    |   |       |       
+    |   |       +---biomes
+    |   |       |       Empty.json
+    |   |       |       
+    |   |       +---blocks
+    |   |       |       TerraArcana.json
+    |   |       |       
+    |   |       +---calendars
+    |   |       |       TerraArcana.json
+    |   |       |       
+    |   |       +---documentation
+    |   |       |       EngineContext.md
+    |   |       |       ProjectIndex.docx
+    |   |       |       
+    |   |       +---entities
+    |   |       |       Humanoid.json
+    |   |       |       
+    |   |       +---fonts
+    |   |       |       MontserratAlternates.ttf
+    |   |       |       
+    |   |       +---internal
+    |   |       |   \---threads
+    |   |       |           ThreadPools.json
+    |   |       |           
+    |   |       +---items
+    |   |       |   \---debug
+    |   |       |           debug.json
+    |   |       |           
+    |   |       +---materials
+    |   |       |   +---debug
+    |   |       |   |       DebugCameraOrientationBase.json
+    |   |       |   |       DebugCameraOrientationHUD.json
+    |   |       |   |       DebugSurface.json
+    |   |       |   |       DebugSurfaceUV.json
+    |   |       |   |       DebugUV.json
+    |   |       |   |       
+    |   |       |   +---fullscreen
+    |   |       |   |       Sky.json
+    |   |       |   |       
+    |   |       |   +---items
+    |   |       |   |       StandardItems.json
+    |   |       |   |       
+    |   |       |   +---standard
+    |   |       |   |       StandardSurface.json
+    |   |       |   |       
+    |   |       |   \---util
+    |   |       |           Label.json
+    |   |       |           Sprite.json
+    |   |       |           
+    |   |       +---menus
+    |   |       |   |   Inventory.json
+    |   |       |   |   Items.json
+    |   |       |   |   MainMenu.json
+    |   |       |   |   
+    |   |       |   \---util
+    |   |       |           Containers.json
+    |   |       |           GenericButtons.json
+    |   |       |           
+    |   |       +---mesh
+    |   |       |   +---items
+    |   |       |   |       Apple.json
+    |   |       |   |       Table.json
+    |   |       |   |       
+    |   |       |   \---util
+    |   |       |       |   LensPass.json
+    |   |       |       |   PlanarPass.json
+    |   |       |       |   Sprite.json
+    |   |       |       |   
+    |   |       |       \---vao
+    |   |       |               ChunkVAO.json
+    |   |       |               ItemVAO.json
+    |   |       |               LabelVAO.json
+    |   |       |               
+    |   |       +---processingpasses
+    |   |       |       DebugCameraOrientationBase.json
+    |   |       |       DebugCameraOrientationHUD.json
+    |   |       |       DebugUV.json
+    |   |       |       Sky.json
+    |   |       |       
+    |   |       +---shaders
+    |   |       |   |   DebugCameraOrientationBase.json
+    |   |       |   |   DebugCameraOrientationHUD.json
+    |   |       |   |   DebugSurface.json
+    |   |       |   |   DebugSurfaceUV.json
+    |   |       |   |   DebugUV.json
+    |   |       |   |   Label.json
+    |   |       |   |   Sky.json
+    |   |       |   |   Sprite.json
+    |   |       |   |   StandardItems.json
+    |   |       |   |   StandardSurface.json
+    |   |       |   |   
+    |   |       |   +---debug
+    |   |       |   |       DebugCameraOrientationBase.fsh
+    |   |       |   |       DebugCameraOrientationHUD.fsh
+    |   |       |   |       DebugSurface.fsh
+    |   |       |   |       DebugSurface.vsh
+    |   |       |   |       DebugSurfaceUV.fsh
+    |   |       |   |       DebugSurfaceUV.vsh
+    |   |       |   |       DebugUV.fsh
+    |   |       |   |       DebugUV.vsh
+    |   |       |   |       
+    |   |       |   +---includes
+    |   |       |   |       BlockOrientationMapData.glsl
+    |   |       |   |       CameraData.glsl
+    |   |       |   |       DirectionalLightData.glsl
+    |   |       |   |       GridCoordinateData.glsl
+    |   |       |   |       ItemRotationData.glsl
+    |   |       |   |       NoiseUtility.glsl
+    |   |       |   |       OrthoData.glsl
+    |   |       |   |       PlayerPositionData.glsl
+    |   |       |   |       SliceData.glsl
+    |   |       |   |       TimeData.glsl
+    |   |       |   |       
+    |   |       |   +---items
+    |   |       |   |   |   StandardItems.fsh
+    |   |       |   |   |   StandardItems.vsh
+    |   |       |   |   |   
+    |   |       |   |   \---includes
+    |   |       |   |           ItemsStandard.glsl
+    |   |       |   |           
+    |   |       |   +---sky
+    |   |       |   |       Clouds.glsl
+    |   |       |   |       DayNightCycle.glsl
+    |   |       |   |       Nebula.glsl
+    |   |       |   |       SeasonCycle.glsl
+    |   |       |   |       Sky.fsh
+    |   |       |   |       Sky.vsh
+    |   |       |   |       SkyColor.glsl
+    |   |       |   |       SkyNoise.glsl
+    |   |       |   |       SkyRotation.glsl
+    |   |       |   |       Stars.glsl
+    |   |       |   |       
+    |   |       |   +---surface
+    |   |       |   |   |   StandardSurface.fsh
+    |   |       |   |   |   StandardSurface.vsh
+    |   |       |   |   |   
+    |   |       |   |   \---includes
+    |   |       |   |           Albedo.glsl
+    |   |       |   |           SurfaceStandard.glsl
+    |   |       |   |           TiledSampling.glsl
+    |   |       |   |           
+    |   |       |   \---util
+    |   |       |           Label.fsh
+    |   |       |           Label.vsh
+    |   |       |           PlanarPass.vsh
+    |   |       |           SphericalPass.vsh
+    |   |       |           Sprite.fsh
+    |   |       |           Sprite.vsh
+    |   |       |           
+    |   |       +---sprites
+    |   |       |   \---menus
+    |   |       |           DebugElement.json
+    |   |       |           DebugElement.png
+    |   |       |           Title.png
+    |   |       |           
+    |   |       +---textureAliases
+    |   |       |       Albedo.json
+    |   |       |       AO.json
+    |   |       |       Emissive.json
+    |   |       |       Height.json
+    |   |       |       Metal.json
+    |   |       |       Normal.json
+    |   |       |       Specular.json
+    |   |       |       
+    |   |       +---textures
+    |   |       |   +---items
+    |   |       |   |   \---standard
+    |   |       |   |           Apple_A.png
+    |   |       |   |           Stem_A.png
+    |   |       |   |           Table_A.png
+    |   |       |   |           
+    |   |       |   \---surface
+    |   |       |       \---standard
+    |   |       |               CoalOre_a.png
+    |   |       |               CopperOre_a.png
+    |   |       |               Dirt_a.png
+    |   |       |               GoldOre_a.png
+    |   |       |               GrassBlockNorth_a.png
+    |   |       |               GrassBlockUp_a.png
+    |   |       |               IronOre_a.png
+    |   |       |               Lava_a.png
+    |   |       |               OakLogNorth_a.png
+    |   |       |               Sand_a.png
+    |   |       |               Stone_a.png
+    |   |       |               Water_a.png
+    |   |       |               
+    |   |       +---tools
+    |   |       |       Standard.json
+    |   |       |       
+    |   |       +---ubos
+    |   |       |       BlockOrientationMapData.json
+    |   |       |       CameraData.json
+    |   |       |       DirectionalLightData.json
+    |   |       |       GridCoordinateData.json
+    |   |       |       ItemRotationData.json
+    |   |       |       ItemsStandard.json
+    |   |       |       OrthoData.json
+    |   |       |       PlayerPositionData.json
+    |   |       |       SliceData.json
+    |   |       |       SurfaceStandard.json
+    |   |       |       TimeData.json
+    |   |       |       
+    |   |       \---worlds
+    |   |               TerraArcana.json
+    |   |               TerraArcana.png
+    |   |               
+    |   +---scripts
+    |   |       lwjgl3
+    |   |       lwjgl3.bat
+    |   |       
+    |   \---tmp
+    |       +---.cache
+    |       |   \---expanded
+    |       |       +---zip_0218d9ff464bb7c41603be5502370e4e
+    |       |       +---zip_03ddc65f4a00cf4c071a5c5adf136620
+    |       |       +---zip_08b5d33c3e585faef733df8fdaa683a4
+    |       |       +---zip_0d2fd87b9562cd62f2e2025bc59af7b9
+    |       |       +---zip_0df29157ef1e03dedb6c6a0871fbf56b
+    |       |       +---zip_14924cc778b3e313cb9d587d96c1c470
+    |       |       +---zip_185d7aa0c3b307fc549a861287956f17
+    |       |       +---zip_19cf913630e74e6e07a11f13cd39191b
+    |       |       +---zip_1b51aa7f44e67364ac2a909d2b1b8bb3
+    |       |       +---zip_1cb5102a8f2bc94dc9ef090b83947e54
+    |       |       +---zip_27e44c8d5bafac0c78183f3ecb01b8a8
+    |       |       +---zip_29793a86dcf9f562818343ff5c757a1e
+    |       |       +---zip_2aee1f5ad01f7e90655a3e0f9af640f3
+    |       |       +---zip_2dc74d984bcf4771cd6660458a64c3a9
+    |       |       +---zip_37df22ff8752bb3fd765d30a4489ef06
+    |       |       +---zip_3843008523ff44ee929d1046121c0425
+    |       |       +---zip_3c25c4e71e5b73cf7e816add5bfa51ae
+    |       |       +---zip_4055ecb3a9b89afb4e6b24eb7139877e
+    |       |       +---zip_42562bc9a99ed930d83d6e40d1f3d6af
+    |       |       +---zip_46295e12a154e44b5764de0f45e16f7b
+    |       |       +---zip_4f450e39a495852a439f3092dd7b9af3
+    |       |       +---zip_52630be9f78d760eb2d2e218cadaf2ec
+    |       |       +---zip_59436115a2e296cb8d1a99c3bbb6ab48
+    |       |       +---zip_5a02843a29827d3b5c67db034a52c556
+    |       |       +---zip_6e35fc937db6c56313260f270927b426
+    |       |       +---zip_6e98a8e810021a41a2fca60e77c314b9
+    |       |       +---zip_798d12f7bb826d68ad46f60cecbf056f
+    |       |       +---zip_7a3c079d0b9536e4255e75396876655c
+    |       |       +---zip_839b9dadba6d253e0dedd31fba089531
+    |       |       +---zip_840fcf48793125082e2e82a1b866e2d3
+    |       |       +---zip_8423e5ca779647603d373a0d9889c481
+    |       |       +---zip_85cb4c99990ebbe824fbb1a2d717fb05
+    |       |       +---zip_91ed3d6ddaf3898b789d6ec791c4ef67
+    |       |       +---zip_95290bfaf928c37dfc36b0df1e56f4ee
+    |       |       +---zip_9d1b2da2d3a96add5a6ea74d0c8dc46c
+    |       |       +---zip_9e6f1c4bc63af2a792aa67ceda8960bc
+    |       |       +---zip_a4816d51b7ee7958b007a24163b0f9db
+    |       |       +---zip_b2c9a0d5fde51a4cb3b5f1ce037d4cb0
+    |       |       +---zip_b93184e2fc2d3330cfea95897cc4743b
+    |       |       +---zip_c55e08ba400c10475af70497d791a23b
+    |       |       +---zip_c713bc60ad374f562baad7f30d5c5e4d
+    |       |       +---zip_cc316803f8b8c4bd3f17c755532ad1f2
+    |       |       +---zip_cd27b6b414199858f834b109c420f090
+    |       |       +---zip_cd5439c9f9a7473f8c7414937ee04df5
+    |       |       +---zip_cdfc7c9e8f2cd01205935aa9993c26e4
+    |       |       +---zip_d08f041928ac01872a3c742506e2ed4b
+    |       |       +---zip_d284745ffbec706764880a797a3b402d
+    |       |       +---zip_d514f4f2ea3b93684de4c5e4d6e5f3fa
+    |       |       +---zip_d5ac062b5f141557ad4eeefa212a80e7
+    |       |       +---zip_e8b0ff657920f753ab8ad26dac7f48cb
+    |       |       +---zip_f259e1dfbfe9e1bf6f70091e6ec21cc1
+    |       |       +---zip_f283899060a16de28225e137684b17e2
+    |       |       +---zip_f2e2e5116d534fab3804f65e66d4357e
+    |       |       +---zip_f506f63171df2b88e44135cd91c88bb9
+    |       |       +---zip_fa34cba8ea8efc7f4568ba9e674347c7
+    |       |       +---zip_fa8289c4efdb5cc5e98ac89cfee7f223
+    |       |       \---zip_ffb2eb3806ffde20c8a41810d630747a
+    |       +---compileJava
+    |       |   |   previous-compilation-data.bin
+    |       |   |   
+    |       |   \---compileTransaction
+    |       |       +---backup-dir
+    |       |       \---stash-dir
+    |       \---jar
+    |               MANIFEST.MF
+    |               
+    +---icons
+    |       logo.icns
+    |       logo.ico
+    |       logo.png
+    |       
+    \---src
+        \---main
+            +---java
+            |   \---com
+            |       \---AdventureRPG
+            |           \---lwjgl3
+            |                   Lwjgl3Launcher.java
+            |                   StartupHelper.java
+            |                   
+            \---resources
+                    libgdx128.png
+                    libgdx16.png
+                    libgdx32.png
+                    libgdx64.png
+                    

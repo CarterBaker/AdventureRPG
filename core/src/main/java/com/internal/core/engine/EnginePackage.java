@@ -45,7 +45,6 @@ public class EnginePackage extends ManagerPackage {
     public final Gson gson;
 
     // Internal
-    private Main main;
     private Screen screen;
     private WindowInstance windowInstance;
     private EngineState engineState;
@@ -82,7 +81,6 @@ public class EnginePackage extends ManagerPackage {
         this.gson = data.gson;
 
         // Internal
-        this.main = data.main;
         this.screen = null;
         this.windowInstance = null;
         this.engineState = EngineState.KERNEL;
@@ -108,7 +106,6 @@ public class EnginePackage extends ManagerPackage {
 
         // Internal
         final Settings settings;
-        final Main main;
         final Game game;
         final File path;
         final Gson gson;
@@ -117,14 +114,13 @@ public class EnginePackage extends ManagerPackage {
 
         EngineStruct(
                 Settings settings,
-                Main main,
+                Game game,
                 File path,
                 Gson gson) {
 
             // Internal
             this.settings = settings;
-            this.main = main;
-            this.game = main;
+            this.game = game;
             this.path = path;
             this.gson = gson;
         }
@@ -132,13 +128,13 @@ public class EnginePackage extends ManagerPackage {
 
     public static void setupConstructor(
             Settings settings,
-            Main main,
+            Game game,
             File path,
             Gson gson) {
         ENGINE_STRUCT.set(
                 new EngineStruct(
                         settings,
-                        main,
+                        game,
                         path,
                         gson));
     }
@@ -554,10 +550,6 @@ public class EnginePackage extends ManagerPackage {
 
     public final long getTime() {
         return frameTimeMillis;
-    }
-
-    public final Main getMain() {
-        return this.main;
     }
 
     public final WindowInstance getWindowInstance() {

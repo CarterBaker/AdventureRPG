@@ -1,17 +1,7 @@
 package com.internal.core.engine;
 
-import com.internal.bootstrap.calendarpipeline.CalendarPipeline;
-import com.internal.bootstrap.entitypipeline.EntityPipeline;
-import com.internal.bootstrap.geometrypipeline.GeometryPipeline;
-import com.internal.bootstrap.inputpipeline.InputPipeline;
-import com.internal.bootstrap.itempipeline.ItemPipeline;
-import com.internal.bootstrap.lightingpipeline.LightingPipeline;
-import com.internal.bootstrap.menupipeline.MenuPipeline;
-import com.internal.bootstrap.physicspipeline.PhysicsPipeline;
-import com.internal.bootstrap.renderpipeline.RenderPipeline;
-import com.internal.bootstrap.shaderpipeline.ShaderPipeline;
-import com.internal.bootstrap.worldpipeline.WorldPipeline;
-import com.internal.runtime.debug.DebugPipeline;
+import com.internal.bootstrap.BootstrapPipeline;
+import com.internal.runtime.RuntimePipeline;
 
 public class GameEngine extends EnginePackage {
 
@@ -22,20 +12,10 @@ public class GameEngine extends EnginePackage {
      */
 
     // BootStrap
-    private GeometryPipeline geometryPipeline;
-    private ShaderPipeline shaderPipeline;
-    private RenderPipeline renderPipeline;
-    private ItemPipeline itemPipeline;
-    private WorldPipeline worldPipeline;
-    private PhysicsPipeline physicsPipeline;
-    private InputPipeline inputPipeline;
-    private EntityPipeline entityPipeline;
-    private CalendarPipeline calendarPipeline;
-    private LightingPipeline lightingPipeline;
-    private MenuPipeline menuPipeline;
+    private BootstrapPipeline bootstrapPipeline;
 
     // Runtime
-    private DebugPipeline debugPipeline;
+    private RuntimePipeline runtimePipeline;
 
     // BootStrap \\
 
@@ -43,17 +23,7 @@ public class GameEngine extends EnginePackage {
     protected void bootstrap() {
 
         // BootStrap
-        this.geometryPipeline = create(GeometryPipeline.class);
-        this.shaderPipeline = create(ShaderPipeline.class);
-        this.renderPipeline = create(RenderPipeline.class);
-        this.itemPipeline = create(ItemPipeline.class);
-        this.worldPipeline = create(WorldPipeline.class);
-        this.physicsPipeline = create(PhysicsPipeline.class);
-        this.inputPipeline = create(InputPipeline.class);
-        this.entityPipeline = create(EntityPipeline.class);
-        this.calendarPipeline = create(CalendarPipeline.class);
-        this.lightingPipeline = create(LightingPipeline.class);
-        this.menuPipeline = create(MenuPipeline.class);
+        this.bootstrapPipeline = create(BootstrapPipeline.class);
     }
 
     // Runtime \\
@@ -62,11 +32,11 @@ public class GameEngine extends EnginePackage {
     protected void create() {
 
         // Runtime
-        this.debugPipeline = create(DebugPipeline.class);
+        this.runtimePipeline = create(RuntimePipeline.class);
     }
 
     @Override
     void draw() {
-        this.renderPipeline.draw();
+        this.bootstrapPipeline.draw();
     }
 }

@@ -8,6 +8,7 @@ import com.internal.bootstrap.worldpipeline.megachunk.MegaData;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.core.engine.BranchPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MegaDumpBranch extends BranchPackage {
 
@@ -59,8 +60,13 @@ public class MegaDumpBranch extends BranchPackage {
 
     private void clearChunkBatchFlags(MegaChunkInstance mega) {
 
-        for (ChunkInstance chunk : mega.getBatchedChunks().values()) {
+        ObjectArrayList<ChunkInstance> list = mega.getBatchedChunkList();
+        Object[] elements = list.elements();
+        int size = list.size();
 
+        for (int i = 0; i < size; i++) {
+
+            ChunkInstance chunk = (ChunkInstance) elements[i];
             ChunkDataSyncContainer chunkSync = chunk.getChunkDataSyncContainer();
 
             if (!chunkSync.tryAcquire())

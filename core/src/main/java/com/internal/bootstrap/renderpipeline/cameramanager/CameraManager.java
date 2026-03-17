@@ -1,6 +1,5 @@
 package com.internal.bootstrap.renderpipeline.cameramanager;
 
-import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
 import com.internal.bootstrap.renderpipeline.camera.CameraData;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.camera.OrthographicCameraData;
@@ -11,14 +10,17 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 public class CameraManager extends ManagerPackage {
 
     /*
-     * Owns all camera instances and drives rotation updates each frame.
-     * The main perspective camera and orthographic camera are created on awake
-     * once the window size is known. Resize propagates to both cameras.
+     * Pure camera factory and registry. Creates and tracks all camera instances
+     * and owns the orthographic camera. Drives UBO pushes via InternalBufferSystem
+     * for whichever camera is registered as main. Never drives position or rotation
+     * —
+     * whoever owns a camera is responsible for updating it each frame.
+     * Main camera is null until an owner explicitly registers one via
+     * setMainCamera().
      */
 
     // Internal
     private InternalBufferSystem internalBufferSystem;
-    private InputSystem inputSystem;
 
     // Perspective
     private ObjectLinkedOpenHashSet<CameraInstance> cameraInstances;
@@ -44,29 +46,12 @@ public class CameraManager extends ManagerPackage {
     }
 
     @Override
-    protected void get() {
-
-        // Internal
-        this.inputSystem = get(InputSystem.class);
-    }
-
-    @Override
     protected void awake() {
 
         float w = internal.getWindowInstance().getWidth();
         float h = internal.getWindowInstance().getHeight();
 
-        createCamera(internal.settings.FOV, w, h);
         createOrthoCamera(w, h);
-    }
-
-    @Override
-    protected void update() {
-
-        if (mainCamera == null)
-            return;
-
-        mainCamera.setRotation(inputSystem.getRotation());
     }
 
     // Camera Management \\
@@ -77,9 +62,6 @@ public class CameraManager extends ManagerPackage {
         CameraInstance instance = create(CameraInstance.class);
         instance.constructor(data);
         cameraInstances.add(instance);
-
-        if (mainCamera == null)
-            mainCamera = instance;
 
         return instance;
     }
@@ -109,12 +91,12 @@ public class CameraManager extends ManagerPackage {
         return mainCamera;
     }
 
-    public void setMainCamera(CameraInstance cam) {
+    public void setMainCamera(CameraInstance camera) {
 
-        if (cam == null)
+        if (camera == null)
             return;
 
-        mainCamera = cam;
+        this.mainCamera = camera;
     }
 
     public OrthographicCameraInstance getOrthoCamera() {

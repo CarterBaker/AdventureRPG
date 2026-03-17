@@ -7,18 +7,13 @@ import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
 import com.internal.core.engine.settings.Settings;
 
-public class Main extends Game {
+public class MainEditor extends Game {
 
     /*
-     * Main serves as the application entry point.
-     * It bridges libGDX with the internal engine, allowing
-     * the engine to manage lifecycle, updates, and rendering
-     * independently of the platform layer.
-     *
-     * Key responsibilities:
-     * - Initialize and execute the internal engine
-     * - Propagate frame delta time to the engine
-     * - Coordinate shutdown and resource disposal
+     * MainEditor serves as the editor application entry point.
+     * Mirrors Main but routes execution through EditorEngine instead
+     * of GameEngine, allowing the editor to share the same codebase
+     * while running an entirely independent pipeline flow.
      */
 
     // Root
@@ -27,11 +22,11 @@ public class Main extends Game {
     private final Gson gson;
 
     // Internal
-    private GameEngine internal;
+    private EditorEngine internal;
 
     // Base \\
 
-    public Main(
+    public MainEditor(
             File GAME_DIRECTORY,
             Settings settings,
             Gson gson) {
@@ -52,7 +47,7 @@ public class Main extends Game {
                 GAME_DIRECTORY,
                 gson);
 
-        this.internal = new GameEngine();
+        this.internal = new EditorEngine();
 
         EnginePackage.ENGINE_STRUCT.remove();
 
@@ -61,11 +56,8 @@ public class Main extends Game {
 
     @Override
     public void render() {
-
         setDeltaTime();
-
         super.render();
-
         internal.execute();
     }
 
@@ -76,8 +68,8 @@ public class Main extends Game {
         internal.setInternalState(EngineState.EXIT);
 
         // Settings
-        HandleGameWindow();
-        HandleSettingsFile();
+        handleGameWindow();
+        handleSettingsFile();
 
         // Game
         super.dispose();
@@ -85,19 +77,16 @@ public class Main extends Game {
 
     // Utility \\
 
-    // Set the games delta time for ease of access across all systems
     private void setDeltaTime() {
         internal.setDeltaTime(Gdx.graphics.getDeltaTime());
     }
 
-    // Close the main window on game close
-    private void HandleGameWindow() {
+    private void handleGameWindow() {
         if (getScreen() != null)
             getScreen().dispose();
     }
 
-    // Save the window size to the settings file
-    private void HandleSettingsFile() {
+    private void handleSettingsFile() {
 
         if (!settings.debug)
             return;

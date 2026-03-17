@@ -1,23 +1,24 @@
-package com.internal.runtime.debug;
+package com.internal.runtime.menu;
 
 import com.internal.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
-import com.internal.core.engine.PipelinePackage;
+import com.internal.core.engine.SystemPackage;
 
-public class DebugPipeline extends PipelinePackage {
+public class MenuSystem extends SystemPackage {
+
+    /*
+     * Triggers the main menu on runtime startup.
+     * Owned by RuntimePipeline. Delegates entirely to MainMenuBranch.
+     */
 
     // Internal
-    private Sky sky;
     private MainMenuBranch mainMenuBranch;
 
-    // Base \\
-
-    @Override
-    protected void create() {
-        this.sky = create(Sky.class);
-    }
+    // Internal \\
 
     @Override
     protected void get() {
+
+        // Internal
         this.mainMenuBranch = get(MainMenuBranch.class);
     }
 

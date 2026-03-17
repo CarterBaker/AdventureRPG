@@ -16,6 +16,7 @@ import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.ArrayDeque;
 
 class MegaQueueManager extends ManagerPackage {
@@ -298,8 +299,13 @@ class MegaQueueManager extends ManagerPackage {
 
     private void clearChunkBatchFlags(MegaChunkInstance mega) {
 
-        for (ChunkInstance chunk : mega.getBatchedChunks().values()) {
+        ObjectArrayList<ChunkInstance> list = mega.getBatchedChunkList();
+        Object[] elements = list.elements();
+        int size = list.size();
 
+        for (int i = 0; i < size; i++) {
+
+            ChunkInstance chunk = (ChunkInstance) elements[i];
             ChunkDataSyncContainer chunkSync = chunk.getChunkDataSyncContainer();
 
             if (!chunkSync.tryAcquire())
