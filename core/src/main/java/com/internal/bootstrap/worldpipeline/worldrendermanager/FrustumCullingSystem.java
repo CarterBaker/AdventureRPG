@@ -1,44 +1,31 @@
 package com.internal.bootstrap.worldpipeline.worldrendermanager;
 
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
-import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
-import com.internal.bootstrap.worldpipeline.gridmanager.GridManager;
-import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
+import com.internal.bootstrap.worldpipeline.grid.GridInstance;
+import com.internal.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
 
 class FrustumCullingSystem extends SystemPackage {
 
     /*
-     * Per-frame frustum culling for world chunks and mega chunks. Refreshed once
-     * at the start of each render call. Pitch-aware — looking straight up or down
-     * widens the effective view angle to prevent geometry popping. Uses diagonal
-     * FOV so screen corners are always covered. All culling constants live in
-     * EngineSetting.
+     * Per-frame frustum culling for world chunks and mega chunks. refresh() takes
+     * a GridInstance and reads the camera from its window — each grid culls
+     * against its own view independently. This enables the editor to run multiple
+     * grids with different windows simultaneously without interference.
      */
-
-    // Internal
-    private CameraManager cameraManager;
-    private GridManager gridManager;
 
     // Cached per awake
     private float megaAngularBleedBase;
     private float fullCenterRadiusSq;
 
-    // Cached per frame — refreshed once per renderWorld call
+    // Cached per frame — refreshed once per grid per renderWorld call
     private float cameraAngle;
     private float effectiveAngle;
     private float maxDistanceSq;
 
     // Internal \\
-
-    @Override
-    protected void get() {
-
-        // Internal
-        this.cameraManager = get(CameraManager.class);
-        this.gridManager = get(GridManager.class);
-    }
 
     @Override
     protected void awake() {
@@ -53,9 +40,17 @@ class FrustumCullingSystem extends SystemPackage {
 
     // Refresh \\
 
-    void refresh() {
+    void refresh(GridInstance grid) {
 
-        CameraInstance camera = cameraManager.getMainCamera();
+        WindowInstance window = grid.getWindowInstance();
+
+        if (window == null)
+            return;
+
+        CameraInstance camera = window.getActiveCamera();
+
+        if (camera == null)
+            return;
 
         this.cameraAngle = getCameraAngle(camera);
 

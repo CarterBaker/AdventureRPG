@@ -1,42 +1,58 @@
 package com.internal.core.engine;
 
 import com.internal.bootstrap.BootstrapAssembly;
+import com.internal.bootstrap.renderpipeline.rendermanager.RenderManager;
+import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.runtime.RuntimeContext;
 
 public class GameEngine extends EnginePackage {
 
     /*
-     * GameEngine defines the concrete engine instance.
-     * Registers pipelines and managers, and routes execution
-     * from Main to internal systems.
+     * GameEngine defines the concrete game engine instance. Bootstraps all
+     * pipelines and managers via BootstrapAssembly, then creates the game
+     * runtime context. windowManager and renderManager are resolved in start()
+     * not get() — bootstrap must be complete before they exist in the registry.
      */
 
-    // BootStrap
+    // Bootstrap
     private BootstrapAssembly bootstrapAssembly;
 
     // Runtime
     private RuntimeContext runtimeContext;
 
-    // BootStrap \\
+    // Render
+    private WindowManager windowManager;
+    private RenderManager renderManager;
+
+    // Bootstrap \\
 
     @Override
     protected void bootstrap() {
-
-        // BootStrap
         this.bootstrapAssembly = create(BootstrapAssembly.class);
     }
 
-    // Runtime \\
+    // Create \\
 
     @Override
     protected void create() {
-
-        // Runtime
         this.runtimeContext = create(RuntimeContext.class);
     }
 
+    // Get \\
+
+    @Override
+    protected void get() {
+
+        // Render
+        this.windowManager = get(WindowManager.class);
+        this.renderManager = get(RenderManager.class);
+    }
+
+    // Render \\
+
     @Override
     void draw() {
-        this.bootstrapAssembly.draw();
+        windowManager.setActiveWindow(windowManager.getMainWindow());
+        renderManager.draw();
     }
 }

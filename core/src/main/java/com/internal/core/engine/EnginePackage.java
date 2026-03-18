@@ -8,6 +8,9 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.google.gson.Gson;
+import com.internal.bootstrap.renderpipeline.window.WindowData;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
+import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.engine.settings.Settings;
 import com.internal.core.kernel.syncconsumer.AsyncStructConsumer;
@@ -46,7 +49,6 @@ public class EnginePackage extends ManagerPackage {
 
     // Internal
     private Screen screen;
-    private WindowInstance windowInstance;
     private EngineState engineState;
     private InternalThreadManager internalThreadManager;
 
@@ -82,7 +84,6 @@ public class EnginePackage extends ManagerPackage {
 
         // Internal
         this.screen = null;
-        this.windowInstance = null;
         this.engineState = EngineState.KERNEL;
 
         // System Management
@@ -164,7 +165,6 @@ public class EnginePackage extends ManagerPackage {
 
     // System Registry \\
 
-    @SuppressWarnings("unchecked")
     protected <T extends SystemPackage> T registerSystem(T systemPackage) {
 
         this.internalRegistry.put(systemPackage.getClass(), systemPackage);
@@ -300,9 +300,9 @@ public class EnginePackage extends ManagerPackage {
 
     private final void preFrameCycle(EngineState nextState) {
 
-        this.internalGet();
-        this.internalAwake();
-        this.internalRelease();
+        this.preGet();
+        this.preAwake();
+        this.preRelease();
 
         this.setInternalState(nextState);
         this.execute();
@@ -345,15 +345,12 @@ public class EnginePackage extends ManagerPackage {
 
     private void internalKernel() {
 
-        // First make sure to enter the KERNEL state
         this.setContext(SystemContext.KERNEL);
 
         kernel();
 
-        // Cache any systems created during KERNEL
         this.cacheSubSystems();
 
-        // Now we can enter BOOTSTRAP and walk through create for all systems
         this.setContext(SystemContext.CREATE);
 
         for (int i = 0; i < this.systemArray.length; i++)
@@ -361,8 +358,6 @@ public class EnginePackage extends ManagerPackage {
     }
 
     private final void kernel() {
-
-        // Kernel Systems
         this.internalThreadManager = create(InternalThreadManager.class);
     }
 
@@ -370,23 +365,18 @@ public class EnginePackage extends ManagerPackage {
 
     private final void internalBootstrap() {
 
-        // First make sure to enter the BOOTSTRAP state
         this.setContext(SystemContext.BOOTSTRAP);
 
-        // Only call OUR bootstrap, not super
         this.bootstrap();
 
-        // Cache any systems created during bootstrap
         this.cacheSubSystems();
 
-        // Now we can enter CREATE and walk through create for all systems
         this.setContext(SystemContext.CREATE);
 
         for (int i = 0; i < this.systemArray.length; i++)
             this.systemArray[i].internalCreate();
     }
 
-    // Internal engine specific. SystemPackages do not contain `bootstrap`.
     void bootstrap() {
     }
 
@@ -402,6 +392,14 @@ public class EnginePackage extends ManagerPackage {
 
     // Get \\
 
+    private final void preGet() {
+
+        this.setContext(SystemContext.GET);
+
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalGet();
+    }
+
     @Override // From `ManagerPackage`
     protected final void internalGet() {
 
@@ -412,6 +410,14 @@ public class EnginePackage extends ManagerPackage {
 
     // Awake \\
 
+    private final void preAwake() {
+
+        this.setContext(SystemContext.AWAKE);
+
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalAwake();
+    }
+
     @Override // From `ManagerPackage`
     protected final void internalAwake() {
 
@@ -421,6 +427,16 @@ public class EnginePackage extends ManagerPackage {
     }
 
     // Release \\
+
+    private final void preRelease() {
+
+        this.setContext(SystemContext.RELEASE);
+
+        for (int i = 0; i < this.systemArray.length; i++)
+            this.systemArray[i].internalRelease();
+
+        this.clearGarbage();
+    }
 
     @Override // From `ManagerPackage`
     protected final void internalRelease() {
@@ -502,7 +518,6 @@ public class EnginePackage extends ManagerPackage {
         this.draw();
     }
 
-    // Internal engine specific. SystemPackages do not contain `draw`.
     void draw() {
     }
 
@@ -528,9 +543,13 @@ public class EnginePackage extends ManagerPackage {
 
     private final void createGameWindow() {
 
-        this.windowInstance = create(WindowInstance.class);
+        WindowInstance mainWindow = create(WindowInstance.class);
+        mainWindow.constructor(new WindowData(0, 0, 0, EngineSetting.WINDOW_TITLE));
 
-        this.screen = windowInstance;
+        WindowManager windowManager = getUnchecked(WindowManager.class);
+        windowManager.registerMainWindow(mainWindow);
+
+        this.screen = mainWindow;
         this.game.setScreen(screen);
     }
 
@@ -550,10 +569,6 @@ public class EnginePackage extends ManagerPackage {
 
     public final long getTime() {
         return frameTimeMillis;
-    }
-
-    public final WindowInstance getWindowInstance() {
-        return this.windowInstance;
     }
 
     public final void closeGame() {

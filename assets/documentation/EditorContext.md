@@ -91,7 +91,7 @@ to stream world data around a free cam independently of the player.
 - Camera is fully decoupled from input — owner drives it
 - Runtime systems cleanly separated into `RuntimeContext` — bootstrap is untouched
 - `WorldPipeline` registration order: `WorldStreamManager` before `WorldRenderManager`
-- `RenderSystem` not yet context-aware — this is the immediate next work
+- `RenderManager` not yet context-aware — this is the immediate next work
 
 ---
 
@@ -115,15 +115,15 @@ null-guards on `mainCamera` — no camera registered means nothing pushes to GPU
 
 ### Context Is Runtime, Not Render Target
 `ContextPackage` is the collection of systems that run inside a window — not a descriptor of a render
-surface. The render surface question is handled separately at the `RenderSystem` level via window handles.
+surface. The render surface question is handled separately at the `RenderManager` level via window handles.
 This separation keeps the two concerns clean: what runs vs where it draws.
 
-### One RenderSystem — Always
-There is one `RenderSystem` in the entire engine. It is a `SystemPackage` and the engine only allows
+### One RenderManager — Always
+There is one `RenderManager` in the entire engine. It is a `SystemPackage` and the engine only allows
 one of each. All systems push render calls to it as they always have. The only change needed is that
 `draw()` accepts a window target so it knows which window's framebuffer to flush to.
 
-### Multi-Window Via RenderSystem Overloads
+### Multi-Window Via RenderManager Overloads
 ```java
 renderSystem.draw()                    // main window — uses WindowInstance, renders to screen
 renderSystem.draw(WindowInstance w)    // specific detached window
@@ -161,7 +161,7 @@ Build `WindowData` → `WindowInstance` → `WindowManager`.
 - `WindowManager` owns the registry, wraps `Lwjgl3Application.newWindow()` on creation
 - `WindowInstance` wraps `WindowData`, delegates getters through it per engine convention
 
-### 2. RenderSystem — Surgical Change
+### 2. RenderManager — Surgical Change
 - Remove `windowInstance` field (currently grabbed from `internal.getWindowInstance()`)
 - Add `draw(WindowInstance window)` overload
 - `draw()` with no args resolves the main window from `WindowManager` and delegates
@@ -182,7 +182,7 @@ com.internal.editor.runtime.RuntimeContext
 
 ### 5. Dock Shell — Phase 1 Foundation
 Build in this exact order, nothing else until each step is solid:
-1. `DockRenderSystem` — draws quads, borders, text to screen coords via `RenderSystem`
+1. `DockRenderSystem` — draws quads, borders, text to screen coords via `RenderManager`
 2. `DockNodeData` / `DockNodeInstance` — binary split tree node
 3. `DockManager` — builds, walks, mutates the tree
 4. `TabGroupHandle` / `TabGroupInstance` — tab bar data
@@ -291,6 +291,6 @@ These follow the same strict last-word rule as all other engine packages.
 | `WindowData` | New — width, height, title payload |
 | `WindowInstance` | New — runtime window wrapper |
 | `WindowManager` | New — registry, wraps `Lwjgl3Application.newWindow()` |
-| `RenderSystem` | Remove `windowInstance`, add `draw(WindowInstance)` overload |
+| `RenderManager` | Remove `windowInstance`, add `draw(WindowInstance)` overload |
 | `EditorCameraSystem` | New — free cam, sets main camera, creates streaming grid |
 | `RuntimeContext (editor)` | Populate with `EditorCameraSystem` |

@@ -1,17 +1,19 @@
 package com.internal.runtime.menu;
 
 import com.internal.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
+import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.core.engine.SystemPackage;
 
 public class MenuSystem extends SystemPackage {
 
     /*
-     * Triggers the main menu on runtime startup.
-     * Owned by RuntimeContext. Delegates entirely to MainMenuBranch.
+     * Opens the main menu at runtime startup. Passes the main window so the
+     * menu is bound to the correct window from the start.
      */
 
     // Internal
     private MainMenuBranch mainMenuBranch;
+    private WindowManager windowManager;
 
     // Internal \\
 
@@ -20,10 +22,11 @@ public class MenuSystem extends SystemPackage {
 
         // Internal
         this.mainMenuBranch = get(MainMenuBranch.class);
+        this.windowManager = get(WindowManager.class);
     }
 
     @Override
     protected void awake() {
-        mainMenuBranch.openMenu();
+        mainMenuBranch.openMenu(windowManager.getMainWindow());
     }
 }

@@ -1,6 +1,8 @@
 package com.internal.bootstrap.worldpipeline.gridmanager;
 
 import com.internal.bootstrap.entitypipeline.entity.EntityInstance;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
+import com.internal.bootstrap.worldpipeline.grid.GridInstance;
 import com.internal.core.engine.ManagerPackage;
 
 public class GridManager extends ManagerPackage {
@@ -22,7 +24,7 @@ public class GridManager extends ManagerPackage {
 
     // Accessible \\
 
-    public GridInstance buildGrid(EntityInstance focalEntity) {
-        return gridBuildSystem.buildGrid(focalEntity);
+    public GridInstance buildGrid(EntityInstance focalEntity, WindowInstance windowInstance) {
+        return gridBuildSystem.buildGrid(focalEntity, windowInstance);
     }
 }

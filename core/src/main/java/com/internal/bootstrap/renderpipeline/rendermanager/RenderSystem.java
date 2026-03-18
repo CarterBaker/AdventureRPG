@@ -1,4 +1,10 @@
-package com.internal.bootstrap.renderpipeline.rendersystem;
+// MOVED FROM: com.internal.bootstrap.renderpipeline.rendersystem
+// MOVED TO:   com.internal.bootstrap.renderpipeline.rendermanager
+//
+// No logic changes. Package declaration updated only.
+// RenderManager calls draw() directly — no longer called from GameEngine.
+
+package com.internal.bootstrap.renderpipeline.rendermanager;
 
 import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
@@ -6,29 +12,30 @@ import com.internal.bootstrap.renderpipeline.compositerendersystem.CompositeRend
 import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallStruct;
 import com.internal.bootstrap.renderpipeline.util.MaskStruct;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
+import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.engine.WindowInstance;
 import com.internal.core.engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class RenderSystem extends SystemPackage {
+class RenderSystem extends SystemPackage {
 
     /*
-     * Collects render calls each frame sorted by depth and material, then flushes
-     * them to the GPU in draw(). Uses a pre-allocated render call array with a
-     * cursor to avoid per-frame allocation. All hot-path iteration is index-based
-     * over pre-allocated arrays — zero allocation per frame after warmup.
-     * Composite instanced draws share depth 0's buffer and are flushed after it.
+     * Collects render calls each frame sorted by depth and material, then
+     * flushes them to the GPU in draw(). Viewport dimensions come from the
+     * active window on WindowManager. Camera data is already pushed to the
+     * shared UBO by CameraBufferSystem before draw() fires — RenderSystem
+     * has no camera knowledge. Zero allocation per frame after warmup.
      */
 
     // Internal
-    private WindowInstance windowInstance;
+    private WindowManager windowManager;
     private CompositeRenderSystem compositeRenderSystem;
 
     // Palette — lookup
@@ -58,7 +65,9 @@ public class RenderSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.windowInstance = internal.getWindowInstance();
+
+        // Internal
+        this.windowManager = get(WindowManager.class);
         this.compositeRenderSystem = get(CompositeRenderSystem.class);
     }
 
@@ -71,13 +80,15 @@ public class RenderSystem extends SystemPackage {
 
     // Draw \\
 
-    public void draw() {
+    void draw() {
+
+        WindowInstance window = windowManager.getActiveWindow();
 
         renderCallCursor = 0;
 
         GLSLUtility.setViewport(
-                windowInstance.getWidth(),
-                windowInstance.getHeight());
+                window.getWidth(),
+                window.getHeight());
 
         GLSLUtility.clearBuffer();
 
@@ -142,12 +153,6 @@ public class RenderSystem extends SystemPackage {
         }
     }
 
-    // Bridge \\
-
-    public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer) {
-        compositeRenderSystem.submit(material, buffer);
-    }
-
     // Render Binding \\
 
     private void bindMaterial(MaterialInstance material, int depth) {
@@ -209,6 +214,10 @@ public class RenderSystem extends SystemPackage {
     }
 
     // Accessible \\
+
+    public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer) {
+        compositeRenderSystem.submit(material, buffer);
+    }
 
     public void pushRenderCall(ModelInstance modelInstance, int depth) {
         pushRenderCall(modelInstance, depth, null);

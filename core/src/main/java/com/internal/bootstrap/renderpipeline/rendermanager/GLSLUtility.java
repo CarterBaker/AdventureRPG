@@ -1,4 +1,4 @@
-package com.internal.bootstrap.renderpipeline.rendersystem;
+package com.internal.bootstrap.renderpipeline.rendermanager;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
@@ -8,7 +8,7 @@ import com.internal.core.engine.UtilityPackage;
 class GLSLUtility extends UtilityPackage {
 
     /*
-     * Stateless OpenGL state management helpers for RenderSystem. Covers buffer
+     * Stateless OpenGL state management helpers for RenderManager. Covers buffer
      * clearing, depth and blend state, scissor, shader binding, VAO operations,
      * UBO binding, and draw calls. Package-private.
      */

@@ -8,11 +8,14 @@ import com.internal.core.util.mathematics.vectors.Vector3;
 public class CameraInstance extends InstancePackage {
 
     /*
-     * Runtime perspective camera. Wraps CameraData and delegates all
-     * mutation and access through it. Owned and registered by CameraManager.
+     * Runtime perspective camera. Wraps CameraData and delegates all mutation
+     * and reads through it. No UBO ownership, no dirty tracking —
+     * CameraBufferSystem
+     * reads from whichever camera is active on the window and pushes to the
+     * shared CameraData UBO immediately before each draw pass.
      */
 
-    // Internal
+    // Data
     private CameraData data;
 
     // Constructor \\
@@ -21,11 +24,7 @@ public class CameraInstance extends InstancePackage {
         this.data = data;
     }
 
-    // Accessible \\
-
-    public CameraData getCameraData() {
-        return data;
-    }
+    // Mutation \\
 
     public void setRotation(Vector2 input) {
         data.setRotation(input);
@@ -37,6 +36,12 @@ public class CameraInstance extends InstancePackage {
 
     public void updateViewport(float width, float height) {
         data.updateViewport(width, height);
+    }
+
+    // Accessible \\
+
+    public CameraData getCameraData() {
+        return data;
     }
 
     public Matrix4 getProjection() {

@@ -3,7 +3,7 @@ package com.internal.bootstrap.worldpipeline.worlditemrendersystem;
 import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import com.internal.bootstrap.geometrypipeline.compositebuffermanager.CompositeBufferManager;
 import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
-import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
+import com.internal.bootstrap.renderpipeline.rendermanager.RenderManager;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.worldpipeline.worlditem.WorldItemCompositeInstance;
@@ -33,7 +33,7 @@ public class WorldItemRenderSystem extends ManagerPackage {
 
     private MaterialManager materialManager;
     private CompositeBufferManager compositeBufferManager;
-    private RenderSystem renderSystem;
+    private RenderManager renderSystem;
 
     // Per item definition — composite buffer + material
     private Int2ObjectOpenHashMap<WorldItemCompositeInstance> itemDefID2Composite;
@@ -57,7 +57,7 @@ public class WorldItemRenderSystem extends ManagerPackage {
     protected void get() {
         this.materialManager = get(MaterialManager.class);
         this.compositeBufferManager = get(CompositeBufferManager.class);
-        this.renderSystem = get(RenderSystem.class);
+        this.renderSystem = get(RenderManager.class);
     }
 
     @Override

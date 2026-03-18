@@ -1,28 +1,40 @@
-package com.internal.bootstrap.worldpipeline.gridmanager;
+package com.internal.bootstrap.worldpipeline.grid;
 
 import com.internal.bootstrap.entitypipeline.entity.EntityInstance;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
+import com.internal.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import com.internal.bootstrap.worldpipeline.util.WorldWrapUtility;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
+import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import com.internal.core.engine.InstancePackage;
+import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class GridInstance extends InstancePackage {
 
     /*
      * The active spatial grid for a single focal entity. Owns the load order,
-     * slot handles, active chunks, active mega chunks, and pending load and
-     * unload requests. The focal entity drives the streaming origin — world
-     * handle and chunk coordinate are read directly from it each frame.
+     * slot handles, active chunks, active mega chunks, pending load and unload
+     * requests, and the render queues for this grid. Render queues map chunk
+     * world coordinates directly to their GridSlotHandle — populated at rebuild
+     * time so no reverse lookup is needed at render time. rebuildRenderQueue()
+     * is called internally when the focal entity crosses a chunk boundary. The
+     * window this grid renders into is stored here so FrustumCullingSystem reads
+     * the correct camera per grid independently.
      */
 
     // Focal
     private EntityInstance focalEntity;
+
+    // Window
+    private WindowInstance windowInstance;
 
     // Grid
     private int totalSlots;
@@ -40,13 +52,21 @@ public class GridInstance extends InstancePackage {
     private LongLinkedOpenHashSet loadRequests;
     private LongLinkedOpenHashSet unloadRequests;
 
-    // Scan cursor — cycles through loadOrder continuously
+    // Render Queues — chunk/mega world coordinate → slot handle
+    private Long2ObjectLinkedOpenHashMap<GridSlotHandle> chunkRenderQueue;
+    private Long2ObjectLinkedOpenHashMap<GridSlotHandle> megaRenderQueue;
+
+    // Settings
+    private int batchedChunks;
+
+    // Scan cursor
     private int scanCursor;
 
     // Constructor \\
 
-    protected void constructor(
+    public void constructor(
             EntityInstance focalEntity,
+            WindowInstance windowInstance,
             int totalSlots,
             long[] loadOrder,
             LongOpenHashSet gridCoordinates,
@@ -56,6 +76,9 @@ public class GridInstance extends InstancePackage {
 
         // Focal
         this.focalEntity = focalEntity;
+
+        // Window
+        this.windowInstance = windowInstance;
 
         // Grid
         this.totalSlots = totalSlots;
@@ -73,13 +96,80 @@ public class GridInstance extends InstancePackage {
         this.loadRequests = new LongLinkedOpenHashSet();
         this.unloadRequests = new LongLinkedOpenHashSet();
 
+        // Render Queues
+        this.chunkRenderQueue = new Long2ObjectLinkedOpenHashMap<>();
+        this.megaRenderQueue = new Long2ObjectLinkedOpenHashMap<>();
+
+        // Settings
+        this.batchedChunks = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
+
         this.scanCursor = 0;
+    }
+
+    // Render Queue \\
+
+    private void rebuildRenderQueue() {
+
+        chunkRenderQueue.clear();
+        megaRenderQueue.clear();
+
+        for (int i = 0; i < totalSlots; i++) {
+
+            long gridCoordinate = loadOrder[i];
+            GridSlotHandle slot = gridSlots.get(gridCoordinate);
+            long chunkCoordinate = getChunkCoordinateForSlot(gridCoordinate);
+
+            queueChunk(slot, chunkCoordinate);
+
+            if (slot.getDetailLevel().renderMode == RenderType.BATCHED)
+                queueMega(slot, chunkCoordinate);
+        }
+    }
+
+    private void queueChunk(GridSlotHandle slot, long chunkCoordinate) {
+
+        long megaCoordinate = Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate);
+
+        if (megaRenderQueue.containsKey(megaCoordinate))
+            return;
+
+        chunkRenderQueue.put(chunkCoordinate, slot);
+    }
+
+    private void queueMega(GridSlotHandle slot, long chunkCoordinate) {
+
+        long megaCoordinate = Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate);
+
+        if (chunkCoordinate != megaCoordinate)
+            return;
+
+        ObjectArrayList<GridSlotHandle> coveredSlots = slot.getCoveredSlots();
+
+        if (coveredSlots.size() != batchedChunks)
+            return;
+
+        megaRenderQueue.put(megaCoordinate, slot);
+
+        for (int i = 0; i < coveredSlots.size(); i++) {
+            long coveredChunk = getChunkCoordinateForSlot(coveredSlots.get(i).getGridCoordinate());
+            chunkRenderQueue.remove(coveredChunk);
+        }
     }
 
     // Active State \\
 
-    public void setActiveChunkCoordinate(long activeChunkCoordinate) {
-        this.activeChunkCoordinate = activeChunkCoordinate;
+    public boolean updateActiveChunkCoordinate() {
+
+        long entityChunkCoordinate = focalEntity
+                .getWorldPositionStruct()
+                .getChunkCoordinate();
+
+        if (activeChunkCoordinate == entityChunkCoordinate)
+            return false;
+
+        activeChunkCoordinate = entityChunkCoordinate;
+        rebuildRenderQueue();
+        return true;
     }
 
     public long getActiveChunkCoordinate() {
@@ -119,6 +209,10 @@ public class GridInstance extends InstancePackage {
 
     public EntityInstance getFocalEntity() {
         return focalEntity;
+    }
+
+    public WindowInstance getWindowInstance() {
+        return windowInstance;
     }
 
     public WorldHandle getWorldHandle() {
@@ -163,5 +257,13 @@ public class GridInstance extends InstancePackage {
 
     public LongLinkedOpenHashSet getUnloadRequests() {
         return unloadRequests;
+    }
+
+    public Long2ObjectLinkedOpenHashMap<GridSlotHandle> getChunkRenderQueue() {
+        return chunkRenderQueue;
+    }
+
+    public Long2ObjectLinkedOpenHashMap<GridSlotHandle> getMegaRenderQueue() {
+        return megaRenderQueue;
     }
 }

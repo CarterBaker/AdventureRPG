@@ -10,7 +10,7 @@ import com.internal.core.engine.StructPackage;
 public class RenderCallStruct extends StructPackage {
 
     /*
-     * Per-frame render submission. Pre-allocated in a fixed array by RenderSystem
+     * Per-frame render submission. Pre-allocated in a fixed array by RenderManager
      * and handed out by cursor — never allocated per frame. Reset by cursor
      * rewind at the start of each draw. Never instantiate directly.
      */

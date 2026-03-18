@@ -1,4 +1,4 @@
-package com.internal.bootstrap.worldpipeline.gridmanager;
+package com.internal.bootstrap.worldpipeline.gridslot;
 
 import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
 

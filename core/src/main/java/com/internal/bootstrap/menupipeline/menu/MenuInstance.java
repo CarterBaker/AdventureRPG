@@ -8,23 +8,34 @@ public class MenuInstance extends InstancePackage {
 
     /*
      * Runtime menu created by MenuManager.openMenu(). Holds the shared MenuData
-     * definition and the live element tree for this session. Visible by default.
+     * definition, the live element tree for this session, and the ID of the
+     * window it was opened in. The window ID is used by hit testing to ignore
+     * clicks from other windows. Visible by default.
      */
 
     // Internal
     private MenuData data;
     private ObjectArrayList<ElementInstance> elements;
 
+    // Identity
+    private int windowID;
+
     // State
     private boolean visible;
 
     // Constructor \\
 
-    public void constructor(MenuData data, ObjectArrayList<ElementInstance> elements) {
+    public void constructor(
+            MenuData data,
+            ObjectArrayList<ElementInstance> elements,
+            int windowID) {
 
         // Internal
         this.data = data;
         this.elements = elements;
+
+        // Identity
+        this.windowID = windowID;
 
         // State
         this.visible = true;
@@ -33,47 +44,35 @@ public class MenuInstance extends InstancePackage {
     // Entry Points \\
 
     public ElementInstance getEntryPoint(int index) {
-
         ObjectArrayList<String> eps = data.getEntryPoints();
-
         if (eps == null || index >= eps.size())
             return null;
-
         return findById(elements, eps.get(index));
     }
 
     public void addToEntryPoint(int index, ElementInstance element) {
-
         ElementInstance container = getEntryPoint(index);
-
         if (container != null)
             container.addChild(element);
     }
 
     public void removeFromEntryPoint(int index, ElementInstance element) {
-
         ElementInstance container = getEntryPoint(index);
-
         if (container != null)
             container.removeChild(element);
     }
 
     private ElementInstance findById(ObjectArrayList<ElementInstance> list, String id) {
-
         for (int i = 0; i < list.size(); i++) {
-
             ElementInstance el = list.get(i);
-
             if (el.getElementData().getId().equals(id))
                 return el;
-
             if (el.hasChildren()) {
                 ElementInstance found = findById(el.getChildren(), id);
                 if (found != null)
                     return found;
             }
         }
-
         return null;
     }
 
@@ -95,6 +94,10 @@ public class MenuInstance extends InstancePackage {
 
     public ObjectArrayList<ElementInstance> getElements() {
         return elements;
+    }
+
+    public int getWindowID() {
+        return windowID;
     }
 
     public boolean isVisible() {

@@ -7,10 +7,10 @@ import com.internal.bootstrap.entitypipeline.entitymanager.EntityManager;
 import com.internal.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import com.internal.bootstrap.inputpipeline.input.InputHandle;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
-import com.internal.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
 import com.internal.bootstrap.physicspipeline.movementmanager.MovementManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -24,12 +24,10 @@ import com.internal.core.util.mathematics.vectors.Vector3;
 public class PlayerManager extends ManagerPackage {
 
     /*
-     * Owns and drives the player entity and its camera. Player spawning is
-     * explicit via spawnPlayer() — called by PlayerSystem at runtime startup
-     * or by the editor play panel when previewing the game. Drives camera
-     * rotation from mouse delta and synchronizes camera position to the player
-     * eye position each frame. Switching the active player only requires
-     * pointing at a different EntityInstance.
+     * Owns and drives the player entity and its camera. spawnPlayer() takes the
+     * window the player renders into — caller decides, no internal window lookup.
+     * Camera position is synchronized to the player eye position each frame.
+     * Camera rotation is driven externally by PlayerInputSystem.
      */
 
     // Internal
@@ -39,7 +37,6 @@ public class PlayerManager extends ManagerPackage {
     private EntityManager entityManager;
     private BlockManager blockManager;
     private WorldStreamManager worldStreamManager;
-    private InventoryBranch inventoryBranch;
 
     // Systems
     private InternalBufferSystem internalBufferSystem;
@@ -78,7 +75,6 @@ public class PlayerManager extends ManagerPackage {
         this.entityManager = get(EntityManager.class);
         this.blockManager = get(BlockManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
-        this.inventoryBranch = get(InventoryBranch.class);
     }
 
     @Override
@@ -87,15 +83,12 @@ public class PlayerManager extends ManagerPackage {
         if (player == null)
             return;
 
-        handleInventoryInput();
-        updateCameraRotation();
-        writePlayerInput();
         calculatePlayerPosition();
     }
 
     // Spawn \\
 
-    public EntityInstance spawnPlayer() {
+    public EntityInstance spawnPlayer(WindowInstance window) {
 
         this.player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
         this.verifyPlayerPosition = true;
@@ -106,29 +99,12 @@ public class PlayerManager extends ManagerPackage {
 
         this.camera = cameraManager.createCamera(
                 internal.settings.FOV,
-                internal.getWindowInstance().getWidth(),
-                internal.getWindowInstance().getHeight());
+                window.getWidth(),
+                window.getHeight());
 
-        cameraManager.setMainCamera(camera);
+        window.setActiveCamera(camera);
 
         return player;
-    }
-
-    // Input \\
-
-    private void handleInventoryInput() {
-        if (inputSystem.consumeInventoryJustPressed())
-            inventoryBranch.toggleInventory(player);
-    }
-
-    private void updateCameraRotation() {
-        camera.setRotation(inputSystem.getRotation());
-    }
-
-    private void writePlayerInput() {
-        inputSystem.writeToHandle(
-                player.getInputHandle(),
-                camera.getDirection());
     }
 
     // Player \\
@@ -219,6 +195,10 @@ public class PlayerManager extends ManagerPackage {
 
     public boolean hasPlayer() {
         return player != null;
+    }
+
+    public CameraInstance getCamera() {
+        return camera;
     }
 
     public WorldPositionStruct getPlayerPosition() {

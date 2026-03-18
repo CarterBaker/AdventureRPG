@@ -1,9 +1,13 @@
 package com.internal.bootstrap.worldpipeline.gridmanager;
 
 import com.internal.bootstrap.entitypipeline.entity.EntityInstance;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import com.internal.bootstrap.worldpipeline.grid.GridInstance;
+import com.internal.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
+import com.internal.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
@@ -17,9 +21,9 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 class GridBuildSystem extends SystemPackage {
 
     /*
-     * Constructs a GridInstance and all GridSlotHandles for a given focal entity.
-     * Derives load order by sorting coordinates by distance from center.
-     * Allocates one UBOInstance per slot for GPU grid position data.
+     * Constructs a GridInstance and all GridSlotHandles for a given focal entity
+     * and window. The window is stored on the grid so FrustumCullingSystem can
+     * read the correct camera per grid independently.
      */
 
     // Internal
@@ -46,7 +50,7 @@ class GridBuildSystem extends SystemPackage {
 
     // Build \\
 
-    GridInstance buildGrid(EntityInstance focalEntity) {
+    GridInstance buildGrid(EntityInstance focalEntity, WindowInstance windowInstance) {
 
         float radius = calculateRadius();
         float radiusSquared = radius * radius;
@@ -70,6 +74,7 @@ class GridBuildSystem extends SystemPackage {
 
         gridInstance.constructor(
                 focalEntity,
+                windowInstance,
                 totalSlots,
                 loadOrder,
                 gridCoordinates,

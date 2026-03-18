@@ -5,7 +5,7 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataUtility;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotHandle;
+import com.internal.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;

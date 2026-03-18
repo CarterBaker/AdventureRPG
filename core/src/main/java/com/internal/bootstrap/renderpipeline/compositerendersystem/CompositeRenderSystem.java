@@ -17,7 +17,7 @@ public class CompositeRenderSystem extends SystemPackage {
 
     /*
      * Collects instanced draw submissions during update, uploads instance data
-     * to the GPU, and flushes all batches in draw(). Drawn after RenderSystem
+     * to the GPU, and flushes all batches in draw(). Drawn after RenderManager
      * depth 0 so composite draws share and respect world geometry depth.
      * All hot-path iteration is index-based over pre-allocated arrays — zero
      * allocation per frame after the first few frames of material registration.

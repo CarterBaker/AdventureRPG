@@ -1,175 +1,102 @@
 package com.internal.bootstrap.inputpipeline.inputsystem;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
-import com.internal.bootstrap.inputpipeline.input.InputHandle;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.mathematics.vectors.Vector2;
-import com.internal.core.util.mathematics.vectors.Vector3;
-import com.internal.core.util.mathematics.vectors.Vector3Int;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 public class InputSystem extends SystemPackage implements InputProcessor {
 
     /*
-     * Handles all raw input from LibGDX and exposes clean state to the engine.
-     * Movement and camera rotation are blocked when the input is locked.
-     * UI keys and raw mouse state are always tracked regardless of lock state.
-     * writeToHandle() translates current frame state into any InputHandle —
-     * used by PlayerManager for the player entity each frame.
+     * Captures all raw input from LibGDX each frame and exposes clean query
+     * methods. No game knowledge — no named keys, no lock state, no handle
+     * writing. Any system that needs input reads from this and interprets the
+     * state in its own context. captureCursor() is the only platform call
+     * exposed — runtime systems call it rather than touching Gdx directly.
      */
 
     // Internal
-    private boolean locked;
     private float sensitivity;
 
-    // Vectors
-    private Vector2 rotation;
-    private Vector3Int input;
+    // Keys
+    private IntOpenHashSet heldKeys;
+    private IntOpenHashSet justPressedKeys;
+    private IntOpenHashSet justPressedSwap;
 
-    // Movement
-    private boolean W;
-    private boolean A;
-    private boolean S;
-    private boolean D;
-    private boolean CTRL;
-    private boolean SHIFT;
-    private boolean SPACE;
+    // Mouse — delta
+    private Vector2 mouseDelta;
 
-    // Mouse — game, blocked when locked
-    private boolean leftClick;
-    private boolean rightClick;
-
-    // Mouse — raw, always tracked, used by UI raycasting
-    private boolean rawLeftClick;
+    // Mouse — position
     private float mouseX;
     private float mouseY;
 
-    // UI Keys — always tracked regardless of lock
-    private boolean inventoryJustPressed;
-    private boolean inventoryDown;
+    // Mouse — buttons
+    private boolean leftClick;
+    private boolean rightClick;
+    private boolean rawLeftClick;
 
-    // Base \\
+    // Internal \\
 
     @Override
     protected void create() {
 
         // Internal
-        this.locked = false;
         this.sensitivity = internal.settings.mouseSensitivity;
 
-        // Vectors
-        this.rotation = new Vector2();
-        this.input = new Vector3Int();
+        // Keys
+        this.heldKeys = new IntOpenHashSet();
+        this.justPressedKeys = new IntOpenHashSet();
+        this.justPressedSwap = new IntOpenHashSet();
+
+        // Mouse
+        this.mouseDelta = new Vector2();
     }
 
     @Override
     protected void start() {
         Gdx.input.setInputProcessor(this);
-        lockInput(locked);
     }
 
     @Override
     protected void update() {
-        updateRotation();
-        updateMovement();
-    }
 
-    // Input \\
-
-    private void updateRotation() {
-
-        rotation.set(0, 0);
-
-        if (locked)
-            return;
+        // Swap and clear — justPressedSwap was populated by keyDown events
+        // this frame, becomes the readable set for this tick
+        IntOpenHashSet temp = justPressedKeys;
+        justPressedKeys = justPressedSwap;
+        justPressedSwap = temp;
+        justPressedSwap.clear();
 
         float deltaX = Gdx.input.getDeltaX() * sensitivity;
         float deltaY = Gdx.input.getDeltaY() * sensitivity;
-
-        rotation.set(deltaX, deltaY);
-    }
-
-    private void updateMovement() {
-
-        input.set(0, 0, 0);
-
-        if (locked)
-            return;
-
-        if (W)
-            input.z += 1;
-        if (S)
-            input.z -= 1;
-        if (A)
-            input.x -= 1;
-        if (D)
-            input.x += 1;
-        if (SPACE)
-            input.y = 1;
+        mouseDelta.set(deltaX, deltaY);
     }
 
     // Input Processor \\
 
     @Override
     public boolean keyDown(int keycode) {
-
-        if (keycode == Input.Keys.I && !inventoryDown) {
-            inventoryDown = true;
-            inventoryJustPressed = true;
-        }
-
-        if (locked)
-            return false;
-
-        switch (keycode) {
-            case Input.Keys.W -> W = true;
-            case Input.Keys.A -> A = true;
-            case Input.Keys.S -> S = true;
-            case Input.Keys.D -> D = true;
-            case Input.Keys.CONTROL_LEFT -> CTRL = true;
-            case Input.Keys.SHIFT_LEFT -> SHIFT = true;
-            case Input.Keys.SPACE -> SPACE = true;
-        }
-
+        heldKeys.add(keycode);
+        justPressedSwap.add(keycode);
         return true;
     }
 
     @Override
     public boolean keyUp(int keycode) {
-
-        if (keycode == Input.Keys.I)
-            inventoryDown = false;
-
-        if (locked)
-            return false;
-
-        switch (keycode) {
-            case Input.Keys.W -> W = false;
-            case Input.Keys.A -> A = false;
-            case Input.Keys.S -> S = false;
-            case Input.Keys.D -> D = false;
-            case Input.Keys.CONTROL_LEFT -> CTRL = false;
-            case Input.Keys.SHIFT_LEFT -> SHIFT = false;
-            case Input.Keys.SPACE -> SPACE = false;
-        }
-
+        heldKeys.remove(keycode);
         return true;
     }
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
-        if (button == Input.Buttons.LEFT)
-            rawLeftClick = true;
-
-        if (locked)
-            return false;
-
-        if (button == Input.Buttons.LEFT)
+        if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
             leftClick = true;
+            rawLeftClick = true;
+        }
 
-        if (button == Input.Buttons.RIGHT)
+        if (button == com.badlogic.gdx.Input.Buttons.RIGHT)
             rightClick = true;
 
         return true;
@@ -178,16 +105,12 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 
-        if (button == Input.Buttons.LEFT)
-            rawLeftClick = false;
-
-        if (locked)
-            return false;
-
-        if (button == Input.Buttons.LEFT)
+        if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
             leftClick = false;
+            rawLeftClick = false;
+        }
 
-        if (button == Input.Buttons.RIGHT)
+        if (button == com.badlogic.gdx.Input.Buttons.RIGHT)
             rightClick = false;
 
         return true;
@@ -220,52 +143,32 @@ public class InputSystem extends SystemPackage implements InputProcessor {
         return false;
     }
 
-    // Input Locking \\
+    // Platform \\
 
-    public void lockInput(boolean input) {
-        this.locked = input;
-        Gdx.input.setCursorCatched(!input);
-    }
-
-    // Write \\
-
-    public void writeToHandle(InputHandle handle, Vector3 facingDirection) {
-
-        handle.setForward(W);
-        handle.setBack(S);
-        handle.setLeft(A);
-        handle.setRight(D);
-        handle.setJump(SPACE);
-        handle.setWalk(CTRL);
-        handle.setSprint(SHIFT);
-        handle.setPrimaryAction(leftClick);
-        handle.setSecondaryAction(rightClick);
-        handle.setFacingDirection(
-                facingDirection.x,
-                facingDirection.y,
-                facingDirection.z);
-    }
-
-    // Consume \\
-
-    public boolean consumeInventoryJustPressed() {
-        boolean val = inventoryJustPressed;
-        inventoryJustPressed = false;
-        return val;
+    public void captureCursor(boolean captured) {
+        Gdx.input.setCursorCatched(captured);
     }
 
     // Accessible \\
 
-    public boolean isLocked() {
-        return locked;
+    public boolean keyHeld(int keycode) {
+        return heldKeys.contains(keycode);
     }
 
-    public Vector2 getRotation() {
-        return rotation;
+    public boolean keyJustPressed(int keycode) {
+        return justPressedKeys.contains(keycode);
     }
 
-    public Vector3Int getInput() {
-        return input;
+    public Vector2 getMouseDelta() {
+        return mouseDelta;
+    }
+
+    public float getMouseX() {
+        return mouseX;
+    }
+
+    public float getMouseY() {
+        return mouseY;
     }
 
     public boolean isLeftClick() {
@@ -278,21 +181,5 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     public boolean isRawLeftClick() {
         return rawLeftClick;
-    }
-
-    public boolean isWalkHeld() {
-        return CTRL;
-    }
-
-    public boolean isSprintHeld() {
-        return SHIFT;
-    }
-
-    public float getMouseX() {
-        return mouseX;
-    }
-
-    public float getMouseY() {
-        return mouseY;
     }
 }

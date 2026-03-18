@@ -1,25 +1,44 @@
 package com.internal.bootstrap.physicspipeline.raycastmanager;
 
 import com.internal.bootstrap.physicspipeline.util.BlockCastStruct;
+import com.internal.bootstrap.physicspipeline.util.ScreenRayStruct;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class RaycastManager extends ManagerPackage {
 
     /*
-     * Owns block raycasting for the physics pipeline. Delegates all DDA
-     * traversal to BlockCastBranch and exposes a single typed cast method
-     * to the rest of the engine.
+     * Owns block raycasting and the current frame's screen-space ray. The
+     * ScreenRayStruct is pre-allocated — ScreenCastBranch writes to it each
+     * frame when a click is detected, zero allocation. Other systems read
+     * getScreenRay() and check hasScreenRay() to act on clicks. BlockCastBranch
+     * handles all DDA world-space traversal.
      */
 
-    // Internal
+    // Branches
     private BlockCastBranch blockCastBranch;
+    private ScreenCastBranch screenCastBranch;
+
+    // Screen Ray
+    private ScreenRayStruct screenRay;
+    private boolean hasScreenRay;
 
     // Internal \\
 
     @Override
     protected void create() {
+
+        // Branches
         this.blockCastBranch = create(BlockCastBranch.class);
+        this.screenCastBranch = create(ScreenCastBranch.class);
+
+        // Screen Ray
+        this.screenRay = new ScreenRayStruct();
+    }
+
+    @Override
+    protected void update() {
+        hasScreenRay = screenCastBranch.cast(screenRay);
     }
 
     // Accessible \\
@@ -31,5 +50,13 @@ public class RaycastManager extends ManagerPackage {
             float maxDistance,
             BlockCastStruct out) {
         blockCastBranch.cast(chunkCoordinate, rayOrigin, direction, maxDistance, out);
+    }
+
+    public ScreenRayStruct getScreenRay() {
+        return screenRay;
+    }
+
+    public boolean hasScreenRay() {
+        return hasScreenRay;
     }
 }

@@ -2,7 +2,7 @@ package com.internal.bootstrap.worldpipeline.chunkstreammanager;
 
 import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
-import com.internal.bootstrap.worldpipeline.gridmanager.GridInstance;
+import com.internal.bootstrap.worldpipeline.grid.GridInstance;
 import com.internal.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import com.internal.core.engine.BranchPackage;
 

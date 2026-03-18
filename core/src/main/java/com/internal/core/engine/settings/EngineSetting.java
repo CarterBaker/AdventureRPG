@@ -51,6 +51,10 @@ public class EngineSetting {
         public static final String UBO_JSON_PATH = "ubos";
         public static final String WORLD_TEXTURE_PATH = "worlds";
 
+        // Window \\
+
+        public static final String WINDOW_TITLE = "TerraArcana";
+
         // Scale \\
 
         public static final float BLOCK_SIZE = 1.0f;
@@ -133,11 +137,31 @@ public class EngineSetting {
 
         // UBOs \\
 
+        public static final String CAMERA_DATA_UBO = "CameraData";
+        public static final String ORTHO_DATA_UBO = "OrthoData";
         public static final String DIRECTIONAL_LIGHT_UBO = "DirectionalLightData";
         public static final String GRID_COORDINATE_UBO = "GridCoordinateData";
         public static final String ITEM_ROTATION_UBO = "ItemRotationData";
         public static final String PLAYER_POSITION_UBO = "PlayerPositionData";
         public static final String UBO_TIME_DATA_NAME = "TimeData";
+
+        // Camera UBO Uniforms \\
+
+        public static final String UNIFORM_CAM_PROJECTION = "u_projection";
+        public static final String UNIFORM_CAM_VIEW = "u_view";
+        public static final String UNIFORM_CAM_INVERSE_PROJECTION = "u_inverseProjection";
+        public static final String UNIFORM_CAM_INVERSE_VIEW = "u_inverseView";
+        public static final String UNIFORM_CAM_VIEW_PROJECTION = "u_viewProjection";
+        public static final String UNIFORM_CAM_POSITION = "u_cameraPosition";
+        public static final String UNIFORM_CAM_FOV = "u_cameraFOV";
+        public static final String UNIFORM_CAM_VIEWPORT = "u_viewport";
+        public static final String UNIFORM_CAM_NEAR_PLANE = "u_nearPlane";
+        public static final String UNIFORM_CAM_FAR_PLANE = "u_farPlane";
+
+        // Ortho UBO Uniforms \\
+
+        public static final String UNIFORM_ORTHO_PROJECTION = "u_orthoProjection";
+        public static final String UNIFORM_ORTHO_SCREEN_SIZE = "u_screenSize";
 
         // Time \\
 

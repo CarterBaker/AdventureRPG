@@ -15,41 +15,23 @@ import com.internal.core.engine.AssemblyPackage;
 
 public class BootstrapAssembly extends AssemblyPackage {
 
-    // BootStrap
-    private GeometryPipeline geometryPipeline;
-    private ShaderPipeline shaderPipeline;
-    private RenderPipeline renderPipeline;
-    private ItemPipeline itemPipeline;
-    private WorldPipeline worldPipeline;
-    private PhysicsPipeline physicsPipeline;
-    private InputPipeline inputPipeline;
-    private EntityPipeline entityPipeline;
-    private CalendarPipeline calendarPipeline;
-    private LightingPipeline lightingPipeline;
-    private MenuPipeline menuPipeline;
-
-    // BootStrap \\
+    /*
+     * Creates and owns all bootstrap pipelines in dependency order.
+     * Pure creation — no runtime logic, no draw delegation.
+     */
 
     @Override
     public void create() {
-
-        // BootStrap
-        this.geometryPipeline = create(GeometryPipeline.class);
-        this.shaderPipeline = create(ShaderPipeline.class);
-        this.renderPipeline = create(RenderPipeline.class);
-        this.itemPipeline = create(ItemPipeline.class);
-        this.worldPipeline = create(WorldPipeline.class);
-        this.physicsPipeline = create(PhysicsPipeline.class);
-        this.inputPipeline = create(InputPipeline.class);
-        this.entityPipeline = create(EntityPipeline.class);
-        this.calendarPipeline = create(CalendarPipeline.class);
-        this.lightingPipeline = create(LightingPipeline.class);
-        this.menuPipeline = create(MenuPipeline.class);
-    }
-
-    // Runtime \\
-
-    public void draw() {
-        this.renderPipeline.draw();
+        create(GeometryPipeline.class);
+        create(ShaderPipeline.class);
+        create(RenderPipeline.class);
+        create(ItemPipeline.class);
+        create(WorldPipeline.class);
+        create(PhysicsPipeline.class);
+        create(InputPipeline.class);
+        create(EntityPipeline.class);
+        create(CalendarPipeline.class);
+        create(LightingPipeline.class);
+        create(MenuPipeline.class);
     }
 }

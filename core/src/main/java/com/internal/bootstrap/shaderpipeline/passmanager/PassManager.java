@@ -1,12 +1,12 @@
 package com.internal.bootstrap.shaderpipeline.passmanager;
 
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
+import com.internal.bootstrap.renderpipeline.rendermanager.RenderManager;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.pass.PassData;
 import com.internal.bootstrap.shaderpipeline.pass.PassHandle;
 import com.internal.bootstrap.shaderpipeline.pass.PassInstance;
-import com.internal.bootstrap.renderpipeline.rendersystem.RenderSystem;
 import com.internal.core.engine.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -23,7 +23,7 @@ public class PassManager extends ManagerPackage {
 
     // Internal
     private MaterialManager materialManager;
-    private RenderSystem renderSystem;
+    private RenderManager renderSystem;
 
     // Palette
     private Object2IntOpenHashMap<String> passName2PassID;
@@ -43,7 +43,7 @@ public class PassManager extends ManagerPackage {
     @Override
     protected void get() {
         this.materialManager = get(MaterialManager.class);
-        this.renderSystem = get(RenderSystem.class);
+        this.renderSystem = get(RenderManager.class);
     }
 
     // Management \\

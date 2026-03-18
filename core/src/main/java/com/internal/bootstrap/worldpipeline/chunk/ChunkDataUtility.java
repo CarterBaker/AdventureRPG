@@ -1,6 +1,6 @@
 package com.internal.bootstrap.worldpipeline.chunk;
 
-import com.internal.bootstrap.worldpipeline.gridmanager.GridSlotDetailLevel;
+import com.internal.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import com.internal.core.engine.UtilityPackage;
 
 public final class ChunkDataUtility extends UtilityPackage {

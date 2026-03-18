@@ -5,6 +5,7 @@ import com.internal.bootstrap.entitypipeline.inventory.InventoryHandle;
 import com.internal.bootstrap.menupipeline.element.ElementInstance;
 import com.internal.bootstrap.menupipeline.menu.MenuInstance;
 import com.internal.bootstrap.menupipeline.menumanager.MenuManager;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.core.engine.BranchPackage;
 
 public class InventoryBranch extends BranchPackage {
@@ -12,7 +13,8 @@ public class InventoryBranch extends BranchPackage {
     /*
      * Handles open, close, and rebuild actions for the inventory menu. Holds
      * the active MenuInstance and drives slot injection from the entity's
-     * backpack contents.
+     * backpack contents. WindowInstance is passed by the caller so the menu
+     * is bound to the correct window.
      */
 
     // Internal
@@ -32,12 +34,12 @@ public class InventoryBranch extends BranchPackage {
 
     // Open / Close \\
 
-    public void openInventory(EntityInstance entity) {
+    public void openInventory(EntityInstance entity, WindowInstance window) {
 
         if (inventoryMenu != null)
             return;
 
-        inventoryMenu = menuManager.openMenu("Inventory/Inventory");
+        inventoryMenu = menuManager.openMenu("Inventory/Inventory", window);
         rebuildUI(entity.getInventoryHandle());
     }
 
@@ -49,12 +51,12 @@ public class InventoryBranch extends BranchPackage {
         inventoryMenu = menuManager.closeMenu(inventoryMenu);
     }
 
-    public void toggleInventory(EntityInstance entity) {
+    public void toggleInventory(EntityInstance entity, WindowInstance window) {
 
         if (inventoryMenu != null)
             closeInventory();
         else
-            openInventory(entity);
+            openInventory(entity, window);
     }
 
     public boolean isOpen() {
@@ -85,11 +87,8 @@ public class InventoryBranch extends BranchPackage {
     }
 
     private void injectSlot(String displayName) {
-
         menuManager.inject(inventoryMenu, 0, "Items/item_slot", el -> {
-
             ElementInstance label = el.findChildById("item_label");
-
             if (label != null)
                 label.getFontInstance().setText(displayName);
         });

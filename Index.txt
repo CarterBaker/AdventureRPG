@@ -581,7 +581,7 @@ C:.
 |   |               |   |   |       
 |   |               |   |   +---rendersystem
 |   |               |   |   |       GLSLUtility.class
-|   |               |   |   |       RenderSystem.class
+|   |               |   |   |       RenderManager.class
 |   |               |   |   |       
 |   |               |   |   \---util
 |   |               |   |           MaskStruct.class
@@ -1271,7 +1271,7 @@ C:.
 |   |   |                   |   |   |       
 |   |   |                   |   |   +---rendersystem
 |   |   |                   |   |   |       GLSLUtility.class
-|   |   |                   |   |   |       RenderSystem.class
+|   |   |                   |   |   |       RenderManager.class
 |   |   |                   |   |   |       
 |   |   |                   |   |   \---util
 |   |   |                   |   |           MaskStruct.class
@@ -1885,7 +1885,7 @@ C:.
 |   |       |               RenderBranch.class.uniqueId91
 |   |       |               RenderCallStruct.class.uniqueId248
 |   |       |               RenderPipeline.class.uniqueId156
-|   |       |               RenderSystem.class.uniqueId225
+|   |       |               RenderManager.class.uniqueId225
 |   |       |               Settings$Builder.class.uniqueId185
 |   |       |               Settings.class.uniqueId130
 |   |       |               SettingsDeserializer.class.uniqueId45
@@ -2239,7 +2239,7 @@ C:.
 |                       |   |   |       
 |                       |   |   +---rendersystem
 |                       |   |   |       GLSLUtility.java
-|                       |   |   |       RenderSystem.java
+|                       |   |   |       RenderManager.java
 |                       |   |   |       
 |                       |   |   \---util
 |                       |   |           MaskStruct.java

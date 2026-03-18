@@ -10,7 +10,7 @@ public class RenderBatchStruct extends StructPackage {
 
     /*
      * Groups render calls sharing the same material within one depth layer.
-     * Created on demand by RenderSystem the first time a material/depth combo
+     * Created on demand by RenderManager the first time a material/depth combo
      * is encountered. Source UBOs are lazily cached on first access — they are
      * owned by the MaterialHandle and never change after bootstrap.
      * The render call list is cleared after every draw flush.

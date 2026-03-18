@@ -1,6 +1,7 @@
-package com.internal.bootstrap.worldpipeline.gridmanager;
+package com.internal.bootstrap.worldpipeline.gridslot;
 
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
+import com.internal.bootstrap.worldpipeline.grid.GridInstance;
 import com.internal.core.engine.HandlePackage;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -33,7 +34,7 @@ public class GridSlotHandle extends HandlePackage {
 
     // Constructor \\
 
-    void constructor(
+    public void constructor(
             long gridCoordinate,
             UBOInstance slotUBO,
             float chunkDistanceFromCenter,

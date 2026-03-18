@@ -1,5 +1,7 @@
 package com.internal.core.engine;
 
+import com.internal.bootstrap.renderpipeline.rendermanager.RenderManager;
+import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.editor.runtime.RuntimeContext;
 
 public class EditorEngine extends EnginePackage {
@@ -17,6 +19,10 @@ public class EditorEngine extends EnginePackage {
     // Runtime
     private RuntimeContext runtimeContext;
 
+    // Render
+    private WindowManager windowManager;
+    private RenderManager renderSystem;
+
     // Bootstrap \\
 
     @Override
@@ -27,7 +33,7 @@ public class EditorEngine extends EnginePackage {
         this.editorBootstrapPipeline = create(com.internal.editor.bootstrap.BootstrapAssembly.class);
     }
 
-    // Runtime \\
+    // Create \\
 
     @Override
     protected void create() {
@@ -36,8 +42,21 @@ public class EditorEngine extends EnginePackage {
         this.runtimeContext = create(RuntimeContext.class);
     }
 
+    // Get \\
+
+    @Override
+    protected void get() {
+
+        // Render
+        this.windowManager = get(WindowManager.class);
+        this.renderSystem = get(RenderManager.class);
+    }
+
+    // Render \\
+
     @Override
     void draw() {
-        this.bootstrapAssembly.draw();
+        windowManager.setActiveWindow(windowManager.getMainWindow());
+        renderSystem.draw();
     }
 }
