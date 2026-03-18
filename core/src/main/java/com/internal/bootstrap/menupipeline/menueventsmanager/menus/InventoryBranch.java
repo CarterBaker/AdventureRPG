@@ -82,8 +82,10 @@ public class InventoryBranch extends BranchPackage {
         while (!list.getChildren().isEmpty())
             menuManager.eject(inventoryMenu, 0, list.getChildren().get(0));
 
-        for (int i = 0; i < inventory.getBackpack().size(); i++)
-            injectSlot(inventory.getBackpack().getItems().get(i).getItemName());
+        if (inventory.getBackpack() != null) {
+            for (int i = 0; i < inventory.getBackpack().size(); i++)
+                injectSlot(inventory.getBackpack().getItems().get(i).getItemName());
+        }
     }
 
     private void injectSlot(String displayName) {

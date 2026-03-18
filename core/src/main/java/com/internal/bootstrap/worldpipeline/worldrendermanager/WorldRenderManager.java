@@ -65,7 +65,7 @@ public class WorldRenderManager extends ManagerPackage {
     }
 
     @Override
-    protected void update() {
+    protected void lateUpdate() {
         renderWorld();
     }
 
