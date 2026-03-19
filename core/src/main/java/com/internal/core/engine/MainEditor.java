@@ -1,7 +1,6 @@
 package com.internal.core.engine;
 
 import java.io.File;
-
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
@@ -20,6 +19,7 @@ public class MainEditor extends Game {
     private final File GAME_DIRECTORY;
     private final Settings settings;
     private final Gson gson;
+    private final WindowPlatform windowPlatform;
 
     // Internal
     private EditorEngine internal;
@@ -29,12 +29,14 @@ public class MainEditor extends Game {
     public MainEditor(
             File GAME_DIRECTORY,
             Settings settings,
-            Gson gson) {
+            Gson gson,
+            WindowPlatform windowPlatform) {
 
         // Root
         this.GAME_DIRECTORY = GAME_DIRECTORY;
         this.settings = settings;
         this.gson = gson;
+        this.windowPlatform = windowPlatform;
     }
 
     @Override
@@ -45,12 +47,10 @@ public class MainEditor extends Game {
                 settings,
                 this,
                 GAME_DIRECTORY,
-                gson);
-
+                gson,
+                windowPlatform);
         this.internal = new EditorEngine();
-
         EnginePackage.ENGINE_STRUCT.remove();
-
         internal.execute();
     }
 
@@ -94,9 +94,7 @@ public class MainEditor extends Game {
         File settingsFile = new File(GAME_DIRECTORY, "settings.json");
 
         if (settingsFile.exists()) {
-
             boolean deleted = settingsFile.delete();
-
             if (!deleted)
                 UtilityPackage.throwException("File: " + settingsFile.getName() + ", Failed to delete on editor close");
         }

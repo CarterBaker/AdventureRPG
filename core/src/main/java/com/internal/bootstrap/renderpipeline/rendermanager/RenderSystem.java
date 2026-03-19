@@ -1,9 +1,3 @@
-// MOVED FROM: com.internal.bootstrap.renderpipeline.rendersystem
-// MOVED TO:   com.internal.bootstrap.renderpipeline.rendermanager
-//
-// No logic changes. Package declaration updated only.
-// RenderManager calls draw() directly — no longer called from GameEngine.
-
 package com.internal.bootstrap.renderpipeline.rendermanager;
 
 import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
@@ -18,8 +12,8 @@ import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
+import com.internal.core.engine.ContextPackage;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -27,41 +21,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RenderSystem extends SystemPackage {
 
     /*
-     * Collects render calls each frame sorted by depth and material, then
-     * flushes them to the GPU in draw(). Viewport dimensions come from the
-     * active window on WindowManager. Camera data is already pushed to the
-     * shared UBO by CameraBufferSystem before draw() fires — RenderSystem
-     * has no camera knowledge. Zero allocation per frame after warmup.
+     * Stateless with respect to render queues — all per-frame call and batch
+     * state lives in RenderQueueHandle on each ContextPackage. pushRenderCall()
+     * resolves the active window's context and writes into its queue. draw()
+     * reads that window's context queue, flushes to GPU, then clears it.
+     * Zero allocation per frame after warmup.
      */
 
     // Internal
     private WindowManager windowManager;
     private CompositeRenderSystem compositeRenderSystem;
 
-    // Palette — lookup
-    private Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>> depth2MaterialBatches;
-
-    // Palette — iteration
-    private IntArrayList sortedDepths;
-    private Int2ObjectOpenHashMap<ObjectArrayList<RenderBatchStruct>> depth2BatchList;
-
-    // Render Call Buffer
-    private RenderCallStruct[] renderCallBuffer;
-    private int renderCallCursor;
-
     // Internal \\
-
-    @Override
-    protected void create() {
-
-        this.depth2MaterialBatches = new Int2ObjectOpenHashMap<>();
-        this.sortedDepths = new IntArrayList();
-        this.depth2BatchList = new Int2ObjectOpenHashMap<>();
-
-        this.renderCallBuffer = new RenderCallStruct[EngineSetting.MAX_RENDER_CALLS_PER_FRAME];
-        for (int i = 0; i < renderCallBuffer.length; i++)
-            renderCallBuffer[i] = new RenderCallStruct();
-    }
 
     @Override
     protected void get() {
@@ -80,11 +51,16 @@ class RenderSystem extends SystemPackage {
 
     // Draw \\
 
-    void draw() {
+    void draw(WindowInstance window) {
 
-        WindowInstance window = windowManager.getActiveWindow();
+        ContextPackage context = window.getContext();
 
-        renderCallCursor = 0;
+        if (context == null)
+            return;
+
+        RenderQueueHandle queue = context.getRenderQueueHandle();
+
+        queue.renderCallCursor = 0;
 
         GLSLUtility.setViewport(
                 window.getWidth(),
@@ -92,8 +68,8 @@ class RenderSystem extends SystemPackage {
 
         GLSLUtility.clearBuffer();
 
-        int[] depths = sortedDepths.elements();
-        int depthCount = sortedDepths.size();
+        int[] depths = queue.sortedDepths.elements();
+        int depthCount = queue.sortedDepths.size();
 
         for (int d = 0; d < depthCount; d++) {
 
@@ -101,7 +77,7 @@ class RenderSystem extends SystemPackage {
 
             GLSLUtility.clearDepthBuffer();
 
-            ObjectArrayList<RenderBatchStruct> batchList = depth2BatchList.get(depth);
+            ObjectArrayList<RenderBatchStruct> batchList = queue.depth2BatchList.get(depth);
             Object[] batchElements = batchList.elements();
             int batchCount = batchList.size();
 
@@ -213,31 +189,39 @@ class RenderSystem extends SystemPackage {
         GLSLUtility.unbindVAO();
     }
 
-    // Accessible \\
+    // Push \\
 
-    public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer) {
+    void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer) {
         compositeRenderSystem.submit(material, buffer);
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, int depth) {
+    void pushRenderCall(ModelInstance modelInstance, int depth) {
         pushRenderCall(modelInstance, depth, null);
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, int depth, MaskStruct mask) {
+    void pushRenderCall(ModelInstance modelInstance, int depth, MaskStruct mask) {
 
-        RenderCallStruct renderCall = renderCallBuffer[renderCallCursor++];
+        WindowInstance window = windowManager.getActiveWindow();
+        ContextPackage context = window.getContext();
+
+        if (context == null)
+            return;
+
+        RenderQueueHandle queue = context.getRenderQueueHandle();
+
+        RenderCallStruct renderCall = queue.nextCall();
         renderCall.init(modelInstance, mask);
 
         MaterialInstance material = modelInstance.getMaterial();
         int materialID = material.getMaterialID();
 
-        Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = depth2MaterialBatches.get(depth);
+        Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = queue.depth2MaterialBatches.get(depth);
 
         if (materialBatches == null) {
             materialBatches = new Int2ObjectOpenHashMap<>();
-            depth2MaterialBatches.put(depth, materialBatches);
-            insertDepthSorted(depth);
-            depth2BatchList.put(depth, new ObjectArrayList<>());
+            queue.depth2MaterialBatches.put(depth, materialBatches);
+            insertDepthSorted(queue, depth);
+            queue.depth2BatchList.put(depth, new ObjectArrayList<>());
         }
 
         RenderBatchStruct batch = materialBatches.get(materialID);
@@ -245,7 +229,7 @@ class RenderSystem extends SystemPackage {
         if (batch == null) {
             batch = new RenderBatchStruct(material);
             materialBatches.put(materialID, batch);
-            depth2BatchList.get(depth).add(batch);
+            queue.depth2BatchList.get(depth).add(batch);
         }
 
         batch.addRenderCall(renderCall);
@@ -253,18 +237,18 @@ class RenderSystem extends SystemPackage {
 
     // Depth Ordering \\
 
-    private void insertDepthSorted(int depth) {
+    private void insertDepthSorted(RenderQueueHandle queue, int depth) {
 
-        int[] elements = sortedDepths.elements();
-        int size = sortedDepths.size();
+        int[] elements = queue.sortedDepths.elements();
+        int size = queue.sortedDepths.size();
 
         for (int i = 0; i < size; i++) {
             if (depth < elements[i]) {
-                sortedDepths.add(i, depth);
+                queue.sortedDepths.add(i, depth);
                 return;
             }
         }
 
-        sortedDepths.add(depth);
+        queue.sortedDepths.add(depth);
     }
 }

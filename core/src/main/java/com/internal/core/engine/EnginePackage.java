@@ -47,6 +47,7 @@ public class EnginePackage extends ManagerPackage {
     public final Game game;
     public final File path;
     public final Gson gson;
+    public final WindowPlatform windowPlatform;
 
     // Internal
     private Screen screen;
@@ -87,6 +88,7 @@ public class EnginePackage extends ManagerPackage {
         this.game = data.game;
         this.path = data.path;
         this.gson = data.gson;
+        this.windowPlatform = data.windowPlatform;
 
         // Internal
         this.screen = null;
@@ -111,9 +113,9 @@ public class EnginePackage extends ManagerPackage {
     static final class EngineStruct extends StructPackage {
 
         /*
-         * A container used to ensure proper engine creation from `Main`. Used
-         * to bypass constructor related timing issues and to ensure that things
-         * settings are able to be called easily without using a get method.
+         * A container used to ensure proper engine creation from Main or MainEditor.
+         * Bypasses constructor timing issues and carries all root references through
+         * to EnginePackage in one shot.
          */
 
         // Internal
@@ -121,6 +123,7 @@ public class EnginePackage extends ManagerPackage {
         final Game game;
         final File path;
         final Gson gson;
+        final WindowPlatform windowPlatform;
 
         // Internal \\
 
@@ -128,13 +131,15 @@ public class EnginePackage extends ManagerPackage {
                 Settings settings,
                 Game game,
                 File path,
-                Gson gson) {
+                Gson gson,
+                WindowPlatform windowPlatform) {
 
             // Internal
             this.settings = settings;
             this.game = game;
             this.path = path;
             this.gson = gson;
+            this.windowPlatform = windowPlatform;
         }
     }
 
@@ -142,13 +147,15 @@ public class EnginePackage extends ManagerPackage {
             Settings settings,
             Game game,
             File path,
-            Gson gson) {
+            Gson gson,
+            WindowPlatform windowPlatform) {
         ENGINE_STRUCT.set(
                 new EngineStruct(
                         settings,
                         game,
                         path,
-                        gson));
+                        gson,
+                        windowPlatform));
     }
 
     // Engine State \\
@@ -163,12 +170,12 @@ public class EnginePackage extends ManagerPackage {
 
     // System Context \\
 
-    @Override // From `SystemPackage`
+    @Override
     final void setContext(SystemContext targetContext) {
         this.internalContext = targetContext;
     }
 
-    @Override // From `SystemPackage`
+    @Override
     boolean verifyContext(SystemContext targetContext) {
         this.setContext(targetContext);
         return true;
@@ -184,7 +191,7 @@ public class EnginePackage extends ManagerPackage {
 
     // System Release \\
 
-    @Override // From `ManagerPackage`
+    @Override
     final void clearGarbage() {
 
         if (this.garbageCollection.isEmpty())
@@ -450,7 +457,7 @@ public class EnginePackage extends ManagerPackage {
 
     // Create \\
 
-    @Override // From `ManagerPackage`
+    @Override
     protected final void internalCreate() {
         this.setContext(SystemContext.CREATE);
         super.internalCreate();
@@ -466,7 +473,7 @@ public class EnginePackage extends ManagerPackage {
             this.systemArray[i].internalGet();
     }
 
-    @Override // From `ManagerPackage`
+    @Override
     protected final void internalGet() {
         this.setContext(SystemContext.GET);
         super.internalGet();
@@ -482,7 +489,7 @@ public class EnginePackage extends ManagerPackage {
             this.systemArray[i].internalAwake();
     }
 
-    @Override // From `ManagerPackage`
+    @Override
     protected final void internalAwake() {
         this.setContext(SystemContext.AWAKE);
         super.internalAwake();
@@ -500,7 +507,7 @@ public class EnginePackage extends ManagerPackage {
         this.clearGarbage();
     }
 
-    @Override // From `ManagerPackage`
+    @Override
     protected final void internalRelease() {
         this.setContext(SystemContext.RELEASE);
         super.internalRelease();
@@ -508,7 +515,7 @@ public class EnginePackage extends ManagerPackage {
 
     // Start \\
 
-    @Override // From `ManagerPackage`
+    @Override
     protected final void internalStart() {
         this.setContext(SystemContext.START);
         super.internalStart();
@@ -516,7 +523,7 @@ public class EnginePackage extends ManagerPackage {
 
     // Update \\
 
-    @Override // From `ManagerPackage`
+    @Override
     protected final void internalUpdate() {
 
         this.frameTimeMillis = Instant.now().toEpochMilli();
@@ -531,7 +538,7 @@ public class EnginePackage extends ManagerPackage {
 
     // Fixed Update \\
 
-    @Override // From `ManagerPackage`
+    @Override
     protected final void internalFixedUpdate() {
 
         this.elapsedTime += deltaTime;
@@ -553,7 +560,7 @@ public class EnginePackage extends ManagerPackage {
 
     // Late Update \\
 
-    @Override // From `ManagerPackage`
+    @Override
     protected final void internalLateUpdate() {
 
         this.setContext(SystemContext.LATE_UPDATE);
@@ -566,15 +573,18 @@ public class EnginePackage extends ManagerPackage {
 
     // Render \\
 
-    @Override // From `ManagerPackage`
+    @Override
     protected final void internalRender() {
 
         this.setContext(SystemContext.RENDER);
 
         super.internalRender();
 
-        for (int i = 0; i < this.contextArray.length; i++)
+        for (int i = 0; i < this.contextArray.length; i++) {
+            if (this.contextArray[i].hasWindow())
+                getUnchecked(WindowManager.class).setActiveWindow(this.contextArray[i].getWindow());
             this.contextArray[i].internalRender();
+        }
     }
 
     // Draw \\
@@ -590,7 +600,7 @@ public class EnginePackage extends ManagerPackage {
 
     // Dispose \\
 
-    @Override // From `ManagerPackage`
+    @Override
     protected final void internalDispose() {
 
         this.setContext(SystemContext.DISPOSE);

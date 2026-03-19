@@ -5,8 +5,9 @@ import com.internal.core.engine.DataPackage;
 public class WindowData extends DataPackage {
 
         /*
-         * Raw window state. Holds the window ID assigned at creation, current
-         * dimensions, and display title. Created with new — owned by WindowInstance.
+         * Raw data payload for a WindowInstance. Stores identity and dimensions.
+         * Width and height are mutable — updated by WindowInstance on resize.
+         * Window ID is assigned at creation time and never changes.
          */
 
         // Identity
@@ -17,7 +18,7 @@ public class WindowData extends DataPackage {
         private int width;
         private int height;
 
-        // Constructor \\
+        // Internal \\
 
         public WindowData(
                         int windowID,

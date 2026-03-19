@@ -13,13 +13,13 @@ import com.internal.core.engine.ManagerPackage;
 public class RenderManager extends ManagerPackage {
 
     /*
-     * Coordinates a single draw pass. Delegates camera UBO upload to
-     * CameraManager then flushes all queued render calls via RenderSystem.
-     * Exposes pushRenderCall() and pushCompositeCall() as the public surface
-     * for all systems that submit geometry — RenderSystem is package-private.
-     * Depth parameter controls pass ordering — lower depth renders first.
-     * draw(WindowInstance) overload sets the active window, used for detached
-     * windows.
+     * Coordinates a single draw pass per window. Exposes createRenderQueue()
+     * so ContextPackage can allocate its own RenderQueueHandle on awake.
+     * pushRenderCall() and pushCompositeCall() are the public surface for all
+     * systems that submit geometry — they always write into the active window's
+     * context queue. draw() resolves the active window and flushes its queue.
+     * draw(WindowInstance) sets the target explicitly — used by detached windows
+     * from their own ApplicationListener.render() callback.
      */
 
     // Internal
@@ -45,14 +45,20 @@ public class RenderManager extends ManagerPackage {
         this.windowManager = get(WindowManager.class);
     }
 
+    // Queue \\
+
+    public RenderQueueHandle createRenderQueue() {
+        RenderQueueHandle handle = create(RenderQueueHandle.class);
+        handle.constructor();
+        return handle;
+    }
+
     // Draw \\
 
     public void draw() {
-
         WindowInstance window = windowManager.getActiveWindow();
-
         cameraManager.pushCamera(window);
-        renderSystem.draw();
+        renderSystem.draw(window);
     }
 
     public void draw(WindowInstance window) {

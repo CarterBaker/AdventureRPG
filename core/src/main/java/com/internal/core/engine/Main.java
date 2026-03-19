@@ -1,7 +1,6 @@
 package com.internal.core.engine;
 
 import java.io.File;
-
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.google.gson.Gson;
@@ -25,6 +24,7 @@ public class Main extends Game {
     private final File GAME_DIRECTORY;
     private final Settings settings;
     private final Gson gson;
+    private final WindowPlatform windowPlatform;
 
     // Internal
     private GameEngine internal;
@@ -34,12 +34,14 @@ public class Main extends Game {
     public Main(
             File GAME_DIRECTORY,
             Settings settings,
-            Gson gson) {
+            Gson gson,
+            WindowPlatform windowPlatform) {
 
         // Root
         this.GAME_DIRECTORY = GAME_DIRECTORY;
         this.settings = settings;
         this.gson = gson;
+        this.windowPlatform = windowPlatform;
     }
 
     @Override
@@ -50,22 +52,17 @@ public class Main extends Game {
                 settings,
                 this,
                 GAME_DIRECTORY,
-                gson);
-
+                gson,
+                windowPlatform);
         this.internal = new GameEngine();
-
         EnginePackage.ENGINE_STRUCT.remove();
-
         internal.execute();
     }
 
     @Override
     public void render() {
-
         setDeltaTime();
-
         super.render();
-
         internal.execute();
     }
 
@@ -76,8 +73,8 @@ public class Main extends Game {
         internal.setInternalState(EngineState.EXIT);
 
         // Settings
-        HandleGameWindow();
-        HandleSettingsFile();
+        handleGameWindow();
+        handleSettingsFile();
 
         // Game
         super.dispose();
@@ -85,19 +82,16 @@ public class Main extends Game {
 
     // Utility \\
 
-    // Set the games delta time for ease of access across all systems
     private void setDeltaTime() {
         internal.setDeltaTime(Gdx.graphics.getDeltaTime());
     }
 
-    // Close the main window on game close
-    private void HandleGameWindow() {
+    private void handleGameWindow() {
         if (getScreen() != null)
             getScreen().dispose();
     }
 
-    // Save the window size to the settings file
-    private void HandleSettingsFile() {
+    private void handleSettingsFile() {
 
         if (!settings.debug)
             return;
@@ -105,9 +99,7 @@ public class Main extends Game {
         File settingsFile = new File(GAME_DIRECTORY, "settings.json");
 
         if (settingsFile.exists()) {
-
             boolean deleted = settingsFile.delete();
-
             if (!deleted)
                 UtilityPackage.throwException("File: " + settingsFile.getName() + ", Failed to delete on editor close");
         }

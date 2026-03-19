@@ -11,7 +11,9 @@ public class WindowManager extends ManagerPackage {
      * bootstrap by EnginePackage after the bootstrap pipelines are created.
      * Window IDs are assigned sequentially — main is always 0, detached windows
      * increment from 1. The active window is set before each draw pass so
-     * RenderSystem and CameraBufferSystem read from the correct window each frame.
+     * RenderSystem reads from the correct window each frame. Detached windows
+     * are opened as real OS windows via internal.windowPlatform on registration —
+     * no backend imports live here.
      */
 
     // Windows
@@ -40,6 +42,7 @@ public class WindowManager extends ManagerPackage {
 
     public void registerDetachedWindow(WindowInstance window) {
         windows.add(window);
+        internal.windowPlatform.openWindow(window);
     }
 
     public void removeWindow(WindowInstance window) {
