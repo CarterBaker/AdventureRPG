@@ -41,6 +41,7 @@ public class Lwjgl3LauncherEditor {
             @Override
             public boolean closeRequested() {
                 saveWindowInfoOnClose(settingsFile, settings);
+                Gdx.app.exit();
                 return true;
             }
         });
