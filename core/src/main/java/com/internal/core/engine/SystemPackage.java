@@ -1,7 +1,6 @@
 package com.internal.core.engine;
 
 import java.util.concurrent.Future;
-
 import com.internal.core.engine.settings.Settings;
 import com.internal.core.kernel.syncconsumer.AsyncStructConsumer;
 import com.internal.core.kernel.syncconsumer.AsyncStructConsumerMulti;
@@ -33,13 +32,19 @@ public abstract class SystemPackage extends EngineUtility {
     public final EnginePackage internal;
     public final ManagerPackage local;
 
+    // Context
+    //
+    // Automatically assigned when this system is created under a ContextPackage,
+    // or inherited from the owning manager when nested deeper in the hierarchy.
+    // Access via context.getWindow() — never reach for WindowManager directly.
+    protected ContextPackage context;
+
     // Internal
     SystemContext internalContext;
 
     // Internal \\
 
     protected SystemPackage(Settings settings) {
-
         // Main
         this.settings = settings;
         this.internal = (EnginePackage) this;
@@ -50,13 +55,10 @@ public abstract class SystemPackage extends EngineUtility {
     }
 
     protected SystemPackage() {
-
         // Core
         SystemStruct data = SYSTEM_STRUCT.get();
-
         if (data == null)
             throwException("Systems must be created via internal engine `create` method");
-
         if (data.settings == null || data.internal == null || data.local == null)
             throwException("SystemData was incomplete during system creation");
 
@@ -110,19 +112,15 @@ public abstract class SystemPackage extends EngineUtility {
     }
 
     void setContext(SystemContext targetContext) {
-
         if (!targetContext.canEnterFrom(this.internalContext.order))
             throwException("Firing order issue. Internal engine attempted to perform an illegal context set.");
-
         this.internalContext = targetContext;
     }
 
     boolean verifyContext(SystemContext targetContext) {
-
         if (this.internal.internalContext != targetContext
                 || !targetContext.canEnterFrom(this.internalContext.order))
             return false;
-
         this.setContext(targetContext);
         return true;
     }
@@ -131,37 +129,24 @@ public abstract class SystemPackage extends EngineUtility {
 
     @SuppressWarnings("unchecked")
     protected <T extends EngineUtility> T create(Class<T> targetClass) {
-
         if (InstancePackage.class.isAssignableFrom(targetClass))
             return (T) this.createInstance((Class<? extends InstancePackage>) targetClass);
-
         return throwException(
                 "SystemPackage can only create InstancePackage types.");
     }
 
     final <T extends InstancePackage> T createInstance(Class<T> instanceClass) {
-
         try {
-
             InstancePackage.setupConstructor(this.internal, this);
-
             T instance = instanceClass.getDeclaredConstructor().newInstance();
-
             instance.internalCreate();
             instance.internalGet();
             instance.internalAwake();
-
             return instance;
-        }
-
-        catch (Exception e) {
-
+        } catch (Exception e) {
             throwException("Failed to create instance: " + e.getMessage());
-
             return null;
-        }
-
-        finally {
+        } finally {
             InstancePackage.CREATION_STRUCT.remove();
         }
     }
@@ -215,10 +200,8 @@ public abstract class SystemPackage extends EngineUtility {
     // Create \\
 
     void internalCreate() {
-
         if (!this.verifyContext(SystemContext.CREATE))
             return;
-
         this.create();
     }
 
@@ -228,10 +211,8 @@ public abstract class SystemPackage extends EngineUtility {
     // Get \\
 
     void internalGet() {
-
         if (!this.verifyContext(SystemContext.GET))
             return;
-
         this.get();
     }
 
@@ -241,10 +222,8 @@ public abstract class SystemPackage extends EngineUtility {
     // Awake \\
 
     void internalAwake() {
-
         if (!this.verifyContext(SystemContext.AWAKE))
             return;
-
         this.awake();
     }
 
@@ -254,10 +233,8 @@ public abstract class SystemPackage extends EngineUtility {
     // FreeMemory \\
 
     void internalRelease() {
-
         if (!this.verifyContext(SystemContext.RELEASE))
             return;
-
         this.release();
     }
 
@@ -267,10 +244,8 @@ public abstract class SystemPackage extends EngineUtility {
     // Start \\
 
     void internalStart() {
-
         if (!this.verifyContext(SystemContext.START))
             return;
-
         this.start();
     }
 
@@ -280,10 +255,8 @@ public abstract class SystemPackage extends EngineUtility {
     // Update \\
 
     void internalUpdate() {
-
         if (!this.verifyContext(SystemContext.UPDATE))
             return;
-
         this.update();
     }
 
@@ -293,10 +266,8 @@ public abstract class SystemPackage extends EngineUtility {
     // Fixed Update \\
 
     void internalFixedUpdate() {
-
         if (!this.verifyContext(SystemContext.FIXED_UPDATE))
             return;
-
         this.fixedUpdate();
     }
 
@@ -306,10 +277,8 @@ public abstract class SystemPackage extends EngineUtility {
     // Late Update \\
 
     void internalLateUpdate() {
-
         if (!this.verifyContext(SystemContext.LATE_UPDATE))
             return;
-
         this.lateUpdate();
     }
 
@@ -319,10 +288,8 @@ public abstract class SystemPackage extends EngineUtility {
     // Render \\
 
     void internalRender() {
-
         if (!this.verifyContext(SystemContext.RENDER))
             return;
-
         this.render();
     }
 
@@ -332,10 +299,8 @@ public abstract class SystemPackage extends EngineUtility {
     // Dispose \\
 
     void internalDispose() {
-
         if (!this.verifyContext(SystemContext.DISPOSE))
             return;
-
         this.dispose();
     }
 

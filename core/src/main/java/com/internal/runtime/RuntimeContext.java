@@ -13,6 +13,10 @@ public class RuntimeContext extends ContextPackage {
      * Game runtime entry point. Creates and owns all runtime systems.
      * Runs after bootstrap is complete — all managers and handles are
      * available. Each system is responsible for its own startup logic.
+     *
+     * The window this context targets is set via setWindow() before the
+     * context starts. The editor calls setWindow() with its preview panel
+     * window — every system inside then targets that window without change.
      */
 
     // Runtime
@@ -22,7 +26,7 @@ public class RuntimeContext extends ContextPackage {
     private WorldSystem worldSystem;
     private PlayerInputSystem playerInputSystem;
 
-    // Runtime \\
+    // Internal \\
 
     @Override
     protected void create() {

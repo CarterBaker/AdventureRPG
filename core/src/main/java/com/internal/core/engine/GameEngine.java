@@ -48,6 +48,15 @@ public class GameEngine extends EnginePackage {
         this.renderManager = get(RenderManager.class);
     }
 
+    // Awake \\
+
+    @Override
+    protected void awake() {
+
+        // Render
+        this.runtimeContext.setWindow(windowManager.getMainWindow());
+    }
+
     // Render \\
 
     @Override

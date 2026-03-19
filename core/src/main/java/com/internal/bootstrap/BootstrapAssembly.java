@@ -26,10 +26,10 @@ public class BootstrapAssembly extends AssemblyPackage {
         create(ShaderPipeline.class);
         create(RenderPipeline.class);
         create(ItemPipeline.class);
-        create(WorldPipeline.class);
         create(PhysicsPipeline.class);
         create(InputPipeline.class);
         create(EntityPipeline.class);
+        create(WorldPipeline.class);
         create(CalendarPipeline.class);
         create(LightingPipeline.class);
         create(MenuPipeline.class);
