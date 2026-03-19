@@ -7,21 +7,23 @@ import com.internal.editor.runtime.RuntimeContext;
 public class EditorEngine extends EnginePackage {
 
     /*
-     * EditorEngine defines the concrete editor engine instance.
-     * Registers editor-specific pipelines and managers, and routes
-     * execution from MainEditor to internal systems.
+     * EditorEngine defines the concrete editor engine instance. Bootstraps
+     * both the shared game pipeline and the editor-specific pipeline via
+     * their respective BootstrapAssemblies, then creates the editor context
+     * paired with the main window in awake() after get() has resolved
+     * the window manager.
      */
 
     // Bootstrap
     private com.internal.bootstrap.BootstrapAssembly bootstrapAssembly;
-    private com.internal.editor.bootstrap.BootstrapAssembly editorBootstrapPipeline;
+    private com.internal.editor.bootstrap.BootstrapAssembly editorBootstrapAssembly;
 
     // Runtime
     private RuntimeContext runtimeContext;
 
     // Render
     private WindowManager windowManager;
-    private RenderManager renderSystem;
+    private RenderManager renderManager;
 
     // Bootstrap \\
 
@@ -30,16 +32,7 @@ public class EditorEngine extends EnginePackage {
 
         // Bootstrap
         this.bootstrapAssembly = create(com.internal.bootstrap.BootstrapAssembly.class);
-        this.editorBootstrapPipeline = create(com.internal.editor.bootstrap.BootstrapAssembly.class);
-    }
-
-    // Create \\
-
-    @Override
-    protected void create() {
-
-        // Runtime
-        this.runtimeContext = create(RuntimeContext.class);
+        this.editorBootstrapAssembly = create(com.internal.editor.bootstrap.BootstrapAssembly.class);
     }
 
     // Get \\
@@ -49,7 +42,14 @@ public class EditorEngine extends EnginePackage {
 
         // Render
         this.windowManager = get(WindowManager.class);
-        this.renderSystem = get(RenderManager.class);
+        this.renderManager = get(RenderManager.class);
+    }
+
+    // Awake \\
+
+    @Override
+    protected void awake() {
+        this.runtimeContext = createContext(RuntimeContext.class, windowManager.getMainWindow());
     }
 
     // Render \\
@@ -57,6 +57,6 @@ public class EditorEngine extends EnginePackage {
     @Override
     void draw() {
         windowManager.setActiveWindow(windowManager.getMainWindow());
-        renderSystem.draw();
+        renderManager.draw();
     }
 }

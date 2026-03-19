@@ -118,9 +118,17 @@ public abstract class SystemPackage extends EngineUtility {
     }
 
     boolean verifyContext(SystemContext targetContext) {
-        if (this.internal.internalContext != targetContext
+
+        // Systems inside a context answer to the context, not the engine.
+        // Systems outside a context answer to the engine as before.
+        SystemPackage authority = (this.context != null)
+                ? (SystemPackage) this.context
+                : this.internal;
+
+        if (authority.internalContext != targetContext
                 || !targetContext.canEnterFrom(this.internalContext.order))
             return false;
+
         this.setContext(targetContext);
         return true;
     }
@@ -155,7 +163,14 @@ public abstract class SystemPackage extends EngineUtility {
 
     @SuppressWarnings("unchecked")
     protected <T> T get(Class<T> type) {
-        return this.internal.get(false, type);
+
+        if (this.context != null) {
+            T local = this.context.getLocal(type);
+            if (local != null)
+                return local;
+        }
+
+        return this.internal.get(true, type);
     }
 
     // Thread Management \\
@@ -230,7 +245,7 @@ public abstract class SystemPackage extends EngineUtility {
     protected void awake() {
     }
 
-    // FreeMemory \\
+    // Release \\
 
     void internalRelease() {
         if (!this.verifyContext(SystemContext.RELEASE))

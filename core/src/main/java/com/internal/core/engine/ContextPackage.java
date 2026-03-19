@@ -1,24 +1,70 @@
 package com.internal.core.engine;
 
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public abstract class ContextPackage extends ManagerPackage {
 
     /*
-     * Base class for all render contexts. A context is owned by a window and
-     * tells the render system what surface to draw to. Every window — main or
-     * detached — holds a ContextPackage that defines its render target and the
-     * systems responsible for populating it each frame.
+     * Base class for all render contexts. Permanently paired with a window at
+     * creation time — both sides hold a reference to each other. Pairing is
+     * enforced by EnginePackage.createContext() and cannot change after creation.
+     * Systems inside a context call context.getWindow() to reach their render
+     * target without knowing which window they are targeting.
      *
-     * Systems created within a context automatically receive a reference back
-     * to it via SystemPackage.context. They call context.getWindow() without
-     * knowing which window they are targeting. The editor reuses RuntimeContext
-     * unchanged — it just calls setWindow() with its preview panel window before
-     * the context starts, and every system inside behaves identically.
+     * Contexts are self-sovereign: their lifecycle phase advances independently
+     * of the engine's global phase. CREATE, GET, AWAKE, and RELEASE fire
+     * immediately on createContext(). START fires on the next frame before the
+     * first update cycle. Context-owned systems are stored in a local registry
+     * and are not globally visible — cross-context system access is not supported.
      */
 
     // Window
     private WindowInstance window;
+
+    // Local Registry
+    private Object2ObjectOpenHashMap<Class<?>, SystemPackage> localRegistry;
+
+    // Lifecycle
+    boolean pendingStart;
+
+    // Internal \\
+
+    protected ContextPackage() {
+        super();
+        this.localRegistry = new Object2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    boolean verifyContext(SystemContext targetContext) {
+
+        if (!targetContext.canEnterFrom(this.internalContext.order))
+            return false;
+
+        this.internalContext = targetContext;
+        return true;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected <T extends SystemPackage> T registerSystem(T systemPackage) {
+
+        if (this.localRegistry.containsKey(systemPackage.getClass()))
+            throwException(
+                    "System already registered in this context.\n" +
+                            "System: " + systemPackage.getClass().getSimpleName());
+
+        this.localRegistry.put(systemPackage.getClass(), systemPackage);
+        this.systemCollection.add(systemPackage);
+        systemPackage.context = this;
+
+        return systemPackage;
+    }
+
+    @SuppressWarnings("unchecked")
+    <T> T getLocal(Class<T> type) {
+        return (T) this.localRegistry.get(type);
+    }
 
     // Accessible \\
 
@@ -26,7 +72,7 @@ public abstract class ContextPackage extends ManagerPackage {
         return window;
     }
 
-    public void setWindow(WindowInstance window) {
+    void setWindow(WindowInstance window) {
         this.window = window;
     }
 

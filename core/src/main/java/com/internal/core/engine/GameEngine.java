@@ -9,9 +9,10 @@ public class GameEngine extends EnginePackage {
 
     /*
      * GameEngine defines the concrete game engine instance. Bootstraps all
-     * pipelines and managers via BootstrapAssembly, then creates the game
-     * runtime context. windowManager and renderManager are resolved in start()
-     * not get() — bootstrap must be complete before they exist in the registry.
+     * pipelines and managers via BootstrapAssembly, then creates and pairs
+     * the runtime context with the main window in awake() — after get() has
+     * resolved the window manager. createContext() fires CREATE, GET, AWAKE,
+     * and RELEASE on the context immediately, then START on the next frame.
      */
 
     // Bootstrap
@@ -31,13 +32,6 @@ public class GameEngine extends EnginePackage {
         this.bootstrapAssembly = create(BootstrapAssembly.class);
     }
 
-    // Create \\
-
-    @Override
-    protected void create() {
-        this.runtimeContext = create(RuntimeContext.class);
-    }
-
     // Get \\
 
     @Override
@@ -52,9 +46,7 @@ public class GameEngine extends EnginePackage {
 
     @Override
     protected void awake() {
-
-        // Render
-        this.runtimeContext.setWindow(windowManager.getMainWindow());
+        this.runtimeContext = createContext(RuntimeContext.class, windowManager.getMainWindow());
     }
 
     // Render \\

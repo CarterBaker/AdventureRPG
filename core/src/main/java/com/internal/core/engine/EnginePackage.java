@@ -19,8 +19,8 @@ import com.internal.core.kernel.syncconsumer.BiSyncAsyncConsumer;
 import com.internal.core.kernel.syncconsumer.SyncStructConsumer;
 import com.internal.core.kernel.thread.ThreadHandle;
 import com.internal.core.kernel.threadmanager.InternalThreadManager;
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EnginePackage extends ManagerPackage {
 
@@ -37,6 +37,7 @@ public class EnginePackage extends ManagerPackage {
      * - State machine execution (BOOTSTRAP → CREATE → START → UPDATE → EXIT)
      * - Frame timing and fixed timestep updates
      * - Root lifecycle propagation to all created systems
+     * - Runtime context creation, pairing, and destruction
      */
 
     // Core
@@ -54,6 +55,11 @@ public class EnginePackage extends ManagerPackage {
 
     // System Management
     Object2ObjectLinkedOpenHashMap<Class<?>, SystemPackage> internalRegistry;
+
+    // Context Management
+    private ObjectArrayList<ContextPackage> pendingContextList;
+    private ObjectArrayList<ContextPackage> activeContextList;
+    private ContextPackage[] contextArray;
 
     // Timing
     private long frameCount;
@@ -88,6 +94,11 @@ public class EnginePackage extends ManagerPackage {
 
         // System Management
         this.internalRegistry = new Object2ObjectLinkedOpenHashMap<>();
+
+        // Context Management
+        this.pendingContextList = new ObjectArrayList<>();
+        this.activeContextList = new ObjectArrayList<>();
+        this.contextArray = new ContextPackage[0];
 
         // Timing
         this.frameCount = 0L;
@@ -166,10 +177,8 @@ public class EnginePackage extends ManagerPackage {
     // System Registry \\
 
     protected <T extends SystemPackage> T registerSystem(T systemPackage) {
-
         this.internalRegistry.put(systemPackage.getClass(), systemPackage);
         this.systemCollection.add(systemPackage);
-
         return systemPackage;
     }
 
@@ -182,15 +191,12 @@ public class EnginePackage extends ManagerPackage {
             return;
 
         for (Class<?> systemClass : garbageCollection) {
-
             SystemPackage systemPackage = this.internal.internalRegistry.get(systemClass);
-
             this.internalRegistry.remove(systemClass);
             this.systemCollection.remove(systemPackage);
         }
 
         this.garbageCollection.clear();
-
         this.cacheSubSystems();
     }
 
@@ -218,6 +224,78 @@ public class EnginePackage extends ManagerPackage {
 
     public final <T> T getUnchecked(Class<T> type) {
         return get(true, type);
+    }
+
+    // Context Management \\
+
+    public <T extends ContextPackage> T createContext(Class<T> contextClass, WindowInstance window) {
+
+        if (window == null)
+            throwException("createContext() requires a WindowInstance — null was passed.");
+
+        if (window.hasContext())
+            throwException(
+                    "Window is already paired with a context.\n" +
+                            "Window ID: " + window.getWindowID() + "\n" +
+                            "Existing context: " + window.getContext().getClass().getSimpleName());
+
+        try {
+            SystemPackage.setupConstructor(this.settings, this, this);
+
+            var constructor = contextClass.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            T context = constructor.newInstance();
+
+            context.pendingStart = true;
+            context.setWindow(window);
+            window.setContext(context);
+
+            this.pendingContextList.add(context);
+
+            context.internalCreate();
+            context.internalGet();
+            context.internalAwake();
+            context.internalRelease();
+
+            return context;
+        } catch (Exception e) {
+            throw new InternalException("Failed to create context: " + contextClass.getSimpleName(), e);
+        } finally {
+            SystemPackage.SYSTEM_STRUCT.remove();
+        }
+    }
+
+    public void destroyContext(ContextPackage context) {
+
+        context.internalDispose();
+
+        WindowInstance window = context.getWindow();
+        if (window != null)
+            window.setContext(null);
+
+        this.pendingContextList.remove(context);
+        this.activeContextList.remove(context);
+        this.cacheContextArray();
+    }
+
+    private void flushPendingContexts() {
+
+        if (this.pendingContextList.isEmpty())
+            return;
+
+        for (int i = 0; i < this.pendingContextList.size(); i++) {
+            ContextPackage context = this.pendingContextList.get(i);
+            context.pendingStart = false;
+            context.internalStart();
+            this.activeContextList.add(context);
+        }
+
+        this.pendingContextList.clear();
+        this.cacheContextArray();
+    }
+
+    private void cacheContextArray() {
+        this.contextArray = this.activeContextList.toArray(new ContextPackage[0]);
     }
 
     // Thread Management \\
@@ -282,53 +360,43 @@ public class EnginePackage extends ManagerPackage {
 
     // Kernel Cycle
     private final void kernelCycle() {
-
         this.internalKernel();
-
         preFrameCycle(EngineState.BOOTSTRAP);
     }
 
     // Bootstrap Cycle
     private final void bootstrapCycle() {
-
         this.internalBootstrap();
-
         this.createGameWindow();
-
         preFrameCycle(EngineState.CREATE);
     }
 
     private final void preFrameCycle(EngineState nextState) {
-
         this.preGet();
         this.preAwake();
         this.preRelease();
-
         this.setInternalState(nextState);
         this.execute();
     }
 
     // Create Cycle
     private final void createCycle() {
-
         this.internalCreate();
         this.internalGet();
         this.internalAwake();
         this.internalRelease();
-
         this.setInternalState(EngineState.START);
     }
 
     // Start Cycle
     private final void startCycle() {
-
         this.internalStart();
-
         this.setInternalState(EngineState.UPDATE);
     }
 
     // Update Cycle
     private final void updateCycle() {
+        this.flushPendingContexts();
         this.internalUpdate();
         this.internalFixedUpdate();
         this.internalLateUpdate();
@@ -384,9 +452,7 @@ public class EnginePackage extends ManagerPackage {
 
     @Override // From `ManagerPackage`
     protected final void internalCreate() {
-
         this.setContext(SystemContext.CREATE);
-
         super.internalCreate();
     }
 
@@ -402,9 +468,7 @@ public class EnginePackage extends ManagerPackage {
 
     @Override // From `ManagerPackage`
     protected final void internalGet() {
-
         this.setContext(SystemContext.GET);
-
         super.internalGet();
     }
 
@@ -420,9 +484,7 @@ public class EnginePackage extends ManagerPackage {
 
     @Override // From `ManagerPackage`
     protected final void internalAwake() {
-
         this.setContext(SystemContext.AWAKE);
-
         super.internalAwake();
     }
 
@@ -440,9 +502,7 @@ public class EnginePackage extends ManagerPackage {
 
     @Override // From `ManagerPackage`
     protected final void internalRelease() {
-
         this.setContext(SystemContext.RELEASE);
-
         super.internalRelease();
     }
 
@@ -450,9 +510,7 @@ public class EnginePackage extends ManagerPackage {
 
     @Override // From `ManagerPackage`
     protected final void internalStart() {
-
         this.setContext(SystemContext.START);
-
         super.internalStart();
     }
 
@@ -466,6 +524,9 @@ public class EnginePackage extends ManagerPackage {
         this.setContext(SystemContext.UPDATE);
 
         super.internalUpdate();
+
+        for (int i = 0; i < this.contextArray.length; i++)
+            this.contextArray[i].internalUpdate();
     }
 
     // Fixed Update \\
@@ -484,6 +545,9 @@ public class EnginePackage extends ManagerPackage {
             this.setContext(SystemContext.FIXED_UPDATE);
 
             super.internalFixedUpdate();
+
+            for (int i = 0; i < this.contextArray.length; i++)
+                this.contextArray[i].internalFixedUpdate();
         }
     }
 
@@ -495,6 +559,9 @@ public class EnginePackage extends ManagerPackage {
         this.setContext(SystemContext.LATE_UPDATE);
 
         super.internalLateUpdate();
+
+        for (int i = 0; i < this.contextArray.length; i++)
+            this.contextArray[i].internalLateUpdate();
     }
 
     // Render \\
@@ -505,16 +572,16 @@ public class EnginePackage extends ManagerPackage {
         this.setContext(SystemContext.RENDER);
 
         super.internalRender();
+
+        for (int i = 0; i < this.contextArray.length; i++)
+            this.contextArray[i].internalRender();
     }
 
     // Draw \\
 
     private final void internalDraw() {
-
         this.setContext(SystemContext.DRAW);
-
         this.setFrameCount();
-
         this.draw();
     }
 
@@ -527,6 +594,9 @@ public class EnginePackage extends ManagerPackage {
     protected final void internalDispose() {
 
         this.setContext(SystemContext.DISPOSE);
+
+        for (int i = 0; i < this.contextArray.length; i++)
+            this.contextArray[i].internalDispose();
 
         super.internalDispose();
     }

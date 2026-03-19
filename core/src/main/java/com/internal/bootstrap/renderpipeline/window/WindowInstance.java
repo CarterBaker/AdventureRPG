@@ -3,19 +3,25 @@ package com.internal.bootstrap.renderpipeline.window;
 import com.badlogic.gdx.Screen;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
+import com.internal.core.engine.ContextPackage;
 import com.internal.core.engine.InstancePackage;
 
 public class WindowInstance extends InstancePackage implements Screen {
 
     /*
      * Runtime window. Wraps WindowData and owns the active perspective and
-     * orthographic cameras assigned to this window. resize() fires from LibGDX
-     * for the main window and from the detached ApplicationListener for all
-     * others — both paths call this method directly.
+     * orthographic cameras assigned to this window. Permanently paired with
+     * a ContextPackage via EnginePackage.createContext() — both sides hold a
+     * reference to each other and the pairing cannot change after creation.
+     * resize() fires from LibGDX for the main window and from the detached
+     * ApplicationListener for all others — both paths call this method directly.
      */
 
     // Internal
     private WindowData data;
+
+    // Context
+    private ContextPackage context;
 
     // Cameras
     private CameraInstance activeCamera;
@@ -31,13 +37,10 @@ public class WindowInstance extends InstancePackage implements Screen {
 
     @Override
     public void resize(int width, int height) {
-
         data.setWidth(width);
         data.setHeight(height);
-
         if (activeCamera != null)
             activeCamera.updateViewport(width, height);
-
         if (orthoCamera != null)
             orthoCamera.updateViewport(width, height);
     }
@@ -82,6 +85,18 @@ public class WindowInstance extends InstancePackage implements Screen {
 
     public int getHeight() {
         return data.getHeight();
+    }
+
+    public ContextPackage getContext() {
+        return context;
+    }
+
+    public void setContext(ContextPackage context) {
+        this.context = context;
+    }
+
+    public boolean hasContext() {
+        return context != null;
     }
 
     public CameraInstance getActiveCamera() {

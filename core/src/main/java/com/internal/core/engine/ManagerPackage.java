@@ -83,12 +83,23 @@ public abstract class ManagerPackage extends SystemPackage {
     /*
      * Overrides SystemPackage.get() to intercept LoaderPackage retrievals.
      * When a manager fetches a loader via get(), internalLoader is assigned
-     * automatically — same guarantee as create().
+     * automatically — same guarantee as create(). Context-local systems are
+     * checked first when this manager belongs to a context.
      */
     @Override
     @SuppressWarnings("unchecked")
     protected <T> T get(Class<T> type) {
-        T result = this.internal.get(false, type);
+
+        if (this.context != null) {
+            T local = this.context.getLocal(type);
+            if (local != null) {
+                if (local instanceof LoaderPackage)
+                    this.internalLoader = (LoaderPackage) local;
+                return local;
+            }
+        }
+
+        T result = this.internal.get(true, type);
         if (result instanceof LoaderPackage)
             this.internalLoader = (LoaderPackage) result;
         return result;
@@ -118,6 +129,7 @@ public abstract class ManagerPackage extends SystemPackage {
     @SuppressWarnings("unchecked")
     <T extends SystemPackage> T createSystem(Class<T> systemClass) {
         if (this.getContext() != SystemContext.KERNEL &&
+                this.getContext() != SystemContext.CREATE &&
                 this.internal.getContext() != SystemContext.BOOTSTRAP &&
                 this.internal.getContext() != SystemContext.CREATE)
             throwException(
@@ -132,10 +144,6 @@ public abstract class ManagerPackage extends SystemPackage {
             var constructor = systemClass.getDeclaredConstructor();
             constructor.setAccessible(true);
             T systemPackage = constructor.newInstance();
-            if (this.internal.internalRegistry.containsKey(systemPackage.getClass()))
-                throwException(
-                        "Subsystem: " + systemPackage.getClass().getSimpleName() +
-                                " already exists within the internal engine");
             return this.registerSystem(systemPackage);
         } catch (Exception e) {
             throw new InternalException(

@@ -7,8 +7,6 @@ import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
 import com.internal.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
 import com.internal.bootstrap.menupipeline.menumanager.MenuManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
-import com.internal.bootstrap.renderpipeline.window.WindowInstance;
-import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
@@ -19,7 +17,7 @@ public class PlayerInputSystem extends SystemPackage {
      * keybindings read from settings at startup. Captures cursor via
      * InputSystem.captureCursor(). Camera rotation and player InputHandle writes
      * are gated by MenuManager.isInputLocked(). Inventory toggle passes the
-     * player's window so the menu is bound to the correct window.
+     * context window so the menu is bound to the correct render target.
      */
 
     // Internal
@@ -27,7 +25,6 @@ public class PlayerInputSystem extends SystemPackage {
     private PlayerManager playerManager;
     private MenuManager menuManager;
     private InventoryBranch inventoryBranch;
-    private WindowManager windowManager;
 
     // Cached Bindings — Movement
     private int forwardKey;
@@ -67,7 +64,6 @@ public class PlayerInputSystem extends SystemPackage {
         this.playerManager = get(PlayerManager.class);
         this.menuManager = get(MenuManager.class);
         this.inventoryBranch = get(InventoryBranch.class);
-        this.windowManager = get(WindowManager.class);
     }
 
     @Override
@@ -92,9 +88,7 @@ public class PlayerInputSystem extends SystemPackage {
         if (!inputSystem.keyJustPressed(inventoryKey))
             return;
 
-        WindowInstance playerWindow = windowManager.getMainWindow();
-
-        inventoryBranch.toggleInventory(playerManager.getPlayer(), playerWindow);
+        inventoryBranch.toggleInventory(playerManager.getPlayer(), context.getWindow());
     }
 
     private void updateCameraRotation() {

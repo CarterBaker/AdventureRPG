@@ -38,6 +38,14 @@ public class WindowManager extends ManagerPackage {
         windows.add(window);
     }
 
+    public void registerDetachedWindow(WindowInstance window) {
+        windows.add(window);
+    }
+
+    public void removeWindow(WindowInstance window) {
+        windows.remove(window);
+    }
+
     // Accessible \\
 
     public WindowInstance getMainWindow() {

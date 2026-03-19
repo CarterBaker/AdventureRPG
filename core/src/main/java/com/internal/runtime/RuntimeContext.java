@@ -11,12 +11,11 @@ public class RuntimeContext extends ContextPackage {
 
     /*
      * Game runtime entry point. Creates and owns all runtime systems.
-     * Runs after bootstrap is complete — all managers and handles are
-     * available. Each system is responsible for its own startup logic.
-     *
-     * The window this context targets is set via setWindow() before the
-     * context starts. The editor calls setWindow() with its preview panel
-     * window — every system inside then targets that window without change.
+     * Paired with a WindowInstance by EnginePackage.createContext() before
+     * any lifecycle phase runs — systems call context.getWindow() to reach
+     * their render target without knowing which window they are targeting.
+     * The editor reuses RuntimeContext unchanged by pairing it with a
+     * different window at creation time.
      */
 
     // Runtime
