@@ -573,6 +573,8 @@ public class EnginePackage extends ManagerPackage {
 
     // Render \\
 
+    // Render \\
+
     @Override
     protected final void internalRender() {
 
@@ -580,11 +582,8 @@ public class EnginePackage extends ManagerPackage {
 
         super.internalRender();
 
-        for (int i = 0; i < this.contextArray.length; i++) {
-            if (this.contextArray[i].hasWindow())
-                getUnchecked(WindowManager.class).setActiveWindow(this.contextArray[i].getWindow());
+        for (int i = 0; i < this.contextArray.length; i++)
             this.contextArray[i].internalRender();
-        }
     }
 
     // Draw \\

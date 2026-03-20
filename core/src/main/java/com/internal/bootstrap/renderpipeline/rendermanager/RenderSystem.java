@@ -12,20 +12,19 @@ import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
-import com.internal.core.engine.ContextPackage;
 import com.internal.core.engine.SystemPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RenderSystem extends SystemPackage {
 
     /*
-     * Stateless with respect to render queues — all per-frame call and batch
-     * state lives in RenderQueueHandle on each ContextPackage. pushRenderCall()
-     * resolves the active window's context and writes into its queue. draw()
-     * reads that window's context queue, flushes to GPU, then clears it.
-     * Zero allocation per frame after warmup.
+     * Collects render calls each frame into every registered window's
+     * RenderQueueHandle, then flushes a specific window's queue on draw().
+     * pushRenderCall() broadcasts into all window queues so each window
+     * receives identical render call data — each window flushes
+     * independently when its GL context is current. Zero allocation per
+     * frame after warmup.
      */
 
     // Internal
@@ -53,12 +52,13 @@ class RenderSystem extends SystemPackage {
 
     void draw(WindowInstance window) {
 
-        ContextPackage context = window.getContext();
-
-        if (context == null)
+        if (!window.hasContext())
             return;
 
-        RenderQueueHandle queue = context.getRenderQueueHandle();
+        RenderQueueHandle queue = window.getContext().getRenderQueueHandle();
+
+        if (queue == null)
+            return;
 
         queue.renderCallCursor = 0;
 
@@ -201,38 +201,46 @@ class RenderSystem extends SystemPackage {
 
     void pushRenderCall(ModelInstance modelInstance, int depth, MaskStruct mask) {
 
-        WindowInstance window = windowManager.getActiveWindow();
-        ContextPackage context = window.getContext();
+        Object[] windowElements = windowManager.getWindows().elements();
+        int windowCount = windowManager.getWindows().size();
 
-        if (context == null)
-            return;
+        for (int w = 0; w < windowCount; w++) {
 
-        RenderQueueHandle queue = context.getRenderQueueHandle();
+            WindowInstance window = (WindowInstance) windowElements[w];
 
-        RenderCallStruct renderCall = queue.nextCall();
-        renderCall.init(modelInstance, mask);
+            if (!window.hasContext())
+                continue;
 
-        MaterialInstance material = modelInstance.getMaterial();
-        int materialID = material.getMaterialID();
+            RenderQueueHandle queue = window.getContext().getRenderQueueHandle();
 
-        Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = queue.depth2MaterialBatches.get(depth);
+            if (queue == null)
+                continue;
 
-        if (materialBatches == null) {
-            materialBatches = new Int2ObjectOpenHashMap<>();
-            queue.depth2MaterialBatches.put(depth, materialBatches);
-            insertDepthSorted(queue, depth);
-            queue.depth2BatchList.put(depth, new ObjectArrayList<>());
+            RenderCallStruct renderCall = queue.nextCall();
+            renderCall.init(modelInstance, mask);
+
+            MaterialInstance material = modelInstance.getMaterial();
+            int materialID = material.getMaterialID();
+
+            Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = queue.depth2MaterialBatches.get(depth);
+
+            if (materialBatches == null) {
+                materialBatches = new Int2ObjectOpenHashMap<>();
+                queue.depth2MaterialBatches.put(depth, materialBatches);
+                insertDepthSorted(queue, depth);
+                queue.depth2BatchList.put(depth, new ObjectArrayList<>());
+            }
+
+            RenderBatchStruct batch = materialBatches.get(materialID);
+
+            if (batch == null) {
+                batch = new RenderBatchStruct(material);
+                materialBatches.put(materialID, batch);
+                queue.depth2BatchList.get(depth).add(batch);
+            }
+
+            batch.addRenderCall(renderCall);
         }
-
-        RenderBatchStruct batch = materialBatches.get(materialID);
-
-        if (batch == null) {
-            batch = new RenderBatchStruct(material);
-            materialBatches.put(materialID, batch);
-            queue.depth2BatchList.get(depth).add(batch);
-        }
-
-        batch.addRenderCall(renderCall);
     }
 
     // Depth Ordering \\
