@@ -10,10 +10,12 @@ public class WindowManager extends ManagerPackage {
      * Owns all windows — main and detached. Main window is registered during
      * bootstrap by EnginePackage after the bootstrap pipelines are created.
      * Window IDs are assigned sequentially — main is always 0, detached windows
-     * increment from 1. The active window is set before each draw pass so
-     * RenderSystem reads from the correct window each frame. Detached windows
-     * are opened as real OS windows via internal.windowPlatform on registration —
-     * no backend imports live here.
+     * increment from 1. Detached windows are opened as real OS windows via
+     * internal.windowPlatform on registration.
+     *
+     * activeWindow tracks the last focused or clicked OS window. This is
+     * exclusively for input and raycast systems — it has no relation to
+     * rendering. Render calls are routed to windows explicitly.
      */
 
     // Windows
@@ -47,6 +49,8 @@ public class WindowManager extends ManagerPackage {
 
     public void removeWindow(WindowInstance window) {
         windows.remove(window);
+        if (activeWindow == window)
+            activeWindow = mainWindow;
     }
 
     // Accessible \\

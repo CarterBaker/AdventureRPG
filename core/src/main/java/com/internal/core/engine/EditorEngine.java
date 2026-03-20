@@ -10,8 +10,10 @@ public class EditorEngine extends EnginePackage {
      * EditorEngine defines the concrete editor engine instance. Bootstraps
      * both the shared game pipeline and the editor-specific pipeline via
      * their respective BootstrapAssemblies, then creates the editor context
-     * paired with the main window in awake() after get() has resolved
-     * the window manager.
+     * paired with the main window in awake(). draw() flushes the main window
+     * only — detached windows flush themselves in their own
+     * ApplicationListener.render() callback after the engine's full push
+     * phase is complete.
      */
 
     // Bootstrap
@@ -52,11 +54,10 @@ public class EditorEngine extends EnginePackage {
         this.runtimeContext = createContext(RuntimeContext.class, windowManager.getMainWindow());
     }
 
-    // Render \\
+    // Draw \\
 
     @Override
     void draw() {
-        windowManager.setActiveWindow(windowManager.getMainWindow());
-        renderManager.draw();
+        renderManager.draw(windowManager.getMainWindow());
     }
 }

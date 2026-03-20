@@ -23,21 +23,13 @@ public class RenderQueueHandle extends HandlePackage {
     int renderCallCursor;
 
     // Palette — lookup
-    final Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>> depth2MaterialBatches;
+    Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>> depth2MaterialBatches;
 
     // Palette — iteration
-    final IntArrayList sortedDepths;
-    final Int2ObjectOpenHashMap<ObjectArrayList<RenderBatchStruct>> depth2BatchList;
+    IntArrayList sortedDepths;
+    Int2ObjectOpenHashMap<ObjectArrayList<RenderBatchStruct>> depth2BatchList;
 
     // Internal \\
-
-    public RenderQueueHandle() {
-
-        // Palette
-        this.depth2MaterialBatches = new Int2ObjectOpenHashMap<>();
-        this.sortedDepths = new IntArrayList();
-        this.depth2BatchList = new Int2ObjectOpenHashMap<>();
-    }
 
     public void constructor() {
 
@@ -45,6 +37,11 @@ public class RenderQueueHandle extends HandlePackage {
         this.renderCallBuffer = new RenderCallStruct[EngineSetting.MAX_RENDER_CALLS_PER_FRAME];
         for (int i = 0; i < renderCallBuffer.length; i++)
             renderCallBuffer[i] = new RenderCallStruct();
+
+        // Palette
+        this.depth2MaterialBatches = new Int2ObjectOpenHashMap<>();
+        this.sortedDepths = new IntArrayList();
+        this.depth2BatchList = new Int2ObjectOpenHashMap<>();
     }
 
     // Accessible \\

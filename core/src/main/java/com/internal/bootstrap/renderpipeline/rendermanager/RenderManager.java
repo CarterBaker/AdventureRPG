@@ -13,13 +13,14 @@ import com.internal.core.engine.ManagerPackage;
 public class RenderManager extends ManagerPackage {
 
     /*
-     * Coordinates a single draw pass per window. Exposes createRenderQueue()
-     * so ContextPackage can allocate its own RenderQueueHandle on awake.
-     * pushRenderCall() and pushCompositeCall() are the public surface for all
-     * systems that submit geometry — they always write into the active window's
-     * context queue. draw() resolves the active window and flushes its queue.
-     * draw(WindowInstance) sets the target explicitly — used by detached windows
-     * from their own ApplicationListener.render() callback.
+     * Coordinates draw passes and routes render call pushes to the correct
+     * window's RenderQueueHandle. Push calls with no window parameter default
+     * to the main window — engine-level systems that do not declare a target
+     * always render to main. Push calls with an explicit window route there.
+     * Active window is never touched here — that is an input concern only.
+     * draw(WindowInstance) flushes a specific window's queue under its GL
+     * context — called by the engine draw() loop for main, and by each
+     * detached WindowInstance.render() callback for itself.
      */
 
     // Internal
@@ -45,36 +46,34 @@ public class RenderManager extends ManagerPackage {
         this.windowManager = get(WindowManager.class);
     }
 
-    // Queue \\
-
-    public RenderQueueHandle createRenderQueue() {
-        RenderQueueHandle handle = create(RenderQueueHandle.class);
-        handle.constructor();
-        return handle;
-    }
-
     // Draw \\
 
-    public void draw() {
-        WindowInstance window = windowManager.getActiveWindow();
+    public void draw(WindowInstance window) {
         cameraManager.pushCamera(window);
         renderSystem.draw(window);
     }
 
-    public void draw(WindowInstance window) {
-        windowManager.setActiveWindow(window);
-        draw();
-    }
-
-    // Push \\
+    // Push — no declared window → main window \\
 
     public void pushRenderCall(ModelInstance modelInstance, int depth) {
-        renderSystem.pushRenderCall(modelInstance, depth);
+        renderSystem.pushRenderCall(modelInstance, depth, null, windowManager.getMainWindow());
     }
 
     public void pushRenderCall(ModelInstance modelInstance, int depth, MaskStruct mask) {
-        renderSystem.pushRenderCall(modelInstance, depth, mask);
+        renderSystem.pushRenderCall(modelInstance, depth, mask, windowManager.getMainWindow());
     }
+
+    // Push — explicit window \\
+
+    public void pushRenderCall(ModelInstance modelInstance, int depth, WindowInstance window) {
+        renderSystem.pushRenderCall(modelInstance, depth, null, window);
+    }
+
+    public void pushRenderCall(ModelInstance modelInstance, int depth, MaskStruct mask, WindowInstance window) {
+        renderSystem.pushRenderCall(modelInstance, depth, mask, window);
+    }
+
+    // Composite \\
 
     public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer) {
         renderSystem.pushCompositeCall(material, buffer);

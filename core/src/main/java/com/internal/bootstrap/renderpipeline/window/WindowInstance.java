@@ -5,6 +5,7 @@ import com.badlogic.gdx.Screen;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
 import com.internal.bootstrap.renderpipeline.rendermanager.RenderManager;
+import com.internal.bootstrap.renderpipeline.rendermanager.RenderQueueHandle;
 import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.core.engine.ContextPackage;
 import com.internal.core.engine.InstancePackage;
@@ -12,18 +13,22 @@ import com.internal.core.engine.InstancePackage;
 public class WindowInstance extends InstancePackage implements Screen, ApplicationListener {
 
     /*
-     * Runtime window wrapper. Owns its WindowData. Paired with a ContextPackage
-     * at creation time via EnginePackage.createContext() — both sides hold a
-     * reference to each other. Holds the active perspective camera and orthographic
-     * camera for this window — set by whoever owns the camera (PlayerManager,
-     * EditorCameraSystem, etc). The main window is driven as a Screen via
-     * game.setScreen(); detached windows receive their own ApplicationListener
-     * render() callback from LibGDX directly, which is the only safe moment
-     * to flush that window's render queue since the GL context is current then.
+     * Runtime window wrapper. Owns its WindowData and RenderQueueHandle.
+     * The queue is created and owned entirely here — no manager involvement.
+     * Render calls are pushed into this window's queue explicitly by systems
+     * that declare their target window — no declared window defaults to main.
+     * The main window's queue is flushed by the engine draw() loop. Each
+     * detached window flushes its own queue in its ApplicationListener.render()
+     * callback after the engine's full push phase is complete and the correct
+     * GL context is current. activeWindow is set on focus for input and
+     * raycast systems only — no relation to rendering.
      */
 
     // Data
     private WindowData windowData;
+
+    // Render Queue
+    private RenderQueueHandle renderQueueHandle;
 
     // Context
     private ContextPackage context;
@@ -38,16 +43,24 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     // Internal \\
 
+    public void constructor(WindowData windowData) {
+        this.windowData = windowData;
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.renderManager = get(RenderManager.class);
+        this.windowManager = get(WindowManager.class);
+    }
+
     @Override
     protected void awake() {
 
-        // Internal
-        this.renderManager = internal.getUnchecked(RenderManager.class);
-        this.windowManager = internal.getUnchecked(WindowManager.class);
-    }
-
-    public void constructor(WindowData windowData) {
-        this.windowData = windowData;
+        // Render Queue
+        this.renderQueueHandle = create(RenderQueueHandle.class);
+        this.renderQueueHandle.constructor();
     }
 
     // ApplicationListener — Detached Window Path \\
@@ -55,16 +68,15 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     @Override
     public void create() {
         // LibGDX calls this when the detached OS window is ready.
-        // WindowInstance is already fully initialized by the engine before
-        // internal.windowPlatform.openWindow() is called — nothing to do here.
+        // WindowInstance is already fully initialized before openWindow() fires.
     }
 
     @Override
     public void render() {
 
-        // LibGDX makes this window's GL context current before calling this.
-        // The engine has already run its full update and render phases this frame.
-        // This is the only safe moment to flush render calls to this window's context.
+        // LibGDX fires this after the engine's full update and push phase for
+        // this frame. The queue is fully populated. GL context is current for
+        // this window — safe to flush.
         windowManager.setActiveWindow(this);
         renderManager.draw(this);
     }
@@ -87,7 +99,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     public void dispose() {
 
         // LibGDX calls this when the user closes a detached OS window.
-        // Destroy the paired context and remove this window from the registry.
         if (context != null)
             internal.destroyContext(context);
 
@@ -98,8 +109,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     public void render(float delta) {
-        // Main window render is driven by EditorEngine.draw() / GameEngine.draw().
-        // LibGDX fires this callback but the engine owns the actual draw call.
+        // Main window is flushed by the engine draw() loop — nothing to do here.
     }
 
     @Override
@@ -154,6 +164,10 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     public WindowData getWindowData() {
         return windowData;
+    }
+
+    public RenderQueueHandle getRenderQueueHandle() {
+        return renderQueueHandle;
     }
 
     public int getWindowID() {

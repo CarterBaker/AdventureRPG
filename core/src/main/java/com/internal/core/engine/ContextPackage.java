@@ -1,7 +1,5 @@
 package com.internal.core.engine;
 
-import com.internal.bootstrap.renderpipeline.rendermanager.RenderManager;
-import com.internal.bootstrap.renderpipeline.rendermanager.RenderQueueHandle;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -20,17 +18,13 @@ public abstract class ContextPackage extends ManagerPackage {
      * first update cycle. Context-owned systems are stored in a local registry
      * and are not globally visible — cross-context system access is not supported.
      *
-     * Each context owns a RenderQueueHandle which accumulates render calls during
-     * the render phase. The queue is flushed when the paired window's GL context
-     * is current — main window in EditorEngine.draw(), detached windows in their
-     * own ApplicationListener.render() callback.
+     * The render queue lives on the WindowInstance, not the context. The context
+     * drives what runs — the window owns where it draws. Systems set the active
+     * window before pushing render calls so calls land in the correct queue.
      */
 
     // Window
     private WindowInstance window;
-
-    // Render Queue
-    private RenderQueueHandle renderQueueHandle;
 
     // Local Registry
     private Object2ObjectOpenHashMap<Class<?>, SystemPackage> localRegistry;
@@ -70,20 +64,6 @@ public abstract class ContextPackage extends ManagerPackage {
         return (T) this.localRegistry.get(type);
     }
 
-    // Awake \\
-
-    @Override
-    protected void internalAwake() {
-        super.internalAwake();
-        initRenderQueue();
-    }
-
-    private void initRenderQueue() {
-
-        RenderManager renderManager = internal.getUnchecked(RenderManager.class);
-        this.renderQueueHandle = renderManager.createRenderQueue();
-    }
-
     // Accessible \\
 
     public WindowInstance getWindow() {
@@ -96,9 +76,5 @@ public abstract class ContextPackage extends ManagerPackage {
 
     public boolean hasWindow() {
         return window != null;
-    }
-
-    public RenderQueueHandle getRenderQueueHandle() {
-        return renderQueueHandle;
     }
 }

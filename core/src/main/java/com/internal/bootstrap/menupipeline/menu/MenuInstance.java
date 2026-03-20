@@ -1,6 +1,7 @@
 package com.internal.bootstrap.menupipeline.menu;
 
 import com.internal.bootstrap.menupipeline.element.ElementInstance;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.core.engine.InstancePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -8,9 +9,10 @@ public class MenuInstance extends InstancePackage {
 
     /*
      * Runtime menu created by MenuManager.openMenu(). Holds the shared MenuData
-     * definition, the live element tree for this session, and the ID of the
-     * window it was opened in. The window ID is used by hit testing to ignore
-     * clicks from other windows. Visible by default.
+     * definition, the live element tree for this session, and the window it was
+     * opened in. The window is used by MenuManager to route render calls to the
+     * correct queue and by hit testing to ignore clicks from other windows.
+     * Visible by default.
      */
 
     // Internal
@@ -18,7 +20,7 @@ public class MenuInstance extends InstancePackage {
     private ObjectArrayList<ElementInstance> elements;
 
     // Identity
-    private int windowID;
+    private WindowInstance window;
 
     // State
     private boolean visible;
@@ -28,14 +30,14 @@ public class MenuInstance extends InstancePackage {
     public void constructor(
             MenuData data,
             ObjectArrayList<ElementInstance> elements,
-            int windowID) {
+            WindowInstance window) {
 
         // Internal
         this.data = data;
         this.elements = elements;
 
         // Identity
-        this.windowID = windowID;
+        this.window = window;
 
         // State
         this.visible = true;
@@ -44,9 +46,12 @@ public class MenuInstance extends InstancePackage {
     // Entry Points \\
 
     public ElementInstance getEntryPoint(int index) {
+
         ObjectArrayList<String> eps = data.getEntryPoints();
+
         if (eps == null || index >= eps.size())
             return null;
+
         return findById(elements, eps.get(index));
     }
 
@@ -63,6 +68,7 @@ public class MenuInstance extends InstancePackage {
     }
 
     private ElementInstance findById(ObjectArrayList<ElementInstance> list, String id) {
+
         for (int i = 0; i < list.size(); i++) {
             ElementInstance el = list.get(i);
             if (el.getElementData().getId().equals(id))
@@ -73,6 +79,7 @@ public class MenuInstance extends InstancePackage {
                     return found;
             }
         }
+
         return null;
     }
 
@@ -96,8 +103,12 @@ public class MenuInstance extends InstancePackage {
         return elements;
     }
 
+    public WindowInstance getWindow() {
+        return window;
+    }
+
     public int getWindowID() {
-        return windowID;
+        return window.getWindowID();
     }
 
     public boolean isVisible() {

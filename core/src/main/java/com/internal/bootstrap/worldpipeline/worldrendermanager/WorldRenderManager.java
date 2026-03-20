@@ -6,6 +6,7 @@ import com.internal.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.bootstrap.renderpipeline.rendermanager.RenderManager;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
@@ -27,7 +28,8 @@ public class WorldRenderManager extends ManagerPackage {
      * queues as Long2ObjectLinkedOpenHashMap<GridSlotHandle> — chunk and mega
      * world coordinates mapped directly to their slot handle, populated at
      * rebuild time. No reverse lookup needed at render time. Frustum culling
-     * refreshes once per grid against that grid's window camera.
+     * refreshes once per grid against that grid's window camera. Render calls
+     * are pushed to each grid's window explicitly — no active window state.
      */
 
     // Internal
@@ -84,14 +86,19 @@ public class WorldRenderManager extends ManagerPackage {
 
             GridInstance grid = (GridInstance) gridElements[g];
 
+            WindowInstance window = grid.getWindowInstance();
+
+            if (window == null)
+                continue;
+
             frustumCullingSystem.refresh(grid);
 
-            renderGridMegas(grid);
-            renderGridChunks(grid);
+            renderGridMegas(grid, window);
+            renderGridChunks(grid, window);
         }
     }
 
-    private void renderGridMegas(GridInstance grid) {
+    private void renderGridMegas(GridInstance grid, WindowInstance window) {
 
         Long2ObjectLinkedOpenHashMap<GridSlotHandle> megaQueue = grid.getMegaRenderQueue();
         LongIterator it = megaQueue.keySet().iterator();
@@ -114,12 +121,12 @@ public class WorldRenderManager extends ManagerPackage {
             for (int i = 0; i < models.size(); i++) {
                 ModelInstance model = models.get(i);
                 model.getMaterial().setUBO(slotUBO);
-                renderManager.pushRenderCall(model, 0);
+                renderManager.pushRenderCall(model, 0, window);
             }
         }
     }
 
-    private void renderGridChunks(GridInstance grid) {
+    private void renderGridChunks(GridInstance grid, WindowInstance window) {
 
         Long2ObjectLinkedOpenHashMap<GridSlotHandle> chunkQueue = grid.getChunkRenderQueue();
         Long2ObjectLinkedOpenHashMap<GridSlotHandle> megaQueue = grid.getMegaRenderQueue();
@@ -146,7 +153,7 @@ public class WorldRenderManager extends ManagerPackage {
             for (int i = 0; i < models.size(); i++) {
                 ModelInstance model = models.get(i);
                 model.getMaterial().setUBO(slotUBO);
-                renderManager.pushRenderCall(model, 0);
+                renderManager.pushRenderCall(model, 0, window);
             }
         }
     }

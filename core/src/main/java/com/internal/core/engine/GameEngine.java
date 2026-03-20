@@ -10,9 +10,10 @@ public class GameEngine extends EnginePackage {
     /*
      * GameEngine defines the concrete game engine instance. Bootstraps all
      * pipelines and managers via BootstrapAssembly, then creates and pairs
-     * the runtime context with the main window in awake() — after get() has
-     * resolved the window manager. createContext() fires CREATE, GET, AWAKE,
-     * and RELEASE on the context immediately, then START on the next frame.
+     * the runtime context with the main window in awake(). draw() flushes
+     * the main window only — detached windows flush themselves in their own
+     * ApplicationListener.render() callback after the engine's full push
+     * phase is complete.
      */
 
     // Bootstrap
@@ -49,11 +50,10 @@ public class GameEngine extends EnginePackage {
         this.runtimeContext = createContext(RuntimeContext.class, windowManager.getMainWindow());
     }
 
-    // Render \\
+    // Draw \\
 
     @Override
     void draw() {
-        windowManager.setActiveWindow(windowManager.getMainWindow());
-        renderManager.draw();
+        renderManager.draw(windowManager.getMainWindow());
     }
 }

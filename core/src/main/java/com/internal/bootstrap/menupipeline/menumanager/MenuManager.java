@@ -19,7 +19,6 @@ import com.internal.bootstrap.physicspipeline.util.ScreenRayStruct;
 import com.internal.bootstrap.renderpipeline.rendermanager.RenderManager;
 import com.internal.bootstrap.renderpipeline.util.MaskStruct;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
-import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
@@ -35,10 +34,10 @@ public class MenuManager extends ManagerPackage {
      * Owns the menu palette and drives the menu lifecycle. Handles opening and
      * closing MenuInstances, element tree rendering, font GPU upload and release,
      * runtime element injection, and mask stack management. Screen size is read
-     * from the active window each frame — no resize() method. Input lock count
-     * is exposed via isInputLocked() so runtime input systems can gate player
-     * input while menus are open. Hit testing reads the frame's ScreenRayStruct
-     * from RaycastManager — zero allocation.
+     * from the menu's own window each frame — no resize() method and no active
+     * window dependency. Render calls are routed to each menu's window explicitly.
+     * Hit testing reads the frame's ScreenRayStruct from RaycastManager —
+     * zero allocation.
      */
 
     // Internal
@@ -46,7 +45,6 @@ public class MenuManager extends ManagerPackage {
     private RenderManager renderManager;
     private ModelManager modelManager;
     private MaterialManager materialManager;
-    private WindowManager windowManager;
     private InputSystem inputSystem;
     private RaycastManager raycastManager;
 
@@ -73,6 +71,9 @@ public class MenuManager extends ManagerPackage {
 
     // Raycast State
     private boolean wasPressed;
+
+    // Current render target — set per menu before traversal
+    private WindowInstance currentWindow;
 
     // Internal \\
 
@@ -104,7 +105,6 @@ public class MenuManager extends ManagerPackage {
         this.renderManager = get(RenderManager.class);
         this.modelManager = get(ModelManager.class);
         this.materialManager = get(MaterialManager.class);
-        this.windowManager = get(WindowManager.class);
         this.inputSystem = get(InputSystem.class);
         this.raycastManager = get(RaycastManager.class);
     }
@@ -115,17 +115,19 @@ public class MenuManager extends ManagerPackage {
         if (activeMenus.isEmpty())
             return;
 
-        float screenW = windowManager.getActiveWindow().getWidth();
-        float screenH = windowManager.getActiveWindow().getHeight();
-
-        if (screenW == 0 || screenH == 0)
-            return;
-
         for (int i = 0; i < activeMenus.size(); i++) {
 
             MenuInstance instance = activeMenus.get(i);
 
             if (!instance.isVisible())
+                continue;
+
+            currentWindow = instance.getWindow();
+
+            float screenW = currentWindow.getWidth();
+            float screenH = currentWindow.getHeight();
+
+            if (screenW == 0 || screenH == 0)
                 continue;
 
             ObjectArrayList<ElementInstance> elements = instance.getElements();
@@ -135,12 +137,12 @@ public class MenuManager extends ManagerPackage {
         }
 
         if (raycastLockCount > 0)
-            updateRaycast(screenH);
+            updateRaycast();
     }
 
     // Raycast \\
 
-    private void updateRaycast(float screenH) {
+    private void updateRaycast() {
 
         if (!raycastManager.hasScreenRay())
             return;
@@ -154,10 +156,8 @@ public class MenuManager extends ManagerPackage {
         if (!clicked)
             return;
 
-        int activeWindowID = windowManager.getActiveWindow().getWindowID();
-        float screenW = ray.getScreenW();
         float mouseX = ray.getScreenX();
-        float mouseY = screenH - ray.getScreenY();
+        float mouseY = ray.getScreenY();
 
         for (int i = activeMenus.size() - 1; i >= 0; i--) {
 
@@ -166,12 +166,14 @@ public class MenuManager extends ManagerPackage {
             if (!instance.isVisible())
                 continue;
 
-            if (instance.getWindowID() != activeWindowID)
-                continue;
+            WindowInstance window = instance.getWindow();
+            float screenW = window.getWidth();
+            float screenH = window.getHeight();
+            float adjustedMouseY = screenH - mouseY;
 
             if (hitTestElements(
                     instance.getElements(),
-                    mouseX, mouseY,
+                    mouseX, adjustedMouseY,
                     0, 0, screenW, screenH))
                 return;
         }
@@ -346,7 +348,7 @@ public class MenuManager extends ManagerPackage {
                 .getMaterial()
                 .setUniform("u_transform", element.getTransform());
         renderManager.pushRenderCall(
-                element.getSpriteInstance().getModelInstance(), 1, currentMask());
+                element.getSpriteInstance().getModelInstance(), 1, currentMask(), currentWindow);
     }
 
     // Font Render Call \\
@@ -371,7 +373,7 @@ public class MenuManager extends ManagerPackage {
                 .getMaterial()
                 .setUniform("u_transform", fontTransform);
 
-        renderManager.pushRenderCall(font.getModelInstance(), 2, currentMask());
+        renderManager.pushRenderCall(font.getModelInstance(), 2, currentMask(), currentWindow);
     }
 
     // Mask Stack \\
@@ -555,7 +557,7 @@ public class MenuManager extends ManagerPackage {
                 handle.getPlacements(), () -> holder[0]);
 
         MenuInstance instance = create(MenuInstance.class);
-        instance.constructor(handle.getMenuData(), liveElements, window.getWindowID());
+        instance.constructor(handle.getMenuData(), liveElements, window);
         holder[0] = instance;
 
         uploadFontModels(liveElements);
