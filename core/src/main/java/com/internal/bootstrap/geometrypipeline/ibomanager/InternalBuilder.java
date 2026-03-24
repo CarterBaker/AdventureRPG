@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOData;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.core.engine.BuilderPackage;
 import com.internal.core.util.JsonUtility;
@@ -42,7 +43,7 @@ public class InternalBuilder extends BuilderPackage {
             String resourceName,
             File file,
             Map<String, File> registry,
-            VAOInstance vaoInstance) {
+            VAOData vaoData) {
 
         if (iboManager.hasIBO(resourceName))
             return;
@@ -59,13 +60,13 @@ public class InternalBuilder extends BuilderPackage {
 
         if (iboEl.isJsonPrimitive() && iboEl.getAsJsonPrimitive().isString()) {
             String refName = iboEl.getAsString();
-            resolveRef(refName, resourceName, file, registry, vaoInstance);
+            resolveRef(refName, resourceName, file, registry, vaoData);
             iboManager.registerIBO(resourceName, iboManager.getIBOHandleDirect(refName));
             return;
         }
 
         if (iboEl.isJsonArray()) {
-            iboManager.registerIBO(resourceName, buildFromData(iboEl.getAsJsonArray(), vaoInstance, file));
+            iboManager.registerIBO(resourceName, buildFromData(iboEl.getAsJsonArray(), vaoData, file));
             return;
         }
 
@@ -79,7 +80,7 @@ public class InternalBuilder extends BuilderPackage {
             String sourceResourceName,
             File sourceFile,
             Map<String, File> registry,
-            VAOInstance vaoInstance) {
+            VAOData vaoData) {
 
         if (iboManager.hasIBO(refName))
             return;
@@ -99,14 +100,14 @@ public class InternalBuilder extends BuilderPackage {
         if (!refEl.isJsonArray())
             throwException("Referenced IBO '" + refName + "' must contain an index array.");
 
-        iboManager.registerIBO(refName, buildFromData(refEl.getAsJsonArray(), vaoInstance, refFile));
+        iboManager.registerIBO(refName, buildFromData(refEl.getAsJsonArray(), vaoData, refFile));
     }
 
     // Creation \\
 
     private IBOHandle buildFromData(
             JsonArray indicesArray,
-            VAOInstance vaoInstance,
+            VAOData vaoData,
             File file) {
 
         if (indicesArray.size() == 0)
@@ -123,7 +124,7 @@ public class InternalBuilder extends BuilderPackage {
         }
 
         return GLSLUtility.uploadIndexData(
-                vaoInstance,
+                vaoData,
                 create(IBOHandle.class),
                 indices);
     }

@@ -1,6 +1,7 @@
 package com.internal.bootstrap.geometrypipeline.vbomanager;
 
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
+import com.internal.bootstrap.geometrypipeline.vao.VAOData;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOData;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOHandle;
@@ -60,10 +61,10 @@ public class VBOManager extends ManagerPackage {
     public VBOHandle addVBOFromData(
             String resourceName,
             float[] vertices,
-            VAOInstance vaoInstance) {
+            VAOData vaoData) {
 
         VBOHandle handle = GLSLUtility.uploadVertexData(
-                vaoInstance,
+                vaoData,
                 create(VBOHandle.class),
                 vertices);
 
@@ -104,9 +105,9 @@ public class VBOManager extends ManagerPackage {
 
     // Runtime \\
 
-    public VBOInstance createVBOInstance(VAOInstance vaoInstance, FloatArrayList vertices) {
+    public VBOInstance createVBOInstance(VAOData vaoData, FloatArrayList vertices) {
         return GLSLUtility.uploadVertexData(
-                vaoInstance,
+                vaoData,
                 create(VBOInstance.class),
                 vertices.toFloatArray());
     }

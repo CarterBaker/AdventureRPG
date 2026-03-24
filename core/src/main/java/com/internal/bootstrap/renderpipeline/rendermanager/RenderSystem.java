@@ -2,6 +2,9 @@ package com.internal.bootstrap.renderpipeline.rendermanager;
 
 import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
+import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
 import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallStruct;
@@ -23,15 +26,22 @@ class RenderSystem extends SystemPackage {
      * WindowInstance — no active window state, no WindowManager dependency.
      * The window's queue is read directly via window.getRenderQueueHandle().
      * Zero allocation per frame after warmup.
+     *
+     * VAO instances are resolved per-window from templates at draw time —
+     * each window gets its own VAO objects in its GL context.
      */
 
     // Internal
+    private VAOManager vaoManager;
     private CompositeRenderSystem compositeRenderSystem;
 
     // Internal \\
 
     @Override
     protected void get() {
+
+        // Internal
+        this.vaoManager = get(VAOManager.class);
         this.compositeRenderSystem = get(CompositeRenderSystem.class);
     }
 
@@ -106,7 +116,7 @@ class RenderSystem extends SystemPackage {
 
                     pushInstanceUBOs(renderCall);
                     pushInstanceUniforms(renderCall);
-                    drawBatchedRenderCall(renderCall);
+                    drawBatchedRenderCall(renderCall, window);
                 }
 
                 batch.clear();
@@ -116,7 +126,7 @@ class RenderSystem extends SystemPackage {
                 GLSLUtility.disableScissor();
 
             if (depth == 0)
-                compositeRenderSystem.draw();
+                compositeRenderSystem.draw(window);
         }
     }
 
@@ -173,9 +183,14 @@ class RenderSystem extends SystemPackage {
         }
     }
 
-    private void drawBatchedRenderCall(RenderCallStruct renderCall) {
+    private void drawBatchedRenderCall(RenderCallStruct renderCall, WindowInstance window) {
+
         ModelInstance model = renderCall.getModelInstance();
-        GLSLUtility.bindVAO(model.getVAO());
+        VAOHandle template = model.getVAOHandle();
+        VAOInstance vaoInstance = vaoManager.getOrCreateVAOInstance(template, window);
+        int vao = vaoInstance.getVAOData().getAttributeHandle();
+
+        GLSLUtility.bindVAO(vao);
         GLSLUtility.drawElements(model.getIndexCount());
         GLSLUtility.unbindVAO();
     }

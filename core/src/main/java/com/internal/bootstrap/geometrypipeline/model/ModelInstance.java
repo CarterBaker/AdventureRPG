@@ -1,6 +1,7 @@
 package com.internal.bootstrap.geometrypipeline.model;
 
 import com.internal.bootstrap.geometrypipeline.mesh.MeshData;
+import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.core.engine.InstancePackage;
 
@@ -10,6 +11,9 @@ public class ModelInstance extends InstancePackage {
      * Runtime model handed to external systems by ModelManager. Stores render
      * integers via MeshData and a MaterialInstance with independent uniform and
      * UBO state. Carries no ownership over GPU resources.
+     *
+     * Exposes VAOHandle template — actual VAO instances are resolved per-window
+     * at render time by the render system.
      */
 
     // Internal
@@ -35,8 +39,8 @@ public class ModelInstance extends InstancePackage {
         return material;
     }
 
-    public int getVAO() {
-        return meshData.getAttributeHandle();
+    public VAOHandle getVAOHandle() {
+        return meshData.getVAOHandle();
     }
 
     public int getVertStride() {

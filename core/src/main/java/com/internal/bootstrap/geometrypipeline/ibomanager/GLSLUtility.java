@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.GL30;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOData;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
+import com.internal.bootstrap.geometrypipeline.vao.VAOData;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 
 class GLSLUtility {
@@ -21,34 +22,34 @@ class GLSLUtility {
         // Upload \\
 
         static IBOHandle uploadIndexData(
-                        VAOInstance vaoInstance,
+                        VAOData vaoData,
                         IBOHandle iboHandle,
                         short[] indices) {
 
-                IBOData iboData = upload(vaoInstance, indices);
+                IBOData iboData = upload(vaoData, indices);
                 iboHandle.constructor(iboData);
 
                 return iboHandle;
         }
 
         static IBOInstance uploadIndexData(
-                        VAOInstance vaoInstance,
+                        VAOData vaoData,
                         IBOInstance iboInstance,
                         short[] indices) {
 
-                IBOData iboData = upload(vaoInstance, indices);
+                IBOData iboData = upload(vaoData, indices);
                 iboInstance.constructor(iboData);
 
                 return iboInstance;
         }
 
-        private static IBOData upload(VAOInstance vaoInstance, short[] indices) {
+        private static IBOData upload(VAOData vaoData, short[] indices) {
 
                 GL30 gl30 = Gdx.gl30;
                 GL20 gl20 = Gdx.gl20;
                 int size = indices.length * Short.BYTES;
 
-                gl30.glBindVertexArray(vaoInstance.getVAOData().getAttributeHandle());
+                gl30.glBindVertexArray(vaoData.getAttributeHandle());
 
                 int ibo = gl20.glGenBuffer();
                 gl20.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, ibo);

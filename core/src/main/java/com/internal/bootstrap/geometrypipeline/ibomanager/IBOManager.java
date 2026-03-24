@@ -4,6 +4,7 @@ import com.internal.bootstrap.geometrypipeline.ibo.IBOData;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
 import com.internal.bootstrap.geometrypipeline.meshmanager.MeshManager;
+import com.internal.bootstrap.geometrypipeline.vao.VAOData;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.util.RegistryUtility;
@@ -60,10 +61,10 @@ public class IBOManager extends ManagerPackage {
     public IBOHandle addIBOFromData(
             String resourceName,
             short[] indices,
-            VAOInstance vaoInstance) {
+            VAOData vaoData) {
 
         IBOHandle handle = GLSLUtility.uploadIndexData(
-                vaoInstance,
+                vaoData,
                 create(IBOHandle.class),
                 indices);
 
@@ -104,9 +105,9 @@ public class IBOManager extends ManagerPackage {
 
     // Runtime \\
 
-    public IBOInstance createIBOInstance(VAOInstance vaoInstance, ShortArrayList indices) {
+    public IBOInstance createIBOInstance(VAOData vaoData, ShortArrayList indices) {
         return GLSLUtility.uploadIndexData(
-                vaoInstance,
+                vaoData,
                 create(IBOInstance.class),
                 indices.toShortArray());
     }
