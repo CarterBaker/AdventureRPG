@@ -1,21 +1,19 @@
 package com.internal.bootstrap.geometrypipeline.mesh;
 
 import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
-import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
+import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOInstance;
 import com.internal.core.engine.InstancePackage;
 
 public class MeshInstance extends InstancePackage {
 
     /*
-     * A fully GPU-resident mesh created at runtime. Owns its VAO template,
-     * VBO instance, and IBO instance. Freed via MeshManager.removeMesh() by
-     * whoever created it. Stores the VAOHandle template — actual VAO instances
-     * are created per-window at render time.
+     * A fully GPU-resident mesh created at runtime. Owns its VAO, VBO, and IBO
+     * instances. Freed via MeshManager.removeMesh() by whoever created it.
      */
 
     // Internal
-    private VAOHandle vaoHandle;
+    private VAOInstance vaoInstance;
     private VBOInstance vboInstance;
     private IBOInstance iboInstance;
     private MeshData meshData;
@@ -23,24 +21,24 @@ public class MeshInstance extends InstancePackage {
     // Constructor \\
 
     public void constructor(
-            VAOHandle vaoHandle,
+            VAOInstance vaoInstance,
             VBOInstance vboInstance,
             IBOInstance iboInstance) {
 
         // Internal
-        this.vaoHandle = vaoHandle;
+        this.vaoInstance = vaoInstance;
         this.vboInstance = vboInstance;
         this.iboInstance = iboInstance;
         this.meshData = new MeshData(
-                vaoHandle,
+                vaoInstance.getVAOData(),
                 vboInstance.getVBOData(),
                 iboInstance.getIBOData());
     }
 
     // Accessible \\
 
-    public VAOHandle getVAOHandle() {
-        return vaoHandle;
+    public VAOInstance getVAOInstance() {
+        return vaoInstance;
     }
 
     public VBOInstance getVBOInstance() {

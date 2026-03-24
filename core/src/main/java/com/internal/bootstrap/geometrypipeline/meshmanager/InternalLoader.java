@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
-import com.internal.bootstrap.geometrypipeline.vao.VAOData;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
@@ -93,13 +92,17 @@ class InternalLoader extends LoaderPackage {
         vaoBuildSystem.build(resourceName, file, resourceName2File);
 
         VAOHandle vaoHandle = vaoManager.getVAOHandleDirect(resourceName);
-        VAOData vaoData = vaoHandle.getVAOData();
 
-        vboBuildSystem.build(resourceName, file, resourceName2File, vaoData);
-        iboBuildSystem.build(resourceName, file, resourceName2File, vaoData);
+        if (vaoHandle == null)
+            return;
+
+        VAOInstance vaoInstance = vaoManager.createVAOInstance(vaoHandle);
+
+        vboBuildSystem.build(resourceName, file, resourceName2File, vaoInstance);
+        iboBuildSystem.build(resourceName, file, resourceName2File, vaoInstance);
 
         try {
-            MeshHandle meshHandle = internalBuilder.buildMeshHandle(root, file, vaoHandle);
+            MeshHandle meshHandle = internalBuilder.buildMeshHandle(root, file, vaoInstance);
             if (meshHandle != null)
                 meshManager.addMeshHandle(resourceName, meshHandle);
         } catch (RuntimeException ex) {

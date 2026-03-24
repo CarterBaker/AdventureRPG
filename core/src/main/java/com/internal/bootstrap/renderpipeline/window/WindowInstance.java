@@ -2,7 +2,6 @@ package com.internal.bootstrap.renderpipeline.window;
 
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Screen;
-import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
 import com.internal.bootstrap.renderpipeline.rendermanager.RenderManager;
@@ -39,7 +38,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     private OrthographicCameraInstance orthoCamera;
 
     // Internal
-    private VAOManager vaoManager;
     private RenderManager renderManager;
     private WindowManager windowManager;
 
@@ -53,7 +51,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     protected void get() {
 
         // Internal
-        this.vaoManager = get(VAOManager.class);
         this.renderManager = get(RenderManager.class);
         this.windowManager = get(WindowManager.class);
     }
@@ -102,8 +99,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     public void dispose() {
 
         // LibGDX calls this when the user closes a detached OS window.
-        vaoManager.removeWindowVAOs(getWindowID());
-
         if (context != null)
             internal.destroyContext(context);
 

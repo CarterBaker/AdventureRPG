@@ -1,9 +1,7 @@
 package com.internal.bootstrap.geometrypipeline.compositebuffer;
 
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
-import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.core.engine.InstancePackage;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import java.util.Arrays;
 
 public class CompositeBufferInstance extends InstancePackage {
@@ -13,9 +11,6 @@ public class CompositeBufferInstance extends InstancePackage {
      * CPU-side mutation — adding, updating, removing, and clearing instances.
      * GPU reallocation is detected by CompositeBufferManager via needsGpuRealloc().
      * Upload staleness is tracked via a version counter rather than a dirty flag.
-     *
-     * Composite VAOs and instance VBOs are window-specific — each window gets
-     * its own GPU objects created lazily on first render.
      */
 
     // Internal
@@ -35,36 +30,20 @@ public class CompositeBufferInstance extends InstancePackage {
         return compositeBufferData;
     }
 
-    public boolean hasCompositeVAOForWindow(WindowInstance window) {
-        return compositeBufferData.getWindow2CompositeVAO().containsKey(window.getWindowID());
+    public int getCompositeVAO() {
+        return compositeBufferData.getCompositeVAO();
     }
 
-    public int getCompositeVAOForWindow(WindowInstance window) {
-        return compositeBufferData.getWindow2CompositeVAO().get(window.getWindowID());
+    public void setCompositeVAO(int vao) {
+        compositeBufferData.setCompositeVAO(vao);
     }
 
-    public void setCompositeVAOForWindow(WindowInstance window, int vao) {
-        compositeBufferData.getWindow2CompositeVAO().put(window.getWindowID(), vao);
+    public int getInstanceVBO() {
+        return compositeBufferData.getInstanceVBO();
     }
 
-    public boolean hasInstanceVBOForWindow(WindowInstance window) {
-        return compositeBufferData.getWindow2InstanceVBO().containsKey(window.getWindowID());
-    }
-
-    public int getInstanceVBOForWindow(WindowInstance window) {
-        return compositeBufferData.getWindow2InstanceVBO().get(window.getWindowID());
-    }
-
-    public void setInstanceVBOForWindow(WindowInstance window, int vbo) {
-        compositeBufferData.getWindow2InstanceVBO().put(window.getWindowID(), vbo);
-    }
-
-    public Int2IntOpenHashMap getWindow2CompositeVAO() {
-        return compositeBufferData.getWindow2CompositeVAO();
-    }
-
-    public Int2IntOpenHashMap getWindow2InstanceVBO() {
-        return compositeBufferData.getWindow2InstanceVBO();
+    public void setInstanceVBO(int vbo) {
+        compositeBufferData.setInstanceVBO(vbo);
     }
 
     public MeshHandle getMeshHandle() {

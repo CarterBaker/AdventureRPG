@@ -22,31 +22,32 @@ class GLSLUtility {
         // Upload \\
 
         static VBOHandle uploadVertexData(
-                        VAOData vaoData,
+                        VAOInstance vaoInstance,
                         VBOHandle vboHandle,
                         float[] vertices) {
 
-                VBOData vboData = upload(vaoData, vertices);
+                VBOData vboData = upload(vaoInstance, vertices);
                 vboHandle.constructor(vboData);
 
                 return vboHandle;
         }
 
         static VBOInstance uploadVertexData(
-                        VAOData vaoData,
+                        VAOInstance vaoInstance,
                         VBOInstance vboInstance,
                         float[] vertices) {
 
-                VBOData vboData = upload(vaoData, vertices);
+                VBOData vboData = upload(vaoInstance, vertices);
                 vboInstance.constructor(vboData);
 
                 return vboInstance;
         }
 
-        private static VBOData upload(VAOData vaoData, float[] vertices) {
+        private static VBOData upload(VAOInstance vaoInstance, float[] vertices) {
 
                 GL30 gl30 = Gdx.gl30;
                 GL20 gl20 = Gdx.gl20;
+                VAOData vaoData = vaoInstance.getVAOData();
                 int size = vertices.length * Float.BYTES;
 
                 gl30.glBindVertexArray(vaoData.getAttributeHandle());

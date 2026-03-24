@@ -3,7 +3,6 @@ package com.internal.bootstrap.renderpipeline.compositerendersystem;
 import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import com.internal.bootstrap.geometrypipeline.compositebuffermanager.CompositeBufferManager;
 import com.internal.bootstrap.renderpipeline.compositebatch.CompositeBatchStruct;
-import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
@@ -22,9 +21,6 @@ public class CompositeRenderSystem extends SystemPackage {
      * depth 0 so composite draws share and respect world geometry depth.
      * All hot-path iteration is index-based over pre-allocated arrays — zero
      * allocation per frame after the first few frames of material registration.
-     *
-     * Composite VAOs and instance VBOs are window-specific — created lazily
-     * on first render per window and cached thereafter.
      */
 
     // Internal
@@ -72,7 +68,7 @@ public class CompositeRenderSystem extends SystemPackage {
 
     // Draw \\
 
-    public void draw(WindowInstance window) {
+    public void draw() {
 
         if (batches.isEmpty())
             return;
@@ -96,7 +92,7 @@ public class CompositeRenderSystem extends SystemPackage {
             int bufferCount = buffers.size();
 
             for (int j = 0; j < bufferCount; j++)
-                drawBuffer((CompositeBufferInstance) bufferElements[j], window);
+                drawBuffer((CompositeBufferInstance) bufferElements[j]);
 
             batch.clear();
         }
@@ -104,25 +100,23 @@ public class CompositeRenderSystem extends SystemPackage {
 
     // Upload and Draw \\
 
-    private void drawBuffer(CompositeBufferInstance buffer, WindowInstance window) {
+    private void drawBuffer(CompositeBufferInstance buffer) {
 
         if (buffer.isEmpty())
             return;
 
-        compositeBufferManager.ensureWindowResources(buffer, window);
-
         if (buffer.needsGpuRealloc())
-            compositeBufferManager.grow(buffer, window);
+            compositeBufferManager.grow(buffer);
 
-        upload(buffer, window);
+        upload(buffer);
 
         GLSLUtility.drawElementsInstanced(
-                buffer.getCompositeVAOForWindow(window),
+                buffer.getCompositeVAO(),
                 buffer.getIndexCount(),
                 buffer.getInstanceCount());
     }
 
-    private void upload(CompositeBufferInstance buffer, WindowInstance window) {
+    private void upload(CompositeBufferInstance buffer) {
 
         if (!buffer.needsUpload())
             return;
@@ -134,7 +128,7 @@ public class CompositeRenderSystem extends SystemPackage {
         uploadBuffer.put(buffer.getInstanceData(), 0, floatCount);
         uploadBuffer.flip();
 
-        GLSLUtility.updateInstanceVBO(buffer.getInstanceVBOForWindow(window), uploadBuffer, floatCount);
+        GLSLUtility.updateInstanceVBO(buffer.getInstanceVBO(), uploadBuffer, floatCount);
         buffer.markUploaded();
     }
 

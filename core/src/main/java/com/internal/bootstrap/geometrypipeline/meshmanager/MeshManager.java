@@ -5,7 +5,6 @@ import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshData;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshInstance;
-import com.internal.bootstrap.geometrypipeline.vao.VAOData;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
@@ -26,10 +25,6 @@ public class MeshManager extends ManagerPackage {
      * load pipeline via InternalLoader, and handles runtime mesh creation and
      * removal by delegating buffer operations to VAOManager, VBOManager,
      * and IBOManager.
-     *
-     * All meshes store VAOHandle templates — actual VAO instances are created
-     * per-window at render time. Runtime mesh creation uses a temporary VAO
-     * instance for VBO/IBO upload, then discards it and stores only the template.
      */
 
     // Internal
@@ -49,7 +44,6 @@ public class MeshManager extends ManagerPackage {
         // Palette
         this.meshName2MeshID = new Object2IntOpenHashMap<>();
         this.meshID2MeshHandle = new Int2ObjectOpenHashMap<>();
-
         create(InternalLoader.class);
     }
 
@@ -67,6 +61,7 @@ public class MeshManager extends ManagerPackage {
     void addMeshHandle(String meshName, MeshHandle meshHandle) {
 
         int id = RegistryUtility.toIntID(meshName);
+
         meshName2MeshID.put(meshName, id);
         meshID2MeshHandle.put(id, meshHandle);
     }
@@ -100,16 +95,16 @@ public class MeshManager extends ManagerPackage {
     // Runtime Mesh Creation \\
 
     public MeshInstance createMesh(
-            VAOHandle vaoHandle,
+            VAOHandle vaoTemplate,
             FloatArrayList vertices,
             ShortArrayList indices) {
 
-        VAOData vaoData = vaoHandle.getVAOData();
-        VBOInstance vboInstance = vboManager.createVBOInstance(vaoData, vertices);
-        IBOInstance iboInstance = iboManager.createIBOInstance(vaoData, indices);
+        VAOInstance vaoInstance = vaoManager.createVAOInstance(vaoTemplate);
+        VBOInstance vboInstance = vboManager.createVBOInstance(vaoInstance, vertices);
+        IBOInstance iboInstance = iboManager.createIBOInstance(vaoInstance, indices);
 
         MeshInstance meshInstance = create(MeshInstance.class);
-        meshInstance.constructor(vaoHandle, vboInstance, iboInstance);
+        meshInstance.constructor(vaoInstance, vboInstance, iboInstance);
 
         return meshInstance;
     }
@@ -117,16 +112,19 @@ public class MeshManager extends ManagerPackage {
     // Removal \\
 
     public void removeMesh(MeshData meshData) {
+        vaoManager.removeVAOData(meshData.getVAOData());
         vboManager.removeVBO(meshData.getVBOData());
         iboManager.removeIBO(meshData.getIBOData());
     }
 
     public void removeMesh(MeshHandle meshHandle) {
+        vaoManager.removeVAOInstance(meshHandle.getVAOInstance());
         vboManager.removeVBO(meshHandle.getVBOHandle());
         iboManager.removeIBO(meshHandle.getIBOHandle());
     }
 
     public void removeMesh(MeshInstance meshInstance) {
+        vaoManager.removeVAOInstance(meshInstance.getVAOInstance());
         vboManager.removeVBOInstance(meshInstance.getVBOInstance());
         iboManager.removeIBOInstance(meshInstance.getIBOInstance());
     }

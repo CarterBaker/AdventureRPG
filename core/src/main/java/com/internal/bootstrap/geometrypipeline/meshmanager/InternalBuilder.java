@@ -7,8 +7,6 @@ import com.google.gson.JsonObject;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibomanager.IBOManager;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
-import com.internal.bootstrap.geometrypipeline.vao.VAOData;
-import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOHandle;
 import com.internal.bootstrap.geometrypipeline.vbomanager.VBOManager;
@@ -48,20 +46,18 @@ class InternalBuilder extends BuilderPackage {
     MeshHandle buildMeshHandle(
             File root,
             File file,
-            VAOHandle vaoHandle) {
+            VAOInstance vaoInstance) {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-
-        VAOData vaoData = vaoHandle.getVAOData();
 
         VBOHandle vboHandle;
         IBOHandle iboHandle;
 
         if (hasQuadEntries(json)) {
-            QuadExpansionStruct expansion = expandVBO(json, vaoData, file);
-            vboHandle = vboManager.addVBOFromData(resourceName, expansion.vertices, vaoData);
-            iboHandle = iboManager.addIBOFromData(resourceName, expansion.indices, vaoData);
+            QuadExpansionStruct expansion = expandVBO(json, vaoInstance, file);
+            vboHandle = vboManager.addVBOFromData(resourceName, expansion.vertices, vaoInstance);
+            iboHandle = iboManager.addIBOFromData(resourceName, expansion.indices, vaoInstance);
         } else {
             vboHandle = vboManager.getVBOHandleDirect(resourceName);
             iboHandle = iboManager.getIBOHandleDirect(resourceName);
@@ -71,7 +67,7 @@ class InternalBuilder extends BuilderPackage {
             return null;
 
         MeshHandle meshHandle = create(MeshHandle.class);
-        meshHandle.constructor(vaoHandle, vboHandle, iboHandle);
+        meshHandle.constructor(vaoInstance, vboHandle, iboHandle);
 
         return meshHandle;
     }
@@ -99,10 +95,10 @@ class InternalBuilder extends BuilderPackage {
 
     private QuadExpansionStruct expandVBO(
             JsonObject json,
-            VAOData vaoData,
+            VAOInstance vaoInstance,
             File file) {
 
-        int vertStride = vaoData.getVertStride();
+        int vertStride = vaoInstance.getVAOData().getVertStride();
         FloatArrayList vertices = new FloatArrayList();
         ShortArrayList quadIndices = new ShortArrayList();
         int currentVertex = 0;
@@ -129,7 +125,7 @@ class InternalBuilder extends BuilderPackage {
                         quadIndices,
                         currentVertex,
                         vertStride,
-                        vaoData,
+                        vaoInstance,
                         file);
                 currentVertex += 4;
             } else
@@ -170,7 +166,7 @@ class InternalBuilder extends BuilderPackage {
             ShortArrayList quadIndices,
             int baseVertex,
             int vertStride,
-            VAOData vaoData,
+            VAOInstance vaoInstance,
             File file) {
 
         if (!quadObj.has("quad") || quadObj.get("quad").isJsonNull())
@@ -185,7 +181,7 @@ class InternalBuilder extends BuilderPackage {
 
         if (hasTexture) {
 
-            validateVAOUVCompatibility(vaoData, file);
+            validateVAOUVCompatibility(vaoInstance, file);
 
             int posStride = vertStride - 2;
             TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(
@@ -236,9 +232,9 @@ class InternalBuilder extends BuilderPackage {
 
     // VAO Compatibility \\
 
-    private void validateVAOUVCompatibility(VAOData vaoData, File file) {
+    private void validateVAOUVCompatibility(VAOInstance vaoInstance, File file) {
 
-        int[] attrSizes = vaoData.getAttrSizes();
+        int[] attrSizes = vaoInstance.getVAOData().getAttrSizes();
 
         if (attrSizes == null || attrSizes.length == 0)
             throwException("VAO has no attribute layout — cannot inject UVs in file: " + file.getName());

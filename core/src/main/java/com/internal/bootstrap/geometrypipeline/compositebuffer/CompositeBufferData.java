@@ -3,7 +3,6 @@ package com.internal.bootstrap.geometrypipeline.compositebuffer;
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.core.engine.DataPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
 public class CompositeBufferData extends DataPackage {
 
@@ -11,15 +10,11 @@ public class CompositeBufferData extends DataPackage {
      * Holds all mutable state for one instanced draw — GPU handles, mesh
      * references, CPU-side instance data, version tracking, and realloc flag.
      * All mutation is driven by CompositeBufferInstance.
-     *
-     * Composite VAOs are window-specific — each window gets its own VAO object
-     * pointing to the shared mesh VBO/IBO and this buffer's instance VBO.
-     * The window2CompositeVAO map grows lazily as new windows render this buffer.
      */
 
     // GPU Handles
-    private Int2IntOpenHashMap window2CompositeVAO;
-    private Int2IntOpenHashMap window2InstanceVBO;
+    private int compositeVAO;
+    private int instanceVBO;
 
     // Mesh State
     private MeshHandle meshHandle;
@@ -43,10 +38,6 @@ public class CompositeBufferData extends DataPackage {
 
     public CompositeBufferData(MeshHandle meshHandle, int[] instanceAttrSizes) {
 
-        // GPU Handles
-        this.window2CompositeVAO = new Int2IntOpenHashMap();
-        this.window2InstanceVBO = new Int2IntOpenHashMap();
-
         // Mesh State
         this.meshHandle = meshHandle;
         this.instanceAttrSizes = instanceAttrSizes;
@@ -55,7 +46,6 @@ public class CompositeBufferData extends DataPackage {
         int floats = 0;
         for (int s : instanceAttrSizes)
             floats += s;
-
         this.floatsPerInstance = floats;
 
         // Instance Data
@@ -73,12 +63,20 @@ public class CompositeBufferData extends DataPackage {
 
     // Accessible \\
 
-    public Int2IntOpenHashMap getWindow2CompositeVAO() {
-        return window2CompositeVAO;
+    public int getCompositeVAO() {
+        return compositeVAO;
     }
 
-    public Int2IntOpenHashMap getWindow2InstanceVBO() {
-        return window2InstanceVBO;
+    public void setCompositeVAO(int compositeVAO) {
+        this.compositeVAO = compositeVAO;
+    }
+
+    public int getInstanceVBO() {
+        return instanceVBO;
+    }
+
+    public void setInstanceVBO(int instanceVBO) {
+        this.instanceVBO = instanceVBO;
     }
 
     public MeshHandle getMeshHandle() {

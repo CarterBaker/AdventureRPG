@@ -2,7 +2,6 @@ package com.internal.bootstrap.geometrypipeline.mesh;
 
 import com.internal.bootstrap.geometrypipeline.ibo.IBOData;
 import com.internal.bootstrap.geometrypipeline.vao.VAOData;
-import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOData;
 import com.internal.core.engine.DataPackage;
 
@@ -12,29 +11,27 @@ public class MeshData extends DataPackage {
      * Flat aggregation of VAO, VBO, and IBO data for one GPU-resident mesh.
      * Provides direct convenience accessors for all render-critical handles
      * and counts without requiring callers to reach through each sub-data object.
-     * Stores the VAOHandle template — actual VAO instances are resolved per-window
-     * at render time.
      */
 
     // Internal
-    private final VAOHandle vaoHandle;
+    private final VAOData vaoData;
     private final VBOData vboData;
     private final IBOData iboData;
 
     // Constructor \\
 
-    public MeshData(VAOHandle vaoHandle, VBOData vboData, IBOData iboData) {
+    public MeshData(VAOData vaoData, VBOData vboData, IBOData iboData) {
 
         // Internal
-        this.vaoHandle = vaoHandle;
+        this.vaoData = vaoData;
         this.vboData = vboData;
         this.iboData = iboData;
     }
 
     // Accessible \\
 
-    public VAOHandle getVAOHandle() {
-        return vaoHandle;
+    public VAOData getVAOData() {
+        return vaoData;
     }
 
     public VBOData getVBOData() {
@@ -45,8 +42,12 @@ public class MeshData extends DataPackage {
         return iboData;
     }
 
+    public int getAttributeHandle() {
+        return vaoData.getAttributeHandle();
+    }
+
     public int getVertStride() {
-        return vaoHandle.getVAOData().getVertStride();
+        return vaoData.getVertStride();
     }
 
     public int getVertexHandle() {

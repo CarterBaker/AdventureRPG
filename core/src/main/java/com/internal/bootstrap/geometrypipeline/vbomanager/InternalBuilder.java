@@ -5,7 +5,6 @@ import java.util.Map;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.internal.bootstrap.geometrypipeline.vao.VAOData;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOHandle;
 import com.internal.core.engine.BuilderPackage;
@@ -44,7 +43,7 @@ public class InternalBuilder extends BuilderPackage {
             String resourceName,
             File file,
             Map<String, File> registry,
-            VAOData vaoData) {
+            VAOInstance vaoInstance) {
 
         if (vboManager.hasVBO(resourceName))
             return;
@@ -61,13 +60,13 @@ public class InternalBuilder extends BuilderPackage {
 
         if (vboEl.isJsonPrimitive() && vboEl.getAsJsonPrimitive().isString()) {
             String refName = vboEl.getAsString();
-            resolveRef(refName, resourceName, file, registry, vaoData);
+            resolveRef(refName, resourceName, file, registry, vaoInstance);
             vboManager.registerVBO(resourceName, vboManager.getVBOHandleDirect(refName));
             return;
         }
 
         if (vboEl.isJsonArray()) {
-            vboManager.registerVBO(resourceName, buildFromData(vboEl.getAsJsonArray(), vaoData, file));
+            vboManager.registerVBO(resourceName, buildFromData(vboEl.getAsJsonArray(), vaoInstance, file));
             return;
         }
 
@@ -81,7 +80,7 @@ public class InternalBuilder extends BuilderPackage {
             String sourceResourceName,
             File sourceFile,
             Map<String, File> registry,
-            VAOData vaoData) {
+            VAOInstance vaoInstance) {
 
         if (vboManager.hasVBO(refName))
             return;
@@ -101,20 +100,20 @@ public class InternalBuilder extends BuilderPackage {
         if (!refEl.isJsonArray())
             throwException("Referenced VBO '" + refName + "' must contain a vertex array.");
 
-        vboManager.registerVBO(refName, buildFromData(refEl.getAsJsonArray(), vaoData, refFile));
+        vboManager.registerVBO(refName, buildFromData(refEl.getAsJsonArray(), vaoInstance, refFile));
     }
 
     // Creation \\
 
     private VBOHandle buildFromData(
             JsonArray verticesArray,
-            VAOData vaoData,
+            VAOInstance vaoInstance,
             File file) {
 
         if (verticesArray.size() == 0)
             throwException("Vertex data array cannot be empty in file: " + file.getName());
 
-        int floatsPerVertex = vaoData.getVertStride();
+        int floatsPerVertex = vaoInstance.getVAOData().getVertStride();
         float[] vertices = new float[verticesArray.size() * floatsPerVertex];
         int index = 0;
 
@@ -127,7 +126,7 @@ public class InternalBuilder extends BuilderPackage {
                 vertices[index++] = val.getAsFloat();
         }
 
-        return GLSLUtility.uploadVertexData(vaoData, create(VBOHandle.class), vertices);
+        return GLSLUtility.uploadVertexData(vaoInstance, create(VBOHandle.class), vertices);
     }
 
     // Utility \\
