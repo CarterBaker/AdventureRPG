@@ -52,4 +52,24 @@ public class MeshInstance extends InstancePackage {
     public MeshData getMeshData() {
         return meshData;
     }
+
+    public int getAttributeHandle() {
+        return meshData.getAttributeHandle();
+    }
+
+    public int[] getAttrSizes() {
+        return meshData.getVAOData().getAttrSizes();
+    }
+
+    public int getVertexHandle() {
+        return meshData.getVertexHandle();
+    }
+
+    public int getIndexHandle() {
+        return meshData.getIndexHandle();
+    }
+
+    public int getIndexCount() {
+        return meshData.getIndexCount();
+    }
 }

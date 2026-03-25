@@ -21,9 +21,9 @@ public class CompositeBufferManager extends ManagerPackage {
 
         int vbo = GLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(), buffer.getFloatsPerInstance());
         int vao = GLSLUtility.createInstancedVAO(
-                meshHandle.getVBOHandle().getVBOData().getVertexHandle(),
-                meshHandle.getVAOInstance().getVAOData().getAttrSizes(),
-                meshHandle.getIBOHandle().getIBOData().getIndexHandle(),
+                meshHandle.getVertexHandle(),
+                meshHandle.getAttrSizes(),
+                meshHandle.getIndexHandle(),
                 vbo,
                 instanceAttrSizes);
 
@@ -40,9 +40,9 @@ public class CompositeBufferManager extends ManagerPackage {
 
         int vbo = GLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(), buffer.getFloatsPerInstance());
         int vao = GLSLUtility.createInstancedVAO(
-                buffer.getMeshHandle().getVBOHandle().getVBOData().getVertexHandle(),
-                buffer.getMeshHandle().getVAOInstance().getVAOData().getAttrSizes(),
-                buffer.getMeshHandle().getIBOHandle().getIBOData().getIndexHandle(),
+                buffer.getMeshHandle().getVertexHandle(),
+                buffer.getMeshHandle().getAttrSizes(),
+                buffer.getMeshHandle().getIndexHandle(),
                 vbo,
                 buffer.getInstanceAttrSizes());
 

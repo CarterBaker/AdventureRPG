@@ -41,7 +41,7 @@ public class CompositeBufferData extends DataPackage {
         // Mesh State
         this.meshHandle = meshHandle;
         this.instanceAttrSizes = instanceAttrSizes;
-        this.indexCount = meshHandle.getIBOHandle().getIBOData().getIndexCount();
+        this.indexCount = meshHandle.getIndexCount();
 
         int floats = 0;
         for (int s : instanceAttrSizes)
