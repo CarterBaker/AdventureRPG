@@ -20,6 +20,7 @@ public class WindowManager extends ManagerPackage {
 
     // Windows
     private ObjectArrayList<WindowInstance> windows;
+    private ObjectArrayList<WindowInstance> pendingWindowOpen;
     private WindowInstance mainWindow;
     private WindowInstance activeWindow;
 
@@ -31,6 +32,7 @@ public class WindowManager extends ManagerPackage {
     @Override
     protected void create() {
         this.windows = new ObjectArrayList<>();
+        this.pendingWindowOpen = new ObjectArrayList<>();
         this.nextWindowID = 1;
     }
 
@@ -44,7 +46,19 @@ public class WindowManager extends ManagerPackage {
 
     public void registerDetachedWindow(WindowInstance window) {
         windows.add(window);
-        internal.windowPlatform.openWindow(window);
+        pendingWindowOpen.add(window);
+    }
+
+    @Override
+    protected void update() {
+
+        if (pendingWindowOpen.isEmpty())
+            return;
+
+        for (int i = 0; i < pendingWindowOpen.size(); i++)
+            internal.windowPlatform.openWindow(pendingWindowOpen.get(i));
+
+        pendingWindowOpen.clear();
     }
 
     public void removeWindow(WindowInstance window) {

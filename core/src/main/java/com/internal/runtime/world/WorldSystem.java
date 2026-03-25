@@ -28,8 +28,9 @@ public class WorldSystem extends SystemPackage {
 
     @Override
     protected void awake() {
+        int windowID = context.getWindow().getWindowID();
         worldStreamManager.createGrid(
-                playerManager.getPlayer(),
+                playerManager.getPlayerForWindow(windowID),
                 context.getWindow());
     }
 }

@@ -1,6 +1,5 @@
 package com.internal.editor.runtime;
 
-import com.badlogic.gdx.Input;
 import com.internal.bootstrap.renderpipeline.window.WindowData;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
@@ -43,9 +42,9 @@ public class PreviewSystem extends SystemPackage {
 
         WindowInstance previewWindow = create(WindowInstance.class);
         previewWindow.constructor(data);
-        windowManager.registerDetachedWindow(previewWindow);
 
         internal.createContext(com.internal.runtime.RuntimeContext.class, previewWindow);
+        windowManager.registerDetachedWindow(previewWindow);
 
     }
 }
