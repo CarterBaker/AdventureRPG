@@ -33,6 +33,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     // Context
     private ContextPackage context;
+    private Class<? extends ContextPackage> pendingContextType;
 
     // Cameras
     private CameraInstance activeCamera;
@@ -71,7 +72,12 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     @Override
     public void create() {
         // LibGDX calls this when the detached OS window is ready.
-        // WindowInstance is already fully initialized before openWindow() fires.
+        // If this window was configured for deferred context creation,
+        // create it now while this window's GL context is current.
+        if (!hasContext() && pendingContextType != null) {
+            internal.createContext(pendingContextType, this);
+            pendingContextType = null;
+        }
     }
 
     @Override
@@ -137,6 +143,10 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     public boolean hasContext() {
         return context != null;
+    }
+
+    public void setPendingContextType(Class<? extends ContextPackage> pendingContextType) {
+        this.pendingContextType = pendingContextType;
     }
 
     // Cameras \\
