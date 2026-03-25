@@ -25,6 +25,11 @@ public abstract class SyncContainerPackage extends InstancePackage {
         return false;
     }
 
+    public final void acquire() {
+        while (!tryAcquire())
+            Thread.onSpinWait();
+    }
+
     public final void release() {
         VarHandle.releaseFence(); // Memory barrier - make all updates visible to other threads
         reset();

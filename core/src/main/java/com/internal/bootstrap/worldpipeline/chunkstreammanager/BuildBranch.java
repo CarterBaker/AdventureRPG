@@ -35,13 +35,21 @@ public class BuildBranch extends BranchPackage {
     // Build \\
 
     public void buildChunk(ChunkInstance chunkInstance) {
+        ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
+
         executeAsync(
                 threadHandle,
-                dynamicGeometryAsyncContainer,
-                chunkInstance.getChunkDataSyncContainer(),
-                (DynamicGeometryAsyncContainer geo, ChunkDataSyncContainer data) -> {
-                    if (dynamicGeometryManager.build(geo, chunkInstance))
-                        data.getData()[ChunkData.BUILD_DATA.index] = true;
+                () -> {
+                    DynamicGeometryAsyncContainer geo = dynamicGeometryAsyncContainer.getInstance();
+                    try {
+                        syncContainer.acquire();
+                        if (dynamicGeometryManager.build(geo, chunkInstance))
+                            syncContainer.getData()[ChunkData.BUILD_DATA.index] = true;
+                    } finally {
+                        syncContainer.release();
+                        syncContainer.endWork(ChunkDataSyncContainer.WORK_BUILD);
+                        geo.reset();
+                    }
                 });
     }
 }

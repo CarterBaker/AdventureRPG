@@ -4,7 +4,6 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkData;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.kernel.syncconsumer.SyncStructConsumer;
 import com.internal.core.kernel.thread.ThreadHandle;
 
 public class MergeBranch extends BranchPackage {
@@ -35,12 +34,19 @@ public class MergeBranch extends BranchPackage {
     // Merge \\
 
     public void mergeChunk(ChunkInstance chunkInstance) {
+        ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
+
         executeAsync(
                 threadHandle,
-                chunkInstance.getChunkDataSyncContainer(),
-                (SyncStructConsumer<ChunkDataSyncContainer>) container -> {
-                    boolean success = chunkInstance.merge();
-                    container.getData()[mergeIndex] = success;
+                () -> {
+                    try {
+                        syncContainer.acquire();
+                        boolean success = chunkInstance.merge();
+                        syncContainer.getData()[mergeIndex] = success;
+                    } finally {
+                        syncContainer.release();
+                        syncContainer.endWork(ChunkDataSyncContainer.WORK_MERGE);
+                    }
                 });
     }
 }

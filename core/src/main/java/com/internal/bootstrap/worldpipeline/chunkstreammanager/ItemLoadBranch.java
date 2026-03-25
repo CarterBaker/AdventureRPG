@@ -5,7 +5,6 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.kernel.syncconsumer.SyncStructConsumer;
 import com.internal.core.kernel.thread.ThreadHandle;
 
 public class ItemLoadBranch extends BranchPackage {
@@ -41,13 +40,19 @@ public class ItemLoadBranch extends BranchPackage {
     public void loadItems(ChunkInstance chunkInstance) {
 
         long chunkCoordinate = chunkInstance.getCoordinate();
+        ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
 
         executeAsync(
                 threadHandle,
-                chunkInstance.getChunkDataSyncContainer(),
-                (SyncStructConsumer<ChunkDataSyncContainer>) container -> {
-                    worldItemPlacementSystem.buildChunkInstances(chunkInstance, chunkCoordinate);
-                    container.getData()[itemDataIndex] = true;
+                () -> {
+                    try {
+                        syncContainer.acquire();
+                        worldItemPlacementSystem.buildChunkInstances(chunkInstance, chunkCoordinate);
+                        syncContainer.getData()[itemDataIndex] = true;
+                    } finally {
+                        syncContainer.release();
+                        syncContainer.endWork(ChunkDataSyncContainer.WORK_ITEM_LOAD);
+                    }
                 });
     }
 }

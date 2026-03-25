@@ -14,18 +14,57 @@ public class ChunkDataSyncContainer extends SyncContainerPackage {
 
     // Internal
     boolean[] data;
+    private boolean[] workInProgress;
+
+    // Work Flags
+    public static final int WORK_LOAD = 0;
+    public static final int WORK_BUILD = 1;
+    public static final int WORK_MERGE = 2;
+    public static final int WORK_ITEM_LOAD = 3;
 
     // Internal \\
 
     @Override
     public void create() {
         this.data = new boolean[ChunkData.LENGTH];
+        this.workInProgress = new boolean[4];
     }
 
     // Reset \\
 
     public void resetData() {
         Arrays.fill(data, false);
+        Arrays.fill(workInProgress, false);
+    }
+
+    public boolean beginWork(int workType) {
+
+        if (!tryAcquire())
+            return false;
+
+        try {
+            return beginWorkLocked(workType);
+        } finally {
+            release();
+        }
+    }
+
+    public boolean beginWorkLocked(int workType) {
+
+        if (workInProgress[workType])
+            return false;
+
+        workInProgress[workType] = true;
+        return true;
+    }
+
+    public void endWork(int workType) {
+        acquire();
+        try {
+            workInProgress[workType] = false;
+        } finally {
+            release();
+        }
     }
 
     // Accessible \\

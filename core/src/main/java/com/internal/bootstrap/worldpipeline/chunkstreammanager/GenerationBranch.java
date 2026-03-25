@@ -7,7 +7,6 @@ import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
 import com.internal.core.engine.BranchPackage;
 import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.kernel.syncconsumer.SyncStructConsumer;
 import com.internal.core.kernel.thread.ThreadHandle;
 
 public class GenerationBranch extends BranchPackage {
@@ -51,18 +50,24 @@ public class GenerationBranch extends BranchPackage {
 
         executeAsync(
                 threadHandle,
-                syncContainer,
-                (SyncStructConsumer<ChunkDataSyncContainer>) container -> {
+                () -> {
+                    try {
+                        syncContainer.acquire();
+                        boolean[] data = syncContainer.getData();
 
-                    boolean loaded = false;
+                        boolean loaded = false;
 
-                    if (!container.getData()[loadIndex]) {
-                        loaded = loadChunk(chunkInstance, container);
-                        container.getData()[loadIndex] = true;
+                        if (!data[loadIndex]) {
+                            loaded = loadChunk(chunkInstance, syncContainer);
+                            data[loadIndex] = true;
+                        }
+
+                        if (!loaded)
+                            generateChunk(chunkInstance, syncContainer);
+                    } finally {
+                        syncContainer.release();
+                        syncContainer.endWork(ChunkDataSyncContainer.WORK_LOAD);
                     }
-
-                    if (!loaded)
-                        generateChunk(chunkInstance, container);
                 });
     }
 

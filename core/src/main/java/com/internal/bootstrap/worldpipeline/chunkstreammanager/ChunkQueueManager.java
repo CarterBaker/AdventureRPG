@@ -335,8 +335,14 @@ class ChunkQueueManager extends ManagerPackage {
 
             ChunkData toLoad = ChunkDataUtility.nextToLoad(syncContainer.getData(), slotLevel);
 
-            if (toLoad != null)
-                return toOperation(toLoad);
+            if (toLoad != null) {
+                QueueOperation operation = toOperation(toLoad);
+
+                if (!reserveAsyncWork(syncContainer, operation))
+                    return QueueOperation.SKIP;
+
+                return operation;
+            }
 
             return QueueOperation.SKIP;
         } finally {
@@ -357,6 +363,18 @@ class ChunkQueueManager extends ManagerPackage {
             case ITEM_DATA -> QueueOperation.ITEM_LOAD;
             case ITEM_RENDER_DATA -> QueueOperation.ITEM_RENDER;
             default -> QueueOperation.SKIP;
+        };
+    }
+
+    private boolean reserveAsyncWork(
+            ChunkDataSyncContainer syncContainer,
+            QueueOperation operation) {
+        return switch (operation) {
+            case LOAD -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_LOAD);
+            case BUILD -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_BUILD);
+            case MERGE -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_MERGE);
+            case ITEM_LOAD -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_ITEM_LOAD);
+            default -> true;
         };
     }
 
