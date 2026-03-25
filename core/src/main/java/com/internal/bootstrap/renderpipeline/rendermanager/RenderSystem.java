@@ -1,7 +1,9 @@
 package com.internal.bootstrap.renderpipeline.rendermanager;
 
 import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
+import com.internal.bootstrap.geometrypipeline.mesh.MeshData;
 import com.internal.bootstrap.geometrypipeline.model.ModelInstance;
+import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
 import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallStruct;
@@ -27,12 +29,14 @@ class RenderSystem extends SystemPackage {
 
     // Internal
     private CompositeRenderSystem compositeRenderSystem;
+    private VAOManager vaoManager;
 
     // Internal \\
 
     @Override
     protected void get() {
         this.compositeRenderSystem = get(CompositeRenderSystem.class);
+        this.vaoManager = get(VAOManager.class);
     }
 
     @Override
@@ -106,7 +110,7 @@ class RenderSystem extends SystemPackage {
 
                     pushInstanceUBOs(renderCall);
                     pushInstanceUniforms(renderCall);
-                    drawBatchedRenderCall(renderCall);
+                    drawBatchedRenderCall(renderCall, window);
                 }
 
                 batch.clear();
@@ -173,9 +177,12 @@ class RenderSystem extends SystemPackage {
         }
     }
 
-    private void drawBatchedRenderCall(RenderCallStruct renderCall) {
+    private void drawBatchedRenderCall(RenderCallStruct renderCall, WindowInstance window) {
         ModelInstance model = renderCall.getModelInstance();
-        GLSLUtility.bindVAO(model.getVAO());
+        MeshData meshData = model.getMeshData();
+        int vao = vaoManager.getVAOForWindow(meshData, window.getWindowID());
+
+        GLSLUtility.bindVAO(vao);
         GLSLUtility.drawElements(model.getIndexCount());
         GLSLUtility.unbindVAO();
     }
