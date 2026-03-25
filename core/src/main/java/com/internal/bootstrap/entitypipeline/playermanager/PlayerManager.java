@@ -20,6 +20,9 @@ import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManage
 import com.internal.core.engine.ManagerPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 
 public class PlayerManager extends ManagerPackage {
 
@@ -42,14 +45,14 @@ public class PlayerManager extends ManagerPackage {
     private InternalBufferSystem internalBufferSystem;
     private PlacementManager placementManager;
 
-    // Player
-    private EntityInstance player;
-    private boolean verifyPlayerPosition;
+    // Player + Camera (per window)
+    private Int2ObjectOpenHashMap<EntityInstance> windowID2Player;
+    private Int2ObjectOpenHashMap<CameraInstance> windowID2Camera;
+    private Int2BooleanOpenHashMap windowID2VerifyPlayerPosition;
+
+    // Scratch
     private Vector3 cameraPosition;
     private Vector3 cameraOffset;
-
-    // Camera
-    private CameraInstance camera;
 
     // Internal \\
 
@@ -60,7 +63,12 @@ public class PlayerManager extends ManagerPackage {
         this.internalBufferSystem = create(InternalBufferSystem.class);
         this.placementManager = create(PlacementManager.class);
 
-        // Player
+        // Player + Camera
+        this.windowID2Player = new Int2ObjectOpenHashMap<>();
+        this.windowID2Camera = new Int2ObjectOpenHashMap<>();
+        this.windowID2VerifyPlayerPosition = new Int2BooleanOpenHashMap();
+
+        // Scratch
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
     }
@@ -80,46 +88,60 @@ public class PlayerManager extends ManagerPackage {
     @Override
     protected void update() {
 
-        if (player == null)
+        if (windowID2Player.isEmpty())
             return;
 
-        calculatePlayerPosition();
+        for (Int2ObjectMap.Entry<EntityInstance> entry : windowID2Player.int2ObjectEntrySet()) {
+            int windowID = entry.getIntKey();
+            EntityInstance player = entry.getValue();
+            CameraInstance camera = windowID2Camera.get(windowID);
+
+            if (camera == null)
+                continue;
+
+            calculatePlayerPosition(windowID, player, camera);
+        }
     }
 
     // Spawn \\
 
     public EntityInstance spawnPlayer(WindowInstance window) {
 
-        this.player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
-        this.verifyPlayerPosition = true;
-        this.cameraOffset.set(
-                player.getSize().x / 2,
-                player.getEyeHeight(),
-                player.getSize().z / 2);
+        EntityInstance player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
+        windowID2Player.put(window.getWindowID(), player);
+        windowID2VerifyPlayerPosition.put(window.getWindowID(), true);
 
-        this.camera = cameraManager.createCamera(
+        CameraInstance camera = cameraManager.createCamera(
                 internal.settings.FOV,
                 window.getWidth(),
                 window.getHeight());
 
         window.setActiveCamera(camera);
+        windowID2Camera.put(window.getWindowID(), camera);
 
         return player;
     }
 
     // Player \\
 
-    private void calculatePlayerPosition() {
+    private void calculatePlayerPosition(int windowID, EntityInstance player, CameraInstance camera) {
 
         WorldPositionStruct worldPositionStruct = player.getWorldPositionStruct();
+        boolean verifyPlayerPosition = windowID2VerifyPlayerPosition.get(windowID);
 
         if (verifyPlayerPosition) {
-            verifyPlayerPosition = verifyPlayerPosition(worldPositionStruct);
+            verifyPlayerPosition = verifyPlayerPosition(player, worldPositionStruct);
+            windowID2VerifyPlayerPosition.put(windowID, verifyPlayerPosition);
             return;
         }
 
-        writeMovementState();
+        writeMovementState(player);
         movementManager.move(player);
+
+        cameraOffset.set(
+                player.getSize().x / 2,
+                player.getEyeHeight(),
+                player.getSize().z / 2);
 
         cameraPosition.set(worldPositionStruct.getPosition());
         cameraPosition.add(cameraOffset);
@@ -135,7 +157,7 @@ public class PlayerManager extends ManagerPackage {
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }
 
-    private void writeMovementState() {
+    private void writeMovementState(EntityInstance player) {
 
         EntityStateHandle state = player.getEntityStateHandle();
         InputHandle input = player.getInputHandle();
@@ -158,7 +180,7 @@ public class PlayerManager extends ManagerPackage {
 
     // Spawn Verification \\
 
-    private boolean verifyPlayerPosition(WorldPositionStruct worldPositionStruct) {
+    private boolean verifyPlayerPosition(EntityInstance player, WorldPositionStruct worldPositionStruct) {
 
         ChunkInstance activeChunkInstance = worldStreamManager.getChunkInstance(
                 worldPositionStruct.getChunkCoordinate());
@@ -190,18 +212,40 @@ public class PlayerManager extends ManagerPackage {
     // Accessible \\
 
     public EntityInstance getPlayer() {
-        return player;
+        for (EntityInstance player : windowID2Player.values())
+            return player;
+        return null;
+    }
+
+    public EntityInstance getPlayerForWindow(int windowID) {
+        return windowID2Player.get(windowID);
     }
 
     public boolean hasPlayer() {
-        return player != null;
+        return !windowID2Player.isEmpty();
+    }
+
+    public boolean hasPlayerForWindow(int windowID) {
+        return windowID2Player.containsKey(windowID);
     }
 
     public CameraInstance getCamera() {
-        return camera;
+        for (CameraInstance camera : windowID2Camera.values())
+            return camera;
+        return null;
+    }
+
+    public CameraInstance getCameraForWindow(int windowID) {
+        return windowID2Camera.get(windowID);
     }
 
     public WorldPositionStruct getPlayerPosition() {
-        return player.getWorldPositionStruct();
+        EntityInstance player = getPlayer();
+        return player == null ? null : player.getWorldPositionStruct();
+    }
+
+    public WorldPositionStruct getPlayerPositionForWindow(int windowID) {
+        EntityInstance player = windowID2Player.get(windowID);
+        return player == null ? null : player.getWorldPositionStruct();
     }
 }

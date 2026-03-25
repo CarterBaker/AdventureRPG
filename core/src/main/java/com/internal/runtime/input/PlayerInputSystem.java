@@ -69,7 +69,9 @@ public class PlayerInputSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        if (!playerManager.hasPlayer())
+        int windowID = context.getWindow().getWindowID();
+
+        if (!playerManager.hasPlayerForWindow(windowID))
             return;
 
         handleInventoryInput();
@@ -88,12 +90,14 @@ public class PlayerInputSystem extends SystemPackage {
         if (!inputSystem.keyJustPressed(inventoryKey))
             return;
 
-        inventoryBranch.toggleInventory(playerManager.getPlayer(), context.getWindow());
+        inventoryBranch.toggleInventory(
+                playerManager.getPlayerForWindow(context.getWindow().getWindowID()),
+                context.getWindow());
     }
 
     private void updateCameraRotation() {
 
-        CameraInstance camera = playerManager.getCamera();
+        CameraInstance camera = playerManager.getCameraForWindow(context.getWindow().getWindowID());
 
         if (camera == null)
             return;
@@ -103,8 +107,9 @@ public class PlayerInputSystem extends SystemPackage {
 
     private void writePlayerInput() {
 
-        EntityInstance player = playerManager.getPlayer();
-        CameraInstance camera = playerManager.getCamera();
+        int windowID = context.getWindow().getWindowID();
+        EntityInstance player = playerManager.getPlayerForWindow(windowID);
+        CameraInstance camera = playerManager.getCameraForWindow(windowID);
 
         if (camera == null)
             return;
