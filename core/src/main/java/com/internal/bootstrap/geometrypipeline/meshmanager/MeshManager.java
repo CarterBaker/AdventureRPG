@@ -118,14 +118,10 @@ public class MeshManager extends ManagerPackage {
     }
 
     public void removeMesh(MeshHandle meshHandle) {
-        vaoManager.removeVAOInstance(meshHandle.getVAOInstance());
-        vboManager.removeVBO(meshHandle.getVBOHandle());
-        iboManager.removeIBO(meshHandle.getIBOHandle());
+        removeMesh(meshHandle.getMeshData());
     }
 
     public void removeMesh(MeshInstance meshInstance) {
-        vaoManager.removeVAOInstance(meshInstance.getVAOInstance());
-        vboManager.removeVBOInstance(meshInstance.getVBOInstance());
-        iboManager.removeIBOInstance(meshInstance.getIBOInstance());
+        removeMesh(meshInstance.getMeshData());
     }
 }
