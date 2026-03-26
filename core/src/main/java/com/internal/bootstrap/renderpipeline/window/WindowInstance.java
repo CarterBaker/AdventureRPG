@@ -43,6 +43,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     private RenderManager renderManager;
     private WindowManager windowManager;
     private VAOManager vaoManager;
+    private int renderLogCount;
 
     // Internal \\
 
@@ -65,6 +66,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
         // Render Queue
         this.renderQueueHandle = create(RenderQueueHandle.class);
         this.renderQueueHandle.constructor();
+        this.renderLogCount = 0;
     }
 
     // ApplicationListener — Detached Window Path \\
@@ -74,9 +76,21 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
         // LibGDX calls this when the detached OS window is ready.
         // If this window was configured for deferred context creation,
         // create it now while this window's GL context is current.
+        System.out.println(
+                "[EditorDiag][WindowInstance.create] frame=" + internal.getFrameCount()
+                        + " thread=" + Thread.currentThread().getName()
+                        + " windowID=" + getWindowID()
+                        + " hasContext=" + hasContext()
+                        + " hasPendingContextType=" + (pendingContextType != null));
+
         if (!hasContext() && pendingContextType != null) {
             internal.createContext(pendingContextType, this);
             pendingContextType = null;
+            System.out.println(
+                    "[EditorDiag][WindowInstance.create.contextCreated] frame=" + internal.getFrameCount()
+                            + " thread=" + Thread.currentThread().getName()
+                            + " windowID=" + getWindowID()
+                            + " context=" + (context == null ? "null" : context.getClass().getSimpleName()));
         }
     }
 
@@ -87,11 +101,28 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
         // this frame. The queue is fully populated. GL context is current for
         // this window — safe to flush.
         windowManager.setActiveWindow(this);
+
+        if (renderLogCount < 240 && (renderLogCount < 10 || renderLogCount % 30 == 0)) {
+            System.out.println(
+                    "[EditorDiag][WindowInstance.render] frame=" + internal.getFrameCount()
+                            + " thread=" + Thread.currentThread().getName()
+                            + " windowID=" + getWindowID()
+                            + " size=" + getWidth() + "x" + getHeight()
+                            + " hasContext=" + hasContext());
+        }
+        renderLogCount++;
+
         renderManager.draw(this);
     }
 
     @Override
     public void resize(int width, int height) {
+        System.out.println(
+                "[EditorDiag][WindowInstance.resize] frame=" + internal.getFrameCount()
+                        + " thread=" + Thread.currentThread().getName()
+                        + " windowID=" + getWindowID()
+                        + " oldSize=" + windowData.getWidth() + "x" + windowData.getHeight()
+                        + " newSize=" + width + "x" + height);
         windowData.setWidth(width);
         windowData.setHeight(height);
     }
@@ -114,6 +145,10 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
             internal.destroyContext(context);
 
         windowManager.removeWindow(this);
+        System.out.println(
+                "[EditorDiag][WindowInstance.dispose] frame=" + internal.getFrameCount()
+                        + " thread=" + Thread.currentThread().getName()
+                        + " windowID=" + getWindowID());
     }
 
     // Screen — Main Window Path \\

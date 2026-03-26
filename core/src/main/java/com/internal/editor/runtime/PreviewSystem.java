@@ -44,6 +44,13 @@ public class PreviewSystem extends SystemPackage {
         previewWindow.constructor(data);
         previewWindow.setPendingContextType(com.internal.runtime.RuntimeContext.class);
 
+        System.out.println(
+                "[EditorDiag][PreviewSystem.openPreview] frame=" + internal.getFrameCount()
+                        + " thread=" + Thread.currentThread().getName()
+                        + " mainWindowID=" + mainWindow.getWindowID()
+                        + " newWindowID=" + previewWindow.getWindowID()
+                        + " size=" + previewWindow.getWidth() + "x" + previewWindow.getHeight());
+
         windowManager.registerDetachedWindow(previewWindow);
 
     }

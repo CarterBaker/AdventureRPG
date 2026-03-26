@@ -2,6 +2,7 @@ package com.AdventureRPG.lwjgl3;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowConfiguration;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.core.engine.WindowPlatform;
@@ -24,6 +25,17 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         config.setTitle(window.getTitle());
         config.setWindowedMode(window.getWidth(), window.getHeight());
 
-        ((Lwjgl3Application) Gdx.app).newWindow(window, config);
+        System.out.println(
+                "[EditorDiag][Lwjgl3WindowPlatform.openWindow.before] thread=" + Thread.currentThread().getName()
+                        + " windowID=" + window.getWindowID()
+                        + " title=" + window.getTitle()
+                        + " size=" + window.getWidth() + "x" + window.getHeight());
+
+        Lwjgl3Window createdWindow = ((Lwjgl3Application) Gdx.app).newWindow(window, config);
+
+        System.out.println(
+                "[EditorDiag][Lwjgl3WindowPlatform.openWindow.after] thread=" + Thread.currentThread().getName()
+                        + " windowID=" + window.getWindowID()
+                        + " created=" + (createdWindow != null));
     }
 }

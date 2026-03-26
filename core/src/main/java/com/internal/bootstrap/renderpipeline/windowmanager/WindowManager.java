@@ -47,6 +47,11 @@ public class WindowManager extends ManagerPackage {
     public void registerDetachedWindow(WindowInstance window) {
         windows.add(window);
         pendingWindowOpen.add(window);
+        System.out.println(
+                "[EditorDiag][WindowManager.registerDetachedWindow] frame=" + internal.getFrameCount()
+                        + " thread=" + Thread.currentThread().getName()
+                        + " windowID=" + window.getWindowID()
+                        + " pendingCount=" + pendingWindowOpen.size());
     }
 
     @Override
@@ -55,8 +60,15 @@ public class WindowManager extends ManagerPackage {
         if (pendingWindowOpen.isEmpty())
             return;
 
-        for (int i = 0; i < pendingWindowOpen.size(); i++)
-            internal.windowPlatform.openWindow(pendingWindowOpen.get(i));
+        for (int i = 0; i < pendingWindowOpen.size(); i++) {
+            WindowInstance pendingWindow = pendingWindowOpen.get(i);
+            System.out.println(
+                    "[EditorDiag][WindowManager.update.openWindow] frame=" + internal.getFrameCount()
+                            + " thread=" + Thread.currentThread().getName()
+                            + " windowID=" + pendingWindow.getWindowID()
+                            + " size=" + pendingWindow.getWidth() + "x" + pendingWindow.getHeight());
+            internal.windowPlatform.openWindow(pendingWindow);
+        }
 
         pendingWindowOpen.clear();
     }

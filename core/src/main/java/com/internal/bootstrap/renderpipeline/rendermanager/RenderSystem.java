@@ -14,6 +14,7 @@ import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOInstance;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.core.engine.SystemPackage;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -30,8 +31,14 @@ class RenderSystem extends SystemPackage {
     // Internal
     private CompositeRenderSystem compositeRenderSystem;
     private VAOManager vaoManager;
+    private Int2IntOpenHashMap windowID2DrawLogCount;
 
     // Internal \\
+
+    @Override
+    protected void create() {
+        this.windowID2DrawLogCount = new Int2IntOpenHashMap();
+    }
 
     @Override
     protected void get() {
@@ -54,6 +61,20 @@ class RenderSystem extends SystemPackage {
 
         if (queue == null)
             return;
+
+        int windowID = window.getWindowID();
+        int drawLogCount = windowID2DrawLogCount.get(windowID);
+        int queuedCallsBeforeReset = queue.renderCallCursor;
+
+        if (drawLogCount < 240 && (drawLogCount < 10 || drawLogCount % 30 == 0))
+            System.out.println(
+                    "[EditorDiag][RenderSystem.draw] frame=" + internal.getFrameCount()
+                            + " thread=" + Thread.currentThread().getName()
+                            + " windowID=" + windowID
+                            + " queuedCallsBeforeReset=" + queuedCallsBeforeReset
+                            + " depthBuckets=" + queue.sortedDepths.size());
+
+        windowID2DrawLogCount.put(windowID, drawLogCount + 1);
 
         queue.renderCallCursor = 0;
 
