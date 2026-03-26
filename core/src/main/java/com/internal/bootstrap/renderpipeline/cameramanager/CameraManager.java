@@ -47,21 +47,6 @@ public class CameraManager extends ManagerPackage {
         this.windowManager = get(WindowManager.class);
     }
 
-    @Override
-    protected void awake() {
-
-        WindowInstance mainWindow = windowManager.getMainWindow();
-
-        OrthographicCameraData data = new OrthographicCameraData(
-                mainWindow.getWidth(),
-                mainWindow.getHeight());
-
-        OrthographicCameraInstance orthoCamera = create(OrthographicCameraInstance.class);
-        orthoCamera.constructor(data);
-
-        mainWindow.setOrthoCamera(orthoCamera);
-    }
-
     // Camera Factory \\
 
     public CameraInstance createCamera(
@@ -73,6 +58,17 @@ public class CameraManager extends ManagerPackage {
         CameraInstance instance = create(CameraInstance.class);
         instance.constructor(data);
         cameraInstances.add(instance);
+
+        return instance;
+    }
+
+    public OrthographicCameraInstance createOrthographicCamera(
+            float width,
+            float height) {
+
+        OrthographicCameraData data = new OrthographicCameraData(width, height);
+        OrthographicCameraInstance instance = create(OrthographicCameraInstance.class);
+        instance.constructor(data);
 
         return instance;
     }

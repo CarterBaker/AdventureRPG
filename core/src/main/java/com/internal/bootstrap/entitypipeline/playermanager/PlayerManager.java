@@ -9,6 +9,7 @@ import com.internal.bootstrap.inputpipeline.input.InputHandle;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
 import com.internal.bootstrap.physicspipeline.movementmanager.MovementManager;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
+import com.internal.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
 import com.internal.bootstrap.renderpipeline.cameramanager.CameraManager;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -115,8 +116,12 @@ public class PlayerManager extends ManagerPackage {
                 internal.settings.FOV,
                 window.getWidth(),
                 window.getHeight());
+        OrthographicCameraInstance orthoCamera = cameraManager.createOrthographicCamera(
+                window.getWidth(),
+                window.getHeight());
 
         window.setActiveCamera(camera);
+        window.setOrthoCamera(orthoCamera);
         windowID2Camera.put(window.getWindowID(), camera);
 
         return player;
