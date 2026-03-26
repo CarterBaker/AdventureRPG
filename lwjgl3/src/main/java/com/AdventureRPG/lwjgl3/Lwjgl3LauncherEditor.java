@@ -60,7 +60,7 @@ public class Lwjgl3LauncherEditor {
     private static Lwjgl3ApplicationConfiguration getConfigurationFromSettings(Settings settings) {
 
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
-        config.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 3, 3);
+        config.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 4, 1);
         config.setTitle("AdventureRPG — Editor");
 
         if (settings.fullscreen) {

@@ -4,7 +4,10 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 import com.internal.core.engine.UtilityPackage;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 
 class GLSLUtility extends UtilityPackage {
 
@@ -28,6 +31,74 @@ class GLSLUtility extends UtilityPackage {
         Gdx.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
         Gdx.gl20.glBufferSubData(GL20.GL_ARRAY_BUFFER, 0, floatCount * Float.BYTES, data);
         Gdx.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+    }
+
+    static int createDynamicInstanceVBO(int maxInstances, int floatsPerInstance) {
+        int vbo = Gdx.gl20.glGenBuffer();
+        Gdx.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
+        Gdx.gl20.glBufferData(
+                GL20.GL_ARRAY_BUFFER,
+                maxInstances * floatsPerInstance * Float.BYTES,
+                null,
+                GL20.GL_DYNAMIC_DRAW);
+        Gdx.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+        return vbo;
+    }
+
+    static int createInstancedVAO(
+            int meshVBOHandle,
+            int[] meshAttrSizes,
+            int meshIBOHandle,
+            int instanceVBOHandle,
+            int[] instanceAttrSizes) {
+
+        IntBuffer idBuffer = ByteBuffer.allocateDirect(Integer.BYTES)
+                .order(ByteOrder.nativeOrder()).asIntBuffer();
+        Gdx.gl30.glGenVertexArrays(1, idBuffer);
+        int vao = idBuffer.get(0);
+
+        Gdx.gl30.glBindVertexArray(vao);
+        Gdx.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, meshVBOHandle);
+
+        int meshStride = 0;
+        for (int i = 0; i < meshAttrSizes.length; i++)
+            meshStride += meshAttrSizes[i];
+        int meshStrideBytes = meshStride * Float.BYTES;
+
+        int meshOffsetBytes = 0;
+        for (int i = 0; i < meshAttrSizes.length; i++) {
+            Gdx.gl20.glEnableVertexAttribArray(i);
+            Gdx.gl20.glVertexAttribPointer(i, meshAttrSizes[i], GL20.GL_FLOAT, false, meshStrideBytes, meshOffsetBytes);
+            meshOffsetBytes += meshAttrSizes[i] * Float.BYTES;
+        }
+
+        int instanceStride = 0;
+        for (int i = 0; i < instanceAttrSizes.length; i++)
+            instanceStride += instanceAttrSizes[i];
+        int instanceStrideBytes = instanceStride * Float.BYTES;
+
+        Gdx.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, instanceVBOHandle);
+
+        int instanceOffsetBytes = 0;
+        for (int i = 0; i < instanceAttrSizes.length; i++) {
+            int location = meshAttrSizes.length + i;
+            Gdx.gl20.glEnableVertexAttribArray(location);
+            Gdx.gl20.glVertexAttribPointer(
+                    location,
+                    instanceAttrSizes[i],
+                    GL20.GL_FLOAT,
+                    false,
+                    instanceStrideBytes,
+                    instanceOffsetBytes);
+            Gdx.gl30.glVertexAttribDivisor(location, 1);
+            instanceOffsetBytes += instanceAttrSizes[i] * Float.BYTES;
+        }
+
+        Gdx.gl20.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, meshIBOHandle);
+        Gdx.gl30.glBindVertexArray(0);
+        Gdx.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+
+        return vao;
     }
 
     // Draw \\
@@ -55,5 +126,19 @@ class GLSLUtility extends UtilityPackage {
 
     static void bindUniformBuffer(int bindingPoint, int gpuHandle) {
         Gdx.gl30.glBindBufferBase(GL30.GL_UNIFORM_BUFFER, bindingPoint, gpuHandle);
+    }
+
+    static void deleteBuffer(int handle) {
+        if (handle != 0)
+            Gdx.gl20.glDeleteBuffer(handle);
+    }
+
+    static void deleteVAO(int handle) {
+        if (handle == 0)
+            return;
+        IntBuffer idBuffer = ByteBuffer.allocateDirect(Integer.BYTES)
+                .order(ByteOrder.nativeOrder()).asIntBuffer();
+        idBuffer.put(handle).flip();
+        Gdx.gl30.glDeleteVertexArrays(1, idBuffer);
     }
 }

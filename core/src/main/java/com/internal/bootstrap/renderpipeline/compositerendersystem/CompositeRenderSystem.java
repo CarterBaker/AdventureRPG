@@ -1,13 +1,14 @@
 package com.internal.bootstrap.renderpipeline.compositerendersystem;
 
 import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
-import com.internal.bootstrap.geometrypipeline.compositebuffermanager.CompositeBufferManager;
 import com.internal.bootstrap.renderpipeline.compositebatch.CompositeBatchStruct;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.core.engine.SystemPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -23,12 +24,11 @@ public class CompositeRenderSystem extends SystemPackage {
      * allocation per frame after the first few frames of material registration.
      */
 
-    // Internal
-    private CompositeBufferManager compositeBufferManager;
+    // Per Window Batch Palette
+    private Int2ObjectOpenHashMap<WindowCompositeState> windowID2CompositeState;
 
-    // Palette
-    private Int2ObjectOpenHashMap<CompositeBatchStruct> materialID2Batch;
-    private ObjectArrayList<CompositeBatchStruct> batches;
+    // Per Window GPU Cache
+    private Int2ObjectOpenHashMap<Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState>> windowID2BufferGpuState;
 
     // Upload Scratch
     private FloatBuffer uploadBuffer;
@@ -38,29 +38,25 @@ public class CompositeRenderSystem extends SystemPackage {
 
     @Override
     protected void create() {
-        this.materialID2Batch = new Int2ObjectOpenHashMap<>();
-        this.batches = new ObjectArrayList<>();
-    }
-
-    @Override
-    protected void get() {
-        this.compositeBufferManager = get(CompositeBufferManager.class);
+        this.windowID2CompositeState = new Int2ObjectOpenHashMap<>();
+        this.windowID2BufferGpuState = new Int2ObjectOpenHashMap<>();
     }
 
     // Submit \\
 
-    public void submit(MaterialInstance material, CompositeBufferInstance buffer) {
+    public void submit(MaterialInstance material, CompositeBufferInstance buffer, WindowInstance window) {
 
         if (buffer.isEmpty())
             return;
 
+        WindowCompositeState compositeState = getOrCreateCompositeState(window.getWindowID());
         int id = material.getMaterialID();
-        CompositeBatchStruct batch = materialID2Batch.get(id);
+        CompositeBatchStruct batch = compositeState.materialID2Batch.get(id);
 
         if (batch == null) {
             batch = new CompositeBatchStruct(material);
-            materialID2Batch.put(id, batch);
-            batches.add(batch);
+            compositeState.materialID2Batch.put(id, batch);
+            compositeState.batches.add(batch);
         }
 
         batch.add(buffer);
@@ -68,15 +64,17 @@ public class CompositeRenderSystem extends SystemPackage {
 
     // Draw \\
 
-    public void draw() {
+    public void draw(WindowInstance window) {
 
-        if (batches.isEmpty())
+        WindowCompositeState compositeState = windowID2CompositeState.get(window.getWindowID());
+
+        if (compositeState == null || compositeState.batches.isEmpty())
             return;
 
         GLSLUtility.enableDepth();
 
-        Object[] batchElements = batches.elements();
-        int batchCount = batches.size();
+        Object[] batchElements = compositeState.batches.elements();
+        int batchCount = compositeState.batches.size();
 
         for (int i = 0; i < batchCount; i++) {
 
@@ -92,7 +90,7 @@ public class CompositeRenderSystem extends SystemPackage {
             int bufferCount = buffers.size();
 
             for (int j = 0; j < bufferCount; j++)
-                drawBuffer((CompositeBufferInstance) bufferElements[j]);
+                drawBuffer((CompositeBufferInstance) bufferElements[j], window.getWindowID());
 
             batch.clear();
         }
@@ -100,25 +98,35 @@ public class CompositeRenderSystem extends SystemPackage {
 
     // Upload and Draw \\
 
-    private void drawBuffer(CompositeBufferInstance buffer) {
+    private void drawBuffer(CompositeBufferInstance buffer, int windowID) {
 
         if (buffer.isEmpty())
             return;
 
-        if (buffer.needsGpuRealloc())
-            compositeBufferManager.grow(buffer);
+        WindowBufferGpuState gpuState = getOrCreateGpuState(buffer, windowID);
 
-        upload(buffer);
+        if (gpuState.maxInstances < buffer.getMaxInstances()) {
+            GLSLUtility.deleteBuffer(gpuState.instanceVBO);
+            GLSLUtility.deleteVAO(gpuState.compositeVAO);
+            gpuState.instanceVBO = 0;
+            gpuState.compositeVAO = 0;
+            gpuState.uploadedVersion = -1;
+        }
+
+        ensureGpuObjects(buffer, gpuState);
+        upload(buffer, gpuState);
 
         GLSLUtility.drawElementsInstanced(
-                buffer.getCompositeVAO(),
+                gpuState.compositeVAO,
                 buffer.getIndexCount(),
                 buffer.getInstanceCount());
     }
 
-    private void upload(CompositeBufferInstance buffer) {
+    private void upload(CompositeBufferInstance buffer, WindowBufferGpuState gpuState) {
 
-        if (!buffer.needsUpload())
+        int cpuVersion = buffer.getCompositeBufferData().getCpuVersion();
+
+        if (gpuState.uploadedVersion == cpuVersion)
             return;
 
         int floatCount = buffer.getInstanceCount() * buffer.getFloatsPerInstance();
@@ -128,8 +136,8 @@ public class CompositeRenderSystem extends SystemPackage {
         uploadBuffer.put(buffer.getInstanceData(), 0, floatCount);
         uploadBuffer.flip();
 
-        GLSLUtility.updateInstanceVBO(buffer.getInstanceVBO(), uploadBuffer, floatCount);
-        buffer.markUploaded();
+        GLSLUtility.updateInstanceVBO(gpuState.instanceVBO, uploadBuffer, floatCount);
+        gpuState.uploadedVersion = cpuVersion;
     }
 
     // Bind \\
@@ -174,5 +182,88 @@ public class CompositeRenderSystem extends SystemPackage {
                 .allocateDirect(uploadBufferCapacity * Float.BYTES)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer();
+    }
+
+    private void ensureGpuObjects(CompositeBufferInstance buffer, WindowBufferGpuState gpuState) {
+
+        if (gpuState.instanceVBO != 0 && gpuState.compositeVAO != 0)
+            return;
+
+        gpuState.instanceVBO = GLSLUtility.createDynamicInstanceVBO(
+                buffer.getMaxInstances(),
+                buffer.getFloatsPerInstance());
+        gpuState.compositeVAO = GLSLUtility.createInstancedVAO(
+                buffer.getMeshHandle().getVertexHandle(),
+                buffer.getMeshHandle().getAttrSizes(),
+                buffer.getMeshHandle().getIndexHandle(),
+                gpuState.instanceVBO,
+                buffer.getInstanceAttrSizes());
+        gpuState.maxInstances = buffer.getMaxInstances();
+    }
+
+    private WindowCompositeState getOrCreateCompositeState(int windowID) {
+
+        WindowCompositeState state = windowID2CompositeState.get(windowID);
+
+        if (state != null)
+            return state;
+
+        state = new WindowCompositeState();
+        windowID2CompositeState.put(windowID, state);
+        return state;
+    }
+
+    private WindowBufferGpuState getOrCreateGpuState(CompositeBufferInstance buffer, int windowID) {
+
+        Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState> buffer2State = windowID2BufferGpuState
+                .get(windowID);
+
+        if (buffer2State == null) {
+            buffer2State = new Object2ObjectOpenHashMap<>();
+            windowID2BufferGpuState.put(windowID, buffer2State);
+        }
+
+        WindowBufferGpuState gpuState = buffer2State.get(buffer);
+
+        if (gpuState != null)
+            return gpuState;
+
+        gpuState = new WindowBufferGpuState();
+        buffer2State.put(buffer, gpuState);
+        return gpuState;
+    }
+
+    public void removeWindow(int windowID) {
+
+        WindowCompositeState compositeState = windowID2CompositeState.remove(windowID);
+
+        if (compositeState != null) {
+            Object[] batches = compositeState.batches.elements();
+            int batchCount = compositeState.batches.size();
+            for (int i = 0; i < batchCount; i++)
+                ((CompositeBatchStruct) batches[i]).clear();
+        }
+
+        Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState> buffer2State = windowID2BufferGpuState
+                .remove(windowID);
+        if (buffer2State == null)
+            return;
+
+        for (WindowBufferGpuState gpuState : buffer2State.values()) {
+            GLSLUtility.deleteBuffer(gpuState.instanceVBO);
+            GLSLUtility.deleteVAO(gpuState.compositeVAO);
+        }
+    }
+
+    private static class WindowCompositeState {
+        private final Int2ObjectOpenHashMap<CompositeBatchStruct> materialID2Batch = new Int2ObjectOpenHashMap<>();
+        private final ObjectArrayList<CompositeBatchStruct> batches = new ObjectArrayList<>();
+    }
+
+    private static class WindowBufferGpuState {
+        private int compositeVAO;
+        private int instanceVBO;
+        private int uploadedVersion = -1;
+        private int maxInstances;
     }
 }

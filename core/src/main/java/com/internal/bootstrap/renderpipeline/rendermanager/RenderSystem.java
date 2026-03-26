@@ -120,7 +120,7 @@ class RenderSystem extends SystemPackage {
                 GLSLUtility.disableScissor();
 
             if (depth == 0)
-                compositeRenderSystem.draw();
+                compositeRenderSystem.draw(window);
         }
     }
 
@@ -189,8 +189,12 @@ class RenderSystem extends SystemPackage {
 
     // Push \\
 
-    void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer) {
-        compositeRenderSystem.submit(material, buffer);
+    void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer, WindowInstance window) {
+        compositeRenderSystem.submit(material, buffer, window);
+    }
+
+    void removeWindowResources(WindowInstance window) {
+        compositeRenderSystem.removeWindow(window.getWindowID());
     }
 
     void pushRenderCall(ModelInstance modelInstance, int depth, MaskStruct mask, WindowInstance window) {

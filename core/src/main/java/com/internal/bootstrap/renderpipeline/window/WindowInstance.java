@@ -41,8 +41,8 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     // Internal
     private RenderManager renderManager;
-    private WindowManager windowManager;
     private VAOManager vaoManager;
+    private WindowManager windowManager;
 
     // Internal \\
 
@@ -55,8 +55,8 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
         // Internal
         this.renderManager = get(RenderManager.class);
-        this.windowManager = get(WindowManager.class);
         this.vaoManager = get(VAOManager.class);
+        this.windowManager = get(WindowManager.class);
     }
 
     @Override
@@ -86,7 +86,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
         // LibGDX fires this after the engine's full update and push phase for
         // this frame. The queue is fully populated. GL context is current for
         // this window — safe to flush.
-        windowManager.setActiveWindow(this);
         renderManager.draw(this);
     }
 
@@ -109,6 +108,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
         // LibGDX calls this when the user closes a detached OS window.
         vaoManager.removeWindowVAOs(getWindowID());
+        renderManager.removeWindowResources(this);
 
         if (context != null)
             internal.destroyContext(context);

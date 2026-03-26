@@ -76,6 +76,14 @@ public class RenderManager extends ManagerPackage {
     // Composite \\
 
     public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer) {
-        renderSystem.pushCompositeCall(material, buffer);
+        renderSystem.pushCompositeCall(material, buffer, windowManager.getMainWindow());
+    }
+
+    public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer, WindowInstance window) {
+        renderSystem.pushCompositeCall(material, buffer, window);
+    }
+
+    public void removeWindowResources(WindowInstance window) {
+        renderSystem.removeWindowResources(window);
     }
 }
