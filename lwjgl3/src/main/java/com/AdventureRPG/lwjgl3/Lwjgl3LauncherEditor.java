@@ -20,9 +20,17 @@ public class Lwjgl3LauncherEditor {
             .create();
 
     public static void main(String[] args) {
+        configureAwtForEngineRasterization();
         if (StartupHelper.startNewJvmIfRequired())
             return;
         createApplication();
+    }
+
+    private static void configureAwtForEngineRasterization() {
+        System.setProperty("java.awt.headless", "true");
+        System.setProperty("sun.java2d.noddraw", "true");
+        System.setProperty("sun.java2d.d3d", "false");
+        System.setProperty("sun.java2d.opengl", "false");
     }
 
     private static Lwjgl3Application createApplication() {

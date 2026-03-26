@@ -55,6 +55,7 @@ tasks.create('runEditor', JavaExec) {
   workingDir = rootProject.file('assets').path
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'com.AdventureRPG.lwjgl3.Lwjgl3LauncherEditor'
+  jvmArgs += ['-XX:+UseSerialGC', '-XX:CICompilerCount=2']
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(21)
   }
