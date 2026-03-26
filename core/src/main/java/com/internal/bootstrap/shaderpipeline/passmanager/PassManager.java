@@ -7,6 +7,7 @@ import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.pass.PassData;
 import com.internal.bootstrap.shaderpipeline.pass.PassHandle;
 import com.internal.bootstrap.shaderpipeline.pass.PassInstance;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.core.engine.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -55,12 +56,24 @@ public class PassManager extends ManagerPackage {
 
     // Render \\
 
+    // Push — no declared window → main window \\
+
     public void pushPass(PassHandle pass, int depth) {
         renderSystem.pushRenderCall(pass.getModelInstance(), depth);
     }
 
     public void pushPass(PassInstance pass, int depth) {
         renderSystem.pushRenderCall(pass.getModelInstance(), depth);
+    }
+
+    // Push — explicit window \\
+
+    public void pushPass(PassHandle pass, int depth, WindowInstance window) {
+        renderSystem.pushRenderCall(pass.getModelInstance(), depth, window);
+    }
+
+    public void pushPass(PassInstance pass, int depth, WindowInstance window) {
+        renderSystem.pushRenderCall(pass.getModelInstance(), depth, window);
     }
 
     // Accessible \\

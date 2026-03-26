@@ -29,6 +29,6 @@ public class SkySystem extends SystemPackage {
 
     @Override
     protected void update() {
-        passManager.pushPass(skyPass, -10);
+        passManager.pushPass(skyPass, -10, context.getWindow());
     }
 }
