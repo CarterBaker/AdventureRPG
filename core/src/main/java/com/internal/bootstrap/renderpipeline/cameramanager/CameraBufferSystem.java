@@ -40,6 +40,7 @@ class CameraBufferSystem extends SystemPackage {
     // Push \\
 
     void pushForWindow(WindowInstance window) {
+
         pushPerspective(window);
         pushOrtho(window);
     }

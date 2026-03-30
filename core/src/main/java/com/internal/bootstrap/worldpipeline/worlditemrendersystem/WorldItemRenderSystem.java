@@ -4,6 +4,8 @@ import com.internal.bootstrap.geometrypipeline.compositebuffer.CompositeBufferIn
 import com.internal.bootstrap.geometrypipeline.compositebuffermanager.CompositeBufferManager;
 import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import com.internal.bootstrap.renderpipeline.rendermanager.RenderManager;
+import com.internal.bootstrap.renderpipeline.window.WindowInstance;
+import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.worldpipeline.worlditem.WorldItemCompositeInstance;
@@ -34,6 +36,7 @@ public class WorldItemRenderSystem extends ManagerPackage {
     private MaterialManager materialManager;
     private CompositeBufferManager compositeBufferManager;
     private RenderManager renderSystem;
+    private WindowManager windowManager;
 
     // Per item definition — composite buffer + material
     private Int2ObjectOpenHashMap<WorldItemCompositeInstance> itemDefID2Composite;
@@ -58,15 +61,25 @@ public class WorldItemRenderSystem extends ManagerPackage {
         this.materialManager = get(MaterialManager.class);
         this.compositeBufferManager = get(CompositeBufferManager.class);
         this.renderSystem = get(RenderManager.class);
+        this.windowManager = get(WindowManager.class);
     }
 
     @Override
     protected void update() {
+        if (windowManager.getWindows().isEmpty())
+            return;
+
         for (var entry : itemDefID2Composite.int2ObjectEntrySet()) {
-            CompositeBufferInstance buffer = entry.getValue().getCompositeBuffer();
+            WorldItemCompositeInstance composite = entry.getValue();
+            CompositeBufferInstance buffer = composite.getCompositeBuffer();
+
             if (buffer.isEmpty())
                 continue;
-            renderSystem.pushCompositeCall(entry.getValue().getMaterial(), buffer);
+
+            for (int i = 0; i < windowManager.getWindows().size(); i++) {
+                WindowInstance window = windowManager.getWindows().get(i);
+                renderSystem.pushCompositeCall(composite.getMaterial(), buffer, window);
+            }
         }
     }
 
