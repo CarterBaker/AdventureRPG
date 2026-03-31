@@ -1,7 +1,7 @@
 package com.internal.editor.runtime;
 
-import com.badlogic.gdx.Input;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
+import com.internal.bootstrap.inputpipeline.inputsystem.KeyCode;
 import com.internal.core.engine.SystemPackage;
 
 public class EditorInputSystem extends SystemPackage {
@@ -29,7 +29,7 @@ public class EditorInputSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        if (inputSystem.keyJustPressed(Input.Keys.NUM_1))
+        if (inputSystem.keyJustPressed(KeyCode.NUM_1))
             previewSystem.openPreview();
     }
 }
