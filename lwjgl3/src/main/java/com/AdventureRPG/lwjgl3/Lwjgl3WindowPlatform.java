@@ -2,7 +2,6 @@ package com.AdventureRPG.lwjgl3;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowConfiguration;
@@ -25,7 +24,6 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         Lwjgl3WindowConfiguration config = new Lwjgl3WindowConfiguration();
         config.setTitle(window.getTitle());
         config.setWindowedMode(window.getWidth(), window.getHeight());
-        config.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 4, 1);
 
         Lwjgl3Window nativeWindow = ((Lwjgl3Application) Gdx.app).newWindow(window, config);
 

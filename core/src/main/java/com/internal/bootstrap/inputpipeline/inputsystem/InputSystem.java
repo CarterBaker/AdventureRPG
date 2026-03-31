@@ -18,8 +18,6 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     // Internal
     private float sensitivity;
-    private static final int MOUSE_LEFT = 0;
-    private static final int MOUSE_RIGHT = 1;
 
     // Keys
     private IntOpenHashSet heldKeys;
@@ -93,12 +91,12 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
-        if (button == MOUSE_LEFT) {
+        if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
             leftClick = true;
             rawLeftClick = true;
         }
 
-        if (button == MOUSE_RIGHT)
+        if (button == com.badlogic.gdx.Input.Buttons.RIGHT)
             rightClick = true;
 
         return true;
@@ -107,12 +105,12 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 
-        if (button == MOUSE_LEFT) {
+        if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
             leftClick = false;
             rawLeftClick = false;
         }
 
-        if (button == MOUSE_RIGHT)
+        if (button == com.badlogic.gdx.Input.Buttons.RIGHT)
             rightClick = false;
 
         return true;

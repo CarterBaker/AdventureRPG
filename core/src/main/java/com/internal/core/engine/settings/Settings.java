@@ -1,6 +1,6 @@
 package com.internal.core.engine.settings;
 
-import com.internal.bootstrap.inputpipeline.inputsystem.KeyCode;
+import com.badlogic.gdx.Input;
 
 public class Settings {
 
@@ -89,16 +89,16 @@ public class Settings {
         public float mouseSensitivity = 0.15f;
 
         // Input Bindings — Player Movement
-        public int keyForward = KeyCode.W;
-        public int keyBack = KeyCode.S;
-        public int keyLeft = KeyCode.A;
-        public int keyRight = KeyCode.D;
-        public int keyJump = KeyCode.SPACE;
-        public int keyWalk = KeyCode.LEFT_CONTROL;
-        public int keySprint = KeyCode.LEFT_SHIFT;
+        public int keyForward = Input.Keys.W;
+        public int keyBack = Input.Keys.S;
+        public int keyLeft = Input.Keys.A;
+        public int keyRight = Input.Keys.D;
+        public int keyJump = Input.Keys.SPACE;
+        public int keyWalk = Input.Keys.CONTROL_LEFT;
+        public int keySprint = Input.Keys.SHIFT_LEFT;
 
         // Input Bindings — Player Actions
-        public int keyInventory = KeyCode.I;
+        public int keyInventory = Input.Keys.I;
 
         // Window \\
 
