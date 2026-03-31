@@ -1,9 +1,9 @@
 package com.internal.bootstrap.shaderpipeline.ubomanager;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
-import com.badlogic.gdx.utils.BufferUtils;
+import com.internal.platform.Gdx;
+import com.internal.platform.graphics.GL20;
+import com.internal.platform.graphics.GL30;
+import com.internal.platform.utils.BufferUtils;
 import com.internal.core.engine.UtilityPackage;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;

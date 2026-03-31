@@ -2,10 +2,10 @@ package com.internal.bootstrap.shaderpipeline.shadermanager;
 
 import java.nio.IntBuffer;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
-import com.badlogic.gdx.utils.BufferUtils;
+import com.internal.platform.Gdx;
+import com.internal.platform.graphics.GL20;
+import com.internal.platform.graphics.GL30;
+import com.internal.platform.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
 import com.internal.core.engine.UtilityPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

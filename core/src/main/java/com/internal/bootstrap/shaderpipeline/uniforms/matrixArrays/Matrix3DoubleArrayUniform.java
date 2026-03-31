@@ -1,7 +1,7 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.matrixArrays;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
+import com.internal.platform.Gdx;
+import com.internal.platform.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.matrices.Matrix3Double;

@@ -1,10 +1,10 @@
 package com.AdventureRPG.lwjgl3;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowConfiguration;
+import com.internal.platform.Gdx;
+import com.internal.platform.backends.lwjgl3.Lwjgl3Application;
+import com.internal.platform.backends.lwjgl3.Lwjgl3Graphics;
+import com.internal.platform.backends.lwjgl3.Lwjgl3Window;
+import com.internal.platform.backends.lwjgl3.Lwjgl3WindowConfiguration;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.core.engine.WindowPlatform;
 import org.lwjgl.BufferUtils;

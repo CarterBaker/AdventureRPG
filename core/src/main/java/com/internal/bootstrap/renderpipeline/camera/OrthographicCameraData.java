@@ -1,6 +1,6 @@
 package com.internal.bootstrap.renderpipeline.camera;
 
-import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.internal.platform.graphics.OrthographicCamera;
 import com.internal.core.engine.DataPackage;
 import com.internal.core.util.mathematics.matrices.Matrix4;
 import com.internal.core.util.mathematics.vectors.Vector2;
@@ -8,7 +8,7 @@ import com.internal.core.util.mathematics.vectors.Vector2;
 public class OrthographicCameraData extends DataPackage {
 
     /*
-     * Raw orthographic camera state. Owns the LibGDX OrthographicCamera and
+     * Raw orthographic camera state. Owns the platform OrthographicCamera and
      * all derived caches updated in place on every mutation.
      * Created with new — owned by OrthographicCameraInstance.
      */

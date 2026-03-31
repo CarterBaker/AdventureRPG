@@ -1,6 +1,6 @@
 package com.internal.bootstrap.renderpipeline.camera;
 
-import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.internal.platform.graphics.PerspectiveCamera;
 import com.internal.core.engine.DataPackage;
 import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.mathematics.matrices.Matrix4;
@@ -10,7 +10,7 @@ import com.internal.core.util.mathematics.vectors.Vector3;
 public class CameraData extends DataPackage {
 
     /*
-     * Raw perspective camera state. Owns the LibGDX PerspectiveCamera and all
+     * Raw perspective camera state. Owns the platform PerspectiveCamera and all
      * derived matrix and vector caches updated in place on every mutation.
      * Created with new — owned by CameraInstance.
      */

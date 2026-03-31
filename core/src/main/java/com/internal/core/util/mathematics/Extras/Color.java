@@ -47,11 +47,11 @@ public class Color extends UtilityPackage {
 
     // Conversion \\
 
-    public com.badlogic.gdx.graphics.Color toGdx() {
-        return new com.badlogic.gdx.graphics.Color(r, g, b, a);
+    public com.internal.platform.graphics.Color toGdx() {
+        return new com.internal.platform.graphics.Color(r, g, b, a);
     }
 
-    public Color fromGDX(com.badlogic.gdx.graphics.Color other) {
+    public Color fromGDX(com.internal.platform.graphics.Color other) {
         return set(other.r, other.g, other.b, other.a);
     }
 

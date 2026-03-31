@@ -1,8 +1,8 @@
 package com.internal.core.engine;
 
 import java.io.File;
-import com.badlogic.gdx.Game;
-import com.badlogic.gdx.Gdx;
+import com.internal.platform.Game;
+import com.internal.platform.Gdx;
 import com.google.gson.Gson;
 import com.internal.core.engine.settings.Settings;
 
@@ -10,7 +10,7 @@ public class Main extends Game {
 
     /*
      * Main serves as the application entry point.
-     * It bridges libGDX with the internal engine, allowing
+     * It bridges legacy backend with the internal engine, allowing
      * the engine to manage lifecycle, updates, and rendering
      * independently of the platform layer.
      *

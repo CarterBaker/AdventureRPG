@@ -1,8 +1,8 @@
 package com.internal.core.engine;
 
 import java.io.File;
-import com.badlogic.gdx.Game;
-import com.badlogic.gdx.Gdx;
+import com.internal.platform.Game;
+import com.internal.platform.Gdx;
 import com.google.gson.Gson;
 import com.internal.core.engine.settings.Settings;
 

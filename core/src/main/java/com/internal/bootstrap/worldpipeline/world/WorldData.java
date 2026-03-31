@@ -1,6 +1,6 @@
 package com.internal.bootstrap.worldpipeline.world;
 
-import com.badlogic.gdx.graphics.Pixmap;
+import com.internal.platform.graphics.Pixmap;
 import com.internal.core.engine.DataPackage;
 import com.internal.core.util.mathematics.vectors.Vector2Int;
 import com.internal.core.util.mathematics.vectors.Vector3;

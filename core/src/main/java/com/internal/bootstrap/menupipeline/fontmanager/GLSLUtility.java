@@ -2,9 +2,9 @@ package com.internal.bootstrap.menupipeline.fontmanager;
 
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Pixmap;
+import com.internal.platform.Gdx;
+import com.internal.platform.graphics.GL20;
+import com.internal.platform.graphics.Pixmap;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.PixmapUtility;
 
@@ -13,7 +13,7 @@ class GLSLUtility extends UtilityPackage {
     /*
      * GL20 2D texture operations for the font pipeline. Uploads a single RGBA
      * BufferedImage to a GPU texture and releases handles on disposal.
-     * LibGDX GL calls are isolated here — nothing above this class imports LibGDX.
+     * platform GL calls are isolated here — nothing above this class imports platform.
      * Package-private — only FontManager may call these.
      */
 

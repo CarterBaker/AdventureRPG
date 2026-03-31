@@ -15,12 +15,12 @@ repositories {
 }
 
 dependencies {
-  api "com.badlogicgames.gdx:gdx:$gdxVersion"
+  api platform("org.lwjgl:lwjgl-bom:3.3.4")
+  api "org.lwjgl:lwjgl"
+  api "org.lwjgl:lwjgl-glfw"
+  api "org.lwjgl:lwjgl-opengl"
 
   implementation 'com.google.code.gson:gson:2.10.1'
   implementation 'it.unimi.dsi:fastutil:8.5.12'
 
-  if(enableGraalNative == 'true') {
-    implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
-  }
 }

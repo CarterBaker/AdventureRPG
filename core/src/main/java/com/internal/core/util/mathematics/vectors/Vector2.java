@@ -29,11 +29,11 @@ public class Vector2 extends UtilityPackage {
 
     // Conversion \\
 
-    public com.badlogic.gdx.math.Vector2 toGdx() {
-        return new com.badlogic.gdx.math.Vector2(x, y);
+    public com.internal.platform.math.Vector2 toGdx() {
+        return new com.internal.platform.math.Vector2(x, y);
     }
 
-    public Vector2 fromGDX(com.badlogic.gdx.math.Vector2 other) {
+    public Vector2 fromGDX(com.internal.platform.math.Vector2 other) {
         return set(other.x, other.y);
     }
 

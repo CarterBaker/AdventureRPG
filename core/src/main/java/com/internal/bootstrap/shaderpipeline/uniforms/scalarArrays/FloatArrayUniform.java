@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalarArrays;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.platform.Gdx;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 

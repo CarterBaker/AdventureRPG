@@ -2,9 +2,9 @@ package com.internal.bootstrap.shaderpipeline.spritemanager;
 
 import java.awt.image.BufferedImage;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Pixmap;
+import com.internal.platform.Gdx;
+import com.internal.platform.graphics.GL20;
+import com.internal.platform.graphics.Pixmap;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.PixmapUtility;
 

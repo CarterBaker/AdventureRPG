@@ -7,7 +7,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WindowManager extends ManagerPackage {
 
     /*
-     * Owns all windows. Main window is LibGDX-hosted.
+     * Owns all windows. Main window is platform-hosted.
      * Detached windows are opened by platform layer and drawn by engine.
      */
 

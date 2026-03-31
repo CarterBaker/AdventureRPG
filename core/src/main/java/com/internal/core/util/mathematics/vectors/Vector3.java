@@ -30,11 +30,11 @@ public class Vector3 extends UtilityPackage {
 
     // Conversion \\
 
-    public com.badlogic.gdx.math.Vector3 toGdx() {
-        return new com.badlogic.gdx.math.Vector3(x, y, z);
+    public com.internal.platform.math.Vector3 toGdx() {
+        return new com.internal.platform.math.Vector3(x, y, z);
     }
 
-    public Vector3 fromGDX(com.badlogic.gdx.math.Vector3 other) {
+    public Vector3 fromGDX(com.internal.platform.math.Vector3 other) {
         return set(other.x, other.y, other.z);
     }
 

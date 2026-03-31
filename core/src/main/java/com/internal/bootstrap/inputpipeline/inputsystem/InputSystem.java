@@ -1,7 +1,7 @@
 package com.internal.bootstrap.inputpipeline.inputsystem;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputProcessor;
+import com.internal.platform.Gdx;
+import com.internal.platform.InputProcessor;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -9,7 +9,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 public class InputSystem extends SystemPackage implements InputProcessor {
 
     /*
-     * Captures all raw input from LibGDX each frame and exposes clean query
+     * Captures all raw input from platform each frame and exposes clean query
      * methods. No game knowledge — no named keys, no lock state, no handle
      * writing. Any system that needs input reads from this and interprets the
      * state in its own context. captureCursor() is the only platform call
@@ -91,12 +91,12 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
-        if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
+        if (button == com.internal.platform.Input.Buttons.LEFT) {
             leftClick = true;
             rawLeftClick = true;
         }
 
-        if (button == com.badlogic.gdx.Input.Buttons.RIGHT)
+        if (button == com.internal.platform.Input.Buttons.RIGHT)
             rightClick = true;
 
         return true;
@@ -105,12 +105,12 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 
-        if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
+        if (button == com.internal.platform.Input.Buttons.LEFT) {
             leftClick = false;
             rawLeftClick = false;
         }
 
-        if (button == com.badlogic.gdx.Input.Buttons.RIGHT)
+        if (button == com.internal.platform.Input.Buttons.RIGHT)
             rightClick = false;
 
         return true;

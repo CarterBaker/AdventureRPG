@@ -1,7 +1,7 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.matrixArrays;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
+import com.internal.platform.Gdx;
+import com.internal.platform.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.matrices.Matrix4;
@@ -46,7 +46,7 @@ public final class Matrix4ArrayUniform extends UniformAttributeStruct<Object[]> 
     protected void applyObject(Object value) {
         if (value instanceof Matrix4[] m)
             applyValue(m);
-        else if (value instanceof com.badlogic.gdx.math.Matrix4[] gdx) {
+        else if (value instanceof com.internal.platform.math.Matrix4[] gdx) {
             Matrix4[] dst = (Matrix4[]) this.value;
             for (int i = 0; i < Math.min(gdx.length, elementCount); i++)
                 dst[i].fromGDX(gdx[i]);

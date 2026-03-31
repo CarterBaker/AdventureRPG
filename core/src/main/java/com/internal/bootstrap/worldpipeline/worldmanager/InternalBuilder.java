@@ -1,8 +1,8 @@
 package com.internal.bootstrap.worldpipeline.worldmanager;
 
 import java.io.File;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Pixmap;
+import com.internal.platform.Gdx;
+import com.internal.platform.graphics.Pixmap;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.internal.bootstrap.worldpipeline.world.WorldData;

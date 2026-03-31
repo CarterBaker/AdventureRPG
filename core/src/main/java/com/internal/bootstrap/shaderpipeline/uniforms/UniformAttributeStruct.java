@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms;
 
-import com.badlogic.gdx.utils.BufferUtils;
+import com.internal.platform.utils.BufferUtils;
 import com.internal.core.engine.StructPackage;
 import java.nio.ByteBuffer;
 

@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.matrices;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.platform.Gdx;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.matrices.Matrix3;
@@ -18,7 +18,7 @@ public final class Matrix3Uniform extends UniformAttributeStruct<Object> {
 
     @Override
     protected void push(int handle, Object value) {
-        if (value instanceof com.badlogic.gdx.math.Matrix3 m)
+        if (value instanceof com.internal.platform.math.Matrix3 m)
             Gdx.gl.glUniformMatrix3fv(handle, 1, false, m.val, 0);
         else if (value instanceof Matrix3 m)
             Gdx.gl.glUniformMatrix3fv(handle, 1, false, m.val, 0);
@@ -29,7 +29,7 @@ public final class Matrix3Uniform extends UniformAttributeStruct<Object> {
     @Override
     protected void applyValue(Object value) {
         Matrix3 target = (Matrix3) this.value;
-        if (value instanceof com.badlogic.gdx.math.Matrix3 m)
+        if (value instanceof com.internal.platform.math.Matrix3 m)
             target.fromGDX(m);
         else if (value instanceof Matrix3 m)
             target.set(m);

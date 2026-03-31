@@ -4,9 +4,9 @@ import java.io.File;
 import java.time.Instant;
 import java.util.concurrent.Future;
 
-import com.badlogic.gdx.Game;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Screen;
+import com.internal.platform.Game;
+import com.internal.platform.Gdx;
+import com.internal.platform.Screen;
 import com.google.gson.Gson;
 import com.internal.bootstrap.renderpipeline.window.WindowData;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;

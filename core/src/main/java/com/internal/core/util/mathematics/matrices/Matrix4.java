@@ -73,7 +73,7 @@ public class Matrix4 extends UtilityPackage {
 
     // Conversion \\
 
-    public Matrix4 fromGDX(com.badlogic.gdx.math.Matrix4 other) {
+    public Matrix4 fromGDX(com.internal.platform.math.Matrix4 other) {
         System.arraycopy(other.val, 0, val, 0, 16);
         return this;
     }

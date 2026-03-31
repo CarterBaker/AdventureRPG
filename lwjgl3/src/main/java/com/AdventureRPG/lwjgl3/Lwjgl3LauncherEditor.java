@@ -1,11 +1,11 @@
 package com.AdventureRPG.lwjgl3;
 
 import java.io.File;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
+import com.internal.platform.Gdx;
+import com.internal.platform.backends.lwjgl3.Lwjgl3Application;
+import com.internal.platform.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.internal.platform.backends.lwjgl3.Lwjgl3Graphics;
+import com.internal.platform.backends.lwjgl3.Lwjgl3Window;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.internal.core.engine.MainEditor;
@@ -45,7 +45,7 @@ public class Lwjgl3LauncherEditor {
         MainEditor mainEditor = new MainEditor(baseGameDir, settings, ENGINE_GSON, new Lwjgl3WindowPlatform());
 
         Lwjgl3ApplicationConfiguration config = getConfigurationFromSettings(settings);
-        config.setWindowListener(new com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter() {
+        config.setWindowListener(new com.internal.platform.backends.lwjgl3.Lwjgl3WindowAdapter() {
             @Override
             public boolean closeRequested() {
                 saveWindowInfoOnClose(settingsFile, settings);
