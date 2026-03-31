@@ -14,19 +14,14 @@ import com.internal.core.engine.InstancePackage;
 public class WindowInstance extends InstancePackage implements Screen, ApplicationListener {
 
     /*
-     * Runtime window wrapper. Owns its WindowData and RenderQueueHandle.
-     * The queue is created and owned entirely here — no manager involvement.
-     * Render calls are pushed into this window's queue explicitly by systems
-     * that declare their target window — no declared window defaults to main.
-     * The main window's queue is flushed by the engine draw() loop. Each
-     * detached window flushes its own queue in its ApplicationListener.render()
-     * callback after the engine's full push phase is complete and the correct
-     * GL context is current. activeWindow is set on focus for input and
-     * raycast systems only — no relation to rendering.
+     * Runtime window wrapper. Owns WindowData and RenderQueueHandle.
+     * Engine now owns timing for all draws (main + detached). Detached
+     * ApplicationListener callbacks are no-op for render timing.
      */
 
     // Data
     private WindowData windowData;
+    private long nativeHandle;
 
     // Render Queue
     private RenderQueueHandle renderQueueHandle;
@@ -71,9 +66,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     public void create() {
-        // LibGDX calls this when the detached OS window is ready.
-        // If this window was configured for deferred context creation,
-        // create it now while this window's GL context is current.
+        // Optional deferred context path (kept for compatibility).
         if (!hasContext() && pendingContextType != null) {
             internal.createContext(pendingContextType, this);
             pendingContextType = null;
@@ -82,11 +75,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     public void render() {
-
-        // LibGDX fires this after the engine's full update and push phase for
-        // this frame. The queue is fully populated. GL context is current for
-        // this window — safe to flush.
-        renderManager.draw(this);
+        // Engine-owned draw timing for detached windows.
     }
 
     @Override
@@ -106,7 +95,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     @Override
     public void dispose() {
 
-        // LibGDX calls this when the user closes a detached OS window.
+        // Safe idempotent cleanup path.
         vaoManager.removeWindowVAOs(getWindowID());
         renderManager.removeWindowResources(this);
 
@@ -120,7 +109,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     public void render(float delta) {
-        // Main window is flushed by the engine draw() loop — nothing to do here.
+        // Main window is flushed by engine draw() loop.
     }
 
     @Override
@@ -147,6 +136,20 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     public void setPendingContextType(Class<? extends ContextPackage> pendingContextType) {
         this.pendingContextType = pendingContextType;
+    }
+
+    // Native Handle \\
+
+    public long getNativeHandle() {
+        return nativeHandle;
+    }
+
+    public void setNativeHandle(long nativeHandle) {
+        this.nativeHandle = nativeHandle;
+    }
+
+    public boolean hasNativeHandle() {
+        return nativeHandle != 0L;
     }
 
     // Cameras \\

@@ -54,6 +54,6 @@ public class GameEngine extends EnginePackage {
 
     @Override
     void draw() {
-        renderManager.draw(windowManager.getMainWindow());
+        renderManager.draw();
     }
 }

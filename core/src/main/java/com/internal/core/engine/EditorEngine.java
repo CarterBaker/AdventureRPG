@@ -58,6 +58,6 @@ public class EditorEngine extends EnginePackage {
 
     @Override
     void draw() {
-        renderManager.draw(windowManager.getMainWindow());
+        renderManager.draw();
     }
 }

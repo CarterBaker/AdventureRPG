@@ -9,18 +9,14 @@ import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.core.engine.ManagerPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RenderManager extends ManagerPackage {
 
     /*
      * Coordinates draw passes and routes render call pushes to the correct
-     * window's RenderQueueHandle. Push calls with no window parameter default
-     * to the main window — engine-level systems that do not declare a target
-     * always render to main. Push calls with an explicit window route there.
-     * Active window is never touched here — that is an input concern only.
-     * draw(WindowInstance) flushes a specific window's queue under its GL
-     * context — called by the engine draw() loop for main, and by each
-     * detached WindowInstance.render() callback for itself.
+     * window queues. Engine calls draw() once per frame; RenderManager owns
+     * draw ordering for main + detached windows.
      */
 
     // Internal
@@ -47,6 +43,40 @@ public class RenderManager extends ManagerPackage {
     }
 
     // Draw \\
+
+    public void draw() {
+
+        WindowInstance mainWindow = windowManager.getMainWindow();
+
+        if (mainWindow == null)
+            return;
+
+        // Main window — context current via LibGDX callback.
+        draw(mainWindow);
+
+        // Detached windows — explicit context/swap ownership via platform.
+        ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
+        Object[] elements = windows.elements();
+        int count = windows.size();
+
+        for (int i = 0; i < count; i++) {
+            WindowInstance window = (WindowInstance) elements[i];
+
+            if (window == mainWindow)
+                continue;
+
+            if (!window.hasNativeHandle())
+                continue;
+
+            internal.windowPlatform.makeContextCurrent(window);
+            internal.windowPlatform.syncWindowSize(window);
+            draw(window);
+            internal.windowPlatform.swapBuffers(window);
+        }
+
+        // Restore main for LibGDX post-render assumptions.
+        internal.windowPlatform.restoreMainContext();
+    }
 
     public void draw(WindowInstance window) {
         cameraManager.pushCamera(window);

@@ -7,15 +7,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WindowManager extends ManagerPackage {
 
     /*
-     * Owns all windows — main and detached. Main window is registered during
-     * bootstrap by EnginePackage after the bootstrap pipelines are created.
-     * Window IDs are assigned sequentially — main is always 0, detached windows
-     * increment from 1. Detached windows are opened as real OS windows via
-     * internal.windowPlatform on registration.
-     *
-     * activeWindow tracks the last focused or clicked OS window. This is
-     * exclusively for input and raycast systems — it has no relation to
-     * rendering. Render calls are routed to windows explicitly.
+     * Owns all windows. Main window is LibGDX-hosted.
+     * Detached windows are opened by platform layer and drawn by engine.
      */
 
     // Windows
@@ -52,13 +45,30 @@ public class WindowManager extends ManagerPackage {
     @Override
     protected void update() {
 
-        if (pendingWindowOpen.isEmpty())
-            return;
+        // Open newly registered detached windows.
+        if (!pendingWindowOpen.isEmpty()) {
+            for (int i = 0; i < pendingWindowOpen.size(); i++)
+                internal.windowPlatform.openWindow(pendingWindowOpen.get(i));
+            pendingWindowOpen.clear();
+        }
 
-        for (int i = 0; i < pendingWindowOpen.size(); i++)
-            internal.windowPlatform.openWindow(pendingWindowOpen.get(i));
+        // Poll close requests for detached windows.
+        // Iterate backwards to allow removals.
+        for (int i = windows.size() - 1; i >= 0; i--) {
+            WindowInstance window = windows.get(i);
 
-        pendingWindowOpen.clear();
+            if (window == mainWindow)
+                continue;
+
+            if (!window.hasNativeHandle())
+                continue;
+
+            if (!internal.windowPlatform.shouldClose(window))
+                continue;
+
+            window.dispose();
+            internal.windowPlatform.destroyWindow(window);
+        }
     }
 
     public void removeWindow(WindowInstance window) {
