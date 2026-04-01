@@ -32,7 +32,7 @@ public class AliasLibrarySystem extends SystemPackage {
     protected void create() {
 
         this.aliasLookup = new Object2IntOpenHashMap<>();
-        this.aliases = new AliasStruct[16];
+        this.aliases = new AliasStruct[EngineSetting.SHADER_ALIAS_LIBRARY_INITIAL_CAPACITY];
         this.aliasCount = 0;
         this.root = new File(EngineSetting.BLOCK_TEXTURE_ALIAS_PATH);
     }
@@ -61,7 +61,7 @@ public class AliasLibrarySystem extends SystemPackage {
             float r = colorArray.get(0).getAsFloat();
             float g = colorArray.get(1).getAsFloat();
             float b = colorArray.get(2).getAsFloat();
-            Color defaultColor = new Color(r, g, b, 1.0f);
+            Color defaultColor = new Color(r, g, b, EngineSetting.SHADER_ALIAS_DEFAULT_ALPHA);
 
             String uniformName = json.has("uniformName")
                     ? json.get("uniformName").getAsString()
@@ -87,10 +87,10 @@ public class AliasLibrarySystem extends SystemPackage {
         if (requiredCapacity <= aliases.length)
             return;
 
-        int newCapacity = aliases.length * 2;
+        int newCapacity = aliases.length * EngineSetting.SHADER_ALIAS_LIBRARY_GROWTH_FACTOR;
 
         while (newCapacity < requiredCapacity)
-            newCapacity *= 2;
+            newCapacity *= EngineSetting.SHADER_ALIAS_LIBRARY_GROWTH_FACTOR;
 
         aliases = java.util.Arrays.copyOf(aliases, newCapacity);
     }
@@ -107,14 +107,14 @@ public class AliasLibrarySystem extends SystemPackage {
 
     public int get(String aliasVariation) {
         if (aliasVariation == null)
-            return -1;
-        return aliasLookup.getOrDefault(aliasVariation.toLowerCase(), -1);
+            return EngineSetting.INDEX_NOT_FOUND;
+        return aliasLookup.getOrDefault(aliasVariation.toLowerCase(), EngineSetting.INDEX_NOT_FOUND);
     }
 
     public int getOrDefault(String aliasVariation) {
         if (aliasVariation == null)
-            return -1;
-        return aliasLookup.getOrDefault(aliasVariation.toLowerCase(), -1);
+            return EngineSetting.INDEX_NOT_FOUND;
+        return aliasLookup.getOrDefault(aliasVariation.toLowerCase(), EngineSetting.INDEX_NOT_FOUND);
     }
 
     public AliasStruct getAlias(int aliasId) {
@@ -134,6 +134,6 @@ public class AliasLibrarySystem extends SystemPackage {
     }
 
     public boolean hasAlias(String aliasVariation) {
-        return getOrDefault(aliasVariation) != -1;
+        return getOrDefault(aliasVariation) != EngineSetting.INDEX_NOT_FOUND;
     }
 }

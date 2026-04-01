@@ -1,6 +1,7 @@
 package com.internal.bootstrap.shaderpipeline.shadermanager;
 
 import com.internal.core.app.CoreContext;
+import com.internal.core.engine.settings.EngineSetting;
 import java.nio.IntBuffer;
 
 import com.internal.core.util.graphics.gl.GL20;
@@ -137,7 +138,7 @@ class GLSLUtility extends UtilityPackage {
 
         int blockIndex = CoreContext.gl30.glGetUniformBlockIndex(programHandle, blockName);
 
-        if (blockIndex == GL30.GL_INVALID_INDEX)
+        if (blockIndex == EngineSetting.GL_INVALID_INDEX)
             throwException("Uniform block not found in shader program: " + blockName);
 
         CoreContext.gl30.glUniformBlockBinding(programHandle, blockIndex, bindingPoint);

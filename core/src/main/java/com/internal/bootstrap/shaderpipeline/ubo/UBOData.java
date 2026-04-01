@@ -4,6 +4,7 @@ import com.internal.core.util.memory.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformData;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.core.engine.DataPackage;
+import com.internal.core.engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.nio.ByteBuffer;
@@ -17,7 +18,7 @@ public class UBOData extends DataPackage {
      * uniformKeys mirrors compiledUniforms for zero-allocation iteration.
      */
 
-    public static final int UNSPECIFIED_BINDING = -1;
+    public static final int UNSPECIFIED_BINDING = EngineSetting.SHADER_UBO_UNSPECIFIED_BINDING;
 
     // Source
     private final String blockName;
@@ -51,7 +52,7 @@ public class UBOData extends DataPackage {
         this.blockName = source.blockName;
         this.requestedBinding = source.requestedBinding;
         this.uniformDeclarations = source.uniformDeclarations;
-        this.bufferID = -1;
+        this.bufferID = EngineSetting.INDEX_NOT_FOUND;
         this.gpuHandle = newGpuHandle;
         this.bindingPoint = source.bindingPoint;
         this.totalSizeBytes = source.totalSizeBytes;

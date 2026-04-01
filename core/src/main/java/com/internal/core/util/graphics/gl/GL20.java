@@ -35,4 +35,7 @@ public interface GL20 {
     void glUniform4i(int loc,int v0,int v1,int v2,int v3); void glUniform4iv(int loc,int count,int[] v,int offset); void glUniform4f(int loc,float v0,float v1,float v2,float v3);
     void glUniform4fv(int loc,int count,float[] v,int offset); void glUniformMatrix2fv(int loc,int count,boolean transpose,float[] value,int offset);
     void glUniformMatrix3fv(int loc,int count,boolean transpose,float[] value,int offset); void glUniformMatrix4fv(int loc,int count,boolean transpose,float[] value,int offset);
+    void glUniformMatrix2fv(int loc,int count,boolean transpose,FloatBuffer value);
+    void glUniformMatrix3fv(int loc,int count,boolean transpose,FloatBuffer value);
+    void glUniformMatrix4fv(int loc,int count,boolean transpose,FloatBuffer value);
 }

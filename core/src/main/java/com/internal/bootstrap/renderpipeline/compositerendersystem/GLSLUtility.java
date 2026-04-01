@@ -1,6 +1,7 @@
 package com.internal.bootstrap.renderpipeline.compositerendersystem;
 
 import com.internal.core.app.CoreContext;
+import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.util.graphics.gl.GL20;
 import com.internal.core.util.graphics.gl.GL30;
 import com.internal.core.engine.UtilityPackage;
@@ -120,7 +121,7 @@ class GLSLUtility extends UtilityPackage {
 
     static void bindUniformBlock(int shaderProgram, String blockName, int bindingPoint) {
         int blockIndex = CoreContext.gl30.glGetUniformBlockIndex(shaderProgram, blockName);
-        if (blockIndex != GL30.GL_INVALID_INDEX)
+        if (blockIndex != EngineSetting.GL_INVALID_INDEX)
             CoreContext.gl30.glUniformBlockBinding(shaderProgram, blockIndex, bindingPoint);
     }
 
