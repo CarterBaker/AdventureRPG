@@ -251,7 +251,6 @@ public class EnginePackage extends ManagerPackage {
             SystemPackage.setupConstructor(this.settings, this, this);
 
             var constructor = contextClass.getDeclaredConstructor();
-            constructor.setAccessible(true);
             T context = constructor.newInstance();
 
             context.pendingStart = true;
