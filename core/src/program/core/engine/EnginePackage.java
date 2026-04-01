@@ -628,7 +628,6 @@ public class EnginePackage extends ManagerPackage {
         int windowHeight = CoreContext.graphics != null ? CoreContext.graphics.getHeight() : 0;
         mainWindow.constructor(new WindowData(0, windowWidth, windowHeight, EngineSetting.WINDOW_TITLE));
 
-
         WindowManager windowManager = getUnchecked(WindowManager.class);
         windowManager.registerMainWindow(mainWindow);
 
