@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.matrices;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.core.app.CoreContext;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.matrices.Matrix2Double;
@@ -29,7 +29,7 @@ public final class Matrix2DoubleUniform extends UniformAttributeStruct<Matrix2Do
         uniformBuffer.put((float) value.val[2]);
         uniformBuffer.put((float) value.val[3]);
         uniformBuffer.flip();
-        Gdx.gl.glUniformMatrix2fv(handle, 1, false, uniformBuffer);
+        CoreContext.gl.glUniformMatrix2fv(handle, 1, false, uniformBuffer);
     }
 
     @Override

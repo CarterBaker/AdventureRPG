@@ -276,7 +276,7 @@ RenderCallStruct call = renderCallBuffer[renderCallCursor++];
 call.init(modelInstance, mask);
 ```
 
-`Pool<T>` from LibGDX is never used. Cursor array always preferred.
+`Pool<T>` from legacy backend is never used. Cursor array always preferred.
 
 ### Zero-Allocation Hot Path Iteration
 FastUtil for-each loops allocate an iterator. In anything called per-frame, use index-based iteration:

@@ -51,7 +51,7 @@ public class RenderManager extends ManagerPackage {
         if (mainWindow == null)
             return;
 
-        // Main window — context current via LibGDX callback.
+        // Main window — context current via platform callback.
         draw(mainWindow);
 
         // Detached windows — explicit context/swap ownership via platform.
@@ -74,7 +74,7 @@ public class RenderManager extends ManagerPackage {
             internal.windowPlatform.swapBuffers(window);
         }
 
-        // Restore main for LibGDX post-render assumptions.
+        // Restore main for platform post-render assumptions.
         internal.windowPlatform.restoreMainContext();
     }
 

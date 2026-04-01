@@ -1,11 +1,11 @@
 package com.internal.bootstrap.geometrypipeline.vbomanager;
 
+import com.internal.core.app.CoreContext;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
+import com.internal.core.util.graphics.gl.GL20;
+import com.internal.core.util.graphics.gl.GL30;
 import com.internal.bootstrap.geometrypipeline.vao.VAOData;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
 import com.internal.bootstrap.geometrypipeline.vbo.VBOData;
@@ -45,8 +45,8 @@ class GLSLUtility {
 
         private static VBOData upload(VAOInstance vaoInstance, float[] vertices) {
 
-                GL30 gl30 = Gdx.gl30;
-                GL20 gl20 = Gdx.gl20;
+                GL30 gl30 = CoreContext.gl30;
+                GL20 gl20 = CoreContext.gl20;
                 VAOData vaoData = vaoInstance.getVAOData();
                 int size = vertices.length * Float.BYTES;
 
@@ -82,6 +82,6 @@ class GLSLUtility {
         // Removal \\
 
         static void removeVertexData(VBOData vboData) {
-                Gdx.gl20.glDeleteBuffer(vboData.getVertexHandle());
+                CoreContext.gl20.glDeleteBuffer(vboData.getVertexHandle());
         }
 }

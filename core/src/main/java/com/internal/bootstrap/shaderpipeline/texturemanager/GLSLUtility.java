@@ -1,12 +1,12 @@
 package com.internal.bootstrap.shaderpipeline.texturemanager;
 
+import com.internal.core.app.CoreContext;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
-import com.badlogic.gdx.graphics.Pixmap;
+import com.internal.core.util.graphics.gl.GL20;
+import com.internal.core.util.graphics.gl.GL30;
+import com.internal.core.util.image.Pixmap;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.PixmapUtility;
 
@@ -36,16 +36,16 @@ class GLSLUtility extends UtilityPackage {
                 throwException("All texture array layers must have identical dimensions");
         }
 
-        if (!(Gdx.gl instanceof GL30))
+        if (!(CoreContext.gl instanceof GL30))
             throwException("GL30 required for texture arrays");
 
-        GL30 gl30 = (GL30) Gdx.gl;
-        int handle = Gdx.gl.glGenTexture();
+        GL30 gl30 = (GL30) CoreContext.gl;
+        int handle = CoreContext.gl.glGenTexture();
 
         if (handle == 0)
             throwException("GPU handle could not be generated for texture array");
 
-        Gdx.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, handle);
+        CoreContext.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, handle);
 
         gl30.glTexImage3D(
                 GL30.GL_TEXTURE_2D_ARRAY,
@@ -72,12 +72,12 @@ class GLSLUtility extends UtilityPackage {
             pix.dispose();
         }
 
-        Gdx.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_NEAREST);
-        Gdx.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_NEAREST);
-        Gdx.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
-        Gdx.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
+        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_NEAREST);
+        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_NEAREST);
+        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
+        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
 
-        Gdx.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
+        CoreContext.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
 
         return handle;
     }
@@ -89,7 +89,7 @@ class GLSLUtility extends UtilityPackage {
         if (handle == 0)
             return;
 
-        Gdx.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
-        Gdx.gl.glDeleteTexture(handle);
+        CoreContext.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
+        CoreContext.gl.glDeleteTexture(handle);
     }
 }

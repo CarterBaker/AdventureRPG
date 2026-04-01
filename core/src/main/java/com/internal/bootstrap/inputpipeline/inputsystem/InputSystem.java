@@ -1,7 +1,7 @@
 package com.internal.bootstrap.inputpipeline.inputsystem;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputProcessor;
+import com.internal.core.app.CoreContext;
+import com.internal.core.input.InputProcessor;
 import com.internal.core.engine.SystemPackage;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -9,11 +9,11 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 public class InputSystem extends SystemPackage implements InputProcessor {
 
     /*
-     * Captures all raw input from LibGDX each frame and exposes clean query
+     * Captures all raw input from platform each frame and exposes clean query
      * methods. No game knowledge — no named keys, no lock state, no handle
      * writing. Any system that needs input reads from this and interprets the
      * state in its own context. captureCursor() is the only platform call
-     * exposed — runtime systems call it rather than touching Gdx directly.
+     * exposed — runtime systems call it rather than touching platform runtime directly.
      */
 
     // Internal
@@ -55,7 +55,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     @Override
     protected void start() {
-        Gdx.input.setInputProcessor(this);
+        CoreContext.input.setInputProcessor(this);
     }
 
     @Override
@@ -68,8 +68,8 @@ public class InputSystem extends SystemPackage implements InputProcessor {
         justPressedSwap = temp;
         justPressedSwap.clear();
 
-        float deltaX = Gdx.input.getDeltaX() * sensitivity;
-        float deltaY = Gdx.input.getDeltaY() * sensitivity;
+        float deltaX = CoreContext.input.getDeltaX() * sensitivity;
+        float deltaY = CoreContext.input.getDeltaY() * sensitivity;
         mouseDelta.set(deltaX, deltaY);
     }
 
@@ -91,12 +91,12 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
-        if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
+        if (button == com.internal.core.input.Input.Buttons.LEFT) {
             leftClick = true;
             rawLeftClick = true;
         }
 
-        if (button == com.badlogic.gdx.Input.Buttons.RIGHT)
+        if (button == com.internal.core.input.Input.Buttons.RIGHT)
             rightClick = true;
 
         return true;
@@ -105,12 +105,12 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 
-        if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
+        if (button == com.internal.core.input.Input.Buttons.LEFT) {
             leftClick = false;
             rawLeftClick = false;
         }
 
-        if (button == com.badlogic.gdx.Input.Buttons.RIGHT)
+        if (button == com.internal.core.input.Input.Buttons.RIGHT)
             rightClick = false;
 
         return true;
@@ -146,7 +146,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     // Platform \\
 
     public void captureCursor(boolean captured) {
-        Gdx.input.setCursorCatched(captured);
+        CoreContext.input.setCursorCatched(captured);
     }
 
     // Accessible \\

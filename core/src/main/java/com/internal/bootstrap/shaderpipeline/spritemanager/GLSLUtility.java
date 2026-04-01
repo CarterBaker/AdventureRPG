@@ -1,10 +1,10 @@
 package com.internal.bootstrap.shaderpipeline.spritemanager;
 
+import com.internal.core.app.CoreContext;
 import java.awt.image.BufferedImage;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Pixmap;
+import com.internal.core.util.graphics.gl.GL20;
+import com.internal.core.util.image.Pixmap;
 import com.internal.core.engine.UtilityPackage;
 import com.internal.core.util.PixmapUtility;
 
@@ -18,20 +18,20 @@ class GLSLUtility extends UtilityPackage {
 
     static int pushSprite(BufferedImage image) {
 
-        int handle = Gdx.gl.glGenTexture();
+        int handle = CoreContext.gl.glGenTexture();
 
         if (handle == 0)
             throwException("GPU handle could not be generated for sprite");
 
-        Gdx.gl.glBindTexture(GL20.GL_TEXTURE_2D, handle);
-        Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
-        Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
-        Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR);
-        Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR);
+        CoreContext.gl.glBindTexture(GL20.GL_TEXTURE_2D, handle);
+        CoreContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
+        CoreContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
+        CoreContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR);
+        CoreContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR);
 
         Pixmap pixmap = PixmapUtility.fromBufferedImage(image, true);
 
-        Gdx.gl.glTexImage2D(
+        CoreContext.gl.glTexImage2D(
                 GL20.GL_TEXTURE_2D,
                 0,
                 GL20.GL_RGBA,
@@ -43,7 +43,7 @@ class GLSLUtility extends UtilityPackage {
                 pixmap.getPixels());
 
         pixmap.dispose();
-        Gdx.gl.glBindTexture(GL20.GL_TEXTURE_2D, 0);
+        CoreContext.gl.glBindTexture(GL20.GL_TEXTURE_2D, 0);
 
         return handle;
     }
@@ -55,7 +55,7 @@ class GLSLUtility extends UtilityPackage {
         if (handle == 0)
             return;
 
-        Gdx.gl.glBindTexture(GL20.GL_TEXTURE_2D, 0);
-        Gdx.gl.glDeleteTexture(handle);
+        CoreContext.gl.glBindTexture(GL20.GL_TEXTURE_2D, 0);
+        CoreContext.gl.glDeleteTexture(handle);
     }
 }

@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.ubo;
 
-import com.badlogic.gdx.utils.BufferUtils;
+import com.internal.core.util.memory.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformData;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.core.engine.DataPackage;

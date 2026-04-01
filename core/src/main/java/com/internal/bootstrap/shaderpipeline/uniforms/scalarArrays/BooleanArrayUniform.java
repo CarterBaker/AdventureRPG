@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalarArrays;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.core.app.CoreContext;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
@@ -25,7 +25,7 @@ public final class BooleanArrayUniform extends UniformAttributeStruct<Object[]> 
         int[] flat = new int[elementCount];
         for (int i = 0; i < elementCount; i++)
             flat[i] = (Boolean) value[i] ? 1 : 0;
-        Gdx.gl.glUniform1iv(handle, elementCount, flat, 0);
+        CoreContext.gl.glUniform1iv(handle, elementCount, flat, 0);
     }
 
     @Override

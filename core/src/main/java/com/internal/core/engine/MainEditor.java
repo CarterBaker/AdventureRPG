@@ -1,8 +1,8 @@
 package com.internal.core.engine;
 
+import com.internal.core.app.CoreContext;
 import java.io.File;
-import com.badlogic.gdx.Game;
-import com.badlogic.gdx.Gdx;
+import com.internal.core.app.Game;
 import com.google.gson.Gson;
 import com.internal.core.engine.settings.Settings;
 
@@ -78,7 +78,7 @@ public class MainEditor extends Game {
     // Utility \\
 
     private void setDeltaTime() {
-        internal.setDeltaTime(Gdx.graphics.getDeltaTime());
+        internal.setDeltaTime(CoreContext.graphics.getDeltaTime());
     }
 
     private void handleGameWindow() {

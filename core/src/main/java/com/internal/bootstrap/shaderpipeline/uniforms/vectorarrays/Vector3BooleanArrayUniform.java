@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.core.app.CoreContext;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector3Boolean;
@@ -30,7 +30,7 @@ public final class Vector3BooleanArrayUniform extends UniformAttributeStruct<Obj
             flat[i * 3 + 1] = v.y ? 1 : 0;
             flat[i * 3 + 2] = v.z ? 1 : 0;
         }
-        Gdx.gl.glUniform3iv(handle, elementCount, flat, 0);
+        CoreContext.gl.glUniform3iv(handle, elementCount, flat, 0);
     }
 
     @Override

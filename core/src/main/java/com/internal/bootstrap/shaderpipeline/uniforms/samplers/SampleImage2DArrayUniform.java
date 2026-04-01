@@ -1,8 +1,8 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.samplers;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
+import com.internal.core.app.CoreContext;
+import com.internal.core.util.graphics.gl.GL20;
+import com.internal.core.util.graphics.gl.GL30;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
@@ -27,13 +27,13 @@ public final class SampleImage2DArrayUniform extends UniformAttributeStruct<Inte
     @Override
     public void bindTexture(int unit) {
         this.textureUnit = unit;
-        Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0 + unit);
-        Gdx.gl30.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, value);
+        CoreContext.gl.glActiveTexture(GL20.GL_TEXTURE0 + unit);
+        CoreContext.gl30.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, value);
     }
 
     @Override
     protected void push(int handle, Integer value) {
-        Gdx.gl.glUniform1i(handle, textureUnit);
+        CoreContext.gl.glUniform1i(handle, textureUnit);
     }
 
     @Override

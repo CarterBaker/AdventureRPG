@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalars;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.core.app.CoreContext;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
@@ -17,7 +17,7 @@ public final class IntegerUniform extends UniformAttributeStruct<Integer> {
 
     @Override
     protected void push(int handle, Integer value) {
-        Gdx.gl.glUniform1i(handle, value);
+        CoreContext.gl.glUniform1i(handle, value);
     }
 
     @Override

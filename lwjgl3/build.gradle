@@ -4,9 +4,6 @@ buildscript {
   }
   dependencies {
     classpath "io.github.fourlastor:construo:1.7.1"
-    if(enableGraalNative == 'true') {
-      classpath "org.graalvm.buildtools.native:org.graalvm.buildtools.native.gradle.plugin:0.9.28"
-    }
   }
 }
 plugins {
@@ -33,15 +30,24 @@ java {
 }
 
 dependencies {
-  implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+  implementation platform("org.lwjgl:lwjgl-bom:3.3.4")
+  implementation "org.lwjgl:lwjgl"
+  implementation "org.lwjgl:lwjgl-glfw"
+  implementation "org.lwjgl:lwjgl-opengl"
+  runtimeOnly "org.lwjgl:lwjgl::natives-windows"
+  runtimeOnly "org.lwjgl:lwjgl-glfw::natives-windows"
+  runtimeOnly "org.lwjgl:lwjgl-opengl::natives-windows"
+  runtimeOnly "org.lwjgl:lwjgl::natives-linux"
+  runtimeOnly "org.lwjgl:lwjgl-glfw::natives-linux"
+  runtimeOnly "org.lwjgl:lwjgl-opengl::natives-linux"
+  runtimeOnly "org.lwjgl:lwjgl::natives-macos"
+  runtimeOnly "org.lwjgl:lwjgl-glfw::natives-macos"
+  runtimeOnly "org.lwjgl:lwjgl-opengl::natives-macos"
+
   implementation 'com.google.code.gson:gson:2.10.1'
 
   implementation project(':core')
 
-  if(enableGraalNative == 'true') {
-    implementation "io.github.berstanio:gdx-svmhelper-backend-lwjgl3:$graalHelperVersion"
-  }
 }
 
 def os = System.properties['os.name'].toLowerCase()
@@ -166,6 +172,3 @@ distributions {
 startScripts.dependsOn(':lwjgl3:jar')
 startScripts.classpath = project.tasks.jar.outputs.files
 
-if(enableGraalNative == 'true') {
-  apply from: file("nativeimage.gradle")
-}

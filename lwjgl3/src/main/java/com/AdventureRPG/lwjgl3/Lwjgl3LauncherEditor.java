@@ -1,11 +1,11 @@
 package com.AdventureRPG.lwjgl3;
 
 import java.io.File;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
+import com.internal.core.app.CoreContext;
+import com.internal.core.backends.lwjgl3.Lwjgl3Application;
+import com.internal.core.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.internal.core.backends.lwjgl3.Lwjgl3Graphics;
+import com.internal.core.backends.lwjgl3.Lwjgl3Window;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.internal.core.engine.MainEditor;
@@ -45,11 +45,11 @@ public class Lwjgl3LauncherEditor {
         MainEditor mainEditor = new MainEditor(baseGameDir, settings, ENGINE_GSON, new Lwjgl3WindowPlatform());
 
         Lwjgl3ApplicationConfiguration config = getConfigurationFromSettings(settings);
-        config.setWindowListener(new com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter() {
+        config.setWindowListener(new com.internal.core.backends.lwjgl3.Lwjgl3WindowAdapter() {
             @Override
             public boolean closeRequested() {
                 saveWindowInfoOnClose(settingsFile, settings);
-                Gdx.app.exit();
+                CoreContext.app.exit();
                 return true;
             }
         });
@@ -79,13 +79,13 @@ public class Lwjgl3LauncherEditor {
 
     private static void saveWindowInfoOnClose(File file, Settings settings) {
 
-        if (Gdx.graphics instanceof Lwjgl3Graphics) {
-            Lwjgl3Window window = ((Lwjgl3Graphics) Gdx.graphics).getWindow();
-            settings.windowWidth = Gdx.graphics.getWidth();
-            settings.windowHeight = Gdx.graphics.getHeight();
+        if (CoreContext.graphics instanceof Lwjgl3Graphics) {
+            Lwjgl3Window window = ((Lwjgl3Graphics) CoreContext.graphics).getWindow();
+            settings.windowWidth = CoreContext.graphics.getWidth();
+            settings.windowHeight = CoreContext.graphics.getHeight();
             settings.windowX = window.getPositionX();
             settings.windowY = window.getPositionY();
-            settings.fullscreen = Gdx.graphics.isFullscreen();
+            settings.fullscreen = CoreContext.graphics.isFullscreen();
             Loader.save(file, settings, ENGINE_GSON);
         }
     }

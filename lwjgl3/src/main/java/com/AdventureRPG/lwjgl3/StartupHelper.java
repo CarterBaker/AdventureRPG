@@ -16,8 +16,8 @@
 
 package com.AdventureRPG.lwjgl3;
 
-import com.badlogic.gdx.Version;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3NativesLoader;
+import com.internal.core.app.Version;
+import com.internal.core.backends.lwjgl3.Lwjgl3NativesLoader;
 import org.lwjgl.system.macosx.LibC;
 import org.lwjgl.system.macosx.ObjCRuntime;
 
@@ -86,9 +86,9 @@ public class StartupHelper {
                 String programData = System.getenv("ProgramData");
                 if(programData == null) programData = "C:\\Temp\\"; // if ProgramData isn't set, try some fallback.
                 String prevTmpDir = System.getProperty("java.io.tmpdir", programData);
-                String prevUser = System.getProperty("user.name", "libGDX_User");
-                System.setProperty("java.io.tmpdir", programData + "/libGDX-temp");
-                System.setProperty("user.name", ("User_" + prevUser.hashCode() + "_GDX" + Version.VERSION).replace('.', '_'));
+                String prevUser = System.getProperty("user.name", "legacy backend_User");
+                System.setProperty("java.io.tmpdir", programData + "/legacy backend-temp");
+                System.setProperty("user.name", ("User_" + prevUser.hashCode() + "_PLATFORM" + Version.VERSION).replace('.', '_'));
                 Lwjgl3NativesLoader.load();
                 System.setProperty("java.io.tmpdir", prevTmpDir);
                 System.setProperty("user.name", prevUser);

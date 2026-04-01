@@ -1,6 +1,6 @@
 package com.internal.editor.runtime;
 
-import com.badlogic.gdx.Input;
+import com.internal.core.input.Input;
 import com.internal.bootstrap.inputpipeline.inputsystem.InputSystem;
 import com.internal.core.engine.SystemPackage;
 

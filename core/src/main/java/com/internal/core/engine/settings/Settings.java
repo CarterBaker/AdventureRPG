@@ -1,6 +1,6 @@
 package com.internal.core.engine.settings;
 
-import com.badlogic.gdx.Input;
+import com.internal.core.input.Input;
 
 public class Settings {
 

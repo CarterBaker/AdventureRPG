@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalarArrays;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.core.app.CoreContext;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
@@ -25,7 +25,7 @@ public final class FloatArrayUniform extends UniformAttributeStruct<Object[]> {
         float[] flat = new float[elementCount];
         for (int i = 0; i < elementCount; i++)
             flat[i] = (Float) value[i];
-        Gdx.gl.glUniform1fv(handle, elementCount, flat, 0);
+        CoreContext.gl.glUniform1fv(handle, elementCount, flat, 0);
     }
 
     @Override

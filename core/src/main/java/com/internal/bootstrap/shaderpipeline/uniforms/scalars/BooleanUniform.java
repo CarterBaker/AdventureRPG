@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.scalars;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.core.app.CoreContext;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 
@@ -17,7 +17,7 @@ public final class BooleanUniform extends UniformAttributeStruct<Boolean> {
 
     @Override
     protected void push(int handle, Boolean value) {
-        Gdx.gl.glUniform1i(handle, value ? 1 : 0);
+        CoreContext.gl.glUniform1i(handle, value ? 1 : 0);
     }
 
     @Override

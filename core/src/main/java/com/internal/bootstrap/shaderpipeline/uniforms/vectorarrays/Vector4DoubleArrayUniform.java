@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.core.app.CoreContext;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector4Double;
@@ -31,7 +31,7 @@ public final class Vector4DoubleArrayUniform extends UniformAttributeStruct<Obje
             flat[i * 4 + 2] = (float) v.z;
             flat[i * 4 + 3] = (float) v.w;
         }
-        Gdx.gl.glUniform4fv(handle, elementCount, flat, 0);
+        CoreContext.gl.glUniform4fv(handle, elementCount, flat, 0);
     }
 
     @Override
