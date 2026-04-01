@@ -1,0 +1,29 @@
+package program.bootstrap.renderpipeline.camera;
+
+import program.core.engine.DataPackage;
+import program.core.util.mathematics.matrices.Matrix4;
+import program.core.util.mathematics.vectors.Vector2;
+
+public class OrthographicCameraData extends DataPackage {
+
+    private final Matrix4 projectionMat;
+    private final Vector2 screenSize;
+
+    public OrthographicCameraData(float width, float height) {
+        this.projectionMat = new Matrix4();
+        this.screenSize = new Vector2();
+        updateViewport(width, height);
+    }
+
+    public void updateViewport(float width, float height) {
+        screenSize.set(width, height);
+        projectionMat.set(
+                2f / width, 0, 0, -1,
+                0, 2f / height, 0, -1,
+                0, 0, -1, 0,
+                0, 0, 0, 1);
+    }
+
+    public Matrix4 getProjection() { return projectionMat; }
+    public Vector2 getScreenSize() { return screenSize; }
+}

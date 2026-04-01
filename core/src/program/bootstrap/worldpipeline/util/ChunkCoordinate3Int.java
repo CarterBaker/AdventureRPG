@@ -1,0 +1,236 @@
+package program.bootstrap.worldpipeline.util;
+
+import program.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertBlockNeighbor3Vector;
+import program.core.engine.UtilityPackage;
+import program.core.settings.EngineSetting;
+import program.core.util.mathematics.extras.Coordinate3Int;
+import program.core.util.mathematics.extras.Direction3Vector;
+
+public class ChunkCoordinate3Int extends UtilityPackage {
+
+    // Internal \\
+
+    private ChunkCoordinate3Int() {
+        throw new AssertionError("Utility class cannot be instantiated");
+    }
+
+    // Chunk dimensions
+    private static final int CHUNK_SIZE;
+    public static final int BLOCK_COORDINATE_COUNT;
+    public static final int INTERIOR_BLOCK_COUNT;
+
+    // Precomputed flattened coordinates packed into shorts
+    // Format: yyyy zzzz xxxx (4 bits each, 12 bits total per coordinate)
+    // Y-Z-X order matches array indexing for cache coherency
+    private static final int[] blockCoordinates;
+    private static final int[] interiorBlockCoordinates;
+
+    static {
+
+        // Load settings
+        CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
+        BLOCK_COORDINATE_COUNT = (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
+
+        int interiorSize = CHUNK_SIZE - 2;
+        INTERIOR_BLOCK_COUNT = CHUNK_SIZE * interiorSize * interiorSize;
+
+        // Allocate coordinate arrays
+        blockCoordinates = new int[BLOCK_COORDINATE_COUNT];
+        interiorBlockCoordinates = new int[INTERIOR_BLOCK_COUNT];
+
+        // Precompute all coordinates
+        flattenBlockCoordinates();
+        flattenInteriorBlockCoordinates();
+    }
+
+    private static void flattenBlockCoordinates() {
+
+        int idx = 0;
+
+        // Iterate in Y-Z-X order to match BlockPaletteHandle's getIndex() ordering
+        for (int y = 0; y < CHUNK_SIZE; y++)
+            for (int z = 0; z < CHUNK_SIZE; z++)
+                for (int x = 0; x < CHUNK_SIZE; x++)
+                    blockCoordinates[idx++] = Coordinate3Int.pack(x, y, z);
+    }
+
+    private static void flattenInteriorBlockCoordinates() {
+
+        int idx = 0;
+
+        for (int y = 0; y < CHUNK_SIZE; y++)
+            for (int z = 1; z < CHUNK_SIZE - 1; z++)
+                for (int x = 1; x < CHUNK_SIZE - 1; x++)
+                    interiorBlockCoordinates[idx++] = Coordinate3Int.pack(x, y, z);
+    }
+
+    // Accessible \\
+
+    public static int[] getBlockCoordinates() {
+        return blockCoordinates;
+    }
+
+    public static int getBlockCoordinate(int index) {
+        return blockCoordinates[index];
+    }
+
+    public static int[] getInteriorBlockCoordinates() {
+        return interiorBlockCoordinates;
+    }
+
+    public static int getInteriorBlockCoordinate(int index) {
+        return interiorBlockCoordinates[index];
+    }
+
+    // Convert packed coordinate back to index (inverse of getBlockCoordinate)
+    public static int getIndex(int packed) {
+
+        int mask = CHUNK_SIZE - 1;
+        int x = Coordinate3Int.unpackX(packed) & mask;
+        int y = Coordinate3Int.unpackY(packed) & mask;
+        int z = Coordinate3Int.unpackZ(packed) & mask;
+
+        // Y-Z-X order to match flattenBlockCoordinates
+        return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x;
+    }
+
+    // Convert a vert coordinate to block space
+    public static int convertToBlockSpace(int vertPacked, VertBlockNeighbor3Vector direction) {
+
+        int vx = (direction.vertOffset3Int & 0x3FF);
+        int vy = ((direction.vertOffset3Int >> 20) & 0x3FF);
+        int vz = ((direction.vertOffset3Int >> 10) & 0x3FF);
+
+        int x = Coordinate3Int.unpackX(vertPacked) - vx;
+        int y = Coordinate3Int.unpackY(vertPacked) - vy;
+        int z = Coordinate3Int.unpackZ(vertPacked) - vz;
+
+        return Coordinate3Int.pack(x, y, z);
+    }
+
+    // Get the neighbor next to a coordinate using the `Direction3Vector`
+    // Returns -1 if the neighbor is out of chunk bounds
+    public static int getNeighbor(int packed, Direction3Vector direction) {
+
+        int x = Coordinate3Int.unpackX(packed) + direction.x;
+        int y = Coordinate3Int.unpackY(packed) + direction.y;
+        int z = Coordinate3Int.unpackZ(packed) + direction.z;
+
+        // Check bounds
+        if (x < 0 || x >= CHUNK_SIZE ||
+                y < 0 || y >= CHUNK_SIZE ||
+                z < 0 || z >= CHUNK_SIZE)
+            return -1;
+
+        return Coordinate3Int.pack(x, y, z);
+    }
+
+    // Get the neighbor next to a coordinate and wrap using the `Direction3Vector`
+    public static int getNeighborAndWrap(int packed, Direction3Vector direction) {
+
+        int mask = CHUNK_SIZE - 1;
+        int x = ((Coordinate3Int.unpackX(packed) + direction.x) & mask);
+        int y = ((Coordinate3Int.unpackY(packed) + direction.y) & mask);
+        int z = ((Coordinate3Int.unpackZ(packed) + direction.z) & mask);
+
+        return Coordinate3Int.pack(x, y, z);
+    }
+
+    // Get the neighbor next to a coordinate and along a tangent
+    // Returns -1 if the result is out of chunk bounds
+    public static int getNeighborWithOffset(int packed, Direction3Vector tangent, int offset) {
+
+        int x = Coordinate3Int.unpackX(packed) + (tangent.x * offset);
+        int y = Coordinate3Int.unpackY(packed) + (tangent.y * offset);
+        int z = Coordinate3Int.unpackZ(packed) + (tangent.z * offset);
+
+        // Check bounds
+        if (x < 0 || x >= CHUNK_SIZE ||
+                y < 0 || y >= CHUNK_SIZE ||
+                z < 0 || z >= CHUNK_SIZE)
+            return -1;
+
+        return Coordinate3Int.pack(x, y, z);
+    }
+
+    // Check if the x, y or z component is 0 or (`CHUNK_SIZE` - 1)
+    public static boolean isAtEdge(int packed, Direction3Vector direction) {
+
+        int max = CHUNK_SIZE - 1;
+        int x = Coordinate3Int.unpackX(packed);
+        int y = Coordinate3Int.unpackY(packed);
+        int z = Coordinate3Int.unpackZ(packed);
+
+        // Check X axis if direction has X component
+        if (direction.x < 0 && x == 0)
+            return true;
+        if (direction.x > 0 && x == max)
+            return true;
+
+        // Check Y axis if direction has Y component
+        if (direction.y < 0 && y == 0)
+            return true;
+        if (direction.y > 0 && y == max)
+            return true;
+
+        // Check Z axis if direction has Z component
+        if (direction.z < 0 && z == 0)
+            return true;
+        if (direction.z > 0 && z == max)
+            return true;
+
+        return false;
+    }
+
+    // Check if a vert coordinate is at the edge in the given direction
+    public static boolean isAtEdge(int packed, VertBlockNeighbor3Vector direction) {
+
+        int x = Coordinate3Int.unpackX(packed);
+        int y = Coordinate3Int.unpackY(packed);
+        int z = Coordinate3Int.unpackZ(packed);
+
+        // Check X axis - only check if direction.x is -1
+        if (direction.x == -1 && x == 0)
+            return true;
+
+        // Check Y axis - only check if direction.y is -1
+        if (direction.y == -1 && y == 0)
+            return true;
+
+        // Check Z axis - only check if direction.z is -1
+        if (direction.z == -1 && z == 0)
+            return true;
+
+        return false;
+    }
+
+    // Convert a block coordinate to vert space
+    public static int convertToVertSpace(int packed, Direction3Vector direction) {
+
+        int x = Coordinate3Int.unpackX(packed) + (direction.x > 0 ? 1 : 0);
+        int y = Coordinate3Int.unpackY(packed) + (direction.y > 0 ? 1 : 0);
+        int z = Coordinate3Int.unpackZ(packed) + (direction.z > 0 ? 1 : 0);
+
+        return Coordinate3Int.pack(x, y, z);
+    }
+
+    // Get the neighbor next to a coordinate using the `VertNeighbor3Vector`
+    public static int getNeighborFromVert(int vertPacked, VertBlockNeighbor3Vector neighbor) {
+
+        int x = Coordinate3Int.unpackX(vertPacked) + neighbor.x;
+        int y = Coordinate3Int.unpackY(vertPacked) + neighbor.y;
+        int z = Coordinate3Int.unpackZ(vertPacked) + neighbor.z;
+
+        return Coordinate3Int.pack(x, y, z);
+    }
+
+    // Get a vert coordinate from a packed vert position
+    public static int getVertCoordinateFromOffset(int vertPacked, Direction3Vector direction, int offset) {
+
+        int x = Coordinate3Int.unpackX(vertPacked) + (direction.x * offset);
+        int y = Coordinate3Int.unpackY(vertPacked) + (direction.y * offset);
+        int z = Coordinate3Int.unpackZ(vertPacked) + (direction.z * offset);
+
+        return Coordinate3Int.pack(x, y, z);
+    }
+}

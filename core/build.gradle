@@ -24,3 +24,11 @@ dependencies {
   implementation 'it.unimi.dsi:fastutil:8.5.12'
 
 }
+
+sourceSets {
+  main {
+    java {
+      srcDirs = ['src']
+    }
+  }
+}
