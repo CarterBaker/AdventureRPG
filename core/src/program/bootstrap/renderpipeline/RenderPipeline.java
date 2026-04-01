@@ -1,0 +1,23 @@
+package program.bootstrap.renderpipeline;
+
+import program.bootstrap.renderpipeline.cameramanager.CameraManager;
+import program.bootstrap.renderpipeline.rendermanager.RenderManager;
+import program.bootstrap.renderpipeline.windowmanager.WindowManager;
+import program.core.engine.PipelinePackage;
+
+public class RenderPipeline extends PipelinePackage {
+
+    /*
+     * Registers all render pipeline managers in dependency order.
+     * WindowManager first — CameraManager and RenderManager both depend on it.
+     * CameraManager before RenderManager — RenderManager calls into CameraManager
+     * each draw pass.
+     */
+
+    @Override
+    protected void create() {
+        create(WindowManager.class);
+        create(CameraManager.class);
+        create(RenderManager.class);
+    }
+}
