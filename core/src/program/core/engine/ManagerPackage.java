@@ -143,6 +143,7 @@ public abstract class ManagerPackage extends SystemPackage {
                     this.internal,
                     this);
             var constructor = systemClass.getDeclaredConstructor();
+            constructor.setAccessible(true);
             T systemPackage = constructor.newInstance();
             return this.registerSystem(systemPackage);
         } catch (Exception e) {
