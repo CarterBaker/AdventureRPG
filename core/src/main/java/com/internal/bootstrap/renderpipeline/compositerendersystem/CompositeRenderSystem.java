@@ -7,6 +7,7 @@ import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.core.engine.SystemPackage;
+import com.internal.core.engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -108,9 +109,9 @@ public class CompositeRenderSystem extends SystemPackage {
         if (gpuState.maxInstances < buffer.getMaxInstances()) {
             GLSLUtility.deleteBuffer(gpuState.instanceVBO);
             GLSLUtility.deleteVAO(gpuState.compositeVAO);
-            gpuState.instanceVBO = 0;
-            gpuState.compositeVAO = 0;
-            gpuState.uploadedVersion = -1;
+            gpuState.instanceVBO = EngineSetting.GL_HANDLE_NONE;
+            gpuState.compositeVAO = EngineSetting.GL_HANDLE_NONE;
+            gpuState.uploadedVersion = EngineSetting.COMPOSITE_UPLOAD_VERSION_UNINITIALIZED;
         }
 
         ensureGpuObjects(buffer, gpuState);
@@ -177,7 +178,7 @@ public class CompositeRenderSystem extends SystemPackage {
         if (floatCount <= uploadBufferCapacity)
             return;
 
-        uploadBufferCapacity = floatCount * 2;
+        uploadBufferCapacity = floatCount * EngineSetting.COMPOSITE_UPLOAD_BUFFER_GROWTH_FACTOR;
         uploadBuffer = ByteBuffer
                 .allocateDirect(uploadBufferCapacity * Float.BYTES)
                 .order(ByteOrder.nativeOrder())
@@ -186,7 +187,7 @@ public class CompositeRenderSystem extends SystemPackage {
 
     private void ensureGpuObjects(CompositeBufferInstance buffer, WindowBufferGpuState gpuState) {
 
-        if (gpuState.instanceVBO != 0 && gpuState.compositeVAO != 0)
+        if (gpuState.instanceVBO != EngineSetting.GL_HANDLE_NONE && gpuState.compositeVAO != EngineSetting.GL_HANDLE_NONE)
             return;
 
         gpuState.instanceVBO = GLSLUtility.createDynamicInstanceVBO(
@@ -263,7 +264,7 @@ public class CompositeRenderSystem extends SystemPackage {
     private static class WindowBufferGpuState {
         private int compositeVAO;
         private int instanceVBO;
-        private int uploadedVersion = -1;
+        private int uploadedVersion = EngineSetting.COMPOSITE_UPLOAD_VERSION_UNINITIALIZED;
         private int maxInstances;
     }
 }

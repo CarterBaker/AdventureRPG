@@ -4,6 +4,7 @@ import com.internal.core.app.CoreContext;
 import com.internal.core.util.graphics.gl.GL20;
 import com.internal.core.util.graphics.gl.GL30;
 import com.internal.core.engine.UtilityPackage;
+import com.internal.core.engine.settings.EngineSetting;
 
 class GLSLUtility extends UtilityPackage {
 
@@ -88,13 +89,13 @@ class GLSLUtility extends UtilityPackage {
     }
 
     static void unbindVAO() {
-        CoreContext.gl30.glBindVertexArray(0);
+        CoreContext.gl30.glBindVertexArray(EngineSetting.GL_HANDLE_NONE);
     }
 
     // Draw \\
 
     static void drawElements(int indexCount) {
-        CoreContext.gl.glDrawElements(GL20.GL_TRIANGLES, indexCount, GL20.GL_UNSIGNED_SHORT, 0);
+        CoreContext.gl.glDrawElements(GL20.GL_TRIANGLES, indexCount, GL20.GL_UNSIGNED_SHORT, EngineSetting.GL_HANDLE_NONE);
     }
 
     // UBO \\
@@ -105,13 +106,13 @@ class GLSLUtility extends UtilityPackage {
 
     static void bindUniformBlockToProgram(int shaderProgram, String blockName, int bindingPoint) {
         int blockIndex = CoreContext.gl30.glGetUniformBlockIndex(shaderProgram, blockName);
-        if (blockIndex != GL30.GL_INVALID_INDEX)
+        if (blockIndex != EngineSetting.GL_INVALID_INDEX)
             CoreContext.gl30.glUniformBlockBinding(shaderProgram, blockIndex, bindingPoint);
     }
 
     static void updateUniformBuffer(int gpuHandle, int offset, java.nio.ByteBuffer data) {
         CoreContext.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, gpuHandle);
         CoreContext.gl30.glBufferSubData(GL30.GL_UNIFORM_BUFFER, offset, data.remaining(), data);
-        CoreContext.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, 0);
+        CoreContext.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, EngineSetting.GL_HANDLE_NONE);
     }
 }

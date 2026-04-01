@@ -70,6 +70,22 @@ public class EngineSetting {
 
         public static final int MAX_RENDER_CALLS_PER_FRAME = 4096;
 
+        public static final int GL_HANDLE_NONE = 0;
+        public static final int GL_INVALID_INDEX = 0xFFFFFFFF;
+        public static final int INDEX_NOT_FOUND = -1;
+
+        // Shader Pipeline \\
+
+        public static final int SHADER_ALIAS_LIBRARY_INITIAL_CAPACITY = 16;
+        public static final int SHADER_ALIAS_LIBRARY_GROWTH_FACTOR = 2;
+        public static final float SHADER_ALIAS_DEFAULT_ALPHA = 1.0f;
+        public static final int SHADER_UBO_UNSPECIFIED_BINDING = INDEX_NOT_FOUND;
+
+        // Composite Rendering \\
+
+        public static final int COMPOSITE_UPLOAD_BUFFER_GROWTH_FACTOR = 2;
+        public static final int COMPOSITE_UPLOAD_VERSION_UNINITIALIZED = INDEX_NOT_FOUND;
+
         // Camera \\
 
         public static final float CAMERA_NEAR_PLANE = 0.1f;
