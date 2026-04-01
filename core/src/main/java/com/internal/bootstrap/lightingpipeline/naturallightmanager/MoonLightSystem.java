@@ -2,7 +2,7 @@ package com.internal.bootstrap.lightingpipeline.naturallightmanager;
 
 import com.internal.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class MoonLightSystem extends SystemPackage {

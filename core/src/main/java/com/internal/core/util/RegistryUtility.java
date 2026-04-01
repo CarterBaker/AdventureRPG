@@ -1,7 +1,7 @@
 package com.internal.core.util;
 
 import com.internal.core.engine.UtilityPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 /*
  * Hashing helpers for converting stable string names into numeric registry IDs.

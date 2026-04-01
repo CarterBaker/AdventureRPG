@@ -11,7 +11,7 @@ import com.internal.bootstrap.worldpipeline.block.BlockData;
 import com.internal.bootstrap.worldpipeline.block.BlockHandle;
 import com.internal.bootstrap.worldpipeline.block.BlockRotationType;
 import com.internal.core.engine.BuilderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
 import com.internal.core.util.RegistryUtility;

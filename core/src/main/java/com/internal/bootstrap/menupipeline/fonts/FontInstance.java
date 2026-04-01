@@ -6,7 +6,7 @@ import com.internal.bootstrap.shaderpipeline.material.MaterialInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import com.internal.core.engine.InstancePackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector4;
 
 public class FontInstance extends InstancePackage {

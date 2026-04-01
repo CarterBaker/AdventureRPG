@@ -10,7 +10,7 @@ import com.internal.bootstrap.worldpipeline.worlditem.WorldItemPaletteHandle;
 import com.internal.bootstrap.worldpipeline.worlditem.WorldItemStruct;
 import com.internal.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRenderSystem;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate3Int;
 import com.internal.core.util.mathematics.extras.Coordinate4Long;
 

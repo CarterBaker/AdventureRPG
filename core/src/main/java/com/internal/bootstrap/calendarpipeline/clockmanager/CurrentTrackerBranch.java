@@ -2,7 +2,7 @@ package com.internal.bootstrap.calendarpipeline.clockmanager;
 
 import com.internal.bootstrap.calendarpipeline.clock.ClockHandle;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 class CurrentTrackerBranch extends BranchPackage {
 

@@ -3,7 +3,8 @@ package com.internal.bootstrap.renderpipeline.rendermanager;
 import com.internal.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import com.internal.bootstrap.renderpipeline.rendercall.RenderCallStruct;
 import com.internal.core.engine.HandlePackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

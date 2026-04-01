@@ -16,7 +16,7 @@ import com.internal.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Color;
 import com.internal.core.util.mathematics.extras.Coordinate3Int;
 import com.internal.core.util.mathematics.extras.Direction2Vector;

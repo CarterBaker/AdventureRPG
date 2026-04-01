@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import com.internal.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import com.internal.core.engine.HandlePackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate3Int;
 
 public final class BlockPaletteHandle extends HandlePackage {

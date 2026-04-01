@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 import com.internal.bootstrap.entitypipeline.behavior.BehaviorData;
 import com.internal.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import com.internal.core.engine.BuilderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.JsonUtility;
 import com.internal.core.util.RegistryUtility;
 

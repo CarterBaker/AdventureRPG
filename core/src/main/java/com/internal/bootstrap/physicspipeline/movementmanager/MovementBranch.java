@@ -6,7 +6,7 @@ import com.internal.bootstrap.entitypipeline.entity.EntityStateHandle;
 import com.internal.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import com.internal.bootstrap.inputpipeline.input.InputHandle;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import com.internal.core.util.mathematics.vectors.Vector3;
 

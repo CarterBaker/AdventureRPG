@@ -5,7 +5,7 @@ import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.worldpipeline.grid.GridInstance;
 import com.internal.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 class FrustumCullingSystem extends SystemPackage {
 

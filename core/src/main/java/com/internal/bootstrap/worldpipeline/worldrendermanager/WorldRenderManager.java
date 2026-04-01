@@ -14,7 +14,8 @@ import com.internal.bootstrap.worldpipeline.grid.GridInstance;
 import com.internal.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;

@@ -2,7 +2,7 @@ package com.internal.bootstrap.worldpipeline.util;
 
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.UtilityPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector2Int;
 import com.internal.core.util.mathematics.vectors.Vector3;

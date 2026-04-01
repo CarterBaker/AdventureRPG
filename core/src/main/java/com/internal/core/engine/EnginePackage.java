@@ -11,14 +11,15 @@ import com.google.gson.Gson;
 import com.internal.bootstrap.renderpipeline.window.WindowData;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
-import com.internal.core.engine.settings.EngineSetting;
-import com.internal.core.engine.settings.Settings;
 import com.internal.core.kernel.syncconsumer.AsyncStructConsumer;
 import com.internal.core.kernel.syncconsumer.AsyncStructConsumerMulti;
 import com.internal.core.kernel.syncconsumer.BiSyncAsyncConsumer;
 import com.internal.core.kernel.syncconsumer.SyncStructConsumer;
 import com.internal.core.kernel.thread.ThreadHandle;
 import com.internal.core.kernel.threadmanager.InternalThreadManager;
+import com.internal.core.settings.EngineSetting;
+import com.internal.core.settings.Settings;
+
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

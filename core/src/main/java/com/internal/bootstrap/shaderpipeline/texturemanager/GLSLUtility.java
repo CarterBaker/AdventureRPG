@@ -8,6 +8,7 @@ import com.internal.core.util.graphics.gl.GL20;
 import com.internal.core.util.graphics.gl.GL30;
 import com.internal.core.util.image.Pixmap;
 import com.internal.core.engine.UtilityPackage;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.PixmapUtility;
 
 /*
@@ -72,8 +73,8 @@ class GLSLUtility extends UtilityPackage {
             pix.dispose();
         }
 
-        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_NEAREST);
-        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_NEAREST);
+        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MIN_FILTER, EngineSetting.GL_NEAREST);
+        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MAG_FILTER, EngineSetting.GL_NEAREST);
         CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
         CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
 

@@ -1,7 +1,7 @@
 package com.internal.bootstrap.shaderpipeline.shadermanager;
 
 import com.internal.core.app.CoreContext;
-import com.internal.core.engine.settings.EngineSetting;
+
 import java.nio.IntBuffer;
 
 import com.internal.core.util.graphics.gl.GL20;
@@ -9,6 +9,8 @@ import com.internal.core.util.graphics.gl.GL30;
 import com.internal.core.util.memory.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
 import com.internal.core.engine.UtilityPackage;
+import com.internal.core.settings.EngineSetting;
+
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*

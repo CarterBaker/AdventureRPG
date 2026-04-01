@@ -6,7 +6,7 @@ import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import com.internal.bootstrap.menupipeline.fonts.FontHandle;
 import com.internal.bootstrap.menupipeline.fonts.FontInstance;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;

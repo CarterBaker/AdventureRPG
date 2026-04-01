@@ -10,7 +10,7 @@ import com.internal.bootstrap.shaderpipeline.texture.TextureTileStruct;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.LoaderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.ints.IntIterator;

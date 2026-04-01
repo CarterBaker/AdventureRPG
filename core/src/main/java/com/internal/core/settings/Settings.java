@@ -1,4 +1,4 @@
-package com.internal.core.engine.settings;
+package com.internal.core.settings;
 
 import com.internal.core.input.Input;
 

@@ -1,7 +1,8 @@
 package com.internal.core.util.queue;
 
 import com.internal.core.engine.InstancePackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class QueueInstance extends InstancePackage {

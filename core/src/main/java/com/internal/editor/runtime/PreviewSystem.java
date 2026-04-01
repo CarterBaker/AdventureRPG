@@ -4,7 +4,7 @@ import com.internal.bootstrap.renderpipeline.window.WindowData;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.renderpipeline.windowmanager.WindowManager;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 public class PreviewSystem extends SystemPackage {
 

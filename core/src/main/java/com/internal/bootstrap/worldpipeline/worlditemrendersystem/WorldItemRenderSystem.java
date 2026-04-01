@@ -11,7 +11,7 @@ import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.worldpipeline.worlditem.WorldItemCompositeInstance;
 import com.internal.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import com.internal.core.util.mathematics.extras.Coordinate4Long;
 

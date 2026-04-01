@@ -4,7 +4,8 @@ import com.internal.core.util.memory.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformData;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.core.engine.DataPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
+
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.nio.ByteBuffer;

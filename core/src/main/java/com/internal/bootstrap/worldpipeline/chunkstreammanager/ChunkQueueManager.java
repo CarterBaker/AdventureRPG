@@ -12,7 +12,7 @@ import com.internal.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import com.internal.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.queue.QueueInstance;
 import com.internal.core.util.queue.QueueItemHandle;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;

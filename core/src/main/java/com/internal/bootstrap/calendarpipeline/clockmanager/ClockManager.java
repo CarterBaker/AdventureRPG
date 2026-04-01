@@ -7,7 +7,7 @@ import com.internal.bootstrap.calendarpipeline.clock.ClockHandle;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.bootstrap.worldpipeline.worldmanager.WorldManager;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 public class ClockManager extends ManagerPackage {
 

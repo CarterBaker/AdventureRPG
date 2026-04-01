@@ -3,7 +3,8 @@ package com.internal.core.engine;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import com.internal.core.engine.settings.Settings;
+
+import com.internal.core.settings.Settings;
 
 public abstract class ManagerPackage extends SystemPackage {
 

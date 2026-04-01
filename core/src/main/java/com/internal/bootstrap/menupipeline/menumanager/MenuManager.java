@@ -21,7 +21,7 @@ import com.internal.bootstrap.renderpipeline.util.MaskStruct;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.RegistryUtility;
 import com.internal.core.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;

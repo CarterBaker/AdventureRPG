@@ -12,7 +12,7 @@ import com.internal.bootstrap.shaderpipeline.uniforms.UniformData;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformUtility;
 import com.internal.core.engine.LoaderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;

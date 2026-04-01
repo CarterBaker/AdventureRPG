@@ -7,7 +7,7 @@ import com.google.gson.JsonObject;
 import com.internal.bootstrap.worldpipeline.world.WorldData;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.BuilderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
 import com.internal.core.util.RegistryUtility;

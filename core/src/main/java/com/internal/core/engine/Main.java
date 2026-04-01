@@ -3,8 +3,8 @@ package com.internal.core.engine;
 import com.internal.core.app.CoreContext;
 import java.io.File;
 import com.internal.core.app.Game;
+import com.internal.core.settings.Settings;
 import com.google.gson.Gson;
-import com.internal.core.engine.settings.Settings;
 
 public class Main extends Game {
 

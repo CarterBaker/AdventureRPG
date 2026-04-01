@@ -11,7 +11,7 @@ import com.internal.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import com.internal.bootstrap.itempipeline.util.ItemRegistryUtility;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.core.engine.BuilderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

@@ -12,7 +12,7 @@ import com.internal.bootstrap.menupipeline.fonts.FontTileData;
 import com.internal.bootstrap.menupipeline.fonts.GlyphMetricStruct;
 import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.core.engine.BuilderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.AtlasUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

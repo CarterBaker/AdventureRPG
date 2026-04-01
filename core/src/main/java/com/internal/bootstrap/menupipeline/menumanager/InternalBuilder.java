@@ -21,7 +21,7 @@ import com.internal.bootstrap.menupipeline.util.StackDirection;
 import com.internal.bootstrap.menupipeline.util.TextAlign;
 import com.internal.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import com.internal.core.engine.BuilderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.JsonUtility;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

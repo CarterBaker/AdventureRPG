@@ -3,7 +3,8 @@ package com.internal.bootstrap.geometrypipeline.dynamicgeometrymanager;
 import com.internal.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import com.internal.bootstrap.menupipeline.fonts.GlyphMetricStruct;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
+
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
 class FontGeometryBranch extends BranchPackage {

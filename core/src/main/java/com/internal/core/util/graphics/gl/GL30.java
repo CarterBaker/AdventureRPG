@@ -1,5 +1,6 @@
 package com.internal.core.util.graphics.gl;
 
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 public interface GL30 extends GL20 {
@@ -8,4 +9,6 @@ public interface GL30 extends GL20 {
     void glVertexAttribDivisor(int index, int divisor); void glDrawElementsInstanced(int mode,int count,int type,int indices,int instancecount);
     void glBindBufferBase(int target,int index,int buffer); int glGetUniformBlockIndex(int program,String uniformBlockName); void glUniformBlockBinding(int program,int uniformBlockIndex,int uniformBlockBinding);
     void glDeleteBuffers(int n, IntBuffer buffers);
+    void glTexImage3D(int target,int level,int internalformat,int width,int height,int depth,int border,int format,int type,ByteBuffer pixels);
+    void glTexSubImage3D(int target,int level,int xoffset,int yoffset,int zoffset,int width,int height,int depth,int format,int type,ByteBuffer pixels);
 }

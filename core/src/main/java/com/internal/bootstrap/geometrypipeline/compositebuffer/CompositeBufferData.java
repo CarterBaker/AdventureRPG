@@ -2,7 +2,7 @@ package com.internal.bootstrap.geometrypipeline.compositebuffer;
 
 import com.internal.bootstrap.geometrypipeline.mesh.MeshHandle;
 import com.internal.core.engine.DataPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 public class CompositeBufferData extends DataPackage {
 

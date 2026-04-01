@@ -1,12 +1,13 @@
 package com.internal.core.engine;
 
 import java.util.concurrent.Future;
-import com.internal.core.engine.settings.Settings;
+
 import com.internal.core.kernel.syncconsumer.AsyncStructConsumer;
 import com.internal.core.kernel.syncconsumer.AsyncStructConsumerMulti;
 import com.internal.core.kernel.syncconsumer.BiSyncAsyncConsumer;
 import com.internal.core.kernel.syncconsumer.SyncStructConsumer;
 import com.internal.core.kernel.thread.ThreadHandle;
+import com.internal.core.settings.Settings;
 
 public abstract class SystemPackage extends EngineUtility {
 

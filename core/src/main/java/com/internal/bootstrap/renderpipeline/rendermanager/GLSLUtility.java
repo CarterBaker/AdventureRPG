@@ -4,7 +4,7 @@ import com.internal.core.app.CoreContext;
 import com.internal.core.util.graphics.gl.GL20;
 import com.internal.core.util.graphics.gl.GL30;
 import com.internal.core.engine.UtilityPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 class GLSLUtility extends UtilityPackage {
 

@@ -8,8 +8,8 @@ import java.nio.file.Path;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.internal.core.engine.LoaderPackage;
-import com.internal.core.engine.settings.EngineSetting;
 import com.internal.core.kernel.thread.ThreadHandle;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import com.internal.core.util.JsonUtility;
 

@@ -8,7 +8,7 @@ import com.internal.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import com.internal.bootstrap.inputpipeline.input.InputHandle;
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.vectors.Vector3;
 
 public class GravityBranch extends BranchPackage {

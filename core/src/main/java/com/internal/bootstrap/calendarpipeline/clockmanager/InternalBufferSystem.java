@@ -4,7 +4,7 @@ import com.internal.bootstrap.calendarpipeline.clock.ClockHandle;
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.BranchPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 class InternalBufferBranch extends BranchPackage {
 

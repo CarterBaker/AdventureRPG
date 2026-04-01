@@ -1,4 +1,4 @@
-package com.internal.core.engine.settings;
+package com.internal.core.settings;
 
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
@@ -72,6 +72,7 @@ public class EngineSetting {
 
         public static final int GL_HANDLE_NONE = 0;
         public static final int GL_INVALID_INDEX = 0xFFFFFFFF;
+        public static final int GL_NEAREST = 0x2600;
         public static final int INDEX_NOT_FOUND = -1;
 
         // Shader Pipeline \\

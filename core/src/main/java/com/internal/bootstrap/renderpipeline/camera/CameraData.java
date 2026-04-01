@@ -1,7 +1,7 @@
 package com.internal.bootstrap.renderpipeline.camera;
 
 import com.internal.core.engine.DataPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.matrices.Matrix4;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import com.internal.core.util.mathematics.vectors.Vector3;

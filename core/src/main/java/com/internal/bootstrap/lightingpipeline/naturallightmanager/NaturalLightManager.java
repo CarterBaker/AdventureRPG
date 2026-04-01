@@ -5,7 +5,7 @@ import com.internal.bootstrap.lightingpipeline.directionallight.DirectionalLight
 import com.internal.bootstrap.shaderpipeline.ubo.UBOHandle;
 import com.internal.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 public class NaturalLightManager extends ManagerPackage {
 

@@ -14,7 +14,7 @@ import com.internal.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteData;
 import com.internal.bootstrap.shaderpipeline.sprite.SpriteHandle;
 import com.internal.core.engine.LoaderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 

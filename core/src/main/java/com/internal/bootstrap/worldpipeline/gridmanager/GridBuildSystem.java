@@ -9,7 +9,7 @@ import com.internal.bootstrap.worldpipeline.grid.GridInstance;
 import com.internal.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import com.internal.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import com.internal.core.engine.SystemPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.mathematics.extras.Coordinate2Long;
 import com.internal.core.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;

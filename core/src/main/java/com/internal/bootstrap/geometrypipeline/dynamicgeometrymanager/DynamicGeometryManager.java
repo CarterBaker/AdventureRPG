@@ -6,7 +6,7 @@ import com.internal.bootstrap.menupipeline.fonts.GlyphMetricStruct;
 import com.internal.bootstrap.worldpipeline.chunk.ChunkInstance;
 import com.internal.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 public class DynamicGeometryManager extends ManagerPackage {
 

@@ -1,7 +1,7 @@
 package com.internal.bootstrap.itempipeline.util;
 
 import com.internal.core.engine.UtilityPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 
 public class ItemRegistryUtility extends UtilityPackage {
 

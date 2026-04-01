@@ -9,8 +9,8 @@ import com.internal.core.backends.lwjgl3.Lwjgl3Window;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.internal.core.engine.MainEditor;
-import com.internal.core.engine.settings.Loader;
-import com.internal.core.engine.settings.Settings;
+import com.internal.core.settings.Loader;
+import com.internal.core.settings.Settings;
 
 public class Lwjgl3LauncherEditor {
 

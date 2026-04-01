@@ -2,7 +2,7 @@ package com.internal.bootstrap.worldpipeline.worldmanager;
 
 import com.internal.bootstrap.worldpipeline.world.WorldHandle;
 import com.internal.core.engine.ManagerPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;

@@ -9,7 +9,7 @@ import com.internal.bootstrap.shaderpipeline.shader.ShaderType;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformData;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.engine.BuilderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

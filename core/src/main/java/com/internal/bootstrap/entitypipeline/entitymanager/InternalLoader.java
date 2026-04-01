@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import com.internal.bootstrap.entitypipeline.entity.EntityHandle;
 import com.internal.core.engine.LoaderPackage;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
 import com.internal.core.util.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 

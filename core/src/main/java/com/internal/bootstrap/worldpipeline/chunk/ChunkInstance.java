@@ -7,7 +7,8 @@ import com.internal.bootstrap.worldpipeline.worlditem.WorldItemInstancePaletteHa
 import com.internal.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstance;
 import com.internal.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
-import com.internal.core.engine.settings.EngineSetting;
+import com.internal.core.settings.EngineSetting;
+
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
 public class ChunkInstance extends WorldRenderInstance {
