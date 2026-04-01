@@ -624,7 +624,9 @@ public class EnginePackage extends ManagerPackage {
     private final void createGameWindow() {
 
         WindowInstance mainWindow = create(WindowInstance.class);
-        mainWindow.constructor(new WindowData(0, 0, 0, EngineSetting.WINDOW_TITLE));
+        int windowWidth = CoreContext.graphics != null ? CoreContext.graphics.getWidth() : 0;
+        int windowHeight = CoreContext.graphics != null ? CoreContext.graphics.getHeight() : 0;
+        mainWindow.constructor(new WindowData(0, windowWidth, windowHeight, EngineSetting.WINDOW_TITLE));
 
         WindowManager windowManager = getUnchecked(WindowManager.class);
         windowManager.registerMainWindow(mainWindow);

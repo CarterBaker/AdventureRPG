@@ -55,7 +55,6 @@ public class Lwjgl3Application implements Application {
             last = now;
 
             listener.render();
-            GLFW.glfwSwapBuffers(mainWindow);
             GLFW.glfwPollEvents();
             input.endFrame();
         }
