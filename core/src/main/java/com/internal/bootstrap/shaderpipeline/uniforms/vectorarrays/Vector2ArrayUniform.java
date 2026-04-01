@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.platform.PlatformRuntime;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector2;
@@ -29,7 +29,7 @@ public final class Vector2ArrayUniform extends UniformAttributeStruct<Object[]> 
             flat[i * 2] = v.x;
             flat[i * 2 + 1] = v.y;
         }
-        Gdx.gl.glUniform2fv(handle, elementCount, flat, 0);
+        PlatformRuntime.gl.glUniform2fv(handle, elementCount, flat, 0);
     }
 
     @Override
@@ -43,7 +43,7 @@ public final class Vector2ArrayUniform extends UniformAttributeStruct<Object[]> 
     protected void applyObject(Object value) {
         if (value instanceof Vector2[] v)
             applyValue(v);
-        else if (value instanceof com.badlogic.gdx.math.Vector2[] vectors) {
+        else if (value instanceof com.internal.core.util.mathematics.vectors.Vector2[] vectors) {
             Vector2[] dst = (Vector2[]) this.value;
             for (int i = 0; i < Math.min(vectors.length, elementCount); i++) {
                 dst[i].x = vectors[i].x;

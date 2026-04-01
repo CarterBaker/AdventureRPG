@@ -1,12 +1,12 @@
 package com.internal.core.engine;
 
+import com.internal.platform.PlatformRuntime;
 import java.io.File;
 import java.time.Instant;
 import java.util.concurrent.Future;
 
-import com.badlogic.gdx.Game;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Screen;
+import com.internal.platform.Game;
+import com.internal.platform.Screen;
 import com.google.gson.Gson;
 import com.internal.bootstrap.renderpipeline.window.WindowData;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
@@ -651,6 +651,6 @@ public class EnginePackage extends ManagerPackage {
     }
 
     public final void closeGame() {
-        Gdx.app.exit();
+        PlatformRuntime.app.exit();
     }
 }

@@ -2,11 +2,11 @@ package com.internal.core.util;
 
 import java.awt.image.BufferedImage;
 
-import com.badlogic.gdx.graphics.Pixmap;
+import com.internal.core.util.image.Pixmap;
 import com.internal.core.engine.UtilityPackage;
 
 /*
- * Centralises BufferedImage → LibGDX Pixmap conversion with ARGB → RGBA
+ * Centralises BufferedImage → platform Pixmap conversion with ARGB → RGBA
  * repacking and optional vertical flip. Used by all GPU upload paths to
  * keep pixel-format logic in one place.
  */

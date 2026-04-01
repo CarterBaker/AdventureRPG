@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.platform.PlatformRuntime;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector2Double;
@@ -29,7 +29,7 @@ public final class Vector2DoubleArrayUniform extends UniformAttributeStruct<Obje
             flat[i * 2] = (float) v.x;
             flat[i * 2 + 1] = (float) v.y;
         }
-        Gdx.gl.glUniform2fv(handle, elementCount, flat, 0);
+        PlatformRuntime.gl.glUniform2fv(handle, elementCount, flat, 0);
     }
 
     @Override

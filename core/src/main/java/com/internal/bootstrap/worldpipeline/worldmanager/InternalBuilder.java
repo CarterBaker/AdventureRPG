@@ -1,8 +1,7 @@
 package com.internal.bootstrap.worldpipeline.worldmanager;
 
 import java.io.File;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Pixmap;
+import com.internal.core.util.image.Pixmap;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.internal.bootstrap.worldpipeline.world.WorldData;
@@ -28,7 +27,7 @@ class InternalBuilder extends BuilderPackage {
     WorldHandle build(File file, File root, String worldName) {
 
         int worldID = RegistryUtility.toIntID(worldName);
-        Pixmap pixmap = new Pixmap(Gdx.files.internal(file.getPath()));
+        Pixmap pixmap = new Pixmap(file);
         Vector2Int worldScale = calculateWorldScale(pixmap);
 
         float gravityMultiplier = EngineSetting.DEFAULT_GRAVITY_MULTIPLIER;

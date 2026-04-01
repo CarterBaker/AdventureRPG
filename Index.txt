@@ -2607,10 +2607,10 @@ C:.
     |   
     +---bin
     |   \---main
-    |       |   libgdx128.png
-    |       |   libgdx16.png
-    |       |   libgdx32.png
-    |       |   libgdx64.png
+    |       |   engine128.png
+    |       |   engine16.png
+    |       |   engine32.png
+    |       |   engine64.png
     |       |   
     |       +---behaviors
     |       |       Bipedal.json
@@ -2856,10 +2856,10 @@ C:.
     |   +---resources
     |   |   \---main
     |   |       |   assets.txt
-    |   |       |   libgdx128.png
-    |   |       |   libgdx16.png
-    |   |       |   libgdx32.png
-    |   |       |   libgdx64.png
+    |   |       |   engine128.png
+    |   |       |   engine16.png
+    |   |       |   engine32.png
+    |   |       |   engine64.png
     |   |       |   
     |   |       +---behaviors
     |   |       |       Bipedal.json
@@ -3157,8 +3157,8 @@ C:.
             |                   StartupHelper.java
             |                   
             \---resources
-                    libgdx128.png
-                    libgdx16.png
-                    libgdx32.png
-                    libgdx64.png
+                    engine128.png
+                    engine16.png
+                    engine32.png
+                    engine64.png
                     

@@ -1,7 +1,7 @@
 package com.internal.bootstrap.renderpipeline.window;
 
-import com.badlogic.gdx.ApplicationListener;
-import com.badlogic.gdx.Screen;
+import com.internal.platform.ApplicationListener;
+import com.internal.platform.Screen;
 import com.internal.bootstrap.renderpipeline.camera.CameraInstance;
 import com.internal.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
 import com.internal.bootstrap.geometrypipeline.vaomanager.VAOManager;

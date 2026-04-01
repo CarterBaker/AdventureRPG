@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.platform.PlatformRuntime;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector4;
@@ -31,7 +31,7 @@ public final class Vector4ArrayUniform extends UniformAttributeStruct<Object[]> 
             flat[i * 4 + 2] = v.z;
             flat[i * 4 + 3] = v.w;
         }
-        Gdx.gl.glUniform4fv(handle, elementCount, flat, 0);
+        PlatformRuntime.gl.glUniform4fv(handle, elementCount, flat, 0);
     }
 
     @Override
@@ -45,7 +45,7 @@ public final class Vector4ArrayUniform extends UniformAttributeStruct<Object[]> 
     protected void applyObject(Object value) {
         if (value instanceof Vector4[] v)
             applyValue(v);
-        else if (value instanceof com.badlogic.gdx.math.Vector4[] vectors) {
+        else if (value instanceof com.internal.core.util.mathematics.vectors.Vector4[] vectors) {
             Vector4[] dst = (Vector4[]) this.value;
             for (int i = 0; i < Math.min(vectors.length, elementCount); i++) {
                 dst[i].x = vectors[i].x;

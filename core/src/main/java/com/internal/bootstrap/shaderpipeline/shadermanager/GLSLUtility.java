@@ -1,11 +1,11 @@
 package com.internal.bootstrap.shaderpipeline.shadermanager;
 
+import com.internal.platform.PlatformRuntime;
 import java.nio.IntBuffer;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
-import com.badlogic.gdx.utils.BufferUtils;
+import com.internal.platform.graphics.GL20;
+import com.internal.platform.graphics.GL30;
+import com.internal.platform.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
 import com.internal.core.engine.UtilityPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -33,31 +33,31 @@ class GLSLUtility extends UtilityPackage {
                 fragSource,
                 assembly.getFrag().getShaderName());
 
-        int program = Gdx.gl.glCreateProgram();
+        int program = PlatformRuntime.gl.glCreateProgram();
 
         if (program == 0)
             throwException("Failed to create shader program: " + assembly.getShaderName());
 
-        Gdx.gl.glAttachShader(program, vertShader);
-        Gdx.gl.glAttachShader(program, fragShader);
-        Gdx.gl.glLinkProgram(program);
+        PlatformRuntime.gl.glAttachShader(program, vertShader);
+        PlatformRuntime.gl.glAttachShader(program, fragShader);
+        PlatformRuntime.gl.glLinkProgram(program);
 
         IntBuffer statusBuf = BufferUtils.newIntBuffer(1);
-        Gdx.gl.glGetProgramiv(program, GL20.GL_LINK_STATUS, statusBuf);
+        PlatformRuntime.gl.glGetProgramiv(program, GL20.GL_LINK_STATUS, statusBuf);
         statusBuf.rewind();
 
         if (statusBuf.get(0) == 0) {
-            String log = Gdx.gl.glGetProgramInfoLog(program);
-            Gdx.gl.glDeleteProgram(program);
-            Gdx.gl.glDeleteShader(vertShader);
-            Gdx.gl.glDeleteShader(fragShader);
+            String log = PlatformRuntime.gl.glGetProgramInfoLog(program);
+            PlatformRuntime.gl.glDeleteProgram(program);
+            PlatformRuntime.gl.glDeleteShader(vertShader);
+            PlatformRuntime.gl.glDeleteShader(fragShader);
             throwException("Failed to link shader " + assembly.getShaderName() + ": " + log);
         }
 
-        Gdx.gl.glDetachShader(program, vertShader);
-        Gdx.gl.glDetachShader(program, fragShader);
-        Gdx.gl.glDeleteShader(vertShader);
-        Gdx.gl.glDeleteShader(fragShader);
+        PlatformRuntime.gl.glDetachShader(program, vertShader);
+        PlatformRuntime.gl.glDetachShader(program, fragShader);
+        PlatformRuntime.gl.glDeleteShader(vertShader);
+        PlatformRuntime.gl.glDeleteShader(fragShader);
 
         return program;
     }
@@ -66,21 +66,21 @@ class GLSLUtility extends UtilityPackage {
 
     private static int compileShaderFromSource(int type, String source, String shaderName) {
 
-        int shaderID = Gdx.gl.glCreateShader(type);
+        int shaderID = PlatformRuntime.gl.glCreateShader(type);
 
         if (shaderID == 0)
             throwException("Invalid shader ID for: " + shaderName);
 
-        Gdx.gl.glShaderSource(shaderID, source);
-        Gdx.gl.glCompileShader(shaderID);
+        PlatformRuntime.gl.glShaderSource(shaderID, source);
+        PlatformRuntime.gl.glCompileShader(shaderID);
 
         IntBuffer compiled = BufferUtils.newIntBuffer(1);
-        Gdx.gl.glGetShaderiv(shaderID, GL20.GL_COMPILE_STATUS, compiled);
+        PlatformRuntime.gl.glGetShaderiv(shaderID, GL20.GL_COMPILE_STATUS, compiled);
         compiled.rewind();
 
         if (compiled.get(0) == 0) {
-            String log = Gdx.gl.glGetShaderInfoLog(shaderID);
-            Gdx.gl.glDeleteShader(shaderID);
+            String log = PlatformRuntime.gl.glGetShaderInfoLog(shaderID);
+            PlatformRuntime.gl.glDeleteShader(shaderID);
             throwException("Failed to compile shader " + shaderName + ": " + log);
         }
 
@@ -128,25 +128,25 @@ class GLSLUtility extends UtilityPackage {
      * Callers store -1 and no-op on upload when location is -1.
      */
     static int getUniformLocation(int programHandle, String uniformName) {
-        return Gdx.gl.glGetUniformLocation(programHandle, uniformName);
+        return PlatformRuntime.gl.glGetUniformLocation(programHandle, uniformName);
     }
 
     // UBO Block Binding \\
 
     static void bindUniformBlock(int programHandle, String blockName, int bindingPoint) {
 
-        int blockIndex = Gdx.gl30.glGetUniformBlockIndex(programHandle, blockName);
+        int blockIndex = PlatformRuntime.gl30.glGetUniformBlockIndex(programHandle, blockName);
 
         if (blockIndex == GL30.GL_INVALID_INDEX)
             throwException("Uniform block not found in shader program: " + blockName);
 
-        Gdx.gl30.glUniformBlockBinding(programHandle, blockIndex, bindingPoint);
+        PlatformRuntime.gl30.glUniformBlockBinding(programHandle, blockIndex, bindingPoint);
     }
 
     // Shader Disposal \\
 
     static void deleteShaderProgram(int programHandle) {
         if (programHandle != 0)
-            Gdx.gl.glDeleteProgram(programHandle);
+            PlatformRuntime.gl.glDeleteProgram(programHandle);
     }
 }

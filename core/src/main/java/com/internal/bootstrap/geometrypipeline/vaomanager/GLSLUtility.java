@@ -1,11 +1,11 @@
 package com.internal.bootstrap.geometrypipeline.vaomanager;
 
+import com.internal.platform.PlatformRuntime;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
+import com.internal.platform.graphics.GL20;
+import com.internal.platform.graphics.GL30;
 import com.internal.bootstrap.geometrypipeline.vao.VAOData;
 import com.internal.bootstrap.geometrypipeline.vao.VAOHandle;
 import com.internal.bootstrap.geometrypipeline.vao.VAOInstance;
@@ -29,8 +29,8 @@ class GLSLUtility {
 
         static int cloneVAO(int[] attrSizes, int vertexHandle, int indexHandle) {
 
-                GL30 gl30 = Gdx.gl30;
-                GL20 gl20 = Gdx.gl20;
+                GL30 gl30 = PlatformRuntime.gl30;
+                GL20 gl20 = PlatformRuntime.gl20;
 
                 IntBuffer id = ByteBuffer
                                 .allocateDirect(Integer.BYTES)
@@ -63,7 +63,7 @@ class GLSLUtility {
 
         private static VAOData createData(int[] attrSizes) {
 
-                GL30 gl = Gdx.gl30;
+                GL30 gl = PlatformRuntime.gl30;
 
                 IntBuffer id = ByteBuffer
                                 .allocateDirect(Integer.BYTES)
@@ -96,7 +96,7 @@ class GLSLUtility {
                                 .asIntBuffer();
                 buffer.put(vaoData.getAttributeHandle()).flip();
 
-                Gdx.gl30.glDeleteVertexArrays(1, buffer);
+                PlatformRuntime.gl30.glDeleteVertexArrays(1, buffer);
         }
 
         static void removeVAOInstance(VAOInstance vaoInstance) {
@@ -112,7 +112,7 @@ class GLSLUtility {
                                 .asIntBuffer();
                 buffer.put(vao).flip();
 
-                Gdx.gl30.glDeleteVertexArrays(1, buffer);
+                PlatformRuntime.gl30.glDeleteVertexArrays(1, buffer);
         }
 
         static void removeVAOHandle(int vao) {
@@ -126,6 +126,6 @@ class GLSLUtility {
                                 .asIntBuffer();
                 buffer.put(vao).flip();
 
-                Gdx.gl30.glDeleteVertexArrays(1, buffer);
+                PlatformRuntime.gl30.glDeleteVertexArrays(1, buffer);
         }
 }

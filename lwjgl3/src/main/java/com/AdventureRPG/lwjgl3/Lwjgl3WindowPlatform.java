@@ -1,10 +1,10 @@
 package com.AdventureRPG.lwjgl3;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowConfiguration;
+import com.internal.platform.PlatformRuntime;
+import com.internal.platform.backends.lwjgl3.Lwjgl3Application;
+import com.internal.platform.backends.lwjgl3.Lwjgl3Graphics;
+import com.internal.platform.backends.lwjgl3.Lwjgl3Window;
+import com.internal.platform.backends.lwjgl3.Lwjgl3WindowConfiguration;
 import com.internal.bootstrap.renderpipeline.window.WindowInstance;
 import com.internal.core.engine.WindowPlatform;
 import org.lwjgl.BufferUtils;
@@ -25,7 +25,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         config.setTitle(window.getTitle());
         config.setWindowedMode(window.getWidth(), window.getHeight());
 
-        Lwjgl3Window nativeWindow = ((Lwjgl3Application) Gdx.app).newWindow(window, config);
+        Lwjgl3Window nativeWindow = ((Lwjgl3Application) PlatformRuntime.app).newWindow(window, config);
 
         windowID2Native.put(window.getWindowID(), nativeWindow);
         window.setNativeHandle(nativeWindow.getWindowHandle());
@@ -62,10 +62,10 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     @Override
     public void restoreMainContext() {
-        if (!(Gdx.graphics instanceof Lwjgl3Graphics))
+        if (!(PlatformRuntime.graphics instanceof Lwjgl3Graphics))
             return;
 
-        Lwjgl3Window main = ((Lwjgl3Graphics) Gdx.graphics).getWindow();
+        Lwjgl3Window main = ((Lwjgl3Graphics) PlatformRuntime.graphics).getWindow();
         GLFW.glfwMakeContextCurrent(main.getWindowHandle());
     }
 

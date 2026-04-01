@@ -1,6 +1,6 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.vectors;
 
-import com.badlogic.gdx.Gdx;
+import com.internal.platform.PlatformRuntime;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.vectors.Vector3Double;
@@ -18,7 +18,7 @@ public final class Vector3DoubleUniform extends UniformAttributeStruct<Vector3Do
 
     @Override
     protected void push(int handle, Vector3Double value) {
-        Gdx.gl.glUniform3f(handle, (float) value.x, (float) value.y, (float) value.z);
+        PlatformRuntime.gl.glUniform3f(handle, (float) value.x, (float) value.y, (float) value.z);
     }
 
     @Override

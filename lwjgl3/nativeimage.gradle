@@ -20,8 +20,8 @@ project(":lwjgl3") {
     doNotTrackState("Running the app should not be affected by Graal.")
   }
 
-  // Modified from https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/ ; thanks again, Lyze!
-  // This creates a resource-config.json file based on the contents of the assets folder (and the libGDX icons).
+  // Modified from https://lyze.dev/2021/04/29/legacy backend-Internal-Assets-List/ ; thanks again, Lyze!
+  // This creates a resource-config.json file based on the contents of the assets folder (and the legacy backend icons).
   // This file is used by Graal Native to embed those specific files.
   // This has to run before nativeCompile, so it runs at the start of an unrelated resource-handling command.
   generateResourcesConfigFile.doFirst {
@@ -42,9 +42,9 @@ project(":lwjgl3") {
       // The backslash-Q and backslash-E escape the start and end of a literal string, respectively.
       resFile.append("\\\\Q${it.name}\\\\E|")
     }
-    // We also match all of the window icon images this way and the font files that are part of libGDX.
+    // We also match all of the window icon images this way and the font files that are part of legacy backend.
     resFile.append(
-            """libgdx.+\\\\.png|lsans.+)"
+            """engine.+\\\\.png|lsans.+)"
     }
   ]},
   "bundles":[]

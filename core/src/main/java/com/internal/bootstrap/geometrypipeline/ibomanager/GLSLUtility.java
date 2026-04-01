@@ -1,11 +1,11 @@
 package com.internal.bootstrap.geometrypipeline.ibomanager;
 
+import com.internal.platform.PlatformRuntime;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
+import com.internal.platform.graphics.GL20;
+import com.internal.platform.graphics.GL30;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOData;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOHandle;
 import com.internal.bootstrap.geometrypipeline.ibo.IBOInstance;
@@ -44,8 +44,8 @@ class GLSLUtility {
 
         private static IBOData upload(VAOInstance vaoInstance, short[] indices) {
 
-                GL30 gl30 = Gdx.gl30;
-                GL20 gl20 = Gdx.gl20;
+                GL30 gl30 = PlatformRuntime.gl30;
+                GL20 gl20 = PlatformRuntime.gl20;
                 int size = indices.length * Short.BYTES;
 
                 gl30.glBindVertexArray(vaoInstance.getVAOData().getAttributeHandle());
@@ -68,6 +68,6 @@ class GLSLUtility {
         // Removal \\
 
         static void removeIndexData(IBOData iboData) {
-                Gdx.gl20.glDeleteBuffer(iboData.getIndexHandle());
+                PlatformRuntime.gl20.glDeleteBuffer(iboData.getIndexHandle());
         }
 }

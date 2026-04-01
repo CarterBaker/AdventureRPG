@@ -1,7 +1,7 @@
 package com.internal.bootstrap.shaderpipeline.uniforms.matrixArrays;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.BufferUtils;
+import com.internal.platform.PlatformRuntime;
+import com.internal.platform.utils.BufferUtils;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import com.internal.bootstrap.shaderpipeline.uniforms.UniformType;
 import com.internal.core.util.mathematics.matrices.Matrix2;
@@ -37,7 +37,7 @@ public final class Matrix2ArrayUniform extends UniformAttributeStruct<Object[]> 
             uniformBuffer.put(m.val[3]);
         }
         uniformBuffer.flip();
-        Gdx.gl.glUniformMatrix2fv(handle, elementCount, false, uniformBuffer);
+        PlatformRuntime.gl.glUniformMatrix2fv(handle, elementCount, false, uniformBuffer);
     }
 
     @Override

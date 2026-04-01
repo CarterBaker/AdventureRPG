@@ -56,7 +56,7 @@ public class Matrix3 extends UtilityPackage {
 
     // Conversion \\
 
-    public Matrix3 fromGDX(com.badlogic.gdx.math.Matrix3 other) {
+    public Matrix3 fromNative(com.internal.core.util.mathematics.matrices.Matrix3 other) {
         System.arraycopy(other.val, 0, val, 0, 9);
         return this;
     }
@@ -164,7 +164,7 @@ public class Matrix3 extends UtilityPackage {
         return this;
     }
 
-    public Matrix3 set(com.badlogic.gdx.math.Matrix3 other) {
+    public Matrix3 set(com.internal.core.util.mathematics.matrices.Matrix3 other) {
         System.arraycopy(other.val, 0, val, 0, 9);
         return this;
     }
@@ -199,7 +199,7 @@ public class Matrix3 extends UtilityPackage {
                 other.val[2], other.val[5], other.val[8]);
     }
 
-    public Matrix3 add(com.badlogic.gdx.math.Matrix3 other) {
+    public Matrix3 add(com.internal.core.util.mathematics.matrices.Matrix3 other) {
         return add(other.val[0], other.val[3], other.val[6],
                 other.val[1], other.val[4], other.val[7],
                 other.val[2], other.val[5], other.val[8]);
@@ -235,7 +235,7 @@ public class Matrix3 extends UtilityPackage {
                 other.val[2], other.val[5], other.val[8]);
     }
 
-    public Matrix3 subtract(com.badlogic.gdx.math.Matrix3 other) {
+    public Matrix3 subtract(com.internal.core.util.mathematics.matrices.Matrix3 other) {
         return subtract(other.val[0], other.val[3], other.val[6],
                 other.val[1], other.val[4], other.val[7],
                 other.val[2], other.val[5], other.val[8]);
@@ -276,7 +276,7 @@ public class Matrix3 extends UtilityPackage {
                 other.val[2], other.val[5], other.val[8]);
     }
 
-    public Matrix3 multiply(com.badlogic.gdx.math.Matrix3 other) {
+    public Matrix3 multiply(com.internal.core.util.mathematics.matrices.Matrix3 other) {
         return multiply(other.val[0], other.val[3], other.val[6],
                 other.val[1], other.val[4], other.val[7],
                 other.val[2], other.val[5], other.val[8]);
@@ -315,7 +315,7 @@ public class Matrix3 extends UtilityPackage {
                 other.val[2], other.val[5], other.val[8]);
     }
 
-    public Matrix3 divide(com.badlogic.gdx.math.Matrix3 other) {
+    public Matrix3 divide(com.internal.core.util.mathematics.matrices.Matrix3 other) {
         return divide(other.val[0], other.val[3], other.val[6],
                 other.val[1], other.val[4], other.val[7],
                 other.val[2], other.val[5], other.val[8]);

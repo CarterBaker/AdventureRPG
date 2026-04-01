@@ -30,11 +30,11 @@ public class Vector4 extends UtilityPackage {
 
     // Conversion \\
 
-    public com.badlogic.gdx.math.Vector4 toGdx() {
-        return new com.badlogic.gdx.math.Vector4(x, y, z, w);
+    public com.internal.core.util.mathematics.vectors.Vector4 toNative() {
+        return new com.internal.core.util.mathematics.vectors.Vector4(x, y, z, w);
     }
 
-    public Vector4 fromGDX(com.badlogic.gdx.math.Vector4 other) {
+    public Vector4 fromNative(com.internal.core.util.mathematics.vectors.Vector4 other) {
         return set(other.x, other.y, other.z, other.w);
     }
 

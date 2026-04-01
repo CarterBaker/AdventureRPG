@@ -1,8 +1,8 @@
 package com.internal.bootstrap.geometrypipeline.compositebuffermanager;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.GL30;
+import com.internal.platform.PlatformRuntime;
+import com.internal.platform.graphics.GL20;
+import com.internal.platform.graphics.GL30;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
@@ -18,7 +18,7 @@ class GLSLUtility {
 
     static int createDynamicInstanceVBO(int maxInstances, int floatsPerInstance) {
 
-        GL20 gl = Gdx.gl20;
+        GL20 gl = PlatformRuntime.gl20;
         int size = maxInstances * floatsPerInstance * Float.BYTES;
 
         int vbo = gl.glGenBuffer();
@@ -38,8 +38,8 @@ class GLSLUtility {
             int instanceVBOHandle,
             int[] instanceAttrSizes) {
 
-        GL30 gl30 = Gdx.gl30;
-        GL20 gl20 = Gdx.gl20;
+        GL30 gl30 = PlatformRuntime.gl30;
+        GL20 gl20 = PlatformRuntime.gl20;
 
         IntBuffer idBuf = ByteBuffer.allocateDirect(Integer.BYTES)
                 .order(ByteOrder.nativeOrder()).asIntBuffer();
@@ -91,7 +91,7 @@ class GLSLUtility {
     // Cleanup \\
 
     static void deleteBuffer(int handle) {
-        Gdx.gl20.glDeleteBuffer(handle);
+        PlatformRuntime.gl20.glDeleteBuffer(handle);
     }
 
     static void deleteVAO(int handle) {
@@ -100,6 +100,6 @@ class GLSLUtility {
                 .order(ByteOrder.nativeOrder()).asIntBuffer();
         buf.put(handle).flip();
 
-        Gdx.gl30.glDeleteVertexArrays(1, buf);
+        PlatformRuntime.gl30.glDeleteVertexArrays(1, buf);
     }
 }

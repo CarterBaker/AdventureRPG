@@ -128,7 +128,7 @@ one of each. All systems push render calls to it as they always have. The only c
 renderSystem.draw()                    // main window — uses WindowInstance, renders to screen
 renderSystem.draw(WindowInstance w)    // specific detached window
 ```
-Viewport dimensions come from whichever window is passed. LibGDX/LWJGL3 handles making that window's
+Viewport dimensions come from whichever window is passed. legacy backend/LWJGL3 handles making that window's
 GL context current before its render callback fires — we do not manage context switching manually.
 
 ### Windows Are Instances Not Handles
@@ -138,13 +138,13 @@ not Handles, because they are created and destroyed at runtime rather than loade
 
 ---
 
-## Multi-Window — How LibGDX LWJGL3 Actually Works
+## Multi-Window — How legacy backend LWJGL3 Actually Works
 
 ```java
-((Lwjgl3Application) Gdx.app).newWindow(applicationListener, windowConfig);
+((Lwjgl3Application) PlatformRuntime.app).newWindow(applicationListener, windowConfig);
 ```
 
-Each window receives its own `ApplicationListener`. LibGDX calls `render()` on each window's listener
+Each window receives its own `ApplicationListener`. legacy backend calls `render()` on each window's listener
 every frame and automatically makes that window's GL context current before doing so. We do not call
 `makeCurrent()` anywhere. The only thing a render pass needs from a window is its viewport dimensions.
 
