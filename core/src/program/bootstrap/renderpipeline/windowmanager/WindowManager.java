@@ -35,6 +35,7 @@ public class WindowManager extends ManagerPackage {
         this.mainWindow = window;
         this.activeWindow = window;
         windows.add(window);
+        pendingWindowOpen.add(window);
     }
 
     public void registerDetachedWindow(WindowInstance window) {
@@ -64,6 +65,20 @@ public class WindowManager extends ManagerPackage {
                 continue;
 
             if (!internal.windowPlatform.shouldClose(window))
+                continue;
+
+            window.dispose();
+            internal.windowPlatform.destroyWindow(window);
+        }
+    }
+
+    @Override
+    protected void dispose() {
+
+        for (int i = windows.size() - 1; i >= 0; i--) {
+            WindowInstance window = windows.get(i);
+
+            if (window == mainWindow)
                 continue;
 
             window.dispose();
