@@ -20,12 +20,20 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     @Override
     public void openWindow(WindowInstance window) {
+        Lwjgl3Window nativeWindow = windowID2Native.get(window.getWindowID());
 
-        Lwjgl3WindowConfiguration config = new Lwjgl3WindowConfiguration();
-        config.setTitle(window.getTitle());
-        config.setWindowedMode(window.getWidth(), window.getHeight());
+        if (nativeWindow == null && window.hasNativeHandle())
+            nativeWindow = new Lwjgl3Window(window.getNativeHandle());
 
-        Lwjgl3Window nativeWindow = ((Lwjgl3Application) CoreContext.app).newWindow(window, config);
+        if (nativeWindow == null && window.getWindowID() == 0 && CoreContext.graphics instanceof Lwjgl3Graphics graphics)
+            nativeWindow = graphics.getWindow();
+
+        if (nativeWindow == null) {
+            Lwjgl3WindowConfiguration config = new Lwjgl3WindowConfiguration();
+            config.setTitle(window.getTitle());
+            config.setWindowedMode(window.getWidth(), window.getHeight());
+            nativeWindow = ((Lwjgl3Application) CoreContext.app).newWindow(window, config);
+        }
 
         windowID2Native.put(window.getWindowID(), nativeWindow);
         window.setNativeHandle(nativeWindow.getWindowHandle());

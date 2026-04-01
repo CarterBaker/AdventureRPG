@@ -71,9 +71,9 @@ public class Main extends Game {
 
         // Internal Engine
         internal.setInternalState(EngineState.EXIT);
+        internal.execute();
 
         // Settings
-        handleGameWindow();
         handleSettingsFile();
 
         // Game
@@ -84,11 +84,6 @@ public class Main extends Game {
 
     private void setDeltaTime() {
         internal.setDeltaTime(CoreContext.graphics.getDeltaTime());
-    }
-
-    private void handleGameWindow() {
-        if (getScreen() != null)
-            getScreen().dispose();
     }
 
     private void handleSettingsFile() {

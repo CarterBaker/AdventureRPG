@@ -45,25 +45,15 @@ public class RenderManager extends ManagerPackage {
     // Draw \\
 
     public void draw() {
-
-        WindowInstance mainWindow = windowManager.getMainWindow();
-
-        if (mainWindow == null)
-            return;
-
-        // Main window — context current via platform callback.
-        draw(mainWindow);
-
-        // Detached windows — explicit context/swap ownership via platform.
         ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
         Object[] elements = windows.elements();
         int count = windows.size();
 
+        if (count == 0)
+            return;
+
         for (int i = 0; i < count; i++) {
             WindowInstance window = (WindowInstance) elements[i];
-
-            if (window == mainWindow)
-                continue;
 
             if (!window.hasNativeHandle())
                 continue;
@@ -73,9 +63,6 @@ public class RenderManager extends ManagerPackage {
             draw(window);
             internal.windowPlatform.swapBuffers(window);
         }
-
-        // Restore main for platform post-render assumptions.
-        internal.windowPlatform.restoreMainContext();
     }
 
     public void draw(WindowInstance window) {
