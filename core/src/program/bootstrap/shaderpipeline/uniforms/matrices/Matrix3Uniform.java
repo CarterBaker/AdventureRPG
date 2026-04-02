@@ -18,9 +18,13 @@ public final class Matrix3Uniform extends UniformAttributeStruct<Object> {
 
     @Override
     protected void push(int handle, Object value) {
-        if (value instanceof Matrix3 m)
-            CoreContext.gl.glUniformMatrix3fv(handle, 1, false, m.val, 0);
-        else
+        if (value instanceof Matrix3 m) {
+            try (org.lwjgl.system.MemoryStack stack = org.lwjgl.system.MemoryStack.stackPush()) {
+                java.nio.FloatBuffer buf = stack.mallocFloat(9);
+                buf.put(m.val).flip();
+                CoreContext.gl.glUniformMatrix3fv(handle, 1, false, buf);
+            }
+        } else
             throw new IllegalArgumentException("push(Matrix3): got " + value.getClass());
     }
 

@@ -1,6 +1,8 @@
 package program.bootstrap.shaderpipeline.uniforms.scalarArrays;
 
-import program.core.app.CoreContext;
+import org.lwjgl.opengl.GL20C;
+import org.lwjgl.system.MemoryStack;
+
 import program.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import program.bootstrap.shaderpipeline.uniforms.UniformType;
 
@@ -25,7 +27,11 @@ public final class IntegerArrayUniform extends UniformAttributeStruct<Object[]> 
         int[] flat = new int[elementCount];
         for (int i = 0; i < elementCount; i++)
             flat[i] = (Integer) value[i];
-        CoreContext.gl.glUniform1iv(handle, elementCount, flat, 0);
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            java.nio.IntBuffer buf = stack.mallocInt(elementCount);
+            buf.put(flat).flip();
+            GL20C.glUniform1iv(handle, buf);
+        }
     }
 
     @Override

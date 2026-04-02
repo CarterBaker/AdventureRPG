@@ -1,6 +1,8 @@
 package program.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import program.core.app.CoreContext;
+import org.lwjgl.opengl.GL20C;
+import org.lwjgl.system.MemoryStack;
+
 import program.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import program.bootstrap.shaderpipeline.uniforms.UniformType;
 import program.core.util.mathematics.vectors.Vector2Boolean;
@@ -29,7 +31,11 @@ public final class Vector2BooleanArrayUniform extends UniformAttributeStruct<Obj
             flat[i * 2] = v.x ? 1 : 0;
             flat[i * 2 + 1] = v.y ? 1 : 0;
         }
-        CoreContext.gl.glUniform2iv(handle, elementCount, flat, 0);
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            java.nio.IntBuffer buf = stack.mallocInt(elementCount * 2);
+            buf.put(flat).flip();
+            GL20C.glUniform2iv(handle, buf);
+        }
     }
 
     @Override
