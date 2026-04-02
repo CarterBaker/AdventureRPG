@@ -119,11 +119,6 @@ class RenderSystem extends SystemPackage {
             if (depth == 0)
                 compositeRenderSystem.draw(window);
         }
-
-        if (!window.hasNativeHandle())
-            throwException(
-                    "WindowInstance '" + window.getTitle() + "' (ID=" + window.getWindowID()
-                            + ") reached draw call without a native handle — window was never registered with the GLFW backend.");
     }
 
     // Render Binding \\
