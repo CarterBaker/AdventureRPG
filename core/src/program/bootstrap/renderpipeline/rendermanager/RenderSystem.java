@@ -57,10 +57,7 @@ class RenderSystem extends SystemPackage {
 
         queue.renderCallCursor = 0;
 
-        GLSLUtility.setViewport(
-                window.getWidth(),
-                window.getHeight());
-
+        GLSLUtility.setViewport(window.getWidth(), window.getHeight());
         GLSLUtility.clearBuffer();
 
         int[] depths = queue.sortedDepths.elements();
@@ -122,6 +119,13 @@ class RenderSystem extends SystemPackage {
             if (depth == 0)
                 compositeRenderSystem.draw(window);
         }
+
+        if (!window.hasNativeHandle())
+            throwException(
+                    "WindowInstance '" + window.getTitle() + "' (ID=" + window.getWindowID()
+                            + ") reached draw call without a native handle — window was never registered with the GLFW backend.");
+
+        GLSLUtility.swapBuffers(window.getNativeHandle());
     }
 
     // Render Binding \\

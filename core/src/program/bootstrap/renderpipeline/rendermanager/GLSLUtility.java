@@ -1,5 +1,7 @@
 package program.bootstrap.renderpipeline.rendermanager;
 
+import org.lwjgl.glfw.GLFW;
+
 import program.core.app.CoreContext;
 import program.core.util.graphics.gl.GL20;
 import program.core.util.graphics.gl.GL30;
@@ -95,7 +97,8 @@ class GLSLUtility extends UtilityPackage {
     // Draw \\
 
     static void drawElements(int indexCount) {
-        CoreContext.gl.glDrawElements(GL20.GL_TRIANGLES, indexCount, GL20.GL_UNSIGNED_SHORT, EngineSetting.GL_HANDLE_NONE);
+        CoreContext.gl.glDrawElements(GL20.GL_TRIANGLES, indexCount, GL20.GL_UNSIGNED_SHORT,
+                EngineSetting.GL_HANDLE_NONE);
     }
 
     // UBO \\
@@ -114,5 +117,11 @@ class GLSLUtility extends UtilityPackage {
         CoreContext.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, gpuHandle);
         CoreContext.gl30.glBufferSubData(GL30.GL_UNIFORM_BUFFER, offset, data.remaining(), data);
         CoreContext.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, EngineSetting.GL_HANDLE_NONE);
+    }
+
+    // Presentation \\
+
+    static void swapBuffers(long nativeHandle) {
+        GLFW.glfwSwapBuffers(nativeHandle);
     }
 }
