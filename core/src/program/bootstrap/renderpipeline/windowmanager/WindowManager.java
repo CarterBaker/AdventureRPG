@@ -77,7 +77,10 @@ public class WindowManager extends ManagerPackage {
         this.mainWindow = window;
         this.activeWindow = window;
         windows.add(window);
-        pendingOpen.add(window);
+
+        // Main window is already platform-hosted (GLFW-created by backend).
+        // Wire the native handle immediately so draw() never skips a startup frame.
+        internal.windowPlatform.openWindow(window);
     }
 
     public void registerDetachedWindow(WindowInstance window) {

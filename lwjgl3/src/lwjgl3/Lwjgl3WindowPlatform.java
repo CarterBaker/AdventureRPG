@@ -11,6 +11,8 @@ import program.core.engine.WindowPlatform;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GLCapabilities;
 
 import java.nio.IntBuffer;
 
@@ -25,6 +27,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     // Window Registry
     private final Int2ObjectOpenHashMap<Lwjgl3Window> windowID2Native = new Int2ObjectOpenHashMap<>();
+    private final Int2ObjectOpenHashMap<GLCapabilities> windowID2Capabilities = new Int2ObjectOpenHashMap<>();
 
     // Internal \\
 
@@ -46,6 +49,16 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
         windowID2Native.put(window.getWindowID(), nativeWindow);
         window.setNativeHandle(nativeWindow.getHandle());
+
+        // If this context is already current (true for main window during bootstrap),
+        // capture capabilities now. Secondary windows will lazily initialize caps
+        // in makeContextCurrent() on first bind.
+        if (GLFW.glfwGetCurrentContext() == nativeWindow.getHandle()) {
+            GLCapabilities caps = GL.getCapabilities();
+            if (caps != null)
+                windowID2Capabilities.put(window.getWindowID(), caps);
+        }
+
         syncWindowSize(window);
     }
 
@@ -60,6 +73,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         long handle = nativeWindow.getHandle();
         ((Lwjgl3Application) CoreContext.app).removeSecondaryWindow(handle);
         GLFW.glfwDestroyWindow(handle);
+        windowID2Capabilities.remove(window.getWindowID());
         window.setNativeHandle(0L);
     }
 
@@ -77,6 +91,15 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
             return;
 
         GLFW.glfwMakeContextCurrent(window.getNativeHandle());
+
+        GLCapabilities caps = windowID2Capabilities.get(window.getWindowID());
+
+        if (caps == null) {
+            caps = GL.createCapabilities();
+            windowID2Capabilities.put(window.getWindowID(), caps);
+        }
+
+        GL.setCapabilities(caps);
     }
 
     @Override
@@ -92,7 +115,19 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         if (!(CoreContext.graphics instanceof Lwjgl3Graphics graphics))
             return;
 
-        GLFW.glfwMakeContextCurrent(graphics.getWindow().getHandle());
+        long mainHandle = graphics.getWindow().getHandle();
+        GLFW.glfwMakeContextCurrent(mainHandle);
+
+        GLCapabilities caps = windowID2Capabilities.get(0);
+
+        if (caps == null) {
+            caps = GL.getCapabilities();
+            if (caps == null)
+                caps = GL.createCapabilities();
+            windowID2Capabilities.put(0, caps);
+        }
+
+        GL.setCapabilities(caps);
     }
 
     @Override
