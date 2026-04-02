@@ -1,6 +1,8 @@
 package program.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import program.core.app.CoreContext;
+import org.lwjgl.opengl.GL20C;
+import org.lwjgl.system.MemoryStack;
+
 import program.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import program.bootstrap.shaderpipeline.uniforms.UniformType;
 import program.core.util.mathematics.vectors.Vector3Int;
@@ -30,7 +32,11 @@ public final class Vector3IntArrayUniform extends UniformAttributeStruct<Object[
             flat[i * 3 + 1] = v.y;
             flat[i * 3 + 2] = v.z;
         }
-        CoreContext.gl.glUniform3iv(handle, elementCount, flat, 0);
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            java.nio.IntBuffer buf = stack.mallocInt(elementCount * 3);
+            buf.put(flat).flip();
+            GL20C.glUniform3iv(handle, buf);
+        }
     }
 
     @Override

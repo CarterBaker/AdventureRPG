@@ -24,7 +24,11 @@ public final class Matrix4DoubleUniform extends UniformAttributeStruct<Matrix4Do
     protected void push(int handle, Matrix4Double value) {
         for (int i = 0; i < 16; i++)
             uniformBuffer.val[i] = (float) value.val[i];
-        CoreContext.gl.glUniformMatrix4fv(handle, 1, false, uniformBuffer.val, 0);
+        try (org.lwjgl.system.MemoryStack stack = org.lwjgl.system.MemoryStack.stackPush()) {
+            java.nio.FloatBuffer buf = stack.mallocFloat(16);
+            buf.put(uniformBuffer.val).flip();
+            CoreContext.gl.glUniformMatrix4fv(handle, 1, false, buf);
+        }
     }
 
     @Override

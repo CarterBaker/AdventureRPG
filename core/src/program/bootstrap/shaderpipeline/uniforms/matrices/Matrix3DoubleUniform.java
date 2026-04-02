@@ -24,7 +24,11 @@ public final class Matrix3DoubleUniform extends UniformAttributeStruct<Matrix3Do
     protected void push(int handle, Matrix3Double value) {
         for (int i = 0; i < 9; i++)
             uniformBuffer.val[i] = (float) value.val[i];
-        CoreContext.gl.glUniformMatrix3fv(handle, 1, false, uniformBuffer.val, 0);
+        try (org.lwjgl.system.MemoryStack stack = org.lwjgl.system.MemoryStack.stackPush()) {
+            java.nio.FloatBuffer buf = stack.mallocFloat(9);
+            buf.put(uniformBuffer.val).flip();
+            CoreContext.gl.glUniformMatrix3fv(handle, 1, false, buf);
+        }
     }
 
     @Override
