@@ -47,8 +47,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     protected void get() {
-
-        // Internal
         this.renderManager = get(RenderManager.class);
         this.vaoManager = get(VAOManager.class);
         this.windowManager = get(WindowManager.class);
@@ -56,8 +54,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     protected void awake() {
-
-        // Render Queue
         this.renderQueueHandle = create(RenderQueueHandle.class);
         this.renderQueueHandle.constructor();
     }
@@ -66,7 +62,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     public void create() {
-        // Optional deferred context path (kept for compatibility).
         if (!hasContext() && pendingContextType != null) {
             internal.createContext(pendingContextType, this);
             pendingContextType = null;
@@ -75,7 +70,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     public void render() {
-        // Engine-owned draw timing for detached windows.
     }
 
     @Override
@@ -94,14 +88,10 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     public void dispose() {
-
-        // Safe idempotent cleanup path.
         vaoManager.removeWindowVAOs(getWindowID());
         renderManager.removeWindowResources(this);
-
         if (context != null)
             internal.destroyContext(context);
-
         windowManager.removeWindow(this);
     }
 
@@ -109,7 +99,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     public void render(float delta) {
-        // Main window is flushed by engine draw() loop.
     }
 
     @Override
@@ -162,20 +151,12 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
         this.activeCamera = activeCamera;
     }
 
-    public boolean hasActiveCamera() {
-        return activeCamera != null;
-    }
-
     public OrthographicCameraInstance getOrthoCamera() {
         return orthoCamera;
     }
 
     public void setOrthoCamera(OrthographicCameraInstance orthoCamera) {
         this.orthoCamera = orthoCamera;
-    }
-
-    public boolean hasOrthoCamera() {
-        return orthoCamera != null;
     }
 
     // Accessible \\

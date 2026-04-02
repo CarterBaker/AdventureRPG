@@ -180,6 +180,7 @@ class RenderSystem extends SystemPackage {
     }
 
     private void drawBatchedRenderCall(RenderCallStruct renderCall, WindowInstance window) {
+
         ModelInstance model = renderCall.getModelInstance();
         MeshData meshData = model.getMeshData();
         int vao = vaoManager.getVAOForWindow(meshData, window.getWindowID());

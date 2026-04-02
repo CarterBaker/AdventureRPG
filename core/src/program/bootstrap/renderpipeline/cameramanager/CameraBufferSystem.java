@@ -51,9 +51,6 @@ class CameraBufferSystem extends SystemPackage {
 
         CameraInstance camera = window.getActiveCamera();
 
-        if (camera == null)
-            return;
-
         cameraDataUBO.updateUniform(EngineSetting.UNIFORM_CAM_PROJECTION, camera.getProjection());
         cameraDataUBO.updateUniform(EngineSetting.UNIFORM_CAM_VIEW, camera.getView());
         cameraDataUBO.updateUniform(EngineSetting.UNIFORM_CAM_INVERSE_PROJECTION, camera.getInverseProjection());
