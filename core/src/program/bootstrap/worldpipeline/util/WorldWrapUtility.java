@@ -3,7 +3,7 @@ package program.bootstrap.worldpipeline.util;
 import program.bootstrap.worldpipeline.world.WorldHandle;
 import program.core.engine.UtilityPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extras.Coordinate2Long;
+import program.core.util.mathematics.extrasa.Coordinate2Long;
 import program.core.util.mathematics.vectors.Vector2Int;
 import program.core.util.mathematics.vectors.Vector3;
 

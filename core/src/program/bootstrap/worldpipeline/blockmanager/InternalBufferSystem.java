@@ -3,7 +3,7 @@ package program.bootstrap.worldpipeline.blockmanager;
 import program.bootstrap.shaderpipeline.ubo.UBOHandle;
 import program.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import program.core.engine.SystemPackage;
-import program.core.util.mathematics.extras.Direction3Vector;
+import program.core.util.mathematics.extrasa.Direction3Vector;
 import program.core.util.mathematics.vectors.Vector2;
 
 /*

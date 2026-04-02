@@ -17,11 +17,10 @@ import program.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import program.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import program.core.engine.BranchPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extras.Color;
-import program.core.util.mathematics.extras.Coordinate3Int;
-import program.core.util.mathematics.extras.Direction2Vector;
-import program.core.util.mathematics.extras.Direction3Vector;
-
+import program.core.util.mathematics.extrasa.Color;
+import program.core.util.mathematics.extrasa.Coordinate3Int;
+import program.core.util.mathematics.extrasa.Direction2Vector;
+import program.core.util.mathematics.extrasa.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 

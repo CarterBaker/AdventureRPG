@@ -1,4 +1,4 @@
-#version 150
+#version 330 core
 
 in vec2 a_position;  // full-screen triangle [-1,1]
 out vec2 v_uv;       // optional UV for fragment shader

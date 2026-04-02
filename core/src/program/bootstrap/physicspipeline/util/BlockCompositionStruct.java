@@ -2,9 +2,9 @@ package program.bootstrap.physicspipeline.util;
 
 import program.core.engine.StructPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extras.Coordinate2Long;
-import program.core.util.mathematics.extras.Coordinate3Int;
-import program.core.util.mathematics.extras.Direction3Vector;
+import program.core.util.mathematics.extrasa.Coordinate2Long;
+import program.core.util.mathematics.extrasa.Coordinate3Int;
+import program.core.util.mathematics.extrasa.Direction3Vector;
 import program.core.util.mathematics.vectors.Vector3;
 import program.core.util.mathematics.vectors.Vector3Int;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;

@@ -1,4 +1,4 @@
-package program.bootstrap.entitypipeline.entitymanager;
+package program.bootstrap.entitypipeline.entitymanagera;
 
 import java.io.File;
 import java.io.IOException;

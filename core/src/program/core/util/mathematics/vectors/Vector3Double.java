@@ -1,7 +1,7 @@
 package program.core.util.mathematics.vectors;
 
 import program.core.engine.UtilityPackage;
-import program.core.util.mathematics.extras.Direction3Vector;
+import program.core.util.mathematics.extrasa.Direction3Vector;
 
 public class Vector3Double extends UtilityPackage {
 

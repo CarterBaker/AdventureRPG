@@ -3,8 +3,8 @@ package program.bootstrap.worldpipeline.util;
 import program.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertBlockNeighbor3Vector;
 import program.core.engine.UtilityPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extras.Coordinate3Int;
-import program.core.util.mathematics.extras.Direction3Vector;
+import program.core.util.mathematics.extrasa.Coordinate3Int;
+import program.core.util.mathematics.extrasa.Direction3Vector;
 
 public class ChunkCoordinate3Int extends UtilityPackage {
 

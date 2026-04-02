@@ -12,8 +12,8 @@ import program.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import program.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import program.core.engine.BranchPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extras.Coordinate2Long;
-import program.core.util.mathematics.extras.Coordinate3Int;
+import program.core.util.mathematics.extrasa.Coordinate2Long;
+import program.core.util.mathematics.extrasa.Coordinate3Int;
 
 class BlockBranch extends BranchPackage {
 

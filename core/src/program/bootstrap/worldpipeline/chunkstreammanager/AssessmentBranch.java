@@ -4,7 +4,7 @@ import program.bootstrap.worldpipeline.chunk.ChunkData;
 import program.bootstrap.worldpipeline.chunk.ChunkInstance;
 import program.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
 import program.core.engine.BranchPackage;
-import program.core.util.mathematics.extras.Direction2Vector;
+import program.core.util.mathematics.extrasa.Direction2Vector;
 
 public class AssessmentBranch extends BranchPackage {
 

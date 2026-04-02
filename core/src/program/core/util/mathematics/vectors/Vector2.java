@@ -1,7 +1,7 @@
 package program.core.util.mathematics.vectors;
 
 import program.core.engine.UtilityPackage;
-import program.core.util.mathematics.extras.Direction2Vector;
+import program.core.util.mathematics.extrasa.Direction2Vector;
 
 public class Vector2 extends UtilityPackage {
 

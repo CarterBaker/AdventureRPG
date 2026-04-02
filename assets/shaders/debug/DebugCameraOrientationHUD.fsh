@@ -1,4 +1,4 @@
-#version 150
+#version 330 core
 in vec3 v_dir;
 in vec2 v_screenPos;
 out vec4 fragColor;

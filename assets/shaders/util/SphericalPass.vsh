@@ -1,4 +1,4 @@
-#version 150
+#version 330 core
 #include "includes/CameraData.glsl"
 
 in vec3 a_position;

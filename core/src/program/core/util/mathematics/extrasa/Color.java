@@ -1,4 +1,4 @@
-package program.core.util.mathematics.extras;
+package program.core.util.mathematics.extrasa;
 
 import program.core.engine.UtilityPackage;
 
@@ -47,11 +47,11 @@ public class Color extends UtilityPackage {
 
     // Conversion \\
 
-    public program.core.util.mathematics.extras.Color toNative() {
-        return new program.core.util.mathematics.extras.Color(r, g, b, a);
+    public program.core.util.mathematics.extrasa.Color toNative() {
+        return new program.core.util.mathematics.extrasa.Color(r, g, b, a);
     }
 
-    public Color fromNative(program.core.util.mathematics.extras.Color other) {
+    public Color fromNative(program.core.util.mathematics.extrasa.Color other) {
         return set(other.r, other.g, other.b, other.a);
     }
 

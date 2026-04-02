@@ -5,7 +5,7 @@ import program.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import program.bootstrap.worldpipeline.util.WorldPositionStruct;
 import program.core.engine.SystemPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extras.Coordinate2Long;
+import program.core.util.mathematics.extrasa.Coordinate2Long;
 
 class InternalBufferSystem extends SystemPackage {
 

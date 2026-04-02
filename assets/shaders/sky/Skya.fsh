@@ -1,4 +1,4 @@
-#version 150
+#version 330 core
 
 in vec3 v_dir;  // from vertex shader
 out vec4 fragColor;

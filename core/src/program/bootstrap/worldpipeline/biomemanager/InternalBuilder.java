@@ -6,7 +6,7 @@ import program.bootstrap.worldpipeline.biome.BiomeHandle;
 import program.core.engine.BuilderPackage;
 import program.core.util.FileUtility;
 import program.core.util.RegistryUtility;
-import program.core.util.mathematics.extras.Color;
+import program.core.util.mathematics.extrasa.Color;
 
 class InternalBuilder extends BuilderPackage {
 

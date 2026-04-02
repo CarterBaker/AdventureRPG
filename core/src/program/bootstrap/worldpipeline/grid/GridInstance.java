@@ -10,7 +10,7 @@ import program.bootstrap.worldpipeline.world.WorldHandle;
 import program.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import program.core.engine.InstancePackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extras.Coordinate2Long;
+import program.core.util.mathematics.extrasa.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;

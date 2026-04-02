@@ -11,9 +11,8 @@ import program.bootstrap.worldpipeline.worlditem.WorldItemStruct;
 import program.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRenderSystem;
 import program.core.engine.ManagerPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extras.Coordinate3Int;
-import program.core.util.mathematics.extras.Coordinate4Long;
-
+import program.core.util.mathematics.extrasa.Coordinate3Int;
+import program.core.util.mathematics.extrasa.Coordinate4Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*

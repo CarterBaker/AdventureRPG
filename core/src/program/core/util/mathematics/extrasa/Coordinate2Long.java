@@ -1,4 +1,4 @@
-package program.core.util.mathematics.extras;
+package program.core.util.mathematics.extrasa;
 
 import program.core.settings.EngineSetting;
 
