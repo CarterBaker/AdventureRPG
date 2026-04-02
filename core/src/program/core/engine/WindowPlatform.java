@@ -4,20 +4,23 @@ import program.bootstrap.renderpipeline.window.WindowInstance;
 
 public interface WindowPlatform {
 
-    // Detached lifecycle
+    /*
+     * Backend contract for all GLFW window operations. Implemented once per
+     * platform and injected at launch. The engine never calls GLFW directly —
+     * all window management routes through here.
+     */
+
     void openWindow(WindowInstance window);
 
     void destroyWindow(WindowInstance window);
 
     boolean shouldClose(WindowInstance window);
 
-    // Context + presentation
     void makeContextCurrent(WindowInstance window);
 
     void swapBuffers(WindowInstance window);
 
     void restoreMainContext();
 
-    // Sync
     void syncWindowSize(WindowInstance window);
 }

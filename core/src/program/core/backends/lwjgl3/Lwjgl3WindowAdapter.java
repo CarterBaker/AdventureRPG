@@ -1,5 +1,13 @@
 package program.core.backends.lwjgl3;
 
 public class Lwjgl3WindowAdapter {
-    public boolean closeRequested() { return true; }
+
+    /*
+     * No-op base adapter for GLFW window lifecycle events.
+     * Override only the callbacks needed.
+     */
+
+    public boolean closeRequested() {
+        return true;
+    }
 }

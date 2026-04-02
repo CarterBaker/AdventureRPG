@@ -1,19 +1,27 @@
 package lwjgl3;
 
-import java.io.File;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import program.core.app.CoreContext;
 import program.core.backends.lwjgl3.Lwjgl3Application;
 import program.core.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import program.core.backends.lwjgl3.Lwjgl3Graphics;
 import program.core.backends.lwjgl3.Lwjgl3Window;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import program.core.backends.lwjgl3.Lwjgl3WindowAdapter;
 import program.core.engine.Main;
 import program.core.settings.Loader;
 import program.core.settings.Settings;
 
+import java.io.File;
+
 public class Lwjgl3Launcher {
 
+    /*
+     * Entry point for the game client. Loads settings, configures the GLFW window,
+     * and hands control to Lwjgl3Application.
+     */
+
+    // Identity
     private static final String GAME_DIRECTORY = "AdventureRPG";
     private static final Gson ENGINE_GSON = new GsonBuilder()
             .setPrettyPrinting()
@@ -33,19 +41,18 @@ public class Lwjgl3Launcher {
         System.setProperty("sun.java2d.opengl", "false");
     }
 
-    private static Lwjgl3Application createApplication() {
+    private static void createApplication() {
 
         File baseGameDir = new File(System.getProperty("user.home"), "Documents/My Games/" + GAME_DIRECTORY);
+
         if (!baseGameDir.exists())
             baseGameDir.mkdirs();
 
         File settingsFile = new File(baseGameDir, "Settings.json");
         Settings settings = Loader.load(settingsFile, ENGINE_GSON);
+        Lwjgl3ApplicationConfiguration config = buildConfig(settings);
 
-        Main mainGame = new Main(baseGameDir, settings, ENGINE_GSON, new Lwjgl3WindowPlatform());
-
-        Lwjgl3ApplicationConfiguration config = getConfigurationFromSettings(settings);
-        config.setWindowListener(new program.core.backends.lwjgl3.Lwjgl3WindowAdapter() {
+        config.setWindowListener(new Lwjgl3WindowAdapter() {
             @Override
             public boolean closeRequested() {
                 saveWindowInfoOnClose(settingsFile, settings);
@@ -54,14 +61,15 @@ public class Lwjgl3Launcher {
             }
         });
 
-        return new Lwjgl3Application(mainGame, config);
+        new Lwjgl3Application(new Main(baseGameDir, settings, ENGINE_GSON, new Lwjgl3WindowPlatform()), config);
     }
 
-    private static Lwjgl3ApplicationConfiguration getConfigurationFromSettings(Settings settings) {
+    private static Lwjgl3ApplicationConfiguration buildConfig(Settings settings) {
 
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
-        config.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 3, 3);
+        config.setOpenGLVersion(3, 3);
         config.setTitle("AdventureRPG");
+        config.useVsync(true);
 
         if (settings.fullscreen) {
             config.setFullscreenMode(Lwjgl3ApplicationConfiguration.getDisplayMode());
@@ -71,22 +79,20 @@ public class Lwjgl3Launcher {
                 config.setWindowPosition(settings.windowX, settings.windowY);
         }
 
-        config.useVsync(true);
-        config.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate);
-
         return config;
     }
 
     private static void saveWindowInfoOnClose(File file, Settings settings) {
 
-        if (CoreContext.graphics instanceof Lwjgl3Graphics) {
-            Lwjgl3Window window = ((Lwjgl3Graphics) CoreContext.graphics).getWindow();
-            settings.windowWidth = CoreContext.graphics.getWidth();
-            settings.windowHeight = CoreContext.graphics.getHeight();
-            settings.windowX = window.getPositionX();
-            settings.windowY = window.getPositionY();
-            settings.fullscreen = CoreContext.graphics.isFullscreen();
-            Loader.save(file, settings, ENGINE_GSON);
-        }
+        if (!(CoreContext.graphics instanceof Lwjgl3Graphics graphics))
+            return;
+
+        Lwjgl3Window window = graphics.getWindow();
+        settings.windowWidth = CoreContext.graphics.getWidth();
+        settings.windowHeight = CoreContext.graphics.getHeight();
+        settings.windowX = window.getPositionX();
+        settings.windowY = window.getPositionY();
+        settings.fullscreen = CoreContext.graphics.isFullscreen();
+        Loader.save(file, settings, ENGINE_GSON);
     }
 }
