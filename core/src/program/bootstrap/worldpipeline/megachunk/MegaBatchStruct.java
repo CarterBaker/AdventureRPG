@@ -2,7 +2,7 @@ package program.bootstrap.worldpipeline.megachunk;
 
 import program.bootstrap.worldpipeline.chunk.ChunkInstance;
 import program.core.engine.StructPackage;
-import program.core.util.mathematics.extrasa.Coordinate2Long;
+import program.core.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

@@ -15,7 +15,7 @@ import program.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import program.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import program.core.engine.ManagerPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extrasa.Coordinate2Long;
+import program.core.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.ArrayDeque;

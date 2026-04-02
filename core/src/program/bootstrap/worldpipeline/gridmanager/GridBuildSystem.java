@@ -10,7 +10,7 @@ import program.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import program.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import program.core.engine.SystemPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extrasa.Coordinate2Long;
+import program.core.util.mathematics.extras.Coordinate2Long;
 import program.core.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;

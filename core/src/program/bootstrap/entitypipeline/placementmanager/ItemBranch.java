@@ -8,9 +8,9 @@ import program.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlaceme
 import program.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import program.core.engine.BranchPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extrasa.Coordinate2Long;
-import program.core.util.mathematics.extrasa.Coordinate4Long;
-import program.core.util.mathematics.extrasa.Direction3Vector;
+import program.core.util.mathematics.extras.Coordinate2Long;
+import program.core.util.mathematics.extras.Coordinate4Long;
+import program.core.util.mathematics.extras.Direction3Vector;
 import program.core.util.mathematics.vectors.Vector3;
 
 class ItemBranch extends BranchPackage {

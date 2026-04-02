@@ -1,4 +1,4 @@
-package program.core.util.mathematics.extrasa;
+package program.core.util.mathematics.extras;
 
 public enum Direction3Vector {
 

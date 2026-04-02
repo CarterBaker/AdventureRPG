@@ -3,7 +3,7 @@ package program.bootstrap.entitypipeline.playermanager;
 import program.bootstrap.entitypipeline.entity.EntityInstance;
 import program.bootstrap.entitypipeline.entity.EntityState;
 import program.bootstrap.entitypipeline.entity.EntityStateHandle;
-import program.bootstrap.entitypipeline.entitymanagera.EntityManager;
+import program.bootstrap.entitypipeline.entitymanager.EntityManager;
 import program.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import program.bootstrap.inputpipeline.input.InputHandle;
 import program.bootstrap.inputpipeline.inputsystem.InputSystem;

@@ -3,7 +3,7 @@ package program.bootstrap.itempipeline.itemrotationmanager;
 import program.bootstrap.shaderpipeline.ubo.UBOHandle;
 import program.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import program.core.engine.SystemPackage;
-import program.core.util.mathematics.extrasa.Direction3Vector;
+import program.core.util.mathematics.extras.Direction3Vector;
 import program.core.util.mathematics.matrices.Matrix4;
 
 public class InternalBufferSystem extends SystemPackage {

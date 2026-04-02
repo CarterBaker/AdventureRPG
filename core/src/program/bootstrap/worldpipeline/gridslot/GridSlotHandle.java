@@ -3,7 +3,7 @@ package program.bootstrap.worldpipeline.gridslot;
 import program.bootstrap.shaderpipeline.ubo.UBOInstance;
 import program.bootstrap.worldpipeline.grid.GridInstance;
 import program.core.engine.HandlePackage;
-import program.core.util.mathematics.extrasa.Coordinate2Long;
+import program.core.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class GridSlotHandle extends HandlePackage {

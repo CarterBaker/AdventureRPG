@@ -1,4 +1,4 @@
-package program.bootstrap.entitypipeline.entitymanagera;
+package program.bootstrap.entitypipeline.entitymanager;
 
 import java.io.File;
 import com.google.gson.JsonObject;

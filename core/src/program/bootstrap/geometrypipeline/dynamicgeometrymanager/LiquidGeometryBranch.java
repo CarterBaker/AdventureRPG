@@ -8,8 +8,8 @@ import program.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import program.bootstrap.worldpipeline.chunk.ChunkInstance;
 import program.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import program.core.engine.BranchPackage;
-import program.core.util.mathematics.extrasa.Color;
-import program.core.util.mathematics.extrasa.Direction3Vector;
+import program.core.util.mathematics.extras.Color;
+import program.core.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 

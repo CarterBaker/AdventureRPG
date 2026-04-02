@@ -15,7 +15,7 @@ import program.core.settings.EngineSetting;
 import program.core.util.FileUtility;
 import program.core.util.JsonUtility;
 import program.core.util.RegistryUtility;
-import program.core.util.mathematics.extrasa.Direction3Vector;
+import program.core.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {

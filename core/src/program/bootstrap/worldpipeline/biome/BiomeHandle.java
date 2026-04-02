@@ -1,7 +1,7 @@
 package program.bootstrap.worldpipeline.biome;
 
 import program.core.engine.HandlePackage;
-import program.core.util.mathematics.extrasa.Color;
+import program.core.util.mathematics.extras.Color;
 
 public class BiomeHandle extends HandlePackage {
 

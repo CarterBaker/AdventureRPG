@@ -1,9 +1,9 @@
 package program.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
-import program.core.util.mathematics.extrasa.Coordinate2Long;
-import program.core.util.mathematics.extrasa.Coordinate3Int;
-import program.core.util.mathematics.extrasa.Coordinate3Long;
-import program.core.util.mathematics.extrasa.Direction2Vector;
+import program.core.util.mathematics.extras.Coordinate2Long;
+import program.core.util.mathematics.extras.Coordinate3Int;
+import program.core.util.mathematics.extras.Coordinate3Long;
+import program.core.util.mathematics.extras.Direction2Vector;
 
 public enum VertBlockNeighbor3Vector {
 

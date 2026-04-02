@@ -1,7 +1,7 @@
 package program.bootstrap.entitypipeline;
 
 import program.bootstrap.entitypipeline.behaviormanager.BehaviorManager;
-import program.bootstrap.entitypipeline.entitymanagera.EntityManager;
+import program.bootstrap.entitypipeline.entitymanager.EntityManager;
 import program.bootstrap.entitypipeline.playermanager.PlayerManager;
 import program.core.engine.PipelinePackage;
 

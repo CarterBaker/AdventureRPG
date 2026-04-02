@@ -2,8 +2,8 @@ package program.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
 import java.util.BitSet;
 import program.core.engine.AsyncContainerPackage;
-import program.core.util.mathematics.extrasa.Color;
-import program.core.util.mathematics.extrasa.Direction3Vector;
+import program.core.util.mathematics.extras.Color;
+import program.core.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 

@@ -2,7 +2,7 @@ package program.bootstrap.physicspipeline.util;
 
 import program.bootstrap.worldpipeline.block.BlockHandle;
 import program.core.engine.StructPackage;
-import program.core.util.mathematics.extrasa.Direction3Vector;
+import program.core.util.mathematics.extras.Direction3Vector;
 
 public class BlockCastStruct extends StructPackage {
 

@@ -1,4 +1,4 @@
-package program.bootstrap.entitypipeline.entitymanagera;
+package program.bootstrap.entitypipeline.entitymanager;
 
 import program.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import program.bootstrap.entitypipeline.behaviormanager.BehaviorManager;

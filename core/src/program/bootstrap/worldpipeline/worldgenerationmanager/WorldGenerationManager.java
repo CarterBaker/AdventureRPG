@@ -7,7 +7,7 @@ import program.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import program.core.engine.ManagerPackage;
 import program.core.settings.EngineSetting;
 import program.core.util.OpenSimplex2;
-import program.core.util.mathematics.extrasa.Coordinate2Long;
+import program.core.util.mathematics.extras.Coordinate2Long;
 
 public class WorldGenerationManager extends ManagerPackage {
 

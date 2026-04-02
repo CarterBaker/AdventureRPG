@@ -5,7 +5,7 @@ import program.bootstrap.worldpipeline.util.WorldPositionStruct;
 import program.bootstrap.worldpipeline.util.WorldWrapUtility;
 import program.core.engine.ManagerPackage;
 import program.core.settings.EngineSetting;
-import program.core.util.mathematics.extrasa.Coordinate2Long;
+import program.core.util.mathematics.extras.Coordinate2Long;
 import program.core.util.mathematics.vectors.Vector3;
 
 public class MovementManager extends ManagerPackage {
