@@ -4,16 +4,16 @@ import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 public class EngineSetting {
 
+        // Engine Settings \\
+
+        public static final int LOADER_BATCH_SIZE = 32;
+        public static final String THREAD_DEFINITIONS = "program/threads";
+
         // Registry \\
 
         public static final int FNV_OFFSET_BASIS = 0x811c9dc5;
         public static final int FNV_PRIME = 0x01000193;
         public static final short REGISTRY_RESERVED_ID = 0;
-
-        // Engine Internals \\
-
-        public static final int LOADER_BATCH_SIZE = 32;
-        public static final String THREAD_DEFINITIONS = "internal/threads";
 
         // File Extensions \\
 
