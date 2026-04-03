@@ -3,17 +3,28 @@ package program.core.input;
 import org.lwjgl.glfw.GLFW;
 
 public interface Input {
+
+    /*
+     * Platform input contract. Implemented by the backend input class.
+     * Provides cursor delta, capture control, and processor registration.
+     */
+
     void setInputProcessor(InputProcessor inputProcessor);
+
     int getDeltaX();
+
     int getDeltaY();
+
     void setCursorCatched(boolean captured);
 
     final class Buttons {
+
         public static final int LEFT = 0;
         public static final int RIGHT = 1;
     }
 
     final class Keys {
+
         public static final int W = GLFW.GLFW_KEY_W;
         public static final int A = GLFW.GLFW_KEY_A;
         public static final int S = GLFW.GLFW_KEY_S;

@@ -9,8 +9,6 @@ import program.bootstrap.inputpipeline.input.InputHandle;
 import program.bootstrap.inputpipeline.inputsystem.InputSystem;
 import program.bootstrap.physicspipeline.movementmanager.MovementManager;
 import program.bootstrap.renderpipeline.camera.CameraInstance;
-import program.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
-import program.bootstrap.renderpipeline.cameramanager.CameraManager;
 import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.bootstrap.worldpipeline.blockmanager.BlockManager;
 import program.bootstrap.worldpipeline.chunk.ChunkData;
@@ -35,7 +33,6 @@ public class PlayerManager extends ManagerPackage {
      */
 
     // Internal
-    private CameraManager cameraManager;
     private InputSystem inputSystem;
     private MovementManager movementManager;
     private EntityManager entityManager;
@@ -78,7 +75,6 @@ public class PlayerManager extends ManagerPackage {
     protected void get() {
 
         // Internal
-        this.cameraManager = get(CameraManager.class);
         this.inputSystem = get(InputSystem.class);
         this.movementManager = get(MovementManager.class);
         this.entityManager = get(EntityManager.class);
@@ -111,18 +107,7 @@ public class PlayerManager extends ManagerPackage {
         EntityInstance player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
         windowID2Player.put(window.getWindowID(), player);
         windowID2VerifyPlayerPosition.put(window.getWindowID(), true);
-
-        CameraInstance camera = cameraManager.createCamera(
-                internal.settings.FOV,
-                window.getWidth(),
-                window.getHeight());
-        OrthographicCameraInstance orthoCamera = cameraManager.createOrthographicCamera(
-                window.getWidth(),
-                window.getHeight());
-
-        window.setActiveCamera(camera);
-        window.setOrthoCamera(orthoCamera);
-        windowID2Camera.put(window.getWindowID(), camera);
+        windowID2Camera.put(window.getWindowID(), window.getActiveCamera());
 
         return player;
     }

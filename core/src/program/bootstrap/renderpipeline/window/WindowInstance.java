@@ -5,6 +5,7 @@ import program.core.app.Screen;
 import program.bootstrap.renderpipeline.camera.CameraInstance;
 import program.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
 import program.bootstrap.geometrypipeline.vaomanager.VAOManager;
+import program.bootstrap.renderpipeline.cameramanager.CameraManager;
 import program.bootstrap.renderpipeline.rendermanager.RenderManager;
 import program.bootstrap.renderpipeline.rendermanager.RenderQueueHandle;
 import program.bootstrap.renderpipeline.windowmanager.WindowManager;
@@ -14,9 +15,9 @@ import program.core.engine.InstancePackage;
 public class WindowInstance extends InstancePackage implements Screen, ApplicationListener {
 
     /*
-     * Runtime window wrapper. Owns WindowData and RenderQueueHandle.
-     * Engine now owns timing for all draws (main + detached). Detached
-     * ApplicationListener callbacks are no-op for render timing.
+     * Runtime window wrapper. Owns WindowData, RenderQueueHandle, and both
+     * cameras. All three are created in awake() — every window is fully
+     * render-ready before any system sees it.
      */
 
     // Data
@@ -35,6 +36,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     private OrthographicCameraInstance orthoCamera;
 
     // Internal
+    private CameraManager cameraManager;
     private RenderManager renderManager;
     private VAOManager vaoManager;
     private WindowManager windowManager;
@@ -47,6 +49,9 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     protected void get() {
+
+        // Internal
+        this.cameraManager = get(CameraManager.class);
         this.renderManager = get(RenderManager.class);
         this.vaoManager = get(VAOManager.class);
         this.windowManager = get(WindowManager.class);
@@ -54,8 +59,20 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     protected void awake() {
+
+        // Render Queue
         this.renderQueueHandle = create(RenderQueueHandle.class);
         this.renderQueueHandle.constructor();
+
+        // Cameras
+        this.activeCamera = cameraManager.createCamera(
+                internal.settings.FOV,
+                windowData.getWidth(),
+                windowData.getHeight());
+
+        this.orthoCamera = cameraManager.createOrthographicCamera(
+                windowData.getWidth(),
+                windowData.getHeight());
     }
 
     // ApplicationListener — Detached Window Path \\
@@ -90,8 +107,10 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     public void dispose() {
         vaoManager.removeWindowVAOs(getWindowID());
         renderManager.removeWindowResources(this);
+
         if (context != null)
             internal.destroyContext(context);
+
         windowManager.removeWindow(this);
     }
 

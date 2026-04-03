@@ -6,6 +6,12 @@ import program.core.util.graphics.gl.GL20;
 import program.core.util.graphics.gl.GL30;
 
 public class CoreContext {
+
+    /*
+     * Global access point for platform-level singletons. Set once during
+     * backend bootstrap and read-only for the rest of the session.
+     */
+
     public static Application app;
     public static Graphics graphics;
     public static Input input;
