@@ -5,7 +5,7 @@ import program.core.app.Screen;
 import program.bootstrap.renderpipeline.camera.CameraInstance;
 import program.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
 import program.bootstrap.geometrypipeline.vaomanager.VAOManager;
-import program.bootstrap.renderpipeline.cameramanager.CameraManager;
+import program.bootstrap.renderpipeline.cameramanager.GLSLUtility;
 import program.bootstrap.renderpipeline.rendermanager.RenderManager;
 import program.bootstrap.renderpipeline.rendermanager.RenderQueueHandle;
 import program.bootstrap.renderpipeline.windowmanager.WindowManager;
@@ -16,8 +16,8 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     /*
      * Runtime window wrapper. Owns WindowData, RenderQueueHandle, and both
-     * cameras. All three are created in awake() — every window is fully
-     * render-ready before any system sees it.
+     * cameras. WindowData and cameras are assigned in constructor(), while
+     * render queue setup occurs in awake().
      */
 
     // Data
@@ -36,7 +36,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     private OrthographicCameraInstance orthoCamera;
 
     // Internal
-    private CameraManager cameraManager;
     private RenderManager renderManager;
     private VAOManager vaoManager;
     private WindowManager windowManager;
@@ -45,13 +44,24 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     public void constructor(WindowData windowData) {
         this.windowData = windowData;
+
+        // Cameras
+        this.activeCamera = GLSLUtility.createCamera(
+                this,
+                internal.settings.FOV,
+                windowData.getWidth(),
+                windowData.getHeight());
+
+        this.orthoCamera = GLSLUtility.createOrthographicCamera(
+                this,
+                windowData.getWidth(),
+                windowData.getHeight());
     }
 
     @Override
     protected void get() {
 
         // Internal
-        this.cameraManager = get(CameraManager.class);
         this.renderManager = get(RenderManager.class);
         this.vaoManager = get(VAOManager.class);
         this.windowManager = get(WindowManager.class);
@@ -64,15 +74,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
         this.renderQueueHandle = create(RenderQueueHandle.class);
         this.renderQueueHandle.constructor();
 
-        // Cameras
-        this.activeCamera = cameraManager.createCamera(
-                internal.settings.FOV,
-                windowData.getWidth(),
-                windowData.getHeight());
-
-        this.orthoCamera = cameraManager.createOrthographicCamera(
-                windowData.getWidth(),
-                windowData.getHeight());
     }
 
     // ApplicationListener — Detached Window Path \\
