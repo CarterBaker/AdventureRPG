@@ -36,7 +36,7 @@ public class EngineSetting {
         public static final String BIOME_JSON_PATH = "biomes";
         public static final String BLOCK_JSON_PATH = "blocks";
         public static final String BLOCK_TEXTURE_PATH = "textures";
-        public static final String BLOCK_TEXTURE_ALIAS_PATH = "textureAliases";
+        public static final String BLOCK_TEXTURE_ALIAS_PATH = "texturealiases";
         public static final String CALENDAR_JSON_PATH = "calendars";
         public static final String ENTITY_JSON_PATH = "entities";
         public static final String FONT_PATH = "fonts";
@@ -44,7 +44,7 @@ public class EngineSetting {
         public static final String MATERIAL_JSON_PATH = "materials";
         public static final String MENU_JSON_PATH = "menus";
         public static final String MESH_JSON_PATH = "mesh";
-        public static final String PASS_JSON_PATH = "processingPasses";
+        public static final String PASS_JSON_PATH = "processingpasses";
         public static final String SHADER_PATH = "shaders";
         public static final String SPRITE_PATH = "sprites";
         public static final String TOOL_TYPE_JSON_PATH = "tools";
