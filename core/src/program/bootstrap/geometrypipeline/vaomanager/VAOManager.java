@@ -6,6 +6,8 @@ import program.bootstrap.geometrypipeline.vao.VAOData;
 import program.bootstrap.geometrypipeline.vao.VAOHandle;
 import program.bootstrap.geometrypipeline.vao.VAOInstance;
 import program.core.engine.ManagerPackage;
+import program.core.kernel.window.WindowInstance;
+import program.core.kernel.windowmanager.WindowManager;
 import program.core.util.RegistryUtility;
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
@@ -23,6 +25,7 @@ public class VAOManager extends ManagerPackage {
 
     // Internal
     private MeshManager meshManager;
+    private WindowManager windowManager;
 
     // Palette
     private Object2ObjectOpenHashMap<String, VAOHandle> vaoName2VAOHandle;
@@ -50,6 +53,7 @@ public class VAOManager extends ManagerPackage {
 
         // Internal
         this.meshManager = get(MeshManager.class);
+        this.windowManager = get(WindowManager.class);
     }
 
     // Management \\
@@ -125,6 +129,13 @@ public class VAOManager extends ManagerPackage {
         if (windowID == 0)
             return;
 
+        WindowInstance window = getWindowByID(windowID);
+
+        if (window == null || !window.hasNativeHandle())
+            return;
+
+        internal.windowPlatform.makeContextCurrent(window);
+
         ObjectIterator<Long2IntMap.Entry> iterator = sourceWindowKey2ClonedVAO.long2IntEntrySet().fastIterator();
 
         while (iterator.hasNext()) {
@@ -144,6 +155,7 @@ public class VAOManager extends ManagerPackage {
         if (sourceVAO == 0)
             return;
 
+        int currentWindowID = Integer.MIN_VALUE;
         ObjectIterator<Long2IntMap.Entry> iterator = sourceWindowKey2ClonedVAO.long2IntEntrySet().fastIterator();
 
         while (iterator.hasNext()) {
@@ -153,9 +165,28 @@ public class VAOManager extends ManagerPackage {
             if (extractSourceVAO(entry.getLongKey()) != sourceVAO)
                 continue;
 
+            int windowID = extractWindowID(entry.getLongKey());
+
+            if (windowID != currentWindowID) {
+                WindowInstance window = getWindowByID(windowID);
+
+                if (window == null || !window.hasNativeHandle()) {
+                    iterator.remove();
+                    continue;
+                }
+
+                internal.windowPlatform.makeContextCurrent(window);
+                currentWindowID = windowID;
+            }
+
             GLSLUtility.removeVAOHandle(entry.getIntValue());
             iterator.remove();
         }
+
+        WindowInstance mainWindow = windowManager.getMainWindow();
+
+        if (mainWindow != null && mainWindow.hasNativeHandle())
+            internal.windowPlatform.makeContextCurrent(mainWindow);
     }
 
     public void removeVAOData(VAOData vaoData) {
@@ -176,5 +207,20 @@ public class VAOManager extends ManagerPackage {
 
     private int extractSourceVAO(long key) {
         return (int) (key & 0xFFFFFFFFL);
+    }
+
+    private WindowInstance getWindowByID(int windowID) {
+
+        if (windowID == 0)
+            return windowManager.getMainWindow();
+
+        for (int i = 0; i < windowManager.getWindows().size(); i++) {
+            WindowInstance window = windowManager.getWindows().get(i);
+
+            if (window.getWindowID() == windowID)
+                return window;
+        }
+
+        return null;
     }
 }
