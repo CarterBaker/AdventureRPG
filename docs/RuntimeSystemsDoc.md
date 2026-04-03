@@ -1,78 +1,170 @@
 # RuntimeSystemsDoc
 
-_Generated: 2026-04-03_
+This is a human-readable subsystem manual. It explains responsibilities, collaboration points, and method intent for each class in scope.
 
-## Overview
-RuntimeSystemsDoc covers 6 classes across 6 packages. This reference follows EngineContext naming/lifecycle conventions and summarizes class responsibilities by suffix rules.
+Classes covered: **6**
 
-## Integration Notes
-- `core.engine` referenced via 6 imports.
-- `runtime` referenced via 5 imports.
-- `entitypipeline` referenced via 4 imports.
-- `menupipeline` referenced via 3 imports.
-- `inputpipeline` referenced via 2 imports.
-- `shaderpipeline` referenced via 2 imports.
-- `worldpipeline` referenced via 1 imports.
+## How to read this manual
+- Start with the package flow notes at the top of each class section.
+- Use **Who talks to this class** to identify collaborators.
+- Use **Method intent** to understand lifecycle and API behavior.
 
-## Package Breakdown
+## `core/src/program/runtime/RuntimeContext.java`
 
-### ``
+**Type:** `class RuntimeContext`
+  
+**Inheritance/implements:** `extends ContextPackage`
+  
+**Package:** `program.runtime`
+  
+**File size:** 40 lines
 
-| Class | Role |
-|---|---|
-| `RuntimeContext` | Runtime context that groups frame-executed systems. |
+**What this class does:** `RuntimeContext` provides subsystem-specific behavior inferred from its APIs and collaborators in `program.runtime`.
 
-### `input`
+**Who this class talks to (direct imports):**
+- `program.core.engine.ContextPackage`
+- `program.runtime.input.PlayerInputSystem`
+- `program.runtime.lighting.SkySystem`
+- `program.runtime.menu.MenuSystem`
+- `program.runtime.player.PlayerSystem`
+- `program.runtime.world.WorldSystem`
 
-| Class | Role |
-|---|---|
-| `PlayerInputSystem` | Single-job helper system for focused tasks. |
+**Method intent:**
+- `protected void create()` — Allocates/initializes child systems or resources.
 
-### `lighting`
+**Operational notes:**
+- Track this class together with its owning manager/pipeline/context to understand when it is instantiated and invoked.
+- For runtime behavior, follow lifecycle methods (`create/get/awake/update/draw/dispose`) in this class and immediate collaborators.
 
-| Class | Role |
-|---|---|
-| `SkySystem` | Single-job helper system for focused tasks. |
+## `core/src/program/runtime/input/PlayerInputSystem.java`
 
-### `menu`
+**Type:** `class PlayerInputSystem`
+  
+**Inheritance/implements:** `extends SystemPackage`
+  
+**Package:** `program.runtime.input`
+  
+**File size:** 131 lines
 
-| Class | Role |
-|---|---|
-| `MenuSystem` | Single-job helper system for focused tasks. |
+**What this class does:** `PlayerInputSystem` provides subsystem-specific behavior inferred from its APIs and collaborators in `program.runtime.input`.
 
-### `player`
+**Who this class talks to (direct imports):**
+- `program.bootstrap.entitypipeline.entity.EntityInstance`
+- `program.bootstrap.entitypipeline.playermanager.PlayerManager`
+- `program.bootstrap.inputpipeline.input.InputHandle`
+- `program.bootstrap.inputpipeline.inputsystem.InputSystem`
+- `program.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch`
+- `program.bootstrap.menupipeline.menumanager.MenuManager`
+- `program.core.engine.SystemPackage`
+- `program.core.util.camera.CameraInstance`
+- `program.core.util.mathematics.vectors.Vector3`
 
-| Class | Role |
-|---|---|
-| `PlayerSystem` | Single-job helper system for focused tasks. |
+**Method intent:**
+- `protected void create()` — Allocates/initializes child systems or resources.
+- `protected void get()` — Returns current state/value.
+- `protected void update()` — Runs frame-step maintenance and logic.
+- `private void handleInventoryInput()` — Performs class-specific logic; see call sites and owning manager flow.
+- `private void updateCameraRotation()` — Runs frame-step maintenance and logic.
+- `private void writePlayerInput()` — Performs class-specific logic; see call sites and owning manager flow.
 
-### `world`
+**Operational notes:**
+- Track this class together with its owning manager/pipeline/context to understand when it is instantiated and invoked.
+- For runtime behavior, follow lifecycle methods (`create/get/awake/update/draw/dispose`) in this class and immediate collaborators.
 
-| Class | Role |
-|---|---|
-| `WorldSystem` | Single-job helper system for focused tasks. |
+## `core/src/program/runtime/lighting/SkySystem.java`
 
-## Class Role Summary
+**Type:** `class SkySystem`
+  
+**Inheritance/implements:** `extends SystemPackage`
+  
+**Package:** `program.runtime.lighting`
+  
+**File size:** 34 lines
 
-| Class | Package | Role |
-|---|---|---|
-| `MenuSystem` | `program.runtime.menu` | Single-job helper system for focused tasks. |
-| `PlayerInputSystem` | `program.runtime.input` | Single-job helper system for focused tasks. |
-| `PlayerSystem` | `program.runtime.player` | Single-job helper system for focused tasks. |
-| `RuntimeContext` | `program.runtime` | Runtime context that groups frame-executed systems. |
-| `SkySystem` | `program.runtime.lighting` | Single-job helper system for focused tasks. |
-| `WorldSystem` | `program.runtime.world` | Single-job helper system for focused tasks. |
+**What this class does:** `SkySystem` provides subsystem-specific behavior inferred from its APIs and collaborators in `program.runtime.lighting`.
 
-## Naming Convention Reference
+**Who this class talks to (direct imports):**
+- `program.bootstrap.shaderpipeline.pass.PassHandle`
+- `program.bootstrap.shaderpipeline.passmanager.PassManager`
+- `program.core.engine.SystemPackage`
 
-| Suffix | Meaning |
-|---|---|
-| `Data` | Raw data payload struct used by handles/instances. |
-| `Handle` | Persistent manager-registered wrapper around data. |
-| `Instance` | Runtime mutable clone of a handle. |
-| `Manager` | Owns registration, lifecycle, and public retrieval. |
-| `Loader` | Bootstrap loader that scans files and requests builds. |
-| `Builder` | Bootstrap builder that parses source data into handles. |
-| `Branch` | Manager-owned internal computation branch. |
-| `System` | Single-job helper system for focused tasks. |
-| `Struct` | Lightweight struct without engine lifecycle. |
+**Method intent:**
+- `protected void get()` — Returns current state/value.
+- `protected void update()` — Runs frame-step maintenance and logic.
+
+**Operational notes:**
+- Track this class together with its owning manager/pipeline/context to understand when it is instantiated and invoked.
+- For runtime behavior, follow lifecycle methods (`create/get/awake/update/draw/dispose`) in this class and immediate collaborators.
+
+## `core/src/program/runtime/menu/MenuSystem.java`
+
+**Type:** `class MenuSystem`
+  
+**Inheritance/implements:** `extends SystemPackage`
+  
+**Package:** `program.runtime.menu`
+  
+**File size:** 30 lines
+
+**What this class does:** `MenuSystem` provides subsystem-specific behavior inferred from its APIs and collaborators in `program.runtime.menu`.
+
+**Who this class talks to (direct imports):**
+- `program.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch`
+- `program.core.engine.SystemPackage`
+
+**Method intent:**
+- `protected void get()` — Returns current state/value.
+- `protected void awake()` — Runs startup-time runtime activation work.
+
+**Operational notes:**
+- Track this class together with its owning manager/pipeline/context to understand when it is instantiated and invoked.
+- For runtime behavior, follow lifecycle methods (`create/get/awake/update/draw/dispose`) in this class and immediate collaborators.
+
+## `core/src/program/runtime/player/PlayerSystem.java`
+
+**Type:** `class PlayerSystem`
+  
+**Inheritance/implements:** `extends SystemPackage`
+  
+**Package:** `program.runtime.player`
+  
+**File size:** 31 lines
+
+**What this class does:** `PlayerSystem` provides subsystem-specific behavior inferred from its APIs and collaborators in `program.runtime.player`.
+
+**Who this class talks to (direct imports):**
+- `program.bootstrap.entitypipeline.playermanager.PlayerManager`
+- `program.core.engine.SystemPackage`
+
+**Method intent:**
+- `protected void get()` — Returns current state/value.
+- `protected void awake()` — Runs startup-time runtime activation work.
+
+**Operational notes:**
+- Track this class together with its owning manager/pipeline/context to understand when it is instantiated and invoked.
+- For runtime behavior, follow lifecycle methods (`create/get/awake/update/draw/dispose`) in this class and immediate collaborators.
+
+## `core/src/program/runtime/world/WorldSystem.java`
+
+**Type:** `class WorldSystem`
+  
+**Inheritance/implements:** `extends SystemPackage`
+  
+**Package:** `program.runtime.world`
+  
+**File size:** 36 lines
+
+**What this class does:** `WorldSystem` provides subsystem-specific behavior inferred from its APIs and collaborators in `program.runtime.world`.
+
+**Who this class talks to (direct imports):**
+- `program.bootstrap.entitypipeline.playermanager.PlayerManager`
+- `program.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager`
+- `program.core.engine.SystemPackage`
+
+**Method intent:**
+- `protected void get()` — Returns current state/value.
+- `protected void awake()` — Runs startup-time runtime activation work.
+
+**Operational notes:**
+- Track this class together with its owning manager/pipeline/context to understand when it is instantiated and invoked.
+- For runtime behavior, follow lifecycle methods (`create/get/awake/update/draw/dispose`) in this class and immediate collaborators.

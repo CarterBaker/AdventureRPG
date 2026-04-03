@@ -1,38 +1,27 @@
 # ClaudeEngineQuickContext
 
-Use this as a fast paste-in context for engine-aware assistance.
+Use this as a short bootstrapping context for engine-aware assistance.
 
-## Architecture in 30 seconds
-- `EnginePackage` is the root lifecycle manager (`bootstrap -> create -> get -> awake -> update -> draw`).
-- `GameEngine` boots `BootstrapAssembly`, then binds `RuntimeContext` to the main window.
-- Pipelines are `PipelinePackage` registries; managers/systems do work and expose typed APIs.
-- Data flow convention: `Loader -> Builder -> Data -> Handle -> Manager registry -> Instance clone (runtime)`.
+## Engine lifecycle (practical)
+- `EnginePackage` is the root orchestrator: registry, lifecycle enforcement, context creation/pairing, timing.
+- `GameEngine` wires bootstrap + runtime: creates `BootstrapAssembly`, resolves `WindowManager`/`RenderManager`, creates `RuntimeContext`, calls `renderManager.draw()`.
+- `get()` phase is where cross-system references are resolved.
 
-## Active bootstrap pipelines
-1. `CalendarPipeline` - world time/calendar state.
-2. `EntityPipeline` - entities, behaviors, player spawn.
-3. `GeometryPipeline` - VAO/VBO/IBO, mesh/model assembly, dynamic/composite geometry.
-4. `InputPipeline` - input polling and input state exposure.
-5. `ItemPipeline` - tool types, item definitions, rotations/backpack helpers.
-6. `LightingPipeline` - natural light and directional light blending.
-7. `MenuPipeline` - fonts, events, raycast, menu runtime.
-8. `PhysicsPipeline` - movement + raycast/collision helpers.
-9. `RenderPipeline` - camera + render batch flush.
-10. `ShaderPipeline` - shader, pass, texture, material, sprite, UBO systems.
-11. `WorldPipeline` - world/block/biome + generation + stream/render/item systems.
+## Runtime execution
+- `RuntimeContext` creates `SkySystem`, `PlayerSystem`, `MenuSystem`, `WorldSystem`, `PlayerInputSystem`.
+- All runtime systems route by `context.getWindow()` (window-aware behavior, multi-window safe).
+- Input flow: `PlayerInputSystem` -> `InputSystem` + `MenuManager` lock + `PlayerManager` input writes.
 
-## Runtime + kernel additions
-- Runtime classes live in `program.runtime` and run frame logic for world/player/menu/lighting/input orchestration.
-- Kernel classes live in `program.core.kernel` and provide threading, sync consumers, and window management.
-- Non-editor platform glue (`core.app`, `core.backends`, `core.graphics`, `core.input`, `core.settings`) hosts launch, settings, and backend integration.
+## Kernel substrate
+- `InternalThreadManager` + loader/builder own named executors and async/sync execution helpers.
+- `WindowManager` owns main/detached window lifecycle, pending opens, active window tracking.
+- `WindowInstance` binds window data, render queue, cameras, and optional context pairing.
 
-## Cross-system communication pattern
-- Pipelines communicate through manager retrieval in `get()` phase, not raw globals.
-- `WorldStreamManager` updates before `WorldRenderManager`; render consumes current stream state.
-- `RenderManager` is the final flush point for draw calls pushed by runtime systems.
+## Bootstrap dependency shape
+- `BootstrapAssembly` order: Geometry -> Shader -> Render -> Item -> Physics -> Input -> Entity -> World -> Calendar -> Lighting -> Menu.
+- Runtime-critical chain: Player spawn (Entity) + grid create (World) + pass push (Shader) + input/menu arbitration (Input+Menu+Entity).
 
-## Naming + lifecycle rules to follow
-- Suffix must match base type (`XManager`, `XHandle`, `XData`, `XSystem`, etc.).
-- Engine-managed objects are created with `create(Class)`; only structs/data use `new`.
-- `get()` is the only legal phase for resolving cross-system references.
-- Use explicit registry maps (`name -> id`, `id -> handle`), never ad-hoc maps.
+## Use these manuals for full detail
+- `CompleteEngineDoc.md` (file-by-file full manual)
+- `EngineCoreDoc.md`, `KernelSystemsDoc.md`, `RuntimeSystemsDoc.md`
+- Pipeline manuals (`*PipelineDoc.md`) for package-level behavior and API intent.
