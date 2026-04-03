@@ -1,8 +1,6 @@
 package program.bootstrap.renderpipeline.cameramanager;
 
-import program.bootstrap.renderpipeline.camera.CameraData;
 import program.bootstrap.renderpipeline.camera.CameraInstance;
-import program.bootstrap.renderpipeline.camera.OrthographicCameraData;
 import program.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
 import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.bootstrap.renderpipeline.windowmanager.WindowManager;
@@ -54,9 +52,7 @@ public class CameraManager extends ManagerPackage {
             float width,
             float height) {
 
-        CameraData data = new CameraData(fov, width, height);
-        CameraInstance instance = create(CameraInstance.class);
-        instance.constructor(data);
+        CameraInstance instance = GLSLUtility.createCamera(this, fov, width, height);
         cameraInstances.add(instance);
 
         return instance;
@@ -66,11 +62,7 @@ public class CameraManager extends ManagerPackage {
             float width,
             float height) {
 
-        OrthographicCameraData data = new OrthographicCameraData(width, height);
-        OrthographicCameraInstance instance = create(OrthographicCameraInstance.class);
-        instance.constructor(data);
-
-        return instance;
+        return GLSLUtility.createOrthographicCamera(this, width, height);
     }
 
     // Buffer \\
