@@ -1,4 +1,4 @@
-package program.bootstrap.renderpipeline.camera;
+package program.core.util.camera;
 
 import program.core.engine.DataPackage;
 import program.core.util.mathematics.matrices.Matrix4;
@@ -24,6 +24,11 @@ public class OrthographicCameraData extends DataPackage {
                 0, 0, 0, 1);
     }
 
-    public Matrix4 getProjection() { return projectionMat; }
-    public Vector2 getScreenSize() { return screenSize; }
+    public Matrix4 getProjection() {
+        return projectionMat;
+    }
+
+    public Vector2 getScreenSize() {
+        return screenSize;
+    }
 }

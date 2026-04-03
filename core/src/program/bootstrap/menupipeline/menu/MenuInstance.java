@@ -1,8 +1,8 @@
 package program.bootstrap.menupipeline.menu;
 
 import program.bootstrap.menupipeline.element.ElementInstance;
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.core.engine.InstancePackage;
+import program.core.kernel.window.WindowInstance;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuInstance extends InstancePackage {

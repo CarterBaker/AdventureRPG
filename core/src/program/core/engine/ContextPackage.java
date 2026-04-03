@@ -1,7 +1,7 @@
 package program.core.engine;
 
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import program.core.kernel.window.WindowInstance;
 
 public abstract class ContextPackage extends ManagerPackage {
 

@@ -1,9 +1,9 @@
 package program.editor.runtime;
 
-import program.bootstrap.renderpipeline.window.WindowData;
-import program.bootstrap.renderpipeline.window.WindowInstance;
-import program.bootstrap.renderpipeline.windowmanager.WindowManager;
 import program.core.engine.SystemPackage;
+import program.core.kernel.window.WindowData;
+import program.core.kernel.window.WindowInstance;
+import program.core.kernel.windowmanager.WindowManager;
 import program.core.settings.EngineSetting;
 
 public class PreviewSystem extends SystemPackage {

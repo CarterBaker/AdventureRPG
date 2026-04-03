@@ -1,4 +1,4 @@
-package program.bootstrap.renderpipeline.camera;
+package program.core.util.camera;
 
 import program.core.engine.InstancePackage;
 import program.core.util.mathematics.matrices.Matrix4;

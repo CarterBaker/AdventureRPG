@@ -1,6 +1,6 @@
 package program.core.engine;
 
-import program.bootstrap.renderpipeline.window.WindowInstance;
+import program.core.kernel.window.WindowInstance;
 
 public interface WindowPlatform {
 

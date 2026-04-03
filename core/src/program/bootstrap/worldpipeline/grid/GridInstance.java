@@ -1,7 +1,6 @@
 package program.bootstrap.worldpipeline.grid;
 
 import program.bootstrap.entitypipeline.entity.EntityInstance;
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.bootstrap.worldpipeline.chunk.ChunkInstance;
 import program.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import program.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
@@ -9,6 +8,7 @@ import program.bootstrap.worldpipeline.util.WorldWrapUtility;
 import program.bootstrap.worldpipeline.world.WorldHandle;
 import program.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import program.core.engine.InstancePackage;
+import program.core.kernel.window.WindowInstance;
 import program.core.settings.EngineSetting;
 import program.core.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;

@@ -6,8 +6,8 @@ import program.bootstrap.inputpipeline.input.InputHandle;
 import program.bootstrap.inputpipeline.inputsystem.InputSystem;
 import program.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
 import program.bootstrap.menupipeline.menumanager.MenuManager;
-import program.bootstrap.renderpipeline.camera.CameraInstance;
 import program.core.engine.SystemPackage;
+import program.core.util.camera.CameraInstance;
 import program.core.util.mathematics.vectors.Vector3;
 
 public class PlayerInputSystem extends SystemPackage {

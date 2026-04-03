@@ -8,12 +8,12 @@ import program.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSys
 import program.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import program.bootstrap.renderpipeline.rendercall.RenderCallStruct;
 import program.bootstrap.renderpipeline.util.MaskStruct;
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.bootstrap.shaderpipeline.material.MaterialInstance;
 import program.bootstrap.shaderpipeline.ubo.UBOHandle;
 import program.bootstrap.shaderpipeline.ubo.UBOInstance;
 import program.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import program.core.engine.SystemPackage;
+import program.core.kernel.window.WindowInstance;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

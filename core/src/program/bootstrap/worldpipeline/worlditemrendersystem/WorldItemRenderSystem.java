@@ -4,13 +4,13 @@ import program.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstanc
 import program.bootstrap.geometrypipeline.compositebuffermanager.CompositeBufferManager;
 import program.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import program.bootstrap.renderpipeline.rendermanager.RenderManager;
-import program.bootstrap.renderpipeline.window.WindowInstance;
-import program.bootstrap.renderpipeline.windowmanager.WindowManager;
 import program.bootstrap.shaderpipeline.material.MaterialInstance;
 import program.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import program.bootstrap.worldpipeline.worlditem.WorldItemCompositeInstance;
 import program.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import program.core.engine.ManagerPackage;
+import program.core.kernel.window.WindowInstance;
+import program.core.kernel.windowmanager.WindowManager;
 import program.core.settings.EngineSetting;
 import program.core.util.mathematics.extras.Coordinate2Long;
 import program.core.util.mathematics.extras.Coordinate4Long;

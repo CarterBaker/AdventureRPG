@@ -8,18 +8,22 @@ import java.util.concurrent.Future;
 import program.core.app.Game;
 import program.core.app.Screen;
 import com.google.gson.Gson;
-import program.bootstrap.renderpipeline.window.WindowData;
-import program.bootstrap.renderpipeline.window.WindowInstance;
-import program.bootstrap.renderpipeline.windowmanager.WindowManager;
+
 import program.core.kernel.syncconsumer.AsyncStructConsumer;
 import program.core.kernel.syncconsumer.AsyncStructConsumerMulti;
 import program.core.kernel.syncconsumer.BiSyncAsyncConsumer;
 import program.core.kernel.syncconsumer.SyncStructConsumer;
 import program.core.kernel.thread.ThreadHandle;
 import program.core.kernel.threadmanager.InternalThreadManager;
+import program.core.kernel.window.WindowData;
+import program.core.kernel.window.WindowInstance;
+import program.core.kernel.windowmanager.WindowManager;
 import program.core.settings.EngineSetting;
 import program.core.settings.Settings;
-
+import program.core.util.camera.CameraData;
+import program.core.util.camera.CameraInstance;
+import program.core.util.camera.OrthographicCameraData;
+import program.core.util.camera.OrthographicCameraInstance;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -54,6 +58,7 @@ public class EnginePackage extends ManagerPackage {
     private Screen screen;
     private EngineState engineState;
     private InternalThreadManager internalThreadManager;
+    private WindowManager windowManager;
 
     // System Management
     Object2ObjectLinkedOpenHashMap<Class<?>, SystemPackage> internalRegistry;
@@ -434,6 +439,7 @@ public class EnginePackage extends ManagerPackage {
 
     private final void kernel() {
         this.internalThreadManager = create(InternalThreadManager.class);
+        this.windowManager = create(WindowManager.class);
     }
 
     // Bootstrap \\
@@ -634,6 +640,18 @@ public class EnginePackage extends ManagerPackage {
 
         this.screen = mainWindow;
         this.game.setScreen(screen);
+    }
+
+    public CameraInstance createCamera(float fov, float width, float height) {
+        CameraInstance instance = createInstance(CameraInstance.class);
+        instance.constructor(new CameraData(fov, width, height));
+        return instance;
+    }
+
+    public OrthographicCameraInstance createOrthographicCamera(float width, float height) {
+        OrthographicCameraInstance instance = createInstance(OrthographicCameraInstance.class);
+        instance.constructor(new OrthographicCameraData(width, height));
+        return instance;
     }
 
     // Accessible \\

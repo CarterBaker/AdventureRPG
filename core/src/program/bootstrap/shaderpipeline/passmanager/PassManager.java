@@ -7,8 +7,8 @@ import program.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import program.bootstrap.shaderpipeline.pass.PassData;
 import program.bootstrap.shaderpipeline.pass.PassHandle;
 import program.bootstrap.shaderpipeline.pass.PassInstance;
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.core.engine.ManagerPackage;
+import program.core.kernel.window.WindowInstance;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

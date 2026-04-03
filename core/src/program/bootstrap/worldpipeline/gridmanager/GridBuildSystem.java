@@ -1,7 +1,6 @@
 package program.bootstrap.worldpipeline.gridmanager;
 
 import program.bootstrap.entitypipeline.entity.EntityInstance;
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.bootstrap.shaderpipeline.ubo.UBOHandle;
 import program.bootstrap.shaderpipeline.ubo.UBOInstance;
 import program.bootstrap.shaderpipeline.ubomanager.UBOManager;
@@ -9,6 +8,7 @@ import program.bootstrap.worldpipeline.grid.GridInstance;
 import program.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import program.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import program.core.engine.SystemPackage;
+import program.core.kernel.window.WindowInstance;
 import program.core.settings.EngineSetting;
 import program.core.util.mathematics.extras.Coordinate2Long;
 import program.core.util.mathematics.vectors.Vector2;

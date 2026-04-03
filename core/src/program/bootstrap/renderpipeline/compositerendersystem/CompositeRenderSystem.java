@@ -2,13 +2,12 @@ package program.bootstrap.renderpipeline.compositerendersystem;
 
 import program.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import program.bootstrap.renderpipeline.compositebatch.CompositeBatchStruct;
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.bootstrap.shaderpipeline.material.MaterialInstance;
 import program.bootstrap.shaderpipeline.ubo.UBOHandle;
 import program.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import program.core.engine.SystemPackage;
+import program.core.kernel.window.WindowInstance;
 import program.core.settings.EngineSetting;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -188,7 +187,8 @@ public class CompositeRenderSystem extends SystemPackage {
 
     private void ensureGpuObjects(CompositeBufferInstance buffer, WindowBufferGpuState gpuState) {
 
-        if (gpuState.instanceVBO != EngineSetting.GL_HANDLE_NONE && gpuState.compositeVAO != EngineSetting.GL_HANDLE_NONE)
+        if (gpuState.instanceVBO != EngineSetting.GL_HANDLE_NONE
+                && gpuState.compositeVAO != EngineSetting.GL_HANDLE_NONE)
             return;
 
         gpuState.instanceVBO = GLSLUtility.createDynamicInstanceVBO(

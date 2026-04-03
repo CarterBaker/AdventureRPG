@@ -1,4 +1,4 @@
-package program.bootstrap.renderpipeline.window;
+package program.core.kernel.window;
 
 import program.core.engine.DataPackage;
 

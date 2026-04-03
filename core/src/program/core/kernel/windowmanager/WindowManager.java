@@ -1,8 +1,7 @@
-package program.bootstrap.renderpipeline.windowmanager;
+package program.core.kernel.windowmanager;
 
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.core.engine.ManagerPackage;
-
+import program.core.kernel.window.WindowInstance;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WindowManager extends ManagerPackage {

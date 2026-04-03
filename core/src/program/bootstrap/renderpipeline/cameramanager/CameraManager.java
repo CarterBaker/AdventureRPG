@@ -1,10 +1,13 @@
 package program.bootstrap.renderpipeline.cameramanager;
 
-import program.bootstrap.renderpipeline.camera.CameraInstance;
-import program.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
-import program.bootstrap.renderpipeline.window.WindowInstance;
-import program.bootstrap.renderpipeline.windowmanager.WindowManager;
+import program.core.engine.InstancePackage;
 import program.core.engine.ManagerPackage;
+import program.core.kernel.window.WindowInstance;
+import program.core.kernel.windowmanager.WindowManager;
+import program.core.util.camera.CameraData;
+import program.core.util.camera.CameraInstance;
+import program.core.util.camera.OrthographicCameraData;
+import program.core.util.camera.OrthographicCameraInstance;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 
 public class CameraManager extends ManagerPackage {
@@ -43,26 +46,6 @@ public class CameraManager extends ManagerPackage {
 
         // Internal
         this.windowManager = get(WindowManager.class);
-    }
-
-    // Camera Factory \\
-
-    public CameraInstance createCamera(
-            float fov,
-            float width,
-            float height) {
-
-        CameraInstance instance = GLSLUtility.createCamera(this, fov, width, height);
-        cameraInstances.add(instance);
-
-        return instance;
-    }
-
-    public OrthographicCameraInstance createOrthographicCamera(
-            float width,
-            float height) {
-
-        return GLSLUtility.createOrthographicCamera(this, width, height);
     }
 
     // Buffer \\

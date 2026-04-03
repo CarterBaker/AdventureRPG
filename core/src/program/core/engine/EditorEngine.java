@@ -1,7 +1,7 @@
 package program.core.engine;
 
 import program.bootstrap.renderpipeline.rendermanager.RenderManager;
-import program.bootstrap.renderpipeline.windowmanager.WindowManager;
+import program.core.kernel.windowmanager.WindowManager;
 import program.editor.runtime.RuntimeContext;
 
 public class EditorEngine extends EnginePackage {

@@ -1,7 +1,6 @@
 package program.bootstrap.worldpipeline.worldstreammanager;
 
 import program.bootstrap.entitypipeline.entity.EntityInstance;
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.bootstrap.worldpipeline.chunk.ChunkInstance;
 import program.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import program.bootstrap.worldpipeline.grid.GridInstance;
@@ -9,6 +8,7 @@ import program.bootstrap.worldpipeline.gridmanager.GridManager;
 import program.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import program.bootstrap.worldpipeline.world.WorldHandle;
 import program.core.engine.ManagerPackage;
+import program.core.kernel.window.WindowInstance;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldStreamManager extends ManagerPackage {

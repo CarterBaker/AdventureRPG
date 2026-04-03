@@ -6,7 +6,6 @@ import program.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
 import program.bootstrap.geometrypipeline.model.ModelInstance;
 import program.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import program.bootstrap.renderpipeline.rendermanager.RenderManager;
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.bootstrap.shaderpipeline.material.MaterialInstance;
 import program.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import program.bootstrap.shaderpipeline.ubo.UBOInstance;
@@ -14,8 +13,8 @@ import program.bootstrap.worldpipeline.grid.GridInstance;
 import program.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import program.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import program.core.engine.ManagerPackage;
+import program.core.kernel.window.WindowInstance;
 import program.core.settings.EngineSetting;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;

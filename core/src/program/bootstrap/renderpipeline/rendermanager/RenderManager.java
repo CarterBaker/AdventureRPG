@@ -5,10 +5,10 @@ import program.bootstrap.geometrypipeline.model.ModelInstance;
 import program.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
 import program.bootstrap.renderpipeline.cameramanager.CameraManager;
 import program.bootstrap.renderpipeline.util.MaskStruct;
-import program.bootstrap.renderpipeline.window.WindowInstance;
-import program.bootstrap.renderpipeline.windowmanager.WindowManager;
 import program.bootstrap.shaderpipeline.material.MaterialInstance;
 import program.core.engine.ManagerPackage;
+import program.core.kernel.window.WindowInstance;
+import program.core.kernel.windowmanager.WindowManager;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RenderManager extends ManagerPackage {

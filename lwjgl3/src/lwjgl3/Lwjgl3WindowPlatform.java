@@ -5,9 +5,8 @@ import program.core.backends.lwjgl3.Lwjgl3Application;
 import program.core.backends.lwjgl3.Lwjgl3Graphics;
 import program.core.backends.lwjgl3.Lwjgl3Window;
 import program.core.backends.lwjgl3.Lwjgl3WindowConfiguration;
-import program.bootstrap.renderpipeline.window.WindowInstance;
 import program.core.engine.WindowPlatform;
-
+import program.core.kernel.window.WindowInstance;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;

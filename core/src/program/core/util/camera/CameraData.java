@@ -1,4 +1,4 @@
-package program.bootstrap.renderpipeline.camera;
+package program.core.util.camera;
 
 import program.core.engine.DataPackage;
 import program.core.settings.EngineSetting;
@@ -103,16 +103,51 @@ public class CameraData extends DataPackage {
                 0, 0, 0, 1);
     }
 
-    public Matrix4 getProjection() { return projectionMat; }
-    public Matrix4 getView() { return viewMat; }
-    public Matrix4 getViewProjection() { return viewProjectionMat; }
-    public Matrix4 getInverseProjection() { return inverseProjectionMat; }
-    public Matrix4 getInverseView() { return inverseViewMat; }
-    public Vector3 getPosition() { return positionVec; }
-    public Vector3 getDirection() { return directionVec; }
-    public Vector3 getUp() { return upVec; }
-    public Vector2 getViewport() { return viewportVec; }
-    public float getFOV() { return fov; }
-    public float getNearPlane() { return nearPlane; }
-    public float getFarPlane() { return farPlane; }
+    public Matrix4 getProjection() {
+        return projectionMat;
+    }
+
+    public Matrix4 getView() {
+        return viewMat;
+    }
+
+    public Matrix4 getViewProjection() {
+        return viewProjectionMat;
+    }
+
+    public Matrix4 getInverseProjection() {
+        return inverseProjectionMat;
+    }
+
+    public Matrix4 getInverseView() {
+        return inverseViewMat;
+    }
+
+    public Vector3 getPosition() {
+        return positionVec;
+    }
+
+    public Vector3 getDirection() {
+        return directionVec;
+    }
+
+    public Vector3 getUp() {
+        return upVec;
+    }
+
+    public Vector2 getViewport() {
+        return viewportVec;
+    }
+
+    public float getFOV() {
+        return fov;
+    }
+
+    public float getNearPlane() {
+        return nearPlane;
+    }
+
+    public float getFarPlane() {
+        return farPlane;
+    }
 }

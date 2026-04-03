@@ -1,16 +1,15 @@
-package program.bootstrap.renderpipeline.window;
+package program.core.kernel.window;
 
 import program.core.app.ApplicationListener;
 import program.core.app.Screen;
-import program.bootstrap.renderpipeline.camera.CameraInstance;
-import program.bootstrap.renderpipeline.camera.OrthographicCameraInstance;
 import program.bootstrap.geometrypipeline.vaomanager.VAOManager;
-import program.bootstrap.renderpipeline.cameramanager.GLSLUtility;
 import program.bootstrap.renderpipeline.rendermanager.RenderManager;
 import program.bootstrap.renderpipeline.rendermanager.RenderQueueHandle;
-import program.bootstrap.renderpipeline.windowmanager.WindowManager;
 import program.core.engine.ContextPackage;
 import program.core.engine.InstancePackage;
+import program.core.kernel.windowmanager.WindowManager;
+import program.core.util.camera.CameraInstance;
+import program.core.util.camera.OrthographicCameraInstance;
 
 public class WindowInstance extends InstancePackage implements Screen, ApplicationListener {
 
@@ -46,14 +45,12 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
         this.windowData = windowData;
 
         // Cameras
-        this.activeCamera = GLSLUtility.createCamera(
-                this,
+        this.activeCamera = internal.createCamera(
                 internal.settings.FOV,
                 windowData.getWidth(),
                 windowData.getHeight());
 
-        this.orthoCamera = GLSLUtility.createOrthographicCamera(
-                this,
+        this.orthoCamera = internal.createOrthographicCamera(
                 windowData.getWidth(),
                 windowData.getHeight());
     }
