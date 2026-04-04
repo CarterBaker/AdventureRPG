@@ -50,4 +50,8 @@ public class RenderQueueHandle extends HandlePackage {
     RenderCallStruct nextCall() {
         return renderCallBuffer[renderCallCursor++];
     }
+
+    boolean isRenderBufferFull() {
+        return renderCallCursor >= renderCallBuffer.length;
+    }
 }

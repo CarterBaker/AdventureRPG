@@ -35,22 +35,28 @@ public class WindowManager extends ManagerPackage {
 
         // Pending Open
         if (!pendingOpen.isEmpty()) {
+
             for (int i = 0; i < pendingOpen.size(); i++)
                 internal.windowPlatform.openWindow(pendingOpen.get(i));
+
             pendingOpen.clear();
         }
 
         // Close Detection
         for (int i = windows.size() - 1; i >= 0; i--) {
+
             WindowInstance window = windows.get(i);
 
             if (window == mainWindow)
                 continue;
+
             if (!window.hasNativeHandle())
                 continue;
+
             if (!internal.windowPlatform.shouldClose(window))
                 continue;
 
+            internal.windowPlatform.makeContextCurrent(window);
             window.dispose();
             internal.windowPlatform.destroyWindow(window);
         }
@@ -60,11 +66,13 @@ public class WindowManager extends ManagerPackage {
     protected void dispose() {
 
         for (int i = windows.size() - 1; i >= 0; i--) {
+
             WindowInstance window = windows.get(i);
 
             if (window == mainWindow)
                 continue;
 
+            internal.windowPlatform.makeContextCurrent(window);
             window.dispose();
             internal.windowPlatform.destroyWindow(window);
         }

@@ -39,10 +39,46 @@ class CameraBufferSystem extends SystemPackage {
 
     // Push \\
 
-    void pushForWindow(WindowInstance window) {
+    private int debugFrameCount = 0;
 
+    void pushForWindow(WindowInstance window) {
+        if (debugFrameCount == 60)
+            debug(window);
+        debugFrameCount++;
         pushPerspective(window);
         pushOrtho(window);
+    }
+
+    void debug(WindowInstance window) {
+        CameraInstance camera = window.getActiveCamera();
+        OrthographicCameraInstance ortho = window.getOrthoCamera();
+
+        System.out.println("=== CameraBufferSystem Debug ===");
+        System.out.println("Window ID: " + window.getWindowID());
+
+        if (camera == null) {
+            System.out.println("PERSPECTIVE CAMERA: null");
+        } else {
+            System.out.println("PERSPECTIVE CAMERA:");
+            System.out.println("  Position:        " + camera.getPosition());
+            System.out.println("  FOV:             " + camera.getFOV());
+            System.out.println("  Near:            " + camera.getNearPlane());
+            System.out.println("  Far:             " + camera.getFarPlane());
+            System.out.println("  Viewport:        " + camera.getViewport());
+            System.out.println("  Projection:      " + camera.getProjection());
+            System.out.println("  View:            " + camera.getView());
+            System.out.println("  ViewProjection:  " + camera.getViewProjection());
+        }
+
+        if (ortho == null) {
+            System.out.println("ORTHO CAMERA: null");
+        } else {
+            System.out.println("ORTHO CAMERA:");
+            System.out.println("  Projection:   " + ortho.getProjection());
+            System.out.println("  Screen Size:  " + ortho.getScreenSize());
+        }
+
+        System.out.println("================================");
     }
 
     // Perspective \\
