@@ -39,13 +39,6 @@ class RenderSystem extends SystemPackage {
         this.vaoManager = get(VAOManager.class);
     }
 
-    @Override
-    protected void awake() {
-        GLSLUtility.enableDepth();
-        GLSLUtility.enableBlending();
-        GLSLUtility.disableCulling();
-    }
-
     // Draw \\
 
     void draw(WindowInstance window) {
@@ -55,7 +48,9 @@ class RenderSystem extends SystemPackage {
         if (queue == null)
             return;
 
-        queue.renderCallCursor = 0;
+        GLSLUtility.enableDepth();
+        GLSLUtility.enableBlending();
+        GLSLUtility.disableCulling();
 
         GLSLUtility.setViewport(window.getWidth(), window.getHeight());
         GLSLUtility.clearBuffer();

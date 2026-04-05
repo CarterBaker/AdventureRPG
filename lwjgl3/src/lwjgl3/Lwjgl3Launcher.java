@@ -67,7 +67,7 @@ public class Lwjgl3Launcher {
     private static Lwjgl3ApplicationConfiguration buildConfig(Settings settings) {
 
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
-        config.setOpenGLVersion(3, 3);
+        config.setOpenGLVersion(4, 1);
         config.setTitle("AdventureRPG");
         config.useVsync(true);
 

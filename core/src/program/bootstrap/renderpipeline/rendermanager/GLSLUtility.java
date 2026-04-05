@@ -19,7 +19,7 @@ class GLSLUtility extends UtilityPackage {
     // Buffer \\
 
     static void clearBuffer() {
-        CoreContext.gl.glClearColor(0, 0, 0, 0);
+        CoreContext.gl.glClearColor(0, 0, 0, 1);
         CoreContext.gl.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
     }
 
