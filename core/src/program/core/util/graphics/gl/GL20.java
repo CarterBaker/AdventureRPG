@@ -53,6 +53,9 @@ public interface GL20 {
     int GL_LINK_STATUS = 0x8B82;
     int GL_COMPILE_STATUS = 0x8B81;
 
+    // Constants — Error
+    int GL_NO_ERROR = 0;
+
     // State \\
 
     void glEnable(int cap);
@@ -195,4 +198,8 @@ public interface GL20 {
     void glUniformMatrix3fv(int loc, int count, boolean transpose, FloatBuffer value);
 
     void glUniformMatrix4fv(int loc, int count, boolean transpose, FloatBuffer value);
+
+    // Error \\
+
+    int glGetError();
 }

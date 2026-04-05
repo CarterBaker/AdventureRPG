@@ -59,6 +59,12 @@ class Lwjgl3GL implements GL30 {
         GL11.glClear(mask);
     }
 
+    // Error \\
+
+    public int glGetError() {
+        return GL11.glGetError();
+    }
+
     // Shaders \\
 
     public int glCreateProgram() {

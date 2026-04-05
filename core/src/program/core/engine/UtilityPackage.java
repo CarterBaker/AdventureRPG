@@ -22,29 +22,29 @@ public abstract class UtilityPackage {
 
     // Debug \\
 
-    protected static void debug() {
+    public static void debug() {
         ENGINE.debug();
     }
 
-    protected static void debug(Object input) {
+    public static void debug(Object input) {
         ENGINE.debug(input);
     }
 
-    protected static void timeStampDebug(Object input) {
+    public static void timeStampDebug(Object input) {
         ENGINE.timeStampDebug(input);
     }
 
     // Log \\
 
-    protected static void log(Object input) {
+    public static void log(Object input) {
         ENGINE.log(input);
     }
 
-    protected static void errorLog(Object input) {
+    public static void errorLog(Object input) {
         ENGINE.errorLog(input);
     }
 
-    protected static void timeStampLog(Object input) {
+    public static void timeStampLog(Object input) {
         ENGINE.timeStampLog(input);
     }
 

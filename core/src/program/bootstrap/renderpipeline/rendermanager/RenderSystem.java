@@ -52,7 +52,7 @@ class RenderSystem extends SystemPackage {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
 
-        if (queue == null || queue.isRenderBufferFull())
+        if (queue == null)
             return;
 
         queue.renderCallCursor = 0;
@@ -199,7 +199,7 @@ class RenderSystem extends SystemPackage {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
 
-        if (queue == null)
+        if (queue == null || queue.isRenderBufferFull())
             return;
 
         RenderCallStruct renderCall = queue.nextCall();
