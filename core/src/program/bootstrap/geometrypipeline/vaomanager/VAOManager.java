@@ -116,6 +116,18 @@ public class VAOManager extends ManagerPackage {
         if (windowID == 0 && sourceVAO != 0)
             return sourceVAO;
 
+        /*
+         * A zero source VAO means this mesh has no canonical VAO handle yet.
+         * Treat it as a transient edge case: create a one-off clone and skip
+         * cache insertion so we don't collide all zero-handle meshes onto one
+         * cache key or leak entries that cannot be reclaimed by source VAO.
+         */
+        if (sourceVAO == 0)
+            return GLSLUtility.cloneVAO(
+                    meshData.getVAOData().getAttrSizes(),
+                    meshData.getVertexHandle(),
+                    meshData.getIndexHandle());
+
         long key = composeWindowKey(sourceVAO, windowID);
         int cachedVAO = sourceWindowKey2ClonedVAO.get(key);
 
