@@ -49,8 +49,10 @@ public class RenderManager extends ManagerPackage {
         Object[] elements = windows.elements();
         int count = windows.size();
 
-        if (count == 0)
+        if (count == 0) {
+            internal.windowPlatform.restoreMainContext();
             return;
+        }
 
         for (int i = 0; i < count; i++) {
             WindowInstance window = (WindowInstance) elements[i];
@@ -63,6 +65,8 @@ public class RenderManager extends ManagerPackage {
             draw(window);
             internal.windowPlatform.swapBuffers(window);
         }
+
+        internal.windowPlatform.restoreMainContext();
     }
 
     public void draw(WindowInstance window) {
