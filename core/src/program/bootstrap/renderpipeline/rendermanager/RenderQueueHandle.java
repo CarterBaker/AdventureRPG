@@ -54,4 +54,8 @@ public class RenderQueueHandle extends HandlePackage {
     boolean isRenderBufferFull() {
         return renderCallCursor >= renderCallBuffer.length;
     }
+
+    void rewindFrame() {
+        renderCallCursor = 0;
+    }
 }

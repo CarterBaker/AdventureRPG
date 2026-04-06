@@ -114,6 +114,8 @@ class RenderSystem extends SystemPackage {
             if (depth == 0)
                 compositeRenderSystem.draw(window);
         }
+
+        queue.rewindFrame();
     }
 
     // Render Binding \\
