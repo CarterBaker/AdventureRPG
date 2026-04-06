@@ -91,6 +91,12 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     public void resize(int width, int height) {
         windowData.setWidth(width);
         windowData.setHeight(height);
+
+        if (activeCamera != null)
+            activeCamera.updateViewport(width, height);
+
+        if (orthoCamera != null)
+            orthoCamera.updateViewport(width, height);
     }
 
     @Override

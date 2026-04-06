@@ -141,9 +141,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         int width = w.get(0);
         int height = h.get(0);
 
-        if (width > 0 && height > 0) {
-            window.getWindowData().setWidth(width);
-            window.getWindowData().setHeight(height);
-        }
+        if (width > 0 && height > 0)
+            window.resize(width, height);
     }
 }
