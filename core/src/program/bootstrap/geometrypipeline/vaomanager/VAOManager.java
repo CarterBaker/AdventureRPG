@@ -103,11 +103,19 @@ public class VAOManager extends ManagerPackage {
     }
 
     public int getVAOForWindow(MeshData meshData, int windowID) {
-
-        if (windowID == 0)
-            return meshData.getAttributeHandle();
-
         int sourceVAO = meshData.getAttributeHandle();
+
+        /*
+         * Window 0 is the main engine window. In the normal bootstrap path its
+         * meshes/VAOs are created while the main context is current, so we can use
+         * the source VAO handle directly with no clone cost.
+         *
+         * Detached windows run their own contexts and therefore need a per-window
+         * VAO clone that rebinds the same VBO/IBO layout in that context.
+         */
+        if (windowID == 0 && sourceVAO != 0)
+            return sourceVAO;
+
         long key = composeWindowKey(sourceVAO, windowID);
         int cachedVAO = sourceWindowKey2ClonedVAO.get(key);
 
