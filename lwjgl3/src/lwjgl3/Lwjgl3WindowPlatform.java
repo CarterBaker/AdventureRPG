@@ -53,9 +53,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         // capture capabilities now. Secondary windows will lazily initialize caps
         // in makeContextCurrent() on first bind.
         if (GLFW.glfwGetCurrentContext() == nativeWindow.getHandle()) {
-            GLCapabilities caps = GL.getCapabilities();
-            if (caps != null)
-                windowID2Capabilities.put(window.getWindowID(), caps);
+            ensureCapabilitiesForCurrentContext(window.getWindowID());
         }
 
         syncWindowSize(window);
@@ -90,15 +88,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
             return;
 
         GLFW.glfwMakeContextCurrent(window.getNativeHandle());
-
-        GLCapabilities caps = windowID2Capabilities.get(window.getWindowID());
-
-        if (caps == null) {
-            caps = GL.createCapabilities();
-            windowID2Capabilities.put(window.getWindowID(), caps);
-        }
-
-        GL.setCapabilities(caps);
+        ensureCapabilitiesForCurrentContext(window.getWindowID());
     }
 
     @Override
@@ -116,14 +106,16 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
         long mainHandle = graphics.getWindow().getHandle();
         GLFW.glfwMakeContextCurrent(mainHandle);
+        ensureCapabilitiesForCurrentContext(0);
+    }
 
-        GLCapabilities caps = windowID2Capabilities.get(0);
+    private void ensureCapabilitiesForCurrentContext(int windowID) {
+
+        GLCapabilities caps = windowID2Capabilities.get(windowID);
 
         if (caps == null) {
-            caps = GL.getCapabilities();
-            if (caps == null)
-                caps = GL.createCapabilities();
-            windowID2Capabilities.put(0, caps);
+            caps = GL.createCapabilities();
+            windowID2Capabilities.put(windowID, caps);
         }
 
         GL.setCapabilities(caps);
