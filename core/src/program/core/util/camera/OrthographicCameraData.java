@@ -16,10 +16,13 @@ public class OrthographicCameraData extends DataPackage {
     }
 
     public void updateViewport(float width, float height) {
-        screenSize.set(width, height);
+        float safeWidth = Math.max(1f, width);
+        float safeHeight = Math.max(1f, height);
+
+        screenSize.set(safeWidth, safeHeight);
         projectionMat.set(
-                2f / width, 0, 0, -1,
-                0, 2f / height, 0, -1,
+                2f / safeWidth, 0, 0, -1,
+                0, 2f / safeHeight, 0, -1,
                 0, 0, -1, 0,
                 0, 0, 0, 1);
     }

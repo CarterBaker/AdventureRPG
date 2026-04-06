@@ -82,8 +82,11 @@ public class CameraData extends DataPackage {
     }
 
     private void setPerspective(Matrix4 out, float fovDeg, float width, float height, float near, float far) {
-        float aspect = height == 0f ? 1f : width / height;
-        float f = (float) (1.0 / Math.tan(Math.toRadians(fovDeg) * 0.5));
+        float safeWidth = Math.max(1f, width);
+        float safeHeight = Math.max(1f, height);
+        float safeFov = Math.max(1f, Math.min(179f, fovDeg));
+        float aspect = safeWidth / safeHeight;
+        float f = (float) (1.0 / Math.tan(Math.toRadians(safeFov) * 0.5));
         out.set(
                 f / aspect, 0, 0, 0,
                 0, f, 0, 0,
