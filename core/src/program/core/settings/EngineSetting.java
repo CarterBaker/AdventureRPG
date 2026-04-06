@@ -54,6 +54,7 @@ public class EngineSetting {
         // Window \\
 
         public static final String WINDOW_TITLE = "TerraArcana";
+        public static final int MIN_WINDOW_DIMENSION = 64;
 
         // Scale \\
 

@@ -9,6 +9,7 @@ import program.core.backends.lwjgl3.Lwjgl3Graphics;
 import program.core.backends.lwjgl3.Lwjgl3Window;
 import program.core.backends.lwjgl3.Lwjgl3WindowAdapter;
 import program.core.engine.Main;
+import program.core.settings.EngineSetting;
 import program.core.settings.Loader;
 import program.core.settings.Settings;
 
@@ -88,8 +89,8 @@ public class Lwjgl3Launcher {
             return;
 
         Lwjgl3Window window = graphics.getWindow();
-        settings.windowWidth = CoreContext.graphics.getWidth();
-        settings.windowHeight = CoreContext.graphics.getHeight();
+        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, CoreContext.graphics.getWidth());
+        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, CoreContext.graphics.getHeight());
         settings.windowX = window.getPositionX();
         settings.windowY = window.getPositionY();
         settings.fullscreen = CoreContext.graphics.isFullscreen();
