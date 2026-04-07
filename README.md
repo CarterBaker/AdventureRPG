@@ -1,33 +1,33 @@
 # AdventureRPG
 
-AdventureRPG custom LWJGL engine project.
+AdventureRPG is a custom Java/LWJGL engine project with a desktop runtime target.
 
-This project uses custom launchers and engine runtime wiring.
+## Project modules
 
-## Platforms
+- `core` — shared application and engine logic.
+- `lwjgl3` — desktop launcher/runtime integration (LWJGL3).
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+## Getting started
 
-## Gradle
+This project uses [Gradle](https://gradle.org/) with the included wrapper.
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
+- Windows: `gradlew.bat <task>`
+- macOS/Linux: `./gradlew <task>`
 
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
+## Common Gradle tasks
 
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
+- `lwjgl3:run` — run the desktop application.
+- `lwjgl3:jar` — build a runnable JAR (`lwjgl3/build/libs`).
+- `build` — compile and package all modules.
+- `test` — run tests (if present).
+- `clean` — remove module build output.
+
+You can scope shared tasks to a specific module with `<module>:<task>`.
+For example: `core:clean`.
+
+## Helpful Gradle flags
+
+- `--daemon` — use the Gradle daemon.
+- `--offline` — use cached dependencies only.
+- `--refresh-dependencies` — re-resolve dependencies.
+- `--continue` — continue as far as possible after task failures.
