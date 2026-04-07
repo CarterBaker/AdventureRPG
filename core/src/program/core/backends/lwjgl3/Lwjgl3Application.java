@@ -121,11 +121,12 @@ public class Lwjgl3Application implements Application {
 
             listener.render();
 
-            GLFW.glfwPollEvents();
             input.endFrame();
 
             for (int i = 0; i < secondaryWindows.size(); i++)
                 secondaryWindows.get(i).getInput().endFrame();
+
+            GLFW.glfwPollEvents();
         }
     }
 
