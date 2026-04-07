@@ -8,17 +8,13 @@ import program.core.kernel.window.WindowInstance;
 public class MainMenuBranch extends BranchPackage {
 
     /*
-     * Handles open and close actions for the main menu. Holds the active
-     * MenuInstance so the same instance is reused across open/close cycles.
-     * WindowInstance is passed by the caller so the menu is bound to the
-     * correct window.
+     * Handles open and close actions for the main menu. Menus are opened per
+     * window/context and close actions are parent-aware so multi-window sessions
+     * can close only the clicked menu instance.
      */
 
     // Internal
     private MenuManager menuManager;
-
-    // State
-    private MenuInstance mainMenu;
 
     // Internal \\
 
@@ -32,15 +28,10 @@ public class MainMenuBranch extends BranchPackage {
     // Accessible \\
 
     public MenuInstance openMenu(WindowInstance window) {
-
-        if (mainMenu == null)
-            mainMenu = menuManager.openMenu("MainMenu/Main", window);
-
-        return mainMenu;
+        return menuManager.openMenu("MainMenu/Main", window);
     }
 
-    public MenuInstance closeMenu() {
-        mainMenu = menuManager.closeMenu(mainMenu);
-        return mainMenu;
+    public MenuInstance closeMenu(MenuInstance parent) {
+        return menuManager.closeMenu(parent);
     }
 }

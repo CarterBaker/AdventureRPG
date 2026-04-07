@@ -54,6 +54,7 @@ public class MenuManager extends ManagerPackage {
 
     // Active
     private ObjectArrayList<MenuInstance> activeMenus;
+    private ObjectArrayList<MenuInstance> pendingCloseMenus;
 
     // Lock Reference Counts
     private int inputLockCount;
@@ -85,6 +86,7 @@ public class MenuManager extends ManagerPackage {
         this.menuName2MenuID.defaultReturnValue(-1);
 
         this.activeMenus = new ObjectArrayList<>();
+        this.pendingCloseMenus = new ObjectArrayList<>();
         this.fontTransform = new Matrix4();
 
         this.maskPool = new MaskStruct[EngineSetting.MAX_MASK_DEPTH];
@@ -111,6 +113,8 @@ public class MenuManager extends ManagerPackage {
 
     @Override
     protected void update() {
+
+        flushPendingClosedMenus();
 
         if (activeMenus.isEmpty())
             return;
@@ -435,6 +439,24 @@ public class MenuManager extends ManagerPackage {
         }
     }
 
+    // Deferred Menu Close \\
+
+    private void flushPendingClosedMenus() {
+
+        if (pendingCloseMenus.isEmpty())
+            return;
+
+        for (int i = 0; i < pendingCloseMenus.size(); i++) {
+
+            MenuInstance instance = pendingCloseMenus.get(i);
+
+            releaseFontModels(instance.getElements());
+            activeMenus.remove(instance);
+        }
+
+        pendingCloseMenus.clear();
+    }
+
     // Runtime Injection \\
 
     public ElementInstance inject(
@@ -574,6 +596,9 @@ public class MenuManager extends ManagerPackage {
 
     public MenuInstance closeMenu(MenuInstance instance) {
 
+        if (instance == null)
+            return null;
+
         MenuData data = instance.getMenuData();
 
         if (data.isLockInput())
@@ -582,8 +607,10 @@ public class MenuManager extends ManagerPackage {
         if (data.isRaycastInput())
             applyRaycastLock(-1);
 
-        releaseFontModels(instance.getElements());
-        activeMenus.remove(instance);
+        instance.hide();
+
+        if (!pendingCloseMenus.contains(instance))
+            pendingCloseMenus.add(instance);
 
         return null;
     }
