@@ -42,9 +42,8 @@ public class PreviewSystem extends SystemPackage {
 
         WindowInstance previewWindow = create(WindowInstance.class);
         previewWindow.constructor(data);
-        internal.createContext(program.runtime.RuntimeContext.class, previewWindow);
-
         windowManager.registerDetachedWindow(previewWindow);
+        internal.createContext(program.runtime.RuntimeContext.class, previewWindow);
 
     }
 }
