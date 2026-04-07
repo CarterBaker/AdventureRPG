@@ -27,6 +27,8 @@ public class WindowManager extends ManagerPackage {
 
     @Override
     protected void update() {
+        syncActiveWindow();
+
         // Close Detection
         for (int i = windows.size() - 1; i >= 0; i--) {
             WindowInstance window = windows.get(i);
@@ -52,6 +54,23 @@ public class WindowManager extends ManagerPackage {
             window.dispose();
             internal.windowPlatform.destroyWindow(window);
         }
+    }
+
+    private void syncActiveWindow() {
+        for (int i = 0; i < windows.size(); i++) {
+            WindowInstance window = windows.get(i);
+
+            if (!window.hasNativeHandle())
+                continue;
+
+            if (!internal.windowPlatform.isWindowFocused(window))
+                continue;
+
+            activeWindow = window;
+            return;
+        }
+
+        activeWindow = mainWindow;
     }
 
     // Accessible \\
@@ -83,10 +102,6 @@ public class WindowManager extends ManagerPackage {
 
     public WindowInstance getActiveWindow() {
         return activeWindow;
-    }
-
-    public void setActiveWindow(WindowInstance window) {
-        this.activeWindow = window;
     }
 
     public ObjectArrayList<WindowInstance> getWindows() {

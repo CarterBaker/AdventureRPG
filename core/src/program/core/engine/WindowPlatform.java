@@ -16,6 +16,8 @@ public interface WindowPlatform {
 
     boolean shouldClose(WindowInstance window);
 
+    boolean isWindowFocused(WindowInstance window);
+
     void makeContextCurrent(WindowInstance window);
 
     void swapBuffers(WindowInstance window);

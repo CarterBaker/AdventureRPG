@@ -82,6 +82,14 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     }
 
     @Override
+    public boolean isWindowFocused(WindowInstance window) {
+        if (!window.hasNativeHandle())
+            return false;
+
+        return GLFW.glfwGetWindowAttrib(window.getNativeHandle(), GLFW.GLFW_FOCUSED) == GLFW.GLFW_TRUE;
+    }
+
+    @Override
     public void makeContextCurrent(WindowInstance window) {
         if (!window.hasNativeHandle())
             return;
