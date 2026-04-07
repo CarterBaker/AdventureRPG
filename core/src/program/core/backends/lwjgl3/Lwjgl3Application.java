@@ -119,14 +119,13 @@ public class Lwjgl3Application implements Application {
             graphics.setDelta((now - last) / 1_000_000_000f);
             last = now;
 
-            listener.render();
-
             input.endFrame();
 
             for (int i = 0; i < secondaryWindows.size(); i++)
                 secondaryWindows.get(i).getInput().endFrame();
 
             GLFW.glfwPollEvents();
+            listener.render();
         }
     }
 
