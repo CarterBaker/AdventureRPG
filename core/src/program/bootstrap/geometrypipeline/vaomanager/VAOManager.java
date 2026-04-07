@@ -106,16 +106,10 @@ public class VAOManager extends ManagerPackage {
         int sourceVAO = meshData.getAttributeHandle();
 
         /*
-         * Window 0 is the main engine window. In the normal bootstrap path its
-         * meshes/VAOs are created while the main context is current, so we can use
-         * the source VAO handle directly with no clone cost.
-         *
-         * Detached windows run their own contexts and therefore need a per-window
-         * VAO clone that rebinds the same VBO/IBO layout in that context.
+         * VAOs are context-local and cannot be shared, even when contexts are created
+         * with resource sharing enabled. Always resolve through the per-window clone
+         * cache so each window draws with a VAO created inside its own current context.
          */
-        if (windowID == 0 && sourceVAO != 0)
-            return sourceVAO;
-
         /*
          * A zero source VAO means this mesh has no canonical VAO handle yet.
          * Treat it as a transient edge case: create a one-off clone and skip
