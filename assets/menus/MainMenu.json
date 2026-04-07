@@ -8,7 +8,8 @@
             "pivot":  "CENTER",
             "on_click": {
                 "class":  "program.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch",
-                "method": "closeMenu"
+                "method": "closeMenu",
+                "arg":    "$parent"
             },
             "elements": [
                 {

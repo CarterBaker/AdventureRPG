@@ -310,6 +310,8 @@ class Lwjgl3GL implements GL30 {
     public void glBufferData(int target, int size, Buffer data, int usage) {
         if (data instanceof FloatBuffer fb)
             GL15.glBufferData(target, fb, usage);
+        else if (data instanceof ShortBuffer sb)
+            GL15.glBufferData(target, sb, usage);
         else if (data instanceof IntBuffer ib)
             GL15.glBufferData(target, ib, usage);
         else if (data instanceof ByteBuffer bb)
@@ -321,6 +323,8 @@ class Lwjgl3GL implements GL30 {
     public void glBufferSubData(int target, int offset, int size, Buffer data) {
         if (data instanceof FloatBuffer fb)
             GL15.glBufferSubData(target, offset, fb);
+        else if (data instanceof ShortBuffer sb)
+            GL15.glBufferSubData(target, offset, sb);
         else if (data instanceof IntBuffer ib)
             GL15.glBufferSubData(target, offset, ib);
         else if (data instanceof ByteBuffer bb)
