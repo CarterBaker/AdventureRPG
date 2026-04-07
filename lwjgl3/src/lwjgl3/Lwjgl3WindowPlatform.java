@@ -8,6 +8,7 @@ import program.core.backends.lwjgl3.Lwjgl3WindowConfiguration;
 import program.core.engine.WindowPlatform;
 import program.core.kernel.window.WindowInstance;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
@@ -25,36 +26,33 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
      */
 
     // Window Registry
+    private static final int MAIN_WINDOW_ID = 0;
+    private static final int UNKNOWN_WINDOW_ID = -1;
     private final Int2ObjectOpenHashMap<Lwjgl3Window> windowID2Native = new Int2ObjectOpenHashMap<>();
     private final Int2ObjectOpenHashMap<GLCapabilities> windowID2Capabilities = new Int2ObjectOpenHashMap<>();
+    private final Long2IntOpenHashMap handle2WindowID = new Long2IntOpenHashMap();
+
+    public Lwjgl3WindowPlatform() {
+        handle2WindowID.defaultReturnValue(UNKNOWN_WINDOW_ID);
+    }
 
     // Internal \\
 
     @Override
     public void openWindow(WindowInstance window) {
 
-        Lwjgl3Window nativeWindow = windowID2Native.get(window.getWindowID());
+        int windowID = window.getWindowID();
+        Lwjgl3Window nativeWindow = resolveOrCreateNativeWindow(window);
+        long handle = nativeWindow.getHandle();
 
-        if (nativeWindow == null && window.getWindowID() == 0
-                && CoreContext.graphics instanceof Lwjgl3Graphics graphics)
-            nativeWindow = graphics.getWindow();
+        windowID2Native.put(windowID, nativeWindow);
+        handle2WindowID.put(handle, windowID);
+        window.setNativeHandle(handle);
 
-        if (nativeWindow == null) {
-            Lwjgl3WindowConfiguration config = new Lwjgl3WindowConfiguration();
-            config.setTitle(window.getTitle());
-            config.setWindowedMode(window.getWidth(), window.getHeight());
-            nativeWindow = ((Lwjgl3Application) CoreContext.app).newWindow(config);
-        }
+        if (windowID != MAIN_WINDOW_ID)
+            GLFW.glfwShowWindow(handle);
 
-        windowID2Native.put(window.getWindowID(), nativeWindow);
-        window.setNativeHandle(nativeWindow.getHandle());
-
-        // If this context is already current (true for main window during bootstrap),
-        // capture capabilities now. Secondary windows will lazily initialize caps
-        // in makeContextCurrent() on first bind.
-        if (GLFW.glfwGetCurrentContext() == nativeWindow.getHandle()) {
-            ensureCapabilitiesForCurrentContext(window.getWindowID());
-        }
+        primeWindowContext(windowID, handle);
 
         syncWindowSize(window);
     }
@@ -68,6 +66,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
             return;
 
         long handle = nativeWindow.getHandle();
+        handle2WindowID.remove(handle);
         ((Lwjgl3Application) CoreContext.app).removeSecondaryWindow(handle);
         GLFW.glfwDestroyWindow(handle);
         windowID2Capabilities.remove(window.getWindowID());
@@ -87,8 +86,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         if (!window.hasNativeHandle())
             return;
 
-        GLFW.glfwMakeContextCurrent(window.getNativeHandle());
-        ensureCapabilitiesForCurrentContext(window.getWindowID());
+        bindContext(window.getWindowID(), window.getNativeHandle());
     }
 
     @Override
@@ -104,9 +102,54 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         if (!(CoreContext.graphics instanceof Lwjgl3Graphics graphics))
             return;
 
-        long mainHandle = graphics.getWindow().getHandle();
-        GLFW.glfwMakeContextCurrent(mainHandle);
-        ensureCapabilitiesForCurrentContext(0);
+        bindContext(MAIN_WINDOW_ID, graphics.getWindow().getHandle());
+    }
+
+    private Lwjgl3Window resolveOrCreateNativeWindow(WindowInstance window) {
+        Lwjgl3Window nativeWindow = windowID2Native.get(window.getWindowID());
+
+        if (nativeWindow != null)
+            return nativeWindow;
+
+        if (window.getWindowID() == MAIN_WINDOW_ID
+                && CoreContext.graphics instanceof Lwjgl3Graphics graphics)
+            return graphics.getWindow();
+
+        Lwjgl3WindowConfiguration config = new Lwjgl3WindowConfiguration();
+        config.setTitle(window.getTitle());
+        config.setWindowedMode(window.getWidth(), window.getHeight());
+        return ((Lwjgl3Application) CoreContext.app).newWindow(config);
+    }
+
+    private void primeWindowContext(int windowID, long windowHandle) {
+        long previousContext = GLFW.glfwGetCurrentContext();
+        bindContext(windowID, windowHandle);
+
+        if (previousContext != windowHandle)
+            restoreContext(previousContext);
+    }
+
+    private void restoreContext(long windowHandle) {
+
+        if (windowHandle == 0L) {
+            GLFW.glfwMakeContextCurrent(0L);
+            GL.setCapabilities(null);
+            return;
+        }
+
+        int windowID = handle2WindowID.get(windowHandle);
+
+        if (windowID == UNKNOWN_WINDOW_ID) {
+            GLFW.glfwMakeContextCurrent(windowHandle);
+            return;
+        }
+
+        bindContext(windowID, windowHandle);
+    }
+
+    private void bindContext(int windowID, long windowHandle) {
+        GLFW.glfwMakeContextCurrent(windowHandle);
+        ensureCapabilitiesForCurrentContext(windowID);
     }
 
     private void ensureCapabilitiesForCurrentContext(int windowID) {
