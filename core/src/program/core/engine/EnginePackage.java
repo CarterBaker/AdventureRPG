@@ -264,6 +264,8 @@ public class EnginePackage extends ManagerPackage {
 
             this.pendingContextList.add(context);
 
+            this.windowPlatform.makeContextCurrent(window);
+
             context.internalCreate();
             context.internalGet();
             context.internalAwake();
