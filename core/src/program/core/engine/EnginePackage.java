@@ -272,9 +272,15 @@ public class EnginePackage extends ManagerPackage {
             context.internalRelease();
 
             return context;
-        } catch (Exception e) {
+        }
+
+        catch (Exception e) {
             throw new InternalException("Failed to create context: " + contextClass.getSimpleName(), e);
-        } finally {
+        }
+
+        finally {
+
+            this.windowPlatform.restoreMainContext();
             SystemPackage.SYSTEM_STRUCT.remove();
         }
     }
