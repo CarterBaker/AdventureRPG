@@ -75,6 +75,7 @@ public class WindowManager extends ManagerPackage {
 
     // Accessible \\
     public void registerMainWindow(WindowInstance window) {
+        verifyWindowRegistration(window, true);
         this.mainWindow = window;
         this.activeWindow = window;
         windows.add(window);
@@ -82,6 +83,7 @@ public class WindowManager extends ManagerPackage {
     }
 
     public void registerDetachedWindow(WindowInstance window) {
+        verifyWindowRegistration(window, false);
         windows.add(window);
         internal.windowPlatform.openWindow(window);
     }
@@ -110,5 +112,32 @@ public class WindowManager extends ManagerPackage {
 
     public boolean hasMainWindow() {
         return mainWindow != null;
+    }
+
+    // Validation \\
+
+    private void verifyWindowRegistration(WindowInstance window, boolean isMain) {
+
+        if (window == null)
+            throwException("Cannot register null window.");
+
+        int windowID = window.getWindowID();
+
+        if (isMain && windowID != 0)
+            throwException("Main window must use window ID 0. Received: " + windowID);
+
+        if (!isMain && windowID == 0)
+            throwException("Detached windows must not use window ID 0.");
+
+        if (hasWindowID(windowID))
+            throwException("Window ID already registered: " + windowID);
+    }
+
+    private boolean hasWindowID(int windowID) {
+        for (int i = 0; i < windows.size(); i++) {
+            if (windows.get(i).getWindowID() == windowID)
+                return true;
+        }
+        return false;
     }
 }

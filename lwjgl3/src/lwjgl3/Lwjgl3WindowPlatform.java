@@ -49,8 +49,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         handle2WindowID.put(handle, windowID);
         window.setNativeHandle(handle);
 
-        if (windowID != MAIN_WINDOW_ID)
-            GLFW.glfwShowWindow(handle);
+        GLFW.glfwShowWindow(handle);
 
         primeWindowContext(windowID, handle);
 
