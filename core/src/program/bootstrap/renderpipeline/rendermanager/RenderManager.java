@@ -50,6 +50,7 @@ public class RenderManager extends ManagerPackage {
         int count = windows.size();
 
         if (count == 0) {
+            windowManager.endRenderWindow();
             internal.windowPlatform.restoreMainContext();
             return;
         }
@@ -62,10 +63,12 @@ public class RenderManager extends ManagerPackage {
 
             internal.windowPlatform.makeContextCurrent(window);
             internal.windowPlatform.syncWindowSize(window);
+            windowManager.beginRenderWindow(window);
             draw(window);
             internal.windowPlatform.swapBuffers(window);
         }
 
+        windowManager.endRenderWindow();
         internal.windowPlatform.restoreMainContext();
     }
 
@@ -74,14 +77,14 @@ public class RenderManager extends ManagerPackage {
         renderSystem.draw(window);
     }
 
-    // Push — no declared window → main window \\
+    // Push — no declared window → render window, then active, then main \\
 
     public void pushRenderCall(ModelInstance modelInstance, int depth) {
-        renderSystem.pushRenderCall(modelInstance, depth, null, windowManager.getMainWindow());
+        renderSystem.pushRenderCall(modelInstance, depth, null, resolveDefaultWindow());
     }
 
     public void pushRenderCall(ModelInstance modelInstance, int depth, MaskStruct mask) {
-        renderSystem.pushRenderCall(modelInstance, depth, mask, windowManager.getMainWindow());
+        renderSystem.pushRenderCall(modelInstance, depth, mask, resolveDefaultWindow());
     }
 
     // Push — explicit window \\
@@ -94,10 +97,21 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushRenderCall(modelInstance, depth, mask, window);
     }
 
+    private WindowInstance resolveDefaultWindow() {
+        WindowInstance renderWindow = windowManager.getRenderWindow();
+        if (renderWindow != null)
+            return renderWindow;
+
+        WindowInstance activeWindow = windowManager.getActiveWindow();
+        if (activeWindow != null)
+            return activeWindow;
+
+        return windowManager.getMainWindow();
+    }
     // Composite \\
 
     public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer) {
-        renderSystem.pushCompositeCall(material, buffer, windowManager.getMainWindow());
+        renderSystem.pushCompositeCall(material, buffer, resolveDefaultWindow());
     }
 
     public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer, WindowInstance window) {

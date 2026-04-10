@@ -15,6 +15,7 @@ public class WindowManager extends ManagerPackage {
     private ObjectArrayList<WindowInstance> windows;
     private WindowInstance mainWindow;
     private WindowInstance activeWindow;
+    private WindowInstance renderWindow;
     // Identity
     private int nextWindowID;
 
@@ -98,12 +99,24 @@ public class WindowManager extends ManagerPackage {
         return nextWindowID++;
     }
 
+    public void beginRenderWindow(WindowInstance window) {
+        this.renderWindow = window;
+    }
+
+    public void endRenderWindow() {
+        this.renderWindow = null;
+    }
+
     public WindowInstance getMainWindow() {
         return mainWindow;
     }
 
     public WindowInstance getActiveWindow() {
         return activeWindow;
+    }
+
+    public WindowInstance getRenderWindow() {
+        return renderWindow;
     }
 
     public ObjectArrayList<WindowInstance> getWindows() {
