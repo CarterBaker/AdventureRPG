@@ -77,7 +77,8 @@ public class RenderManager extends ManagerPackage {
         renderSystem.draw(window);
     }
 
-    // Push — no declared window → render window, then active, then main \\
+    // Push — no declared window → render window, context window, active, then main
+    // \\
 
     public void pushRenderCall(ModelInstance modelInstance, int depth) {
         renderSystem.pushRenderCall(modelInstance, depth, null, resolveDefaultWindow());
@@ -101,6 +102,10 @@ public class RenderManager extends ManagerPackage {
         WindowInstance renderWindow = windowManager.getRenderWindow();
         if (renderWindow != null)
             return renderWindow;
+
+        WindowInstance contextWindow = windowManager.getContextWindow();
+        if (contextWindow != null)
+            return contextWindow;
 
         WindowInstance activeWindow = windowManager.getActiveWindow();
         if (activeWindow != null)
