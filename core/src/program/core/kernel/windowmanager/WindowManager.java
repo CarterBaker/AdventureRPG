@@ -80,15 +80,17 @@ public class WindowManager extends ManagerPackage {
         verifyWindowRegistration(window, true);
         this.mainWindow = window;
         this.activeWindow = window;
-        windows.add(window);
-        internal.windowPlatform.openWindow(window);
+        registerWindow(window);
     }
 
     public void registerDetachedWindow(WindowInstance window) {
         verifyWindowRegistration(window, false);
+        registerWindow(window);
+    }
+
+    private void registerWindow(WindowInstance window) {
         windows.add(window);
         internal.windowPlatform.openWindow(window);
-        window.create();
     }
 
     public void removeWindow(WindowInstance window) {
