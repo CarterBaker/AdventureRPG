@@ -120,6 +120,7 @@ public class WindowManager extends ManagerPackage {
     }
 
     public void endContextWindow() {
+        internal.windowPlatform.restoreMainContext();
         this.contextWindow = null;
     }
 
