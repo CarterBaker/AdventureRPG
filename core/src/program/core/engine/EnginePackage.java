@@ -74,7 +74,6 @@ public class EnginePackage extends ManagerPackage {
     private float fixedInterval;
     private float elapsedTime;
     private int maxSteps;
-
     private long frameTimeMillis;
 
     // Internal \\
@@ -97,7 +96,6 @@ public class EnginePackage extends ManagerPackage {
         this.windowPlatform = data.windowPlatform;
 
         // Internal
-        this.screen = null;
         this.engineState = EngineState.KERNEL;
 
         // System Management
@@ -109,10 +107,7 @@ public class EnginePackage extends ManagerPackage {
         this.contextArray = new ContextPackage[0];
 
         // Timing
-        this.frameCount = 0L;
-        this.deltaTime = 0f;
         this.fixedInterval = EngineSetting.FIXED_TIME_STEP;
-        this.elapsedTime = 0f;
         this.maxSteps = 5;
     }
 
@@ -140,7 +135,7 @@ public class EnginePackage extends ManagerPackage {
                 Gson gson,
                 WindowPlatform windowPlatform) {
 
-            // Internal
+            // Identity
             this.settings = settings;
             this.game = game;
             this.path = path;
@@ -266,10 +261,7 @@ public class EnginePackage extends ManagerPackage {
 
             this.windowPlatform.makeContextCurrent(window);
 
-            context.internalCreate();
-            context.internalGet();
-            context.internalAwake();
-            context.internalRelease();
+            primeContextLifecycle(context);
 
             return context;
         }
@@ -279,9 +271,31 @@ public class EnginePackage extends ManagerPackage {
         }
 
         finally {
-
             this.windowPlatform.restoreMainContext();
             SystemPackage.SYSTEM_STRUCT.remove();
+        }
+    }
+
+    private void primeContextLifecycle(ContextPackage context) {
+
+        SystemContext previousContext = this.internalContext;
+
+        try {
+            this.internalContext = SystemContext.CREATE;
+            context.internalCreate();
+
+            this.internalContext = SystemContext.GET;
+            context.internalGet();
+
+            this.internalContext = SystemContext.AWAKE;
+            context.internalAwake();
+
+            this.internalContext = SystemContext.RELEASE;
+            context.internalRelease();
+        }
+
+        finally {
+            this.internalContext = previousContext;
         }
     }
 
@@ -552,7 +566,6 @@ public class EnginePackage extends ManagerPackage {
         }
 
         this.windowManager.endContextWindow();
-
     }
 
     // Fixed Update \\
@@ -578,7 +591,6 @@ public class EnginePackage extends ManagerPackage {
             }
 
             this.windowManager.endContextWindow();
-
         }
     }
 
@@ -597,10 +609,7 @@ public class EnginePackage extends ManagerPackage {
         }
 
         this.windowManager.endContextWindow();
-
     }
-
-    // Render \\
 
     // Render \\
 
@@ -617,7 +626,6 @@ public class EnginePackage extends ManagerPackage {
         }
 
         this.windowManager.endContextWindow();
-
     }
 
     // Draw \\
