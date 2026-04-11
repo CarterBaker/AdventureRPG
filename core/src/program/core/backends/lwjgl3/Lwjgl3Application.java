@@ -140,7 +140,6 @@ public class Lwjgl3Application implements Application {
 
         Lwjgl3Input windowInput = new Lwjgl3Input(handle);
         registerCallbacks(handle, windowInput, null);
-        GLFW.glfwShowWindow(handle);
         secondaryWindows.add(new Lwjgl3ManagedWindow(handle, windowInput));
 
         return new Lwjgl3Window(handle, windowInput);
