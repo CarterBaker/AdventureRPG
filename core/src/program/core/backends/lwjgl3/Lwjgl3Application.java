@@ -8,6 +8,7 @@ import program.core.engine.UtilityPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GLCapabilities;
 
 public class Lwjgl3Application implements Application {
 
@@ -29,20 +30,16 @@ public class Lwjgl3Application implements Application {
 
     // State
     private boolean running;
-    private final int glMajor;
-    private final int glMinor;
 
     public Lwjgl3Application(ApplicationListener listener, Lwjgl3ApplicationConfiguration config) {
 
         this.secondaryWindows = new ObjectArrayList<>();
         this.running = true;
-        this.glMajor = config.getGlMajor();
-        this.glMinor = config.getGlMinor();
 
         if (!GLFW.glfwInit())
             UtilityPackage.throwException("Unable to initialize GLFW");
 
-        applyWindowHints(glMajor, glMinor);
+        applyWindowHints(config.getGlMajor(), config.getGlMinor());
 
         long monitor = config.isFullscreen() ? GLFW.glfwGetPrimaryMonitor() : 0L;
         this.mainHandle = GLFW.glfwCreateWindow(config.width, config.height, config.title, monitor, 0L);
@@ -137,12 +134,19 @@ public class Lwjgl3Application implements Application {
 
     public Lwjgl3Window newWindow(Lwjgl3WindowConfiguration config) {
 
-        GLFW.glfwDefaultWindowHints();
-        applyWindowHints(glMajor, glMinor);
         long handle = GLFW.glfwCreateWindow(config.width, config.height, config.title, 0L, mainHandle);
 
         if (handle == 0L)
             UtilityPackage.throwException("Failed to create secondary window: " + config.title);
+
+        long previousContext = GLFW.glfwGetCurrentContext();
+        GLCapabilities previousCapabilities = GL.getCapabilities();
+
+        GLFW.glfwMakeContextCurrent(handle);
+        GL.createCapabilities();
+
+        GLFW.glfwMakeContextCurrent(previousContext);
+        GL.setCapabilities(previousCapabilities);
 
         Lwjgl3Input windowInput = new Lwjgl3Input(handle);
         registerCallbacks(handle, windowInput, null);
