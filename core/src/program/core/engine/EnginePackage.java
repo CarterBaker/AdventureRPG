@@ -279,6 +279,7 @@ public class EnginePackage extends ManagerPackage {
     private void primeContextLifecycle(ContextPackage context) {
 
         SystemContext previousContext = this.internalContext;
+        this.windowManager.beginContextWindow(context.getWindow());
 
         try {
             this.internalContext = SystemContext.CREATE;
@@ -295,6 +296,7 @@ public class EnginePackage extends ManagerPackage {
         }
 
         finally {
+            this.windowManager.endContextWindow();
             this.internalContext = previousContext;
         }
     }
@@ -320,7 +322,12 @@ public class EnginePackage extends ManagerPackage {
         for (int i = 0; i < this.pendingContextList.size(); i++) {
             ContextPackage context = this.pendingContextList.get(i);
             context.pendingStart = false;
-            context.internalStart();
+            this.windowManager.beginContextWindow(context.getWindow());
+            try {
+                context.internalStart();
+            } finally {
+                this.windowManager.endContextWindow();
+            }
             this.activeContextList.add(context);
         }
 
