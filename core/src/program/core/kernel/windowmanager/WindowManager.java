@@ -88,6 +88,7 @@ public class WindowManager extends ManagerPackage {
         verifyWindowRegistration(window, false);
         windows.add(window);
         internal.windowPlatform.openWindow(window);
+        window.create();
     }
 
     public void removeWindow(WindowInstance window) {
