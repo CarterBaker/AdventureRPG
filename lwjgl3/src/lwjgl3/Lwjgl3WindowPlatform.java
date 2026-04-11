@@ -129,13 +129,14 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     private void primeWindowContext(int windowID, long windowHandle) {
         long previousContext = GLFW.glfwGetCurrentContext();
+        GLCapabilities previousCapabilities = GL.getCapabilities();
         bindContext(windowID, windowHandle);
 
         if (previousContext != windowHandle)
-            restoreContext(previousContext);
+            restoreContext(previousContext, previousCapabilities);
     }
 
-    private void restoreContext(long windowHandle) {
+    private void restoreContext(long windowHandle, GLCapabilities previousCapabilities) {
 
         if (windowHandle == 0L) {
             GLFW.glfwMakeContextCurrent(0L);
@@ -147,6 +148,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
         if (windowID == UNKNOWN_WINDOW_ID) {
             GLFW.glfwMakeContextCurrent(windowHandle);
+            GL.setCapabilities(previousCapabilities);
             return;
         }
 
