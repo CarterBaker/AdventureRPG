@@ -29,16 +29,20 @@ public class Lwjgl3Application implements Application {
 
     // State
     private boolean running;
+    private final int glMajor;
+    private final int glMinor;
 
     public Lwjgl3Application(ApplicationListener listener, Lwjgl3ApplicationConfiguration config) {
 
         this.secondaryWindows = new ObjectArrayList<>();
         this.running = true;
+        this.glMajor = config.getGlMajor();
+        this.glMinor = config.getGlMinor();
 
         if (!GLFW.glfwInit())
             UtilityPackage.throwException("Unable to initialize GLFW");
 
-        applyWindowHints(config.getGlMajor(), config.getGlMinor());
+        applyWindowHints(glMajor, glMinor);
 
         long monitor = config.isFullscreen() ? GLFW.glfwGetPrimaryMonitor() : 0L;
         this.mainHandle = GLFW.glfwCreateWindow(config.width, config.height, config.title, monitor, 0L);
@@ -133,6 +137,8 @@ public class Lwjgl3Application implements Application {
 
     public Lwjgl3Window newWindow(Lwjgl3WindowConfiguration config) {
 
+        GLFW.glfwDefaultWindowHints();
+        applyWindowHints(glMajor, glMinor);
         long handle = GLFW.glfwCreateWindow(config.width, config.height, config.title, 0L, mainHandle);
 
         if (handle == 0L)
