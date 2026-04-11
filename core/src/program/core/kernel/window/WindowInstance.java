@@ -28,7 +28,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     // Context
     private ContextPackage context;
-    private Class<? extends ContextPackage> pendingContextType;
 
     // Cameras
     private CameraInstance activeCamera;
@@ -72,14 +71,10 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
         this.renderQueueHandle.constructor();
     }
 
-    // ApplicationListener — Detached Window Path \\
+    // ApplicationListener \\
 
     @Override
     public void create() {
-        if (!hasContext() && pendingContextType != null) {
-            internal.createContext(pendingContextType, this);
-            pendingContextType = null;
-        }
     }
 
     @Override
@@ -144,10 +139,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     public boolean hasContext() {
         return context != null;
-    }
-
-    public void setPendingContextType(Class<? extends ContextPackage> pendingContextType) {
-        this.pendingContextType = pendingContextType;
     }
 
     // Native Handle \\
