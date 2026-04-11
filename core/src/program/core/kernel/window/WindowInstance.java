@@ -70,7 +70,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
         // Render Queue
         this.renderQueueHandle = create(RenderQueueHandle.class);
         this.renderQueueHandle.constructor();
-
     }
 
     // ApplicationListener — Detached Window Path \\
@@ -85,6 +84,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     public void render() {
+        renderManager.draw(this);
     }
 
     @Override
