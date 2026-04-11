@@ -8,7 +8,6 @@ import program.core.engine.UtilityPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
-import org.lwjgl.opengl.GLCapabilities;
 
 public class Lwjgl3Application implements Application {
 
@@ -138,15 +137,6 @@ public class Lwjgl3Application implements Application {
 
         if (handle == 0L)
             UtilityPackage.throwException("Failed to create secondary window: " + config.title);
-
-        long previousContext = GLFW.glfwGetCurrentContext();
-        GLCapabilities previousCapabilities = GL.getCapabilities();
-
-        GLFW.glfwMakeContextCurrent(handle);
-        GL.createCapabilities();
-
-        GLFW.glfwMakeContextCurrent(previousContext);
-        GL.setCapabilities(previousCapabilities);
 
         Lwjgl3Input windowInput = new Lwjgl3Input(handle);
         registerCallbacks(handle, windowInput, null);
