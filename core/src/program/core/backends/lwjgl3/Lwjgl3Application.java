@@ -8,6 +8,7 @@ import program.core.engine.UtilityPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GLCapabilities;
 
 public class Lwjgl3Application implements Application {
 
@@ -146,6 +147,13 @@ public class Lwjgl3Application implements Application {
         Lwjgl3Input windowInput = new Lwjgl3Input(handle);
         registerCallbacks(handle, windowInput, null);
         secondaryWindows.add(new Lwjgl3ManagedWindow(handle, windowInput));
+
+        long previousContext = GLFW.glfwGetCurrentContext();
+        GLCapabilities previousCapabilities = previousContext != 0L ? GL.getCapabilities() : null;
+        GLFW.glfwMakeContextCurrent(handle);
+        GL.createCapabilities();
+        GLFW.glfwMakeContextCurrent(previousContext);
+        GL.setCapabilities(previousCapabilities);
 
         return new Lwjgl3Window(handle, windowInput);
     }
