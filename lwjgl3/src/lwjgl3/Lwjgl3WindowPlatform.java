@@ -48,11 +48,22 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         windowID2Native.put(windowID, nativeWindow);
         handle2WindowID.put(handle, windowID);
         window.setNativeHandle(handle);
+        seedCurrentCapabilities(windowID, handle);
 
         primeWindowContext(windowID, handle);
         GLFW.glfwShowWindow(handle);
 
         syncWindowSize(window);
+    }
+
+    private void seedCurrentCapabilities(int windowID, long windowHandle) {
+        if (GLFW.glfwGetCurrentContext() != windowHandle)
+            return;
+
+        GLCapabilities currentCaps = GL.getCapabilities();
+
+        if (currentCaps != null)
+            windowID2Capabilities.putIfAbsent(windowID, currentCaps);
     }
 
     @Override
