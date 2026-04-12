@@ -148,13 +148,6 @@ public class Lwjgl3Application implements Application {
         registerCallbacks(handle, windowInput, null);
         secondaryWindows.add(new Lwjgl3ManagedWindow(handle, windowInput));
 
-        long previousContext = GLFW.glfwGetCurrentContext();
-        GLCapabilities previousCapabilities = previousContext != 0L ? GL.getCapabilities() : null;
-        GLFW.glfwMakeContextCurrent(handle);
-        GL.createCapabilities();
-        GLFW.glfwMakeContextCurrent(previousContext);
-        GL.setCapabilities(previousCapabilities);
-
         return new Lwjgl3Window(handle, windowInput);
     }
 

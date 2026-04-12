@@ -79,6 +79,7 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     public void render() {
+        debug();
         renderManager.draw(this);
     }
 
