@@ -2,7 +2,6 @@ package lwjgl3;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import engine.lwjgl3.Lwjgl3Application;
 import engine.lwjgl3.Lwjgl3ApplicationConfiguration;
 import engine.lwjgl3.Lwjgl3Graphics;
@@ -15,7 +14,7 @@ import engine.root.EnginePackage;
 import engine.settings.EngineSetting;
 import engine.settings.Loader;
 import engine.settings.Settings;
-
+import engine.settings.SettingsDeserializer;
 import java.io.File;
 
 public class Lwjgl3LauncherEditor {
@@ -29,6 +28,7 @@ public class Lwjgl3LauncherEditor {
     private static final String GAME_DIRECTORY = "AdventureRPG";
     private static final Gson ENGINE_GSON = new GsonBuilder()
             .setPrettyPrinting()
+            .registerTypeAdapter(Settings.class, new SettingsDeserializer())
             .create();
 
     public static void main(String[] args) {
@@ -48,16 +48,20 @@ public class Lwjgl3LauncherEditor {
     private static void createApplication() {
 
         File baseGameDir = new File(System.getProperty("user.home"), "Documents/My Games/" + GAME_DIRECTORY);
+
         if (!baseGameDir.exists())
             baseGameDir.mkdirs();
 
         File settingsFile = new File(baseGameDir, "EditorSettings.json");
         Settings settings = Loader.load(settingsFile, ENGINE_GSON);
+
         editor.runtime.input.Bindings.load(settings);
+
         Lwjgl3ApplicationConfiguration config = buildConfig(settings);
         Lwjgl3WindowPlatform platform = new Lwjgl3WindowPlatform();
 
         config.setWindowListener(new Lwjgl3WindowAdapter() {
+
             @Override
             public boolean closeRequested() {
                 saveWindowInfoOnClose(settingsFile, settings);
@@ -67,8 +71,8 @@ public class Lwjgl3LauncherEditor {
         });
 
         EnginePackage.setupConstructor(settings, baseGameDir, ENGINE_GSON, platform);
-        EditorEngine engine = new EditorEngine();
 
+        EditorEngine engine = new EditorEngine();
         new Lwjgl3Application(engine, config, platform);
     }
 
@@ -103,6 +107,7 @@ public class Lwjgl3LauncherEditor {
         settings.windowX = window.getPositionX();
         settings.windowY = window.getPositionY();
         settings.fullscreen = EngineContext.graphics.isFullscreen();
+
         Loader.save(file, settings, ENGINE_GSON);
     }
 }

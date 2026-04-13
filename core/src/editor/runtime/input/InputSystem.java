@@ -18,13 +18,16 @@ public class InputSystem extends SystemPackage {
 
     @Override
     protected void get() {
+
+        // Internal
         this.inputSystem = get(application.bootstrap.inputpipeline.inputsystem.InputSystem.class);
         this.previewSystem = get(PreviewSystem.class);
     }
 
     @Override
     protected void update() {
-        if (inputSystem.bindingJustPressed(Bindings.OPEN_PREVIEW))
+
+        if (inputSystem.bindingClicked(Bindings.OPEN_PREVIEW))
             previewSystem.openPreview();
     }
 }

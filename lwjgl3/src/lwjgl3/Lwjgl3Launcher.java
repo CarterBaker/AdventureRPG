@@ -2,7 +2,6 @@ package lwjgl3;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import engine.lwjgl3.Lwjgl3Application;
 import engine.lwjgl3.Lwjgl3ApplicationConfiguration;
 import engine.lwjgl3.Lwjgl3Graphics;
@@ -15,7 +14,7 @@ import engine.root.GameEngine;
 import engine.settings.EngineSetting;
 import engine.settings.Loader;
 import engine.settings.Settings;
-
+import engine.settings.SettingsDeserializer;
 import java.io.File;
 
 public class Lwjgl3Launcher {
@@ -29,6 +28,7 @@ public class Lwjgl3Launcher {
     private static final String GAME_DIRECTORY = "AdventureRPG";
     private static final Gson ENGINE_GSON = new GsonBuilder()
             .setPrettyPrinting()
+            .registerTypeAdapter(Settings.class, new SettingsDeserializer())
             .create();
 
     public static void main(String[] args) {
@@ -48,16 +48,20 @@ public class Lwjgl3Launcher {
     private static void createApplication() {
 
         File baseGameDir = new File(System.getProperty("user.home"), "Documents/My Games/" + GAME_DIRECTORY);
+
         if (!baseGameDir.exists())
             baseGameDir.mkdirs();
 
         File settingsFile = new File(baseGameDir, "Settings.json");
         Settings settings = Loader.load(settingsFile, ENGINE_GSON);
+
         application.runtime.input.Bindings.load(settings);
+
         Lwjgl3ApplicationConfiguration config = buildConfig(settings);
         Lwjgl3WindowPlatform platform = new Lwjgl3WindowPlatform();
 
         config.setWindowListener(new Lwjgl3WindowAdapter() {
+
             @Override
             public boolean closeRequested() {
                 saveWindowInfoOnClose(settingsFile, settings);
@@ -67,8 +71,8 @@ public class Lwjgl3Launcher {
         });
 
         EnginePackage.setupConstructor(settings, baseGameDir, ENGINE_GSON, platform);
-        GameEngine engine = new GameEngine();
 
+        GameEngine engine = new GameEngine();
         new Lwjgl3Application(engine, config, platform);
     }
 
@@ -101,6 +105,7 @@ public class Lwjgl3Launcher {
         settings.windowX = window.getPositionX();
         settings.windowY = window.getPositionY();
         settings.fullscreen = EngineContext.graphics.isFullscreen();
+
         Loader.save(file, settings, ENGINE_GSON);
     }
 }

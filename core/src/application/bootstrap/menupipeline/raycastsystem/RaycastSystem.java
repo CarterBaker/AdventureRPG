@@ -4,23 +4,22 @@ import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.menu.MenuInstance;
+import application.bootstrap.menupipeline.menumanager.MenuManager;
+import engine.root.EngineContext;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RaycastSystem extends SystemPackage {
 
     /*
-     * Performs mouse hit testing against active menu elements each frame when
-     * active. Iterates menus back to front and elements back to front so the
-     * topmost visible element wins. Mask ancestors clip the testable region.
+     * Performs mouse hit testing against active menu elements each frame.
+     * Iterates menus back to front and elements back to front so the topmost
+     * visible element wins. Mask ancestors clip the testable region.
      */
 
     // Internal
     private InputSystem inputSystem;
-
-    // State
-    private boolean active;
-    private boolean wasPressed;
+    private MenuManager menuManager;
 
     // Internal \\
 
@@ -29,27 +28,23 @@ public class RaycastSystem extends SystemPackage {
 
         // Internal
         this.inputSystem = get(InputSystem.class);
+        this.menuManager = get(MenuManager.class);
     }
 
     // Update \\
 
-    public void update(
-            ObjectArrayList<MenuInstance> activeMenus,
-            float screenW,
-            float screenH) {
+    @Override
+    protected void update() {
 
-        if (!active)
+        if (!inputSystem.isLeftClicked())
             return;
 
-        boolean pressed = inputSystem.isLeftDown();
-        boolean clicked = pressed && !wasPressed;
-        wasPressed = pressed;
-
-        if (!clicked)
-            return;
-
+        float screenW = EngineContext.graphics.getWidth();
+        float screenH = EngineContext.graphics.getHeight();
         float mouseX = inputSystem.getMouseX();
         float mouseY = screenH - inputSystem.getMouseY();
+
+        ObjectArrayList<MenuInstance> activeMenus = menuManager.getActiveMenus();
 
         for (int i = activeMenus.size() - 1; i >= 0; i--) {
 
@@ -112,6 +107,7 @@ public class RaycastSystem extends SystemPackage {
                 continue;
 
             element.execute();
+
             return true;
         }
 
@@ -127,15 +123,5 @@ public class RaycastSystem extends SystemPackage {
 
         return mouseX >= left && mouseX <= right
                 && mouseY >= top && mouseY <= bottom;
-    }
-
-    // Control \\
-
-    public void setActive(boolean active) {
-
-        this.active = active;
-
-        if (!active)
-            wasPressed = false;
     }
 }

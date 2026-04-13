@@ -1,19 +1,17 @@
 package engine.lwjgl3;
 
-import org.lwjgl.glfw.GLFW;
-
-import engine.util.input.Buttons;
 import engine.util.input.Input;
 import engine.util.input.InputListener;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import org.lwjgl.glfw.GLFW;
 
 class Lwjgl3Input implements Input {
 
     /*
      * Collects raw GLFW events and forwards them to registered InputListeners.
-     * Tracks held keys and buttons for polling via isKeyDown / isMouseDown.
-     * Delta values accumulate during the frame and are zeroed in endFrame().
+     * Tracks clicked, held, and released state for keys and mouse buttons.
+     * Click and release latches are cleared each frame in endFrame().
      */
 
     // Internal
@@ -22,7 +20,13 @@ class Lwjgl3Input implements Input {
 
     // Key State
     private final IntOpenHashSet heldKeys = new IntOpenHashSet();
+    private final IntOpenHashSet clickedKeys = new IntOpenHashSet();
+    private final IntOpenHashSet releasedKeys = new IntOpenHashSet();
+
+    // Mouse State
     private final IntOpenHashSet heldButtons = new IntOpenHashSet();
+    private final IntOpenHashSet clickedButtons = new IntOpenHashSet();
+    private final IntOpenHashSet releasedButtons = new IntOpenHashSet();
 
     // Cursor State
     private double cursorX;
@@ -58,12 +62,14 @@ class Lwjgl3Input implements Input {
 
         if (action == GLFW.GLFW_PRESS) {
             heldButtons.add(button);
+            clickedButtons.add(button);
             for (int i = 0; i < listeners.size(); i++)
                 listeners.get(i).onMouseDown(button, (int) cursorX, (int) cursorY);
         }
 
         if (action == GLFW.GLFW_RELEASE) {
             heldButtons.remove(button);
+            releasedButtons.add(button);
             for (int i = 0; i < listeners.size(); i++)
                 listeners.get(i).onMouseUp(button, (int) cursorX, (int) cursorY);
         }
@@ -78,12 +84,14 @@ class Lwjgl3Input implements Input {
 
         if (action == GLFW.GLFW_PRESS) {
             heldKeys.add(key);
+            clickedKeys.add(key);
             for (int i = 0; i < listeners.size(); i++)
                 listeners.get(i).onKeyDown(key);
         }
 
         if (action == GLFW.GLFW_RELEASE) {
             heldKeys.remove(key);
+            releasedKeys.add(key);
             for (int i = 0; i < listeners.size(); i++)
                 listeners.get(i).onKeyUp(key);
         }
@@ -97,6 +105,10 @@ class Lwjgl3Input implements Input {
     void endFrame() {
         deltaX = 0;
         deltaY = 0;
+        clickedKeys.clear();
+        releasedKeys.clear();
+        clickedButtons.clear();
+        releasedButtons.clear();
     }
 
     // Input \\
@@ -112,8 +124,23 @@ class Lwjgl3Input implements Input {
     }
 
     @Override
+    public boolean isKeyClicked(int key) {
+        return clickedKeys.contains(key);
+    }
+
+    @Override
     public boolean isKeyDown(int key) {
         return heldKeys.contains(key);
+    }
+
+    @Override
+    public boolean isKeyReleased(int key) {
+        return releasedKeys.contains(key);
+    }
+
+    @Override
+    public boolean isMouseClicked(int button) {
+        return clickedButtons.contains(button);
     }
 
     @Override
@@ -122,11 +149,18 @@ class Lwjgl3Input implements Input {
     }
 
     @Override
-    public void setCursorCatched(boolean captured) {
-        GLFW.glfwSetInputMode(
-                window,
-                GLFW.GLFW_CURSOR,
-                captured ? GLFW.GLFW_CURSOR_DISABLED : GLFW.GLFW_CURSOR_NORMAL);
+    public boolean isMouseReleased(int button) {
+        return releasedButtons.contains(button);
+    }
+
+    @Override
+    public float getMouseX() {
+        return (float) cursorX;
+    }
+
+    @Override
+    public float getMouseY() {
+        return (float) cursorY;
     }
 
     @Override
@@ -139,11 +173,11 @@ class Lwjgl3Input implements Input {
         return deltaY;
     }
 
-    public int getX() {
-        return (int) cursorX;
-    }
-
-    public int getY() {
-        return (int) cursorY;
+    @Override
+    public void setCursorCatched(boolean captured) {
+        GLFW.glfwSetInputMode(
+                window,
+                GLFW.GLFW_CURSOR,
+                captured ? GLFW.GLFW_CURSOR_DISABLED : GLFW.GLFW_CURSOR_NORMAL);
     }
 }

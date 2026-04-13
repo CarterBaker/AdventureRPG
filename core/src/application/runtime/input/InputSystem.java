@@ -27,6 +27,8 @@ public class InputSystem extends SystemPackage {
 
     @Override
     protected void get() {
+
+        // Internal
         this.inputSystem = get(application.bootstrap.inputpipeline.inputsystem.InputSystem.class);
         this.playerManager = get(PlayerManager.class);
         this.menuManager = get(MenuManager.class);
@@ -41,30 +43,30 @@ public class InputSystem extends SystemPackage {
         if (!playerManager.hasPlayerForWindow(windowID))
             return;
 
-        handleInventoryInput();
+        handleInventoryInput(windowID);
 
         if (menuManager.isInputLocked())
             return;
 
-        updateCameraRotation();
-        writePlayerInput();
+        updateCameraRotation(windowID);
+        writePlayerInput(windowID);
     }
 
     // Input \\
 
-    private void handleInventoryInput() {
+    private void handleInventoryInput(int windowID) {
 
-        if (!inputSystem.bindingJustPressed(Bindings.INVENTORY))
+        if (!inputSystem.bindingClicked(Bindings.INVENTORY))
             return;
 
         inventoryBranch.toggleInventory(
-                playerManager.getPlayerForWindow(context.getWindow().getWindowID()),
+                playerManager.getPlayerForWindow(windowID),
                 context.getWindow());
     }
 
-    private void updateCameraRotation() {
+    private void updateCameraRotation(int windowID) {
 
-        CameraInstance camera = playerManager.getCameraForWindow(context.getWindow().getWindowID());
+        CameraInstance camera = playerManager.getCameraForWindow(windowID);
 
         if (camera == null)
             return;
@@ -72,9 +74,8 @@ public class InputSystem extends SystemPackage {
         camera.setRotation(inputSystem.getMouseDelta());
     }
 
-    private void writePlayerInput() {
+    private void writePlayerInput(int windowID) {
 
-        int windowID = context.getWindow().getWindowID();
         EntityInstance player = playerManager.getPlayerForWindow(windowID);
         CameraInstance camera = playerManager.getCameraForWindow(windowID);
 
