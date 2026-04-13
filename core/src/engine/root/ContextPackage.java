@@ -1,6 +1,6 @@
 package engine.root;
 
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public abstract class ContextPackage extends ManagerPackage {

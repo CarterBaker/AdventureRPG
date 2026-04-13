@@ -2,7 +2,7 @@ package application.bootstrap.renderpipeline.cameramanager;
 
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.SystemPackage;
 import engine.settings.EngineSetting;
 import engine.util.camera.CameraInstance;

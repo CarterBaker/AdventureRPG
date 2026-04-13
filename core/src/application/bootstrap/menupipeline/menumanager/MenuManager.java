@@ -20,7 +20,7 @@ import application.bootstrap.physicspipeline.util.ScreenRayStruct;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import engine.settings.EngineSetting;
 import engine.util.RegistryUtility;

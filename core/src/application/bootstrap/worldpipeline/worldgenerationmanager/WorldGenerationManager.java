@@ -6,7 +6,7 @@ import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import engine.root.ManagerPackage;
 import engine.settings.EngineSetting;
-import engine.util.OpenSimplex2;
+import engine.util.NoiseUtility;
 import engine.util.mathematics.extras.Coordinate2Long;
 
 public class WorldGenerationManager extends ManagerPackage {
@@ -92,7 +92,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 long worldX = localX + offsetX;
                 long worldZ = localZ + offsetZ;
 
-                double noise = OpenSimplex2.noise2(seed, worldX * scale, worldZ * scale);
+                double noise = NoiseUtility.noise2(seed, worldX * scale, worldZ * scale);
                 int groundHeight = (int) (baseHeight + noise * amplitude);
 
                 for (int localY = 0; localY < CHUNK_SIZE; localY++) {

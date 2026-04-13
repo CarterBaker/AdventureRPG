@@ -12,7 +12,7 @@ import application.bootstrap.renderpipeline.compositebatch.CompositeBatchStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.SystemPackage;
 import engine.settings.EngineSetting;
 

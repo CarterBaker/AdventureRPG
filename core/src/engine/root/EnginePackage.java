@@ -6,21 +6,15 @@ import java.util.concurrent.Future;
 
 import com.google.gson.Gson;
 
-import application.kernel.threadmanager.InternalThreadManager;
-import application.kernel.util.syncconsumer.AsyncStructConsumer;
-import application.kernel.util.syncconsumer.AsyncStructConsumerMulti;
-import application.kernel.util.syncconsumer.BiSyncAsyncConsumer;
-import application.kernel.util.syncconsumer.SyncStructConsumer;
-import application.kernel.util.thread.ThreadHandle;
-import application.kernel.util.window.WindowData;
-import application.kernel.util.window.WindowInstance;
-import application.kernel.windowmanager.WindowManager;
+import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
+import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
+import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
+import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
+import application.kernel.threadpipeline.thread.ThreadHandle;
+import application.kernel.windowpipeline.window.WindowData;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.settings.EngineSetting;
 import engine.settings.Settings;
-import engine.util.camera.CameraData;
-import engine.util.camera.CameraInstance;
-import engine.util.camera.OrthographicCameraData;
-import engine.util.camera.OrthographicCameraInstance;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -42,8 +36,6 @@ public class EnginePackage extends ManagerPackage {
 
     // Internal
     private EngineState engineState;
-    private InternalThreadManager internalThreadManager;
-    private WindowManager windowManager;
 
     // System Management
     Object2ObjectLinkedOpenHashMap<Class<?>, SystemPackage> internalRegistry;
@@ -79,6 +71,7 @@ public class EnginePackage extends ManagerPackage {
 
         // Internal
         this.engineState = EngineState.KERNEL;
+        EngineUtility.engine = this;
 
         // System Management
         this.internalRegistry = new Object2ObjectLinkedOpenHashMap<>();
@@ -250,7 +243,7 @@ public class EnginePackage extends ManagerPackage {
     private void primeContextLifecycle(ContextPackage context) {
 
         SystemContext previousContext = this.internalContext;
-        this.windowManager.beginContextWindow(context.getWindow());
+        EngineUtility.windowManager.beginContextWindow(context.getWindow());
 
         try {
             this.internalContext = SystemContext.CREATE;
@@ -265,7 +258,7 @@ public class EnginePackage extends ManagerPackage {
             this.internalContext = SystemContext.RELEASE;
             context.internalRelease();
         } finally {
-            this.windowManager.endContextWindow();
+            EngineUtility.windowManager.endContextWindow();
             this.internalContext = previousContext;
         }
     }
@@ -291,11 +284,11 @@ public class EnginePackage extends ManagerPackage {
         for (int i = 0; i < this.pendingContextList.size(); i++) {
             ContextPackage context = this.pendingContextList.get(i);
             context.pendingStart = false;
-            this.windowManager.beginContextWindow(context.getWindow());
+            EngineUtility.windowManager.beginContextWindow(context.getWindow());
             try {
                 context.internalStart();
             } finally {
-                this.windowManager.endContextWindow();
+                EngineUtility.windowManager.endContextWindow();
             }
             this.activeContextList.add(context);
         }
@@ -312,14 +305,14 @@ public class EnginePackage extends ManagerPackage {
 
     @Override
     protected final ThreadHandle getThreadHandleFromThreadName(String threadName) {
-        return internalThreadManager.getThreadHandleFromThreadName(threadName);
+        return EngineUtility.getThreadHandle(threadName);
     }
 
     // Submit \\
 
     @Override
     protected final Future<?> executeAsync(ThreadHandle handle, Runnable task) {
-        return internalThreadManager.executeAsync(handle, task);
+        return EngineUtility.executeAsync(handle, task);
     }
 
     @Override
@@ -327,7 +320,7 @@ public class EnginePackage extends ManagerPackage {
             ThreadHandle handle,
             T asyncStruct,
             AsyncStructConsumer<T> consumer) {
-        return internalThreadManager.executeAsync(handle, asyncStruct, consumer);
+        return EngineUtility.executeAsync(handle, asyncStruct, consumer);
     }
 
     @Override
@@ -335,7 +328,7 @@ public class EnginePackage extends ManagerPackage {
             ThreadHandle handle,
             AsyncStructConsumerMulti consumer,
             AsyncContainerPackage... asyncStructs) {
-        return internalThreadManager.executeAsync(handle, consumer, asyncStructs);
+        return EngineUtility.executeAsync(handle, consumer, asyncStructs);
     }
 
     @Override
@@ -343,7 +336,7 @@ public class EnginePackage extends ManagerPackage {
             ThreadHandle handle,
             T syncStruct,
             SyncStructConsumer<T> consumer) {
-        return internalThreadManager.executeAsync(handle, syncStruct, consumer);
+        return EngineUtility.executeAsync(handle, syncStruct, consumer);
     }
 
     @Override
@@ -352,7 +345,7 @@ public class EnginePackage extends ManagerPackage {
             T asyncStruct,
             S syncStruct,
             BiSyncAsyncConsumer<T, S> consumer) {
-        return internalThreadManager.executeAsync(handle, asyncStruct, syncStruct, consumer);
+        return EngineUtility.executeAsync(handle, asyncStruct, syncStruct, consumer);
     }
 
     // Game State \\
@@ -434,9 +427,7 @@ public class EnginePackage extends ManagerPackage {
             this.systemArray[i].internalCreate();
     }
 
-    private final void kernel() {
-        this.internalThreadManager = create(InternalThreadManager.class);
-        this.windowManager = create(WindowManager.class);
+    protected void kernel() {
     }
 
     // Bootstrap \\
@@ -455,7 +446,7 @@ public class EnginePackage extends ManagerPackage {
             this.systemArray[i].internalCreate();
     }
 
-    void bootstrap() {
+    protected void bootstrap() {
     }
 
     // Create \\
@@ -536,11 +527,11 @@ public class EnginePackage extends ManagerPackage {
         super.internalUpdate();
 
         for (int i = 0; i < this.contextArray.length; i++) {
-            this.windowManager.beginContextWindow(this.contextArray[i].getWindow());
+            EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
             this.contextArray[i].internalUpdate();
         }
 
-        this.windowManager.endContextWindow();
+        EngineUtility.windowManager.endContextWindow();
     }
 
     // Fixed Update \\
@@ -561,11 +552,11 @@ public class EnginePackage extends ManagerPackage {
             super.internalFixedUpdate();
 
             for (int i = 0; i < this.contextArray.length; i++) {
-                this.windowManager.beginContextWindow(this.contextArray[i].getWindow());
+                EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
                 this.contextArray[i].internalFixedUpdate();
             }
 
-            this.windowManager.endContextWindow();
+            EngineUtility.windowManager.endContextWindow();
         }
     }
 
@@ -579,11 +570,11 @@ public class EnginePackage extends ManagerPackage {
         super.internalLateUpdate();
 
         for (int i = 0; i < this.contextArray.length; i++) {
-            this.windowManager.beginContextWindow(this.contextArray[i].getWindow());
+            EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
             this.contextArray[i].internalLateUpdate();
         }
 
-        this.windowManager.endContextWindow();
+        EngineUtility.windowManager.endContextWindow();
     }
 
     // Render \\
@@ -596,11 +587,11 @@ public class EnginePackage extends ManagerPackage {
         super.internalRender();
 
         for (int i = 0; i < this.contextArray.length; i++) {
-            this.windowManager.beginContextWindow(this.contextArray[i].getWindow());
+            EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
             this.contextArray[i].internalRender();
         }
 
-        this.windowManager.endContextWindow();
+        EngineUtility.windowManager.endContextWindow();
     }
 
     // Draw \\
@@ -611,7 +602,7 @@ public class EnginePackage extends ManagerPackage {
         this.draw();
     }
 
-    void draw() {
+    protected void draw() {
     }
 
     // Dispose \\
@@ -642,20 +633,7 @@ public class EnginePackage extends ManagerPackage {
                 settings.windowHeight,
                 EngineSetting.WINDOW_TITLE));
 
-        WindowManager windowManager = getUnchecked(WindowManager.class);
-        windowManager.registerMainWindow(mainWindow);
-    }
-
-    public CameraInstance createCamera(float fov, float width, float height) {
-        CameraInstance instance = createInstance(CameraInstance.class);
-        instance.constructor(new CameraData(fov, width, height));
-        return instance;
-    }
-
-    public OrthographicCameraInstance createOrthographicCamera(float width, float height) {
-        OrthographicCameraInstance instance = createInstance(OrthographicCameraInstance.class);
-        instance.constructor(new OrthographicCameraData(width, height));
-        return instance;
+        EngineUtility.windowManager.registerMainWindow(mainWindow);
     }
 
     // Accessible \\

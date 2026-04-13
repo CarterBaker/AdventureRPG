@@ -14,7 +14,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import engine.settings.EngineSetting;
 import engine.util.camera.CameraInstance;

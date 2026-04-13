@@ -1,4 +1,4 @@
-package application.kernel.util.window;
+package application.kernel.windowpipeline.window;
 
 import engine.root.DataPackage;
 

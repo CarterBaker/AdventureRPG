@@ -7,7 +7,7 @@ import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.SystemPackage;
 import engine.settings.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;

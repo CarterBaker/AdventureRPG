@@ -2,11 +2,11 @@ package engine.root;
 
 import java.util.concurrent.Future;
 
-import application.kernel.util.syncconsumer.AsyncStructConsumer;
-import application.kernel.util.syncconsumer.AsyncStructConsumerMulti;
-import application.kernel.util.syncconsumer.BiSyncAsyncConsumer;
-import application.kernel.util.syncconsumer.SyncStructConsumer;
-import application.kernel.util.thread.ThreadHandle;
+import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
+import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
+import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
+import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
+import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.settings.Settings;
 
 public abstract class SystemPackage extends UtilityPackage {

@@ -1,6 +1,6 @@
 package engine.root;
 
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 
 public interface WindowPlatform {
 

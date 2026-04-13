@@ -1,4 +1,4 @@
-package application.kernel.threadmanager;
+package application.kernel.threadpipeline.threadmanager;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;

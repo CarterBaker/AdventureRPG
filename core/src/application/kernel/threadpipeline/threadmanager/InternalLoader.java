@@ -1,4 +1,4 @@
-package application.kernel.threadmanager;
+package application.kernel.threadpipeline.threadmanager;
 
 import java.io.File;
 import java.io.IOException;
@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
-import application.kernel.util.thread.ThreadHandle;
+import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.LoaderPackage;
 import engine.settings.EngineSetting;
 import engine.util.FileUtility;

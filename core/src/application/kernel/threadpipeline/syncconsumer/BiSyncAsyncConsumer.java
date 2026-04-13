@@ -1,4 +1,4 @@
-package application.kernel.util.syncconsumer;
+package application.kernel.threadpipeline.syncconsumer;
 
 import engine.root.AsyncContainerPackage;
 import engine.root.SyncContainerPackage;

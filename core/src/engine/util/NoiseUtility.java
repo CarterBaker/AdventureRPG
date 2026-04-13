@@ -1,10 +1,13 @@
 package engine.util;
 
+import engine.root.UtilityPackage;
+
 /**
  * K.jpg's OpenSimplex 2, faster variant
+ * This is just open simplex 2 with virtually no changes made.
  */
 
-public class OpenSimplex2 {
+public class NoiseUtility extends UtilityPackage {
 
     private static final long PRIME_X = 0x5205402B9270C86FL;
     private static final long PRIME_Y = 0x598CD327003817B5L;

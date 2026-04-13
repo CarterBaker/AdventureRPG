@@ -12,7 +12,7 @@ import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;

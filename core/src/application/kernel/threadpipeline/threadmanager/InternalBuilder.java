@@ -1,9 +1,9 @@
-package application.kernel.threadmanager;
+package application.kernel.threadpipeline.threadmanager;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import application.kernel.util.thread.ThreadHandle;
+import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.BuilderPackage;
 
 class InternalBuilder extends BuilderPackage {

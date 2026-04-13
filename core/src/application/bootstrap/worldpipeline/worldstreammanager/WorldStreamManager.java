@@ -7,7 +7,7 @@ import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
 import application.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

@@ -2,7 +2,7 @@ package application.bootstrap.worldpipeline.worldrendermanager;
 
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.SystemPackage;
 import engine.settings.EngineSetting;
 import engine.util.camera.CameraInstance;

@@ -5,7 +5,7 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.Dynami
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.kernel.util.thread.ThreadHandle;
+import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.BranchPackage;
 
 public class BuildBranch extends BranchPackage {

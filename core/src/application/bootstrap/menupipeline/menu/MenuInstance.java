@@ -1,7 +1,7 @@
 package application.bootstrap.menupipeline.menu;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

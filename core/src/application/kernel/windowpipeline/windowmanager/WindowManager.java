@@ -1,6 +1,7 @@
-package application.kernel.windowmanager;
+package application.kernel.windowpipeline.windowmanager;
 
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
+import engine.root.EngineUtility;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -25,6 +26,11 @@ public class WindowManager extends ManagerPackage {
     protected void create() {
         this.windows = new ObjectArrayList<>();
         this.nextWindowID = 1;
+    }
+
+    @Override
+    protected void awake() {
+        EngineUtility.assignWindowManager(this);
     }
 
     @Override

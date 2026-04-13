@@ -6,8 +6,8 @@ import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.kernel.util.window.WindowInstance;
-import application.kernel.windowmanager.WindowManager;
+import application.kernel.windowpipeline.window.WindowInstance;
+import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

@@ -2,7 +2,7 @@ package application.bootstrap.menupipeline.menueventsmanager.menus;
 
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.BranchPackage;
 
 public class MainMenuBranch extends BranchPackage {

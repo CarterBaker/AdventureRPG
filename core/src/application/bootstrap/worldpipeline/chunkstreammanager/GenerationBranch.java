@@ -5,7 +5,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
-import application.kernel.util.thread.ThreadHandle;
+import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.BranchPackage;
 import engine.settings.EngineSetting;
 

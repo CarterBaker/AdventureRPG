@@ -5,7 +5,7 @@ import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.kernel.util.window.WindowInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.BranchPackage;
 
 public class InventoryBranch extends BranchPackage {

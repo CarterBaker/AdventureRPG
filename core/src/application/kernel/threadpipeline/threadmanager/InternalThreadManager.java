@@ -1,13 +1,14 @@
-package application.kernel.threadmanager;
+package application.kernel.threadpipeline.threadmanager;
 
 import java.util.concurrent.Future;
 
-import application.kernel.util.syncconsumer.AsyncStructConsumer;
-import application.kernel.util.syncconsumer.AsyncStructConsumerMulti;
-import application.kernel.util.syncconsumer.BiSyncAsyncConsumer;
-import application.kernel.util.syncconsumer.SyncStructConsumer;
-import application.kernel.util.thread.ThreadHandle;
+import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
+import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
+import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
+import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
+import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.AsyncContainerPackage;
+import engine.root.EngineUtility;
 import engine.root.ManagerPackage;
 import engine.root.SyncContainerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -23,6 +24,11 @@ public class InternalThreadManager extends ManagerPackage {
     protected void create() {
         create(InternalLoader.class);
         this.threadName2ThreadHandle = new Object2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    protected void awake() {
+        EngineUtility.assignThreadManager(this);
     }
 
     @Override
