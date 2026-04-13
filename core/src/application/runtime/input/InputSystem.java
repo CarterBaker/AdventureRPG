@@ -3,14 +3,13 @@ package application.runtime.input;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.inputpipeline.input.InputHandle;
-import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import engine.root.SystemPackage;
 import engine.util.camera.CameraInstance;
 import engine.util.mathematics.vectors.Vector3;
 
-public class PlayerInputSystem extends SystemPackage {
+public class InputSystem extends SystemPackage {
 
     /*
      * Translates raw InputSystem state into player actions each frame using
@@ -19,7 +18,7 @@ public class PlayerInputSystem extends SystemPackage {
      */
 
     // Internal
-    private InputSystem inputSystem;
+    private application.bootstrap.inputpipeline.inputsystem.InputSystem inputSystem;
     private PlayerManager playerManager;
     private MenuManager menuManager;
     private InventoryBranch inventoryBranch;
@@ -28,7 +27,7 @@ public class PlayerInputSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.inputSystem = get(InputSystem.class);
+        this.inputSystem = get(application.bootstrap.inputpipeline.inputsystem.InputSystem.class);
         this.playerManager = get(PlayerManager.class);
         this.menuManager = get(MenuManager.class);
         this.inventoryBranch = get(InventoryBranch.class);

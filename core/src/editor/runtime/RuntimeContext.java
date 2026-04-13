@@ -1,5 +1,6 @@
 package editor.runtime;
 
+import editor.runtime.input.InputSystem;
 import engine.root.ContextPackage;
 
 public class RuntimeContext extends ContextPackage {
@@ -12,7 +13,7 @@ public class RuntimeContext extends ContextPackage {
      */
 
     // Editor
-    private EditorInputSystem editorInputSystem;
+    private InputSystem editorInputSystem;
     private PreviewSystem previewSystem;
 
     // Internal \\
@@ -22,6 +23,6 @@ public class RuntimeContext extends ContextPackage {
 
         // Editor
         this.previewSystem = create(PreviewSystem.class);
-        this.editorInputSystem = create(EditorInputSystem.class);
+        this.editorInputSystem = create(InputSystem.class);
     }
 }

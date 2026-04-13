@@ -56,20 +56,16 @@ class Lwjgl3Input implements Input {
 
     void onMouseButton(int button, int action) {
 
-        int mapped = button == GLFW.GLFW_MOUSE_BUTTON_LEFT ? Buttons.LEFT
-                : button == GLFW.GLFW_MOUSE_BUTTON_RIGHT ? Buttons.RIGHT
-                        : button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE ? Buttons.MIDDLE : button;
-
         if (action == GLFW.GLFW_PRESS) {
-            heldButtons.add(mapped);
+            heldButtons.add(button);
             for (int i = 0; i < listeners.size(); i++)
-                listeners.get(i).onMouseDown(mapped, (int) cursorX, (int) cursorY);
+                listeners.get(i).onMouseDown(button, (int) cursorX, (int) cursorY);
         }
 
         if (action == GLFW.GLFW_RELEASE) {
-            heldButtons.remove(mapped);
+            heldButtons.remove(button);
             for (int i = 0; i < listeners.size(); i++)
-                listeners.get(i).onMouseUp(mapped, (int) cursorX, (int) cursorY);
+                listeners.get(i).onMouseUp(button, (int) cursorX, (int) cursorY);
         }
     }
 
@@ -134,13 +130,13 @@ class Lwjgl3Input implements Input {
     }
 
     @Override
-    public int getDeltaX() {
-        return (int) deltaX;
+    public float getDeltaX() {
+        return deltaX;
     }
 
     @Override
-    public int getDeltaY() {
-        return (int) deltaY;
+    public float getDeltaY() {
+        return deltaY;
     }
 
     public int getX() {

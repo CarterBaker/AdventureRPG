@@ -53,6 +53,7 @@ public class Lwjgl3Launcher {
 
         File settingsFile = new File(baseGameDir, "Settings.json");
         Settings settings = Loader.load(settingsFile, ENGINE_GSON);
+        application.runtime.input.Bindings.load(settings);
         Lwjgl3ApplicationConfiguration config = buildConfig(settings);
         Lwjgl3WindowPlatform platform = new Lwjgl3WindowPlatform();
 

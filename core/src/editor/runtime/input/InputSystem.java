@@ -1,9 +1,9 @@
-package editor.runtime;
+package editor.runtime.input;
 
-import application.bootstrap.inputpipeline.inputsystem.InputSystem;
+import editor.runtime.PreviewSystem;
 import engine.root.SystemPackage;
 
-public class EditorInputSystem extends SystemPackage {
+public class InputSystem extends SystemPackage {
 
     /*
      * Handles editor keyboard shortcuts each frame.
@@ -11,14 +11,14 @@ public class EditorInputSystem extends SystemPackage {
      */
 
     // Internal
-    private InputSystem inputSystem;
+    private application.bootstrap.inputpipeline.inputsystem.InputSystem inputSystem;
     private PreviewSystem previewSystem;
 
     // Internal \\
 
     @Override
     protected void get() {
-        this.inputSystem = get(InputSystem.class);
+        this.inputSystem = get(application.bootstrap.inputpipeline.inputsystem.InputSystem.class);
         this.previewSystem = get(PreviewSystem.class);
     }
 

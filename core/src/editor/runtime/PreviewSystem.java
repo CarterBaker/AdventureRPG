@@ -30,7 +30,7 @@ public class PreviewSystem extends SystemPackage {
 
     // Preview \\
 
-    void openPreview() {
+    public void openPreview() {
 
         WindowInstance mainWindow = windowManager.getMainWindow();
 

@@ -14,9 +14,9 @@ public interface Input {
 
     boolean isMouseDown(int button);
 
-    int getDeltaX();
+    float getDeltaX();
 
-    int getDeltaY();
+    float getDeltaY();
 
     void setCursorCatched(boolean captured);
 }

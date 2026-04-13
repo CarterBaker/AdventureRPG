@@ -3,6 +3,7 @@ package application.runtime.input;
 import engine.input.Binding;
 import engine.input.Buttons;
 import engine.input.Keys;
+import engine.settings.Settings;
 
 public final class Bindings {
 
@@ -25,4 +26,17 @@ public final class Bindings {
 
     // Camera
     public static Binding LOOK = new Binding(Buttons.RIGHT);
+
+    // Accessible \\
+
+    public static void load(Settings settings) {
+        MOVE_FORWARD.set(settings.bindMoveForward);
+        MOVE_BACK.set(settings.bindMoveBack);
+        MOVE_LEFT.set(settings.bindMoveLeft);
+        MOVE_RIGHT.set(settings.bindMoveRight);
+        JUMP.set(settings.bindJump);
+        WALK.set(settings.bindWalk);
+        SPRINT.set(settings.bindSprint);
+        INVENTORY.set(settings.bindInventory);
+    }
 }

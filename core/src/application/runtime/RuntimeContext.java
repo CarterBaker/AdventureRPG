@@ -1,6 +1,6 @@
 package application.runtime;
 
-import application.runtime.input.PlayerInputSystem;
+import application.runtime.input.InputSystem;
 import application.runtime.lighting.SkySystem;
 import application.runtime.menu.MenuSystem;
 import application.runtime.player.PlayerSystem;
@@ -23,7 +23,7 @@ public class RuntimeContext extends ContextPackage {
     private PlayerSystem playerSystem;
     private MenuSystem menuSystem;
     private WorldSystem worldSystem;
-    private PlayerInputSystem playerInputSystem;
+    private InputSystem playerInputSystem;
 
     // Internal \\
 
@@ -35,6 +35,6 @@ public class RuntimeContext extends ContextPackage {
         this.playerSystem = create(PlayerSystem.class);
         this.menuSystem = create(MenuSystem.class);
         this.worldSystem = create(WorldSystem.class);
-        this.playerInputSystem = create(PlayerInputSystem.class);
+        this.playerInputSystem = create(InputSystem.class);
     }
 }

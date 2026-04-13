@@ -122,14 +122,14 @@ public class InputSystem extends SystemPackage implements InputListener {
     }
 
     public boolean bindingHeld(Binding binding) {
-        for (int key : binding.getKeys())
+        for (int key : binding.getCodes())
             if (!heldKeys.contains(key))
                 return false;
         return true;
     }
 
     public boolean bindingJustPressed(Binding binding) {
-        int[] keys = binding.getKeys();
+        int[] keys = binding.getCodes();
         if (!justPressedKeys.contains(keys[keys.length - 1]))
             return false;
         for (int i = 0; i < keys.length - 1; i++)
