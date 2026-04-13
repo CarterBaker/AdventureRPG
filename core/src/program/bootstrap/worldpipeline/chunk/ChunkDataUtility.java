@@ -1,9 +1,9 @@
 package program.bootstrap.worldpipeline.chunk;
 
 import program.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
-public final class ChunkDataUtility extends UtilityPackage {
+public final class ChunkDataUtility extends EngineUtility {
 
     /*
      * Stateless graph walker for ChunkData stage transitions. Determines which

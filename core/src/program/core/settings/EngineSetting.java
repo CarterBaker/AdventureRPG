@@ -6,6 +6,7 @@ public class EngineSetting {
 
         // Engine Settings \\
 
+        public static final String VERSION = "0.0.0.1a";
         public static final int LOADER_BATCH_SIZE = 32;
         public static final String THREAD_DEFINITIONS = "program/threads";
 

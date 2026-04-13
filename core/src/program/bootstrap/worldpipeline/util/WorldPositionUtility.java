@@ -8,12 +8,12 @@ import program.bootstrap.worldpipeline.blockmanager.BlockManager;
 import program.bootstrap.worldpipeline.chunk.ChunkInstance;
 import program.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import program.bootstrap.worldpipeline.world.WorldHandle;
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.settings.EngineSetting;
 import program.core.util.mathematics.extras.Coordinate2Long;
 import program.core.util.mathematics.vectors.Vector2Int;
 
-public class WorldPositionUtility extends UtilityPackage {
+public class WorldPositionUtility extends EngineUtility {
 
     public static long getRandomChunk(WorldHandle worldHandle) {
 

@@ -1,9 +1,9 @@
 package program.core.util.mathematics.quaternions;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.util.mathematics.vectors.Vector3;
 
-public class Quaternion extends UtilityPackage {
+public class Quaternion extends EngineUtility {
 
     // Data
     public final float[] val = new float[4];

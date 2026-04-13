@@ -1,7 +1,5 @@
 package program.core.kernel.window;
 
-import program.core.app.ApplicationListener;
-import program.core.app.Screen;
 import program.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import program.bootstrap.renderpipeline.rendermanager.RenderManager;
 import program.bootstrap.renderpipeline.rendermanager.RenderQueueHandle;
@@ -11,7 +9,7 @@ import program.core.kernel.windowmanager.WindowManager;
 import program.core.util.camera.CameraInstance;
 import program.core.util.camera.OrthographicCameraInstance;
 
-public class WindowInstance extends InstancePackage implements Screen, ApplicationListener {
+public class WindowInstance extends InstancePackage {
 
     /*
      * Runtime window wrapper. Owns WindowData, RenderQueueHandle, and both
@@ -43,7 +41,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     public void constructor(WindowData windowData) {
         this.windowData = windowData;
 
-        // Cameras
         this.activeCamera = internal.createCamera(
                 internal.settings.FOV,
                 windowData.getWidth(),
@@ -56,8 +53,6 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     protected void get() {
-
-        // Internal
         this.renderManager = get(RenderManager.class);
         this.vaoManager = get(VAOManager.class);
         this.windowManager = get(WindowManager.class);
@@ -65,67 +60,8 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
 
     @Override
     protected void awake() {
-
-        // Render Queue
         this.renderQueueHandle = create(RenderQueueHandle.class);
         this.renderQueueHandle.constructor();
-    }
-
-    // ApplicationListener \\
-
-    @Override
-    public void create() {
-    }
-
-    @Override
-    public void render() {
-        debug();
-        renderManager.draw(this);
-    }
-
-    @Override
-    public void resize(int width, int height) {
-        windowData.setWidth(width);
-        windowData.setHeight(height);
-
-        if (activeCamera != null)
-            activeCamera.updateViewport(width, height);
-
-        if (orthoCamera != null)
-            orthoCamera.updateViewport(width, height);
-    }
-
-    @Override
-    public void pause() {
-    }
-
-    @Override
-    public void resume() {
-    }
-
-    @Override
-    public void dispose() {
-        vaoManager.removeWindowVAOs(getWindowID());
-        renderManager.removeWindowResources(this);
-
-        if (context != null)
-            internal.destroyContext(context);
-
-        windowManager.removeWindow(this);
-    }
-
-    // Screen — Main Window Path \\
-
-    @Override
-    public void render(float delta) {
-    }
-
-    @Override
-    public void show() {
-    }
-
-    @Override
-    public void hide() {
     }
 
     // Context \\
@@ -175,6 +111,29 @@ public class WindowInstance extends InstancePackage implements Screen, Applicati
     }
 
     // Accessible \\
+
+    public void resize(int width, int height) {
+
+        windowData.setWidth(width);
+        windowData.setHeight(height);
+
+        if (activeCamera != null)
+            activeCamera.updateViewport(width, height);
+
+        if (orthoCamera != null)
+            orthoCamera.updateViewport(width, height);
+    }
+
+    public void dispose() {
+
+        vaoManager.removeWindowVAOs(getWindowID());
+        renderManager.removeWindowResources(this);
+
+        if (context != null)
+            internal.destroyContext(context);
+
+        windowManager.removeWindow(this);
+    }
 
     public WindowData getWindowData() {
         return windowData;

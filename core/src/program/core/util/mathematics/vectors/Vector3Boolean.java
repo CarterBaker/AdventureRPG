@@ -1,8 +1,8 @@
 package program.core.util.mathematics.vectors;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
-public class Vector3Boolean extends UtilityPackage {
+public class Vector3Boolean extends EngineUtility {
 
     // Data
     public boolean x, y, z;

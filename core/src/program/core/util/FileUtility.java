@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 /*
@@ -15,7 +15,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArraySet;
  * directory validation, filtered file collection at varying depths, extension
  * inspection, path-relative name resolution, and name format conversion.
  */
-public class FileUtility extends UtilityPackage {
+public class FileUtility extends EngineUtility {
 
     // Directory Validation \\
 

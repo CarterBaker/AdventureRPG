@@ -60,7 +60,7 @@ public abstract class ManagerPackage extends SystemPackage {
 
     @Override
     @SuppressWarnings("unchecked")
-    protected <T extends EngineUtility> T create(Class<T> systemClass) {
+    protected <T extends UtilityPackage> T create(Class<T> systemClass) {
         if (systemClass == EnginePackage.class)
             throwException("Only one engine package is allowed at any given time");
 

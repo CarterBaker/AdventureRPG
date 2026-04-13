@@ -1,6 +1,6 @@
 package program.bootstrap.shaderpipeline.uniforms.vectors;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import program.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import program.bootstrap.shaderpipeline.uniforms.UniformType;
 import program.core.util.mathematics.vectors.Vector3Boolean;
@@ -18,7 +18,7 @@ public final class Vector3BooleanUniform extends UniformAttributeStruct<Vector3B
 
     @Override
     protected void push(int handle, Vector3Boolean value) {
-        CoreContext.gl.glUniform3i(handle, value.x ? 1 : 0, value.y ? 1 : 0, value.z ? 1 : 0);
+        EngineContext.gl.glUniform3i(handle, value.x ? 1 : 0, value.y ? 1 : 0, value.z ? 1 : 0);
     }
 
     @Override

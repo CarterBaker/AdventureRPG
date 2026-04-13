@@ -1,6 +1,6 @@
 package program.bootstrap.inputpipeline.inputsystem;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import program.core.input.InputProcessor;
 import program.core.engine.SystemPackage;
 import program.core.util.mathematics.vectors.Vector2;
@@ -13,7 +13,8 @@ public class InputSystem extends SystemPackage implements InputProcessor {
      * methods. No game knowledge — no named keys, no lock state, no handle
      * writing. Any system that needs input reads from this and interprets the
      * state in its own context. captureCursor() is the only platform call
-     * exposed — runtime systems call it rather than touching platform runtime directly.
+     * exposed — runtime systems call it rather than touching platform runtime
+     * directly.
      */
 
     // Internal
@@ -55,7 +56,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     @Override
     protected void start() {
-        CoreContext.input.setInputProcessor(this);
+        EngineContext.input.setInputProcessor(this);
     }
 
     @Override
@@ -68,8 +69,8 @@ public class InputSystem extends SystemPackage implements InputProcessor {
         justPressedSwap = temp;
         justPressedSwap.clear();
 
-        float deltaX = CoreContext.input.getDeltaX() * sensitivity;
-        float deltaY = CoreContext.input.getDeltaY() * sensitivity;
+        float deltaX = EngineContext.input.getDeltaX() * sensitivity;
+        float deltaY = EngineContext.input.getDeltaY() * sensitivity;
         mouseDelta.set(deltaX, deltaY);
     }
 
@@ -146,7 +147,7 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     // Platform \\
 
     public void captureCursor(boolean captured) {
-        CoreContext.input.setCursorCatched(captured);
+        EngineContext.input.setCursorCatched(captured);
     }
 
     // Accessible \\

@@ -417,7 +417,7 @@ Classes covered: **15**
 
 **Type:** `class ItemRegistryUtility`
   
-**Inheritance/implements:** `extends UtilityPackage`
+**Inheritance/implements:** `extends EngineUtility`
   
 **Package:** `program.bootstrap.itempipeline.util`
   
@@ -426,7 +426,7 @@ Classes covered: **15**
 **What this class does:** `ItemRegistryUtility` provides subsystem-specific behavior inferred from its APIs and collaborators in `program.bootstrap.itempipeline.util`.
 
 **Who this class talks to (direct imports):**
-- `program.core.engine.UtilityPackage`
+- `program.core.engine.EngineUtility`
 - `program.core.settings.EngineSetting`
 
 **Method intent:**

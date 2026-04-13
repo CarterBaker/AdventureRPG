@@ -1,6 +1,6 @@
 package program.bootstrap.geometrypipeline.ibomanager;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
@@ -44,8 +44,8 @@ class GLSLUtility {
 
         private static IBOData upload(VAOInstance vaoInstance, short[] indices) {
 
-                GL30 gl30 = CoreContext.gl30;
-                GL20 gl20 = CoreContext.gl20;
+                GL30 gl30 = EngineContext.gl30;
+                GL20 gl20 = EngineContext.gl20;
                 int size = indices.length * Short.BYTES;
 
                 gl30.glBindVertexArray(vaoInstance.getVAOData().getAttributeHandle());
@@ -68,6 +68,6 @@ class GLSLUtility {
         // Removal \\
 
         static void removeIndexData(IBOData iboData) {
-                CoreContext.gl20.glDeleteBuffer(iboData.getIndexHandle());
+                EngineContext.gl20.glDeleteBuffer(iboData.getIndexHandle());
         }
 }

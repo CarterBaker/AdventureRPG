@@ -1,4 +1,4 @@
-package program.core.backends.lwjgl3;
+package program.core.lwjgl3;
 
 public class Lwjgl3WindowConfiguration {
 

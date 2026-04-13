@@ -1,8 +1,8 @@
 package program.core.util.mathematics.vectors;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
-public class Vector4Int extends UtilityPackage {
+public class Vector4Int extends EngineUtility {
 
     // Data
     public int x, y, z, w;

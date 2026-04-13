@@ -1,6 +1,6 @@
 package program.core.engine;
 
-import program.core.engine.EngineUtility.InternalException;
+import program.core.engine.UtilityPackage.InternalException;
 
 enum SystemContext {
 

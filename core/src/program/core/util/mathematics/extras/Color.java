@@ -1,8 +1,8 @@
 package program.core.util.mathematics.extras;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
-public class Color extends UtilityPackage {
+public class Color extends EngineUtility {
 
     // Static Colors \\
 

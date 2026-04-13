@@ -1,6 +1,6 @@
 package program.bootstrap.geometrypipeline.compositebuffermanager;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import program.core.util.graphics.gl.GL20;
 import program.core.util.graphics.gl.GL30;
 import java.nio.ByteBuffer;
@@ -18,7 +18,7 @@ class GLSLUtility {
 
     static int createDynamicInstanceVBO(int maxInstances, int floatsPerInstance) {
 
-        GL20 gl = CoreContext.gl20;
+        GL20 gl = EngineContext.gl20;
         int size = maxInstances * floatsPerInstance * Float.BYTES;
 
         int vbo = gl.glGenBuffer();
@@ -38,8 +38,8 @@ class GLSLUtility {
             int instanceVBOHandle,
             int[] instanceAttrSizes) {
 
-        GL30 gl30 = CoreContext.gl30;
-        GL20 gl20 = CoreContext.gl20;
+        GL30 gl30 = EngineContext.gl30;
+        GL20 gl20 = EngineContext.gl20;
 
         IntBuffer idBuf = ByteBuffer.allocateDirect(Integer.BYTES)
                 .order(ByteOrder.nativeOrder()).asIntBuffer();
@@ -91,7 +91,7 @@ class GLSLUtility {
     // Cleanup \\
 
     static void deleteBuffer(int handle) {
-        CoreContext.gl20.glDeleteBuffer(handle);
+        EngineContext.gl20.glDeleteBuffer(handle);
     }
 
     static void deleteVAO(int handle) {
@@ -100,6 +100,6 @@ class GLSLUtility {
                 .order(ByteOrder.nativeOrder()).asIntBuffer();
         buf.put(handle).flip();
 
-        CoreContext.gl30.glDeleteVertexArrays(1, buf);
+        EngineContext.gl30.glDeleteVertexArrays(1, buf);
     }
 }

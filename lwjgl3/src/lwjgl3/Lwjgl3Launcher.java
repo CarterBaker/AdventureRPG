@@ -2,13 +2,16 @@ package lwjgl3;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import program.core.app.CoreContext;
-import program.core.backends.lwjgl3.Lwjgl3Application;
-import program.core.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import program.core.backends.lwjgl3.Lwjgl3Graphics;
-import program.core.backends.lwjgl3.Lwjgl3Window;
-import program.core.backends.lwjgl3.Lwjgl3WindowAdapter;
-import program.core.engine.Main;
+
+import program.core.engine.EngineContext;
+import program.core.engine.EnginePackage;
+import program.core.engine.GameEngine;
+import program.core.lwjgl3.Lwjgl3Application;
+import program.core.lwjgl3.Lwjgl3ApplicationConfiguration;
+import program.core.lwjgl3.Lwjgl3Graphics;
+import program.core.lwjgl3.Lwjgl3Window;
+import program.core.lwjgl3.Lwjgl3WindowAdapter;
+import program.core.lwjgl3.Lwjgl3WindowPlatform;
 import program.core.settings.EngineSetting;
 import program.core.settings.Loader;
 import program.core.settings.Settings;
@@ -45,24 +48,27 @@ public class Lwjgl3Launcher {
     private static void createApplication() {
 
         File baseGameDir = new File(System.getProperty("user.home"), "Documents/My Games/" + GAME_DIRECTORY);
-
         if (!baseGameDir.exists())
             baseGameDir.mkdirs();
 
         File settingsFile = new File(baseGameDir, "Settings.json");
         Settings settings = Loader.load(settingsFile, ENGINE_GSON);
         Lwjgl3ApplicationConfiguration config = buildConfig(settings);
+        Lwjgl3WindowPlatform platform = new Lwjgl3WindowPlatform();
 
         config.setWindowListener(new Lwjgl3WindowAdapter() {
             @Override
             public boolean closeRequested() {
                 saveWindowInfoOnClose(settingsFile, settings);
-                CoreContext.app.exit();
+                platform.exit();
                 return true;
             }
         });
 
-        new Lwjgl3Application(new Main(baseGameDir, settings, ENGINE_GSON, new Lwjgl3WindowPlatform()), config);
+        EnginePackage.setupConstructor(settings, baseGameDir, ENGINE_GSON, platform);
+        GameEngine engine = new GameEngine();
+
+        new Lwjgl3Application(engine, config, platform);
     }
 
     private static Lwjgl3ApplicationConfiguration buildConfig(Settings settings) {
@@ -85,15 +91,15 @@ public class Lwjgl3Launcher {
 
     private static void saveWindowInfoOnClose(File file, Settings settings) {
 
-        if (!(CoreContext.graphics instanceof Lwjgl3Graphics graphics))
+        if (!(EngineContext.graphics instanceof Lwjgl3Graphics graphics))
             return;
 
         Lwjgl3Window window = graphics.getWindow();
-        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, CoreContext.graphics.getWidth());
-        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, CoreContext.graphics.getHeight());
+        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, EngineContext.graphics.getWidth());
+        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, EngineContext.graphics.getHeight());
         settings.windowX = window.getPositionX();
         settings.windowY = window.getPositionY();
-        settings.fullscreen = CoreContext.graphics.isFullscreen();
+        settings.fullscreen = EngineContext.graphics.isFullscreen();
         Loader.save(file, settings, ENGINE_GSON);
     }
 }

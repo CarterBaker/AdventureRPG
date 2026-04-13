@@ -1,6 +1,6 @@
 package program.bootstrap.menupipeline.element;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
 public enum ElementOrigin {
 
@@ -36,7 +36,7 @@ public enum ElementOrigin {
         for (ElementOrigin o : values())
             if (o.name().equalsIgnoreCase(name))
                 return o;
-        UtilityPackage.throwException("Unknown origin: '" + name + "'");
+        EngineUtility.throwException("Unknown origin: '" + name + "'");
         return null;
     }
 

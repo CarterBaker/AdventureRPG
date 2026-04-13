@@ -16,9 +16,10 @@
 
 package lwjgl3;
 
-import program.core.app.Version;
 import org.lwjgl.system.macosx.LibC;
 import org.lwjgl.system.macosx.ObjCRuntime;
+
+import program.core.settings.EngineSetting;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -101,7 +102,8 @@ public class StartupHelper {
                 String prevUser = System.getProperty("user.name", "legacy backend_User");
                 System.setProperty("java.io.tmpdir", programData + "/legacy backend-temp");
                 System.setProperty("user.name",
-                        ("User_" + prevUser.hashCode() + "_PLATFORM" + Version.VERSION).replace('.', '_'));
+                        ("User_" + prevUser.hashCode() + "_PLATFORM" + EngineSetting.VERSION).replace('.',
+                                '_'));
                 System.setProperty("java.io.tmpdir", prevTmpDir);
                 System.setProperty("user.name", prevUser);
             }

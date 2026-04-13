@@ -1,6 +1,6 @@
 package program.bootstrap.shaderpipeline.uniforms.matrices;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import program.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import program.bootstrap.shaderpipeline.uniforms.UniformType;
 import program.core.util.mathematics.matrices.Matrix4;
@@ -27,7 +27,7 @@ public final class Matrix4DoubleUniform extends UniformAttributeStruct<Matrix4Do
         try (org.lwjgl.system.MemoryStack stack = org.lwjgl.system.MemoryStack.stackPush()) {
             java.nio.FloatBuffer buf = stack.mallocFloat(16);
             buf.put(uniformBuffer.val).flip();
-            CoreContext.gl.glUniformMatrix4fv(handle, 1, false, buf);
+            EngineContext.gl.glUniformMatrix4fv(handle, 1, false, buf);
         }
     }
 

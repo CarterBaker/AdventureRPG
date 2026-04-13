@@ -1,6 +1,6 @@
 package program.core.engine;
 
-public abstract class InstancePackage extends EngineUtility {
+public abstract class InstancePackage extends UtilityPackage {
 
     /*
      * InstancePackages are lightweight, engine-managed objects. They are

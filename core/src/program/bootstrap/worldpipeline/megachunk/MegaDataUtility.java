@@ -1,9 +1,9 @@
 package program.bootstrap.worldpipeline.megachunk;
 
 import program.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
-public final class MegaDataUtility extends UtilityPackage {
+public final class MegaDataUtility extends EngineUtility {
 
     /*
      * Stateless graph walker for MegaData stage transitions. Megas dump in the

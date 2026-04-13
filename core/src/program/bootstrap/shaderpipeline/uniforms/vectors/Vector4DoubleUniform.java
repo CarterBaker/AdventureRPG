@@ -1,6 +1,6 @@
 package program.bootstrap.shaderpipeline.uniforms.vectors;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import program.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import program.bootstrap.shaderpipeline.uniforms.UniformType;
 import program.core.util.mathematics.vectors.Vector4Double;
@@ -18,7 +18,7 @@ public final class Vector4DoubleUniform extends UniformAttributeStruct<Vector4Do
 
     @Override
     protected void push(int handle, Vector4Double value) {
-        CoreContext.gl.glUniform4f(handle, (float) value.x, (float) value.y, (float) value.z, (float) value.w);
+        EngineContext.gl.glUniform4f(handle, (float) value.x, (float) value.y, (float) value.z, (float) value.w);
     }
 
     @Override

@@ -6,11 +6,11 @@ import program.bootstrap.menupipeline.element.ElementOrigin;
 import program.bootstrap.menupipeline.element.ElementType;
 import program.bootstrap.menupipeline.util.DimensionVector2;
 import program.bootstrap.menupipeline.util.LayoutStruct;
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.util.JsonUtility;
 import program.core.util.mathematics.vectors.Vector2;
 
-class FileParserUtility extends UtilityPackage {
+class FileParserUtility extends EngineUtility {
 
     /*
      * Stateless JSON parsing helpers shared by InternalBuilder. Handles

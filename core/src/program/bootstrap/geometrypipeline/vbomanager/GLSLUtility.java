@@ -1,6 +1,6 @@
 package program.bootstrap.geometrypipeline.vbomanager;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -45,8 +45,8 @@ class GLSLUtility {
 
         private static VBOData upload(VAOInstance vaoInstance, float[] vertices) {
 
-                GL30 gl30 = CoreContext.gl30;
-                GL20 gl20 = CoreContext.gl20;
+                GL30 gl30 = EngineContext.gl30;
+                GL20 gl20 = EngineContext.gl20;
                 VAOData vaoData = vaoInstance.getVAOData();
                 int size = vertices.length * Float.BYTES;
 
@@ -82,6 +82,6 @@ class GLSLUtility {
         // Removal \\
 
         static void removeVertexData(VBOData vboData) {
-                CoreContext.gl20.glDeleteBuffer(vboData.getVertexHandle());
+                EngineContext.gl20.glDeleteBuffer(vboData.getVertexHandle());
         }
 }

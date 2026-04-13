@@ -1,9 +1,9 @@
 package program.core.util.mathematics.vectors;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.util.mathematics.extras.Direction2Vector;
 
-public class Vector2Double extends UtilityPackage {
+public class Vector2Double extends EngineUtility {
 
     // Data
     public double x, y;

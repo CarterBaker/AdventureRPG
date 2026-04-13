@@ -1,10 +1,10 @@
 package program.core.util.mathematics.vectors;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.util.mathematics.extras.Coordinate2Long;
 import program.core.util.mathematics.extras.Direction2Vector;
 
-public class Vector2Int extends UtilityPackage {
+public class Vector2Int extends EngineUtility {
 
     // Data
     public int x, y;

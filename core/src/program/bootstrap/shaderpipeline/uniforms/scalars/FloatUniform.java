@@ -1,6 +1,6 @@
 package program.bootstrap.shaderpipeline.uniforms.scalars;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import program.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import program.bootstrap.shaderpipeline.uniforms.UniformType;
 
@@ -17,7 +17,7 @@ public final class FloatUniform extends UniformAttributeStruct<Float> {
 
     @Override
     protected void push(int handle, Float value) {
-        CoreContext.gl.glUniform1f(handle, value);
+        EngineContext.gl.glUniform1f(handle, value);
     }
 
     @Override

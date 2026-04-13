@@ -4,14 +4,14 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
  * Stateless text-parsing helpers for reading and pre-processing GLSL source
  * files. Handles comment stripping, line conversion, and token extraction.
  */
-class FileParserUtility extends UtilityPackage {
+class FileParserUtility extends EngineUtility {
 
     // File Reading \\
 

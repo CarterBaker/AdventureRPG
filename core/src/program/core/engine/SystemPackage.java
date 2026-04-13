@@ -9,7 +9,7 @@ import program.core.kernel.syncconsumer.SyncStructConsumer;
 import program.core.kernel.thread.ThreadHandle;
 import program.core.settings.Settings;
 
-public abstract class SystemPackage extends EngineUtility {
+public abstract class SystemPackage extends UtilityPackage {
 
     /*
      * This is the base class for all systems within the engine.
@@ -137,7 +137,7 @@ public abstract class SystemPackage extends EngineUtility {
     // System Registry \\
 
     @SuppressWarnings("unchecked")
-    protected <T extends EngineUtility> T create(Class<T> targetClass) {
+    protected <T extends UtilityPackage> T create(Class<T> targetClass) {
         if (InstancePackage.class.isAssignableFrom(targetClass))
             return (T) this.createInstance((Class<? extends InstancePackage>) targetClass);
         return throwException(

@@ -25,4 +25,6 @@ public interface WindowPlatform {
     void restoreMainContext();
 
     void syncWindowSize(WindowInstance window);
+
+    void exit();
 }

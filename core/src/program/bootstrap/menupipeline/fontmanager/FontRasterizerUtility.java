@@ -7,10 +7,10 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import program.bootstrap.menupipeline.fonts.FontTileData;
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class FontRasterizerUtility extends UtilityPackage {
+class FontRasterizerUtility extends EngineUtility {
 
     /*
      * Rasterizes a TTF/OTF font file into a list of per-glyph FontTileData

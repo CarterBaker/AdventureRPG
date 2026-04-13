@@ -1,6 +1,6 @@
 package program.bootstrap.geometrypipeline.vaomanager;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
@@ -29,8 +29,8 @@ class GLSLUtility {
 
         static int cloneVAO(int[] attrSizes, int vertexHandle, int indexHandle) {
 
-                GL30 gl30 = CoreContext.gl30;
-                GL20 gl20 = CoreContext.gl20;
+                GL30 gl30 = EngineContext.gl30;
+                GL20 gl20 = EngineContext.gl20;
 
                 IntBuffer id = ByteBuffer
                                 .allocateDirect(Integer.BYTES)
@@ -63,7 +63,7 @@ class GLSLUtility {
 
         private static VAOData createData(int[] attrSizes) {
 
-                GL30 gl = CoreContext.gl30;
+                GL30 gl = EngineContext.gl30;
 
                 IntBuffer id = ByteBuffer
                                 .allocateDirect(Integer.BYTES)
@@ -96,7 +96,7 @@ class GLSLUtility {
                                 .asIntBuffer();
                 buffer.put(vaoData.getAttributeHandle()).flip();
 
-                CoreContext.gl30.glDeleteVertexArrays(1, buffer);
+                EngineContext.gl30.glDeleteVertexArrays(1, buffer);
         }
 
         static void removeVAOInstance(VAOInstance vaoInstance) {
@@ -112,7 +112,7 @@ class GLSLUtility {
                                 .asIntBuffer();
                 buffer.put(vao).flip();
 
-                CoreContext.gl30.glDeleteVertexArrays(1, buffer);
+                EngineContext.gl30.glDeleteVertexArrays(1, buffer);
         }
 
         static void removeVAOHandle(int vao) {
@@ -126,6 +126,6 @@ class GLSLUtility {
                                 .asIntBuffer();
                 buffer.put(vao).flip();
 
-                CoreContext.gl30.glDeleteVertexArrays(1, buffer);
+                EngineContext.gl30.glDeleteVertexArrays(1, buffer);
         }
 }

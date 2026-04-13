@@ -195,7 +195,7 @@ Classes covered: **35**
 **What this class does:** `ElementOrigin` provides subsystem-specific behavior inferred from its APIs and collaborators in `program.bootstrap.menupipeline.element`.
 
 **Who this class talks to (direct imports):**
-- `program.core.engine.UtilityPackage`
+- `program.core.engine.EngineUtility`
 
 **Method intent:**
 - `package  ElementOrigin(float x, float y)` — Performs class-specific logic; see call sites and owning manager flow.
@@ -299,7 +299,7 @@ Classes covered: **35**
 
 **Type:** `class FontRasterizerUtility`
   
-**Inheritance/implements:** `extends UtilityPackage`
+**Inheritance/implements:** `extends EngineUtility`
   
 **Package:** `program.bootstrap.menupipeline.fontmanager`
   
@@ -309,7 +309,7 @@ Classes covered: **35**
 
 **Who this class talks to (direct imports):**
 - `program.bootstrap.menupipeline.fonts.FontTileData`
-- `program.core.engine.UtilityPackage`
+- `program.core.engine.EngineUtility`
 
 **Method intent:**
 - `package ObjectArrayList<FontTileData> rasterize(File fontFile, int size, String charset, InternalBuilder builder)` — Performs class-specific logic; see call sites and owning manager flow. Called via static reference from: `core/src/program/bootstrap/menupipeline/fontmanager/InternalBuilder.java`.
@@ -323,7 +323,7 @@ Classes covered: **35**
 
 **Type:** `class GLSLUtility`
   
-**Inheritance/implements:** `extends UtilityPackage`
+**Inheritance/implements:** `extends EngineUtility`
   
 **Package:** `program.bootstrap.menupipeline.fontmanager`
   
@@ -332,10 +332,10 @@ Classes covered: **35**
 **What this class does:** `GLSLUtility` provides subsystem-specific behavior inferred from its APIs and collaborators in `program.bootstrap.menupipeline.fontmanager`.
 
 **Who this class talks to (direct imports):**
-- `program.core.app.CoreContext`
+- `program.core.app.EngineContext`
 - `program.core.util.graphics.gl.GL20`
 - `program.core.util.image.Pixmap`
-- `program.core.engine.UtilityPackage`
+- `program.core.engine.EngineUtility`
 - `program.core.util.PixmapUtility`
 
 **Method intent:**
@@ -783,7 +783,7 @@ Classes covered: **35**
 
 **Type:** `class FileParserUtility`
   
-**Inheritance/implements:** `extends UtilityPackage`
+**Inheritance/implements:** `extends EngineUtility`
   
 **Package:** `program.bootstrap.menupipeline.menumanager`
   
@@ -796,7 +796,7 @@ Classes covered: **35**
 - `program.bootstrap.menupipeline.element.ElementType`
 - `program.bootstrap.menupipeline.util.DimensionVector2`
 - `program.bootstrap.menupipeline.util.LayoutStruct`
-- `program.core.engine.UtilityPackage`
+- `program.core.engine.EngineUtility`
 - `program.core.util.JsonUtility`
 - `program.core.util.mathematics.vectors.Vector2`
 

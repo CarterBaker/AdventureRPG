@@ -1,11 +1,11 @@
 package program.core.util;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.util.image.Pixmap;
 
 import java.awt.image.BufferedImage;
 
-public class PixmapUtility extends UtilityPackage {
+public class PixmapUtility extends EngineUtility {
 
     /*
      * Converts a BufferedImage to a Pixmap with ARGB to RGBA repacking.

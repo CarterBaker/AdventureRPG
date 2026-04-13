@@ -1,16 +1,15 @@
-package program.core.backends.lwjgl3;
+package program.core.lwjgl3;
 
-import program.core.app.Application;
-import program.core.app.ApplicationListener;
-import program.core.app.CoreContext;
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineContext;
+import program.core.engine.EnginePackage;
+import program.core.engine.EngineState;
+import program.core.engine.EngineUtility;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
-import org.lwjgl.opengl.GLCapabilities;
 
-public class Lwjgl3Application implements Application {
+public class Lwjgl3Application {
 
     /*
      * Entry point for the LWJGL3 backend. Owns the main GLFW window and primary
@@ -21,7 +20,7 @@ public class Lwjgl3Application implements Application {
 
     // Internal
     private final long mainHandle;
-    private final ApplicationListener listener;
+    private final EnginePackage engine;
     private final Lwjgl3Graphics graphics;
     private final Lwjgl3Input input;
     private final int glMajor;
@@ -33,13 +32,16 @@ public class Lwjgl3Application implements Application {
     // State
     private boolean running;
 
-    public Lwjgl3Application(ApplicationListener listener, Lwjgl3ApplicationConfiguration config) {
+    public Lwjgl3Application(
+            EnginePackage engine,
+            Lwjgl3ApplicationConfiguration config,
+            Lwjgl3WindowPlatform platform) {
 
         this.secondaryWindows = new ObjectArrayList<>();
         this.running = true;
 
         if (!GLFW.glfwInit())
-            UtilityPackage.throwException("Unable to initialize GLFW");
+            EngineUtility.throwException("Unable to initialize GLFW");
 
         this.glMajor = config.getGlMajor();
         this.glMinor = config.getGlMinor();
@@ -50,7 +52,7 @@ public class Lwjgl3Application implements Application {
 
         if (mainHandle == 0L) {
             GLFW.glfwTerminate();
-            UtilityPackage.throwException("Failed to create GLFW window");
+            EngineUtility.throwException("Failed to create GLFW window");
         }
 
         if (config.getWindowX() >= 0 && config.getWindowY() >= 0)
@@ -62,23 +64,22 @@ public class Lwjgl3Application implements Application {
 
         this.input = new Lwjgl3Input(mainHandle);
         this.graphics = new Lwjgl3Graphics(config.width, config.height, config.isFullscreen());
-        this.listener = listener;
+        this.engine = engine;
 
         graphics.setWindow(new Lwjgl3Window(mainHandle, input));
 
         Lwjgl3GL gl = new Lwjgl3GL();
-        CoreContext.app = this;
-        CoreContext.graphics = graphics;
-        CoreContext.input = input;
-        CoreContext.gl = gl;
-        CoreContext.gl20 = gl;
-        CoreContext.gl30 = gl;
+        EngineContext.graphics = graphics;
+        EngineContext.input = input;
+        EngineContext.gl = gl;
+        EngineContext.gl20 = gl;
+        EngineContext.gl30 = gl;
 
         registerCallbacks(mainHandle, input, config.getWindowListener());
 
-        listener.create();
+        platform.setApplication(this);
+
         loop();
-        listener.dispose();
 
         for (int i = 0; i < secondaryWindows.size(); i++)
             GLFW.glfwDestroyWindow(secondaryWindows.get(i).getHandle());
@@ -121,7 +122,8 @@ public class Lwjgl3Application implements Application {
 
         while (running && !GLFW.glfwWindowShouldClose(mainHandle)) {
             long now = System.nanoTime();
-            graphics.setDelta((now - last) / 1_000_000_000f);
+            float delta = (now - last) / 1_000_000_000f;
+            graphics.setDelta(delta);
             last = now;
 
             input.endFrame();
@@ -130,8 +132,10 @@ public class Lwjgl3Application implements Application {
                 secondaryWindows.get(i).getInput().endFrame();
 
             GLFW.glfwPollEvents();
-            listener.render();
+            engine.execute(delta);
         }
+
+        engine.shutdown();
     }
 
     // Accessible \\
@@ -142,7 +146,7 @@ public class Lwjgl3Application implements Application {
         long handle = GLFW.glfwCreateWindow(config.width, config.height, config.title, 0L, mainHandle);
 
         if (handle == 0L)
-            UtilityPackage.throwException("Failed to create secondary window: " + config.title);
+            EngineUtility.throwException("Failed to create secondary window: " + config.title);
 
         Lwjgl3Input windowInput = new Lwjgl3Input(handle);
         registerCallbacks(handle, windowInput, null);
@@ -163,7 +167,6 @@ public class Lwjgl3Application implements Application {
         }
     }
 
-    @Override
     public void exit() {
         running = false;
     }

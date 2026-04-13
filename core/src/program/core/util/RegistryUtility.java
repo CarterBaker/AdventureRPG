@@ -1,6 +1,6 @@
 package program.core.util;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.settings.EngineSetting;
 
 /*
@@ -8,7 +8,7 @@ import program.core.settings.EngineSetting;
  * Uses FNV-1a to guarantee the same name always produces the same ID across
  * runs, machines, and load orders — making IDs safe to persist in save files.
  */
-public class RegistryUtility extends UtilityPackage {
+public class RegistryUtility extends EngineUtility {
 
     // Constants \\
 

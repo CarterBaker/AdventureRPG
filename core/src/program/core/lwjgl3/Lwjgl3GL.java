@@ -1,6 +1,6 @@
-package program.core.backends.lwjgl3;
+package program.core.lwjgl3;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.util.graphics.gl.GL30;
 import org.lwjgl.opengl.*;
 import java.nio.*;
@@ -267,7 +267,7 @@ class Lwjgl3GL implements GL30 {
         else if (pixels == null)
             GL11.glTexImage2D(target, level, internalformat, width, height, border, format, type, (ByteBuffer) null);
         else
-            UtilityPackage.throwException("Unsupported pixel buffer type: " + pixels.getClass().getSimpleName());
+            EngineUtility.throwException("Unsupported pixel buffer type: " + pixels.getClass().getSimpleName());
     }
 
     public void glTexImage3D(

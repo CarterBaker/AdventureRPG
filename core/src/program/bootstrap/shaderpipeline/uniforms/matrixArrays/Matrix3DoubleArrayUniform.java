@@ -1,6 +1,6 @@
 package program.bootstrap.shaderpipeline.uniforms.matrixArrays;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import program.core.util.memory.BufferUtils;
 import program.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import program.bootstrap.shaderpipeline.uniforms.UniformType;
@@ -35,7 +35,7 @@ public final class Matrix3DoubleArrayUniform extends UniformAttributeStruct<Obje
                 uniformBuffer.put((float) m.val[j]);
         }
         uniformBuffer.flip();
-        CoreContext.gl.glUniformMatrix3fv(handle, elementCount, false, uniformBuffer);
+        EngineContext.gl.glUniformMatrix3fv(handle, elementCount, false, uniformBuffer);
     }
 
     @Override

@@ -1,6 +1,6 @@
 package program.bootstrap.shaderpipeline.uniforms.vectors;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import program.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import program.bootstrap.shaderpipeline.uniforms.UniformType;
 import program.core.util.mathematics.vectors.Vector4Int;
@@ -18,7 +18,7 @@ public final class Vector4IntUniform extends UniformAttributeStruct<Vector4Int> 
 
     @Override
     protected void push(int handle, Vector4Int value) {
-        CoreContext.gl.glUniform4i(handle, value.x, value.y, value.z, value.w);
+        EngineContext.gl.glUniform4i(handle, value.x, value.y, value.z, value.w);
     }
 
     @Override

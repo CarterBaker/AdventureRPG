@@ -2,7 +2,7 @@ package program.core.util.image;
 
 import javax.imageio.ImageIO;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -44,7 +44,7 @@ public class Pixmap {
         try {
             image = ImageIO.read(file);
         } catch (IOException e) {
-            UtilityPackage.throwException("Failed loading image: " + file.getPath(), e);
+            EngineUtility.throwException("Failed loading image: " + file.getPath(), e);
             throw new AssertionError();
         }
 

@@ -1,9 +1,9 @@
 package program.bootstrap.itempipeline.util;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.settings.EngineSetting;
 
-public class ItemRegistryUtility extends UtilityPackage {
+public class ItemRegistryUtility extends EngineUtility {
 
     /*
      * Int ID layout (32 bits):

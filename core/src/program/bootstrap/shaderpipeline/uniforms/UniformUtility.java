@@ -10,11 +10,11 @@ import program.bootstrap.shaderpipeline.uniforms.scalarArrays.*;
 import program.bootstrap.shaderpipeline.uniforms.scalars.*;
 import program.bootstrap.shaderpipeline.uniforms.vectorarrays.*;
 import program.bootstrap.shaderpipeline.uniforms.vectors.*;
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.util.mathematics.matrices.*;
 import program.core.util.mathematics.vectors.*;
 
-public final class UniformUtility extends UtilityPackage {
+public final class UniformUtility extends EngineUtility {
 
     /*
      * Stateless helpers for std140 layout calculation, UniformAttributeStruct

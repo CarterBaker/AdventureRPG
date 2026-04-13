@@ -3,7 +3,7 @@
 ## Package Hierarchy
 
 ```
-EngineUtility
+UtilityPackage
 ├── StructPackage           ← independent, no lifecycle, no engine timing
 │   └── DataPackage         ← raw data payload held inside a Handle or Instance
 └── InstancePackage         ← engine-managed, lifecycle-aware
@@ -304,10 +304,10 @@ Use a pre-allocated `StringBuilder` or avoid string building entirely.
 
 ## GLSLUtility Pattern
 
-Stateless OpenGL helper classes extend `UtilityPackage`, are package-private, one per package. Never hold state. All methods `static`. One per package that needs them — do not share across packages.
+Stateless OpenGL helper classes extend `EngineUtility`, are package-private, one per package. Never hold state. All methods `static`. One per package that needs them — do not share across packages.
 
 ```java
-class GLSLUtility extends UtilityPackage {
+class GLSLUtility extends EngineUtility {
     static void enableDepth() { ... }
     static void drawElements(int indexCount) { ... }
 }

@@ -1,12 +1,9 @@
 package program.core.engine;
 
-import program.core.app.CoreContext;
 import java.io.File;
 import java.time.Instant;
 import java.util.concurrent.Future;
 
-import program.core.app.Game;
-import program.core.app.Screen;
 import com.google.gson.Gson;
 
 import program.core.kernel.syncconsumer.AsyncStructConsumer;
@@ -30,32 +27,20 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class EnginePackage extends ManagerPackage {
 
     /*
-     * This is the main class that drives the entire game engine.
-     * EnginePackage serves as the root of the system hierarchy and
-     * manages the core game loop, global state machine, and master
-     * system registry. It contains a built-in bootstrap phase to
-     * ensure necessary systems are initialized before standard
-     * lifecycle operations begin.
-     *
-     * Key responsibilities:
-     * - Global system registry and retrieval
-     * - State machine execution (BOOTSTRAP → CREATE → START → UPDATE → EXIT)
-     * - Frame timing and fixed timestep updates
-     * - Root lifecycle propagation to all created systems
-     * - Runtime context creation, pairing, and destruction
+     * Root of the system hierarchy. Drives the core game loop, global state
+     * machine, and master system registry. Owns bootstrap, context management,
+     * frame timing, and lifecycle propagation to all registered systems.
      */
 
     // Core
     static final ThreadLocal<EngineStruct> ENGINE_STRUCT = new ThreadLocal<>();
 
     // Root
-    public final Game game;
     public final File path;
     public final Gson gson;
     public final WindowPlatform windowPlatform;
 
     // Internal
-    private Screen screen;
     private EngineState engineState;
     private InternalThreadManager internalThreadManager;
     private WindowManager windowManager;
@@ -80,17 +65,14 @@ public class EnginePackage extends ManagerPackage {
 
     EnginePackage() {
 
-        // Internal Manager Package
         super(ENGINE_STRUCT.get() != null ? ENGINE_STRUCT.get().settings : null);
 
-        // Core
         EngineStruct data = ENGINE_STRUCT.get();
 
         if (data == null)
             throwException("Engine must be created via EnginePackage.setupConstructor()");
 
         // Root
-        this.game = data.game;
         this.path = data.path;
         this.gson = data.gson;
         this.windowPlatform = data.windowPlatform;
@@ -114,14 +96,12 @@ public class EnginePackage extends ManagerPackage {
     static final class EngineStruct extends StructPackage {
 
         /*
-         * A container used to ensure proper engine creation from Main or MainEditor.
-         * Bypasses constructor timing issues and carries all root references through
-         * to EnginePackage in one shot.
+         * Carries all root references through to EnginePackage during
+         * construction. Bypasses constructor timing issues in one shot.
          */
 
         // Internal
         final Settings settings;
-        final Game game;
         final File path;
         final Gson gson;
         final WindowPlatform windowPlatform;
@@ -130,14 +110,12 @@ public class EnginePackage extends ManagerPackage {
 
         EngineStruct(
                 Settings settings,
-                Game game,
                 File path,
                 Gson gson,
                 WindowPlatform windowPlatform) {
 
             // Identity
             this.settings = settings;
-            this.game = game;
             this.path = path;
             this.gson = gson;
             this.windowPlatform = windowPlatform;
@@ -146,14 +124,12 @@ public class EnginePackage extends ManagerPackage {
 
     public static void setupConstructor(
             Settings settings,
-            Game game,
             File path,
             Gson gson,
             WindowPlatform windowPlatform) {
         ENGINE_STRUCT.set(
                 new EngineStruct(
                         settings,
-                        game,
                         path,
                         gson,
                         windowPlatform));
@@ -258,19 +234,14 @@ public class EnginePackage extends ManagerPackage {
             window.setContext(context);
 
             this.pendingContextList.add(context);
-
             this.windowPlatform.makeContextCurrent(window);
 
             primeContextLifecycle(context);
 
             return context;
-        }
-
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new InternalException("Failed to create context: " + contextClass.getSimpleName(), e);
-        }
-
-        finally {
+        } finally {
             this.windowPlatform.restoreMainContext();
             SystemPackage.SYSTEM_STRUCT.remove();
         }
@@ -293,9 +264,7 @@ public class EnginePackage extends ManagerPackage {
 
             this.internalContext = SystemContext.RELEASE;
             context.internalRelease();
-        }
-
-        finally {
+        } finally {
             this.windowManager.endContextWindow();
             this.internalContext = previousContext;
         }
@@ -388,7 +357,12 @@ public class EnginePackage extends ManagerPackage {
 
     // Game State \\
 
-    final void execute() {
+    public final void execute(float delta) {
+        this.deltaTime = delta;
+        execute();
+    }
+
+    private void execute() {
         switch (engineState) {
             case KERNEL -> this.kernelCycle();
             case BOOTSTRAP -> this.bootstrapCycle();
@@ -399,13 +373,11 @@ public class EnginePackage extends ManagerPackage {
         }
     }
 
-    // Kernel Cycle
     private final void kernelCycle() {
         this.internalKernel();
         preFrameCycle(EngineState.BOOTSTRAP);
     }
 
-    // Bootstrap Cycle
     private final void bootstrapCycle() {
         this.internalBootstrap();
         this.createGameWindow();
@@ -420,7 +392,6 @@ public class EnginePackage extends ManagerPackage {
         this.execute();
     }
 
-    // Create Cycle
     private final void createCycle() {
         this.internalCreate();
         this.internalGet();
@@ -429,13 +400,11 @@ public class EnginePackage extends ManagerPackage {
         this.setInternalState(EngineState.START);
     }
 
-    // Start Cycle
     private final void startCycle() {
         this.internalStart();
         this.setInternalState(EngineState.UPDATE);
     }
 
-    // Update Cycle
     private final void updateCycle() {
         this.flushPendingContexts();
         this.internalUpdate();
@@ -445,7 +414,6 @@ public class EnginePackage extends ManagerPackage {
         this.internalDraw();
     }
 
-    // Exit Cycle
     private final void exitCycle() {
         this.internalDispose();
     }
@@ -665,10 +633,6 @@ public class EnginePackage extends ManagerPackage {
         this.frameCount++;
     }
 
-    final void setDeltaTime(float delta) {
-        this.deltaTime = delta;
-    }
-
     private final void createGameWindow() {
 
         WindowInstance mainWindow = create(WindowInstance.class);
@@ -680,9 +644,6 @@ public class EnginePackage extends ManagerPackage {
 
         WindowManager windowManager = getUnchecked(WindowManager.class);
         windowManager.registerMainWindow(mainWindow);
-
-        this.screen = mainWindow;
-        this.game.setScreen(screen);
     }
 
     public CameraInstance createCamera(float fov, float width, float height) {
@@ -712,10 +673,15 @@ public class EnginePackage extends ManagerPackage {
     }
 
     public final long getTime() {
-        return frameTimeMillis;
+        return this.frameTimeMillis;
     }
 
     public final void closeGame() {
-        CoreContext.app.exit();
+        this.windowPlatform.exit();
+    }
+
+    public final void shutdown() {
+        this.engineState = EngineState.EXIT;
+        execute(0f);
     }
 }

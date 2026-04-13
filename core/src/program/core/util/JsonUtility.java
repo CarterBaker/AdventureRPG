@@ -6,9 +6,9 @@ import java.io.FileReader;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
-public class JsonUtility extends UtilityPackage {
+public class JsonUtility extends EngineUtility {
 
     // Loaders \\
 

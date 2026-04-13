@@ -5,7 +5,7 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.util.atlas.AtlasTileData;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -22,7 +22,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
  * Compositing is handled separately by each pipeline's builder since alias
  * layer structure differs between systems.
  */
-public class AtlasUtility extends UtilityPackage {
+public class AtlasUtility extends EngineUtility {
 
     // Entry Point \\
 

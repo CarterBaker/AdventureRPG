@@ -2,13 +2,16 @@ package lwjgl3;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import program.core.app.CoreContext;
-import program.core.backends.lwjgl3.Lwjgl3Application;
-import program.core.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import program.core.backends.lwjgl3.Lwjgl3Graphics;
-import program.core.backends.lwjgl3.Lwjgl3Window;
-import program.core.backends.lwjgl3.Lwjgl3WindowAdapter;
-import program.core.engine.MainEditor;
+
+import program.core.engine.EditorEngine;
+import program.core.engine.EngineContext;
+import program.core.engine.EnginePackage;
+import program.core.lwjgl3.Lwjgl3Application;
+import program.core.lwjgl3.Lwjgl3ApplicationConfiguration;
+import program.core.lwjgl3.Lwjgl3Graphics;
+import program.core.lwjgl3.Lwjgl3Window;
+import program.core.lwjgl3.Lwjgl3WindowAdapter;
+import program.core.lwjgl3.Lwjgl3WindowPlatform;
 import program.core.settings.EngineSetting;
 import program.core.settings.Loader;
 import program.core.settings.Settings;
@@ -18,8 +21,8 @@ import java.io.File;
 public class Lwjgl3LauncherEditor {
 
     /*
-     * Entry point for the editor. Loads editor settings, configures the GLFW window
-     * at GL 4.1, and hands control to Lwjgl3Application.
+     * Entry point for the editor. Loads editor settings, configures the GLFW
+     * window at GL 4.1, and hands control to Lwjgl3Application.
      */
 
     // Identity
@@ -45,24 +48,27 @@ public class Lwjgl3LauncherEditor {
     private static void createApplication() {
 
         File baseGameDir = new File(System.getProperty("user.home"), "Documents/My Games/" + GAME_DIRECTORY);
-
         if (!baseGameDir.exists())
             baseGameDir.mkdirs();
 
         File settingsFile = new File(baseGameDir, "EditorSettings.json");
         Settings settings = Loader.load(settingsFile, ENGINE_GSON);
         Lwjgl3ApplicationConfiguration config = buildConfig(settings);
+        Lwjgl3WindowPlatform platform = new Lwjgl3WindowPlatform();
 
         config.setWindowListener(new Lwjgl3WindowAdapter() {
             @Override
             public boolean closeRequested() {
                 saveWindowInfoOnClose(settingsFile, settings);
-                CoreContext.app.exit();
+                platform.exit();
                 return true;
             }
         });
 
-        new Lwjgl3Application(new MainEditor(baseGameDir, settings, ENGINE_GSON, new Lwjgl3WindowPlatform()), config);
+        EnginePackage.setupConstructor(settings, baseGameDir, ENGINE_GSON, platform);
+        EditorEngine engine = new EditorEngine();
+
+        new Lwjgl3Application(engine, config, platform);
     }
 
     private static Lwjgl3ApplicationConfiguration buildConfig(Settings settings) {
@@ -87,15 +93,15 @@ public class Lwjgl3LauncherEditor {
 
     private static void saveWindowInfoOnClose(File file, Settings settings) {
 
-        if (!(CoreContext.graphics instanceof Lwjgl3Graphics graphics))
+        if (!(EngineContext.graphics instanceof Lwjgl3Graphics graphics))
             return;
 
         Lwjgl3Window window = graphics.getWindow();
-        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, CoreContext.graphics.getWidth());
-        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, CoreContext.graphics.getHeight());
+        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, EngineContext.graphics.getWidth());
+        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, EngineContext.graphics.getHeight());
         settings.windowX = window.getPositionX();
         settings.windowY = window.getPositionY();
-        settings.fullscreen = CoreContext.graphics.isFullscreen();
+        settings.fullscreen = EngineContext.graphics.isFullscreen();
         Loader.save(file, settings, ENGINE_GSON);
     }
 }

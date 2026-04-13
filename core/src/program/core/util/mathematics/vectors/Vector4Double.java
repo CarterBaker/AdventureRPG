@@ -1,8 +1,8 @@
 package program.core.util.mathematics.vectors;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
-public class Vector4Double extends UtilityPackage {
+public class Vector4Double extends EngineUtility {
 
     // Data
     public double x, y, z, w;

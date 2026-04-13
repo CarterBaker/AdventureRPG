@@ -1,6 +1,6 @@
 package program.bootstrap.shaderpipeline.uniforms.vectors;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import program.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import program.bootstrap.shaderpipeline.uniforms.UniformType;
 import program.core.util.mathematics.vectors.Vector3;
@@ -19,7 +19,7 @@ public final class Vector3Uniform extends UniformAttributeStruct<Object> {
     @Override
     protected void push(int handle, Object value) {
         if (value instanceof Vector3 vector)
-            CoreContext.gl.glUniform3f(handle, vector.x, vector.y, vector.z);
+            EngineContext.gl.glUniform3f(handle, vector.x, vector.y, vector.z);
         else
             throw new IllegalArgumentException("push(int, Vector3): got " + value.getClass());
     }

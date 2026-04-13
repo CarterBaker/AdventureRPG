@@ -1,10 +1,6 @@
-package lwjgl3;
+package program.core.lwjgl3;
 
-import program.core.app.CoreContext;
-import program.core.backends.lwjgl3.Lwjgl3Application;
-import program.core.backends.lwjgl3.Lwjgl3Graphics;
-import program.core.backends.lwjgl3.Lwjgl3Window;
-import program.core.backends.lwjgl3.Lwjgl3WindowConfiguration;
+import program.core.engine.EngineContext;
 import program.core.engine.WindowPlatform;
 import program.core.kernel.window.WindowInstance;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -20,10 +16,12 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     /*
      * Bridges the engine WindowPlatform contract to raw GLFW. Maps engine window
-     * IDs
-     * to native Lwjgl3Window instances. All windows — main and secondary — share
-     * identical open, draw, swap, and destroy paths with no special casing.
+     * IDs to native Lwjgl3Window instances. All windows — main and secondary —
+     * share identical open, draw, swap, and destroy paths with no special casing.
      */
+
+    // Application
+    private Lwjgl3Application application;
 
     // Window Registry
     private static final int MAIN_WINDOW_ID = 0;
@@ -34,6 +32,10 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     public Lwjgl3WindowPlatform() {
         handle2WindowID.defaultReturnValue(UNKNOWN_WINDOW_ID);
+    }
+
+    public void setApplication(Lwjgl3Application application) {
+        this.application = application;
     }
 
     // Internal \\
@@ -65,7 +67,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
         long handle = nativeWindow.getHandle();
         handle2WindowID.remove(handle);
-        ((Lwjgl3Application) CoreContext.app).removeSecondaryWindow(handle);
+        application.removeSecondaryWindow(handle);
         GLFW.glfwDestroyWindow(handle);
         windowID2Capabilities.remove(window.getWindowID());
         window.setNativeHandle(0L);
@@ -105,26 +107,34 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     @Override
     public void restoreMainContext() {
-        if (!(CoreContext.graphics instanceof Lwjgl3Graphics graphics))
+        if (!(EngineContext.graphics instanceof Lwjgl3Graphics graphics))
             return;
 
         bindContext(MAIN_WINDOW_ID, graphics.getWindow().getHandle());
     }
 
+    @Override
+    public void exit() {
+        Lwjgl3Window main = windowID2Native.get(MAIN_WINDOW_ID);
+        if (main != null)
+            GLFW.glfwSetWindowShouldClose(main.getHandle(), true);
+    }
+
     private Lwjgl3Window resolveOrCreateNativeWindow(WindowInstance window) {
+
         Lwjgl3Window nativeWindow = windowID2Native.get(window.getWindowID());
 
         if (nativeWindow != null)
             return nativeWindow;
 
         if (window.getWindowID() == MAIN_WINDOW_ID
-                && CoreContext.graphics instanceof Lwjgl3Graphics graphics)
+                && EngineContext.graphics instanceof Lwjgl3Graphics graphics)
             return graphics.getWindow();
 
         Lwjgl3WindowConfiguration config = new Lwjgl3WindowConfiguration();
         config.setTitle(window.getTitle());
         config.setWindowedMode(window.getWidth(), window.getHeight());
-        return ((Lwjgl3Application) CoreContext.app).newWindow(config);
+        return application.newWindow(config);
     }
 
     private void primeWindowContext(int windowID, long windowHandle) {

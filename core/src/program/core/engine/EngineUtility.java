@@ -1,122 +1,76 @@
 package program.core.engine;
 
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-
 public abstract class EngineUtility {
 
     /*
-     * Base utility class shared by all engine-level systems.
+     * EngineUtility provides engine-level diagnostics and exception
+     * handling to static utility classes.
      *
-     * Provides:
-     * - Standardized debug and logging output
-     * - Centralized fatal exception handling
-     * - Common timing utilities
+     * Since static helpers cannot extend UtilityPackage directly,
+     * this class exposes a shared internal UtilityPackage instance
+     * and forwards its functionality through static methods.
      *
-     * Intended to enforce consistent diagnostics and failure
-     * behavior across the engine.
+     * This allows static systems to participate in the same
+     * debugging and failure-reporting infrastructure as the rest
+     * of the engine.
      */
 
-    // Internal
-    protected final String packageName = getClass().getPackage() != null
-            ? getClass().getPackage().getName()
-            : "<default>";
+    // Internal \\
 
-    protected final String systemName = getClass().getSimpleName();
+    protected static final UtilityPackage UTILITY = new UtilityPackage() {
+    };
 
     // Debug \\
 
-    protected final void debug() {
-        debug("");
+    public static void debug() {
+        UTILITY.debug();
     }
 
-    protected final void debug(Object input) {
-        System.out.println("(" + packageName + ")");
-        System.out.println("[" + systemName + "] " + String.valueOf(input));
+    public static void debug(Object input) {
+        UTILITY.debug(input);
     }
 
-    protected final void timeStampDebug(Object input) {
-        debug("[" + timeStamp() + "] " + String.valueOf(input));
+    public static void timeStampDebug(Object input) {
+        UTILITY.timeStampDebug(input);
     }
 
     // Log \\
 
-    protected final void log(Object input) {
-        System.out.println(String.valueOf(input));
+    public static void log(Object input) {
+        UTILITY.log(input);
     }
 
-    protected final void errorLog(Object input) {
-        System.err.println(String.valueOf(input));
+    public static void errorLog(Object input) {
+        UTILITY.errorLog(input);
     }
 
-    protected final void timeStampLog(Object input) {
-        System.out.println("[" + timeStamp() + "] " + String.valueOf(input));
+    public static void timeStampLog(Object input) {
+        UTILITY.timeStampLog(input);
     }
 
     // Exception Handling \\
 
-    protected final <T> T throwException() {
-        return throwException("Unspecified fatal error", null);
+    public static <T> T throwException() {
+        return UTILITY.throwException();
     }
 
-    protected final <T> T throwException(String message) {
-        return throwException(message, null);
+    public static <T> T throwException(String message) {
+        return UTILITY.throwException(message);
     }
 
-    protected final <T> T throwException(Throwable cause) {
-        return throwException("Unspecified fatal error", cause);
+    public static <T> T throwException(Throwable cause) {
+        return UTILITY.throwException(cause);
     }
 
-    protected final <T> T throwException(String message, Throwable cause) {
-        logFatal(message, cause);
-        throw new InternalException("[" + systemName + "] " + message, cause);
+    public static <T> T throwException(String message, Throwable cause) {
+        return UTILITY.throwException(message, cause);
     }
 
-    protected final <T> T throwException(Object input) {
-        return throwException(String.valueOf(input), null);
+    public static <T> T throwException(Object input) {
+        return UTILITY.throwException(input);
     }
 
-    protected final <T> T throwException(Object input, Throwable cause) {
-        return throwException(String.valueOf(input), cause);
-    }
-
-    // Utility \\
-
-    private final String timeStamp() {
-        return LocalTime.now().format(TIME_FORMAT);
-    }
-
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-
-    public static class InternalException extends RuntimeException {
-
-        public InternalException(String message) {
-            super(message);
-        }
-
-        public InternalException(String message, Throwable cause) {
-            super(message, cause);
-        }
-    }
-
-    private void logFatal(String message, Throwable cause) {
-
-        log("========Internal Engine Failure========");
-
-        log("");
-
-        log("Package   : " + packageName);
-        log("System    : " + systemName);
-        log("Time      : " + timeStamp());
-        errorLog("Message   : " + message);
-
-        log("");
-
-        if (cause != null) {
-            log("Cause:");
-            cause.printStackTrace(System.err);
-        }
-
-        log("=======================================");
+    public static <T> T throwException(Object input, Throwable cause) {
+        return UTILITY.throwException(input, cause);
     }
 }

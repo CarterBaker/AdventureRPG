@@ -1,4 +1,4 @@
-package program.core.backends.lwjgl3;
+package program.core.lwjgl3;
 
 import program.core.input.Input;
 import program.core.input.InputProcessor;

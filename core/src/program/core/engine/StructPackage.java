@@ -1,6 +1,6 @@
 package program.core.engine;
 
-public abstract class StructPackage extends EngineUtility {
+public abstract class StructPackage extends UtilityPackage {
 
     /*
      * StructPackages are intended to serve as long-lived data containers

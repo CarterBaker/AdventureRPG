@@ -1,8 +1,8 @@
 package program.core.util.mathematics.matrices;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
-public class Matrix3Double extends UtilityPackage {
+public class Matrix3Double extends EngineUtility {
 
     // Data
     public final double[] val = new double[9];

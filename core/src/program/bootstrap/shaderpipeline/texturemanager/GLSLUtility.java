@@ -1,13 +1,13 @@
 package program.bootstrap.shaderpipeline.texturemanager;
 
-import program.core.app.CoreContext;
+import program.core.engine.EngineContext;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 
 import program.core.util.graphics.gl.GL20;
 import program.core.util.graphics.gl.GL30;
 import program.core.util.image.Pixmap;
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 import program.core.settings.EngineSetting;
 import program.core.util.PixmapUtility;
 
@@ -16,7 +16,7 @@ import program.core.util.PixmapUtility;
  * Pixel conversion is delegated to PixmapUtility. Atlas images are already
  * flipped at composite time — no flip applied here.
  */
-class GLSLUtility extends UtilityPackage {
+class GLSLUtility extends EngineUtility {
 
     // GPU Upload \\
 
@@ -37,16 +37,16 @@ class GLSLUtility extends UtilityPackage {
                 throwException("All texture array layers must have identical dimensions");
         }
 
-        if (!(CoreContext.gl instanceof GL30))
+        if (!(EngineContext.gl instanceof GL30))
             throwException("GL30 required for texture arrays");
 
-        GL30 gl30 = (GL30) CoreContext.gl;
-        int handle = CoreContext.gl.glGenTexture();
+        GL30 gl30 = (GL30) EngineContext.gl;
+        int handle = EngineContext.gl.glGenTexture();
 
         if (handle == 0)
             throwException("GPU handle could not be generated for texture array");
 
-        CoreContext.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, handle);
+        EngineContext.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, handle);
 
         gl30.glTexImage3D(
                 GL30.GL_TEXTURE_2D_ARRAY,
@@ -73,12 +73,14 @@ class GLSLUtility extends UtilityPackage {
             pix.dispose();
         }
 
-        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MIN_FILTER, EngineSetting.GL_NEAREST);
-        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MAG_FILTER, EngineSetting.GL_NEAREST);
-        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
-        CoreContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
+        EngineContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MIN_FILTER,
+                EngineSetting.GL_NEAREST);
+        EngineContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MAG_FILTER,
+                EngineSetting.GL_NEAREST);
+        EngineContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
+        EngineContext.gl.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
 
-        CoreContext.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
+        EngineContext.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
 
         return handle;
     }
@@ -90,7 +92,7 @@ class GLSLUtility extends UtilityPackage {
         if (handle == 0)
             return;
 
-        CoreContext.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
-        CoreContext.gl.glDeleteTexture(handle);
+        EngineContext.gl.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
+        EngineContext.gl.glDeleteTexture(handle);
     }
 }

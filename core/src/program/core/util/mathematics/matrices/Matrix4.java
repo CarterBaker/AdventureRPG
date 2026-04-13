@@ -1,8 +1,8 @@
 package program.core.util.mathematics.matrices;
 
-import program.core.engine.UtilityPackage;
+import program.core.engine.EngineUtility;
 
-public class Matrix4 extends UtilityPackage {
+public class Matrix4 extends EngineUtility {
 
     // Data
     public final float[] val = new float[16];
