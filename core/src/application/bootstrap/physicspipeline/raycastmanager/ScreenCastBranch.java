@@ -4,6 +4,7 @@ import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.physicspipeline.util.ScreenRayStruct;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.BranchPackage;
+import engine.util.input.Bindings;
 
 class ScreenCastBranch extends BranchPackage {
 
@@ -23,8 +24,6 @@ class ScreenCastBranch extends BranchPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.inputSystem = get(InputSystem.class);
         this.windowManager = get(WindowManager.class);
     }
@@ -32,8 +31,7 @@ class ScreenCastBranch extends BranchPackage {
     // Cast \\
 
     boolean cast(ScreenRayStruct out) {
-
-        if (!inputSystem.isLeftDown())
+        if (!inputSystem.bindingHeld(Bindings.PRIMARY))
             return false;
 
         int windowID = windowManager.getActiveWindow().getWindowID();

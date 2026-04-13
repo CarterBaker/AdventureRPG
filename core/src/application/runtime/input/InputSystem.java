@@ -7,6 +7,7 @@ import application.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranc
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import engine.root.SystemPackage;
 import engine.util.camera.CameraInstance;
+import engine.util.input.Bindings;
 import engine.util.mathematics.vectors.Vector3;
 
 public class InputSystem extends SystemPackage {
@@ -27,8 +28,6 @@ public class InputSystem extends SystemPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.inputSystem = get(application.bootstrap.inputpipeline.inputsystem.InputSystem.class);
         this.playerManager = get(PlayerManager.class);
         this.menuManager = get(MenuManager.class);
@@ -37,17 +36,12 @@ public class InputSystem extends SystemPackage {
 
     @Override
     protected void update() {
-
         int windowID = context.getWindow().getWindowID();
-
         if (!playerManager.hasPlayerForWindow(windowID))
             return;
-
         handleInventoryInput(windowID);
-
         if (menuManager.isInputLocked())
             return;
-
         updateCameraRotation(windowID);
         writePlayerInput(windowID);
     }
@@ -55,36 +49,27 @@ public class InputSystem extends SystemPackage {
     // Input \\
 
     private void handleInventoryInput(int windowID) {
-
         if (!inputSystem.bindingClicked(Bindings.INVENTORY))
             return;
-
         inventoryBranch.toggleInventory(
                 playerManager.getPlayerForWindow(windowID),
                 context.getWindow());
     }
 
     private void updateCameraRotation(int windowID) {
-
         CameraInstance camera = playerManager.getCameraForWindow(windowID);
-
         if (camera == null)
             return;
-
         camera.setRotation(inputSystem.getMouseDelta());
     }
 
     private void writePlayerInput(int windowID) {
-
         EntityInstance player = playerManager.getPlayerForWindow(windowID);
         CameraInstance camera = playerManager.getCameraForWindow(windowID);
-
         if (camera == null)
             return;
-
         InputHandle handle = player.getInputHandle();
         Vector3 direction = camera.getDirection();
-
         handle.setForward(inputSystem.bindingHeld(Bindings.MOVE_FORWARD));
         handle.setBack(inputSystem.bindingHeld(Bindings.MOVE_BACK));
         handle.setLeft(inputSystem.bindingHeld(Bindings.MOVE_LEFT));
@@ -92,8 +77,8 @@ public class InputSystem extends SystemPackage {
         handle.setJump(inputSystem.bindingHeld(Bindings.JUMP));
         handle.setWalk(inputSystem.bindingHeld(Bindings.WALK));
         handle.setSprint(inputSystem.bindingHeld(Bindings.SPRINT));
-        handle.setPrimaryAction(inputSystem.isLeftDown());
-        handle.setSecondaryAction(inputSystem.isRightDown());
+        handle.setPrimaryAction(inputSystem.bindingHeld(Bindings.PRIMARY));
+        handle.setSecondaryAction(inputSystem.bindingHeld(Bindings.SECONDARY));
         handle.setFacingDirection(direction.x, direction.y, direction.z);
     }
 }

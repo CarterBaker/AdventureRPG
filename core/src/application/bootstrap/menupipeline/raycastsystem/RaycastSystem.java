@@ -7,6 +7,7 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import engine.root.EngineContext;
 import engine.root.SystemPackage;
+import engine.util.input.Bindings;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RaycastSystem extends SystemPackage {
@@ -25,8 +26,6 @@ public class RaycastSystem extends SystemPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.inputSystem = get(InputSystem.class);
         this.menuManager = get(MenuManager.class);
     }
@@ -35,8 +34,7 @@ public class RaycastSystem extends SystemPackage {
 
     @Override
     protected void update() {
-
-        if (!inputSystem.isLeftClicked())
+        if (!inputSystem.bindingClicked(Bindings.PRIMARY))
             return;
 
         float screenW = EngineContext.graphics.getWidth();
@@ -47,12 +45,9 @@ public class RaycastSystem extends SystemPackage {
         ObjectArrayList<MenuInstance> activeMenus = menuManager.getActiveMenus();
 
         for (int i = activeMenus.size() - 1; i >= 0; i--) {
-
             MenuInstance instance = activeMenus.get(i);
-
             if (!instance.isVisible())
                 continue;
-
             if (hitTestElements(
                     instance.getElements(),
                     mouseX, mouseY,
@@ -68,6 +63,7 @@ public class RaycastSystem extends SystemPackage {
      * ancestors. Mouse must be inside this rect to hit anything within it.
      * Children are tested before parent buttons so nested buttons win.
      */
+
     private boolean hitTestElements(
             ObjectArrayList<ElementInstance> elements,
             float mouseX, float mouseY,
@@ -79,7 +75,6 @@ public class RaycastSystem extends SystemPackage {
             ElementInstance element = elements.get(i);
 
             if (element.hasChildren()) {
-
                 float cl = clipLeft;
                 float ct = clipTop;
                 float cr = clipRight;
@@ -107,7 +102,6 @@ public class RaycastSystem extends SystemPackage {
                 continue;
 
             element.execute();
-
             return true;
         }
 
@@ -115,12 +109,10 @@ public class RaycastSystem extends SystemPackage {
     }
 
     private boolean isHit(ElementInstance element, float mouseX, float mouseY) {
-
         float left = element.getComputedLeft();
         float top = element.getComputedTop();
         float right = left + element.getComputedW();
         float bottom = top + element.getComputedH();
-
         return mouseX >= left && mouseX <= right
                 && mouseY >= top && mouseY <= bottom;
     }

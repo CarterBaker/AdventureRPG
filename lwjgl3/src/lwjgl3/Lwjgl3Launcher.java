@@ -12,9 +12,9 @@ import engine.root.EngineContext;
 import engine.root.EnginePackage;
 import engine.root.GameEngine;
 import engine.settings.EngineSetting;
-import engine.settings.Loader;
+import engine.settings.LoadUtility;
 import engine.settings.Settings;
-import engine.settings.SettingsDeserializer;
+import engine.util.input.Bindings;
 import java.io.File;
 
 public class Lwjgl3Launcher {
@@ -28,7 +28,6 @@ public class Lwjgl3Launcher {
     private static final String GAME_DIRECTORY = "AdventureRPG";
     private static final Gson ENGINE_GSON = new GsonBuilder()
             .setPrettyPrinting()
-            .registerTypeAdapter(Settings.class, new SettingsDeserializer())
             .create();
 
     public static void main(String[] args) {
@@ -46,22 +45,20 @@ public class Lwjgl3Launcher {
     }
 
     private static void createApplication() {
-
         File baseGameDir = new File(System.getProperty("user.home"), "Documents/My Games/" + GAME_DIRECTORY);
 
         if (!baseGameDir.exists())
             baseGameDir.mkdirs();
 
         File settingsFile = new File(baseGameDir, "Settings.json");
-        Settings settings = Loader.load(settingsFile, ENGINE_GSON);
+        Settings settings = LoadUtility.load(settingsFile, ENGINE_GSON);
 
-        application.runtime.input.Bindings.load(settings);
+        Bindings.load(settings);
 
         Lwjgl3ApplicationConfiguration config = buildConfig(settings);
         Lwjgl3WindowPlatform platform = new Lwjgl3WindowPlatform();
 
         config.setWindowListener(new Lwjgl3WindowAdapter() {
-
             @Override
             public boolean closeRequested() {
                 saveWindowInfoOnClose(settingsFile, settings);
@@ -77,7 +74,6 @@ public class Lwjgl3Launcher {
     }
 
     private static Lwjgl3ApplicationConfiguration buildConfig(Settings settings) {
-
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
         config.setOpenGLVersion(4, 1);
         config.setTitle("AdventureRPG");
@@ -86,7 +82,9 @@ public class Lwjgl3Launcher {
         if (settings.fullscreen) {
             config.setFullscreenMode(Lwjgl3ApplicationConfiguration.getDisplayMode());
         } else {
-            config.setWindowedMode(settings.windowWidth, settings.windowHeight);
+            int width = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, settings.windowWidth);
+            int height = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, settings.windowHeight);
+            config.setWindowedMode(width, height);
             if (settings.windowX >= 0 && settings.windowY >= 0)
                 config.setWindowPosition(settings.windowX, settings.windowY);
         }
@@ -95,7 +93,6 @@ public class Lwjgl3Launcher {
     }
 
     private static void saveWindowInfoOnClose(File file, Settings settings) {
-
         if (!(EngineContext.graphics instanceof Lwjgl3Graphics graphics))
             return;
 
@@ -106,6 +103,6 @@ public class Lwjgl3Launcher {
         settings.windowY = window.getPositionY();
         settings.fullscreen = EngineContext.graphics.isFullscreen();
 
-        Loader.save(file, settings, ENGINE_GSON);
+        LoadUtility.save(file, settings, ENGINE_GSON);
     }
 }

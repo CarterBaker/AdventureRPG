@@ -150,9 +150,10 @@ public class Lwjgl3Application {
 
         Lwjgl3Input windowInput = new Lwjgl3Input(handle);
         registerCallbacks(handle, windowInput, null);
-        secondaryWindows.add(new Lwjgl3Window(handle, windowInput));
+        Lwjgl3Window window = new Lwjgl3Window(handle, windowInput);
+        secondaryWindows.add(window);
 
-        return new Lwjgl3Window(handle, windowInput);
+        return window;
     }
 
     public void removeSecondaryWindow(long handle) {

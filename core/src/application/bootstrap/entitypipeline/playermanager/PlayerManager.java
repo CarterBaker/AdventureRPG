@@ -18,10 +18,11 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import engine.settings.EngineSetting;
 import engine.util.camera.CameraInstance;
+import engine.util.input.Bindings;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class PlayerManager extends ManagerPackage {
 
@@ -73,8 +74,6 @@ public class PlayerManager extends ManagerPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.inputSystem = get(InputSystem.class);
         this.movementManager = get(MovementManager.class);
         this.entityManager = get(EntityManager.class);
@@ -103,12 +102,10 @@ public class PlayerManager extends ManagerPackage {
     // Spawn \\
 
     public EntityInstance spawnPlayer(WindowInstance window) {
-
         EntityInstance player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
         windowID2Player.put(window.getWindowID(), player);
         windowID2VerifyPlayerPosition.put(window.getWindowID(), true);
         windowID2Camera.put(window.getWindowID(), window.getActiveCamera());
-
         return player;
     }
 
@@ -141,8 +138,8 @@ public class PlayerManager extends ManagerPackage {
                 player,
                 cameraPosition,
                 camera.getDirection(),
-                inputSystem.isLeftDown(),
-                inputSystem.isRightDown());
+                inputSystem.bindingHeld(Bindings.PRIMARY),
+                inputSystem.bindingHeld(Bindings.SECONDARY));
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }

@@ -24,6 +24,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import engine.settings.EngineSetting;
 import engine.util.RegistryUtility;
+import engine.util.input.Bindings;
 import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -154,7 +155,7 @@ public class MenuManager extends ManagerPackage {
 
         ScreenRayStruct ray = raycastManager.getScreenRay();
 
-        boolean pressed = inputSystem.isRightDown();
+        boolean pressed = inputSystem.bindingClicked(Bindings.PRIMARY);
         boolean clicked = pressed && !wasPressed;
         wasPressed = pressed;
 
