@@ -1,4 +1,4 @@
-package application.util.input;
+package application.runtime.input;
 
 import engine.input.Binding;
 import engine.input.Buttons;

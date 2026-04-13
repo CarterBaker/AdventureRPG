@@ -1,20 +1,19 @@
 package application.bootstrap.inputpipeline.inputsystem;
 
-import engine.input.InputProcessor;
+import engine.input.Binding;
+import engine.input.InputListener;
 import engine.root.EngineContext;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
-public class InputSystem extends SystemPackage implements InputProcessor {
+public class InputSystem extends SystemPackage implements InputListener {
 
     /*
      * Captures all raw input from platform each frame and exposes clean query
      * methods. No game knowledge — no named keys, no lock state, no handle
      * writing. Any system that needs input reads from this and interprets the
-     * state in its own context. captureCursor() is the only platform call
-     * exposed — runtime systems call it rather than touching platform runtime
-     * directly.
+     * state in its own context.
      */
 
     // Internal
@@ -33,115 +32,77 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     private float mouseY;
 
     // Mouse — buttons
-    private boolean leftClick;
-    private boolean rightClick;
-    private boolean rawLeftClick;
+    private boolean leftDown;
+    private boolean rightDown;
 
     // Internal \\
 
     @Override
     protected void create() {
 
-        // Internal
         this.sensitivity = internal.settings.mouseSensitivity;
-
-        // Keys
         this.heldKeys = new IntOpenHashSet();
         this.justPressedKeys = new IntOpenHashSet();
         this.justPressedSwap = new IntOpenHashSet();
-
-        // Mouse
         this.mouseDelta = new Vector2();
     }
 
     @Override
     protected void start() {
-        EngineContext.input.setInputProcessor(this);
+        EngineContext.input.addListener(this);
+    }
+
+    @Override
+    protected void dispose() {
+        EngineContext.input.removeListener(this);
     }
 
     @Override
     protected void update() {
 
-        // Swap and clear — justPressedSwap was populated by keyDown events
-        // this frame, becomes the readable set for this tick
         IntOpenHashSet temp = justPressedKeys;
         justPressedKeys = justPressedSwap;
         justPressedSwap = temp;
         justPressedSwap.clear();
 
-        float deltaX = EngineContext.input.getDeltaX() * sensitivity;
-        float deltaY = EngineContext.input.getDeltaY() * sensitivity;
-        mouseDelta.set(deltaX, deltaY);
+        float dx = EngineContext.input.getDeltaX() * sensitivity;
+        float dy = EngineContext.input.getDeltaY() * sensitivity;
+        mouseDelta.set(dx, dy);
     }
 
-    // Input Processor \\
+    // InputListener \\
 
     @Override
-    public boolean keyDown(int keycode) {
-        heldKeys.add(keycode);
-        justPressedSwap.add(keycode);
-        return true;
-    }
-
-    @Override
-    public boolean keyUp(int keycode) {
-        heldKeys.remove(keycode);
-        return true;
+    public void onKeyDown(int key) {
+        heldKeys.add(key);
+        justPressedSwap.add(key);
     }
 
     @Override
-    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-
-        if (button == engine.input.Input.Buttons.LEFT) {
-            leftClick = true;
-            rawLeftClick = true;
-        }
-
-        if (button == engine.input.Input.Buttons.RIGHT)
-            rightClick = true;
-
-        return true;
+    public void onKeyUp(int key) {
+        heldKeys.remove(key);
     }
 
     @Override
-    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-
-        if (button == engine.input.Input.Buttons.LEFT) {
-            leftClick = false;
-            rawLeftClick = false;
-        }
-
-        if (button == engine.input.Input.Buttons.RIGHT)
-            rightClick = false;
-
-        return true;
+    public void onMouseDown(int button, int x, int y) {
+        if (button == engine.input.Buttons.LEFT)
+            leftDown = true;
+        if (button == engine.input.Buttons.RIGHT)
+            rightDown = true;
     }
 
     @Override
-    public boolean mouseMoved(int screenX, int screenY) {
-        this.mouseX = screenX;
-        this.mouseY = screenY;
-        return false;
+    public void onMouseUp(int button, int x, int y) {
+        if (button == engine.input.Buttons.LEFT)
+            leftDown = false;
+        if (button == engine.input.Buttons.RIGHT)
+            rightDown = false;
     }
 
     @Override
-    public boolean keyTyped(char character) {
-        return false;
-    }
-
-    @Override
-    public boolean touchDragged(int screenX, int screenY, int pointer) {
-        return false;
-    }
-
-    @Override
-    public boolean scrolled(float amountX, float amountY) {
-        return false;
-    }
-
-    @Override
-    public boolean touchCancelled(int screenX, int screenY, int pointer, int button) {
-        return false;
+    public void onMouseMoved(int x, int y) {
+        this.mouseX = x;
+        this.mouseY = y;
     }
 
     // Platform \\
@@ -152,12 +113,29 @@ public class InputSystem extends SystemPackage implements InputProcessor {
 
     // Accessible \\
 
-    public boolean keyHeld(int keycode) {
-        return heldKeys.contains(keycode);
+    public boolean keyHeld(int key) {
+        return heldKeys.contains(key);
     }
 
-    public boolean keyJustPressed(int keycode) {
-        return justPressedKeys.contains(keycode);
+    public boolean keyJustPressed(int key) {
+        return justPressedKeys.contains(key);
+    }
+
+    public boolean bindingHeld(Binding binding) {
+        for (int key : binding.getKeys())
+            if (!heldKeys.contains(key))
+                return false;
+        return true;
+    }
+
+    public boolean bindingJustPressed(Binding binding) {
+        int[] keys = binding.getKeys();
+        if (!justPressedKeys.contains(keys[keys.length - 1]))
+            return false;
+        for (int i = 0; i < keys.length - 1; i++)
+            if (!heldKeys.contains(keys[i]))
+                return false;
+        return true;
     }
 
     public Vector2 getMouseDelta() {
@@ -172,15 +150,11 @@ public class InputSystem extends SystemPackage implements InputProcessor {
         return mouseY;
     }
 
-    public boolean isLeftClick() {
-        return leftClick;
+    public boolean isLeftDown() {
+        return leftDown;
     }
 
-    public boolean isRightClick() {
-        return rightClick;
-    }
-
-    public boolean isRawLeftClick() {
-        return rawLeftClick;
+    public boolean isRightDown() {
+        return rightDown;
     }
 }

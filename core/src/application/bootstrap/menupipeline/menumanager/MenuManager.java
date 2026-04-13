@@ -154,7 +154,7 @@ public class MenuManager extends ManagerPackage {
 
         ScreenRayStruct ray = raycastManager.getScreenRay();
 
-        boolean pressed = inputSystem.isRawLeftClick();
+        boolean pressed = inputSystem.isRightDown();
         boolean clicked = pressed && !wasPressed;
         wasPressed = pressed;
 

@@ -141,8 +141,8 @@ public class PlayerManager extends ManagerPackage {
                 player,
                 cameraPosition,
                 camera.getDirection(),
-                inputSystem.isLeftClick(),
-                inputSystem.isRightClick());
+                inputSystem.isLeftDown(),
+                inputSystem.isRightDown());
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }

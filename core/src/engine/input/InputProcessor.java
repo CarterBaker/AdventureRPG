@@ -13,24 +13,24 @@ public final class InputProcessor {
 
     public void loadFromSettings(Settings settings) {
         // Game
-        application.util.input.Bindings.MOVE_FORWARD.set(settings.bindMoveForward);
-        application.util.input.Bindings.MOVE_BACK.set(settings.bindMoveBack);
-        application.util.input.Bindings.MOVE_LEFT.set(settings.bindMoveLeft);
-        application.util.input.Bindings.MOVE_RIGHT.set(settings.bindMoveRight);
-        application.util.input.Bindings.JUMP.set(settings.bindJump);
-        application.util.input.Bindings.WALK.set(settings.bindWalk);
-        application.util.input.Bindings.SPRINT.set(settings.bindSprint);
-        application.util.input.Bindings.INVENTORY.set(settings.bindInventory);
+        application.runtime.input.Bindings.MOVE_FORWARD.set(settings.bindMoveForward);
+        application.runtime.input.Bindings.MOVE_BACK.set(settings.bindMoveBack);
+        application.runtime.input.Bindings.MOVE_LEFT.set(settings.bindMoveLeft);
+        application.runtime.input.Bindings.MOVE_RIGHT.set(settings.bindMoveRight);
+        application.runtime.input.Bindings.JUMP.set(settings.bindJump);
+        application.runtime.input.Bindings.WALK.set(settings.bindWalk);
+        application.runtime.input.Bindings.SPRINT.set(settings.bindSprint);
+        application.runtime.input.Bindings.INVENTORY.set(settings.bindInventory);
 
         // Editor
-        editor.util.input.Bindings.TOGGLE_INSPECTOR.set(settings.bindToggleInspector);
-        editor.util.input.Bindings.FOCUS_SELECTED.set(settings.bindFocusSelected);
-        editor.util.input.Bindings.DELETE_SELECTED.set(settings.bindDeleteSelected);
-        editor.util.input.Bindings.SAVE.set(settings.bindSave);
-        editor.util.input.Bindings.UNDO.set(settings.bindUndo);
-        editor.util.input.Bindings.REDO.set(settings.bindRedo);
-        editor.util.input.Bindings.DUPLICATE.set(settings.bindDuplicate);
-        editor.util.input.Bindings.OPEN_CONSOLE.set(settings.bindOpenConsole);
+        editor.runtime.Bindings.TOGGLE_INSPECTOR.set(settings.bindToggleInspector);
+        editor.runtime.Bindings.FOCUS_SELECTED.set(settings.bindFocusSelected);
+        editor.runtime.Bindings.DELETE_SELECTED.set(settings.bindDeleteSelected);
+        editor.runtime.Bindings.SAVE.set(settings.bindSave);
+        editor.runtime.Bindings.UNDO.set(settings.bindUndo);
+        editor.runtime.Bindings.REDO.set(settings.bindRedo);
+        editor.runtime.Bindings.DUPLICATE.set(settings.bindDuplicate);
+        editor.runtime.Bindings.OPEN_CONSOLE.set(settings.bindOpenConsole);
     }
 
     // Hook for later — update binding + settings field + persist

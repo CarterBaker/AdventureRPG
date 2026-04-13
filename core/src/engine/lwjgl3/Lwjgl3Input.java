@@ -2,20 +2,27 @@ package engine.lwjgl3;
 
 import org.lwjgl.glfw.GLFW;
 
+import engine.input.Buttons;
 import engine.input.Input;
-import engine.input.InputProcessor;
+import engine.input.InputListener;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class Lwjgl3Input implements Input {
 
     /*
-     * Collects raw GLFW events and forwards them to the active InputProcessor.
-     * Delta and scroll values accumulate during the frame and are zeroed in
-     * endFrame().
+     * Collects raw GLFW events and forwards them to registered InputListeners.
+     * Tracks held keys and buttons for polling via isKeyDown / isMouseDown.
+     * Delta values accumulate during the frame and are zeroed in endFrame().
      */
 
     // Internal
     private final long window;
-    private InputProcessor processor;
+    private final ObjectArrayList<InputListener> listeners = new ObjectArrayList<>();
+
+    // Key State
+    private final IntOpenHashSet heldKeys = new IntOpenHashSet();
+    private final IntOpenHashSet heldButtons = new IntOpenHashSet();
 
     // Cursor State
     private double cursorX;
@@ -23,10 +30,6 @@ class Lwjgl3Input implements Input {
     private float deltaX;
     private float deltaY;
     private boolean firstCursor = true;
-
-    // Scroll State
-    private float scrollX;
-    private float scrollY;
 
     Lwjgl3Input(long window) {
         this.window = window;
@@ -47,63 +50,79 @@ class Lwjgl3Input implements Input {
         cursorX = x;
         cursorY = y;
 
-        if (processor != null)
-            processor.mouseMoved((int) x, (int) y);
+        for (int i = 0; i < listeners.size(); i++)
+            listeners.get(i).onMouseMoved((int) x, (int) y);
     }
 
     void onMouseButton(int button, int action) {
 
-        if (processor == null)
-            return;
+        int mapped = button == GLFW.GLFW_MOUSE_BUTTON_LEFT ? Buttons.LEFT
+                : button == GLFW.GLFW_MOUSE_BUTTON_RIGHT ? Buttons.RIGHT
+                        : button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE ? Buttons.MIDDLE : button;
 
-        int mapped = button == GLFW.GLFW_MOUSE_BUTTON_LEFT ? Buttons.LEFT : Buttons.RIGHT;
+        if (action == GLFW.GLFW_PRESS) {
+            heldButtons.add(mapped);
+            for (int i = 0; i < listeners.size(); i++)
+                listeners.get(i).onMouseDown(mapped, (int) cursorX, (int) cursorY);
+        }
 
-        if (action == GLFW.GLFW_PRESS)
-            processor.touchDown(0, 0, 0, mapped);
-
-        if (action == GLFW.GLFW_RELEASE)
-            processor.touchUp(0, 0, 0, mapped);
+        if (action == GLFW.GLFW_RELEASE) {
+            heldButtons.remove(mapped);
+            for (int i = 0; i < listeners.size(); i++)
+                listeners.get(i).onMouseUp(mapped, (int) cursorX, (int) cursorY);
+        }
     }
 
     void onScroll(double dx, double dy) {
-
-        scrollX += (float) dx;
-        scrollY += (float) dy;
-
-        if (processor != null)
-            processor.scrolled((float) dx, (float) dy);
+        for (int i = 0; i < listeners.size(); i++)
+            listeners.get(i).onScroll((float) dx, (float) dy);
     }
 
     void onKey(int key, int action) {
 
-        if (processor == null)
-            return;
+        if (action == GLFW.GLFW_PRESS) {
+            heldKeys.add(key);
+            for (int i = 0; i < listeners.size(); i++)
+                listeners.get(i).onKeyDown(key);
+        }
 
-        if (action == GLFW.GLFW_PRESS)
-            processor.keyDown(key);
-
-        if (action == GLFW.GLFW_RELEASE)
-            processor.keyUp(key);
+        if (action == GLFW.GLFW_RELEASE) {
+            heldKeys.remove(key);
+            for (int i = 0; i < listeners.size(); i++)
+                listeners.get(i).onKeyUp(key);
+        }
     }
 
     void onChar(int codepoint) {
-
-        if (processor != null)
-            processor.keyTyped((char) codepoint);
+        for (int i = 0; i < listeners.size(); i++)
+            listeners.get(i).onChar((char) codepoint);
     }
 
     void endFrame() {
         deltaX = 0;
         deltaY = 0;
-        scrollX = 0;
-        scrollY = 0;
     }
 
-    // Accessible \\
+    // Input \\
 
     @Override
-    public void setInputProcessor(InputProcessor processor) {
-        this.processor = processor;
+    public void addListener(InputListener listener) {
+        listeners.add(listener);
+    }
+
+    @Override
+    public void removeListener(InputListener listener) {
+        listeners.remove(listener);
+    }
+
+    @Override
+    public boolean isKeyDown(int key) {
+        return heldKeys.contains(key);
+    }
+
+    @Override
+    public boolean isMouseDown(int button) {
+        return heldButtons.contains(button);
     }
 
     @Override
@@ -130,13 +149,5 @@ class Lwjgl3Input implements Input {
 
     public int getY() {
         return (int) cursorY;
-    }
-
-    public float getScrollX() {
-        return scrollX;
-    }
-
-    public float getScrollY() {
-        return scrollY;
     }
 }

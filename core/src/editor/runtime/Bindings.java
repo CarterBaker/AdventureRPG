@@ -1,4 +1,4 @@
-package editor.util.input;
+package editor.runtime;
 
 import engine.input.Binding;
 import engine.input.Keys;
@@ -21,4 +21,5 @@ public final class Bindings {
     public static Binding REDO = new Binding(Keys.CONTROL_LEFT, Keys.Y);
     public static Binding DUPLICATE = new Binding(Keys.CONTROL_LEFT, Keys.D);
     public static Binding OPEN_CONSOLE = new Binding(Keys.CONTROL_LEFT, Keys.GRAVE);
+    public static Binding OPEN_PREVIEW = new Binding(Keys.NUM_1);
 }

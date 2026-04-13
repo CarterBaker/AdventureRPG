@@ -1,15 +1,13 @@
 package editor.runtime;
 
 import application.bootstrap.inputpipeline.inputsystem.InputSystem;
-import engine.input.Input;
 import engine.root.SystemPackage;
 
 public class EditorInputSystem extends SystemPackage {
 
     /*
-     * Handles editor keyboard shortcuts each frame. Key 1 opens a new
-     * game preview window. All editor hotkeys live here — never scattered
-     * across individual systems.
+     * Handles editor keyboard shortcuts each frame.
+     * All editor hotkeys live here — never scattered across individual systems.
      */
 
     // Internal
@@ -20,16 +18,13 @@ public class EditorInputSystem extends SystemPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.inputSystem = get(InputSystem.class);
         this.previewSystem = get(PreviewSystem.class);
     }
 
     @Override
     protected void update() {
-
-        if (inputSystem.keyJustPressed(Input.Keys.NUM_1))
+        if (inputSystem.bindingJustPressed(Bindings.OPEN_PREVIEW))
             previewSystem.openPreview();
     }
 }

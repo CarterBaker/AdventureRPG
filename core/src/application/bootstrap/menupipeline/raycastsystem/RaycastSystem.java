@@ -41,7 +41,7 @@ public class RaycastSystem extends SystemPackage {
         if (!active)
             return;
 
-        boolean pressed = inputSystem.isRawLeftClick();
+        boolean pressed = inputSystem.isLeftDown();
         boolean clicked = pressed && !wasPressed;
         wasPressed = pressed;
 

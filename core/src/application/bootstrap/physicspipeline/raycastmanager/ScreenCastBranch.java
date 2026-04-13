@@ -33,7 +33,7 @@ class ScreenCastBranch extends BranchPackage {
 
     boolean cast(ScreenRayStruct out) {
 
-        if (!inputSystem.isRawLeftClick())
+        if (!inputSystem.isLeftDown())
             return false;
 
         int windowID = windowManager.getActiveWindow().getWindowID();
