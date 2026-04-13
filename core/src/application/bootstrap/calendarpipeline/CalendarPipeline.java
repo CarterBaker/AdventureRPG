@@ -2,7 +2,7 @@ package application.bootstrap.calendarpipeline;
 
 import application.bootstrap.calendarpipeline.calendarmanager.CalendarManager;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class CalendarPipeline extends PipelinePackage {
 

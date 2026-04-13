@@ -1,7 +1,7 @@
 package application.bootstrap.itempipeline.backpack;
 
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class BackpackInstance extends InstancePackage {

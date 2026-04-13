@@ -1,9 +1,9 @@
 package application.bootstrap.inputpipeline.inputsystem;
 
-import application.core.engine.EngineContext;
-import application.core.engine.SystemPackage;
-import application.core.input.InputProcessor;
-import application.core.util.mathematics.vectors.Vector2;
+import engine.input.InputProcessor;
+import engine.root.EngineContext;
+import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 public class InputSystem extends SystemPackage implements InputProcessor {
@@ -92,12 +92,12 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
-        if (button == application.core.input.Input.Buttons.LEFT) {
+        if (button == engine.input.Input.Buttons.LEFT) {
             leftClick = true;
             rawLeftClick = true;
         }
 
-        if (button == application.core.input.Input.Buttons.RIGHT)
+        if (button == engine.input.Input.Buttons.RIGHT)
             rightClick = true;
 
         return true;
@@ -106,12 +106,12 @@ public class InputSystem extends SystemPackage implements InputProcessor {
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 
-        if (button == application.core.input.Input.Buttons.LEFT) {
+        if (button == engine.input.Input.Buttons.LEFT) {
             leftClick = false;
             rawLeftClick = false;
         }
 
-        if (button == application.core.input.Input.Buttons.RIGHT)
+        if (button == engine.input.Input.Buttons.RIGHT)
             rightClick = false;
 
         return true;

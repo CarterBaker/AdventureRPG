@@ -1,6 +1,6 @@
 package application.bootstrap.geometrypipeline.vao;
 
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 
 public class VAOHandle extends HandlePackage {
 

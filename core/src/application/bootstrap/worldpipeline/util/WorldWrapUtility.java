@@ -1,11 +1,11 @@
 package application.bootstrap.worldpipeline.util;
 
 import application.bootstrap.worldpipeline.world.WorldHandle;
-import application.core.engine.EngineUtility;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Coordinate2Long;
-import application.core.util.mathematics.vectors.Vector2Int;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.EngineUtility;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.vectors.Vector2Int;
+import engine.util.mathematics.vectors.Vector3;
 
 public class WorldWrapUtility extends EngineUtility {
 

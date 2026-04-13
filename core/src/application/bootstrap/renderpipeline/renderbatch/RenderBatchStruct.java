@@ -3,7 +3,7 @@ package application.bootstrap.renderpipeline.renderbatch;
 import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RenderBatchStruct extends StructPackage {

@@ -1,7 +1,7 @@
 package application.bootstrap.menupipeline.menu;
 
 import application.bootstrap.menupipeline.element.ElementPlacementStruct;
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuHandle extends HandlePackage {

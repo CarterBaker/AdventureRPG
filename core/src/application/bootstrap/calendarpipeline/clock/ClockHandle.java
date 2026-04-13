@@ -1,6 +1,6 @@
 package application.bootstrap.calendarpipeline.clock;
 
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 
 public class ClockHandle extends HandlePackage {
 

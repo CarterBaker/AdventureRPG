@@ -10,10 +10,10 @@ import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.core.engine.ManagerPackage;
-import application.core.util.RegistryUtility;
-import application.core.util.mathematics.vectors.Vector2;
-import application.core.util.mathematics.vectors.Vector4;
+import engine.root.ManagerPackage;
+import engine.util.RegistryUtility;
+import engine.util.mathematics.vectors.Vector2;
+import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

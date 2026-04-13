@@ -2,8 +2,8 @@ package application.bootstrap.lightingpipeline.directionallight;
 
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.core.engine.HandlePackage;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.HandlePackage;
+import engine.util.mathematics.vectors.Vector3;
 
 public class DirectionalLightHandle extends HandlePackage {
 

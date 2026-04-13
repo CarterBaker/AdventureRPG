@@ -1,8 +1,8 @@
 package application.bootstrap.lightingpipeline.naturallightmanager;
 
-import application.core.engine.SystemPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.SystemPackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.vectors.Vector3;
 
 public class SunLightSystem extends SystemPackage {
 

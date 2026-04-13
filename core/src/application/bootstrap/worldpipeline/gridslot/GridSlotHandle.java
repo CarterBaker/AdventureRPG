@@ -2,8 +2,8 @@ package application.bootstrap.worldpipeline.gridslot;
 
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
-import application.core.engine.HandlePackage;
-import application.core.util.mathematics.extras.Coordinate2Long;
+import engine.root.HandlePackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class GridSlotHandle extends HandlePackage {

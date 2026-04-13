@@ -5,9 +5,9 @@ import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
-import application.core.engine.BranchPackage;
-import application.core.kernel.thread.ThreadHandle;
-import application.core.settings.EngineSetting;
+import application.kernel.util.thread.ThreadHandle;
+import engine.root.BranchPackage;
+import engine.settings.EngineSetting;
 
 public class GenerationBranch extends BranchPackage {
 

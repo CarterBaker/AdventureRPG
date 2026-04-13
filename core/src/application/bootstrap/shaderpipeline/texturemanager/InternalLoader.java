@@ -10,10 +10,10 @@ import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
 import application.bootstrap.shaderpipeline.texture.TextureTileStruct;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.core.engine.LoaderPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.FileUtility;
-import application.core.util.mathematics.vectors.Vector2;
+import engine.root.LoaderPackage;
+import engine.settings.EngineSetting;
+import engine.util.FileUtility;
+import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 

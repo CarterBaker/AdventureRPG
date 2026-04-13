@@ -1,7 +1,7 @@
 package application.bootstrap.entitypipeline.entity;
 
-import application.core.engine.DataPackage;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.DataPackage;
+import engine.util.mathematics.vectors.Vector3;
 
 public class EntityData extends DataPackage {
 

@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

@@ -1,7 +1,7 @@
 package application.bootstrap.worldpipeline.worlditem;
 
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 
 public class WorldItemInstance extends InstancePackage {
 

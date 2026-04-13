@@ -2,10 +2,10 @@ package application.bootstrap.worldpipeline.worldrendermanager;
 
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
-import application.core.engine.SystemPackage;
-import application.core.kernel.window.WindowInstance;
-import application.core.settings.EngineSetting;
-import application.core.util.camera.CameraInstance;
+import application.kernel.util.window.WindowInstance;
+import engine.root.SystemPackage;
+import engine.settings.EngineSetting;
+import engine.util.camera.CameraInstance;
 
 class FrustumCullingSystem extends SystemPackage {
 

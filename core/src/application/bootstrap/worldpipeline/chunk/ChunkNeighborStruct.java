@@ -1,9 +1,9 @@
 package application.bootstrap.worldpipeline.chunk;
 
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
-import application.core.engine.StructPackage;
-import application.core.util.mathematics.extras.Coordinate2Long;
-import application.core.util.mathematics.extras.Direction2Vector;
+import engine.root.StructPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.extras.Direction2Vector;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 
 public class ChunkNeighborStruct extends StructPackage {

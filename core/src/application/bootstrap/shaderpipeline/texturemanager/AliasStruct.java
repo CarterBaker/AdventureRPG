@@ -2,7 +2,7 @@ package application.bootstrap.shaderpipeline.texturemanager;
 
 import java.awt.Color;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class AliasStruct extends StructPackage {
 

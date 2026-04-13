@@ -9,7 +9,7 @@ import application.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRender
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class WorldPipeline extends PipelinePackage {
 

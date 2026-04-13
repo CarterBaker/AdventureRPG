@@ -3,7 +3,7 @@ package application.bootstrap.geometrypipeline.compositebuffer;
 import java.util.Arrays;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 
 public class CompositeBufferInstance extends InstancePackage {
 

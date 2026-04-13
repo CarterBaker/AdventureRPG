@@ -6,12 +6,12 @@ import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import application.core.engine.BranchPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Coordinate2Long;
-import application.core.util.mathematics.extras.Coordinate4Long;
-import application.core.util.mathematics.extras.Direction3Vector;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.BranchPackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.extras.Coordinate4Long;
+import engine.util.mathematics.extras.Direction3Vector;
+import engine.util.mathematics.vectors.Vector3;
 
 class ItemBranch extends BranchPackage {
 

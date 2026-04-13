@@ -4,7 +4,7 @@ import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferIns
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CompositeBatchStruct extends StructPackage {

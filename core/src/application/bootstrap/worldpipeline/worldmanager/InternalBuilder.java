@@ -7,14 +7,14 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.worldpipeline.world.WorldData;
 import application.bootstrap.worldpipeline.world.WorldHandle;
-import application.core.engine.BuilderPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.FileUtility;
-import application.core.util.JsonUtility;
-import application.core.util.RegistryUtility;
-import application.core.util.image.Pixmap;
-import application.core.util.mathematics.vectors.Vector2Int;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.BuilderPackage;
+import engine.settings.EngineSetting;
+import engine.util.FileUtility;
+import engine.util.JsonUtility;
+import engine.util.RegistryUtility;
+import engine.util.image.Pixmap;
+import engine.util.mathematics.vectors.Vector2Int;
+import engine.util.mathematics.vectors.Vector3;
 
 class InternalBuilder extends BuilderPackage {
 

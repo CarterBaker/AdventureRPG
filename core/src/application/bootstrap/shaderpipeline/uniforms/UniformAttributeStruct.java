@@ -2,8 +2,8 @@ package application.bootstrap.shaderpipeline.uniforms;
 
 import java.nio.ByteBuffer;
 
-import application.core.engine.StructPackage;
-import application.core.util.memory.BufferUtils;
+import engine.root.StructPackage;
+import engine.util.memory.BufferUtils;
 
 public abstract class UniformAttributeStruct<T> extends StructPackage {
 

@@ -14,8 +14,8 @@ import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformData;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformUtility;
-import application.core.engine.ManagerPackage;
-import application.core.util.RegistryUtility;
+import engine.root.ManagerPackage;
+import engine.util.RegistryUtility;
 
 public class UBOManager extends ManagerPackage {
 

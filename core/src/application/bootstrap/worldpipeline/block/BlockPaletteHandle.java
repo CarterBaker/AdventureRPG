@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
-import application.core.engine.HandlePackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Coordinate3Int;
+import engine.root.HandlePackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Coordinate3Int;
 
 public final class BlockPaletteHandle extends HandlePackage {
 

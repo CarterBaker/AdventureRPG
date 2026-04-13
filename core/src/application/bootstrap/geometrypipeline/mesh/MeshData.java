@@ -3,7 +3,7 @@ package application.bootstrap.geometrypipeline.mesh;
 import application.bootstrap.geometrypipeline.ibo.IBOData;
 import application.bootstrap.geometrypipeline.vao.VAOData;
 import application.bootstrap.geometrypipeline.vbo.VBOData;
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 
 public class MeshData extends DataPackage {
 

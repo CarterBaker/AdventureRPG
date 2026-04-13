@@ -4,7 +4,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
-import application.core.engine.BranchPackage;
+import engine.root.BranchPackage;
 
 public class BatchBranch extends BranchPackage {
 

@@ -1,8 +1,8 @@
 package application.bootstrap.worldpipeline.megachunk;
 
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.core.engine.StructPackage;
-import application.core.util.mathematics.extras.Coordinate2Long;
+import engine.root.StructPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

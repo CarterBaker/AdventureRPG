@@ -4,7 +4,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
-import application.core.engine.BranchPackage;
+import engine.root.BranchPackage;
 
 public class RenderBranch extends BranchPackage {
 

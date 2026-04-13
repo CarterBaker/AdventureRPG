@@ -11,9 +11,9 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.pass.PassData;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
-import application.core.engine.BuilderPackage;
-import application.core.util.JsonUtility;
-import application.core.util.RegistryUtility;
+import engine.root.BuilderPackage;
+import engine.util.JsonUtility;
+import engine.util.RegistryUtility;
 
 /*
  * Constructs PassHandles from JSON descriptors during bootstrap. Resolves

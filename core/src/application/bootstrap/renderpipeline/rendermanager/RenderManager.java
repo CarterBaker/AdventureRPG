@@ -6,9 +6,9 @@ import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.core.engine.ManagerPackage;
-import application.core.kernel.window.WindowInstance;
-import application.core.kernel.windowmanager.WindowManager;
+import application.kernel.util.window.WindowInstance;
+import application.kernel.windowmanager.WindowManager;
+import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RenderManager extends ManagerPackage {

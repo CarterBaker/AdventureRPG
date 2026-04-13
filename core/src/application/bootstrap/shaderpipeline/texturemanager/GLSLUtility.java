@@ -3,13 +3,13 @@ package application.bootstrap.shaderpipeline.texturemanager;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 
-import application.core.engine.EngineContext;
-import application.core.engine.EngineUtility;
-import application.core.settings.EngineSetting;
-import application.core.util.PixmapUtility;
-import application.core.util.graphics.gl.GL20;
-import application.core.util.graphics.gl.GL30;
-import application.core.util.image.Pixmap;
+import engine.graphics.GL20;
+import engine.graphics.GL30;
+import engine.root.EngineContext;
+import engine.root.EngineUtility;
+import engine.settings.EngineSetting;
+import engine.util.PixmapUtility;
+import engine.util.image.Pixmap;
 
 /*
  * GL30 wrapper for texture array operations. Handles upload and deletion only.

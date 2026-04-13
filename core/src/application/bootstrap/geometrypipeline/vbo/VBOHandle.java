@@ -1,6 +1,6 @@
 package application.bootstrap.geometrypipeline.vbo;
 
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 
 public class VBOHandle extends HandlePackage {
 

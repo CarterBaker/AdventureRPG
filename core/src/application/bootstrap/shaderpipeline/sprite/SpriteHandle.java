@@ -1,7 +1,7 @@
 package application.bootstrap.shaderpipeline.sprite;
 
 import application.bootstrap.geometrypipeline.model.ModelInstance;
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 
 public class SpriteHandle extends HandlePackage {
 

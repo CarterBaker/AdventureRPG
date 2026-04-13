@@ -1,8 +1,8 @@
 package application.bootstrap.worldpipeline.block;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
-import application.core.engine.HandlePackage;
-import application.core.util.mathematics.extras.Direction3Vector;
+import engine.root.HandlePackage;
+import engine.util.mathematics.extras.Direction3Vector;
 
 public class BlockHandle extends HandlePackage {
 

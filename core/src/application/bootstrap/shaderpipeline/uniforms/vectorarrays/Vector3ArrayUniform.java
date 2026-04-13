@@ -5,7 +5,7 @@ import org.lwjgl.system.MemoryStack;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.vectors.Vector3;
 
 public final class Vector3ArrayUniform extends UniformAttributeStruct<Object[]> {
 
@@ -50,7 +50,7 @@ public final class Vector3ArrayUniform extends UniformAttributeStruct<Object[]> 
     protected void applyObject(Object value) {
         if (value instanceof Vector3[] v)
             applyValue(v);
-        else if (value instanceof application.core.util.mathematics.vectors.Vector3[] vectors) {
+        else if (value instanceof engine.util.mathematics.vectors.Vector3[] vectors) {
             Vector3[] dst = (Vector3[]) this.value;
             for (int i = 0; i < Math.min(vectors.length, elementCount); i++) {
                 dst[i].x = vectors[i].x;

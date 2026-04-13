@@ -1,6 +1,6 @@
 package application.bootstrap.shaderpipeline.uniforms;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class UniformStruct<T> extends StructPackage {
 

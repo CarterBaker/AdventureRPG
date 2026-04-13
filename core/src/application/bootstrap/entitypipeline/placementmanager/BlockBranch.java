@@ -10,10 +10,10 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import application.core.engine.BranchPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Coordinate2Long;
-import application.core.util.mathematics.extras.Coordinate3Int;
+import engine.root.BranchPackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.extras.Coordinate3Int;
 
 class BlockBranch extends BranchPackage {
 

@@ -4,7 +4,7 @@ import application.bootstrap.shaderpipeline.shader.ShaderHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

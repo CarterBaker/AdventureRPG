@@ -2,9 +2,9 @@ package application.bootstrap.shaderpipeline.uniforms.matrices;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.engine.EngineContext;
-import application.core.util.mathematics.matrices.Matrix4;
-import application.core.util.mathematics.matrices.Matrix4Double;
+import engine.root.EngineContext;
+import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.matrices.Matrix4Double;
 
 public final class Matrix4DoubleUniform extends UniformAttributeStruct<Matrix4Double> {
 

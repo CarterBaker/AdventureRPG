@@ -1,6 +1,6 @@
 package application.bootstrap.worldpipeline.worlditem;
 
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

@@ -1,6 +1,6 @@
 package application.bootstrap.geometrypipeline.meshmanager;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 class QuadExpansionStruct extends StructPackage {
 

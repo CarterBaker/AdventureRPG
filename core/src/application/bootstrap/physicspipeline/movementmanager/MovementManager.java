@@ -3,10 +3,10 @@ package application.bootstrap.physicspipeline.movementmanager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
-import application.core.engine.ManagerPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Coordinate2Long;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.ManagerPackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.vectors.Vector3;
 
 public class MovementManager extends ManagerPackage {
 

@@ -7,8 +7,8 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarData;
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
-import application.core.engine.BuilderPackage;
-import application.core.util.JsonUtility;
+import engine.root.BuilderPackage;
+import engine.util.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

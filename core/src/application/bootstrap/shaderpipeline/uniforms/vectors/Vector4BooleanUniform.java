@@ -2,8 +2,8 @@ package application.bootstrap.shaderpipeline.uniforms.vectors;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.engine.EngineContext;
-import application.core.util.mathematics.vectors.Vector4Boolean;
+import engine.root.EngineContext;
+import engine.util.mathematics.vectors.Vector4Boolean;
 
 public final class Vector4BooleanUniform extends UniformAttributeStruct<Vector4Boolean> {
 

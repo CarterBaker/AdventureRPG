@@ -7,9 +7,9 @@ import application.bootstrap.menupipeline.element.ElementOrigin;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
-import application.core.engine.EngineUtility;
-import application.core.util.JsonUtility;
-import application.core.util.mathematics.vectors.Vector2;
+import engine.root.EngineUtility;
+import engine.util.JsonUtility;
+import engine.util.mathematics.vectors.Vector2;
 
 class FileParserUtility extends EngineUtility {
 

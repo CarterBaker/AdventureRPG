@@ -2,9 +2,9 @@ package application.bootstrap.itempipeline.itemrotationmanager;
 
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.core.engine.SystemPackage;
-import application.core.util.mathematics.extras.Direction3Vector;
-import application.core.util.mathematics.matrices.Matrix4;
+import engine.root.SystemPackage;
+import engine.util.mathematics.extras.Direction3Vector;
+import engine.util.mathematics.matrices.Matrix4;
 
 public class InternalBufferSystem extends SystemPackage {
 

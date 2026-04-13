@@ -1,7 +1,7 @@
 package application.bootstrap.menupipeline.fonts;
 
 import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class FontHandle extends HandlePackage {

@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import application.core.engine.LoaderPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.FileUtility;
+import engine.root.LoaderPackage;
+import engine.settings.EngineSetting;
+import engine.util.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {

@@ -3,8 +3,8 @@ package application.bootstrap.shaderpipeline.shadermanager;
 import application.bootstrap.shaderpipeline.shader.ShaderHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.core.engine.ManagerPackage;
-import application.core.util.RegistryUtility;
+import engine.root.ManagerPackage;
+import engine.util.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

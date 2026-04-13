@@ -2,7 +2,7 @@ package application.bootstrap.shaderpipeline.uniforms.scalars;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.engine.EngineContext;
+import engine.root.EngineContext;
 
 public final class BooleanUniform extends UniformAttributeStruct<Boolean> {
 

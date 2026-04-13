@@ -11,10 +11,10 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionData;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
-import application.core.engine.BuilderPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.FileUtility;
-import application.core.util.JsonUtility;
+import engine.root.BuilderPackage;
+import engine.settings.EngineSetting;
+import engine.util.FileUtility;
+import engine.util.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {

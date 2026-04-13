@@ -2,8 +2,8 @@ package application.bootstrap.worldpipeline.gridmanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
-import application.core.engine.ManagerPackage;
-import application.core.kernel.window.WindowInstance;
+import application.kernel.util.window.WindowInstance;
+import engine.root.ManagerPackage;
 
 public class GridManager extends ManagerPackage {
 

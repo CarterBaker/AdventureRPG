@@ -1,6 +1,6 @@
 package application.bootstrap.shaderpipeline.uniforms;
 
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 
 public class UniformData extends DataPackage {
 

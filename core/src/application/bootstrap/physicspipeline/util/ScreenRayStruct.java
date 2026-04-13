@@ -1,6 +1,6 @@
 package application.bootstrap.physicspipeline.util;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class ScreenRayStruct extends StructPackage {
 

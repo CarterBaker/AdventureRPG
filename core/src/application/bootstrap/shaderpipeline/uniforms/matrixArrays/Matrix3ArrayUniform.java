@@ -4,9 +4,9 @@ import java.nio.FloatBuffer;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.engine.EngineContext;
-import application.core.util.mathematics.matrices.Matrix3;
-import application.core.util.memory.BufferUtils;
+import engine.root.EngineContext;
+import engine.util.mathematics.matrices.Matrix3;
+import engine.util.memory.BufferUtils;
 
 public final class Matrix3ArrayUniform extends UniformAttributeStruct<Object[]> {
 

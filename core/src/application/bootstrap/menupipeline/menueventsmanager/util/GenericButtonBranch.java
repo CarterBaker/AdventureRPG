@@ -1,6 +1,6 @@
 package application.bootstrap.menupipeline.menueventsmanager.util;
 
-import application.core.engine.BranchPackage;
+import engine.root.BranchPackage;
 
 public class GenericButtonBranch extends BranchPackage {
 

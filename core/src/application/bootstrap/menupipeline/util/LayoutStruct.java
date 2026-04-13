@@ -1,7 +1,7 @@
 package application.bootstrap.menupipeline.util;
 
-import application.core.engine.StructPackage;
-import application.core.util.mathematics.vectors.Vector2;
+import engine.root.StructPackage;
+import engine.util.mathematics.vectors.Vector2;
 
 public class LayoutStruct extends StructPackage {
 

@@ -1,6 +1,6 @@
 package application.bootstrap.geometrypipeline.ibo;
 
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 
 public class IBOData extends DataPackage {
 

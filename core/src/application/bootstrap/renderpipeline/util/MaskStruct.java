@@ -1,6 +1,6 @@
 package application.bootstrap.renderpipeline.util;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class MaskStruct extends StructPackage {
 

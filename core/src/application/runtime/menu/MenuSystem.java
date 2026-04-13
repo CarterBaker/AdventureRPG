@@ -1,7 +1,7 @@
 package application.runtime.menu;
 
 import application.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
-import application.core.engine.SystemPackage;
+import engine.root.SystemPackage;
 
 public class MenuSystem extends SystemPackage {
 

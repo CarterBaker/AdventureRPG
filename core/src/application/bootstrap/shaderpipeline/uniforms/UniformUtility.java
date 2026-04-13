@@ -11,9 +11,9 @@ import application.bootstrap.shaderpipeline.uniforms.scalarArrays.*;
 import application.bootstrap.shaderpipeline.uniforms.scalars.*;
 import application.bootstrap.shaderpipeline.uniforms.vectorarrays.*;
 import application.bootstrap.shaderpipeline.uniforms.vectors.*;
-import application.core.engine.EngineUtility;
-import application.core.util.mathematics.matrices.*;
-import application.core.util.mathematics.vectors.*;
+import engine.root.EngineUtility;
+import engine.util.mathematics.matrices.*;
+import engine.util.mathematics.vectors.*;
 
 public final class UniformUtility extends EngineUtility {
 

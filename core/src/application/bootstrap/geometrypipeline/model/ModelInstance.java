@@ -2,7 +2,7 @@ package application.bootstrap.geometrypipeline.model;
 
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 
 public class ModelInstance extends InstancePackage {
 

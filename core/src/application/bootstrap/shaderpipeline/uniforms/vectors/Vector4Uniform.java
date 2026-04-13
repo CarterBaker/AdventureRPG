@@ -2,8 +2,8 @@ package application.bootstrap.shaderpipeline.uniforms.vectors;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.engine.EngineContext;
-import application.core.util.mathematics.vectors.Vector4;
+import engine.root.EngineContext;
+import engine.util.mathematics.vectors.Vector4;
 
 public final class Vector4Uniform extends UniformAttributeStruct<Object> {
 

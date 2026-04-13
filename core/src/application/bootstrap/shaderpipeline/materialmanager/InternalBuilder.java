@@ -14,9 +14,9 @@ import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import application.bootstrap.shaderpipeline.uniforms.UniformUtility;
-import application.core.engine.BuilderPackage;
-import application.core.util.JsonUtility;
-import application.core.util.RegistryUtility;
+import engine.root.BuilderPackage;
+import engine.util.JsonUtility;
+import engine.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalBuilder extends BuilderPackage {

@@ -3,7 +3,7 @@ package application.bootstrap.menupipeline.menueventsmanager;
 import application.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
 import application.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
 import application.bootstrap.menupipeline.menueventsmanager.util.GenericButtonBranch;
-import application.core.engine.ManagerPackage;
+import engine.root.ManagerPackage;
 
 public class MenuEventsManager extends ManagerPackage {
 

@@ -14,9 +14,9 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.sprite.SpriteData;
 import application.bootstrap.shaderpipeline.sprite.SpriteHandle;
-import application.core.engine.LoaderPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.FileUtility;
+import engine.root.LoaderPackage;
+import engine.settings.EngineSetting;
+import engine.util.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /*

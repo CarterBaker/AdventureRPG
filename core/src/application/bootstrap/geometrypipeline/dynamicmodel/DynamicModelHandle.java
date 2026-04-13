@@ -1,8 +1,8 @@
 package application.bootstrap.geometrypipeline.dynamicmodel;
 
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
-import application.core.engine.HandlePackage;
-import application.core.settings.EngineSetting;
+import engine.root.HandlePackage;
+import engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 

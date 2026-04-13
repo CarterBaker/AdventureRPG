@@ -3,7 +3,7 @@ package application.bootstrap.worldpipeline.worldrendermanager;
 import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.world.WorldHandle;
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 
 public class WorldRenderInstance extends InstancePackage {
 

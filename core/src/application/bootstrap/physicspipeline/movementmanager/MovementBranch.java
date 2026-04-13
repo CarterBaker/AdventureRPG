@@ -5,10 +5,10 @@ import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.inputpipeline.input.InputHandle;
-import application.core.engine.BranchPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.vectors.Vector2;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.BranchPackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.vectors.Vector2;
+import engine.util.mathematics.vectors.Vector3;
 
 public class MovementBranch extends BranchPackage {
 

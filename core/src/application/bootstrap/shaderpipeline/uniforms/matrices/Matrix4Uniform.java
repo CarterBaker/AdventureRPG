@@ -2,8 +2,8 @@ package application.bootstrap.shaderpipeline.uniforms.matrices;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.engine.EngineContext;
-import application.core.util.mathematics.matrices.Matrix4;
+import engine.root.EngineContext;
+import engine.util.mathematics.matrices.Matrix4;
 
 public final class Matrix4Uniform extends UniformAttributeStruct<Object> {
 

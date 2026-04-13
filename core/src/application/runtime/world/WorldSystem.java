@@ -2,7 +2,7 @@ package application.runtime.world;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import application.core.engine.SystemPackage;
+import engine.root.SystemPackage;
 
 public class WorldSystem extends SystemPackage {
 

@@ -5,7 +5,7 @@ import org.lwjgl.system.MemoryStack;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.util.mathematics.vectors.Vector3Boolean;
+import engine.util.mathematics.vectors.Vector3Boolean;
 
 public final class Vector3BooleanArrayUniform extends UniformAttributeStruct<Object[]> {
 

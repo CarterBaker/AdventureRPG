@@ -2,7 +2,7 @@ package application.bootstrap.menupipeline.element;
 
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class ElementPlacementStruct extends StructPackage {
 

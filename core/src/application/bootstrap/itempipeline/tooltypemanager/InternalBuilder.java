@@ -6,10 +6,10 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.itempipeline.tooltype.ToolTypeData;
 import application.bootstrap.itempipeline.tooltype.ToolTypeHandle;
-import application.core.engine.BuilderPackage;
-import application.core.util.FileUtility;
-import application.core.util.JsonUtility;
-import application.core.util.RegistryUtility;
+import engine.root.BuilderPackage;
+import engine.util.FileUtility;
+import engine.util.JsonUtility;
+import engine.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {

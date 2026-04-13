@@ -3,8 +3,8 @@ package application.bootstrap.calendarpipeline.clockmanager;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.core.engine.BranchPackage;
-import application.core.settings.EngineSetting;
+import engine.root.BranchPackage;
+import engine.settings.EngineSetting;
 
 class InternalBufferBranch extends BranchPackage {
 

@@ -2,7 +2,7 @@ package application.bootstrap.shaderpipeline.texture;
 
 import java.awt.image.BufferedImage;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class TextureAtlasStruct extends StructPackage {
 

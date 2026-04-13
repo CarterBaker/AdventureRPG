@@ -1,7 +1,7 @@
 package application.bootstrap.lightingpipeline;
 
 import application.bootstrap.lightingpipeline.naturallightmanager.NaturalLightManager;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class LightingPipeline extends PipelinePackage {
 

@@ -1,6 +1,6 @@
 package application.bootstrap.geometrypipeline.vao;
 
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 
 public class VAOInstance extends InstancePackage {
 

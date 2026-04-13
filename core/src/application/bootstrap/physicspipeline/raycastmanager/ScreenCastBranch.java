@@ -2,8 +2,8 @@ package application.bootstrap.physicspipeline.raycastmanager;
 
 import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.physicspipeline.util.ScreenRayStruct;
-import application.core.engine.BranchPackage;
-import application.core.kernel.windowmanager.WindowManager;
+import application.kernel.windowmanager.WindowManager;
+import engine.root.BranchPackage;
 
 class ScreenCastBranch extends BranchPackage {
 

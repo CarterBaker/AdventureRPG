@@ -1,7 +1,7 @@
 package application.bootstrap.inputpipeline.input;
 
-import application.core.engine.HandlePackage;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.HandlePackage;
+import engine.util.mathematics.vectors.Vector3;
 
 public class InputHandle extends HandlePackage {
 

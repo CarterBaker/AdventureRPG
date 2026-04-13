@@ -4,7 +4,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import application.bootstrap.worldpipeline.megachunk.MegaData;
 import application.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
-import application.core.engine.BranchPackage;
+import engine.root.BranchPackage;
 
 public class MegaMergeBranch extends BranchPackage {
 

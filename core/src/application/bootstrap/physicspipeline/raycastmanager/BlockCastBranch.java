@@ -7,12 +7,12 @@ import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import application.core.engine.BranchPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Coordinate2Long;
-import application.core.util.mathematics.extras.Coordinate3Int;
-import application.core.util.mathematics.extras.Direction3Vector;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.BranchPackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.extras.Coordinate3Int;
+import engine.util.mathematics.extras.Direction3Vector;
+import engine.util.mathematics.vectors.Vector3;
 
 class BlockCastBranch extends BranchPackage {
 

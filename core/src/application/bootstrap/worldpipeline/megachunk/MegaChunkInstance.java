@@ -6,8 +6,8 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstance;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Coordinate2Long;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

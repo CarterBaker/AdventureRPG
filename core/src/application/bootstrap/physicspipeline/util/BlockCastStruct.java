@@ -1,8 +1,8 @@
 package application.bootstrap.physicspipeline.util;
 
 import application.bootstrap.worldpipeline.block.BlockHandle;
-import application.core.engine.StructPackage;
-import application.core.util.mathematics.extras.Direction3Vector;
+import engine.root.StructPackage;
+import engine.util.mathematics.extras.Direction3Vector;
 
 public class BlockCastStruct extends StructPackage {
 

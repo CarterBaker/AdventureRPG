@@ -2,11 +2,11 @@ package application.bootstrap.renderpipeline.cameramanager;
 
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.core.engine.SystemPackage;
-import application.core.kernel.window.WindowInstance;
-import application.core.settings.EngineSetting;
-import application.core.util.camera.CameraInstance;
-import application.core.util.camera.OrthographicCameraInstance;
+import application.kernel.util.window.WindowInstance;
+import engine.root.SystemPackage;
+import engine.settings.EngineSetting;
+import engine.util.camera.CameraInstance;
+import engine.util.camera.OrthographicCameraInstance;
 
 class CameraBufferSystem extends SystemPackage {
 

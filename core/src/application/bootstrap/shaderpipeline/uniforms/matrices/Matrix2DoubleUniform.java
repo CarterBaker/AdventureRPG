@@ -4,8 +4,8 @@ import java.nio.FloatBuffer;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.engine.EngineContext;
-import application.core.util.mathematics.matrices.Matrix2Double;
+import engine.root.EngineContext;
+import engine.util.mathematics.matrices.Matrix2Double;
 
 public final class Matrix2DoubleUniform extends UniformAttributeStruct<Matrix2Double> {
 

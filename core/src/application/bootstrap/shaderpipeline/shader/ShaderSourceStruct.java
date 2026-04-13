@@ -4,7 +4,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.File;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformData;
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class ShaderSourceStruct extends StructPackage {
 

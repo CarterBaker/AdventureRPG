@@ -2,7 +2,7 @@ package application.bootstrap.shaderpipeline.texture;
 
 import java.awt.image.BufferedImage;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;

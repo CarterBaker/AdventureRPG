@@ -14,9 +14,9 @@ import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
-import application.core.engine.ManagerPackage;
-import application.core.util.mathematics.extras.Color;
-import application.core.util.mathematics.extras.Direction3Vector;
+import engine.root.ManagerPackage;
+import engine.util.mathematics.extras.Color;
+import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 

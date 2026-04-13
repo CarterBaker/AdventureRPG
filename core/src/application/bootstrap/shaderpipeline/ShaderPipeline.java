@@ -6,7 +6,7 @@ import application.bootstrap.shaderpipeline.shadermanager.ShaderManager;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class ShaderPipeline extends PipelinePackage {
 

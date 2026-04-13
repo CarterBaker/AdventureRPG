@@ -4,8 +4,8 @@ import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.lightingpipeline.directionallight.DirectionalLightHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.core.engine.ManagerPackage;
-import application.core.settings.EngineSetting;
+import engine.root.ManagerPackage;
+import engine.settings.EngineSetting;
 
 public class NaturalLightManager extends ManagerPackage {
 

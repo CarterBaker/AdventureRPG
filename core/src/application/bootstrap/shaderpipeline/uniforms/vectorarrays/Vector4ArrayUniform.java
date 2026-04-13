@@ -5,7 +5,7 @@ import org.lwjgl.system.MemoryStack;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.util.mathematics.vectors.Vector4;
+import engine.util.mathematics.vectors.Vector4;
 
 public final class Vector4ArrayUniform extends UniformAttributeStruct<Object[]> {
 
@@ -51,7 +51,7 @@ public final class Vector4ArrayUniform extends UniformAttributeStruct<Object[]> 
     protected void applyObject(Object value) {
         if (value instanceof Vector4[] v)
             applyValue(v);
-        else if (value instanceof application.core.util.mathematics.vectors.Vector4[] vectors) {
+        else if (value instanceof engine.util.mathematics.vectors.Vector4[] vectors) {
             Vector4[] dst = (Vector4[]) this.value;
             for (int i = 0; i < Math.min(vectors.length, elementCount); i++) {
                 dst[i].x = vectors[i].x;

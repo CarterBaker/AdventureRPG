@@ -1,8 +1,8 @@
 package application.bootstrap.worldpipeline.block;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
-import application.core.engine.DataPackage;
-import application.core.util.mathematics.extras.Direction3Vector;
+import engine.root.DataPackage;
+import engine.util.mathematics.extras.Direction3Vector;
 
 public class BlockData extends DataPackage {
 

@@ -13,9 +13,9 @@ import application.bootstrap.geometrypipeline.vbo.VBOHandle;
 import application.bootstrap.geometrypipeline.vbomanager.VBOManager;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
-import application.core.engine.BuilderPackage;
-import application.core.util.FileUtility;
-import application.core.util.JsonUtility;
+import engine.root.BuilderPackage;
+import engine.util.FileUtility;
+import engine.util.JsonUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 

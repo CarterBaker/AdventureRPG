@@ -2,8 +2,8 @@ package application.bootstrap.shaderpipeline.uniforms.vectors;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.engine.EngineContext;
-import application.core.util.mathematics.vectors.Vector2Int;
+import engine.root.EngineContext;
+import engine.util.mathematics.vectors.Vector2Int;
 
 public final class Vector2IntUniform extends UniformAttributeStruct<Vector2Int> {
 

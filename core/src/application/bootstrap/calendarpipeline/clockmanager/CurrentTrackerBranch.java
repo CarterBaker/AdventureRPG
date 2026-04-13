@@ -1,8 +1,8 @@
 package application.bootstrap.calendarpipeline.clockmanager;
 
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
-import application.core.engine.BranchPackage;
-import application.core.settings.EngineSetting;
+import engine.root.BranchPackage;
+import engine.settings.EngineSetting;
 
 class CurrentTrackerBranch extends BranchPackage {
 

@@ -5,7 +5,7 @@ import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class RenderCallStruct extends StructPackage {
 

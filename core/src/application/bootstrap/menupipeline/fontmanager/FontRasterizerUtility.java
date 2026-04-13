@@ -8,7 +8,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 
 import application.bootstrap.menupipeline.fonts.FontTileData;
-import application.core.engine.EngineUtility;
+import engine.root.EngineUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class FontRasterizerUtility extends EngineUtility {

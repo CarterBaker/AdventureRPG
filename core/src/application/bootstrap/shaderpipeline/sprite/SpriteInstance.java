@@ -2,7 +2,7 @@ package application.bootstrap.shaderpipeline.sprite;
 
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 
 public class SpriteInstance extends InstancePackage {
 

@@ -2,7 +2,7 @@ package application.bootstrap.shaderpipeline.sprite;
 
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 
 public class SpriteData extends DataPackage {
 

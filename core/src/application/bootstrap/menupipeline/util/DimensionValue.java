@@ -1,6 +1,6 @@
 package application.bootstrap.menupipeline.util;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class DimensionValue extends StructPackage {
 

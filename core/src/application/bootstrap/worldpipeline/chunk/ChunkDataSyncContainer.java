@@ -2,7 +2,7 @@ package application.bootstrap.worldpipeline.chunk;
 
 import java.util.Arrays;
 
-import application.core.engine.SyncContainerPackage;
+import engine.root.SyncContainerPackage;
 
 public class ChunkDataSyncContainer extends SyncContainerPackage {
 

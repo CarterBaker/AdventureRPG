@@ -1,7 +1,7 @@
 package application.bootstrap.shaderpipeline.shader;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

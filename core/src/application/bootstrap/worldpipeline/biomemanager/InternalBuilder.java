@@ -4,10 +4,10 @@ import java.io.File;
 
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
-import application.core.engine.BuilderPackage;
-import application.core.util.FileUtility;
-import application.core.util.RegistryUtility;
-import application.core.util.mathematics.extras.Color;
+import engine.root.BuilderPackage;
+import engine.util.FileUtility;
+import engine.util.RegistryUtility;
+import engine.util.mathematics.extras.Color;
 
 class InternalBuilder extends BuilderPackage {
 

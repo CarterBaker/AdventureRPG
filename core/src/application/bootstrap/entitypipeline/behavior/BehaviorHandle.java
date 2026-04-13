@@ -1,6 +1,6 @@
 package application.bootstrap.entitypipeline.behavior;
 
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 
 public class BehaviorHandle extends HandlePackage {
 

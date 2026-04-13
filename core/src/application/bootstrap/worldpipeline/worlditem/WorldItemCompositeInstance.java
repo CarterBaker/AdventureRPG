@@ -2,7 +2,7 @@ package application.bootstrap.worldpipeline.worlditem;
 
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 
 /*
  * Pairs a cloned MaterialInstance with a CompositeBufferInstance for a single

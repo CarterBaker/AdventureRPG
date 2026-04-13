@@ -2,7 +2,7 @@ package application.bootstrap.renderpipeline;
 
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class RenderPipeline extends PipelinePackage {
 

@@ -2,7 +2,7 @@ package application.bootstrap.worldpipeline.megachunk;
 
 import java.util.Arrays;
 
-import application.core.engine.SyncContainerPackage;
+import engine.root.SyncContainerPackage;
 
 public class MegaDataSyncContainer extends SyncContainerPackage {
 

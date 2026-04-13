@@ -2,8 +2,8 @@ package application.bootstrap.shaderpipeline.uniforms.samplers;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.engine.EngineContext;
-import application.core.util.graphics.gl.GL20;
+import engine.graphics.GL20;
+import engine.root.EngineContext;
 
 public final class SampleImage2DUniform extends UniformAttributeStruct<Integer> {
 

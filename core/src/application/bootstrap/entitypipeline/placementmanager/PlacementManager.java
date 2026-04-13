@@ -4,9 +4,9 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
-import application.core.engine.ManagerPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.ManagerPackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.vectors.Vector3;
 
 public class PlacementManager extends ManagerPackage {
 

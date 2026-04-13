@@ -3,7 +3,7 @@ package application.bootstrap.geometrypipeline.mesh;
 import application.bootstrap.geometrypipeline.ibo.IBOHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import application.bootstrap.geometrypipeline.vbo.VBOHandle;
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 
 public class MeshHandle extends HandlePackage {
 

@@ -9,8 +9,8 @@ import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
-import application.core.engine.BranchPackage;
-import application.core.settings.EngineSetting;
+import engine.root.BranchPackage;
+import engine.settings.EngineSetting;
 
 public class DumpBranch extends BranchPackage {
 

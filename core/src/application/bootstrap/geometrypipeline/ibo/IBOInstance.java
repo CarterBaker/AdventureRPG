@@ -1,6 +1,6 @@
 package application.bootstrap.geometrypipeline.ibo;
 
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 
 public class IBOInstance extends InstancePackage {
 

@@ -1,7 +1,7 @@
 package application.bootstrap.itempipeline.util;
 
-import application.core.engine.EngineUtility;
-import application.core.settings.EngineSetting;
+import engine.root.EngineUtility;
+import engine.settings.EngineSetting;
 
 public class ItemRegistryUtility extends EngineUtility {
 

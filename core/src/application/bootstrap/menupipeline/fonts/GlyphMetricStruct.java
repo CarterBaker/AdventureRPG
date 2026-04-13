@@ -1,6 +1,6 @@
 package application.bootstrap.menupipeline.fonts;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class GlyphMetricStruct extends StructPackage {
 

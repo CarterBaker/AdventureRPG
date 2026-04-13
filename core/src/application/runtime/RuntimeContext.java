@@ -1,11 +1,11 @@
 package application.runtime;
 
-import application.core.engine.ContextPackage;
 import application.runtime.input.PlayerInputSystem;
 import application.runtime.lighting.SkySystem;
 import application.runtime.menu.MenuSystem;
 import application.runtime.player.PlayerSystem;
 import application.runtime.world.WorldSystem;
+import engine.root.ContextPackage;
 
 public class RuntimeContext extends ContextPackage {
 

@@ -7,10 +7,10 @@ import java.util.List;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
-import application.core.engine.SystemPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.FileUtility;
-import application.core.util.JsonUtility;
+import engine.root.SystemPackage;
+import engine.settings.EngineSetting;
+import engine.util.FileUtility;
+import engine.util.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 /*

@@ -1,6 +1,6 @@
 package application.bootstrap.calendarpipeline.calendar;
 
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

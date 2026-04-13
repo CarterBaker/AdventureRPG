@@ -2,8 +2,8 @@ package application.bootstrap.calendarpipeline.clockmanager;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
-import application.core.engine.BranchPackage;
-import application.core.settings.EngineSetting;
+import engine.root.BranchPackage;
+import engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 

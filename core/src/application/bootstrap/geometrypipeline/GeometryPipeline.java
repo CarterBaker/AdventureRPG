@@ -7,7 +7,7 @@ import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.geometrypipeline.vbomanager.VBOManager;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class GeometryPipeline extends PipelinePackage {
 

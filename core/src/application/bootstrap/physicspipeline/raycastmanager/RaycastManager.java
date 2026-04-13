@@ -2,8 +2,8 @@ package application.bootstrap.physicspipeline.raycastmanager;
 
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.physicspipeline.util.ScreenRayStruct;
-import application.core.engine.ManagerPackage;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.ManagerPackage;
+import engine.util.mathematics.vectors.Vector3;
 
 public class RaycastManager extends ManagerPackage {
 

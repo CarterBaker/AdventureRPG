@@ -8,9 +8,9 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
-import application.core.engine.ManagerPackage;
-import application.core.util.RegistryUtility;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.ManagerPackage;
+import engine.util.RegistryUtility;
+import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

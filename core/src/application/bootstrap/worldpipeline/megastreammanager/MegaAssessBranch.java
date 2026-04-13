@@ -3,7 +3,7 @@ package application.bootstrap.worldpipeline.megastreammanager;
 import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import application.bootstrap.worldpipeline.megachunk.MegaData;
 import application.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
-import application.core.engine.BranchPackage;
+import engine.root.BranchPackage;
 
 public class MegaAssessBranch extends BranchPackage {
 

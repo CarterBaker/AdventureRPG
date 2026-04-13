@@ -13,10 +13,10 @@ import javax.imageio.ImageIO;
 import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
 import application.bootstrap.shaderpipeline.texture.TextureAtlasStruct;
 import application.bootstrap.shaderpipeline.texture.TextureTileStruct;
-import application.core.engine.BuilderPackage;
-import application.core.util.AtlasUtility;
-import application.core.util.FileUtility;
-import application.core.util.RegistryUtility;
+import engine.root.BuilderPackage;
+import engine.util.AtlasUtility;
+import engine.util.FileUtility;
+import engine.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*

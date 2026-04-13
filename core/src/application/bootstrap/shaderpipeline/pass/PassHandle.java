@@ -4,7 +4,7 @@ import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 
 public class PassHandle extends HandlePackage {
 

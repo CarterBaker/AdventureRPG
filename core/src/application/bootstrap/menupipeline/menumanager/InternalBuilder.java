@@ -21,10 +21,10 @@ import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
-import application.core.engine.BuilderPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.JsonUtility;
-import application.core.util.mathematics.vectors.Vector2;
+import engine.root.BuilderPackage;
+import engine.settings.EngineSetting;
+import engine.util.JsonUtility;
+import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 

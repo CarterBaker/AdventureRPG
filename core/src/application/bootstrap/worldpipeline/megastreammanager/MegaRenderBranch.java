@@ -7,7 +7,7 @@ import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import application.bootstrap.worldpipeline.megachunk.MegaData;
 import application.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
-import application.core.engine.BranchPackage;
+import engine.root.BranchPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MegaRenderBranch extends BranchPackage {

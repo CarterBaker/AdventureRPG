@@ -5,7 +5,7 @@ import org.lwjgl.system.MemoryStack;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.util.mathematics.vectors.Vector4Int;
+import engine.util.mathematics.vectors.Vector4Int;
 
 public final class Vector4IntArrayUniform extends UniformAttributeStruct<Object[]> {
 

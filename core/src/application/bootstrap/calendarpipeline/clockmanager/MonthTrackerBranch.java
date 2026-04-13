@@ -1,7 +1,7 @@
 package application.bootstrap.calendarpipeline.clockmanager;
 
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
-import application.core.engine.BranchPackage;
+import engine.root.BranchPackage;
 
 class MonthTrackerBranch extends BranchPackage {
 

@@ -2,7 +2,7 @@ package application.runtime.lighting;
 
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
-import application.core.engine.SystemPackage;
+import engine.root.SystemPackage;
 
 public class SkySystem extends SystemPackage {
 

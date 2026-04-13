@@ -1,6 +1,6 @@
 package application.bootstrap.itempipeline.itemrotationmanager;
 
-import application.core.engine.ManagerPackage;
+import engine.root.ManagerPackage;
 
 public class ItemRotationManager extends ManagerPackage {
 

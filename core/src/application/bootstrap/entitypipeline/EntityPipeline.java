@@ -3,7 +3,7 @@ package application.bootstrap.entitypipeline;
 import application.bootstrap.entitypipeline.behaviormanager.BehaviorManager;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class EntityPipeline extends PipelinePackage {
 

@@ -3,9 +3,9 @@ package application.bootstrap.entitypipeline.playermanager;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
-import application.core.engine.SystemPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Coordinate2Long;
+import engine.root.SystemPackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
 
 class InternalBufferSystem extends SystemPackage {
 

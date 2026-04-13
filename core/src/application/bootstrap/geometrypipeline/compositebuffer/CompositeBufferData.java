@@ -1,8 +1,8 @@
 package application.bootstrap.geometrypipeline.compositebuffer;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
-import application.core.engine.DataPackage;
-import application.core.settings.EngineSetting;
+import engine.root.DataPackage;
+import engine.settings.EngineSetting;
 
 public class CompositeBufferData extends DataPackage {
 

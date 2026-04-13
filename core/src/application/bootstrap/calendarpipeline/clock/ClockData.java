@@ -1,6 +1,6 @@
 package application.bootstrap.calendarpipeline.clock;
 
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 
 public class ClockData extends DataPackage {
 

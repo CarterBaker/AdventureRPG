@@ -2,7 +2,7 @@ package application.bootstrap.physicspipeline;
 
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class PhysicsPipeline extends PipelinePackage {
 

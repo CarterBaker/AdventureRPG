@@ -4,7 +4,7 @@ import application.bootstrap.menupipeline.fontmanager.FontManager;
 import application.bootstrap.menupipeline.menueventsmanager.MenuEventsManager;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.raycastsystem.RaycastSystem;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class MenuPipeline extends PipelinePackage {
 

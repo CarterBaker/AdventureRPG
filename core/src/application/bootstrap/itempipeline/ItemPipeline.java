@@ -3,7 +3,7 @@ package application.bootstrap.itempipeline;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationManager;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class ItemPipeline extends PipelinePackage {
 

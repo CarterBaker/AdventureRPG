@@ -4,8 +4,8 @@ import application.bootstrap.menupipeline.fonts.FontInstance;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
-import application.core.engine.InstancePackage;
-import application.core.util.mathematics.matrices.Matrix4;
+import engine.root.InstancePackage;
+import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ElementInstance extends InstancePackage {

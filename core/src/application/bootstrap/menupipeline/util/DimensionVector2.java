@@ -2,7 +2,7 @@ package application.bootstrap.menupipeline.util;
 
 import com.google.gson.JsonObject;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class DimensionVector2 extends StructPackage {
 

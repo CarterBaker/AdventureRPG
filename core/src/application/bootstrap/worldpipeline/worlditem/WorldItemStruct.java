@@ -1,6 +1,6 @@
 package application.bootstrap.worldpipeline.worlditem;
 
-import application.core.engine.StructPackage;
+import engine.root.StructPackage;
 
 public class WorldItemStruct extends StructPackage {
 

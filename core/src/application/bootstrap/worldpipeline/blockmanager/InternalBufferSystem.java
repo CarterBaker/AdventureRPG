@@ -2,9 +2,9 @@ package application.bootstrap.worldpipeline.blockmanager;
 
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.core.engine.SystemPackage;
-import application.core.util.mathematics.extras.Direction3Vector;
-import application.core.util.mathematics.vectors.Vector2;
+import engine.root.SystemPackage;
+import engine.util.mathematics.extras.Direction3Vector;
+import engine.util.mathematics.vectors.Vector2;
 
 /*
  * Seeds GPU-side UBOs with data that cannot be expressed statically in JSON.

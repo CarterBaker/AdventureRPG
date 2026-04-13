@@ -19,7 +19,7 @@ package lwjgl3;
 import org.lwjgl.system.macosx.LibC;
 import org.lwjgl.system.macosx.ObjCRuntime;
 
-import application.core.settings.EngineSetting;
+import engine.settings.EngineSetting;
 
 import java.io.BufferedReader;
 import java.io.File;

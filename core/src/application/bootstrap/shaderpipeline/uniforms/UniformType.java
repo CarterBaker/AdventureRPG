@@ -3,8 +3,8 @@ package application.bootstrap.shaderpipeline.uniforms;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.nio.ByteBuffer;
 
-import application.core.util.mathematics.matrices.*;
-import application.core.util.mathematics.vectors.*;
+import engine.util.mathematics.matrices.*;
+import engine.util.mathematics.vectors.*;
 
 public enum UniformType {
 

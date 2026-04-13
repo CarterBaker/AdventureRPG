@@ -6,9 +6,9 @@ import application.bootstrap.inputpipeline.input.InputHandle;
 import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.core.engine.SystemPackage;
-import application.core.util.camera.CameraInstance;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.SystemPackage;
+import engine.util.camera.CameraInstance;
+import engine.util.mathematics.vectors.Vector3;
 
 public class PlayerInputSystem extends SystemPackage {
 

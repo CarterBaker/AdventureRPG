@@ -8,8 +8,8 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.geometrypipeline.ibo.IBOHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
-import application.core.engine.BuilderPackage;
-import application.core.util.JsonUtility;
+import engine.root.BuilderPackage;
+import engine.util.JsonUtility;
 
 public class InternalBuilder extends BuilderPackage {
 

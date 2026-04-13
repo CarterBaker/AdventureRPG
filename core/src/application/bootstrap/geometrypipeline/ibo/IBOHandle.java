@@ -1,6 +1,6 @@
 package application.bootstrap.geometrypipeline.ibo;
 
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 
 public class IBOHandle extends HandlePackage {
 

@@ -5,10 +5,10 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityHandle;
-import application.core.engine.BuilderPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.JsonUtility;
-import application.core.util.mathematics.vectors.Vector3;
+import engine.root.BuilderPackage;
+import engine.settings.EngineSetting;
+import engine.util.JsonUtility;
+import engine.util.mathematics.vectors.Vector3;
 
 class InternalBuilder extends BuilderPackage {
 

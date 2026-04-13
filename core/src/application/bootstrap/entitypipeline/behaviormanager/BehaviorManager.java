@@ -1,8 +1,8 @@
 package application.bootstrap.entitypipeline.behaviormanager;
 
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
-import application.core.engine.ManagerPackage;
-import application.core.util.RegistryUtility;
+import engine.root.ManagerPackage;
+import engine.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 

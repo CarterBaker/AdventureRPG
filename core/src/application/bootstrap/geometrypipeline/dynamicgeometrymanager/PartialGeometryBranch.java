@@ -8,9 +8,9 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import application.core.engine.BranchPackage;
-import application.core.util.mathematics.extras.Color;
-import application.core.util.mathematics.extras.Direction3Vector;
+import engine.root.BranchPackage;
+import engine.util.mathematics.extras.Color;
+import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 

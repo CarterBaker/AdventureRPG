@@ -1,6 +1,6 @@
 package application.bootstrap.geometrypipeline.vbo;
 
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 
 public class VBOInstance extends InstancePackage {
 

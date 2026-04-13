@@ -9,8 +9,8 @@ import application.bootstrap.shaderpipeline.ubo.UBOData;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.uniforms.UniformData;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.core.engine.BuilderPackage;
-import application.core.util.JsonUtility;
+import engine.root.BuilderPackage;
+import engine.util.JsonUtility;
 
 /*
  * Parses UBO JSON descriptors into UBOHandles during bootstrap. Checks the

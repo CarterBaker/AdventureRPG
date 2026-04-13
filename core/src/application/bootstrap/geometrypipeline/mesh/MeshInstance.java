@@ -3,7 +3,7 @@ package application.bootstrap.geometrypipeline.mesh;
 import application.bootstrap.geometrypipeline.ibo.IBOInstance;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import application.bootstrap.geometrypipeline.vbo.VBOInstance;
-import application.core.engine.InstancePackage;
+import engine.root.InstancePackage;
 
 public class MeshInstance extends InstancePackage {
 

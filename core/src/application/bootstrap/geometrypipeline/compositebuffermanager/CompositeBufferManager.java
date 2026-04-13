@@ -3,7 +3,7 @@ package application.bootstrap.geometrypipeline.compositebuffermanager;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferData;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
-import application.core.engine.ManagerPackage;
+import engine.root.ManagerPackage;
 
 public class CompositeBufferManager extends ManagerPackage {
 

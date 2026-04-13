@@ -1,6 +1,6 @@
 package application.bootstrap.menupipeline.menu;
 
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuData extends DataPackage {

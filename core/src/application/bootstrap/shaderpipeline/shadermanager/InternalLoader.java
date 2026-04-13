@@ -12,10 +12,10 @@ import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformData;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformUtility;
-import application.core.engine.LoaderPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.FileUtility;
-import application.core.util.RegistryUtility;
+import engine.root.LoaderPackage;
+import engine.settings.EngineSetting;
+import engine.util.FileUtility;
+import engine.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

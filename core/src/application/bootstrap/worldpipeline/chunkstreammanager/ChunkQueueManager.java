@@ -17,10 +17,10 @@ import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import application.core.engine.ManagerPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.queue.QueueInstance;
-import application.core.util.queue.QueueItemHandle;
+import engine.root.ManagerPackage;
+import engine.settings.EngineSetting;
+import engine.util.queue.QueueInstance;
+import engine.util.queue.QueueItemHandle;
 
 class ChunkQueueManager extends ManagerPackage {
 

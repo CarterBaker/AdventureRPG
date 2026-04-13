@@ -1,6 +1,6 @@
 package application.bootstrap.geometrypipeline.vao;
 
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 
 public class VAOData extends DataPackage {
 

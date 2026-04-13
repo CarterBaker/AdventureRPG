@@ -12,9 +12,9 @@ import application.bootstrap.renderpipeline.compositebatch.CompositeBatchStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
-import application.core.engine.SystemPackage;
-import application.core.kernel.window.WindowInstance;
-import application.core.settings.EngineSetting;
+import application.kernel.util.window.WindowInstance;
+import engine.root.SystemPackage;
+import engine.settings.EngineSetting;
 
 public class CompositeRenderSystem extends SystemPackage {
 

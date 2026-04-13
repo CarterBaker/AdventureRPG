@@ -11,7 +11,7 @@ import application.bootstrap.physicspipeline.PhysicsPipeline;
 import application.bootstrap.renderpipeline.RenderPipeline;
 import application.bootstrap.shaderpipeline.ShaderPipeline;
 import application.bootstrap.worldpipeline.WorldPipeline;
-import application.core.engine.AssemblyPackage;
+import engine.root.AssemblyPackage;
 
 public class BootstrapAssembly extends AssemblyPackage {
 

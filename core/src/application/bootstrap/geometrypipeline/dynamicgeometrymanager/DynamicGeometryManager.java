@@ -5,8 +5,8 @@ import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import application.bootstrap.menupipeline.fonts.GlyphMetricStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import application.core.engine.ManagerPackage;
-import application.core.settings.EngineSetting;
+import engine.root.ManagerPackage;
+import engine.settings.EngineSetting;
 
 public class DynamicGeometryManager extends ManagerPackage {
 

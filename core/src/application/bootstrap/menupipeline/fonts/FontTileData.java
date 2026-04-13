@@ -2,7 +2,7 @@ package application.bootstrap.menupipeline.fonts;
 
 import java.awt.image.BufferedImage;
 
-import application.core.util.atlas.AtlasTileData;
+import engine.util.atlas.AtlasTileData;
 
 public class FontTileData extends AtlasTileData {
 

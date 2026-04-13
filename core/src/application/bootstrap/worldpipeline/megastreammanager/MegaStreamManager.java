@@ -2,7 +2,7 @@ package application.bootstrap.worldpipeline.megastreammanager;
 
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
-import application.core.engine.ManagerPackage;
+import engine.root.ManagerPackage;
 
 public class MegaStreamManager extends ManagerPackage {
 

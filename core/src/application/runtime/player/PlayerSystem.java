@@ -1,7 +1,7 @@
 package application.runtime.player;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
-import application.core.engine.SystemPackage;
+import engine.root.SystemPackage;
 
 public class PlayerSystem extends SystemPackage {
 

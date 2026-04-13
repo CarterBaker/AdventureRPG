@@ -7,9 +7,9 @@ import application.bootstrap.inputpipeline.input.InputHandle;
 import application.bootstrap.physicspipeline.util.BlockCompositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
-import application.core.engine.InstancePackage;
-import application.core.util.mathematics.vectors.Vector3;
-import application.core.util.mathematics.vectors.Vector3Int;
+import engine.root.InstancePackage;
+import engine.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.vectors.Vector3Int;
 
 public class EntityInstance extends InstancePackage {
 

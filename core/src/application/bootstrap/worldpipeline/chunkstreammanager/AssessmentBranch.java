@@ -3,8 +3,8 @@ package application.bootstrap.worldpipeline.chunkstreammanager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
-import application.core.engine.BranchPackage;
-import application.core.util.mathematics.extras.Direction2Vector;
+import engine.root.BranchPackage;
+import engine.util.mathematics.extras.Direction2Vector;
 
 public class AssessmentBranch extends BranchPackage {
 

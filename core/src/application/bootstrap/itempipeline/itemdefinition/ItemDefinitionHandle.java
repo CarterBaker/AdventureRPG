@@ -1,7 +1,7 @@
 package application.bootstrap.itempipeline.itemdefinition;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 
 public class ItemDefinitionHandle extends HandlePackage {
 

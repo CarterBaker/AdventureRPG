@@ -1,10 +1,10 @@
 package application.bootstrap.worldpipeline.util;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertBlockNeighbor3Vector;
-import application.core.engine.EngineUtility;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Coordinate3Int;
-import application.core.util.mathematics.extras.Direction3Vector;
+import engine.root.EngineUtility;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Coordinate3Int;
+import engine.util.mathematics.extras.Direction3Vector;
 
 public class ChunkCoordinate3Int extends EngineUtility {
 

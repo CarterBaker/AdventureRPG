@@ -1,7 +1,7 @@
 package application.bootstrap.inputpipeline;
 
 import application.bootstrap.inputpipeline.inputsystem.InputSystem;
-import application.core.engine.PipelinePackage;
+import engine.root.PipelinePackage;
 
 public class InputPipeline extends PipelinePackage {
 

@@ -1,6 +1,6 @@
 package application.bootstrap.entitypipeline.behavior;
 
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 
 public class BehaviorData extends DataPackage {
 

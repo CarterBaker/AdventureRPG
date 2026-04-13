@@ -12,9 +12,9 @@ import application.bootstrap.menupipeline.fonts.FontHandle;
 import application.bootstrap.menupipeline.fonts.FontTileData;
 import application.bootstrap.menupipeline.fonts.GlyphMetricStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
-import application.core.engine.BuilderPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.AtlasUtility;
+import engine.root.BuilderPackage;
+import engine.settings.EngineSetting;
+import engine.util.AtlasUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

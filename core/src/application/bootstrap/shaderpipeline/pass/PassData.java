@@ -3,7 +3,7 @@ package application.bootstrap.shaderpipeline.pass;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 
 public class PassData extends DataPackage {
 

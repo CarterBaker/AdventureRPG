@@ -1,6 +1,6 @@
 package application.bootstrap.shaderpipeline.texture;
 
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 
 public class TextureData extends DataPackage {
 

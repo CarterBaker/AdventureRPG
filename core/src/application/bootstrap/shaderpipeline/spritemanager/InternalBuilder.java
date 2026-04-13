@@ -7,8 +7,8 @@ import javax.imageio.ImageIO;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
-import application.core.engine.BuilderPackage;
-import application.core.util.JsonUtility;
+import engine.root.BuilderPackage;
+import engine.util.JsonUtility;
 
 /*
  * Loads raw images from disk and parses companion border JSON files.

@@ -1,8 +1,8 @@
 package application.bootstrap.worldpipeline.biomemanager;
 
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
-import application.core.engine.ManagerPackage;
-import application.core.util.RegistryUtility;
+import engine.root.ManagerPackage;
+import engine.util.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 

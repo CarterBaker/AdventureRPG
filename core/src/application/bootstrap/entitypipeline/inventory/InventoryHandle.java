@@ -2,7 +2,7 @@ package application.bootstrap.entitypipeline.inventory;
 
 import application.bootstrap.itempipeline.backpack.BackpackInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 
 public class InventoryHandle extends HandlePackage {
 

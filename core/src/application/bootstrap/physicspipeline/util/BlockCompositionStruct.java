@@ -1,12 +1,12 @@
 package application.bootstrap.physicspipeline.util;
 
-import application.core.engine.StructPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Coordinate2Long;
-import application.core.util.mathematics.extras.Coordinate3Int;
-import application.core.util.mathematics.extras.Direction3Vector;
-import application.core.util.mathematics.vectors.Vector3;
-import application.core.util.mathematics.vectors.Vector3Int;
+import engine.root.StructPackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.extras.Coordinate3Int;
+import engine.util.mathematics.extras.Direction3Vector;
+import engine.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.vectors.Vector3Int;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 
 public class BlockCompositionStruct extends StructPackage {

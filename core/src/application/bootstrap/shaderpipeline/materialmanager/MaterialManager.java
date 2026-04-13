@@ -3,8 +3,8 @@ package application.bootstrap.shaderpipeline.materialmanager;
 import application.bootstrap.shaderpipeline.material.MaterialData;
 import application.bootstrap.shaderpipeline.material.MaterialHandle;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.core.engine.ManagerPackage;
-import application.core.util.RegistryUtility;
+import engine.root.ManagerPackage;
+import engine.util.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

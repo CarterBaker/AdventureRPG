@@ -5,7 +5,7 @@ import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
-import application.core.engine.HandlePackage;
+import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ElementHandle extends HandlePackage {

@@ -1,6 +1,6 @@
 package application.bootstrap.geometrypipeline.vbo;
 
-import application.core.engine.DataPackage;
+import engine.root.DataPackage;
 
 public class VBOData extends DataPackage {
 

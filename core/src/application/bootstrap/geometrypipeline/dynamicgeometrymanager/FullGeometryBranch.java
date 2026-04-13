@@ -16,12 +16,12 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
-import application.core.engine.BranchPackage;
-import application.core.settings.EngineSetting;
-import application.core.util.mathematics.extras.Color;
-import application.core.util.mathematics.extras.Coordinate3Int;
-import application.core.util.mathematics.extras.Direction2Vector;
-import application.core.util.mathematics.extras.Direction3Vector;
+import engine.root.BranchPackage;
+import engine.settings.EngineSetting;
+import engine.util.mathematics.extras.Color;
+import engine.util.mathematics.extras.Coordinate3Int;
+import engine.util.mathematics.extras.Direction2Vector;
+import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 

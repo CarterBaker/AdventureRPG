@@ -16,8 +16,8 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
-import application.core.engine.SystemPackage;
-import application.core.util.RegistryUtility;
+import engine.root.SystemPackage;
+import engine.util.RegistryUtility;
 
 class ElementSystem extends SystemPackage {
 
