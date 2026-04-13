@@ -7,7 +7,7 @@
             "anchor": "CENTER",
             "pivot":  "CENTER",
             "on_click": {
-                "class":  "program.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch",
+                "class":  "application.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch",
                 "method": "closeMenu",
                 "arg":    "$parent"
             },

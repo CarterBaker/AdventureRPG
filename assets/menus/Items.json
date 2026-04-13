@@ -6,7 +6,7 @@
             "sprite": "menus/DebugElement",
             "size": { "x": "100%", "y": "50px" },
             "on_click": {
-                "class":  "program.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch",
+                "class":  "application.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch",
                 "method": "selectItem"
             },
             "elements": [
