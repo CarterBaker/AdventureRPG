@@ -2,11 +2,11 @@ package application.bootstrap.renderpipeline.rendermanager;
 
 import org.lwjgl.glfw.GLFW;
 
-import engine.graphics.GL20;
-import engine.graphics.GL30;
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
 import engine.settings.EngineSetting;
+import engine.util.graphics.GL20;
+import engine.util.graphics.GL30;
 
 class GLSLUtility extends EngineUtility {
 

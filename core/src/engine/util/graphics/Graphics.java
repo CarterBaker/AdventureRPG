@@ -1,4 +1,4 @@
-package engine.graphics;
+package engine.util.graphics;
 
 public interface Graphics {
 

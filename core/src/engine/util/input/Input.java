@@ -1,4 +1,4 @@
-package engine.input;
+package engine.util.input;
 
 public interface Input {
 

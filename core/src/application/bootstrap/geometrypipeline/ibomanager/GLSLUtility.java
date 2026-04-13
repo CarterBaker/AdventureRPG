@@ -8,9 +8,9 @@ import application.bootstrap.geometrypipeline.ibo.IBOData;
 import application.bootstrap.geometrypipeline.ibo.IBOHandle;
 import application.bootstrap.geometrypipeline.ibo.IBOInstance;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
-import engine.graphics.GL20;
-import engine.graphics.GL30;
 import engine.root.EngineContext;
+import engine.util.graphics.GL20;
+import engine.util.graphics.GL30;
 
 class GLSLUtility {
 

@@ -1,6 +1,6 @@
 package engine.lwjgl3;
 
-import engine.graphics.Graphics;
+import engine.util.graphics.Graphics;
 
 public class Lwjgl3Graphics implements Graphics {
 

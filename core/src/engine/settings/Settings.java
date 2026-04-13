@@ -1,6 +1,6 @@
 package engine.settings;
 
-import engine.input.Keys;
+import engine.util.input.Keys;
 
 public class Settings {
 

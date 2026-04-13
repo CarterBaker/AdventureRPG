@@ -3,11 +3,11 @@ package application.bootstrap.shaderpipeline.shadermanager;
 import java.nio.IntBuffer;
 
 import application.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
-import engine.graphics.GL20;
-import engine.graphics.GL30;
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
 import engine.settings.EngineSetting;
+import engine.util.graphics.GL20;
+import engine.util.graphics.GL30;
 import engine.util.memory.BufferUtils;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

@@ -3,10 +3,10 @@ package application.bootstrap.menupipeline.fontmanager;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 
-import engine.graphics.GL20;
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
 import engine.util.PixmapUtility;
+import engine.util.graphics.GL20;
 import engine.util.image.Pixmap;
 
 class GLSLUtility extends EngineUtility {

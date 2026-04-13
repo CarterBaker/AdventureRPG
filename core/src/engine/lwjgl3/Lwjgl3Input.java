@@ -2,9 +2,9 @@ package engine.lwjgl3;
 
 import org.lwjgl.glfw.GLFW;
 
-import engine.input.Buttons;
-import engine.input.Input;
-import engine.input.InputListener;
+import engine.util.input.Buttons;
+import engine.util.input.Input;
+import engine.util.input.InputListener;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

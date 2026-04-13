@@ -1,9 +1,9 @@
 package engine.root;
 
-import engine.graphics.GL20;
-import engine.graphics.GL30;
-import engine.graphics.Graphics;
-import engine.input.Input;
+import engine.util.graphics.GL20;
+import engine.util.graphics.GL30;
+import engine.util.graphics.Graphics;
+import engine.util.input.Input;
 
 public class EngineContext {
 

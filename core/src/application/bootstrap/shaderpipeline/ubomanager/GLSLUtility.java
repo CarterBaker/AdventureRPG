@@ -3,10 +3,10 @@ package application.bootstrap.shaderpipeline.ubomanager;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-import engine.graphics.GL20;
-import engine.graphics.GL30;
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
+import engine.util.graphics.GL20;
+import engine.util.graphics.GL30;
 import engine.util.memory.BufferUtils;
 
 /*

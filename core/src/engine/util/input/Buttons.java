@@ -1,4 +1,4 @@
-package engine.input;
+package engine.util.input;
 
 import org.lwjgl.glfw.GLFW;
 

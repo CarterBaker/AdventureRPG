@@ -1,7 +1,6 @@
 package engine.root;
 
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
-import application.kernel.KernelAssembly;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.runtime.RuntimeContext;
 
@@ -18,7 +17,8 @@ public class EditorEngine extends EnginePackage {
      */
 
     // Kernel
-    private KernelAssembly kernelAssembly;
+    private application.kernel.KernelAssembly kernelAssembly;
+    private editor.kernel.KernelAssembly editorKernelAssembly;
 
     // Bootstrap
     private application.bootstrap.BootstrapAssembly bootstrapAssembly;
@@ -35,7 +35,8 @@ public class EditorEngine extends EnginePackage {
 
     @Override
     protected void kernel() {
-        this.kernelAssembly = create(KernelAssembly.class);
+        this.kernelAssembly = create(application.kernel.KernelAssembly.class);
+        this.editorKernelAssembly = create(editor.kernel.KernelAssembly.class);
     }
 
     // Bootstrap \\

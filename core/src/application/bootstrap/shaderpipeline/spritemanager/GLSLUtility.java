@@ -2,10 +2,10 @@ package application.bootstrap.shaderpipeline.spritemanager;
 
 import java.awt.image.BufferedImage;
 
-import engine.graphics.GL20;
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
 import engine.util.PixmapUtility;
+import engine.util.graphics.GL20;
 import engine.util.image.Pixmap;
 
 /*

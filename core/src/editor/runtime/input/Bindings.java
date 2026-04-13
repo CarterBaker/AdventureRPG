@@ -1,8 +1,8 @@
 package editor.runtime.input;
 
-import engine.input.Binding;
-import engine.input.Keys;
 import engine.settings.Settings;
+import engine.util.input.Binding;
+import engine.util.input.Keys;
 
 public final class Bindings {
 

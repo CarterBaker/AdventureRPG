@@ -1,9 +1,9 @@
 package application.bootstrap.inputpipeline.inputsystem;
 
-import engine.input.Binding;
-import engine.input.InputListener;
 import engine.root.EngineContext;
 import engine.root.SystemPackage;
+import engine.util.input.Binding;
+import engine.util.input.InputListener;
 import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
@@ -85,17 +85,17 @@ public class InputSystem extends SystemPackage implements InputListener {
 
     @Override
     public void onMouseDown(int button, int x, int y) {
-        if (button == engine.input.Buttons.LEFT)
+        if (button == engine.util.input.Buttons.LEFT)
             leftDown = true;
-        if (button == engine.input.Buttons.RIGHT)
+        if (button == engine.util.input.Buttons.RIGHT)
             rightDown = true;
     }
 
     @Override
     public void onMouseUp(int button, int x, int y) {
-        if (button == engine.input.Buttons.LEFT)
+        if (button == engine.util.input.Buttons.LEFT)
             leftDown = false;
-        if (button == engine.input.Buttons.RIGHT)
+        if (button == engine.util.input.Buttons.RIGHT)
             rightDown = false;
     }
 

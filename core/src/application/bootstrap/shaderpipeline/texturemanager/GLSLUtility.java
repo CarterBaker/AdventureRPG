@@ -3,12 +3,12 @@ package application.bootstrap.shaderpipeline.texturemanager;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 
-import engine.graphics.GL20;
-import engine.graphics.GL30;
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
 import engine.settings.EngineSetting;
 import engine.util.PixmapUtility;
+import engine.util.graphics.GL20;
+import engine.util.graphics.GL30;
 import engine.util.image.Pixmap;
 
 /*
