@@ -27,7 +27,7 @@ public class Lwjgl3Application {
     private final int glMinor;
 
     // Secondary Windows
-    private final ObjectArrayList<Lwjgl3ManagedWindow> secondaryWindows;
+    private final ObjectArrayList<Lwjgl3Window> secondaryWindows;
 
     // State
     private boolean running;
@@ -150,7 +150,7 @@ public class Lwjgl3Application {
 
         Lwjgl3Input windowInput = new Lwjgl3Input(handle);
         registerCallbacks(handle, windowInput, null);
-        secondaryWindows.add(new Lwjgl3ManagedWindow(handle, windowInput));
+        secondaryWindows.add(new Lwjgl3Window(handle, windowInput));
 
         return new Lwjgl3Window(handle, windowInput);
     }

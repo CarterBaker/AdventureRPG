@@ -5,7 +5,6 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderQueueHandle;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.ContextPackage;
-import engine.root.EngineUtility;
 import engine.root.InstancePackage;
 import engine.util.camera.CameraInstance;
 import engine.util.camera.OrthographicCameraInstance;
@@ -42,12 +41,12 @@ public class WindowInstance extends InstancePackage {
     public void constructor(WindowData windowData) {
         this.windowData = windowData;
 
-        this.activeCamera = EngineUtility.createCamera(
+        this.activeCamera = internal.createCamera(
                 internal.settings.FOV,
                 windowData.getWidth(),
                 windowData.getHeight());
 
-        this.orthoCamera = EngineUtility.createOrthographicCamera(
+        this.orthoCamera = internal.createOrthographicCamera(
                 windowData.getWidth(),
                 windowData.getHeight());
     }

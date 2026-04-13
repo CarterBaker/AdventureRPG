@@ -52,36 +52,36 @@ public abstract class EngineUtility {
 
     // Thread \\
 
-    public static ThreadHandle getThreadHandle(String threadName) {
+    static ThreadHandle getThreadHandle(String threadName) {
         return threadManager.getThreadHandleFromThreadName(threadName);
     }
 
-    public static Future<?> executeAsync(ThreadHandle handle, Runnable task) {
+    static Future<?> executeAsync(ThreadHandle handle, Runnable task) {
         return threadManager.executeAsync(handle, task);
     }
 
-    public static <T extends AsyncContainerPackage> Future<?> executeAsync(
+    static <T extends AsyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
             T asyncStruct,
             AsyncStructConsumer<T> consumer) {
         return threadManager.executeAsync(handle, asyncStruct, consumer);
     }
 
-    public static Future<?> executeAsync(
+    static Future<?> executeAsync(
             ThreadHandle handle,
             AsyncStructConsumerMulti consumer,
             AsyncContainerPackage... asyncStructs) {
         return threadManager.executeAsync(handle, consumer, asyncStructs);
     }
 
-    public static <T extends SyncContainerPackage> Future<?> executeAsync(
+    static <T extends SyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
             T syncStruct,
             SyncStructConsumer<T> consumer) {
         return threadManager.executeAsync(handle, syncStruct, consumer);
     }
 
-    public static <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
+    static <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
             ThreadHandle handle,
             T asyncStruct,
             S syncStruct,
@@ -91,13 +91,13 @@ public abstract class EngineUtility {
 
     // Camera \\
 
-    public static CameraInstance createCamera(float fov, float width, float height) {
+    static CameraInstance createCamera(float fov, float width, float height) {
         CameraInstance instance = engine.createInstance(CameraInstance.class);
         instance.constructor(new CameraData(fov, width, height));
         return instance;
     }
 
-    public static OrthographicCameraInstance createOrthographicCamera(float width, float height) {
+    static OrthographicCameraInstance createOrthographicCamera(float width, float height) {
         OrthographicCameraInstance instance = engine.createInstance(OrthographicCameraInstance.class);
         instance.constructor(new OrthographicCameraData(width, height));
         return instance;

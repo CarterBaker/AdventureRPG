@@ -15,6 +15,8 @@ import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.settings.EngineSetting;
 import engine.settings.Settings;
+import engine.util.camera.CameraInstance;
+import engine.util.camera.OrthographicCameraInstance;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -634,6 +636,16 @@ public class EnginePackage extends ManagerPackage {
                 EngineSetting.WINDOW_TITLE));
 
         EngineUtility.windowManager.registerMainWindow(mainWindow);
+    }
+
+    // Camera \\
+
+    public final CameraInstance createCamera(float fov, float width, float height) {
+        return EngineUtility.createCamera(fov, width, height);
+    }
+
+    public final OrthographicCameraInstance createOrthographicCamera(float width, float height) {
+        return EngineUtility.createOrthographicCamera(width, height);
     }
 
     // Accessible \\
