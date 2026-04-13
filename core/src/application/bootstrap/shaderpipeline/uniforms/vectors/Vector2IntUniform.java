@@ -1,0 +1,28 @@
+package application.bootstrap.shaderpipeline.uniforms.vectors;
+
+import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
+import application.bootstrap.shaderpipeline.uniforms.UniformType;
+import application.core.engine.EngineContext;
+import application.core.util.mathematics.vectors.Vector2Int;
+
+public final class Vector2IntUniform extends UniformAttributeStruct<Vector2Int> {
+
+    public Vector2IntUniform() {
+        super(UniformType.VECTOR2_INT, new Vector2Int());
+    }
+
+    @Override
+    public UniformAttributeStruct<?> createDefault() {
+        return new Vector2IntUniform();
+    }
+
+    @Override
+    protected void push(int handle, Vector2Int value) {
+        EngineContext.gl.glUniform2i(handle, value.x, value.y);
+    }
+
+    @Override
+    protected void applyValue(Vector2Int value) {
+        this.value.set(value);
+    }
+}

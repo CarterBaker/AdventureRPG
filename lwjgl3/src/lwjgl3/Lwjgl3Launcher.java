@@ -3,18 +3,18 @@ package lwjgl3;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import program.core.engine.EngineContext;
-import program.core.engine.EnginePackage;
-import program.core.engine.GameEngine;
-import program.core.lwjgl3.Lwjgl3Application;
-import program.core.lwjgl3.Lwjgl3ApplicationConfiguration;
-import program.core.lwjgl3.Lwjgl3Graphics;
-import program.core.lwjgl3.Lwjgl3Window;
-import program.core.lwjgl3.Lwjgl3WindowAdapter;
-import program.core.lwjgl3.Lwjgl3WindowPlatform;
-import program.core.settings.EngineSetting;
-import program.core.settings.Loader;
-import program.core.settings.Settings;
+import application.core.engine.EngineContext;
+import application.core.engine.EnginePackage;
+import application.core.engine.GameEngine;
+import application.core.lwjgl3.Lwjgl3Application;
+import application.core.lwjgl3.Lwjgl3ApplicationConfiguration;
+import application.core.lwjgl3.Lwjgl3Graphics;
+import application.core.lwjgl3.Lwjgl3Window;
+import application.core.lwjgl3.Lwjgl3WindowAdapter;
+import application.core.lwjgl3.Lwjgl3WindowPlatform;
+import application.core.settings.EngineSetting;
+import application.core.settings.Loader;
+import application.core.settings.Settings;
 
 import java.io.File;
 
