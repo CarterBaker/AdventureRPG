@@ -163,6 +163,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         long previousContext = GLFW.glfwGetCurrentContext();
         GLCapabilities previousCapabilities = GL.getCapabilities();
         bindContext(windowID, windowHandle);
+        GLFW.glfwSwapInterval(application.getSwapInterval());
 
         if (previousContext != windowHandle)
             restoreContext(previousContext, previousCapabilities);
