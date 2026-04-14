@@ -23,7 +23,7 @@ public class Lwjgl3Application {
     // Internal
     private final long mainHandle;
     private final EnginePackage engine;
-    private final Lwjgl3Display graphics;
+    private final Lwjgl3Display display;
     private final Lwjgl3Input input;
     private final int glMajor;
     private final int glMinor;
@@ -67,21 +67,21 @@ public class Lwjgl3Application {
         GL.createCapabilities();
 
         this.input = new Lwjgl3Input(mainHandle);
-        this.graphics = new Lwjgl3Display(config.width, config.height, config.isFullscreen());
+        this.display = new Lwjgl3Display(config.width, config.height, config.isFullscreen());
         this.engine = engine;
 
-        graphics.setMainHandle(mainHandle);
+        display.setMainHandle(mainHandle);
 
         Lwjgl3GL gl20 = new Lwjgl3GL();
-        EngineContext.graphics = graphics;
+        EngineContext.display = display;
         EngineContext.input = input;
         EngineContext.gl20 = gl20;
         EngineContext.gl30 = gl20;
 
         registerCallbacks(mainHandle, input, config.getCloseCallback());
         GLFW.glfwSetWindowPosCallback(mainHandle, (w, x, y) -> {
-            graphics.setPosX(x);
-            graphics.setPosY(y);
+            display.setPosX(x);
+            display.setPosY(y);
         });
 
         platform.setApplication(this);
@@ -108,7 +108,7 @@ public class Lwjgl3Application {
 
         GLFW.glfwSetFramebufferSizeCallback(handle, (w, width, height) -> {
             if (handle == mainHandle)
-                graphics.setSize(width, height);
+                display.setSize(width, height);
         });
         GLFW.glfwSetCursorPosCallback(handle, (w, x, y) -> inp.onCursor(x, y));
         GLFW.glfwSetMouseButtonCallback(handle, (w, b, a, m) -> inp.onMouseButton(b, a));
@@ -131,7 +131,7 @@ public class Lwjgl3Application {
 
             long now = System.nanoTime();
             float delta = (now - last) / 1_000_000_000f;
-            graphics.setDelta(delta);
+            display.setDelta(delta);
             last = now;
 
             input.endFrame();
