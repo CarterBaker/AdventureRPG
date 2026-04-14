@@ -207,6 +207,7 @@ class RenderSystem extends SystemPackage {
 
         Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = queue.depth2MaterialBatches.get(depth);
 
+        // TODO: Inline these if null checks to the actual queue class.
         if (materialBatches == null) {
             materialBatches = new Int2ObjectOpenHashMap<>();
             queue.depth2MaterialBatches.put(depth, materialBatches);
