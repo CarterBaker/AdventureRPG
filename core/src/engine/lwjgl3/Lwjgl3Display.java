@@ -5,8 +5,8 @@ import engine.util.display.Display;
 public class Lwjgl3Display implements Display {
 
     /*
-     * Holds the current display state for the main window. Size is updated each
-     * frame via the framebuffer resize callback — never stale after the first
+     * Holds the current display state for the main window. Size and position are
+     * updated via framebuffer and position callbacks — never stale after the first
      * frame.
      */
 
@@ -17,7 +17,9 @@ public class Lwjgl3Display implements Display {
     private boolean fullscreen;
 
     // Window
-    private Lwjgl3Window window;
+    private long mainHandle;
+    private int posX;
+    private int posY;
 
     Lwjgl3Display(int width, int height, boolean fullscreen) {
         this.width = width;
@@ -40,8 +42,16 @@ public class Lwjgl3Display implements Display {
         this.fullscreen = fullscreen;
     }
 
-    void setWindow(Lwjgl3Window window) {
-        this.window = window;
+    void setMainHandle(long mainHandle) {
+        this.mainHandle = mainHandle;
+    }
+
+    void setPosX(int posX) {
+        this.posX = posX;
+    }
+
+    void setPosY(int posY) {
+        this.posY = posY;
     }
 
     // Accessible \\
@@ -66,7 +76,15 @@ public class Lwjgl3Display implements Display {
         return fullscreen;
     }
 
-    public Lwjgl3Window getWindow() {
-        return window;
+    public long getMainHandle() {
+        return mainHandle;
+    }
+
+    public int getPosX() {
+        return posX;
+    }
+
+    public int getPosY() {
+        return posY;
     }
 }

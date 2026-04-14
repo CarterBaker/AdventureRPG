@@ -1,5 +1,6 @@
 package engine.lwjgl3;
 
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import org.lwjgl.BufferUtils;
@@ -17,8 +18,8 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     /*
      * Bridges the engine WindowPlatform contract to raw GLFW. Maps engine window
-     * IDs to native Lwjgl3Window instances. All windows — main and secondary —
-     * share identical open, draw, swap, and destroy paths with no special casing.
+     * IDs to native handles. All windows — main and secondary — share identical
+     * open, draw, swap, and destroy paths with no special casing.
      */
 
     // Application
@@ -27,11 +28,12 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     // Window Registry
     private static final int MAIN_WINDOW_ID = 0;
     private static final int UNKNOWN_WINDOW_ID = -1;
-    private final Int2ObjectOpenHashMap<Lwjgl3Window> windowID2Native = new Int2ObjectOpenHashMap<>();
+    private final Int2LongOpenHashMap windowID2Handle = new Int2LongOpenHashMap();
     private final Int2ObjectOpenHashMap<GLCapabilities> windowID2Capabilities = new Int2ObjectOpenHashMap<>();
     private final Long2IntOpenHashMap handle2WindowID = new Long2IntOpenHashMap();
 
     public Lwjgl3WindowPlatform() {
+        windowID2Handle.defaultReturnValue(0L);
         handle2WindowID.defaultReturnValue(UNKNOWN_WINDOW_ID);
     }
 
@@ -45,10 +47,9 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     public void openWindow(WindowInstance window) {
 
         int windowID = window.getWindowID();
-        Lwjgl3Window nativeWindow = resolveOrCreateNativeWindow(window);
-        long handle = nativeWindow.getHandle();
+        long handle = resolveOrCreateHandle(window);
 
-        windowID2Native.put(windowID, nativeWindow);
+        windowID2Handle.put(windowID, handle);
         handle2WindowID.put(handle, windowID);
         window.setNativeHandle(handle);
 
@@ -61,12 +62,11 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     @Override
     public void destroyWindow(WindowInstance window) {
 
-        Lwjgl3Window nativeWindow = windowID2Native.remove(window.getWindowID());
+        long handle = windowID2Handle.remove(window.getWindowID());
 
-        if (nativeWindow == null)
+        if (handle == 0L)
             return;
 
-        long handle = nativeWindow.getHandle();
         handle2WindowID.remove(handle);
         application.removeSecondaryWindow(handle);
         GLFW.glfwDestroyWindow(handle);
@@ -76,6 +76,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     @Override
     public boolean shouldClose(WindowInstance window) {
+
         if (!window.hasNativeHandle())
             return false;
 
@@ -84,6 +85,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     @Override
     public boolean isWindowFocused(WindowInstance window) {
+
         if (!window.hasNativeHandle())
             return false;
 
@@ -92,6 +94,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     @Override
     public void makeContextCurrent(WindowInstance window) {
+
         if (!window.hasNativeHandle())
             return;
 
@@ -100,6 +103,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     @Override
     public void swapBuffers(WindowInstance window) {
+
         if (!window.hasNativeHandle())
             return;
 
@@ -108,37 +112,54 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     @Override
     public void restoreMainContext() {
+
         if (!(EngineContext.graphics instanceof Lwjgl3Display graphics))
             return;
 
-        bindContext(MAIN_WINDOW_ID, graphics.getWindow().getHandle());
+        bindContext(MAIN_WINDOW_ID, graphics.getMainHandle());
     }
 
     @Override
     public void exit() {
-        Lwjgl3Window main = windowID2Native.get(MAIN_WINDOW_ID);
-        if (main != null)
-            GLFW.glfwSetWindowShouldClose(main.getHandle(), true);
+
+        long mainHandle = windowID2Handle.get(MAIN_WINDOW_ID);
+
+        if (mainHandle != 0L)
+            GLFW.glfwSetWindowShouldClose(mainHandle, true);
     }
 
-    private Lwjgl3Window resolveOrCreateNativeWindow(WindowInstance window) {
+    @Override
+    public void syncWindowSize(WindowInstance window) {
 
-        Lwjgl3Window nativeWindow = windowID2Native.get(window.getWindowID());
+        if (!window.hasNativeHandle())
+            return;
 
-        if (nativeWindow != null)
-            return nativeWindow;
+        IntBuffer w = BufferUtils.createIntBuffer(1);
+        IntBuffer h = BufferUtils.createIntBuffer(1);
+        GLFW.glfwGetFramebufferSize(window.getNativeHandle(), w, h);
 
-        if (window.getWindowID() == MAIN_WINDOW_ID
-                && EngineContext.graphics instanceof Lwjgl3Display graphics)
-            return graphics.getWindow();
+        int width = w.get(0);
+        int height = h.get(0);
 
-        Lwjgl3WindowConfiguration config = new Lwjgl3WindowConfiguration();
-        config.setTitle(window.getTitle());
-        config.setWindowedMode(window.getWidth(), window.getHeight());
-        return application.newWindow(config);
+        if (width > 0 && height > 0)
+            window.resize(width, height);
+    }
+
+    private long resolveOrCreateHandle(WindowInstance window) {
+
+        long handle = windowID2Handle.get(window.getWindowID());
+
+        if (handle != 0L)
+            return handle;
+
+        if (window.getWindowID() == MAIN_WINDOW_ID && EngineContext.graphics instanceof Lwjgl3Display graphics)
+            return graphics.getMainHandle();
+
+        return application.newWindow(window.getTitle(), window.getWidth(), window.getHeight());
     }
 
     private void primeWindowContext(int windowID, long windowHandle) {
+
         long previousContext = GLFW.glfwGetCurrentContext();
         GLCapabilities previousCapabilities = GL.getCapabilities();
         bindContext(windowID, windowHandle);
@@ -181,21 +202,5 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         }
 
         GL.setCapabilities(caps);
-    }
-
-    @Override
-    public void syncWindowSize(WindowInstance window) {
-        if (!window.hasNativeHandle())
-            return;
-
-        IntBuffer w = BufferUtils.createIntBuffer(1);
-        IntBuffer h = BufferUtils.createIntBuffer(1);
-        GLFW.glfwGetFramebufferSize(window.getNativeHandle(), w, h);
-
-        int width = w.get(0);
-        int height = h.get(0);
-
-        if (width > 0 && height > 0)
-            window.resize(width, height);
     }
 }

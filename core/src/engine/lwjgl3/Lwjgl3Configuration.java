@@ -3,25 +3,39 @@ package engine.lwjgl3;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWVidMode;
 
-public class Lwjgl3ApplicationConfiguration extends Lwjgl3WindowConfiguration {
+import java.util.function.BooleanSupplier;
+
+public class Lwjgl3Configuration {
 
     /*
      * Boot-time configuration for the LWJGL3 application. Consumed once during
      * Lwjgl3Application construction — never read again at runtime.
      */
 
-    // State
+    // Identity
+    String title = "Window";
+
+    // Dimensions
+    int width = 1280;
+    int height = 720;
+
+    // Display
     private int glMajor = 3;
     private int glMinor = 3;
     private boolean fullscreen;
     private boolean vsync = true;
+
+    // Position
     private int windowX = -1;
     private int windowY = -1;
-    private Lwjgl3WindowAdapter windowListener;
+
+    // Callback
+    private BooleanSupplier closeCallback;
 
     // Accessible \\
 
     public static DisplayModeStruct getDisplayMode() {
+
         long monitor = GLFW.glfwGetPrimaryMonitor();
         GLFWVidMode mode = monitor != 0L ? GLFW.glfwGetVideoMode(monitor) : null;
 
@@ -29,6 +43,15 @@ public class Lwjgl3ApplicationConfiguration extends Lwjgl3WindowConfiguration {
             return new DisplayModeStruct(mode.width(), mode.height(), mode.refreshRate());
 
         return new DisplayModeStruct(1920, 1080, 60);
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setWindowedMode(int width, int height) {
+        this.width = width;
+        this.height = height;
     }
 
     public void setOpenGLVersion(int major, int minor) {
@@ -51,8 +74,8 @@ public class Lwjgl3ApplicationConfiguration extends Lwjgl3WindowConfiguration {
         this.windowY = y;
     }
 
-    public void setWindowListener(Lwjgl3WindowAdapter listener) {
-        this.windowListener = listener;
+    public void setCloseCallback(BooleanSupplier closeCallback) {
+        this.closeCallback = closeCallback;
     }
 
     public int getGlMajor() {
@@ -79,7 +102,7 @@ public class Lwjgl3ApplicationConfiguration extends Lwjgl3WindowConfiguration {
         return windowY;
     }
 
-    public Lwjgl3WindowAdapter getWindowListener() {
-        return windowListener;
+    public BooleanSupplier getCloseCallback() {
+        return closeCallback;
     }
 }

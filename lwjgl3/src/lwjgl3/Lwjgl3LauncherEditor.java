@@ -2,18 +2,18 @@ package lwjgl3;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
 import engine.lwjgl3.Lwjgl3Application;
-import engine.lwjgl3.Lwjgl3ApplicationConfiguration;
+import engine.lwjgl3.Lwjgl3Configuration;
 import engine.lwjgl3.Lwjgl3Display;
-import engine.lwjgl3.Lwjgl3Window;
-import engine.lwjgl3.Lwjgl3WindowAdapter;
 import engine.lwjgl3.Lwjgl3WindowPlatform;
 import engine.root.EditorEngine;
 import engine.root.EngineContext;
 import engine.root.EnginePackage;
 import engine.root.EngineSetting;
-import engine.util.settings.SettingsUtility;
 import engine.util.settings.Settings;
+import engine.util.settings.SettingsUtility;
+
 import java.io.File;
 
 public class Lwjgl3LauncherEditor {
@@ -50,6 +50,7 @@ public class Lwjgl3LauncherEditor {
     private static void createApplication() {
 
         File baseGameDir = new File(System.getProperty("user.home"), "Documents/My Games/" + GAME_DIRECTORY);
+
         if (!baseGameDir.exists())
             baseGameDir.mkdirs();
 
@@ -57,16 +58,13 @@ public class Lwjgl3LauncherEditor {
         Settings settings = SettingsUtility.load(settingsFile, ENGINE_GSON);
         SettingsUtility.applyBindings(settings);
 
-        Lwjgl3ApplicationConfiguration config = buildConfig(settings);
+        Lwjgl3Configuration config = buildConfig(settings);
         Lwjgl3WindowPlatform platform = new Lwjgl3WindowPlatform();
 
-        config.setWindowListener(new Lwjgl3WindowAdapter() {
-            @Override
-            public boolean closeRequested() {
-                saveWindowInfoOnClose(settingsFile, settings);
-                platform.exit();
-                return true;
-            }
+        config.setCloseCallback(() -> {
+            saveWindowInfoOnClose(settingsFile, settings);
+            platform.exit();
+            return true;
         });
 
         EnginePackage.setupConstructor(settings, baseGameDir, ENGINE_GSON, platform);
@@ -74,15 +72,15 @@ public class Lwjgl3LauncherEditor {
         new Lwjgl3Application(engine, config, platform);
     }
 
-    private static Lwjgl3ApplicationConfiguration buildConfig(Settings settings) {
+    private static Lwjgl3Configuration buildConfig(Settings settings) {
 
-        Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
+        Lwjgl3Configuration config = new Lwjgl3Configuration();
         config.setOpenGLVersion(4, 1);
         config.setTitle("AdventureRPG — Editor");
         config.useVsync(true);
 
         if (settings.fullscreen) {
-            config.setFullscreenMode(Lwjgl3ApplicationConfiguration.getDisplayMode());
+            config.setFullscreenMode(Lwjgl3Configuration.getDisplayMode());
         } else {
             int width = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, settings.windowWidth);
             int height = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, settings.windowHeight);
@@ -100,13 +98,11 @@ public class Lwjgl3LauncherEditor {
         if (!(EngineContext.graphics instanceof Lwjgl3Display graphics))
             return;
 
-        Lwjgl3Window window = graphics.getWindow();
-        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, EngineContext.graphics.getWidth());
-        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, EngineContext.graphics.getHeight());
-        settings.windowX = window.getPositionX();
-        settings.windowY = window.getPositionY();
-        settings.fullscreen = EngineContext.graphics.isFullscreen();
-
+        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, graphics.getWidth());
+        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, graphics.getHeight());
+        settings.windowX = graphics.getPosX();
+        settings.windowY = graphics.getPosY();
+        settings.fullscreen = graphics.isFullscreen();
         SettingsUtility.save(file, settings, ENGINE_GSON);
     }
 }

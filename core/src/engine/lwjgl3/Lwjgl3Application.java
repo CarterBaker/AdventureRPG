@@ -1,13 +1,15 @@
 package engine.lwjgl3;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 
 import engine.root.EngineContext;
 import engine.root.EnginePackage;
-import engine.root.EngineState;
 import engine.root.EngineUtility;
+
+import java.util.function.BooleanSupplier;
 
 public class Lwjgl3Application {
 
@@ -27,17 +29,19 @@ public class Lwjgl3Application {
     private final int glMinor;
 
     // Secondary Windows
-    private final ObjectArrayList<Lwjgl3Window> secondaryWindows;
+    private final LongArrayList secondaryHandles;
+    private final Long2ObjectOpenHashMap<Lwjgl3Input> handle2Input;
 
     // State
     private boolean running;
 
     public Lwjgl3Application(
             EnginePackage engine,
-            Lwjgl3ApplicationConfiguration config,
+            Lwjgl3Configuration config,
             Lwjgl3WindowPlatform platform) {
 
-        this.secondaryWindows = new ObjectArrayList<>();
+        this.secondaryHandles = new LongArrayList();
+        this.handle2Input = new Long2ObjectOpenHashMap<>();
         this.running = true;
 
         if (!GLFW.glfwInit())
@@ -66,7 +70,7 @@ public class Lwjgl3Application {
         this.graphics = new Lwjgl3Display(config.width, config.height, config.isFullscreen());
         this.engine = engine;
 
-        graphics.setWindow(new Lwjgl3Window(mainHandle, input));
+        graphics.setMainHandle(mainHandle);
 
         Lwjgl3GL gl20 = new Lwjgl3GL();
         EngineContext.graphics = graphics;
@@ -74,14 +78,18 @@ public class Lwjgl3Application {
         EngineContext.gl20 = gl20;
         EngineContext.gl30 = gl20;
 
-        registerCallbacks(mainHandle, input, config.getWindowListener());
+        registerCallbacks(mainHandle, input, config.getCloseCallback());
+        GLFW.glfwSetWindowPosCallback(mainHandle, (w, x, y) -> {
+            graphics.setPosX(x);
+            graphics.setPosY(y);
+        });
 
         platform.setApplication(this);
 
         loop();
 
-        for (int i = 0; i < secondaryWindows.size(); i++)
-            GLFW.glfwDestroyWindow(secondaryWindows.get(i).getHandle());
+        for (int i = 0; i < secondaryHandles.size(); i++)
+            GLFW.glfwDestroyWindow(secondaryHandles.getLong(i));
 
         GLFW.glfwDestroyWindow(mainHandle);
         GLFW.glfwTerminate();
@@ -96,7 +104,7 @@ public class Lwjgl3Application {
         GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_FORWARD_COMPAT, GLFW.GLFW_TRUE);
     }
 
-    private void registerCallbacks(long handle, Lwjgl3Input inp, Lwjgl3WindowAdapter adapter) {
+    private void registerCallbacks(long handle, Lwjgl3Input inp, BooleanSupplier closeCallback) {
 
         GLFW.glfwSetFramebufferSizeCallback(handle, (w, width, height) -> {
             if (handle == mainHandle)
@@ -108,9 +116,9 @@ public class Lwjgl3Application {
         GLFW.glfwSetKeyCallback(handle, (w, k, s, a, m) -> inp.onKey(k, a));
         GLFW.glfwSetCharCallback(handle, (w, cp) -> inp.onChar(cp));
 
-        if (adapter != null)
+        if (closeCallback != null)
             GLFW.glfwSetWindowCloseCallback(handle, w -> {
-                if (!adapter.closeRequested())
+                if (!closeCallback.getAsBoolean())
                     GLFW.glfwSetWindowShouldClose(w, false);
             });
     }
@@ -120,6 +128,7 @@ public class Lwjgl3Application {
         long last = System.nanoTime();
 
         while (running && !GLFW.glfwWindowShouldClose(mainHandle)) {
+
             long now = System.nanoTime();
             float delta = (now - last) / 1_000_000_000f;
             graphics.setDelta(delta);
@@ -127,8 +136,8 @@ public class Lwjgl3Application {
 
             input.endFrame();
 
-            for (int i = 0; i < secondaryWindows.size(); i++)
-                secondaryWindows.get(i).getInput().endFrame();
+            for (int i = 0; i < secondaryHandles.size(); i++)
+                handle2Input.get(secondaryHandles.getLong(i)).endFrame();
 
             GLFW.glfwPollEvents();
             engine.execute(delta);
@@ -139,30 +148,31 @@ public class Lwjgl3Application {
 
     // Accessible \\
 
-    public Lwjgl3Window newWindow(Lwjgl3WindowConfiguration config) {
+    public long newWindow(String title, int width, int height) {
 
         applyWindowHints(glMajor, glMinor);
-        long handle = GLFW.glfwCreateWindow(config.width, config.height, config.title, 0L, mainHandle);
+        long handle = GLFW.glfwCreateWindow(width, height, title, 0L, mainHandle);
 
         if (handle == 0L)
-            EngineUtility.throwException("Failed to create secondary window: " + config.title);
+            EngineUtility.throwException("Failed to create secondary window: " + title);
 
         Lwjgl3Input windowInput = new Lwjgl3Input(handle);
         registerCallbacks(handle, windowInput, null);
-        Lwjgl3Window window = new Lwjgl3Window(handle, windowInput);
-        secondaryWindows.add(window);
+        secondaryHandles.add(handle);
+        handle2Input.put(handle, windowInput);
 
-        return window;
+        return handle;
     }
 
     public void removeSecondaryWindow(long handle) {
 
-        for (int i = 0; i < secondaryWindows.size(); i++) {
+        for (int i = 0; i < secondaryHandles.size(); i++) {
 
-            if (secondaryWindows.get(i).getHandle() != handle)
+            if (secondaryHandles.getLong(i) != handle)
                 continue;
 
-            secondaryWindows.remove(i);
+            secondaryHandles.removeLong(i);
+            handle2Input.remove(handle);
             return;
         }
     }
