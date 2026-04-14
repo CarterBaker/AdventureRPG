@@ -17,8 +17,8 @@ import application.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
 import application.bootstrap.worldpipeline.megachunk.MegaDataUtility;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.settings.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
 
 class MegaQueueManager extends ManagerPackage {

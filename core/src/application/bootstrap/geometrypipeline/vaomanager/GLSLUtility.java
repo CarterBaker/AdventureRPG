@@ -8,8 +8,8 @@ import application.bootstrap.geometrypipeline.vao.VAOData;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import engine.root.EngineContext;
-import engine.util.graphics.GL20;
-import engine.util.graphics.GL30;
+import engine.util.graphics.gl.GL20;
+import engine.util.graphics.gl.GL30;
 
 class GLSLUtility {
 
@@ -64,22 +64,22 @@ class GLSLUtility {
 
         private static VAOData createData(int[] attrSizes) {
 
-                GL30 gl = EngineContext.gl30;
+                GL30 gl20 = EngineContext.gl30;
 
                 IntBuffer id = ByteBuffer
                                 .allocateDirect(Integer.BYTES)
                                 .order(ByteOrder.nativeOrder())
                                 .asIntBuffer();
 
-                gl.glGenVertexArrays(1, id);
+                gl20.glGenVertexArrays(1, id);
                 int vao = id.get(0);
 
-                gl.glBindVertexArray(vao);
+                gl20.glBindVertexArray(vao);
 
                 for (int i = 0; i < attrSizes.length; i++)
-                        gl.glEnableVertexAttribArray(i);
+                        gl20.glEnableVertexAttribArray(i);
 
-                gl.glBindVertexArray(0);
+                gl20.glBindVertexArray(0);
 
                 return new VAOData(vao, attrSizes);
         }

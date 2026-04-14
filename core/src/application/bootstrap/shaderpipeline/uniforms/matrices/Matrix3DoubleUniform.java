@@ -27,7 +27,7 @@ public final class Matrix3DoubleUniform extends UniformAttributeStruct<Matrix3Do
         try (org.lwjgl.system.MemoryStack stack = org.lwjgl.system.MemoryStack.stackPush()) {
             java.nio.FloatBuffer buf = stack.mallocFloat(9);
             buf.put(uniformBuffer.val).flip();
-            EngineContext.gl.glUniformMatrix3fv(handle, 1, false, buf);
+            EngineContext.gl20.glUniformMatrix3fv(handle, 1, false, buf);
         }
     }
 

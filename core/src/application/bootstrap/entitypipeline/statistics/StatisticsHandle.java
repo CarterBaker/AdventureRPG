@@ -1,7 +1,7 @@
 package application.bootstrap.entitypipeline.statistics;
 
+import engine.root.EngineSetting;
 import engine.root.HandlePackage;
-import engine.settings.EngineSetting;
 
 public class StatisticsHandle extends HandlePackage {
 

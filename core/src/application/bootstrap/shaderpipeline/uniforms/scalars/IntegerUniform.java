@@ -17,7 +17,7 @@ public final class IntegerUniform extends UniformAttributeStruct<Integer> {
 
     @Override
     protected void push(int handle, Integer value) {
-        EngineContext.gl.glUniform1i(handle, value);
+        EngineContext.gl20.glUniform1i(handle, value);
     }
 
     @Override

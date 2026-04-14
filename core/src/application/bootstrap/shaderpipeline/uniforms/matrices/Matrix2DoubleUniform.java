@@ -29,7 +29,7 @@ public final class Matrix2DoubleUniform extends UniformAttributeStruct<Matrix2Do
         uniformBuffer.put((float) value.val[2]);
         uniformBuffer.put((float) value.val[3]);
         uniformBuffer.flip();
-        EngineContext.gl.glUniformMatrix2fv(handle, 1, false, uniformBuffer);
+        EngineContext.gl20.glUniformMatrix2fv(handle, 1, false, uniformBuffer);
     }
 
     @Override

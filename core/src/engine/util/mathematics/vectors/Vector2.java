@@ -27,16 +27,6 @@ public class Vector2 extends EngineUtility {
         this(other.x, other.y);
     }
 
-    // Conversion \\
-
-    public engine.util.mathematics.vectors.Vector2 toNative() {
-        return new engine.util.mathematics.vectors.Vector2(x, y);
-    }
-
-    public Vector2 fromNative(engine.util.mathematics.vectors.Vector2 other) {
-        return set(other.x, other.y);
-    }
-
     // Set \\
 
     public Vector2 set(float x, float y) {

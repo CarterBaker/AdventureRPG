@@ -32,7 +32,7 @@ public final class Matrix3ArrayUniform extends UniformAttributeStruct<Object[]> 
         for (int i = 0; i < elementCount; i++)
             uniformBuffer.put(((Matrix3) value[i]).val, 0, 9);
         uniformBuffer.flip();
-        EngineContext.gl.glUniformMatrix3fv(handle, elementCount, false, uniformBuffer);
+        EngineContext.gl20.glUniformMatrix3fv(handle, elementCount, false, uniformBuffer);
     }
 
     @Override

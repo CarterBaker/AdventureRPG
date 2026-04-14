@@ -18,7 +18,7 @@ public final class Vector4DoubleUniform extends UniformAttributeStruct<Vector4Do
 
     @Override
     protected void push(int handle, Vector4Double value) {
-        EngineContext.gl.glUniform4f(handle, (float) value.x, (float) value.y, (float) value.z, (float) value.w);
+        EngineContext.gl20.glUniform4f(handle, (float) value.x, (float) value.y, (float) value.z, (float) value.w);
     }
 
     @Override

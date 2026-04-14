@@ -1,9 +1,8 @@
-package engine.util;
+package engine.util.assets.image;
 
 import java.awt.image.BufferedImage;
 
 import engine.root.EngineUtility;
-import engine.util.image.Pixmap;
 
 public class PixmapUtility extends EngineUtility {
 

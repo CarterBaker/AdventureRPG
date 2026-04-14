@@ -15,11 +15,11 @@ import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.settings.EngineSetting;
-import engine.util.camera.CameraInstance;
-import engine.util.input.Bindings;
+import engine.util.display.camera.CameraInstance;
 import engine.util.mathematics.vectors.Vector3;
+import engine.util.settings.KeyBindings;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -138,8 +138,8 @@ public class PlayerManager extends ManagerPackage {
                 player,
                 cameraPosition,
                 camera.getDirection(),
-                inputSystem.bindingHeld(Bindings.PRIMARY),
-                inputSystem.bindingHeld(Bindings.SECONDARY));
+                inputSystem.bindingHeld(KeyBindings.PRIMARY),
+                inputSystem.bindingHeld(KeyBindings.SECONDARY));
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }

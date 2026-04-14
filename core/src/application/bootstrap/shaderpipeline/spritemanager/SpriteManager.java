@@ -11,9 +11,9 @@ import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import engine.root.ManagerPackage;
-import engine.util.RegistryUtility;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector4;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

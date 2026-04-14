@@ -8,13 +8,13 @@ import com.google.gson.JsonObject;
 import application.bootstrap.worldpipeline.world.WorldData;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.BuilderPackage;
-import engine.settings.EngineSetting;
-import engine.util.FileUtility;
-import engine.util.JsonUtility;
-import engine.util.RegistryUtility;
-import engine.util.image.Pixmap;
+import engine.root.EngineSetting;
+import engine.util.assets.image.Pixmap;
+import engine.util.io.FileUtility;
+import engine.util.io.JsonUtility;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
+import engine.util.registry.RegistryUtility;
 
 class InternalBuilder extends BuilderPackage {
 

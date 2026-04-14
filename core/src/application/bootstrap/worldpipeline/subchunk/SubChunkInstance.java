@@ -7,7 +7,7 @@ import application.bootstrap.worldpipeline.worlditem.WorldItemPaletteHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstance;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
-import engine.settings.EngineSetting;
+import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate3Int;
 
 public class SubChunkInstance extends WorldRenderInstance {

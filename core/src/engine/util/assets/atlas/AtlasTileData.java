@@ -1,4 +1,4 @@
-package engine.util.atlas;
+package engine.util.assets.atlas;
 
 import engine.root.DataPackage;
 

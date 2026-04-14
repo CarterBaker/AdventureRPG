@@ -6,10 +6,10 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.settings.EngineSetting;
-import engine.util.graphics.GL20;
-import engine.util.graphics.GL30;
+import engine.util.graphics.gl.GL20;
+import engine.util.graphics.gl.GL30;
 
 class GLSLUtility extends EngineUtility {
 
@@ -22,9 +22,9 @@ class GLSLUtility extends EngineUtility {
     // Depth \\
 
     static void enableDepth() {
-        EngineContext.gl.glEnable(GL20.GL_DEPTH_TEST);
-        EngineContext.gl.glDepthFunc(GL20.GL_LEQUAL);
-        EngineContext.gl.glDepthMask(true);
+        EngineContext.gl20.glEnable(GL20.GL_DEPTH_TEST);
+        EngineContext.gl20.glDepthFunc(GL20.GL_LEQUAL);
+        EngineContext.gl20.glDepthMask(true);
     }
 
     // Upload \\
@@ -116,7 +116,7 @@ class GLSLUtility extends EngineUtility {
     // Shader \\
 
     static void useShader(int shaderHandle) {
-        EngineContext.gl.glUseProgram(shaderHandle);
+        EngineContext.gl20.glUseProgram(shaderHandle);
     }
 
     // UBO \\

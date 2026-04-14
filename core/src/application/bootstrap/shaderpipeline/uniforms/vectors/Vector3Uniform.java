@@ -19,7 +19,7 @@ public final class Vector3Uniform extends UniformAttributeStruct<Object> {
     @Override
     protected void push(int handle, Object value) {
         if (value instanceof Vector3 vector)
-            EngineContext.gl.glUniform3f(handle, vector.x, vector.y, vector.z);
+            EngineContext.gl20.glUniform3f(handle, vector.x, vector.y, vector.z);
         else
             throw new IllegalArgumentException("push(int, Vector3): got " + value.getClass());
     }

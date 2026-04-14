@@ -12,11 +12,11 @@ import application.bootstrap.worldpipeline.block.BlockData;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockRotationType;
 import engine.root.BuilderPackage;
-import engine.settings.EngineSetting;
-import engine.util.FileUtility;
-import engine.util.JsonUtility;
-import engine.util.RegistryUtility;
+import engine.root.EngineSetting;
+import engine.util.io.FileUtility;
+import engine.util.io.JsonUtility;
 import engine.util.mathematics.extras.Direction3Vector;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {

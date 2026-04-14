@@ -1,8 +1,8 @@
 package application.bootstrap.worldpipeline.util;
 
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.settings.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;

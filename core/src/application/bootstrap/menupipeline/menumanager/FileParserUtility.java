@@ -8,7 +8,7 @@ import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import engine.root.EngineUtility;
-import engine.util.JsonUtility;
+import engine.util.io.JsonUtility;
 import engine.util.mathematics.vectors.Vector2;
 
 class FileParserUtility extends EngineUtility {

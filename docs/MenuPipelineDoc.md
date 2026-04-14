@@ -333,7 +333,7 @@ Classes covered: **35**
 
 **Who this class talks to (direct imports):**
 - `program.core.app.EngineContext`
-- `program.core.util.graphics.gl.GL20`
+- `program.core.util.graphics.gl20.GL20`
 - `program.core.util.image.Pixmap`
 - `program.core.engine.EngineUtility`
 - `program.core.util.PixmapUtility`

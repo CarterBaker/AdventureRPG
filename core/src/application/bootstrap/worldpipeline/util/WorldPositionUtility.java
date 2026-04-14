@@ -8,8 +8,8 @@ import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.settings.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector2Int;
 

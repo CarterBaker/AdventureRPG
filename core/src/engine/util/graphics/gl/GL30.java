@@ -1,4 +1,4 @@
-package engine.util.graphics;
+package engine.util.graphics.gl;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;

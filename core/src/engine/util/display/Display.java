@@ -1,6 +1,6 @@
-package engine.util.graphics;
+package engine.util.display;
 
-public interface Graphics {
+public interface Display {
 
     /*
      * Platform graphics state contract. Implemented by the backend graphics

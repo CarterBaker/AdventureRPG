@@ -1,6 +1,6 @@
 package engine.util.mathematics.extras;
 
-import engine.settings.EngineSetting;
+import engine.root.EngineSetting;
 
 public final class Coordinate2Long {
     private static final int MEGA_SHIFT = Integer.numberOfTrailingZeros(EngineSetting.MEGA_CHUNK_SIZE);

@@ -6,7 +6,7 @@ public class QueueItemHandle extends HandlePackage {
 
     // Internal
     private String queueItemName;
-    private int QueueItemID;
+    private int queueItemID;
 
     // Internal \\
 
@@ -16,7 +16,7 @@ public class QueueItemHandle extends HandlePackage {
 
         // Internal
         this.queueItemName = queueItemName;
-        this.QueueItemID = QueueItemID;
+        this.queueItemID = QueueItemID;
     }
 
     // Accessible \\
@@ -26,6 +26,6 @@ public class QueueItemHandle extends HandlePackage {
     }
 
     public int getQueueItemID() {
-        return QueueItemID;
+        return queueItemID;
     }
 }

@@ -4,9 +4,9 @@ import java.awt.image.BufferedImage;
 
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
-import engine.util.PixmapUtility;
-import engine.util.graphics.GL20;
-import engine.util.image.Pixmap;
+import engine.util.assets.image.Pixmap;
+import engine.util.assets.image.PixmapUtility;
+import engine.util.graphics.gl.GL20;
 
 /*
  * GL20 wrapper for individual sprite texture operations. Handles upload
@@ -18,20 +18,20 @@ class GLSLUtility extends EngineUtility {
 
     static int pushSprite(BufferedImage image) {
 
-        int handle = EngineContext.gl.glGenTexture();
+        int handle = EngineContext.gl20.glGenTexture();
 
         if (handle == 0)
             throwException("GPU handle could not be generated for sprite");
 
-        EngineContext.gl.glBindTexture(GL20.GL_TEXTURE_2D, handle);
-        EngineContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
-        EngineContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
-        EngineContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR);
-        EngineContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR);
+        EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, handle);
+        EngineContext.gl20.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
+        EngineContext.gl20.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
+        EngineContext.gl20.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR);
+        EngineContext.gl20.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR);
 
         Pixmap pixmap = PixmapUtility.fromBufferedImage(image, true);
 
-        EngineContext.gl.glTexImage2D(
+        EngineContext.gl20.glTexImage2D(
                 GL20.GL_TEXTURE_2D,
                 0,
                 GL20.GL_RGBA,
@@ -43,7 +43,7 @@ class GLSLUtility extends EngineUtility {
                 pixmap.getPixels());
 
         pixmap.dispose();
-        EngineContext.gl.glBindTexture(GL20.GL_TEXTURE_2D, 0);
+        EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, 0);
 
         return handle;
     }
@@ -55,7 +55,7 @@ class GLSLUtility extends EngineUtility {
         if (handle == 0)
             return;
 
-        EngineContext.gl.glBindTexture(GL20.GL_TEXTURE_2D, 0);
-        EngineContext.gl.glDeleteTexture(handle);
+        EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, 0);
+        EngineContext.gl20.glDeleteTexture(handle);
     }
 }

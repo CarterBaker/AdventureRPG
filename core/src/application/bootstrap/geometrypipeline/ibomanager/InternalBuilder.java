@@ -9,7 +9,7 @@ import com.google.gson.JsonObject;
 import application.bootstrap.geometrypipeline.ibo.IBOHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import engine.root.BuilderPackage;
-import engine.util.JsonUtility;
+import engine.util.io.JsonUtility;
 
 public class InternalBuilder extends BuilderPackage {
 

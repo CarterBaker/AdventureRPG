@@ -1,7 +1,7 @@
 package application.bootstrap.physicspipeline.util;
 
+import engine.root.EngineSetting;
 import engine.root.StructPackage;
-import engine.settings.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Direction3Vector;

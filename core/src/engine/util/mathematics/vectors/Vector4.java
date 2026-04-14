@@ -28,16 +28,6 @@ public class Vector4 extends EngineUtility {
         this(other.x, other.y, other.z, other.w);
     }
 
-    // Conversion \\
-
-    public engine.util.mathematics.vectors.Vector4 toNative() {
-        return new engine.util.mathematics.vectors.Vector4(x, y, z, w);
-    }
-
-    public Vector4 fromNative(engine.util.mathematics.vectors.Vector4 other) {
-        return set(other.x, other.y, other.z, other.w);
-    }
-
     // Set \\
 
     public Vector4 set(float x, float y, float z, float w) {

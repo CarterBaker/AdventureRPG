@@ -2,7 +2,7 @@ package application.bootstrap.itempipeline.itemdefinitionmanager;
 
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import engine.root.ManagerPackage;
-import engine.util.RegistryUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

@@ -1,8 +1,8 @@
 package engine.lwjgl3;
 
-import engine.util.graphics.Graphics;
+import engine.util.display.Display;
 
-public class Lwjgl3Graphics implements Graphics {
+public class Lwjgl3Display implements Display {
 
     /*
      * Holds the current display state for the main window. Size is updated each
@@ -19,7 +19,7 @@ public class Lwjgl3Graphics implements Graphics {
     // Window
     private Lwjgl3Window window;
 
-    Lwjgl3Graphics(int width, int height, boolean fullscreen) {
+    Lwjgl3Display(int width, int height, boolean fullscreen) {
         this.width = width;
         this.height = height;
         this.fullscreen = fullscreen;

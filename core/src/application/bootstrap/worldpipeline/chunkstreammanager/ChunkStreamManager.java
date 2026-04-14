@@ -5,8 +5,8 @@ import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ChunkStreamManager extends ManagerPackage {

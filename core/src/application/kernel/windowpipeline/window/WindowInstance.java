@@ -6,8 +6,8 @@ import application.bootstrap.renderpipeline.rendermanager.RenderQueueHandle;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.ContextPackage;
 import engine.root.InstancePackage;
-import engine.util.camera.CameraInstance;
-import engine.util.camera.OrthographicCameraInstance;
+import engine.util.display.camera.CameraInstance;
+import engine.util.display.camera.OrthographicCameraInstance;
 
 public class WindowInstance extends InstancePackage {
 

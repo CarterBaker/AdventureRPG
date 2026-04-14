@@ -22,7 +22,7 @@ public final class Matrix4Uniform extends UniformAttributeStruct<Object> {
             try (org.lwjgl.system.MemoryStack stack = org.lwjgl.system.MemoryStack.stackPush()) {
                 java.nio.FloatBuffer buf = stack.mallocFloat(16);
                 buf.put(m.val).flip();
-                EngineContext.gl.glUniformMatrix4fv(handle, 1, false, buf);
+                EngineContext.gl20.glUniformMatrix4fv(handle, 1, false, buf);
             }
         } else
             throw new IllegalArgumentException("push(Matrix4): got " + value.getClass());

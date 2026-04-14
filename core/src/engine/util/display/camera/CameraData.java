@@ -1,7 +1,7 @@
-package engine.util.camera;
+package engine.util.display.camera;
 
 import engine.root.DataPackage;
-import engine.settings.EngineSetting;
+import engine.root.EngineSetting;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;

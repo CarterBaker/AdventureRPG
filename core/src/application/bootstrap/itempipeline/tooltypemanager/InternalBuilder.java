@@ -7,9 +7,9 @@ import com.google.gson.JsonObject;
 import application.bootstrap.itempipeline.tooltype.ToolTypeData;
 import application.bootstrap.itempipeline.tooltype.ToolTypeHandle;
 import engine.root.BuilderPackage;
-import engine.util.FileUtility;
-import engine.util.JsonUtility;
-import engine.util.RegistryUtility;
+import engine.util.io.FileUtility;
+import engine.util.io.JsonUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {

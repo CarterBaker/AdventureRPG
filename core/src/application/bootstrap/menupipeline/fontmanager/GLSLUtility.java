@@ -5,9 +5,9 @@ import java.nio.ByteBuffer;
 
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
-import engine.util.PixmapUtility;
-import engine.util.graphics.GL20;
-import engine.util.image.Pixmap;
+import engine.util.assets.image.Pixmap;
+import engine.util.assets.image.PixmapUtility;
+import engine.util.graphics.gl.GL20;
 
 class GLSLUtility extends EngineUtility {
 
@@ -25,18 +25,18 @@ class GLSLUtility extends EngineUtility {
 
         int width = image.getWidth();
         int height = image.getHeight();
-        int handle = EngineContext.gl.glGenTexture();
+        int handle = EngineContext.gl20.glGenTexture();
 
         if (handle == 0)
             throwException("[FontGLSLUtility] Failed to generate GPU texture handle");
 
-        EngineContext.gl.glBindTexture(GL20.GL_TEXTURE_2D, handle);
+        EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, handle);
 
         Pixmap pix = PixmapUtility.fromBufferedImage(image, false);
         ByteBuffer pixels = pix.getPixels();
         pixels.position(0);
 
-        EngineContext.gl.glTexImage2D(
+        EngineContext.gl20.glTexImage2D(
                 GL20.GL_TEXTURE_2D,
                 0,
                 GL20.GL_RGBA,
@@ -48,12 +48,12 @@ class GLSLUtility extends EngineUtility {
 
         pix.dispose();
 
-        EngineContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR);
-        EngineContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR);
-        EngineContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
-        EngineContext.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
+        EngineContext.gl20.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR);
+        EngineContext.gl20.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR);
+        EngineContext.gl20.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
+        EngineContext.gl20.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
 
-        EngineContext.gl.glBindTexture(GL20.GL_TEXTURE_2D, 0);
+        EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, 0);
 
         return handle;
     }
@@ -63,7 +63,7 @@ class GLSLUtility extends EngineUtility {
         if (handle == 0)
             return;
 
-        EngineContext.gl.glBindTexture(GL20.GL_TEXTURE_2D, 0);
-        EngineContext.gl.glDeleteTexture(handle);
+        EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, 0);
+        EngineContext.gl20.glDeleteTexture(handle);
     }
 }

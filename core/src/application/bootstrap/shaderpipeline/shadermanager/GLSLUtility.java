@@ -4,10 +4,10 @@ import java.nio.IntBuffer;
 
 import application.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.settings.EngineSetting;
-import engine.util.graphics.GL20;
-import engine.util.graphics.GL30;
+import engine.util.graphics.gl.GL20;
+import engine.util.graphics.gl.GL30;
 import engine.util.memory.BufferUtils;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -34,31 +34,31 @@ class GLSLUtility extends EngineUtility {
                 fragSource,
                 assembly.getFrag().getShaderName());
 
-        int program = EngineContext.gl.glCreateProgram();
+        int program = EngineContext.gl20.glCreateProgram();
 
         if (program == 0)
             throwException("Failed to create shader program: " + assembly.getShaderName());
 
-        EngineContext.gl.glAttachShader(program, vertShader);
-        EngineContext.gl.glAttachShader(program, fragShader);
-        EngineContext.gl.glLinkProgram(program);
+        EngineContext.gl20.glAttachShader(program, vertShader);
+        EngineContext.gl20.glAttachShader(program, fragShader);
+        EngineContext.gl20.glLinkProgram(program);
 
         IntBuffer statusBuf = BufferUtils.newIntBuffer(1);
-        EngineContext.gl.glGetProgramiv(program, GL20.GL_LINK_STATUS, statusBuf);
+        EngineContext.gl20.glGetProgramiv(program, GL20.GL_LINK_STATUS, statusBuf);
         statusBuf.rewind();
 
         if (statusBuf.get(0) == 0) {
-            String log = EngineContext.gl.glGetProgramInfoLog(program);
-            EngineContext.gl.glDeleteProgram(program);
-            EngineContext.gl.glDeleteShader(vertShader);
-            EngineContext.gl.glDeleteShader(fragShader);
+            String log = EngineContext.gl20.glGetProgramInfoLog(program);
+            EngineContext.gl20.glDeleteProgram(program);
+            EngineContext.gl20.glDeleteShader(vertShader);
+            EngineContext.gl20.glDeleteShader(fragShader);
             throwException("Failed to link shader " + assembly.getShaderName() + ": " + log);
         }
 
-        EngineContext.gl.glDetachShader(program, vertShader);
-        EngineContext.gl.glDetachShader(program, fragShader);
-        EngineContext.gl.glDeleteShader(vertShader);
-        EngineContext.gl.glDeleteShader(fragShader);
+        EngineContext.gl20.glDetachShader(program, vertShader);
+        EngineContext.gl20.glDetachShader(program, fragShader);
+        EngineContext.gl20.glDeleteShader(vertShader);
+        EngineContext.gl20.glDeleteShader(fragShader);
 
         return program;
     }
@@ -67,21 +67,21 @@ class GLSLUtility extends EngineUtility {
 
     private static int compileShaderFromSource(int type, String source, String shaderName) {
 
-        int shaderID = EngineContext.gl.glCreateShader(type);
+        int shaderID = EngineContext.gl20.glCreateShader(type);
 
         if (shaderID == 0)
             throwException("Invalid shader ID for: " + shaderName);
 
-        EngineContext.gl.glShaderSource(shaderID, source);
-        EngineContext.gl.glCompileShader(shaderID);
+        EngineContext.gl20.glShaderSource(shaderID, source);
+        EngineContext.gl20.glCompileShader(shaderID);
 
         IntBuffer compiled = BufferUtils.newIntBuffer(1);
-        EngineContext.gl.glGetShaderiv(shaderID, GL20.GL_COMPILE_STATUS, compiled);
+        EngineContext.gl20.glGetShaderiv(shaderID, GL20.GL_COMPILE_STATUS, compiled);
         compiled.rewind();
 
         if (compiled.get(0) == 0) {
-            String log = EngineContext.gl.glGetShaderInfoLog(shaderID);
-            EngineContext.gl.glDeleteShader(shaderID);
+            String log = EngineContext.gl20.glGetShaderInfoLog(shaderID);
+            EngineContext.gl20.glDeleteShader(shaderID);
             throwException("Failed to compile shader " + shaderName + ": " + log);
         }
 
@@ -129,7 +129,7 @@ class GLSLUtility extends EngineUtility {
      * Callers store -1 and no-op on upload when location is -1.
      */
     static int getUniformLocation(int programHandle, String uniformName) {
-        return EngineContext.gl.glGetUniformLocation(programHandle, uniformName);
+        return EngineContext.gl20.glGetUniformLocation(programHandle, uniformName);
     }
 
     // UBO Block Binding \\
@@ -148,6 +148,6 @@ class GLSLUtility extends EngineUtility {
 
     static void deleteShaderProgram(int programHandle) {
         if (programHandle != 0)
-            EngineContext.gl.glDeleteProgram(programHandle);
+            EngineContext.gl20.glDeleteProgram(programHandle);
     }
 }

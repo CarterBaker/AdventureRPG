@@ -1,8 +1,8 @@
 package application.bootstrap.worldpipeline.util;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertBlockNeighbor3Vector;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.settings.EngineSetting;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Direction3Vector;
 

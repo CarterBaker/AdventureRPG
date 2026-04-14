@@ -6,7 +6,7 @@ import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.inputpipeline.input.InputHandle;
 import engine.root.BranchPackage;
-import engine.settings.EngineSetting;
+import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 

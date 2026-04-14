@@ -1,4 +1,4 @@
-package engine.util;
+package engine.util.mathematics.extras;
 
 import engine.root.UtilityPackage;
 

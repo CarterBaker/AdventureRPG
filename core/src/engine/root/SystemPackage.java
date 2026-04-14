@@ -7,7 +7,7 @@ import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
 import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
 import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
 import application.kernel.threadpipeline.thread.ThreadHandle;
-import engine.settings.Settings;
+import engine.util.settings.Settings;
 
 public abstract class SystemPackage extends UtilityPackage {
 

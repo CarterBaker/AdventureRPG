@@ -7,7 +7,7 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import engine.root.EngineContext;
 import engine.root.SystemPackage;
-import engine.util.input.Bindings;
+import engine.util.settings.KeyBindings;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RaycastSystem extends SystemPackage {
@@ -34,7 +34,7 @@ public class RaycastSystem extends SystemPackage {
 
     @Override
     protected void update() {
-        if (!inputSystem.bindingClicked(Bindings.PRIMARY))
+        if (!inputSystem.bindingClicked(KeyBindings.PRIMARY))
             return;
 
         float screenW = EngineContext.graphics.getWidth();

@@ -17,7 +17,7 @@ public final class DoubleUniform extends UniformAttributeStruct<Double> {
 
     @Override
     protected void push(int handle, Double value) {
-        EngineContext.gl.glUniform1f(handle, value.floatValue());
+        EngineContext.gl20.glUniform1f(handle, value.floatValue());
     }
 
     @Override

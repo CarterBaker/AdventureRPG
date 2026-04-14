@@ -6,7 +6,7 @@ import application.bootstrap.geometrypipeline.ibo.IBOInstance;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import engine.root.ManagerPackage;
-import engine.util.RegistryUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;

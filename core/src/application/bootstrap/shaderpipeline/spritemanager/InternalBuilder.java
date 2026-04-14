@@ -8,7 +8,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import engine.root.BuilderPackage;
-import engine.util.JsonUtility;
+import engine.util.io.JsonUtility;
 
 /*
  * Loads raw images from disk and parses companion border JSON files.

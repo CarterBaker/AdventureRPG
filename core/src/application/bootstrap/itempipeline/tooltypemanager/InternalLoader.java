@@ -8,10 +8,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import application.bootstrap.itempipeline.tooltype.ToolTypeHandle;
+import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
-import engine.settings.EngineSetting;
-import engine.util.FileUtility;
-import engine.util.JsonUtility;
+import engine.util.io.FileUtility;
+import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

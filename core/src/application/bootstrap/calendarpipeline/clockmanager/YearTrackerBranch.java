@@ -3,7 +3,7 @@ package application.bootstrap.calendarpipeline.clockmanager;
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import engine.root.BranchPackage;
-import engine.settings.EngineSetting;
+import engine.root.EngineSetting;
 
 class YearTrackerBranch extends BranchPackage {
 

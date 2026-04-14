@@ -1,4 +1,4 @@
-package engine.util.image;
+package engine.util.assets.image;
 
 import javax.imageio.ImageIO;
 

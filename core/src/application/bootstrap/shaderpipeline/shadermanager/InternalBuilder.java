@@ -10,8 +10,8 @@ import application.bootstrap.shaderpipeline.shader.ShaderType;
 import application.bootstrap.shaderpipeline.uniforms.UniformData;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import engine.root.BuilderPackage;
-import engine.settings.EngineSetting;
-import engine.util.JsonUtility;
+import engine.root.EngineSetting;
+import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {

@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import engine.settings.EngineSetting;
-
 public abstract class LoaderPackage extends ManagerPackage {
 
     /*

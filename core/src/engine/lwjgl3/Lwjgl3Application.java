@@ -21,7 +21,7 @@ public class Lwjgl3Application {
     // Internal
     private final long mainHandle;
     private final EnginePackage engine;
-    private final Lwjgl3Graphics graphics;
+    private final Lwjgl3Display graphics;
     private final Lwjgl3Input input;
     private final int glMajor;
     private final int glMinor;
@@ -63,17 +63,16 @@ public class Lwjgl3Application {
         GL.createCapabilities();
 
         this.input = new Lwjgl3Input(mainHandle);
-        this.graphics = new Lwjgl3Graphics(config.width, config.height, config.isFullscreen());
+        this.graphics = new Lwjgl3Display(config.width, config.height, config.isFullscreen());
         this.engine = engine;
 
         graphics.setWindow(new Lwjgl3Window(mainHandle, input));
 
-        Lwjgl3GL gl = new Lwjgl3GL();
+        Lwjgl3GL gl20 = new Lwjgl3GL();
         EngineContext.graphics = graphics;
         EngineContext.input = input;
-        EngineContext.gl = gl;
-        EngineContext.gl20 = gl;
-        EngineContext.gl30 = gl;
+        EngineContext.gl20 = gl20;
+        EngineContext.gl30 = gl20;
 
         registerCallbacks(mainHandle, input, config.getWindowListener());
 

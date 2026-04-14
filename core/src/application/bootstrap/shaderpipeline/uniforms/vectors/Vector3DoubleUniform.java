@@ -18,7 +18,7 @@ public final class Vector3DoubleUniform extends UniformAttributeStruct<Vector3Do
 
     @Override
     protected void push(int handle, Vector3Double value) {
-        EngineContext.gl.glUniform3f(handle, (float) value.x, (float) value.y, (float) value.z);
+        EngineContext.gl20.glUniform3f(handle, (float) value.x, (float) value.y, (float) value.z);
     }
 
     @Override

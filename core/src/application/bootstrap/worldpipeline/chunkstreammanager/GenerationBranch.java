@@ -7,7 +7,7 @@ import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.BranchPackage;
-import engine.settings.EngineSetting;
+import engine.root.EngineSetting;
 
 public class GenerationBranch extends BranchPackage {
 

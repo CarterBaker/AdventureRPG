@@ -22,7 +22,7 @@ public final class Matrix3Uniform extends UniformAttributeStruct<Object> {
             try (org.lwjgl.system.MemoryStack stack = org.lwjgl.system.MemoryStack.stackPush()) {
                 java.nio.FloatBuffer buf = stack.mallocFloat(9);
                 buf.put(m.val).flip();
-                EngineContext.gl.glUniformMatrix3fv(handle, 1, false, buf);
+                EngineContext.gl20.glUniformMatrix3fv(handle, 1, false, buf);
             }
         } else
             throw new IllegalArgumentException("push(Matrix3): got " + value.getClass());

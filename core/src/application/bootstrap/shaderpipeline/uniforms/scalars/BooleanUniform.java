@@ -17,7 +17,7 @@ public final class BooleanUniform extends UniformAttributeStruct<Boolean> {
 
     @Override
     protected void push(int handle, Boolean value) {
-        EngineContext.gl.glUniform1i(handle, value ? 1 : 0);
+        EngineContext.gl20.glUniform1i(handle, value ? 1 : 0);
     }
 
     @Override

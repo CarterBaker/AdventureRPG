@@ -1,7 +1,7 @@
-package engine.util;
+package engine.util.registry;
 
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.settings.EngineSetting;
 
 /*
  * Hashing helpers for converting stable string names into numeric registry IDs.

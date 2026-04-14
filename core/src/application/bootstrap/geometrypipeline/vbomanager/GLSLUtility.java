@@ -10,8 +10,8 @@ import application.bootstrap.geometrypipeline.vbo.VBOData;
 import application.bootstrap.geometrypipeline.vbo.VBOHandle;
 import application.bootstrap.geometrypipeline.vbo.VBOInstance;
 import engine.root.EngineContext;
-import engine.util.graphics.GL20;
-import engine.util.graphics.GL30;
+import engine.util.graphics.gl.GL20;
+import engine.util.graphics.gl.GL30;
 
 class GLSLUtility {
 

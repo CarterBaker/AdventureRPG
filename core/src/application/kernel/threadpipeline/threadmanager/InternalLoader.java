@@ -9,10 +9,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import application.kernel.threadpipeline.thread.ThreadHandle;
+import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
-import engine.settings.EngineSetting;
-import engine.util.FileUtility;
-import engine.util.JsonUtility;
+import engine.util.io.FileUtility;
+import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {

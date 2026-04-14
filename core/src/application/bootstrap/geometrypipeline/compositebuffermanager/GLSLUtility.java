@@ -5,8 +5,8 @@ import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 
 import engine.root.EngineContext;
-import engine.util.graphics.GL20;
-import engine.util.graphics.GL30;
+import engine.util.graphics.gl.GL20;
+import engine.util.graphics.gl.GL30;
 
 class GLSLUtility {
 
@@ -19,13 +19,13 @@ class GLSLUtility {
 
     static int createDynamicInstanceVBO(int maxInstances, int floatsPerInstance) {
 
-        GL20 gl = EngineContext.gl20;
+        GL20 gl20 = EngineContext.gl20;
         int size = maxInstances * floatsPerInstance * Float.BYTES;
 
-        int vbo = gl.glGenBuffer();
-        gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
-        gl.glBufferData(GL20.GL_ARRAY_BUFFER, size, null, GL20.GL_DYNAMIC_DRAW);
-        gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+        int vbo = gl20.glGenBuffer();
+        gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
+        gl20.glBufferData(GL20.GL_ARRAY_BUFFER, size, null, GL20.GL_DYNAMIC_DRAW);
+        gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
 
         return vbo;
     }

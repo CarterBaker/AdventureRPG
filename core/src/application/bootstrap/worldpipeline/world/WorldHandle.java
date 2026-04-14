@@ -1,7 +1,7 @@
 package application.bootstrap.worldpipeline.world;
 
 import engine.root.HandlePackage;
-import engine.util.image.Pixmap;
+import engine.util.assets.image.Pixmap;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
 

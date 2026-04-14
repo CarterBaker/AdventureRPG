@@ -18,7 +18,7 @@ public final class Vector4IntUniform extends UniformAttributeStruct<Vector4Int> 
 
     @Override
     protected void push(int handle, Vector4Int value) {
-        EngineContext.gl.glUniform4i(handle, value.x, value.y, value.z, value.w);
+        EngineContext.gl20.glUniform4i(handle, value.x, value.y, value.z, value.w);
     }
 
     @Override

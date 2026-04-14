@@ -8,7 +8,7 @@ import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.ManagerPackage;
-import engine.util.RegistryUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;

@@ -6,8 +6,8 @@ import application.bootstrap.calendarpipeline.clock.ClockData;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.settings.EngineSetting;
 
 public class ClockManager extends ManagerPackage {
 

@@ -5,8 +5,8 @@ import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import engine.root.EngineSetting;
 import engine.root.InstancePackage;
-import engine.settings.EngineSetting;
 import engine.util.mathematics.vectors.Vector4;
 
 public class FontInstance extends InstancePackage {

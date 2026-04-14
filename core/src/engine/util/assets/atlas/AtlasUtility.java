@@ -1,10 +1,9 @@
-package engine.util;
+package engine.util.assets.atlas;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import engine.root.EngineUtility;
-import engine.util.atlas.AtlasTileData;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*

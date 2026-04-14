@@ -1,11 +1,13 @@
-package engine.settings;
+package engine.util.settings;
 
-import engine.util.input.Keys;
+import engine.lwjgl3.input.Keys;
 
 public class Settings {
+
     /*
-     * Runtime configuration for the engine. Fields are public and mutable so
-     * they can be patched at runtime and flushed to disk via Loader.save().
+     * User-configurable runtime values. Serialized to and from disk via
+     * LoadUtility. Fields are public and mutable — patched at runtime and
+     * flushed on close or settings change.
      */
 
     // Debug
@@ -17,7 +19,7 @@ public class Settings {
     public int windowHeight = 720;
     public int windowX = -1;
     public int windowY = -1;
-    public boolean fullscreen = false;
+    public boolean fullscreen;
 
     // Render
     public int maxRenderDistance = 64;

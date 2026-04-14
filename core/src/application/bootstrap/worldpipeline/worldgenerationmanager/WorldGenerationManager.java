@@ -4,10 +4,10 @@ import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.settings.EngineSetting;
-import engine.util.NoiseUtility;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.extras.NoiseUtility;
 
 public class WorldGenerationManager extends ManagerPackage {
 

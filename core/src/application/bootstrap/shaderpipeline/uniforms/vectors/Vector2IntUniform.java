@@ -18,7 +18,7 @@ public final class Vector2IntUniform extends UniformAttributeStruct<Vector2Int> 
 
     @Override
     protected void push(int handle, Vector2Int value) {
-        EngineContext.gl.glUniform2i(handle, value.x, value.y);
+        EngineContext.gl20.glUniform2i(handle, value.x, value.y);
     }
 
     @Override

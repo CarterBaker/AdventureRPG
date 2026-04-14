@@ -1,9 +1,9 @@
 package application.bootstrap.worldpipeline.worldmanager;
 
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.settings.EngineSetting;
-import engine.util.RegistryUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

@@ -12,9 +12,9 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import engine.root.BuilderPackage;
-import engine.settings.EngineSetting;
-import engine.util.FileUtility;
-import engine.util.JsonUtility;
+import engine.root.EngineSetting;
+import engine.util.io.FileUtility;
+import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {

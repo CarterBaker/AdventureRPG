@@ -6,7 +6,7 @@ import application.bootstrap.geometrypipeline.vbo.VBOData;
 import application.bootstrap.geometrypipeline.vbo.VBOHandle;
 import application.bootstrap.geometrypipeline.vbo.VBOInstance;
 import engine.root.ManagerPackage;
-import engine.util.RegistryUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;

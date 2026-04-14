@@ -14,9 +14,9 @@ import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
 import application.bootstrap.shaderpipeline.texture.TextureAtlasStruct;
 import application.bootstrap.shaderpipeline.texture.TextureTileStruct;
 import engine.root.BuilderPackage;
-import engine.util.AtlasUtility;
-import engine.util.FileUtility;
-import engine.util.RegistryUtility;
+import engine.util.assets.atlas.AtlasUtility;
+import engine.util.io.FileUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*

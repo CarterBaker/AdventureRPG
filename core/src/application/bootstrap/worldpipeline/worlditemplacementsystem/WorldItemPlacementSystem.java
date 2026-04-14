@@ -9,8 +9,8 @@ import application.bootstrap.worldpipeline.worlditem.WorldItemInstancePaletteHan
 import application.bootstrap.worldpipeline.worlditem.WorldItemPaletteHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemStruct;
 import application.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRenderSystem;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.settings.EngineSetting;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Coordinate4Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

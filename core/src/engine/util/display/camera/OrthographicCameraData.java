@@ -1,4 +1,4 @@
-package engine.util.camera;
+package engine.util.display.camera;
 
 import engine.root.DataPackage;
 import engine.util.mathematics.matrices.Matrix4;

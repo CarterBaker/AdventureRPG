@@ -8,7 +8,7 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import engine.root.BuilderPackage;
-import engine.util.JsonUtility;
+import engine.util.io.JsonUtility;
 
 public class InternalBuilder extends BuilderPackage {
 

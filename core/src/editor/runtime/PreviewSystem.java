@@ -3,8 +3,8 @@ package editor.runtime;
 import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.settings.EngineSetting;
 
 public class PreviewSystem extends SystemPackage {
 

@@ -32,7 +32,7 @@ public final class Matrix4ArrayUniform extends UniformAttributeStruct<Object[]> 
         for (int i = 0; i < elementCount; i++)
             uniformBuffer.put(((Matrix4) value[i]).val, 0, 16);
         uniformBuffer.flip();
-        EngineContext.gl.glUniformMatrix4fv(handle, elementCount, false, uniformBuffer);
+        EngineContext.gl20.glUniformMatrix4fv(handle, elementCount, false, uniformBuffer);
     }
 
     @Override

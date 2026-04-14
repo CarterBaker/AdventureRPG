@@ -11,7 +11,7 @@ import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.geometrypipeline.vbo.VBOInstance;
 import application.bootstrap.geometrypipeline.vbomanager.VBOManager;
 import engine.root.ManagerPackage;
-import engine.util.RegistryUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;

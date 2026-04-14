@@ -4,7 +4,7 @@ import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.physicspipeline.util.ScreenRayStruct;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.BranchPackage;
-import engine.util.input.Bindings;
+import engine.util.settings.KeyBindings;
 
 class ScreenCastBranch extends BranchPackage {
 
@@ -31,7 +31,7 @@ class ScreenCastBranch extends BranchPackage {
     // Cast \\
 
     boolean cast(ScreenRayStruct out) {
-        if (!inputSystem.bindingHeld(Bindings.PRIMARY))
+        if (!inputSystem.bindingHeld(KeyBindings.PRIMARY))
             return false;
 
         int windowID = windowManager.getActiveWindow().getWindowID();

@@ -18,7 +18,7 @@ public final class Vector3BooleanUniform extends UniformAttributeStruct<Vector3B
 
     @Override
     protected void push(int handle, Vector3Boolean value) {
-        EngineContext.gl.glUniform3i(handle, value.x ? 1 : 0, value.y ? 1 : 0, value.z ? 1 : 0);
+        EngineContext.gl20.glUniform3i(handle, value.x ? 1 : 0, value.y ? 1 : 0, value.z ? 1 : 0);
     }
 
     @Override

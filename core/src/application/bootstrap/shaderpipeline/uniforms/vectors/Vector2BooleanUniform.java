@@ -18,7 +18,7 @@ public final class Vector2BooleanUniform extends UniformAttributeStruct<Vector2B
 
     @Override
     protected void push(int handle, Vector2Boolean value) {
-        EngineContext.gl.glUniform2i(handle, value.x ? 1 : 0, value.y ? 1 : 0);
+        EngineContext.gl20.glUniform2i(handle, value.x ? 1 : 0, value.y ? 1 : 0);
     }
 
     @Override

@@ -5,9 +5,9 @@ import java.io.File;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import engine.root.BuilderPackage;
-import engine.util.FileUtility;
-import engine.util.RegistryUtility;
-import engine.util.mathematics.extras.Color;
+import engine.util.graphics.color.Color;
+import engine.util.io.FileUtility;
+import engine.util.registry.RegistryUtility;
 
 class InternalBuilder extends BuilderPackage {
 

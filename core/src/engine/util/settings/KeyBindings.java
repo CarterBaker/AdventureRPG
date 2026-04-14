@@ -1,8 +1,17 @@
-package engine.util.input;
+package engine.util.settings;
 
-import engine.settings.Settings;
+import engine.lwjgl3.input.Buttons;
+import engine.lwjgl3.input.Keys;
+import engine.util.input.Binding;
+import engine.util.input.InputCode;
 
-public final class Bindings {
+public final class KeyBindings {
+
+    /*
+     * Runtime key binding state. Holds all active Binding objects for the
+     * session. Initialized with engine defaults at startup — overwritten by
+     * LoadUtility.applyBindings() once Settings are loaded.
+     */
 
     // Movement
     public static Binding MOVE_FORWARD = new Binding(InputCode.key(Keys.W));
@@ -33,32 +42,4 @@ public final class Bindings {
     public static Binding DUPLICATE = new Binding(InputCode.key(Keys.CONTROL_LEFT), InputCode.key(Keys.D));
     public static Binding OPEN_CONSOLE = new Binding(InputCode.key(Keys.CONTROL_LEFT), InputCode.key(Keys.GRAVE));
     public static Binding OPEN_PREVIEW = new Binding(InputCode.key(Keys.NUM_1));
-
-    // Load \\
-
-    public static void load(Settings settings) {
-        MOVE_FORWARD.set(toKeys(settings.bindMoveForward));
-        MOVE_BACK.set(toKeys(settings.bindMoveBack));
-        MOVE_LEFT.set(toKeys(settings.bindMoveLeft));
-        MOVE_RIGHT.set(toKeys(settings.bindMoveRight));
-        JUMP.set(toKeys(settings.bindJump));
-        WALK.set(toKeys(settings.bindWalk));
-        SPRINT.set(toKeys(settings.bindSprint));
-        INVENTORY.set(toKeys(settings.bindInventory));
-        TOGGLE_INSPECTOR.set(toKeys(settings.bindToggleInspector));
-        FOCUS_SELECTED.set(toKeys(settings.bindFocusSelected));
-        DELETE_SELECTED.set(toKeys(settings.bindDeleteSelected));
-        SAVE.set(toKeys(settings.bindSave));
-        UNDO.set(toKeys(settings.bindUndo));
-        REDO.set(toKeys(settings.bindRedo));
-        DUPLICATE.set(toKeys(settings.bindDuplicate));
-        OPEN_CONSOLE.set(toKeys(settings.bindOpenConsole));
-    }
-
-    private static InputCode[] toKeys(int[] codes) {
-        InputCode[] result = new InputCode[codes.length];
-        for (int i = 0; i < codes.length; i++)
-            result[i] = InputCode.key(codes[i]);
-        return result;
-    }
 }

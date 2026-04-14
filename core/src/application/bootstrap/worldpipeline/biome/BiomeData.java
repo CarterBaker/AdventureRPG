@@ -1,7 +1,7 @@
 package application.bootstrap.worldpipeline.biome;
 
 import engine.root.DataPackage;
-import engine.util.mathematics.extras.Color;
+import engine.util.graphics.color.Color;
 
 public class BiomeData extends DataPackage {
 

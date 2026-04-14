@@ -3,10 +3,10 @@ package application.bootstrap.renderpipeline.rendermanager;
 import org.lwjgl.glfw.GLFW;
 
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.settings.EngineSetting;
-import engine.util.graphics.GL20;
-import engine.util.graphics.GL30;
+import engine.util.graphics.gl.GL20;
+import engine.util.graphics.gl.GL30;
 
 class GLSLUtility extends EngineUtility {
 
@@ -19,69 +19,69 @@ class GLSLUtility extends EngineUtility {
     // Buffer \\
 
     static void clearBuffer() {
-        EngineContext.gl.glClearColor(0, 0, 0, 1);
-        EngineContext.gl.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
+        EngineContext.gl20.glClearColor(0, 0, 0, 1);
+        EngineContext.gl20.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
     }
 
     static void clearDepthBuffer() {
-        EngineContext.gl.glClear(GL30.GL_DEPTH_BUFFER_BIT);
+        EngineContext.gl20.glClear(GL30.GL_DEPTH_BUFFER_BIT);
     }
 
     static void setViewport(int width, int height) {
-        EngineContext.gl.glViewport(0, 0, width, height);
+        EngineContext.gl20.glViewport(0, 0, width, height);
     }
 
     // Depth \\
 
     static void enableDepth() {
-        EngineContext.gl.glEnable(GL20.GL_DEPTH_TEST);
-        EngineContext.gl.glDepthFunc(GL20.GL_LEQUAL);
-        EngineContext.gl.glDepthMask(true);
+        EngineContext.gl20.glEnable(GL20.GL_DEPTH_TEST);
+        EngineContext.gl20.glDepthFunc(GL20.GL_LEQUAL);
+        EngineContext.gl20.glDepthMask(true);
     }
 
     static void disableDepth() {
-        EngineContext.gl.glDepthMask(false);
-        EngineContext.gl.glDisable(GL20.GL_DEPTH_TEST);
+        EngineContext.gl20.glDepthMask(false);
+        EngineContext.gl20.glDisable(GL20.GL_DEPTH_TEST);
     }
 
     // Blending \\
 
     static void enableBlending() {
-        EngineContext.gl.glEnable(GL20.GL_BLEND);
-        EngineContext.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        EngineContext.gl20.glEnable(GL20.GL_BLEND);
+        EngineContext.gl20.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
     }
 
     static void disableBlending() {
-        EngineContext.gl.glDisable(GL20.GL_BLEND);
+        EngineContext.gl20.glDisable(GL20.GL_BLEND);
     }
 
     // Culling \\
 
     static void enableCulling() {
-        EngineContext.gl.glEnable(GL20.GL_CULL_FACE);
-        EngineContext.gl.glCullFace(GL20.GL_BACK);
-        EngineContext.gl.glFrontFace(GL20.GL_CCW);
+        EngineContext.gl20.glEnable(GL20.GL_CULL_FACE);
+        EngineContext.gl20.glCullFace(GL20.GL_BACK);
+        EngineContext.gl20.glFrontFace(GL20.GL_CCW);
     }
 
     static void disableCulling() {
-        EngineContext.gl.glDisable(GL20.GL_CULL_FACE);
+        EngineContext.gl20.glDisable(GL20.GL_CULL_FACE);
     }
 
     // Scissor \\
 
     static void enableScissor(int x, int y, int w, int h) {
-        EngineContext.gl.glEnable(GL20.GL_SCISSOR_TEST);
-        EngineContext.gl.glScissor(x, y, w, h);
+        EngineContext.gl20.glEnable(GL20.GL_SCISSOR_TEST);
+        EngineContext.gl20.glScissor(x, y, w, h);
     }
 
     static void disableScissor() {
-        EngineContext.gl.glDisable(GL20.GL_SCISSOR_TEST);
+        EngineContext.gl20.glDisable(GL20.GL_SCISSOR_TEST);
     }
 
     // Shader \\
 
     static void useShader(int shaderHandle) {
-        EngineContext.gl.glUseProgram(shaderHandle);
+        EngineContext.gl20.glUseProgram(shaderHandle);
     }
 
     // VAO \\
@@ -97,7 +97,7 @@ class GLSLUtility extends EngineUtility {
     // Draw \\
 
     static void drawElements(int indexCount) {
-        EngineContext.gl.glDrawElements(GL20.GL_TRIANGLES, indexCount, GL20.GL_UNSIGNED_SHORT,
+        EngineContext.gl20.glDrawElements(GL20.GL_TRIANGLES, indexCount, GL20.GL_UNSIGNED_SHORT,
                 EngineSetting.GL_HANDLE_NONE);
     }
 

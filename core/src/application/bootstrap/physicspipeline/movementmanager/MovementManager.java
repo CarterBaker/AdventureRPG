@@ -3,8 +3,8 @@ package application.bootstrap.physicspipeline.movementmanager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.settings.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 

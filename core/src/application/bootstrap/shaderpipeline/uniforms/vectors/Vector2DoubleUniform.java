@@ -18,7 +18,7 @@ public final class Vector2DoubleUniform extends UniformAttributeStruct<Vector2Do
 
     @Override
     protected void push(int handle, Vector2Double value) {
-        EngineContext.gl.glUniform2f(handle, (float) value.x, (float) value.y);
+        EngineContext.gl20.glUniform2f(handle, (float) value.x, (float) value.y);
     }
 
     @Override

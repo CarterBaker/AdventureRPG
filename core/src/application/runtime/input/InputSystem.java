@@ -6,9 +6,9 @@ import application.bootstrap.inputpipeline.input.InputHandle;
 import application.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import engine.root.SystemPackage;
-import engine.util.camera.CameraInstance;
-import engine.util.input.Bindings;
+import engine.util.display.camera.CameraInstance;
 import engine.util.mathematics.vectors.Vector3;
+import engine.util.settings.KeyBindings;
 
 public class InputSystem extends SystemPackage {
 
@@ -49,7 +49,7 @@ public class InputSystem extends SystemPackage {
     // Input \\
 
     private void handleInventoryInput(int windowID) {
-        if (!inputSystem.bindingClicked(Bindings.INVENTORY))
+        if (!inputSystem.bindingClicked(KeyBindings.INVENTORY))
             return;
         inventoryBranch.toggleInventory(
                 playerManager.getPlayerForWindow(windowID),
@@ -70,15 +70,15 @@ public class InputSystem extends SystemPackage {
             return;
         InputHandle handle = player.getInputHandle();
         Vector3 direction = camera.getDirection();
-        handle.setForward(inputSystem.bindingHeld(Bindings.MOVE_FORWARD));
-        handle.setBack(inputSystem.bindingHeld(Bindings.MOVE_BACK));
-        handle.setLeft(inputSystem.bindingHeld(Bindings.MOVE_LEFT));
-        handle.setRight(inputSystem.bindingHeld(Bindings.MOVE_RIGHT));
-        handle.setJump(inputSystem.bindingHeld(Bindings.JUMP));
-        handle.setWalk(inputSystem.bindingHeld(Bindings.WALK));
-        handle.setSprint(inputSystem.bindingHeld(Bindings.SPRINT));
-        handle.setPrimaryAction(inputSystem.bindingHeld(Bindings.PRIMARY));
-        handle.setSecondaryAction(inputSystem.bindingHeld(Bindings.SECONDARY));
+        handle.setForward(inputSystem.bindingHeld(KeyBindings.MOVE_FORWARD));
+        handle.setBack(inputSystem.bindingHeld(KeyBindings.MOVE_BACK));
+        handle.setLeft(inputSystem.bindingHeld(KeyBindings.MOVE_LEFT));
+        handle.setRight(inputSystem.bindingHeld(KeyBindings.MOVE_RIGHT));
+        handle.setJump(inputSystem.bindingHeld(KeyBindings.JUMP));
+        handle.setWalk(inputSystem.bindingHeld(KeyBindings.WALK));
+        handle.setSprint(inputSystem.bindingHeld(KeyBindings.SPRINT));
+        handle.setPrimaryAction(inputSystem.bindingHeld(KeyBindings.PRIMARY));
+        handle.setSecondaryAction(inputSystem.bindingHeld(KeyBindings.SECONDARY));
         handle.setFacingDirection(direction.x, direction.y, direction.z);
     }
 }

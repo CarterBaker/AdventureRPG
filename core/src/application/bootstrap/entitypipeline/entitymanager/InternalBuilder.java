@@ -6,8 +6,8 @@ import com.google.gson.JsonObject;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityHandle;
 import engine.root.BuilderPackage;
-import engine.settings.EngineSetting;
-import engine.util.JsonUtility;
+import engine.root.EngineSetting;
+import engine.util.io.JsonUtility;
 import engine.util.mathematics.vectors.Vector3;
 
 class InternalBuilder extends BuilderPackage {

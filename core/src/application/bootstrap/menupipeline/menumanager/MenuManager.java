@@ -21,11 +21,11 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.settings.EngineSetting;
-import engine.util.RegistryUtility;
-import engine.util.input.Bindings;
 import engine.util.mathematics.matrices.Matrix4;
+import engine.util.registry.RegistryUtility;
+import engine.util.settings.KeyBindings;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -155,7 +155,7 @@ public class MenuManager extends ManagerPackage {
 
         ScreenRayStruct ray = raycastManager.getScreenRay();
 
-        boolean pressed = inputSystem.bindingClicked(Bindings.PRIMARY);
+        boolean pressed = inputSystem.bindingClicked(KeyBindings.PRIMARY);
         boolean clicked = pressed && !wasPressed;
         wasPressed = pressed;
 

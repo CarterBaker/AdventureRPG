@@ -2,7 +2,7 @@ package application.bootstrap.itempipeline.tooltypemanager;
 
 import application.bootstrap.itempipeline.tooltype.ToolTypeHandle;
 import engine.root.ManagerPackage;
-import engine.util.RegistryUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 

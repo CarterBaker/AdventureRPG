@@ -13,10 +13,9 @@ import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
-import engine.settings.EngineSetting;
-import engine.settings.Settings;
-import engine.util.camera.CameraInstance;
-import engine.util.camera.OrthographicCameraInstance;
+import engine.util.display.camera.CameraInstance;
+import engine.util.display.camera.OrthographicCameraInstance;
+import engine.util.settings.Settings;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

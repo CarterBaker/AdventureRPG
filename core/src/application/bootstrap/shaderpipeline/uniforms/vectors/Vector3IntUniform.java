@@ -18,7 +18,7 @@ public final class Vector3IntUniform extends UniformAttributeStruct<Vector3Int> 
 
     @Override
     protected void push(int handle, Vector3Int value) {
-        EngineContext.gl.glUniform3i(handle, value.x, value.y, value.z);
+        EngineContext.gl20.glUniform3i(handle, value.x, value.y, value.z);
     }
 
     @Override

@@ -17,7 +17,7 @@ public final class FloatUniform extends UniformAttributeStruct<Float> {
 
     @Override
     protected void push(int handle, Float value) {
-        EngineContext.gl.glUniform1f(handle, value);
+        EngineContext.gl20.glUniform1f(handle, value);
     }
 
     @Override

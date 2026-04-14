@@ -19,7 +19,7 @@ public final class Vector2Uniform extends UniformAttributeStruct<Object> {
     @Override
     protected void push(int handle, Object value) {
         if (value instanceof Vector2 vector)
-            EngineContext.gl.glUniform2f(handle, vector.x, vector.y);
+            EngineContext.gl20.glUniform2f(handle, vector.x, vector.y);
         else
             throw new IllegalArgumentException("push(int, Vector2): got " + value.getClass());
     }

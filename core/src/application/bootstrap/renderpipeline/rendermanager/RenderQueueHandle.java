@@ -2,8 +2,8 @@ package application.bootstrap.renderpipeline.rendermanager;
 
 import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
+import engine.root.EngineSetting;
 import engine.root.HandlePackage;
-import engine.settings.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

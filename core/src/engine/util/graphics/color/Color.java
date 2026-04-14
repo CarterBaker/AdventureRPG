@@ -1,4 +1,4 @@
-package engine.util.mathematics.extras;
+package engine.util.graphics.color;
 
 import engine.root.EngineUtility;
 
@@ -43,16 +43,6 @@ public class Color extends EngineUtility {
 
     public Color(Color other) {
         this(other.r, other.g, other.b, other.a);
-    }
-
-    // Conversion \\
-
-    public engine.util.mathematics.extras.Color toNative() {
-        return new engine.util.mathematics.extras.Color(r, g, b, a);
-    }
-
-    public Color fromNative(engine.util.mathematics.extras.Color other) {
-        return set(other.r, other.g, other.b, other.a);
     }
 
     // Set \\

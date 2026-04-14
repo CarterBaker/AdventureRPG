@@ -6,9 +6,9 @@ import com.google.gson.JsonObject;
 import application.bootstrap.entitypipeline.behavior.BehaviorData;
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import engine.root.BuilderPackage;
-import engine.settings.EngineSetting;
-import engine.util.JsonUtility;
-import engine.util.RegistryUtility;
+import engine.root.EngineSetting;
+import engine.util.io.JsonUtility;
+import engine.util.registry.RegistryUtility;
 
 class InternalBuilder extends BuilderPackage {
 

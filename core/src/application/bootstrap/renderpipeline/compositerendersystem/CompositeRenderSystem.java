@@ -13,8 +13,8 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.settings.EngineSetting;
 
 public class CompositeRenderSystem extends SystemPackage {
 

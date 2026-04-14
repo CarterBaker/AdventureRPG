@@ -14,8 +14,8 @@ import application.bootstrap.geometrypipeline.vbomanager.VBOManager;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.root.BuilderPackage;
-import engine.util.FileUtility;
-import engine.util.JsonUtility;
+import engine.util.io.FileUtility;
+import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 

@@ -1,4 +1,4 @@
-package engine.settings;
+package engine.root;
 
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 

@@ -5,7 +5,7 @@ import application.bootstrap.shaderpipeline.texture.TextureData;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texture.TextureTileStruct;
 import engine.root.ManagerPackage;
-import engine.util.RegistryUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

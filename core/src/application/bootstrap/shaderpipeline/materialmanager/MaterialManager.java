@@ -4,7 +4,7 @@ import application.bootstrap.shaderpipeline.material.MaterialData;
 import application.bootstrap.shaderpipeline.material.MaterialHandle;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import engine.root.ManagerPackage;
-import engine.util.RegistryUtility;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

@@ -2,7 +2,7 @@ package editor.runtime.input;
 
 import editor.runtime.PreviewSystem;
 import engine.root.SystemPackage;
-import engine.util.input.Bindings;
+import engine.util.settings.KeyBindings;
 
 public class InputSystem extends SystemPackage {
 
@@ -25,7 +25,7 @@ public class InputSystem extends SystemPackage {
 
     @Override
     protected void update() {
-        if (inputSystem.bindingClicked(Bindings.OPEN_PREVIEW))
+        if (inputSystem.bindingClicked(KeyBindings.OPEN_PREVIEW))
             previewSystem.openPreview();
     }
 }

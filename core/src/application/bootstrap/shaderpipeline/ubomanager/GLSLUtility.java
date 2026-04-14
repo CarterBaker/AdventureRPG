@@ -5,8 +5,8 @@ import java.nio.IntBuffer;
 
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
-import engine.util.graphics.GL20;
-import engine.util.graphics.GL30;
+import engine.util.graphics.gl.GL20;
+import engine.util.graphics.gl.GL30;
 import engine.util.memory.BufferUtils;
 
 /*

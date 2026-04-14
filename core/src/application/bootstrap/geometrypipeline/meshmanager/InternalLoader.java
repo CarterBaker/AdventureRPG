@@ -9,9 +9,9 @@ import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
+import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
-import engine.settings.EngineSetting;
-import engine.util.FileUtility;
+import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class InternalLoader extends LoaderPackage {

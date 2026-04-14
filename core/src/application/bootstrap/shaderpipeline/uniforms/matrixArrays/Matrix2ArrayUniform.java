@@ -37,7 +37,7 @@ public final class Matrix2ArrayUniform extends UniformAttributeStruct<Object[]> 
             uniformBuffer.put(m.val[3]);
         }
         uniformBuffer.flip();
-        EngineContext.gl.glUniformMatrix2fv(handle, elementCount, false, uniformBuffer);
+        EngineContext.gl20.glUniformMatrix2fv(handle, elementCount, false, uniformBuffer);
     }
 
     @Override

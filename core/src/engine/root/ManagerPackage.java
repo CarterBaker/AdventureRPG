@@ -4,7 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import engine.settings.Settings;
+import engine.util.settings.Settings;
 
 public abstract class ManagerPackage extends SystemPackage {
 

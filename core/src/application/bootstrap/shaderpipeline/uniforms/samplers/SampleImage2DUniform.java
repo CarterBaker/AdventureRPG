@@ -3,7 +3,7 @@ package application.bootstrap.shaderpipeline.uniforms.samplers;
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import engine.root.EngineContext;
-import engine.util.graphics.GL20;
+import engine.util.graphics.gl.GL20;
 
 public final class SampleImage2DUniform extends UniformAttributeStruct<Integer> {
 
@@ -26,13 +26,13 @@ public final class SampleImage2DUniform extends UniformAttributeStruct<Integer> 
     @Override
     public void bindTexture(int unit) {
         this.textureUnit = unit;
-        EngineContext.gl.glActiveTexture(GL20.GL_TEXTURE0 + unit);
-        EngineContext.gl.glBindTexture(GL20.GL_TEXTURE_2D, value);
+        EngineContext.gl20.glActiveTexture(GL20.GL_TEXTURE0 + unit);
+        EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, value);
     }
 
     @Override
     protected void push(int handle, Integer value) {
-        EngineContext.gl.glUniform1i(handle, textureUnit);
+        EngineContext.gl20.glUniform1i(handle, textureUnit);
     }
 
     @Override

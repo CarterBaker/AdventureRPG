@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 import application.bootstrap.shaderpipeline.uniforms.UniformData;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import engine.root.DataPackage;
-import engine.settings.EngineSetting;
+import engine.root.EngineSetting;
 import engine.util.memory.BufferUtils;
 
 public class UBOData extends DataPackage {
