@@ -128,12 +128,9 @@ public class WindowManager extends ManagerPackage {
 
     public void beginContextWindow(WindowInstance window) {
         this.contextWindow = window;
-        if (window != null && window.hasNativeHandle())
-            internal.windowPlatform.makeContextCurrent(window);
     }
 
     public void endContextWindow() {
-        internal.windowPlatform.restoreMainContext();
         this.contextWindow = null;
     }
 

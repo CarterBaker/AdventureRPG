@@ -244,6 +244,7 @@ public class EnginePackage extends ManagerPackage {
     private void primeContextLifecycle(ContextPackage context) {
 
         SystemContext previousContext = this.internalContext;
+        this.windowPlatform.makeContextCurrent(context.getWindow());
         EngineUtility.windowManager.beginContextWindow(context.getWindow());
 
         try {
@@ -258,8 +259,11 @@ public class EnginePackage extends ManagerPackage {
 
             this.internalContext = SystemContext.RELEASE;
             context.internalRelease();
-        } finally {
+        }
+
+        finally {
             EngineUtility.windowManager.endContextWindow();
+            this.windowPlatform.restoreMainContext();
             this.internalContext = previousContext;
         }
     }
@@ -283,14 +287,21 @@ public class EnginePackage extends ManagerPackage {
             return;
 
         for (int i = 0; i < this.pendingContextList.size(); i++) {
+
             ContextPackage context = this.pendingContextList.get(i);
             context.pendingStart = false;
+            this.windowPlatform.makeContextCurrent(context.getWindow());
             EngineUtility.windowManager.beginContextWindow(context.getWindow());
+
             try {
                 context.internalStart();
-            } finally {
-                EngineUtility.windowManager.endContextWindow();
             }
+
+            finally {
+                EngineUtility.windowManager.endContextWindow();
+                this.windowPlatform.restoreMainContext();
+            }
+
             this.activeContextList.add(context);
         }
 
