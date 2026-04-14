@@ -1,23 +1,27 @@
 package application.kernel.windowpipeline.windowmanager;
 
+import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.root.ContextPackage;
 import engine.root.EngineUtility;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WindowManager extends ManagerPackage {
+
     /*
      * Owns all engine windows. The main window is platform-hosted and registered
      * at bootstrap. Secondary windows are registered on demand and opened
-     * immediately
-     * by the platform layer.
+     * immediately by the platform layer.
      */
+
     // Windows
     private ObjectArrayList<WindowInstance> windows;
     private WindowInstance mainWindow;
     private WindowInstance activeWindow;
     private WindowInstance renderWindow;
     private WindowInstance contextWindow;
+
     // Identity
     private int nextWindowID;
 
@@ -37,7 +41,6 @@ public class WindowManager extends ManagerPackage {
     protected void update() {
         syncActiveWindow();
 
-        // Close Detection
         for (int i = windows.size() - 1; i >= 0; i--) {
             WindowInstance window = windows.get(i);
             if (window == mainWindow)
@@ -67,21 +70,18 @@ public class WindowManager extends ManagerPackage {
     private void syncActiveWindow() {
         for (int i = 0; i < windows.size(); i++) {
             WindowInstance window = windows.get(i);
-
             if (!window.hasNativeHandle())
                 continue;
-
             if (!internal.windowPlatform.isWindowFocused(window))
                 continue;
-
             activeWindow = window;
             return;
         }
-
         activeWindow = mainWindow;
     }
 
     // Accessible \\
+
     public void registerMainWindow(WindowInstance window) {
         verifyWindowRegistration(window, true);
         this.mainWindow = window;
@@ -92,6 +92,15 @@ public class WindowManager extends ManagerPackage {
     public void registerDetachedWindow(WindowInstance window) {
         verifyWindowRegistration(window, false);
         registerWindow(window);
+    }
+
+    public <T extends ContextPackage> WindowInstance openWindow(String title, Class<T> contextClass) {
+        WindowData data = new WindowData(issueWindowID(), mainWindow.getWidth(), mainWindow.getHeight(), title);
+        WindowInstance window = create(WindowInstance.class);
+        window.constructor(data);
+        registerDetachedWindow(window);
+        internal.createContext(contextClass, window);
+        return window;
     }
 
     private void registerWindow(WindowInstance window) {
@@ -118,9 +127,7 @@ public class WindowManager extends ManagerPackage {
     }
 
     public void beginContextWindow(WindowInstance window) {
-
         this.contextWindow = window;
-
         if (window != null && window.hasNativeHandle())
             internal.windowPlatform.makeContextCurrent(window);
     }
@@ -157,18 +164,13 @@ public class WindowManager extends ManagerPackage {
     // Validation \\
 
     private void verifyWindowRegistration(WindowInstance window, boolean isMain) {
-
         if (window == null)
             throwException("Cannot register null window.");
-
         int windowID = window.getWindowID();
-
         if (isMain && windowID != 0)
             throwException("Main window must use window ID 0. Received: " + windowID);
-
         if (!isMain && windowID == 0)
             throwException("Detached windows must not use window ID 0.");
-
         if (hasWindowID(windowID))
             throwException("Window ID already registered: " + windowID);
     }
