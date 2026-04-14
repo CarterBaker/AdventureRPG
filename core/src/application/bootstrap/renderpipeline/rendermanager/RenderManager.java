@@ -2,8 +2,10 @@ package application.bootstrap.renderpipeline.rendermanager;
 
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
+import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
+import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -22,6 +24,8 @@ public class RenderManager extends ManagerPackage {
     // Internal
     private CameraManager cameraManager;
     private WindowManager windowManager;
+    private PlayerManager playerManager;
+    private UBOManager uboManager;
 
     // Systems
     private RenderSystem renderSystem;
@@ -40,6 +44,8 @@ public class RenderManager extends ManagerPackage {
         // Internal
         this.cameraManager = get(CameraManager.class);
         this.windowManager = get(WindowManager.class);
+        this.playerManager = get(PlayerManager.class);
+        this.uboManager = get(UBOManager.class);
     }
 
     // Draw \\
@@ -73,6 +79,8 @@ public class RenderManager extends ManagerPackage {
     }
 
     public void draw(WindowInstance window) {
+        uboManager.bindBuffersForCurrentContext();
+        playerManager.pushPlayerPositionForWindow(window.getWindowID());
         cameraManager.pushCamera(window);
         renderSystem.draw(window);
     }

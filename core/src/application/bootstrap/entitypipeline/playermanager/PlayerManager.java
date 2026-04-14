@@ -214,4 +214,13 @@ public class PlayerManager extends ManagerPackage {
         EntityInstance player = windowID2Player.get(windowID);
         return player == null ? null : player.getWorldPositionStruct();
     }
+
+    public void pushPlayerPositionForWindow(int windowID) {
+        WorldPositionStruct position = getPlayerPositionForWindow(windowID);
+
+        if (position == null)
+            return;
+
+        internalBufferSystem.updatePlayerPosition(position);
+    }
 }
