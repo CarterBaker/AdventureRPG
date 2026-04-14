@@ -27,6 +27,7 @@ public class Lwjgl3Application {
     private final Lwjgl3Input input;
     private final int glMajor;
     private final int glMinor;
+    private final int swapInterval;
 
     // Secondary Windows
     private final LongArrayList secondaryHandles;
@@ -49,6 +50,7 @@ public class Lwjgl3Application {
 
         this.glMajor = config.getGlMajor();
         this.glMinor = config.getGlMinor();
+        this.swapInterval = config.isVsync() ? 1 : 0;
         applyWindowHints(glMajor, glMinor);
 
         long monitor = config.isFullscreen() ? GLFW.glfwGetPrimaryMonitor() : 0L;
@@ -63,7 +65,7 @@ public class Lwjgl3Application {
             GLFW.glfwSetWindowPos(mainHandle, config.getWindowX(), config.getWindowY());
 
         GLFW.glfwMakeContextCurrent(mainHandle);
-        GLFW.glfwSwapInterval(config.isVsync() ? 1 : 0);
+        GLFW.glfwSwapInterval(swapInterval);
         GL.createCapabilities();
 
         this.input = new Lwjgl3Input(mainHandle);
@@ -179,5 +181,9 @@ public class Lwjgl3Application {
 
     public void exit() {
         running = false;
+    }
+
+    public int getSwapInterval() {
+        return swapInterval;
     }
 }
