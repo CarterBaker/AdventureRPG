@@ -95,14 +95,14 @@ public class Lwjgl3Launcher {
 
     private static void saveWindowInfoOnClose(File file, Settings settings) {
 
-        if (!(EngineContext.graphics instanceof Lwjgl3Display graphics))
+        if (!(EngineContext.display instanceof Lwjgl3Display display))
             return;
 
-        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, graphics.getWidth());
-        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, graphics.getHeight());
-        settings.windowX = graphics.getPosX();
-        settings.windowY = graphics.getPosY();
-        settings.fullscreen = graphics.isFullscreen();
+        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getWidth());
+        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getHeight());
+        settings.windowX = display.getPosX();
+        settings.windowY = display.getPosY();
+        settings.fullscreen = display.isFullscreen();
         SettingsUtility.save(file, settings, ENGINE_GSON);
     }
 }

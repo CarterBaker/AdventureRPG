@@ -13,7 +13,7 @@ public class EngineContext {
      */
 
     // Platform
-    public static Display graphics;
+    public static Display display;
     public static Input input;
     public static GL20 gl20;
     public static GL30 gl30;

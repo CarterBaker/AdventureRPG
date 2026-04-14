@@ -113,10 +113,10 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     @Override
     public void restoreMainContext() {
 
-        if (!(EngineContext.graphics instanceof Lwjgl3Display graphics))
+        if (!(EngineContext.display instanceof Lwjgl3Display display))
             return;
 
-        bindContext(MAIN_WINDOW_ID, graphics.getMainHandle());
+        bindContext(MAIN_WINDOW_ID, display.getMainHandle());
     }
 
     @Override
@@ -152,8 +152,8 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         if (handle != 0L)
             return handle;
 
-        if (window.getWindowID() == MAIN_WINDOW_ID && EngineContext.graphics instanceof Lwjgl3Display graphics)
-            return graphics.getMainHandle();
+        if (window.getWindowID() == MAIN_WINDOW_ID && EngineContext.display instanceof Lwjgl3Display display)
+            return display.getMainHandle();
 
         return application.newWindow(window.getTitle(), window.getWidth(), window.getHeight());
     }

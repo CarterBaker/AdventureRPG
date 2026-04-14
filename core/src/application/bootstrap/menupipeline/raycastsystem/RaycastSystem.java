@@ -37,8 +37,8 @@ public class RaycastSystem extends SystemPackage {
         if (!inputSystem.bindingClicked(KeyBindings.PRIMARY))
             return;
 
-        float screenW = EngineContext.graphics.getWidth();
-        float screenH = EngineContext.graphics.getHeight();
+        float screenW = EngineContext.display.getWidth();
+        float screenH = EngineContext.display.getHeight();
         float mouseX = inputSystem.getMouseX();
         float mouseY = screenH - inputSystem.getMouseY();
 
