@@ -50,6 +50,10 @@ public abstract class EngineUtility {
         windowManager = input;
     }
 
+    public static WindowManager getWindowManager() {
+        return windowManager;
+    }
+
     // Thread \\
 
     static ThreadHandle getThreadHandle(String threadName) {

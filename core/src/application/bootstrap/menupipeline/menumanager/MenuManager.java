@@ -25,7 +25,6 @@ import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.registry.RegistryUtility;
-import engine.util.settings.KeyBindings;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -171,7 +170,7 @@ public class MenuManager extends ManagerPackage {
         if (rayWindow == null)
             return;
 
-        boolean pressed = inputSystem.bindingClicked(KeyBindings.PRIMARY);
+        boolean pressed = raycastManager.hasScreenRay();
         boolean clicked = pressed && !wasPressed;
         wasPressed = pressed;
 
