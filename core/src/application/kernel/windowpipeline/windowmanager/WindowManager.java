@@ -68,15 +68,38 @@ public class WindowManager extends ManagerPackage {
     }
 
     private void syncActiveWindow() {
-        for (int i = 0; i < windows.size(); i++) {
+        WindowInstance focusedDetached = null;
+
+        for (int i = windows.size() - 1; i >= 0; i--) {
             WindowInstance window = windows.get(i);
+
+            if (window == mainWindow)
+                continue;
+
             if (!window.hasNativeHandle())
                 continue;
+
             if (!internal.windowPlatform.isWindowFocused(window))
                 continue;
-            if (activeWindow != window) {
-                activeWindow = window;
-                internal.windowPlatform.makeContextCurrent(window);
+
+            focusedDetached = window;
+            break;
+        }
+
+        if (focusedDetached != null) {
+            if (activeWindow != focusedDetached) {
+                activeWindow = focusedDetached;
+                internal.windowPlatform.makeContextCurrent(focusedDetached);
+            }
+            return;
+        }
+
+        if (mainWindow != null
+                && mainWindow.hasNativeHandle()
+                && internal.windowPlatform.isWindowFocused(mainWindow)) {
+            if (activeWindow != mainWindow) {
+                activeWindow = mainWindow;
+                internal.windowPlatform.makeContextCurrent(mainWindow);
             }
             return;
         }
