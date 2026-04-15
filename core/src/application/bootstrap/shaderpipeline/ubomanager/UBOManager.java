@@ -34,6 +34,7 @@ public class UBOManager extends ManagerPackage {
     // Palette
     private Object2IntOpenHashMap<String> uboName2UBOID;
     private Int2ObjectOpenHashMap<UBOHandle> uboID2UBOHandle;
+    private ObjectArrayList<UBOInstance> activeInstances;
 
     // Base \\
 
@@ -45,6 +46,7 @@ public class UBOManager extends ManagerPackage {
         this.releasedBindings = new IntOpenHashSet();
         this.uboName2UBOID = new Object2IntOpenHashMap<>();
         this.uboID2UBOHandle = new Int2ObjectOpenHashMap<>();
+        this.activeInstances = new ObjectArrayList<>();
 
         create(InternalLoader.class);
     }
@@ -55,8 +57,12 @@ public class UBOManager extends ManagerPackage {
         for (UBOHandle handle : uboID2UBOHandle.values())
             GLSLUtility.deleteUniformBuffer(handle.getGpuHandle());
 
+        for (int i = 0; i < activeInstances.size(); i++)
+            GLSLUtility.deleteUniformBuffer(activeInstances.get(i).getGpuHandle());
+
         uboName2UBOID.clear();
         uboID2UBOHandle.clear();
+        activeInstances.clear();
         usedBindings.clear();
         releasedBindings.clear();
     }
@@ -98,6 +104,7 @@ public class UBOManager extends ManagerPackage {
         UBOData clonedData = new UBOData(handle.getUBOData(), newGpuHandle);
         UBOInstance instance = create(UBOInstance.class);
         instance.constructor(clonedData);
+        activeInstances.add(instance);
 
         Object2ObjectOpenHashMap<String, UniformStruct<?>> sourceUniforms = handle.getCompiledUniforms();
         ObjectArrayList<String> uniformKeys = handle.getUniformKeys();
@@ -113,6 +120,7 @@ public class UBOManager extends ManagerPackage {
     }
 
     public void destroyInstance(UBOInstance instance) {
+        activeInstances.remove(instance);
         GLSLUtility.deleteUniformBuffer(instance.getGpuHandle());
     }
 
@@ -126,6 +134,14 @@ public class UBOManager extends ManagerPackage {
         ByteBuffer staging = instance.getUBOData().getStagingBuffer();
         staging.rewind();
         GLSLUtility.updateUniformBuffer(instance.getGpuHandle(), 0, staging);
+    }
+
+    public void bindBuffersForCurrentContext() {
+
+        // Shared/source UBO handles may not be re-bound every draw call.
+        // Re-assert their binding points whenever a context is made current.
+        for (UBOHandle handle : uboID2UBOHandle.values())
+            GLSLUtility.bindUniformBufferBase(handle.getGpuHandle(), handle.getBindingPoint());
     }
 
     // Binding Registry \\
