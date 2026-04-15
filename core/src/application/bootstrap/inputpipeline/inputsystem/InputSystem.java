@@ -11,6 +11,8 @@ public class InputSystem extends SystemPackage {
      * Thin bridge between the engine input backend and bootstrap systems.
      * Owns sensitivity-scaled mouse delta and binding query convenience.
      * All click, held, and release state delegates directly to EngineContext.input.
+     * Mouse delta is computed lazily per call so it always reflects the active
+     * window's input context — no stale snapshot from a cached update().
      */
 
     // Internal
@@ -25,13 +27,6 @@ public class InputSystem extends SystemPackage {
     protected void create() {
         this.sensitivity = internal.settings.mouseSensitivity;
         this.mouseDelta = new Vector2();
-    }
-
-    @Override
-    protected void update() {
-        float dx = EngineContext.input.getDeltaX() * sensitivity;
-        float dy = EngineContext.input.getDeltaY() * sensitivity;
-        mouseDelta.set(dx, dy);
     }
 
     // Platform \\
@@ -65,6 +60,9 @@ public class InputSystem extends SystemPackage {
     }
 
     public Vector2 getMouseDelta() {
+        mouseDelta.set(
+                EngineContext.input.getDeltaX() * sensitivity,
+                EngineContext.input.getDeltaY() * sensitivity);
         return mouseDelta;
     }
 }

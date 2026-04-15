@@ -3,7 +3,6 @@ package application.bootstrap.menupipeline;
 import application.bootstrap.menupipeline.fontmanager.FontManager;
 import application.bootstrap.menupipeline.menueventsmanager.MenuEventsManager;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.raycastsystem.RaycastSystem;
 import engine.root.PipelinePackage;
 
 public class MenuPipeline extends PipelinePackage {
@@ -19,7 +18,6 @@ public class MenuPipeline extends PipelinePackage {
     protected void create() {
         create(MenuEventsManager.class);
         create(FontManager.class);
-        create(RaycastSystem.class);
         create(MenuManager.class);
     }
 }
