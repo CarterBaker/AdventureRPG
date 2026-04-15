@@ -173,6 +173,26 @@ public class WindowManager extends ManagerPackage {
         return activeWindow;
     }
 
+    public void setActiveWindowByID(int windowID) {
+
+        for (int i = 0; i < windows.size(); i++) {
+            WindowInstance window = windows.get(i);
+
+            if (window.getWindowID() != windowID)
+                continue;
+
+            if (activeWindow == window)
+                return;
+
+            activeWindow = window;
+
+            if (window.hasNativeHandle())
+                internal.windowPlatform.makeContextCurrent(window);
+
+            return;
+        }
+    }
+
     public WindowInstance getRenderWindow() {
         return renderWindow;
     }
