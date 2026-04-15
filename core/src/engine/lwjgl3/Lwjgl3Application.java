@@ -8,6 +8,7 @@ import org.lwjgl.opengl.GL;
 import engine.root.EngineContext;
 import engine.root.EnginePackage;
 import engine.root.EngineUtility;
+import engine.util.input.Input;
 
 import java.util.function.BooleanSupplier;
 
@@ -185,5 +186,13 @@ public class Lwjgl3Application {
 
     public int getSwapInterval() {
         return swapInterval;
+    }
+
+    public Input getInputForHandle(long handle) {
+
+        if (handle == mainHandle)
+            return input;
+
+        return handle2Input.get(handle);
     }
 }

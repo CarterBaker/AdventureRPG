@@ -11,6 +11,7 @@ import org.lwjgl.opengl.GLCapabilities;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineContext;
 import engine.root.WindowPlatform;
+import engine.util.input.Input;
 
 import java.nio.IntBuffer;
 
@@ -182,6 +183,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         if (windowID == UNKNOWN_WINDOW_ID) {
             GLFW.glfwMakeContextCurrent(windowHandle);
             GL.setCapabilities(previousCapabilities);
+            syncInputForCurrentContext(windowHandle);
             return;
         }
 
@@ -191,6 +193,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     private void bindContext(int windowID, long windowHandle) {
         GLFW.glfwMakeContextCurrent(windowHandle);
         ensureCapabilitiesForCurrentContext(windowID);
+        syncInputForCurrentContext(windowHandle);
     }
 
     private void ensureCapabilitiesForCurrentContext(int windowID) {
@@ -203,5 +206,13 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         }
 
         GL.setCapabilities(caps);
+    }
+
+    private void syncInputForCurrentContext(long windowHandle) {
+
+        Input windowInput = application.getInputForHandle(windowHandle);
+
+        if (windowInput != null)
+            EngineContext.input = windowInput;
     }
 }
