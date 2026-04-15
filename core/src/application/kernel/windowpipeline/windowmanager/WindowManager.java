@@ -74,10 +74,18 @@ public class WindowManager extends ManagerPackage {
                 continue;
             if (!internal.windowPlatform.isWindowFocused(window))
                 continue;
-            activeWindow = window;
+            if (activeWindow != window) {
+                activeWindow = window;
+                internal.windowPlatform.makeContextCurrent(window);
+            }
             return;
         }
+
+        boolean switchedToMain = activeWindow != mainWindow;
         activeWindow = mainWindow;
+
+        if (switchedToMain && mainWindow != null && mainWindow.hasNativeHandle())
+            internal.windowPlatform.makeContextCurrent(mainWindow);
     }
 
     // Accessible \\

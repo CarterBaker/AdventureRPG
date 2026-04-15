@@ -154,6 +154,22 @@ public class MenuManager extends ManagerPackage {
             return;
 
         ScreenRayStruct ray = raycastManager.getScreenRay();
+        int rayWindowID = ray.getWindowID();
+
+        WindowInstance rayWindow = null;
+
+        for (int i = 0; i < activeMenus.size(); i++) {
+            WindowInstance candidate = activeMenus.get(i).getWindow();
+
+            if (candidate.getWindowID() != rayWindowID)
+                continue;
+
+            rayWindow = candidate;
+            break;
+        }
+
+        if (rayWindow == null)
+            return;
 
         boolean pressed = inputSystem.bindingClicked(KeyBindings.PRIMARY);
         boolean clicked = pressed && !wasPressed;
@@ -163,7 +179,7 @@ public class MenuManager extends ManagerPackage {
             return;
 
         float mouseX = ray.getScreenX();
-        float mouseY = ray.getScreenY();
+        float adjustedMouseY = rayWindow.getHeight() - ray.getScreenY();
 
         for (int i = activeMenus.size() - 1; i >= 0; i--) {
 
@@ -173,9 +189,11 @@ public class MenuManager extends ManagerPackage {
                 continue;
 
             WindowInstance window = instance.getWindow();
+            if (window.getWindowID() != rayWindowID)
+                continue;
+
             float screenW = window.getWidth();
             float screenH = window.getHeight();
-            float adjustedMouseY = screenH - mouseY;
 
             if (hitTestElements(
                     instance.getElements(),
