@@ -29,7 +29,6 @@ public class Lwjgl3Application {
     private final int glMajor;
     private final int glMinor;
     private final int swapInterval;
-    private final Lwjgl3WindowPlatform windowPlatform;
 
     // Secondary Windows
     private final LongArrayList secondaryHandles;
@@ -53,7 +52,6 @@ public class Lwjgl3Application {
         this.glMajor = config.getGlMajor();
         this.glMinor = config.getGlMinor();
         this.swapInterval = config.isVsync() ? 1 : 0;
-        this.windowPlatform = platform;
         applyWindowHints(glMajor, glMinor);
 
         long monitor = config.isFullscreen() ? GLFW.glfwGetPrimaryMonitor() : 0L;
@@ -115,26 +113,11 @@ public class Lwjgl3Application {
             if (handle == mainHandle)
                 display.setSize(width, height);
         });
-        GLFW.glfwSetCursorPosCallback(handle, (w, x, y) -> {
-            windowPlatform.notifyWindowInteracted(w);
-            inp.onCursor(x, y);
-        });
-        GLFW.glfwSetMouseButtonCallback(handle, (w, b, a, m) -> {
-            windowPlatform.notifyWindowInteracted(w);
-            inp.onMouseButton(b, a);
-        });
-        GLFW.glfwSetScrollCallback(handle, (w, dx, dy) -> {
-            windowPlatform.notifyWindowInteracted(w);
-            inp.onScroll(dx, dy);
-        });
-        GLFW.glfwSetKeyCallback(handle, (w, k, s, a, m) -> {
-            windowPlatform.notifyWindowInteracted(w);
-            inp.onKey(k, a);
-        });
-        GLFW.glfwSetCharCallback(handle, (w, cp) -> {
-            windowPlatform.notifyWindowInteracted(w);
-            inp.onChar(cp);
-        });
+        GLFW.glfwSetCursorPosCallback(handle, (w, x, y) -> inp.onCursor(x, y));
+        GLFW.glfwSetMouseButtonCallback(handle, (w, b, a, m) -> inp.onMouseButton(b, a));
+        GLFW.glfwSetScrollCallback(handle, (w, dx, dy) -> inp.onScroll(dx, dy));
+        GLFW.glfwSetKeyCallback(handle, (w, k, s, a, m) -> inp.onKey(k, a));
+        GLFW.glfwSetCharCallback(handle, (w, cp) -> inp.onChar(cp));
 
         if (closeCallback != null)
             GLFW.glfwSetWindowCloseCallback(handle, w -> {

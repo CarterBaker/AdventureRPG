@@ -9,9 +9,7 @@ import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GLCapabilities;
 
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineContext;
-import engine.root.EngineUtility;
 import engine.root.WindowPlatform;
 import engine.util.input.Input;
 
@@ -216,20 +214,5 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
         if (windowInput != null)
             EngineContext.input = windowInput;
-    }
-
-    void notifyWindowInteracted(long windowHandle) {
-
-        int windowID = handle2WindowID.get(windowHandle);
-
-        if (windowID == UNKNOWN_WINDOW_ID)
-            return;
-
-        WindowManager manager = EngineUtility.getWindowManager();
-
-        if (manager == null)
-            return;
-
-        manager.setActiveWindowByID(windowID);
     }
 }
