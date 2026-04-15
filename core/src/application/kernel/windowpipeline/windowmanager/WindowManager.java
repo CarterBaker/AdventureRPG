@@ -57,10 +57,13 @@ public class WindowManager extends ManagerPackage {
 
     @Override
     protected void dispose() {
+
         for (int i = windows.size() - 1; i >= 0; i--) {
+
             WindowInstance window = windows.get(i);
-            if (window == mainWindow)
+            if (window == mainWindow || !window.hasNativeHandle())
                 continue;
+
             internal.windowPlatform.makeContextCurrent(window);
             window.dispose();
             internal.windowPlatform.destroyWindow(window);
@@ -68,24 +71,43 @@ public class WindowManager extends ManagerPackage {
     }
 
     private void syncActiveWindow() {
-        for (int i = 0; i < windows.size(); i++) {
+        WindowInstance focusedWindow = resolveFocusedWindow();
+
+        if (focusedWindow == null) {
+            boolean switchedToMain = activeWindow != mainWindow;
+            activeWindow = mainWindow;
+
+            if (switchedToMain && mainWindow != null && mainWindow.hasNativeHandle())
+                internal.windowPlatform.makeContextCurrent(mainWindow);
+
+            return;
+        }
+
+        if (activeWindow == focusedWindow)
+            return;
+
+        activeWindow = focusedWindow;
+        internal.windowPlatform.makeContextCurrent(focusedWindow);
+    }
+
+    private WindowInstance resolveFocusedWindow() {
+        for (int i = windows.size() - 1; i >= 0; i--) {
             WindowInstance window = windows.get(i);
+            if (window == mainWindow)
+                continue;
             if (!window.hasNativeHandle())
                 continue;
             if (!internal.windowPlatform.isWindowFocused(window))
                 continue;
-            if (activeWindow != window) {
-                activeWindow = window;
-                internal.windowPlatform.makeContextCurrent(window);
-            }
-            return;
+            return window;
         }
 
-        boolean switchedToMain = activeWindow != mainWindow;
-        activeWindow = mainWindow;
+        if (mainWindow != null
+                && mainWindow.hasNativeHandle()
+                && internal.windowPlatform.isWindowFocused(mainWindow))
+            return mainWindow;
 
-        if (switchedToMain && mainWindow != null && mainWindow.hasNativeHandle())
-            internal.windowPlatform.makeContextCurrent(mainWindow);
+        return null;
     }
 
     // Accessible \\
