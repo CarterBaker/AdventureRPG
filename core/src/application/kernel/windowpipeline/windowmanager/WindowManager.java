@@ -71,20 +71,15 @@ public class WindowManager extends ManagerPackage {
     }
 
     private void syncActiveWindow() {
+
         WindowInstance focusedWindow = resolveFocusedWindow();
 
         if (focusedWindow == null) {
-            boolean switchedToMain = activeWindow != mainWindow;
             activeWindow = mainWindow;
-
-            if (switchedToMain && mainWindow != null && mainWindow.hasNativeHandle())
+            if (mainWindow != null && mainWindow.hasNativeHandle())
                 internal.windowPlatform.makeContextCurrent(mainWindow);
-
             return;
         }
-
-        if (activeWindow == focusedWindow)
-            return;
 
         activeWindow = focusedWindow;
         internal.windowPlatform.makeContextCurrent(focusedWindow);
