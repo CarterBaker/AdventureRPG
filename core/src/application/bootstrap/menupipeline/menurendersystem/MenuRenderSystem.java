@@ -7,6 +7,7 @@ import application.bootstrap.menupipeline.fonts.FontInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
+import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
@@ -199,8 +200,19 @@ public class MenuRenderSystem extends SystemPackage {
         if (!font.hasModel() || font.getMergedModel().isEmpty())
             return;
 
-        float x = element.getComputedLeft() + (element.getComputedW() - font.getTextWidth()) * 0.5f;
-        float y = element.getComputedTop() + (element.getComputedH() - font.getTextHeight()) * 0.5f;
+        TextAlign align = element.getElementData().getTextAlign();
+
+        float x;
+        float y;
+
+        if (align == TextAlign.LEFT)
+            x = element.getComputedLeft();
+        else if (align == TextAlign.RIGHT)
+            x = element.getComputedLeft() + element.getComputedW() - font.getTextWidth();
+        else
+            x = element.getComputedLeft() + (element.getComputedW() - font.getTextWidth()) * 0.5f;
+
+        y = element.getComputedTop() + (element.getComputedH() - font.getTextHeight()) * 0.5f;
 
         fontTransform.set(
                 1, 0, 0, x,
