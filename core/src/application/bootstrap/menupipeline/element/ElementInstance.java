@@ -1,6 +1,6 @@
 package application.bootstrap.menupipeline.element;
 
-import application.bootstrap.menupipeline.fonts.FontInstance;
+import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;

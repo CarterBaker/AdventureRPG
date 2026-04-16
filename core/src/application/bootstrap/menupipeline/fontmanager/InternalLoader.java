@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import application.bootstrap.menupipeline.fonts.FontHandle;
+import application.bootstrap.menupipeline.font.FontHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;

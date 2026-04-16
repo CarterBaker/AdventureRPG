@@ -3,7 +3,7 @@ package application.bootstrap.menupipeline.menurendersystem;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementInstance;
-import application.bootstrap.menupipeline.fonts.FontInstance;
+import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
@@ -23,6 +23,13 @@ public class MenuRenderSystem extends SystemPackage {
      * Drives element tree traversal, mask stack management, and font GPU
      * upload and release. Owns the current render window per frame and routes
      * sprite and font render calls to RenderManager.
+     *
+     * Font scaling contract:
+     * - FontInstance.setText() stores geometry in raw atlas-pixel units.
+     * - At render time we compute scale = targetFontSize / atlasPixelSize.
+     * - That scale goes onto the transform matrix diagonal so both glyph
+     * quads AND their spacing grow/shrink uniformly.
+     * - setText is only re-called when the string changes, not on size change.
      */
 
     // Internal
@@ -197,38 +204,52 @@ public class MenuRenderSystem extends SystemPackage {
 
         FontInstance font = element.getFontInstance();
         ElementData data = element.getElementData();
+
+        // Resolve target font size (explicit from JSON or derived from element height)
         float targetFontSize = data.hasExplicitFontSize()
                 ? data.getFontSize()
-                : Math.max(
-                        1f,
-                        element.getComputedH() * EngineSetting.FONT_SIZE_FROM_ELEMENT_HEIGHT_RATIO);
+                : Math.max(1f, element.getComputedH() * EngineSetting.FONT_SIZE_FROM_ELEMENT_HEIGHT_RATIO);
 
-        if (Math.abs(font.getFontSize() - targetFontSize) > 0.01f) {
-            font.setFontSize(targetFontSize);
-            font.setText(element.getText());
+        // Update stored size so isDirty checks and external readers stay consistent
+        font.setFontSize(targetFontSize);
+
+        // Upload geometry if the string changed — size changes never need a rebake
+        if (font.isDirty())
             font.upload(modelManager, materialManager);
-        }
 
         if (!font.hasModel() || font.getMergedModel().isEmpty())
             return;
 
-        TextAlign align = element.getElementData().getTextAlign();
+        // Scale: converts raw atlas-pixel units → screen pixels
+        float atlasPixelSize = font.getHandle().getAtlasPixelSize();
+        float scale = atlasPixelSize > 0f ? targetFontSize / atlasPixelSize : 1f;
+
+        // Scaled screen-space dimensions for alignment
+        float scaledW = font.getTextWidth() * scale;
+        float scaledH = font.getTextHeight() * scale;
+
+        TextAlign align = data.getTextAlign();
 
         float x;
-        float y;
-
         if (align == TextAlign.LEFT)
             x = element.getComputedLeft();
         else if (align == TextAlign.RIGHT)
-            x = element.getComputedLeft() + element.getComputedW() - font.getTextWidth();
+            x = element.getComputedLeft() + element.getComputedW() - scaledW;
         else
-            x = element.getComputedLeft() + (element.getComputedW() - font.getTextWidth()) * 0.5f;
+            x = element.getComputedLeft() + (element.getComputedW() - scaledW) * 0.5f;
 
-        y = element.getComputedTop() + (element.getComputedH() - font.getTextHeight()) * 0.5f;
+        float y = element.getComputedTop() + (element.getComputedH() - scaledH) * 0.5f;
 
+        /*
+         * Transform = translate(x, y) * scale(scale, scale)
+         *
+         * The scale on the diagonal is what actually resizes the glyphs.
+         * Without it the geometry stays at raster-pixel size and only
+         * spacing was growing — which was the original bug.
+         */
         fontTransform.set(
-                1, 0, 0, x,
-                0, 1, 0, y,
+                scale, 0, 0, x,
+                0, scale, 0, y,
                 0, 0, 1, 0,
                 0, 0, 0, 1);
 

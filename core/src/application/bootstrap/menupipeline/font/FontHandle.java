@@ -1,4 +1,4 @@
-package application.bootstrap.menupipeline.fonts;
+package application.bootstrap.menupipeline.font;
 
 import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import engine.root.HandlePackage;

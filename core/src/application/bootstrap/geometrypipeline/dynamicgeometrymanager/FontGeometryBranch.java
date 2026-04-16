@@ -1,7 +1,7 @@
 package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
-import application.bootstrap.menupipeline.fonts.GlyphMetricStruct;
+import application.bootstrap.menupipeline.font.GlyphMetricStruct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;

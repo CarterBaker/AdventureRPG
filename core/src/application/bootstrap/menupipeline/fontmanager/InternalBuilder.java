@@ -8,9 +8,9 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
-import application.bootstrap.menupipeline.fonts.FontHandle;
-import application.bootstrap.menupipeline.fonts.FontTileData;
-import application.bootstrap.menupipeline.fonts.GlyphMetricStruct;
+import application.bootstrap.menupipeline.font.FontHandle;
+import application.bootstrap.menupipeline.font.FontTileData;
+import application.bootstrap.menupipeline.font.GlyphMetricStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;

@@ -5,7 +5,7 @@ import java.util.BitSet;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
-import application.bootstrap.menupipeline.fonts.GlyphMetricStruct;
+import application.bootstrap.menupipeline.font.GlyphMetricStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;

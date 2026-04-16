@@ -7,7 +7,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
 
-import application.bootstrap.menupipeline.fonts.FontTileData;
+import application.bootstrap.menupipeline.font.FontTileData;
 import engine.root.EngineUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
