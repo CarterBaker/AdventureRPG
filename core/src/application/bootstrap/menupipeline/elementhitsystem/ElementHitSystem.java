@@ -1,4 +1,4 @@
-package application.bootstrap.menupipeline.menumanager;
+package application.bootstrap.menupipeline.elementhitsystem;
 
 import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.menupipeline.element.ElementInstance;
@@ -11,7 +11,7 @@ import engine.root.SystemPackage;
 import engine.util.settings.KeyBindings;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class HitSystem extends SystemPackage {
+public class ElementHitSystem extends SystemPackage {
 
     /*
      * Handles per-frame raycast hit testing against the active menu stack.
@@ -33,7 +33,7 @@ class HitSystem extends SystemPackage {
         this.inputSystem = get(InputSystem.class);
     }
 
-    void updateRaycast(ObjectArrayList<MenuInstance> activeMenus) {
+    public void updateRaycast(ObjectArrayList<MenuInstance> activeMenus) {
 
         if (!raycastManager.hasScreenRay())
             return;
@@ -88,7 +88,7 @@ class HitSystem extends SystemPackage {
         }
     }
 
-    void resetPressed() {
+    public void resetPressed() {
         wasPressed = false;
     }
 

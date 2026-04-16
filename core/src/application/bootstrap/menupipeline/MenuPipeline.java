@@ -1,8 +1,12 @@
 package application.bootstrap.menupipeline;
 
+import application.bootstrap.menupipeline.cursorlocksystem.CursorLockSystem;
+import application.bootstrap.menupipeline.elementhitsystem.ElementHitSystem;
+import application.bootstrap.menupipeline.elementsystem.ElementSystem;
 import application.bootstrap.menupipeline.fontmanager.FontManager;
 import application.bootstrap.menupipeline.menueventsmanager.MenuEventsManager;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
 import engine.root.PipelinePackage;
 
 public class MenuPipeline extends PipelinePackage {
@@ -16,8 +20,12 @@ public class MenuPipeline extends PipelinePackage {
 
     @Override
     protected void create() {
-        create(MenuEventsManager.class);
         create(FontManager.class);
+        create(ElementSystem.class);
+        create(ElementHitSystem.class);
+        create(MenuEventsManager.class);
+        create(MenuRenderSystem.class);
         create(MenuManager.class);
+        create(CursorLockSystem.class);
     }
 }

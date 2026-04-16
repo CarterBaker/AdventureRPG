@@ -1,4 +1,4 @@
-package application.bootstrap.menupipeline.menumanager;
+package application.bootstrap.menupipeline.elementsystem;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -19,7 +19,7 @@ import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import engine.root.SystemPackage;
 import engine.util.registry.RegistryUtility;
 
-class ElementSystem extends SystemPackage {
+public class ElementSystem extends SystemPackage {
 
     /*
      * Owns the master element registry and drives runtime instantiation of element
@@ -64,18 +64,18 @@ class ElementSystem extends SystemPackage {
 
     // Master Registry \\
 
-    boolean hasMaster(String key) {
+    public boolean hasMaster(String key) {
         return masterKey2MasterID.containsKey(key);
     }
 
-    ElementHandle getMaster(String key) {
+    public ElementHandle getMaster(String key) {
 
         int id = masterKey2MasterID.getInt(key);
 
         return id == -1 ? null : masterID2MasterHandle.get(id);
     }
 
-    void registerMaster(String key, ElementHandle handle) {
+    public void registerMaster(String key, ElementHandle handle) {
 
         int id = RegistryUtility.toIntID(key);
 
@@ -83,27 +83,27 @@ class ElementSystem extends SystemPackage {
         masterID2MasterHandle.put(id, handle);
     }
 
-    Iterable<String> getMasterKeys() {
+    public Iterable<String> getMasterKeys() {
         return masterKey2MasterID.keySet();
     }
 
     // Cycle Detection \\
 
-    boolean isFileLoading(String filePath) {
+    public boolean isFileLoading(String filePath) {
         return loadingFiles.contains(filePath);
     }
 
-    void beginFileLoad(String filePath) {
+    public void beginFileLoad(String filePath) {
         loadingFiles.add(filePath);
     }
 
-    void endFileLoad(String filePath) {
+    public void endFileLoad(String filePath) {
         loadingFiles.remove(filePath);
     }
 
     // Runtime Instantiation \\
 
-    ObjectArrayList<ElementInstance> createInstances(
+    public ObjectArrayList<ElementInstance> createInstances(
             ObjectArrayList<ElementPlacementStruct> placements,
             Supplier<MenuInstance> parentRef) {
 
@@ -197,7 +197,7 @@ class ElementSystem extends SystemPackage {
         return null;
     }
 
-    ElementInstance createDetachedInstance(ElementPlacementStruct placement) {
+    public ElementInstance createDetachedInstance(ElementPlacementStruct placement) {
         return createInstance(placement, () -> null);
     }
 }

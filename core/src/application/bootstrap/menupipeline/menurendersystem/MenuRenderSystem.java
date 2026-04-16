@@ -1,4 +1,4 @@
-package application.bootstrap.menupipeline.menumanager;
+package application.bootstrap.menupipeline.menurendersystem;
 
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.menupipeline.element.ElementData;
@@ -16,7 +16,7 @@ import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class RenderSystem extends SystemPackage {
+public class MenuRenderSystem extends SystemPackage {
 
     /*
      * Drives element tree traversal, mask stack management, and font GPU
@@ -57,7 +57,7 @@ class RenderSystem extends SystemPackage {
         this.materialManager = get(MaterialManager.class);
     }
 
-    void renderMenu(MenuInstance instance) {
+    public void renderMenu(MenuInstance instance) {
 
         if (!instance.isVisible())
             return;
@@ -250,7 +250,7 @@ class RenderSystem extends SystemPackage {
 
     // Font GPU Upload \\
 
-    void uploadFontModels(ObjectArrayList<ElementInstance> elements) {
+    public void uploadFontModels(ObjectArrayList<ElementInstance> elements) {
 
         for (int i = 0; i < elements.size(); i++) {
             ElementInstance el = elements.get(i);
@@ -263,7 +263,7 @@ class RenderSystem extends SystemPackage {
 
     // Font GPU Release \\
 
-    void releaseFontModels(ObjectArrayList<ElementInstance> elements) {
+    public void releaseFontModels(ObjectArrayList<ElementInstance> elements) {
 
         for (int i = 0; i < elements.size(); i++) {
             ElementInstance el = elements.get(i);

@@ -1,9 +1,9 @@
-package application.bootstrap.menupipeline.menumanager;
+package application.bootstrap.menupipeline.cursorlocksystem;
 
 import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import engine.root.SystemPackage;
 
-class LockSystem extends SystemPackage {
+public class CursorLockSystem extends SystemPackage {
 
     /*
      * Manages input and raycast lock reference counts. Drives cursor capture
@@ -24,7 +24,7 @@ class LockSystem extends SystemPackage {
 
     // Input Lock \\
 
-    void applyInputLock(int delta) {
+    public void applyInputLock(int delta) {
 
         int prev = inputLockCount;
         inputLockCount = Math.max(0, inputLockCount + delta);
@@ -37,17 +37,17 @@ class LockSystem extends SystemPackage {
 
     // Raycast Lock \\
 
-    void applyRaycastLock(int delta) {
+    public void applyRaycastLock(int delta) {
         raycastLockCount = Math.max(0, raycastLockCount + delta);
     }
 
-    boolean isRaycastLocked() {
+    public boolean isRaycastLocked() {
         return raycastLockCount > 0;
     }
 
     // Accessible \\
 
-    boolean isInputLocked() {
+    public boolean isInputLocked() {
         return inputLockCount > 0;
     }
 }

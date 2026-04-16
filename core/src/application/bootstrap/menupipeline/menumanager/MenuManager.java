@@ -2,12 +2,16 @@ package application.bootstrap.menupipeline.menumanager;
 
 import java.util.function.Consumer;
 
+import application.bootstrap.menupipeline.cursorlocksystem.CursorLockSystem;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.element.ElementPlacementStruct;
+import application.bootstrap.menupipeline.elementhitsystem.ElementHitSystem;
+import application.bootstrap.menupipeline.elementsystem.ElementSystem;
 import application.bootstrap.menupipeline.menu.MenuData;
 import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuInstance;
+import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
@@ -26,9 +30,9 @@ public class MenuManager extends ManagerPackage {
 
     // Internal
     private ElementSystem elementSystem;
-    private RenderSystem renderSystem;
-    private HitSystem hitSystem;
-    private LockSystem lockSystem;
+    private MenuRenderSystem renderSystem;
+    private ElementHitSystem hitSystem;
+    private CursorLockSystem lockSystem;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
@@ -55,16 +59,15 @@ public class MenuManager extends ManagerPackage {
 
         this.singletonScratch = new ObjectArrayList<>(1);
 
-        this.elementSystem = create(ElementSystem.class);
-        this.renderSystem = create(RenderSystem.class);
-        this.hitSystem = create(HitSystem.class);
-        this.lockSystem = create(LockSystem.class);
-
         create(InternalLoader.class);
     }
 
     @Override
     protected void get() {
+        this.elementSystem = get(ElementSystem.class);
+        this.renderSystem = get(MenuRenderSystem.class);
+        this.hitSystem = get(ElementHitSystem.class);
+        this.lockSystem = get(CursorLockSystem.class);
     }
 
     @Override
