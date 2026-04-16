@@ -5,6 +5,11 @@ import engine.root.SystemPackage;
 
 class LockSystem extends SystemPackage {
 
+    /*
+     * Manages input and raycast lock reference counts. Drives cursor capture
+     * state transitions on InputSystem when the input lock count crosses zero.
+     */
+
     // Internal
     private InputSystem inputSystem;
 

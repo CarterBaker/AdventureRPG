@@ -13,6 +13,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class HitSystem extends SystemPackage {
 
+    /*
+     * Handles per-frame raycast hit testing against the active menu stack.
+     * Resolves the target window from the screen ray, performs click detection,
+     * and walks the element tree to find and execute the first hit button.
+     */
+
     // Internal
     private RaycastManager raycastManager;
     private InputSystem inputSystem;

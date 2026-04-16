@@ -18,6 +18,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RenderSystem extends SystemPackage {
 
+    /*
+     * Drives element tree traversal, mask stack management, and font GPU
+     * upload and release. Owns the current render window per frame and routes
+     * sprite and font render calls to RenderManager.
+     */
+
     // Internal
     private RenderManager renderManager;
     private ModelManager modelManager;
