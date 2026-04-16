@@ -278,6 +278,7 @@ public class EngineSetting {
         public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                         + "0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
         public static final String FONT_DEFAULT_MATERIAL = "util/Label";
+        public static final float FONT_SIZE_FROM_ELEMENT_HEIGHT_RATIO = 0.6f;
         public static final String FONT_DEFAULT_VAO = "util/vao/LabelVAO";
         public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;
         public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;

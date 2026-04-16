@@ -116,8 +116,14 @@ public class FontInstance extends InstancePackage {
         return color;
     }
 
+    // Font Size \\
+
     public void setFontSize(float fontSize) {
         this.fontSize = fontSize;
+    }
+
+    public float getFontSize() {
+        return fontSize;
     }
 
     // GPU Lifecycle \\
