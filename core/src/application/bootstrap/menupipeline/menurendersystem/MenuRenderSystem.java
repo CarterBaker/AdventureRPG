@@ -205,9 +205,9 @@ public class MenuRenderSystem extends SystemPackage {
         FontInstance font = element.getFontInstance();
         ElementData data = element.getElementData();
 
-        // Resolve target font size (explicit from JSON or derived from element height)
+        // Resolve target font size — % resolves against element height, px is absolute
         float targetFontSize = data.hasExplicitFontSize()
-                ? data.getFontSize()
+                ? data.getFontSize().resolve(element.getComputedH())
                 : Math.max(1f, element.getComputedH() * EngineSetting.FONT_SIZE_FROM_ELEMENT_HEIGHT_RATIO);
 
         // Update stored size so isDirty checks and external readers stay consistent
@@ -240,13 +240,6 @@ public class MenuRenderSystem extends SystemPackage {
 
         float y = element.getComputedTop() + (element.getComputedH() - scaledH) * 0.5f;
 
-        /*
-         * Transform = translate(x, y) * scale(scale, scale)
-         *
-         * The scale on the diagonal is what actually resizes the glyphs.
-         * Without it the geometry stays at raster-pixel size and only
-         * spacing was growing — which was the original bug.
-         */
         fontTransform.set(
                 scale, 0, 0, x,
                 0, scale, 0, y,

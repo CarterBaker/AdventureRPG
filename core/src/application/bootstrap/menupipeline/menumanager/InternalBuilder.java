@@ -131,7 +131,7 @@ class InternalBuilder extends BuilderPackage {
                 filePath,
                 menuJson,
                 null,
-                EngineSetting.FONT_DEFAULT_SIZE,
+                DimensionValue.ofAbsolute(EngineSetting.FONT_DEFAULT_SIZE),
                 false);
 
         MenuData data = new MenuData(fileName + "/" + id, lockInput, raycastInput, entryPoints);
@@ -168,7 +168,7 @@ class InternalBuilder extends BuilderPackage {
                                 id,
                                 el,
                                 null,
-                                EngineSetting.FONT_DEFAULT_SIZE,
+                                DimensionValue.ofAbsolute(EngineSetting.FONT_DEFAULT_SIZE),
                                 false));
         }
     }
@@ -179,7 +179,7 @@ class InternalBuilder extends BuilderPackage {
             String filePath,
             JsonObject parent,
             String inheritedFontName,
-            float inheritedFontSize,
+            DimensionValue inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         if (!parent.has("elements"))
@@ -203,7 +203,7 @@ class InternalBuilder extends BuilderPackage {
             String filePath,
             JsonObject json,
             String inheritedFontName,
-            float inheritedFontSize,
+            DimensionValue inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         String id = JsonUtility.validateString(json, "id");
@@ -224,7 +224,7 @@ class InternalBuilder extends BuilderPackage {
             String id,
             JsonObject json,
             String inheritedFontName,
-            float inheritedFontSize,
+            DimensionValue inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         String key = filePath + "/" + id;
@@ -244,7 +244,7 @@ class InternalBuilder extends BuilderPackage {
             String id,
             JsonObject json,
             String inheritedFontName,
-            float inheritedFontSize,
+            DimensionValue inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         String usePath = json.get("use").getAsString();
@@ -252,8 +252,8 @@ class InternalBuilder extends BuilderPackage {
 
         boolean explicitFontSize = json.has("font_size") || template.hasExplicitFontSize();
         String resolvedFontName = JsonUtility.getString(json, "font", template.getFontName());
-        float resolvedFontSize = json.has("font_size")
-                ? json.get("font_size").getAsFloat()
+        DimensionValue resolvedFontSize = json.has("font_size")
+                ? DimensionValue.parse(json.get("font_size").getAsString())
                 : template.getFontSize();
 
         ObjectArrayList<ElementPlacementStruct> children = buildPlacements(
@@ -364,7 +364,7 @@ class InternalBuilder extends BuilderPackage {
             String id,
             JsonObject json,
             String inheritedFontName,
-            float inheritedFontSize,
+            DimensionValue inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         ElementType type = parseElementType(JsonUtility.validateString(json, "type"), id);
@@ -372,8 +372,8 @@ class InternalBuilder extends BuilderPackage {
         String text = JsonUtility.getString(json, "text", null);
         String fontName = JsonUtility.getString(json, "font", inheritedFontName);
         boolean explicitFontSize = json.has("font_size") || inheritedExplicitFontSize;
-        float fontSize = json.has("font_size")
-                ? json.get("font_size").getAsFloat()
+        DimensionValue fontSize = json.has("font_size")
+                ? DimensionValue.parse(json.get("font_size").getAsString())
                 : inheritedFontSize;
         float[] color = parseColor(json);
         LayoutStruct layout = parseLayout(json);

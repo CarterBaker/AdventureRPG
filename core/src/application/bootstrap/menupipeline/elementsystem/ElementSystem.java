@@ -135,7 +135,6 @@ public class ElementSystem extends SystemPackage {
         if (data.hasFont()) {
 
             fontInstance = fontManager.cloneFont(data.getFontName());
-            fontInstance.setFontSize(data.getFontSize());
 
             float[] color = placement.hasColorOverride()
                     ? placement.getColorOverride()

@@ -63,7 +63,7 @@ public class ElementHandle extends HandlePackage {
         return data.getFontName();
     }
 
-    public float getFontSize() {
+    public DimensionValue getFontSize() {
         return data.getFontSize();
     }
 

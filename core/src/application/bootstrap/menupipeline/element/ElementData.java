@@ -22,7 +22,7 @@ public class ElementData extends DataPackage {
     private final String spriteName;
     private final String text;
     private final String fontName;
-    private final float fontSize;
+    private final DimensionValue fontSize;
     private final boolean explicitFontSize;
     private final float[] color;
 
@@ -41,7 +41,7 @@ public class ElementData extends DataPackage {
             String spriteName,
             String text,
             String fontName,
-            float fontSize,
+            DimensionValue fontSize,
             boolean explicitFontSize,
             float[] color,
             LayoutStruct layout,
@@ -92,7 +92,7 @@ public class ElementData extends DataPackage {
         return fontName;
     }
 
-    public float getFontSize() {
+    public DimensionValue getFontSize() {
         return fontSize;
     }
 
