@@ -240,12 +240,7 @@ class InternalBuilder extends BuilderPackage {
         String usePath = json.get("use").getAsString();
         ElementHandle template = resolveTemplate(usePath, id);
         String resolvedFontName = JsonUtility.getString(json, "font", template.getFontName());
-        boolean explicitFontSize = json.has("font_size")
-                ? true
-                : template.hasExplicitFontSize();
-        float resolvedFontSize = explicitFontSize
-                ? JsonUtility.getFloat(json, "font_size", template.getFontSize())
-                : EngineSetting.FONT_DEFAULT_SIZE;
+        float resolvedFontSize = JsonUtility.getFloat(json, "font_size", template.getFontSize());
         ObjectArrayList<ElementPlacementStruct> children = buildPlacements(
                 filePath,
                 json,
@@ -262,7 +257,6 @@ class InternalBuilder extends BuilderPackage {
                     template.getText(),
                     resolvedFontName,
                     resolvedFontSize,
-                    explicitFontSize,
                     template.getColor(),
                     template.getLayout(),
                     template.isMask(),
@@ -358,10 +352,7 @@ class InternalBuilder extends BuilderPackage {
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String text = JsonUtility.getString(json, "text", null);
         String fontName = JsonUtility.getString(json, "font", inheritedFontName);
-        boolean explicitFontSize = json.has("font_size");
-        float fontSize = explicitFontSize
-                ? JsonUtility.getFloat(json, "font_size", inheritedFontSize)
-                : EngineSetting.FONT_DEFAULT_SIZE;
+        float fontSize = JsonUtility.getFloat(json, "font_size", inheritedFontSize);
         float[] color = parseColor(json);
         LayoutStruct layout = parseLayout(json);
         boolean mask = JsonUtility.getBoolean(json, "mask", false);
@@ -388,7 +379,7 @@ class InternalBuilder extends BuilderPackage {
                 fontSize);
 
         ElementData data = new ElementData(
-                id, type, spriteName, text, fontName, fontSize, explicitFontSize, color,
+                id, type, spriteName, text, fontName, fontSize, color,
                 layout, mask, stackDirection, spacing, textAlign);
 
         ElementHandle master = create(ElementHandle.class);

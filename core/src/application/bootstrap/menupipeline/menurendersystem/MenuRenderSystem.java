@@ -212,7 +212,7 @@ public class MenuRenderSystem extends SystemPackage {
         if (!font.hasModel() || font.getMergedModel().isEmpty())
             return;
 
-        TextAlign align = data.getTextAlign();
+        TextAlign align = element.getElementData().getTextAlign();
 
         float x;
         float y;

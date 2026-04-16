@@ -283,7 +283,6 @@ public class EngineSetting {
         public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;
         public static final float FONT_DEFAULT_SIZE = 16f;
         public static final int FONT_RASTER_SIZE = 24;
-        public static final float FONT_SIZE_FROM_ELEMENT_HEIGHT_RATIO = 0.45f;
 
         // Menu \\
 

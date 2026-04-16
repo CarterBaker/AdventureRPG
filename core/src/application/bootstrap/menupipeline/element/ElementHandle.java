@@ -67,10 +67,6 @@ public class ElementHandle extends HandlePackage {
         return data.getFontSize();
     }
 
-    public boolean hasExplicitFontSize() {
-        return data.hasExplicitFontSize();
-    }
-
     public float[] getColor() {
         return data.getColor();
     }

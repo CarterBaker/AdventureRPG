@@ -54,8 +54,8 @@ public class FontInstance extends InstancePackage {
         mergedModel.clear();
         textWidth = 0f;
         textHeight = 0f;
-        float scale = fontSize > 0f && handle.getRasterPixelSize() > 0f
-                ? fontSize / handle.getRasterPixelSize()
+        float scale = fontSize > 0f && handle.getAtlasPixelSize() > 0f
+                ? fontSize / handle.getAtlasPixelSize()
                 : 1f;
 
         if (text == null || text.isEmpty()) {
@@ -75,7 +75,7 @@ public class FontInstance extends InstancePackage {
                 GlyphMetricStruct space = handle.getGlyph(codepoint);
                 cursorX += space != null
                         ? space.advance * scale
-                        : handle.getRasterPixelSize() * 0.25f * scale;
+                        : handle.getAtlasPixelSize() * 0.25f * scale;
                 continue;
             }
 
@@ -118,10 +118,6 @@ public class FontInstance extends InstancePackage {
 
     public void setFontSize(float fontSize) {
         this.fontSize = fontSize;
-    }
-
-    public float getFontSize() {
-        return fontSize;
     }
 
     // GPU Lifecycle \\
