@@ -196,6 +196,18 @@ public class MenuRenderSystem extends SystemPackage {
     private void pushFontRenderCall(ElementInstance element) {
 
         FontInstance font = element.getFontInstance();
+        ElementData data = element.getElementData();
+        float targetFontSize = data.hasExplicitFontSize()
+                ? data.getFontSize()
+                : Math.max(
+                        1f,
+                        element.getComputedH() * EngineSetting.FONT_SIZE_FROM_ELEMENT_HEIGHT_RATIO);
+
+        if (Math.abs(font.getFontSize() - targetFontSize) > 0.01f) {
+            font.setFontSize(targetFontSize);
+            font.setText(element.getText());
+            font.upload(modelManager, materialManager);
+        }
 
         if (!font.hasModel() || font.getMergedModel().isEmpty())
             return;

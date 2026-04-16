@@ -76,7 +76,7 @@ class InternalBuilder extends BuilderPackage {
             tiles.get(i).clearImage();
 
         FontHandle handle = create(FontHandle.class);
-        handle.constructor(name, gpuHandle, materialID, atlasPixelSize, glyphs, glyphModels);
+        handle.constructor(name, gpuHandle, materialID, atlasPixelSize, size, glyphs, glyphModels);
 
         return handle;
     }

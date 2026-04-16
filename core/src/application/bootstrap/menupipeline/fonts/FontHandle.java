@@ -20,6 +20,7 @@ public class FontHandle extends HandlePackage {
     private int gpuHandle;
     private int materialID;
     private int atlasPixelSize;
+    private int rasterPixelSize;
 
     // Glyphs
     private Int2ObjectOpenHashMap<GlyphMetricStruct> glyphs;
@@ -32,6 +33,7 @@ public class FontHandle extends HandlePackage {
             int gpuHandle,
             int materialID,
             int atlasPixelSize,
+            int rasterPixelSize,
             Int2ObjectOpenHashMap<GlyphMetricStruct> glyphs,
             Int2ObjectOpenHashMap<DynamicModelHandle> glyphModels) {
 
@@ -40,6 +42,7 @@ public class FontHandle extends HandlePackage {
         this.gpuHandle = gpuHandle;
         this.materialID = materialID;
         this.atlasPixelSize = atlasPixelSize;
+        this.rasterPixelSize = rasterPixelSize;
 
         // Glyphs
         this.glyphs = glyphs;
@@ -62,6 +65,10 @@ public class FontHandle extends HandlePackage {
 
     public int getAtlasPixelSize() {
         return atlasPixelSize;
+    }
+
+    public int getRasterPixelSize() {
+        return rasterPixelSize;
     }
 
     public boolean hasGlyph(int codepoint) {
