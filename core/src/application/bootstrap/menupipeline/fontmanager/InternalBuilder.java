@@ -55,7 +55,7 @@ class InternalBuilder extends BuilderPackage {
 
         int materialID = materialManager.getMaterialIDFromMaterialName(
                 EngineSetting.FONT_DEFAULT_MATERIAL);
-        int size = EngineSetting.FONT_DEFAULT_SIZE;
+        int size = EngineSetting.FONT_RASTER_SIZE;
         String charset = EngineSetting.FONT_DEFAULT_CHARSET;
 
         ObjectArrayList<FontTileData> tiles = FontRasterizerUtility.rasterize(
@@ -76,7 +76,7 @@ class InternalBuilder extends BuilderPackage {
             tiles.get(i).clearImage();
 
         FontHandle handle = create(FontHandle.class);
-        handle.constructor(name, gpuHandle, materialID, atlasPixelSize, glyphs, glyphModels);
+        handle.constructor(name, gpuHandle, materialID, atlasPixelSize, size, glyphs, glyphModels);
 
         return handle;
     }

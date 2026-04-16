@@ -25,6 +25,7 @@ public class FontInstance extends InstancePackage {
 
     // State
     private final Vector4 color = new Vector4(1f, 1f, 1f, 1f);
+    private float fontSize;
     private float textWidth;
     private float textHeight;
     private boolean dirty;
@@ -43,6 +44,7 @@ public class FontInstance extends InstancePackage {
         // Internal
         this.handle = handle;
         this.mergedModel = mergedModel;
+        this.fontSize = EngineSetting.FONT_DEFAULT_SIZE;
     }
 
     // Text \\
@@ -52,6 +54,9 @@ public class FontInstance extends InstancePackage {
         mergedModel.clear();
         textWidth = 0f;
         textHeight = 0f;
+        float scale = fontSize > 0f && handle.getRasterPixelSize() > 0f
+                ? fontSize / handle.getRasterPixelSize()
+                : 1f;
 
         if (text == null || text.isEmpty()) {
             dirty = true;
@@ -68,7 +73,9 @@ public class FontInstance extends InstancePackage {
 
             if (codepoint == ' ') {
                 GlyphMetricStruct space = handle.getGlyph(codepoint);
-                cursorX += space != null ? space.advance : handle.getAtlasPixelSize() * 0.25f;
+                cursorX += space != null
+                        ? space.advance * scale
+                        : handle.getRasterPixelSize() * 0.25f * scale;
                 continue;
             }
 
@@ -78,15 +85,17 @@ public class FontInstance extends InstancePackage {
             if (glyphModel == null || metric == null)
                 continue;
 
-            offsets[0] = cursorX + metric.bearingX;
-            offsets[1] = cursorY + (metric.bearingY - metric.height);
+            offsets[0] = cursorX + metric.bearingX * scale;
+            offsets[1] = cursorY + (metric.bearingY - metric.height) * scale;
 
             mergedModel.mergeWithOffset(glyphModel, offsetIndices, offsets);
 
-            cursorX += metric.advance;
+            cursorX += metric.advance * scale;
 
-            if (metric.height > textHeight)
-                textHeight = metric.height;
+            float metricHeight = metric.height * scale;
+
+            if (metricHeight > textHeight)
+                textHeight = metricHeight;
         }
 
         textWidth = cursorX;
@@ -105,6 +114,14 @@ public class FontInstance extends InstancePackage {
 
     public Vector4 getColor() {
         return color;
+    }
+
+    public void setFontSize(float fontSize) {
+        this.fontSize = fontSize;
+    }
+
+    public float getFontSize() {
+        return fontSize;
     }
 
     // GPU Lifecycle \\

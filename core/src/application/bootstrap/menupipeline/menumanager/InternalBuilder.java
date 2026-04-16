@@ -127,7 +127,11 @@ class InternalBuilder extends BuilderPackage {
                 entryPoints.add(eps.get(i).getAsString());
         }
 
-        ObjectArrayList<ElementPlacementStruct> placements = buildPlacements(filePath, menuJson);
+        ObjectArrayList<ElementPlacementStruct> placements = buildPlacements(
+                filePath,
+                menuJson,
+                null,
+                EngineSetting.FONT_DEFAULT_SIZE);
 
         MenuData data = new MenuData(fileName + "/" + id, lockInput, raycastInput, entryPoints);
         MenuHandle handle = create(MenuHandle.class);
@@ -156,7 +160,14 @@ class InternalBuilder extends BuilderPackage {
             String key = filePath + "/" + id;
 
             if (!elementSystem.hasMaster(key))
-                elementSystem.registerMaster(key, buildMasterFromJson(filePath, id, el));
+                elementSystem.registerMaster(
+                        key,
+                        buildMasterFromJson(
+                                filePath,
+                                id,
+                                el,
+                                null,
+                                EngineSetting.FONT_DEFAULT_SIZE));
         }
     }
 
@@ -164,7 +175,9 @@ class InternalBuilder extends BuilderPackage {
 
     private ObjectArrayList<ElementPlacementStruct> buildPlacements(
             String filePath,
-            JsonObject parent) {
+            JsonObject parent,
+            String inheritedFontName,
+            float inheritedFontSize) {
 
         if (!parent.has("elements"))
             return new ObjectArrayList<>();
@@ -173,12 +186,20 @@ class InternalBuilder extends BuilderPackage {
         ObjectArrayList<ElementPlacementStruct> placements = new ObjectArrayList<>(array.size());
 
         for (int i = 0; i < array.size(); i++)
-            placements.add(buildPlacement(filePath, array.get(i).getAsJsonObject()));
+            placements.add(buildPlacement(
+                    filePath,
+                    array.get(i).getAsJsonObject(),
+                    inheritedFontName,
+                    inheritedFontSize));
 
         return placements;
     }
 
-    private ElementPlacementStruct buildPlacement(String filePath, JsonObject json) {
+    private ElementPlacementStruct buildPlacement(
+            String filePath,
+            JsonObject json,
+            String inheritedFontName,
+            float inheritedFontSize) {
 
         String id = JsonUtility.validateString(json, "id");
 
@@ -186,21 +207,23 @@ class InternalBuilder extends BuilderPackage {
             return buildRefPlacement(filePath, id, json);
 
         if (json.has("use"))
-            return buildUsePlacement(filePath, id, json);
+            return buildUsePlacement(filePath, id, json, inheritedFontName, inheritedFontSize);
 
-        return buildInlinePlacement(filePath, id, json);
+        return buildInlinePlacement(filePath, id, json, inheritedFontName, inheritedFontSize);
     }
 
     private ElementPlacementStruct buildInlinePlacement(
             String filePath,
             String id,
-            JsonObject json) {
+            JsonObject json,
+            String inheritedFontName,
+            float inheritedFontSize) {
 
         String key = filePath + "/" + id;
         ElementHandle master = elementSystem.getMaster(key);
 
         if (master == null) {
-            master = buildMasterFromJson(filePath, id, json);
+            master = buildMasterFromJson(filePath, id, json, inheritedFontName, inheritedFontSize);
             elementSystem.registerMaster(key, master);
         }
 
@@ -210,11 +233,24 @@ class InternalBuilder extends BuilderPackage {
     private ElementPlacementStruct buildUsePlacement(
             String filePath,
             String id,
-            JsonObject json) {
+            JsonObject json,
+            String inheritedFontName,
+            float inheritedFontSize) {
 
         String usePath = json.get("use").getAsString();
         ElementHandle template = resolveTemplate(usePath, id);
-        ObjectArrayList<ElementPlacementStruct> children = buildPlacements(filePath, json);
+        String resolvedFontName = JsonUtility.getString(json, "font", template.getFontName());
+        boolean explicitFontSize = json.has("font_size")
+                ? true
+                : template.hasExplicitFontSize();
+        float resolvedFontSize = explicitFontSize
+                ? JsonUtility.getFloat(json, "font_size", template.getFontSize())
+                : EngineSetting.FONT_DEFAULT_SIZE;
+        ObjectArrayList<ElementPlacementStruct> children = buildPlacements(
+                filePath,
+                json,
+                resolvedFontName,
+                resolvedFontSize);
         ElementHandle master;
 
         if (!children.isEmpty()) {
@@ -224,7 +260,9 @@ class InternalBuilder extends BuilderPackage {
                     template.getType(),
                     template.getSpriteName(),
                     template.getText(),
-                    template.getFontName(),
+                    resolvedFontName,
+                    resolvedFontSize,
+                    explicitFontSize,
                     template.getColor(),
                     template.getLayout(),
                     template.isMask(),
@@ -309,13 +347,22 @@ class InternalBuilder extends BuilderPackage {
 
     // Master Building \\
 
-    private ElementHandle buildMasterFromJson(String filePath, String id, JsonObject json) {
+    private ElementHandle buildMasterFromJson(
+            String filePath,
+            String id,
+            JsonObject json,
+            String inheritedFontName,
+            float inheritedFontSize) {
 
         ElementType type = parseElementType(JsonUtility.validateString(json, "type"), id);
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String text = JsonUtility.getString(json, "text", null);
-        String fontName = parseFontName(json, type, id);
-        float[] color = type == ElementType.LABEL ? parseColor(json) : null;
+        String fontName = JsonUtility.getString(json, "font", inheritedFontName);
+        boolean explicitFontSize = json.has("font_size");
+        float fontSize = explicitFontSize
+                ? JsonUtility.getFloat(json, "font_size", inheritedFontSize)
+                : EngineSetting.FONT_DEFAULT_SIZE;
+        float[] color = parseColor(json);
         LayoutStruct layout = parseLayout(json);
         boolean mask = JsonUtility.getBoolean(json, "mask", false);
         StackDirection stackDirection = json.has("stack")
@@ -334,10 +381,14 @@ class InternalBuilder extends BuilderPackage {
                 ? resolveClickActionRaw(onClick[0], onClick[1], onClick[2])
                 : null;
 
-        ObjectArrayList<ElementPlacementStruct> children = buildPlacements(filePath, json);
+        ObjectArrayList<ElementPlacementStruct> children = buildPlacements(
+                filePath,
+                json,
+                fontName,
+                fontSize);
 
         ElementData data = new ElementData(
-                id, type, spriteName, text, fontName, color,
+                id, type, spriteName, text, fontName, fontSize, explicitFontSize, color,
                 layout, mask, stackDirection, spacing, textAlign);
 
         ElementHandle master = create(ElementHandle.class);
@@ -614,19 +665,6 @@ class InternalBuilder extends BuilderPackage {
     }
 
     // Font / Color Parsing \\
-
-    private String parseFontName(JsonObject json, ElementType type, String elementId) {
-
-        String fontName = JsonUtility.getString(json, "font", null);
-
-        if (fontName == null)
-            return null;
-
-        if (type != ElementType.LABEL)
-            throwException("Element '" + elementId + "' has 'font' field but is not type LABEL");
-
-        return fontName;
-    }
 
     private float[] parseColor(JsonObject json) {
 
