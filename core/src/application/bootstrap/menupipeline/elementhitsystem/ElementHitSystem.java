@@ -8,7 +8,7 @@ import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import application.bootstrap.physicspipeline.util.ScreenRayStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.SystemPackage;
-import engine.util.settings.KeyBindings;
+import engine.settings.KeyBindings;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ElementHitSystem extends SystemPackage {

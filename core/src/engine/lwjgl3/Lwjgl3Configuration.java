@@ -3,6 +3,8 @@ package engine.lwjgl3;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWVidMode;
 
+import engine.graphics.display.DisplayModeStruct;
+
 import java.util.function.BooleanSupplier;
 
 public class Lwjgl3Configuration {

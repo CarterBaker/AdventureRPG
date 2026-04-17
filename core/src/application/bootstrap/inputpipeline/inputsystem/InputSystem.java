@@ -2,9 +2,9 @@ package application.bootstrap.inputpipeline.inputsystem;
 
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import engine.input.Binding;
 import engine.root.EngineContext;
 import engine.root.SystemPackage;
-import engine.util.input.Binding;
 import engine.util.mathematics.vectors.Vector2;
 
 public class InputSystem extends SystemPackage {

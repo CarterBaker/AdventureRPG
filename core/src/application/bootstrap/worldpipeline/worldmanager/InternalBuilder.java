@@ -7,9 +7,9 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.worldpipeline.world.WorldData;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import engine.assets.image.Pixmap;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.assets.image.Pixmap;
 import engine.util.io.FileUtility;
 import engine.util.io.JsonUtility;
 import engine.util.mathematics.vectors.Vector2Int;

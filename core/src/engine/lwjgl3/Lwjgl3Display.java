@@ -1,6 +1,6 @@
 package engine.lwjgl3;
 
-import engine.util.display.Display;
+import engine.graphics.display.Display;
 
 public class Lwjgl3Display implements Display {
 

@@ -9,10 +9,10 @@ import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.threadpipeline.threadmanager.InternalThreadManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import engine.util.display.camera.CameraData;
-import engine.util.display.camera.CameraInstance;
-import engine.util.display.camera.OrthographicCameraData;
-import engine.util.display.camera.OrthographicCameraInstance;
+import engine.assets.camera.CameraData;
+import engine.assets.camera.CameraInstance;
+import engine.assets.camera.OrthographicCameraData;
+import engine.assets.camera.OrthographicCameraInstance;
 
 public abstract class EngineUtility {
 

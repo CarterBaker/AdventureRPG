@@ -4,9 +4,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 
+import engine.graphics.gl.GL20;
+import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
-import engine.util.graphics.gl.GL20;
-import engine.util.graphics.gl.GL30;
 
 class GLSLUtility {
 

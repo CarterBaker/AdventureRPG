@@ -2,7 +2,7 @@ package application.bootstrap.shaderpipeline.texture;
 
 import java.awt.image.BufferedImage;
 
-import engine.util.assets.atlas.AtlasTileData;
+import engine.assets.atlas.AtlasTileData;
 
 public class TextureTileStruct extends AtlasTileData {
 

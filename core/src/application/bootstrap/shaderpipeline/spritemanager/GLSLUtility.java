@@ -2,11 +2,11 @@ package application.bootstrap.shaderpipeline.spritemanager;
 
 import java.awt.image.BufferedImage;
 
+import engine.assets.image.Pixmap;
+import engine.assets.image.PixmapUtility;
+import engine.graphics.gl.GL20;
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
-import engine.util.assets.image.Pixmap;
-import engine.util.assets.image.PixmapUtility;
-import engine.util.graphics.gl.GL20;
 
 /*
  * GL20 wrapper for individual sprite texture operations. Handles upload

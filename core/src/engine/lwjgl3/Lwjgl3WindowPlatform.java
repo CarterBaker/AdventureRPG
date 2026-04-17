@@ -9,9 +9,9 @@ import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GLCapabilities;
 
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.input.Input;
 import engine.root.EngineContext;
 import engine.root.WindowPlatform;
-import engine.util.input.Input;
 
 import java.nio.IntBuffer;
 

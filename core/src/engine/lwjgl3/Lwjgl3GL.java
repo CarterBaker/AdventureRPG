@@ -2,8 +2,8 @@ package engine.lwjgl3;
 
 import org.lwjgl.opengl.*;
 
+import engine.graphics.gl.GL30;
 import engine.root.EngineUtility;
-import engine.util.graphics.gl.GL30;
 
 import java.nio.*;
 

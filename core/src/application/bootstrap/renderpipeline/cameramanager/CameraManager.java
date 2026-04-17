@@ -1,8 +1,8 @@
 package application.bootstrap.renderpipeline.cameramanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.assets.camera.CameraInstance;
 import engine.root.ManagerPackage;
-import engine.util.display.camera.CameraInstance;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 
 public class CameraManager extends ManagerPackage {

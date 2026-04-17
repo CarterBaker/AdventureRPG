@@ -11,8 +11,8 @@ import engine.root.EngineContext;
 import engine.root.EnginePackage;
 import engine.root.EngineSetting;
 import engine.root.GameEngine;
-import engine.util.settings.Settings;
-import engine.util.settings.SettingsUtility;
+import engine.settings.Settings;
+import engine.settings.SettingsUtility;
 
 import java.io.File;
 

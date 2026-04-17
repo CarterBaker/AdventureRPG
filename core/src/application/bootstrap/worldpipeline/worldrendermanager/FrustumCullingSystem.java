@@ -3,9 +3,9 @@ package application.bootstrap.worldpipeline.worldrendermanager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.assets.camera.CameraInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.display.camera.CameraInstance;
 
 class FrustumCullingSystem extends SystemPackage {
 

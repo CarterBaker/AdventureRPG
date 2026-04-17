@@ -2,7 +2,7 @@ package editor.runtime.input;
 
 import editor.runtime.PreviewSystem;
 import engine.root.SystemPackage;
-import engine.util.settings.KeyBindings;
+import engine.settings.KeyBindings;
 
 public class InputSystem extends SystemPackage {
 

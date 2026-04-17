@@ -1,10 +1,11 @@
 package engine.lwjgl3;
 
-import engine.util.input.Input;
-import engine.util.input.InputListener;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.lwjgl.glfw.GLFW;
+
+import engine.input.Input;
+import engine.input.InputListener;
 
 class Lwjgl3Input implements Input {
 

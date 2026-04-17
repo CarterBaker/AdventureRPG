@@ -7,9 +7,9 @@ import java.nio.IntBuffer;
 import application.bootstrap.geometrypipeline.vao.VAOData;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
+import engine.graphics.gl.GL20;
+import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
-import engine.util.graphics.gl.GL20;
-import engine.util.graphics.gl.GL30;
 
 class GLSLUtility {
 

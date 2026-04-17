@@ -5,10 +5,10 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 
+import engine.input.Input;
 import engine.root.EngineContext;
 import engine.root.EnginePackage;
 import engine.root.EngineUtility;
-import engine.util.input.Input;
 
 import java.util.function.BooleanSupplier;
 

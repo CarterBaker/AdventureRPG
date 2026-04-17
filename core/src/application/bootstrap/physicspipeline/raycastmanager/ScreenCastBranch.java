@@ -4,7 +4,7 @@ import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.physicspipeline.util.ScreenRayStruct;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.BranchPackage;
-import engine.util.settings.KeyBindings;
+import engine.settings.KeyBindings;
 
 class ScreenCastBranch extends BranchPackage {
 

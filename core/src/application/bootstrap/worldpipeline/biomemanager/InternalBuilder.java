@@ -4,8 +4,8 @@ import java.io.File;
 
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
-import engine.util.graphics.color.Color;
 import engine.util.io.FileUtility;
 import engine.util.registry.RegistryUtility;
 
