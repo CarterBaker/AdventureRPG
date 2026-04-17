@@ -131,8 +131,8 @@ class InternalBuilder extends BuilderPackage {
                 filePath,
                 menuJson,
                 null,
-                DimensionValue.ofAbsolute(EngineSetting.FONT_DEFAULT_SIZE),
-                false);
+                DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT),
+                true);
 
         MenuData data = new MenuData(fileName + "/" + id, lockInput, raycastInput, entryPoints);
         MenuHandle handle = create(MenuHandle.class);
@@ -168,8 +168,8 @@ class InternalBuilder extends BuilderPackage {
                                 id,
                                 el,
                                 null,
-                                DimensionValue.ofAbsolute(EngineSetting.FONT_DEFAULT_SIZE),
-                                false));
+                                DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT),
+                                true));
         }
     }
 
@@ -601,10 +601,18 @@ class InternalBuilder extends BuilderPackage {
         return new LayoutStruct(
                 parseOriginField(json, "anchor"),
                 parseOriginField(json, "pivot"),
-                DimensionVector2.parse(json, "position", "0%", "0%"),
-                DimensionVector2.parse(json, "size", "10%", "10%"),
-                json.has("min_size") ? DimensionVector2.parse(json, "min_size", "0%", "0%") : null,
-                json.has("max_size") ? DimensionVector2.parse(json, "max_size", "100%", "100%") : null);
+                DimensionVector2.parse(json, "position",
+                        EngineSetting.ELEMENT_DEFAULT_POSITION,
+                        EngineSetting.ELEMENT_DEFAULT_POSITION),
+                DimensionVector2.parse(json, "size",
+                        EngineSetting.ELEMENT_DEFAULT_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_SIZE),
+                json.has("min_size") ? DimensionVector2.parse(json, "min_size",
+                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE) : null,
+                json.has("max_size") ? DimensionVector2.parse(json, "max_size",
+                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE) : null);
     }
 
     private LayoutStruct parseLayoutOverride(JsonObject json) {
@@ -618,10 +626,18 @@ class InternalBuilder extends BuilderPackage {
         return new LayoutStruct(
                 json.has("anchor") ? parseOriginField(json, "anchor") : null,
                 json.has("pivot") ? parseOriginField(json, "pivot") : null,
-                json.has("position") ? DimensionVector2.parse(json, "position", "0%", "0%") : null,
-                json.has("size") ? DimensionVector2.parse(json, "size", "10%", "10%") : null,
-                json.has("min_size") ? DimensionVector2.parse(json, "min_size", "0%", "0%") : null,
-                json.has("max_size") ? DimensionVector2.parse(json, "max_size", "100%", "100%") : null);
+                json.has("position") ? DimensionVector2.parse(json, "position",
+                        EngineSetting.ELEMENT_DEFAULT_POSITION,
+                        EngineSetting.ELEMENT_DEFAULT_POSITION) : null,
+                json.has("size") ? DimensionVector2.parse(json, "size",
+                        EngineSetting.ELEMENT_DEFAULT_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_SIZE) : null,
+                json.has("min_size") ? DimensionVector2.parse(json, "min_size",
+                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE) : null,
+                json.has("max_size") ? DimensionVector2.parse(json, "max_size",
+                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE) : null);
     }
 
     private Vector2 parseOriginField(JsonObject json, String key) {

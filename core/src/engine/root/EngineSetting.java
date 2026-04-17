@@ -278,15 +278,19 @@ public class EngineSetting {
         public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                         + "0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
         public static final String FONT_DEFAULT_MATERIAL = "util/Label";
-        public static final float FONT_SIZE_FROM_ELEMENT_HEIGHT_RATIO = 0.6f;
-        public static final float FONT_LETTER_SPACING_RATIO = 0.05f;
         public static final String FONT_DEFAULT_VAO = "util/vao/LabelVAO";
+        public static final String FONT_DEFAULT_SIZE_PERCENT = "50%";
+        public static final float FONT_LETTER_SPACING_RATIO = 0.05f;
+        public static final float FONT_SPACE_WIDTH_RATIO = 0.25f;
         public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;
         public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;
-        public static final float FONT_DEFAULT_SIZE = 16f;
         public static final int FONT_RASTER_SIZE = 24;
 
         // Menu \\
 
+        public static final String ELEMENT_DEFAULT_SIZE = "100%";
+        public static final String ELEMENT_DEFAULT_POSITION = "0%";
+        public static final String ELEMENT_DEFAULT_MIN_SIZE = "0%";
+        public static final String ELEMENT_DEFAULT_MAX_SIZE = "100%";
         public static final int MAX_MASK_DEPTH = 8;
 }

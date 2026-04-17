@@ -47,7 +47,7 @@ public class FontInstance extends InstancePackage {
     public void constructor(FontHandle handle, DynamicModelHandle mergedModel) {
         this.handle = handle;
         this.mergedModel = mergedModel;
-        this.fontSize = EngineSetting.FONT_DEFAULT_SIZE;
+        this.fontSize = EngineSetting.FONT_RASTER_SIZE;
     }
 
     // Text \\

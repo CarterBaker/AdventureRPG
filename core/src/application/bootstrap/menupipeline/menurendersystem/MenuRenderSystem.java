@@ -205,26 +205,20 @@ public class MenuRenderSystem extends SystemPackage {
         FontInstance font = element.getFontInstance();
         ElementData data = element.getElementData();
 
-        // Resolve target font size — % resolves against element height, px is absolute
-        float targetFontSize = data.hasExplicitFontSize()
-                ? data.getFontSize().resolve(element.getComputedH())
-                : Math.max(1f, element.getComputedH() * EngineSetting.FONT_SIZE_FROM_ELEMENT_HEIGHT_RATIO);
+        // Always resolve — either explicit JSON value or inherited 100% default
+        float targetFontSize = Math.max(1f, data.getFontSize().resolve(element.getComputedH()));
 
-        // Update stored size so isDirty checks and external readers stay consistent
         font.setFontSize(targetFontSize);
 
-        // Upload geometry if the string changed — size changes never need a rebake
         if (font.isDirty())
             font.upload(modelManager, materialManager);
 
         if (!font.hasModel() || font.getMergedModel().isEmpty())
             return;
 
-        // Scale: converts raw atlas-pixel units → screen pixels
-        float atlasPixelSize = font.getHandle().getAtlasPixelSize();
-        float scale = atlasPixelSize > 0f ? targetFontSize / atlasPixelSize : 1f;
+        float rasterPixelSize = font.getHandle().getRasterPixelSize();
+        float scale = rasterPixelSize > 0f ? targetFontSize / rasterPixelSize : 1f;
 
-        // Scaled screen-space dimensions for alignment
         float scaledW = font.getTextWidth() * scale;
         float scaledH = font.getTextHeight() * scale;
 
