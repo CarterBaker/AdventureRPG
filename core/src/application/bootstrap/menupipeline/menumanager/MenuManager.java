@@ -203,7 +203,6 @@ public class MenuManager extends ManagerPackage {
         instance.constructor(handle.getMenuData(), liveElements, window);
         holder[0] = instance;
 
-        renderSystem.uploadFontModels(liveElements);
         activeMenus.add(instance);
 
         if (handle.isLockInput())
