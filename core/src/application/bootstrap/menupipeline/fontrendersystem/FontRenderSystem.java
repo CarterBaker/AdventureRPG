@@ -1,63 +1,58 @@
 package application.bootstrap.menupipeline.fontrendersystem;
 
+import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
+import application.bootstrap.geometrypipeline.compositebuffermanager.CompositeBufferManager;
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.renderpipeline.util.MaskStruct;
+import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class FontRenderSystem extends SystemPackage {
 
     /*
-     * Owns all GPU resources for composite font rendering. Shared quad
-     * VBO/IBO is created once during create(). Per-window per-FontInstance
-     * VAO and instance VBO state is created on first submit and grown as
-     * needed. GPU objects are released when a FontInstance is ejected or a
-     * window is removed.
+     * Bridges menu font submissions into the shared render pipeline composite
+     * path. This system does not issue GL draw/upload calls directly.
      *
-     * Call order each frame per window:
-     * MenuRenderSystem calls submit() for each visible label during traversal.
-     * MenuRenderSystem calls draw(window) once after all menus for that window.
-     * The submission list is cleared after draw.
+     * For each window + FontInstance pair we keep one CompositeBufferInstance
+     * containing per-glyph instance data in the Label shader layout:
+     * [screenX, screenY, screenW, screenH, atlasU, atlasV, atlasUW, atlasVH].
+     *
+     * MenuRenderSystem calls submit() while traversing visible elements; each
+     * submit updates that font's composite buffer for the current frame and
+     * pushes the batch into RenderManager via pushCompositeCall().
      */
 
-    // Quad geometry (shared across all instances and windows)
-    private int quadVBO;
-    private int quadIBO;
+    private static final int[] INSTANCE_ATTR_SIZES = { 2, 2, 4 };
+    private static final int FLOATS_PER_INSTANCE = 8;
 
-    static final int QUAD_INDEX_COUNT = 6;
-    static final int[] QUAD_ATTR_SIZES = { 2 }; // local xy
-    static final int[] INSTANCE_ATTR_SIZES = { 2, 2, 4 }; // screenPos, screenSize, atlasUV
-    static final int FLOATS_PER_INSTANCE;
+    // Internal
+    private RenderManager renderManager;
+    private MeshManager meshManager;
+    private CompositeBufferManager compositeBufferManager;
+    private MeshHandle fontQuadMesh;
 
-    static {
-        int sum = 0;
-        for (int s : INSTANCE_ATTR_SIZES)
-            sum += s;
-        FLOATS_PER_INSTANCE = sum;
-    }
-
-    // Per-window per-FontInstance GPU state
-    private Int2ObjectOpenHashMap<Object2ObjectOpenHashMap<FontInstance, WindowFontGpuState>> windowID2FontState;
-
-    // Per-frame submission list per window
-    private Int2ObjectOpenHashMap<ObjectArrayList<FontSubmission>> windowID2Submissions;
-
-    // Upload scratch — grown as needed, reused each frame
-    private float[] uploadScratch = new float[256 * FLOATS_PER_INSTANCE];
+    // Per-window per-font state
+    private Int2ObjectOpenHashMap<Object2ObjectOpenHashMap<FontInstance, FontCompositeState>> windowID2FontState;
 
     // Internal \\
 
     @Override
     protected void create() {
-
         this.windowID2FontState = new Int2ObjectOpenHashMap<>();
-        this.windowID2Submissions = new Int2ObjectOpenHashMap<>();
+    }
 
-        this.quadVBO = GLSLUtility.createQuadVBO();
-        this.quadIBO = GLSLUtility.createQuadIBO();
+    @Override
+    protected void get() {
+        this.renderManager = get(RenderManager.class);
+        this.meshManager = get(MeshManager.class);
+        this.compositeBufferManager = get(CompositeBufferManager.class);
+        this.fontQuadMesh = meshManager.getMeshHandleFromMeshName(EngineSetting.FONT_DEFAULT_MESH);
     }
 
     // Submit \\
@@ -74,125 +69,58 @@ public class FontRenderSystem extends SystemPackage {
             return;
 
         int windowID = window.getWindowID();
-        ObjectArrayList<FontSubmission> list = windowID2Submissions.get(windowID);
+        Object2ObjectOpenHashMap<FontInstance, FontCompositeState> fontState = getOrCreateFontState(windowID);
 
-        if (list == null) {
-            list = new ObjectArrayList<>();
-            windowID2Submissions.put(windowID, list);
+        FontCompositeState state = fontState.get(font);
+        if (state == null) {
+            state = new FontCompositeState();
+            state.buffer = create(CompositeBufferInstance.class);
+            compositeBufferManager.constructor(state.buffer, fontQuadMesh, INSTANCE_ATTR_SIZES);
+            fontState.put(font, state);
         }
 
-        list.add(new FontSubmission(font, mask));
+        state.buffer.clear();
+
+        float[] instanceData = font.getInstanceData();
+
+        for (int i = 0; i < font.getGlyphCount(); i++) {
+            int base = i * FLOATS_PER_INSTANCE;
+            System.arraycopy(instanceData, base, state.scratch, 0, FLOATS_PER_INSTANCE);
+            state.buffer.addInstance(state.scratch);
+        }
+
+        renderManager.pushCompositeCall(font.getMaterial(), state.buffer, window);
     }
 
     // Draw \\
 
     public void draw(WindowInstance window) {
-
-        int windowID = window.getWindowID();
-        ObjectArrayList<FontSubmission> list = windowID2Submissions.get(windowID);
-
-        if (list == null || list.isEmpty())
-            return;
-
-        Object2ObjectOpenHashMap<FontInstance, WindowFontGpuState> fontState = getOrCreateFontState(windowID);
-
-        for (int i = 0; i < list.size(); i++)
-            drawSubmission(list.get(i), fontState, window);
-
-        list.clear();
-
-        GLSLUtility.disableScissor();
-    }
-
-    private void drawSubmission(
-            FontSubmission submission,
-            Object2ObjectOpenHashMap<FontInstance, WindowFontGpuState> fontState,
-            WindowInstance window) {
-
-        FontInstance font = submission.font;
-
-        WindowFontGpuState gpuState = fontState.get(font);
-        if (gpuState == null) {
-            gpuState = new WindowFontGpuState();
-            fontState.put(font, gpuState);
-        }
-
-        // Grow or create GPU objects if capacity is insufficient
-        if (gpuState.instanceVBO == 0 || gpuState.maxInstances < font.getGlyphCount()) {
-            destroyGpuState(gpuState);
-            int capacity = Math.max(font.getGlyphCount() * 2, 16);
-            gpuState.instanceVBO = GLSLUtility.createInstanceVBO(capacity, FLOATS_PER_INSTANCE);
-            gpuState.compositeVAO = GLSLUtility.createFontVAO(
-                    quadVBO, QUAD_ATTR_SIZES,
-                    quadIBO,
-                    gpuState.instanceVBO, INSTANCE_ATTR_SIZES);
-            gpuState.maxInstances = capacity;
-            gpuState.uploadedVersion = -1;
-        }
-
-        // Upload instance data if stale
-        if (gpuState.uploadedVersion != font.getInstanceDataVersion()) {
-
-            int floatCount = font.getGlyphCount() * FLOATS_PER_INSTANCE;
-            if (uploadScratch.length < floatCount)
-                uploadScratch = new float[floatCount * 2];
-
-            System.arraycopy(font.getInstanceData(), 0, uploadScratch, 0, floatCount);
-            GLSLUtility.uploadInstanceData(gpuState.instanceVBO, uploadScratch, floatCount);
-            gpuState.uploadedVersion = font.getInstanceDataVersion();
-        }
-
-        // Scissor mask
-        if (submission.mask != null)
-            GLSLUtility.enableScissor(
-                    submission.mask.getX(), submission.mask.getY(),
-                    submission.mask.getW(), submission.mask.getH());
-        else
-            GLSLUtility.disableScissor();
-
-        // Bind font material (atlas + color uniforms, shader)
-        GLSLUtility.bindFontMaterial(font.getMaterial(), window);
-
-        // Draw
-        GLSLUtility.drawInstanced(gpuState.compositeVAO, QUAD_INDEX_COUNT, font.getGlyphCount());
+        // No-op by design: flush is handled by RenderManager/CompositeRenderSystem.
     }
 
     // Release \\
 
-    /*
-     * Called when a FontInstance is ejected from an active menu.
-     * Removes per-window GPU objects for that instance across all windows.
-     */
     public void release(FontInstance font) {
-        for (Object2ObjectOpenHashMap<FontInstance, WindowFontGpuState> fontState : windowID2FontState.values()) {
-            WindowFontGpuState gpuState = fontState.remove(font);
-            if (gpuState != null)
-                destroyGpuState(gpuState);
+        for (Object2ObjectOpenHashMap<FontInstance, FontCompositeState> fontState : windowID2FontState.values()) {
+            FontCompositeState state = fontState.remove(font);
+            if (state != null)
+                compositeBufferManager.dispose(state.buffer);
         }
     }
 
     public void removeWindow(int windowID) {
-        windowID2Submissions.remove(windowID);
-        Object2ObjectOpenHashMap<FontInstance, WindowFontGpuState> fontState = windowID2FontState.remove(windowID);
+        Object2ObjectOpenHashMap<FontInstance, FontCompositeState> fontState = windowID2FontState.remove(windowID);
         if (fontState == null)
             return;
-        for (WindowFontGpuState gpuState : fontState.values())
-            destroyGpuState(gpuState);
+
+        for (FontCompositeState state : fontState.values())
+            compositeBufferManager.dispose(state.buffer);
     }
 
     // Helpers \\
 
-    private void destroyGpuState(WindowFontGpuState gpuState) {
-        if (gpuState.instanceVBO != 0) {
-            GLSLUtility.deleteBuffer(gpuState.instanceVBO);
-            GLSLUtility.deleteVAO(gpuState.compositeVAO);
-            gpuState.instanceVBO = 0;
-            gpuState.compositeVAO = 0;
-        }
-    }
-
-    private Object2ObjectOpenHashMap<FontInstance, WindowFontGpuState> getOrCreateFontState(int windowID) {
-        Object2ObjectOpenHashMap<FontInstance, WindowFontGpuState> state = windowID2FontState.get(windowID);
+    private Object2ObjectOpenHashMap<FontInstance, FontCompositeState> getOrCreateFontState(int windowID) {
+        Object2ObjectOpenHashMap<FontInstance, FontCompositeState> state = windowID2FontState.get(windowID);
         if (state == null) {
             state = new Object2ObjectOpenHashMap<>();
             windowID2FontState.put(windowID, state);
@@ -200,22 +128,8 @@ public class FontRenderSystem extends SystemPackage {
         return state;
     }
 
-    // Inner Types \\
-
-    private static final class FontSubmission {
-        final FontInstance font;
-        final MaskStruct mask;
-
-        FontSubmission(FontInstance font, MaskStruct mask) {
-            this.font = font;
-            this.mask = mask;
-        }
-    }
-
-    private static final class WindowFontGpuState {
-        int instanceVBO;
-        int compositeVAO;
-        int uploadedVersion = -1;
-        int maxInstances;
+    private static final class FontCompositeState {
+        CompositeBufferInstance buffer;
+        float[] scratch = new float[FLOATS_PER_INSTANCE];
     }
 }
