@@ -83,8 +83,6 @@ public class MenuRenderSystem extends SystemPackage {
 
         for (int i = 0; i < elements.size(); i++)
             renderElement(elements.get(i), 0f, 0f, screenW, screenH);
-
-        fontRenderSystem.draw(currentWindow);
     }
 
     // Render Traversal \\
