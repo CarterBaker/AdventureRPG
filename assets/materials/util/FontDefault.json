@@ -1,0 +1,14 @@
+{
+    "shader": "Label",
+    "ubos": {
+        "CameraData": "CameraData"
+    },
+    "uniforms": {
+        "u_fontAtlas": {
+            "value": "MontserratAlternates"
+        },
+        "u_color": {
+            "value": [0.0, 0.0, 0.0, 1.0]
+        }
+    }
+}

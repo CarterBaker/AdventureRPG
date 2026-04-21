@@ -113,7 +113,7 @@ public class EngineSetting {
 
         // Sprite \\
 
-        public static final String SPRITE_DEFAULT_MATERIAL = "util/Sprite";
+        public static final String SPRITE_DEFAULT_MATERIAL = "util/SpriteDefault";
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
 
         // Mesh \\
@@ -277,7 +277,7 @@ public class EngineSetting {
 
         public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                         + "0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
-        public static final String FONT_DEFAULT_MATERIAL = "util/Label";
+        public static final String FONT_DEFAULT_MATERIAL = "util/FontDefault";
         public static final String FONT_DEFAULT_MESH = "util/LabelQuad";
         public static final String FONT_DEFAULT_VAO = "util/vao/LabelVAO";
         public static final String FONT_DEFAULT_SIZE_PERCENT = "50%";
