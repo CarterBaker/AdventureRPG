@@ -5,6 +5,8 @@ import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.menupipeline.font.FontHandle;
 import application.bootstrap.menupipeline.font.FontInstance;
+import application.bootstrap.shaderpipeline.material.MaterialInstance;
+import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
@@ -20,6 +22,7 @@ public class FontManager extends ManagerPackage {
      */
 
     // Internal
+    private MaterialManager materialManager;
     private VAOManager vaoManager;
     private VAOHandle labelVAOHandle;
 
@@ -43,6 +46,7 @@ public class FontManager extends ManagerPackage {
     protected void get() {
 
         // Internal
+        this.materialManager = get(MaterialManager.class);
         this.vaoManager = get(VAOManager.class);
     }
 
@@ -97,15 +101,11 @@ public class FontManager extends ManagerPackage {
     public FontInstance cloneFont(String fontName) {
 
         FontHandle handle = getFontHandleFromFontName(fontName);
-
-        if (labelVAOHandle == null)
-            labelVAOHandle = vaoManager.getVAOHandleFromVAOName(EngineSetting.FONT_DEFAULT_VAO);
-
-        DynamicModelHandle mergedModel = create(DynamicModelHandle.class);
-        mergedModel.constructor(handle.getMaterialID(), labelVAOHandle);
+        MaterialInstance material = materialManager.cloneMaterial(handle.getMaterialID());
+        material.setUniform("u_fontAtlas", handle.getGPUHandle());
 
         FontInstance instance = create(FontInstance.class);
-        instance.constructor(handle, mergedModel);
+        instance.constructor(handle, material);
 
         return instance;
     }

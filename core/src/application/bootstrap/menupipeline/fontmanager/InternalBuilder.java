@@ -4,7 +4,6 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 
-import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
@@ -34,7 +33,6 @@ class InternalBuilder extends BuilderPackage {
      */
 
     // Internal
-    private DynamicGeometryManager dynamicGeometryManager;
     private MaterialManager materialManager;
     private VAOManager vaoManager;
 
@@ -44,7 +42,6 @@ class InternalBuilder extends BuilderPackage {
     protected void get() {
 
         // Internal
-        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.materialManager = get(MaterialManager.class);
         this.vaoManager = get(VAOManager.class);
     }
@@ -68,15 +65,12 @@ class InternalBuilder extends BuilderPackage {
         BufferedImage atlasImage = compositeAtlas(tiles, atlasPixelSize);
         int gpuHandle = GLSLUtility.pushTexture2D(atlasImage);
         Int2ObjectOpenHashMap<GlyphMetricStruct> glyphs = buildGlyphTable(tiles, atlasPixelSize);
-        VAOHandle vaoHandle = vaoManager.getVAOHandleFromVAOName(EngineSetting.FONT_DEFAULT_VAO);
-        Int2ObjectOpenHashMap<DynamicModelHandle> glyphModels = buildGlyphModels(
-                glyphs, materialID, vaoHandle, atlasPixelSize);
 
         for (int i = 0; i < tiles.size(); i++)
             tiles.get(i).clearImage();
 
         FontHandle handle = create(FontHandle.class);
-        handle.constructor(name, gpuHandle, materialID, atlasPixelSize, size, glyphs, glyphModels);
+        handle.constructor(name, gpuHandle, materialID, atlasPixelSize, size, glyphs);
 
         return handle;
     }
@@ -123,32 +117,6 @@ class InternalBuilder extends BuilderPackage {
         }
 
         return glyphs;
-    }
-
-    // Glyph Models \\
-
-    private Int2ObjectOpenHashMap<DynamicModelHandle> buildGlyphModels(
-            Int2ObjectOpenHashMap<GlyphMetricStruct> glyphs,
-            int materialID,
-            VAOHandle vaoHandle,
-            int atlasPixelSize) {
-
-        Int2ObjectOpenHashMap<DynamicModelHandle> models = new Int2ObjectOpenHashMap<>(glyphs.size());
-
-        for (var entry : glyphs.int2ObjectEntrySet()) {
-
-            GlyphMetricStruct g = entry.getValue();
-
-            if (g.width <= 0 || g.height <= 0)
-                continue;
-
-            DynamicModelHandle model = create(DynamicModelHandle.class);
-            model.constructor(materialID, vaoHandle);
-            dynamicGeometryManager.buildGlyphModel(model, g, atlasPixelSize);
-            models.put(entry.getIntKey(), model);
-        }
-
-        return models;
     }
 
     // Helpers \\

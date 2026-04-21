@@ -28,7 +28,7 @@ class GLSLUtility extends EngineUtility {
         int handle = EngineContext.gl20.glGenTexture();
 
         if (handle == 0)
-            throwException("[FontGLSLUtility] Failed to generate GPU texture handle");
+            throwException("[GLSLUtility] Failed to generate GPU texture handle");
 
         EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, handle);
 

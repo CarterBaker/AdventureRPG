@@ -1,6 +1,5 @@
 package application.bootstrap.menupipeline.font;
 
-import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
@@ -24,7 +23,6 @@ public class FontHandle extends HandlePackage {
 
     // Glyphs
     private Int2ObjectOpenHashMap<GlyphMetricStruct> glyphs;
-    private Int2ObjectOpenHashMap<DynamicModelHandle> glyphModels;
 
     // Constructor \\
 
@@ -34,8 +32,7 @@ public class FontHandle extends HandlePackage {
             int materialID,
             int atlasPixelSize,
             int rasterPixelSize,
-            Int2ObjectOpenHashMap<GlyphMetricStruct> glyphs,
-            Int2ObjectOpenHashMap<DynamicModelHandle> glyphModels) {
+            Int2ObjectOpenHashMap<GlyphMetricStruct> glyphs) {
 
         // Identity
         this.name = name;
@@ -46,7 +43,6 @@ public class FontHandle extends HandlePackage {
 
         // Glyphs
         this.glyphs = glyphs;
-        this.glyphModels = glyphModels;
     }
 
     // Accessible \\
@@ -79,15 +75,7 @@ public class FontHandle extends HandlePackage {
         return glyphs.get(codepoint);
     }
 
-    public DynamicModelHandle getGlyphModel(int codepoint) {
-        return glyphModels.get(codepoint);
-    }
-
     public Int2ObjectOpenHashMap<GlyphMetricStruct> getGlyphs() {
         return glyphs;
-    }
-
-    public Int2ObjectOpenHashMap<DynamicModelHandle> getGlyphModels() {
-        return glyphModels;
     }
 }

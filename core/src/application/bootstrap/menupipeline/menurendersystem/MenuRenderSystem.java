@@ -4,6 +4,7 @@ import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.font.FontInstance;
+import application.bootstrap.menupipeline.fontrendersystem.FontCompositeRenderSystem;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
@@ -34,8 +35,8 @@ public class MenuRenderSystem extends SystemPackage {
 
     // Internal
     private RenderManager renderManager;
-    private ModelManager modelManager;
     private MaterialManager materialManager;
+    private FontCompositeRenderSystem fontRenderSystem;
 
     // Mask Pool
     private MaskStruct[] maskPool;
@@ -61,8 +62,8 @@ public class MenuRenderSystem extends SystemPackage {
     protected void get() {
 
         this.renderManager = get(RenderManager.class);
-        this.modelManager = get(ModelManager.class);
         this.materialManager = get(MaterialManager.class);
+        this.fontRenderSystem = get(FontCompositeRenderSystem.class);
     }
 
     public void renderMenu(MenuInstance instance) {
@@ -82,6 +83,8 @@ public class MenuRenderSystem extends SystemPackage {
 
         for (int i = 0; i < elements.size(); i++)
             renderElement(elements.get(i), 0f, 0f, screenW, screenH);
+
+        fontRenderSystem.draw(currentWindow);
     }
 
     // Render Traversal \\
@@ -205,25 +208,18 @@ public class MenuRenderSystem extends SystemPackage {
         FontInstance font = element.getFontInstance();
         ElementData data = element.getElementData();
 
-        // Always resolve — either explicit JSON value or inherited 100% default
         float targetFontSize = Math.max(1f, data.getFontSize().resolve(element.getComputedH()));
-
         font.setFontSize(targetFontSize);
 
-        if (font.isDirty())
-            font.upload(modelManager, materialManager);
-
-        if (!font.hasModel() || font.getMergedModel().isEmpty())
+        if (!font.hasGlyphs())
             return;
 
         float rasterPixelSize = font.getHandle().getRasterPixelSize();
         float scale = rasterPixelSize > 0f ? targetFontSize / rasterPixelSize : 1f;
-
         float scaledW = font.getTextWidth() * scale;
         float scaledH = font.getTextHeight() * scale;
 
         TextAlign align = data.getTextAlign();
-
         float x;
         if (align == TextAlign.LEFT)
             x = element.getComputedLeft();
@@ -234,17 +230,7 @@ public class MenuRenderSystem extends SystemPackage {
 
         float y = element.getComputedTop() + (element.getComputedH() - scaledH) * 0.5f;
 
-        fontTransform.set(
-                scale, 0, 0, x,
-                0, scale, 0, y,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
-
-        font.getModelInstance()
-                .getMaterial()
-                .setUniform("u_transform", fontTransform);
-
-        renderManager.pushRenderCall(font.getModelInstance(), 2, currentMask(), currentWindow);
+        fontRenderSystem.submit(font, x, y, scale, currentMask(), currentWindow);
     }
 
     // Mask Stack \\
@@ -280,27 +266,17 @@ public class MenuRenderSystem extends SystemPackage {
         return maskDepth == 0 ? null : maskPool[maskDepth - 1];
     }
 
-    // Font GPU Upload \\
-
-    public void uploadFontModels(ObjectArrayList<ElementInstance> elements) {
-
-        for (int i = 0; i < elements.size(); i++) {
-            ElementInstance el = elements.get(i);
-            if (el.hasFont())
-                el.getFontInstance().upload(modelManager, materialManager);
-            if (el.hasChildren())
-                uploadFontModels(el.getChildren());
-        }
-    }
-
     // Font GPU Release \\
 
     public void releaseFontModels(ObjectArrayList<ElementInstance> elements) {
 
         for (int i = 0; i < elements.size(); i++) {
+
             ElementInstance el = elements.get(i);
+
             if (el.hasFont())
-                el.getFontInstance().release(modelManager);
+                fontRenderSystem.release(el.getFontInstance());
+
             if (el.hasChildren())
                 releaseFontModels(el.getChildren());
         }

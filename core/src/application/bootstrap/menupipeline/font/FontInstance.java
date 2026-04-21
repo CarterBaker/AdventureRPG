@@ -1,10 +1,6 @@
 package application.bootstrap.menupipeline.font;
 
-import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
-import application.bootstrap.geometrypipeline.model.ModelInstance;
-import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import engine.util.mathematics.vectors.Vector4;
@@ -12,41 +8,54 @@ import engine.util.mathematics.vectors.Vector4;
 public class FontInstance extends InstancePackage {
 
     /*
-     * Per-label runtime font state. Holds a reference to the shared FontHandle,
-     * a merged DynamicModelHandle assembled from per-glyph origin-space models,
-     * and the uploaded ModelInstance pushed to the GPU.
+     * Per-label runtime font state. Owns a MaterialInstance (atlas + color),
+     * a glyph layout buffer in atlas-pixel space rebuilt on setText, and a
+     * screen-space instance data buffer rebuilt by prepareComposite when scale
+     * or position changes. FontCompositeRenderSystem owns all GPU objects and
+     * handles per-window upload. No ModelManager or DynamicModelHandle involved.
      *
-     * All geometry and cursor offsets are kept in raw atlas-pixel units.
-     * Font size scaling is applied entirely in the render transform matrix —
-     * NOT here. This means setText only needs to run when the string content
-     * changes, not on every font-size change, because sizing is handled
-     * downstream by the render system.
+     * Two-stage update contract:
+     * 1. setText — rebuilds glyphLayout in atlas-pixel units. O(n glyphs).
+     * 2. prepareComposite — transforms glyphLayout to screen-pixel instanceData.
+     * Skipped entirely if scale and screen position are unchanged since last call.
      */
+
+    static final int FLOATS_PER_GLYPH = 8; // screenX,Y,W,H, u,v,uw,vh
 
     // Internal
     private FontHandle handle;
-    private DynamicModelHandle mergedModel;
-    private ModelInstance modelInstance;
+    private MaterialInstance material;
 
-    // State
+    // Glyph layout — atlas-pixel space, rebuilt by setText
+    // Per glyph: cursorX, baselineOffsetY, w, h, u, v, uw, vh
+    private float[] glyphLayout = new float[0];
+    private int glyphCount;
+
+    // Instance data — screen-pixel space, rebuilt by prepareComposite
+    private float[] instanceData = new float[0];
+    private int instanceDataVersion;
+
+    // Transform cache — detect when prepareComposite needs to rebuild
+    private float lastScreenX = Float.NaN;
+    private float lastScreenY = Float.NaN;
+    private float lastScale = Float.NaN;
+    private boolean textDirty = false;
+
+    // Metrics — raw atlas-pixel units, scale before use in screen space
+    private float textWidth;
+    private float textHeight;
+
+    // Color
     private final Vector4 color = new Vector4(1f, 1f, 1f, 1f);
-    private float fontSize;
-    private float textWidth; // raw atlas-pixel units — scale before use in screen space
-    private float textHeight; // raw atlas-pixel units — scale before use in screen space
-    private boolean dirty;
 
-    // Scratch — cached to avoid allocation per glyph per setText call
-    private final int[] offsetIndices = new int[] {
-            EngineSetting.FONT_DEFAULT_OFFSET_INDEX_X,
-            EngineSetting.FONT_DEFAULT_OFFSET_INDEX_Y
-    };
-    private final float[] offsets = new float[2];
+    // Font size — stored so render system can compute scale
+    private float fontSize;
 
     // Constructor \\
 
-    public void constructor(FontHandle handle, DynamicModelHandle mergedModel) {
+    public void constructor(FontHandle handle, MaterialInstance material) {
         this.handle = handle;
-        this.mergedModel = mergedModel;
+        this.material = material;
         this.fontSize = EngineSetting.FONT_RASTER_SIZE;
     }
 
@@ -54,24 +63,21 @@ public class FontInstance extends InstancePackage {
 
     public void setText(String text) {
 
-        /*
-         * Builds the merged glyph model in raw atlas-pixel units.
-         * No font-size scale is applied — the render transform handles that.
-         * FONT_LETTER_SPACING_RATIO adds a small per-character gap proportional
-         * to the atlas pixel size so glyphs never bleed into each other at any
-         * size. Set it to 0 in EngineSetting for pure metric-only spacing.
-         */
-
-        mergedModel.clear();
+        glyphCount = 0;
         textWidth = 0f;
         textHeight = 0f;
 
         if (text == null || text.isEmpty()) {
-            dirty = true;
+            textDirty = true;
             return;
         }
 
+        int maxGlyphs = text.length();
+        if (glyphLayout.length < maxGlyphs * FLOATS_PER_GLYPH)
+            glyphLayout = new float[maxGlyphs * FLOATS_PER_GLYPH];
+
         float letterSpacing = handle.getAtlasPixelSize() * EngineSetting.FONT_LETTER_SPACING_RATIO;
+        float atlasPixelSize = handle.getAtlasPixelSize();
         float cursorX = 0f;
 
         for (int i = 0; i < text.length();) {
@@ -81,44 +87,78 @@ public class FontInstance extends InstancePackage {
 
             if (codepoint == ' ') {
                 GlyphMetricStruct space = handle.getGlyph(codepoint);
-                cursorX += (space != null
-                        ? space.advance
-                        : handle.getAtlasPixelSize() * 0.25f) + letterSpacing;
+                cursorX += (space != null ? space.advance : atlasPixelSize * 0.25f) + letterSpacing;
                 continue;
             }
 
-            DynamicModelHandle glyphModel = handle.getGlyphModel(codepoint);
             GlyphMetricStruct metric = handle.getGlyph(codepoint);
-
-            if (glyphModel == null || metric == null)
+            if (metric == null || metric.width <= 0 || metric.height <= 0)
                 continue;
 
-            // Raw atlas-pixel offsets — no size scaling
-            offsets[0] = cursorX + metric.bearingX;
-            offsets[1] = metric.bearingY - metric.height;
-
-            mergedModel.mergeWithOffset(glyphModel, offsetIndices, offsets);
+            int base = glyphCount * FLOATS_PER_GLYPH;
+            glyphLayout[base] = cursorX + metric.bearingX;
+            glyphLayout[base + 1] = metric.bearingY - metric.height;
+            glyphLayout[base + 2] = metric.width;
+            glyphLayout[base + 3] = metric.height;
+            glyphLayout[base + 4] = (float) metric.atlasX / atlasPixelSize;
+            glyphLayout[base + 5] = (float) metric.atlasY / atlasPixelSize;
+            glyphLayout[base + 6] = (float) metric.width / atlasPixelSize;
+            glyphLayout[base + 7] = (float) metric.height / atlasPixelSize;
 
             cursorX += metric.advance + letterSpacing;
-
             if (metric.height > textHeight)
                 textHeight = metric.height;
+            glyphCount++;
         }
 
-        // Strip trailing letter spacing from the last character
         if (cursorX > 0f)
             cursorX -= letterSpacing;
-
         textWidth = cursorX;
-        dirty = true;
+        textDirty = true;
+        lastScale = Float.NaN; // force instance data rebuild on next render
+    }
+
+    // Composite Preparation \\
+
+    /*
+     * Transforms the atlas-pixel glyph layout into screen-pixel instance data.
+     * Skipped entirely if nothing has changed since the last call.
+     * Called by FontCompositeRenderSystem.submit before queuing for draw.
+     */
+    public void prepareComposite(float screenX, float screenY, float scale) {
+
+        if (!textDirty && screenX == lastScreenX && screenY == lastScreenY && scale == lastScale)
+            return;
+
+        if (instanceData.length < glyphCount * FLOATS_PER_GLYPH)
+            instanceData = new float[glyphCount * FLOATS_PER_GLYPH];
+
+        for (int i = 0; i < glyphCount; i++) {
+
+            int idx = i * FLOATS_PER_GLYPH;
+
+            instanceData[idx] = screenX + glyphLayout[idx] * scale;
+            instanceData[idx + 1] = screenY + glyphLayout[idx + 1] * scale;
+            instanceData[idx + 2] = glyphLayout[idx + 2] * scale;
+            instanceData[idx + 3] = glyphLayout[idx + 3] * scale;
+            instanceData[idx + 4] = glyphLayout[idx + 4]; // u
+            instanceData[idx + 5] = glyphLayout[idx + 5]; // v
+            instanceData[idx + 6] = glyphLayout[idx + 6]; // uw
+            instanceData[idx + 7] = glyphLayout[idx + 7]; // vh
+        }
+
+        lastScreenX = screenX;
+        lastScreenY = screenY;
+        lastScale = scale;
+        textDirty = false;
+        instanceDataVersion++;
     }
 
     // Color \\
 
     public void setColor(float r, float g, float b, float a) {
         color.set(r, g, b, a);
-        if (modelInstance != null)
-            modelInstance.getMaterial().setUniform("u_color", color);
+        material.setUniform("u_color", color);
     }
 
     public Vector4 getColor() {
@@ -135,71 +175,37 @@ public class FontInstance extends InstancePackage {
         return fontSize;
     }
 
-    // GPU Lifecycle \\
-
-    public void upload(ModelManager modelManager, MaterialManager materialManager) {
-
-        if (!dirty || mergedModel.isEmpty())
-            return;
-
-        if (modelInstance != null)
-            modelManager.removeMesh(modelInstance);
-
-        MaterialInstance mat = materialManager.cloneMaterial(handle.getMaterialID());
-        mat.setUniform("u_fontAtlas", handle.getGPUHandle());
-        mat.setUniform("u_color", color);
-
-        modelInstance = modelManager.createModel(
-                mergedModel.getVAOHandle(),
-                mergedModel.getVertices(),
-                mergedModel.getIndices(),
-                mat);
-
-        dirty = false;
-    }
-
-    public void release(ModelManager modelManager) {
-        if (modelInstance == null)
-            return;
-        modelManager.removeMesh(modelInstance);
-        modelInstance = null;
-    }
-
     // Accessible \\
 
     public FontHandle getHandle() {
         return handle;
     }
 
-    public DynamicModelHandle getMergedModel() {
-        return mergedModel;
+    public MaterialInstance getMaterial() {
+        return material;
     }
 
-    public ModelInstance getModelInstance() {
-        return modelInstance;
+    public float[] getInstanceData() {
+        return instanceData;
     }
 
-    /**
-     * Raw atlas-pixel width. Multiply by (fontSize / atlasPixelSize) for screen
-     * pixels.
-     */
+    public int getGlyphCount() {
+        return glyphCount;
+    }
+
+    public int getInstanceDataVersion() {
+        return instanceDataVersion;
+    }
+
     public float getTextWidth() {
         return textWidth;
     }
 
-    /**
-     * Raw atlas-pixel height. Multiply by (fontSize / atlasPixelSize) for screen
-     * pixels.
-     */
     public float getTextHeight() {
         return textHeight;
     }
 
-    public boolean hasModel() {
-        return modelInstance != null;
-    }
-
-    public boolean isDirty() {
-        return dirty;
+    public boolean hasGlyphs() {
+        return glyphCount > 0;
     }
 }

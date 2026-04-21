@@ -124,7 +124,6 @@ public class MenuManager extends ManagerPackage {
 
         singletonScratch.clear();
         singletonScratch.add(instance);
-        renderSystem.uploadFontModels(singletonScratch);
 
         menu.addToEntryPoint(entryPoint, instance);
 
@@ -148,7 +147,6 @@ public class MenuManager extends ManagerPackage {
 
         singletonScratch.clear();
         singletonScratch.add(element);
-        renderSystem.uploadFontModels(singletonScratch);
     }
 
     // Management \\
