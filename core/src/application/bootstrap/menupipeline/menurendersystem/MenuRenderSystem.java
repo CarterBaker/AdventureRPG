@@ -4,7 +4,7 @@ import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.font.FontInstance;
-import application.bootstrap.menupipeline.fontrendersystem.FontCompositeRenderSystem;
+import application.bootstrap.menupipeline.fontrendersystem.FontRenderSystem;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
@@ -36,7 +36,7 @@ public class MenuRenderSystem extends SystemPackage {
     // Internal
     private RenderManager renderManager;
     private MaterialManager materialManager;
-    private FontCompositeRenderSystem fontRenderSystem;
+    private FontRenderSystem fontRenderSystem;
 
     // Mask Pool
     private MaskStruct[] maskPool;
@@ -63,7 +63,7 @@ public class MenuRenderSystem extends SystemPackage {
 
         this.renderManager = get(RenderManager.class);
         this.materialManager = get(MaterialManager.class);
-        this.fontRenderSystem = get(FontCompositeRenderSystem.class);
+        this.fontRenderSystem = get(FontRenderSystem.class);
     }
 
     public void renderMenu(MenuInstance instance) {

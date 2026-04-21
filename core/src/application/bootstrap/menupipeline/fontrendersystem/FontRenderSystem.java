@@ -8,7 +8,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class FontCompositeRenderSystem extends SystemPackage {
+public class FontRenderSystem extends SystemPackage {
 
     /*
      * Owns all GPU resources for composite font rendering. Shared quad
