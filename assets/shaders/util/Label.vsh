@@ -1,14 +1,21 @@
 #version 330 core
-#include "includes/OrthoData.glsl"
 
-layout (location = 0) in vec2 a_position;
-layout (location = 1) in vec2 a_uv;
+layout (location = 0) in vec2 a_localPos;
+layout (location = 1) in vec2 a_screenPos;
+layout (location = 2) in vec2 a_screenSize;
+layout (location = 3) in vec4 a_atlasUV;
 
 out vec2 v_uv;
 
-uniform mat4 u_transform;
+uniform vec2 u_screenSize;
 
 void main() {
-    v_uv        = a_uv;
-    gl_Position = u_orthoProjection * u_transform * vec4(a_position, 0.0, 1.0);
+    vec2 pixelPos = a_screenPos + (a_localPos * a_screenSize);
+
+    vec2 ndc;
+    ndc.x = (pixelPos.x / u_screenSize.x) * 2.0 - 1.0;
+    ndc.y = 1.0 - (pixelPos.y / u_screenSize.y) * 2.0;
+
+    v_uv = a_atlasUV.xy + (a_localPos * a_atlasUV.zw);
+    gl_Position = vec4(ndc, 0.0, 1.0);
 }
