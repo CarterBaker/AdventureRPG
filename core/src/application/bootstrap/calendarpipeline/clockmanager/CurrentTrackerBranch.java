@@ -87,11 +87,12 @@ class CurrentTrackerBranch extends BranchPackage {
      */
     boolean advanceTime() {
 
-        long now = System.currentTimeMillis();
+        long now = internal.getTime();
         long millisPerGameDay = (long) (MILLIS_PER_REAL_DAY / daysPerDay);
 
         long totalDaysElapsed = (now - clockHandle.getWorldEpochStart()) / millisPerGameDay;
-        double dayProgress = (double) (now % millisPerGameDay) / millisPerGameDay;
+        double dayProgress = ((double) (now % MILLIS_PER_REAL_DAY) / MILLIS_PER_REAL_DAY * daysPerDay) % 1.0;
+
         double rawTimeOfDay = calculateRawTimeOfDay(dayProgress);
         int currentMinute = calculateMinute(rawTimeOfDay);
         int currentHour = calculateHour(rawTimeOfDay);
