@@ -10,6 +10,7 @@ import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.element.ElementPlacementStruct;
+import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.fontmanager.FontManager;
 import application.bootstrap.menupipeline.menu.MenuInstance;
@@ -133,20 +134,30 @@ public class ElementSystem extends SystemPackage {
 
         FontInstance fontInstance = null;
 
-        if (data.hasFont()) {
+        String resolvedFontName = data.hasFont()
+                ? data.getFontName()
+                : data.getType() == ElementType.LABEL ? EngineSetting.FONT_DEFAULT_NAME : null;
+
+        if (resolvedFontName != null) {
 
             String materialName = data.hasMaterial()
                     ? data.getMaterialName()
                     : EngineSetting.FONT_DEFAULT_MATERIAL;
 
-            fontInstance = fontManager.cloneFont(data.getFontName(), materialName);
+            fontInstance = fontManager.cloneFont(resolvedFontName, materialName);
 
             float[] color = placement.hasColorOverride()
                     ? placement.getColorOverride()
-                    : data.hasColor() ? data.getColor() : null;
+                    : data.hasColor()
+                            ? data.getColor()
+                            : new float[] {
+                                    EngineSetting.FONT_DEFAULT_COLOR_R,
+                                    EngineSetting.FONT_DEFAULT_COLOR_G,
+                                    EngineSetting.FONT_DEFAULT_COLOR_B,
+                                    EngineSetting.FONT_DEFAULT_COLOR_A
+                            };
 
-            if (color != null)
-                fontInstance.setColor(color[0], color[1], color[2], color[3]);
+            fontInstance.setColor(color[0], color[1], color[2], color[3]);
 
             String text = placement.getTextOverride() != null
                     ? placement.getTextOverride()
