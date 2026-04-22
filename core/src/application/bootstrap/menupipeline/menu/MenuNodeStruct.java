@@ -1,20 +1,27 @@
-package application.bootstrap.menupipeline.element;
+package application.bootstrap.menupipeline.menu;
 
+import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
 import engine.graphics.color.Color;
 import engine.root.StructPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class ElementPlacementStruct extends StructPackage {
+public class MenuNodeStruct extends StructPackage {
 
     /*
-     * Links a master ElementHandle to optional per-placement overrides. Override
-     * fields are inlined — any null field means "use the handle's value". Master
-     * may be null initially for deferred ref placements and resolved via
+     * One node in a resolved menu element tree. References a master ElementHandle,
+     * carries optional per-placement overrides, and owns an ordered child node
+     * list.
+     * Built during bootstrap and owned by MenuHandle or parent MenuNodeStructs.
+     * Master may be null initially for deferred ref nodes; resolved via
      * setMaster().
+     * Children are always fully resolved at build time — ElementSystem never
+     * touches
+     * master.getChildren() at runtime, only node.getChildren().
      */
 
-    // Internal
+    // Master
     private ElementHandle master;
 
     // Overrides
@@ -25,9 +32,11 @@ public class ElementPlacementStruct extends StructPackage {
     private final MenuAwareAction menuAwareActionOverride;
     private final LayoutStruct layoutOverride;
 
-    // Constructor — no override \\
+    // Tree
+    private final ObjectArrayList<MenuNodeStruct> children;
 
-    public ElementPlacementStruct(ElementHandle master) {
+    // Constructor — master + children only \\
+    public MenuNodeStruct(ElementHandle master, ObjectArrayList<MenuNodeStruct> children) {
         this.master = master;
         this.spriteNameOverride = null;
         this.textOverride = null;
@@ -35,19 +44,19 @@ public class ElementPlacementStruct extends StructPackage {
         this.clickActionOverride = null;
         this.menuAwareActionOverride = null;
         this.layoutOverride = null;
+        this.children = children != null ? children : new ObjectArrayList<>();
     }
 
-    // Constructor — with overrides \\
-
-    public ElementPlacementStruct(
+    // Constructor — full \\
+    public MenuNodeStruct(
             ElementHandle master,
             String spriteNameOverride,
             String textOverride,
             Color colorOverride,
             Runnable clickActionOverride,
             MenuAwareAction menuAwareActionOverride,
-            LayoutStruct layoutOverride) {
-
+            LayoutStruct layoutOverride,
+            ObjectArrayList<MenuNodeStruct> children) {
         this.master = master;
         this.spriteNameOverride = spriteNameOverride;
         this.textOverride = textOverride;
@@ -55,6 +64,7 @@ public class ElementPlacementStruct extends StructPackage {
         this.clickActionOverride = clickActionOverride;
         this.menuAwareActionOverride = menuAwareActionOverride;
         this.layoutOverride = layoutOverride;
+        this.children = children != null ? children : new ObjectArrayList<>();
     }
 
     // Deferred Resolution \\
@@ -93,7 +103,15 @@ public class ElementPlacementStruct extends StructPackage {
         return layoutOverride;
     }
 
+    public ObjectArrayList<MenuNodeStruct> getChildren() {
+        return children;
+    }
+
     public boolean hasColorOverride() {
         return colorOverride != null;
+    }
+
+    public boolean hasChildren() {
+        return !children.isEmpty();
     }
 }

@@ -9,12 +9,12 @@ import com.google.gson.JsonObject;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementOrigin;
-import application.bootstrap.menupipeline.element.ElementPlacementStruct;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.elementsystem.ElementSystem;
 import application.bootstrap.menupipeline.menu.MenuData;
 import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuInstance;
+import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.util.DimensionValue;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
@@ -34,7 +34,10 @@ class InternalBuilder extends BuilderPackage {
 
     /*
      * Parses menu JSON files into MenuHandles and ElementHandles during bootstrap.
-     * Builds all handles directly from JSON locals — no intermediate parse structs.
+     * Builds a fully resolved MenuNodeStruct tree per menu — children always live
+     * in the node, never looked up from masters at runtime.
+     *
+     * ElementHandle.children holds the default subtree for ref copying only.
      * Deferred ref resolution runs after all files are processed.
      */
 
@@ -51,15 +54,11 @@ class InternalBuilder extends BuilderPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.spriteManager = get(SpriteManager.class);
         this.elementSystem = get(ElementSystem.class);
     }
 
     void init(File root) {
-
-        // Internal
         this.root = root;
         this.registeredFiles = new ObjectOpenHashSet<>();
         this.deferredRefs = new ObjectArrayList<>();
@@ -111,10 +110,7 @@ class InternalBuilder extends BuilderPackage {
 
     // Menu Building \\
 
-    private MenuHandle buildMenuHandle(
-            String fileName,
-            String filePath,
-            JsonObject menuJson) {
+    private MenuHandle buildMenuHandle(String fileName, String filePath, JsonObject menuJson) {
 
         String id = JsonUtility.validateString(menuJson, "id");
         boolean lockInput = JsonUtility.getBoolean(menuJson, "lock_input", false);
@@ -128,7 +124,7 @@ class InternalBuilder extends BuilderPackage {
                 entryPoints.add(eps.get(i).getAsString());
         }
 
-        ObjectArrayList<ElementPlacementStruct> placements = buildPlacements(
+        ObjectArrayList<MenuNodeStruct> nodes = buildNodes(
                 filePath,
                 menuJson,
                 null,
@@ -137,7 +133,7 @@ class InternalBuilder extends BuilderPackage {
 
         MenuData data = new MenuData(fileName + "/" + id, lockInput, raycastInput, entryPoints);
         MenuHandle handle = create(MenuHandle.class);
-        handle.constructor(data, placements);
+        handle.constructor(data, nodes);
 
         return handle;
     }
@@ -174,9 +170,9 @@ class InternalBuilder extends BuilderPackage {
         }
     }
 
-    // Placement Building \\
+    // Node Building \\
 
-    private ObjectArrayList<ElementPlacementStruct> buildPlacements(
+    private ObjectArrayList<MenuNodeStruct> buildNodes(
             String filePath,
             JsonObject parent,
             String inheritedFontName,
@@ -187,20 +183,20 @@ class InternalBuilder extends BuilderPackage {
             return new ObjectArrayList<>();
 
         JsonArray array = parent.getAsJsonArray("elements");
-        ObjectArrayList<ElementPlacementStruct> placements = new ObjectArrayList<>(array.size());
+        ObjectArrayList<MenuNodeStruct> nodes = new ObjectArrayList<>(array.size());
 
         for (int i = 0; i < array.size(); i++)
-            placements.add(buildPlacement(
+            nodes.add(buildNode(
                     filePath,
                     array.get(i).getAsJsonObject(),
                     inheritedFontName,
                     inheritedFontSize,
                     inheritedExplicitFontSize));
 
-        return placements;
+        return nodes;
     }
 
-    private ElementPlacementStruct buildPlacement(
+    private MenuNodeStruct buildNode(
             String filePath,
             JsonObject json,
             String inheritedFontName,
@@ -210,17 +206,17 @@ class InternalBuilder extends BuilderPackage {
         String id = JsonUtility.validateString(json, "id");
 
         if (json.has("ref"))
-            return buildRefPlacement(filePath, id, json);
+            return buildRefNode(filePath, id, json);
 
         if (json.has("use"))
-            return buildUsePlacement(filePath, id, json, inheritedFontName, inheritedFontSize,
+            return buildUseNode(filePath, id, json, inheritedFontName, inheritedFontSize,
                     inheritedExplicitFontSize);
 
-        return buildInlinePlacement(filePath, id, json, inheritedFontName, inheritedFontSize,
+        return buildInlineNode(filePath, id, json, inheritedFontName, inheritedFontSize,
                 inheritedExplicitFontSize);
     }
 
-    private ElementPlacementStruct buildInlinePlacement(
+    private MenuNodeStruct buildInlineNode(
             String filePath,
             String id,
             JsonObject json,
@@ -237,10 +233,10 @@ class InternalBuilder extends BuilderPackage {
             elementSystem.registerMaster(key, master);
         }
 
-        return new ElementPlacementStruct(master);
+        return new MenuNodeStruct(master, master.getChildren());
     }
 
-    private ElementPlacementStruct buildUsePlacement(
+    private MenuNodeStruct buildUseNode(
             String filePath,
             String id,
             JsonObject json,
@@ -258,42 +254,12 @@ class InternalBuilder extends BuilderPackage {
                 ? DimensionValue.parse(json.get("font_size").getAsString())
                 : template.getFontSize();
 
-        ObjectArrayList<ElementPlacementStruct> children = buildPlacements(
-                filePath,
-                json,
-                resolvedFontName,
-                resolvedFontSize,
-                explicitFontSize);
-
-        ElementHandle master;
-
-        if (!children.isEmpty()) {
-
-            ElementData data = new ElementData(
-                    id,
-                    template.getType(),
-                    template.getSpriteName(),
-                    template.getText(),
-                    resolvedFontName,
-                    resolvedMaterialName,
-                    resolvedFontSize,
-                    explicitFontSize,
-                    template.getColor(),
-                    template.getLayout(),
-                    template.isMask(),
-                    template.getStackDirection(),
-                    template.getSpacing(),
-                    template.getTextAlign());
-
-            master = create(ElementHandle.class);
-            master.constructor(
-                    data,
-                    template.getClickAction(),
-                    template.getMenuAwareAction(),
-                    children);
-        } else {
-            master = template;
-        }
+        // Override children from JSON, or fall back to template defaults
+        ObjectArrayList<MenuNodeStruct> jsonChildren = buildNodes(
+                filePath, json, resolvedFontName, resolvedFontSize, explicitFontSize);
+        ObjectArrayList<MenuNodeStruct> children = !jsonChildren.isEmpty()
+                ? jsonChildren
+                : template.getChildren();
 
         LayoutStruct partialOverride = parseLayoutOverride(json);
         LayoutStruct layoutOverride = partialOverride != null
@@ -320,41 +286,44 @@ class InternalBuilder extends BuilderPackage {
                 || maaOverride != null || colorOverride != null;
 
         if (!hasOverride)
-            return new ElementPlacementStruct(master);
+            return new MenuNodeStruct(template, children);
 
-        return new ElementPlacementStruct(
-                master,
+        return new MenuNodeStruct(
+                template,
                 spriteNameOverride,
                 textOverride,
                 colorOverride,
                 clickOverride,
                 maaOverride,
-                layoutOverride);
+                layoutOverride,
+                children);
     }
 
-    private ElementPlacementStruct buildRefPlacement(
-            String filePath,
-            String id,
-            JsonObject json) {
+    private MenuNodeStruct buildRefNode(String filePath, String id, JsonObject json) {
 
         String refKey = json.get("ref").getAsString();
         LayoutStruct layoutOverride = parseLayoutOverride(json);
         ElementHandle resolved = resolveRefKey(refKey);
 
-        if (resolved != null)
+        if (resolved != null) {
+            ObjectArrayList<MenuNodeStruct> children = resolved.getChildren();
             return layoutOverride != null
-                    ? new ElementPlacementStruct(resolved, null, null, null, null, null, layoutOverride)
-                    : new ElementPlacementStruct(resolved);
+                    ? new MenuNodeStruct(resolved, null, null, null, null, null, layoutOverride, children)
+                    : new MenuNodeStruct(resolved, children);
+        }
 
-        ElementPlacementStruct placeholder = layoutOverride != null
-                ? new ElementPlacementStruct(null, null, null, null, null, null, layoutOverride)
-                : new ElementPlacementStruct(null);
+        // Deferred — children populated when ref resolves
+        ObjectArrayList<MenuNodeStruct> children = new ObjectArrayList<>();
+        MenuNodeStruct placeholder = layoutOverride != null
+                ? new MenuNodeStruct(null, null, null, null, null, null, layoutOverride, children)
+                : new MenuNodeStruct(null, children);
 
         deferredRefs.add(() -> {
             ElementHandle target = resolveRefKey(refKey);
             if (target == null)
                 throwException("Unresolved ref: '" + refKey + "' (id: '" + id + "')");
             placeholder.setMaster(target);
+            children.addAll(target.getChildren());
         });
 
         return placeholder;
@@ -398,12 +367,9 @@ class InternalBuilder extends BuilderPackage {
                 ? resolveClickActionRaw(onClick[0], onClick[1], onClick[2])
                 : null;
 
-        ObjectArrayList<ElementPlacementStruct> children = buildPlacements(
-                filePath,
-                json,
-                fontName,
-                fontSize,
-                explicitFontSize);
+        // Default children for this master — used when this element is ref'd
+        ObjectArrayList<MenuNodeStruct> defaultChildren = buildNodes(
+                filePath, json, fontName, fontSize, explicitFontSize);
 
         ElementData data = new ElementData(
                 id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize, color,
@@ -414,7 +380,7 @@ class InternalBuilder extends BuilderPackage {
                 data,
                 action instanceof Runnable r ? r : null,
                 action instanceof MenuAwareAction m ? m : null,
-                children);
+                defaultChildren);
 
         return master;
     }
@@ -514,10 +480,7 @@ class InternalBuilder extends BuilderPackage {
 
     // Click Action Resolution \\
 
-    private Object resolveClickActionRaw(
-            String actionClass,
-            String actionMethod,
-            String actionArg) {
+    private Object resolveClickActionRaw(String actionClass, String actionMethod, String actionArg) {
 
         Object target = resolveTarget(actionClass, actionMethod);
 
@@ -582,11 +545,7 @@ class InternalBuilder extends BuilderPackage {
         }
     }
 
-    private Method resolveMethod(
-            Object target,
-            String className,
-            String methodName,
-            String arg) {
+    private Method resolveMethod(Object target, String className, String methodName, String arg) {
 
         try {
             return arg != null

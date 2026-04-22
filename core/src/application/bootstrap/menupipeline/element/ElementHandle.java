@@ -1,5 +1,6 @@
 package application.bootstrap.menupipeline.element;
 
+import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.util.DimensionValue;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
@@ -15,13 +16,18 @@ public class ElementHandle extends HandlePackage {
      * Immutable master definition for one UI element. Registered in ElementSystem
      * keyed by file path and element ID. Shared across all instances — never
      * mutated after bootstrap completes.
+     *
+     * children holds the default subtree for this element as defined in its source
+     * JSON. Used only during bootstrap when a ref node copies them as its own
+     * children. ElementSystem.createInstances never reads these — it always walks
+     * the MenuNodeStruct tree passed to it.
      */
 
     // Internal
     private ElementData data;
     private Runnable clickAction;
     private MenuAwareAction menuAwareAction;
-    private ObjectArrayList<ElementPlacementStruct> children;
+    private ObjectArrayList<MenuNodeStruct> children;
 
     // Constructor \\
 
@@ -29,9 +35,7 @@ public class ElementHandle extends HandlePackage {
             ElementData data,
             Runnable clickAction,
             MenuAwareAction menuAwareAction,
-            ObjectArrayList<ElementPlacementStruct> children) {
-
-        // Internal
+            ObjectArrayList<MenuNodeStruct> children) {
         this.data = data;
         this.clickAction = clickAction;
         this.menuAwareAction = menuAwareAction;
@@ -108,7 +112,7 @@ public class ElementHandle extends HandlePackage {
         return menuAwareAction;
     }
 
-    public ObjectArrayList<ElementPlacementStruct> getChildren() {
+    public ObjectArrayList<MenuNodeStruct> getChildren() {
         return children;
     }
 

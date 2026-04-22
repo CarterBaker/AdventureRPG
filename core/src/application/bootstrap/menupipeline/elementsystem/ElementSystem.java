@@ -9,11 +9,11 @@ import java.util.function.Supplier;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
-import application.bootstrap.menupipeline.element.ElementPlacementStruct;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.fontmanager.FontManager;
 import application.bootstrap.menupipeline.menu.MenuInstance;
+import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
@@ -30,6 +30,10 @@ public class ElementSystem extends SystemPackage {
      * file/element
      * path. Cycle detection prevents circular file dependencies during template
      * resolution.
+     *
+     * At runtime, createInstances walks the MenuNodeStruct tree passed to it.
+     * master.getChildren() is a bootstrap-only concept used when building ref nodes
+     * — ElementSystem never reads it during instantiation.
      */
 
     // Internal
@@ -47,20 +51,14 @@ public class ElementSystem extends SystemPackage {
 
     @Override
     protected void create() {
-
-        // Palette
         this.masterKey2MasterID = new Object2IntOpenHashMap<>();
         this.masterID2MasterHandle = new Int2ObjectOpenHashMap<>();
         this.masterKey2MasterID.defaultReturnValue(-1);
-
-        // State
         this.loadingFiles = new ObjectOpenHashSet<>();
     }
 
     @Override
     protected void get() {
-
-        // Internal
         this.spriteManager = get(SpriteManager.class);
         this.fontManager = get(FontManager.class);
     }
@@ -72,16 +70,12 @@ public class ElementSystem extends SystemPackage {
     }
 
     public ElementHandle getMaster(String key) {
-
         int id = masterKey2MasterID.getInt(key);
-
         return id == -1 ? null : masterID2MasterHandle.get(id);
     }
 
     public void registerMaster(String key, ElementHandle handle) {
-
         int id = RegistryUtility.toIntID(key);
-
         masterKey2MasterID.put(key, id);
         masterID2MasterHandle.put(id, handle);
     }
@@ -107,26 +101,26 @@ public class ElementSystem extends SystemPackage {
     // Runtime Instantiation \\
 
     public ObjectArrayList<ElementInstance> createInstances(
-            ObjectArrayList<ElementPlacementStruct> placements,
+            ObjectArrayList<MenuNodeStruct> nodes,
             Supplier<MenuInstance> parentRef) {
 
-        ObjectArrayList<ElementInstance> result = new ObjectArrayList<>(placements.size());
+        ObjectArrayList<ElementInstance> result = new ObjectArrayList<>(nodes.size());
 
-        for (int i = 0; i < placements.size(); i++)
-            result.add(createInstance(placements.get(i), parentRef));
+        for (int i = 0; i < nodes.size(); i++)
+            result.add(createInstance(nodes.get(i), parentRef));
 
         return result;
     }
 
     private ElementInstance createInstance(
-            ElementPlacementStruct placement,
+            MenuNodeStruct node,
             Supplier<MenuInstance> parentRef) {
 
-        ElementHandle master = placement.getMaster();
+        ElementHandle master = node.getMaster();
         ElementData data = master.getElementData();
 
-        String sourceName = placement.getSpriteNameOverride() != null
-                ? placement.getSpriteNameOverride()
+        String sourceName = node.getSpriteNameOverride() != null
+                ? node.getSpriteNameOverride()
                 : data.getSpriteName();
 
         SpriteInstance spriteInstance = sourceName != null
@@ -147,37 +141,39 @@ public class ElementSystem extends SystemPackage {
 
             fontInstance = fontManager.cloneFont(resolvedFontName, materialName);
 
-            Color color = placement.hasColorOverride()
-                    ? placement.getColorOverride()
+            Color color = node.hasColorOverride()
+                    ? node.getColorOverride()
                     : data.hasColor()
                             ? data.getColor()
                             : EngineSetting.FONT_DEFAULT_COLOR;
 
             fontInstance.setColor(color.r, color.g, color.b, color.a);
 
-            String text = placement.getTextOverride() != null
-                    ? placement.getTextOverride()
+            String text = node.getTextOverride() != null
+                    ? node.getTextOverride()
                     : data.getText();
 
             if (text != null)
                 fontInstance.setText(text);
         }
 
-        Runnable resolvedAction = resolveAction(master, placement, parentRef);
-        ObjectArrayList<ElementPlacementStruct> childPlacements = master.getChildren();
-        ObjectArrayList<ElementInstance> childInstances = new ObjectArrayList<>(childPlacements.size());
+        Runnable resolvedAction = resolveAction(master, node, parentRef);
 
-        for (int i = 0; i < childPlacements.size(); i++)
-            childInstances.add(createInstance(childPlacements.get(i), parentRef));
+        // Children always come from the node — the tree is fully resolved at build time
+        ObjectArrayList<MenuNodeStruct> childNodes = node.getChildren();
+        ObjectArrayList<ElementInstance> childInstances = new ObjectArrayList<>(childNodes.size());
+
+        for (int i = 0; i < childNodes.size(); i++)
+            childInstances.add(createInstance(childNodes.get(i), parentRef));
 
         ElementInstance instance = create(ElementInstance.class);
         instance.constructor(
                 data,
                 spriteInstance,
                 fontInstance,
-                placement.getTextOverride(),
+                node.getTextOverride(),
                 resolvedAction,
-                placement.getLayoutOverride(),
+                node.getLayoutOverride(),
                 childInstances);
 
         return instance;
@@ -185,15 +181,15 @@ public class ElementSystem extends SystemPackage {
 
     private Runnable resolveAction(
             ElementHandle master,
-            ElementPlacementStruct placement,
+            MenuNodeStruct node,
             Supplier<MenuInstance> parentRef) {
 
-        MenuAwareAction maaOverride = placement.getMenuAwareActionOverride();
+        MenuAwareAction maaOverride = node.getMenuAwareActionOverride();
 
         if (maaOverride != null)
             return () -> maaOverride.execute(parentRef.get());
 
-        Runnable clickOverride = placement.getClickActionOverride();
+        Runnable clickOverride = node.getClickActionOverride();
 
         if (clickOverride != null)
             return clickOverride;
@@ -209,7 +205,7 @@ public class ElementSystem extends SystemPackage {
         return null;
     }
 
-    public ElementInstance createDetachedInstance(ElementPlacementStruct placement) {
-        return createInstance(placement, () -> null);
+    public ElementInstance createDetachedInstance(MenuNodeStruct node) {
+        return createInstance(node, () -> null);
     }
 }

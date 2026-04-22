@@ -1,6 +1,5 @@
 package application.bootstrap.menupipeline.menu;
 
-import application.bootstrap.menupipeline.element.ElementPlacementStruct;
 import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -8,23 +7,19 @@ public class MenuHandle extends HandlePackage {
 
     /*
      * Persistent reference to a loaded menu definition. Registered and owned by
-     * MenuManager. Wraps MenuData and holds the placement tree needed to
-     * instantiate a MenuInstance at runtime.
+     * MenuManager. Wraps MenuData and holds the root node list of the fully
+     * resolved element tree needed to instantiate a MenuInstance at runtime.
      */
 
     // Internal
     private MenuData data;
-    private ObjectArrayList<ElementPlacementStruct> placements;
+    private ObjectArrayList<MenuNodeStruct> nodes;
 
     // Constructor \\
 
-    public void constructor(
-            MenuData data,
-            ObjectArrayList<ElementPlacementStruct> placements) {
-
-        // Internal
+    public void constructor(MenuData data, ObjectArrayList<MenuNodeStruct> nodes) {
         this.data = data;
-        this.placements = placements;
+        this.nodes = nodes;
     }
 
     // Accessible \\
@@ -49,7 +44,7 @@ public class MenuHandle extends HandlePackage {
         return data.getEntryPoints();
     }
 
-    public ObjectArrayList<ElementPlacementStruct> getPlacements() {
-        return placements;
+    public ObjectArrayList<MenuNodeStruct> getNodes() {
+        return nodes;
     }
 }

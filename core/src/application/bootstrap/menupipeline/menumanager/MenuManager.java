@@ -5,12 +5,12 @@ import java.util.function.Consumer;
 import application.bootstrap.menupipeline.cursorlocksystem.CursorLockSystem;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
-import application.bootstrap.menupipeline.element.ElementPlacementStruct;
 import application.bootstrap.menupipeline.elementhitsystem.ElementHitSystem;
 import application.bootstrap.menupipeline.elementsystem.ElementSystem;
 import application.bootstrap.menupipeline.menu.MenuData;
 import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuInstance;
+import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
@@ -117,7 +117,7 @@ public class MenuManager extends ManagerPackage {
             throwException("inject failed — master not found: '" + masterKey + "'");
 
         ElementInstance instance = elementSystem.createDetachedInstance(
-                new ElementPlacementStruct(master));
+                new MenuNodeStruct(master, master.getChildren()));
 
         if (customizer != null)
             customizer.accept(instance);
@@ -195,7 +195,7 @@ public class MenuManager extends ManagerPackage {
         MenuInstance[] holder = { null };
 
         ObjectArrayList<ElementInstance> liveElements = elementSystem.createInstances(
-                handle.getPlacements(), () -> holder[0]);
+                handle.getNodes(), () -> holder[0]);
 
         MenuInstance instance = create(MenuInstance.class);
         instance.constructor(handle.getMenuData(), liveElements, window);
