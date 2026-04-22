@@ -252,6 +252,7 @@ class InternalBuilder extends BuilderPackage {
 
         boolean explicitFontSize = json.has("font_size") || template.hasExplicitFontSize();
         String resolvedFontName = JsonUtility.getString(json, "font", template.getFontName());
+        String resolvedMaterialName = JsonUtility.getString(json, "material", template.getMaterialName());
         DimensionValue resolvedFontSize = json.has("font_size")
                 ? DimensionValue.parse(json.get("font_size").getAsString())
                 : template.getFontSize();
@@ -273,6 +274,7 @@ class InternalBuilder extends BuilderPackage {
                     template.getSpriteName(),
                     template.getText(),
                     resolvedFontName,
+                    resolvedMaterialName,
                     resolvedFontSize,
                     explicitFontSize,
                     template.getColor(),
@@ -371,6 +373,7 @@ class InternalBuilder extends BuilderPackage {
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String text = JsonUtility.getString(json, "text", null);
         String fontName = JsonUtility.getString(json, "font", inheritedFontName);
+        String materialName = JsonUtility.getString(json, "material", null);
         boolean explicitFontSize = json.has("font_size") || inheritedExplicitFontSize;
         DimensionValue fontSize = json.has("font_size")
                 ? DimensionValue.parse(json.get("font_size").getAsString())
@@ -402,7 +405,7 @@ class InternalBuilder extends BuilderPackage {
                 explicitFontSize);
 
         ElementData data = new ElementData(
-                id, type, spriteName, text, fontName, fontSize, explicitFontSize, color,
+                id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize, color,
                 layout, mask, stackDirection, spacing, textAlign);
 
         ElementHandle master = create(ElementHandle.class);

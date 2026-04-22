@@ -3,9 +3,7 @@ package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 import java.util.BitSet;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
-import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
-import application.bootstrap.menupipeline.font.GlyphMetricStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
@@ -33,7 +31,6 @@ class InternalBuildManager extends ManagerPackage {
     private PartialGeometryBranch partialGeometryBranch;
     private ComplexGeometryBranch complexGeometryBranch;
     private LiquidGeometryBranch liquidGeometryBranch;
-    private FontGeometryBranch fontGeometryBranch;
     private BiomeManager biomeManager;
     private BlockManager blockManager;
 
@@ -50,7 +47,6 @@ class InternalBuildManager extends ManagerPackage {
         this.partialGeometryBranch = create(PartialGeometryBranch.class);
         this.complexGeometryBranch = create(ComplexGeometryBranch.class);
         this.liquidGeometryBranch = create(LiquidGeometryBranch.class);
-        this.fontGeometryBranch = create(FontGeometryBranch.class);
 
         // Settings
         this.BLOCK_COORDINATE_COUNT = ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT;
@@ -222,17 +218,5 @@ class InternalBuildManager extends ManagerPackage {
                     vertColors);
             case NONE -> true;
         };
-    }
-
-    // Font Geometry \\
-
-    /*
-     * Caller creates and owns the DynamicModelHandle — branch just fills verts.
-     */
-    void buildGlyphModel(
-            DynamicModelHandle model,
-            GlyphMetricStruct glyph,
-            int atlasPixelSize) {
-        fontGeometryBranch.buildGlyphModel(model, glyph, atlasPixelSize);
     }
 }

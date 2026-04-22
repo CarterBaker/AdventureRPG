@@ -21,7 +21,9 @@ public class CompositeRenderSystem extends SystemPackage {
     /*
      * Collects instanced draw submissions during update, uploads instance data
      * to the GPU, and flushes all batches in draw(). Drawn after RenderManager
-     * depth 0 so composite draws share and respect world geometry depth.
+     * depth 0 so composite draws appear over world geometry.
+     * Depth testing and depth writes are disabled for the composite pass —
+     * UI always draws on top. Blending is enabled for alpha transparency.
      * All hot-path iteration is index-based over pre-allocated arrays — zero
      * allocation per frame after the first few frames of material registration.
      */
@@ -73,7 +75,7 @@ public class CompositeRenderSystem extends SystemPackage {
         if (compositeState == null || compositeState.batches.isEmpty())
             return;
 
-        GLSLUtility.enableDepth();
+        GLSLUtility.beginUIPass();
 
         Object[] batchElements = compositeState.batches.elements();
         int batchCount = compositeState.batches.size();
@@ -96,6 +98,8 @@ public class CompositeRenderSystem extends SystemPackage {
 
             batch.clear();
         }
+
+        GLSLUtility.endUIPass();
     }
 
     // Upload and Draw \\
@@ -249,6 +253,7 @@ public class CompositeRenderSystem extends SystemPackage {
 
         Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState> buffer2State = windowID2BufferGpuState
                 .remove(windowID);
+
         if (buffer2State == null)
             return;
 

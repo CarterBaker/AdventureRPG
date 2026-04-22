@@ -1,6 +1,8 @@
 package application.bootstrap.menupipeline.font;
 
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
+import application.bootstrap.shaderpipeline.texture.TextureHandle;
+import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import engine.util.mathematics.vectors.Vector4;
@@ -8,26 +10,26 @@ import engine.util.mathematics.vectors.Vector4;
 public class FontInstance extends InstancePackage {
 
     /*
-     * Per-label runtime font state. Owns a MaterialInstance (atlas + color),
-     * a glyph layout buffer in atlas-pixel space rebuilt on setText, and a
-     * screen-space instance data buffer rebuilt by prepareComposite when scale
-     * or position changes. FontCompositeRenderSystem owns all GPU objects and
-     * handles per-window upload. No ModelManager or DynamicModelHandle involved.
+     * Per-label runtime font state. Owns a MaterialInstance (color), a glyph
+     * layout buffer in atlas-pixel space rebuilt on setText, and a screen-space
+     * instance data buffer rebuilt by prepareComposite when scale or position
+     * changes. UV coordinates are sourced from each glyph's TextureHandle at
+     * setText time — no atlas pixel math here.
      *
      * Two-stage update contract:
-     * 1. setText — rebuilds glyphLayout in atlas-pixel units. O(n glyphs).
+     * 1. setText — rebuilds glyphLayout. O(n glyphs).
      * 2. prepareComposite — transforms glyphLayout to screen-pixel instanceData.
      * Skipped entirely if scale and screen position are unchanged since last call.
      */
 
-    static final int FLOATS_PER_GLYPH = 8; // screenX,Y,W,H, u,v,uw,vh
+    static final int FLOATS_PER_GLYPH = 8; // screenX,Y,W,H, u0,v0,uw,vh
 
     // Internal
     private FontHandle handle;
     private MaterialInstance material;
 
     // Glyph layout — atlas-pixel space, rebuilt by setText
-    // Per glyph: cursorX, baselineOffsetY, w, h, u, v, uw, vh
+    // Per glyph: cursorX, baselineOffsetY, w, h, u0, v0, uw, vh
     private float[] glyphLayout = new float[0];
     private int glyphCount;
 
@@ -35,28 +37,37 @@ public class FontInstance extends InstancePackage {
     private float[] instanceData = new float[0];
     private int instanceDataVersion;
 
-    // Transform cache — detect when prepareComposite needs to rebuild
+    // Transform cache
     private float lastScreenX = Float.NaN;
     private float lastScreenY = Float.NaN;
     private float lastScale = Float.NaN;
     private boolean textDirty = false;
 
-    // Metrics — raw atlas-pixel units, scale before use in screen space
+    // Metrics
     private float textWidth;
     private float textHeight;
 
     // Color
     private final Vector4 color = new Vector4(1f, 1f, 1f, 1f);
 
-    // Font size — stored so render system can compute scale
+    // Font size
     private float fontSize;
 
     // Constructor \\
 
     public void constructor(FontHandle handle, MaterialInstance material) {
+
         this.handle = handle;
         this.material = material;
         this.fontSize = EngineSetting.FONT_RASTER_SIZE;
+
+        UniformStruct<?> colorUniform = material.getUniform("u_color");
+
+        if (colorUniform != null) {
+            Object val = colorUniform.attribute().getValue();
+            if (val instanceof Vector4 v)
+                color.set(v.x, v.y, v.z, v.w);
+        }
     }
 
     // Text \\
@@ -92,7 +103,9 @@ public class FontInstance extends InstancePackage {
             }
 
             GlyphMetricStruct metric = handle.getGlyph(codepoint);
-            if (metric == null || metric.width <= 0 || metric.height <= 0)
+            TextureHandle glyphHandle = handle.getGlyphHandle(codepoint);
+
+            if (metric == null || glyphHandle == null || metric.width <= 0 || metric.height <= 0)
                 continue;
 
             int base = glyphCount * FLOATS_PER_GLYPH;
@@ -100,10 +113,10 @@ public class FontInstance extends InstancePackage {
             glyphLayout[base + 1] = metric.bearingY - metric.height;
             glyphLayout[base + 2] = metric.width;
             glyphLayout[base + 3] = metric.height;
-            glyphLayout[base + 4] = (float) metric.atlasX / atlasPixelSize;
-            glyphLayout[base + 5] = (float) metric.atlasY / atlasPixelSize;
-            glyphLayout[base + 6] = (float) metric.width / atlasPixelSize;
-            glyphLayout[base + 7] = (float) metric.height / atlasPixelSize;
+            glyphLayout[base + 4] = glyphHandle.getU0();
+            glyphLayout[base + 5] = glyphHandle.getV0();
+            glyphLayout[base + 6] = glyphHandle.getU1() - glyphHandle.getU0();
+            glyphLayout[base + 7] = glyphHandle.getV1() - glyphHandle.getV0();
 
             cursorX += metric.advance + letterSpacing;
             if (metric.height > textHeight)
@@ -115,16 +128,11 @@ public class FontInstance extends InstancePackage {
             cursorX -= letterSpacing;
         textWidth = cursorX;
         textDirty = true;
-        lastScale = Float.NaN; // force instance data rebuild on next render
+        lastScale = Float.NaN;
     }
 
     // Composite Preparation \\
 
-    /*
-     * Transforms the atlas-pixel glyph layout into screen-pixel instance data.
-     * Skipped entirely if nothing has changed since the last call.
-     * Called by FontCompositeRenderSystem.submit before queuing for draw.
-     */
     public void prepareComposite(float screenX, float screenY, float scale) {
 
         if (!textDirty && screenX == lastScreenX && screenY == lastScreenY && scale == lastScale)
@@ -141,8 +149,8 @@ public class FontInstance extends InstancePackage {
             instanceData[idx + 1] = screenY + glyphLayout[idx + 1] * scale;
             instanceData[idx + 2] = glyphLayout[idx + 2] * scale;
             instanceData[idx + 3] = glyphLayout[idx + 3] * scale;
-            instanceData[idx + 4] = glyphLayout[idx + 4]; // u
-            instanceData[idx + 5] = glyphLayout[idx + 5]; // v
+            instanceData[idx + 4] = glyphLayout[idx + 4]; // u0
+            instanceData[idx + 5] = glyphLayout[idx + 5]; // v0
             instanceData[idx + 6] = glyphLayout[idx + 6]; // uw
             instanceData[idx + 7] = glyphLayout[idx + 7]; // vh
         }

@@ -49,7 +49,6 @@ public abstract class UniformAttributeStruct<T> extends StructPackage {
         return uboBuffer;
     }
 
-    @SuppressWarnings("unchecked")
     protected final void writeToBuffer(ByteBuffer buffer, T value) {
 
         if (count == 1) {

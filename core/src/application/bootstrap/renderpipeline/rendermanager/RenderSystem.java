@@ -110,10 +110,10 @@ class RenderSystem extends SystemPackage {
 
             if (activeMask != null)
                 GLSLUtility.disableScissor();
-
-            if (depth == 0)
-                compositeRenderSystem.draw(window);
         }
+
+        // Always draw composite — not gated on depth 0 existing
+        compositeRenderSystem.draw(window);
 
         queue.rewindFrame();
     }

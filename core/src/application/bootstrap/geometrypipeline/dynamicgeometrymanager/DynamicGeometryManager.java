@@ -1,8 +1,6 @@
 package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
-import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
-import application.bootstrap.menupipeline.font.GlyphMetricStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import engine.root.EngineSetting;
@@ -63,19 +61,6 @@ public class DynamicGeometryManager extends ManagerPackage {
                 dynamicGeometryAsyncContainer,
                 chunkInstance,
                 chunkInstance.getSubChunks()[subChunkIndex]);
-    }
-
-    // Font Geometry \\
-
-    /*
-     * Caller creates the DynamicModelHandle with the correct materialID and
-     * VAOHandle, then passes it here to be filled with glyph quad verts.
-     */
-    public void buildGlyphModel(
-            DynamicModelHandle model,
-            GlyphMetricStruct glyph,
-            int atlasPixelSize) {
-        internalBuildManager.buildGlyphModel(model, glyph, atlasPixelSize);
     }
 
     // Accessible \\

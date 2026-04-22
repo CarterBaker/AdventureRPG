@@ -1,13 +1,9 @@
 package application.bootstrap.menupipeline.fontmanager;
 
-import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
-import application.bootstrap.geometrypipeline.vao.VAOHandle;
-import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.menupipeline.font.FontHandle;
 import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
-import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -17,14 +13,12 @@ public class FontManager extends ManagerPackage {
 
     /*
      * Owns the font palette for the engine lifetime. Drives font rasterization
-     * and atlas upload via InternalLoader. Provides FontInstance cloning for
-     * per-label use. Releases all GPU texture handles on dispose.
+     * and atlas registration via InternalLoader. GPU resources are owned and
+     * disposed by TextureManager — FontManager holds no GPU state directly.
      */
 
     // Internal
     private MaterialManager materialManager;
-    private VAOManager vaoManager;
-    private VAOHandle labelVAOHandle;
 
     // Palette
     private Object2IntOpenHashMap<String> fontName2FontID;
@@ -35,27 +29,20 @@ public class FontManager extends ManagerPackage {
     @Override
     protected void create() {
 
-        // Palette
         this.fontName2FontID = new Object2IntOpenHashMap<>();
         this.fontID2FontHandle = new Int2ObjectOpenHashMap<>();
         this.fontName2FontID.defaultReturnValue(-1);
+
         create(InternalLoader.class);
     }
 
     @Override
     protected void get() {
-
-        // Internal
         this.materialManager = get(MaterialManager.class);
-        this.vaoManager = get(VAOManager.class);
     }
 
     @Override
     protected void dispose() {
-
-        for (FontHandle handle : fontID2FontHandle.values())
-            GLSLUtility.deleteTexture2D(handle.getGPUHandle());
-
         fontName2FontID.clear();
         fontID2FontHandle.clear();
     }
@@ -63,9 +50,7 @@ public class FontManager extends ManagerPackage {
     // Management \\
 
     void addFont(String fontName, FontHandle fontHandle) {
-
         int id = RegistryUtility.toIntID(fontName);
-
         fontName2FontID.put(fontName, id);
         fontID2FontHandle.put(id, fontHandle);
     }
@@ -99,10 +84,18 @@ public class FontManager extends ManagerPackage {
     }
 
     public FontInstance cloneFont(String fontName) {
+        return cloneFont(fontName, null);
+    }
+
+    public FontInstance cloneFont(String fontName, String materialNameOverride) {
 
         FontHandle handle = getFontHandleFromFontName(fontName);
-        MaterialInstance material = materialManager.cloneMaterial(handle.getMaterialID());
-        material.setUniform("u_fontAtlas", handle.getGPUHandle());
+
+        int materialID = materialNameOverride != null
+                ? materialManager.getMaterialIDFromMaterialName(materialNameOverride)
+                : handle.getMaterialID();
+
+        MaterialInstance material = materialManager.cloneMaterial(materialID);
 
         FontInstance instance = create(FontInstance.class);
         instance.constructor(handle, material);

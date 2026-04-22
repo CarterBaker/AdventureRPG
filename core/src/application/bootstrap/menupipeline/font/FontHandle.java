@@ -1,48 +1,49 @@
 package application.bootstrap.menupipeline.font;
 
+import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class FontHandle extends HandlePackage {
 
     /*
-     * Immutable font definition owned by FontManager. Holds the GPU texture
-     * handle for the rasterized glyph atlas, the atlas pixel size, the full
-     * glyph metric table keyed by codepoint, and one pre-built origin-space
-     * DynamicModelHandle per glyph. Glyph models are static forever — label
-     * creation merges them with cursor offsets into a FontInstance model.
+     * Immutable font definition owned by FontManager. Holds the TextureHandle
+     * for the rasterized glyph atlas, the atlas pixel size, and two per-glyph
+     * tables keyed by codepoint — metrics for layout, TextureHandle for UVs.
      * Never mutated after bootstrap completes.
      */
 
     // Identity
     private String name;
-    private int gpuHandle;
     private int materialID;
     private int atlasPixelSize;
     private int rasterPixelSize;
 
+    // Atlas
+    private TextureHandle atlasHandle;
+
     // Glyphs
     private Int2ObjectOpenHashMap<GlyphMetricStruct> glyphs;
+    private Int2ObjectOpenHashMap<TextureHandle> glyphHandles;
 
     // Constructor \\
 
     public void constructor(
             String name,
-            int gpuHandle,
+            TextureHandle atlasHandle,
             int materialID,
             int atlasPixelSize,
             int rasterPixelSize,
-            Int2ObjectOpenHashMap<GlyphMetricStruct> glyphs) {
+            Int2ObjectOpenHashMap<GlyphMetricStruct> glyphs,
+            Int2ObjectOpenHashMap<TextureHandle> glyphHandles) {
 
-        // Identity
         this.name = name;
-        this.gpuHandle = gpuHandle;
+        this.atlasHandle = atlasHandle;
         this.materialID = materialID;
         this.atlasPixelSize = atlasPixelSize;
         this.rasterPixelSize = rasterPixelSize;
-
-        // Glyphs
         this.glyphs = glyphs;
+        this.glyphHandles = glyphHandles;
     }
 
     // Accessible \\
@@ -51,8 +52,8 @@ public class FontHandle extends HandlePackage {
         return name;
     }
 
-    public int getGPUHandle() {
-        return gpuHandle;
+    public TextureHandle getAtlasHandle() {
+        return atlasHandle;
     }
 
     public int getMaterialID() {
@@ -73,6 +74,10 @@ public class FontHandle extends HandlePackage {
 
     public GlyphMetricStruct getGlyph(int codepoint) {
         return glyphs.get(codepoint);
+    }
+
+    public TextureHandle getGlyphHandle(int codepoint) {
+        return glyphHandles.get(codepoint);
     }
 
     public Int2ObjectOpenHashMap<GlyphMetricStruct> getGlyphs() {

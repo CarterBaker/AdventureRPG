@@ -90,13 +90,13 @@ public final class UniformUtility extends EngineUtility {
             String uniformName,
             JsonObject uniformData) {
 
-        if (!uniformData.has("type"))
-            throwException("UniformStruct '" + uniformName + "' missing required 'type' field");
-
         if (!uniformData.has("value"))
             throwException("UniformStruct '" + uniformName + "' missing required 'value' field");
 
-        String type = uniformData.get("type").getAsString();
+        String type = uniformData.has("type")
+                ? uniformData.get("type").getAsString()
+                : attribute.getUniformType().name();
+
         JsonElement value = uniformData.get("value");
         boolean isArray = uniformData.has("count");
 

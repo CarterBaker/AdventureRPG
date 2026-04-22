@@ -16,6 +16,10 @@ public class TextureManager extends ManagerPackage {
      * Two palettes — tile and array — both following the standard name→ID→handle
      * pattern. On tile miss, the parent array name is extracted and an on-demand
      * load is triggered. GPU resources are released on dispose.
+     *
+     * Font atlases enter through the same registration path as block textures —
+     * a single-layer texture array, glyphs as tiles named fontName/glyph.
+     * No special casing anywhere in this class.
      */
 
     // Tile Palette
@@ -78,6 +82,19 @@ public class TextureManager extends ManagerPackage {
         if (!arrayName2ArrayID.containsKey(array.getName())) {
             arrayName2ArrayID.put(array.getName(), arrayID);
             arrayID2TextureHandle.put(arrayID, handle);
+        }
+    }
+
+    public void register(TextureArrayStruct arrayStruct, int gpuHandle) {
+
+        float invAtlas = 1.0f / arrayStruct.getAtlasPixelSize();
+
+        for (TextureTileStruct tile : arrayStruct.getTileCoordinateMap().values()) {
+            float u0 = tile.getAtlasX() * invAtlas;
+            float v0 = tile.getAtlasY() * invAtlas;
+            float u1 = (tile.getAtlasX() + tile.getTileWidth()) * invAtlas;
+            float v1 = (tile.getAtlasY() + tile.getTileHeight()) * invAtlas;
+            registerTile(tile, u0, v0, u1, v1, arrayStruct, gpuHandle);
         }
     }
 

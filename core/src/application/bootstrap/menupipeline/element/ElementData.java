@@ -22,6 +22,7 @@ public class ElementData extends DataPackage {
     private final String spriteName;
     private final String text;
     private final String fontName;
+    private final String materialName;
     private final DimensionValue fontSize;
     private final boolean explicitFontSize;
     private final float[] color;
@@ -41,6 +42,7 @@ public class ElementData extends DataPackage {
             String spriteName,
             String text,
             String fontName,
+            String materialName,
             DimensionValue fontSize,
             boolean explicitFontSize,
             float[] color,
@@ -58,6 +60,7 @@ public class ElementData extends DataPackage {
         this.spriteName = spriteName;
         this.text = text;
         this.fontName = fontName;
+        this.materialName = materialName;
         this.fontSize = fontSize;
         this.explicitFontSize = explicitFontSize;
         this.color = color;
@@ -90,6 +93,10 @@ public class ElementData extends DataPackage {
 
     public String getFontName() {
         return fontName;
+    }
+
+    public String getMaterialName() {
+        return materialName;
     }
 
     public DimensionValue getFontSize() {
@@ -134,6 +141,10 @@ public class ElementData extends DataPackage {
 
     public boolean hasFont() {
         return fontName != null;
+    }
+
+    public boolean hasMaterial() {
+        return materialName != null;
     }
 
     public boolean hasColor() {

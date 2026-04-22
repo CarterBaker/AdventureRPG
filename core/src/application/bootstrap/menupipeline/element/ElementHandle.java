@@ -63,6 +63,10 @@ public class ElementHandle extends HandlePackage {
         return data.getFontName();
     }
 
+    public String getMaterialName() {
+        return data.getMaterialName();
+    }
+
     public DimensionValue getFontSize() {
         return data.getFontSize();
     }
@@ -117,6 +121,10 @@ public class ElementHandle extends HandlePackage {
 
     public boolean hasFont() {
         return data.hasFont();
+    }
+
+    public boolean hasMaterial() {
+        return data.hasMaterial();
     }
 
     public boolean hasColor() {

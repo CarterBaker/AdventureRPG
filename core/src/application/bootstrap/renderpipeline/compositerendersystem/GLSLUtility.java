@@ -14,17 +14,24 @@ import engine.root.EngineUtility;
 class GLSLUtility extends EngineUtility {
 
     /*
-     * Stateless OpenGL helpers for CompositeRenderSystem. Covers depth state,
+     * Stateless OpenGL helpers for CompositeRenderSystem. Covers UI pass state,
      * instance VBO upload, instanced draw calls, shader binding, and UBO binding.
      * Package-private — only CompositeRenderSystem may call these.
      */
 
-    // Depth \\
+    // UI Pass State \\
 
-    static void enableDepth() {
+    static void beginUIPass() {
+        EngineContext.gl20.glDisable(GL20.GL_DEPTH_TEST);
+        EngineContext.gl20.glDepthMask(false);
+        EngineContext.gl20.glEnable(GL20.GL_BLEND);
+        EngineContext.gl20.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    static void endUIPass() {
         EngineContext.gl20.glEnable(GL20.GL_DEPTH_TEST);
-        EngineContext.gl20.glDepthFunc(GL20.GL_LEQUAL);
         EngineContext.gl20.glDepthMask(true);
+        EngineContext.gl20.glDisable(GL20.GL_BLEND);
     }
 
     // Upload \\
@@ -70,8 +77,8 @@ class GLSLUtility extends EngineUtility {
         int meshOffsetBytes = 0;
         for (int i = 0; i < meshAttrSizes.length; i++) {
             EngineContext.gl20.glEnableVertexAttribArray(i);
-            EngineContext.gl20.glVertexAttribPointer(i, meshAttrSizes[i], GL20.GL_FLOAT, false, meshStrideBytes,
-                    meshOffsetBytes);
+            EngineContext.gl20.glVertexAttribPointer(
+                    i, meshAttrSizes[i], GL20.GL_FLOAT, false, meshStrideBytes, meshOffsetBytes);
             meshOffsetBytes += meshAttrSizes[i] * Float.BYTES;
         }
 
