@@ -97,6 +97,9 @@ public class FontManager extends ManagerPackage {
 
         MaterialInstance material = materialManager.cloneMaterial(materialID);
 
+        if (material.getUniform("u_fontAtlas") != null)
+            material.setUniform("u_fontAtlas", handle.getAtlasHandle().getGpuHandle());
+
         FontInstance instance = create(FontInstance.class);
         instance.constructor(handle, material);
 
