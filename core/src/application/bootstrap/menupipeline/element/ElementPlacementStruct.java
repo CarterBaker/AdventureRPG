@@ -2,6 +2,7 @@ package application.bootstrap.menupipeline.element;
 
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
+import engine.graphics.color.Color;
 import engine.root.StructPackage;
 
 public class ElementPlacementStruct extends StructPackage {
@@ -19,7 +20,7 @@ public class ElementPlacementStruct extends StructPackage {
     // Overrides
     private final String spriteNameOverride;
     private final String textOverride;
-    private final float[] colorOverride;
+    private final Color colorOverride;
     private final Runnable clickActionOverride;
     private final MenuAwareAction menuAwareActionOverride;
     private final LayoutStruct layoutOverride;
@@ -27,7 +28,6 @@ public class ElementPlacementStruct extends StructPackage {
     // Constructor — no override \\
 
     public ElementPlacementStruct(ElementHandle master) {
-
         this.master = master;
         this.spriteNameOverride = null;
         this.textOverride = null;
@@ -43,7 +43,7 @@ public class ElementPlacementStruct extends StructPackage {
             ElementHandle master,
             String spriteNameOverride,
             String textOverride,
-            float[] colorOverride,
+            Color colorOverride,
             Runnable clickActionOverride,
             MenuAwareAction menuAwareActionOverride,
             LayoutStruct layoutOverride) {
@@ -77,7 +77,7 @@ public class ElementPlacementStruct extends StructPackage {
         return textOverride;
     }
 
-    public float[] getColorOverride() {
+    public Color getColorOverride() {
         return colorOverride;
     }
 

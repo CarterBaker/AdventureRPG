@@ -4,6 +4,7 @@ import application.bootstrap.menupipeline.util.DimensionValue;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
+import engine.graphics.color.Color;
 import engine.root.DataPackage;
 
 public class ElementData extends DataPackage {
@@ -25,7 +26,7 @@ public class ElementData extends DataPackage {
     private final String materialName;
     private final DimensionValue fontSize;
     private final boolean explicitFontSize;
-    private final float[] color;
+    private final Color color;
 
     // Layout
     private final LayoutStruct layout;
@@ -45,7 +46,7 @@ public class ElementData extends DataPackage {
             String materialName,
             DimensionValue fontSize,
             boolean explicitFontSize,
-            float[] color,
+            Color color,
             LayoutStruct layout,
             boolean mask,
             StackDirection stackDirection,
@@ -107,7 +108,7 @@ public class ElementData extends DataPackage {
         return explicitFontSize;
     }
 
-    public float[] getColor() {
+    public Color getColor() {
         return color;
     }
 

@@ -15,11 +15,7 @@
                 {
                     "id":     "closeLabel",
                     "type":   "label",
-                    "font":   "MontserratAlternates",
-                    "text":   "Close",
-                    "color":  [0, 0, 0, 1],
-                    "anchor": "CENTER",
-                    "pivot":  "CENTER"
+                    "text":   "Close"
                 }
             ]
         },
@@ -71,12 +67,7 @@
                                 {
                                     "id":     "quitLabel",
                                     "type":   "label",
-                                    "font":   "MontserratAlternates",
-                                    "text":   "Quit",
-                                    "color":  [0, 0, 0, 1],
-                                    "anchor": "CENTER",
-                                    "pivot":  "CENTER",
-                                    "size":   { "x": "100%", "y": "100%" }
+                                    "text":   "Quit"
                                 }
                             ]
                         }

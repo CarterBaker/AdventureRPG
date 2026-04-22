@@ -22,6 +22,7 @@ import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
+import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.io.JsonUtility;
@@ -302,7 +303,7 @@ class InternalBuilder extends BuilderPackage {
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String spriteNameOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
         String textOverride = JsonUtility.getString(json, "text", null);
-        float[] colorOverride = json.has("color") ? parseColor(json) : null;
+        Color colorOverride = json.has("color") ? parseColor(json) : null;
 
         String[] onClick = parseOnClick(json);
         Runnable clickOverride = null;
@@ -378,7 +379,7 @@ class InternalBuilder extends BuilderPackage {
         DimensionValue fontSize = json.has("font_size")
                 ? DimensionValue.parse(json.get("font_size").getAsString())
                 : inheritedFontSize;
-        float[] color = parseColor(json);
+        Color color = parseColor(json);
         LayoutStruct layout = parseLayout(json);
         boolean mask = JsonUtility.getBoolean(json, "mask", false);
         StackDirection stackDirection = json.has("stack")
@@ -697,9 +698,9 @@ class InternalBuilder extends BuilderPackage {
         };
     }
 
-    // Font / Color Parsing \\
+    // Color Parsing \\
 
-    private float[] parseColor(JsonObject json) {
+    private Color parseColor(JsonObject json) {
 
         if (!json.has("color"))
             return null;
@@ -709,11 +710,10 @@ class InternalBuilder extends BuilderPackage {
         if (arr.size() != 4)
             throwException("'color' must be exactly 4 floats [r, g, b, a]");
 
-        return new float[] {
+        return new Color(
                 arr.get(0).getAsFloat(),
                 arr.get(1).getAsFloat(),
                 arr.get(2).getAsFloat(),
-                arr.get(3).getAsFloat()
-        };
+                arr.get(3).getAsFloat());
     }
 }

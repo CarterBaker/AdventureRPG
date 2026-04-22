@@ -17,6 +17,7 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
+import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.registry.RegistryUtility;
@@ -146,18 +147,13 @@ public class ElementSystem extends SystemPackage {
 
             fontInstance = fontManager.cloneFont(resolvedFontName, materialName);
 
-            float[] color = placement.hasColorOverride()
+            Color color = placement.hasColorOverride()
                     ? placement.getColorOverride()
                     : data.hasColor()
                             ? data.getColor()
-                            : new float[] {
-                                    EngineSetting.FONT_DEFAULT_COLOR_R,
-                                    EngineSetting.FONT_DEFAULT_COLOR_G,
-                                    EngineSetting.FONT_DEFAULT_COLOR_B,
-                                    EngineSetting.FONT_DEFAULT_COLOR_A
-                            };
+                            : EngineSetting.FONT_DEFAULT_COLOR;
 
-            fontInstance.setColor(color[0], color[1], color[2], color[3]);
+            fontInstance.setColor(color.r, color.g, color.b, color.a);
 
             String text = placement.getTextOverride() != null
                     ? placement.getTextOverride()

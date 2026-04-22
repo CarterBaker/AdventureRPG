@@ -1,5 +1,6 @@
 package engine.root;
 
+import engine.graphics.color.Color;
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 public class EngineSetting {
@@ -278,14 +279,11 @@ public class EngineSetting {
         public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                         + "0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
         public static final String FONT_DEFAULT_NAME = "MontserratAlternates";
+        public static final Color FONT_DEFAULT_COLOR = Color.RED;
         public static final String FONT_DEFAULT_MATERIAL = "util/FontDefault";
         public static final String FONT_DEFAULT_MESH = "util/LabelQuad";
         public static final String FONT_DEFAULT_VAO = "util/vao/LabelVAO";
         public static final String FONT_DEFAULT_SIZE_PERCENT = "50%";
-        public static final float FONT_DEFAULT_COLOR_R = 1.0f;
-        public static final float FONT_DEFAULT_COLOR_G = 1.0f;
-        public static final float FONT_DEFAULT_COLOR_B = 1.0f;
-        public static final float FONT_DEFAULT_COLOR_A = 1.0f;
         public static final float FONT_LETTER_SPACING_RATIO = 0.05f;
         public static final float FONT_SPACE_WIDTH_RATIO = 0.25f;
         public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;

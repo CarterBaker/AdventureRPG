@@ -45,6 +45,12 @@ public class Color extends EngineUtility {
         this(other.r, other.g, other.b, other.a);
     }
 
+    // Conversion \\
+
+    public float[] toArray() {
+        return new float[] { r, g, b, a };
+    }
+
     // Set \\
 
     public Color set(float r, float g, float b, float a) {
