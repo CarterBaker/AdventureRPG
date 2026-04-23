@@ -219,6 +219,8 @@ public class MenuRenderSystem extends SystemPackage {
         float scaledW = font.getTextWidth() * scale;
         float scaledH = font.getTextHeight() * scale;
 
+        float screenH = currentWindow.getHeight();
+
         TextAlign align = data.getTextAlign();
         float x;
         if (align == TextAlign.LEFT)
@@ -228,7 +230,8 @@ public class MenuRenderSystem extends SystemPackage {
         else
             x = element.getComputedLeft() + (element.getComputedW() - scaledW) * 0.5f;
 
-        float y = element.getComputedTop() + (element.getComputedH() - scaledH) * 0.5f;
+        float y = (screenH - element.getComputedTop() - element.getComputedH())
+                + (element.getComputedH() - scaledH) * 0.5f;
 
         fontRenderSystem.submit(font, x, y, scale, currentMask(), currentWindow);
     }
