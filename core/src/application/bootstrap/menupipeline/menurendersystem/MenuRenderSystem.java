@@ -161,7 +161,9 @@ public class MenuRenderSystem extends SystemPackage {
 
             if (vertical) {
 
-                LayoutStruct layout = child.getElementData().getLayout();
+                LayoutStruct layout = child.getLayoutOverride() != null
+                        ? child.getLayoutOverride()
+                        : child.getElementData().getLayout();
                 float childH = layout.getSize().getY().resolve(parentH);
 
                 if (layout.hasMinSize())
@@ -172,7 +174,7 @@ public class MenuRenderSystem extends SystemPackage {
 
                 cursor -= childH;
                 renderStackedElement(child, parent.getComputedLeft(), cursor, parentW, parentH);
-                contentSize += childH + (i < children.size() - 1 ? spacing : 0f);
+                contentSize += child.getComputedH() + (i < children.size() - 1 ? spacing : 0f);
                 cursor -= spacing;
             } else {
                 renderStackedElement(child, cursor, parent.getComputedTop(), parentW, parentH);

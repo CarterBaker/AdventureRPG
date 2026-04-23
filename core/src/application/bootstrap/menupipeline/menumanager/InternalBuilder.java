@@ -302,10 +302,15 @@ class InternalBuilder extends BuilderPackage {
     private MenuNodeStruct buildRefNode(String filePath, String id, JsonObject json) {
 
         String refKey = json.get("ref").getAsString();
-        LayoutStruct layoutOverride = parseLayoutOverride(json);
+        LayoutStruct partialOverride = parseLayoutOverride(json);
         ElementHandle resolved = resolveRefKey(refKey);
 
         if (resolved != null) {
+
+            LayoutStruct layoutOverride = partialOverride != null
+                    ? LayoutStruct.merge(resolved.getLayout(), partialOverride)
+                    : null;
+
             ObjectArrayList<MenuNodeStruct> children = resolved.getChildren();
             return layoutOverride != null
                     ? new MenuNodeStruct(resolved, null, null, null, null, null, layoutOverride, children)
@@ -314,14 +319,17 @@ class InternalBuilder extends BuilderPackage {
 
         // Deferred — children populated when ref resolves
         ObjectArrayList<MenuNodeStruct> children = new ObjectArrayList<>();
-        MenuNodeStruct placeholder = layoutOverride != null
-                ? new MenuNodeStruct(null, null, null, null, null, null, layoutOverride, children)
+        MenuNodeStruct placeholder = partialOverride != null
+                ? new MenuNodeStruct(null, null, null, null, null, null, partialOverride, children)
                 : new MenuNodeStruct(null, children);
 
         deferredRefs.add(() -> {
             ElementHandle target = resolveRefKey(refKey);
             if (target == null)
                 throwException("Unresolved ref: '" + refKey + "' (id: '" + id + "')");
+            if (partialOverride != null)
+                placeholder.setLayoutOverride(LayoutStruct.merge(target.getLayout(), partialOverride));
+
             placeholder.setMaster(target);
             children.addAll(target.getChildren());
         });

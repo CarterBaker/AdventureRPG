@@ -30,7 +30,7 @@ public class MenuNodeStruct extends StructPackage {
     private final Color colorOverride;
     private final Runnable clickActionOverride;
     private final MenuAwareAction menuAwareActionOverride;
-    private final LayoutStruct layoutOverride;
+    private LayoutStruct layoutOverride;
 
     // Tree
     private final ObjectArrayList<MenuNodeStruct> children;
@@ -71,6 +71,10 @@ public class MenuNodeStruct extends StructPackage {
 
     public void setMaster(ElementHandle master) {
         this.master = master;
+    }
+
+    public void setLayoutOverride(LayoutStruct layoutOverride) {
+        this.layoutOverride = layoutOverride;
     }
 
     // Accessible \\

@@ -259,6 +259,10 @@ public class ElementInstance extends InstancePackage {
         return children;
     }
 
+    public LayoutStruct getLayoutOverride() {
+        return layoutOverride;
+    }
+
     public Matrix4 getTransform() {
         return transform;
     }
