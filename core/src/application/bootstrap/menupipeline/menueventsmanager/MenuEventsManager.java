@@ -1,5 +1,6 @@
 package application.bootstrap.menupipeline.menueventsmanager;
 
+import application.bootstrap.menupipeline.menueventsmanager.menus.EditorBranch;
 import application.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
 import application.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
 import application.bootstrap.menupipeline.menueventsmanager.util.GenericButtonBranch;
@@ -22,5 +23,6 @@ public class MenuEventsManager extends ManagerPackage {
         // Menus
         create(MainMenuBranch.class);
         create(InventoryBranch.class);
+        create(EditorBranch.class);
     }
 }

@@ -11,5 +11,7 @@ public enum ElementType {
     TEXTURE,
     BUTTON,
     LABEL,
-    CONTAINER
+    CONTAINER,
+    TOOLBAR,
+    EXPANDABLE_CONTAINER;
 }

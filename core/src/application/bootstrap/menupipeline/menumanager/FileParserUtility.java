@@ -44,6 +44,8 @@ class FileParserUtility extends EngineUtility {
             case "button" -> ElementType.BUTTON;
             case "label" -> ElementType.LABEL;
             case "container" -> ElementType.CONTAINER;
+            case "toolbar" -> ElementType.TOOLBAR;
+            case "expandable_container" -> ElementType.EXPANDABLE_CONTAINER;
             default -> {
                 throwException("Unknown element type '" + type + "' on element '" + id + "'");
                 yield null;

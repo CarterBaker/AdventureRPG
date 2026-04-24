@@ -1,0 +1,124 @@
+{
+  "menus": [
+    {
+      "id": "Main",
+      "raycast_input": true,
+      "entry_points": ["testing_dropdown"],
+      "elements": [
+        {
+          "id": "background",
+          "type": "sprite",
+          "anchor": "top_left",
+          "pivot": "top_left",
+          "position": {"x": "0%", "y": "0%"},
+          "size": {"x": "100%", "y": "100%"},
+          "sprite": "util/Default",
+          "color": [1.0, 1.0, 1.0, 1.0]
+        },
+        {
+          "id": "toolbar",
+          "use": "util/ToolBar",
+          "elements": [
+            {
+              "id": "testing_menu",
+              "type": "container",
+              "anchor": "top_left",
+              "pivot": "top_left",
+              "size": {"x": "100px", "y": "28px"},
+              "elements": [
+                {
+                  "id": "testing_button",
+                  "type": "button",
+                  "anchor": "top_left",
+                  "pivot": "top_left",
+                  "size": {"x": "100px", "y": "28px"},
+                  "on_click": {
+                    "class": "application.bootstrap.menupipeline.menueventsmanager.menus.EditorBranch",
+                    "method": "toggleTestingDropdown",
+                    "arg": "$parent"
+                  },
+                  "elements": [
+                    {
+                      "id": "testing_label",
+                      "type": "label",
+                      "text": "Testing"
+                    }
+                  ]
+                },
+                {
+                  "id": "testing_dropdown",
+                  "type": "expandable_container",
+                  "anchor": "top_left",
+                  "pivot": "top_left",
+                  "position": {"x": "0px", "y": "-28px"},
+                  "size": {"x": "150px", "y": "56px"},
+                  "color": [0.18, 0.18, 0.18, 1.0],
+                  "start_expanded": false,
+                  "elements": [
+                    {
+                      "id": "open_window_button",
+                      "type": "button",
+                      "anchor": "top_left",
+                      "pivot": "top_left",
+                      "size": {"x": "150px", "y": "28px"},
+                      "on_click": {
+                        "class": "application.bootstrap.menupipeline.menueventsmanager.menus.EditorBranch",
+                        "method": "openSecondaryWindow"
+                      },
+                      "elements": [
+                        {
+                          "id": "open_window_label",
+                          "type": "label",
+                          "text": "Open Window"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "open_preview_button",
+                      "type": "button",
+                      "anchor": "top_left",
+                      "pivot": "top_left",
+                      "position": {"x": "0px", "y": "28px"},
+                      "size": {"x": "150px", "y": "28px"},
+                      "on_click": {
+                        "class": "application.bootstrap.menupipeline.menueventsmanager.menus.EditorBranch",
+                        "method": "openPreview"
+                      },
+                      "elements": [
+                        {
+                          "id": "open_preview_label",
+                          "type": "label",
+                          "text": "Open Preview"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Secondary",
+      "raycast_input": true,
+      "elements": [
+        {
+          "id": "background",
+          "type": "sprite",
+          "anchor": "top_left",
+          "pivot": "top_left",
+          "position": {"x": "0%", "y": "0%"},
+          "size": {"x": "100%", "y": "100%"},
+          "sprite": "util/Default",
+          "color": [1.0, 1.0, 1.0, 1.0]
+        },
+        {
+          "id": "toolbar",
+          "use": "util/ToolBar"
+        }
+      ]
+    }
+  ]
+}

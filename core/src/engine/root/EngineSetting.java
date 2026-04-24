@@ -297,4 +297,5 @@ public class EngineSetting {
         public static final String ELEMENT_DEFAULT_MIN_SIZE = "0%";
         public static final String ELEMENT_DEFAULT_MAX_SIZE = "100%";
         public static final int MAX_MASK_DEPTH = 8;
+        public static final float DROPDOWN_COLLAPSE_TOLERANCE = 12f;
 }

@@ -3,6 +3,7 @@ package application.bootstrap.menupipeline.menurendersystem;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementInstance;
+import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.fontrendersystem.FontRenderSystem;
 import application.bootstrap.menupipeline.menu.MenuInstance;
@@ -31,6 +32,13 @@ public class MenuRenderSystem extends SystemPackage {
      * - That scale goes onto the transform matrix diagonal so both glyph
      * quads AND their spacing grow/shrink uniformly.
      * - setText is only re-called when the string changes, not on size change.
+     *
+     * Toolbar contract:
+     * - TOOLBAR elements ignore all layout fields except height. They are always
+     * placed at the top of the screen at full width, and their children are always
+     * laid out as a horizontal stack regardless of the stack field in data.
+     * - EXPANDABLE_CONTAINER children are rendered as a vertical dropdown below
+     * the container only when expanded. Collapsed containers render no children.
      */
 
     // Internal
@@ -91,7 +99,12 @@ public class MenuRenderSystem extends SystemPackage {
             ElementInstance element,
             float parentLeft, float parentTop,
             float parentW, float parentH) {
-        element.computeTransform(parentLeft, parentTop, parentW, parentH);
+
+        if (element.getElementData().getType() == ElementType.TOOLBAR)
+            element.computeToolbarTransform(currentWindow.getWidth(), currentWindow.getHeight());
+        else
+            element.computeTransform(parentLeft, parentTop, parentW, parentH);
+
         renderElementContent(element);
     }
 
@@ -106,6 +119,7 @@ public class MenuRenderSystem extends SystemPackage {
     private void renderElementContent(ElementInstance element) {
 
         ElementData data = element.getElementData();
+        ElementType type = data.getType();
 
         if (element.hasSprite())
             pushSpriteRenderCall(element);
@@ -116,10 +130,18 @@ public class MenuRenderSystem extends SystemPackage {
         if (!element.hasChildren())
             return;
 
+        if (type == ElementType.EXPANDABLE_CONTAINER) {
+            if (element.isExpanded())
+                renderDropdown(element);
+            return;
+        }
+
         if (data.isMask())
             pushMask(element);
 
-        StackDirection stack = data.getStackDirection();
+        StackDirection stack = type == ElementType.TOOLBAR
+                ? StackDirection.HORIZONTAL
+                : data.getStackDirection();
 
         if (stack != StackDirection.NONE)
             renderStacked(element, stack);
@@ -134,6 +156,39 @@ public class MenuRenderSystem extends SystemPackage {
 
         if (data.isMask())
             popMask();
+    }
+
+    private void renderDropdown(ElementInstance expandable) {
+
+        float left = expandable.getComputedLeft();
+        float parentW = expandable.getComputedW();
+        float parentH = expandable.getComputedH();
+        float cursor = expandable.getComputedTop();
+        float totalH = 0f;
+
+        ObjectArrayList<ElementInstance> children = expandable.getChildren();
+
+        for (int i = 0; i < children.size(); i++) {
+
+            ElementInstance child = children.get(i);
+            LayoutStruct layout = child.getLayoutOverride() != null
+                    ? child.getLayoutOverride()
+                    : child.getElementData().getLayout();
+
+            float childH = layout.getSize().getY().resolve(parentH);
+
+            if (layout.hasMinSize())
+                childH = Math.max(childH, layout.getMinSize().getY().resolve(parentH));
+
+            if (layout.hasMaxSize())
+                childH = Math.min(childH, layout.getMaxSize().getY().resolve(parentH));
+
+            cursor -= childH;
+            totalH += childH;
+            renderStackedElement(child, left, cursor, parentW, parentH);
+        }
+
+        expandable.setContentH(totalH);
     }
 
     private void renderStacked(ElementInstance parent, StackDirection dir) {

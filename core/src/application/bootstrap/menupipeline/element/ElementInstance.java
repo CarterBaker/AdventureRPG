@@ -14,7 +14,7 @@ public class ElementInstance extends InstancePackage {
      * Runtime instance of a UI element. Holds a reference to the shared
      * ElementData definition, resolved sprite and font instances, a pre-resolved
      * click action, optional placement overrides, computed layout values updated
-     * each frame, and scroll and content state for stacked containers.
+     * each frame, and scroll, content, and expansion state.
      */
 
     // Internal
@@ -46,6 +46,9 @@ public class ElementInstance extends InstancePackage {
     private float contentW;
     private float contentH;
 
+    // Expansion
+    private boolean expanded;
+
     // Internal \\
 
     @Override
@@ -74,6 +77,9 @@ public class ElementInstance extends InstancePackage {
 
         // Children
         this.children = children;
+
+        // Expansion
+        this.expanded = data.isStartExpanded();
     }
 
     // Layout \\
@@ -147,6 +153,36 @@ public class ElementInstance extends InstancePackage {
 
         transform.set(
                 w, 0, 0, left,
+                0, h, 0, top,
+                0, 0, 1, 0,
+                0, 0, 0, 1);
+    }
+
+    /*
+     * Used by toolbar elements — forces full screen width and top-of-screen
+     * placement. Only height resolves from layout; all other geometry is fixed.
+     */
+    public void computeToolbarTransform(float screenW, float screenH) {
+
+        LayoutStruct layout = layoutOverride != null ? layoutOverride : data.getLayout();
+
+        float h = layout.getSize().getY().resolve(screenH);
+
+        if (layout.hasMinSize())
+            h = Math.max(h, layout.getMinSize().getY().resolve(screenH));
+
+        if (layout.hasMaxSize())
+            h = Math.min(h, layout.getMaxSize().getY().resolve(screenH));
+
+        float top = screenH - h;
+
+        this.computedLeft = 0f;
+        this.computedTop = top;
+        this.computedW = screenW;
+        this.computedH = h;
+
+        transform.set(
+                screenW, 0, 0, 0f,
                 0, h, 0, top,
                 0, 0, 1, 0,
                 0, 0, 0, 1);
@@ -239,6 +275,16 @@ public class ElementInstance extends InstancePackage {
 
     public void clearPositionOverride() {
         this.positionOverride = null;
+    }
+
+    // Expansion \\
+
+    public void toggleExpanded() {
+        this.expanded = !expanded;
+    }
+
+    public boolean isExpanded() {
+        return expanded;
     }
 
     // Accessible \\

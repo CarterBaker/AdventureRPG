@@ -2,7 +2,7 @@ package engine.root;
 
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import editor.runtime.RuntimeContext;
+import editor.runtime.EditorWindowMain;
 
 public class EditorEngine extends EnginePackage {
 
@@ -25,7 +25,7 @@ public class EditorEngine extends EnginePackage {
     private editor.bootstrap.BootstrapAssembly editorBootstrapAssembly;
 
     // Runtime
-    private RuntimeContext runtimeContext;
+    private EditorWindowMain runtimeContext;
 
     // Render
     private WindowManager windowManager;
@@ -63,7 +63,7 @@ public class EditorEngine extends EnginePackage {
 
     @Override
     protected void awake() {
-        this.runtimeContext = createContext(RuntimeContext.class, windowManager.getMainWindow());
+        this.runtimeContext = createContext(EditorWindowMain.class, windowManager.getMainWindow());
     }
 
     // Draw \\

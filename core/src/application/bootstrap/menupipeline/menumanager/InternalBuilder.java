@@ -249,7 +249,6 @@ class InternalBuilder extends BuilderPackage {
 
         boolean explicitFontSize = json.has("font_size") || template.hasExplicitFontSize();
         String resolvedFontName = JsonUtility.getString(json, "font", template.getFontName());
-        String resolvedMaterialName = JsonUtility.getString(json, "material", template.getMaterialName());
         DimensionValue resolvedFontSize = json.has("font_size")
                 ? DimensionValue.parse(json.get("font_size").getAsString())
                 : template.getFontSize();
@@ -368,6 +367,7 @@ class InternalBuilder extends BuilderPackage {
         TextAlign textAlign = json.has("align")
                 ? TextAlign.fromString(json.get("align").getAsString())
                 : TextAlign.CENTER;
+        boolean startExpanded = JsonUtility.getBoolean(json, "start_expanded", false);
         String spriteName = resolveSpriteName(id, spritePath);
 
         String[] onClick = parseOnClick(json);
@@ -381,7 +381,7 @@ class InternalBuilder extends BuilderPackage {
 
         ElementData data = new ElementData(
                 id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize, color,
-                layout, mask, stackDirection, spacing, textAlign);
+                layout, mask, stackDirection, spacing, textAlign, startExpanded);
 
         ElementHandle master = create(ElementHandle.class);
         master.constructor(
@@ -642,6 +642,7 @@ class InternalBuilder extends BuilderPackage {
             case "button" -> ElementType.BUTTON;
             case "label" -> ElementType.LABEL;
             case "container" -> ElementType.CONTAINER;
+            case "expandable_container" -> ElementType.EXPANDABLE_CONTAINER;
             default -> {
                 throwException("Unknown element type '" + type + "' on element '" + id + "'");
                 yield null;

@@ -35,6 +35,9 @@ public class ElementData extends DataPackage {
     private final DimensionValue spacing;
     private final TextAlign textAlign;
 
+    // Expansion
+    private final boolean startExpanded;
+
     // Constructor \\
 
     public ElementData(
@@ -51,7 +54,8 @@ public class ElementData extends DataPackage {
             boolean mask,
             StackDirection stackDirection,
             DimensionValue spacing,
-            TextAlign textAlign) {
+            TextAlign textAlign,
+            boolean startExpanded) {
 
         // Identity
         this.id = id;
@@ -72,6 +76,9 @@ public class ElementData extends DataPackage {
         this.stackDirection = stackDirection;
         this.spacing = spacing;
         this.textAlign = textAlign;
+
+        // Expansion
+        this.startExpanded = startExpanded;
     }
 
     // Accessible \\
@@ -130,6 +137,10 @@ public class ElementData extends DataPackage {
 
     public TextAlign getTextAlign() {
         return textAlign;
+    }
+
+    public boolean isStartExpanded() {
+        return startExpanded;
     }
 
     public boolean hasSprite() {
