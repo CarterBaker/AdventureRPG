@@ -541,9 +541,10 @@ public class EnginePackage extends ManagerPackage {
         for (int i = 0; i < this.contextArray.length; i++) {
             EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
             this.contextArray[i].internalUpdate();
+            EngineUtility.windowManager.endContextWindow();
         }
 
-        EngineUtility.windowManager.endContextWindow();
+        this.windowPlatform.restoreMainContext();
     }
 
     // Fixed Update \\
@@ -566,9 +567,10 @@ public class EnginePackage extends ManagerPackage {
             for (int i = 0; i < this.contextArray.length; i++) {
                 EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
                 this.contextArray[i].internalFixedUpdate();
+                EngineUtility.windowManager.endContextWindow();
             }
 
-            EngineUtility.windowManager.endContextWindow();
+            this.windowPlatform.restoreMainContext();
         }
     }
 
@@ -584,9 +586,10 @@ public class EnginePackage extends ManagerPackage {
         for (int i = 0; i < this.contextArray.length; i++) {
             EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
             this.contextArray[i].internalLateUpdate();
+            EngineUtility.windowManager.endContextWindow();
         }
 
-        EngineUtility.windowManager.endContextWindow();
+        this.windowPlatform.restoreMainContext();
     }
 
     // Render \\
@@ -601,9 +604,10 @@ public class EnginePackage extends ManagerPackage {
         for (int i = 0; i < this.contextArray.length; i++) {
             EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
             this.contextArray[i].internalRender();
+            EngineUtility.windowManager.endContextWindow();
         }
 
-        EngineUtility.windowManager.endContextWindow();
+        this.windowPlatform.restoreMainContext();
     }
 
     // Draw \\

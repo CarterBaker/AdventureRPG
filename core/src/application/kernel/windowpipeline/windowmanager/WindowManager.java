@@ -74,12 +74,8 @@ public class WindowManager extends ManagerPackage {
 
         WindowInstance focusedWindow = resolveFocusedWindow();
 
-        if (focusedWindow == null) {
-            activeWindow = mainWindow;
-            if (mainWindow != null && mainWindow.hasNativeHandle())
-                internal.windowPlatform.makeContextCurrent(mainWindow);
+        if (focusedWindow == null)
             return;
-        }
 
         activeWindow = focusedWindow;
         internal.windowPlatform.makeContextCurrent(focusedWindow);
