@@ -117,6 +117,11 @@ public class EngineSetting {
         public static final String SPRITE_DEFAULT_MATERIAL = "util/SpriteDefault";
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
 
+        // Blit \\
+
+        public static final String DEFAULT_BLIT_MATERIAL = "fullscreen/Blit";
+        public static final String DEFAULT_BLIT_MESH = "util/Blit";
+
         // Mesh \\
 
         public static final int CHUNK_VERT_BUFFER = 128;

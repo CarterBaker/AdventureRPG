@@ -1,34 +1,40 @@
 package application.runtime.lighting;
 
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FboManager;
+import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import engine.root.SystemPackage;
 
 public class SkySystem extends SystemPackage {
 
-    /*
-     * Pushes the sky pass to the render pipeline each frame.
-     * Owned by RuntimeContext.
-     */
+    private static final String SKY_FBO = "SkyScene";
 
-    // Internal
     private PassManager passManager;
+    private FboManager fboManager;
+    private FboRenderManager fboRenderManager;
 
-    // Pass
     private PassHandle skyPass;
-
-    // Internal \\
+    private FboInstance skyFbo;
 
     @Override
     protected void get() {
-
-        // Internal
         this.passManager = get(PassManager.class);
+        this.fboManager = get(FboManager.class);
+        this.fboRenderManager = get(FboRenderManager.class);
+
         this.skyPass = passManager.getPassHandleFromPassName("Sky");
     }
 
     @Override
+    protected void awake() {
+        this.skyFbo = fboManager.getFbo(SKY_FBO);
+    }
+
+    @Override
     protected void update() {
-        passManager.pushPass(skyPass, -10, context.getWindow());
+        passManager.pushPass(skyPass, SKY_FBO, context.getWindow());
+        fboRenderManager.pushFbo(skyFbo);
     }
 }

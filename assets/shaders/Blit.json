@@ -1,0 +1,4 @@
+{
+    "vert": "debug/DebugUV.vsh",
+    "frag": "util/Blit.fsh"
+}

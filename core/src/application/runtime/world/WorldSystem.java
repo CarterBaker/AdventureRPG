@@ -1,29 +1,29 @@
 package application.runtime.world;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FboManager;
+import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.SystemPackage;
 
 public class WorldSystem extends SystemPackage {
 
-    /*
-     * Creates the world streaming grid at runtime startup for the player entity.
-     * Passes the context window so the grid culls against the correct camera
-     * regardless of which window this context was paired with.
-     */
+    private static final String WORLD_FBO = "MainScene";
 
-    // Internal
     private PlayerManager playerManager;
     private WorldStreamManager worldStreamManager;
+    private FboManager fboManager;
+    private FboRenderManager fboRenderManager;
 
-    // Internal \\
+    private FboInstance worldFbo;
 
     @Override
     protected void get() {
-
-        // Internal
         this.playerManager = get(PlayerManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.fboManager = get(FboManager.class);
+        this.fboRenderManager = get(FboRenderManager.class);
     }
 
     @Override
@@ -32,5 +32,12 @@ public class WorldSystem extends SystemPackage {
         worldStreamManager.createGrid(
                 playerManager.getPlayerForWindow(windowID),
                 context.getWindow());
+
+        this.worldFbo = fboManager.getFbo(WORLD_FBO);
+    }
+
+    @Override
+    protected void update() {
+        fboRenderManager.pushFbo(worldFbo);
     }
 }

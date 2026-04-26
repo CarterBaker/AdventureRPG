@@ -253,7 +253,7 @@ public class MenuRenderSystem extends SystemPackage {
                 .getMaterial()
                 .setUniform("u_transform", element.getTransform());
         renderManager.pushRenderCall(
-                element.getSpriteInstance().getModelInstance(), 1, currentMask(), currentWindow);
+                element.getSpriteInstance().getModelInstance(), "MainScene", currentMask(), currentWindow);
     }
 
     // Font Render Call \\

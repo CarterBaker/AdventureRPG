@@ -1,6 +1,8 @@
 package application.bootstrap.renderpipeline;
 
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
+import application.bootstrap.renderpipeline.fbo.FboManager;
+import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import engine.root.PipelinePackage;
 
@@ -16,6 +18,8 @@ public class RenderPipeline extends PipelinePackage {
     @Override
     protected void create() {
         create(CameraManager.class);
+        create(FboManager.class);
         create(RenderManager.class);
+        create(FboRenderManager.class);
     }
 }

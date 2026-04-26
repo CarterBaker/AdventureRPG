@@ -121,7 +121,7 @@ public class WorldRenderManager extends ManagerPackage {
             for (int i = 0; i < models.size(); i++) {
                 ModelInstance model = models.get(i);
                 model.getMaterial().setUBO(slotUBO);
-                renderManager.pushRenderCall(model, 0, window);
+                renderManager.pushRenderCall(model, "MainScene", window);
             }
         }
     }
@@ -153,7 +153,7 @@ public class WorldRenderManager extends ManagerPackage {
             for (int i = 0; i < models.size(); i++) {
                 ModelInstance model = models.get(i);
                 model.getMaterial().setUBO(slotUBO);
-                renderManager.pushRenderCall(model, 0, window);
+                renderManager.pushRenderCall(model, "MainScene", window);
             }
         }
     }
