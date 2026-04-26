@@ -5,6 +5,8 @@ import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FboManager;
 import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
 import application.bootstrap.renderpipeline.util.MaskStruct;
@@ -19,19 +21,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RenderSystem extends SystemPackage {
 
-    /*
-     * Collects render calls into a specific window's RenderQueueHandle and
-     * flushes a window's queue on draw(). All push methods take an explicit
-     * WindowInstance — no active window state, no WindowManager dependency.
-     * The window's queue is read directly via window.getRenderQueueHandle().
-     * Zero allocation per frame after warmup.
-     */
+    private static final String DEFAULT_FBO = "MainScene";
 
-    // Internal
     private CompositeRenderSystem compositeRenderSystem;
     private VAOManager vaoManager;
-
-    // Internal \\
 
     @Override
     protected void get() {
@@ -39,94 +32,130 @@ class RenderSystem extends SystemPackage {
         this.vaoManager = get(VAOManager.class);
     }
 
-    // Draw \\
-
-    void draw(WindowInstance window) {
+    void drawToMappedTargets(WindowInstance window, FboManager fboManager) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
 
         if (queue == null)
             return;
 
-        GLSLUtility.enableDepth();
-        GLSLUtility.enableBlending();
-        GLSLUtility.disableCulling();
+        Object[] fboNames = queue.queuedFboNames.elements();
+        int fboCount = queue.queuedFboNames.size();
 
-        GLSLUtility.setViewport(window.getWidth(), window.getHeight());
-        GLSLUtility.clearBuffer();
+        for (int f = 0; f < fboCount; f++) {
+            String fboName = (String) fboNames[f];
+            FboInstance target = fboManager.getFbo(fboName);
+            if (target == null)
+                continue;
 
-        int[] depths = queue.sortedDepths.elements();
-        int depthCount = queue.sortedDepths.size();
-
-        for (int d = 0; d < depthCount; d++) {
-
-            int depth = depths[d];
-
+            bindTarget(window, target);
+            GLSLUtility.enableDepth();
+            GLSLUtility.enableBlending();
+            GLSLUtility.disableCulling();
+            GLSLUtility.clearBuffer();
             GLSLUtility.clearDepthBuffer();
 
-            ObjectArrayList<RenderBatchStruct> batchList = queue.depth2BatchList.get(depth);
-            Object[] batchElements = batchList.elements();
-            int batchCount = batchList.size();
-
-            MaskStruct activeMask = null;
-
-            for (int b = 0; b < batchCount; b++) {
-
-                RenderBatchStruct batch = (RenderBatchStruct) batchElements[b];
-
-                if (batch.isEmpty())
-                    continue;
-
-                MaterialInstance representative = batch.getRepresentativeMaterial();
-                bindMaterial(representative, depth);
-                bindSourceUBOs(batch);
-
-                ObjectArrayList<RenderCallStruct> renderCalls = batch.getRenderCalls();
-                Object[] callElements = renderCalls.elements();
-                int callCount = renderCalls.size();
-
-                for (int i = 0; i < callCount; i++) {
-
-                    RenderCallStruct renderCall = (RenderCallStruct) callElements[i];
-                    MaskStruct callMask = renderCall.getMask();
-
-                    if (callMask != activeMask) {
-                        if (callMask != null)
-                            GLSLUtility.enableScissor(
-                                    callMask.getX(), callMask.getY(),
-                                    callMask.getW(), callMask.getH());
-                        else
-                            GLSLUtility.disableScissor();
-                        activeMask = callMask;
-                    }
-
-                    pushInstanceUBOs(renderCall);
-                    pushInstanceUniforms(renderCall);
-                    drawBatchedRenderCall(renderCall, window);
-                }
-
-                batch.clear();
-            }
-
-            if (activeMask != null)
-                GLSLUtility.disableScissor();
+            drawBatchesForFbo(queue.fbo2BatchList.get(fboName), window);
+            target.unbind();
         }
 
-        // Always draw composite — not gated on depth 0 existing
         compositeRenderSystem.draw(window);
-
         queue.rewindFrame();
     }
 
-    // Render Binding \\
+    void drawToTarget(WindowInstance window, FboInstance target) {
 
-    private void bindMaterial(MaterialInstance material, int depth) {
+        RenderQueueHandle queue = window.getRenderQueueHandle();
 
-        if (depth == 0)
-            GLSLUtility.enableDepth();
-        else
-            GLSLUtility.disableDepth();
+        if (queue == null)
+            return;
 
+        bindTarget(window, target);
+        GLSLUtility.enableDepth();
+        GLSLUtility.enableBlending();
+        GLSLUtility.disableCulling();
+        GLSLUtility.clearBuffer();
+        GLSLUtility.clearDepthBuffer();
+
+        Object[] fboNames = queue.queuedFboNames.elements();
+        int fboCount = queue.queuedFboNames.size();
+
+        for (int f = 0; f < fboCount; f++) {
+            String fboName = (String) fboNames[f];
+            drawBatchesForFbo(queue.fbo2BatchList.get(fboName), window);
+        }
+
+        drawBatchesForFbo(queue.screenBatchList, window);
+
+        compositeRenderSystem.draw(window);
+        queue.rewindFrame();
+
+        if (target != null)
+            target.unbind();
+    }
+
+    private void drawBatchesForFbo(ObjectArrayList<RenderBatchStruct> batchList, WindowInstance window) {
+        if (batchList == null)
+            return;
+
+        Object[] batchElements = batchList.elements();
+        int batchCount = batchList.size();
+
+        MaskStruct activeMask = null;
+
+        for (int b = 0; b < batchCount; b++) {
+
+            RenderBatchStruct batch = (RenderBatchStruct) batchElements[b];
+
+            if (batch.isEmpty())
+                continue;
+
+            MaterialInstance representative = batch.getRepresentativeMaterial();
+            bindMaterial(representative);
+            bindSourceUBOs(batch);
+
+            ObjectArrayList<RenderCallStruct> renderCalls = batch.getRenderCalls();
+            Object[] callElements = renderCalls.elements();
+            int callCount = renderCalls.size();
+
+            for (int i = 0; i < callCount; i++) {
+
+                RenderCallStruct renderCall = (RenderCallStruct) callElements[i];
+                MaskStruct callMask = renderCall.getMask();
+
+                if (callMask != activeMask) {
+                    if (callMask != null)
+                        GLSLUtility.enableScissor(
+                                callMask.getX(), callMask.getY(),
+                                callMask.getW(), callMask.getH());
+                    else
+                        GLSLUtility.disableScissor();
+                    activeMask = callMask;
+                }
+
+                pushInstanceUBOs(renderCall);
+                pushInstanceUniforms(renderCall);
+                drawBatchedRenderCall(renderCall, window);
+            }
+
+            batch.clear();
+        }
+
+        if (activeMask != null)
+            GLSLUtility.disableScissor();
+    }
+
+    private void bindTarget(WindowInstance window, FboInstance target) {
+        if (target == null) {
+            GLSLUtility.setViewport(window.getWidth(), window.getHeight());
+            return;
+        }
+
+        target.bind();
+    }
+
+    private void bindMaterial(MaterialInstance material) {
+        GLSLUtility.enableDepth();
         GLSLUtility.useShader(material.getShaderHandle().getGpuHandle());
     }
 
@@ -182,8 +211,6 @@ class RenderSystem extends SystemPackage {
         GLSLUtility.unbindVAO();
     }
 
-    // Push \\
-
     void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer, WindowInstance window) {
         compositeRenderSystem.submit(material, buffer, window);
     }
@@ -192,7 +219,42 @@ class RenderSystem extends SystemPackage {
         compositeRenderSystem.removeWindow(window.getWindowID());
     }
 
-    void pushRenderCall(ModelInstance modelInstance, int depth, MaskStruct mask, WindowInstance window) {
+    void pushRenderCall(ModelInstance modelInstance, String fboName, MaskStruct mask, WindowInstance window) {
+
+        RenderQueueHandle queue = window.getRenderQueueHandle();
+
+        if (queue == null || queue.isRenderBufferFull())
+            return;
+
+        RenderCallStruct renderCall = queue.nextCall();
+        renderCall.init(modelInstance, mask);
+
+        String targetFbo = (fboName == null || fboName.isBlank()) ? DEFAULT_FBO : fboName;
+
+        MaterialInstance material = modelInstance.getMaterial();
+        int materialID = material.getMaterialID();
+
+        Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = queue.fbo2MaterialBatches.get(targetFbo);
+
+        if (materialBatches == null) {
+            materialBatches = new Int2ObjectOpenHashMap<>();
+            queue.fbo2MaterialBatches.put(targetFbo, materialBatches);
+            queue.queuedFboNames.add(targetFbo);
+            queue.fbo2BatchList.put(targetFbo, new ObjectArrayList<>());
+        }
+
+        RenderBatchStruct batch = materialBatches.get(materialID);
+
+        if (batch == null) {
+            batch = new RenderBatchStruct(material);
+            materialBatches.put(materialID, batch);
+            queue.fbo2BatchList.get(targetFbo).add(batch);
+        }
+
+        batch.addRenderCall(renderCall);
+    }
+
+    void pushScreenCall(ModelInstance modelInstance, MaskStruct mask, WindowInstance window) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
 
@@ -205,41 +267,15 @@ class RenderSystem extends SystemPackage {
         MaterialInstance material = modelInstance.getMaterial();
         int materialID = material.getMaterialID();
 
-        Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = queue.depth2MaterialBatches.get(depth);
-
-        // TODO: Inline these if null checks to the actual queue class.
-        if (materialBatches == null) {
-            materialBatches = new Int2ObjectOpenHashMap<>();
-            queue.depth2MaterialBatches.put(depth, materialBatches);
-            insertDepthSorted(queue, depth);
-            queue.depth2BatchList.put(depth, new ObjectArrayList<>());
-        }
-
-        RenderBatchStruct batch = materialBatches.get(materialID);
+        RenderBatchStruct batch = queue.screenMaterialBatches.get(materialID);
 
         if (batch == null) {
             batch = new RenderBatchStruct(material);
-            materialBatches.put(materialID, batch);
-            queue.depth2BatchList.get(depth).add(batch);
+            queue.screenMaterialBatches.put(materialID, batch);
+            queue.screenBatchList.add(batch);
         }
 
         batch.addRenderCall(renderCall);
     }
 
-    // Depth Ordering \\
-
-    private void insertDepthSorted(RenderQueueHandle queue, int depth) {
-
-        int[] elements = queue.sortedDepths.elements();
-        int size = queue.sortedDepths.size();
-
-        for (int i = 0; i < size; i++) {
-            if (depth < elements[i]) {
-                queue.sortedDepths.add(i, depth);
-                return;
-            }
-        }
-
-        queue.sortedDepths.add(depth);
-    }
 }

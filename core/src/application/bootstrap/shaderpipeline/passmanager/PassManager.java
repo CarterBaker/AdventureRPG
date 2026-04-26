@@ -58,22 +58,22 @@ public class PassManager extends ManagerPackage {
 
     // Push — no declared window → main window \\
 
-    public void pushPass(PassHandle pass, int depth) {
-        renderSystem.pushRenderCall(pass.getModelInstance(), depth);
+    public void pushPass(PassHandle pass, String fboName) {
+        renderSystem.pushRenderCall(pass.getModelInstance(), fboName);
     }
 
-    public void pushPass(PassInstance pass, int depth) {
-        renderSystem.pushRenderCall(pass.getModelInstance(), depth);
+    public void pushPass(PassInstance pass, String fboName) {
+        renderSystem.pushRenderCall(pass.getModelInstance(), fboName);
     }
 
     // Push — explicit window \\
 
-    public void pushPass(PassHandle pass, int depth, WindowInstance window) {
-        renderSystem.pushRenderCall(pass.getModelInstance(), depth, window);
+    public void pushPass(PassHandle pass, String fboName, WindowInstance window) {
+        renderSystem.pushRenderCall(pass.getModelInstance(), fboName, window);
     }
 
-    public void pushPass(PassInstance pass, int depth, WindowInstance window) {
-        renderSystem.pushRenderCall(pass.getModelInstance(), depth, window);
+    public void pushPass(PassInstance pass, String fboName, WindowInstance window) {
+        renderSystem.pushRenderCall(pass.getModelInstance(), fboName, window);
     }
 
     // Accessible \\

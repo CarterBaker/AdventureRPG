@@ -1,13 +1,16 @@
 package application.bootstrap.renderpipeline.rendermanager;
 
+import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
-import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
-import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FboManager;
+import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
+import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.ManagerPackage;
@@ -15,22 +18,14 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RenderManager extends ManagerPackage {
 
-    /*
-     * Coordinates draw passes and routes render call pushes to the correct
-     * window queues. Engine calls draw() once per frame; RenderManager owns
-     * draw ordering for main + detached windows.
-     */
-
-    // Internal
     private CameraManager cameraManager;
     private WindowManager windowManager;
     private PlayerManager playerManager;
     private UBOManager uboManager;
+    private FboManager fboManager;
+    private FboRenderManager fboRenderManager;
 
-    // Systems
     private RenderSystem renderSystem;
-
-    // Internal \\
 
     @Override
     protected void create() {
@@ -40,15 +35,13 @@ public class RenderManager extends ManagerPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.cameraManager = get(CameraManager.class);
         this.windowManager = get(WindowManager.class);
         this.playerManager = get(PlayerManager.class);
         this.uboManager = get(UBOManager.class);
+        this.fboManager = get(FboManager.class);
+        this.fboRenderManager = get(FboRenderManager.class);
     }
-
-    // Draw \\
 
     public void draw() {
         ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
@@ -82,28 +75,66 @@ public class RenderManager extends ManagerPackage {
         uboManager.bindBuffersForCurrentContext();
         playerManager.pushPlayerPositionForWindow(window.getWindowID());
         cameraManager.pushCamera(window);
-        renderSystem.draw(window);
+
+        fboManager.resizeWindowRelative(window.getWidth(), window.getHeight());
+        renderSystem.drawToMappedTargets(window, fboManager);
+
+        fboRenderManager.pushBlits();
+        drawFinal(window);
     }
 
-    // Push — no declared window → render window, context window, active, then main
-    // \\
+    public void draw(FboInstance target) {
+        WindowInstance window = resolveDefaultWindow();
+        if (window == null)
+            return;
 
-    public void pushRenderCall(ModelInstance modelInstance, int depth) {
-        renderSystem.pushRenderCall(modelInstance, depth, null, resolveDefaultWindow());
+        uboManager.bindBuffersForCurrentContext();
+        playerManager.pushPlayerPositionForWindow(window.getWindowID());
+        cameraManager.pushCamera(window);
+        renderSystem.drawToTarget(window, target);
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, int depth, MaskStruct mask) {
-        renderSystem.pushRenderCall(modelInstance, depth, mask, resolveDefaultWindow());
+    public void drawFinal(WindowInstance window) {
+        renderSystem.drawToTarget(window, null);
     }
 
-    // Push — explicit window \\
-
-    public void pushRenderCall(ModelInstance modelInstance, int depth, WindowInstance window) {
-        renderSystem.pushRenderCall(modelInstance, depth, null, window);
+    public void drawFinal() {
+        WindowInstance window = resolveDefaultWindow();
+        if (window != null)
+            drawFinal(window);
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, int depth, MaskStruct mask, WindowInstance window) {
-        renderSystem.pushRenderCall(modelInstance, depth, mask, window);
+    public void pushRenderCall(ModelInstance modelInstance, String fboName) {
+        renderSystem.pushRenderCall(modelInstance, fboName, null, resolveDefaultWindow());
+    }
+
+    public void pushRenderCall(ModelInstance modelInstance, String fboName, MaskStruct mask) {
+        renderSystem.pushRenderCall(modelInstance, fboName, mask, resolveDefaultWindow());
+    }
+
+    public void pushRenderCall(ModelInstance modelInstance, String fboName, WindowInstance window) {
+        renderSystem.pushRenderCall(modelInstance, fboName, null, window);
+    }
+
+    public void pushRenderCall(ModelInstance modelInstance, String fboName, MaskStruct mask, WindowInstance window) {
+        renderSystem.pushRenderCall(modelInstance, fboName, mask, window);
+    }
+
+
+    public void pushScreenCall(ModelInstance modelInstance) {
+        renderSystem.pushScreenCall(modelInstance, null, resolveDefaultWindow());
+    }
+
+    public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask) {
+        renderSystem.pushScreenCall(modelInstance, mask, resolveDefaultWindow());
+    }
+
+    public void pushScreenCall(ModelInstance modelInstance, WindowInstance window) {
+        renderSystem.pushScreenCall(modelInstance, null, window);
+    }
+
+    public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask, WindowInstance window) {
+        renderSystem.pushScreenCall(modelInstance, mask, window);
     }
 
     private WindowInstance resolveDefaultWindow() {
@@ -121,7 +152,6 @@ public class RenderManager extends ManagerPackage {
 
         return windowManager.getMainWindow();
     }
-    // Composite \\
 
     public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer) {
         renderSystem.pushCompositeCall(material, buffer, resolveDefaultWindow());

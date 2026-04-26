@@ -1,0 +1,16 @@
+{
+    "fbos": [
+        {
+            "name": "SkyScene",
+            "format": "RGBA8",
+            "depth": false,
+            "sizingStrategy": "WINDOW_RELATIVE"
+        },
+        {
+            "name": "MainScene",
+            "format": "RGBA8",
+            "depth": true,
+            "sizingStrategy": "WINDOW_RELATIVE"
+        }
+    ]
+}
