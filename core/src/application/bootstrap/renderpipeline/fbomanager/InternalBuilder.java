@@ -1,10 +1,13 @@
-package application.bootstrap.renderpipeline.fbo;
+package application.bootstrap.renderpipeline.fbomanager;
 
 import java.io.File;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+import application.bootstrap.renderpipeline.fbo.FboData;
+import application.bootstrap.renderpipeline.fbo.FboHandle;
+import application.bootstrap.renderpipeline.fbo.FboData.SizingStrategy;
 import engine.graphics.gl.GL20;
 import engine.root.BuilderPackage;
 import engine.root.EngineContext;
@@ -35,7 +38,8 @@ class InternalBuilder extends BuilderPackage {
 
     FboHandle buildHandle(FboData data) {
         int width = data.getSizingStrategy() == FboData.SizingStrategy.FIXED ? data.getWidth() : settings.windowWidth;
-        int height = data.getSizingStrategy() == FboData.SizingStrategy.FIXED ? data.getHeight() : settings.windowHeight;
+        int height = data.getSizingStrategy() == FboData.SizingStrategy.FIXED ? data.getHeight()
+                : settings.windowHeight;
 
         IntArrayList framebuffers = new IntArrayList();
         IntArrayList textures = new IntArrayList();

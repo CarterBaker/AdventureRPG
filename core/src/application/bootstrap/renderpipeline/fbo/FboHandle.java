@@ -51,7 +51,7 @@ public class FboHandle extends HandlePackage {
         return height;
     }
 
-    void setSize(int width, int height) {
+    public void setSize(int width, int height) {
         this.width = width;
         this.height = height;
     }

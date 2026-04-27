@@ -1,7 +1,7 @@
 package application.runtime.lighting;
 
 import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbo.FboManager;
+import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.pass.PassHandle;

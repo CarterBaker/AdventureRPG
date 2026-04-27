@@ -1,10 +1,11 @@
-package application.bootstrap.renderpipeline.fbo;
+package application.bootstrap.renderpipeline.fbomanager;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import application.bootstrap.renderpipeline.fbo.FboData;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
@@ -27,7 +28,7 @@ class InternalLoader extends LoaderPackage {
 
     @Override
     protected void scan() {
-        File root = new File(EngineSetting.FBO_CATALOG_PATH);
+        File root = new File(EngineSetting.FBO_CATALOG_JSON_PATH);
         FileUtility.verifyDirectory(root, "FBO directory not found: " + root.getAbsolutePath());
 
         try (var stream = Files.walk(root.toPath())) {

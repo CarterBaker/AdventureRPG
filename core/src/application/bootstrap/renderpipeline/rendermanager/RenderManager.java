@@ -6,7 +6,7 @@ import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbo.FboManager;
+import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;

@@ -1,6 +1,7 @@
 package application.bootstrap.renderpipeline.fbo;
 
 import application.bootstrap.geometrypipeline.mesh.MeshData;
+import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -63,7 +64,7 @@ public class FboInstance extends InstancePackage {
         return handle.getHeight();
     }
 
-    FboHandle getHandle() {
+    public FboHandle getHandle() {
         return handle;
     }
 

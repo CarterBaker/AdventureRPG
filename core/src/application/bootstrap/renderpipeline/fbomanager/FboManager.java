@@ -1,4 +1,4 @@
-package application.bootstrap.renderpipeline.fbo;
+package application.bootstrap.renderpipeline.fbomanager;
 
 import engine.graphics.gl.GL20;
 import engine.root.EngineContext;
@@ -7,6 +7,11 @@ import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.lwjgl.opengl.GL30C;
+
+import application.bootstrap.renderpipeline.fbo.FboData;
+import application.bootstrap.renderpipeline.fbo.FboHandle;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FboData.SizingStrategy;
 
 public class FboManager extends ManagerPackage {
 

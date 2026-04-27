@@ -53,7 +53,6 @@ public class EngineSetting {
         public static final String MENU_JSON_PATH = "menus";
         public static final String MESH_JSON_PATH = "mesh";
         public static final String PASS_JSON_PATH = "processingpasses";
-        public static final String FBO_CATALOG_PATH = "application/fbos";
         public static final String SHADER_PATH = "shaders";
         public static final String SPRITE_PATH = "sprites";
         public static final String THREAD_CATALOG_PATH = "application/threads";
