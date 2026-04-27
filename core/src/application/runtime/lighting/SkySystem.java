@@ -26,11 +26,11 @@ public class SkySystem extends SystemPackage {
         this.fboManager = get(FboManager.class);
         this.fboRenderManager = get(FboRenderManager.class);
 
-        this.skyPass = passManager.getPassHandleFromPassName(EngineSetting.PASS_SKY);
     }
 
     @Override
     protected void awake() {
+        this.skyPass = passManager.getPassHandleFromPassName(EngineSetting.PASS_SKY);
         this.skyFbo = fboManager.getFbo(EngineSetting.FBO_SKY);
     }
 
