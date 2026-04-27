@@ -12,6 +12,7 @@ import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
+import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
@@ -33,6 +34,7 @@ public class MenuManager extends ManagerPackage {
     private MenuRenderSystem renderSystem;
     private ElementHitSystem hitSystem;
     private CursorLockSystem lockSystem;
+    private FboRenderManager fboRenderManager;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
@@ -68,6 +70,7 @@ public class MenuManager extends ManagerPackage {
         this.renderSystem = get(MenuRenderSystem.class);
         this.hitSystem = get(ElementHitSystem.class);
         this.lockSystem = get(CursorLockSystem.class);
+        this.fboRenderManager = get(FboRenderManager.class);
     }
 
     @Override
@@ -80,6 +83,8 @@ public class MenuManager extends ManagerPackage {
 
         for (int i = 0; i < activeMenus.size(); i++)
             renderSystem.renderMenu(activeMenus.get(i));
+
+        fboRenderManager.pushFbo(renderSystem.getUiFbo());
 
         if (lockSystem.isRaycastLocked())
             hitSystem.updateRaycast(activeMenus);

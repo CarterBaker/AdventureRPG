@@ -11,6 +11,12 @@
             "format": "RGBA8",
             "depth": true,
             "sizingStrategy": "WINDOW_RELATIVE"
+        },
+        {
+            "name": "UIScene",
+            "format": "RGBA8",
+            "depth": false,
+            "sizingStrategy": "WINDOW_RELATIVE"
         }
     ]
 }
