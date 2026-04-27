@@ -9,7 +9,7 @@ public class EngineSetting {
 
         public static final String VERSION = "0.0.0.1a";
         public static final int LOADER_BATCH_SIZE = 32;
-        public static final String THREAD_DEFINITIONS = "program/threads";
+        public static final String THREAD_DEFINITIONS = "application/threads";
 
         // Registry \\
 
@@ -48,7 +48,7 @@ public class EngineSetting {
         public static final String MESH_JSON_PATH = "mesh";
         public static final String PASS_JSON_PATH = "processingpasses";
         public static final String PASS_SKY = "Sky";
-        public static final String FBO_CATALOG_JSON_PATH = "assets/fbos.json";
+        public static final String FBO_CATALOG_JSON_PATH = "application/fbos/fbos.json";
         public static final String SHADER_PATH = "shaders";
         public static final String SPRITE_PATH = "sprites";
         public static final String TOOL_TYPE_JSON_PATH = "tools";
