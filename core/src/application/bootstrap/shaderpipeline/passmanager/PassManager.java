@@ -1,36 +1,21 @@
 package application.bootstrap.shaderpipeline.passmanager;
 
 import application.bootstrap.geometrypipeline.model.ModelInstance;
-import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.pass.PassData;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.pass.PassInstance;
-import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 public class PassManager extends ManagerPackage {
 
-    /*
-     * Owns all compiled PassHandles. Drives bootstrap via InternalLoader.
-     * Passes are pushed into the render system by depth layer. Cloning produces
-     * a PassInstance with a shared mesh reference and a deep-copied
-     * MaterialInstance,
-     * mirroring the material cloning contract.
-     */
-
-    // Internal
     private MaterialManager materialManager;
-    private RenderManager renderSystem;
 
-    // Palette
     private Object2IntOpenHashMap<String> passName2PassID;
     private Int2ObjectOpenHashMap<PassHandle> passID2PassHandle;
-
-    // Base \\
 
     @Override
     protected void create() {
@@ -44,39 +29,12 @@ public class PassManager extends ManagerPackage {
     @Override
     protected void get() {
         this.materialManager = get(MaterialManager.class);
-        this.renderSystem = get(RenderManager.class);
     }
-
-    // Management \\
 
     void addPassHandle(PassHandle handle) {
         passName2PassID.put(handle.getPassName(), handle.getPassID());
         passID2PassHandle.put(handle.getPassID(), handle);
     }
-
-    // Render \\
-
-    // Push — no declared window → main window \\
-
-    public void pushPass(PassHandle pass, String fboName) {
-        renderSystem.pushRenderCall(pass.getModelInstance(), fboName);
-    }
-
-    public void pushPass(PassInstance pass, String fboName) {
-        renderSystem.pushRenderCall(pass.getModelInstance(), fboName);
-    }
-
-    // Push — explicit window \\
-
-    public void pushPass(PassHandle pass, String fboName, WindowInstance window) {
-        renderSystem.pushRenderCall(pass.getModelInstance(), fboName, window);
-    }
-
-    public void pushPass(PassInstance pass, String fboName, WindowInstance window) {
-        renderSystem.pushRenderCall(pass.getModelInstance(), fboName, window);
-    }
-
-    // Accessible \\
 
     public void request(String passName) {
         ((InternalLoader) internalLoader).request(passName);

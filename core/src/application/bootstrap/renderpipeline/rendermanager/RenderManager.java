@@ -77,7 +77,7 @@ public class RenderManager extends ManagerPackage {
         cameraManager.pushCamera(window);
 
         fboManager.resizeWindowRelative(window.getWidth(), window.getHeight());
-        renderSystem.drawToMappedTargets(window, fboManager);
+        renderSystem.drawToMappedTargets(window);
 
         fboRenderManager.pushBlits();
         drawFinal(window);
@@ -104,22 +104,22 @@ public class RenderManager extends ManagerPackage {
             drawFinal(window);
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, String fboName) {
-        renderSystem.pushRenderCall(modelInstance, fboName, null, resolveDefaultWindow());
+    public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth) {
+        renderSystem.pushRenderCall(modelInstance, fbo, depth, null, resolveDefaultWindow());
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, String fboName, MaskStruct mask) {
-        renderSystem.pushRenderCall(modelInstance, fboName, mask, resolveDefaultWindow());
+    public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask) {
+        renderSystem.pushRenderCall(modelInstance, fbo, depth, mask, resolveDefaultWindow());
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, String fboName, WindowInstance window) {
-        renderSystem.pushRenderCall(modelInstance, fboName, null, window);
+    public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, WindowInstance window) {
+        renderSystem.pushRenderCall(modelInstance, fbo, depth, null, window);
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, String fboName, MaskStruct mask, WindowInstance window) {
-        renderSystem.pushRenderCall(modelInstance, fboName, mask, window);
+    public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
+            WindowInstance window) {
+        renderSystem.pushRenderCall(modelInstance, fbo, depth, mask, window);
     }
-
 
     public void pushScreenCall(ModelInstance modelInstance) {
         renderSystem.pushScreenCall(modelInstance, null, resolveDefaultWindow());

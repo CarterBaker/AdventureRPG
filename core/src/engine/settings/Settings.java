@@ -23,7 +23,6 @@ public class Settings {
 
     // Render
     public int maxRenderDistance = 64;
-    public String fboCatalogJsonPath = "assets/fbos.json";
 
     // Input
     public float mouseSensitivity = 0.15f;

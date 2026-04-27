@@ -1,32 +1,20 @@
 package application.bootstrap.renderpipeline.fbo;
 
+import application.bootstrap.geometrypipeline.mesh.MeshData;
+import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class FboInstance extends InstancePackage {
 
-    private FboData data;
-    private IntArrayList framebuffers;
-    private IntArrayList textures;
-    private IntArrayList depthRenderbuffers;
-    private int width;
-    private int height;
+    private FboHandle handle;
+    private MeshData blitMeshOverride;
+    private MaterialInstance blitMaterialOverride;
 
     private FboManager fboManager;
 
-    public void constructor(
-            FboData data,
-            IntArrayList framebuffers,
-            IntArrayList textures,
-            IntArrayList depthRenderbuffers,
-            int width,
-            int height) {
-        this.data = data;
-        this.framebuffers = framebuffers;
-        this.textures = textures;
-        this.depthRenderbuffers = depthRenderbuffers;
-        this.width = width;
-        this.height = height;
+    public void constructor(FboHandle handle) {
+        this.handle = handle;
     }
 
     @Override
@@ -35,6 +23,7 @@ public class FboInstance extends InstancePackage {
     }
 
     public int getTextureId() {
+        IntArrayList textures = handle.getTextures();
         return textures.isEmpty() ? 0 : textures.getInt(textures.size() - 1);
     }
 
@@ -50,32 +39,44 @@ public class FboInstance extends InstancePackage {
         fboManager.resize(this, width, height);
     }
 
-    void setSize(int width, int height) {
-        this.width = width;
-        this.height = height;
-    }
-
     public FboData getFboData() {
-        return data;
+        return handle.getData();
     }
 
     public IntArrayList getFramebuffers() {
-        return framebuffers;
+        return handle.getFramebuffers();
     }
 
     public IntArrayList getTextures() {
-        return textures;
+        return handle.getTextures();
     }
 
     public IntArrayList getDepthRenderbuffers() {
-        return depthRenderbuffers;
+        return handle.getDepthRenderbuffers();
     }
 
     public int getWidth() {
-        return width;
+        return handle.getWidth();
     }
 
     public int getHeight() {
-        return height;
+        return handle.getHeight();
+    }
+
+    FboHandle getHandle() {
+        return handle;
+    }
+
+    public MeshData getBlitMeshOverride() {
+        return blitMeshOverride;
+    }
+
+    public MaterialInstance getBlitMaterialOverride() {
+        return blitMaterialOverride;
+    }
+
+    public void setBlitOverride(MeshData mesh, MaterialInstance material) {
+        this.blitMeshOverride = mesh;
+        this.blitMaterialOverride = material;
     }
 }

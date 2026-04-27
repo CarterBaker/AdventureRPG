@@ -5,6 +5,9 @@ import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstanc
 import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FboManager;
+import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
@@ -23,34 +26,22 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldRenderManager extends ManagerPackage {
 
-    /*
-     * Drives the world render pipeline each frame. Each grid owns its render
-     * queues as Long2ObjectLinkedOpenHashMap<GridSlotHandle> — chunk and mega
-     * world coordinates mapped directly to their slot handle, populated at
-     * rebuild time. No reverse lookup needed at render time. Frustum culling
-     * refreshes once per grid against that grid's window camera. Render calls
-     * are pushed to each grid's window explicitly — no active window state.
-     */
-
-    // Internal
     private MaterialManager materialManager;
     private ModelManager modelManager;
     private RenderManager renderManager;
     private WorldStreamManager worldStreamManager;
     private FrustumCullingSystem frustumCullingSystem;
+    private FboManager fboManager;
+    private FboRenderManager fboRenderManager;
 
-    // GPU Data
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> chunkModels;
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> megaModels;
 
-    // Settings
     private int batchedChunks;
-
-    // Internal \\
+    private FboInstance worldFbo;
 
     @Override
     protected void create() {
-
         this.frustumCullingSystem = create(FrustumCullingSystem.class);
         this.chunkModels = new Long2ObjectOpenHashMap<>();
         this.megaModels = new Long2ObjectOpenHashMap<>();
@@ -59,19 +50,24 @@ public class WorldRenderManager extends ManagerPackage {
 
     @Override
     protected void get() {
-
         this.materialManager = get(MaterialManager.class);
         this.modelManager = get(ModelManager.class);
         this.renderManager = get(RenderManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.fboManager = get(FboManager.class);
+        this.fboRenderManager = get(FboRenderManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        this.worldFbo = fboManager.getFbo(EngineSetting.FBO_WORLD);
     }
 
     @Override
     protected void lateUpdate() {
         renderWorld();
+        fboRenderManager.pushFbo(worldFbo);
     }
-
-    // Render \\
 
     private void renderWorld() {
 
@@ -121,7 +117,7 @@ public class WorldRenderManager extends ManagerPackage {
             for (int i = 0; i < models.size(); i++) {
                 ModelInstance model = models.get(i);
                 model.getMaterial().setUBO(slotUBO);
-                renderManager.pushRenderCall(model, "MainScene", window);
+                renderManager.pushRenderCall(model, worldFbo, 0, window);
             }
         }
     }
@@ -153,12 +149,10 @@ public class WorldRenderManager extends ManagerPackage {
             for (int i = 0; i < models.size(); i++) {
                 ModelInstance model = models.get(i);
                 model.getMaterial().setUBO(slotUBO);
-                renderManager.pushRenderCall(model, "MainScene", window);
+                renderManager.pushRenderCall(model, worldFbo, 0, window);
             }
         }
     }
-
-    // GPU Instance Management \\
 
     public boolean addChunkInstance(WorldRenderInstance worldRenderInstance) {
 

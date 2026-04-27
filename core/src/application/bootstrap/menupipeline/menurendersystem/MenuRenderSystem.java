@@ -1,6 +1,5 @@
 package application.bootstrap.menupipeline.menurendersystem;
 
-import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.element.ElementType;
@@ -10,57 +9,29 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FboManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
-import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuRenderSystem extends SystemPackage {
 
-    /*
-     * Drives element tree traversal, mask stack management, and font GPU
-     * upload and release. Owns the current render window per frame and routes
-     * sprite and font render calls to RenderManager.
-     *
-     * Font scaling contract:
-     * - FontInstance.setText() stores geometry in raw atlas-pixel units.
-     * - At render time we compute scale = targetFontSize / atlasPixelSize.
-     * - That scale goes onto the transform matrix diagonal so both glyph
-     * quads AND their spacing grow/shrink uniformly.
-     * - setText is only re-called when the string changes, not on size change.
-     *
-     * Toolbar contract:
-     * - TOOLBAR elements ignore all layout fields except height. They are always
-     * placed at the top of the screen at full width, and their children are always
-     * laid out as a horizontal stack regardless of the stack field in data.
-     * - EXPANDABLE_CONTAINER children are rendered as a vertical dropdown below
-     * the container only when expanded. Collapsed containers render no children.
-     */
-
-    // Internal
     private RenderManager renderManager;
-    private MaterialManager materialManager;
     private FontRenderSystem fontRenderSystem;
+    private FboManager fboManager;
 
-    // Mask Pool
     private MaskStruct[] maskPool;
     private int maskDepth;
 
-    // Cached Transforms
-    private Matrix4 fontTransform;
-
-    // Current render target — set per menu before traversal
     private WindowInstance currentWindow;
+    private FboInstance uiFbo;
 
     @Override
     protected void create() {
-
-        this.fontTransform = new Matrix4();
-
         this.maskPool = new MaskStruct[EngineSetting.MAX_MASK_DEPTH];
         for (int i = 0; i < maskPool.length; i++)
             maskPool[i] = new MaskStruct();
@@ -68,10 +39,14 @@ public class MenuRenderSystem extends SystemPackage {
 
     @Override
     protected void get() {
-
         this.renderManager = get(RenderManager.class);
-        this.materialManager = get(MaterialManager.class);
         this.fontRenderSystem = get(FontRenderSystem.class);
+        this.fboManager = get(FboManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        this.uiFbo = fboManager.getFbo(EngineSetting.FBO_UI);
     }
 
     public void renderMenu(MenuInstance instance) {
@@ -92,8 +67,6 @@ public class MenuRenderSystem extends SystemPackage {
         for (int i = 0; i < elements.size(); i++)
             renderElement(elements.get(i), 0f, 0f, screenW, screenH);
     }
-
-    // Render Traversal \\
 
     private void renderElement(
             ElementInstance element,
@@ -245,18 +218,14 @@ public class MenuRenderSystem extends SystemPackage {
             parent.setContentW(contentSize);
     }
 
-    // Sprite Render Call \\
-
     private void pushSpriteRenderCall(ElementInstance element) {
         element.getSpriteInstance()
                 .getModelInstance()
                 .getMaterial()
                 .setUniform("u_transform", element.getTransform());
         renderManager.pushRenderCall(
-                element.getSpriteInstance().getModelInstance(), "MainScene", currentMask(), currentWindow);
+                element.getSpriteInstance().getModelInstance(), uiFbo, 0, currentMask(), currentWindow);
     }
-
-    // Font Render Call \\
 
     private void pushFontRenderCall(ElementInstance element) {
 
@@ -291,8 +260,6 @@ public class MenuRenderSystem extends SystemPackage {
         fontRenderSystem.submit(font, x, y, scale, currentMask(), currentWindow);
     }
 
-    // Mask Stack \\
-
     private void pushMask(ElementInstance element) {
 
         int x = (int) element.getComputedLeft();
@@ -324,8 +291,6 @@ public class MenuRenderSystem extends SystemPackage {
         return maskDepth == 0 ? null : maskPool[maskDepth - 1];
     }
 
-    // Font GPU Release \\
-
     public void releaseFontModels(ObjectArrayList<ElementInstance> elements) {
 
         for (int i = 0; i < elements.size(); i++) {
@@ -338,5 +303,9 @@ public class MenuRenderSystem extends SystemPackage {
             if (el.hasChildren())
                 releaseFontModels(el.getChildren());
         }
+    }
+
+    public FboInstance getUiFbo() {
+        return uiFbo;
     }
 }

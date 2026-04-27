@@ -1,27 +1,25 @@
 package application.bootstrap.renderpipeline.rendermanager;
 
+import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RenderQueueHandle extends HandlePackage {
 
-    // Render Call Buffer
     private RenderCallStruct[] renderCallBuffer;
     int renderCallCursor;
 
-    // Palette — lookup
-    Object2ObjectOpenHashMap<String, Int2ObjectOpenHashMap<RenderBatchStruct>> fbo2MaterialBatches;
+    Object2ObjectOpenHashMap<FboInstance, Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>>> fbo2Depth2MaterialBatches;
+    Object2ObjectOpenHashMap<FboInstance, Int2ObjectOpenHashMap<ObjectArrayList<RenderBatchStruct>>> fbo2Depth2BatchList;
+    Object2ObjectOpenHashMap<FboInstance, IntArrayList> fbo2DepthOrder;
+    ObjectArrayList<FboInstance> queuedFbos;
 
-    // Palette — iteration
-    ObjectArrayList<String> queuedFboNames;
-    Object2ObjectOpenHashMap<String, ObjectArrayList<RenderBatchStruct>> fbo2BatchList;
-
-    // Screen Queue
     Int2ObjectOpenHashMap<RenderBatchStruct> screenMaterialBatches;
     ObjectArrayList<RenderBatchStruct> screenBatchList;
 
@@ -31,9 +29,10 @@ public class RenderQueueHandle extends HandlePackage {
         for (int i = 0; i < renderCallBuffer.length; i++)
             renderCallBuffer[i] = new RenderCallStruct();
 
-        this.fbo2MaterialBatches = new Object2ObjectOpenHashMap<>();
-        this.queuedFboNames = new ObjectArrayList<>();
-        this.fbo2BatchList = new Object2ObjectOpenHashMap<>();
+        this.fbo2Depth2MaterialBatches = new Object2ObjectOpenHashMap<>();
+        this.fbo2Depth2BatchList = new Object2ObjectOpenHashMap<>();
+        this.fbo2DepthOrder = new Object2ObjectOpenHashMap<>();
+        this.queuedFbos = new ObjectArrayList<>();
 
         this.screenMaterialBatches = new Int2ObjectOpenHashMap<>();
         this.screenBatchList = new ObjectArrayList<>();
@@ -49,9 +48,10 @@ public class RenderQueueHandle extends HandlePackage {
 
     void rewindFrame() {
         renderCallCursor = 0;
-        queuedFboNames.clear();
-        fbo2MaterialBatches.clear();
-        fbo2BatchList.clear();
+        queuedFbos.clear();
+        fbo2Depth2MaterialBatches.clear();
+        fbo2Depth2BatchList.clear();
+        fbo2DepthOrder.clear();
         screenMaterialBatches.clear();
         screenBatchList.clear();
     }
