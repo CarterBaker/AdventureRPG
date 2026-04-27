@@ -23,6 +23,11 @@ class GLSLUtility extends EngineUtility {
         EngineContext.gl20.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
     }
 
+    static void clearBuffer(float r, float g, float b, float a) {
+        EngineContext.gl20.glClearColor(r, g, b, a);
+        EngineContext.gl20.glClear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT);
+    }
+
     static void clearDepthBuffer() {
         EngineContext.gl20.glClear(GL30.GL_DEPTH_BUFFER_BIT);
     }

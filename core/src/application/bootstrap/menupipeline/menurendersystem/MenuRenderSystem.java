@@ -11,6 +11,7 @@ import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbo.FboManager;
+import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -23,6 +24,7 @@ public class MenuRenderSystem extends SystemPackage {
     private RenderManager renderManager;
     private FontRenderSystem fontRenderSystem;
     private FboManager fboManager;
+    private FboRenderManager fboRenderManager;
 
     private MaskStruct[] maskPool;
     private int maskDepth;
@@ -42,6 +44,7 @@ public class MenuRenderSystem extends SystemPackage {
         this.renderManager = get(RenderManager.class);
         this.fontRenderSystem = get(FontRenderSystem.class);
         this.fboManager = get(FboManager.class);
+        this.fboRenderManager = get(FboRenderManager.class);
     }
 
     @Override
@@ -66,6 +69,8 @@ public class MenuRenderSystem extends SystemPackage {
 
         for (int i = 0; i < elements.size(); i++)
             renderElement(elements.get(i), 0f, 0f, screenW, screenH);
+
+        fboRenderManager.pushFbo(uiFbo);
     }
 
     private void renderElement(
@@ -303,9 +308,5 @@ public class MenuRenderSystem extends SystemPackage {
             if (el.hasChildren())
                 releaseFontModels(el.getChildren());
         }
-    }
-
-    public FboInstance getUiFbo() {
-        return uiFbo;
     }
 }

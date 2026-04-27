@@ -16,59 +16,24 @@ import org.lwjgl.opengl.GL30C;
 
 class InternalBuilder extends BuilderPackage {
 
-    ObjectArrayList<FboHandle> build(File file) {
+    ObjectArrayList<FboData> buildData(File file) {
         JsonObject root = JsonUtility.loadJsonObject(file);
         JsonArray list = root.has("fbos") ? JsonUtility.validateArray(root, "fbos") : new JsonArray();
 
         if (list.size() == 0 && root.has("name"))
             list.add(root);
 
-        ObjectArrayList<FboHandle> handles = new ObjectArrayList<>();
+        ObjectArrayList<FboData> dataList = new ObjectArrayList<>();
 
         for (int i = 0; i < list.size(); i++) {
             JsonObject json = list.get(i).getAsJsonObject();
-            FboData data = buildData(json);
-            handles.add(buildHandle(data));
+            dataList.add(buildDataEntry(json));
         }
 
-        return handles;
+        return dataList;
     }
 
-    FboHandle buildByName(File file, String fboName) {
-        JsonObject root = JsonUtility.loadJsonObject(file);
-        JsonArray list = root.has("fbos") ? JsonUtility.validateArray(root, "fbos") : new JsonArray();
-
-        if (list.size() == 0 && root.has("name"))
-            list.add(root);
-
-        for (int i = 0; i < list.size(); i++) {
-            JsonObject json = list.get(i).getAsJsonObject();
-            String jsonName = JsonUtility.validateString(json, "name");
-
-            if (!jsonName.equals(fboName))
-                continue;
-
-            FboData data = buildData(json);
-            return buildHandle(data);
-        }
-
-        return null;
-    }
-
-    private FboData buildData(JsonObject json) {
-        String name = JsonUtility.validateString(json, "name");
-        String formatName = JsonUtility.getString(json, "format", "RGBA8");
-        boolean depth = JsonUtility.getBoolean(json, "depth", true);
-        FboData.SizingStrategy strategy = FboData.SizingStrategy
-                .valueOf(JsonUtility.getString(json, "sizingStrategy", "WINDOW_RELATIVE"));
-        int width = JsonUtility.getInt(json, "width", settings.windowWidth);
-        int height = JsonUtility.getInt(json, "height", settings.windowHeight);
-        int format = resolveInternalFormat(formatName);
-
-        return new FboData(name, format, depth, strategy, width, height);
-    }
-
-    private FboHandle buildHandle(FboData data) {
+    FboHandle buildHandle(FboData data) {
         int width = data.getSizingStrategy() == FboData.SizingStrategy.FIXED ? data.getWidth() : settings.windowWidth;
         int height = data.getSizingStrategy() == FboData.SizingStrategy.FIXED ? data.getHeight() : settings.windowHeight;
 
@@ -114,6 +79,19 @@ class InternalBuilder extends BuilderPackage {
         FboHandle handle = create(FboHandle.class);
         handle.constructor(data, framebuffers, textures, depthRenderbuffers, width, height);
         return handle;
+    }
+
+    private FboData buildDataEntry(JsonObject json) {
+        String name = JsonUtility.validateString(json, "name");
+        String formatName = JsonUtility.getString(json, "format", "RGBA8");
+        boolean depth = JsonUtility.getBoolean(json, "depth", true);
+        FboData.SizingStrategy strategy = FboData.SizingStrategy
+                .valueOf(JsonUtility.getString(json, "sizingStrategy", "WINDOW_RELATIVE"));
+        int width = JsonUtility.getInt(json, "width", settings.windowWidth);
+        int height = JsonUtility.getInt(json, "height", settings.windowHeight);
+        int format = resolveInternalFormat(formatName);
+
+        return new FboData(name, format, depth, strategy, width, height);
     }
 
     private int resolveInternalFormat(String formatName) {
