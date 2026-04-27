@@ -49,7 +49,7 @@ class RenderSystem extends SystemPackage {
             GLSLUtility.enableDepth();
             GLSLUtility.enableBlending();
             GLSLUtility.disableCulling();
-            GLSLUtility.clearBuffer();
+            GLSLUtility.clearBuffer(0f, 0f, 0f, 0f);
             GLSLUtility.clearDepthBuffer();
 
             drawDepthSortedBatches(queue, target, window);
@@ -57,6 +57,7 @@ class RenderSystem extends SystemPackage {
         }
 
         compositeRenderSystem.draw(window);
+        queue.rewindFrame();
     }
 
     void drawToTarget(WindowInstance window, FboInstance target) {
@@ -72,14 +73,6 @@ class RenderSystem extends SystemPackage {
         GLSLUtility.disableCulling();
         GLSLUtility.clearBuffer();
         GLSLUtility.clearDepthBuffer();
-
-        Object[] fboObjects = queue.queuedFbos.elements();
-        int fboCount = queue.queuedFbos.size();
-
-        for (int f = 0; f < fboCount; f++) {
-            FboInstance queuedFbo = (FboInstance) fboObjects[f];
-            drawDepthSortedBatches(queue, queuedFbo, window);
-        }
 
         drawScreenPass(queue, window);
 
@@ -105,6 +98,7 @@ class RenderSystem extends SystemPackage {
 
     private void drawScreenPass(RenderQueueHandle queue, WindowInstance window) {
         GLSLUtility.disableDepth();
+        GLSLUtility.enableBlending();
         drawBatches(queue.screenBatchList, window);
         GLSLUtility.enableDepth();
     }

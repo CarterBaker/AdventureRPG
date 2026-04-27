@@ -1,7 +1,5 @@
 package application.bootstrap.renderpipeline.fbo;
 
-import java.io.File;
-
 import engine.graphics.gl.GL20;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
@@ -14,28 +12,28 @@ public class FboManager extends ManagerPackage {
 
     private InternalBuilder internalBuilder;
 
-    private Object2ObjectOpenHashMap<String, FboHandle> fboName2Handle;
+    private Object2ObjectOpenHashMap<String, FboData> fboName2Data;
     private Object2ObjectOpenHashMap<String, FboInstance> fboName2Instance;
-    private ObjectArrayList<FboHandle> orderedFbos;
+    private ObjectArrayList<FboData> orderedFboData;
 
     @Override
     protected void create() {
-        this.fboName2Handle = new Object2ObjectOpenHashMap<>();
+        this.fboName2Data = new Object2ObjectOpenHashMap<>();
         this.fboName2Instance = new Object2ObjectOpenHashMap<>();
-        this.orderedFbos = new ObjectArrayList<>();
+        this.orderedFboData = new ObjectArrayList<>();
 
         this.internalBuilder = create(InternalBuilder.class);
         create(InternalLoader.class);
     }
 
-    void addFboHandle(FboHandle handle) {
-        String name = handle.getData().getName();
+    void addFboData(FboData data) {
+        String name = data.getName();
 
-        if (fboName2Handle.containsKey(name))
+        if (fboName2Data.containsKey(name))
             return;
 
-        fboName2Handle.put(name, handle);
-        orderedFbos.add(handle);
+        fboName2Data.put(name, data);
+        orderedFboData.add(data);
     }
 
     public void bind(FboInstance fbo) {
@@ -84,13 +82,12 @@ public class FboManager extends ManagerPackage {
         if (instance != null)
             return instance;
 
-        FboHandle handle = fboName2Handle.get(name);
+        FboData data = fboName2Data.get(name);
 
-        if (handle == null)
-            handle = buildMissingFbo(name);
-
-        if (handle == null)
+        if (data == null)
             throwException("FBO not found in catalog: " + name);
+
+        FboHandle handle = internalBuilder.buildHandle(data);
 
         instance = create(FboInstance.class);
         instance.constructor(handle);
@@ -105,31 +102,16 @@ public class FboManager extends ManagerPackage {
     }
 
     public void resizeWindowRelative(int width, int height) {
-        Object[] elements = orderedFbos.elements();
-        int count = orderedFbos.size();
+        Object[] elements = orderedFboData.elements();
+        int count = orderedFboData.size();
 
         for (int i = 0; i < count; i++) {
-            FboHandle handle = (FboHandle) elements[i];
-            if (handle.getData().getSizingStrategy() != FboData.SizingStrategy.WINDOW_RELATIVE)
+            FboData data = (FboData) elements[i];
+            if (data.getSizingStrategy() != FboData.SizingStrategy.WINDOW_RELATIVE)
                 continue;
 
-            FboInstance instance = getFbo(handle.getData().getName());
+            FboInstance instance = getFbo(data.getName());
             resize(instance, width, height);
         }
-    }
-
-    private FboHandle buildMissingFbo(String name) {
-        File file = new File(EngineSetting.FBO_CATALOG_JSON_PATH);
-
-        if (!file.exists())
-            return null;
-
-        FboHandle handle = internalBuilder.buildByName(file, name);
-
-        if (handle == null)
-            return null;
-
-        addFboHandle(handle);
-        return handle;
     }
 }
