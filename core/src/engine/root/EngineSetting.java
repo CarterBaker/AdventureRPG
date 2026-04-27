@@ -47,6 +47,7 @@ public class EngineSetting {
         public static final String BLOCK_TEXTURE_PATH = "textures";
         public static final String CALENDAR_JSON_PATH = "calendars";
         public static final String ENTITY_JSON_PATH = "entities";
+        public static final String FBO_CATALOG_JSON_PATH = "application/fbos";
         public static final String FONT_PATH = "fonts";
         public static final String ITEM_JSON_PATH = "items";
         public static final String MATERIAL_JSON_PATH = "materials";
@@ -62,7 +63,6 @@ public class EngineSetting {
 
         // Framebuffer \\
 
-        public static final String FBO_CATALOG_JSON_PATH = "application/fbos";
         public static final String FBO_SKY = "SkyScene";
         public static final String FBO_WORLD = "MainScene";
         public static final String FBO_UI = "UIScene";

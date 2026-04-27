@@ -6,8 +6,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import application.bootstrap.renderpipeline.fbo.FboData;
-import application.bootstrap.renderpipeline.fbo.FboHandle;
-import application.bootstrap.renderpipeline.fbo.FboData.SizingStrategy;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FboSizingStrategy;
 import engine.graphics.gl.GL20;
 import engine.root.BuilderPackage;
 import engine.root.EngineContext;
@@ -17,7 +17,15 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.lwjgl.opengl.GL30C;
 
+/*
+ * Parses FBO JSON descriptors into FboData during bootstrap, and constructs
+ * GL-backed FboInstances on demand when getFbo() resolves a name for the
+ * first time. GL allocation and framebuffer completeness checks happen here
+ * so FboManager stays free of raw GL calls.
+ */
 class InternalBuilder extends BuilderPackage {
+
+    // Build \\
 
     ObjectArrayList<FboData> buildData(File file) {
         JsonObject root = JsonUtility.loadJsonObject(file);
@@ -36,10 +44,9 @@ class InternalBuilder extends BuilderPackage {
         return dataList;
     }
 
-    FboHandle buildHandle(FboData data) {
-        int width = data.getSizingStrategy() == FboData.SizingStrategy.FIXED ? data.getWidth() : settings.windowWidth;
-        int height = data.getSizingStrategy() == FboData.SizingStrategy.FIXED ? data.getHeight()
-                : settings.windowHeight;
+    FboInstance buildInstance(FboData data) {
+        int width = data.getSizingStrategy() == FboSizingStrategy.FIXED ? data.getWidth() : settings.windowWidth;
+        int height = data.getSizingStrategy() == FboSizingStrategy.FIXED ? data.getHeight() : settings.windowHeight;
 
         IntArrayList framebuffers = new IntArrayList();
         IntArrayList textures = new IntArrayList();
@@ -80,16 +87,19 @@ class InternalBuilder extends BuilderPackage {
         if (depthBuffer != 0)
             depthRenderbuffers.add(depthBuffer);
 
-        FboHandle handle = create(FboHandle.class);
-        handle.constructor(data, framebuffers, textures, depthRenderbuffers, width, height);
-        return handle;
+        FboInstance instance = create(FboInstance.class);
+        instance.constructor(data, framebuffers, textures, depthRenderbuffers, width, height);
+
+        return instance;
     }
+
+    // Internal \\
 
     private FboData buildDataEntry(JsonObject json) {
         String name = JsonUtility.validateString(json, "name");
         String formatName = JsonUtility.getString(json, "format", "RGBA8");
         boolean depth = JsonUtility.getBoolean(json, "depth", true);
-        FboData.SizingStrategy strategy = FboData.SizingStrategy
+        FboSizingStrategy strategy = FboSizingStrategy
                 .valueOf(JsonUtility.getString(json, "sizingStrategy", "WINDOW_RELATIVE"));
         int width = JsonUtility.getInt(json, "width", settings.windowWidth);
         int height = JsonUtility.getInt(json, "height", settings.windowHeight);
@@ -106,4 +116,5 @@ class InternalBuilder extends BuilderPackage {
             default -> GL20.GL_RGBA8;
         };
     }
+
 }

@@ -8,14 +8,47 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class FboInstance extends InstancePackage {
 
-    private FboHandle handle;
+    /*
+     * Runtime FBO wrapper. Holds GL resources directly — no handle indirection
+     * at call sites. Delegates bind, unbind, and resize back to FboManager so
+     * all GL state changes stay in one place. Blit overrides are optional and
+     * checked by the render pipeline before falling back to defaults.
+     */
+
+    // Data
+    private FboData data;
+
+    // GL Resources
+    private IntArrayList framebuffers;
+    private IntArrayList textures;
+    private IntArrayList depthRenderbuffers;
+
+    // Dimensions
+    private int width;
+    private int height;
+
+    // Blit
     private MeshData blitMeshOverride;
     private MaterialInstance blitMaterialOverride;
 
+    // Internal
     private FboManager fboManager;
 
-    public void constructor(FboHandle handle) {
-        this.handle = handle;
+    // Constructor \\
+
+    public void constructor(
+            FboData data,
+            IntArrayList framebuffers,
+            IntArrayList textures,
+            IntArrayList depthRenderbuffers,
+            int width,
+            int height) {
+        this.data = data;
+        this.framebuffers = framebuffers;
+        this.textures = textures;
+        this.depthRenderbuffers = depthRenderbuffers;
+        this.width = width;
+        this.height = height;
     }
 
     @Override
@@ -23,10 +56,7 @@ public class FboInstance extends InstancePackage {
         this.fboManager = get(FboManager.class);
     }
 
-    public int getTextureId() {
-        IntArrayList textures = handle.getTextures();
-        return textures.isEmpty() ? 0 : textures.getInt(textures.size() - 1);
-    }
+    // Framebuffer \\
 
     public void bind() {
         fboManager.bind(this);
@@ -36,36 +66,52 @@ public class FboInstance extends InstancePackage {
         fboManager.unbind();
     }
 
+    // Resize \\
+
     public void resize(int width, int height) {
         fboManager.resize(this, width, height);
     }
 
+    public void setSize(int width, int height) {
+        this.width = width;
+        this.height = height;
+    }
+
+    // Blit \\
+
+    public void setBlitOverride(MeshData mesh, MaterialInstance material) {
+        this.blitMeshOverride = mesh;
+        this.blitMaterialOverride = material;
+    }
+
+    // Accessible \\
+
+    public int getTextureId() {
+        return textures.isEmpty() ? 0 : textures.getInt(textures.size() - 1);
+    }
+
     public FboData getFboData() {
-        return handle.getData();
+        return data;
     }
 
     public IntArrayList getFramebuffers() {
-        return handle.getFramebuffers();
+        return framebuffers;
     }
 
     public IntArrayList getTextures() {
-        return handle.getTextures();
+        return textures;
     }
 
     public IntArrayList getDepthRenderbuffers() {
-        return handle.getDepthRenderbuffers();
+        return depthRenderbuffers;
     }
 
     public int getWidth() {
-        return handle.getWidth();
+        return width;
     }
 
     public int getHeight() {
-        return handle.getHeight();
-    }
-
-    public FboHandle getHandle() {
-        return handle;
+        return height;
     }
 
     public MeshData getBlitMeshOverride() {
@@ -76,8 +122,4 @@ public class FboInstance extends InstancePackage {
         return blitMaterialOverride;
     }
 
-    public void setBlitOverride(MeshData mesh, MaterialInstance material) {
-        this.blitMeshOverride = mesh;
-        this.blitMaterialOverride = material;
-    }
 }
