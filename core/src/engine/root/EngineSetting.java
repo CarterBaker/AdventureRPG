@@ -56,7 +56,7 @@ public class EngineSetting {
         public static final String FBO_CATALOG_PATH = "application/fbos";
         public static final String SHADER_PATH = "shaders";
         public static final String SPRITE_PATH = "sprites";
-        public static final String THREAD_DEFINITIONS = "application/threads";
+        public static final String THREAD_CATALOG_PATH = "application/threads";
         public static final String TOOL_TYPE_JSON_PATH = "tools";
         public static final String UBO_JSON_PATH = "ubos";
         public static final String WORLD_TEXTURE_PATH = "worlds";

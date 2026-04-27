@@ -31,7 +31,7 @@ class InternalLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.THREAD_DEFINITIONS);
+        this.root = new File(EngineSetting.THREAD_CATALOG_PATH);
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
         this.threadName2ResourceName = new Object2ObjectOpenHashMap<>();
 
