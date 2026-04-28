@@ -3,6 +3,7 @@ package application.bootstrap.renderpipeline.fbomanager;
 import engine.graphics.gl.GL20;
 import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 
 class GLSLUtility extends EngineUtility {
@@ -16,7 +17,7 @@ class GLSLUtility extends EngineUtility {
     }
 
     static void unbindFramebuffer() {
-        EngineContext.gl30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
+        EngineContext.gl30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, EngineSetting.GL_HANDLE_NONE);
     }
 
     static void framebufferTexture2D(int texture) {
@@ -37,7 +38,7 @@ class GLSLUtility extends EngineUtility {
     }
 
     static void unbindRenderbuffer() {
-        EngineContext.gl30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, 0);
+        EngineContext.gl30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, EngineSetting.GL_HANDLE_NONE);
     }
 
     static void renderbufferStorage(int internalFormat, int width, int height) {
