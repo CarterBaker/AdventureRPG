@@ -53,10 +53,9 @@ class RenderSystem extends SystemPackage {
             GLSLUtility.clearDepthBuffer();
 
             drawDepthSortedBatches(queue, target, window);
+            compositeRenderSystem.draw(queue, target, window);
             target.unbind();
         }
-
-        compositeRenderSystem.draw(window);
         queue.rewindFrame();
     }
 
@@ -76,7 +75,7 @@ class RenderSystem extends SystemPackage {
 
         drawScreenPass(queue, window);
 
-        compositeRenderSystem.draw(window);
+        compositeRenderSystem.drawScreen(queue, window);
         queue.rewindFrame();
 
         if (target != null)
@@ -219,8 +218,12 @@ class RenderSystem extends SystemPackage {
         GLSLUtility.unbindVAO();
     }
 
-    void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer, WindowInstance window) {
-        compositeRenderSystem.submit(material, buffer, window);
+    void pushCompositeCall(
+            MaterialInstance material,
+            CompositeBufferInstance buffer,
+            FboInstance fbo,
+            WindowInstance window) {
+        compositeRenderSystem.submit(material, buffer, fbo, window);
     }
 
     void removeWindowResources(WindowInstance window) {

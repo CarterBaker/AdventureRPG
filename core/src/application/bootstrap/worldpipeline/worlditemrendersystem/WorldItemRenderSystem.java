@@ -77,7 +77,7 @@ public class WorldItemRenderSystem extends ManagerPackage {
 
             for (int i = 0; i < windowManager.getWindows().size(); i++) {
                 WindowInstance window = windowManager.getWindows().get(i);
-                renderSystem.pushCompositeCall(composite.getMaterial(), buffer, window);
+                renderSystem.pushCompositeCall(composite.getMaterial(), buffer, null, window);
             }
         }
     }

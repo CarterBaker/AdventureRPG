@@ -5,6 +5,7 @@ import application.bootstrap.geometrypipeline.compositebuffermanager.CompositeBu
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.menupipeline.font.FontInstance;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -61,6 +62,7 @@ public class FontRenderSystem extends SystemPackage {
             FontInstance font,
             float screenX, float screenY, float scale,
             MaskStruct mask,
+            FboInstance fbo,
             WindowInstance window) {
 
         font.prepareComposite(screenX, screenY, scale);
@@ -89,7 +91,7 @@ public class FontRenderSystem extends SystemPackage {
             state.buffer.addInstance(state.scratch);
         }
 
-        renderManager.pushCompositeCall(font.getMaterial(), state.buffer, window);
+        renderManager.pushCompositeCall(font.getMaterial(), state.buffer, fbo, window);
     }
 
     // Draw \\

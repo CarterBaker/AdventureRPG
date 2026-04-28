@@ -255,7 +255,7 @@ public class MenuRenderSystem extends SystemPackage {
         float y = (screenH - element.getComputedTop() - element.getComputedH())
                 + (element.getComputedH() - scaledH) * 0.5f;
 
-        fontRenderSystem.submit(font, x, y, scale, currentMask(), currentWindow);
+        fontRenderSystem.submit(font, x, y, scale, currentMask(), targetFbo, currentWindow);
     }
 
     private void pushMask(ElementInstance element) {
