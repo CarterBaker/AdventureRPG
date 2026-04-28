@@ -44,7 +44,7 @@ public class MenuRenderSystem extends SystemPackage {
         this.fboRenderSystem = get(FboRenderSystem.class);
     }
 
-    public void renderMenu(MenuInstance instance, FboInstance uiTargetFbo) {
+    public void renderMenu(MenuInstance instance, FboInstance uiTargetFbo, int layer) {
 
         if (!instance.isVisible() || uiTargetFbo == null)
             return;
@@ -63,7 +63,7 @@ public class MenuRenderSystem extends SystemPackage {
         for (int i = 0; i < elements.size(); i++)
             renderElement(elements.get(i), 0f, 0f, screenW, screenH);
 
-        fboRenderSystem.pushFbo(uiTargetFbo);
+        fboRenderSystem.pushFbo(uiTargetFbo, layer);
     }
 
     private void renderElement(

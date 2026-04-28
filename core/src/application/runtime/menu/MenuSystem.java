@@ -3,8 +3,8 @@ package application.runtime.menu;
 import application.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.runtime.RuntimeSetting;
 import engine.root.SystemPackage;
-import engine.root.EngineSetting;
 
 public class MenuSystem extends SystemPackage {
 
@@ -32,7 +32,7 @@ public class MenuSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        menuManager.setMenuTargetFbo(fboManager.getFbo(EngineSetting.FBO_UI));
+        menuManager.setMenuTargetFbo(fboManager.getFbo(RuntimeSetting.FBO_UI));
         mainMenuBranch.openMenu(context.getWindow());
     }
 }
