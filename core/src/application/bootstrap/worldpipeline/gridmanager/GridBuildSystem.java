@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.gridmanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
@@ -50,7 +51,7 @@ class GridBuildSystem extends SystemPackage {
 
     // Build \\
 
-    GridInstance buildGrid(EntityInstance focalEntity, WindowInstance windowInstance) {
+    GridInstance buildGrid(EntityInstance focalEntity, WindowInstance windowInstance, FboInstance renderTargetFbo) {
 
         float radius = calculateRadius();
         float radiusSquared = radius * radius;
@@ -75,6 +76,7 @@ class GridBuildSystem extends SystemPackage {
         gridInstance.constructor(
                 focalEntity,
                 windowInstance,
+                renderTargetFbo,
                 totalSlots,
                 loadOrder,
                 gridCoordinates,

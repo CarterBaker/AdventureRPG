@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.grid;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
@@ -35,6 +36,7 @@ public class GridInstance extends InstancePackage {
 
     // Window
     private WindowInstance windowInstance;
+    private FboInstance renderTargetFbo;
 
     // Grid
     private int totalSlots;
@@ -67,6 +69,7 @@ public class GridInstance extends InstancePackage {
     public void constructor(
             EntityInstance focalEntity,
             WindowInstance windowInstance,
+            FboInstance renderTargetFbo,
             int totalSlots,
             long[] loadOrder,
             LongOpenHashSet gridCoordinates,
@@ -79,6 +82,7 @@ public class GridInstance extends InstancePackage {
 
         // Window
         this.windowInstance = windowInstance;
+        this.renderTargetFbo = renderTargetFbo;
 
         // Grid
         this.totalSlots = totalSlots;
@@ -213,6 +217,10 @@ public class GridInstance extends InstancePackage {
 
     public WindowInstance getWindowInstance() {
         return windowInstance;
+    }
+
+    public FboInstance getRenderTargetFbo() {
+        return renderTargetFbo;
     }
 
     public WorldHandle getWorldHandle() {

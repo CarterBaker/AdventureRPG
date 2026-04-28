@@ -10,7 +10,6 @@ import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
@@ -23,15 +22,13 @@ public class MenuRenderSystem extends SystemPackage {
 
     private RenderManager renderManager;
     private FontRenderSystem fontRenderSystem;
-    private FboManager fboManager;
     private FboRenderManager fboRenderManager;
 
     private MaskStruct[] maskPool;
     private int maskDepth;
 
     private WindowInstance currentWindow;
-    private FboInstance uiFbo;
-
+    private FboInstance targetFbo;
     @Override
     protected void create() {
         this.maskPool = new MaskStruct[EngineSetting.MAX_MASK_DEPTH];
@@ -43,21 +40,16 @@ public class MenuRenderSystem extends SystemPackage {
     protected void get() {
         this.renderManager = get(RenderManager.class);
         this.fontRenderSystem = get(FontRenderSystem.class);
-        this.fboManager = get(FboManager.class);
         this.fboRenderManager = get(FboRenderManager.class);
     }
 
-    @Override
-    protected void awake() {
-        this.uiFbo = fboManager.getFbo(EngineSetting.FBO_UI);
-    }
+    public void renderMenu(MenuInstance instance, FboInstance uiTargetFbo) {
 
-    public void renderMenu(MenuInstance instance) {
-
-        if (!instance.isVisible())
+        if (!instance.isVisible() || uiTargetFbo == null)
             return;
 
         currentWindow = instance.getWindow();
+        this.targetFbo = uiTargetFbo;
 
         float screenW = currentWindow.getWidth();
         float screenH = currentWindow.getHeight();
@@ -70,7 +62,7 @@ public class MenuRenderSystem extends SystemPackage {
         for (int i = 0; i < elements.size(); i++)
             renderElement(elements.get(i), 0f, 0f, screenW, screenH);
 
-        fboRenderManager.pushFbo(uiFbo);
+        fboRenderManager.pushFbo(uiTargetFbo);
     }
 
     private void renderElement(
@@ -229,7 +221,7 @@ public class MenuRenderSystem extends SystemPackage {
                 .getMaterial()
                 .setUniform("u_transform", element.getTransform());
         renderManager.pushRenderCall(
-                element.getSpriteInstance().getModelInstance(), uiFbo, 0, currentMask(), currentWindow);
+                element.getSpriteInstance().getModelInstance(), targetFbo, 0, currentMask(), currentWindow);
     }
 
     private void pushFontRenderCall(ElementInstance element) {

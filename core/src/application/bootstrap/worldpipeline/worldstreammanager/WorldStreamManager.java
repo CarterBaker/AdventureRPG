@@ -7,6 +7,7 @@ import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
 import application.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -57,8 +58,8 @@ public class WorldStreamManager extends ManagerPackage {
 
     // Grid Lifecycle \\
 
-    public GridInstance createGrid(EntityInstance focalEntity, WindowInstance windowInstance) {
-        GridInstance grid = gridManager.buildGrid(focalEntity, windowInstance);
+    public GridInstance createGrid(EntityInstance focalEntity, WindowInstance windowInstance, FboInstance renderTargetFbo) {
+        GridInstance grid = gridManager.buildGrid(focalEntity, windowInstance, renderTargetFbo);
         grids.add(grid);
         return grid;
     }
@@ -72,7 +73,10 @@ public class WorldStreamManager extends ManagerPackage {
     public void rebuildGrid(GridInstance grid) {
         chunkStreamManager.onGridRebuilt(grid);
         megaStreamManager.onGridRebuilt(grid);
-        GridInstance rebuilt = gridManager.buildGrid(grid.getFocalEntity(), grid.getWindowInstance());
+        GridInstance rebuilt = gridManager.buildGrid(
+                grid.getFocalEntity(),
+                grid.getWindowInstance(),
+                grid.getRenderTargetFbo());
         int index = grids.indexOf(grid);
         grids.set(index, rebuilt);
     }

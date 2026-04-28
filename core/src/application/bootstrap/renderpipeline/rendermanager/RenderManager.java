@@ -91,6 +91,9 @@ public class RenderManager extends ManagerPackage {
         uboManager.bindBuffersForCurrentContext();
         playerManager.pushPlayerPositionForWindow(window.getWindowID());
         cameraManager.pushCamera(window);
+        fboManager.resizeWindowRelative(window.getWidth(), window.getHeight());
+        renderSystem.drawToMappedTargets(window);
+        fboRenderManager.pushBlits();
         renderSystem.drawToTarget(window, target);
     }
 
