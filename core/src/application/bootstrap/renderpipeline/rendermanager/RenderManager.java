@@ -7,7 +7,7 @@ import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
+import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
@@ -23,7 +23,7 @@ public class RenderManager extends ManagerPackage {
     private PlayerManager playerManager;
     private UBOManager uboManager;
     private FboManager fboManager;
-    private FboRenderManager fboRenderManager;
+    private FboRenderSystem fboRenderSystem;
 
     private RenderSystem renderSystem;
 
@@ -40,7 +40,7 @@ public class RenderManager extends ManagerPackage {
         this.playerManager = get(PlayerManager.class);
         this.uboManager = get(UBOManager.class);
         this.fboManager = get(FboManager.class);
-        this.fboRenderManager = get(FboRenderManager.class);
+        this.fboRenderSystem = get(FboRenderSystem.class);
     }
 
     public void draw() {
@@ -79,7 +79,7 @@ public class RenderManager extends ManagerPackage {
         fboManager.resizeWindowRelative(window.getWidth(), window.getHeight());
         renderSystem.drawToMappedTargets(window);
 
-        fboRenderManager.pushBlits();
+        fboRenderSystem.pushBlits();
         drawFinal(window);
     }
 
@@ -93,7 +93,7 @@ public class RenderManager extends ManagerPackage {
         cameraManager.pushCamera(window);
         fboManager.resizeWindowRelative(window.getWidth(), window.getHeight());
         renderSystem.drawToMappedTargets(window);
-        fboRenderManager.pushBlits();
+        fboRenderSystem.pushBlits();
         renderSystem.drawToTarget(window, target);
     }
 

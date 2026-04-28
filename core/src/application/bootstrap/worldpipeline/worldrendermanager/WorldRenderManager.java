@@ -6,7 +6,7 @@ import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
+import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
@@ -30,7 +30,7 @@ public class WorldRenderManager extends ManagerPackage {
     private RenderManager renderManager;
     private WorldStreamManager worldStreamManager;
     private FrustumCullingSystem frustumCullingSystem;
-    private FboRenderManager fboRenderManager;
+    private FboRenderSystem fboRenderSystem;
 
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> chunkModels;
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> megaModels;
@@ -52,14 +52,14 @@ public class WorldRenderManager extends ManagerPackage {
         this.modelManager = get(ModelManager.class);
         this.renderManager = get(RenderManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
-        this.fboRenderManager = get(FboRenderManager.class);
+        this.fboRenderSystem = get(FboRenderSystem.class);
     }
 
     @Override
     protected void lateUpdate() {
         renderWorld();
         if (frameWorldFbo != null)
-            fboRenderManager.pushFbo(frameWorldFbo);
+            fboRenderSystem.pushFbo(frameWorldFbo);
     }
 
     private void renderWorld() {

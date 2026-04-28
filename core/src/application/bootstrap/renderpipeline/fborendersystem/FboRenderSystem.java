@@ -1,4 +1,4 @@
-package application.bootstrap.renderpipeline.fborendermanager;
+package application.bootstrap.renderpipeline.fborendersystem;
 
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
@@ -8,11 +8,11 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import engine.root.EngineSetting;
-import engine.root.ManagerPackage;
+import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class FboRenderManager extends ManagerPackage {
+public class FboRenderSystem extends SystemPackage {
 
     private MeshManager meshManager;
     private MaterialManager materialManager;

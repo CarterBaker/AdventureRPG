@@ -10,7 +10,7 @@ import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fborendermanager.FboRenderManager;
+import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -22,13 +22,14 @@ public class MenuRenderSystem extends SystemPackage {
 
     private RenderManager renderManager;
     private FontRenderSystem fontRenderSystem;
-    private FboRenderManager fboRenderManager;
+    private FboRenderSystem fboRenderSystem;
 
     private MaskStruct[] maskPool;
     private int maskDepth;
 
     private WindowInstance currentWindow;
     private FboInstance targetFbo;
+
     @Override
     protected void create() {
         this.maskPool = new MaskStruct[EngineSetting.MAX_MASK_DEPTH];
@@ -40,7 +41,7 @@ public class MenuRenderSystem extends SystemPackage {
     protected void get() {
         this.renderManager = get(RenderManager.class);
         this.fontRenderSystem = get(FontRenderSystem.class);
-        this.fboRenderManager = get(FboRenderManager.class);
+        this.fboRenderSystem = get(FboRenderSystem.class);
     }
 
     public void renderMenu(MenuInstance instance, FboInstance uiTargetFbo) {
@@ -62,7 +63,7 @@ public class MenuRenderSystem extends SystemPackage {
         for (int i = 0; i < elements.size(); i++)
             renderElement(elements.get(i), 0f, 0f, screenW, screenH);
 
-        fboRenderManager.pushFbo(uiTargetFbo);
+        fboRenderSystem.pushFbo(uiTargetFbo);
     }
 
     private void renderElement(
