@@ -347,6 +347,40 @@ class Lwjgl3GL implements GL30 {
         GL30C.glDeleteVertexArrays(arrays);
     }
 
+    // Framebuffers \\
+
+    public int glGenFramebuffer() {
+        return GL30C.glGenFramebuffers();
+    }
+
+    public void glBindFramebuffer(int target, int framebuffer) {
+        GL30C.glBindFramebuffer(target, framebuffer);
+    }
+
+    public void glFramebufferTexture2D(int target, int attachment, int textarget, int texture, int level) {
+        GL30C.glFramebufferTexture2D(target, attachment, textarget, texture, level);
+    }
+
+    public int glGenRenderbuffer() {
+        return GL30C.glGenRenderbuffers();
+    }
+
+    public void glBindRenderbuffer(int target, int renderbuffer) {
+        GL30C.glBindRenderbuffer(target, renderbuffer);
+    }
+
+    public void glRenderbufferStorage(int target, int internalformat, int width, int height) {
+        GL30C.glRenderbufferStorage(target, internalformat, width, height);
+    }
+
+    public void glFramebufferRenderbuffer(int target, int attachment, int renderbuffertarget, int renderbuffer) {
+        GL30C.glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
+    }
+
+    public int glCheckFramebufferStatus(int target) {
+        return GL30C.glCheckFramebufferStatus(target);
+    }
+
     // Vertex Attributes \\
 
     public void glEnableVertexAttribArray(int index) {

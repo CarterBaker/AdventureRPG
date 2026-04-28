@@ -3,13 +3,14 @@ package application.bootstrap.renderpipeline.fbomanager;
 import application.bootstrap.renderpipeline.fbo.FboData;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbo.FboSizingStrategy;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.graphics.gl.GL20;
+import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import org.lwjgl.opengl.GL30C;
 
 public class FboManager extends ManagerPackage {
 
@@ -30,7 +31,7 @@ public class FboManager extends ManagerPackage {
     private Object2ObjectOpenHashMap<String, FboInstance> fboName2Instance;
 
     // Resize Tracking
-    private ObjectArrayList<FboInstance> windowRelativeInstances;
+    private Object2ObjectOpenHashMap<WindowInstance, ObjectArrayList<FboInstance>> window2RelativeInstances;
 
     // Internal \\
 
@@ -39,7 +40,7 @@ public class FboManager extends ManagerPackage {
         this.fboName2Data = new Object2ObjectOpenHashMap<>();
         this.fboName2Instance = new Object2ObjectOpenHashMap<>();
         this.orderedFboData = new ObjectArrayList<>();
-        this.windowRelativeInstances = new ObjectArrayList<>();
+        this.window2RelativeInstances = new Object2ObjectOpenHashMap<>();
         this.internalBuilder = create(InternalBuilder.class);
         create(InternalLoader.class);
     }
@@ -68,12 +69,12 @@ public class FboManager extends ManagerPackage {
             return;
         }
 
-        GL30C.glBindFramebuffer(GL30C.GL_FRAMEBUFFER, fbo.getFramebuffers().getInt(0));
+        GLSLUtility.bindFramebuffer(fbo.getFramebuffers().getInt(0));
         EngineContext.gl20.glViewport(0, 0, fbo.getWidth(), fbo.getHeight());
     }
 
     public void unbind() {
-        GL30C.glBindFramebuffer(GL30C.GL_FRAMEBUFFER, 0);
+        GLSLUtility.unbindFramebuffer();
     }
 
     // Resize \\
@@ -91,9 +92,9 @@ public class FboManager extends ManagerPackage {
 
         if (fbo.getFboData().hasDepth() && !fbo.getDepthRenderbuffers().isEmpty()) {
             int depthBuffer = fbo.getDepthRenderbuffers().getInt(0);
-            GL30C.glBindRenderbuffer(GL30C.GL_RENDERBUFFER, depthBuffer);
-            GL30C.glRenderbufferStorage(GL30C.GL_RENDERBUFFER, GL30C.GL_DEPTH_COMPONENT24, width, height);
-            GL30C.glBindRenderbuffer(GL30C.GL_RENDERBUFFER, 0);
+            GLSLUtility.bindRenderbuffer(depthBuffer);
+            GLSLUtility.renderbufferStorage(GL30.GL_DEPTH_COMPONENT24, width, height);
+            GLSLUtility.unbindRenderbuffer();
         }
 
         fbo.setSize(width, height);
@@ -103,7 +104,17 @@ public class FboManager extends ManagerPackage {
         resize(getFbo(name), width, height);
     }
 
-    public void resizeWindowRelative(int width, int height) {
+    public void resizeWindowRelative(WindowInstance window, int width, int height) {
+        resizeTracked(null, width, height);
+        resizeTracked(window, width, height);
+    }
+
+    private void resizeTracked(WindowInstance window, int width, int height) {
+        ObjectArrayList<FboInstance> windowRelativeInstances = window2RelativeInstances.get(window);
+
+        if (windowRelativeInstances == null)
+            return;
+
         Object[] elements = windowRelativeInstances.elements();
         int count = windowRelativeInstances.size();
 
@@ -124,17 +135,17 @@ public class FboManager extends ManagerPackage {
         fboName2Instance.put(name, instance);
 
         if (data.getSizingStrategy() == FboSizingStrategy.WINDOW_RELATIVE)
-            windowRelativeInstances.add(instance);
+            registerWindowRelative(instance, null);
 
         return instance;
     }
 
-    public FboInstance cloneFbo(String name) {
+    public FboInstance cloneFbo(String name, WindowInstance window) {
         FboData data = resolveFboData(name);
         FboInstance instance = internalBuilder.buildInstance(data);
 
         if (data.getSizingStrategy() == FboSizingStrategy.WINDOW_RELATIVE)
-            windowRelativeInstances.add(instance);
+            registerWindowRelative(instance, window);
 
         return instance;
     }
@@ -157,5 +168,16 @@ public class FboManager extends ManagerPackage {
             throwException("FBO not found in catalog: " + name);
 
         return data;
+    }
+
+    private void registerWindowRelative(FboInstance instance, WindowInstance window) {
+        ObjectArrayList<FboInstance> windowRelativeInstances = window2RelativeInstances.get(window);
+
+        if (windowRelativeInstances == null) {
+            windowRelativeInstances = new ObjectArrayList<>();
+            window2RelativeInstances.put(window, windowRelativeInstances);
+        }
+
+        windowRelativeInstances.add(instance);
     }
 }
