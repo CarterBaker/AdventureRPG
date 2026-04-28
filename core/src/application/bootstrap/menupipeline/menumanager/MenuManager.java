@@ -13,6 +13,7 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.runtime.RuntimeSetting;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
@@ -81,7 +82,7 @@ public class MenuManager extends ManagerPackage {
             return;
 
         for (int i = 0; i < activeMenus.size(); i++)
-            renderSystem.renderMenu(activeMenus.get(i), menuTargetFbo);
+            renderSystem.renderMenu(activeMenus.get(i), menuTargetFbo, RuntimeSetting.LAYER_UI);
 
 
         if (lockSystem.isRaycastLocked())

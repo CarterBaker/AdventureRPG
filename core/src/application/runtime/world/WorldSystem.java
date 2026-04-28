@@ -4,7 +4,7 @@ import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import engine.root.EngineSetting;
+import application.runtime.RuntimeSetting;
 import engine.root.SystemPackage;
 
 public class WorldSystem extends SystemPackage {

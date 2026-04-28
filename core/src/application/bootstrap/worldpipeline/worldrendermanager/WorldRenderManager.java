@@ -15,6 +15,7 @@ import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import application.runtime.RuntimeSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -59,7 +60,7 @@ public class WorldRenderManager extends ManagerPackage {
     protected void lateUpdate() {
         renderWorld();
         if (frameWorldFbo != null)
-            fboRenderSystem.pushFbo(frameWorldFbo);
+            fboRenderSystem.pushFbo(frameWorldFbo, RuntimeSetting.LAYER_WORLD);
     }
 
     private void renderWorld() {

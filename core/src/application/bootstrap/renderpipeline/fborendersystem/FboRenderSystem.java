@@ -10,7 +10,6 @@ import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class FboRenderSystem extends SystemPackage {
 
@@ -19,12 +18,16 @@ public class FboRenderSystem extends SystemPackage {
     private RenderManager renderManager;
 
     private Object2ObjectOpenHashMap<FboInstance, ModelInstance> fbo2BlitModel;
-    private ObjectArrayList<FboInstance> blitQueue;
+    private FboInstance[] blitFboBuffer;
+    private int[] blitLayerBuffer;
+    private int blitCount;
 
     @Override
     protected void create() {
         this.fbo2BlitModel = new Object2ObjectOpenHashMap<>();
-        this.blitQueue = new ObjectArrayList<>();
+        this.blitFboBuffer = new FboInstance[EngineSetting.MAX_RENDER_CALLS_PER_FRAME];
+        this.blitLayerBuffer = new int[EngineSetting.MAX_RENDER_CALLS_PER_FRAME];
+        this.blitCount = 0;
     }
 
     @Override
@@ -34,10 +37,13 @@ public class FboRenderSystem extends SystemPackage {
         this.renderManager = get(RenderManager.class);
     }
 
-    public void pushFbo(FboInstance fbo) {
-        if (fbo == null)
+    public void pushFbo(FboInstance fbo, int layer) {
+        if (fbo == null || blitCount >= blitFboBuffer.length)
             return;
-        blitQueue.add(fbo);
+
+        blitFboBuffer[blitCount] = fbo;
+        blitLayerBuffer[blitCount] = layer;
+        blitCount++;
     }
 
     public void setBlitOverride(FboInstance fbo, MeshData mesh, MaterialInstance material) {
@@ -49,20 +55,32 @@ public class FboRenderSystem extends SystemPackage {
     }
 
     public void pushBlits() {
-        if (blitQueue.isEmpty())
+        if (blitCount == 0)
             return;
 
-        Object[] elements = blitQueue.elements();
-        int count = blitQueue.size();
+        for (int i = 1; i < blitCount; i++) {
+            FboInstance fbo = blitFboBuffer[i];
+            int layer = blitLayerBuffer[i];
+            int j = i - 1;
 
-        for (int i = 0; i < count; i++) {
-            FboInstance fbo = (FboInstance) elements[i];
+            while (j >= 0 && blitLayerBuffer[j] > layer) {
+                blitFboBuffer[j + 1] = blitFboBuffer[j];
+                blitLayerBuffer[j + 1] = blitLayerBuffer[j];
+                j--;
+            }
+
+            blitFboBuffer[j + 1] = fbo;
+            blitLayerBuffer[j + 1] = layer;
+        }
+
+        for (int i = 0; i < blitCount; i++) {
+            FboInstance fbo = blitFboBuffer[i];
             ModelInstance model = resolveBlitModel(fbo);
             model.getMaterial().setUniform("u_source", fbo.getTextureId());
             renderManager.pushScreenCall(model);
         }
 
-        blitQueue.clear();
+        blitCount = 0;
     }
 
     private ModelInstance resolveBlitModel(FboInstance fbo) {

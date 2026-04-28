@@ -6,6 +6,7 @@ import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
+import application.runtime.RuntimeSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
@@ -39,12 +40,12 @@ public class SkySystem extends SystemPackage {
     @Override
     protected void awake() {
         this.skyPass = passManager.getPassHandleFromPassName(EngineSetting.PASS_SKY);
-        this.skyFbo = fboManager.getFbo(EngineSetting.FBO_SKY);
+        this.skyFbo = fboManager.getFbo(RuntimeSetting.FBO_SKY);
     }
 
     @Override
     protected void update() {
         renderManager.pushRenderCall(skyPass.getModelInstance(), skyFbo, 0, context.getWindow());
-        fboRenderSystem.pushFbo(skyFbo);
+        fboRenderSystem.pushFbo(skyFbo, RuntimeSetting.LAYER_SKY);
     }
 }
