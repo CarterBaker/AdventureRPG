@@ -8,6 +8,7 @@ import application.bootstrap.renderpipeline.compositerendersystem.CompositeRende
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
+import application.bootstrap.renderpipeline.renderqueue.RenderQueueHandle;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
@@ -230,7 +231,8 @@ class RenderSystem extends SystemPackage {
         compositeRenderSystem.removeWindow(window.getWindowID());
     }
 
-    void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask, WindowInstance window) {
+    void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
+            WindowInstance window) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
 

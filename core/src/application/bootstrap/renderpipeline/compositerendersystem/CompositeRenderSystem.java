@@ -10,7 +10,7 @@ import java.nio.FloatBuffer;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.renderpipeline.compositebatch.CompositeBatchStruct;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.rendermanager.RenderQueueHandle;
+import application.bootstrap.renderpipeline.renderqueue.RenderQueueHandle;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;

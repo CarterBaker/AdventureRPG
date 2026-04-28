@@ -1,4 +1,4 @@
-package application.bootstrap.renderpipeline.rendermanager;
+package application.bootstrap.renderpipeline.renderqueue;
 
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.compositebatch.CompositeBatchStruct;
@@ -16,13 +16,13 @@ public class RenderQueueHandle extends HandlePackage {
     private RenderCallStruct[] renderCallBuffer;
     int renderCallCursor;
 
-    Object2ObjectOpenHashMap<FboInstance, Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>>> fbo2Depth2MaterialBatches;
-    Object2ObjectOpenHashMap<FboInstance, Int2ObjectOpenHashMap<ObjectArrayList<RenderBatchStruct>>> fbo2Depth2BatchList;
-    Object2ObjectOpenHashMap<FboInstance, IntArrayList> fbo2DepthOrder;
-    ObjectArrayList<FboInstance> queuedFbos;
+    public Object2ObjectOpenHashMap<FboInstance, Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>>> fbo2Depth2MaterialBatches;
+    public Object2ObjectOpenHashMap<FboInstance, Int2ObjectOpenHashMap<ObjectArrayList<RenderBatchStruct>>> fbo2Depth2BatchList;
+    public Object2ObjectOpenHashMap<FboInstance, IntArrayList> fbo2DepthOrder;
+    public ObjectArrayList<FboInstance> queuedFbos;
 
-    Int2ObjectOpenHashMap<RenderBatchStruct> screenMaterialBatches;
-    ObjectArrayList<RenderBatchStruct> screenBatchList;
+    public Int2ObjectOpenHashMap<RenderBatchStruct> screenMaterialBatches;
+    public ObjectArrayList<RenderBatchStruct> screenBatchList;
     public Object2ObjectOpenHashMap<FboInstance, Int2ObjectOpenHashMap<CompositeBatchStruct>> fbo2CompositeMaterialBatches;
     public Object2ObjectOpenHashMap<FboInstance, ObjectArrayList<CompositeBatchStruct>> fbo2CompositeBatchList;
     public Int2ObjectOpenHashMap<CompositeBatchStruct> screenCompositeMaterialBatches;
@@ -47,15 +47,15 @@ public class RenderQueueHandle extends HandlePackage {
         this.screenCompositeBatchList = new ObjectArrayList<>();
     }
 
-    RenderCallStruct nextCall() {
+    public RenderCallStruct nextCall() {
         return renderCallBuffer[renderCallCursor++];
     }
 
-    boolean isRenderBufferFull() {
+    public boolean isRenderBufferFull() {
         return renderCallCursor >= renderCallBuffer.length;
     }
 
-    void rewindFrame() {
+    public void rewindFrame() {
         renderCallCursor = 0;
         queuedFbos.clear();
         fbo2Depth2MaterialBatches.clear();
