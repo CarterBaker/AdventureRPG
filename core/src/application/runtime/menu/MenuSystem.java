@@ -2,16 +2,16 @@ package application.runtime.menu;
 
 import application.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import application.runtime.RuntimeSetting;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
 public class MenuSystem extends SystemPackage {
 
     /*
-     * Opens the main menu at runtime startup. Passes the context window so
-     * the menu is bound to the correct render target regardless of which
-     * window this context was paired with.
+     * Opens the main menu at runtime startup and binds the UI render target
+     * so menus composite into the correct FBO regardless of window context.
      */
 
     // Internal
@@ -19,7 +19,8 @@ public class MenuSystem extends SystemPackage {
     private MenuManager menuManager;
     private FboManager fboManager;
 
-    // Internal \\
+    // Render Target
+    private FboInstance uiFbo;
 
     @Override
     protected void get() {
@@ -32,7 +33,8 @@ public class MenuSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        menuManager.setMenuTargetFbo(fboManager.getFbo(RuntimeSetting.FBO_UI));
+        this.uiFbo = fboManager.getFbo(EngineSetting.FBO_UI);
+        menuManager.setMenuTargetFbo(uiFbo);
         mainMenuBranch.openMenu(context.getWindow());
     }
 }
