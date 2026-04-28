@@ -1,7 +1,10 @@
 package editor.runtime;
 
 import application.bootstrap.menupipeline.menueventsmanager.menus.EditorBranch;
+import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
 public class EditorMenuSystem extends SystemPackage {
@@ -17,6 +20,8 @@ public class EditorMenuSystem extends SystemPackage {
     // Internal
     private EditorBranch editorBranch;
     private WindowManager windowManager;
+    private MenuManager menuManager;
+    private FboManager fboManager;
 
     // Internal \\
 
@@ -24,10 +29,13 @@ public class EditorMenuSystem extends SystemPackage {
     protected void get() {
         this.editorBranch = get(EditorBranch.class);
         this.windowManager = get(WindowManager.class);
+        this.menuManager = get(MenuManager.class);
+        this.fboManager = get(FboManager.class);
     }
 
     @Override
     protected void awake() {
+        menuManager.setMenuTargetFbo(fboManager.getFbo(EngineSetting.FBO_UI));
         editorBranch.openEditorMenu(windowManager.getMainWindow());
     }
 }

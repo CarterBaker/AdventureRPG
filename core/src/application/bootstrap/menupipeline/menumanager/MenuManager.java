@@ -12,6 +12,7 @@ import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
@@ -41,6 +42,7 @@ public class MenuManager extends ManagerPackage {
     // Active
     private ObjectArrayList<MenuInstance> activeMenus;
     private ObjectArrayList<MenuInstance> pendingCloseMenus;
+    private FboInstance menuTargetFbo;
 
     // Scratch
     private ObjectArrayList<ElementInstance> singletonScratch;
@@ -79,7 +81,7 @@ public class MenuManager extends ManagerPackage {
             return;
 
         for (int i = 0; i < activeMenus.size(); i++)
-            renderSystem.renderMenu(activeMenus.get(i));
+            renderSystem.renderMenu(activeMenus.get(i), menuTargetFbo);
 
 
         if (lockSystem.isRaycastLocked())
@@ -243,5 +245,9 @@ public class MenuManager extends ManagerPackage {
 
     public void request(String menuName) {
         ((InternalLoader) internalLoader).request(menuName);
+    }
+
+    public void setMenuTargetFbo(FboInstance menuTargetFbo) {
+        this.menuTargetFbo = menuTargetFbo;
     }
 }
