@@ -4,7 +4,7 @@ import application.bootstrap.menupipeline.menueventsmanager.menus.EditorBranch;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import engine.root.EngineSetting;
+import application.runtime.RuntimeSetting;
 import engine.root.SystemPackage;
 
 public class EditorMenuSystem extends SystemPackage {
@@ -35,7 +35,7 @@ public class EditorMenuSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        menuManager.setMenuTargetFbo(fboManager.getFbo(EngineSetting.FBO_UI));
+        menuManager.setMenuTargetFbo(fboManager.getFbo(RuntimeSetting.FBO_UI));
         editorBranch.openEditorMenu(windowManager.getMainWindow());
     }
 }

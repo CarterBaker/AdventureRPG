@@ -4,7 +4,7 @@ import application.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import engine.root.EngineSetting;
+import application.runtime.RuntimeSetting;
 import engine.root.SystemPackage;
 
 public class MenuSystem extends SystemPackage {
@@ -33,8 +33,14 @@ public class MenuSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.uiFbo = fboManager.getFbo(EngineSetting.FBO_UI);
+        this.uiFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI);
         menuManager.setMenuTargetFbo(uiFbo);
         mainMenuBranch.openMenu(context.getWindow());
+    }
+
+    // Accessible \\
+
+    public FboInstance getUiFbo() {
+        return uiFbo;
     }
 }

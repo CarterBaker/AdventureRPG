@@ -61,12 +61,6 @@ public class EngineSetting {
         public static final String UBO_JSON_PATH = "ubos";
         public static final String WORLD_TEXTURE_PATH = "worlds";
 
-        // Framebuffer \\
-
-        public static final String FBO_SKY = "SkyScene";
-        public static final String FBO_WORLD = "MainScene";
-        public static final String FBO_UI = "UIScene";
-
         // Pass Names \\
 
         public static final String PASS_SKY = "Sky";

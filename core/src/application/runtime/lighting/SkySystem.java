@@ -40,12 +40,18 @@ public class SkySystem extends SystemPackage {
     @Override
     protected void awake() {
         this.skyPass = passManager.getPassHandleFromPassName(EngineSetting.PASS_SKY);
-        this.skyFbo = fboManager.getFbo(RuntimeSetting.FBO_SKY);
+        this.skyFbo = fboManager.cloneFbo(RuntimeSetting.FBO_SKY);
     }
 
     @Override
     protected void update() {
         renderManager.pushRenderCall(skyPass.getModelInstance(), skyFbo, 0, context.getWindow());
         fboRenderSystem.pushFbo(skyFbo, RuntimeSetting.LAYER_SKY);
+    }
+
+    // Accessible \\
+
+    public FboInstance getSkyFbo() {
+        return skyFbo;
     }
 }
