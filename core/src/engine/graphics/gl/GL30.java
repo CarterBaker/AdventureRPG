@@ -15,6 +15,14 @@ public interface GL30 extends GL20 {
         int GL_TEXTURE_2D_ARRAY = 0x8C1A;
         int GL_COLOR_BUFFER_BIT = 0x4000;
         int GL_DEPTH_BUFFER_BIT = 0x0100;
+        int GL_FRAMEBUFFER = 0x8D40;
+        int GL_RENDERBUFFER = 0x8D41;
+        int GL_COLOR_ATTACHMENT0 = 0x8CE0;
+        int GL_DEPTH_ATTACHMENT = 0x8D00;
+        int GL_DEPTH_COMPONENT24 = 0x81A6;
+        int GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
+        int GL_RGBA16F = 0x881A;
+        int GL_RGB8 = 0x8051;
 
         // Vertex Arrays \\
 
@@ -23,6 +31,24 @@ public interface GL30 extends GL20 {
         void glBindVertexArray(int array);
 
         void glDeleteVertexArrays(int n, IntBuffer arrays);
+
+        // Framebuffers \\
+
+        int glGenFramebuffer();
+
+        void glBindFramebuffer(int target, int framebuffer);
+
+        void glFramebufferTexture2D(int target, int attachment, int textarget, int texture, int level);
+
+        int glGenRenderbuffer();
+
+        void glBindRenderbuffer(int target, int renderbuffer);
+
+        void glRenderbufferStorage(int target, int internalformat, int width, int height);
+
+        void glFramebufferRenderbuffer(int target, int attachment, int renderbuffertarget, int renderbuffer);
+
+        int glCheckFramebufferStatus(int target);
 
         // Instancing \\
 

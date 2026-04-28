@@ -33,7 +33,7 @@ public class MenuSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.uiFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI);
+        this.uiFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, context.getWindow());
         menuManager.setMenuTargetFbo(uiFbo);
         mainMenuBranch.openMenu(context.getWindow());
     }

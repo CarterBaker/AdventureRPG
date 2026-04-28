@@ -40,7 +40,7 @@ public class SkySystem extends SystemPackage {
     @Override
     protected void awake() {
         this.skyPass = passManager.getPassHandleFromPassName(EngineSetting.PASS_SKY);
-        this.skyFbo = fboManager.cloneFbo(RuntimeSetting.FBO_SKY);
+        this.skyFbo = fboManager.cloneFbo(RuntimeSetting.FBO_SKY, context.getWindow());
     }
 
     @Override

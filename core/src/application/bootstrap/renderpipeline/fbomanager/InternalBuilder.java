@@ -9,13 +9,13 @@ import application.bootstrap.renderpipeline.fbo.FboData;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbo.FboSizingStrategy;
 import engine.graphics.gl.GL20;
+import engine.graphics.gl.GL30;
 import engine.root.BuilderPackage;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import org.lwjgl.opengl.GL30C;
 
 /*
  * Parses FBO JSON descriptors into FboData during bootstrap, and constructs
@@ -52,10 +52,10 @@ class InternalBuilder extends BuilderPackage {
         IntArrayList textures = new IntArrayList();
         IntArrayList depthRenderbuffers = new IntArrayList();
 
-        int fbo = GL30C.glGenFramebuffers();
+        int fbo = GLSLUtility.genFramebuffer();
         int texture = EngineContext.gl20.glGenTexture();
 
-        GL30C.glBindFramebuffer(GL30C.GL_FRAMEBUFFER, fbo);
+        GLSLUtility.bindFramebuffer(fbo);
         EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, texture);
         EngineContext.gl20.glTexImage2D(GL20.GL_TEXTURE_2D, 0, data.getFormat(), width, height, 0, GL20.GL_RGBA,
                 GL20.GL_UNSIGNED_BYTE, null);
@@ -64,22 +64,21 @@ class InternalBuilder extends BuilderPackage {
         EngineContext.gl20.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
         EngineContext.gl20.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
 
-        GL30C.glFramebufferTexture2D(GL30C.GL_FRAMEBUFFER, GL30C.GL_COLOR_ATTACHMENT0, GL20.GL_TEXTURE_2D, texture, 0);
+        GLSLUtility.framebufferTexture2D(texture);
 
         int depthBuffer = 0;
         if (data.hasDepth()) {
-            depthBuffer = GL30C.glGenRenderbuffers();
-            GL30C.glBindRenderbuffer(GL30C.GL_RENDERBUFFER, depthBuffer);
-            GL30C.glRenderbufferStorage(GL30C.GL_RENDERBUFFER, GL30C.GL_DEPTH_COMPONENT24, width, height);
-            GL30C.glFramebufferRenderbuffer(GL30C.GL_FRAMEBUFFER, GL30C.GL_DEPTH_ATTACHMENT, GL30C.GL_RENDERBUFFER,
-                    depthBuffer);
-            GL30C.glBindRenderbuffer(GL30C.GL_RENDERBUFFER, 0);
+            depthBuffer = GLSLUtility.genRenderbuffer();
+            GLSLUtility.bindRenderbuffer(depthBuffer);
+            GLSLUtility.renderbufferStorage(GL30.GL_DEPTH_COMPONENT24, width, height);
+            GLSLUtility.framebufferRenderbuffer(depthBuffer);
+            GLSLUtility.unbindRenderbuffer();
         }
 
-        if (GL30C.glCheckFramebufferStatus(GL30C.GL_FRAMEBUFFER) != GL30C.GL_FRAMEBUFFER_COMPLETE)
+        if (GLSLUtility.checkFramebufferStatus() != GL30.GL_FRAMEBUFFER_COMPLETE)
             throwException("Framebuffer is incomplete for: " + data.getName());
 
-        GL30C.glBindFramebuffer(GL30C.GL_FRAMEBUFFER, 0);
+        GLSLUtility.unbindFramebuffer();
         EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
 
         framebuffers.add(fbo);
@@ -110,8 +109,8 @@ class InternalBuilder extends BuilderPackage {
 
     private int resolveInternalFormat(String formatName) {
         return switch (formatName) {
-            case "RGBA16F" -> GL30C.GL_RGBA16F;
-            case "RGB8" -> GL30C.GL_RGB8;
+            case "RGBA16F" -> GL30.GL_RGBA16F;
+            case "RGB8" -> GL30.GL_RGB8;
             case "RGBA8" -> GL20.GL_RGBA8;
             default -> GL20.GL_RGBA8;
         };

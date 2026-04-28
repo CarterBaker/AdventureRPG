@@ -36,7 +36,7 @@ public class WorldSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.worldFbo = fboManager.cloneFbo(RuntimeSetting.FBO_WORLD);
+        this.worldFbo = fboManager.cloneFbo(RuntimeSetting.FBO_WORLD, context.getWindow());
 
         int windowID = context.getWindow().getWindowID();
         worldStreamManager.createGrid(
