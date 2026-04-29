@@ -96,10 +96,6 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     @Override
     public void makeContextCurrent(WindowInstance window) {
 
-        System.out.println("[DEBUG] makeContextCurrent windowID=" + window.getWindowID()
-                + " handle=" + window.getNativeHandle()
-                + " currentContext=" + GLFW.glfwGetCurrentContext());
-
         if (!window.hasNativeHandle())
             return;
 
@@ -108,10 +104,6 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     @Override
     public void swapBuffers(WindowInstance window) {
-
-        System.out.println("[DEBUG] swapBuffers windowID=" + window.getWindowID()
-                + " handle=" + window.getNativeHandle()
-                + " currentContext=" + GLFW.glfwGetCurrentContext());
 
         if (!window.hasNativeHandle())
             return;

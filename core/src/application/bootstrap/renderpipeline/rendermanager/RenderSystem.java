@@ -156,15 +156,12 @@ class RenderSystem extends SystemPackage {
 
     private void bindTarget(WindowInstance window, FboInstance target) {
         if (target == null) {
-            System.out.println("[DEBUG] bindTarget(null) windowID=" + window.getWindowID()
-                    + " handle=" + window.getNativeHandle());
-            // Re-assert only for the default framebuffer path. FBO targets are explicit
-            // handles; framebuffer 0 is context-relative and must map to this window.
+
             internal.windowPlatform.makeContextCurrent(window);
-            // Ensure screen pass renders to the currently bound window's default framebuffer.
-            // Without this, the previous FBO can remain bound and secondary windows present black.
+
             GLSLUtility.unbindFramebuffer();
             GLSLUtility.setViewport(window.getWidth(), window.getHeight());
+
             return;
         }
 
