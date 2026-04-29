@@ -1,23 +1,21 @@
-package application.runtime.menu;
+package editor.runtime;
 
-import application.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.runtime.RuntimeSetting;
 import engine.root.SystemPackage;
 
-public class MenuSystem extends SystemPackage {
+public class MenuTargetFboSystem extends SystemPackage {
 
     /*
-     * Opens the main menu at runtime startup and binds the UI render target
-     * so menus composite into the correct FBO regardless of window context.
+     * Clones the UI render target for this window's GL context and registers
+     * it with MenuManager so menus bound to this window composite correctly.
      */
 
     // Internal
-    private MainMenuBranch mainMenuBranch;
-    private MenuManager menuManager;
     private FboManager fboManager;
+    private MenuManager menuManager;
 
     // Render Target
     private FboInstance uiFbo;
@@ -26,16 +24,14 @@ public class MenuSystem extends SystemPackage {
     protected void get() {
 
         // Internal
-        this.mainMenuBranch = get(MainMenuBranch.class);
-        this.menuManager = get(MenuManager.class);
         this.fboManager = get(FboManager.class);
+        this.menuManager = get(MenuManager.class);
     }
 
     @Override
     protected void awake() {
         this.uiFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, context.getWindow());
         menuManager.setMenuTargetFbo(context.getWindow(), uiFbo);
-        mainMenuBranch.openMenu(context.getWindow());
     }
 
     // Accessible \\
