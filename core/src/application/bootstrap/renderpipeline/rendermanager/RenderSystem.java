@@ -156,6 +156,8 @@ class RenderSystem extends SystemPackage {
 
     private void bindTarget(WindowInstance window, FboInstance target) {
         if (target == null) {
+            System.out.println("[DEBUG] bindTarget(null) windowID=" + window.getWindowID()
+                    + " handle=" + window.getNativeHandle());
             // Re-assert only for the default framebuffer path. FBO targets are explicit
             // handles; framebuffer 0 is context-relative and must map to this window.
             internal.windowPlatform.makeContextCurrent(window);
