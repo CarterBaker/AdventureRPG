@@ -11,6 +11,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class FboRenderSystem extends SystemPackage {
 
@@ -19,16 +20,12 @@ public class FboRenderSystem extends SystemPackage {
     private RenderManager renderManager;
 
     private Object2ObjectOpenHashMap<FboInstance, ModelInstance> fbo2BlitModel;
-    private FboInstance[] blitFboBuffer;
-    private int[] blitLayerBuffer;
-    private int blitCount;
+    private Object2ObjectOpenHashMap<WindowInstance, ObjectArrayList<FboLayerStruct>> window2BlitQueue;
 
     @Override
     protected void create() {
         this.fbo2BlitModel = new Object2ObjectOpenHashMap<>();
-        this.blitFboBuffer = new FboInstance[EngineSetting.MAX_RENDER_CALLS_PER_FRAME];
-        this.blitLayerBuffer = new int[EngineSetting.MAX_RENDER_CALLS_PER_FRAME];
-        this.blitCount = 0;
+        this.window2BlitQueue = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -38,13 +35,20 @@ public class FboRenderSystem extends SystemPackage {
         this.renderManager = get(RenderManager.class);
     }
 
-    public void pushFbo(FboInstance fbo, int layer) {
-        if (fbo == null || blitCount >= blitFboBuffer.length)
+    public void pushFbo(FboInstance fbo, int layer, WindowInstance window) {
+        if (fbo == null || window == null)
             return;
 
-        blitFboBuffer[blitCount] = fbo;
-        blitLayerBuffer[blitCount] = layer;
-        blitCount++;
+        ObjectArrayList<FboLayerStruct> queue = window2BlitQueue.get(window);
+        if (queue == null) {
+            queue = new ObjectArrayList<>();
+            window2BlitQueue.put(window, queue);
+        }
+
+        if (queue.size() >= EngineSetting.MAX_RENDER_CALLS_PER_FRAME)
+            return;
+
+        queue.add(new FboLayerStruct(fbo, layer));
     }
 
     public void setBlitOverride(FboInstance fbo, MeshData mesh, MaterialInstance material) {
@@ -56,32 +60,35 @@ public class FboRenderSystem extends SystemPackage {
     }
 
     public void pushBlits(WindowInstance window) {
-        if (blitCount == 0)
+        ObjectArrayList<FboLayerStruct> queue = window2BlitQueue.get(window);
+
+        if (queue == null || queue.isEmpty())
             return;
 
-        for (int i = 1; i < blitCount; i++) {
-            FboInstance fbo = blitFboBuffer[i];
-            int layer = blitLayerBuffer[i];
+        for (int i = 1; i < queue.size(); i++) {
+            FboLayerStruct entry = queue.get(i);
             int j = i - 1;
 
-            while (j >= 0 && blitLayerBuffer[j] > layer) {
-                blitFboBuffer[j + 1] = blitFboBuffer[j];
-                blitLayerBuffer[j + 1] = blitLayerBuffer[j];
+            while (j >= 0 && queue.get(j).layer > entry.layer) {
+                queue.set(j + 1, queue.get(j));
                 j--;
             }
 
-            blitFboBuffer[j + 1] = fbo;
-            blitLayerBuffer[j + 1] = layer;
+            queue.set(j + 1, entry);
         }
 
-        for (int i = 0; i < blitCount; i++) {
-            FboInstance fbo = blitFboBuffer[i];
+        for (int i = 0; i < queue.size(); i++) {
+            FboInstance fbo = queue.get(i).fbo;
             ModelInstance model = resolveBlitModel(fbo);
             model.getMaterial().setUniform("u_source", fbo.getTextureId());
             renderManager.pushScreenCall(model, window);
         }
 
-        blitCount = 0;
+        queue.clear();
+    }
+
+    public void removeWindowResources(WindowInstance window) {
+        window2BlitQueue.remove(window);
     }
 
     private ModelInstance resolveBlitModel(FboInstance fbo) {
@@ -103,5 +110,15 @@ public class FboRenderSystem extends SystemPackage {
 
         fbo2BlitModel.put(fbo, model);
         return model;
+    }
+
+    private static class FboLayerStruct {
+        private final FboInstance fbo;
+        private final int layer;
+
+        private FboLayerStruct(FboInstance fbo, int layer) {
+            this.fbo = fbo;
+            this.layer = layer;
+        }
     }
 }

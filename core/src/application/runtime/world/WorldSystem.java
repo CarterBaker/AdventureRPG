@@ -47,7 +47,7 @@ public class WorldSystem extends SystemPackage {
 
     @Override
     protected void update() {
-        fboRenderSystem.pushFbo(worldFbo, RuntimeSetting.LAYER_WORLD);
+        fboRenderSystem.pushFbo(worldFbo, RuntimeSetting.LAYER_WORLD, context.getWindow());
     }
 
     // Accessible \\

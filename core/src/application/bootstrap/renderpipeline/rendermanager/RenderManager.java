@@ -170,5 +170,6 @@ public class RenderManager extends ManagerPackage {
 
     public void removeWindowResources(WindowInstance window) {
         renderSystem.removeWindowResources(window);
+        fboRenderSystem.removeWindowResources(window);
     }
 }
