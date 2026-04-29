@@ -78,7 +78,7 @@ public class WindowManager extends ManagerPackage {
             return;
 
         activeWindow = focusedWindow;
-        internal.windowPlatform.makeContextCurrent(focusedWindow);
+        internal.windowPlatform.syncInputForWindow(focusedWindow);
     }
 
     private WindowInstance resolveFocusedWindow() {

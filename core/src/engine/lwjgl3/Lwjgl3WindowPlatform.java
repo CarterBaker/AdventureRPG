@@ -103,6 +103,15 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     }
 
     @Override
+    public void syncInputForWindow(WindowInstance window) {
+
+        if (!window.hasNativeHandle())
+            return;
+
+        syncInputForCurrentContext(window.getNativeHandle());
+    }
+
+    @Override
     public void swapBuffers(WindowInstance window) {
 
         if (!window.hasNativeHandle())

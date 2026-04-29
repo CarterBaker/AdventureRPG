@@ -20,6 +20,8 @@ public interface WindowPlatform {
 
     void makeContextCurrent(WindowInstance window);
 
+    void syncInputForWindow(WindowInstance window);
+
     void swapBuffers(WindowInstance window);
 
     void restoreMainContext();
