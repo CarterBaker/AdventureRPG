@@ -35,7 +35,7 @@ public class EditorMenuSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        menuManager.setMenuTargetFbo(fboManager.getFbo(RuntimeSetting.FBO_UI));
+        menuManager.setMenuTargetFbo(windowManager.getMainWindow(), fboManager.getFbo(RuntimeSetting.FBO_UI));
         editorBranch.openEditorMenu(windowManager.getMainWindow());
     }
 }

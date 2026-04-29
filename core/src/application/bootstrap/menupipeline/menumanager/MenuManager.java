@@ -18,6 +18,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -43,7 +44,7 @@ public class MenuManager extends ManagerPackage {
     // Active
     private ObjectArrayList<MenuInstance> activeMenus;
     private ObjectArrayList<MenuInstance> pendingCloseMenus;
-    private FboInstance menuTargetFbo;
+    private Object2ObjectOpenHashMap<WindowInstance, FboInstance> window2MenuTargetFbo;
 
     // Scratch
     private ObjectArrayList<ElementInstance> singletonScratch;
@@ -59,6 +60,7 @@ public class MenuManager extends ManagerPackage {
 
         this.activeMenus = new ObjectArrayList<>();
         this.pendingCloseMenus = new ObjectArrayList<>();
+        this.window2MenuTargetFbo = new Object2ObjectOpenHashMap<>();
 
         this.singletonScratch = new ObjectArrayList<>(1);
 
@@ -81,8 +83,16 @@ public class MenuManager extends ManagerPackage {
         if (activeMenus.isEmpty())
             return;
 
-        for (int i = 0; i < activeMenus.size(); i++)
-            renderSystem.renderMenu(activeMenus.get(i), menuTargetFbo, RuntimeSetting.LAYER_UI);
+        for (int i = 0; i < activeMenus.size(); i++) {
+
+            MenuInstance menu = activeMenus.get(i);
+            FboInstance menuTargetFbo = window2MenuTargetFbo.get(menu.getWindow());
+
+            if (menuTargetFbo == null)
+                continue;
+
+            renderSystem.renderMenu(menu, menuTargetFbo, RuntimeSetting.LAYER_UI);
+        }
 
 
         if (lockSystem.isRaycastLocked())
@@ -248,7 +258,16 @@ public class MenuManager extends ManagerPackage {
         ((InternalLoader) internalLoader).request(menuName);
     }
 
-    public void setMenuTargetFbo(FboInstance menuTargetFbo) {
-        this.menuTargetFbo = menuTargetFbo;
+    public void setMenuTargetFbo(WindowInstance window, FboInstance menuTargetFbo) {
+
+        if (window == null)
+            return;
+
+        if (menuTargetFbo == null) {
+            window2MenuTargetFbo.remove(window);
+            return;
+        }
+
+        window2MenuTargetFbo.put(window, menuTargetFbo);
     }
 }
