@@ -79,7 +79,7 @@ public class RenderManager extends ManagerPackage {
         fboManager.resizeWindowRelative(window, window.getWidth(), window.getHeight());
         renderSystem.drawToMappedTargets(window);
 
-        fboRenderSystem.pushBlits();
+        fboRenderSystem.pushBlits(window);
         drawFinal(window);
     }
 
@@ -93,7 +93,7 @@ public class RenderManager extends ManagerPackage {
         cameraManager.pushCamera(window);
         fboManager.resizeWindowRelative(window, window.getWidth(), window.getHeight());
         renderSystem.drawToMappedTargets(window);
-        fboRenderSystem.pushBlits();
+        fboRenderSystem.pushBlits(window);
         renderSystem.drawToTarget(window, target);
     }
 
@@ -128,12 +128,12 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushScreenCall(modelInstance, null, resolveDefaultWindow());
     }
 
-    public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask) {
-        renderSystem.pushScreenCall(modelInstance, mask, resolveDefaultWindow());
-    }
-
     public void pushScreenCall(ModelInstance modelInstance, WindowInstance window) {
         renderSystem.pushScreenCall(modelInstance, null, window);
+    }
+
+    public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask) {
+        renderSystem.pushScreenCall(modelInstance, mask, resolveDefaultWindow());
     }
 
     public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask, WindowInstance window) {

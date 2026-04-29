@@ -7,6 +7,7 @@ import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -54,7 +55,7 @@ public class FboRenderSystem extends SystemPackage {
         fbo2BlitModel.remove(fbo);
     }
 
-    public void pushBlits() {
+    public void pushBlits(WindowInstance window) {
         if (blitCount == 0)
             return;
 
@@ -77,7 +78,7 @@ public class FboRenderSystem extends SystemPackage {
             FboInstance fbo = blitFboBuffer[i];
             ModelInstance model = resolveBlitModel(fbo);
             model.getMaterial().setUniform("u_source", fbo.getTextureId());
-            renderManager.pushScreenCall(model);
+            renderManager.pushScreenCall(model, window);
         }
 
         blitCount = 0;
