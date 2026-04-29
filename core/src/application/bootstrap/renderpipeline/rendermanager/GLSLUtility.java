@@ -36,6 +36,10 @@ class GLSLUtility extends EngineUtility {
         EngineContext.gl20.glViewport(0, 0, width, height);
     }
 
+    static void unbindFramebuffer() {
+        EngineContext.gl30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, EngineSetting.GL_HANDLE_NONE);
+    }
+
     // Depth \\
 
     static void enableDepth() {
