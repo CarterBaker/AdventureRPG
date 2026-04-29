@@ -6,7 +6,6 @@ import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
@@ -15,7 +14,6 @@ import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.runtime.RuntimeSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -31,13 +29,11 @@ public class WorldRenderManager extends ManagerPackage {
     private RenderManager renderManager;
     private WorldStreamManager worldStreamManager;
     private FrustumCullingSystem frustumCullingSystem;
-    private FboRenderSystem fboRenderSystem;
 
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> chunkModels;
     private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> megaModels;
 
     private int batchedChunks;
-    private FboInstance frameWorldFbo;
 
     @Override
     protected void create() {
@@ -53,22 +49,17 @@ public class WorldRenderManager extends ManagerPackage {
         this.modelManager = get(ModelManager.class);
         this.renderManager = get(RenderManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
-        this.fboRenderSystem = get(FboRenderSystem.class);
     }
 
     @Override
     protected void lateUpdate() {
         renderWorld();
-        if (frameWorldFbo != null)
-            fboRenderSystem.pushFbo(frameWorldFbo, RuntimeSetting.LAYER_WORLD);
     }
 
     private void renderWorld() {
 
         if (!worldStreamManager.hasGrids())
             return;
-
-        frameWorldFbo = null;
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
         Object[] gridElements = grids.elements();
@@ -83,9 +74,6 @@ public class WorldRenderManager extends ManagerPackage {
 
             if (window == null || worldFbo == null)
                 continue;
-
-            if (frameWorldFbo == null)
-                frameWorldFbo = worldFbo;
 
             frustumCullingSystem.refresh(grid);
 

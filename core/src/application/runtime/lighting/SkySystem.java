@@ -46,7 +46,7 @@ public class SkySystem extends SystemPackage {
     @Override
     protected void update() {
         renderManager.pushRenderCall(skyPass.getModelInstance(), skyFbo, 0, context.getWindow());
-        fboRenderSystem.pushFbo(skyFbo, RuntimeSetting.LAYER_SKY);
+        fboRenderSystem.pushFbo(skyFbo, RuntimeSetting.LAYER_SKY, context.getWindow());
     }
 
     // Accessible \\

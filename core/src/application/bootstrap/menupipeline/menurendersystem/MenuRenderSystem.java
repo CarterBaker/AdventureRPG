@@ -63,7 +63,7 @@ public class MenuRenderSystem extends SystemPackage {
         for (int i = 0; i < elements.size(); i++)
             renderElement(elements.get(i), 0f, 0f, screenW, screenH);
 
-        fboRenderSystem.pushFbo(uiTargetFbo, layer);
+        fboRenderSystem.pushFbo(uiTargetFbo, layer, currentWindow);
     }
 
     private void renderElement(
