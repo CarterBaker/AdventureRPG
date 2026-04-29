@@ -156,6 +156,9 @@ class RenderSystem extends SystemPackage {
 
     private void bindTarget(WindowInstance window, FboInstance target) {
         if (target == null) {
+            // Ensure screen pass renders to the currently bound window's default framebuffer.
+            // Without this, the previous FBO can remain bound and secondary windows present black.
+            GLSLUtility.unbindFramebuffer();
             GLSLUtility.setViewport(window.getWidth(), window.getHeight());
             return;
         }
