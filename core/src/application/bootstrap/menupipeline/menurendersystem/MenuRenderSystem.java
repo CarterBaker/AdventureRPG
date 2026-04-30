@@ -5,6 +5,8 @@ import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.fontrendersystem.FontRenderSystem;
+import application.bootstrap.geometrypipeline.model.ModelInstance;
+import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
@@ -13,9 +15,14 @@ import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.renderpipeline.util.MaskStruct;
+import application.bootstrap.shaderpipeline.material.MaterialInstance;
+import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuRenderSystem extends SystemPackage {
@@ -23,18 +30,24 @@ public class MenuRenderSystem extends SystemPackage {
     private RenderManager renderManager;
     private FontRenderSystem fontRenderSystem;
     private FboRenderSystem fboRenderSystem;
+    private MaterialManager materialManager;
+    private MeshManager meshManager;
+    private ModelManager modelManager;
 
     private MaskStruct[] maskPool;
     private int maskDepth;
 
     private WindowInstance currentWindow;
     private FboInstance targetFbo;
+    private ModelInstance flatRectModel;
+    private Vector4 flatRectColor;
 
     @Override
     protected void create() {
         this.maskPool = new MaskStruct[EngineSetting.MAX_MASK_DEPTH];
         for (int i = 0; i < maskPool.length; i++)
             maskPool[i] = new MaskStruct();
+        this.flatRectColor = new Vector4();
     }
 
     @Override
@@ -42,6 +55,14 @@ public class MenuRenderSystem extends SystemPackage {
         this.renderManager = get(RenderManager.class);
         this.fontRenderSystem = get(FontRenderSystem.class);
         this.fboRenderSystem = get(FboRenderSystem.class);
+        this.materialManager = get(MaterialManager.class);
+        this.meshManager = get(MeshManager.class);
+        this.modelManager = get(ModelManager.class);
+
+        MaterialInstance material = materialManager.cloneMaterial("util/FlatColorRect");
+        this.flatRectModel = modelManager.createModel(
+                meshManager.getMeshHandleFromMeshName("util/Sprite"),
+                material);
     }
 
     public void renderMenu(MenuInstance instance, FboInstance uiTargetFbo, int layer) {
@@ -97,6 +118,9 @@ public class MenuRenderSystem extends SystemPackage {
 
         if (element.hasFont())
             pushFontRenderCall(element);
+
+        if (type == ElementType.FLAT_COLOR_RECT)
+            pushFlatRectRenderCall(element);
 
         if (!element.hasChildren())
             return;
@@ -256,6 +280,19 @@ public class MenuRenderSystem extends SystemPackage {
                 + (element.getComputedH() - scaledH) * 0.5f;
 
         fontRenderSystem.submit(font, x, y, scale, currentMask(), targetFbo, currentWindow);
+    }
+
+    private void pushFlatRectRenderCall(ElementInstance element) {
+
+        flatRectModel.getMaterial().setUniform("u_transform", element.getTransform());
+
+        Color color = element.getElementData().hasColor()
+                ? element.getElementData().getColor()
+                : EngineSetting.FONT_DEFAULT_COLOR;
+        flatRectColor.set(color.r, color.g, color.b, color.a);
+        flatRectModel.getMaterial().setUniform("u_color", flatRectColor);
+
+        renderManager.pushRenderCall(flatRectModel, targetFbo, 0, currentMask(), currentWindow);
     }
 
     private void pushMask(ElementInstance element) {

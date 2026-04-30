@@ -1,0 +1,4 @@
+{
+    "vert": "util/FlatColorRect.vsh",
+    "frag": "util/FlatColorRect.fsh"
+}

@@ -13,5 +13,6 @@ public enum ElementType {
     LABEL,
     CONTAINER,
     TOOLBAR,
-    EXPANDABLE_CONTAINER;
+    EXPANDABLE_CONTAINER,
+    FLAT_COLOR_RECT;
 }
