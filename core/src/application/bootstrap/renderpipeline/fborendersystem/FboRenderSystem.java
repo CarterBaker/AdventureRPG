@@ -36,6 +36,10 @@ public class FboRenderSystem extends SystemPackage {
     }
 
     public void pushFbo(FboInstance fbo, int layer, WindowInstance window) {
+        pushFbo(fbo, layer, window, null);
+    }
+
+    public void pushFbo(FboInstance fbo, int layer, WindowInstance window, DestRectStruct destRect) {
         if (fbo == null || window == null)
             return;
 
@@ -48,7 +52,7 @@ public class FboRenderSystem extends SystemPackage {
         if (queue.size() >= EngineSetting.MAX_RENDER_CALLS_PER_FRAME)
             return;
 
-        queue.add(new FboLayerStruct(fbo, layer));
+        queue.add(new FboLayerStruct(fbo, layer, destRect));
     }
 
     public void setBlitOverride(FboInstance fbo, MeshData mesh, MaterialInstance material) {
@@ -81,6 +85,17 @@ public class FboRenderSystem extends SystemPackage {
             FboInstance fbo = queue.get(i).fbo;
             ModelInstance model = resolveBlitModel(fbo);
             model.getMaterial().setUniform("u_source", fbo.getTextureId());
+
+            DestRectStruct destRect = queue.get(i).destRect;
+            if (destRect != null)
+                model.getMaterial().setUniform("u_destRect", new float[] {
+                        destRect.x,
+                        destRect.y,
+                        destRect.width,
+                        destRect.height
+                });
+            else
+                model.getMaterial().setUniform("u_destRect", new float[] { -1f, -1f, -1f, -1f });
             renderManager.pushScreenCall(model, window);
         }
 
@@ -112,13 +127,29 @@ public class FboRenderSystem extends SystemPackage {
         return model;
     }
 
+    public static class DestRectStruct {
+        public final float x;
+        public final float y;
+        public final float width;
+        public final float height;
+
+        public DestRectStruct(float x, float y, float width, float height) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+        }
+    }
+
     private static class FboLayerStruct {
         private final FboInstance fbo;
         private final int layer;
+        private final DestRectStruct destRect;
 
-        private FboLayerStruct(FboInstance fbo, int layer) {
+        private FboLayerStruct(FboInstance fbo, int layer, DestRectStruct destRect) {
             this.fbo = fbo;
             this.layer = layer;
+            this.destRect = destRect;
         }
     }
 }
