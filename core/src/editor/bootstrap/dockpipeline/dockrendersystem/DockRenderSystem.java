@@ -12,6 +12,7 @@ import editor.bootstrap.dockpipeline.dockmanager.DockManager;
 import editor.bootstrap.dockpipeline.node.NodeInstance;
 import editor.bootstrap.dockpipeline.tab.TabInstance;
 import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector4;
@@ -21,21 +22,10 @@ public class DockRenderSystem extends SystemPackage {
 
     /*
      * Draws all dock chrome as screen-space flat color quads.
-     * Tab bars, tab backgrounds, active highlights, close buttons,
-     * splitter handles, and zone borders.
-     * Uses the same FlatColorRect material + Sprite mesh path
-     * as MenuRenderSystem — identical transform convention.
+     * Uses the default sprite material with a color uniform —
+     * same path as menu sprites, no custom shader needed.
      * Does not touch FBOs or context rendering — that is the context's job.
      */
-
-    // Chrome constants — pixels
-    private static final int TAB_BAR_HEIGHT = 24;
-    private static final int TAB_MIN_WIDTH = 80;
-    private static final int TAB_MAX_WIDTH = 200;
-    private static final int TAB_CLOSE_SIZE = 14;
-    private static final int SPLITTER_SIZE = 4;
-    private static final int BORDER_SIZE = 1;
-    private static final int ACTIVE_STRIP_H = 2;
 
     // Colors — r g b a
     private static final float[] COL_TAB_BAR = { 0.18f, 0.18f, 0.18f, 1f };
@@ -73,9 +63,11 @@ public class DockRenderSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        MaterialInstance material = materialManager.cloneMaterial("util/FlatColorRect");
+        MaterialInstance material = materialManager.cloneMaterial(
+                EngineSetting.SPRITE_DEFAULT_MATERIAL);
         this.flatRectModel = modelManager.createModel(
-                meshManager.getMeshHandleFromMeshName("util/Sprite"), material);
+                meshManager.getMeshHandleFromMeshName(EngineSetting.SPRITE_DEFAULT_MESH),
+                material);
         this.colorScratch = new Vector4();
         this.transformScratch = new Matrix4();
     }
@@ -126,10 +118,10 @@ public class DockRenderSystem extends SystemPackage {
         int w = node.getWidth();
         int h = node.getHeight();
 
-        drawRect(x, y, w, BORDER_SIZE, COL_BORDER);
-        drawRect(x, y + h - BORDER_SIZE, w, BORDER_SIZE, COL_BORDER);
-        drawRect(x, y, BORDER_SIZE, h, COL_BORDER);
-        drawRect(x + w - BORDER_SIZE, y, BORDER_SIZE, h, COL_BORDER);
+        drawRect(x, y, w, EngineSetting.DOCK_BORDER_SIZE, COL_BORDER);
+        drawRect(x, y + h - EngineSetting.DOCK_BORDER_SIZE, w, EngineSetting.DOCK_BORDER_SIZE, COL_BORDER);
+        drawRect(x, y, EngineSetting.DOCK_BORDER_SIZE, h, COL_BORDER);
+        drawRect(x + w - EngineSetting.DOCK_BORDER_SIZE, y, EngineSetting.DOCK_BORDER_SIZE, h, COL_BORDER);
     }
 
     private void drawTabBar(NodeInstance node, TabGroupInstance group) {
@@ -137,7 +129,7 @@ public class DockRenderSystem extends SystemPackage {
         int y = node.getY();
         int w = node.getWidth();
 
-        drawRect(x, y, w, TAB_BAR_HEIGHT, COL_TAB_BAR);
+        drawRect(x, y, w, EngineSetting.DOCK_TAB_BAR_HEIGHT, COL_TAB_BAR);
 
         ObjectArrayList<TabInstance> tabs = group.getTabs();
         int tabCount = tabs.size();
@@ -151,32 +143,34 @@ public class DockRenderSystem extends SystemPackage {
     }
 
     private void drawTab(TabInstance tab, int x, int y, int width, boolean active) {
-        drawRect(x, y, width, TAB_BAR_HEIGHT,
+        drawRect(x, y, width, EngineSetting.DOCK_TAB_BAR_HEIGHT,
                 active ? COL_TAB_ACTIVE : COL_TAB_INACTIVE);
 
         if (active)
-            drawRect(x, y, width, ACTIVE_STRIP_H, COL_TAB_HIGHLIGHT);
+            drawRect(x, y, width, EngineSetting.DOCK_ACTIVE_STRIP_H, COL_TAB_HIGHLIGHT);
 
-        drawRect(x + width - 1, y, 1, TAB_BAR_HEIGHT, COL_TAB_SEPARATOR);
+        drawRect(x + width - 1, y, 1, EngineSetting.DOCK_TAB_BAR_HEIGHT, COL_TAB_SEPARATOR);
 
-        int closeX = x + width - TAB_CLOSE_SIZE - 4;
-        int closeY = y + (TAB_BAR_HEIGHT - TAB_CLOSE_SIZE) / 2;
-        drawRect(closeX, closeY, TAB_CLOSE_SIZE, TAB_CLOSE_SIZE, COL_TAB_CLOSE);
+        int closeX = x + width - EngineSetting.DOCK_TAB_CLOSE_SIZE - 4;
+        int closeY = y + (EngineSetting.DOCK_TAB_BAR_HEIGHT - EngineSetting.DOCK_TAB_CLOSE_SIZE) / 2;
+        drawRect(closeX, closeY, EngineSetting.DOCK_TAB_CLOSE_SIZE,
+                EngineSetting.DOCK_TAB_CLOSE_SIZE, COL_TAB_CLOSE);
     }
 
     // Splitter \\
 
     private void drawSplitter(NodeInstance node) {
         boolean horizontal = node.getSplitAxis() == NodeInstance.SplitAxis.HORIZONTAL;
+        int half = EngineSetting.DOCK_SPLITTER_SIZE / 2;
 
         if (horizontal) {
             int splitX = node.getX() + (int) (node.getWidth() * node.getSplitRatio());
-            drawRect(splitX - SPLITTER_SIZE / 2, node.getY(),
-                    SPLITTER_SIZE, node.getHeight(), COL_SPLITTER);
+            drawRect(splitX - half, node.getY(),
+                    EngineSetting.DOCK_SPLITTER_SIZE, node.getHeight(), COL_SPLITTER);
         } else {
             int splitY = node.getY() + (int) (node.getHeight() * node.getSplitRatio());
-            drawRect(node.getX(), splitY - SPLITTER_SIZE / 2,
-                    node.getWidth(), SPLITTER_SIZE, COL_SPLITTER);
+            drawRect(node.getX(), splitY - half,
+                    node.getWidth(), EngineSetting.DOCK_SPLITTER_SIZE, COL_SPLITTER);
         }
     }
 
@@ -203,6 +197,7 @@ public class DockRenderSystem extends SystemPackage {
         if (tabCount == 0)
             return 0;
         int computed = zoneWidth / tabCount;
-        return Math.max(TAB_MIN_WIDTH, Math.min(TAB_MAX_WIDTH, computed));
+        return Math.max(EngineSetting.DOCK_TAB_MIN_WIDTH,
+                Math.min(EngineSetting.DOCK_TAB_MAX_WIDTH, computed));
     }
 }

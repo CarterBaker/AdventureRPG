@@ -80,6 +80,15 @@ public class EngineSetting {
         public static final String SPRITE_DEFAULT_MATERIAL = "util/SpriteDefault";
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
 
+        // Dock \\
+        public static final int DOCK_TAB_BAR_HEIGHT = 24;
+        public static final int DOCK_TAB_MIN_WIDTH = 80;
+        public static final int DOCK_TAB_MAX_WIDTH = 200;
+        public static final int DOCK_TAB_CLOSE_SIZE = 14;
+        public static final int DOCK_SPLITTER_SIZE = 4;
+        public static final int DOCK_BORDER_SIZE = 1;
+        public static final int DOCK_ACTIVE_STRIP_H = 2;
+
         // Scale \\
 
         public static final float BLOCK_SIZE = 1.0f;

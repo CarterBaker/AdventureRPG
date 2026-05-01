@@ -1,5 +1,9 @@
 package editor.runtime;
 
+import application.kernel.windowpipeline.windowmanager.WindowManager;
+import editor.bootstrap.dockpipeline.dockmanager.DockManager;
+import editor.bootstrap.dockpipeline.dockinputsystem.DockInputSystem;
+import editor.bootstrap.dockpipeline.dockrendersystem.DockRenderSystem;
 import engine.root.ContextPackage;
 
 public class EditorWindowMain extends ContextPackage {
@@ -7,19 +11,29 @@ public class EditorWindowMain extends ContextPackage {
     /*
      * Editor runtime entry point. Creates and owns all editor systems.
      * Paired with the main window by EditorEngine.
-     *
-     * PreviewSystem has been removed. Secondary editor windows are now
-     * opened via the Testing dropdown in the editor toolbar (EditorBranch),
-     * which replaces the old OPEN_PREVIEW keybind entirely.
+     * Creates dock container for main window on start.
+     * DockRenderSystem draws chrome. DockInputSystem handles interaction.
      */
 
-    // Editor
-    private EditorMenuSystem editorMenuSystem;
-
-    // Internal \\
+    // Managers
+    private DockManager dockManager;
+    private WindowManager windowManager;
 
     @Override
     protected void create() {
-        this.editorMenuSystem = create(EditorMenuSystem.class);
+        create(EditorMenuSystem.class);
+        create(DockRenderSystem.class);
+        create(DockInputSystem.class);
+    }
+
+    @Override
+    protected void get() {
+        this.dockManager = get(DockManager.class);
+        this.windowManager = get(WindowManager.class);
+    }
+
+    @Override
+    protected void start() {
+        dockManager.createContainer(windowManager.getMainWindow());
     }
 }

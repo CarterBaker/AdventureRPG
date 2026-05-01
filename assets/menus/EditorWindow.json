@@ -13,7 +13,7 @@
           "position": {"x": "0%", "y": "0%"},
           "size": {"x": "100%", "y": "100%"},
           "sprite": "util/Default",
-          "color": [1.0, 1.0, 1.0, 1.0]
+          "color": [0.13, 0.13, 0.13, 1.0]
         },
         {
           "id": "toolbar",
@@ -78,7 +78,6 @@
                       "type": "button",
                       "anchor": "top_left",
                       "pivot": "top_left",
-                      "position": {"x": "0px", "y": "28px"},
                       "size": {"x": "150px", "y": "28px"},
                       "on_click": {
                         "class": "application.bootstrap.menupipeline.menueventsmanager.menus.EditorBranch",
@@ -104,16 +103,6 @@
       "id": "Secondary",
       "raycast_input": true,
       "elements": [
-        {
-          "id": "background",
-          "type": "sprite",
-          "anchor": "top_left",
-          "pivot": "top_left",
-          "position": {"x": "0%", "y": "0%"},
-          "size": {"x": "100%", "y": "100%"},
-          "sprite": "util/Default",
-          "color": [1.0, 1.0, 1.0, 1.0]
-        },
         {
           "id": "toolbar",
           "use": "util/ToolBar"
