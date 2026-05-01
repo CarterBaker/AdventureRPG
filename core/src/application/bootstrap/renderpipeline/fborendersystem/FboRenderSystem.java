@@ -10,6 +10,7 @@ import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -21,6 +22,9 @@ public class FboRenderSystem extends SystemPackage {
 
     private Object2ObjectOpenHashMap<FboInstance, ModelInstance> fbo2BlitModel;
     private Object2ObjectOpenHashMap<WindowInstance, ObjectArrayList<FboLayerStruct>> window2BlitQueue;
+
+    // Scratch — avoids allocation per blit per frame
+    private final Vector4 destRectScratch = new Vector4();
 
     @Override
     protected void create() {
@@ -82,20 +86,18 @@ public class FboRenderSystem extends SystemPackage {
         }
 
         for (int i = 0; i < queue.size(); i++) {
-            FboInstance fbo = queue.get(i).fbo;
+            FboLayerStruct struct = queue.get(i);
+            FboInstance fbo = struct.fbo;
             ModelInstance model = resolveBlitModel(fbo);
             model.getMaterial().setUniform("u_source", fbo.getTextureId());
 
-            DestRectStruct destRect = queue.get(i).destRect;
+            DestRectStruct destRect = struct.destRect;
             if (destRect != null)
-                model.getMaterial().setUniform("u_destRect", new float[] {
-                        destRect.x,
-                        destRect.y,
-                        destRect.width,
-                        destRect.height
-                });
+                destRectScratch.set(destRect.x, destRect.y, destRect.width, destRect.height);
             else
-                model.getMaterial().setUniform("u_destRect", new float[] { -1f, -1f, -1f, -1f });
+                destRectScratch.set(-1f, -1f, -1f, -1f);
+
+            model.getMaterial().setUniform("u_destRect", destRectScratch);
             renderManager.pushScreenCall(model, window);
         }
 
@@ -126,6 +128,8 @@ public class FboRenderSystem extends SystemPackage {
         fbo2BlitModel.put(fbo, model);
         return model;
     }
+
+    // Structs \\
 
     public static class DestRectStruct {
         public final float x;

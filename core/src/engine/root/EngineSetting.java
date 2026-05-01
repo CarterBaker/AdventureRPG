@@ -81,6 +81,7 @@ public class EngineSetting {
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
 
         // Dock \\
+
         public static final int DOCK_TAB_BAR_HEIGHT = 24;
         public static final int DOCK_TAB_MIN_WIDTH = 80;
         public static final int DOCK_TAB_MAX_WIDTH = 200;
@@ -88,6 +89,8 @@ public class EngineSetting {
         public static final int DOCK_SPLITTER_SIZE = 4;
         public static final int DOCK_BORDER_SIZE = 1;
         public static final int DOCK_ACTIVE_STRIP_H = 2;
+        public static final String DOCK_CHROME_VAO = "util/vao/DockChromeVAO";
+        public static final String DOCK_CHROME_MATERIAL = "util/DockChrome";
 
         // Scale \\
 
