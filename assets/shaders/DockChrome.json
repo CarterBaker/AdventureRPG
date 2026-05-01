@@ -1,0 +1,4 @@
+{
+    "vert": "util/DockChrome.vsh",
+    "frag": "util/DockChrome.fsh"
+}

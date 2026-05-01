@@ -1,0 +1,6 @@
+{
+    "shader": "DockChrome",
+    "ubos": {
+        "CameraData": "CameraData"
+    }
+}

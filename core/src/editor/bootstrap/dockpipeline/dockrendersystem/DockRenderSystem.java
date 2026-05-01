@@ -1,21 +1,14 @@
 package editor.bootstrap.dockpipeline.dockrendersystem;
 
-import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
-import application.bootstrap.geometrypipeline.model.ModelInstance;
-import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
-import application.bootstrap.renderpipeline.rendermanager.RenderManager;
-import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.dockpipeline.container.ContainerInstance;
+import editor.bootstrap.dockpipeline.dockgeometrysystem.DockGeometrySystem;
 import editor.bootstrap.dockpipeline.dockmanager.DockManager;
 import editor.bootstrap.dockpipeline.node.NodeInstance;
 import editor.bootstrap.dockpipeline.tab.TabInstance;
 import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.mathematics.matrices.Matrix4;
-import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class DockRenderSystem extends SystemPackage {
@@ -38,42 +31,23 @@ public class DockRenderSystem extends SystemPackage {
     private static final float[] COL_SPLITTER = { 0.12f, 0.12f, 0.12f, 1f };
 
     // Dependencies
-    private RenderManager renderManager;
-    private MaterialManager materialManager;
-    private MeshManager meshManager;
-    private ModelManager modelManager;
     private DockManager dockManager;
-
-    // Shared draw resources
-    private ModelInstance flatRectModel;
-    private Vector4 colorScratch;
-    private Matrix4 transformScratch;
+    private DockGeometrySystem dockGeometrySystem;
 
     // Per-frame state
     private WindowInstance currentWindow;
 
     @Override
     protected void get() {
-        this.renderManager = get(RenderManager.class);
-        this.materialManager = get(MaterialManager.class);
-        this.meshManager = get(MeshManager.class);
-        this.modelManager = get(ModelManager.class);
         this.dockManager = get(DockManager.class);
+        this.dockGeometrySystem = get(DockGeometrySystem.class);
     }
 
-    @Override
-    protected void awake() {
-        MaterialInstance material = materialManager.cloneMaterial(
-                EngineSetting.SPRITE_DEFAULT_MATERIAL);
-        this.flatRectModel = modelManager.createModel(
-                meshManager.getMeshHandleFromMeshName(EngineSetting.SPRITE_DEFAULT_MESH),
-                material);
-        this.colorScratch = new Vector4();
-        this.transformScratch = new Matrix4();
-    }
 
     @Override
     protected void render() {
+        dockGeometrySystem.beginFrame();
+
         ObjectArrayList<ContainerInstance> containers = dockManager.getContainers();
         Object[] elements = containers.elements();
         int count = containers.size();
@@ -82,6 +56,7 @@ public class DockRenderSystem extends SystemPackage {
             ContainerInstance container = (ContainerInstance) elements[i];
             currentWindow = container.getWindow();
             drawNode(container.getRootNode());
+            dockGeometrySystem.flushAndSubmit(currentWindow);
         }
     }
 
@@ -177,18 +152,7 @@ public class DockRenderSystem extends SystemPackage {
     // Primitive \\
 
     private void drawRect(int x, int y, int width, int height, float[] col) {
-        transformScratch.set(
-                width, 0, 0, x,
-                0, height, 0, y,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
-
-        colorScratch.set(col[0], col[1], col[2], col[3]);
-
-        flatRectModel.getMaterial().setUniform("u_transform", transformScratch);
-        flatRectModel.getMaterial().setUniform("u_color", colorScratch);
-
-        renderManager.pushScreenCall(flatRectModel, currentWindow);
+        dockGeometrySystem.pushRect(x, y, width, height, col);
     }
 
     // Helpers \\
