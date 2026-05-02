@@ -38,6 +38,11 @@ public class ElementData extends DataPackage {
     // Expansion
     private final boolean startExpanded;
 
+    // Action
+    private final String actionClass;
+    private final String actionMethod;
+    private final String actionArg;
+
     // Constructor \\
 
     public ElementData(
@@ -55,7 +60,10 @@ public class ElementData extends DataPackage {
             StackDirection stackDirection,
             DimensionValue spacing,
             TextAlign textAlign,
-            boolean startExpanded) {
+            boolean startExpanded,
+            String actionClass,
+            String actionMethod,
+            String actionArg) {
 
         // Identity
         this.id = id;
@@ -79,6 +87,11 @@ public class ElementData extends DataPackage {
 
         // Expansion
         this.startExpanded = startExpanded;
+
+        // Action
+        this.actionClass = actionClass;
+        this.actionMethod = actionMethod;
+        this.actionArg = actionArg;
     }
 
     // Accessible \\
@@ -141,6 +154,22 @@ public class ElementData extends DataPackage {
 
     public boolean isStartExpanded() {
         return startExpanded;
+    }
+
+    public String getActionClass() {
+        return actionClass;
+    }
+
+    public String getActionMethod() {
+        return actionMethod;
+    }
+
+    public String getActionArg() {
+        return actionArg;
+    }
+
+    public boolean hasAction() {
+        return actionClass != null && actionMethod != null;
     }
 
     public boolean hasSprite() {
