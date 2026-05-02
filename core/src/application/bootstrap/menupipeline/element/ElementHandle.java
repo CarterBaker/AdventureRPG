@@ -3,7 +3,6 @@ package application.bootstrap.menupipeline.element;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.util.DimensionValue;
 import application.bootstrap.menupipeline.util.LayoutStruct;
-import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
 import engine.graphics.color.Color;
@@ -25,20 +24,23 @@ public class ElementHandle extends HandlePackage {
 
     // Internal
     private ElementData data;
-    private Runnable clickAction;
-    private MenuAwareAction menuAwareAction;
+    private String actionClass;
+    private String actionMethod;
+    private String actionArg;
     private ObjectArrayList<MenuNodeStruct> children;
 
     // Constructor \\
 
     public void constructor(
             ElementData data,
-            Runnable clickAction,
-            MenuAwareAction menuAwareAction,
+            String actionClass,
+            String actionMethod,
+            String actionArg,
             ObjectArrayList<MenuNodeStruct> children) {
         this.data = data;
-        this.clickAction = clickAction;
-        this.menuAwareAction = menuAwareAction;
+        this.actionClass = actionClass;
+        this.actionMethod = actionMethod;
+        this.actionArg = actionArg;
         this.children = children;
     }
 
@@ -104,12 +106,16 @@ public class ElementHandle extends HandlePackage {
         return data.getTextAlign();
     }
 
-    public Runnable getClickAction() {
-        return clickAction;
+    public String getActionClass() {
+        return actionClass;
     }
 
-    public MenuAwareAction getMenuAwareAction() {
-        return menuAwareAction;
+    public String getActionMethod() {
+        return actionMethod;
+    }
+
+    public String getActionArg() {
+        return actionArg;
     }
 
     public ObjectArrayList<MenuNodeStruct> getChildren() {
@@ -136,12 +142,8 @@ public class ElementHandle extends HandlePackage {
         return data.hasColor();
     }
 
-    public boolean hasClickAction() {
-        return clickAction != null;
-    }
-
-    public boolean hasMenuAwareAction() {
-        return menuAwareAction != null;
+    public boolean hasAction() {
+        return actionClass != null && actionMethod != null;
     }
 
     public boolean hasChildren() {
