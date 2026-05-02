@@ -4,6 +4,7 @@ import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.dockpipeline.dockmanager.DockManager;
 import editor.bootstrap.dockpipeline.dockinputsystem.DockInputSystem;
 import editor.bootstrap.dockpipeline.dockrendersystem.DockRenderSystem;
+import editor.runtime.menueventsmanager.EditorMenuEventsManager;
 import engine.root.ContextPackage;
 
 public class EditorWindowMain extends ContextPackage {
@@ -21,6 +22,7 @@ public class EditorWindowMain extends ContextPackage {
 
     @Override
     protected void create() {
+        create(EditorMenuEventsManager.class);
         create(EditorMenuSystem.class);
         create(DockRenderSystem.class);
         create(DockInputSystem.class);

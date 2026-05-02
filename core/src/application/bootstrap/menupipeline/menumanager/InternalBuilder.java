@@ -1,7 +1,6 @@
 package application.bootstrap.menupipeline.menumanager;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -13,12 +12,10 @@ import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.elementsystem.ElementSystem;
 import application.bootstrap.menupipeline.menu.MenuData;
 import application.bootstrap.menupipeline.menu.MenuHandle;
-import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.util.DimensionValue;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
-import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
@@ -269,20 +266,14 @@ class InternalBuilder extends BuilderPackage {
         String spriteNameOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
         String textOverride = JsonUtility.getString(json, "text", null);
         Color colorOverride = json.has("color") ? parseColor(json) : null;
-
         String[] onClick = parseOnClick(json);
-        Runnable clickOverride = null;
-        MenuAwareAction maaOverride = null;
-
-        if (onClick != null) {
-            Object action = resolveClickActionRaw(onClick[0], onClick[1], onClick[2]);
-            clickOverride = action instanceof Runnable r ? r : null;
-            maaOverride = action instanceof MenuAwareAction m ? m : null;
-        }
+        String actionClassOverride = onClick != null ? onClick[0] : null;
+        String actionMethodOverride = onClick != null ? onClick[1] : null;
+        String actionArgOverride = onClick != null ? onClick[2] : null;
 
         boolean hasOverride = layoutOverride != null || spriteNameOverride != null
-                || textOverride != null || clickOverride != null
-                || maaOverride != null || colorOverride != null;
+                || textOverride != null || colorOverride != null
+                || actionClassOverride != null || actionMethodOverride != null || actionArgOverride != null;
 
         if (!hasOverride)
             return new MenuNodeStruct(template, children);
@@ -292,8 +283,11 @@ class InternalBuilder extends BuilderPackage {
                 spriteNameOverride,
                 textOverride,
                 colorOverride,
-                clickOverride,
-                maaOverride,
+                null,
+                null,
+                actionClassOverride,
+                actionMethodOverride,
+                actionArgOverride,
                 layoutOverride,
                 children);
     }
@@ -312,14 +306,14 @@ class InternalBuilder extends BuilderPackage {
 
             ObjectArrayList<MenuNodeStruct> children = resolved.getChildren();
             return layoutOverride != null
-                    ? new MenuNodeStruct(resolved, null, null, null, null, null, layoutOverride, children)
+                    ? new MenuNodeStruct(resolved, null, null, null, null, null, null, null, null, layoutOverride, children)
                     : new MenuNodeStruct(resolved, children);
         }
 
         // Deferred — children populated when ref resolves
         ObjectArrayList<MenuNodeStruct> children = new ObjectArrayList<>();
         MenuNodeStruct placeholder = partialOverride != null
-                ? new MenuNodeStruct(null, null, null, null, null, null, partialOverride, children)
+                ? new MenuNodeStruct(null, null, null, null, null, null, null, null, null, partialOverride, children)
                 : new MenuNodeStruct(null, children);
 
         deferredRefs.add(() -> {
@@ -371,9 +365,9 @@ class InternalBuilder extends BuilderPackage {
         String spriteName = resolveSpriteName(id, spritePath);
 
         String[] onClick = parseOnClick(json);
-        Object action = onClick != null
-                ? resolveClickActionRaw(onClick[0], onClick[1], onClick[2])
-                : null;
+        String actionClass = onClick != null ? onClick[0] : null;
+        String actionMethod = onClick != null ? onClick[1] : null;
+        String actionArg = onClick != null ? onClick[2] : null;
 
         // Default children for this master — used when this element is ref'd
         ObjectArrayList<MenuNodeStruct> defaultChildren = buildNodes(
@@ -381,13 +375,15 @@ class InternalBuilder extends BuilderPackage {
 
         ElementData data = new ElementData(
                 id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize, color,
-                layout, mask, stackDirection, spacing, textAlign, startExpanded);
+                layout, mask, stackDirection, spacing, textAlign, startExpanded,
+                actionClass, actionMethod, actionArg);
 
         ElementHandle master = create(ElementHandle.class);
         master.constructor(
                 data,
-                action instanceof Runnable r ? r : null,
-                action instanceof MenuAwareAction m ? m : null,
+                actionClass,
+                actionMethod,
+                actionArg,
                 defaultChildren);
 
         return master;
@@ -486,87 +482,7 @@ class InternalBuilder extends BuilderPackage {
         return spritePath;
     }
 
-    // Click Action Resolution \\
-
-    private Object resolveClickActionRaw(String actionClass, String actionMethod, String actionArg) {
-
-        Object target = resolveTarget(actionClass, actionMethod);
-
-        if (PARENT_ARG.equals(actionArg)) {
-
-            Method method;
-
-            try {
-                method = target.getClass().getMethod(actionMethod, MenuInstance.class);
-            } catch (NoSuchMethodException e) {
-                throwException("$parent method '" + actionMethod
-                        + "' must accept MenuInstance on '" + actionClass + "'", e);
-                return null;
-            }
-
-            return (MenuAwareAction) parent -> {
-                try {
-                    method.invoke(target, parent);
-                } catch (Exception e) {
-                    throwException("Button action failed: " + actionMethod, e);
-                }
-            };
-        }
-
-        Method method = resolveMethod(target, actionClass, actionMethod, actionArg);
-
-        if (actionArg != null) {
-            String capturedArg = actionArg;
-            return (Runnable) () -> {
-                try {
-                    method.invoke(target, capturedArg);
-                } catch (Exception e) {
-                    throwException("Button action failed: " + actionMethod, e);
-                }
-            };
-        }
-
-        return (Runnable) () -> {
-            try {
-                method.invoke(target);
-            } catch (Exception e) {
-                throwException("Button action failed: " + actionMethod, e);
-            }
-        };
-    }
-
-    private Object resolveTarget(String className, String methodName) {
-
-        try {
-            Class<?> clazz = Class.forName(className);
-            Object target = internal.getUnchecked(clazz);
-
-            if (target == null)
-                throwException("on_click class not registered: '" + className
-                        + "' (method: '" + methodName + "')");
-
-            return target;
-        } catch (ClassNotFoundException e) {
-            throwException("on_click class not found: '" + className
-                    + "' (method: '" + methodName + "')", e);
-            return null;
-        }
-    }
-
-    private Method resolveMethod(Object target, String className, String methodName, String arg) {
-
-        try {
-            return arg != null
-                    ? target.getClass().getMethod(methodName, String.class)
-                    : target.getClass().getMethod(methodName);
-        } catch (NoSuchMethodException e) {
-            throwException("on_click method not found: '" + methodName
-                    + "' on '" + className + "'", e);
-            return null;
-        }
-    }
-
-    // Layout Parsing \\
+    // Layout Parsing \
 
     private LayoutStruct parseLayout(JsonObject json) {
         return new LayoutStruct(
