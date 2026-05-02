@@ -30,6 +30,9 @@ public class MenuNodeStruct extends StructPackage {
     private final Color colorOverride;
     private final Runnable clickActionOverride;
     private final MenuAwareAction menuAwareActionOverride;
+    private final String actionClassOverride;
+    private final String actionMethodOverride;
+    private final String actionArgOverride;
     private LayoutStruct layoutOverride;
 
     // Tree
@@ -43,6 +46,9 @@ public class MenuNodeStruct extends StructPackage {
         this.colorOverride = null;
         this.clickActionOverride = null;
         this.menuAwareActionOverride = null;
+        this.actionClassOverride = null;
+        this.actionMethodOverride = null;
+        this.actionArgOverride = null;
         this.layoutOverride = null;
         this.children = children != null ? children : new ObjectArrayList<>();
     }
@@ -55,6 +61,9 @@ public class MenuNodeStruct extends StructPackage {
             Color colorOverride,
             Runnable clickActionOverride,
             MenuAwareAction menuAwareActionOverride,
+            String actionClassOverride,
+            String actionMethodOverride,
+            String actionArgOverride,
             LayoutStruct layoutOverride,
             ObjectArrayList<MenuNodeStruct> children) {
         this.master = master;
@@ -63,6 +72,9 @@ public class MenuNodeStruct extends StructPackage {
         this.colorOverride = colorOverride;
         this.clickActionOverride = clickActionOverride;
         this.menuAwareActionOverride = menuAwareActionOverride;
+        this.actionClassOverride = actionClassOverride;
+        this.actionMethodOverride = actionMethodOverride;
+        this.actionArgOverride = actionArgOverride;
         this.layoutOverride = layoutOverride;
         this.children = children != null ? children : new ObjectArrayList<>();
     }
@@ -101,6 +113,22 @@ public class MenuNodeStruct extends StructPackage {
 
     public MenuAwareAction getMenuAwareActionOverride() {
         return menuAwareActionOverride;
+    }
+
+    public String getActionClassOverride() {
+        return actionClassOverride;
+    }
+
+    public String getActionMethodOverride() {
+        return actionMethodOverride;
+    }
+
+    public String getActionArgOverride() {
+        return actionArgOverride;
+    }
+
+    public boolean hasActionOverride() {
+        return actionClassOverride != null;
     }
 
     public LayoutStruct getLayoutOverride() {

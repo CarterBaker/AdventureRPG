@@ -22,6 +22,12 @@ public class ElementInstance extends InstancePackage {
     private SpriteInstance spriteInstance;
     private FontInstance fontInstance;
     private Runnable resolvedAction;
+    private String actionClassOverride;
+    private String actionMethodOverride;
+    private String actionArgOverride;
+    private String actionClass;
+    private String actionMethod;
+    private String actionArg;
     private LayoutStruct layoutOverride;
     private DimensionVector2 positionOverride;
 
@@ -64,6 +70,12 @@ public class ElementInstance extends InstancePackage {
             FontInstance fontInstance,
             String textOverride,
             Runnable resolvedAction,
+            String actionClassOverride,
+            String actionMethodOverride,
+            String actionArgOverride,
+            String actionClass,
+            String actionMethod,
+            String actionArg,
             LayoutStruct layoutOverride,
             ObjectArrayList<ElementInstance> children) {
 
@@ -73,6 +85,12 @@ public class ElementInstance extends InstancePackage {
         this.fontInstance = fontInstance;
         this.textOverride = textOverride;
         this.resolvedAction = resolvedAction;
+        this.actionClassOverride = actionClassOverride;
+        this.actionMethodOverride = actionMethodOverride;
+        this.actionArgOverride = actionArgOverride;
+        this.actionClass = actionClass;
+        this.actionMethod = actionMethod;
+        this.actionArg = actionArg;
         this.layoutOverride = layoutOverride;
 
         // Children
@@ -186,6 +204,22 @@ public class ElementInstance extends InstancePackage {
                 0, h, 0, top,
                 0, 0, 1, 0,
                 0, 0, 0, 1);
+    }
+
+    public String getEffectiveActionClass() {
+        return actionClassOverride != null ? actionClassOverride : actionClass;
+    }
+
+    public String getEffectiveActionMethod() {
+        return actionClassOverride != null ? actionMethodOverride : actionMethod;
+    }
+
+    public String getEffectiveActionArg() {
+        return actionClassOverride != null ? actionArgOverride : actionArg;
+    }
+
+    public boolean hasAction() {
+        return getEffectiveActionClass() != null && getEffectiveActionMethod() != null;
     }
 
     // Interaction \\

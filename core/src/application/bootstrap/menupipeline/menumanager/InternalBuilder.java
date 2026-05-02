@@ -298,14 +298,14 @@ class InternalBuilder extends BuilderPackage {
 
             ObjectArrayList<MenuNodeStruct> children = resolved.getChildren();
             return layoutOverride != null
-                    ? new MenuNodeStruct(resolved, null, null, null, null, null, layoutOverride, children)
+                    ? new MenuNodeStruct(resolved, null, null, null, null, null, null, null, null, layoutOverride, children)
                     : new MenuNodeStruct(resolved, children);
         }
 
         // Deferred — children populated when ref resolves
         ObjectArrayList<MenuNodeStruct> children = new ObjectArrayList<>();
         MenuNodeStruct placeholder = partialOverride != null
-                ? new MenuNodeStruct(null, null, null, null, null, null, partialOverride, children)
+                ? new MenuNodeStruct(null, null, null, null, null, null, null, null, null, partialOverride, children)
                 : new MenuNodeStruct(null, children);
 
         deferredRefs.add(() -> {

@@ -173,6 +173,12 @@ public class ElementSystem extends SystemPackage {
                 fontInstance,
                 node.getTextOverride(),
                 resolvedAction,
+                node.getActionClassOverride(),
+                node.getActionMethodOverride(),
+                node.getActionArgOverride(),
+                master.getActionClass(),
+                master.getActionMethod(),
+                master.getActionArg(),
                 node.getLayoutOverride(),
                 childInstances);
 
