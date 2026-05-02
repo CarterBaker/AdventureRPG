@@ -14,7 +14,6 @@ import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.fontmanager.FontManager;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
-import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import engine.graphics.color.Color;
@@ -27,13 +26,16 @@ public class ElementSystem extends SystemPackage {
     /*
      * Owns the master element registry and drives runtime instantiation of element
      * trees. Masters are registered during bootstrap keyed by composite
-     * file/element
-     * path. Cycle detection prevents circular file dependencies during template
-     * resolution.
+     * file/element path. Cycle detection prevents circular file dependencies during
+     * template resolution.
      *
      * At runtime, createInstances walks the MenuNodeStruct tree passed to it.
      * master.getChildren() is a bootstrap-only concept used when building ref nodes
      * — ElementSystem never reads it during instantiation.
+     *
+     * Action resolution is intentionally not performed here. Action strings are
+     * stored on ElementInstance and resolved at click time by ElementHitSystem,
+     * which is a persistent system with a valid engine reference.
      */
 
     // Internal
@@ -157,9 +159,9 @@ public class ElementSystem extends SystemPackage {
                 fontInstance.setText(text);
         }
 
-        Runnable resolvedAction = resolveAction(master, node, parentRef);
+        // Action resolution is deferred to ElementHitSystem at click time.
+        // Strings are stored on ElementInstance and resolved once on first click.
 
-        // Children always come from the node — the tree is fully resolved at build time
         ObjectArrayList<MenuNodeStruct> childNodes = node.getChildren();
         ObjectArrayList<ElementInstance> childInstances = new ObjectArrayList<>(childNodes.size());
 
@@ -172,7 +174,7 @@ public class ElementSystem extends SystemPackage {
                 spriteInstance,
                 fontInstance,
                 node.getTextOverride(),
-                resolvedAction,
+                null,
                 node.getActionClassOverride(),
                 node.getActionMethodOverride(),
                 node.getActionArgOverride(),
@@ -183,32 +185,6 @@ public class ElementSystem extends SystemPackage {
                 childInstances);
 
         return instance;
-    }
-
-    private Runnable resolveAction(
-            ElementHandle master,
-            MenuNodeStruct node,
-            Supplier<MenuInstance> parentRef) {
-
-        MenuAwareAction maaOverride = node.getMenuAwareActionOverride();
-
-        if (maaOverride != null)
-            return () -> maaOverride.execute(parentRef.get());
-
-        Runnable clickOverride = node.getClickActionOverride();
-
-        if (clickOverride != null)
-            return clickOverride;
-
-        if (master.hasMenuAwareAction()) {
-            MenuAwareAction maa = master.getMenuAwareAction();
-            return () -> maa.execute(parentRef.get());
-        }
-
-        if (master.hasClickAction())
-            return master.getClickAction();
-
-        return null;
     }
 
     public ElementInstance createDetachedInstance(MenuNodeStruct node) {
