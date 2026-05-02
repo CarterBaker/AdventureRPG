@@ -107,22 +107,19 @@ public class ElementHitSystem extends SystemPackage {
             if (mouseX < clipLeft || mouseX > clipRight || mouseY < clipTop || mouseY > clipBottom) continue;
             if (!isHit(element, mouseX, mouseY)) continue;
             if (type == ElementType.EXPANDABLE_CONTAINER) { toggleExpandable(element); return true; }
-            executeAction(element, menu);
+            executeAction(data, menu);
             return true;
         }
         return false;
     }
 
-    private void executeAction(ElementInstance element, MenuInstance parent) {
-        if (!element.hasAction()) return;
-        String actionClass = element.getEffectiveActionClass();
-        String actionMethod = element.getEffectiveActionMethod();
-        String actionArg = element.getEffectiveActionArg();
-        String key = actionClass + "#" + actionMethod + "#" + actionArg;
-        if (PARENT_ARG.equals(actionArg)) {
+    private void executeAction(ElementData data, MenuInstance parent) {
+        if (!data.hasAction()) return;
+        String key = data.getActionClass() + "#" + data.getActionMethod() + "#" + data.getActionArg();
+        if (PARENT_ARG.equals(data.getActionArg())) {
             MenuAwareAction action = resolvedMenuAwareActions.get(key);
             if (action == null) {
-                action = resolveMenuAwareAction(actionClass, actionMethod);
+                action = resolveMenuAwareAction(data);
                 resolvedMenuAwareActions.put(key, action);
             }
             action.execute(parent);
@@ -130,13 +127,13 @@ public class ElementHitSystem extends SystemPackage {
         }
         Runnable action = resolvedActions.get(key);
         if (action == null) {
-            action = resolveRunnableAction(actionClass, actionMethod, actionArg);
+            action = resolveRunnableAction(data);
             resolvedActions.put(key, action);
         }
         action.run();
     }
 
-    private Runnable resolveRunnableAction(String actionClass, String actionMethod, String actionArg) {
+    private Runnable resolveRunnableAction(ElementData data) {
         try {
             Class<?> clazz = Class.forName(data.getActionClass());
             Object target = internal.getUnchecked(clazz);
@@ -146,12 +143,12 @@ public class ElementHitSystem extends SystemPackage {
             if (arg != null) return () -> invoke(method, target, arg);
             return () -> invoke(method, target);
         } catch (Exception e) {
-            throwException("Failed to resolve button action: " + actionClass + "#" + actionMethod, e);
+            throwException("Failed to resolve button action: " + data.getActionClass() + "#" + data.getActionMethod(), e);
             return null;
         }
     }
 
-    private MenuAwareAction resolveMenuAwareAction(String actionClass, String actionMethod) {
+    private MenuAwareAction resolveMenuAwareAction(ElementData data) {
         try {
             Class<?> clazz = Class.forName(data.getActionClass());
             Object target = internal.getUnchecked(clazz);
@@ -159,7 +156,7 @@ public class ElementHitSystem extends SystemPackage {
             Method method = target.getClass().getMethod(data.getActionMethod(), MenuInstance.class);
             return parent -> invoke(method, target, parent);
         } catch (Exception e) {
-            throwException("Failed to resolve menu-aware action: " + actionClass + "#" + actionMethod, e);
+            throwException("Failed to resolve menu-aware action: " + data.getActionClass() + "#" + data.getActionMethod(), e);
             return null;
         }
     }

@@ -266,14 +266,9 @@ class InternalBuilder extends BuilderPackage {
         String spriteNameOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
         String textOverride = JsonUtility.getString(json, "text", null);
         Color colorOverride = json.has("color") ? parseColor(json) : null;
-        String[] onClick = parseOnClick(json);
-        String actionClassOverride = onClick != null ? onClick[0] : null;
-        String actionMethodOverride = onClick != null ? onClick[1] : null;
-        String actionArgOverride = onClick != null ? onClick[2] : null;
 
         boolean hasOverride = layoutOverride != null || spriteNameOverride != null
-                || textOverride != null || colorOverride != null
-                || actionClassOverride != null || actionMethodOverride != null || actionArgOverride != null;
+                || textOverride != null || colorOverride != null;
 
         if (!hasOverride)
             return new MenuNodeStruct(template, children);
@@ -285,9 +280,6 @@ class InternalBuilder extends BuilderPackage {
                 colorOverride,
                 null,
                 null,
-                actionClassOverride,
-                actionMethodOverride,
-                actionArgOverride,
                 layoutOverride,
                 children);
     }
