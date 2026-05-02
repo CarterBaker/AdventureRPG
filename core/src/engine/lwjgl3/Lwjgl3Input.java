@@ -6,6 +6,7 @@ import org.lwjgl.glfw.GLFW;
 
 import engine.input.Input;
 import engine.input.InputListener;
+import engine.root.EngineSetting;
 
 class Lwjgl3Input implements Input {
 
@@ -35,6 +36,9 @@ class Lwjgl3Input implements Input {
     private float deltaX;
     private float deltaY;
     private boolean firstCursor = true;
+    private long cursorDefault;
+    private long cursorResizeH;
+    private long cursorResizeV;
 
     Lwjgl3Input(long window) {
         this.window = window;
@@ -110,6 +114,27 @@ class Lwjgl3Input implements Input {
         releasedKeys.clear();
         clickedButtons.clear();
         releasedButtons.clear();
+    }
+
+    public void initCursors() {
+        this.cursorDefault = GLFW.glfwCreateStandardCursor(GLFW.GLFW_ARROW_CURSOR);
+        this.cursorResizeH = GLFW.glfwCreateStandardCursor(GLFW.GLFW_HRESIZE_CURSOR);
+        this.cursorResizeV = GLFW.glfwCreateStandardCursor(GLFW.GLFW_VRESIZE_CURSOR);
+    }
+
+    public void setCursorShape(long windowHandle, int shape) {
+        long cursor = switch (shape) {
+            case EngineSetting.CURSOR_RESIZE_H -> cursorResizeH;
+            case EngineSetting.CURSOR_RESIZE_V -> cursorResizeV;
+            default -> cursorDefault;
+        };
+        GLFW.glfwSetCursor(windowHandle, cursor);
+    }
+
+    public void destroyCursors() {
+        GLFW.glfwDestroyCursor(cursorDefault);
+        GLFW.glfwDestroyCursor(cursorResizeH);
+        GLFW.glfwDestroyCursor(cursorResizeV);
     }
 
     // Input \\

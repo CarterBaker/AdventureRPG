@@ -85,7 +85,6 @@ public class EditorBranch extends BranchPackage {
         TabInstance tab = tabManager.createTab(
                 "Editor",
                 EditorWindowSecondary.class,
-                mainWindow,
                 0, 0,
                 mainWindow.getWidth(),
                 mainWindow.getHeight() - 28);

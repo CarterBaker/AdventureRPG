@@ -70,6 +70,7 @@ public class Lwjgl3Application {
         GL.createCapabilities();
 
         this.input = new Lwjgl3Input(mainHandle);
+        this.input.initCursors();
         this.display = new Lwjgl3Display(config.width, config.height, config.isFullscreen());
         this.engine = engine;
 
@@ -93,6 +94,10 @@ public class Lwjgl3Application {
 
         for (int i = 0; i < secondaryHandles.size(); i++)
             GLFW.glfwDestroyWindow(secondaryHandles.getLong(i));
+
+        for (Lwjgl3Input value : handle2Input.values())
+            value.destroyCursors();
+        input.destroyCursors();
 
         GLFW.glfwDestroyWindow(mainHandle);
         GLFW.glfwTerminate();
@@ -160,6 +165,7 @@ public class Lwjgl3Application {
             EngineUtility.throwException("Failed to create secondary window: " + title);
 
         Lwjgl3Input windowInput = new Lwjgl3Input(handle);
+        windowInput.initCursors();
         registerCallbacks(handle, windowInput, null);
         secondaryHandles.add(handle);
         handle2Input.put(handle, windowInput);
@@ -189,6 +195,14 @@ public class Lwjgl3Application {
     }
 
     public Input getInputForHandle(long handle) {
+
+        if (handle == mainHandle)
+            return input;
+
+        return handle2Input.get(handle);
+    }
+
+    public Lwjgl3Input getLwjglInputForHandle(long handle) {
 
         if (handle == mainHandle)
             return input;

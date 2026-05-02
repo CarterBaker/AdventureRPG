@@ -89,6 +89,9 @@ public class EngineSetting {
         public static final int DOCK_SPLITTER_SIZE = 4;
         public static final int DOCK_BORDER_SIZE = 1;
         public static final int DOCK_ACTIVE_STRIP_H = 2;
+        public static final int CURSOR_DEFAULT = 0;
+        public static final int CURSOR_RESIZE_H = 1;
+        public static final int CURSOR_RESIZE_V = 2;
         public static final String DOCK_CHROME_VAO = "util/vao/DockChromeVAO";
         public static final String DOCK_CHROME_MATERIAL = "util/DockChrome";
 
