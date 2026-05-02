@@ -85,6 +85,7 @@ public class EditorBranch extends BranchPackage {
         TabInstance tab = tabManager.createTab(
                 "Editor",
                 EditorWindowSecondary.class,
+                mainWindow,
                 0, 0,
                 mainWindow.getWidth(),
                 mainWindow.getHeight() - 28);
@@ -94,6 +95,21 @@ public class EditorBranch extends BranchPackage {
     }
 
     public void openPreview() {
-        windowManager.openWindow("Preview", RuntimeContext.class);
+        WindowInstance mainWindow = windowManager.getMainWindow();
+        ContainerInstance container = dockManager.getContainerForWindow(mainWindow);
+
+        if (container == null || container.getRootNode() == null)
+            return;
+
+        TabInstance tab = tabManager.createTab(
+                "Preview",
+                RuntimeContext.class,
+                mainWindow,
+                0, 0,
+                mainWindow.getWidth(),
+                mainWindow.getHeight() - 28);
+
+        dockManager.addTab(tab, container.getRootNode().getTabGroup());
+        tabManager.activateTab(tab, container.getRootNode().getTabGroup());
     }
 }

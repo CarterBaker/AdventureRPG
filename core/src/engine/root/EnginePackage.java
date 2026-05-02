@@ -6,6 +6,8 @@ import java.util.concurrent.Future;
 
 import com.google.gson.Gson;
 
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
 import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
 import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
@@ -235,6 +237,38 @@ public class EnginePackage extends ManagerPackage {
             return context;
         } catch (Exception e) {
             throw new InternalException("Failed to create context: " + contextClass.getSimpleName(), e);
+        } finally {
+            this.windowPlatform.restoreMainContext();
+            SystemPackage.SYSTEM_STRUCT.remove();
+        }
+    }
+
+    public <T extends ContextPackage> T createTabContext(
+            Class<T> contextClass,
+            WindowInstance window,
+            FboInstance fbo) {
+
+        if (window == null)
+            throwException("createTabContext() requires a WindowInstance — null was passed.");
+
+        try {
+            SystemPackage.setupConstructor(this.settings, this, this);
+
+            var constructor = contextClass.getDeclaredConstructor();
+            T context = constructor.newInstance();
+
+            context.pendingStart = true;
+            context.setWindow(window);
+            context.setFbo(fbo);
+
+            this.pendingContextList.add(context);
+            this.windowPlatform.makeContextCurrent(window);
+
+            primeContextLifecycle(context);
+
+            return context;
+        } catch (Exception e) {
+            throw new InternalException("Failed to create tab context: " + contextClass.getSimpleName(), e);
         } finally {
             this.windowPlatform.restoreMainContext();
             SystemPackage.SYSTEM_STRUCT.remove();
@@ -600,10 +634,15 @@ public class EnginePackage extends ManagerPackage {
         this.setContext(SystemContext.RENDER);
 
         super.internalRender();
+        RenderManager renderManager = this.getUnchecked(RenderManager.class);
 
         for (int i = 0; i < this.contextArray.length; i++) {
             EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
-            this.contextArray[i].internalRender();
+            if (this.contextArray[i].hasFbo()) {
+                renderManager.renderContextToFbo(this.contextArray[i], this.contextArray[i].getFbo());
+            } else {
+                this.contextArray[i].internalRender();
+            }
             EngineUtility.windowManager.endContextWindow();
         }
 

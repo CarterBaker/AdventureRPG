@@ -13,6 +13,7 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import engine.root.ContextPackage;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -105,6 +106,12 @@ public class RenderManager extends ManagerPackage {
         WindowInstance window = resolveDefaultWindow();
         if (window != null)
             drawFinal(window);
+    }
+
+    public void renderContextToFbo(ContextPackage ctx, FboInstance fbo) {
+        fboManager.bind(fbo);
+        ctx.internalRender();
+        fboManager.unbind();
     }
 
     public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth) {

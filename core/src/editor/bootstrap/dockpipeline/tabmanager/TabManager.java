@@ -1,5 +1,9 @@
 package editor.bootstrap.dockpipeline.tabmanager;
 
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.kernel.windowpipeline.window.WindowInstance;
+import application.runtime.RuntimeSetting;
 import editor.bootstrap.dockpipeline.tab.TabData;
 import editor.bootstrap.dockpipeline.tab.TabInstance;
 import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
@@ -19,6 +23,7 @@ public class TabManager extends ManagerPackage {
 
     // Registry
     private ObjectArrayList<TabInstance> tabs;
+    private FboManager fboManager;
 
     // Internal \\
 
@@ -27,16 +32,29 @@ public class TabManager extends ManagerPackage {
         this.tabs = new ObjectArrayList<>();
     }
 
+    @Override
+    protected void get() {
+        this.fboManager = get(FboManager.class);
+    }
+
     // Tab Lifecycle \\
 
     public TabInstance createTab(
             String title,
             Class<? extends ContextPackage> contextClass,
+            WindowInstance window,
             int x, int y, int width, int height) {
+
+        FboInstance fbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, window);
+        fboManager.resize(fbo, width, height);
 
         TabData data = new TabData(title, contextClass, x, y, width, height);
         TabInstance tab = create(TabInstance.class);
         tab.constructor(data);
+        tab.setFbo(fbo);
+
+        ContextPackage context = internal.createTabContext(contextClass, window, fbo);
+        tab.setContext(context);
 
         tabs.add(tab);
         return tab;

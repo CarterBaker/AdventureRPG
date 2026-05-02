@@ -1,5 +1,6 @@
 package editor.bootstrap.dockpipeline.tab;
 
+import application.bootstrap.renderpipeline.fbo.FboInstance;
 import engine.root.ContextPackage;
 import engine.root.InstancePackage;
 
@@ -17,6 +18,7 @@ public class TabInstance extends InstancePackage {
 
     // Context
     private ContextPackage context;
+    private FboInstance fbo;
 
     // State
     private boolean active;
@@ -74,6 +76,10 @@ public class TabInstance extends InstancePackage {
         return context != null;
     }
 
+    public boolean hasFbo() {
+        return fbo != null;
+    }
+
     // Accessible \\
 
     public TabData getTabData() {
@@ -82,6 +88,14 @@ public class TabInstance extends InstancePackage {
 
     public ContextPackage getContext() {
         return context;
+    }
+
+    public FboInstance getFbo() {
+        return fbo;
+    }
+
+    public void setFbo(FboInstance fbo) {
+        this.fbo = fbo;
     }
 
     public String getTitle() {
