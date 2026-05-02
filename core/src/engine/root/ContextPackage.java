@@ -1,5 +1,6 @@
 package engine.root;
 
+import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -25,6 +26,9 @@ public abstract class ContextPackage extends ManagerPackage {
 
     // Window
     private WindowInstance window;
+    
+    // Render Target (tab contexts only — null for window-paired contexts)
+    private FboInstance fbo;
 
     // Local Registry
     private Object2ObjectOpenHashMap<Class<?>, SystemPackage> localRegistry;
@@ -76,5 +80,17 @@ public abstract class ContextPackage extends ManagerPackage {
 
     public boolean hasWindow() {
         return window != null;
+    }
+
+    public FboInstance getFbo() {
+        return fbo;
+    }
+
+    void setFbo(FboInstance fbo) {
+        this.fbo = fbo;
+    }
+
+    public boolean hasFbo() {
+        return fbo != null;
     }
 }

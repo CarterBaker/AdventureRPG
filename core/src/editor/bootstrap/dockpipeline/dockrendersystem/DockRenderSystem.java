@@ -1,5 +1,6 @@
 package editor.bootstrap.dockpipeline.dockrendersystem;
 
+import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.dockpipeline.container.ContainerInstance;
 import editor.bootstrap.dockpipeline.dockgeometrysystem.DockGeometrySystem;
@@ -33,6 +34,7 @@ public class DockRenderSystem extends SystemPackage {
     // Dependencies
     private DockManager dockManager;
     private DockGeometrySystem dockGeometrySystem;
+    private FboRenderSystem fboRenderSystem;
 
     // Per-frame state
     private WindowInstance currentWindow;
@@ -41,6 +43,7 @@ public class DockRenderSystem extends SystemPackage {
     protected void get() {
         this.dockManager = get(DockManager.class);
         this.dockGeometrySystem = get(DockGeometrySystem.class);
+        this.fboRenderSystem = get(FboRenderSystem.class);
     }
 
 
@@ -85,6 +88,24 @@ public class DockRenderSystem extends SystemPackage {
 
         drawZoneBorder(node);
         drawTabBar(node, group);
+        drawTabContent(node, group);
+    }
+
+    private void drawTabContent(NodeInstance node, TabGroupInstance group) {
+        TabInstance active = group.getActiveTab();
+        if (active == null || !active.hasFbo())
+            return;
+
+        int x = node.getX();
+        int y = node.getY() + EngineSetting.DOCK_TAB_BAR_HEIGHT;
+        int w = node.getWidth();
+        int h = node.getHeight() - EngineSetting.DOCK_TAB_BAR_HEIGHT;
+
+        fboRenderSystem.pushFbo(
+                active.getFbo(),
+                0,
+                currentWindow,
+                new FboRenderSystem.DestRectStruct(x, y, w, h));
     }
 
     private void drawZoneBorder(NodeInstance node) {
