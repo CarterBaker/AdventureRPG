@@ -148,7 +148,9 @@ public class DockManager extends ManagerPackage {
 
         Class contextClass = tab.getTabData().getContextClass();
         WindowInstance newWindow = windowManager.openWindow(tab.getTitle(), contextClass);
-        ContainerInstance newContainer = createContainer(newWindow);
+        ContainerInstance newContainer = getContainerForWindow(newWindow);
+        if (newContainer == null)
+            return;
         addTab(tab, newContainer.getRootNode().getTabGroup());
     }
 

@@ -26,6 +26,8 @@ public interface WindowPlatform {
 
     void restoreMainContext();
 
+    void setCursorShape(long windowHandle, int shape);
+
     void syncWindowSize(WindowInstance window);
 
     void exit();

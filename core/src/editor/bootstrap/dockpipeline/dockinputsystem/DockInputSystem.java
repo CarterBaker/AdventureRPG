@@ -9,6 +9,7 @@ import editor.bootstrap.dockpipeline.node.NodeInstance;
 import editor.bootstrap.dockpipeline.tab.TabInstance;
 import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
 import editor.bootstrap.dockpipeline.tabmanager.TabManager;
+import engine.root.EngineSetting;
 import engine.settings.KeyBindings;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -55,6 +56,9 @@ public class DockInputSystem extends SystemPackage {
     private float dragStartY;
     private boolean tabDragActive;
 
+    // Cursor state
+    private int lastCursorShape;
+
     @Override
     protected void get() {
         this.inputSystem = get(InputSystem.class);
@@ -67,6 +71,7 @@ public class DockInputSystem extends SystemPackage {
     protected void update() {
         float mx = inputSystem.getMouseX();
         float my = inputSystem.getMouseY();
+        updateHoverCursor(mx, my);
         boolean clicked = inputSystem.bindingClicked(KeyBindings.PRIMARY);
         boolean held = inputSystem.bindingHeld(KeyBindings.PRIMARY);
         boolean released = inputSystem.bindingReleased(KeyBindings.PRIMARY);
@@ -316,6 +321,40 @@ public class DockInputSystem extends SystemPackage {
         tabDragActive = false;
         dragStartX = 0;
         dragStartY = 0;
+    }
+
+    private void updateHoverCursor(float mx, float my) {
+        int shape = resolveHoverCursorShape(mx, my);
+        if (shape == lastCursorShape)
+            return;
+        lastCursorShape = shape;
+        WindowInstance active = windowManager.getActiveWindow();
+        if (active == null)
+            return;
+        internal.windowPlatform.setCursorShape(active.getNativeHandle(), shape);
+    }
+
+    private int resolveHoverCursorShape(float mx, float my) {
+        ObjectArrayList<ContainerInstance> containers = dockManager.getContainers();
+        for (int i = 0; i < containers.size(); i++) {
+            int shape = findSplitterCursorShape(containers.get(i).getRootNode(), mx, my);
+            if (shape != EngineSetting.CURSOR_DEFAULT)
+                return shape;
+        }
+        return EngineSetting.CURSOR_DEFAULT;
+    }
+
+    private int findSplitterCursorShape(NodeInstance node, float mx, float my) {
+        if (node == null || node.isLeaf())
+            return EngineSetting.CURSOR_DEFAULT;
+        if (hitSplitter(node, mx, my))
+            return node.getSplitAxis() == NodeInstance.SplitAxis.HORIZONTAL
+                    ? EngineSetting.CURSOR_RESIZE_H
+                    : EngineSetting.CURSOR_RESIZE_V;
+        int result = findSplitterCursorShape(node.getChildA(), mx, my);
+        if (result != EngineSetting.CURSOR_DEFAULT)
+            return result;
+        return findSplitterCursorShape(node.getChildB(), mx, my);
     }
 
     // Helpers \\

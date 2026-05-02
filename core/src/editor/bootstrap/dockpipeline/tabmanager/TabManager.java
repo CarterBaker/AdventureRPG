@@ -1,6 +1,5 @@
 package editor.bootstrap.dockpipeline.tabmanager;
 
-import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.dockpipeline.tab.TabData;
 import editor.bootstrap.dockpipeline.tab.TabInstance;
 import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
@@ -33,15 +32,11 @@ public class TabManager extends ManagerPackage {
     public TabInstance createTab(
             String title,
             Class<? extends ContextPackage> contextClass,
-            WindowInstance window,
             int x, int y, int width, int height) {
 
         TabData data = new TabData(title, contextClass, x, y, width, height);
         TabInstance tab = create(TabInstance.class);
         tab.constructor(data);
-
-        ContextPackage context = internal.createContext(contextClass, window);
-        tab.setContext(context);
 
         tabs.add(tab);
         return tab;

@@ -130,6 +130,14 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     }
 
     @Override
+    public void setCursorShape(long windowHandle, int shape) {
+        Lwjgl3Input windowInput = application.getLwjglInputForHandle(windowHandle);
+        if (windowInput == null)
+            return;
+        windowInput.setCursorShape(windowHandle, shape);
+    }
+
+    @Override
     public void exit() {
 
         long mainHandle = windowID2Handle.get(MAIN_WINDOW_ID);
