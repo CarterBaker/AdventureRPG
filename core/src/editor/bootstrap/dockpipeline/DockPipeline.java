@@ -1,6 +1,7 @@
 package editor.bootstrap.dockpipeline;
 
 import editor.bootstrap.dockpipeline.dockgeometrysystem.DockGeometrySystem;
+import editor.bootstrap.dockpipeline.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.dockpipeline.dockmanager.DockManager;
 import editor.bootstrap.dockpipeline.tabmanager.TabManager;
 import engine.root.PipelinePackage;
@@ -18,5 +19,6 @@ public class DockPipeline extends PipelinePackage {
         create(DockManager.class);
         create(TabManager.class);
         create(DockGeometrySystem.class);
+        create(DockLayoutSystem.class);
     }
 }

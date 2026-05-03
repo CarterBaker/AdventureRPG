@@ -36,6 +36,9 @@ public class DockManager extends ManagerPackage {
     private int nextNodeID;
     private int nextGroupID;
 
+    // Layout dirtiness
+    private boolean layoutDirty;
+
     // Internal \\
 
     @Override
@@ -45,6 +48,7 @@ public class DockManager extends ManagerPackage {
         this.nextContainerID = 0;
         this.nextNodeID = 0;
         this.nextGroupID = 0;
+        this.layoutDirty = false;
     }
 
     @Override
@@ -81,6 +85,7 @@ public class DockManager extends ManagerPackage {
             return;
         root.setRect(0, 0, container.getWidth(), container.getHeight());
         recalculateRects(root);
+        layoutDirty = true;
     }
 
     // Node Operations \\
@@ -104,6 +109,7 @@ public class DockManager extends ManagerPackage {
         node.setChildB(childB);
         node.setSplitAxis(axis);
         node.setSplitRatio(0.5f);
+        layoutDirty = true;
     }
 
     public void collapseNode(ContainerInstance container, NodeInstance parent, boolean keepA) {
@@ -119,11 +125,13 @@ public class DockManager extends ManagerPackage {
         parent.setChildA(null);
         parent.setChildB(null);
         parent.setSplitAxis(null);
+        layoutDirty = true;
     }
 
     public void setNodeRatio(NodeInstance node, float ratio) {
         node.setSplitRatio(ratio);
         recalculateRects(node);
+        layoutDirty = true;
     }
 
     // Tab Operations \\
@@ -140,6 +148,7 @@ public class DockManager extends ManagerPackage {
     public void moveTab(TabInstance tab, TabGroupInstance from, TabGroupInstance to) {
         from.removeTab(tab);
         addTab(tab, to);
+        layoutDirty = true;
     }
 
     @SuppressWarnings("unchecked")
@@ -220,6 +229,14 @@ public class DockManager extends ManagerPackage {
 
     public ObjectArrayList<ContainerInstance> getContainers() {
         return containers;
+    }
+
+    public boolean isLayoutDirty() {
+        return layoutDirty;
+    }
+
+    public void clearLayoutDirty() {
+        layoutDirty = false;
     }
 
     public NodeInstance findNodeForGroup(NodeInstance node, TabGroupInstance group) {
