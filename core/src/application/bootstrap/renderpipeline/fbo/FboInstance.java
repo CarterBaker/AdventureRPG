@@ -3,6 +3,7 @@ package application.bootstrap.renderpipeline.fbo;
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
@@ -13,6 +14,9 @@ public class FboInstance extends InstancePackage {
      * at call sites. Delegates bind, unbind, and resize back to FboManager so
      * all GL state changes stay in one place. Blit overrides are optional and
      * checked by the render pipeline before falling back to defaults.
+     * Push data is a full snapshot of everything the FBO was queued with —
+     * window, layer, screen order, and dest rect. Null dest rect means fullscreen.
+     * Written at queue time, read during flush.
      */
 
     // Data
@@ -30,6 +34,12 @@ public class FboInstance extends InstancePackage {
     // Blit
     private MeshData blitMeshOverride;
     private MaterialInstance blitMaterialOverride;
+
+    // Push data — full snapshot written at queue time, read during flush
+    private WindowInstance pushWindow;
+    private int pushLayer;
+    private int pushScreenOrder;
+    private FBODestinationStruct pushDestRect;
 
     // Internal
     private FboManager fboManager;
@@ -84,6 +94,15 @@ public class FboInstance extends InstancePackage {
         this.blitMaterialOverride = material;
     }
 
+    // Push \\
+
+    public void setPushData(WindowInstance window, int layer, int screenOrder, FBODestinationStruct destRect) {
+        this.pushWindow = window;
+        this.pushLayer = layer;
+        this.pushScreenOrder = screenOrder;
+        this.pushDestRect = destRect;
+    }
+
     // Accessible \\
 
     public int getTextureId() {
@@ -120,6 +139,22 @@ public class FboInstance extends InstancePackage {
 
     public MaterialInstance getBlitMaterialOverride() {
         return blitMaterialOverride;
+    }
+
+    public WindowInstance getPushWindow() {
+        return pushWindow;
+    }
+
+    public int getPushLayer() {
+        return pushLayer;
+    }
+
+    public int getPushScreenOrder() {
+        return pushScreenOrder;
+    }
+
+    public FBODestinationStruct getPushDestRect() {
+        return pushDestRect;
     }
 
 }
