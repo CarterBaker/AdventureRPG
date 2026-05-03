@@ -69,6 +69,7 @@ public class DockManager extends ManagerPackage {
 
         containers.add(container);
         window2Container.put(window, container);
+        layoutDirty = true;
         return container;
     }
 
@@ -139,6 +140,7 @@ public class DockManager extends ManagerPackage {
     public void addTab(TabInstance tab, TabGroupInstance group) {
         group.addTab(tab);
         group.setActiveIndex(group.getTabs().size() - 1);
+        layoutDirty = true;
     }
 
     public void removeTab(TabInstance tab, TabGroupInstance group) {
