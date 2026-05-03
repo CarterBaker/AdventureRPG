@@ -197,7 +197,7 @@ public class WindowInstance extends InstancePackage {
     }
 
     public RenderQueueHandle getRenderQueueHandle() {
-        return renderQueueHandle;
+        return hasCompositeTarget() ? compositeTarget.getRenderQueueHandle() : renderQueueHandle;
     }
 
     public int getWindowID() {

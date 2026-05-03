@@ -1,11 +1,14 @@
 package editor.runtime;
 
+import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.dockpipeline.dockmanager.DockManager;
+import editor.bootstrap.dockpipeline.container.ContainerInstance;
 import editor.bootstrap.dockpipeline.dockinputsystem.DockInputSystem;
 import editor.bootstrap.dockpipeline.dockrendersystem.DockRenderSystem;
 import editor.runtime.menueventsmanager.EditorMenuEventsManager;
 import engine.root.ContextPackage;
+import engine.root.EngineSetting;
 
 public class EditorWindowMain extends ContextPackage {
 
@@ -36,6 +39,12 @@ public class EditorWindowMain extends ContextPackage {
 
     @Override
     protected void start() {
-        dockManager.createContainer(windowManager.getMainWindow());
+        WindowInstance mainWindow = windowManager.getMainWindow();
+        ContainerInstance container = dockManager.createContainer(mainWindow);
+        container.getRootNode().setRect(
+                0,
+                0,
+                mainWindow.getWidth(),
+                mainWindow.getHeight() - EngineSetting.DOCK_TAB_BAR_HEIGHT);
     }
 }
