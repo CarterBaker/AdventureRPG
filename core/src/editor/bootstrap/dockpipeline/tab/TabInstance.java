@@ -1,24 +1,17 @@
 package editor.bootstrap.dockpipeline.tab;
 
-import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ContextPackage;
 import engine.root.InstancePackage;
 
 public class TabInstance extends InstancePackage {
-
-    /*
-     * A tab is a windowed context inside a dock zone.
-     * The OS WindowInstance owns the render queue — the context drives what runs.
-     * TabInstance just tracks identity, rect, context, and lifecycle state.
-     * The context itself owns its FBO and render logic.
-     */
 
     // Data
     private TabData tabData;
 
     // Context
     private ContextPackage context;
-    private FboInstance fbo;
+    private WindowInstance logicalWindow;
 
     // State
     private boolean active;
@@ -62,6 +55,10 @@ public class TabInstance extends InstancePackage {
         this.context = context;
     }
 
+    public void setLogicalWindow(WindowInstance logicalWindow) {
+        this.logicalWindow = logicalWindow;
+    }
+
     // Queries \\
 
     public boolean isActive() {
@@ -76,8 +73,8 @@ public class TabInstance extends InstancePackage {
         return context != null;
     }
 
-    public boolean hasFbo() {
-        return fbo != null;
+    public boolean hasLogicalWindow() {
+        return logicalWindow != null;
     }
 
     // Accessible \\
@@ -90,12 +87,8 @@ public class TabInstance extends InstancePackage {
         return context;
     }
 
-    public FboInstance getFbo() {
-        return fbo;
-    }
-
-    public void setFbo(FboInstance fbo) {
-        this.fbo = fbo;
+    public WindowInstance getLogicalWindow() {
+        return logicalWindow;
     }
 
     public String getTitle() {

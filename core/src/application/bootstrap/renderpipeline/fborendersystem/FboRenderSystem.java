@@ -16,6 +16,13 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class FboRenderSystem extends SystemPackage {
 
+    /*
+     * Manages screen-space FBO compositing. Queues blits per OS window and
+     * flushes them sorted by layer during the draw phase.
+     * Logical windows (tabs) are transparently redirected to their composite
+     * target OS window and rect — callers never need to know the difference.
+     */
+
     private MeshManager meshManager;
     private MaterialManager materialManager;
     private RenderManager renderManager;
@@ -39,6 +46,8 @@ public class FboRenderSystem extends SystemPackage {
         this.renderManager = get(RenderManager.class);
     }
 
+    // Accessible \\
+
     public void pushFbo(FboInstance fbo, int layer, WindowInstance window) {
         pushFbo(fbo, layer, window, null);
     }
@@ -47,16 +56,24 @@ public class FboRenderSystem extends SystemPackage {
         if (fbo == null || window == null)
             return;
 
-        ObjectArrayList<FboLayerStruct> queue = window2BlitQueue.get(window);
+        WindowInstance target = window.hasCompositeTarget() ? window.getCompositeTarget() : window;
+
+        DestRectStruct rect = destRect;
+        if (rect == null && window.hasCompositeTarget() && window.hasCompositeRect())
+            rect = new DestRectStruct(
+                    window.getCompositeX(), window.getCompositeY(),
+                    window.getCompositeW(), window.getCompositeH());
+
+        ObjectArrayList<FboLayerStruct> queue = window2BlitQueue.get(target);
         if (queue == null) {
             queue = new ObjectArrayList<>();
-            window2BlitQueue.put(window, queue);
+            window2BlitQueue.put(target, queue);
         }
 
         if (queue.size() >= EngineSetting.MAX_RENDER_CALLS_PER_FRAME)
             return;
 
-        queue.add(new FboLayerStruct(fbo, layer, destRect));
+        queue.add(new FboLayerStruct(fbo, layer, rect));
     }
 
     public void setBlitOverride(FboInstance fbo, MeshData mesh, MaterialInstance material) {
@@ -108,6 +125,8 @@ public class FboRenderSystem extends SystemPackage {
         window2BlitQueue.remove(window);
     }
 
+    // Internal \\
+
     private ModelInstance resolveBlitModel(FboInstance fbo) {
         ModelInstance model = fbo2BlitModel.get(fbo);
 
@@ -126,6 +145,7 @@ public class FboRenderSystem extends SystemPackage {
         model.constructor(meshData, material);
 
         fbo2BlitModel.put(fbo, model);
+
         return model;
     }
 

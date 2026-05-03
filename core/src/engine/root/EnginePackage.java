@@ -245,10 +245,9 @@ public class EnginePackage extends ManagerPackage {
 
     public <T extends ContextPackage> T createTabContext(
             Class<T> contextClass,
-            WindowInstance window,
-            FboInstance fbo) {
+            WindowInstance logicalWindow) {
 
-        if (window == null)
+        if (logicalWindow == null)
             throwException("createTabContext() requires a WindowInstance — null was passed.");
 
         try {
@@ -258,11 +257,10 @@ public class EnginePackage extends ManagerPackage {
             T context = constructor.newInstance();
 
             context.pendingStart = true;
-            context.setWindow(window);
-            context.setFbo(fbo);
+            context.setWindow(logicalWindow);
 
             this.pendingContextList.add(context);
-            this.windowPlatform.makeContextCurrent(window);
+            this.windowPlatform.makeContextCurrent(logicalWindow.getGLWindow());
 
             primeContextLifecycle(context);
 
@@ -278,7 +276,7 @@ public class EnginePackage extends ManagerPackage {
     private void primeContextLifecycle(ContextPackage context) {
 
         SystemContext previousContext = this.internalContext;
-        this.windowPlatform.makeContextCurrent(context.getWindow());
+        this.windowPlatform.makeContextCurrent(context.getWindow().getGLWindow());
         EngineUtility.windowManager.beginContextWindow(context.getWindow());
 
         try {
@@ -324,7 +322,7 @@ public class EnginePackage extends ManagerPackage {
 
             ContextPackage context = this.pendingContextList.get(i);
             context.pendingStart = false;
-            this.windowPlatform.makeContextCurrent(context.getWindow());
+            this.windowPlatform.makeContextCurrent(context.getWindow().getGLWindow());
             EngineUtility.windowManager.beginContextWindow(context.getWindow());
 
             try {
@@ -634,15 +632,10 @@ public class EnginePackage extends ManagerPackage {
         this.setContext(SystemContext.RENDER);
 
         super.internalRender();
-        RenderManager renderManager = this.getUnchecked(RenderManager.class);
 
         for (int i = 0; i < this.contextArray.length; i++) {
             EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
-            if (this.contextArray[i].hasFbo()) {
-                renderManager.renderContextToFbo(this.contextArray[i], this.contextArray[i].getFbo());
-            } else {
-                this.contextArray[i].internalRender();
-            }
+            this.contextArray[i].internalRender();
             EngineUtility.windowManager.endContextWindow();
         }
 

@@ -1,9 +1,8 @@
 package editor.bootstrap.dockpipeline.tabmanager;
 
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.runtime.RuntimeSetting;
+import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.dockpipeline.tab.TabData;
 import editor.bootstrap.dockpipeline.tab.TabInstance;
 import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
@@ -15,17 +14,14 @@ public class TabManager extends ManagerPackage {
 
     /*
      * Owns all tabs. Sole factory for TabInstance.
-     * Drives context lifecycle — creates, activates, suspends, and destroys
-     * contexts as tabs are opened, switched, and closed.
-     * The context inside each tab owns its own FBO and render pipeline.
-     * TabManager does not touch FBOs — that is the context's responsibility.
+     * Each tab gets a logical WindowInstance — no native handle, just
+     * dimensions and composite routing onto the OS window. The context
+     * paired with that logical window creates its own FBOs internally.
      */
 
     // Registry
     private ObjectArrayList<TabInstance> tabs;
-    private FboManager fboManager;
-
-    // Internal \\
+    private WindowManager windowManager;
 
     @Override
     protected void create() {
@@ -34,7 +30,7 @@ public class TabManager extends ManagerPackage {
 
     @Override
     protected void get() {
-        this.fboManager = get(FboManager.class);
+        this.windowManager = get(WindowManager.class);
     }
 
     // Tab Lifecycle \\
@@ -42,18 +38,20 @@ public class TabManager extends ManagerPackage {
     public TabInstance createTab(
             String title,
             Class<? extends ContextPackage> contextClass,
-            WindowInstance window,
+            WindowInstance osWindow,
             int x, int y, int width, int height) {
 
-        FboInstance fbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, window);
-        fboManager.resize(fbo, width, height);
+        WindowInstance logicalWindow = create(WindowInstance.class);
+        logicalWindow.constructor(new WindowData(windowManager.issueWindowID(), width, height, title));
+        logicalWindow.setCompositeTarget(osWindow);
+        logicalWindow.setCompositeRect(x, y, width, height);
 
         TabData data = new TabData(title, contextClass, x, y, width, height);
         TabInstance tab = create(TabInstance.class);
         tab.constructor(data);
-        tab.setFbo(fbo);
+        tab.setLogicalWindow(logicalWindow);
 
-        ContextPackage context = internal.createTabContext(contextClass, window, fbo);
+        ContextPackage context = internal.createTabContext(contextClass, logicalWindow);
         tab.setContext(context);
 
         tabs.add(tab);
@@ -89,6 +87,12 @@ public class TabManager extends ManagerPackage {
 
     public void resizeTab(TabInstance tab, int x, int y, int width, int height) {
         tab.resize(x, y, width, height);
+
+        if (tab.hasLogicalWindow()) {
+            WindowInstance logicalWindow = tab.getLogicalWindow();
+            logicalWindow.resize(width, height);
+            logicalWindow.setCompositeRect(x, y, width, height);
+        }
     }
 
     // Accessible \\

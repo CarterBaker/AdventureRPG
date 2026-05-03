@@ -12,9 +12,10 @@ import engine.root.InstancePackage;
 public class WindowInstance extends InstancePackage {
 
     /*
-     * Runtime window wrapper. Owns WindowData, RenderQueueHandle, and both
-     * cameras. WindowData and cameras are assigned in constructor(), while
-     * render queue setup occurs in awake().
+     * Runtime window wrapper. Pairs with a context and owns the render queue.
+     * Logical windows (tabs) have no native handle — they carry a composite
+     * target and rect so FboRenderSystem can transparently redirect their
+     * pushFbo calls to the correct OS window and screen region.
      */
 
     // Data
@@ -30,6 +31,14 @@ public class WindowInstance extends InstancePackage {
     // Cameras
     private CameraInstance activeCamera;
     private OrthographicCameraInstance orthoCamera;
+
+    // Composite routing — logical windows only
+    private WindowInstance compositeTarget;
+    private float compositeX;
+    private float compositeY;
+    private float compositeW;
+    private float compositeH;
+    private boolean compositeRect;
 
     // Internal
     private RenderManager renderManager;
@@ -92,6 +101,56 @@ public class WindowInstance extends InstancePackage {
         return nativeHandle != 0L;
     }
 
+    // Composite Routing \\
+
+    public WindowInstance getCompositeTarget() {
+        return compositeTarget;
+    }
+
+    public void setCompositeTarget(WindowInstance compositeTarget) {
+        this.compositeTarget = compositeTarget;
+    }
+
+    public boolean hasCompositeTarget() {
+        return compositeTarget != null;
+    }
+
+    public void setCompositeRect(float x, float y, float w, float h) {
+        this.compositeX = x;
+        this.compositeY = y;
+        this.compositeW = w;
+        this.compositeH = h;
+        this.compositeRect = true;
+    }
+
+    public void clearCompositeRect() {
+        this.compositeRect = false;
+    }
+
+    public boolean hasCompositeRect() {
+        return compositeRect;
+    }
+
+    public float getCompositeX() {
+        return compositeX;
+    }
+
+    public float getCompositeY() {
+        return compositeY;
+    }
+
+    public float getCompositeW() {
+        return compositeW;
+    }
+
+    public float getCompositeH() {
+        return compositeH;
+    }
+
+    public WindowInstance getGLWindow() {
+        return hasNativeHandle() ? this : compositeTarget;
+    }
+
     // Cameras \\
 
     public CameraInstance getActiveCamera() {
@@ -113,7 +172,6 @@ public class WindowInstance extends InstancePackage {
     // Accessible \\
 
     public void resize(int width, int height) {
-
         windowData.setWidth(width);
         windowData.setHeight(height);
 
@@ -125,7 +183,6 @@ public class WindowInstance extends InstancePackage {
     }
 
     public void dispose() {
-
         vaoManager.removeWindowVAOs(getWindowID());
         renderManager.removeWindowResources(this);
 

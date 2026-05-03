@@ -19,6 +19,14 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RenderManager extends ManagerPackage {
 
+    /*
+     * Drives the draw phase. Iterates all OS windows, flushes queued render
+     * calls into mapped FBO targets, composites FBOs via FboRenderSystem,
+     * then blits the final frame to the window and swaps buffers.
+     * Logical windows (tabs) redirect through FboRenderSystem automatically —
+     * RenderManager only ever iterates OS windows.
+     */
+
     private CameraManager cameraManager;
     private WindowManager windowManager;
     private PlayerManager playerManager;
@@ -44,6 +52,8 @@ public class RenderManager extends ManagerPackage {
         this.fboRenderSystem = get(FboRenderSystem.class);
     }
 
+    // Draw \\
+
     public void draw() {
         ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
         Object[] elements = windows.elements();
@@ -57,7 +67,6 @@ public class RenderManager extends ManagerPackage {
 
         for (int i = 0; i < count; i++) {
             WindowInstance window = (WindowInstance) elements[i];
-
             if (!window.hasNativeHandle())
                 continue;
 
@@ -76,10 +85,8 @@ public class RenderManager extends ManagerPackage {
         uboManager.bindBuffersForCurrentContext();
         playerManager.pushPlayerPositionForWindow(window.getWindowID());
         cameraManager.pushCamera(window);
-
         fboManager.resizeWindowRelative(window, window.getWidth(), window.getHeight());
         renderSystem.drawToMappedTargets(window);
-
         fboRenderSystem.pushBlits(window);
         drawFinal(window);
     }
@@ -108,11 +115,7 @@ public class RenderManager extends ManagerPackage {
             drawFinal(window);
     }
 
-    public void renderContextToFbo(ContextPackage ctx, FboInstance fbo) {
-        fboManager.bind(fbo);
-        ctx.internalRender();
-        fboManager.unbind();
-    }
+    // Render Calls \\
 
     public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth) {
         renderSystem.pushRenderCall(modelInstance, fbo, depth, null, resolveDefaultWindow());
@@ -126,7 +129,11 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushRenderCall(modelInstance, fbo, depth, null, window);
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
+    public void pushRenderCall(
+            ModelInstance modelInstance,
+            FboInstance fbo,
+            int depth,
+            MaskStruct mask,
             WindowInstance window) {
         renderSystem.pushRenderCall(modelInstance, fbo, depth, mask, window);
     }
@@ -147,22 +154,6 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushScreenCall(modelInstance, mask, window);
     }
 
-    private WindowInstance resolveDefaultWindow() {
-        WindowInstance renderWindow = windowManager.getRenderWindow();
-        if (renderWindow != null)
-            return renderWindow;
-
-        WindowInstance contextWindow = windowManager.getContextWindow();
-        if (contextWindow != null)
-            return contextWindow;
-
-        WindowInstance activeWindow = windowManager.getActiveWindow();
-        if (activeWindow != null)
-            return activeWindow;
-
-        return windowManager.getMainWindow();
-    }
-
     public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer, FboInstance fbo) {
         renderSystem.pushCompositeCall(material, buffer, fbo, resolveDefaultWindow());
     }
@@ -178,5 +169,24 @@ public class RenderManager extends ManagerPackage {
     public void removeWindowResources(WindowInstance window) {
         renderSystem.removeWindowResources(window);
         fboRenderSystem.removeWindowResources(window);
+    }
+
+    // Internal \\
+
+    private WindowInstance resolveDefaultWindow() {
+
+        WindowInstance renderWindow = windowManager.getRenderWindow();
+        if (renderWindow != null)
+            return renderWindow.getGLWindow();
+
+        WindowInstance contextWindow = windowManager.getContextWindow();
+        if (contextWindow != null)
+            return contextWindow.getGLWindow();
+
+        WindowInstance activeWindow = windowManager.getActiveWindow();
+        if (activeWindow != null)
+            return activeWindow;
+
+        return windowManager.getMainWindow();
     }
 }
