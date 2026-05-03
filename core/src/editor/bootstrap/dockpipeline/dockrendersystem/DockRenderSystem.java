@@ -46,6 +46,7 @@ public class DockRenderSystem extends SystemPackage {
 
     @Override
     protected void render() {
+
         dockGeometrySystem.beginFrame();
 
         ObjectArrayList<ContainerInstance> containers = dockManager.getContainers();
@@ -53,8 +54,9 @@ public class DockRenderSystem extends SystemPackage {
         int count = containers.size();
 
         for (int i = 0; i < count; i++) {
+
             ContainerInstance container = (ContainerInstance) elements[i];
-            currentWindow = container.getWindow();
+            currentWindow = container.getWindow().getGLWindow();
             drawNode(container.getRootNode());
             dockGeometrySystem.flushAndSubmit(currentWindow);
         }
