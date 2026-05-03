@@ -40,11 +40,6 @@ public class EditorWindowMain extends ContextPackage {
     @Override
     protected void start() {
         WindowInstance mainWindow = windowManager.getMainWindow();
-        ContainerInstance container = dockManager.createContainer(mainWindow);
-        container.getRootNode().setRect(
-                0,
-                0,
-                mainWindow.getWidth(),
-                mainWindow.getHeight() - EngineSetting.DOCK_TAB_BAR_HEIGHT);
+        dockManager.createContainer(mainWindow);
     }
 }

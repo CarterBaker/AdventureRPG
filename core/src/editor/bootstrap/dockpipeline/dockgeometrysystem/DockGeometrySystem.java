@@ -21,7 +21,8 @@ public class DockGeometrySystem extends SystemPackage {
     /*
      * Builds and submits dock chrome geometry each frame.
      * Per-vertex color quads accumulated into a DynamicPacketInstance,
-     * flushed per container window, submitted as screen calls.
+     * flushed per container window, submitted as screen calls at order 1
+     * so chrome always composites on top of FBO tab content.
      * Models are destroyed at the start of each frame — geometry
      * is rebuilt every frame since rects change with splits and drags.
      */
@@ -105,7 +106,7 @@ public class DockGeometrySystem extends SystemPackage {
                         materialManager.cloneMaterial(entry.getIntKey()));
 
                 frameModels.add(model);
-                renderManager.pushScreenCall(model, window);
+                renderManager.pushScreenCall(model, window, 1);
             }
         }
     }

@@ -57,6 +57,7 @@ class RenderSystem extends SystemPackage {
             compositeRenderSystem.draw(queue, target, window);
             target.unbind();
         }
+
         queue.rewindFrame();
     }
 
@@ -74,9 +75,10 @@ class RenderSystem extends SystemPackage {
         GLSLUtility.clearBuffer();
         GLSLUtility.clearDepthBuffer();
 
-        drawScreenPass(queue, window);
-
+        drawScreenPass(queue, window, 0);
         compositeRenderSystem.drawScreen(queue, window);
+        drawScreenPass(queue, window, 1);
+
         queue.rewindFrame();
 
         if (target != null)
@@ -96,10 +98,13 @@ class RenderSystem extends SystemPackage {
         }
     }
 
-    private void drawScreenPass(RenderQueueHandle queue, WindowInstance window) {
+    private void drawScreenPass(RenderQueueHandle queue, WindowInstance window, int order) {
+        ObjectArrayList<RenderBatchStruct> batchList = queue.screenOrder2BatchList.get(order);
+        if (batchList == null)
+            return;
         GLSLUtility.disableDepth();
         GLSLUtility.enableBlending();
-        drawBatches(queue.screenBatchList, window);
+        drawBatches(batchList, window);
         GLSLUtility.enableDepth();
     }
 
@@ -156,12 +161,9 @@ class RenderSystem extends SystemPackage {
 
     private void bindTarget(WindowInstance window, FboInstance target) {
         if (target == null) {
-
             internal.windowPlatform.makeContextCurrent(window);
-
             GLSLUtility.unbindFramebuffer();
             GLSLUtility.setViewport(window.getWidth(), window.getHeight());
-
             return;
         }
 
@@ -224,18 +226,6 @@ class RenderSystem extends SystemPackage {
         GLSLUtility.unbindVAO();
     }
 
-    void pushCompositeCall(
-            MaterialInstance material,
-            CompositeBufferInstance buffer,
-            FboInstance fbo,
-            WindowInstance window) {
-        compositeRenderSystem.submit(material, buffer, fbo, window);
-    }
-
-    void removeWindowResources(WindowInstance window) {
-        compositeRenderSystem.removeWindow(window.getWindowID());
-    }
-
     void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
             WindowInstance window) {
 
@@ -274,7 +264,6 @@ class RenderSystem extends SystemPackage {
         }
 
         RenderBatchStruct batch = materialBatches.get(materialID);
-
         if (batch == null) {
             batch = new RenderBatchStruct(material);
             materialBatches.put(materialID, batch);
@@ -284,7 +273,7 @@ class RenderSystem extends SystemPackage {
         batch.addRenderCall(renderCall);
     }
 
-    void pushScreenCall(ModelInstance modelInstance, MaskStruct mask, WindowInstance window) {
+    void pushScreenCall(ModelInstance modelInstance, MaskStruct mask, WindowInstance window, int order) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
 
@@ -297,14 +286,38 @@ class RenderSystem extends SystemPackage {
         MaterialInstance material = modelInstance.getMaterial();
         int materialID = material.getMaterialID();
 
-        RenderBatchStruct batch = queue.screenMaterialBatches.get(materialID);
+        Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = queue.screenOrder2MaterialBatches.get(order);
+        if (materialBatches == null) {
+            materialBatches = new Int2ObjectOpenHashMap<>();
+            queue.screenOrder2MaterialBatches.put(order, materialBatches);
+            queue.screenOrder2BatchList.put(order, new ObjectArrayList<>());
 
+            IntArrayList orders = queue.screenDepthOrder;
+            int index = 0;
+            while (index < orders.size() && orders.getInt(index) < order)
+                index++;
+            orders.add(index, order);
+        }
+
+        RenderBatchStruct batch = materialBatches.get(materialID);
         if (batch == null) {
             batch = new RenderBatchStruct(material);
-            queue.screenMaterialBatches.put(materialID, batch);
-            queue.screenBatchList.add(batch);
+            materialBatches.put(materialID, batch);
+            queue.screenOrder2BatchList.get(order).add(batch);
         }
 
         batch.addRenderCall(renderCall);
+    }
+
+    void pushCompositeCall(
+            MaterialInstance material,
+            CompositeBufferInstance buffer,
+            FboInstance fbo,
+            WindowInstance window) {
+        compositeRenderSystem.submit(material, buffer, fbo, window);
+    }
+
+    void removeWindowResources(WindowInstance window) {
+        compositeRenderSystem.removeWindow(window.getWindowID());
     }
 }

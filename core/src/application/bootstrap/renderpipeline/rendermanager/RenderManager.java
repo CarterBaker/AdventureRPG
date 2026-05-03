@@ -25,6 +25,10 @@ public class RenderManager extends ManagerPackage {
      * then blits the final frame to the window and swaps buffers.
      * Logical windows (tabs) redirect through FboRenderSystem automatically —
      * RenderManager only ever iterates OS windows.
+     *
+     * Screen pass is split around the compositor:
+     * order 0 — drawn before FBO composite (game UI, menus)
+     * order 1 — drawn after FBO composite (dock chrome, always on top)
      */
 
     private CameraManager cameraManager;
@@ -139,19 +143,35 @@ public class RenderManager extends ManagerPackage {
     }
 
     public void pushScreenCall(ModelInstance modelInstance) {
-        renderSystem.pushScreenCall(modelInstance, null, resolveDefaultWindow());
+        renderSystem.pushScreenCall(modelInstance, null, resolveDefaultWindow(), 0);
     }
 
     public void pushScreenCall(ModelInstance modelInstance, WindowInstance window) {
-        renderSystem.pushScreenCall(modelInstance, null, window);
+        renderSystem.pushScreenCall(modelInstance, null, window, 0);
     }
 
     public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask) {
-        renderSystem.pushScreenCall(modelInstance, mask, resolveDefaultWindow());
+        renderSystem.pushScreenCall(modelInstance, mask, resolveDefaultWindow(), 0);
     }
 
     public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask, WindowInstance window) {
-        renderSystem.pushScreenCall(modelInstance, mask, window);
+        renderSystem.pushScreenCall(modelInstance, mask, window, 0);
+    }
+
+    public void pushScreenCall(ModelInstance modelInstance, int order) {
+        renderSystem.pushScreenCall(modelInstance, null, resolveDefaultWindow(), order);
+    }
+
+    public void pushScreenCall(ModelInstance modelInstance, WindowInstance window, int order) {
+        renderSystem.pushScreenCall(modelInstance, null, window, order);
+    }
+
+    public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask, int order) {
+        renderSystem.pushScreenCall(modelInstance, mask, resolveDefaultWindow(), order);
+    }
+
+    public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask, WindowInstance window, int order) {
+        renderSystem.pushScreenCall(modelInstance, mask, window, order);
     }
 
     public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer, FboInstance fbo) {

@@ -8,7 +8,9 @@ import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeContext;
 import editor.bootstrap.dockpipeline.container.ContainerInstance;
 import editor.bootstrap.dockpipeline.dockmanager.DockManager;
+import editor.bootstrap.dockpipeline.node.NodeInstance;
 import editor.bootstrap.dockpipeline.tab.TabInstance;
+import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
 import editor.bootstrap.dockpipeline.tabmanager.TabManager;
 import editor.runtime.EditorWindowSecondary;
 import engine.root.BranchPackage;
@@ -26,11 +28,11 @@ public class EditorBranch extends BranchPackage {
      * and flips its visibility.
      *
      * openSecondaryWindow() — opens a new tab in the main window's dock
-     * container. Dragging the tab outside the window will detach it to a
-     * new OS window via DockInputSystem.
+     * container. Split axis is chosen based on the target leaf dimensions —
+     * wide panels split horizontally, tall panels split vertically.
      *
-     * openPreview() — spawns a new OS window bound to RuntimeContext,
-     * running the full game runtime in a separate window.
+     * openPreview() — same split logic, binds to RuntimeContext so the full
+     * game runtime runs inside the panel.
      */
 
     // Internal
@@ -82,6 +84,10 @@ public class EditorBranch extends BranchPackage {
         if (container == null || container.getRootNode() == null)
             return;
 
+        TabGroupInstance group = resolveTargetGroup(container);
+        if (group == null)
+            return;
+
         TabInstance tab = tabManager.createTab(
                 "Editor",
                 EditorWindowSecondary.class,
@@ -90,8 +96,8 @@ public class EditorBranch extends BranchPackage {
                 mainWindow.getWidth(),
                 mainWindow.getHeight() - 28);
 
-        dockManager.addTab(tab, container.getRootNode().getTabGroup());
-        tabManager.activateTab(tab, container.getRootNode().getTabGroup());
+        dockManager.addTab(tab, group);
+        tabManager.activateTab(tab, group);
     }
 
     public void openPreview() {
@@ -99,6 +105,10 @@ public class EditorBranch extends BranchPackage {
         ContainerInstance container = dockManager.getContainerForWindow(mainWindow);
 
         if (container == null || container.getRootNode() == null)
+            return;
+
+        TabGroupInstance group = resolveTargetGroup(container);
+        if (group == null)
             return;
 
         TabInstance tab = tabManager.createTab(
@@ -109,7 +119,38 @@ public class EditorBranch extends BranchPackage {
                 mainWindow.getWidth(),
                 mainWindow.getHeight() - 28);
 
-        dockManager.addTab(tab, container.getRootNode().getTabGroup());
-        tabManager.activateTab(tab, container.getRootNode().getTabGroup());
+        dockManager.addTab(tab, group);
+        tabManager.activateTab(tab, group);
+    }
+
+    // Layout \\
+
+    private TabGroupInstance resolveTargetGroup(ContainerInstance container) {
+        NodeInstance root = container.getRootNode();
+
+        if (root.isLeaf() && root.getTabGroup().isEmpty())
+            return root.getTabGroup();
+
+        NodeInstance leaf = findLeaf(root);
+        if (leaf == null)
+            return root.isLeaf() ? root.getTabGroup() : null;
+
+        NodeInstance.SplitAxis axis = leaf.getWidth() >= leaf.getHeight()
+                ? NodeInstance.SplitAxis.HORIZONTAL
+                : NodeInstance.SplitAxis.VERTICAL;
+
+        dockManager.splitNode(leaf, axis);
+        return leaf.getChildB().getTabGroup();
+    }
+
+    private NodeInstance findLeaf(NodeInstance node) {
+        if (node == null)
+            return null;
+        if (node.isLeaf())
+            return node;
+        NodeInstance result = findLeaf(node.getChildA());
+        if (result != null)
+            return result;
+        return findLeaf(node.getChildB());
     }
 }

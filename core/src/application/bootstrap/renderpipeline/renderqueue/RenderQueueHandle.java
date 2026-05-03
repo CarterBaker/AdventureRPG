@@ -21,15 +21,16 @@ public class RenderQueueHandle extends HandlePackage {
     public Object2ObjectOpenHashMap<FboInstance, IntArrayList> fbo2DepthOrder;
     public ObjectArrayList<FboInstance> queuedFbos;
 
-    public Int2ObjectOpenHashMap<RenderBatchStruct> screenMaterialBatches;
-    public ObjectArrayList<RenderBatchStruct> screenBatchList;
+    public Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>> screenOrder2MaterialBatches;
+    public Int2ObjectOpenHashMap<ObjectArrayList<RenderBatchStruct>> screenOrder2BatchList;
+    public IntArrayList screenDepthOrder;
+
     public Object2ObjectOpenHashMap<FboInstance, Int2ObjectOpenHashMap<CompositeBatchStruct>> fbo2CompositeMaterialBatches;
     public Object2ObjectOpenHashMap<FboInstance, ObjectArrayList<CompositeBatchStruct>> fbo2CompositeBatchList;
     public Int2ObjectOpenHashMap<CompositeBatchStruct> screenCompositeMaterialBatches;
     public ObjectArrayList<CompositeBatchStruct> screenCompositeBatchList;
 
     public void constructor() {
-
         this.renderCallBuffer = new RenderCallStruct[EngineSetting.MAX_RENDER_CALLS_PER_FRAME];
         for (int i = 0; i < renderCallBuffer.length; i++)
             renderCallBuffer[i] = new RenderCallStruct();
@@ -39,8 +40,10 @@ public class RenderQueueHandle extends HandlePackage {
         this.fbo2DepthOrder = new Object2ObjectOpenHashMap<>();
         this.queuedFbos = new ObjectArrayList<>();
 
-        this.screenMaterialBatches = new Int2ObjectOpenHashMap<>();
-        this.screenBatchList = new ObjectArrayList<>();
+        this.screenOrder2MaterialBatches = new Int2ObjectOpenHashMap<>();
+        this.screenOrder2BatchList = new Int2ObjectOpenHashMap<>();
+        this.screenDepthOrder = new IntArrayList();
+
         this.fbo2CompositeMaterialBatches = new Object2ObjectOpenHashMap<>();
         this.fbo2CompositeBatchList = new Object2ObjectOpenHashMap<>();
         this.screenCompositeMaterialBatches = new Int2ObjectOpenHashMap<>();
@@ -57,12 +60,16 @@ public class RenderQueueHandle extends HandlePackage {
 
     public void rewindFrame() {
         renderCallCursor = 0;
+
         queuedFbos.clear();
         fbo2Depth2MaterialBatches.clear();
         fbo2Depth2BatchList.clear();
         fbo2DepthOrder.clear();
-        screenMaterialBatches.clear();
-        screenBatchList.clear();
+
+        screenOrder2MaterialBatches.clear();
+        screenOrder2BatchList.clear();
+        screenDepthOrder.clear();
+
         fbo2CompositeMaterialBatches.clear();
         fbo2CompositeBatchList.clear();
         screenCompositeMaterialBatches.clear();
