@@ -1,4 +1,4 @@
-package application.bootstrap.menupipeline.menueventsmanager.util;
+package application.runtime.menueventsmanager.util;
 
 import engine.root.BranchPackage;
 

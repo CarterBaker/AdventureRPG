@@ -1,7 +1,7 @@
 package application.runtime.menueventsmanager;
 
-import application.bootstrap.menupipeline.menueventsmanager.menus.InventoryBranch;
-import application.bootstrap.menupipeline.menueventsmanager.menus.MainMenuBranch;
+import application.runtime.menueventsmanager.menus.InventoryBranch;
+import application.runtime.menueventsmanager.menus.MainMenuBranch;
 import engine.root.ManagerPackage;
 
 public class RuntimeMenuEventsManager extends ManagerPackage {

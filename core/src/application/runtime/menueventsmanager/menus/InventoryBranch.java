@@ -1,4 +1,4 @@
-package application.bootstrap.menupipeline.menueventsmanager.menus;
+package application.runtime.menueventsmanager.menus;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
