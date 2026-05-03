@@ -131,7 +131,7 @@ public class EditorBranch extends BranchPackage {
         if (root.isLeaf() && root.getTabGroup().isEmpty())
             return root.getTabGroup();
 
-        NodeInstance leaf = findLeaf(root);
+        NodeInstance leaf = findLargestLeaf(root);
         if (leaf == null)
             return root.isLeaf() ? root.getTabGroup() : null;
 
@@ -143,14 +143,17 @@ public class EditorBranch extends BranchPackage {
         return leaf.getChildB().getTabGroup();
     }
 
-    private NodeInstance findLeaf(NodeInstance node) {
+    private NodeInstance findLargestLeaf(NodeInstance node) {
         if (node == null)
             return null;
         if (node.isLeaf())
             return node;
-        NodeInstance result = findLeaf(node.getChildA());
-        if (result != null)
-            return result;
-        return findLeaf(node.getChildB());
+        NodeInstance a = findLargestLeaf(node.getChildA());
+        NodeInstance b = findLargestLeaf(node.getChildB());
+        if (a == null)
+            return b;
+        if (b == null)
+            return a;
+        return (a.getWidth() * a.getHeight() >= b.getWidth() * b.getHeight()) ? a : b;
     }
 }

@@ -16,6 +16,8 @@ public class WindowInstance extends InstancePackage {
      * Logical windows (tabs) have no native handle — they carry a composite
      * target and rect so FboRenderSystem can transparently redirect their
      * pushFbo calls to the correct OS window and screen region.
+     * Depth controls draw order during the screen pass — OS windows are 0,
+     * tab logical windows are 1. Higher depth always draws on top.
      */
 
     // Data
@@ -39,6 +41,9 @@ public class WindowInstance extends InstancePackage {
     private float compositeW;
     private float compositeH;
     private boolean compositeRect;
+
+    // Draw order — 0 for OS windows, 1 for tab logical windows
+    private int depth;
 
     // Internal
     private RenderManager renderManager;
@@ -149,6 +154,16 @@ public class WindowInstance extends InstancePackage {
 
     public WindowInstance getGLWindow() {
         return hasNativeHandle() ? this : compositeTarget;
+    }
+
+    // Depth \\
+
+    public int getDepth() {
+        return depth;
+    }
+
+    public void setDepth(int depth) {
+        this.depth = depth;
     }
 
     // Cameras \\

@@ -15,8 +15,9 @@ public class TabManager extends ManagerPackage {
     /*
      * Owns all tabs. Sole factory for TabInstance.
      * Each tab gets a logical WindowInstance — no native handle, just
-     * dimensions and composite routing onto the OS window. The context
-     * paired with that logical window creates its own FBOs internally.
+     * dimensions and composite routing onto the OS window. Logical windows
+     * are assigned depth 1 so their FBO blits always draw on top of the
+     * OS window's own blits during the screen pass.
      */
 
     // Registry
@@ -45,6 +46,7 @@ public class TabManager extends ManagerPackage {
         logicalWindow.constructor(new WindowData(windowManager.issueWindowID(), width, height, title));
         logicalWindow.setCompositeTarget(osWindow);
         logicalWindow.setCompositeRect(x, y, width, height);
+        logicalWindow.setDepth(1);
 
         TabData data = new TabData(title, contextClass, x, y, width, height);
         TabInstance tab = create(TabInstance.class);

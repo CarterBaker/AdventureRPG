@@ -115,7 +115,7 @@ public class FboRenderSystem extends SystemPackage {
                 destRectScratch.set(-1f, -1f, -1f, -1f);
 
             model.getMaterial().setUniform("u_destRect", destRectScratch);
-            renderManager.pushScreenCall(model, window);
+            renderManager.pushScreenCall(model, window, window.getDepth());
         }
 
         queue.clear();
