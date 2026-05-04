@@ -39,10 +39,7 @@ public class DynamicModelHandle extends HandlePackage {
 
         int floatsPerQuad = vertStride * 4;
 
-        if (offset < 0 || length < 0 || offset + length > sourceVerts.size())
-            throwException("Vertex data range is out of bounds");
-
-        if (offset % floatsPerQuad != 0 || length % floatsPerQuad != 0)
+        if (length % floatsPerQuad != 0)
             throwException("Vertex data must be quad-aligned");
 
         int currentVertCount = vertices.size() / vertStride;

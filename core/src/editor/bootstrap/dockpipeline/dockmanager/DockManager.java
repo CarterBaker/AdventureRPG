@@ -59,18 +59,11 @@ public class DockManager extends ManagerPackage {
     // Container Lifecycle \\
 
     public ContainerInstance createContainer(WindowInstance window) {
-        return createContainer(window, 0);
-    }
-
-    public ContainerInstance createContainer(WindowInstance window, int topInset) {
         ContainerData data = new ContainerData(nextContainerID++);
         ContainerInstance container = create(ContainerInstance.class);
         container.constructor(data, window);
 
-        int clampedTopInset = Math.max(0, topInset);
-        int rootHeight = Math.max(0, window.getHeight() - clampedTopInset);
-
-        NodeInstance root = createNode(0, clampedTopInset, window.getWidth(), rootHeight);
+        NodeInstance root = createNode(0, 0, window.getWidth(), window.getHeight());
         root.setTabGroup(createGroup());
         container.setRootNode(root);
 
@@ -91,8 +84,7 @@ public class DockManager extends ManagerPackage {
         NodeInstance root = container.getRootNode();
         if (root == null)
             return;
-        int topInset = root.getY();
-        root.setRect(0, topInset, container.getWidth(), Math.max(0, container.getHeight() - topInset));
+        root.setRect(0, 0, container.getWidth(), container.getHeight());
         recalculateRects(root);
         layoutDirty = true;
     }

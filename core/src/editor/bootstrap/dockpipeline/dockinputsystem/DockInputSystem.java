@@ -28,8 +28,13 @@ public class DockInputSystem extends SystemPackage {
      * All structural mutations go through DockManager and TabManager.
      */
 
-    // Derived geometry constants
-    private static final int SPLITTER_HALF = EngineSetting.DOCK_SPLITTER_SIZE / 2;
+    // Chrome constants — must match DockRenderSystem exactly
+    private static final int TAB_BAR_HEIGHT = 24;
+    private static final int TAB_MIN_WIDTH = 80;
+    private static final int TAB_MAX_WIDTH = 200;
+    private static final int TAB_CLOSE_SIZE = 14;
+    private static final int SPLITTER_SIZE = 4;
+    private static final int SPLITTER_HALF = SPLITTER_SIZE / 2;
 
     // Drag threshold — pixels before a drag is recognized
     private static final float DRAG_THRESHOLD = 6f;
@@ -124,7 +129,7 @@ public class DockInputSystem extends SystemPackage {
         int y = node.getY();
         int w = node.getWidth();
 
-        if (!inRect(mx, my, x, y, w, EngineSetting.DOCK_TAB_BAR_HEIGHT))
+        if (!inRect(mx, my, x, y, w, TAB_BAR_HEIGHT))
             return false;
 
         TabGroupInstance group = node.getTabGroup();
@@ -139,9 +144,9 @@ public class DockInputSystem extends SystemPackage {
             TabInstance tab = group.getTabs().get(i);
 
             // Close button
-            int closeX = tabX + tabWidth - EngineSetting.DOCK_TAB_CLOSE_SIZE - 4;
-            int closeY = y + (EngineSetting.DOCK_TAB_BAR_HEIGHT - EngineSetting.DOCK_TAB_CLOSE_SIZE) / 2;
-            if (inRect(mx, my, closeX, closeY, EngineSetting.DOCK_TAB_CLOSE_SIZE, EngineSetting.DOCK_TAB_CLOSE_SIZE)) {
+            int closeX = tabX + tabWidth - TAB_CLOSE_SIZE - 4;
+            int closeY = y + (TAB_BAR_HEIGHT - TAB_CLOSE_SIZE) / 2;
+            if (inRect(mx, my, closeX, closeY, TAB_CLOSE_SIZE, TAB_CLOSE_SIZE)) {
                 tabManager.destroyTab(tab);
                 dockManager.removeTab(tab, group);
                 collapseIfEmpty(group, node, window);
@@ -149,7 +154,7 @@ public class DockInputSystem extends SystemPackage {
             }
 
             // Tab body — begin potential drag
-            if (inRect(mx, my, tabX, y, tabWidth, EngineSetting.DOCK_TAB_BAR_HEIGHT)) {
+            if (inRect(mx, my, tabX, y, tabWidth, TAB_BAR_HEIGHT)) {
                 tabManager.activateTab(tab, group);
                 draggingTab = tab;
                 draggingFromGroup = group;
@@ -173,12 +178,12 @@ public class DockInputSystem extends SystemPackage {
             int splitX = node.getX() + (int) (node.getWidth() * node.getSplitRatio());
             return inRect(mx, my,
                     splitX - SPLITTER_HALF, node.getY(),
-                    EngineSetting.DOCK_SPLITTER_SIZE, node.getHeight());
+                    SPLITTER_SIZE, node.getHeight());
         } else {
             int splitY = node.getY() + (int) (node.getHeight() * node.getSplitRatio());
             return inRect(mx, my,
                     node.getX(), splitY - SPLITTER_HALF,
-                    node.getWidth(), EngineSetting.DOCK_SPLITTER_SIZE);
+                    node.getWidth(), SPLITTER_SIZE);
         }
     }
 
@@ -257,12 +262,12 @@ public class DockInputSystem extends SystemPackage {
             return null;
 
         if (node.isLeaf()) {
-            int barBottom = node.getY() + EngineSetting.DOCK_TAB_BAR_HEIGHT;
-            if (inRect(mx, my, node.getX(), node.getY(), node.getWidth(), EngineSetting.DOCK_TAB_BAR_HEIGHT))
+            int barBottom = node.getY() + TAB_BAR_HEIGHT;
+            if (inRect(mx, my, node.getX(), node.getY(), node.getWidth(), TAB_BAR_HEIGHT))
                 return node;
             // Allow drop onto content area too
             if (inRect(mx, my, node.getX(), barBottom,
-                    node.getWidth(), node.getHeight() - EngineSetting.DOCK_TAB_BAR_HEIGHT))
+                    node.getWidth(), node.getHeight() - TAB_BAR_HEIGHT))
                 return node;
             return null;
         }
@@ -362,6 +367,6 @@ public class DockInputSystem extends SystemPackage {
         if (tabCount == 0)
             return 0;
         int computed = zoneWidth / tabCount;
-        return Math.max(EngineSetting.DOCK_TAB_MIN_WIDTH, Math.min(EngineSetting.DOCK_TAB_MAX_WIDTH, computed));
+        return Math.max(TAB_MIN_WIDTH, Math.min(TAB_MAX_WIDTH, computed));
     }
 }

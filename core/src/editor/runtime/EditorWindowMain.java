@@ -3,6 +3,7 @@ package editor.runtime;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.dockpipeline.dockmanager.DockManager;
+import editor.bootstrap.dockpipeline.container.ContainerInstance;
 import editor.bootstrap.dockpipeline.dockinputsystem.DockInputSystem;
 import editor.bootstrap.dockpipeline.dockrendersystem.DockRenderSystem;
 import editor.runtime.menueventsmanager.EditorMenuEventsManager;
@@ -39,6 +40,6 @@ public class EditorWindowMain extends ContextPackage {
     @Override
     protected void start() {
         WindowInstance mainWindow = windowManager.getMainWindow();
-        dockManager.createContainer(mainWindow, EngineSetting.MENU_TOOLBAR_HEIGHT);
+        dockManager.createContainer(mainWindow);
     }
 }

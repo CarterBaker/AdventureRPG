@@ -82,12 +82,10 @@ public class DockRenderSystem extends SystemPackage {
 
     private void drawTabGroup(NodeInstance node) {
         TabGroupInstance group = node.getTabGroup();
-
-        drawZoneBorder(node);
-
         if (group == null || group.isEmpty())
             return;
 
+        drawZoneBorder(node);
         drawTabBar(node, group);
     }
 
