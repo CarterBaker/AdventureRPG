@@ -31,6 +31,6 @@ public class EditorWindowSecondary extends ContextPackage {
     @Override
     protected void start() {
         if (dockManager.getContainerForWindow(getWindow()) == null)
-            dockManager.createContainer(getWindow());
+            dockManager.createContainer(getWindow(), 0);
     }
 }
