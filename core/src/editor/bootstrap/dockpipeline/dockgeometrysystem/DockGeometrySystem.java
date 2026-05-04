@@ -25,6 +25,11 @@ public class DockGeometrySystem extends SystemPackage {
      * so chrome always composites on top of FBO tab content.
      * Models are destroyed at the start of each frame — geometry
      * is rebuilt every frame since rects change with splits and drags.
+     *
+     * Y-flip: dock layout uses top-left origin (y=0 at top), but the
+     * shader expects y-up (y=0 at bottom). viewportHeight is stored at
+     * beginFrame() and applied in addVertex() to flip each vertex before
+     * it enters the geometry buffer.
      */
 
     // Dependencies
@@ -38,8 +43,9 @@ public class DockGeometrySystem extends SystemPackage {
     private int dockMaterialID;
     private DynamicPacketInstance dynamicPacket;
 
-    // Frame model tracking — destroyed each frame
+    // Frame state
     private ObjectArrayList<ModelInstance> frameModels;
+    private int viewportHeight; // set each frame, used to flip Y
 
     @Override
     protected void get() {
@@ -62,7 +68,8 @@ public class DockGeometrySystem extends SystemPackage {
 
     // Frame Lifecycle \\
 
-    public void beginFrame() {
+    public void beginFrame(WindowInstance window) {
+        this.viewportHeight = window.getHeight();
         destroyFrameModels();
         dynamicPacket.clear();
         dynamicPacket.tryLock();
@@ -115,7 +122,7 @@ public class DockGeometrySystem extends SystemPackage {
 
     private void addVertex(FloatArrayList verts, float x, float y, float[] c) {
         verts.add(x);
-        verts.add(y);
+        verts.add(viewportHeight - y); // flip: top-left origin -> y-up for shader
         verts.add(c[0]);
         verts.add(c[1]);
         verts.add(c[2]);
