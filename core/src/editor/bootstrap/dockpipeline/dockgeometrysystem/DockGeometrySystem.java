@@ -1,55 +1,37 @@
 package editor.bootstrap.dockpipeline.dockgeometrysystem;
 
-import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
-import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
-import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
-import application.bootstrap.geometrypipeline.vao.VAOHandle;
-import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
+import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.dockpipeline.tab.TabInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import engine.util.mathematics.matrices.Matrix4;
 
 public class DockGeometrySystem extends SystemPackage {
 
-    /*
-     * Builds and submits dock chrome geometry each frame.
-     * Per-vertex color quads accumulated into a DynamicPacketInstance,
-     * flushed per container window, submitted as screen calls at order 1
-     * so chrome always composites on top of FBO tab content.
-     * Models are destroyed at the start of each frame — geometry
-     * is rebuilt every frame since rects change with splits and drags.
-     *
-     * Y-flip: dock layout uses top-left origin (y=0 at top), but the
-     * shader expects y-up (y=0 at bottom). viewportHeight is stored at
-     * beginFrame() and applied in addVertex() to flip each vertex before
-     * it enters the geometry buffer.
-     */
+    private static final int FRAME_POOL_SIZE = 32;
 
     // Dependencies
-    private VAOManager vaoManager;
+    private MeshManager meshManager;
     private MaterialManager materialManager;
     private ModelManager modelManager;
     private RenderManager renderManager;
 
-    // Geometry
-    private VAOHandle dockVao;
-    private int dockMaterialID;
-    private DynamicPacketInstance dynamicPacket;
-
-    // Frame state
-    private ObjectArrayList<ModelInstance> frameModels;
-    private int viewportHeight; // set each frame, used to flip Y
+    // Static render data
+    private MeshHandle dockQuadMesh;
+    private Matrix4 rectTransform;
+    private ModelInstance[] framePool;
+    private int framePoolIndex;
 
     @Override
     protected void get() {
-        this.vaoManager = get(VAOManager.class);
+        this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
         this.modelManager = get(ModelManager.class);
         this.renderManager = get(RenderManager.class);
@@ -57,83 +39,63 @@ public class DockGeometrySystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.dockVao = vaoManager.getVAOHandleFromVAOName(EngineSetting.DOCK_CHROME_VAO);
-        this.dockMaterialID = materialManager
+        dockQuadMesh = meshManager.getMeshHandleFromMeshName(EngineSetting.DOCK_CHROME_MESH);
+        rectTransform = new Matrix4();
+        framePool = new ModelInstance[FRAME_POOL_SIZE];
+
+        int materialID = materialManager
                 .getMaterialHandleFromMaterialName(EngineSetting.DOCK_CHROME_MATERIAL)
                 .getMaterialData().getMaterialID();
-        this.dynamicPacket = create(DynamicPacketInstance.class);
-        this.dynamicPacket.constructor(dockVao);
-        this.frameModels = new ObjectArrayList<>();
+
+        for (int i = 0; i < FRAME_POOL_SIZE; i++) {
+            MaterialInstance material = materialManager.cloneMaterial(materialID);
+            framePool[i] = modelManager.createModel(dockQuadMesh, material);
+        }
+
+        framePoolIndex = 0;
     }
 
-    // Frame Lifecycle \\
-
-    public void beginFrame(WindowInstance window) {
-        this.viewportHeight = window.getHeight();
-        destroyFrameModels();
-        dynamicPacket.clear();
-        dynamicPacket.tryLock();
+    public void beginFrame() {
+        framePoolIndex = 0;
     }
 
-    public void pushRect(int x, int y, int width, int height, float[] color) {
+    public void buildTabModel(TabInstance tab) {
+        MaterialInstance material = materialManager.cloneMaterial(materialManager
+                .getMaterialHandleFromMaterialName(EngineSetting.DOCK_CHROME_MATERIAL)
+                .getMaterialData().getMaterialID());
+        ModelInstance model = modelManager.createModel(dockQuadMesh, material);
+        tab.setTabModel(model);
+    }
+
+    public void pushRect(WindowInstance window, TabInstance tab, int x, int y, int width, int height, float[] color) {
+        if (tab == null || tab.getTabModel() == null)
+            return;
+
+        pushRect(window, tab.getTabModel(), x, y, width, height, color);
+    }
+
+    public void pushRect(WindowInstance window, ModelInstance model, int x, int y, int width, int height, float[] color) {
         if (width <= 0 || height <= 0)
             return;
 
-        FloatArrayList verts = new FloatArrayList(24);
-        addVertex(verts, x, y, color);
-        addVertex(verts, x + width, y, color);
-        addVertex(verts, x + width, y + height, color);
-        addVertex(verts, x, y + height, color);
+        ModelInstance rectModel = model;
 
-        dynamicPacket.addVertices(dockMaterialID, verts);
-    }
-
-    public void flushAndSubmit(WindowInstance window) {
-        dynamicPacket.setReady();
-
-        if (dynamicPacket.getState() != DynamicPacketState.READY)
-            return;
-
-        Int2ObjectMap<ObjectArrayList<DynamicModelHandle>> buckets = dynamicPacket.getMaterialID2ModelCollection();
-
-        for (Int2ObjectMap.Entry<ObjectArrayList<DynamicModelHandle>> entry : buckets.int2ObjectEntrySet()) {
-
-            ObjectArrayList<DynamicModelHandle> handles = entry.getValue();
-
-            for (int i = 0; i < handles.size(); i++) {
-                DynamicModelHandle handle = handles.get(i);
-
-                if (handle.isEmpty())
-                    continue;
-
-                ModelInstance model = modelManager.createModel(
-                        handle.getVAOHandle(),
-                        handle.getVertices(),
-                        handle.getIndices(),
-                        materialManager.cloneMaterial(entry.getIntKey()));
-
-                frameModels.add(model);
-                renderManager.pushScreenCall(model, window, 1);
-            }
+        if (rectModel == null) {
+            rectModel = framePool[framePoolIndex % FRAME_POOL_SIZE];
+            framePoolIndex++;
         }
-    }
 
-    // Vertex Building \\
+        int screenY = window.getHeight() - y - height;
 
-    private void addVertex(FloatArrayList verts, float x, float y, float[] c) {
-        verts.add(x);
-        verts.add(viewportHeight - y); // flip: top-left origin -> y-up for shader
-        verts.add(c[0]);
-        verts.add(c[1]);
-        verts.add(c[2]);
-        verts.add(c[3]);
-    }
+        rectTransform.set(
+                width, 0, 0, x,
+                0, height, 0, screenY,
+                0, 0, 1, 0,
+                0, 0, 0, 1);
 
-    // Cleanup \\
+        rectModel.getMaterial().setUniform("u_transform", rectTransform);
+        rectModel.getMaterial().setUniform("u_color", color);
 
-    private void destroyFrameModels() {
-        for (int i = 0; i < frameModels.size(); i++)
-            modelManager.removeMesh(frameModels.get(i));
-        frameModels.clear();
+        renderManager.pushScreenCall(rectModel, window, 1);
     }
 }

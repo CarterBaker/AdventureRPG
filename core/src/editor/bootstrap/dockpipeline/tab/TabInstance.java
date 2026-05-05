@@ -1,5 +1,6 @@
 package editor.bootstrap.dockpipeline.tab;
 
+import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ContextPackage;
 import engine.root.InstancePackage;
@@ -12,6 +13,9 @@ public class TabInstance extends InstancePackage {
     // Context
     private ContextPackage context;
     private WindowInstance logicalWindow;
+
+    // Geometry
+    private ModelInstance tabModel;
 
     // State
     private boolean active;
@@ -59,6 +63,10 @@ public class TabInstance extends InstancePackage {
         this.logicalWindow = logicalWindow;
     }
 
+    public void setTabModel(ModelInstance tabModel) {
+        this.tabModel = tabModel;
+    }
+
     // Queries \\
 
     public boolean isActive() {
@@ -89,6 +97,10 @@ public class TabInstance extends InstancePackage {
 
     public WindowInstance getLogicalWindow() {
         return logicalWindow;
+    }
+
+    public ModelInstance getTabModel() {
+        return tabModel;
     }
 
     public String getTitle() {

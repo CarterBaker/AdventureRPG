@@ -1,5 +1,20 @@
 {
     "shader": "DockChrome",
+    "uniforms": {
+        "u_transform": {
+            "type": "mat4",
+            "value": [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0]
+            ]
+        },
+        "u_color": {
+            "type": "vec4",
+            "value": [1.0, 1.0, 1.0, 1.0]
+        }
+    },
     "ubos": {
         "CameraData": "CameraData"
     }

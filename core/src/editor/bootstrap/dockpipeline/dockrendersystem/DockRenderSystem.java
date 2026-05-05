@@ -13,14 +13,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class DockRenderSystem extends SystemPackage {
 
-    /*
-     * Draws all dock chrome as screen-space flat color quads.
-     * Uses the default sprite material with a color uniform —
-     * same path as menu sprites, no custom shader needed.
-     * Tab content compositing is handled uniformly by RenderManager —
-     * this system draws chrome only.
-     */
-
     // Colors — r g b a
     private static final float[] COL_TAB_BAR = { 0.18f, 0.18f, 0.18f, 1f };
     private static final float[] COL_TAB_ACTIVE = { 0.28f, 0.28f, 0.28f, 1f };
@@ -51,18 +43,16 @@ public class DockRenderSystem extends SystemPackage {
         Object[] elements = containers.elements();
         int count = containers.size();
 
+        dockGeometrySystem.beginFrame();
+
         for (int i = 0; i < count; i++) {
 
             ContainerInstance container = (ContainerInstance) elements[i];
             currentWindow = container.getWindow().getGLWindow();
 
-            dockGeometrySystem.beginFrame(currentWindow);
             drawNode(container.getRootNode());
-            dockGeometrySystem.flushAndSubmit(currentWindow);
         }
     }
-
-    // Node Traversal \\
 
     private void drawNode(NodeInstance node) {
         if (node == null)
@@ -77,8 +67,6 @@ public class DockRenderSystem extends SystemPackage {
         drawNode(node.getChildA());
         drawNode(node.getChildB());
     }
-
-    // Tab Group Chrome \\
 
     private void drawTabGroup(NodeInstance node) {
         TabGroupInstance group = node.getTabGroup();
@@ -120,7 +108,7 @@ public class DockRenderSystem extends SystemPackage {
     }
 
     private void drawTab(TabInstance tab, int x, int y, int width, boolean active) {
-        drawRect(x, y, width, EngineSetting.DOCK_TAB_BAR_HEIGHT,
+        drawRect(tab, x, y, width, EngineSetting.DOCK_TAB_BAR_HEIGHT,
                 active ? COL_TAB_ACTIVE : COL_TAB_INACTIVE);
 
         if (active)
@@ -133,8 +121,6 @@ public class DockRenderSystem extends SystemPackage {
         drawRect(closeX, closeY, EngineSetting.DOCK_TAB_CLOSE_SIZE,
                 EngineSetting.DOCK_TAB_CLOSE_SIZE, COL_TAB_CLOSE);
     }
-
-    // Splitter \\
 
     private void drawSplitter(NodeInstance node) {
         boolean horizontal = node.getSplitAxis() == NodeInstance.SplitAxis.HORIZONTAL;
@@ -151,13 +137,13 @@ public class DockRenderSystem extends SystemPackage {
         }
     }
 
-    // Primitive \\
-
     private void drawRect(int x, int y, int width, int height, float[] col) {
-        dockGeometrySystem.pushRect(x, y, width, height, col);
+        dockGeometrySystem.pushRect(currentWindow, null, x, y, width, height, col);
     }
 
-    // Helpers \\
+    private void drawRect(TabInstance tab, int x, int y, int width, int height, float[] col) {
+        dockGeometrySystem.pushRect(currentWindow, tab, x, y, width, height, col);
+    }
 
     private int resolveTabWidth(int tabCount, int zoneWidth) {
         if (tabCount == 0)

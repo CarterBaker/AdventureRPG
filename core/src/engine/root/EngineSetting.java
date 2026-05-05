@@ -92,7 +92,7 @@ public class EngineSetting {
         public static final int CURSOR_DEFAULT = 0;
         public static final int CURSOR_RESIZE_H = 1;
         public static final int CURSOR_RESIZE_V = 2;
-        public static final String DOCK_CHROME_VAO = "util/vao/DockChromeVAO";
+        public static final String DOCK_CHROME_MESH = "util/DockChromeQuad";
         public static final String DOCK_CHROME_MATERIAL = "util/DockChrome";
 
         // Scale \\

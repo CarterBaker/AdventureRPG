@@ -3,6 +3,7 @@ package editor.bootstrap.dockpipeline.tabmanager;
 import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import editor.bootstrap.dockpipeline.dockgeometrysystem.DockGeometrySystem;
 import editor.bootstrap.dockpipeline.tab.TabData;
 import editor.bootstrap.dockpipeline.tab.TabInstance;
 import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
@@ -23,6 +24,7 @@ public class TabManager extends ManagerPackage {
     // Registry
     private ObjectArrayList<TabInstance> tabs;
     private WindowManager windowManager;
+    private DockGeometrySystem dockGeometrySystem;
 
     @Override
     protected void create() {
@@ -32,6 +34,7 @@ public class TabManager extends ManagerPackage {
     @Override
     protected void get() {
         this.windowManager = get(WindowManager.class);
+        this.dockGeometrySystem = get(DockGeometrySystem.class);
     }
 
     // Tab Lifecycle \\
@@ -52,6 +55,7 @@ public class TabManager extends ManagerPackage {
         TabInstance tab = create(TabInstance.class);
         tab.constructor(data);
         tab.setLogicalWindow(logicalWindow);
+        dockGeometrySystem.buildTabModel(tab);
 
         ContextPackage context = internal.createTabContext(contextClass, logicalWindow);
         tab.setContext(context);
