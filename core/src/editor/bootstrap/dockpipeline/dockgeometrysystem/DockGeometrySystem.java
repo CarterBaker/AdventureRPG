@@ -12,6 +12,7 @@ import editor.bootstrap.dockpipeline.tab.TabInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.vectors.Vector4;
 
 public class DockGeometrySystem extends SystemPackage {
 
@@ -67,14 +68,15 @@ public class DockGeometrySystem extends SystemPackage {
         tab.setTabModel(model);
     }
 
-    public void pushRect(WindowInstance window, TabInstance tab, int x, int y, int width, int height, float[] color) {
+    public void pushRect(WindowInstance window, TabInstance tab, int x, int y, int width, int height, Vector4 color) {
         if (tab == null || tab.getTabModel() == null)
             return;
 
         pushRect(window, tab.getTabModel(), x, y, width, height, color);
     }
 
-    public void pushRect(WindowInstance window, ModelInstance model, int x, int y, int width, int height, float[] color) {
+    public void pushRect(WindowInstance window, ModelInstance model, int x, int y, int width, int height,
+            Vector4 color) {
         if (width <= 0 || height <= 0)
             return;
 

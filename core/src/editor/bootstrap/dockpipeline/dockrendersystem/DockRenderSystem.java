@@ -10,19 +10,20 @@ import editor.bootstrap.dockpipeline.tab.TabInstance;
 import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class DockRenderSystem extends SystemPackage {
 
     // Colors — r g b a
-    private static final float[] COL_TAB_BAR = { 0.18f, 0.18f, 0.18f, 1f };
-    private static final float[] COL_TAB_ACTIVE = { 0.28f, 0.28f, 0.28f, 1f };
-    private static final float[] COL_TAB_INACTIVE = { 0.20f, 0.20f, 0.20f, 1f };
-    private static final float[] COL_TAB_HIGHLIGHT = { 0.40f, 0.65f, 1.00f, 1f };
-    private static final float[] COL_TAB_CLOSE = { 0.55f, 0.20f, 0.20f, 1f };
-    private static final float[] COL_TAB_SEPARATOR = { 0.12f, 0.12f, 0.12f, 1f };
-    private static final float[] COL_BORDER = { 0.15f, 0.15f, 0.15f, 1f };
-    private static final float[] COL_SPLITTER = { 0.12f, 0.12f, 0.12f, 1f };
+    private static final Vector4 COL_TAB_BAR = new Vector4(0.18f, 0.18f, 0.18f, 1f);
+    private static final Vector4 COL_TAB_ACTIVE = new Vector4(0.28f, 0.28f, 0.28f, 1f);
+    private static final Vector4 COL_TAB_INACTIVE = new Vector4(0.20f, 0.20f, 0.20f, 1f);
+    private static final Vector4 COL_TAB_HIGHLIGHT = new Vector4(0.40f, 0.65f, 1.00f, 1f);
+    private static final Vector4 COL_TAB_CLOSE = new Vector4(0.55f, 0.20f, 0.20f, 1f);
+    private static final Vector4 COL_TAB_SEPARATOR = new Vector4(0.12f, 0.12f, 0.12f, 1f);
+    private static final Vector4 COL_BORDER = new Vector4(0.15f, 0.15f, 0.15f, 1f);
+    private static final Vector4 COL_SPLITTER = new Vector4(0.12f, 0.12f, 0.12f, 1f);
 
     // Dependencies
     private DockManager dockManager;
@@ -138,11 +139,11 @@ public class DockRenderSystem extends SystemPackage {
         }
     }
 
-    private void drawRect(int x, int y, int width, int height, float[] col) {
+    private void drawRect(int x, int y, int width, int height, Vector4 col) {
         dockGeometrySystem.pushRect(currentWindow, (ModelInstance) null, x, y, width, height, col);
     }
 
-    private void drawRect(TabInstance tab, int x, int y, int width, int height, float[] col) {
+    private void drawRect(TabInstance tab, int x, int y, int width, int height, Vector4 col) {
         dockGeometrySystem.pushRect(currentWindow, tab, x, y, width, height, col);
     }
 
