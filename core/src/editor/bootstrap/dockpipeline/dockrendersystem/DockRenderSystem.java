@@ -1,5 +1,6 @@
 package editor.bootstrap.dockpipeline.dockrendersystem;
 
+import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.dockpipeline.container.ContainerInstance;
 import editor.bootstrap.dockpipeline.dockgeometrysystem.DockGeometrySystem;
@@ -138,7 +139,7 @@ public class DockRenderSystem extends SystemPackage {
     }
 
     private void drawRect(int x, int y, int width, int height, float[] col) {
-        dockGeometrySystem.pushRect(currentWindow, null, x, y, width, height, col);
+        dockGeometrySystem.pushRect(currentWindow, (ModelInstance) null, x, y, width, height, col);
     }
 
     private void drawRect(TabInstance tab, int x, int y, int width, int height, float[] col) {
