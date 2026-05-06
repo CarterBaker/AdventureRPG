@@ -1,5 +1,6 @@
 package application.bootstrap.menupipeline.menurendersystem;
 
+import application.bootstrap.menupipeline.canvassystem.CanvasAreaSystem;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.element.ElementType;
@@ -21,6 +22,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MenuRenderSystem extends SystemPackage {
 
     private RenderManager renderManager;
+    private CanvasAreaSystem canvasAreaSystem;
     private FontRenderSystem fontRenderSystem;
     private FboRenderSystem fboRenderSystem;
 
@@ -40,6 +42,7 @@ public class MenuRenderSystem extends SystemPackage {
     @Override
     protected void get() {
         this.renderManager = get(RenderManager.class);
+        this.canvasAreaSystem = get(CanvasAreaSystem.class);
         this.fontRenderSystem = get(FontRenderSystem.class);
         this.fboRenderSystem = get(FboRenderSystem.class);
     }
@@ -76,6 +79,15 @@ public class MenuRenderSystem extends SystemPackage {
         else
             element.computeTransform(parentLeft, parentTop, parentW, parentH);
 
+        if (element.getElementData().getType() == ElementType.CANVAS_AREA)
+            canvasAreaSystem.register(
+                    currentWindow,
+                    element.getElementData().getId(),
+                    (int) element.getComputedLeft(),
+                    (int) element.getComputedTop(),
+                    (int) element.getComputedW(),
+                    (int) element.getComputedH());
+
         renderElementContent(element);
     }
 
@@ -91,6 +103,9 @@ public class MenuRenderSystem extends SystemPackage {
 
         ElementData data = element.getElementData();
         ElementType type = data.getType();
+
+        if (type == ElementType.CANVAS_AREA)
+            return;
 
         if (element.hasSprite())
             pushSpriteRenderCall(element);

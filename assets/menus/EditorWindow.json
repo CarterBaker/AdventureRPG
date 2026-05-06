@@ -96,6 +96,14 @@
               ]
             }
           ]
+        },
+        {
+          "id": "dock_canvas",
+          "type": "canvas_area",
+          "anchor": "top_left",
+          "pivot": "top_left",
+          "position": {"x": "0%", "y": "0%"},
+          "size": {"x": "100%", "y": "100%"}
         }
       ]
     },
@@ -106,6 +114,14 @@
         {
           "id": "toolbar",
           "use": "util/ToolBar"
+        },
+        {
+          "id": "dock_canvas",
+          "type": "canvas_area",
+          "anchor": "top_left",
+          "pivot": "top_left",
+          "position": {"x": "0%", "y": "0%"},
+          "size": {"x": "100%", "y": "100%"}
         }
       ]
     }

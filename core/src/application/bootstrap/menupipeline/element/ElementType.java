@@ -13,5 +13,6 @@ public enum ElementType {
     LABEL,
     CONTAINER,
     TOOLBAR,
+    CANVAS_AREA,
     EXPANDABLE_CONTAINER
 }
