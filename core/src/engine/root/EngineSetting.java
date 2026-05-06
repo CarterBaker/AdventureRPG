@@ -316,6 +316,7 @@ public class EngineSetting {
 
         // Menu \\
 
+        public static final String MENU_TAB_SHELL = "editor/TabShell/TabShell";
         public static final float DROPDOWN_COLLAPSE_TOLERANCE = 12f;
         public static final String ELEMENT_DEFAULT_MAX_SIZE = "100%";
         public static final String ELEMENT_DEFAULT_MIN_SIZE = "0%";

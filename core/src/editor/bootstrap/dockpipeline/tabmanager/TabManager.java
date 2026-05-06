@@ -4,10 +4,10 @@ import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.dockpipeline.dockgeometrysystem.DockGeometrySystem;
+import editor.bootstrap.dockpipeline.tab.TabContext;
 import editor.bootstrap.dockpipeline.tab.TabData;
 import editor.bootstrap.dockpipeline.tab.TabInstance;
 import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
-import editor.runtime.TabShellContext;
 import engine.root.ContextPackage;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -55,7 +55,7 @@ public class TabManager extends ManagerPackage {
         shellWindow.setDepth(1);
         windowManager.registerDetachedWindow(shellWindow);
 
-        TabShellContext shellContext = internal.createContext(TabShellContext.class, shellWindow);
+        TabContext shellContext = internal.createContext(TabContext.class, shellWindow);
 
         WindowInstance contentWindow = create(WindowInstance.class);
         contentWindow.constructor(new WindowData(windowManager.issueWindowID(), width, height, title, false));

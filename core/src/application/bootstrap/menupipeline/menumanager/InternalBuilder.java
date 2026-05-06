@@ -80,10 +80,6 @@ class InternalBuilder extends BuilderPackage {
             }
         }
 
-        String fileName = filePath.contains("/")
-                ? filePath.substring(filePath.lastIndexOf('/') + 1)
-                : filePath;
-
         ObjectArrayList<MenuHandle> handles = new ObjectArrayList<>();
 
         if (!json.has("menus"))
@@ -92,7 +88,7 @@ class InternalBuilder extends BuilderPackage {
         JsonArray menuArray = json.getAsJsonArray("menus");
 
         for (int i = 0; i < menuArray.size(); i++)
-            handles.add(buildMenuHandle(fileName, filePath, menuArray.get(i).getAsJsonObject()));
+            handles.add(buildMenuHandle(filePath, menuArray.get(i).getAsJsonObject()));
 
         return handles;
     }
@@ -105,7 +101,7 @@ class InternalBuilder extends BuilderPackage {
 
     // Menu Building \\
 
-    private MenuHandle buildMenuHandle(String fileName, String filePath, JsonObject menuJson) {
+    private MenuHandle buildMenuHandle(String filePath, JsonObject menuJson) {
 
         String id = JsonUtility.validateString(menuJson, "id");
         boolean lockInput = JsonUtility.getBoolean(menuJson, "lock_input", false);
@@ -126,7 +122,7 @@ class InternalBuilder extends BuilderPackage {
                 DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT),
                 true);
 
-        MenuData data = new MenuData(fileName + "/" + id, lockInput, raycastInput, entryPoints);
+        MenuData data = new MenuData(filePath + "/" + id, lockInput, raycastInput, entryPoints);
         MenuHandle handle = create(MenuHandle.class);
         handle.constructor(data, nodes);
 

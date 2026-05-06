@@ -1,11 +1,13 @@
-package editor.runtime;
+package editor.bootstrap.dockpipeline.tab;
 
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.runtime.MenuTargetFboSystem;
 import engine.root.ContextPackage;
+import engine.root.EngineSetting;
 
-public class TabShellContext extends ContextPackage {
+public class TabContext extends ContextPackage {
 
     private MenuManager menuManager;
     private MenuInstance tabShellMenu;
@@ -24,7 +26,7 @@ public class TabShellContext extends ContextPackage {
 
     @Override
     protected void start() {
-        tabShellMenu = menuManager.openMenu("editor/TabShell", getWindow());
+        tabShellMenu = menuManager.openMenu(EngineSetting.MENU_TAB_SHELL, getWindow());
     }
 
     public void mountContent(WindowInstance contentWin, ContextPackage content) {
