@@ -1,43 +1,41 @@
 package application.bootstrap.menupipeline.canvassystem;
 
-import application.kernel.windowpipeline.window.WindowInstance;
+import application.bootstrap.menupipeline.menu.MenuInstance;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class CanvasAreaSystem extends SystemPackage {
 
-    private Object2ObjectOpenHashMap<WindowInstance, Object2ObjectOpenHashMap<String, int[]>> windowAreas;
+    /*
+     * Tracks the computed screen rect for the single canvas_area element each
+     * menu is permitted to define. Keyed by MenuInstance — completely independent
+     * of window. Updated every frame by MenuRenderSystem; callers retrieve the
+     * rect by menu, never by window.
+     */
+
+    // Internal
+    private Object2ObjectOpenHashMap<MenuInstance, int[]> menuCanvas;
+
+    // Internal \\
 
     @Override
     protected void create() {
-        this.windowAreas = new Object2ObjectOpenHashMap<>();
+        this.menuCanvas = new Object2ObjectOpenHashMap<>();
     }
 
-    public void register(WindowInstance window, String id, int x, int y, int w, int h) {
-        Object2ObjectOpenHashMap<String, int[]> areas = windowAreas.get(window);
+    // Management \\
 
-        if (areas != null && !areas.isEmpty())
-            throwException("Window already has a canvas area: " + window);
-
-        if (areas == null) {
-            areas = new Object2ObjectOpenHashMap<>();
-            windowAreas.put(window, areas);
-        }
-
-        areas.put(id, new int[] { x, y, w, h });
+    public void register(MenuInstance menu, int x, int y, int w, int h) {
+        menuCanvas.put(menu, new int[] { x, y, w, h });
     }
 
-    public int[] get(WindowInstance window, String id) {
-        Object2ObjectOpenHashMap<String, int[]> areas = windowAreas.get(window);
-        return areas == null ? null : areas.get(id);
+    public void unregister(MenuInstance menu) {
+        menuCanvas.remove(menu);
     }
 
-    public int[] get(WindowInstance window) {
-        Object2ObjectOpenHashMap<String, int[]> areas = windowAreas.get(window);
+    // Accessible \\
 
-        if (areas == null || areas.isEmpty())
-            throwException("No canvas area found for window: " + window);
-
-        return areas.values().iterator().next();
+    public int[] get(MenuInstance menu) {
+        return menuCanvas.get(menu);
     }
 }

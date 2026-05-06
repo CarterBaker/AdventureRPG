@@ -97,7 +97,6 @@ public class MenuManager extends ManagerPackage {
             renderSystem.renderMenu(menu, menuTargetFbo, RuntimeSetting.LAYER_UI);
         }
 
-
         if (lockSystem.isRaycastLocked())
             hitSystem.updateRaycast(activeMenus);
     }
@@ -114,6 +113,7 @@ public class MenuManager extends ManagerPackage {
             MenuInstance instance = pendingCloseMenus.get(i);
 
             renderSystem.releaseFontModels(instance.getElements());
+            canvasAreaSystem.unregister(instance);
             activeMenus.remove(instance);
         }
 
@@ -257,8 +257,8 @@ public class MenuManager extends ManagerPackage {
         return activeMenus;
     }
 
-    public int[] getCanvas(WindowInstance window) {
-        return canvasAreaSystem.get(window);
+    public int[] getCanvas(MenuInstance menu) {
+        return canvasAreaSystem.get(menu);
     }
 
     public void request(String menuName) {

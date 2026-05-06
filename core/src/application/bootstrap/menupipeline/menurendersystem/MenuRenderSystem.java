@@ -29,6 +29,7 @@ public class MenuRenderSystem extends SystemPackage {
     private MaskStruct[] maskPool;
     private int maskDepth;
 
+    private MenuInstance currentMenu;
     private WindowInstance currentWindow;
     private FboInstance targetFbo;
 
@@ -52,6 +53,7 @@ public class MenuRenderSystem extends SystemPackage {
         if (!instance.isVisible() || uiTargetFbo == null)
             return;
 
+        currentMenu = instance;
         currentWindow = instance.getWindow();
         this.targetFbo = uiTargetFbo;
 
@@ -81,8 +83,7 @@ public class MenuRenderSystem extends SystemPackage {
 
         if (element.getElementData().getType() == ElementType.CANVAS_AREA)
             canvasAreaSystem.register(
-                    currentWindow,
-                    element.getElementData().getId(),
+                    currentMenu,
                     (int) element.getComputedLeft(),
                     (int) element.getComputedTop(),
                     (int) element.getComputedW(),
