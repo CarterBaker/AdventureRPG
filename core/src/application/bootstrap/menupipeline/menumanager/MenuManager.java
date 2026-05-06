@@ -2,6 +2,7 @@ package application.bootstrap.menupipeline.menumanager;
 
 import java.util.function.Consumer;
 
+import application.bootstrap.menupipeline.canvassystem.CanvasAreaSystem;
 import application.bootstrap.menupipeline.cursorlocksystem.CursorLockSystem;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
@@ -36,6 +37,7 @@ public class MenuManager extends ManagerPackage {
     private MenuRenderSystem renderSystem;
     private ElementHitSystem hitSystem;
     private CursorLockSystem lockSystem;
+    private CanvasAreaSystem canvasAreaSystem;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
@@ -73,6 +75,7 @@ public class MenuManager extends ManagerPackage {
         this.renderSystem = get(MenuRenderSystem.class);
         this.hitSystem = get(ElementHitSystem.class);
         this.lockSystem = get(CursorLockSystem.class);
+        this.canvasAreaSystem = get(CanvasAreaSystem.class);
     }
 
     @Override
@@ -252,6 +255,10 @@ public class MenuManager extends ManagerPackage {
 
     public ObjectArrayList<MenuInstance> getActiveMenus() {
         return activeMenus;
+    }
+
+    public int[] getCanvas(WindowInstance window) {
+        return canvasAreaSystem.get(window);
     }
 
     public void request(String menuName) {

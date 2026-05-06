@@ -273,6 +273,53 @@ public class EnginePackage extends ManagerPackage {
         }
     }
 
+
+    public <T extends ContextPackage> T createChildContext(
+            ContextPackage parent,
+            Class<T> childClass) {
+        return createChildContext(parent, childClass, parent.getWindow());
+    }
+
+    public <T extends ContextPackage> T createChildContext(
+            ContextPackage parent,
+            Class<T> childClass,
+            WindowInstance window) {
+
+        try {
+            SystemPackage.setupConstructor(this.settings, this, this);
+
+            var constructor = childClass.getDeclaredConstructor();
+            T context = constructor.newInstance();
+
+            context.pendingStart = false;
+            context.setWindow(window);
+
+            this.windowPlatform.makeContextCurrent(window.getGLWindow());
+
+            primeContextLifecycle(context);
+
+            EngineUtility.windowManager.beginContextWindow(window);
+
+            try {
+                context.internalStart();
+            }
+
+            finally {
+                EngineUtility.windowManager.endContextWindow();
+            }
+
+            this.activeContextList.add(context);
+            this.cacheContextArray();
+
+            return context;
+        } catch (Exception e) {
+            throw new InternalException("Failed to create child context: " + childClass.getSimpleName(), e);
+        } finally {
+            this.windowPlatform.restoreMainContext();
+            SystemPackage.SYSTEM_STRUCT.remove();
+        }
+    }
+
     private void primeContextLifecycle(ContextPackage context) {
 
         SystemContext previousContext = this.internalContext;

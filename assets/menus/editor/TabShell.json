@@ -1,0 +1,29 @@
+{
+  "menus": [
+    {
+      "id": "TabShell",
+      "raycast_input": true,
+      "elements": [
+        {
+          "id": "tab_bar",
+          "type": "toolbar",
+          "anchor": "top_left",
+          "pivot": "top_left",
+          "position": {"x": "0%", "y": "0%"},
+          "size": {"x": "100%", "y": "24px"},
+          "sprite": "menus/ToolBar",
+          "stack": "horizontal",
+          "spacing": "0px"
+        },
+        {
+          "id": "tab_canvas",
+          "type": "canvas_area",
+          "anchor": "top_left",
+          "pivot": "top_left",
+          "position": {"x": "0%", "y": "24px"},
+          "size": {"x": "100%", "y": "calc(100% - 24px)"}
+        }
+      ]
+    }
+  ]
+}
