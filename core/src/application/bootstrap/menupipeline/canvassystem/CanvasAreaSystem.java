@@ -16,6 +16,9 @@ public class CanvasAreaSystem extends SystemPackage {
     public void register(WindowInstance window, String id, int x, int y, int w, int h) {
         Object2ObjectOpenHashMap<String, int[]> areas = windowAreas.get(window);
 
+        if (areas != null && !areas.isEmpty())
+            throwException("Window already has a canvas area: " + window);
+
         if (areas == null) {
             areas = new Object2ObjectOpenHashMap<>();
             windowAreas.put(window, areas);
@@ -27,5 +30,14 @@ public class CanvasAreaSystem extends SystemPackage {
     public int[] get(WindowInstance window, String id) {
         Object2ObjectOpenHashMap<String, int[]> areas = windowAreas.get(window);
         return areas == null ? null : areas.get(id);
+    }
+
+    public int[] get(WindowInstance window) {
+        Object2ObjectOpenHashMap<String, int[]> areas = windowAreas.get(window);
+
+        if (areas == null || areas.isEmpty())
+            throwException("No canvas area found for window: " + window);
+
+        return areas.values().iterator().next();
     }
 }

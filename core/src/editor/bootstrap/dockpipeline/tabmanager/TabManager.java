@@ -7,6 +7,7 @@ import editor.bootstrap.dockpipeline.dockgeometrysystem.DockGeometrySystem;
 import editor.bootstrap.dockpipeline.tab.TabData;
 import editor.bootstrap.dockpipeline.tab.TabInstance;
 import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
+import editor.runtime.TabShellContext;
 import engine.root.ContextPackage;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -47,22 +48,33 @@ public class TabManager extends ManagerPackage {
             WindowInstance osWindow,
             int x, int y, int width, int height) {
 
-        WindowInstance logicalWindow = create(WindowInstance.class);
-        logicalWindow.constructor(new WindowData(windowManager.issueWindowID(), width, height, title, false));
-        logicalWindow.setCompositeTarget(osWindow);
-        logicalWindow.setCompositeRect(x, y, width, height);
-        logicalWindow.setDepth(1);
-        windowManager.registerDetachedWindow(logicalWindow);
+        WindowInstance shellWindow = create(WindowInstance.class);
+        shellWindow.constructor(new WindowData(windowManager.issueWindowID(), width, height, title, false));
+        shellWindow.setCompositeTarget(osWindow);
+        shellWindow.setCompositeRect(x, y, width, height);
+        shellWindow.setDepth(1);
+        windowManager.registerDetachedWindow(shellWindow);
+
+        TabShellContext shellContext = internal.createContext(TabShellContext.class, shellWindow);
+
+        WindowInstance contentWindow = create(WindowInstance.class);
+        contentWindow.constructor(new WindowData(windowManager.issueWindowID(), width, height, title, false));
+        contentWindow.setCompositeTarget(osWindow);
+        contentWindow.setCompositeRect(x, y, width, height);
+        contentWindow.setDepth(2);
+        windowManager.registerDetachedWindow(contentWindow);
+
+        ContextPackage contentContext = internal.createChildContext(shellContext, contextClass, contentWindow);
+        shellContext.mountContent(contentWindow, contentContext);
 
         TabData data = new TabData(title, contextClass, x, y, width, height);
         TabInstance tab = create(TabInstance.class);
         tab.constructor(data);
-        tab.setLogicalWindow(logicalWindow);
+        tab.setLogicalWindow(shellWindow);
 
         dockGeometrySystem.buildTabModel(tab);
 
-        ContextPackage context = internal.createTabContext(contextClass, logicalWindow);
-        tab.setContext(context);
+        tab.setContext(shellContext);
 
         tabs.add(tab);
         return tab;
