@@ -92,9 +92,7 @@ public class EditorBranch extends BranchPackage {
                 "Editor",
                 EditorWindowSecondary.class,
                 mainWindow,
-                0, 0,
-                mainWindow.getWidth(),
-                mainWindow.getHeight() - 28);
+                0, 0, 0, 0);
 
         dockManager.addTab(tab, group);
         tabManager.activateTab(tab, group);
@@ -115,9 +113,7 @@ public class EditorBranch extends BranchPackage {
                 "Preview",
                 RuntimeContext.class,
                 mainWindow,
-                0, 0,
-                mainWindow.getWidth(),
-                mainWindow.getHeight() - 28);
+                0, 0, 0, 0);
 
         dockManager.addTab(tab, group);
         tabManager.activateTab(tab, group);

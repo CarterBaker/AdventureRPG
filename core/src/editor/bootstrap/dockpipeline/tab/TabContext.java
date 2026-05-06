@@ -40,6 +40,8 @@ public class TabContext extends ContextPackage {
 
     private void syncCanvasToContent() {
         int[] bounds = getCanvasBounds();
+        if (bounds == null)
+            return;
         contentWindow.setCompositeRect(bounds[0], bounds[1], bounds[2], bounds[3]);
     }
 

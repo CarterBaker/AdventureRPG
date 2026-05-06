@@ -61,7 +61,7 @@ public class TabManager extends ManagerPackage {
         contentWindow.constructor(new WindowData(windowManager.issueWindowID(), width, height, title, false));
         contentWindow.setCompositeTarget(osWindow);
         contentWindow.setCompositeRect(x, y, width, height);
-        contentWindow.setDepth(2);
+        contentWindow.setDepth(1);
         windowManager.registerDetachedWindow(contentWindow);
 
         ContextPackage contentContext = internal.createChildContext(shellContext, contextClass, contentWindow);
