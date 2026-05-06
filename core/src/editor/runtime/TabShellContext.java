@@ -1,31 +1,30 @@
 package editor.runtime;
 
+import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ContextPackage;
 
 public class TabShellContext extends ContextPackage {
 
-    private CanvasBridge canvasBridge;
     private MenuManager menuManager;
+    private MenuInstance tabShellMenu;
     private WindowInstance contentWindow;
     private ContextPackage contentContext;
 
     @Override
     protected void create() {
         create(MenuTargetFboSystem.class);
-        create(CanvasBridge.class);
     }
 
     @Override
     protected void get() {
-        this.canvasBridge = get(CanvasBridge.class);
         this.menuManager = get(MenuManager.class);
     }
 
     @Override
     protected void start() {
-        menuManager.openMenu("editor/TabShell", getWindow());
+        tabShellMenu = menuManager.openMenu("editor/TabShell", getWindow());
     }
 
     public void mountContent(WindowInstance contentWin, ContextPackage content) {
@@ -34,11 +33,11 @@ public class TabShellContext extends ContextPackage {
     }
 
     public int[] getCanvasBounds() {
-        return canvasBridge.getCanvasBounds();
+        return menuManager.getCanvas(tabShellMenu);
     }
 
     private void syncCanvasToContent() {
-        int[] bounds = canvasBridge.getCanvasBounds();
+        int[] bounds = getCanvasBounds();
         contentWindow.setCompositeRect(bounds[0], bounds[1], bounds[2], bounds[3]);
     }
 
