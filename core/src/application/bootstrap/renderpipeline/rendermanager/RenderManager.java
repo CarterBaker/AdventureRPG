@@ -20,11 +20,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RenderManager extends ManagerPackage {
 
     /*
-     * Drives the draw phase. Iterates all OS windows, flushes queued render
-     * calls into mapped FBO targets, composites FBOs via FboRenderSystem,
-     * then blits the final frame to the window and swaps buffers.
-     * Logical windows (tabs) redirect through FboRenderSystem automatically —
-     * RenderManager only ever iterates OS windows.
+     * Drives the draw phase. Two-pass loop over all windows registered in
+     * WindowManager:
+     *
+     * Pass 1 — logical windows (tabs, no native handle): make their composite
+     * target's GL context current, push their own camera to the UBO, render
+     * their content, push FBOs onto the OS window's blit queue. No buffer swap.
+     *
+     * Pass 2 — OS windows (native handle): make context current, sync size,
+     * push camera, render content, flush blit queue (which now includes any
+     * logical window FBOs from pass 1), swap buffers.
+     *
+     * Both passes call the same draw(window) — no special-casing per window type.
      *
      * Screen pass is split around the compositor:
      * order 0 — drawn before FBO composite (game UI, menus)
@@ -59,6 +66,7 @@ public class RenderManager extends ManagerPackage {
     // Draw \\
 
     public void draw() {
+
         ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
         Object[] elements = windows.elements();
         int count = windows.size();
@@ -69,11 +77,23 @@ public class RenderManager extends ManagerPackage {
             return;
         }
 
+        // Pass 1 — logical windows: render with own camera, queue FBOs onto OS window
+        // blit queues
+        for (int i = 0; i < count; i++) {
+            WindowInstance window = (WindowInstance) elements[i];
+            if (window.hasNativeHandle())
+                continue;
+            internal.windowPlatform.makeContextCurrent(window.getGLWindow());
+            windowManager.beginRenderWindow(window);
+            draw(window);
+        }
+
+        // Pass 2 — OS windows: pushBlits picks up logical window FBOs, then swap
+        // buffers
         for (int i = 0; i < count; i++) {
             WindowInstance window = (WindowInstance) elements[i];
             if (!window.hasNativeHandle())
                 continue;
-
             internal.windowPlatform.makeContextCurrent(window);
             internal.windowPlatform.syncWindowSize(window);
             windowManager.beginRenderWindow(window);

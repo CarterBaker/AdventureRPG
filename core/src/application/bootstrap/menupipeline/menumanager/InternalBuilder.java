@@ -2,19 +2,16 @@ package application.bootstrap.menupipeline.menumanager;
 
 import java.io.File;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementHandle;
-import application.bootstrap.menupipeline.element.ElementOrigin;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.elementsystem.ElementSystem;
 import application.bootstrap.menupipeline.menu.MenuData;
 import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.util.DimensionValue;
-import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
@@ -23,7 +20,6 @@ import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.io.JsonUtility;
-import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
@@ -36,6 +32,8 @@ class InternalBuilder extends BuilderPackage {
      *
      * ElementHandle.children holds the default subtree for ref copying only.
      * Deferred ref resolution runs after all files are processed.
+     *
+     * All stateless JSON parsing helpers live in FileParserUtility.
      */
 
     private static final String PARENT_ARG = "$parent";
@@ -250,14 +248,13 @@ class InternalBuilder extends BuilderPackage {
                 ? DimensionValue.parse(json.get("font_size").getAsString())
                 : template.getFontSize();
 
-        // Override children from JSON, or fall back to template defaults
         ObjectArrayList<MenuNodeStruct> jsonChildren = buildNodes(
                 filePath, json, resolvedFontName, resolvedFontSize, explicitFontSize);
         ObjectArrayList<MenuNodeStruct> children = !jsonChildren.isEmpty()
                 ? jsonChildren
                 : template.getChildren();
 
-        LayoutStruct partialOverride = parseLayoutOverride(json);
+        LayoutStruct partialOverride = FileParserUtility.parseLayoutOverride(json);
         LayoutStruct layoutOverride = partialOverride != null
                 ? LayoutStruct.merge(template.getLayout(), partialOverride)
                 : null;
@@ -265,8 +262,8 @@ class InternalBuilder extends BuilderPackage {
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String spriteNameOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
         String textOverride = JsonUtility.getString(json, "text", null);
-        Color colorOverride = json.has("color") ? parseColor(json) : null;
-        String[] onClick = parseOnClick(json);
+        Color colorOverride = FileParserUtility.parseColor(json);
+        String[] onClick = FileParserUtility.parseOnClick(json);
         String actionClassOverride = onClick != null ? onClick[0] : null;
         String actionMethodOverride = onClick != null ? onClick[1] : null;
         String actionArgOverride = onClick != null ? onClick[2] : null;
@@ -295,7 +292,7 @@ class InternalBuilder extends BuilderPackage {
     private MenuNodeStruct buildRefNode(String filePath, String id, JsonObject json) {
 
         String refKey = json.get("ref").getAsString();
-        LayoutStruct partialOverride = parseLayoutOverride(json);
+        LayoutStruct partialOverride = FileParserUtility.parseLayoutOverride(json);
         ElementHandle resolved = resolveRefKey(refKey);
 
         if (resolved != null) {
@@ -311,7 +308,6 @@ class InternalBuilder extends BuilderPackage {
                     : new MenuNodeStruct(resolved, children);
         }
 
-        // Deferred — children populated when ref resolves
         ObjectArrayList<MenuNodeStruct> children = new ObjectArrayList<>();
         MenuNodeStruct placeholder = partialOverride != null
                 ? new MenuNodeStruct(null, null, null, null, null, null, null, null, null, partialOverride, children)
@@ -323,7 +319,6 @@ class InternalBuilder extends BuilderPackage {
                 throwException("Unresolved ref: '" + refKey + "' (id: '" + id + "')");
             if (partialOverride != null)
                 placeholder.setLayoutOverride(LayoutStruct.merge(target.getLayout(), partialOverride));
-
             placeholder.setMaster(target);
             children.addAll(target.getChildren());
         });
@@ -341,7 +336,7 @@ class InternalBuilder extends BuilderPackage {
             DimensionValue inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
-        ElementType type = parseElementType(JsonUtility.validateString(json, "type"), id);
+        ElementType type = FileParserUtility.parseElementType(JsonUtility.validateString(json, "type"), id);
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String text = JsonUtility.getString(json, "text", null);
         String fontName = JsonUtility.getString(json, "font", inheritedFontName);
@@ -350,8 +345,8 @@ class InternalBuilder extends BuilderPackage {
         DimensionValue fontSize = json.has("font_size")
                 ? DimensionValue.parse(json.get("font_size").getAsString())
                 : inheritedFontSize;
-        Color color = parseColor(json);
-        LayoutStruct layout = parseLayout(json);
+        Color color = FileParserUtility.parseColor(json);
+        LayoutStruct layout = FileParserUtility.parseLayout(json);
         boolean mask = JsonUtility.getBoolean(json, "mask", false);
         StackDirection stackDirection = json.has("stack")
                 ? StackDirection.fromString(json.get("stack").getAsString())
@@ -365,12 +360,11 @@ class InternalBuilder extends BuilderPackage {
         boolean startExpanded = JsonUtility.getBoolean(json, "start_expanded", false);
         String spriteName = resolveSpriteName(id, spritePath);
 
-        String[] onClick = parseOnClick(json);
+        String[] onClick = FileParserUtility.parseOnClick(json);
         String actionClass = onClick != null ? onClick[0] : null;
         String actionMethod = onClick != null ? onClick[1] : null;
         String actionArg = onClick != null ? onClick[2] : null;
 
-        // Default children for this master — used when this element is ref'd
         ObjectArrayList<MenuNodeStruct> defaultChildren = buildNodes(
                 filePath, json, fontName, fontSize, explicitFontSize);
 
@@ -380,12 +374,7 @@ class InternalBuilder extends BuilderPackage {
                 actionClass, actionMethod, actionArg);
 
         ElementHandle master = create(ElementHandle.class);
-        master.constructor(
-                data,
-                actionClass,
-                actionMethod,
-                actionArg,
-                defaultChildren);
+        master.constructor(data, actionClass, actionMethod, actionArg, defaultChildren);
 
         return master;
     }
@@ -481,126 +470,5 @@ class InternalBuilder extends BuilderPackage {
                     + "': '" + spritePath + "'");
 
         return spritePath;
-    }
-
-    // Layout Parsing \\
-
-    private LayoutStruct parseLayout(JsonObject json) {
-        return new LayoutStruct(
-                parseOriginField(json, "anchor"),
-                parseOriginField(json, "pivot"),
-                DimensionVector2.parse(json, "position",
-                        EngineSetting.ELEMENT_DEFAULT_POSITION,
-                        EngineSetting.ELEMENT_DEFAULT_POSITION),
-                DimensionVector2.parse(json, "size",
-                        EngineSetting.ELEMENT_DEFAULT_SIZE,
-                        EngineSetting.ELEMENT_DEFAULT_SIZE),
-                json.has("min_size") ? DimensionVector2.parse(json, "min_size",
-                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE,
-                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE) : null,
-                json.has("max_size") ? DimensionVector2.parse(json, "max_size",
-                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE,
-                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE) : null);
-    }
-
-    private LayoutStruct parseLayoutOverride(JsonObject json) {
-
-        boolean hasAny = json.has("anchor") || json.has("pivot") || json.has("position")
-                || json.has("size") || json.has("min_size") || json.has("max_size");
-
-        if (!hasAny)
-            return null;
-
-        return new LayoutStruct(
-                json.has("anchor") ? parseOriginField(json, "anchor") : null,
-                json.has("pivot") ? parseOriginField(json, "pivot") : null,
-                json.has("position") ? DimensionVector2.parse(json, "position",
-                        EngineSetting.ELEMENT_DEFAULT_POSITION,
-                        EngineSetting.ELEMENT_DEFAULT_POSITION) : null,
-                json.has("size") ? DimensionVector2.parse(json, "size",
-                        EngineSetting.ELEMENT_DEFAULT_SIZE,
-                        EngineSetting.ELEMENT_DEFAULT_SIZE) : null,
-                json.has("min_size") ? DimensionVector2.parse(json, "min_size",
-                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE,
-                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE) : null,
-                json.has("max_size") ? DimensionVector2.parse(json, "max_size",
-                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE,
-                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE) : null);
-    }
-
-    private Vector2 parseOriginField(JsonObject json, String key) {
-
-        if (!json.has(key))
-            return new Vector2(0f, 0f);
-
-        JsonElement el = json.get(key);
-
-        if (el.isJsonPrimitive()) {
-            ElementOrigin o = ElementOrigin.fromString(el.getAsString());
-            return new Vector2(o.getX(), o.getY());
-        }
-
-        if (el.isJsonObject()) {
-            JsonObject obj = el.getAsJsonObject();
-            return new Vector2(
-                    JsonUtility.getFloat(obj, "x", 0f),
-                    JsonUtility.getFloat(obj, "y", 0f));
-        }
-
-        return new Vector2(0f, 0f);
-    }
-
-    // Element Type Parsing \\
-
-    private ElementType parseElementType(String type, String id) {
-        return switch (type.toLowerCase()) {
-            case "sprite" -> ElementType.SPRITE;
-            case "texture" -> ElementType.TEXTURE;
-            case "button" -> ElementType.BUTTON;
-            case "label" -> ElementType.LABEL;
-            case "container" -> ElementType.CONTAINER;
-            case "toolbar" -> ElementType.TOOLBAR;
-            case "canvas_area" -> ElementType.CANVAS_AREA;
-            case "expandable_container" -> ElementType.EXPANDABLE_CONTAINER;
-            default -> {
-                throwException("Unknown element type '" + type + "' on element '" + id + "'");
-                yield null;
-            }
-        };
-    }
-
-    // On Click Parsing \\
-
-    private String[] parseOnClick(JsonObject json) {
-
-        if (!json.has("on_click"))
-            return null;
-
-        JsonObject clickJson = json.getAsJsonObject("on_click");
-
-        return new String[] {
-                JsonUtility.validateString(clickJson, "class"),
-                JsonUtility.validateString(clickJson, "method"),
-                JsonUtility.getString(clickJson, "arg", null)
-        };
-    }
-
-    // Color Parsing \\
-
-    private Color parseColor(JsonObject json) {
-
-        if (!json.has("color"))
-            return null;
-
-        JsonArray arr = json.getAsJsonArray("color");
-
-        if (arr.size() != 4)
-            throwException("'color' must be exactly 4 floats [r, g, b, a]");
-
-        return new Color(
-                arr.get(0).getAsFloat(),
-                arr.get(1).getAsFloat(),
-                arr.get(2).getAsFloat(),
-                arr.get(3).getAsFloat());
     }
 }

@@ -13,6 +13,8 @@ public class WindowManager extends ManagerPackage {
      * Owns all engine windows. The main window is platform-hosted and registered
      * at bootstrap. Secondary windows are registered on demand and opened
      * immediately by the platform layer.
+     * Windows with createOSWindow = false are registered as full participants
+     * but do not get a native platform handle — they composite onto an OS window.
      */
 
     // Windows
@@ -26,6 +28,7 @@ public class WindowManager extends ManagerPackage {
     private int nextWindowID;
 
     // Internal \\
+
     @Override
     protected void create() {
         this.windows = new ObjectArrayList<>();
@@ -82,6 +85,7 @@ public class WindowManager extends ManagerPackage {
     }
 
     private WindowInstance resolveFocusedWindow() {
+
         for (int i = windows.size() - 1; i >= 0; i--) {
             WindowInstance window = windows.get(i);
             if (window == mainWindow)
@@ -126,7 +130,8 @@ public class WindowManager extends ManagerPackage {
 
     private void registerWindow(WindowInstance window) {
         windows.add(window);
-        internal.windowPlatform.openWindow(window);
+        if (window.getWindowData().shouldCreateOSWindow())
+            internal.windowPlatform.openWindow(window);
     }
 
     public void removeWindow(WindowInstance window) {

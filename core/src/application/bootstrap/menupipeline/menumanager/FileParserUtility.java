@@ -1,5 +1,6 @@
 package application.bootstrap.menupipeline.menumanager;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -7,6 +8,8 @@ import application.bootstrap.menupipeline.element.ElementOrigin;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
+import engine.graphics.color.Color;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.io.JsonUtility;
 import engine.util.mathematics.vectors.Vector2;
@@ -15,8 +18,9 @@ class FileParserUtility extends EngineUtility {
 
     /*
      * Stateless JSON parsing helpers shared by InternalBuilder. Handles
-     * on_click resolution, element type mapping, layout parsing, and
-     * origin field parsing. Package-private — only InternalBuilder may call these.
+     * on_click resolution, element type mapping, color parsing, layout parsing,
+     * and origin field parsing. Package-private — only InternalBuilder may call
+     * these.
      */
 
     // On Click \\
@@ -45,6 +49,7 @@ class FileParserUtility extends EngineUtility {
             case "label" -> ElementType.LABEL;
             case "container" -> ElementType.CONTAINER;
             case "toolbar" -> ElementType.TOOLBAR;
+            case "canvas_area" -> ElementType.CANVAS_AREA;
             case "expandable_container" -> ElementType.EXPANDABLE_CONTAINER;
             default -> {
                 throwException("Unknown element type '" + type + "' on element '" + id + "'");
@@ -53,16 +58,43 @@ class FileParserUtility extends EngineUtility {
         };
     }
 
+    // Color \\
+
+    static Color parseColor(JsonObject json) {
+
+        if (!json.has("color"))
+            return null;
+
+        JsonArray arr = json.getAsJsonArray("color");
+
+        if (arr.size() != 4)
+            throwException("'color' must be exactly 4 floats [r, g, b, a]");
+
+        return new Color(
+                arr.get(0).getAsFloat(),
+                arr.get(1).getAsFloat(),
+                arr.get(2).getAsFloat(),
+                arr.get(3).getAsFloat());
+    }
+
     // Layout — full parse, absent fields get defaults \\
 
     static LayoutStruct parseLayout(JsonObject json) {
         return new LayoutStruct(
                 parseOriginField(json, "anchor"),
                 parseOriginField(json, "pivot"),
-                DimensionVector2.parse(json, "position", "0%", "0%"),
-                DimensionVector2.parse(json, "size", "10%", "10%"),
-                json.has("min_size") ? DimensionVector2.parse(json, "min_size", "0%", "0%") : null,
-                json.has("max_size") ? DimensionVector2.parse(json, "max_size", "100%", "100%") : null);
+                DimensionVector2.parse(json, "position",
+                        EngineSetting.ELEMENT_DEFAULT_POSITION,
+                        EngineSetting.ELEMENT_DEFAULT_POSITION),
+                DimensionVector2.parse(json, "size",
+                        EngineSetting.ELEMENT_DEFAULT_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_SIZE),
+                json.has("min_size") ? DimensionVector2.parse(json, "min_size",
+                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE) : null,
+                json.has("max_size") ? DimensionVector2.parse(json, "max_size",
+                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE) : null);
     }
 
     // Layout Override — absent fields null, preserved from template \\
@@ -78,10 +110,18 @@ class FileParserUtility extends EngineUtility {
         return new LayoutStruct(
                 json.has("anchor") ? parseOriginField(json, "anchor") : null,
                 json.has("pivot") ? parseOriginField(json, "pivot") : null,
-                json.has("position") ? DimensionVector2.parse(json, "position", "0%", "0%") : null,
-                json.has("size") ? DimensionVector2.parse(json, "size", "10%", "10%") : null,
-                json.has("min_size") ? DimensionVector2.parse(json, "min_size", "0%", "0%") : null,
-                json.has("max_size") ? DimensionVector2.parse(json, "max_size", "100%", "100%") : null);
+                json.has("position") ? DimensionVector2.parse(json, "position",
+                        EngineSetting.ELEMENT_DEFAULT_POSITION,
+                        EngineSetting.ELEMENT_DEFAULT_POSITION) : null,
+                json.has("size") ? DimensionVector2.parse(json, "size",
+                        EngineSetting.ELEMENT_DEFAULT_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_SIZE) : null,
+                json.has("min_size") ? DimensionVector2.parse(json, "min_size",
+                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_MIN_SIZE) : null,
+                json.has("max_size") ? DimensionVector2.parse(json, "max_size",
+                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE,
+                        EngineSetting.ELEMENT_DEFAULT_MAX_SIZE) : null);
     }
 
     // Origin Field \\
@@ -100,9 +140,9 @@ class FileParserUtility extends EngineUtility {
 
         if (el.isJsonObject()) {
             JsonObject obj = el.getAsJsonObject();
-            float x = JsonUtility.getFloat(obj, "x", 0f);
-            float y = JsonUtility.getFloat(obj, "y", 0f);
-            return new Vector2(x, y);
+            return new Vector2(
+                    JsonUtility.getFloat(obj, "x", 0f),
+                    JsonUtility.getFloat(obj, "y", 0f));
         }
 
         return new Vector2(0f, 0f);

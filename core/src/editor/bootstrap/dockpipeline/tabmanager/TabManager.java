@@ -17,8 +17,10 @@ public class TabManager extends ManagerPackage {
      * Owns all tabs. Sole factory for TabInstance.
      * Each tab gets a logical WindowInstance — no native handle, just
      * dimensions and composite routing onto the OS window. Logical windows
-     * are assigned depth 1 so their FBO blits always draw on top of the
-     * OS window's own blits during the screen pass.
+     * are registered in WindowManager so they participate in the full render
+     * loop alongside OS windows. createOSWindow = false tells WindowManager
+     * to skip native platform window creation. Depth 1 ensures their FBO
+     * blits always draw on top of the OS window's own blits during the screen pass.
      */
 
     // Registry
@@ -46,15 +48,17 @@ public class TabManager extends ManagerPackage {
             int x, int y, int width, int height) {
 
         WindowInstance logicalWindow = create(WindowInstance.class);
-        logicalWindow.constructor(new WindowData(windowManager.issueWindowID(), width, height, title));
+        logicalWindow.constructor(new WindowData(windowManager.issueWindowID(), width, height, title, false));
         logicalWindow.setCompositeTarget(osWindow);
         logicalWindow.setCompositeRect(x, y, width, height);
         logicalWindow.setDepth(1);
+        windowManager.registerDetachedWindow(logicalWindow);
 
         TabData data = new TabData(title, contextClass, x, y, width, height);
         TabInstance tab = create(TabInstance.class);
         tab.constructor(data);
         tab.setLogicalWindow(logicalWindow);
+
         dockGeometrySystem.buildTabModel(tab);
 
         ContextPackage context = internal.createTabContext(contextClass, logicalWindow);
@@ -65,8 +69,8 @@ public class TabManager extends ManagerPackage {
     }
 
     public void destroyTab(TabInstance tab) {
-        if (tab.hasContext())
-            internal.destroyContext(tab.getContext());
+        if (tab.hasLogicalWindow())
+            tab.getLogicalWindow().dispose();
         tabs.remove(tab);
     }
 
@@ -93,7 +97,6 @@ public class TabManager extends ManagerPackage {
 
     public void resizeTab(TabInstance tab, int x, int y, int width, int height) {
         tab.resize(x, y, width, height);
-
         if (tab.hasLogicalWindow()) {
             WindowInstance logicalWindow = tab.getLogicalWindow();
             logicalWindow.resize(width, height);
