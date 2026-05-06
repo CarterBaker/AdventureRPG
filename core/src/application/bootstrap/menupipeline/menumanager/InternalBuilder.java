@@ -560,6 +560,7 @@ class InternalBuilder extends BuilderPackage {
             case "label" -> ElementType.LABEL;
             case "container" -> ElementType.CONTAINER;
             case "toolbar" -> ElementType.TOOLBAR;
+            case "canvas_area" -> ElementType.CANVAS_AREA;
             case "expandable_container" -> ElementType.EXPANDABLE_CONTAINER;
             default -> {
                 throwException("Unknown element type '" + type + "' on element '" + id + "'");

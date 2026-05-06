@@ -17,15 +17,17 @@ public class ContainerInstance extends InstancePackage {
 
     // Window
     private WindowInstance window;
+    private String canvasAreaId;
 
     // Tree
     private NodeInstance rootNode;
 
     // Constructor \\
 
-    public void constructor(ContainerData data, WindowInstance window) {
+    public void constructor(ContainerData data, WindowInstance window, String canvasAreaId) {
         this.data = data;
         this.window = window;
+        this.canvasAreaId = canvasAreaId;
         this.rootNode = null;
     }
 
@@ -57,6 +59,10 @@ public class ContainerInstance extends InstancePackage {
 
     public WindowInstance getWindow() {
         return window;
+    }
+
+    public String getCanvasAreaId() {
+        return canvasAreaId;
     }
 
     public NodeInstance getRootNode() {

@@ -1,5 +1,6 @@
 package editor.bootstrap.dockpipeline.dockmanager;
 
+import application.bootstrap.menupipeline.canvassystem.CanvasAreaSystem;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.dockpipeline.container.ContainerData;
@@ -26,6 +27,7 @@ public class DockManager extends ManagerPackage {
 
     // Dependencies
     private WindowManager windowManager;
+    private CanvasAreaSystem canvasAreaSystem;
 
     // Registry
     private ObjectArrayList<ContainerInstance> containers;
@@ -54,14 +56,50 @@ public class DockManager extends ManagerPackage {
     @Override
     protected void get() {
         this.windowManager = get(WindowManager.class);
+        this.canvasAreaSystem = get(CanvasAreaSystem.class);
+    }
+
+    // Canvas Area Layout \\
+
+    @Override
+    protected void update() {
+        for (int i = 0; i < containers.size(); i++) {
+            ContainerInstance container = containers.get(i);
+            String canvasAreaId = container.getCanvasAreaId();
+
+            if (canvasAreaId == null)
+                continue;
+
+            int[] bounds = canvasAreaSystem.get(container.getWindow(), canvasAreaId);
+
+            if (bounds == null)
+                continue;
+
+            NodeInstance root = container.getRootNode();
+
+            if (root == null)
+                continue;
+
+            if (root.getX() == bounds[0] && root.getY() == bounds[1]
+                    && root.getWidth() == bounds[2] && root.getHeight() == bounds[3])
+                continue;
+
+            root.setRect(bounds[0], bounds[1], bounds[2], bounds[3]);
+            recalculateRects(root);
+            layoutDirty = true;
+        }
     }
 
     // Container Lifecycle \\
 
     public ContainerInstance createContainer(WindowInstance window) {
+        return createContainer(window, null);
+    }
+
+    public ContainerInstance createContainer(WindowInstance window, String canvasAreaId) {
         ContainerData data = new ContainerData(nextContainerID++);
         ContainerInstance container = create(ContainerInstance.class);
-        container.constructor(data, window);
+        container.constructor(data, window, canvasAreaId);
 
         NodeInstance root = createNode(0, 0, window.getWidth(), window.getHeight());
         root.setTabGroup(createGroup());

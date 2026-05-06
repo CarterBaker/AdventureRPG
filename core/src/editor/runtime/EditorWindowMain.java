@@ -40,6 +40,6 @@ public class EditorWindowMain extends ContextPackage {
     @Override
     protected void start() {
         WindowInstance mainWindow = windowManager.getMainWindow();
-        dockManager.createContainer(mainWindow);
+        dockManager.createContainer(mainWindow, "dock_canvas");
     }
 }
