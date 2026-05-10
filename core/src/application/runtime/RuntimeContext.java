@@ -3,7 +3,7 @@ package application.runtime;
 import application.runtime.input.InputSystem;
 import application.runtime.lighting.SkySystem;
 import application.runtime.menu.MenuSystem;
-import application.runtime.menueventsmanager.RuntimeMenuEventsManager;
+import application.runtime.menueventsmanager.MenuEventsManager;
 import application.runtime.player.PlayerSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.ContextPackage;
@@ -34,7 +34,7 @@ public class RuntimeContext extends ContextPackage {
         // Runtime
         this.skySystem = create(SkySystem.class);
         this.playerSystem = create(PlayerSystem.class);
-        create(RuntimeMenuEventsManager.class);
+        create(MenuEventsManager.class);
         this.menuSystem = create(MenuSystem.class);
         this.worldSystem = create(WorldSystem.class);
         this.playerInputSystem = create(InputSystem.class);

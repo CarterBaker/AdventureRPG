@@ -6,8 +6,6 @@ import java.util.concurrent.Future;
 
 import com.google.gson.Gson;
 
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
 import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
 import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
@@ -272,7 +270,6 @@ public class EnginePackage extends ManagerPackage {
             SystemPackage.SYSTEM_STRUCT.remove();
         }
     }
-
 
     public <T extends ContextPackage> T createChildContext(
             ContextPackage parent,
@@ -759,12 +756,25 @@ public class EnginePackage extends ManagerPackage {
         return this.frameTimeMillis;
     }
 
-    public final void closeGame() {
-        this.windowPlatform.exit();
+    public final void close() {
+
+        WindowInstance currentWindow = EngineUtility.windowManager.getContextWindow();
+
+        if (currentWindow == null || currentWindow == EngineUtility.windowManager.getMainWindow())
+            this.shutdown();
+
+        else {
+
+            ContextPackage context = currentWindow.getContext();
+
+            if (context != null)
+                this.destroyContext(context);
+        }
     }
 
     public final void shutdown() {
         this.engineState = EngineState.EXIT;
+        this.windowPlatform.exit();
         execute(0f);
     }
 }

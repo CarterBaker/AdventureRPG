@@ -10,6 +10,6 @@ public class GenericButtonBranch extends BranchPackage {
      */
 
     public void quitGame() {
-        internal.closeGame();
+        internal.close();
     }
 }
