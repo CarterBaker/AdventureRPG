@@ -128,6 +128,21 @@ public class WindowManager extends ManagerPackage {
         return window;
     }
 
+    public <T extends ContextPackage> WindowInstance openTab(
+            WindowInstance osWindow,
+            String title,
+            Class<T> contextClass) {
+
+        WindowData data = new WindowData(issueWindowID(), osWindow.getWidth(), osWindow.getHeight(), title, false);
+        WindowInstance logicalWindow = create(WindowInstance.class);
+        logicalWindow.constructor(data);
+        logicalWindow.setCompositeTarget(osWindow);
+        logicalWindow.setDepth(1);
+        registerDetachedWindow(logicalWindow);
+        internal.createTabContext(contextClass, logicalWindow);
+        return logicalWindow;
+    }
+
     private void registerWindow(WindowInstance window) {
         windows.add(window);
         if (window.getWindowData().shouldCreateOSWindow())
