@@ -112,14 +112,9 @@ public class TabManager extends ManagerPackage {
 
         TabContext tabContext = handle.getTabContext();
         ContextPackage contentContext = handle.getContentContext();
-        WindowInstance tabWindow = tabContext.getWindow();
-        WindowInstance contentWindow = contentContext.getWindow();
-
         tabContext.unmountContent();
         internal.destroyContext(contentContext);
-        windowManager.removeWindow(contentWindow);
         internal.destroyContext(tabContext);
-        windowManager.removeWindow(tabWindow);
 
         int tabID = getTabIDFromTabName(handle.getTabTitle());
         tabName2TabID.removeInt(handle.getTabTitle());
