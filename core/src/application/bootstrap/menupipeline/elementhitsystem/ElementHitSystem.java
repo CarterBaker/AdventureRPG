@@ -5,7 +5,6 @@ import java.lang.reflect.Method;
 import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementInstance;
-import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
@@ -23,24 +22,33 @@ public class ElementHitSystem extends SystemPackage {
      * Handles all interactive element behavior per frame.
      *
      * Hover state is updated every raycast. An element is hovered when the mouse
-     * is within its own bounds OR within any of its hover state children's bounds.
-     * This prevents flicker when the hover state visually expands the element (e.g.
-     * a toolbar button whose hover state shows a dropdown below it — moving the
-     * mouse into the dropdown must keep the button hovered).
+     * is within its own bounds OR within its hover state children's bounds (inline)
+     * OR within its hoverStateRoot's children's bounds (master-based overlay).
      *
-     * Two tracking fields manage this:
-     * hoveredElement — the innermost element directly under the cursor; this
-     * element has isHovered() == true for its own rendering.
-     * hoverAnchor — set when hoveredElement is inside the hover state children
-     * of another element; that parent also has isHovered() == true
-     * so it continues to render its hover state (keeps dropdown open).
+     * For master-based hover overlays (hasHoverStateRoot), hoverTestElements always
+     * tests the root's children unconditionally — this bootstraps hover on first
+     * entry without a chicken-and-egg dependency on isHovered(). hitTestElements
+     * gates on isHovered() so buttons inside the panel are only clickable when the
+     * panel is actually visible.
+     *
+     * For inline hover children (hasHoverStateChildren, no root), the owning
+     * element must already be hovered before its children are tested in both
+     * systems. The anchor mechanism keeps the parent marked hovered while the
+     * cursor is over a child.
+     *
+     * Two tracking fields manage anchor state:
+     * hoveredElement — the innermost element directly under the cursor.
+     * hoverAnchor — the parent whose hover region contains the cursor; remains
+     * hovered so it continues to render its hover state.
      *
      * hoverAnchorCapture is a scratch field valid only during a single
-     * hoverTestElements traversal. It is set when a hit is found inside hover state
-     * children so updateHover can read the parent after traversal completes.
+     * hoverTestElements traversal.
      *
      * Click state expansion and collapse fire on press-release edge.
      * Action resolution is cached on first call.
+     *
+     * Interactivity is capability-driven — any element with a hover state, click
+     * state, or action participates in hit testing regardless of element type.
      */
 
     private static final String PARENT_ARG = "$parent";
@@ -53,13 +61,15 @@ public class ElementHitSystem extends SystemPackage {
     private boolean wasPressed;
     private ElementInstance hoveredElement;
     private ElementInstance hoverAnchor;
-    private ElementInstance hoverAnchorCapture; // scratch, valid only during hoverTestElements
+    private ElementInstance hoverAnchorCapture;
     private ElementInstance openClickState;
     private float collapseTolerance;
 
     // Action Cache
     private Object2ObjectOpenHashMap<String, Runnable> resolvedActions;
     private Object2ObjectOpenHashMap<String, MenuAwareAction> resolvedMenuAwareActions;
+
+    // Internal \\
 
     @Override
     protected void create() {
@@ -73,6 +83,8 @@ public class ElementHitSystem extends SystemPackage {
         this.raycastManager = get(RaycastManager.class);
         this.inputSystem = get(InputSystem.class);
     }
+
+    // Entry Point \\
 
     public void updateRaycast(ObjectArrayList<MenuInstance> activeMenus) {
 
@@ -154,7 +166,6 @@ public class ElementHitSystem extends SystemPackage {
                 break;
         }
 
-        // Short-circuit if nothing changed (element and anchor are identical)
         if (next == hoveredElement && hoverAnchorCapture == hoverAnchor)
             return;
 
@@ -166,8 +177,6 @@ public class ElementHitSystem extends SystemPackage {
         next.setHovered(true);
         hoveredElement = next;
 
-        // If the hit was inside someone else's hover state children, mark that parent
-        // as hovered too so it continues to render its hover state
         if (hoverAnchorCapture != null && hoverAnchorCapture != next) {
             hoverAnchorCapture.setHovered(true);
             hoverAnchor = hoverAnchorCapture;
@@ -218,10 +227,26 @@ public class ElementHitSystem extends SystemPackage {
                     return childHit;
             }
 
-            // Hover state children — only visible when this element is currently hovered.
-            // If the mouse is over any of them, they become the active hovered element
-            // while this element remains hovered as the anchor (keeps the hover zone open).
-            if (element.isHovered() && element.hasHoverStateChildren()) {
+            // Master-based hover overlay — always test unconditionally to bootstrap
+            // hover on first entry; isHovered() gate lives in hitTestElements only
+            if (element.hasHoverStateRoot()) {
+
+                ElementInstance prevCapture = hoverAnchorCapture;
+                hoverAnchorCapture = element;
+
+                ElementInstance childHit = hoverTestElements(
+                        element.getHoverStateRoot().getChildren(), mouseX, mouseY,
+                        clipLeft, clipTop, clipRight, clipBottom);
+
+                if (childHit != null) {
+                    hoverAnchorCapture = element;
+                    return childHit;
+                }
+
+                hoverAnchorCapture = prevCapture;
+
+                // Inline hover children — owning element must already be hovered
+            } else if (element.isHovered() && element.hasHoverStateChildren()) {
 
                 ElementInstance prevCapture = hoverAnchorCapture;
                 hoverAnchorCapture = element;
@@ -231,8 +256,6 @@ public class ElementHitSystem extends SystemPackage {
                         clipLeft, clipTop, clipRight, clipBottom);
 
                 if (childHit != null) {
-                    // Preserve element as the anchor at this level — if there was deeper
-                    // nesting the inner call may have overwritten capture, so restore it
                     hoverAnchorCapture = element;
                     return childHit;
                 }
@@ -240,9 +263,8 @@ public class ElementHitSystem extends SystemPackage {
                 hoverAnchorCapture = prevCapture;
             }
 
-            // Element itself
-            boolean hoverable = data.getType() == ElementType.BUTTON
-                    || element.hasHoverState();
+            // Element itself — capability-driven, type is irrelevant
+            boolean hoverable = element.hasHoverState() || element.hasClickState() || data.hasAction();
 
             if (!hoverable)
                 continue;
@@ -333,17 +355,24 @@ public class ElementHitSystem extends SystemPackage {
                     return true;
             }
 
-            // Hover state children — interactive when this element is hovered (visible)
-            if (element.isHovered() && element.hasHoverStateChildren()) {
+            // Master-based hover overlay — gated on isHovered() so buttons are only
+            // clickable when the panel is actually visible
+            if (element.isHovered() && element.hasHoverStateRoot()) {
+
+                if (hitTestElements(element.getHoverStateRoot().getChildren(), mouseX, mouseY,
+                        clipLeft, clipTop, clipRight, clipBottom, menu))
+                    return true;
+
+                // Inline hover children — same gate, consistent with master-based path
+            } else if (element.isHovered() && element.hasHoverStateChildren()) {
 
                 if (hitTestElements(element.getHoverStateChildren(), mouseX, mouseY,
                         clipLeft, clipTop, clipRight, clipBottom, menu))
                     return true;
             }
 
-            // Element itself
-            boolean interactive = data.getType() == ElementType.BUTTON
-                    || element.hasClickState();
+            // Element itself — capability-driven, type is irrelevant
+            boolean interactive = element.hasClickState() || data.hasAction();
 
             if (!interactive)
                 continue;

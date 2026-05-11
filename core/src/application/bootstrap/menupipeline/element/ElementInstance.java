@@ -20,6 +20,11 @@ public class ElementInstance extends InstancePackage {
      * state's sprite override so the render system can swap without re-resolving.
      * Hover state children replace the default child list in-place when hovered.
      * Click state children render as an additional overlay below the element.
+     *
+     * When the hover state has a master handle, hoverStateRoot holds a full
+     * ElementInstance for that master container. The render system renders it as
+     * a positioned overlay so its own layout (position offset, size, color, stack)
+     * is respected rather than inlining its children into this element's bounds.
      */
 
     // Internal
@@ -46,6 +51,10 @@ public class ElementInstance extends InstancePackage {
     private ObjectArrayList<ElementInstance> children;
     private ObjectArrayList<ElementInstance> hoverStateChildren;
     private ObjectArrayList<ElementInstance> clickStateChildren;
+
+    // Hover State Root — full instance of the master container when hover state has
+    // a master
+    private ElementInstance hoverStateRoot;
 
     // Computed
     private Matrix4 transform;
@@ -405,6 +414,20 @@ public class ElementInstance extends InstancePackage {
 
     public ObjectArrayList<ElementInstance> getClickStateChildren() {
         return clickStateChildren;
+    }
+
+    // Hover State Root \\
+
+    public void setHoverStateRoot(ElementInstance root) {
+        this.hoverStateRoot = root;
+    }
+
+    public ElementInstance getHoverStateRoot() {
+        return hoverStateRoot;
+    }
+
+    public boolean hasHoverStateRoot() {
+        return hoverStateRoot != null;
     }
 
     // Hover State Children \\

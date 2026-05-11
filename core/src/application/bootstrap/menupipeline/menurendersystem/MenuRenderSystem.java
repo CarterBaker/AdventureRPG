@@ -31,14 +31,17 @@ public class MenuRenderSystem extends SystemPackage {
      *
      * 1. Geometry — computeTransform (or stacked/toolbar variant) using the active
      * state's layout override if one exists.
-     * 2. Content — sprite swap, font color/text, child list selection (hover
-     * children replace default children in-place; click state children render
-     * as an additional stacked overlay below the element).
+     * 2. Content — sprite swap, font color/text, child list selection.
      * 3. Propagation — recurse into children with mask scissor if requested.
      *
      * Active state is click-expanded > hovered > none. Only one state is active
      * at a time. All overrides (sprite, layout, color, text, children) come from
      * the active state and degrade gracefully if not set.
+     *
+     * When a hover state has a master handle, hoverStateRoot is rendered as a
+     * full positioned overlay so its own layout, visuals, and stack direction
+     * are respected. Without a master, hover children inline into the owning
+     * element's bounds as before.
      */
 
     private RenderManager renderManager;
@@ -152,37 +155,51 @@ public class MenuRenderSystem extends SystemPackage {
         if (element.hasFont())
             pushFontRenderCall(element, activeState);
 
-        // Children — hover state children replace default children in-place;
-        // click state children are a separate overlay rendered below
-        boolean useHoverChildren = activeState != null
+        // Hover state with a master — render the root container as a positioned
+        // overlay so its own layout, size, color, and stack direction are respected
+        if (activeState != null
                 && !element.isClickExpanded()
-                && element.hasHoverStateChildren();
+                && activeState.hasMaster()
+                && element.hasHoverStateRoot()) {
 
-        ObjectArrayList<ElementInstance> activeChildren = useHoverChildren
-                ? element.getHoverStateChildren()
-                : element.getChildren();
+            renderElement(
+                    element.getHoverStateRoot(),
+                    element.getComputedLeft(), element.getComputedTop(),
+                    element.getComputedW(), element.getComputedH());
 
-        if (!activeChildren.isEmpty()) {
+        } else {
 
-            if (data.isMask())
-                pushMask(element);
+            // No master — hover children inline into this element's bounds
+            boolean useHoverChildren = activeState != null
+                    && !element.isClickExpanded()
+                    && element.hasHoverStateChildren();
 
-            StackDirection stack = type == ElementType.TOOLBAR
-                    ? StackDirection.HORIZONTAL
-                    : data.getStackDirection();
+            ObjectArrayList<ElementInstance> activeChildren = useHoverChildren
+                    ? element.getHoverStateChildren()
+                    : element.getChildren();
 
-            if (stack != StackDirection.NONE)
-                renderStacked(element, activeChildren, stack);
-            else {
-                for (int i = 0; i < activeChildren.size(); i++)
-                    renderElement(
-                            activeChildren.get(i),
-                            element.getComputedLeft(), element.getComputedTop(),
-                            element.getComputedW(), element.getComputedH());
+            if (!activeChildren.isEmpty()) {
+
+                if (data.isMask())
+                    pushMask(element);
+
+                StackDirection stack = type == ElementType.TOOLBAR
+                        ? StackDirection.HORIZONTAL
+                        : data.getStackDirection();
+
+                if (stack != StackDirection.NONE)
+                    renderStacked(element, activeChildren, stack);
+                else {
+                    for (int i = 0; i < activeChildren.size(); i++)
+                        renderElement(
+                                activeChildren.get(i),
+                                element.getComputedLeft(), element.getComputedTop(),
+                                element.getComputedW(), element.getComputedH());
+                }
+
+                if (data.isMask())
+                    popMask();
             }
-
-            if (data.isMask())
-                popMask();
         }
 
         // Click state children — stacked dropdown overlay below the element
@@ -287,10 +304,10 @@ public class MenuRenderSystem extends SystemPackage {
                 float childH = layout.getSize().getY().resolve(parentH);
 
                 if (layout.hasMinSize())
-                    childH = Math.max(childH, layout.getMinSize().getY().resolve(parentH));
+                    childH = Math.max(childH, layout.getMinSize().getX().resolve(parentH));
 
                 if (layout.hasMaxSize())
-                    childH = Math.min(childH, layout.getMaxSize().getY().resolve(parentH));
+                    childH = Math.min(childH, layout.getMaxSize().getX().resolve(parentH));
 
                 cursor -= childH;
                 renderStackedElement(child, parent.getComputedLeft(), cursor, parentW, parentH);

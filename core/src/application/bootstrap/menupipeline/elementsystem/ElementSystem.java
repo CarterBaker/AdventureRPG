@@ -39,6 +39,11 @@ public class ElementSystem extends SystemPackage {
      * instantiated from their respective MenuNodeStruct lists. All three are
      * passed into the ElementInstance constructor so the hit and render systems
      * can traverse them without re-resolving the handle each frame.
+     *
+     * When a hover state has a master handle, a hoverStateRoot ElementInstance is
+     * built from that master with the hover children as its child list. The render
+     * system renders it as a full positioned overlay so its own layout, visuals,
+     * and stack direction are respected.
      */
 
     // Internal
@@ -223,7 +228,83 @@ public class ElementSystem extends SystemPackage {
                 hoverStateInstances,
                 clickStateInstances);
 
+        // Hover state root — when the hover state references a master handle,
+        // build a full ElementInstance for that container so the render system
+        // can position and render it as a proper overlay with its own layout,
+        // visuals, and stack direction rather than inlining children into this
+        // element's bounds
+        if (hoverState != null && hoverState.hasMaster()) {
+            ElementInstance hoverStateRoot = createHoverStateRoot(
+                    hoverState.getMaster(), hoverStateInstances, parentRef);
+            instance.setHoverStateRoot(hoverStateRoot);
+        }
+
         return instance;
+    }
+
+    private ElementInstance createHoverStateRoot(
+            ElementHandle master,
+            ObjectArrayList<ElementInstance> hoverChildren,
+            Supplier<MenuInstance> parentRef) {
+
+        ElementData data = master.getElementData();
+
+        // Sprite for the root container panel itself
+        SpriteInstance spriteInstance = data.hasSprite()
+                ? spriteManager.cloneSprite(data.getSpriteName())
+                : null;
+
+        // Font for the root container — labels directly on the panel are rare
+        // but supported
+        FontInstance fontInstance = null;
+
+        String resolvedFontName = data.hasFont()
+                ? data.getFontName()
+                : data.getType() == ElementType.LABEL ? EngineSetting.FONT_DEFAULT_NAME : null;
+
+        if (resolvedFontName != null) {
+
+            String materialName = data.hasMaterial()
+                    ? data.getMaterialName()
+                    : EngineSetting.FONT_DEFAULT_MATERIAL;
+
+            fontInstance = fontManager.cloneFont(resolvedFontName, materialName);
+
+            if (data.hasColor()) {
+                Color color = data.getColor();
+                fontInstance.setColor(color.r, color.g, color.b, color.a);
+            } else {
+                Color color = EngineSetting.FONT_DEFAULT_COLOR;
+                fontInstance.setColor(color.r, color.g, color.b, color.a);
+            }
+
+            if (data.getText() != null)
+                fontInstance.setText(data.getText());
+        }
+
+        // The hover children are already instantiated — pass them directly as
+        // the child list so the root renders them through its own stack logic
+        ElementInstance root = create(ElementInstance.class);
+        root.constructor(
+                master,
+                spriteInstance,
+                null,
+                null,
+                fontInstance,
+                null,
+                null,
+                null,
+                null,
+                null,
+                master.getActionClass(),
+                master.getActionMethod(),
+                master.getActionArg(),
+                null,
+                hoverChildren,
+                new ObjectArrayList<>(),
+                new ObjectArrayList<>());
+
+        return root;
     }
 
     public ElementInstance createDetachedInstance(MenuNodeStruct node) {

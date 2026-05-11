@@ -1,5 +1,6 @@
 package editor.runtime;
 
+import editor.runtime.menueventsmanager.EditorMenuEventsManager;
 import engine.root.ContextPackage;
 
 public class EditorWindowMain extends ContextPackage {
@@ -13,5 +14,6 @@ public class EditorWindowMain extends ContextPackage {
     @Override
     protected void create() {
         create(EditorMenuSystem.class);
+        create(EditorMenuEventsManager.class);
     }
 }
