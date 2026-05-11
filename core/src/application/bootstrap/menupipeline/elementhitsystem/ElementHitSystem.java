@@ -274,6 +274,7 @@ public class ElementHitSystem extends SystemPackage {
 
             if (isHit(element, mouseX, mouseY))
                 return element;
+
         }
 
         return null;

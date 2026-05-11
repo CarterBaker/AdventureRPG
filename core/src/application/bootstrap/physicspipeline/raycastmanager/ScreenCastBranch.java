@@ -4,16 +4,15 @@ import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.physicspipeline.util.ScreenRayStruct;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.BranchPackage;
-import engine.settings.KeyBindings;
 
 class ScreenCastBranch extends BranchPackage {
 
     /*
      * Assembles the current frame's ScreenRayStruct from raw InputSystem state
      * and the active WindowManager window. Called by RaycastManager each frame.
-     * If no click is detected the struct is cleared via the hasScreenRay flag —
-     * the struct itself is never nulled, just ignored by callers via
-     * hasScreenRay().
+     * Always writes mouse position and returns true while an active window exists.
+     * Click detection is the caller's responsibility — this branch only tracks
+     * cursor position.
      */
 
     // Internal
@@ -31,8 +30,6 @@ class ScreenCastBranch extends BranchPackage {
     // Cast \\
 
     boolean cast(ScreenRayStruct out) {
-        if (!inputSystem.bindingHeld(KeyBindings.PRIMARY))
-            return false;
 
         int windowID = windowManager.getActiveWindow().getWindowID();
         float screenW = windowManager.getActiveWindow().getWidth();

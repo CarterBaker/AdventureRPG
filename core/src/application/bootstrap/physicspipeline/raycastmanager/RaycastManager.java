@@ -9,10 +9,10 @@ public class RaycastManager extends ManagerPackage {
 
     /*
      * Owns block raycasting and the current frame's screen-space ray. The
-     * ScreenRayStruct is pre-allocated — ScreenCastBranch writes to it each
-     * frame when a click is detected, zero allocation. Other systems read
-     * getScreenRay() and check hasScreenRay() to act on clicks. BlockCastBranch
-     * handles all DDA world-space traversal.
+     * ScreenRayStruct is pre-allocated — ScreenCastBranch writes the current
+     * mouse position every frame, zero allocation. hasScreenRay is always true
+     * while an active window exists. Click detection lives in ElementHitSystem.
+     * BlockCastBranch handles all DDA world-space traversal.
      */
 
     // Branches
@@ -27,11 +27,9 @@ public class RaycastManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
         // Branches
         this.blockCastBranch = create(BlockCastBranch.class);
         this.screenCastBranch = create(ScreenCastBranch.class);
-
         // Screen Ray
         this.screenRay = new ScreenRayStruct();
     }
