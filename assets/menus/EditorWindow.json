@@ -33,7 +33,7 @@
                   "pivot": "top_left",
                   "size": {"x": "100px", "y": "28px"},
                   "on_click": {
-                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.bootstrap.tabmanager.EditorBranch",
                     "method": "toggleTestingDropdown",
                     "arg": "$parent"
                   },
@@ -62,7 +62,7 @@
                       "pivot": "top_left",
                       "size": {"x": "150px", "y": "28px"},
                       "on_click": {
-                        "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
+                        "class": "editor.bootstrap.tabmanager.EditorBranch",
                         "method": "openSecondaryWindow"
                       },
                       "elements": [
@@ -80,7 +80,7 @@
                       "pivot": "top_left",
                       "size": {"x": "150px", "y": "28px"},
                       "on_click": {
-                        "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
+                        "class": "editor.bootstrap.tabmanager.EditorBranch",
                         "method": "openPreview"
                       },
                       "elements": [

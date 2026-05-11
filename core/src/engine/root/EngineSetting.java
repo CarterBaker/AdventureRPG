@@ -5,6 +5,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 public class EngineSetting {
 
+        /*
+         * Central compile-time constant registry. Runtime systems read shared
+         * values from this class instead of embedding literals in logic.
+         */
+
         // Engine \\
 
         public static final String VERSION = "0.0.0.1a";
@@ -80,20 +85,10 @@ public class EngineSetting {
         public static final String SPRITE_DEFAULT_MATERIAL = "util/SpriteDefault";
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
 
-        // Dock \\
-
-        public static final int DOCK_TAB_BAR_HEIGHT = 24;
-        public static final int DOCK_TAB_MIN_WIDTH = 80;
-        public static final int DOCK_TAB_MAX_WIDTH = 200;
-        public static final int DOCK_TAB_CLOSE_SIZE = 14;
-        public static final int DOCK_SPLITTER_SIZE = 4;
-        public static final int DOCK_BORDER_SIZE = 1;
-        public static final int DOCK_ACTIVE_STRIP_H = 2;
+        // Cursor \\
         public static final int CURSOR_DEFAULT = 0;
         public static final int CURSOR_RESIZE_H = 1;
         public static final int CURSOR_RESIZE_V = 2;
-        public static final String DOCK_CHROME_MESH = "util/DockChromeQuad";
-        public static final String DOCK_CHROME_MATERIAL = "util/DockChrome";
 
         // Scale \\
 
@@ -317,6 +312,17 @@ public class EngineSetting {
         // Menu \\
 
         public static final String MENU_TAB_SHELL = "editor/TabShell/TabShell";
+        public static final String MENU_EDITOR_MAIN = "EditorWindow/Main";
+        public static final String MENU_EDITOR_SECONDARY = "EditorWindow/Secondary";
+        public static final String TAB_TITLE_PREVIEW = "Preview";
+        public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
+        public static final String TAB_MENU_TARGET_FBO_SYSTEM_CLASS = "editor.runtime.MenuTargetFboSystem";
+        public static final int TAB_CANVAS_X_INDEX = 0;
+        public static final int TAB_CANVAS_Y_INDEX = 1;
+        public static final int TAB_CANVAS_W_INDEX = 2;
+        public static final int TAB_CANVAS_H_INDEX = 3;
+        public static final int TAB_CANVAS_BOUNDS_LENGTH = 4;
+        public static final int EDITOR_TESTING_DROPDOWN_ENTRY_INDEX = 0;
         public static final float DROPDOWN_COLLAPSE_TOLERANCE = 12f;
         public static final String ELEMENT_DEFAULT_MAX_SIZE = "100%";
         public static final String ELEMENT_DEFAULT_MIN_SIZE = "0%";

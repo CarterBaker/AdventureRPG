@@ -4,30 +4,27 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
-import editor.runtime.menueventsmanager.menus.EditorBranch;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
 public class EditorMenuSystem extends SystemPackage {
 
     /*
      * Opens the main editor menu against the main window when the editor
-     * context awakens. Runs once — no per-frame update needed.
-     *
-     * NOTE: calls windowManager.getMainWindow() — verify the method name
-     * matches your WindowManager API.
+     * context awakens. The editor TabManager owns on_click routing through
+     * editor.bootstrap.tabmanager.EditorBranch.
      */
 
     // Internal
-    private EditorBranch editorBranch;
     private WindowManager windowManager;
     private MenuManager menuManager;
     private FboManager fboManager;
 
     // Internal \\
-
     @Override
     protected void get() {
-        this.editorBranch = get(EditorBranch.class);
+
+        // Internal
         this.windowManager = get(WindowManager.class);
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FboManager.class);
@@ -36,6 +33,6 @@ public class EditorMenuSystem extends SystemPackage {
     @Override
     protected void awake() {
         menuManager.setMenuTargetFbo(windowManager.getMainWindow(), fboManager.getFbo(RuntimeSetting.FBO_UI));
-        editorBranch.openEditorMenu(windowManager.getMainWindow());
+        menuManager.openMenu(EngineSetting.MENU_EDITOR_MAIN, windowManager.getMainWindow());
     }
 }
