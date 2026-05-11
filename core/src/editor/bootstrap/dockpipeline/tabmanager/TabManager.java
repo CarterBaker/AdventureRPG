@@ -29,6 +29,8 @@ public class TabManager extends ManagerPackage {
     private WindowManager windowManager;
     private DockGeometrySystem dockGeometrySystem;
 
+    // Internal \\
+
     @Override
     protected void create() {
         this.tabs = new ObjectArrayList<>();
@@ -55,7 +57,7 @@ public class TabManager extends ManagerPackage {
         shellWindow.setDepth(1);
         windowManager.registerDetachedWindow(shellWindow);
 
-        TabContext shellContext = internal.createContext(TabContext.class, shellWindow);
+        TabContext shellContext = internal.createTabContext(TabContext.class, shellWindow);
 
         WindowInstance contentWindow = create(WindowInstance.class);
         contentWindow.constructor(new WindowData(windowManager.issueWindowID(), width, height, title, false));
