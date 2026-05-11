@@ -23,9 +23,6 @@ public class TabManager extends ManagerPackage {
     private Object2IntOpenHashMap<String> tabName2TabID;
     private Int2ObjectOpenHashMap<TabHandle> tabID2TabHandle;
 
-    // Branch
-    private EditorBranch editorBranch;
-
     // Internal
     private WindowManager windowManager;
 
@@ -38,16 +35,10 @@ public class TabManager extends ManagerPackage {
         this.tabName2TabID = new Object2IntOpenHashMap<>();
         this.tabName2TabID.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
         this.tabID2TabHandle = new Int2ObjectOpenHashMap<>();
-
-        // Branch
-        create(EditorBranch.class);
     }
 
     @Override
     protected void get() {
-
-        // Branch
-        this.editorBranch = get(EditorBranch.class);
 
         // Internal
         this.windowManager = get(WindowManager.class);
@@ -55,16 +46,14 @@ public class TabManager extends ManagerPackage {
 
     // Management \\
 
-    TabHandle openPreview() {
+    public TabHandle openPreview() {
         return openTab(EngineSetting.TAB_TITLE_PREVIEW, application.runtime.RuntimeContext.class);
     }
 
-    WindowInstance openSecondaryWindow() {
-        WindowInstance window = windowManager.openWindow(
+    public WindowInstance openSecondaryWindow() {
+        return windowManager.openWindow(
                 EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY,
                 editor.runtime.EditorWindowSecondary.class);
-        editorBranch.openSecondaryMenu(window);
-        return window;
     }
 
     // Accessible \\
@@ -112,6 +101,7 @@ public class TabManager extends ManagerPackage {
 
         TabContext tabContext = handle.getTabContext();
         ContextPackage contentContext = handle.getContentContext();
+
         tabContext.unmountContent();
         internal.destroyContext(contentContext);
         internal.destroyContext(tabContext);
