@@ -21,20 +21,23 @@ public class ElementHitSystem extends SystemPackage {
     /*
      * Handles all interactive element behavior per frame.
      *
-     * Hover state is updated every raycast. An element is hovered when the mouse
-     * is within its own bounds OR within its hover state children's bounds (inline)
-     * OR within its hoverStateRoot's children's bounds (master-based overlay).
+     * Hover state is updated every frame. An element is hovered when the cursor is
+     * within its own bounds OR within its hover state children's bounds (inline) OR
+     * within its hoverStateRoot's children's bounds (master-based overlay).
      *
-     * For master-based hover overlays (hasHoverStateRoot), hoverTestElements always
-     * tests the root's children unconditionally — this bootstraps hover on first
-     * entry without a chicken-and-egg dependency on isHovered(). hitTestElements
-     * gates on isHovered() so buttons inside the panel are only clickable when the
-     * panel is actually visible.
+     * For master-based hover overlays (hasHoverStateRoot), the root's children are
+     * tested only when the cursor is over the owning element (bootstraps hover on
+     * first entry) OR the element is already hovered (maintains hover while the
+     * cursor moves into the panel). This prevents phantom hover when the cursor
+     * passes over the panel's rendered region before the trigger is hovered.
      *
      * For inline hover children (hasHoverStateChildren, no root), the owning
      * element must already be hovered before its children are tested in both
      * systems. The anchor mechanism keeps the parent marked hovered while the
      * cursor is over a child.
+     *
+     * hitTestElements gates master-based overlay children on isHovered() so buttons
+     * inside the panel are only clickable when the panel is actually visible.
      *
      * Two tracking fields manage anchor state:
      * hoveredElement — the innermost element directly under the cursor.
@@ -227,23 +230,27 @@ public class ElementHitSystem extends SystemPackage {
                     return childHit;
             }
 
-            // Master-based hover overlay — always test unconditionally to bootstrap
-            // hover on first entry; isHovered() gate lives in hitTestElements only
+            // Master-based hover overlay — test root children only when the cursor is
+            // over the owning element (bootstraps hover on first entry) OR the element
+            // is already hovered (maintains hover while cursor moves into the panel)
             if (element.hasHoverStateRoot()) {
 
-                ElementInstance prevCapture = hoverAnchorCapture;
-                hoverAnchorCapture = element;
+                if (element.isHovered() || isHit(element, mouseX, mouseY)) {
 
-                ElementInstance childHit = hoverTestElements(
-                        element.getHoverStateRoot().getChildren(), mouseX, mouseY,
-                        clipLeft, clipTop, clipRight, clipBottom);
-
-                if (childHit != null) {
+                    ElementInstance prevCapture = hoverAnchorCapture;
                     hoverAnchorCapture = element;
-                    return childHit;
-                }
 
-                hoverAnchorCapture = prevCapture;
+                    ElementInstance childHit = hoverTestElements(
+                            element.getHoverStateRoot().getChildren(), mouseX, mouseY,
+                            clipLeft, clipTop, clipRight, clipBottom);
+
+                    if (childHit != null) {
+                        hoverAnchorCapture = element;
+                        return childHit;
+                    }
+
+                    hoverAnchorCapture = prevCapture;
+                }
 
                 // Inline hover children — owning element must already be hovered
             } else if (element.isHovered() && element.hasHoverStateChildren()) {
@@ -274,7 +281,6 @@ public class ElementHitSystem extends SystemPackage {
 
             if (isHit(element, mouseX, mouseY))
                 return element;
-
         }
 
         return null;
