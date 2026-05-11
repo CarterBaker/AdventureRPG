@@ -1,3 +1,4 @@
+// core/src/editor/runtime/menueventsmanager/menus/EditorBranch.java
 package editor.runtime.menueventsmanager.menus;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
@@ -5,151 +6,50 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import application.runtime.RuntimeContext;
-import editor.bootstrap.dockpipeline.container.ContainerInstance;
-import editor.bootstrap.dockpipeline.dockmanager.DockManager;
-import editor.bootstrap.dockpipeline.node.NodeInstance;
-import editor.bootstrap.dockpipeline.tab.TabInstance;
-import editor.bootstrap.dockpipeline.tabgroup.TabGroupInstance;
-import editor.bootstrap.dockpipeline.tabmanager.TabManager;
-import editor.runtime.EditorWindowSecondary;
+import editor.bootstrap.tab.TabContext;
 import engine.root.BranchPackage;
+import engine.root.ContextPackage;
 
 public class EditorBranch extends BranchPackage {
 
-    /*
-     * Handles editor menu lifecycle and toolbar button actions.
-     *
-     * openEditorMenu() — called by EditorMenuSystem on awake, opens the
-     * main editor menu against the main window.
-     *
-     * toggleTestingDropdown() — $parent click handler on the Testing toolbar
-     * button. Reads entry point 0 (testing_dropdown) from the live MenuInstance
-     * and flips its visibility.
-     *
-     * openSecondaryWindow() — opens a new tab in the main window's dock
-     * container. Split axis is chosen based on the target leaf dimensions —
-     * wide panels split horizontally, tall panels split vertically.
-     *
-     * openPreview() — same split logic, binds to RuntimeContext so the full
-     * game runtime runs inside the panel.
-     */
-
-    // Internal
     private MenuManager menuManager;
     private WindowManager windowManager;
-    private DockManager dockManager;
-    private TabManager tabManager;
-
-    // State
     private MenuInstance editorMenu;
-
-    // Internal \\
 
     @Override
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.windowManager = get(WindowManager.class);
-        this.dockManager = get(DockManager.class);
-        this.tabManager = get(TabManager.class);
     }
-
-    // Open / Close \\
 
     public void openEditorMenu(WindowInstance window) {
         if (editorMenu != null)
             return;
+
         editorMenu = menuManager.openMenu("EditorWindow/Main", window);
     }
 
     public void closeEditorMenu() {
         if (editorMenu == null)
             return;
+
         editorMenu = menuManager.closeMenu(editorMenu);
     }
-
-    // Toolbar Actions \\
 
     public void toggleTestingDropdown(MenuInstance parent) {
         ElementInstance dropdown = parent.getEntryPoint(0);
         if (dropdown == null)
             return;
+
         dropdown.toggleExpanded();
     }
 
-    public void openSecondaryWindow() {
+    public void openTab(String title, Class<? extends ContextPackage> contextClass) {
         WindowInstance mainWindow = windowManager.getMainWindow();
-        ContainerInstance container = dockManager.getContainerForWindow(mainWindow);
-
-        if (container == null || container.getRootNode() == null)
-            return;
-
-        TabGroupInstance group = resolveTargetGroup(container);
-        if (group == null)
-            return;
-
-        TabInstance tab = tabManager.createTab(
-                "Editor",
-                EditorWindowSecondary.class,
-                mainWindow,
-                0, 0, 0, 0);
-
-        dockManager.addTab(tab, group);
-        tabManager.activateTab(tab, group);
-    }
-
-    public void openPreview() {
-        WindowInstance mainWindow = windowManager.getMainWindow();
-        ContainerInstance container = dockManager.getContainerForWindow(mainWindow);
-
-        if (container == null || container.getRootNode() == null)
-            return;
-
-        TabGroupInstance group = resolveTargetGroup(container);
-        if (group == null)
-            return;
-
-        TabInstance tab = tabManager.createTab(
-                "Preview",
-                RuntimeContext.class,
-                mainWindow,
-                0, 0, 0, 0);
-
-        dockManager.addTab(tab, group);
-        tabManager.activateTab(tab, group);
-    }
-
-    // Layout \\
-
-    private TabGroupInstance resolveTargetGroup(ContainerInstance container) {
-        NodeInstance root = container.getRootNode();
-
-        if (root.isLeaf() && root.getTabGroup().isEmpty())
-            return root.getTabGroup();
-
-        NodeInstance leaf = findLargestLeaf(root);
-        if (leaf == null)
-            return root.isLeaf() ? root.getTabGroup() : null;
-
-        NodeInstance.SplitAxis axis = leaf.getWidth() >= leaf.getHeight()
-                ? NodeInstance.SplitAxis.HORIZONTAL
-                : NodeInstance.SplitAxis.VERTICAL;
-
-        dockManager.splitNode(leaf, axis);
-        return leaf.getChildB().getTabGroup();
-    }
-
-    private NodeInstance findLargestLeaf(NodeInstance node) {
-        if (node == null)
-            return null;
-        if (node.isLeaf())
-            return node;
-        NodeInstance a = findLargestLeaf(node.getChildA());
-        NodeInstance b = findLargestLeaf(node.getChildB());
-        if (a == null)
-            return b;
-        if (b == null)
-            return a;
-        return (a.getWidth() * a.getHeight() >= b.getWidth() * b.getHeight()) ? a : b;
+        WindowInstance tabWindow = windowManager.createLogicalWindow(title, mainWindow);
+        TabContext tabContext = internal.createTabContext(TabContext.class, tabWindow);
+        WindowInstance contentWindow = windowManager.createLogicalWindow(title, mainWindow);
+        ContextPackage contentContext = internal.createChildContext(tabContext, contextClass, contentWindow);
+        tabContext.mountContent(contentWindow, contentContext);
     }
 }

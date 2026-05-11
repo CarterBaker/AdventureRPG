@@ -1,3 +1,4 @@
+// core/src/application/kernel/windowpipeline/windowmanager/WindowManager.java
 package application.kernel.windowpipeline.windowmanager;
 
 import application.kernel.windowpipeline.window.WindowData;
@@ -125,6 +126,25 @@ public class WindowManager extends ManagerPackage {
         window.constructor(data);
         registerDetachedWindow(window);
         internal.createContext(contextClass, window);
+        return window;
+    }
+
+    public WindowInstance createLogicalWindow(String title, WindowInstance compositeTarget) {
+        if (compositeTarget == null)
+            throwException("Cannot create logical window without a composite target.");
+
+        WindowData data = new WindowData(
+                issueWindowID(),
+                compositeTarget.getWidth(),
+                compositeTarget.getHeight(),
+                title,
+                false);
+        WindowInstance window = create(WindowInstance.class);
+        window.constructor(data);
+        window.setCompositeTarget(compositeTarget);
+        window.setCompositeRect(0f, 0f, compositeTarget.getWidth(), compositeTarget.getHeight());
+        window.setDepth(1);
+        registerDetachedWindow(window);
         return window;
     }
 
