@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
+import application.bootstrap.menupipeline.element.ElementStateStruct;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.fontmanager.FontManager;
@@ -33,9 +34,11 @@ public class ElementSystem extends SystemPackage {
      * master.getChildren() is a bootstrap-only concept used when building ref nodes
      * — ElementSystem never reads it during instantiation.
      *
-     * Action resolution is intentionally not performed here. Action strings are
-     * stored on ElementInstance and resolved at click time by ElementHitSystem,
-     * which is a persistent system with a valid engine reference.
+     * For each element, hover and click state sprite instances are cloned from
+     * the state's sprite override (if any), and hover/click state children are
+     * instantiated from their respective MenuNodeStruct lists. All three are
+     * passed into the ElementInstance constructor so the hit and render systems
+     * can traverse them without re-resolving the handle each frame.
      */
 
     // Internal
@@ -121,6 +124,7 @@ public class ElementSystem extends SystemPackage {
         ElementHandle master = node.getMaster();
         ElementData data = master.getElementData();
 
+        // Default sprite — node override takes priority over handle definition
         String sourceName = node.getSpriteNameOverride() != null
                 ? node.getSpriteNameOverride()
                 : data.getSpriteName();
@@ -129,6 +133,21 @@ public class ElementSystem extends SystemPackage {
                 ? spriteManager.cloneSprite(sourceName)
                 : null;
 
+        // Hover sprite — cloned from state sprite override if present
+        ElementStateStruct hoverState = master.getHoverState();
+        SpriteInstance hoverSpriteInstance = null;
+
+        if (hoverState != null && hoverState.hasSpriteOverride())
+            hoverSpriteInstance = spriteManager.cloneSprite(hoverState.getSpriteOverride());
+
+        // Click sprite — cloned from state sprite override if present
+        ElementStateStruct clickState = master.getClickState();
+        SpriteInstance clickSpriteInstance = null;
+
+        if (clickState != null && clickState.hasSpriteOverride())
+            clickSpriteInstance = spriteManager.cloneSprite(clickState.getSpriteOverride());
+
+        // Font
         FontInstance fontInstance = null;
 
         String resolvedFontName = data.hasFont()
@@ -159,19 +178,37 @@ public class ElementSystem extends SystemPackage {
                 fontInstance.setText(text);
         }
 
-        // Action resolution is deferred to ElementHitSystem at click time.
-        // Strings are stored on ElementInstance and resolved once on first click.
-
+        // Default children
         ObjectArrayList<MenuNodeStruct> childNodes = node.getChildren();
         ObjectArrayList<ElementInstance> childInstances = new ObjectArrayList<>(childNodes.size());
 
         for (int i = 0; i < childNodes.size(); i++)
             childInstances.add(createInstance(childNodes.get(i), parentRef));
 
+        // Hover state children — replace default children in-place when hovered
+        ObjectArrayList<ElementInstance> hoverStateInstances = new ObjectArrayList<>();
+
+        if (hoverState != null && hoverState.hasChildren()) {
+            ObjectArrayList<MenuNodeStruct> hoverNodes = hoverState.getChildren();
+            for (int i = 0; i < hoverNodes.size(); i++)
+                hoverStateInstances.add(createInstance(hoverNodes.get(i), parentRef));
+        }
+
+        // Click state children — rendered as dropdown overlay when click-expanded
+        ObjectArrayList<ElementInstance> clickStateInstances = new ObjectArrayList<>();
+
+        if (clickState != null && clickState.hasChildren()) {
+            ObjectArrayList<MenuNodeStruct> clickStateNodes = clickState.getChildren();
+            for (int i = 0; i < clickStateNodes.size(); i++)
+                clickStateInstances.add(createInstance(clickStateNodes.get(i), parentRef));
+        }
+
         ElementInstance instance = create(ElementInstance.class);
         instance.constructor(
-                data,
+                master,
                 spriteInstance,
+                hoverSpriteInstance,
+                clickSpriteInstance,
                 fontInstance,
                 node.getTextOverride(),
                 null,
@@ -182,7 +219,9 @@ public class ElementSystem extends SystemPackage {
                 master.getActionMethod(),
                 master.getActionArg(),
                 node.getLayoutOverride(),
-                childInstances);
+                childInstances,
+                hoverStateInstances,
+                clickStateInstances);
 
         return instance;
     }

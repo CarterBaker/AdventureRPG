@@ -12,141 +12,133 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ElementHandle extends HandlePackage {
 
     /*
-     * Immutable master definition for one UI element. Registered in ElementSystem
-     * keyed by file path and element ID. Shared across all instances — never
-     * mutated after bootstrap completes.
-     *
-     * children holds the default subtree for this element as defined in its source
-     * JSON. Used only during bootstrap when a ref node copies them as its own
-     * children. ElementSystem.createInstances never reads these — it always walks
-     * the MenuNodeStruct tree passed to it.
+     * Persistent template for a single UI element. Owns the default child tree
+     * and any visual state overrides (hover, click). Instances are cloned from
+     * this handle at menu open time and are safe to mutate independently.
      */
 
-    // Internal
-    private ElementData data;
-    private String actionClass;
-    private String actionMethod;
-    private String actionArg;
+    // Data
+    private ElementData elementData;
+
+    // Tree
     private ObjectArrayList<MenuNodeStruct> children;
 
-    // Constructor \\
+    // States
+    private ElementStateStruct hoverState;
+    private ElementStateStruct clickState;
 
     public void constructor(
-            ElementData data,
-            String actionClass,
-            String actionMethod,
-            String actionArg,
-            ObjectArrayList<MenuNodeStruct> children) {
-        this.data = data;
-        this.actionClass = actionClass;
-        this.actionMethod = actionMethod;
-        this.actionArg = actionArg;
+            ElementData elementData,
+            ObjectArrayList<MenuNodeStruct> children,
+            ElementStateStruct hoverState,
+            ElementStateStruct clickState) {
+
+        // Data
+        this.elementData = elementData;
+
+        // Tree
         this.children = children;
+
+        // States
+        this.hoverState = hoverState;
+        this.clickState = clickState;
     }
 
     // Accessible \\
 
     public ElementData getElementData() {
-        return data;
-    }
-
-    public String getId() {
-        return data.getId();
-    }
-
-    public ElementType getType() {
-        return data.getType();
-    }
-
-    public String getSpriteName() {
-        return data.getSpriteName();
-    }
-
-    public String getText() {
-        return data.getText();
-    }
-
-    public String getFontName() {
-        return data.getFontName();
-    }
-
-    public String getMaterialName() {
-        return data.getMaterialName();
-    }
-
-    public DimensionValue getFontSize() {
-        return data.getFontSize();
-    }
-
-    public boolean hasExplicitFontSize() {
-        return data.hasExplicitFontSize();
-    }
-
-    public Color getColor() {
-        return data.getColor();
-    }
-
-    public LayoutStruct getLayout() {
-        return data.getLayout();
-    }
-
-    public boolean isMask() {
-        return data.isMask();
-    }
-
-    public StackDirection getStackDirection() {
-        return data.getStackDirection();
-    }
-
-    public DimensionValue getSpacing() {
-        return data.getSpacing();
-    }
-
-    public TextAlign getTextAlign() {
-        return data.getTextAlign();
-    }
-
-    public String getActionClass() {
-        return actionClass;
-    }
-
-    public String getActionMethod() {
-        return actionMethod;
-    }
-
-    public String getActionArg() {
-        return actionArg;
+        return elementData;
     }
 
     public ObjectArrayList<MenuNodeStruct> getChildren() {
         return children;
     }
 
-    public boolean hasSprite() {
-        return data.hasSprite();
+    public ElementStateStruct getHoverState() {
+        return hoverState;
     }
 
-    public boolean hasText() {
-        return data.hasText();
+    public boolean hasHoverState() {
+        return hoverState != null;
     }
 
-    public boolean hasFont() {
-        return data.hasFont();
+    public ElementStateStruct getClickState() {
+        return clickState;
     }
 
-    public boolean hasMaterial() {
-        return data.hasMaterial();
+    public boolean hasClickState() {
+        return clickState != null;
     }
 
-    public boolean hasColor() {
-        return data.hasColor();
+    public String getId() {
+        return elementData.getId();
     }
 
-    public boolean hasAction() {
-        return actionClass != null && actionMethod != null;
+    public ElementType getType() {
+        return elementData.getType();
     }
 
-    public boolean hasChildren() {
-        return children != null && !children.isEmpty();
+    public String getSpriteName() {
+        return elementData.getSpriteName();
+    }
+
+    public String getText() {
+        return elementData.getText();
+    }
+
+    public String getFontName() {
+        return elementData.getFontName();
+    }
+
+    public String getMaterialName() {
+        return elementData.getMaterialName();
+    }
+
+    public DimensionValue getFontSize() {
+        return elementData.getFontSize();
+    }
+
+    public boolean hasExplicitFontSize() {
+        return elementData.hasExplicitFontSize();
+    }
+
+    public Color getColor() {
+        return elementData.getColor();
+    }
+
+    public LayoutStruct getLayout() {
+        return elementData.getLayout();
+    }
+
+    public boolean isMask() {
+        return elementData.isMask();
+    }
+
+    public StackDirection getStackDirection() {
+        return elementData.getStackDirection();
+    }
+
+    public DimensionValue getSpacing() {
+        return elementData.getSpacing();
+    }
+
+    public TextAlign getTextAlign() {
+        return elementData.getTextAlign();
+    }
+
+    public boolean isStartExpanded() {
+        return elementData.isStartExpanded();
+    }
+
+    public String getActionClass() {
+        return elementData.getActionClass();
+    }
+
+    public String getActionMethod() {
+        return elementData.getActionMethod();
+    }
+
+    public String getActionArg() {
+        return elementData.getActionArg();
     }
 }

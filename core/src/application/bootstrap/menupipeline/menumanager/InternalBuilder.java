@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementHandle;
+import application.bootstrap.menupipeline.element.ElementStateStruct;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.elementsystem.ElementSystem;
 import application.bootstrap.menupipeline.menu.MenuData;
@@ -31,7 +32,9 @@ class InternalBuilder extends BuilderPackage {
      * in the node, never looked up from masters at runtime.
      *
      * ElementHandle.children holds the default subtree for ref copying only.
-     * Deferred ref resolution runs after all files are processed.
+     * Hover and click states are parsed after the master is created and stored
+     * directly on the handle. Deferred ref resolution runs after all files are
+     * processed.
      *
      * All stateless JSON parsing helpers live in FileParserUtility.
      */
@@ -94,8 +97,10 @@ class InternalBuilder extends BuilderPackage {
     }
 
     void resolveAllDeferredRefs() {
+
         for (int i = 0; i < deferredRefs.size(); i++)
             deferredRefs.get(i).run();
+
         deferredRefs.clear();
     }
 
@@ -266,7 +271,8 @@ class InternalBuilder extends BuilderPackage {
 
         boolean hasOverride = layoutOverride != null || spriteNameOverride != null
                 || textOverride != null || colorOverride != null
-                || actionClassOverride != null || actionMethodOverride != null || actionArgOverride != null;
+                || actionClassOverride != null || actionMethodOverride != null
+                || actionArgOverride != null;
 
         if (!hasOverride)
             return new MenuNodeStruct(template, children);
@@ -298,23 +304,28 @@ class InternalBuilder extends BuilderPackage {
                     : null;
 
             ObjectArrayList<MenuNodeStruct> children = resolved.getChildren();
+
             return layoutOverride != null
-                    ? new MenuNodeStruct(resolved, null, null, null, null, null, null, null, null, layoutOverride,
-                            children)
+                    ? new MenuNodeStruct(resolved, null, null, null, null, null, null, null, null,
+                            layoutOverride, children)
                     : new MenuNodeStruct(resolved, children);
         }
 
         ObjectArrayList<MenuNodeStruct> children = new ObjectArrayList<>();
         MenuNodeStruct placeholder = partialOverride != null
-                ? new MenuNodeStruct(null, null, null, null, null, null, null, null, null, partialOverride, children)
+                ? new MenuNodeStruct(null, null, null, null, null, null, null, null, null,
+                        partialOverride, children)
                 : new MenuNodeStruct(null, children);
 
         deferredRefs.add(() -> {
             ElementHandle target = resolveRefKey(refKey);
+
             if (target == null)
                 throwException("Unresolved ref: '" + refKey + "' (id: '" + id + "')");
+
             if (partialOverride != null)
                 placeholder.setLayoutOverride(LayoutStruct.merge(target.getLayout(), partialOverride));
+
             placeholder.setMaster(target);
             children.addAll(target.getChildren());
         });
@@ -332,7 +343,8 @@ class InternalBuilder extends BuilderPackage {
             DimensionValue inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
-        ElementType type = FileParserUtility.parseElementType(JsonUtility.validateString(json, "type"), id);
+        ElementType type = FileParserUtility.parseElementType(
+                JsonUtility.validateString(json, "type"), id);
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String text = JsonUtility.getString(json, "text", null);
         String fontName = JsonUtility.getString(json, "font", inheritedFontName);
@@ -365,14 +377,95 @@ class InternalBuilder extends BuilderPackage {
                 filePath, json, fontName, fontSize, explicitFontSize);
 
         ElementData data = new ElementData(
-                id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize, color,
-                layout, mask, stackDirection, spacing, textAlign, startExpanded,
+                id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize,
+                color, layout, mask, stackDirection, spacing, textAlign, startExpanded,
                 actionClass, actionMethod, actionArg);
 
+        ElementStateStruct hoverState = parseStateBlock(
+                filePath, id, json, "hover_state", fontName, fontSize, explicitFontSize);
+        ElementStateStruct clickState = parseStateBlock(
+                filePath, id, json, "click_state", fontName, fontSize, explicitFontSize);
+
         ElementHandle master = create(ElementHandle.class);
-        master.constructor(data, actionClass, actionMethod, actionArg, defaultChildren);
+        master.constructor(data, defaultChildren, hoverState, clickState);
 
         return master;
+    }
+
+    // State Building \\
+
+    private ElementStateStruct parseStateBlock(
+            String filePath,
+            String id,
+            JsonObject json,
+            String stateKey,
+            String inheritedFontName,
+            DimensionValue inheritedFontSize,
+            boolean inheritedExplicitFontSize) {
+
+        if (!json.has(stateKey))
+            return null;
+
+        JsonObject stateJson = json.getAsJsonObject(stateKey);
+
+        // Null master means "self" — resolved at runtime by the hit/render system
+        ElementHandle baseMaster = null;
+
+        if (stateJson.has("use")) {
+            String usePath = stateJson.get("use").getAsString();
+            baseMaster = resolveTemplate(usePath, id);
+        }
+
+        // Font context inherits from base master when using another element,
+        // otherwise falls through to the parent element's inherited context
+        boolean explicitFontSize = stateJson.has("font_size")
+                || (baseMaster != null ? baseMaster.hasExplicitFontSize() : inheritedExplicitFontSize);
+        String fontName = JsonUtility.getString(stateJson, "font",
+                baseMaster != null ? baseMaster.getFontName() : inheritedFontName);
+        DimensionValue fontSize = stateJson.has("font_size")
+                ? DimensionValue.parse(stateJson.get("font_size").getAsString())
+                : (baseMaster != null ? baseMaster.getFontSize() : inheritedFontSize);
+
+        // Children — inline elements in the state block take priority; if none are
+        // defined and a base master was referenced via use, inherit its child tree
+        // so "use: some_dropdown" automatically pulls in that dropdown's buttons
+        ObjectArrayList<MenuNodeStruct> jsonChildren = buildNodes(
+                filePath, stateJson, fontName, fontSize, explicitFontSize);
+        ObjectArrayList<MenuNodeStruct> children = !jsonChildren.isEmpty()
+                ? jsonChildren
+                : baseMaster != null ? baseMaster.getChildren() : new ObjectArrayList<>();
+
+        // Layout merge: when using another base master, merge at build time;
+        // when self (null master), store partial and let runtime merge with element's
+        // layout
+        LayoutStruct partialLayout = FileParserUtility.parseLayoutOverride(stateJson);
+        LayoutStruct layoutOverride = null;
+
+        if (partialLayout != null) {
+            layoutOverride = baseMaster != null
+                    ? LayoutStruct.merge(baseMaster.getLayout(), partialLayout)
+                    : partialLayout;
+        }
+
+        String spritePath = JsonUtility.getString(stateJson, "sprite", null);
+        String spriteOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
+        String textOverride = JsonUtility.getString(stateJson, "text", null);
+        Color colorOverride = FileParserUtility.parseColor(stateJson);
+        String[] onClick = FileParserUtility.parseOnClick(stateJson);
+        String actionClassOverride = onClick != null ? onClick[0] : null;
+        String actionMethodOverride = onClick != null ? onClick[1] : null;
+        String actionArgOverride = onClick != null ? onClick[2] : null;
+
+        return new ElementStateStruct(
+                baseMaster,
+                spriteOverride,
+                textOverride,
+                colorOverride,
+                layoutOverride,
+                actionClassOverride,
+                actionMethodOverride,
+                actionArgOverride,
+                children);
     }
 
     // Ref Key Resolution \\
