@@ -10,6 +10,18 @@ import engine.root.EngineSetting;
 
 public class EditorBranch extends BranchPackage {
 
+    /*
+     * Menu event handlers for the main editor menu. Delegates tab and window
+     * operations to TabManager.
+     *
+     * The hasTab guards that previously blocked opening a second tab of the
+     * same type have been removed. TabManager now generates unique instance
+     * titles via a per-class counter ("Preview 1", "Preview 2", etc.) so
+     * there is no uniqueness collision to guard against here. Any limit on
+     * how many of a given tab type can be open belongs in TabManager, not
+     * in branch event handlers.
+     */
+
     private MenuManager menuManager;
     private TabManager tabManager;
 
@@ -27,14 +39,10 @@ public class EditorBranch extends BranchPackage {
     }
 
     public void openPreview() {
-        if (tabManager.hasTab(EngineSetting.TAB_TITLE_PREVIEW))
-            return;
         tabManager.openPreview();
     }
 
     public void openSecondaryWindow() {
-        if (tabManager.hasTab(EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY))
-            return;
         tabManager.openTab(EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY, EditorWindowSecondary.class);
     }
 }

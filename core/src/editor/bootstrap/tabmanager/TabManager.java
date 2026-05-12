@@ -23,6 +23,10 @@ public class TabManager extends ManagerPackage {
      * into the tab shell for per-frame compositing.
      * Notifies DockLayoutSystem on every open and close so the BSP tree stays
      * in sync with the live tab set.
+     *
+     * Uniqueness is keyed on a generated instance title, not on the content
+     * class. A per-class counter produces "Preview 1", "Preview 2", etc. so
+     * any number of tabs of the same type can be open simultaneously.
      */
 
     // Palette
@@ -31,6 +35,10 @@ public class TabManager extends ManagerPackage {
 
     // Active
     private ObjectArrayList<TabHandle> openTabs;
+
+    // Counter — tracks how many instances of each content class have been opened
+    // so every generated title is unique for the lifetime of the session.
+    private Object2IntOpenHashMap<Class<? extends ContextPackage>> classInstanceCounter;
 
     // Internal
     private WindowManager windowManager;
@@ -48,6 +56,10 @@ public class TabManager extends ManagerPackage {
 
         // Active
         this.openTabs = new ObjectArrayList<>();
+
+        // Counter
+        this.classInstanceCounter = new Object2IntOpenHashMap<>();
+        this.classInstanceCounter.defaultReturnValue(0);
     }
 
     @Override
@@ -73,17 +85,24 @@ public class TabManager extends ManagerPackage {
     // Accessible \\
 
     public TabHandle openTab(
-            String title,
+            String baseTitle,
             Class<? extends ContextPackage> contentClass) {
 
-        if (title == null)
+        if (baseTitle == null)
             throwException("Cannot open a tab with a null title.");
 
         if (contentClass == null)
-            throwException("Cannot open tab '" + title + "' without a content context class.");
+            throwException("Cannot open tab '" + baseTitle + "' without a content context class.");
 
+        // Generate a unique instance title using a per-class counter.
+        // "Preview" becomes "Preview 1", "Preview 2", etc.
+        int instance = classInstanceCounter.getInt(contentClass) + 1;
+        classInstanceCounter.put(contentClass, instance);
+        String title = baseTitle + " " + instance;
+
+        // Collision should never happen with the counter, but guard anyway.
         if (hasTab(title))
-            throwException("Tab is already open: " + title);
+            throwException("Tab title collision (this is a bug): " + title);
 
         WindowInstance mainWindow = windowManager.getMainWindow();
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, mainWindow);
