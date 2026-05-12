@@ -1,6 +1,5 @@
-package editor.bootstrap.tabmanager;
+package editor.bootstrap.tab;
 
-import editor.bootstrap.tab.TabContext;
 import engine.root.ContextPackage;
 import engine.root.HandlePackage;
 
@@ -29,14 +28,14 @@ public class TabHandle extends HandlePackage {
 
     // Management \\
 
-    void mount(TabContext tabContext, ContextPackage contentContext) {
+    public void mount(TabContext tabContext, ContextPackage contentContext) {
 
         // Active
         this.tabContext = tabContext;
         this.contentContext = contentContext;
     }
 
-    void unmount() {
+    public void unmount() {
 
         // Active
         this.tabContext = null;

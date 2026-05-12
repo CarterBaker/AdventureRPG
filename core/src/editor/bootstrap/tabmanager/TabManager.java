@@ -2,13 +2,17 @@ package editor.bootstrap.tabmanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import editor.bootstrap.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tab.TabContext;
+import editor.bootstrap.tab.TabData;
+import editor.bootstrap.tab.TabHandle;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TabManager extends ManagerPackage {
 
@@ -17,14 +21,20 @@ public class TabManager extends ManagerPackage {
      * The manager opens a TabContext shell on a logical window, opens the child
      * content ContextPackage on its own logical window, and mounts the child
      * into the tab shell for per-frame compositing.
+     * Notifies DockLayoutSystem on every open and close so the BSP tree stays
+     * in sync with the live tab set.
      */
 
     // Palette
     private Object2IntOpenHashMap<String> tabName2TabID;
     private Int2ObjectOpenHashMap<TabHandle> tabID2TabHandle;
 
+    // Active
+    private ObjectArrayList<TabHandle> openTabs;
+
     // Internal
     private WindowManager windowManager;
+    private DockLayoutSystem dockLayoutSystem;
 
     // Internal \\
 
@@ -35,6 +45,9 @@ public class TabManager extends ManagerPackage {
         this.tabName2TabID = new Object2IntOpenHashMap<>();
         this.tabName2TabID.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
         this.tabID2TabHandle = new Int2ObjectOpenHashMap<>();
+
+        // Active
+        this.openTabs = new ObjectArrayList<>();
     }
 
     @Override
@@ -42,6 +55,7 @@ public class TabManager extends ManagerPackage {
 
         // Internal
         this.windowManager = get(WindowManager.class);
+        this.dockLayoutSystem = get(DockLayoutSystem.class);
     }
 
     // Management \\
@@ -78,7 +92,7 @@ public class TabManager extends ManagerPackage {
         WindowInstance contentWindow = windowManager.createLogicalWindow(title, tabWindow);
         ContextPackage contentContext = internal.createChildContext(tabContext, contentClass, contentWindow);
 
-        tabContext.mountContent(contentWindow, contentContext);
+        tabContext.mountContent(contentWindow);
 
         TabHandle handle = create(TabHandle.class);
         handle.constructor(new TabData(title, contentClass));
@@ -87,6 +101,9 @@ public class TabManager extends ManagerPackage {
         int tabID = RegistryUtility.toIntID(title);
         tabName2TabID.put(title, tabID);
         tabID2TabHandle.put(tabID, handle);
+        openTabs.add(handle);
+
+        dockLayoutSystem.addTab(handle);
 
         return handle;
     }
@@ -99,6 +116,8 @@ public class TabManager extends ManagerPackage {
         if (!handle.isOpen())
             throwException("Cannot close tab because it is not open: " + handle.getTabTitle());
 
+        dockLayoutSystem.removeTab(handle);
+
         TabContext tabContext = handle.getTabContext();
         ContextPackage contentContext = handle.getContentContext();
 
@@ -109,6 +128,7 @@ public class TabManager extends ManagerPackage {
         int tabID = getTabIDFromTabName(handle.getTabTitle());
         tabName2TabID.removeInt(handle.getTabTitle());
         tabID2TabHandle.remove(tabID);
+        openTabs.remove(handle);
         handle.unmount();
     }
 
@@ -136,5 +156,9 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle getTabHandleFromTabName(String name) {
         return getTabHandleFromTabID(getTabIDFromTabName(name));
+    }
+
+    public ObjectArrayList<TabHandle> getOpenTabs() {
+        return openTabs;
     }
 }

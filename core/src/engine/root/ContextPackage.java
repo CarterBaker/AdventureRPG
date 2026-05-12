@@ -44,6 +44,13 @@ public abstract class ContextPackage extends ManagerPackage {
         return (T) this.localRegistry.get(type);
     }
 
+    // Resize \\
+
+    public void onResize(int width, int height) {
+    }
+
+    // Accessible \\
+
     public WindowInstance getWindow() {
         return window;
     }

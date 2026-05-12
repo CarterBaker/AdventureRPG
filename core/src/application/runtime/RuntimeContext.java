@@ -23,6 +23,7 @@ public class RuntimeContext extends ContextPackage {
     private SkySystem skySystem;
     private PlayerSystem playerSystem;
     private MenuSystem menuSystem;
+    private MenuEventsManager menuEventsManager;
     private WorldSystem worldSystem;
     private InputSystem playerInputSystem;
 
@@ -34,8 +35,8 @@ public class RuntimeContext extends ContextPackage {
         // Runtime
         this.skySystem = create(SkySystem.class);
         this.playerSystem = create(PlayerSystem.class);
-        create(MenuEventsManager.class);
         this.menuSystem = create(MenuSystem.class);
+        this.menuEventsManager = create(MenuEventsManager.class);
         this.worldSystem = create(WorldSystem.class);
         this.playerInputSystem = create(InputSystem.class);
     }

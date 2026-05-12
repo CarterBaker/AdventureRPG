@@ -1,5 +1,6 @@
 package editor.runtime;
 
+import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
@@ -11,8 +12,7 @@ public class EditorMenuSystem extends SystemPackage {
 
     /*
      * Opens the main editor menu against the main window when the editor
-     * context awakens. The editor TabManager owns on_click routing through
-     * editor.bootstrap.tabmanager.EditorBranch.
+     * context awakens and exposes it for canvas-based compositing downstream.
      */
 
     // Internal
@@ -20,7 +20,11 @@ public class EditorMenuSystem extends SystemPackage {
     private MenuManager menuManager;
     private FboManager fboManager;
 
+    // Menu
+    private MenuInstance editorMenu;
+
     // Internal \\
+
     @Override
     protected void get() {
 
@@ -33,6 +37,12 @@ public class EditorMenuSystem extends SystemPackage {
     @Override
     protected void awake() {
         menuManager.setMenuTargetFbo(windowManager.getMainWindow(), fboManager.getFbo(RuntimeSetting.FBO_UI));
-        menuManager.openMenu(EngineSetting.MENU_EDITOR_MAIN, windowManager.getMainWindow());
+        this.editorMenu = menuManager.openMenu(EngineSetting.MENU_EDITOR_MAIN, windowManager.getMainWindow());
+    }
+
+    // Accessible \\
+
+    public MenuInstance getEditorMenu() {
+        return editorMenu;
     }
 }

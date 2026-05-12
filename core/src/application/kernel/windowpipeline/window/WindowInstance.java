@@ -195,6 +195,9 @@ public class WindowInstance extends InstancePackage {
 
         if (orthoCamera != null)
             orthoCamera.updateViewport(width, height);
+
+        if (context != null)
+            context.onResize(width, height);
     }
 
     public void dispose() {

@@ -1,4 +1,4 @@
-package editor.bootstrap.tabmanager;
+package editor.bootstrap.tab;
 
 import engine.root.ContextPackage;
 import engine.root.DataPackage;
