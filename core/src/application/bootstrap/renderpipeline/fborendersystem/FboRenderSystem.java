@@ -19,13 +19,25 @@ public class FboRenderSystem extends SystemPackage {
 
     /*
      * Manages screen-space FBO compositing. Queues blits per OS window and
-     * flushes them sorted by layer during the draw phase.
+     * flushes them sorted by composite sort key during the draw phase.
      * Logical windows (tabs) are transparently redirected to their composite
      * target OS window and rect — callers never need to know the difference.
-     * Screen order is captured from the source window's depth at push time
-     * so tab FBO blits always land on top of OS window FBO blits.
+     *
+     * Sort key = windowDepth * LAYER_STRIDE + layer.
+     * Window depth is the primary draw order: editor(0) < tabs(1) < content(2).
+     * Layer is secondary — dozens of layers per window sort cleanly within each
+     * band.
+     * LAYER_STRIDE of 10,000 gives each window depth 10,000 layer slots.
+     *
+     * Screen order (before/after composite pass) is a separate concern from
+     * draw order. It is passed explicitly at push time; default is 1 (after
+     * composite, on top of game content). Window depth does NOT bleed into
+     * screen order — those are two different axes.
+     *
      * Null dest rect means fullscreen — the shader handles both cases identically.
      */
+
+    private static final int LAYER_STRIDE = 10_000;
 
     private MeshManager meshManager;
     private MaterialManager materialManager;
@@ -39,24 +51,33 @@ public class FboRenderSystem extends SystemPackage {
 
     @Override
     protected void create() {
-        this.fbo2BlitModel = new Object2ObjectOpenHashMap<>();
-        this.window2BlitQueue = new Object2ObjectOpenHashMap<>();
+        fbo2BlitModel = new Object2ObjectOpenHashMap<>();
+        window2BlitQueue = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
     protected void get() {
-        this.meshManager = get(MeshManager.class);
-        this.materialManager = get(MaterialManager.class);
-        this.renderManager = get(RenderManager.class);
+        meshManager = get(MeshManager.class);
+        materialManager = get(MaterialManager.class);
+        renderManager = get(RenderManager.class);
     }
 
     // Accessible \\
 
     public void pushFbo(FboInstance fbo, int layer, WindowInstance window) {
-        pushFbo(fbo, layer, window, null);
+        pushFbo(fbo, layer, window, null, 1);
     }
 
     public void pushFbo(FboInstance fbo, int layer, WindowInstance window, FBODestinationStruct destRect) {
+        pushFbo(fbo, layer, window, destRect, 1);
+    }
+
+    public void pushFbo(FboInstance fbo, int layer, WindowInstance window, int screenOrder) {
+        pushFbo(fbo, layer, window, null, screenOrder);
+    }
+
+    public void pushFbo(FboInstance fbo, int layer, WindowInstance window, FBODestinationStruct destRect,
+            int screenOrder) {
 
         if (fbo == null || window == null)
             return;
@@ -79,9 +100,13 @@ public class FboRenderSystem extends SystemPackage {
         if (queue.size() >= EngineSetting.MAX_RENDER_CALLS_PER_FRAME)
             return;
 
-        // Capture full push state now — target is always the OS window so depth
-        // and rect must be read from the source window here, not later in pushBlits.
-        fbo.setPushData(window, layer, window.getDepth(), resolveDestRect(window, destRect));
+        // Sort key: window depth is primary, layer is secondary within each window.
+        // Separating sort key from screen order is intentional — they are different
+        // concerns. Window depth tells us draw order relative to other windows.
+        // Screen order tells us where this blit lands relative to the composite pass.
+        int sortKey = window.getDepth() * LAYER_STRIDE + layer;
+
+        fbo.setPushData(window, layer, sortKey, screenOrder, resolveDestRect(window, destRect));
         queue.add(fbo);
     }
 
@@ -99,11 +124,17 @@ public class FboRenderSystem extends SystemPackage {
         if (queue == null || queue.isEmpty())
             return;
 
+        // Insertion sort by composite sort key.
+        // editor(depth=0, any layer) always before tab(depth=1, any layer)
+        // before content(depth=2, any layer). Within each window, layers
+        // sort low-to-high. Dozens of layers per window are handled cleanly
+        // because LAYER_STRIDE gives each depth band 10,000 slots.
         for (int i = 1; i < queue.size(); i++) {
             FboInstance entry = queue.get(i);
+            int entryKey = entry.getPushSortKey();
             int j = i - 1;
 
-            while (j >= 0 && queue.get(j).getPushLayer() > entry.getPushLayer()) {
+            while (j >= 0 && queue.get(j).getPushSortKey() > entryKey) {
                 queue.set(j + 1, queue.get(j));
                 j--;
             }
@@ -123,6 +154,10 @@ public class FboRenderSystem extends SystemPackage {
                 destRectScratch.set(-1f, -1f, -1f, -1f);
 
             model.getMaterial().setUniform("u_destRect", destRectScratch);
+
+            // screenOrder is explicit — not derived from window depth.
+            // All blits default to order 1 (after composite). Callers that
+            // need a blit before the composite pass pass screenOrder = 0.
             renderManager.pushScreenCall(model, window, fbo.getPushScreenOrder());
         }
 

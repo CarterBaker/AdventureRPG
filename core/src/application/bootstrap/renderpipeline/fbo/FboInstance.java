@@ -14,9 +14,22 @@ public class FboInstance extends InstancePackage {
      * at call sites. Delegates bind, unbind, and resize back to FboManager so
      * all GL state changes stay in one place. Blit overrides are optional and
      * checked by the render pipeline before falling back to defaults.
+     *
      * Push data is a full snapshot of everything the FBO was queued with —
-     * window, layer, screen order, and dest rect. Null dest rect means fullscreen.
-     * Written at queue time, read during flush.
+     * window, layer, sort key, screen order, and dest rect. Null dest rect
+     * means fullscreen.
+     *
+     * sortKey = windowDepth * LAYER_STRIDE + layer
+     * Primary draw order: editor(0) < tabs(1) < content(2).
+     * Layer is secondary within each window depth band.
+     * 10,000 layer slots per band — sufficient for any realistic
+     * layer count per window.
+     *
+     * screenOrder = 0 (before composite) or 1 (after composite).
+     * Separate from draw order. Not derived from window depth.
+     * Written at queue time by the caller. Defaults to 1.
+     *
+     * Written at queue time by FboRenderSystem.pushFbo, read during flush.
      */
 
     // Data
@@ -38,7 +51,8 @@ public class FboInstance extends InstancePackage {
     // Push data — full snapshot written at queue time, read during flush
     private WindowInstance pushWindow;
     private int pushLayer;
-    private int pushScreenOrder;
+    private int pushSortKey; // windowDepth * LAYER_STRIDE + layer
+    private int pushScreenOrder; // 0 = before composite, 1 = after
     private FBODestinationStruct pushDestRect;
 
     // Internal
@@ -63,7 +77,7 @@ public class FboInstance extends InstancePackage {
 
     @Override
     protected void get() {
-        this.fboManager = get(FboManager.class);
+        fboManager = get(FboManager.class);
     }
 
     // Framebuffer \\
@@ -90,17 +104,19 @@ public class FboInstance extends InstancePackage {
     // Blit \\
 
     public void setBlitOverride(MeshData mesh, MaterialInstance material) {
-        this.blitMeshOverride = mesh;
-        this.blitMaterialOverride = material;
+        blitMeshOverride = mesh;
+        blitMaterialOverride = material;
     }
 
     // Push \\
 
-    public void setPushData(WindowInstance window, int layer, int screenOrder, FBODestinationStruct destRect) {
-        this.pushWindow = window;
-        this.pushLayer = layer;
-        this.pushScreenOrder = screenOrder;
-        this.pushDestRect = destRect;
+    public void setPushData(WindowInstance window, int layer, int sortKey, int screenOrder,
+            FBODestinationStruct destRect) {
+        pushWindow = window;
+        pushLayer = layer;
+        pushSortKey = sortKey;
+        pushScreenOrder = screenOrder;
+        pushDestRect = destRect;
     }
 
     // Accessible \\
@@ -149,6 +165,10 @@ public class FboInstance extends InstancePackage {
         return pushLayer;
     }
 
+    public int getPushSortKey() {
+        return pushSortKey;
+    }
+
     public int getPushScreenOrder() {
         return pushScreenOrder;
     }
@@ -156,5 +176,4 @@ public class FboInstance extends InstancePackage {
     public FBODestinationStruct getPushDestRect() {
         return pushDestRect;
     }
-
 }

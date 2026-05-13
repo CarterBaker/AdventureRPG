@@ -1,3 +1,4 @@
+
 package editor.bootstrap.tabmanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -20,8 +21,9 @@ public class TabManager extends ManagerPackage {
      * Editor bootstrap manager that owns tab registration and tab lifecycle.
      * Both the TabContext shell and the content context are created as peers via
      * internal.createContext() — no parent/child nesting. The returned references
-     * are wired together through mountContent so the tab shell can propagate
-     * resize events to the content window without owning the content lifecycle.
+     * are wired via linkContent() so TabContext.onResize() can cascade canvas
+     * bounds down to the content window, the same way EditorTabCompositorSystem
+     * cascades editor canvas bounds down to tab windows.
      * Notifies DockLayoutSystem on every open and close so the BSP tree stays
      * in sync with the live tab set.
      *
@@ -29,11 +31,14 @@ public class TabManager extends ManagerPackage {
      * class. A per-class counter produces "Preview 1", "Preview 2", etc. so
      * any number of tabs of the same type can be open simultaneously.
      *
-     * Depth: tab logical windows are depth 1 — chrome draws on top of content.
-     * Content logical windows are depth 0 — they composite directly to mainWindow
-     * and are drawn before chrome. Both logical windows share mainWindow as their
-     * composite target so their FBOs land in the same blit queue and are drawn
-     * in depth order.
+     * Depth ordering:
+     * editor — depth 0 (base layer, drawn first)
+     * tab — depth 1 (chrome draws on top of editor)
+     * content — depth 2 (content draws on top of chrome)
+     *
+     * FboRenderSystem sort key = windowDepth * LAYER_STRIDE + layer, so this
+     * ordering is automatically enforced each frame without any manual sorting
+     * at this level.
      */
 
     // Palette
@@ -57,24 +62,24 @@ public class TabManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.tabName2TabID = new Object2IntOpenHashMap<>();
-        this.tabName2TabID.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
-        this.tabID2TabHandle = new Int2ObjectOpenHashMap<>();
+        tabName2TabID = new Object2IntOpenHashMap<>();
+        tabName2TabID.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+        tabID2TabHandle = new Int2ObjectOpenHashMap<>();
 
         // Active
-        this.openTabs = new ObjectArrayList<>();
+        openTabs = new ObjectArrayList<>();
 
         // Counter
-        this.classInstanceCounter = new Object2IntOpenHashMap<>();
-        this.classInstanceCounter.defaultReturnValue(0);
+        classInstanceCounter = new Object2IntOpenHashMap<>();
+        classInstanceCounter.defaultReturnValue(0);
     }
 
     @Override
     protected void get() {
 
         // Internal
-        this.windowManager = get(WindowManager.class);
-        this.dockLayoutSystem = get(DockLayoutSystem.class);
+        windowManager = get(WindowManager.class);
+        dockLayoutSystem = get(DockLayoutSystem.class);
     }
 
     // Management \\
@@ -101,33 +106,31 @@ public class TabManager extends ManagerPackage {
         if (contentClass == null)
             throwException("Cannot open tab '" + baseTitle + "' without a content context class.");
 
-        // Generate a unique instance title using a per-class counter.
-        // "Preview" becomes "Preview 1", "Preview 2", etc.
         int instance = classInstanceCounter.getInt(contentClass) + 1;
         classInstanceCounter.put(contentClass, instance);
         String title = baseTitle + " " + instance;
 
-        // Collision should never happen with the counter, but guard anyway.
         if (hasTab(title))
             throwException("Tab title collision (this is a bug): " + title);
 
         WindowInstance mainWindow = windowManager.getMainWindow();
 
-        // tabWindow is depth 1 — chrome draws on top of content.
+        // Tab window is depth 1 — chrome draws on top of the editor base layer.
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, mainWindow);
         tabWindow.setDepth(1);
 
         TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
 
-        // contentWindow composites directly to mainWindow at depth 0.
-        // FBOs land in the mainWindow blit queue and are drawn before tab chrome
-        // so content appears underneath the chrome overlay.
+        // Content window is depth 2 — draws on top of chrome.
         WindowInstance contentWindow = windowManager.createLogicalWindow(title, mainWindow);
-        contentWindow.setDepth(0);
+        contentWindow.setDepth(2);
 
         ContextPackage contentContext = internal.createContext(contentClass, contentWindow);
 
-        tabContext.mountContent(contentWindow);
+        // Bridge the two peer contexts so TabContext.onResize() can cascade
+        // canvas bounds down to the content window — same pattern as the
+        // compositor cascading editor canvas bounds down to tab windows.
+        tabContext.linkContent(contentContext);
 
         TabHandle handle = create(TabHandle.class);
         handle.constructor(new TabData(title, contentClass));
@@ -156,7 +159,6 @@ public class TabManager extends ManagerPackage {
         TabContext tabContext = handle.getTabContext();
         ContextPackage contentContext = handle.getContentContext();
 
-        tabContext.unmountContent();
         internal.destroyContext(contentContext);
         internal.destroyContext(tabContext);
 
@@ -164,7 +166,6 @@ public class TabManager extends ManagerPackage {
         tabName2TabID.removeInt(handle.getTabTitle());
         tabID2TabHandle.remove(tabID);
         openTabs.remove(handle);
-        handle.unmount();
     }
 
     public boolean hasTab(String name) {

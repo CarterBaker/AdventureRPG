@@ -6,9 +6,9 @@ import engine.root.HandlePackage;
 public class TabHandle extends HandlePackage {
 
     /*
-     * Runtime handle for one registered/open tab. Wraps immutable TabData and
-     * carries live context references after TabManager opens the shell and child
-     * content contexts.
+     * Runtime handle for one registered open tab. Wraps immutable TabData and
+     * carries live context references after TabManager creates both the shell
+     * and content contexts. isOpen() gates all close-path logic in TabManager.
      */
 
     // Data
@@ -33,13 +33,6 @@ public class TabHandle extends HandlePackage {
         // Active
         this.tabContext = tabContext;
         this.contentContext = contentContext;
-    }
-
-    public void unmount() {
-
-        // Active
-        this.tabContext = null;
-        this.contentContext = null;
     }
 
     // Accessible \\
