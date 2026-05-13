@@ -116,7 +116,7 @@ public class TabManager extends ManagerPackage {
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, mainWindow);
         tabWindow.setDepth(1);
 
-        TabContext tabContext = internal.createTabContext(TabContext.class, tabWindow);
+        TabContext tabContext = (TabContext) internal.createChildContext(context, TabContext.class, tabWindow);
 
         // contentWindow composites directly to mainWindow at depth 0.
         // FBOs land in the mainWindow blit queue and are drawn before tab chrome
@@ -125,7 +125,7 @@ public class TabManager extends ManagerPackage {
         // window2BlitQueue[tabWindow] — pushBlits is never called on logical windows,
         // so those FBOs would be silently dropped every frame.
         WindowInstance contentWindow = windowManager.createLogicalWindow(title, mainWindow);
-        contentWindow.setDepth(0);
+        contentWindow.setDepth(2);
 
         ContextPackage contentContext = internal.createChildContext(tabContext, contentClass, contentWindow);
 

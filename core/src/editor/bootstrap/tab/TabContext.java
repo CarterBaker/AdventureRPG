@@ -4,6 +4,7 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import engine.root.ContextPackage;
@@ -36,6 +37,7 @@ public class TabContext extends ContextPackage {
     // Internal
     private MenuManager menuManager;
     private FboManager fboManager;
+    private FboRenderSystem fboRenderSystem;
 
     // Render Target
     private FboInstance uiFbo;
@@ -52,6 +54,7 @@ public class TabContext extends ContextPackage {
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FboManager.class);
+        this.fboRenderSystem = get(FboRenderSystem.class);
     }
 
     @Override
@@ -64,6 +67,37 @@ public class TabContext extends ContextPackage {
         menuManager.setMenuTargetFbo(getWindow(), uiFbo);
 
         this.chromeMenu = menuManager.openMenu(EngineSetting.MENU_TAB_SHELL, getWindow());
+    }
+
+    @Override
+    protected void update() {
+
+        if (contentWindow == null)
+            return;
+
+        if (contentWindow.hasCompositeRect())
+            return;
+
+        if (!getWindow().hasCompositeRect())
+            return;
+
+        if (!chromeMenu.hasCanvas())
+            return;
+
+        // Canvas became valid after the first onResize() fired.
+        // Propagate now — this runs exactly once.
+        onResize((int) getWindow().getCompositeW(), (int) getWindow().getCompositeH());
+    }
+
+    // Render \\
+
+    @Override
+    protected void render() {
+
+        if (!getWindow().hasCompositeRect())
+            return;
+
+        fboRenderSystem.pushFbo(uiFbo, RuntimeSetting.LAYER_UI, getWindow());
     }
 
     // Management \\

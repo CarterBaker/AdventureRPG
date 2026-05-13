@@ -241,36 +241,6 @@ public class EnginePackage extends ManagerPackage {
         }
     }
 
-    public <T extends ContextPackage> T createTabContext(
-            Class<T> contextClass,
-            WindowInstance logicalWindow) {
-
-        if (logicalWindow == null)
-            throwException("createTabContext() requires a WindowInstance — null was passed.");
-
-        try {
-            SystemPackage.setupConstructor(this.settings, this, this);
-
-            var constructor = contextClass.getDeclaredConstructor();
-            T context = constructor.newInstance();
-
-            context.pendingStart = true;
-            context.setWindow(logicalWindow);
-
-            this.pendingContextList.add(context);
-            this.windowPlatform.makeContextCurrent(logicalWindow.getGLWindow());
-
-            primeContextLifecycle(context);
-
-            return context;
-        } catch (Exception e) {
-            throw new InternalException("Failed to create tab context: " + contextClass.getSimpleName(), e);
-        } finally {
-            this.windowPlatform.restoreMainContext();
-            SystemPackage.SYSTEM_STRUCT.remove();
-        }
-    }
-
     public <T extends ContextPackage> T createChildContext(
             ContextPackage parent,
             Class<T> childClass) {

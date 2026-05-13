@@ -77,19 +77,16 @@ public class RenderManager extends ManagerPackage {
             return;
         }
 
-        // Pass 1 — logical windows: render with own camera, queue FBOs onto OS window
-        // blit queues
-        for (int i = 0; i < count; i++) {
-            WindowInstance window = (WindowInstance) elements[i];
-            if (window.hasNativeHandle())
-                continue;
-            internal.windowPlatform.makeContextCurrent(window.getGLWindow());
-            windowManager.beginRenderWindow(window);
-            draw(window);
-        }
+        // Pass 1 — logical windows: intentionally no render work.
+        // Context systems run at update time. All render calls are queued
+        // into the composite OS window's render queue and flushed in pass 2
+        // under the correct OS window camera.
+        //
+        // Future: this is where per-tab scene FBOs get rendered using
+        // per-tab cameras (editor free cam, game cam, etc.) before the
+        // UI compositing pass. That work lands here once scene FBOs exist.
 
-        // Pass 2 — OS windows: pushBlits picks up logical window FBOs, then swap
-        // buffers
+        // Pass 2 — OS windows: correct camera, full queue, composite blits, swap.
         for (int i = 0; i < count; i++) {
             WindowInstance window = (WindowInstance) elements[i];
             if (!window.hasNativeHandle())
