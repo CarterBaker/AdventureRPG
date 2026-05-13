@@ -18,9 +18,10 @@ public class TabManager extends ManagerPackage {
 
     /*
      * Editor bootstrap manager that owns tab registration and tab lifecycle.
-     * The manager opens a TabContext shell on a logical window, opens the child
-     * content ContextPackage on its own logical window, and mounts the child
-     * into the tab shell for per-frame compositing.
+     * Both the TabContext shell and the content context are created as peers via
+     * internal.createContext() — no parent/child nesting. The returned references
+     * are wired together through mountContent so the tab shell can propagate
+     * resize events to the content window without owning the content lifecycle.
      * Notifies DockLayoutSystem on every open and close so the BSP tree stays
      * in sync with the live tab set.
      *
@@ -28,11 +29,11 @@ public class TabManager extends ManagerPackage {
      * class. A per-class counter produces "Preview 1", "Preview 2", etc. so
      * any number of tabs of the same type can be open simultaneously.
      *
-     * Depth: OS windows are depth 0. Tab logical windows are depth 1 — chrome
-     * draws on top of content. Content logical windows are depth 0 — they
-     * composite directly to mainWindow and are drawn before chrome.
-     * Both logical windows share mainWindow as their composite target so their
-     * FBOs land in the same blit queue and are drawn in depth order.
+     * Depth: tab logical windows are depth 1 — chrome draws on top of content.
+     * Content logical windows are depth 0 — they composite directly to mainWindow
+     * and are drawn before chrome. Both logical windows share mainWindow as their
+     * composite target so their FBOs land in the same blit queue and are drawn
+     * in depth order.
      */
 
     // Palette
@@ -116,18 +117,15 @@ public class TabManager extends ManagerPackage {
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, mainWindow);
         tabWindow.setDepth(1);
 
-        TabContext tabContext = (TabContext) internal.createChildContext(context, TabContext.class, tabWindow);
+        TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
 
         // contentWindow composites directly to mainWindow at depth 0.
         // FBOs land in the mainWindow blit queue and are drawn before tab chrome
         // so content appears underneath the chrome overlay.
-        // Using tabWindow as the composite target would enqueue content FBOs into
-        // window2BlitQueue[tabWindow] — pushBlits is never called on logical windows,
-        // so those FBOs would be silently dropped every frame.
         WindowInstance contentWindow = windowManager.createLogicalWindow(title, mainWindow);
-        contentWindow.setDepth(2);
+        contentWindow.setDepth(0);
 
-        ContextPackage contentContext = internal.createChildContext(tabContext, contentClass, contentWindow);
+        ContextPackage contentContext = internal.createContext(contentClass, contentWindow);
 
         tabContext.mountContent(contentWindow);
 

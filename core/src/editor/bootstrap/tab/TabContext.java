@@ -14,9 +14,11 @@ public class TabContext extends ContextPackage {
 
     /*
      * Thin context shell for a single editor tab. Owns the docker chrome menu
-     * and one content window. When the tab window is resized by the compositor,
-     * onResize fires once and pushes the corrected canvas bounds down to the
-     * content window — no per-frame polling.
+     * and a reference to a peer content window assigned at mount time. When the
+     * tab window is resized by the compositor, onResize fires once and pushes
+     * the corrected canvas bounds down to the content window — no per-frame
+     * polling. The content context is a peer in the engine context array, not
+     * a child — TabContext only holds the window reference, not the lifecycle.
      *
      * Canvas: chromeMenu.hasCanvas() gates the resize path. The menu writes
      * its canvas bounds directly onto the MenuInstance each frame via
@@ -106,7 +108,7 @@ public class TabContext extends ContextPackage {
 
         this.contentWindow = contentWindow;
 
-        // The compositor may have already fired resize before this was called.
+        // The compositor may have already fired resize before mount was called.
         // If we have a valid rect right now, push it immediately — otherwise
         // contentWindow sits at zero forever because the rect won't change again.
         int w = (int) getWindow().getCompositeW();
