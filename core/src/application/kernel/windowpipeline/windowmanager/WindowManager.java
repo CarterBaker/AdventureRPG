@@ -1,4 +1,3 @@
-// core/src/application/kernel/windowpipeline/windowmanager/WindowManager.java
 package application.kernel.windowpipeline.windowmanager;
 
 import application.kernel.windowpipeline.window.WindowData;
@@ -130,9 +129,14 @@ public class WindowManager extends ManagerPackage {
     }
 
     public WindowInstance createLogicalWindow(String title, WindowInstance compositeTarget) {
+
         if (compositeTarget == null)
             throwException("Cannot create logical window without a composite target.");
 
+        // Depth and composite rect are the caller's responsibility.
+        // No default rect is set here — hasCompositeRect() must return false
+        // until the layout system assigns a real screen region. A premature
+        // full-screen rect causes FBOs to blit at the wrong size before layout runs.
         WindowData data = new WindowData(
                 issueWindowID(),
                 compositeTarget.getWidth(),
@@ -142,9 +146,8 @@ public class WindowManager extends ManagerPackage {
         WindowInstance window = create(WindowInstance.class);
         window.constructor(data);
         window.setCompositeTarget(compositeTarget);
-        window.setCompositeRect(0f, 0f, compositeTarget.getWidth(), compositeTarget.getHeight());
-        window.setDepth(1);
         registerDetachedWindow(window);
+
         return window;
     }
 

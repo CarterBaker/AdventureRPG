@@ -57,7 +57,15 @@ public class FboRenderSystem extends SystemPackage {
     }
 
     public void pushFbo(FboInstance fbo, int layer, WindowInstance window, FBODestinationStruct destRect) {
+
         if (fbo == null || window == null)
+            return;
+
+        // Logical windows have no composite rect until the layout system fires
+        // the first valid resize. Pushing before that would resolve to a null
+        // dest rect and blit the FBO full-screen, overwriting the entire OS
+        // window on the opening frame.
+        if (window.hasCompositeTarget() && !window.hasCompositeRect())
             return;
 
         WindowInstance target = window.hasCompositeTarget() ? window.getCompositeTarget() : window;
@@ -72,7 +80,7 @@ public class FboRenderSystem extends SystemPackage {
             return;
 
         // Capture full push state now — target is always the OS window so depth
-        // and rect must be read from the source window here, not later in pushBlits
+        // and rect must be read from the source window here, not later in pushBlits.
         fbo.setPushData(window, layer, window.getDepth(), resolveDestRect(window, destRect));
         queue.add(fbo);
     }
@@ -160,5 +168,4 @@ public class FboRenderSystem extends SystemPackage {
 
         return model;
     }
-
 }

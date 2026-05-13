@@ -30,6 +30,10 @@ public class MenuManager extends ManagerPackage {
      * closing MenuInstances, runtime element injection, and deferred menu closing.
      * Rendering, hit testing, mask stack, lock management, and font upload/release
      * are delegated to dedicated systems.
+     *
+     * Canvas access is no longer routed through this manager. CanvasAreaSystem
+     * writes bounds directly onto each MenuInstance; callers read from the
+     * instance. getCanvas() has been removed.
      */
 
     // Internal
@@ -255,10 +259,6 @@ public class MenuManager extends ManagerPackage {
 
     public ObjectArrayList<MenuInstance> getActiveMenus() {
         return activeMenus;
-    }
-
-    public int[] getCanvas(MenuInstance menu) {
-        return canvasAreaSystem.get(menu);
     }
 
     public void request(String menuName) {

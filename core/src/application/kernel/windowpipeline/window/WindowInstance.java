@@ -153,7 +153,11 @@ public class WindowInstance extends InstancePackage {
     }
 
     public WindowInstance getGLWindow() {
-        return hasNativeHandle() ? this : compositeTarget;
+
+        if (hasNativeHandle())
+            return this;
+
+        return compositeTarget != null ? compositeTarget.getGLWindow() : this;
     }
 
     // Depth \\

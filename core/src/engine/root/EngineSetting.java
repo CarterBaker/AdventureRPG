@@ -317,11 +317,6 @@ public class EngineSetting {
         public static final String TAB_TITLE_PREVIEW = "Preview";
         public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
         public static final String TAB_MENU_TARGET_FBO_SYSTEM_CLASS = "editor.runtime.MenuTargetFboSystem";
-        public static final int TAB_CANVAS_X_INDEX = 0;
-        public static final int TAB_CANVAS_Y_INDEX = 1;
-        public static final int TAB_CANVAS_W_INDEX = 2;
-        public static final int TAB_CANVAS_H_INDEX = 3;
-        public static final int TAB_CANVAS_BOUNDS_LENGTH = 4;
         public static final int EDITOR_TESTING_DROPDOWN_ENTRY_INDEX = 0;
         public static final float DROPDOWN_COLLAPSE_TOLERANCE = 12f;
         public static final String ELEMENT_DEFAULT_MAX_SIZE = "100%";

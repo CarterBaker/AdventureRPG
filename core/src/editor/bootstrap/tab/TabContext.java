@@ -17,10 +17,14 @@ public class TabContext extends ContextPackage {
      * onResize fires once and pushes the corrected canvas bounds down to the
      * content window — no per-frame polling.
      *
+     * Canvas: chromeMenu.hasCanvas() gates the resize path. The menu writes
+     * its canvas bounds directly onto the MenuInstance each frame via
+     * CanvasAreaSystem — no manager call, no index constants.
+     *
      * FBO: each tab window clones FBO_UI so every tab has its own isolated
      * render target. Using getFbo() (the shared singleton) causes all tab
      * chrome menus to write to the same texture — rendering corrupts as soon
-     * as a second tab opens. Pattern matches MenuTargetFboSystem.
+     * as a second tab opens.
      *
      * Zero-size guard: if the BSP assigns a (0,0,0,0) rect during a split
      * frame, or the compositor zeroes an inactive tab, onResize returns early
@@ -65,11 +69,36 @@ public class TabContext extends ContextPackage {
     // Management \\
 
     public void mountContent(WindowInstance contentWindow) {
+
         this.contentWindow = contentWindow;
+
+        // The compositor may have already fired resize before this was called.
+        // If we have a valid rect right now, push it immediately — otherwise
+        // contentWindow sits at zero forever because the rect won't change again.
+        int w = (int) getWindow().getCompositeW();
+        int h = (int) getWindow().getCompositeH();
+
+        if (w > 0 && h > 0)
+            onResize(w, h);
     }
 
     public void unmountContent() {
         this.contentWindow = null;
+    }
+
+    public void deactivate() {
+
+        // Clear both logical window rects so hasCompositeRect() returns false
+        // on both. FboRenderSystem skips pushFbo for any logical window without
+        // a composite rect, so neither the chrome FBO nor the content FBO will
+        // blit while this tab is hidden.
+        // Do not call resize — zero-size resizes cascade into content FBOs and
+        // corrupt them. The layout system will fire a real resize when this tab
+        // becomes active again.
+        getWindow().clearCompositeRect();
+
+        if (contentWindow != null)
+            contentWindow.clearCompositeRect();
     }
 
     // Resize \\
@@ -86,28 +115,24 @@ public class TabContext extends ContextPackage {
         if (width <= 0 || height <= 0)
             return;
 
-        int[] canvas = menuManager.getCanvas(chromeMenu);
-
-        if (canvas == null)
-            return;
-
-        if (canvas.length != EngineSetting.TAB_CANVAS_BOUNDS_LENGTH)
-            return;
-
-        float canvasW = canvas[EngineSetting.TAB_CANVAS_W_INDEX];
-        float canvasH = canvas[EngineSetting.TAB_CANVAS_H_INDEX];
-
         // Guard: chrome menu canvas hasn't laid out yet. The next resize
         // triggered by a real rect will correct it.
+        if (!chromeMenu.hasCanvas())
+            return;
+
+        float canvasX = chromeMenu.getCanvasX();
+        float canvasY = chromeMenu.getCanvasY();
+        float canvasW = chromeMenu.getCanvasW();
+        float canvasH = chromeMenu.getCanvasH();
+
+        // Guard: canvas element has zero size on the frame it first appears.
         if (canvasW <= 0 || canvasH <= 0)
             return;
 
         float tabX = getWindow().getCompositeX();
         float tabY = getWindow().getCompositeY();
-        float x = tabX + canvas[EngineSetting.TAB_CANVAS_X_INDEX];
-        float y = tabY + canvas[EngineSetting.TAB_CANVAS_Y_INDEX];
 
-        contentWindow.setCompositeRect(x, y, canvasW, canvasH);
+        contentWindow.setCompositeRect(tabX + canvasX, tabY + canvasY, canvasW, canvasH);
         contentWindow.resize((int) canvasW, (int) canvasH);
     }
 

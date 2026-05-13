@@ -27,6 +27,12 @@ public class TabManager extends ManagerPackage {
      * Uniqueness is keyed on a generated instance title, not on the content
      * class. A per-class counter produces "Preview 1", "Preview 2", etc. so
      * any number of tabs of the same type can be open simultaneously.
+     *
+     * Depth: OS windows are depth 0. Tab logical windows are depth 1 — chrome
+     * draws on top of content. Content logical windows are depth 0 — they
+     * composite directly to mainWindow and are drawn before chrome.
+     * Both logical windows share mainWindow as their composite target so their
+     * FBOs land in the same blit queue and are drawn in depth order.
      */
 
     // Palette
@@ -36,8 +42,8 @@ public class TabManager extends ManagerPackage {
     // Active
     private ObjectArrayList<TabHandle> openTabs;
 
-    // Counter — tracks how many instances of each content class have been opened
-    // so every generated title is unique for the lifetime of the session.
+    // Counter — tracks how many instances of each content class have been
+    // opened so every generated title is unique for the lifetime of the session.
     private Object2IntOpenHashMap<Class<? extends ContextPackage>> classInstanceCounter;
 
     // Internal
@@ -105,10 +111,22 @@ public class TabManager extends ManagerPackage {
             throwException("Tab title collision (this is a bug): " + title);
 
         WindowInstance mainWindow = windowManager.getMainWindow();
+
+        // tabWindow is depth 1 — chrome draws on top of content.
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, mainWindow);
+        tabWindow.setDepth(1);
+
         TabContext tabContext = internal.createTabContext(TabContext.class, tabWindow);
 
-        WindowInstance contentWindow = windowManager.createLogicalWindow(title, tabWindow);
+        // contentWindow composites directly to mainWindow at depth 0.
+        // FBOs land in the mainWindow blit queue and are drawn before tab chrome
+        // so content appears underneath the chrome overlay.
+        // Using tabWindow as the composite target would enqueue content FBOs into
+        // window2BlitQueue[tabWindow] — pushBlits is never called on logical windows,
+        // so those FBOs would be silently dropped every frame.
+        WindowInstance contentWindow = windowManager.createLogicalWindow(title, mainWindow);
+        contentWindow.setDepth(0);
+
         ContextPackage contentContext = internal.createChildContext(tabContext, contentClass, contentWindow);
 
         tabContext.mountContent(contentWindow);

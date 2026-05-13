@@ -1,11 +1,11 @@
 package editor.runtime;
 
-import application.bootstrap.menupipeline.menumanager.MenuManager;
 import editor.bootstrap.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tab.TabContext;
 import editor.bootstrap.tab.TabHandle;
 import editor.bootstrap.tabmanager.TabManager;
-import engine.root.EngineSetting;
+import application.bootstrap.menupipeline.menu.MenuInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -13,12 +13,28 @@ public class EditorTabCompositorSystem extends SystemPackage {
 
     /*
      * Feeds the dock canvas bounds to DockLayoutSystem each frame, then applies
-     * the resulting per-tab rects to each tab context window. Inactive tabs in
-     * a shared panel receive a zero-size rect so they do not composite.
+     * the resulting per-tab rects to each tab context window.
+     *
+     * Canvas: read directly from the editor menu instance — no manager call,
+     * no index constants. hasCanvas() gates the update; the menu writes its
+     * own bounds each frame via CanvasAreaSystem.
+     *
+     * Active tabs: setCompositeRect + resize so the tab window blits to the
+     * correct region and TabContext.onResize pushes bounds down to the content
+     * window. The change-detection guard includes !hasCompositeRect() so a tab
+     * that was deactivated always fires a resize when it becomes active again —
+     * without the guard, a rect matching the zero field defaults would be
+     * silently skipped and the tab would stay dark.
+     *
+     * Inactive tabs: tabContext.deactivate() clears both the tab window and
+     * content window composite rects so hasCompositeRect() returns false on
+     * both. FboRenderSystem skips any logical window without a composite rect,
+     * so neither the chrome FBO nor the content FBO blits while the tab is
+     * hidden. Do NOT call resize(0,0) — zero-size resizes cascade through
+     * TabContext into the content FBO and corrupt it.
      */
 
     // Internal
-    private MenuManager menuManager;
     private TabManager tabManager;
     private EditorMenuSystem editorMenuSystem;
     private DockLayoutSystem dockLayoutSystem;
@@ -27,9 +43,6 @@ public class EditorTabCompositorSystem extends SystemPackage {
 
     @Override
     protected void get() {
-
-        // Internal
-        this.menuManager = get(MenuManager.class);
         this.tabManager = get(TabManager.class);
         this.editorMenuSystem = get(EditorMenuSystem.class);
         this.dockLayoutSystem = get(DockLayoutSystem.class);
@@ -40,18 +53,15 @@ public class EditorTabCompositorSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        int[] canvas = menuManager.getCanvas(editorMenuSystem.getEditorMenu());
+        MenuInstance editorMenu = editorMenuSystem.getEditorMenu();
 
-        if (canvas == null)
+        if (!editorMenu.hasCanvas())
             return;
 
-        if (canvas.length != EngineSetting.TAB_CANVAS_BOUNDS_LENGTH)
-            return;
-
-        float x = canvas[EngineSetting.TAB_CANVAS_X_INDEX];
-        float y = canvas[EngineSetting.TAB_CANVAS_Y_INDEX];
-        float w = canvas[EngineSetting.TAB_CANVAS_W_INDEX];
-        float h = canvas[EngineSetting.TAB_CANVAS_H_INDEX];
+        float x = editorMenu.getCanvasX();
+        float y = editorMenu.getCanvasY();
+        float w = editorMenu.getCanvasW();
+        float h = editorMenu.getCanvasH();
 
         dockLayoutSystem.computeRects(x, y, w, h);
 
@@ -66,8 +76,10 @@ public class EditorTabCompositorSystem extends SystemPackage {
                 continue;
 
             if (!dockLayoutSystem.isTabActive(handle)) {
-                tabContext.getWindow().setCompositeRect(0f, 0f, 0f, 0f);
-                tabContext.getWindow().resize(0, 0);
+                // Clears both tab window and content window composite rects.
+                // FboRenderSystem skips logical windows without a composite rect
+                // so neither FBO blits while the tab is hidden.
+                tabContext.deactivate();
                 continue;
             }
 
@@ -76,8 +88,20 @@ public class EditorTabCompositorSystem extends SystemPackage {
             float tabW = dockLayoutSystem.getTabW(handle);
             float tabH = dockLayoutSystem.getTabH(handle);
 
-            tabContext.getWindow().setCompositeRect(tabX, tabY, tabW, tabH);
-            tabContext.getWindow().resize((int) tabW, (int) tabH);
+            WindowInstance tabWindow = tabContext.getWindow();
+
+            // hasCompositeRect() guard is required: when a tab transitions from
+            // inactive to active, deactivate() has cleared the rect and the field
+            // values are 0. A tab whose BSP rect happens to be (0,0,w,h) would
+            // pass the numeric comparison and never fire resize without this guard.
+            if (!tabWindow.hasCompositeRect()
+                    || tabWindow.getCompositeX() != tabX
+                    || tabWindow.getCompositeY() != tabY
+                    || tabWindow.getCompositeW() != tabW
+                    || tabWindow.getCompositeH() != tabH) {
+                tabWindow.setCompositeRect(tabX, tabY, tabW, tabH);
+                tabWindow.resize((int) tabW, (int) tabH);
+            }
         }
     }
 }
