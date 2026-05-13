@@ -16,6 +16,14 @@ public class FboManager extends ManagerPackage {
      * Owns FBO data registration, canonical instance creation, and clone
      * distribution. All window-relative instances — canonical and cloned —
      * are tracked so resizeWindowRelative keeps every live FboInstance in sync.
+     *
+     * Only OS windows (hasNativeHandle) are permitted to resize global
+     * (null-tracked)
+     * FBOs. Logical windows resize only their own tracked instances. Global FBOs
+     * are owned by the OS window — a logical window resizing them would clear any
+     * rendered content written by a prior logical window draw call in the same
+     * frame.
+     *
      * Cloned instances are created with the target window's context current so
      * GL resources belong to the correct context.
      */
@@ -106,8 +114,17 @@ public class FboManager extends ManagerPackage {
     }
 
     public void resizeWindowRelative(WindowInstance window, int width, int height) {
-        resizeTracked(null, width, height);
-        resizeTracked(window, width, height);
+        if (!window.hasNativeHandle()) {
+            // Logical windows (tabs, content) own only their own tracked FBO instances.
+            // Global (null-tracked) FBOs belong to the OS window. Resizing them here
+            // would clear content rendered by an earlier logical window draw call
+            // in the same frame before the OS window gets a chance to blit it.
+            resizeTracked(window, width, height);
+        } else {
+            // OS windows resize both global FBOs and their own tracked instances.
+            resizeTracked(null, width, height);
+            resizeTracked(window, width, height);
+        }
     }
 
     // Accessible \\
