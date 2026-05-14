@@ -25,25 +25,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuRenderSystem extends SystemPackage {
 
-    /*
-     * Drives all menu rendering. Each frame, for every active menu, walks the
-     * element tree depth-first and renders each element in three phases:
-     *
-     * 1. Geometry — computeTransform (or stacked/toolbar variant) using the active
-     * state's layout override if one exists.
-     * 2. Content — sprite swap, font color/text, child list selection.
-     * 3. Propagation — recurse into children with mask scissor if requested.
-     *
-     * Active state is click-expanded > hovered > none. Only one state is active
-     * at a time. All overrides (sprite, layout, color, text, children) come from
-     * the active state and degrade gracefully if not set.
-     *
-     * When a hover state has a master handle, hoverStateRoot is rendered as a
-     * full positioned overlay so its own layout, visuals, and stack direction
-     * are respected. Without a master, hover children inline into the owning
-     * element's bounds as before.
-     */
-
     private RenderManager renderManager;
     private CanvasAreaSystem canvasAreaSystem;
     private FontRenderSystem fontRenderSystem;
@@ -116,12 +97,12 @@ public class MenuRenderSystem extends SystemPackage {
         }
 
         if (type == ElementType.CANVAS_AREA) {
-            canvasAreaSystem.register(
-                    currentMenu,
-                    (int) element.getComputedLeft(),
-                    (int) element.getComputedTop(),
-                    (int) element.getComputedW(),
-                    (int) element.getComputedH());
+            int cx = (int) element.getComputedLeft();
+            int cy = (int) element.getComputedTop();
+            int cw = (int) element.getComputedW();
+            int ch = (int) element.getComputedH();
+            // computedTop is in layout space (Y+ down). Convert to OpenGL space (Y+ up).
+            canvasAreaSystem.register(currentMenu, cx, (int) (currentWindow.getHeight() - cy - ch), cw, ch);
         }
 
         renderElementContent(element, activeState);
@@ -146,17 +127,13 @@ public class MenuRenderSystem extends SystemPackage {
         if (type == ElementType.CANVAS_AREA)
             return;
 
-        // Sprite — active state sprite instance if present, else default
         SpriteInstance sprite = resolveSprite(element, activeState);
         if (sprite != null)
             pushSpriteRenderCall(element, sprite);
 
-        // Font — color, text driven by active state overrides where present
         if (element.hasFont())
             pushFontRenderCall(element, activeState);
 
-        // Hover state with a master — render the root container as a positioned
-        // overlay so its own layout, size, color, and stack direction are respected
         if (activeState != null
                 && !element.isClickExpanded()
                 && activeState.hasMaster()
@@ -169,7 +146,6 @@ public class MenuRenderSystem extends SystemPackage {
 
         } else {
 
-            // No master — hover children inline into this element's bounds
             boolean useHoverChildren = activeState != null
                     && !element.isClickExpanded()
                     && element.hasHoverStateChildren();
@@ -202,7 +178,6 @@ public class MenuRenderSystem extends SystemPackage {
             }
         }
 
-        // Click state children — stacked dropdown overlay below the element
         if (element.isClickExpanded() && element.hasClickStateChildren())
             renderClickStateChildren(element);
     }
@@ -239,7 +214,7 @@ public class MenuRenderSystem extends SystemPackage {
         return element.getElementData().getLayout();
     }
 
-    // Click State Children — stacked below the element \\
+    // Click State Children \\
 
     private void renderClickStateChildren(ElementInstance element) {
 
@@ -345,7 +320,6 @@ public class MenuRenderSystem extends SystemPackage {
         FontInstance font = element.getFontInstance();
         ElementData data = element.getElementData();
 
-        // Color — state override takes priority, else restore to element base
         if (activeState != null && activeState.hasColorOverride()) {
             Color c = activeState.getColorOverride();
             font.setColor(c.r, c.g, c.b, c.a);
@@ -354,8 +328,6 @@ public class MenuRenderSystem extends SystemPackage {
             font.setColor(c.r, c.g, c.b, c.a);
         }
 
-        // Text — state override takes priority, else element text (with instance
-        // override)
         String text = activeState != null && activeState.getTextOverride() != null
                 ? activeState.getTextOverride()
                 : element.getText();
@@ -400,19 +372,22 @@ public class MenuRenderSystem extends SystemPackage {
         int w = (int) element.getComputedW();
         int h = (int) element.getComputedH();
 
+        // computedTop is in layout space (Y+ down). Convert to OpenGL space (Y+ up).
+        int openglY = (int) (currentWindow.getHeight() - y - h);
+
         if (maskDepth > 0) {
             MaskStruct prev = maskPool[maskDepth - 1];
             int ix = Math.max(x, prev.getX());
-            int iy = Math.max(y, prev.getY());
+            int iy = Math.max(openglY, prev.getY());
             int ix2 = Math.min(x + w, prev.getX() + prev.getW());
-            int iy2 = Math.min(y + h, prev.getY() + prev.getH());
+            int iy2 = Math.min(openglY + h, prev.getY() + prev.getH());
             x = ix;
-            y = iy;
+            openglY = iy;
             w = Math.max(0, ix2 - ix);
             h = Math.max(0, iy2 - iy);
         }
 
-        maskPool[maskDepth].set(x, y, w, h);
+        maskPool[maskDepth].set(x, openglY, w, h);
         maskDepth++;
     }
 
