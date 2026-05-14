@@ -1,5 +1,6 @@
 package application.bootstrap.menupipeline.menu;
 
+import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.InstancePackage;
@@ -10,14 +11,12 @@ public class MenuInstance extends InstancePackage {
     /*
      * Runtime menu created by MenuManager.openMenu(). Holds the shared MenuData
      * definition, the live element tree for this session, and the window it was
-     * opened in. The window is used by MenuManager to route render calls to the
-     * correct queue and by hit testing to ignore clicks from other windows.
+     * opened in.
      *
-     * Canvas: if this menu defines a canvas_area element, CanvasAreaSystem
-     * writes the computed screen rect directly here each frame. Callers read
-     * the typed accessors rather than going back through the manager. hasCanvas()
-     * returns false until the first layout pass writes a rect — guards in
-     * TabContext.onResize and EditorTabCompositorSystem.update() rely on this.
+     * Canvas: if this menu declared a canvas_area in JSON, a CanvasInstance is
+     * created here at construction time. MenuRenderSystem writes computed OpenGL-
+     * space bounds into it every frame. Null means no canvas. Callers null-check
+     * getCanvas() directly.
      *
      * Visible by default.
      */
@@ -30,11 +29,7 @@ public class MenuInstance extends InstancePackage {
     private WindowInstance window;
 
     // Canvas
-    private int canvasX;
-    private int canvasY;
-    private int canvasW;
-    private int canvasH;
-    private boolean hasCanvas;
+    private CanvasInstance canvas;
 
     // State
     private boolean visible;
@@ -45,84 +40,46 @@ public class MenuInstance extends InstancePackage {
             MenuData data,
             ObjectArrayList<ElementInstance> elements,
             WindowInstance window) {
-
-        // Internal
         this.data = data;
         this.elements = elements;
-
-        // Identity
         this.window = window;
-
-        // Canvas
-        this.hasCanvas = false;
-
-        // State
+        this.canvas = data.hasCanvasArea() ? create(CanvasInstance.class) : null;
         this.visible = true;
     }
 
     // Entry Points \\
 
     public ElementInstance getEntryPoint(int index) {
-
         ObjectArrayList<String> eps = data.getEntryPoints();
-
         if (eps == null || index >= eps.size())
             return null;
-
         return findById(elements, eps.get(index));
     }
 
     public void addToEntryPoint(int index, ElementInstance element) {
-
         ElementInstance container = getEntryPoint(index);
-
         if (container != null)
             container.addChild(element);
     }
 
     public void removeFromEntryPoint(int index, ElementInstance element) {
-
         ElementInstance container = getEntryPoint(index);
-
         if (container != null)
             container.removeChild(element);
     }
 
     private ElementInstance findById(ObjectArrayList<ElementInstance> list, String id) {
-
         for (int i = 0; i < list.size(); i++) {
-
             ElementInstance el = list.get(i);
-
             if (el.getElementData().getId().equals(id))
                 return el;
-
             if (el.hasChildren()) {
                 ElementInstance found = findById(el.getChildren(), id);
                 if (found != null)
                     return found;
             }
         }
-
         return null;
-    }
-
-    // Canvas \\
-
-    public void setCanvas(int x, int y, int w, int h) {
-        this.canvasX = x;
-        this.canvasY = y;
-        this.canvasW = w;
-        this.canvasH = h;
-        this.hasCanvas = true;
-    }
-
-    public void clearCanvas() {
-        this.canvasX = 0;
-        this.canvasY = 0;
-        this.canvasW = 0;
-        this.canvasH = 0;
-        this.hasCanvas = false;
     }
 
     // Visibility \\
@@ -157,23 +114,7 @@ public class MenuInstance extends InstancePackage {
         return visible;
     }
 
-    public int getCanvasX() {
-        return canvasX;
-    }
-
-    public int getCanvasY() {
-        return canvasY;
-    }
-
-    public int getCanvasW() {
-        return canvasW;
-    }
-
-    public int getCanvasH() {
-        return canvasH;
-    }
-
-    public boolean hasCanvas() {
-        return hasCanvas;
+    public CanvasInstance getCanvas() {
+        return canvas;
     }
 }

@@ -1,6 +1,5 @@
 package application.bootstrap.menupipeline;
 
-import application.bootstrap.menupipeline.canvassystem.CanvasAreaSystem;
 import application.bootstrap.menupipeline.cursorlocksystem.CursorLockSystem;
 import application.bootstrap.menupipeline.elementhitsystem.ElementHitSystem;
 import application.bootstrap.menupipeline.elementsystem.ElementSystem;
@@ -24,7 +23,6 @@ public class MenuPipeline extends PipelinePackage {
         create(FontManager.class);
         create(ElementSystem.class);
         create(ElementHitSystem.class);
-        create(CanvasAreaSystem.class);
         create(MenuRenderSystem.class);
         create(FontRenderSystem.class);
         create(MenuManager.class);

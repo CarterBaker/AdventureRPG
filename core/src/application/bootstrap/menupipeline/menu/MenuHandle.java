@@ -40,6 +40,10 @@ public class MenuHandle extends HandlePackage {
         return data.isRaycastInput();
     }
 
+    public boolean hasCanvasArea() {
+        return data.hasCanvasArea();
+    }
+
     public ObjectArrayList<String> getEntryPoints() {
         return data.getEntryPoints();
     }

@@ -1,5 +1,6 @@
 package editor.bootstrap.tab;
 
+import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
@@ -101,22 +102,24 @@ public class TabContext extends ContextPackage {
         if (width <= 0 || height <= 0)
             return;
 
-        if (!chromeMenu.hasCanvas())
+        CanvasInstance canvas = chromeMenu.getCanvas();
+
+        if (canvas == null)
             return;
 
-        float canvasX = chromeMenu.getCanvasX();
-        float canvasY = chromeMenu.getCanvasY();
-        float canvasW = chromeMenu.getCanvasW();
-        float canvasH = chromeMenu.getCanvasH();
-
-        if (canvasW <= 0 || canvasH <= 0)
+        if (canvas.getW() <= 0 || canvas.getH() <= 0)
             return;
 
         float tabX = getWindow().getCompositeX();
         float tabY = getWindow().getCompositeY();
 
-        contentContext.getWindow().setCompositeRect(tabX + canvasX, tabY + canvasY, canvasW, canvasH);
-        contentContext.getWindow().resize((int) canvasW, (int) canvasH);
+        contentContext.getWindow().setCompositeRect(
+                tabX + canvas.getX(),
+                tabY + canvas.getY(),
+                canvas.getW(),
+                canvas.getH());
+
+        contentContext.getWindow().resize(canvas.getW(), canvas.getH());
     }
 
     // Accessible \\

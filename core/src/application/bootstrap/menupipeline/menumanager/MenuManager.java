@@ -2,7 +2,6 @@ package application.bootstrap.menupipeline.menumanager;
 
 import java.util.function.Consumer;
 
-import application.bootstrap.menupipeline.canvassystem.CanvasAreaSystem;
 import application.bootstrap.menupipeline.cursorlocksystem.CursorLockSystem;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
@@ -28,12 +27,11 @@ public class MenuManager extends ManagerPackage {
     /*
      * Owns the menu palette and drives the menu lifecycle. Handles opening and
      * closing MenuInstances, runtime element injection, and deferred menu closing.
-     * Rendering, hit testing, mask stack, lock management, and font upload/release
-     * are delegated to dedicated systems.
+     * Rendering, hit testing, mask stack, and lock management are delegated to
+     * dedicated systems.
      *
-     * Canvas access is no longer routed through this manager. CanvasAreaSystem
-     * writes bounds directly onto each MenuInstance; callers read from the
-     * instance. getCanvas() has been removed.
+     * Canvas bounds are owned by MenuInstance and written directly by
+     * MenuRenderSystem each frame. Nothing in this manager touches canvas state.
      */
 
     // Internal
@@ -41,7 +39,6 @@ public class MenuManager extends ManagerPackage {
     private MenuRenderSystem renderSystem;
     private ElementHitSystem hitSystem;
     private CursorLockSystem lockSystem;
-    private CanvasAreaSystem canvasAreaSystem;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
@@ -79,7 +76,6 @@ public class MenuManager extends ManagerPackage {
         this.renderSystem = get(MenuRenderSystem.class);
         this.hitSystem = get(ElementHitSystem.class);
         this.lockSystem = get(CursorLockSystem.class);
-        this.canvasAreaSystem = get(CanvasAreaSystem.class);
     }
 
     @Override
@@ -113,11 +109,8 @@ public class MenuManager extends ManagerPackage {
             return;
 
         for (int i = 0; i < pendingCloseMenus.size(); i++) {
-
             MenuInstance instance = pendingCloseMenus.get(i);
-
             renderSystem.releaseFontModels(instance.getElements());
-            canvasAreaSystem.unregister(instance);
             activeMenus.remove(instance);
         }
 
@@ -165,7 +158,6 @@ public class MenuManager extends ManagerPackage {
     }
 
     public void refreshText(ElementInstance element) {
-
         singletonScratch.clear();
         singletonScratch.add(element);
     }

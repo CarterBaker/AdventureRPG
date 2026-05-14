@@ -97,10 +97,8 @@ class InternalBuilder extends BuilderPackage {
     }
 
     void resolveAllDeferredRefs() {
-
         for (int i = 0; i < deferredRefs.size(); i++)
             deferredRefs.get(i).run();
-
         deferredRefs.clear();
     }
 
@@ -111,6 +109,7 @@ class InternalBuilder extends BuilderPackage {
         String id = JsonUtility.validateString(menuJson, "id");
         boolean lockInput = JsonUtility.getBoolean(menuJson, "lock_input", false);
         boolean raycastInput = JsonUtility.getBoolean(menuJson, "raycast_input", false);
+        boolean hasCanvasArea = scanForCanvasArea(menuJson);
 
         ObjectArrayList<String> entryPoints = new ObjectArrayList<>();
 
@@ -127,11 +126,29 @@ class InternalBuilder extends BuilderPackage {
                 DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT),
                 true);
 
-        MenuData data = new MenuData(filePath + "/" + id, lockInput, raycastInput, entryPoints);
+        MenuData data = new MenuData(filePath + "/" + id, lockInput, raycastInput, hasCanvasArea, entryPoints);
         MenuHandle handle = create(MenuHandle.class);
         handle.constructor(data, nodes);
 
         return handle;
+    }
+
+    private boolean scanForCanvasArea(JsonObject json) {
+
+        if (!json.has("elements"))
+            return false;
+
+        JsonArray elements = json.getAsJsonArray("elements");
+
+        for (int i = 0; i < elements.size(); i++) {
+            JsonObject el = elements.get(i).getAsJsonObject();
+            if (el.has("type") && el.get("type").getAsString().equalsIgnoreCase("canvas_area"))
+                return true;
+            if (scanForCanvasArea(el))
+                return true;
+        }
+
+        return false;
     }
 
     // Top-Level Master Registration \\
@@ -408,7 +425,6 @@ class InternalBuilder extends BuilderPackage {
 
         JsonObject stateJson = json.getAsJsonObject(stateKey);
 
-        // Null master means "self" — resolved at runtime by the hit/render system
         ElementHandle baseMaster = null;
 
         if (stateJson.has("use")) {
@@ -416,8 +432,6 @@ class InternalBuilder extends BuilderPackage {
             baseMaster = resolveTemplate(usePath, id);
         }
 
-        // Font context inherits from base master when using another element,
-        // otherwise falls through to the parent element's inherited context
         boolean explicitFontSize = stateJson.has("font_size")
                 || (baseMaster != null ? baseMaster.hasExplicitFontSize() : inheritedExplicitFontSize);
         String fontName = JsonUtility.getString(stateJson, "font",
@@ -426,18 +440,12 @@ class InternalBuilder extends BuilderPackage {
                 ? DimensionValue.parse(stateJson.get("font_size").getAsString())
                 : (baseMaster != null ? baseMaster.getFontSize() : inheritedFontSize);
 
-        // Children — inline elements in the state block take priority; if none are
-        // defined and a base master was referenced via use, inherit its child tree
-        // so "use: some_dropdown" automatically pulls in that dropdown's buttons
         ObjectArrayList<MenuNodeStruct> jsonChildren = buildNodes(
                 filePath, stateJson, fontName, fontSize, explicitFontSize);
         ObjectArrayList<MenuNodeStruct> children = !jsonChildren.isEmpty()
                 ? jsonChildren
                 : baseMaster != null ? baseMaster.getChildren() : new ObjectArrayList<>();
 
-        // Layout merge: when using another base master, merge at build time;
-        // when self (null master), store partial and let runtime merge with element's
-        // layout
         LayoutStruct partialLayout = FileParserUtility.parseLayoutOverride(stateJson);
         LayoutStruct layoutOverride = null;
 
@@ -526,38 +534,30 @@ class InternalBuilder extends BuilderPackage {
     }
 
     private File tryResolveFile(String filePath) {
-
         for (String ext : EngineSetting.JSON_FILE_EXTENSIONS) {
             File f = new File(root, filePath + (ext.startsWith(".") ? "" : ".") + ext);
             if (f.exists())
                 return f;
         }
-
         return null;
     }
 
     private File resolveFile(String filePath) {
-
         File f = tryResolveFile(filePath);
-
         if (f == null)
             throwException("File not found: '" + filePath
                     + "' (root: " + root.getAbsolutePath() + ")");
-
         return f;
     }
 
     // Sprite Resolution \\
 
     private String resolveSpriteName(String elementId, String spritePath) {
-
         if (spritePath == null)
             return null;
-
         if (!spriteManager.hasSprite(spritePath))
             throwException("Sprite not found for element '" + elementId
                     + "': '" + spritePath + "'");
-
         return spritePath;
     }
 }

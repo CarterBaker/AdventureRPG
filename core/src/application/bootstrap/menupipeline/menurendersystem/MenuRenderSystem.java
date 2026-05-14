@@ -1,6 +1,5 @@
 package application.bootstrap.menupipeline.menurendersystem;
 
-import application.bootstrap.menupipeline.canvassystem.CanvasAreaSystem;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
@@ -26,7 +25,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MenuRenderSystem extends SystemPackage {
 
     private RenderManager renderManager;
-    private CanvasAreaSystem canvasAreaSystem;
     private FontRenderSystem fontRenderSystem;
     private FboRenderSystem fboRenderSystem;
 
@@ -49,7 +47,6 @@ public class MenuRenderSystem extends SystemPackage {
     @Override
     protected void get() {
         this.renderManager = get(RenderManager.class);
-        this.canvasAreaSystem = get(CanvasAreaSystem.class);
         this.fontRenderSystem = get(FontRenderSystem.class);
         this.fboRenderSystem = get(FboRenderSystem.class);
     }
@@ -101,8 +98,8 @@ public class MenuRenderSystem extends SystemPackage {
             int cy = (int) element.getComputedTop();
             int cw = (int) element.getComputedW();
             int ch = (int) element.getComputedH();
-            // computedTop is in layout space (Y+ down). Convert to OpenGL space (Y+ up).
-            canvasAreaSystem.register(currentMenu, cx, (int) (currentWindow.getHeight() - cy - ch), cw, ch);
+            // computedTop is layout space (Y+ down). Convert to OpenGL space (Y+ up).
+            currentMenu.getCanvas().set(cx, (int) (currentWindow.getHeight() - cy - ch), cw, ch);
         }
 
         renderElementContent(element, activeState);
@@ -372,7 +369,7 @@ public class MenuRenderSystem extends SystemPackage {
         int w = (int) element.getComputedW();
         int h = (int) element.getComputedH();
 
-        // computedTop is in layout space (Y+ down). Convert to OpenGL space (Y+ up).
+        // computedTop is layout space (Y+ down). Convert to OpenGL space (Y+ up).
         int openglY = (int) (currentWindow.getHeight() - y - h);
 
         if (maskDepth > 0) {
