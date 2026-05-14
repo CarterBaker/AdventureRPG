@@ -5,12 +5,12 @@
       "raycast_input": true,
       "elements": [
         {
-          "id": "tab_bar",
+          "id": "window_frame",
           "type": "sprite",
           "anchor": "top_left",
           "pivot": "top_left",
           "position": {"x": "0%", "y": "0%"},
-          "size": {"x": "100%", "y": "32px"},
+          "size": {"x": "100%", "y": "100%"},
           "color": [1.0, 1.0, 1.0, 1.0]
         },
         {
@@ -18,8 +18,8 @@
           "type": "canvas_area",
           "anchor": "top_left",
           "pivot": "top_left",
-          "position": {"x": "0%", "y": "32px"},
-          "size": {"x": "100%", "y": "calc(100% - 32px)"}
+          "position": {"x": "1px", "y": "32px"},
+          "size": {"x": "calc(100% - 2px)", "y": "calc(100% - 33px)"}
         }
       ]
     }
