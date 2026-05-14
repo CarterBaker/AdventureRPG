@@ -312,8 +312,9 @@ public class EngineSetting {
         // Menu \\
 
         public static final String MENU_TAB_SHELL = "editor/TabShell/TabShell";
-        public static final String MENU_EDITOR_MAIN = "EditorWindow/Main";
-        public static final String MENU_EDITOR_SECONDARY = "EditorWindow/Secondary";
+        public static final String MENU_EDITOR_BASE = "EditorWindow/Base";
+        public static final String MENU_EDITOR_TOOLBAR = "EditorWindow/Toolbar";
+        public static final String WINDOW_TITLE_EDITOR_TOOLBAR = "Editor Toolbar";
         public static final String TAB_TITLE_PREVIEW = "Preview";
         public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
         public static final String TAB_MENU_TARGET_FBO_SYSTEM_CLASS = "editor.runtime.MenuTargetFboSystem";

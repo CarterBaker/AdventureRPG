@@ -3,7 +3,6 @@ package editor.bootstrap.docklayoutsystem;
 import editor.bootstrap.docknode.DockNodeStruct;
 import editor.bootstrap.tab.TabHandle;
 import engine.root.SystemPackage;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class DockLayoutSystem extends SystemPackage {
 

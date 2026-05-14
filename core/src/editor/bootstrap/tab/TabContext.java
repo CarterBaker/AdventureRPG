@@ -50,16 +50,18 @@ public class TabContext extends ContextPackage {
 
     @Override
     protected void get() {
-        this.menuManager = get(MenuManager.class);
-        this.fboManager = get(FboManager.class);
-        this.fboRenderSystem = get(FboRenderSystem.class);
+
+        // Internal
+        menuManager = get(MenuManager.class);
+        fboManager = get(FboManager.class);
+        fboRenderSystem = get(FboRenderSystem.class);
     }
 
     @Override
     protected void awake() {
-        this.uiFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, getWindow());
+        uiFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, getWindow());
         menuManager.setMenuTargetFbo(getWindow(), uiFbo);
-        this.chromeMenu = menuManager.openMenu(EngineSetting.MENU_TAB_SHELL, getWindow());
+        chromeMenu = menuManager.openMenu(EngineSetting.MENU_TAB_SHELL, getWindow());
     }
 
     // Render \\
@@ -77,18 +79,6 @@ public class TabContext extends ContextPackage {
 
     public void linkContent(ContextPackage contentContext) {
         this.contentContext = contentContext;
-    }
-
-    public void deactivate() {
-
-        // Clear both window rects so hasCompositeRect() returns false on both.
-        // FboRenderSystem skips any logical window without a composite rect —
-        // neither FBO blits while the tab is hidden.
-        // Do not resize to zero — that cascades into content FBOs and corrupts them.
-        getWindow().clearCompositeRect();
-
-        if (contentContext != null)
-            contentContext.getWindow().clearCompositeRect();
     }
 
     // Resize \\

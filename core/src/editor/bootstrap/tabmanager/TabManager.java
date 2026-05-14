@@ -1,4 +1,3 @@
-
 package editor.bootstrap.tabmanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -39,6 +38,11 @@ public class TabManager extends ManagerPackage {
      * FboRenderSystem sort key = windowDepth * LAYER_STRIDE + layer, so this
      * ordering is automatically enforced each frame without any manual sorting
      * at this level.
+     *
+     * Rect propagation fires only on structural changes — tab opened, tab
+     * closed, dock canvas resized. The compositor calls setDockRect() on
+     * resize. openTab() and closeTab() call pushRects() directly using the
+     * cached bounds so every tab window always holds a valid composite rect.
      */
 
     // Palette
@@ -51,6 +55,12 @@ public class TabManager extends ManagerPackage {
     // Counter — tracks how many instances of each content class have been
     // opened so every generated title is unique for the lifetime of the session.
     private Object2IntOpenHashMap<Class<? extends ContextPackage>> classInstanceCounter;
+
+    // Dock Rect
+    private float dockX;
+    private float dockY;
+    private float dockW;
+    private float dockH;
 
     // Internal
     private WindowManager windowManager;
@@ -142,6 +152,7 @@ public class TabManager extends ManagerPackage {
         openTabs.add(handle);
 
         dockLayoutSystem.addTab(handle);
+        pushRects();
 
         return handle;
     }
@@ -166,6 +177,43 @@ public class TabManager extends ManagerPackage {
         tabName2TabID.removeInt(handle.getTabTitle());
         tabID2TabHandle.remove(tabID);
         openTabs.remove(handle);
+
+        pushRects();
+    }
+
+    public void setDockRect(float x, float y, float w, float h) {
+
+        dockX = x;
+        dockY = y;
+        dockW = w;
+        dockH = h;
+
+        pushRects();
+    }
+
+    private void pushRects() {
+
+        if (dockW <= 0 || dockH <= 0)
+            return;
+
+        dockLayoutSystem.computeRects(dockX, dockY, dockW, dockH);
+
+        Object[] elements = openTabs.elements();
+        int size = openTabs.size();
+
+        for (int i = 0; i < size; i++) {
+
+            TabHandle handle = (TabHandle) elements[i];
+
+            float x = dockLayoutSystem.getTabX(handle);
+            float y = dockLayoutSystem.getTabY(handle);
+            float w = dockLayoutSystem.getTabW(handle);
+            float h = dockLayoutSystem.getTabH(handle);
+
+            WindowInstance tabWindow = handle.getTabContext().getWindow();
+            tabWindow.setCompositeRect(x, y, w, h);
+            tabWindow.resize((int) w, (int) h);
+        }
     }
 
     public boolean hasTab(String name) {

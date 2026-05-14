@@ -51,9 +51,7 @@
   ],
   "menus": [
     {
-      "id": "Main",
-      "raycast_input": true,
-      "entry_points": ["testing_dropdown"],
+      "id": "Base",
       "elements": [
         {
           "id": "background",
@@ -65,6 +63,21 @@
           "sprite": "util/Default",
           "color": [0.13, 0.13, 0.13, 1.0]
         },
+        {
+          "id": "dock_canvas",
+          "type": "canvas_area",
+          "anchor": "top_left",
+          "pivot": "top_left",
+          "position": {"x": "0%", "y": "28px"},
+          "size": {"x": "100%", "y": "calc(100% - 28px)"}
+        }
+      ]
+    },
+    {
+      "id": "Toolbar",
+      "raycast_input": true,
+      "entry_points": ["testing_dropdown"],
+      "elements": [
         {
           "id": "toolbar",
           "use": "util/ToolBar",
@@ -109,11 +122,6 @@
               ]
             }
           ]
-        },
-        {
-          "id": "dock_canvas",
-          "type": "canvas_area",
-          "size": {"x": "100%", "y": "calc(100% - 28px)"}
         }
       ]
     },
