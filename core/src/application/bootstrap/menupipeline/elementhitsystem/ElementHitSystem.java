@@ -7,9 +7,8 @@ import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
-import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
-import application.bootstrap.physicspipeline.util.ScreenRayStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
+import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.settings.KeyBindings;
@@ -47,21 +46,25 @@ public class ElementHitSystem extends SystemPackage {
      * hoverAnchorCapture is a scratch field valid only during a single
      * hoverTestElements traversal.
      *
-     * Click state expansion and collapse fire on press-release edge.
+     * Click detection uses bindingClicked — already a single-frame latch,
+     * no wasPressed edge detection needed.
      * Action resolution is cached on first call.
      *
      * Interactivity is capability-driven — any element with a hover state, click
      * state, or action participates in hit testing regardless of element type.
+     *
+     * Y axis: engine is Y+ up. GLFW reports Y=0 at top increasing downward.
+     * mouseY is flipped on entry: hoveredWindow.getHeight() -
+     * inputSystem.getMouseY().
      */
 
     private static final String PARENT_ARG = "$parent";
 
     // Internal
-    private RaycastManager raycastManager;
+    private WindowManager windowManager;
     private InputSystem inputSystem;
 
     // State
-    private boolean wasPressed;
     private ElementInstance hoveredElement;
     private ElementInstance hoverAnchor;
     private ElementInstance hoverAnchorCapture;
@@ -83,7 +86,7 @@ public class ElementHitSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.raycastManager = get(RaycastManager.class);
+        this.windowManager = get(WindowManager.class);
         this.inputSystem = get(InputSystem.class);
     }
 
@@ -91,28 +94,19 @@ public class ElementHitSystem extends SystemPackage {
 
     public void updateRaycast(ObjectArrayList<MenuInstance> activeMenus) {
 
-        if (!raycastManager.hasScreenRay())
+        WindowInstance hoveredWindow = windowManager.getHoveredWindow();
+
+        if (hoveredWindow == null)
             return;
 
-        ScreenRayStruct ray = raycastManager.getScreenRay();
-        int rayWindowID = ray.getWindowID();
-
-        WindowInstance rayWindow = resolveRayWindow(activeMenus, rayWindowID);
-
-        if (rayWindow == null)
-            return;
-
-        float mouseX = ray.getScreenX();
-        float mouseY = rayWindow.getHeight() - ray.getScreenY();
+        int rayWindowID = hoveredWindow.getWindowID();
+        float mouseX = inputSystem.getMouseX();
+        float mouseY = hoveredWindow.getHeight() - inputSystem.getMouseY();
 
         updateHover(activeMenus, mouseX, mouseY, rayWindowID);
         checkClickStateCollapse(mouseX, mouseY);
 
-        boolean pressed = inputSystem.bindingClicked(KeyBindings.PRIMARY);
-        boolean clicked = pressed && !wasPressed;
-        wasPressed = pressed;
-
-        if (!clicked)
+        if (!inputSystem.bindingClicked(KeyBindings.PRIMARY))
             return;
 
         for (int i = activeMenus.size() - 1; i >= 0; i--) {
@@ -134,7 +128,6 @@ public class ElementHitSystem extends SystemPackage {
     }
 
     public void resetPressed() {
-        this.wasPressed = false;
         this.openClickState = null;
         clearHover();
     }
@@ -200,7 +193,6 @@ public class ElementHitSystem extends SystemPackage {
             ElementInstance element = elements.get(i);
             ElementData data = element.getElementData();
 
-            // Default children
             if (element.hasChildren()) {
 
                 float cl = clipLeft, ct = clipTop, cr = clipRight, cb = clipBottom;
@@ -219,7 +211,6 @@ public class ElementHitSystem extends SystemPackage {
                     return childHit;
             }
 
-            // Click state children — visible and interactive when click-expanded
             if (element.isClickExpanded() && element.hasClickStateChildren()) {
 
                 ElementInstance childHit = hoverTestElements(
@@ -230,9 +221,6 @@ public class ElementHitSystem extends SystemPackage {
                     return childHit;
             }
 
-            // Master-based hover overlay — test root children only when the cursor is
-            // over the owning element (bootstraps hover on first entry) OR the element
-            // is already hovered (maintains hover while cursor moves into the panel)
             if (element.hasHoverStateRoot()) {
 
                 if (element.isHovered() || isHit(element, mouseX, mouseY)) {
@@ -252,7 +240,6 @@ public class ElementHitSystem extends SystemPackage {
                     hoverAnchorCapture = prevCapture;
                 }
 
-                // Inline hover children — owning element must already be hovered
             } else if (element.isHovered() && element.hasHoverStateChildren()) {
 
                 ElementInstance prevCapture = hoverAnchorCapture;
@@ -270,7 +257,6 @@ public class ElementHitSystem extends SystemPackage {
                 hoverAnchorCapture = prevCapture;
             }
 
-            // Element itself — capability-driven, type is irrelevant
             boolean hoverable = element.hasHoverState() || element.hasClickState() || data.hasAction();
 
             if (!hoverable)
@@ -337,7 +323,6 @@ public class ElementHitSystem extends SystemPackage {
             ElementInstance element = elements.get(i);
             ElementData data = element.getElementData();
 
-            // Default children
             if (element.hasChildren()) {
 
                 float cl = clipLeft, ct = clipTop, cr = clipRight, cb = clipBottom;
@@ -354,7 +339,6 @@ public class ElementHitSystem extends SystemPackage {
                     return true;
             }
 
-            // Click state children — interactive when click-expanded
             if (element.isClickExpanded() && element.hasClickStateChildren()) {
 
                 if (hitTestElements(element.getClickStateChildren(), mouseX, mouseY,
@@ -362,15 +346,12 @@ public class ElementHitSystem extends SystemPackage {
                     return true;
             }
 
-            // Master-based hover overlay — gated on isHovered() so buttons are only
-            // clickable when the panel is actually visible
             if (element.isHovered() && element.hasHoverStateRoot()) {
 
                 if (hitTestElements(element.getHoverStateRoot().getChildren(), mouseX, mouseY,
                         clipLeft, clipTop, clipRight, clipBottom, menu))
                     return true;
 
-                // Inline hover children — same gate, consistent with master-based path
             } else if (element.isHovered() && element.hasHoverStateChildren()) {
 
                 if (hitTestElements(element.getHoverStateChildren(), mouseX, mouseY,
@@ -378,7 +359,6 @@ public class ElementHitSystem extends SystemPackage {
                     return true;
             }
 
-            // Element itself — capability-driven, type is irrelevant
             boolean interactive = element.hasClickState() || data.hasAction();
 
             if (!interactive)
@@ -464,6 +444,7 @@ public class ElementHitSystem extends SystemPackage {
                 return () -> invoke(method, target, arg);
 
             return () -> invoke(method, target);
+
         } catch (Exception e) {
             throwException("Failed to resolve button action: "
                     + data.getActionClass() + "#" + data.getActionMethod(), e);
@@ -483,6 +464,7 @@ public class ElementHitSystem extends SystemPackage {
             Method method = target.getClass().getMethod(data.getActionMethod(), MenuInstance.class);
 
             return p -> invoke(method, target, p);
+
         } catch (Exception e) {
             throwException("Failed to resolve menu-aware action: "
                     + data.getActionClass() + "#" + data.getActionMethod(), e);
@@ -500,19 +482,6 @@ public class ElementHitSystem extends SystemPackage {
     }
 
     // Util \\
-
-    private WindowInstance resolveRayWindow(
-            ObjectArrayList<MenuInstance> activeMenus,
-            int rayWindowID) {
-
-        for (int i = 0; i < activeMenus.size(); i++) {
-            WindowInstance candidate = activeMenus.get(i).getWindow();
-            if (candidate.getWindowID() == rayWindowID)
-                return candidate;
-        }
-
-        return null;
-    }
 
     private boolean isHit(ElementInstance element, float mouseX, float mouseY) {
         float left = element.getComputedLeft();

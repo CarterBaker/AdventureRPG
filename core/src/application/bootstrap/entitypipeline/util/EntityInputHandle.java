@@ -1,15 +1,17 @@
-package application.bootstrap.inputpipeline.input;
+package application.bootstrap.entitypipeline.util;
 
 import engine.root.HandlePackage;
 import engine.util.mathematics.vectors.Vector3;
 
-public class InputHandle extends HandlePackage {
+public class EntityInputHandle extends HandlePackage {
 
     /*
-     * Universal input container owned by every entity. Holds movement booleans,
-     * action booleans, and facing direction. Written each frame by PlayerManager
-     * for the player entity or by AI for NPCs. MovementManager reads from this
-     * and never cares about the source.
+     * Game-semantic input container owned by every entity. Holds movement
+     * booleans, action booleans, and facing direction. Written each frame by
+     * PlayerManager for the player entity or by AI for NPCs. MovementManager
+     * reads from this and never cares about the source.
+     * Disconnected from RawInputHandle by design — the translation from raw
+     * hardware state to game intent happens in PlayerManager.
      */
 
     // Movement
@@ -41,72 +43,72 @@ public class InputHandle extends HandlePackage {
         return forward;
     }
 
-    public void setForward(boolean forward) {
-        this.forward = forward;
-    }
-
     public boolean isBack() {
         return back;
-    }
-
-    public void setBack(boolean back) {
-        this.back = back;
     }
 
     public boolean isLeft() {
         return left;
     }
 
-    public void setLeft(boolean left) {
-        this.left = left;
-    }
-
     public boolean isRight() {
         return right;
-    }
-
-    public void setRight(boolean right) {
-        this.right = right;
     }
 
     public boolean isJump() {
         return jump;
     }
 
-    public void setJump(boolean jump) {
-        this.jump = jump;
-    }
-
     public boolean isWalk() {
         return walk;
-    }
-
-    public void setWalk(boolean walk) {
-        this.walk = walk;
     }
 
     public boolean isSprint() {
         return sprint;
     }
 
-    public void setSprint(boolean sprint) {
-        this.sprint = sprint;
+    public void setForward(boolean v) {
+        forward = v;
+    }
+
+    public void setBack(boolean v) {
+        back = v;
+    }
+
+    public void setLeft(boolean v) {
+        left = v;
+    }
+
+    public void setRight(boolean v) {
+        right = v;
+    }
+
+    public void setJump(boolean v) {
+        jump = v;
+    }
+
+    public void setWalk(boolean v) {
+        walk = v;
+    }
+
+    public void setSprint(boolean v) {
+        sprint = v;
     }
 
     public boolean isPrimaryAction() {
         return primaryAction;
     }
 
-    public void setPrimaryAction(boolean primaryAction) {
-        this.primaryAction = primaryAction;
-    }
-
     public boolean isSecondaryAction() {
         return secondaryAction;
     }
 
-    public void setSecondaryAction(boolean secondaryAction) {
-        this.secondaryAction = secondaryAction;
+    public void setPrimaryAction(boolean v) {
+        primaryAction = v;
+    }
+
+    public void setSecondaryAction(boolean v) {
+        secondaryAction = v;
     }
 
     public Vector3 getFacingDirection() {
@@ -114,7 +116,7 @@ public class InputHandle extends HandlePackage {
     }
 
     public void setFacingDirection(float x, float y, float z) {
-        this.facingDirection.set(x, y, z);
+        facingDirection.set(x, y, z);
     }
 
     // Utility \\

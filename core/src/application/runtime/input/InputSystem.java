@@ -2,7 +2,8 @@ package application.runtime.input;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
-import application.bootstrap.inputpipeline.input.InputHandle;
+import application.bootstrap.entitypipeline.util.EntityInputHandle;
+import application.bootstrap.inputpipeline.input.RawInputHandle;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.runtime.menueventsmanager.menus.InventoryBranch;
 import engine.assets.camera.CameraInstance;
@@ -13,22 +14,33 @@ import engine.util.mathematics.vectors.Vector3;
 public class InputSystem extends SystemPackage {
 
     /*
-     * Translates raw InputSystem state into player actions each frame using
-     * Bindings. Cursor capture, camera rotation, and player InputHandle
-     * writes are gated by MenuManager.isInputLocked().
+     * Runtime input bridge. Owns the RawInputHandle for this context —
+     * written each frame by the bootstrap InputSystem snapshot.
+     * Responsible for camera rotation and facing direction only.
+     * Movement key → EntityInputHandle translation is handled by
+     * PlayerInputSystem inside PlayerManager. This class no longer
+     * touches movement bindings directly.
      */
 
     // Internal
-    private application.bootstrap.inputpipeline.inputsystem.InputSystem inputSystem;
+    private application.bootstrap.inputpipeline.inputsystem.InputSystem bootstrapInput;
     private PlayerManager playerManager;
     private MenuManager menuManager;
     private InventoryBranch inventoryBranch;
 
+    // Raw input — owned here, passed to PlayerManager at spawn
+    private RawInputHandle rawInputHandle;
+
     // Internal \\
 
     @Override
+    protected void create() {
+        this.rawInputHandle = create(RawInputHandle.class);
+    }
+
+    @Override
     protected void get() {
-        this.inputSystem = get(application.bootstrap.inputpipeline.inputsystem.InputSystem.class);
+        this.bootstrapInput = get(application.bootstrap.inputpipeline.inputsystem.InputSystem.class);
         this.playerManager = get(PlayerManager.class);
         this.menuManager = get(MenuManager.class);
         this.inventoryBranch = get(InventoryBranch.class);
@@ -36,20 +48,27 @@ public class InputSystem extends SystemPackage {
 
     @Override
     protected void update() {
+
+        // Snapshot raw hardware state into this context's handle
+        bootstrapInput.writeRawInput(rawInputHandle);
+
         int windowID = context.getWindow().getWindowID();
         if (!playerManager.hasPlayerForWindow(windowID))
             return;
+
         handleInventoryInput(windowID);
+
         if (menuManager.isInputLocked())
             return;
+
         updateCameraRotation(windowID);
-        writePlayerInput(windowID);
+        writeFacingDirection(windowID);
     }
 
     // Input \\
 
     private void handleInventoryInput(int windowID) {
-        if (!inputSystem.bindingClicked(KeyBindings.INVENTORY))
+        if (!rawInputHandle.isBindingClicked(KeyBindings.INVENTORY))
             return;
         inventoryBranch.toggleInventory(
                 playerManager.getPlayerForWindow(windowID),
@@ -60,25 +79,22 @@ public class InputSystem extends SystemPackage {
         CameraInstance camera = playerManager.getCameraForWindow(windowID);
         if (camera == null)
             return;
-        camera.setRotation(inputSystem.getMouseDelta());
+        camera.setRotation(bootstrapInput.getMouseDelta());
     }
 
-    private void writePlayerInput(int windowID) {
+    private void writeFacingDirection(int windowID) {
         EntityInstance player = playerManager.getPlayerForWindow(windowID);
         CameraInstance camera = playerManager.getCameraForWindow(windowID);
-        if (camera == null)
+        if (player == null || camera == null)
             return;
-        InputHandle handle = player.getInputHandle();
+        EntityInputHandle handle = player.getEntityInputHandle();
         Vector3 direction = camera.getDirection();
-        handle.setForward(inputSystem.bindingHeld(KeyBindings.MOVE_FORWARD));
-        handle.setBack(inputSystem.bindingHeld(KeyBindings.MOVE_BACK));
-        handle.setLeft(inputSystem.bindingHeld(KeyBindings.MOVE_LEFT));
-        handle.setRight(inputSystem.bindingHeld(KeyBindings.MOVE_RIGHT));
-        handle.setJump(inputSystem.bindingHeld(KeyBindings.JUMP));
-        handle.setWalk(inputSystem.bindingHeld(KeyBindings.WALK));
-        handle.setSprint(inputSystem.bindingHeld(KeyBindings.SPRINT));
-        handle.setPrimaryAction(inputSystem.bindingHeld(KeyBindings.PRIMARY));
-        handle.setSecondaryAction(inputSystem.bindingHeld(KeyBindings.SECONDARY));
         handle.setFacingDirection(direction.x, direction.y, direction.z);
+    }
+
+    // Accessible \\
+
+    public RawInputHandle getRawInputHandle() {
+        return rawInputHandle;
     }
 }

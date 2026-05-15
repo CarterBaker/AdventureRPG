@@ -3,7 +3,7 @@ package application.bootstrap.entitypipeline.entity;
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
-import application.bootstrap.inputpipeline.input.InputHandle;
+import application.bootstrap.entitypipeline.util.EntityInputHandle;
 import application.bootstrap.physicspipeline.util.BlockCompositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -30,7 +30,7 @@ public class EntityInstance extends InstancePackage {
     private InventoryHandle inventoryHandle;
 
     // Input
-    private InputHandle inputHandle;
+    private EntityInputHandle EntityInputHandle;
 
     // Physics
     private WorldPositionStruct worldPositionStruct;
@@ -52,7 +52,7 @@ public class EntityInstance extends InstancePackage {
         this.inventoryHandle = create(InventoryHandle.class);
 
         // Input
-        this.inputHandle = create(InputHandle.class);
+        this.EntityInputHandle = create(EntityInputHandle.class);
 
         // Physics
         this.worldPositionStruct = new WorldPositionStruct();
@@ -134,8 +134,8 @@ public class EntityInstance extends InstancePackage {
         return inventoryHandle;
     }
 
-    public InputHandle getInputHandle() {
-        return inputHandle;
+    public EntityInputHandle getEntityInputHandle() {
+        return EntityInputHandle;
     }
 
     public WorldPositionStruct getWorldPositionStruct() {

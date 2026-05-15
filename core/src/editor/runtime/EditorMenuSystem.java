@@ -75,7 +75,6 @@ public class EditorMenuSystem extends SystemPackage {
         toolbarWindow = windowManager.createLogicalWindow(
                 EngineSetting.WINDOW_TITLE_EDITOR_TOOLBAR, mainWindow);
         toolbarWindow.setDepth(3);
-        toolbarWindow.setAlwaysInputActive(true);
 
         FboInstance toolbarFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, toolbarWindow);
         menuManager.setMenuTargetFbo(toolbarWindow, toolbarFbo);

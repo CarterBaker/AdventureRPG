@@ -3,6 +3,7 @@ package application.kernel.windowpipeline.windowmanager;
 import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ContextPackage;
+import engine.root.EngineContext;
 import engine.root.EngineUtility;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -10,21 +11,21 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WindowManager extends ManagerPackage {
 
     /*
-     * Owns all engine windows. The main window is platform-hosted and registered
-     * at bootstrap. Secondary windows are registered on demand and opened
-     * immediately by the platform layer.
-     * Windows with createOSWindow = false are registered as full participants
-     * but do not get a native platform handle — they composite onto an OS window.
+     * Owns all engine windows. Each frame resolves which window the cursor is
+     * geometrically inside (highest depth wins) and stores it as hoveredWindow.
+     * No concept of active, focused, or foreground window — all windows are
+     * equal participants. Input routing is entirely hover-driven.
+     *
+     * OS windows are depth 0. Logical windows (tabs) are depth 1+.
+     * Higher depth always wins the hover test when rects overlap.
      */
 
-    // Windows
     private ObjectArrayList<WindowInstance> windows;
     private WindowInstance mainWindow;
-    private WindowInstance activeWindow;
+    private WindowInstance hoveredWindow;
     private WindowInstance renderWindow;
     private WindowInstance contextWindow;
 
-    // Identity
     private int nextWindowID;
 
     // Internal \\
@@ -42,7 +43,7 @@ public class WindowManager extends ManagerPackage {
 
     @Override
     protected void update() {
-        syncActiveWindow();
+        syncHoveredWindow();
 
         for (int i = windows.size() - 1; i >= 0; i--) {
             WindowInstance window = windows.get(i);
@@ -60,57 +61,58 @@ public class WindowManager extends ManagerPackage {
 
     @Override
     protected void dispose() {
-
         for (int i = windows.size() - 1; i >= 0; i--) {
-
             WindowInstance window = windows.get(i);
             if (window == mainWindow || !window.hasNativeHandle())
                 continue;
-
             internal.windowPlatform.makeContextCurrent(window);
             window.dispose();
             internal.windowPlatform.destroyWindow(window);
         }
     }
 
-    private void syncActiveWindow() {
+    private void syncHoveredWindow() {
 
-        WindowInstance focusedWindow = resolveFocusedWindow();
+        float mx = EngineContext.input.getMouseX();
+        float my = EngineContext.input.getMouseY();
 
-        if (focusedWindow == null)
-            return;
+        WindowInstance topHit = null;
+        int topDepth = Integer.MIN_VALUE;
 
-        activeWindow = focusedWindow;
-        internal.windowPlatform.syncInputForWindow(focusedWindow);
-    }
-
-    private WindowInstance resolveFocusedWindow() {
-
-        for (int i = windows.size() - 1; i >= 0; i--) {
-            WindowInstance window = windows.get(i);
-            if (window == mainWindow)
+        for (int i = 0; i < windows.size(); i++) {
+            WindowInstance w = windows.get(i);
+            if (!isMouseOver(w, mx, my))
                 continue;
-            if (!window.hasNativeHandle())
-                continue;
-            if (!internal.windowPlatform.isWindowFocused(window))
-                continue;
-            return window;
+            if (w.getDepth() > topDepth) {
+                topDepth = w.getDepth();
+                topHit = w;
+            }
         }
 
-        if (mainWindow != null
-                && mainWindow.hasNativeHandle()
-                && internal.windowPlatform.isWindowFocused(mainWindow))
-            return mainWindow;
+        hoveredWindow = topHit;
 
-        return null;
+        if (hoveredWindow != null)
+            internal.windowPlatform.syncInputForWindow(hoveredWindow);
     }
 
-    // Accessible \\
+    private boolean isMouseOver(WindowInstance w, float mx, float my) {
+        if (w.hasCompositeRect())
+            return mx >= w.getCompositeX()
+                    && mx < w.getCompositeX() + w.getCompositeW()
+                    && my >= w.getCompositeY()
+                    && my < w.getCompositeY() + w.getCompositeH();
+        if (w.hasNativeHandle())
+            return mx >= 0 && mx < w.getWidth()
+                    && my >= 0 && my < w.getHeight();
+        return false;
+    }
+
+    // Registration \\
 
     public void registerMainWindow(WindowInstance window) {
         verifyWindowRegistration(window, true);
         this.mainWindow = window;
-        this.activeWindow = window;
+        this.hoveredWindow = window;
         registerWindow(window);
     }
 
@@ -129,14 +131,8 @@ public class WindowManager extends ManagerPackage {
     }
 
     public WindowInstance createLogicalWindow(String title, WindowInstance compositeTarget) {
-
         if (compositeTarget == null)
             throwException("Cannot create logical window without a composite target.");
-
-        // Depth and composite rect are the caller's responsibility.
-        // No default rect is set here — hasCompositeRect() must return false
-        // until the layout system assigns a real screen region. A premature
-        // full-screen rect causes FBOs to blit at the wrong size before layout runs.
         WindowData data = new WindowData(
                 issueWindowID(),
                 compositeTarget.getWidth(),
@@ -147,7 +143,6 @@ public class WindowManager extends ManagerPackage {
         window.constructor(data);
         window.setCompositeTarget(compositeTarget);
         registerDetachedWindow(window);
-
         return window;
     }
 
@@ -159,13 +154,17 @@ public class WindowManager extends ManagerPackage {
 
     public void removeWindow(WindowInstance window) {
         windows.remove(window);
-        if (activeWindow == window)
-            activeWindow = mainWindow;
+        if (hoveredWindow == window)
+            hoveredWindow = null;
     }
+
+    // Identity \\
 
     public int issueWindowID() {
         return nextWindowID++;
     }
+
+    // Render / context frame tracking \\
 
     public void beginRenderWindow(WindowInstance window) {
         this.renderWindow = window;
@@ -183,12 +182,14 @@ public class WindowManager extends ManagerPackage {
         this.contextWindow = null;
     }
 
+    // Accessors \\
+
     public WindowInstance getMainWindow() {
         return mainWindow;
     }
 
-    public WindowInstance getActiveWindow() {
-        return activeWindow;
+    public WindowInstance getHoveredWindow() {
+        return hoveredWindow;
     }
 
     public WindowInstance getRenderWindow() {
@@ -212,20 +213,19 @@ public class WindowManager extends ManagerPackage {
     private void verifyWindowRegistration(WindowInstance window, boolean isMain) {
         if (window == null)
             throwException("Cannot register null window.");
-        int windowID = window.getWindowID();
-        if (isMain && windowID != 0)
-            throwException("Main window must use window ID 0. Received: " + windowID);
-        if (!isMain && windowID == 0)
+        int id = window.getWindowID();
+        if (isMain && id != 0)
+            throwException("Main window must use window ID 0. Received: " + id);
+        if (!isMain && id == 0)
             throwException("Detached windows must not use window ID 0.");
-        if (hasWindowID(windowID))
-            throwException("Window ID already registered: " + windowID);
+        if (hasWindowID(id))
+            throwException("Window ID already registered: " + id);
     }
 
-    private boolean hasWindowID(int windowID) {
-        for (int i = 0; i < windows.size(); i++) {
-            if (windows.get(i).getWindowID() == windowID)
+    private boolean hasWindowID(int id) {
+        for (int i = 0; i < windows.size(); i++)
+            if (windows.get(i).getWindowID() == id)
                 return true;
-        }
         return false;
     }
 }

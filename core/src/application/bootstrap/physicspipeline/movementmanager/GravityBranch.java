@@ -5,7 +5,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
-import application.bootstrap.inputpipeline.input.InputHandle;
+import application.bootstrap.entitypipeline.util.EntityInputHandle;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -15,7 +15,8 @@ public class GravityBranch extends BranchPackage {
 
     /*
      * Applies gravity and jump force along all three axes based on the world
-     * gravity direction each frame. Reads jump input from the entity's InputHandle.
+     * gravity direction each frame. Reads jump input from the entity's
+     * EntityInputHandle .
      * Writes displacement directly into the shared movement vector passed by
      * MovementManager.
      */
@@ -44,7 +45,7 @@ public class GravityBranch extends BranchPackage {
         BehaviorHandle behavior = entity.getBehaviorHandle();
         WorldHandle world = entity.getWorldHandle();
         StatisticsHandle stats = entity.getStatisticsHandle();
-        InputHandle input = entity.getInputHandle();
+        EntityInputHandle input = entity.getEntityInputHandle();
         Vector3 gravVel = state.getGravityVelocity();
         Vector3 gravDir = world.getGravityDirection();
         float delta = internal.getDeltaTime();

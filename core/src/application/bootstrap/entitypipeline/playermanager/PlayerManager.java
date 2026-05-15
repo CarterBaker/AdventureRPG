@@ -5,8 +5,8 @@ import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
-import application.bootstrap.inputpipeline.input.InputHandle;
-import application.bootstrap.inputpipeline.inputsystem.InputSystem;
+import application.bootstrap.entitypipeline.util.EntityInputHandle;
+import application.bootstrap.inputpipeline.input.RawInputHandle;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
@@ -18,7 +18,6 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import engine.assets.camera.CameraInstance;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.settings.KeyBindings;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -28,25 +27,30 @@ public class PlayerManager extends ManagerPackage {
 
     /*
      * Owns and drives the player entity and its camera. spawnPlayer() takes the
-     * window the player renders into — caller decides, no internal window lookup.
+     * window the player renders into and the context's RawInputHandle —
+     * caller decides both, no internal lookups.
      * Camera position is synchronized to the player eye position each frame.
-     * Camera rotation is driven externally by PlayerInputSystem.
+     * Camera rotation is driven externally by the runtime context.
+     * PlayerInputSystem translates RawInputHandle → EntityInputHandle each frame
+     * before movement runs. No KeyBindings queries anywhere in this class —
+     * all binding logic lives in PlayerInputSystem.
      */
 
     // Internal
-    private InputSystem inputSystem;
     private MovementManager movementManager;
     private EntityManager entityManager;
     private BlockManager blockManager;
     private WorldStreamManager worldStreamManager;
 
     // Systems
+    private PlayerInputSystem playerInputSystem;
     private InternalBufferSystem internalBufferSystem;
     private PlacementManager placementManager;
 
-    // Player + Camera (per window)
+    // Per-window
     private Int2ObjectOpenHashMap<EntityInstance> windowID2Player;
     private Int2ObjectOpenHashMap<CameraInstance> windowID2Camera;
+    private Int2ObjectOpenHashMap<RawInputHandle> windowID2RawInput;
     private Int2BooleanOpenHashMap windowID2VerifyPlayerPosition;
 
     // Scratch
@@ -58,23 +62,21 @@ public class PlayerManager extends ManagerPackage {
     @Override
     protected void create() {
 
-        // Systems
+        this.playerInputSystem = create(PlayerInputSystem.class);
         this.internalBufferSystem = create(InternalBufferSystem.class);
         this.placementManager = create(PlacementManager.class);
 
-        // Player + Camera
         this.windowID2Player = new Int2ObjectOpenHashMap<>();
         this.windowID2Camera = new Int2ObjectOpenHashMap<>();
+        this.windowID2RawInput = new Int2ObjectOpenHashMap<>();
         this.windowID2VerifyPlayerPosition = new Int2BooleanOpenHashMap();
 
-        // Scratch
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
     }
 
     @Override
     protected void get() {
-        this.inputSystem = get(InputSystem.class);
         this.movementManager = get(MovementManager.class);
         this.entityManager = get(EntityManager.class);
         this.blockManager = get(BlockManager.class);
@@ -91,27 +93,34 @@ public class PlayerManager extends ManagerPackage {
             int windowID = entry.getIntKey();
             EntityInstance player = entry.getValue();
             CameraInstance camera = windowID2Camera.get(windowID);
+            RawInputHandle raw = windowID2RawInput.get(windowID);
 
-            if (camera == null)
+            if (camera == null || raw == null)
                 continue;
 
-            calculatePlayerPosition(windowID, player, camera);
+            calculatePlayerPosition(windowID, player, camera, raw);
         }
     }
 
     // Spawn \\
 
-    public EntityInstance spawnPlayer(WindowInstance window) {
+    public EntityInstance spawnPlayer(WindowInstance window, RawInputHandle rawInput) {
         EntityInstance player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
-        windowID2Player.put(window.getWindowID(), player);
-        windowID2VerifyPlayerPosition.put(window.getWindowID(), true);
-        windowID2Camera.put(window.getWindowID(), window.getActiveCamera());
+        int windowID = window.getWindowID();
+        windowID2Player.put(windowID, player);
+        windowID2Camera.put(windowID, window.getActiveCamera());
+        windowID2RawInput.put(windowID, rawInput);
+        windowID2VerifyPlayerPosition.put(windowID, true);
         return player;
     }
 
     // Player \\
 
-    private void calculatePlayerPosition(int windowID, EntityInstance player, CameraInstance camera) {
+    private void calculatePlayerPosition(
+            int windowID,
+            EntityInstance player,
+            CameraInstance camera,
+            RawInputHandle raw) {
 
         WorldPositionStruct worldPositionStruct = player.getWorldPositionStruct();
         boolean verifyPlayerPosition = windowID2VerifyPlayerPosition.get(windowID);
@@ -121,6 +130,9 @@ public class PlayerManager extends ManagerPackage {
             windowID2VerifyPlayerPosition.put(windowID, verifyPlayerPosition);
             return;
         }
+
+        // Translate raw hardware → game intent before anything reads EntityInputHandle
+        playerInputSystem.translate(raw, player.getEntityInputHandle());
 
         writeMovementState(player);
         movementManager.move(player);
@@ -134,12 +146,13 @@ public class PlayerManager extends ManagerPackage {
         cameraPosition.add(cameraOffset);
         camera.setPosition(cameraPosition);
 
+        EntityInputHandle input = player.getEntityInputHandle();
         placementManager.update(
                 player,
                 cameraPosition,
                 camera.getDirection(),
-                inputSystem.bindingHeld(KeyBindings.PRIMARY),
-                inputSystem.bindingHeld(KeyBindings.SECONDARY));
+                input.isPrimaryAction(),
+                input.isSecondaryAction());
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }
@@ -147,7 +160,7 @@ public class PlayerManager extends ManagerPackage {
     private void writeMovementState(EntityInstance player) {
 
         EntityStateHandle state = player.getEntityStateHandle();
-        InputHandle input = player.getInputHandle();
+        EntityInputHandle input = player.getEntityInputHandle();
 
         if (!state.isGrounded())
             return;
@@ -217,10 +230,8 @@ public class PlayerManager extends ManagerPackage {
 
     public void pushPlayerPositionForWindow(int windowID) {
         WorldPositionStruct position = getPlayerPositionForWindow(windowID);
-
         if (position == null)
             return;
-
         internalBufferSystem.updatePlayerPosition(position);
     }
 }

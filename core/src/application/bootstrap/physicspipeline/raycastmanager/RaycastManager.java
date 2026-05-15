@@ -1,42 +1,26 @@
 package application.bootstrap.physicspipeline.raycastmanager;
 
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
-import application.bootstrap.physicspipeline.util.ScreenRayStruct;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector3;
 
 public class RaycastManager extends ManagerPackage {
 
     /*
-     * Owns block raycasting and the current frame's screen-space ray. The
-     * ScreenRayStruct is pre-allocated — ScreenCastBranch writes the current
-     * mouse position every frame, zero allocation. hasScreenRay is always true
-     * while an active window exists. Click detection lives in ElementHitSystem.
+     * Owns block raycasting. Screen-space mouse position is sourced directly
+     * from InputSystem and WindowManager — no intermediate struct needed.
+     * Click detection lives in ElementHitSystem.
      * BlockCastBranch handles all DDA world-space traversal.
      */
 
     // Branches
     private BlockCastBranch blockCastBranch;
-    private ScreenCastBranch screenCastBranch;
-
-    // Screen Ray
-    private ScreenRayStruct screenRay;
-    private boolean hasScreenRay;
 
     // Internal \\
 
     @Override
     protected void create() {
-        // Branches
         this.blockCastBranch = create(BlockCastBranch.class);
-        this.screenCastBranch = create(ScreenCastBranch.class);
-        // Screen Ray
-        this.screenRay = new ScreenRayStruct();
-    }
-
-    @Override
-    protected void update() {
-        hasScreenRay = screenCastBranch.cast(screenRay);
     }
 
     // Accessible \\
@@ -48,13 +32,5 @@ public class RaycastManager extends ManagerPackage {
             float maxDistance,
             BlockCastStruct out) {
         blockCastBranch.cast(chunkCoordinate, rayOrigin, direction, maxDistance, out);
-    }
-
-    public ScreenRayStruct getScreenRay() {
-        return screenRay;
-    }
-
-    public boolean hasScreenRay() {
-        return hasScreenRay;
     }
 }

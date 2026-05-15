@@ -220,10 +220,9 @@ public class RenderManager extends ManagerPackage {
         if (contextWindow != null)
             return contextWindow.getGLWindow();
 
-        WindowInstance activeWindow = windowManager.getActiveWindow();
-        if (activeWindow != null)
-            return activeWindow;
-
+        // No hover fallback here — render resolution is context-driven, not
+        // cursor-driven.
+        // If neither render nor context window is set, fall straight to main.
         return windowManager.getMainWindow();
     }
 }

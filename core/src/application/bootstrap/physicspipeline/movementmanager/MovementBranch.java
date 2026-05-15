@@ -4,7 +4,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
-import application.bootstrap.inputpipeline.input.InputHandle;
+import application.bootstrap.entitypipeline.util.EntityInputHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector2;
@@ -14,7 +14,7 @@ public class MovementBranch extends BranchPackage {
 
     /*
      * Computes horizontal movement displacement each frame from the entity's
-     * InputHandle. Smoothly accelerates toward target velocity via lerp.
+     * EntityInputHandle . Smoothly accelerates toward target velocity via lerp.
      * Y axis is not touched — owned entirely by GravityBranch.
      */
 
@@ -46,7 +46,7 @@ public class MovementBranch extends BranchPackage {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         StatisticsHandle stats = entity.getStatisticsHandle();
-        InputHandle input = entity.getInputHandle();
+        EntityInputHandle input = entity.getEntityInputHandle();
         Vector2 vel = state.getHorizontalVelocity();
         Vector3 facing = input.getFacingDirection();
         float delta = internal.getDeltaTime();
