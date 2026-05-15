@@ -2,6 +2,7 @@ package editor.runtime;
 
 import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
+import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.tab.TabContext;
 import editor.bootstrap.tab.TabHandle;
 import editor.bootstrap.tabmanager.TabManager;
@@ -14,16 +15,19 @@ public class EditorTabCompositorSystem extends SystemPackage {
      * Two responsibilities:
      *
      * 1. Dock resize — detects dock canvas bound changes and forwards them to
-     * TabManager via setDockRect(). TabManager owns full rect propagation.
-     * Only fires when bounds actually change.
+     * TabManager via setDockRect(). TabManager owns BSP rect propagation and
+     * tab window composite rect assignment. Only fires when bounds change.
      *
-     * 2. First-frame flush — on the frame after a tab is opened, TabContext.awake()
-     * has now run and chromeMenu is valid, but the content window has no
-     * composite rect because the pushRects() call inside openTab() fired before
-     * awake(). Any tab window that has a composite rect while its content window
-     * does not gets a resize() re-fire to flush TabContext.onResize() now that
-     * the canvas is ready. This fires exactly once per tab — content has a rect
-     * from that point forward so the condition never triggers again.
+     * 2. Content rect sync — every frame, reads the current chrome canvas
+     * bounds from each tab's TabContext and pushes them to the content window.
+     * This runs after menu layout has settled, which is why it lives here
+     * rather than in TabContext.onResize(). onResize() fires at resize() call
+     * time, before layout; this system fires each frame after layout, so it
+     * always reads correct canvas values.
+     *
+     * The sync is change-guarded: contentWindow.resize() only fires when the
+     * computed rect actually differs from what the content window already holds,
+     * avoiding redundant resize cascades each frame.
      */
 
     // Internal
@@ -40,8 +44,6 @@ public class EditorTabCompositorSystem extends SystemPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         tabManager = get(TabManager.class);
         editorMenuSystem = get(EditorMenuSystem.class);
     }
@@ -63,19 +65,23 @@ public class EditorTabCompositorSystem extends SystemPackage {
         float h = canvas.getH();
 
         if (x != lastX || y != lastY || w != lastW || h != lastH) {
-
             lastX = x;
             lastY = y;
             lastW = w;
             lastH = h;
-
             tabManager.setDockRect(x, y, w, h);
         }
 
-        flushPendingContentRects();
+        syncContentRects();
     }
 
-    private void flushPendingContentRects() {
+    /*
+     * Reads each tab's chrome canvas bounds (post-layout) and propagates them
+     * to the content window. Skips tabs whose tab window has no composite rect
+     * yet (split-frame guard) and tabs whose canvas is still zero-size (awake
+     * guard). Change-guarded so resize() only fires when the rect has moved.
+     */
+    private void syncContentRects() {
 
         ObjectArrayList<TabHandle> tabs = tabManager.getOpenTabs();
         Object[] elements = tabs.elements();
@@ -85,16 +91,36 @@ public class EditorTabCompositorSystem extends SystemPackage {
 
             TabHandle handle = (TabHandle) elements[i];
             TabContext tabContext = handle.getTabContext();
+            WindowInstance tabWindow = tabContext.getWindow();
 
-            if (!tabContext.getWindow().hasCompositeRect())
+            if (!tabWindow.hasCompositeRect())
                 continue;
 
-            if (handle.getContentContext().getWindow().hasCompositeRect())
+            MenuInstance chromeMenu = tabContext.getChromeMenu();
+            if (chromeMenu == null)
                 continue;
 
-            tabContext.getWindow().resize(
-                    (int) tabContext.getWindow().getCompositeW(),
-                    (int) tabContext.getWindow().getCompositeH());
+            CanvasInstance tabCanvas = chromeMenu.getCanvas();
+            if (tabCanvas == null || tabCanvas.getW() <= 0 || tabCanvas.getH() <= 0)
+                continue;
+
+            float cx = tabWindow.getCompositeX() + tabCanvas.getX();
+            float cy = tabWindow.getCompositeY() + tabCanvas.getY();
+            float cw = tabCanvas.getW();
+            float ch = tabCanvas.getH();
+
+            WindowInstance contentWindow = handle.getContentContext().getWindow();
+
+            // Skip if content window already holds this exact rect — avoids
+            // firing resize() and its downstream cascade every frame.
+            if (cx == contentWindow.getCompositeX()
+                    && cy == contentWindow.getCompositeY()
+                    && cw == contentWindow.getCompositeW()
+                    && ch == contentWindow.getCompositeH())
+                continue;
+
+            contentWindow.setCompositeRect(cx, cy, cw, ch);
+            contentWindow.resize((int) cw, (int) ch);
         }
     }
 }

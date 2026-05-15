@@ -81,37 +81,6 @@ public class TabContext extends ContextPackage {
         this.contentContext = contentContext;
     }
 
-    // Resize \\
-
-    @Override
-    public void onResize(int width, int height) {
-
-        if (contentContext == null)
-            return;
-
-        if (width <= 0 || height <= 0)
-            return;
-
-        CanvasInstance canvas = chromeMenu.getCanvas();
-
-        if (canvas == null)
-            return;
-
-        if (canvas.getW() <= 0 || canvas.getH() <= 0)
-            return;
-
-        float tabX = getWindow().getCompositeX();
-        float tabY = getWindow().getCompositeY();
-
-        contentContext.getWindow().setCompositeRect(
-                tabX + canvas.getX(),
-                tabY + canvas.getY(),
-                canvas.getW(),
-                canvas.getH());
-
-        contentContext.getWindow().resize(canvas.getW(), canvas.getH());
-    }
-
     // Accessible \\
 
     public MenuInstance getChromeMenu() {
