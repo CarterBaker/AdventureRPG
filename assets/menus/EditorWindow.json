@@ -66,8 +66,8 @@
         {
           "id": "dock_canvas",
           "type": "canvas_area",
-          "position": {"x": "0%", "y": "0%"},
-          "size": {"x": "100%", "y": "calc(100% - 28px)"}
+          "position": {"x": "0%", "y": "14px"},
+          "size": {"x": "100%", "y": "calc(100% - 14px)"}
         }
       ]
     },
