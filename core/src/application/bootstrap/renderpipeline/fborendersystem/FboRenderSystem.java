@@ -145,10 +145,14 @@ public class FboRenderSystem extends SystemPackage {
         if (destRect != null)
             return destRect;
 
-        if (window.hasCompositeTarget() && window.hasCompositeRect())
+        if (window.hasCompositeTarget() && window.hasCompositeRect()) {
+            WindowInstance target = window.getCompositeTarget();
+            // compositeY is layout space (Y+ down). Convert to OpenGL space (Y+ up).
+            float openglY = target.getHeight() - window.getCompositeY() - window.getCompositeH();
             return new FBODestinationStruct(
-                    window.getCompositeX(), window.getCompositeY(),
+                    window.getCompositeX(), openglY,
                     window.getCompositeW(), window.getCompositeH());
+        }
 
         return null;
     }

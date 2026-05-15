@@ -98,8 +98,8 @@ public class MenuRenderSystem extends SystemPackage {
             int cy = (int) element.getComputedTop();
             int cw = (int) element.getComputedW();
             int ch = (int) element.getComputedH();
-            // computedTop is layout space (Y+ down). Convert to OpenGL space (Y+ up).
-            currentMenu.getCanvas().set(cx, (int) (currentWindow.getHeight() - cy - ch), cw, ch);
+
+            currentMenu.getCanvas().set(cx, cy, cw, ch);
         }
 
         renderElementContent(element, activeState);
