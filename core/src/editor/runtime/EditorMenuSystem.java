@@ -27,6 +27,9 @@ public class EditorMenuSystem extends SystemPackage {
      * Toolbar rect is mirrored from the main window dimensions each frame.
      * The OS window has no compositeRect — its source of truth is getWidth()
      * and getHeight(). Fires only when dimensions change.
+     *
+     * Toolbar window is marked alwaysInputActive so InputSystem passes input
+     * through regardless of OS focus state.
      */
 
     // Internal
@@ -67,10 +70,12 @@ public class EditorMenuSystem extends SystemPackage {
         menuManager.setMenuTargetFbo(mainWindow, baseFbo);
         baseMenu = menuManager.openMenu(EngineSetting.MENU_EDITOR_BASE, mainWindow);
 
-        // Toolbar — own logical window at depth 3, own cloned FBO
+        // Toolbar — own logical window at depth 3, own cloned FBO, always receives
+        // input
         toolbarWindow = windowManager.createLogicalWindow(
                 EngineSetting.WINDOW_TITLE_EDITOR_TOOLBAR, mainWindow);
         toolbarWindow.setDepth(3);
+        toolbarWindow.setAlwaysInputActive(true);
 
         FboInstance toolbarFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, toolbarWindow);
         menuManager.setMenuTargetFbo(toolbarWindow, toolbarFbo);

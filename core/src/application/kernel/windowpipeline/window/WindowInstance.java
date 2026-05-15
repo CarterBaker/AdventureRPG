@@ -18,6 +18,10 @@ public class WindowInstance extends InstancePackage {
      * pushFbo calls to the correct OS window and screen region.
      * Depth controls draw order during the screen pass — OS windows are 0,
      * tab logical windows are 1. Higher depth always draws on top.
+     *
+     * alwaysInputActive — set by the caller on logical windows that must receive
+     * input regardless of OS focus state (e.g. the toolbar window). InputSystem
+     * bypasses the active window check for these windows.
      */
 
     // Data
@@ -42,8 +46,11 @@ public class WindowInstance extends InstancePackage {
     private float compositeH;
     private boolean compositeRect;
 
-    // Draw order — 0 for OS windows, 1 for tab logical windows
+    // Draw order
     private int depth;
+
+    // Input
+    private boolean alwaysInputActive;
 
     // Internal
     private RenderManager renderManager;
@@ -168,6 +175,16 @@ public class WindowInstance extends InstancePackage {
 
     public void setDepth(int depth) {
         this.depth = depth;
+    }
+
+    // Input \\
+
+    public boolean isAlwaysInputActive() {
+        return alwaysInputActive;
+    }
+
+    public void setAlwaysInputActive(boolean alwaysInputActive) {
+        this.alwaysInputActive = alwaysInputActive;
     }
 
     // Cameras \\

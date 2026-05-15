@@ -16,9 +16,11 @@ public class InputSystem extends SystemPackage {
      * Mouse delta is computed lazily per call so it always reflects the active
      * window's input context — no stale snapshot from a cached update().
      *
-     * Input is gated: if the window currently executing (contextWindow) is not
-     * the focused active window, all queries return neutral values. This prevents
-     * unfocused editor windows from reacting to input events.
+     * Input is gated: if the GL window of the context window currently executing
+     * is not the focused active window, all queries return neutral values. This
+     * prevents unfocused editor windows from reacting to input events while
+     * allowing logical windows (toolbar, tabs) that composite onto a focused OS
+     * window to receive input correctly.
      */
 
     // Internal
@@ -26,49 +28,43 @@ public class InputSystem extends SystemPackage {
 
     // Mouse — delta
     private Vector2 mouseDelta;
-
     private static final Vector2 ZERO_DELTA = new Vector2(0, 0);
 
     // Internal \\
 
     @Override
-    protected void get() {
-
-        // Internal
-        this.windowManager = get(WindowManager.class);
-    }
-
-    @Override
     protected void create() {
 
         // Mouse — delta
-        this.mouseDelta = new Vector2();
+        mouseDelta = new Vector2();
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        windowManager = get(WindowManager.class);
     }
 
     // Guard \\
 
-    /**
-     * Returns true only when the window currently executing this system's context
-     * is also the window that has OS focus. Unfocused windows are silenced.
-     */
     private boolean isActiveContext() {
 
         WindowInstance contextWindow = windowManager.getContextWindow();
 
-        // contextWindow is only set when explicitly bracketed by beginContextWindow/
-        // endContextWindow in the pipeline. If it's null we have no context information
-        // to gate on — allow input through rather than silencing everything.
         if (contextWindow == null)
             return true;
 
-        return contextWindow == windowManager.getActiveWindow();
+        return contextWindow.getGLWindow() == windowManager.getActiveWindow();
     }
 
     // Platform \\
 
     public void captureCursor(boolean captured) {
+
         if (!isActiveContext())
             return;
+
         EngineContext.input.setCursorCatched(captured);
     }
 
@@ -97,12 +93,14 @@ public class InputSystem extends SystemPackage {
     }
 
     public Vector2 getMouseDelta() {
+
         if (!isActiveContext())
             return ZERO_DELTA;
 
         mouseDelta.set(
                 EngineContext.input.getDeltaX() * internal.settings.mouseSensitivity,
                 EngineContext.input.getDeltaY() * internal.settings.mouseSensitivity);
+
         return mouseDelta;
     }
 }
