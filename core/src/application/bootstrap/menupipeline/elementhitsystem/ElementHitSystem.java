@@ -53,9 +53,8 @@ public class ElementHitSystem extends SystemPackage {
      * Interactivity is capability-driven — any element with a hover state, click
      * state, or action participates in hit testing regardless of element type.
      *
-     * Y axis: engine is Y+ up. GLFW reports Y=0 at top increasing downward.
-     * mouseY is flipped on entry: hoveredWindow.getHeight() -
-     * inputSystem.getMouseY().
+     * Y axis: menu layout and hit testing use the same visual coordinate space.
+     * computedTop is the element bottom edge; computedTop + computedH is top.
      */
 
     private static final String PARENT_ARG = "$parent";
@@ -101,7 +100,7 @@ public class ElementHitSystem extends SystemPackage {
 
         int rayWindowID = hoveredWindow.getWindowID();
         float mouseX = inputSystem.getMouseX();
-        float mouseY = hoveredWindow.getHeight() - inputSystem.getMouseY();
+        float mouseY = inputSystem.getMouseY();
 
         updateHover(activeMenus, mouseX, mouseY, rayWindowID);
         checkClickStateCollapse(mouseX, mouseY);

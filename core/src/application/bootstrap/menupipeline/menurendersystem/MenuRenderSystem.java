@@ -276,10 +276,10 @@ public class MenuRenderSystem extends SystemPackage {
                 float childH = layout.getSize().getY().resolve(parentH);
 
                 if (layout.hasMinSize())
-                    childH = Math.max(childH, layout.getMinSize().getX().resolve(parentH));
+                    childH = Math.max(childH, layout.getMinSize().getY().resolve(parentH));
 
                 if (layout.hasMaxSize())
-                    childH = Math.min(childH, layout.getMaxSize().getX().resolve(parentH));
+                    childH = Math.min(childH, layout.getMaxSize().getY().resolve(parentH));
 
                 cursor -= childH;
                 renderStackedElement(child, parent.getComputedLeft(), cursor, parentW, parentH);
@@ -343,8 +343,6 @@ public class MenuRenderSystem extends SystemPackage {
         float scaledW = font.getTextWidth() * scale;
         float scaledH = font.getTextHeight() * scale;
 
-        float screenH = currentWindow.getHeight();
-
         TextAlign align = data.getTextAlign();
         float x;
         if (align == TextAlign.LEFT)
@@ -354,8 +352,7 @@ public class MenuRenderSystem extends SystemPackage {
         else
             x = element.getComputedLeft() + (element.getComputedW() - scaledW) * 0.5f;
 
-        float y = (screenH - element.getComputedTop() - element.getComputedH())
-                + (element.getComputedH() - scaledH) * 0.5f;
+        float y = element.getComputedTop() + (element.getComputedH() - scaledH) * 0.5f;
 
         fontRenderSystem.submit(font, x, y, scale, currentMask(), targetFbo, currentWindow);
     }
@@ -369,22 +366,19 @@ public class MenuRenderSystem extends SystemPackage {
         int w = (int) element.getComputedW();
         int h = (int) element.getComputedH();
 
-        // computedTop is layout space (Y+ down). Convert to OpenGL space (Y+ up).
-        int openglY = (int) (currentWindow.getHeight() - y - h);
-
         if (maskDepth > 0) {
             MaskStruct prev = maskPool[maskDepth - 1];
             int ix = Math.max(x, prev.getX());
-            int iy = Math.max(openglY, prev.getY());
+            int iy = Math.max(y, prev.getY());
             int ix2 = Math.min(x + w, prev.getX() + prev.getW());
-            int iy2 = Math.min(openglY + h, prev.getY() + prev.getH());
+            int iy2 = Math.min(y + h, prev.getY() + prev.getH());
             x = ix;
-            openglY = iy;
+            y = iy;
             w = Math.max(0, ix2 - ix);
             h = Math.max(0, iy2 - iy);
         }
 
-        maskPool[maskDepth].set(x, openglY, w, h);
+        maskPool[maskDepth].set(x, y, w, h);
         maskDepth++;
     }
 
