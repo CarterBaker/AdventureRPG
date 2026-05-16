@@ -1,7 +1,7 @@
 package application.bootstrap.entitypipeline.playermanager;
 
 import application.bootstrap.entitypipeline.util.EntityInputHandle;
-import application.bootstrap.inputpipeline.input.RawInputHandle;
+import application.kernel.inputpipeline.input.RawInputHandle;
 import engine.root.SystemPackage;
 import engine.settings.KeyBindings;
 

@@ -1,6 +1,6 @@
 package application.bootstrap.menupipeline.cursorlocksystem;
 
-import application.bootstrap.inputpipeline.inputsystem.InputSystem;
+import application.kernel.inputpipeline.inputsystem.InputSystem;
 import engine.root.SystemPackage;
 
 public class CursorLockSystem extends SystemPackage {

@@ -3,7 +3,6 @@ package application.bootstrap;
 import application.bootstrap.calendarpipeline.CalendarPipeline;
 import application.bootstrap.entitypipeline.EntityPipeline;
 import application.bootstrap.geometrypipeline.GeometryPipeline;
-import application.bootstrap.inputpipeline.InputPipeline;
 import application.bootstrap.itempipeline.ItemPipeline;
 import application.bootstrap.lightingpipeline.LightingPipeline;
 import application.bootstrap.menupipeline.MenuPipeline;
@@ -27,7 +26,6 @@ public class BootstrapAssembly extends AssemblyPackage {
         create(RenderPipeline.class);
         create(ItemPipeline.class);
         create(PhysicsPipeline.class);
-        create(InputPipeline.class);
         create(EntityPipeline.class);
         create(WorldPipeline.class);
         create(CalendarPipeline.class);

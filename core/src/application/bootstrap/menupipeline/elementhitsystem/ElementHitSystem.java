@@ -2,11 +2,11 @@ package application.bootstrap.menupipeline.elementhitsystem;
 
 import java.lang.reflect.Method;
 
-import application.bootstrap.inputpipeline.inputsystem.InputSystem;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
+import application.kernel.inputpipeline.inputsystem.InputSystem;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;

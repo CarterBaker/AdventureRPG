@@ -3,8 +3,8 @@ package application.runtime.input;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.entitypipeline.util.EntityInputHandle;
-import application.bootstrap.inputpipeline.input.RawInputHandle;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.kernel.inputpipeline.input.RawInputHandle;
 import application.runtime.menueventsmanager.menus.InventoryBranch;
 import engine.assets.camera.CameraInstance;
 import engine.root.SystemPackage;
@@ -23,7 +23,7 @@ public class InputSystem extends SystemPackage {
      */
 
     // Internal
-    private application.bootstrap.inputpipeline.inputsystem.InputSystem bootstrapInput;
+    private application.kernel.inputpipeline.inputsystem.InputSystem bootstrapInput;
     private PlayerManager playerManager;
     private MenuManager menuManager;
     private InventoryBranch inventoryBranch;
@@ -40,7 +40,7 @@ public class InputSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.bootstrapInput = get(application.bootstrap.inputpipeline.inputsystem.InputSystem.class);
+        this.bootstrapInput = get(application.kernel.inputpipeline.inputsystem.InputSystem.class);
         this.playerManager = get(PlayerManager.class);
         this.menuManager = get(MenuManager.class);
         this.inventoryBranch = get(InventoryBranch.class);

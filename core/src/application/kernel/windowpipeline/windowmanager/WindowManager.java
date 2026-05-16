@@ -102,8 +102,7 @@ public class WindowManager extends ManagerPackage {
                     && my >= w.getCompositeY()
                     && my < w.getCompositeY() + w.getCompositeH();
         if (w.hasNativeHandle())
-            return mx >= 0 && mx < w.getWidth()
-                    && my >= 0 && my < w.getHeight();
+            return true;
         return false;
     }
 

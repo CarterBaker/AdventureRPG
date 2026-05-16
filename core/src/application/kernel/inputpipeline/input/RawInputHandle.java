@@ -1,4 +1,4 @@
-package application.bootstrap.inputpipeline.input;
+package application.kernel.inputpipeline.input;
 
 import engine.input.Binding;
 import engine.input.BindingType;

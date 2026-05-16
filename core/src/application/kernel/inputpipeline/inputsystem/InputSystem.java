@@ -1,6 +1,6 @@
-package application.bootstrap.inputpipeline.inputsystem;
+package application.kernel.inputpipeline.inputsystem;
 
-import application.bootstrap.inputpipeline.input.RawInputHandle;
+import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.input.Binding;

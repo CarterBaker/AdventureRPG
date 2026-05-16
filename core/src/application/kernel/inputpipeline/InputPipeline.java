@@ -1,6 +1,6 @@
-package application.bootstrap.inputpipeline;
+package application.kernel.inputpipeline;
 
-import application.bootstrap.inputpipeline.inputsystem.InputSystem;
+import application.kernel.inputpipeline.inputsystem.InputSystem;
 import engine.root.PipelinePackage;
 
 public class InputPipeline extends PipelinePackage {

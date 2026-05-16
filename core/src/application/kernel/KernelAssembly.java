@@ -1,5 +1,6 @@
 package application.kernel;
 
+import application.kernel.inputpipeline.InputPipeline;
 import application.kernel.threadpipeline.ThreadPipeline;
 import application.kernel.windowpipeline.WindowPipeline;
 import engine.root.AssemblyPackage;
@@ -13,6 +14,7 @@ public class KernelAssembly extends AssemblyPackage {
     @Override
     public void create() {
         create(ThreadPipeline.class);
+        create(InputPipeline.class);
         create(WindowPipeline.class);
     }
 }
