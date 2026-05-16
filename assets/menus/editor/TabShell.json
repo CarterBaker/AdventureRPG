@@ -17,9 +17,9 @@
         {
           "id": "tab_canvas",
           "type": "canvas_area",
-          "anchor": "center",
-          "pivot": "center",
-          "position": {"x": "0px", "y": "11.5px"},
+          "anchor": "top_left",
+          "pivot": "top_left",
+          "position": {"x": "5px", "y": "-28px"},
           "size": {"x": "calc(100% - 10px)", "y": "calc(100% - 33px)"}
         }
       ]
