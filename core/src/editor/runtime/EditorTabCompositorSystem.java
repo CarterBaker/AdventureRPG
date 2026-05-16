@@ -76,9 +76,7 @@ public class EditorTabCompositorSystem extends SystemPackage {
             float cx = tabWindow.getCompositeX() + tabCanvas.getX();
             float cy = tabWindow.getCompositeY() + tabCanvas.getY();
             float cw = tabCanvas.getW();
-            // Use the resolved canvas height, not parent height minus canvas top.
-            // The canvas layout may include a bottom inset through calc(100% - Npx).
-            float ch = tabCanvas.getH();
+            float ch = tabWindow.getHeight() - tabCanvas.getY();
 
             WindowInstance contentWindow = handle.getContentContext().getWindow();
 

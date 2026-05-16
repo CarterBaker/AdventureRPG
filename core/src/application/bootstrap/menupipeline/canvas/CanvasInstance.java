@@ -5,10 +5,9 @@ import engine.root.InstancePackage;
 public class CanvasInstance extends InstancePackage {
 
     /*
-     * Computed layout-space rect for a menu's canvas_area element, stored in
-     * the owning window's top-left coordinate space (Y+ down). Written every
-     * frame by MenuRenderSystem after resolving the element's position and size.
-     * Null on MenuInstance means this menu has no canvas.
+     * Computed screen rect for a menu's canvas_area element, stored in
+     * OpenGL space (Y+ up, origin bottom-left). Written every frame by
+     * MenuRenderSystem. Null on MenuInstance means this menu has no canvas.
      */
 
     private int x;
