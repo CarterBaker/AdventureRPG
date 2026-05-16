@@ -17,6 +17,7 @@ public class TabHandle extends HandlePackage {
     // Active
     private TabContext tabContext;
     private ContextPackage contentContext;
+    private boolean pendingResize;
 
     // Internal \\
 
@@ -55,6 +56,18 @@ public class TabHandle extends HandlePackage {
 
     public ContextPackage getContentContext() {
         return contentContext;
+    }
+
+    public void markPendingResize() {
+        pendingResize = true;
+    }
+
+    public void clearPendingResize() {
+        pendingResize = false;
+    }
+
+    public boolean isPendingResize() {
+        return pendingResize;
     }
 
     public boolean isOpen() {
