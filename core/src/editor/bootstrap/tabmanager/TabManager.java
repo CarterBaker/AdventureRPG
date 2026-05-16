@@ -154,9 +154,6 @@ public class TabManager extends ManagerPackage {
         dockLayoutSystem.addTab(handle);
         pushRects();
 
-        if (tabWindow.getCompositeW() <= 0 || tabWindow.getCompositeH() <= 0)
-            handle.markPendingResize();
-
         return handle;
     }
 
@@ -196,6 +193,9 @@ public class TabManager extends ManagerPackage {
 
     private void pushRects() {
 
+        if (dockW <= 0 || dockH <= 0)
+            return;
+
         dockLayoutSystem.computeRects(dockX, dockY, dockW, dockH);
 
         Object[] elements = openTabs.elements();
@@ -210,15 +210,9 @@ public class TabManager extends ManagerPackage {
             float w = dockLayoutSystem.getTabW(handle);
             float h = dockLayoutSystem.getTabH(handle);
 
-            if (w <= 0 || h <= 0) {
-                handle.markPendingResize();
-                continue;
-            }
-
             WindowInstance tabWindow = handle.getTabContext().getWindow();
             tabWindow.setCompositeRect(x, y, w, h);
             tabWindow.resize((int) w, (int) h);
-            handle.clearPendingResize();
         }
     }
 
