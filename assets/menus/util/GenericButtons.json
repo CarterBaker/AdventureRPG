@@ -4,8 +4,8 @@
             "id":     "quit",
             "type":   "button",
             "sprite": "menus/DebugElement",
-            "anchor": "center",
-            "pivot":  "center",
+            "anchor": "CENTER",
+            "pivot":  "CENTER",
             "on_click": {
                 "class":  "application.runtime.menueventsmanager.util.GenericButtonBranch",
                 "method": "quitGame"

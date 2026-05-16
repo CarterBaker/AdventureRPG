@@ -161,7 +161,7 @@ public class ElementInstance extends InstancePackage {
         float anchorX = parentLeft + layout.getAnchor().x * parentW;
         float anchorY = parentTop + layout.getAnchor().y * parentH;
         float tx = anchorX + posX - layout.getPivot().x * w;
-        float ty = anchorY + posY - (1.0f - layout.getPivot().y) * h;
+        float ty = anchorY + posY - layout.getPivot().y * h;
 
         this.computedLeft = tx;
         this.computedTop = ty;
@@ -241,7 +241,7 @@ public class ElementInstance extends InstancePackage {
         if (layout.hasMaxSize())
             h = Math.min(h, layout.getMaxSize().getY().resolve(screenH));
 
-        float top = screenH;
+        float top = screenH - h;
 
         this.computedLeft = 0f;
         this.computedTop = top;

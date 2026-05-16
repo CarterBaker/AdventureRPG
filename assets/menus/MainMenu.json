@@ -4,8 +4,8 @@
             "id":     "close",
             "type":   "button",
             "sprite": "menus/DebugElement",
-            "anchor": "center",
-            "pivot":  "center",
+            "anchor": "CENTER",
+            "pivot":  "CENTER",
             "on_click": {
                 "class":  "application.runtime.menueventsmanager.menus.MainMenuBranch",
                 "method": "closeMenu",
@@ -23,8 +23,8 @@
             "id":   "title",
             "type": "sprite",
             "sprite": "menus/Title",
-            "anchor": "top_center",
-            "pivot":  "top_center",
+            "anchor": "TOP_CENTER",
+            "pivot":  "TOP_CENTER",
             "position": { "x": "0%",  "y": "-5%" },
             "size":     { "x": "40%", "y": "20%" },
             "min_size": { "x": "300px", "y": "80px" }
@@ -43,24 +43,24 @@
                 {
                     "id":       "empty",
                     "use":      "util/Containers",
-                    "anchor":   "center",
-                    "pivot":    "center",
+                    "anchor":   "CENTER",
+                    "pivot":    "CENTER",
                     "position": { "x": "0%",  "y": "0%"  },
                     "size":     { "x": "20%", "y": "10%" },
                     "elements": [
                         {
                             "id":       "close",
                             "ref":      "MainMenu/close",
-                            "anchor":   "center",
-                            "pivot":    "center",
+                            "anchor":   "CENTER",
+                            "pivot":    "CENTER",
                             "position": { "x": "0%", "y": "60%" },
                             "size":     { "x": "80%", "y": "60%" }
                         },
                         {
                             "id":       "quit",
                             "use":      "util/GenericButtons",
-                            "anchor":   "center",
-                            "pivot":    "center",
+                            "anchor":   "CENTER",
+                            "pivot":    "CENTER",
                             "position": { "x": "0%", "y": "0%"  },
                             "size":     { "x": "80%", "y": "60%" },
                             "elements": [
