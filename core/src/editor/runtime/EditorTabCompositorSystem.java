@@ -19,6 +19,8 @@ public class EditorTabCompositorSystem extends SystemPackage {
     private float lastW;
     private float lastH;
 
+    // Internal \\
+
     @Override
     protected void get() {
         tabManager = get(TabManager.class);
@@ -50,6 +52,8 @@ public class EditorTabCompositorSystem extends SystemPackage {
         syncContentRects();
     }
 
+    // Sync \\
+
     private void syncContentRects() {
 
         ObjectArrayList<TabHandle> tabs = tabManager.getOpenTabs();
@@ -66,17 +70,19 @@ public class EditorTabCompositorSystem extends SystemPackage {
                 continue;
 
             MenuInstance chromeMenu = tabContext.getChromeMenu();
+
             if (chromeMenu == null)
                 continue;
 
             CanvasInstance tabCanvas = chromeMenu.getCanvas();
+
             if (tabCanvas == null || tabCanvas.getW() <= 0 || tabCanvas.getH() <= 0)
                 continue;
 
             float cx = tabWindow.getCompositeX() + tabCanvas.getX();
             float cy = tabWindow.getCompositeY() + tabCanvas.getY();
             float cw = tabCanvas.getW();
-            float ch = tabWindow.getHeight() - tabCanvas.getY();
+            float ch = tabCanvas.getH();
 
             WindowInstance contentWindow = handle.getContentContext().getWindow();
 

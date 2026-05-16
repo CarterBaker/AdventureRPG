@@ -19,8 +19,8 @@
           "type": "canvas_area",
           "anchor": "top_left",
           "pivot": "top_left",
-          "position": {"x": "5px", "y": "16px"},
-          "size": {"x": "calc(100% - 10px)", "y": "calc(100% - 21px)"}
+          "position": {"x": "5px", "y": "23px"},
+          "size": {"x": "calc(100% - 10px)", "y": "calc(100% - 28px)"}
         }
       ]
     }
