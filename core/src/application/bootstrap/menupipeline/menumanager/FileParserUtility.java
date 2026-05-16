@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import application.bootstrap.menupipeline.element.ElementOrigin;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
@@ -132,10 +131,8 @@ class FileParserUtility extends EngineUtility {
 
         JsonElement el = json.get(key);
 
-        if (el.isJsonPrimitive()) {
-            ElementOrigin o = ElementOrigin.fromString(el.getAsString());
-            return new Vector2(o.getX(), o.getY());
-        }
+        if (el.isJsonPrimitive())
+            return parseOriginName(el.getAsString());
 
         if (el.isJsonObject()) {
             JsonObject obj = el.getAsJsonObject();
@@ -145,5 +142,23 @@ class FileParserUtility extends EngineUtility {
         }
 
         return new Vector2(0f, 0f);
+    }
+
+    private static Vector2 parseOriginName(String name) {
+        return switch (name.trim().toLowerCase()) {
+            case "top_left" -> new Vector2(0f, 1f);
+            case "top_center" -> new Vector2(0.5f, 1f);
+            case "top_right" -> new Vector2(1f, 1f);
+            case "bottom_left" -> new Vector2(0f, 0f);
+            case "bottom_center" -> new Vector2(0.5f, 0f);
+            case "bottom_right" -> new Vector2(1f, 0f);
+            case "center" -> new Vector2(0.5f, 0.5f);
+            case "left" -> new Vector2(0f, 0.5f);
+            case "right" -> new Vector2(1f, 0.5f);
+            default -> {
+                throwException("Unknown origin: '" + name + "'");
+                yield null;
+            }
+        };
     }
 }
