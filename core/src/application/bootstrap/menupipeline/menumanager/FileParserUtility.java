@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import application.bootstrap.menupipeline.element.ElementOrigin;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
@@ -125,6 +124,26 @@ class FileParserUtility extends EngineUtility {
 
     // Origin Field \\
 
+    static Vector2 parseOriginName(String name) {
+
+        String normalized = name.toLowerCase();
+
+        float x = 0.5f;
+        float y = 0.5f;
+
+        if (normalized.contains("left"))
+            x = 0f;
+        else if (normalized.contains("right"))
+            x = 1f;
+
+        if (normalized.contains("top"))
+            y = 1f;
+        else if (normalized.contains("bottom"))
+            y = 0f;
+
+        return new Vector2(x, y);
+    }
+
     static Vector2 parseOriginField(JsonObject json, String key) {
 
         if (!json.has(key))
@@ -132,10 +151,8 @@ class FileParserUtility extends EngineUtility {
 
         JsonElement el = json.get(key);
 
-        if (el.isJsonPrimitive()) {
-            ElementOrigin o = ElementOrigin.fromString(el.getAsString());
-            return new Vector2(o.getX(), o.getY());
-        }
+        if (el.isJsonPrimitive())
+            return parseOriginName(el.getAsString());
 
         if (el.isJsonObject()) {
             JsonObject obj = el.getAsJsonObject();
