@@ -18,8 +18,8 @@ public class InputSystem extends SystemPackage {
      * reuses pre-allocated arrays to avoid per-frame heap allocation.
      *
      * Input is hover-gated: if the context window is not the one the mouse
-     * is currently over, transient events are cleared but held state is
-     * preserved. No concept of active or focused window — all windows are equal.
+     * is currently over, the handle is cleared to neutral. No concept of
+     * active or focused window — all windows are equal.
      */
 
     // Internal
@@ -55,14 +55,14 @@ public class InputSystem extends SystemPackage {
         WindowInstance ctx = windowManager.getContextWindow();
         if (ctx == null)
             return true;
-        return ctx.equals(windowManager.getHoveredWindow());
+        return ctx == windowManager.getHoveredWindow();
     }
 
     // Frame write \\
 
     public void writeRawInput(RawInputHandle handle) {
         if (!isHovered()) {
-            handle.clearTransient();
+            handle.clear();
             return;
         }
 

@@ -61,14 +61,6 @@ public class RawInputHandle extends HandlePackage {
         mouseX = mouseY = deltaX = deltaY = 0f;
     }
 
-    public void clearTransient() {
-        java.util.Arrays.fill(keysClicked, false);
-        java.util.Arrays.fill(keysReleased, false);
-        java.util.Arrays.fill(buttonsClicked, false);
-        java.util.Arrays.fill(buttonsReleased, false);
-        deltaX = deltaY = 0f;
-    }
-
     // Keys \\
 
     public boolean isKeyClicked(int key) {
@@ -100,10 +92,7 @@ public class RawInputHandle extends HandlePackage {
     // Bindings \\
 
     public boolean isBindingHeld(Binding binding) {
-        InputCode[] codes = binding.getCodes();
-        if (codes == null || codes.length == 0)
-            return false;
-        for (InputCode code : codes) {
+        for (InputCode code : binding.getCodes()) {
             if (code.type == BindingType.KEY && !isKeyHeld(code.code))
                 return false;
             if (code.type == BindingType.BUTTON && !isButtonHeld(code.code))
@@ -114,8 +103,6 @@ public class RawInputHandle extends HandlePackage {
 
     public boolean isBindingClicked(Binding binding) {
         InputCode[] codes = binding.getCodes();
-        if (codes == null || codes.length == 0)
-            return false;
         for (int i = 0; i < codes.length - 1; i++) {
             if (codes[i].type == BindingType.KEY && !isKeyHeld(codes[i].code))
                 return false;
@@ -130,8 +117,6 @@ public class RawInputHandle extends HandlePackage {
 
     public boolean isBindingReleased(Binding binding) {
         InputCode[] codes = binding.getCodes();
-        if (codes == null || codes.length == 0)
-            return false;
         for (int i = 0; i < codes.length - 1; i++) {
             if (codes[i].type == BindingType.KEY && !isKeyHeld(codes[i].code))
                 return false;
