@@ -218,6 +218,7 @@ public class TabManager extends ManagerPackage {
             WindowInstance tabWindow = handle.getTabContext().getWindow();
             tabWindow.setCompositeRect(x, y, w, h);
             tabWindow.resize((int) w, (int) h);
+            handle.markCanvasDirty();
             handle.clearPendingResize();
         }
     }
