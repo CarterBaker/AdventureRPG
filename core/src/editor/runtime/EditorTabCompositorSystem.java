@@ -59,12 +59,6 @@ public class EditorTabCompositorSystem extends SystemPackage {
         for (int i = 0; i < size; i++) {
 
             TabHandle handle = (TabHandle) elements[i];
-
-            if (handle.isCanvasDirty()) {
-                handle.clearCanvasDirty();
-                continue;
-            }
-
             TabContext tabContext = handle.getTabContext();
             WindowInstance tabWindow = tabContext.getWindow();
 

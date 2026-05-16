@@ -18,7 +18,6 @@ public class TabHandle extends HandlePackage {
     private TabContext tabContext;
     private ContextPackage contentContext;
     private boolean pendingResize;
-    private boolean canvasDirty;
 
     // Internal \\
 
@@ -69,18 +68,6 @@ public class TabHandle extends HandlePackage {
 
     public boolean isPendingResize() {
         return pendingResize;
-    }
-
-    public void markCanvasDirty() {
-        canvasDirty = true;
-    }
-
-    public void clearCanvasDirty() {
-        canvasDirty = false;
-    }
-
-    public boolean isCanvasDirty() {
-        return canvasDirty;
     }
 
     public boolean isOpen() {
