@@ -161,7 +161,7 @@ public class ElementInstance extends InstancePackage {
         float anchorX = parentLeft + layout.getAnchor().x * parentW;
         float anchorY = parentTop + layout.getAnchor().y * parentH;
         float tx = anchorX + posX - layout.getPivot().x * w;
-        float ty = anchorY + posY - layout.getPivot().y * h;
+        float ty = anchorY + posY - (1f - layout.getPivot().y) * h;
 
         this.computedLeft = tx;
         this.computedTop = ty;
@@ -262,11 +262,11 @@ public class ElementInstance extends InstancePackage {
     }
 
     public String getEffectiveActionMethod() {
-        return actionClassOverride != null ? actionMethodOverride : actionMethod;
+        return actionMethodOverride != null ? actionMethodOverride : actionMethod;
     }
 
     public String getEffectiveActionArg() {
-        return actionClassOverride != null ? actionArgOverride : actionArg;
+        return actionArgOverride != null ? actionArgOverride : actionArg;
     }
 
     public boolean hasAction() {
@@ -313,7 +313,7 @@ public class ElementInstance extends InstancePackage {
     }
 
     public void setScrollY(float y) {
-        this.scrollY = y;
+        this.scrollY = Math.max(0, Math.min(y, getMaxScrollY()));
     }
 
     public float getScrollX() {
