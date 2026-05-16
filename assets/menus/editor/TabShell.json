@@ -17,10 +17,10 @@
         {
           "id": "tab_canvas",
           "type": "canvas_area",
-          "anchor": "top_left",
-          "pivot": "top_left",
-          "position": {"x": "5px", "y": "23px"},
-          "size": {"x": "calc(100% - 10px)", "y": "calc(100% - 28px)"}
+          "anchor": "center",
+          "pivot": "center",
+          "position": {"x": "0px", "y": "11.5px"},
+          "size": {"x": "calc(100% - 10px)", "y": "calc(100% - 33px)"}
         }
       ]
     }
