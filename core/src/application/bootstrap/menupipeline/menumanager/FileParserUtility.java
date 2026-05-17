@@ -147,7 +147,7 @@ class FileParserUtility extends EngineUtility {
     static Vector2 parseOriginField(JsonObject json, String key) {
 
         if (!json.has(key))
-            return new Vector2(0f, 0f);
+            return new Vector2(0.5f, 0.5f);
 
         JsonElement el = json.get(key);
 
@@ -157,10 +157,10 @@ class FileParserUtility extends EngineUtility {
         if (el.isJsonObject()) {
             JsonObject obj = el.getAsJsonObject();
             return new Vector2(
-                    JsonUtility.getFloat(obj, "x", 0f),
-                    JsonUtility.getFloat(obj, "y", 0f));
+                    JsonUtility.getFloat(obj, "x", 0.5f),
+                    JsonUtility.getFloat(obj, "y", 0.5f));
         }
 
-        return new Vector2(0f, 0f);
+        return new Vector2(0.5f, 0.5f);
     }
 }

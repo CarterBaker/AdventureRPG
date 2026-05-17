@@ -10,11 +10,10 @@ layout (location = 3) in vec4 a_atlasUV;
 out vec2 v_uv;
 
 void main() {
-
-    vec2 pixelPos = a_screenPos + (a_localPos * a_screenSize);
+    vec2 pixelPos = a_screenPos + (vec2(a_localPos.x, 1.0 - a_localPos.y) * a_screenSize);
 
     vec2 ndc;
-    ndc.x =  (pixelPos.x / u_viewport.x) * 2.0 - 1.0;
+    ndc.x = (pixelPos.x / u_viewport.x) * 2.0 - 1.0;
     ndc.y = (pixelPos.y / u_viewport.y) * 2.0 - 1.0;
 
     v_uv = a_atlasUV.xy + (a_localPos * a_atlasUV.zw);
