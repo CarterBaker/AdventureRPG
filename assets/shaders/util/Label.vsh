@@ -15,7 +15,7 @@ void main() {
 
     vec2 ndc;
     ndc.x =  (pixelPos.x / u_viewport.x) * 2.0 - 1.0;
-    ndc.y = 1.0 - (pixelPos.y / u_viewport.y) * 2.0;
+    ndc.y = (pixelPos.y / u_viewport.y) * 2.0 - 1.0;
 
     v_uv = a_atlasUV.xy + (a_localPos * a_atlasUV.zw);
 
