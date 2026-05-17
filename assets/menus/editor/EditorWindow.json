@@ -61,7 +61,7 @@
           "type": "canvas_area",
           "anchor": "bottom_left",
           "pivot": "top_left",
-          "size": {"x": "100%", "y": "calc(100% - 14px)"}
+          "size": {"x": "100%", "y": "calc(100% - 28px)"}
         }
       ]
     },

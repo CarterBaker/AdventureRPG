@@ -111,8 +111,6 @@ public class FboRenderSystem extends SystemPackage {
             queue.set(j + 1, entry);
         }
 
-        // Resolution is constant for all blits in this window — set once outside the
-        // loop
         resolutionScratch.set(window.getWidth(), window.getHeight());
 
         for (int i = 0; i < queue.size(); i++) {
@@ -146,11 +144,8 @@ public class FboRenderSystem extends SystemPackage {
             return destRect;
 
         if (window.hasCompositeTarget() && window.hasCompositeRect()) {
-            WindowInstance target = window.getCompositeTarget();
-            // compositeY is layout space (Y+ down). Convert to OpenGL space (Y+ up).
-            float openglY = target.getHeight() - window.getCompositeY() - window.getCompositeH();
             return new FBODestinationStruct(
-                    window.getCompositeX(), openglY,
+                    window.getCompositeX(), window.getCompositeY(),
                     window.getCompositeW(), window.getCompositeH());
         }
 
