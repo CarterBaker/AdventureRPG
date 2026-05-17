@@ -58,7 +58,7 @@ class Lwjgl3Input implements Input {
         }
 
         deltaX = (float) (x - cursorX);
-        deltaY = (float) (yUp - cursorY);
+        deltaY = (float) (cursorY - yUp);
         cursorX = x;
         cursorY = yUp;
 

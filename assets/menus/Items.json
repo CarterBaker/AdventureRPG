@@ -11,14 +11,14 @@
             },
             "elements": [
                 {
-                    "id":     "item_label",
-                    "type":   "label",
-                    "font":   "MontserratAlternates",
-                    "text":   "Item",
-                    "color":  [0, 0, 0, 1],
-                    "align":  "left",
-                    "anchor": "CENTER_LEFT",
-                    "pivot":  "CENTER_LEFT",
+                    "id":       "item_label",
+                    "type":     "label",
+                    "font":     "MontserratAlternates",
+                    "text":     "Item",
+                    "color":    [0, 0, 0, 1],
+                    "align":    "left",
+                    "anchor":   "left",
+                    "pivot":    "left",
                     "position": { "x": "5%", "y": "0%" },
                     "size":     { "x": "90%", "y": "100%" }
                 }

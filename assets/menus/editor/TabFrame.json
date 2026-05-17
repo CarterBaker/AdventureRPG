@@ -1,7 +1,7 @@
 {
   "menus": [
     {
-      "id": "TabShell",
+      "id": "TabFrame",
       "raycast_input": true,
       "elements": [
         {
@@ -9,17 +9,16 @@
           "type": "sprite",
           "sprite": "menus/EditorTab",
           "anchor": "top_left",
-          "pivot": "top_left",
-          "position": {"x": "0%", "y": "0%"},
+          "pivot": "bottom_left",
           "size": {"x": "100%", "y": "100%"},
           "color": [1.0, 1.0, 1.0, 1.0]
         },
         {
           "id": "tab_canvas",
           "type": "canvas_area",
-          "anchor": "top_left",
+          "anchor": "bottom_left",
           "pivot": "top_left",
-          "position": {"x": "5px", "y": "-28px"},
+          "position": {"x": "5px", "y": "5px"},
           "size": {"x": "calc(100% - 10px)", "y": "calc(100% - 33px)"}
         }
       ]

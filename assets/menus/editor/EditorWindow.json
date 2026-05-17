@@ -3,18 +3,14 @@
     {
       "id": "testing_dropdown_panel",
       "type": "container",
-      "anchor": "top_left",
-      "pivot": "top_left",
-      "position": {"x": "0px", "y": "-28px"},
+      "anchor": "bottom_left",
+      "pivot": "bottom_left",
       "size": {"x": "150px", "y": "56px"},
-      "color": [1.0, 1.0, 1.0, 1.0],
       "stack": "vertical",
       "elements": [
         {
           "id": "open_window_button",
           "type": "button",
-          "anchor": "top_left",
-          "pivot": "top_left",
           "size": {"x": "150px", "y": "28px"},
           "on_click": {
             "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
@@ -31,8 +27,6 @@
         {
           "id": "open_preview_button",
           "type": "button",
-          "anchor": "top_left",
-          "pivot": "top_left",
           "size": {"x": "150px", "y": "28px"},
           "on_click": {
             "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
@@ -57,8 +51,7 @@
           "id": "background",
           "type": "sprite",
           "anchor": "top_left",
-          "pivot": "top_left",
-          "position": {"x": "0%", "y": "0%"},
+          "pivot": "bottom_left",
           "size": {"x": "100%", "y": "100%"},
           "sprite": "util/Default",
           "color": [0.13, 0.13, 0.13, 1.0]
@@ -66,7 +59,8 @@
         {
           "id": "dock_canvas",
           "type": "canvas_area",
-          "position": {"x": "0%", "y": "14px"},
+          "anchor": "bottom_left",
+          "pivot": "top_left",
           "size": {"x": "100%", "y": "calc(100% - 14px)"}
         }
       ]
@@ -84,14 +78,14 @@
               "id": "testing_menu",
               "type": "container",
               "anchor": "top_left",
-              "pivot": "top_left",
+              "pivot": "bottom_left",
               "size": {"x": "100px", "y": "28px"},
               "elements": [
                 {
                   "id": "testing_button",
                   "type": "button",
                   "anchor": "top_left",
-                  "pivot": "top_left",
+                  "pivot": "bottom_left",
                   "size": {"x": "100px", "y": "28px"},
                   "on_click": {
                     "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
@@ -110,11 +104,11 @@
                   "id": "testing_dropdown",
                   "type": "container",
                   "anchor": "top_left",
-                  "pivot": "top_left",
+                  "pivot": "bottom_left",
                   "size": {"x": "100px", "y": "28px"},
                   "start_expanded": false,
                   "hover_state": {
-                    "use": "EditorWindow/testing_dropdown_panel"
+                    "use": "editor/EditorWindow/testing_dropdown_panel"
                   }
                 }
               ]
@@ -134,9 +128,8 @@
         {
           "id": "dock_canvas",
           "type": "canvas_area",
-          "anchor": "top_left",
+          "anchor": "bottom_left",
           "pivot": "top_left",
-          "position": {"x": "0%", "y": "28px"},
           "size": {"x": "100%", "y": "calc(100% - 28px)"}
         }
       ]

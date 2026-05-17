@@ -4,7 +4,7 @@
       "id": "toolbar",
       "type": "container",
       "anchor": "top_left",
-      "pivot": "top_left",
+      "pivot": "bottom_left",
       "position": {"x": "0%", "y": "0%"},
       "size": {"x": "100%", "y": "28px"},
       "sprite": "menus/ToolBar",
