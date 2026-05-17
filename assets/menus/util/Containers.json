@@ -3,8 +3,8 @@
         {
             "id":     "empty",
             "type":   "container",
-            "anchor": "CENTER",
-            "pivot":  "CENTER"
+            "anchor": "center",
+            "pivot":  "center"
         }
     ]
 }

@@ -4,8 +4,8 @@
             "id":     "close",
             "type":   "button",
             "sprite": "menus/DebugElement",
-            "anchor": "CENTER",
-            "pivot":  "CENTER",
+            "anchor": "center",
+            "pivot":  "center",
             "on_click": {
                 "class":  "application.runtime.menueventsmanager.menus.MainMenuBranch",
                 "method": "closeMenu",
@@ -13,19 +13,19 @@
             },
             "elements": [
                 {
-                    "id":     "closeLabel",
-                    "type":   "label",
-                    "text":   "Close"
+                    "id":   "closeLabel",
+                    "type": "label",
+                    "text": "Close"
                 }
             ]
         },
         {
-            "id":   "title",
-            "type": "sprite",
+            "id":     "title",
+            "type":   "sprite",
             "sprite": "menus/Title",
-            "anchor": "TOP_CENTER",
-            "pivot":  "TOP_CENTER",
-            "position": { "x": "0%",  "y": "-5%" },
+            "anchor": "top_center",
+            "pivot":  "top_center",
+            "position": { "x": "0%",  "y": "-25%" },
             "size":     { "x": "40%", "y": "20%" },
             "min_size": { "x": "300px", "y": "80px" }
         }
@@ -43,31 +43,31 @@
                 {
                     "id":       "empty",
                     "use":      "util/Containers",
-                    "anchor":   "CENTER",
-                    "pivot":    "CENTER",
-                    "position": { "x": "0%",  "y": "0%"  },
-                    "size":     { "x": "20%", "y": "10%" },
+                    "anchor":   "center",
+                    "pivot":    "center",
+                    "position": { "x": "0%", "y": "0%" },
+                    "size":     { "x": "20%", "y": "20%" },
                     "elements": [
                         {
                             "id":       "close",
                             "ref":      "MainMenu/close",
-                            "anchor":   "CENTER",
-                            "pivot":    "CENTER",
-                            "position": { "x": "0%", "y": "60%" },
-                            "size":     { "x": "80%", "y": "60%" }
+                            "anchor":   "center",
+                            "pivot":    "center",
+                            "position": { "x": "0%", "y": "25%" },
+                            "size":     { "x": "80%", "y": "40%" }
                         },
                         {
                             "id":       "quit",
                             "use":      "util/GenericButtons",
-                            "anchor":   "CENTER",
-                            "pivot":    "CENTER",
-                            "position": { "x": "0%", "y": "0%"  },
-                            "size":     { "x": "80%", "y": "60%" },
+                            "anchor":   "center",
+                            "pivot":    "center",
+                            "position": { "x": "0%", "y": "-25%" },
+                            "size":     { "x": "80%", "y": "40%" },
                             "elements": [
                                 {
-                                    "id":     "quitLabel",
-                                    "type":   "label",
-                                    "text":   "Quit"
+                                    "id":   "quitLabel",
+                                    "type": "label",
+                                    "text": "Quit"
                                 }
                             ]
                         }
