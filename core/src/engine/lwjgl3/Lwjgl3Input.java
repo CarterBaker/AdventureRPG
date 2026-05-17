@@ -2,7 +2,9 @@ package engine.lwjgl3;
 
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.nio.IntBuffer;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.system.MemoryStack;
 
 import engine.input.Input;
 import engine.input.InputListener;
@@ -47,20 +49,29 @@ class Lwjgl3Input implements Input {
     // Internal \\
 
     void onCursor(double x, double y) {
+        double yUp = toYUp(y);
 
         if (firstCursor) {
             cursorX = x;
-            cursorY = y;
+            cursorY = yUp;
             firstCursor = false;
         }
 
         deltaX = (float) (x - cursorX);
-        deltaY = (float) (y - cursorY);
+        deltaY = (float) (yUp - cursorY);
         cursorX = x;
-        cursorY = y;
+        cursorY = yUp;
 
         for (int i = 0; i < listeners.size(); i++)
-            listeners.get(i).onMouseMoved((int) x, (int) y);
+            listeners.get(i).onMouseMoved((int) x, (int) yUp);
+    }
+
+    private double toYUp(double yDown) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer height = stack.mallocInt(1);
+            GLFW.glfwGetWindowSize(window, null, height);
+            return height.get(0) - yDown;
+        }
     }
 
     void onMouseButton(int button, int action) {
