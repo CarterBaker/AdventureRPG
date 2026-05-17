@@ -30,11 +30,6 @@ public class TabManager extends ManagerPackage {
      * class. A per-class counter produces "Preview 1", "Preview 2", etc. so
      * any number of tabs of the same type can be open simultaneously.
      *
-     * Depth ordering:
-     * editor — depth 0 (base layer, drawn first)
-     * tab — depth 1 (chrome draws on top of editor)
-     * content — depth 2 (content draws on top of chrome)
-     *
      * FboRenderSystem sort key = windowDepth * LAYER_STRIDE + layer, so this
      * ordering is automatically enforced each frame without any manual sorting
      * at this level.
