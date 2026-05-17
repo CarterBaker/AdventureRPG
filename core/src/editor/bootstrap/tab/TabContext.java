@@ -1,5 +1,6 @@
 package editor.bootstrap.tab;
 
+import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
@@ -24,9 +25,11 @@ public class TabContext extends ContextPackage {
      *
      * FBO: cloned per tab so every chrome menu writes to its own render target.
      * Sharing the singleton FBO causes all tab menus to overwrite the same
-     * texture as soon as a second tab opens. Resized in onResize() to stay in
-     * sync with the tab window dimensions so the blit shader always maps a
-     * fully-occupied texture into the composite dest rect.
+     * texture as soon as a second tab opens.
+     *
+     * Zero-size guard: BSP emits (0,0,0,0) on the split frame. Canvas guard:
+     * menu layout runs one frame after awake. Both guards live in onResize so
+     * the content window never receives an invalid rect.
      */
 
     // Internal
@@ -59,17 +62,6 @@ public class TabContext extends ContextPackage {
         uiFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, getWindow());
         menuManager.setMenuTargetFbo(getWindow(), uiFbo);
         chromeMenu = menuManager.openMenu(EngineSetting.MENU_TAB_SHELL, getWindow());
-    }
-
-    // Resize \\
-
-    @Override
-    public void onResize(int width, int height) {
-
-        if (width <= 0 || height <= 0)
-            return;
-
-        fboManager.resize(uiFbo, width, height);
     }
 
     // Render \\
