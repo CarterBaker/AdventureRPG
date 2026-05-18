@@ -29,10 +29,8 @@ public class EditorTabCompositorSystem extends SystemPackage {
 
     @Override
     protected void update() {
-
         MenuInstance baseMenu = editorMenuSystem.getBaseMenu();
         CanvasInstance canvas = baseMenu.getCanvas();
-
         if (canvas == null)
             return;
 
@@ -55,13 +53,11 @@ public class EditorTabCompositorSystem extends SystemPackage {
     // Sync \\
 
     private void syncContentRects() {
-
         ObjectArrayList<TabHandle> tabs = tabManager.getOpenTabs();
         Object[] elements = tabs.elements();
         int size = tabs.size();
 
         for (int i = 0; i < size; i++) {
-
             TabHandle handle = (TabHandle) elements[i];
             TabContext tabContext = handle.getTabContext();
             WindowInstance tabWindow = tabContext.getWindow();
@@ -69,13 +65,19 @@ public class EditorTabCompositorSystem extends SystemPackage {
             if (!tabWindow.hasCompositeRect())
                 continue;
 
-            MenuInstance chromeMenu = tabContext.getChromeMenu();
+            int targetW = (int) tabWindow.getCompositeW();
+            int targetH = (int) tabWindow.getCompositeH();
 
+            if (tabWindow.getWidth() != targetW || tabWindow.getHeight() != targetH) {
+                tabWindow.resize(targetW, targetH);
+                continue;
+            }
+
+            MenuInstance chromeMenu = tabContext.getChromeMenu();
             if (chromeMenu == null)
                 continue;
 
             CanvasInstance tabCanvas = chromeMenu.getCanvas();
-
             if (tabCanvas == null || tabCanvas.getW() <= 0 || tabCanvas.getH() <= 0)
                 continue;
 

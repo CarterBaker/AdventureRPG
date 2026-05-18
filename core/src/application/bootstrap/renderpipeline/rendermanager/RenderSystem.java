@@ -4,6 +4,7 @@ import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferIns
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
+import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
@@ -24,11 +25,13 @@ class RenderSystem extends SystemPackage {
 
     private CompositeRenderSystem compositeRenderSystem;
     private VAOManager vaoManager;
+    private CameraManager cameraManager;
 
     @Override
     protected void get() {
         this.compositeRenderSystem = get(CompositeRenderSystem.class);
         this.vaoManager = get(VAOManager.class);
+        this.cameraManager = get(CameraManager.class);
     }
 
     void drawToMappedTargets(WindowInstance window) {
@@ -45,6 +48,10 @@ class RenderSystem extends SystemPackage {
             FboInstance target = (FboInstance) fboObjects[f];
             if (target == null)
                 continue;
+
+            WindowInstance fboWindow = queue.fbo2Window.get(target);
+            if (fboWindow != null)
+                cameraManager.pushCamera(fboWindow);
 
             bindTarget(window, target);
             GLSLUtility.enableDepth();
@@ -248,6 +255,7 @@ class RenderSystem extends SystemPackage {
             queue.fbo2Depth2BatchList.put(fbo, new Int2ObjectOpenHashMap<>());
             queue.fbo2DepthOrder.put(fbo, new IntArrayList());
             queue.queuedFbos.add(fbo);
+            queue.fbo2Window.put(fbo, window);
         }
 
         Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = depth2MaterialBatches.get(depth);

@@ -4,6 +4,7 @@ import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.compositebatch.CompositeBatchStruct;
 import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
+import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -20,6 +21,7 @@ public class RenderQueueHandle extends HandlePackage {
     public Object2ObjectOpenHashMap<FboInstance, Int2ObjectOpenHashMap<ObjectArrayList<RenderBatchStruct>>> fbo2Depth2BatchList;
     public Object2ObjectOpenHashMap<FboInstance, IntArrayList> fbo2DepthOrder;
     public ObjectArrayList<FboInstance> queuedFbos;
+    public Object2ObjectOpenHashMap<FboInstance, WindowInstance> fbo2Window;
 
     public Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>> screenOrder2MaterialBatches;
     public Int2ObjectOpenHashMap<ObjectArrayList<RenderBatchStruct>> screenOrder2BatchList;
@@ -39,6 +41,7 @@ public class RenderQueueHandle extends HandlePackage {
         this.fbo2Depth2BatchList = new Object2ObjectOpenHashMap<>();
         this.fbo2DepthOrder = new Object2ObjectOpenHashMap<>();
         this.queuedFbos = new ObjectArrayList<>();
+        this.fbo2Window = new Object2ObjectOpenHashMap<>();
 
         this.screenOrder2MaterialBatches = new Int2ObjectOpenHashMap<>();
         this.screenOrder2BatchList = new Int2ObjectOpenHashMap<>();
@@ -60,16 +63,14 @@ public class RenderQueueHandle extends HandlePackage {
 
     public void rewindFrame() {
         renderCallCursor = 0;
-
         queuedFbos.clear();
         fbo2Depth2MaterialBatches.clear();
         fbo2Depth2BatchList.clear();
         fbo2DepthOrder.clear();
-
+        fbo2Window.clear();
         screenOrder2MaterialBatches.clear();
         screenOrder2BatchList.clear();
         screenDepthOrder.clear();
-
         fbo2CompositeMaterialBatches.clear();
         fbo2CompositeBatchList.clear();
         screenCompositeMaterialBatches.clear();

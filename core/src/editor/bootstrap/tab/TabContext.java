@@ -64,6 +64,15 @@ public class TabContext extends ContextPackage {
         chromeMenu = menuManager.openMenu(EngineSetting.MENU_TAB_SHELL, getWindow());
     }
 
+    @Override
+    public void onResize(int width, int height) {
+
+        if (uiFbo == null)
+            return;
+
+        uiFbo.resize(width, height);
+    }
+
     // Render \\
 
     @Override
