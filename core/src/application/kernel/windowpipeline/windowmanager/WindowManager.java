@@ -12,12 +12,21 @@ public class WindowManager extends ManagerPackage {
 
     /*
      * Owns all engine windows. Each frame resolves which window the cursor is
-     * geometrically inside (highest depth wins) and stores it as hoveredWindow.
-     * No concept of active, focused, or foreground window — all windows are
-     * equal participants. Input routing is entirely hover-driven.
+     * geometrically inside and stores it as hoveredWindow. No concept of active,
+     * focused, or foreground window — all windows are equal participants. Input
+     * routing is entirely hover-driven.
      *
      * OS windows are depth 0. Logical windows (tabs) are depth 1+.
-     * Higher depth always wins the hover test when rects overlap.
+     *
+     * Hover resolution uses tightest-rect-wins: among all windows whose bounds
+     * contain the cursor, the window with the smallest compositeRect area wins.
+     * Depth breaks ties only when two windows have the same area. This prevents
+     * full-screen overlay windows (e.g. toolbar at depth 3 with a full-screen
+     * compositeRect) from stealing hover from smaller precisely-positioned windows
+     * (e.g. tab windows at depth 1 with a dock-sized compositeRect).
+     *
+     * Windows without a compositeRect but with a native handle are treated as
+     * infinite area and only win when no compositeRect window contains the cursor.
      */
 
     private ObjectArrayList<WindowInstance> windows;
@@ -77,13 +86,21 @@ public class WindowManager extends ManagerPackage {
         float my = EngineContext.input.getMouseY();
 
         WindowInstance topHit = null;
+        long topArea = Long.MAX_VALUE;
         int topDepth = Integer.MIN_VALUE;
 
         for (int i = 0; i < windows.size(); i++) {
             WindowInstance w = windows.get(i);
+
             if (!isMouseOver(w, mx, my))
                 continue;
-            if (w.getDepth() > topDepth) {
+
+            long area = w.hasCompositeRect()
+                    ? (long) w.getCompositeW() * (long) w.getCompositeH()
+                    : Long.MAX_VALUE;
+
+            if (area < topArea || (area == topArea && w.getDepth() > topDepth)) {
+                topArea = area;
                 topDepth = w.getDepth();
                 topHit = w;
             }
