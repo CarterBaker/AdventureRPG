@@ -55,6 +55,10 @@ public class ElementHitSystem extends SystemPackage {
      *
      * Y axis: menu layout and hit testing use the same visual coordinate space.
      * computedTop is the element bottom edge; computedTop + computedH is top.
+     *
+     * When an element hover fires, WindowManager.lockHoveredWindow() is called to
+     * prevent syncHoveredWindow from reassigning hoveredWindow mid-hover. The lock
+     * is released in clearHover() on hover exit.
      */
 
     private static final String PARENT_ARG = "$parent";
@@ -171,6 +175,7 @@ public class ElementHitSystem extends SystemPackage {
 
         next.setHovered(true);
         hoveredElement = next;
+        windowManager.lockHoveredWindow();
 
         if (hoverAnchorCapture != null && hoverAnchorCapture != next) {
             hoverAnchorCapture.setHovered(true);
@@ -282,6 +287,8 @@ public class ElementHitSystem extends SystemPackage {
             hoverAnchor.setHovered(false);
             hoverAnchor = null;
         }
+
+        windowManager.unlockHoveredWindow();
     }
 
     // Collapse \\

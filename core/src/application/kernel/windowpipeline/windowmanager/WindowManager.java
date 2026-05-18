@@ -27,6 +27,10 @@ public class WindowManager extends ManagerPackage {
      *
      * Windows without a compositeRect but with a native handle are treated as
      * infinite area and only win when no compositeRect window contains the cursor.
+     *
+     * hoveredWindowLocked prevents syncHoveredWindow from reassigning hoveredWindow
+     * while an element hover is active. Lock is set by ElementHitSystem on hover
+     * entry and released on hover exit.
      */
 
     private ObjectArrayList<WindowInstance> windows;
@@ -34,6 +38,8 @@ public class WindowManager extends ManagerPackage {
     private WindowInstance hoveredWindow;
     private WindowInstance renderWindow;
     private WindowInstance contextWindow;
+
+    private boolean hoveredWindowLocked;
 
     private int nextWindowID;
 
@@ -81,6 +87,9 @@ public class WindowManager extends ManagerPackage {
     }
 
     private void syncHoveredWindow() {
+
+        if (hoveredWindowLocked)
+            return;
 
         float mx = EngineContext.input.getMouseX();
         float my = EngineContext.input.getMouseY();
@@ -196,6 +205,16 @@ public class WindowManager extends ManagerPackage {
 
     public void endContextWindow() {
         this.contextWindow = null;
+    }
+
+    // Hover lock \\
+
+    public void lockHoveredWindow() {
+        hoveredWindowLocked = true;
+    }
+
+    public void unlockHoveredWindow() {
+        hoveredWindowLocked = false;
     }
 
     // Accessors \\
