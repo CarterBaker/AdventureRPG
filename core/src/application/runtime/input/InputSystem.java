@@ -49,16 +49,19 @@ public class InputSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        // Snapshot raw hardware state into this context's handle
         bootstrapInput.writeRawInput(rawInputHandle);
 
         int windowID = context.getWindow().getWindowID();
+
         if (!playerManager.hasPlayerForWindow(windowID))
             return;
 
         handleInventoryInput(windowID);
 
-        if (menuManager.isInputLocked(context.getWindow()))
+        boolean inputLocked = context.getWindow().getMenuListHandle().isInputLocked();
+        bootstrapInput.captureCursor(!inputLocked);
+
+        if (inputLocked)
             return;
 
         updateCameraRotation(windowID);

@@ -6,8 +6,6 @@ import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.elementhitsystem.ElementHitSystem;
 import application.bootstrap.menupipeline.elementsystem.ElementSystem;
-import application.bootstrap.menupipeline.locksystem.LockSystem;
-import application.bootstrap.menupipeline.menu.MenuData;
 import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
@@ -28,9 +26,8 @@ public class MenuManager extends ManagerPackage {
 
     /*
      * Owns the menu palette and drives the menu lifecycle. Handles opening and
-     * closing MenuInstances, runtime element injection, and deferred menu closing.
-     * Rendering, hit testing, mask stack, and lock management are delegated to
-     * dedicated systems.
+     * closing MenuInstances and runtime element injection. Rendering and hit
+     * testing are delegated to dedicated systems.
      *
      * Open menu state is per-window. Each WindowInstance owns a MenuListHandle
      * — the single source of truth for which menus are active in that window.
@@ -38,18 +35,14 @@ public class MenuManager extends ManagerPackage {
      * window list each frame and renders each window's menus against its FBO.
      *
      * Input and raycast lock state is derived live from each window's
-     * MenuListHandle — no counter is maintained here. LockSystem is retained
-     * for any non-menu lock sources it may serve.
-     *
-     * Canvas bounds are owned by MenuInstance and written directly by
-     * MenuRenderSystem each frame. Nothing in this manager touches canvas state.
+     * MenuListHandle. Canvas bounds are owned by MenuInstance and written
+     * directly by MenuRenderSystem each frame.
      */
 
     // Internal
     private ElementSystem elementSystem;
     private MenuRenderSystem renderSystem;
     private ElementHitSystem hitSystem;
-    private LockSystem lockSystem;
     private WindowManager windowManager;
 
     // Palette
@@ -61,9 +54,6 @@ public class MenuManager extends ManagerPackage {
 
     // FBO routing
     private Object2ObjectOpenHashMap<WindowInstance, FboInstance> window2MenuTargetFbo;
-
-    // Scratch
-    private ObjectArrayList<ElementInstance> singletonScratch;
 
     // Internal \\
 
@@ -77,8 +67,6 @@ public class MenuManager extends ManagerPackage {
         this.pendingCloseMenus = new ObjectArrayList<>();
         this.window2MenuTargetFbo = new Object2ObjectOpenHashMap<>();
 
-        this.singletonScratch = new ObjectArrayList<>(1);
-
         create(InternalLoader.class);
     }
 
@@ -87,7 +75,6 @@ public class MenuManager extends ManagerPackage {
         this.elementSystem = get(ElementSystem.class);
         this.renderSystem = get(MenuRenderSystem.class);
         this.hitSystem = get(ElementHitSystem.class);
-        this.lockSystem = get(LockSystem.class);
         this.windowManager = get(WindowManager.class);
     }
 
@@ -160,9 +147,6 @@ public class MenuManager extends ManagerPackage {
         if (customizer != null)
             customizer.accept(instance);
 
-        singletonScratch.clear();
-        singletonScratch.add(instance);
-
         menu.addToEntryPoint(entryPoint, instance);
 
         return instance;
@@ -174,16 +158,11 @@ public class MenuManager extends ManagerPackage {
 
     public void eject(MenuInstance menu, int entryPoint, ElementInstance instance) {
 
-        singletonScratch.clear();
-        singletonScratch.add(instance);
-        renderSystem.releaseFontModels(singletonScratch);
+        ObjectArrayList<ElementInstance> single = new ObjectArrayList<>(1);
+        single.add(instance);
+        renderSystem.releaseFontModels(single);
 
         menu.removeFromEntryPoint(entryPoint, instance);
-    }
-
-    public void refreshText(ElementInstance element) {
-        singletonScratch.clear();
-        singletonScratch.add(element);
     }
 
     // Management \\
@@ -195,10 +174,6 @@ public class MenuManager extends ManagerPackage {
     }
 
     // Accessible \\
-
-    public boolean isInputLocked(WindowInstance window) {
-        return window.getMenuListHandle().isInputLocked();
-    }
 
     public boolean hasMenu(String menuName) {
         return menuName2MenuID.containsKey(menuName);
@@ -253,7 +228,7 @@ public class MenuManager extends ManagerPackage {
         if (!pendingCloseMenus.contains(instance))
             pendingCloseMenus.add(instance);
 
-        if (!lockSystem.isRaycastLocked())
+        if (!instance.getWindow().getMenuListHandle().isRaycastLocked())
             hitSystem.resetPressed();
 
         return null;
