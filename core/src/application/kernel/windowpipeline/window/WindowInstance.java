@@ -229,7 +229,7 @@ public class WindowInstance extends InstancePackage {
     }
 
     public MenuListHandle getMenuListHandle() {
-        return hasCompositeTarget() ? compositeTarget.getMenuListHandle() : menuListHandle;
+        return menuListHandle;
     }
 
     public int getWindowID() {
