@@ -20,6 +20,8 @@ public class InputSystem extends SystemPackage {
      * Input is hover-gated: if the context window is not the one the mouse
      * is currently over, the handle is cleared to neutral. No concept of
      * active or focused window — all windows are equal.
+     * Exception: when the cursor is captured, the hover gate is bypassed —
+     * capture is an explicit contract that this window owns the mouse.
      */
 
     // Internal
@@ -28,6 +30,9 @@ public class InputSystem extends SystemPackage {
     // Mouse delta
     private Vector2 mouseDelta;
     private static final Vector2 ZERO_DELTA = new Vector2(0, 0);
+
+    // Cursor capture
+    private boolean cursorCaptured = false;
 
     // Pre-allocated snapshot buffers — reused every frame
     private final boolean[] kc = new boolean[512];
@@ -52,6 +57,8 @@ public class InputSystem extends SystemPackage {
     // Guard \\
 
     private boolean isHovered() {
+        if (cursorCaptured)
+            return true;
         WindowInstance ctx = windowManager.getContextWindow();
         if (ctx == null)
             return true;
@@ -125,6 +132,7 @@ public class InputSystem extends SystemPackage {
     // Platform \\
 
     public void captureCursor(boolean captured) {
+        this.cursorCaptured = captured;
         EngineContext.input.setCursorCatched(captured);
     }
 }
