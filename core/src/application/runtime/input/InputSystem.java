@@ -58,7 +58,7 @@ public class InputSystem extends SystemPackage {
 
         handleInventoryInput(windowID);
 
-        if (menuManager.isInputLocked())
+        if (menuManager.isInputLocked(context.getWindow()))
             return;
 
         updateCameraRotation(windowID);

@@ -1,6 +1,7 @@
 package application.kernel.windowpipeline.window;
 
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
+import application.bootstrap.menupipeline.menulist.MenuListHandle;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.renderpipeline.renderqueue.RenderQueueHandle;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
@@ -12,10 +13,10 @@ import engine.root.InstancePackage;
 public class WindowInstance extends InstancePackage {
 
     /*
-     * Runtime window wrapper. Pairs with a context and owns the render queue.
-     * Logical windows (tabs) have no native handle — they carry a composite
-     * target and rect so FboRenderSystem can transparently redirect their
-     * pushFbo calls to the correct OS window and screen region.
+     * Runtime window wrapper. Pairs with a context and owns the render queue
+     * and menu list. Logical windows (tabs) have no native handle — they carry
+     * a composite target and rect so FboRenderSystem can transparently redirect
+     * their pushFbo calls to the correct OS window and screen region.
      * Depth controls draw order during the screen pass — OS windows are 0,
      * tab logical windows are 1. Higher depth always draws on top.
      * Input is hover-driven — no active or focus concept exists at this level.
@@ -27,6 +28,9 @@ public class WindowInstance extends InstancePackage {
 
     // Render Queue
     private RenderQueueHandle renderQueueHandle;
+
+    // Menu List
+    private MenuListHandle menuListHandle;
 
     // Context
     private ContextPackage context;
@@ -77,6 +81,9 @@ public class WindowInstance extends InstancePackage {
     protected void awake() {
         this.renderQueueHandle = create(RenderQueueHandle.class);
         this.renderQueueHandle.constructor();
+
+        this.menuListHandle = create(MenuListHandle.class);
+        this.menuListHandle.constructor();
     }
 
     // Context \\
@@ -219,6 +226,10 @@ public class WindowInstance extends InstancePackage {
 
     public RenderQueueHandle getRenderQueueHandle() {
         return hasCompositeTarget() ? compositeTarget.getRenderQueueHandle() : renderQueueHandle;
+    }
+
+    public MenuListHandle getMenuListHandle() {
+        return hasCompositeTarget() ? compositeTarget.getMenuListHandle() : menuListHandle;
     }
 
     public int getWindowID() {

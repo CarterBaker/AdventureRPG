@@ -11,15 +11,17 @@ import application.bootstrap.menupipeline.menu.MenuData;
 import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
+import application.bootstrap.menupipeline.menulist.MenuListHandle;
 import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.runtime.RuntimeSetting;
 import application.kernel.windowpipeline.window.WindowInstance;
+import application.kernel.windowpipeline.windowmanager.WindowManager;
+import application.runtime.RuntimeSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuManager extends ManagerPackage {
@@ -30,6 +32,15 @@ public class MenuManager extends ManagerPackage {
      * Rendering, hit testing, mask stack, and lock management are delegated to
      * dedicated systems.
      *
+     * Open menu state is per-window. Each WindowInstance owns a MenuListHandle
+     * — the single source of truth for which menus are active in that window.
+     * MenuManager holds no global active list; it iterates WindowManager's
+     * window list each frame and renders each window's menus against its FBO.
+     *
+     * Input and raycast lock state is derived live from each window's
+     * MenuListHandle — no counter is maintained here. LockSystem is retained
+     * for any non-menu lock sources it may serve.
+     *
      * Canvas bounds are owned by MenuInstance and written directly by
      * MenuRenderSystem each frame. Nothing in this manager touches canvas state.
      */
@@ -39,14 +50,16 @@ public class MenuManager extends ManagerPackage {
     private MenuRenderSystem renderSystem;
     private ElementHitSystem hitSystem;
     private LockSystem lockSystem;
+    private WindowManager windowManager;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
     private Int2ObjectOpenHashMap<MenuHandle> menuID2MenuHandle;
 
-    // Active
-    private ObjectArrayList<MenuInstance> activeMenus;
+    // Deferred close — scratch buffer only, not the source of truth for open state
     private ObjectArrayList<MenuInstance> pendingCloseMenus;
+
+    // FBO routing
     private Object2ObjectOpenHashMap<WindowInstance, FboInstance> window2MenuTargetFbo;
 
     // Scratch
@@ -61,7 +74,6 @@ public class MenuManager extends ManagerPackage {
         this.menuID2MenuHandle = new Int2ObjectOpenHashMap<>();
         this.menuName2MenuID.defaultReturnValue(-1);
 
-        this.activeMenus = new ObjectArrayList<>();
         this.pendingCloseMenus = new ObjectArrayList<>();
         this.window2MenuTargetFbo = new Object2ObjectOpenHashMap<>();
 
@@ -76,6 +88,7 @@ public class MenuManager extends ManagerPackage {
         this.renderSystem = get(MenuRenderSystem.class);
         this.hitSystem = get(ElementHitSystem.class);
         this.lockSystem = get(LockSystem.class);
+        this.windowManager = get(WindowManager.class);
     }
 
     @Override
@@ -83,22 +96,33 @@ public class MenuManager extends ManagerPackage {
 
         flushPendingClosedMenus();
 
-        if (activeMenus.isEmpty())
-            return;
+        ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
+        int windowCount = windows.size();
 
-        for (int i = 0; i < activeMenus.size(); i++) {
+        for (int i = 0; i < windowCount; i++) {
 
-            MenuInstance menu = activeMenus.get(i);
-            FboInstance menuTargetFbo = window2MenuTargetFbo.get(menu.getWindow());
+            WindowInstance window = windows.get(i);
+            MenuListHandle menuList = window.getMenuListHandle();
+
+            if (menuList.isEmpty())
+                continue;
+
+            FboInstance menuTargetFbo = window2MenuTargetFbo.get(window);
 
             if (menuTargetFbo == null)
                 continue;
 
-            renderSystem.renderMenu(menu, menuTargetFbo, RuntimeSetting.LAYER_UI);
+            ObjectArrayList<MenuInstance> menus = menuList.getMenus();
+            int menuCount = menus.size();
+
+            for (int j = 0; j < menuCount; j++)
+                renderSystem.renderMenu(menus.get(j), menuTargetFbo, RuntimeSetting.LAYER_UI);
         }
 
-        if (lockSystem.isRaycastLocked())
-            hitSystem.updateRaycast(activeMenus);
+        WindowInstance hovered = windowManager.getHoveredWindow();
+
+        if (hovered != null && hovered.getMenuListHandle().isRaycastLocked())
+            hitSystem.updateRaycast(hovered.getMenuListHandle().getMenus());
     }
 
     // Deferred Menu Close \\
@@ -111,7 +135,7 @@ public class MenuManager extends ManagerPackage {
         for (int i = 0; i < pendingCloseMenus.size(); i++) {
             MenuInstance instance = pendingCloseMenus.get(i);
             renderSystem.releaseFontModels(instance.getElements());
-            activeMenus.remove(instance);
+            instance.getWindow().getMenuListHandle().remove(instance);
         }
 
         pendingCloseMenus.clear();
@@ -172,8 +196,8 @@ public class MenuManager extends ManagerPackage {
 
     // Accessible \\
 
-    public boolean isInputLocked() {
-        return lockSystem.isInputLocked();
+    public boolean isInputLocked(WindowInstance window) {
+        return window.getMenuListHandle().isInputLocked();
     }
 
     public boolean hasMenu(String menuName) {
@@ -214,13 +238,7 @@ public class MenuManager extends ManagerPackage {
         instance.constructor(handle.getMenuData(), liveElements, window);
         holder[0] = instance;
 
-        activeMenus.add(instance);
-
-        if (handle.isLockInput())
-            lockSystem.applyInputLock(1);
-
-        if (handle.isRaycastInput())
-            lockSystem.applyRaycastLock(1);
+        window.getMenuListHandle().add(instance);
 
         return instance;
     }
@@ -230,27 +248,23 @@ public class MenuManager extends ManagerPackage {
         if (instance == null)
             return null;
 
-        MenuData data = instance.getMenuData();
-
-        if (data.isLockInput())
-            lockSystem.applyInputLock(-1);
-
-        if (data.isRaycastInput()) {
-            lockSystem.applyRaycastLock(-1);
-            if (!lockSystem.isRaycastLocked())
-                hitSystem.resetPressed();
-        }
-
         instance.hide();
 
         if (!pendingCloseMenus.contains(instance))
             pendingCloseMenus.add(instance);
 
+        if (!lockSystem.isRaycastLocked())
+            hitSystem.resetPressed();
+
         return null;
     }
 
-    public ObjectArrayList<MenuInstance> getActiveMenus() {
-        return activeMenus;
+    public ObjectArrayList<MenuInstance> getActiveMenus(WindowInstance window) {
+        return window.getMenuListHandle().getMenus();
+    }
+
+    public boolean isMenuOpen(WindowInstance window) {
+        return window.getMenuListHandle().isOpen();
     }
 
     public void request(String menuName) {
