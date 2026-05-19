@@ -1,9 +1,9 @@
-package application.bootstrap.menupipeline.cursorlocksystem;
+package application.bootstrap.menupipeline.locksystem;
 
 import application.kernel.inputpipeline.inputsystem.InputSystem;
 import engine.root.SystemPackage;
 
-public class CursorLockSystem extends SystemPackage {
+public class LockSystem extends SystemPackage {
 
     /*
      * Manages input and raycast lock reference counts. Drives cursor capture

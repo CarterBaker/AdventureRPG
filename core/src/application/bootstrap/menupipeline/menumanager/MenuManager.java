@@ -2,11 +2,11 @@ package application.bootstrap.menupipeline.menumanager;
 
 import java.util.function.Consumer;
 
-import application.bootstrap.menupipeline.cursorlocksystem.CursorLockSystem;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.elementhitsystem.ElementHitSystem;
 import application.bootstrap.menupipeline.elementsystem.ElementSystem;
+import application.bootstrap.menupipeline.locksystem.LockSystem;
 import application.bootstrap.menupipeline.menu.MenuData;
 import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuInstance;
@@ -38,7 +38,7 @@ public class MenuManager extends ManagerPackage {
     private ElementSystem elementSystem;
     private MenuRenderSystem renderSystem;
     private ElementHitSystem hitSystem;
-    private CursorLockSystem lockSystem;
+    private LockSystem lockSystem;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
@@ -75,7 +75,7 @@ public class MenuManager extends ManagerPackage {
         this.elementSystem = get(ElementSystem.class);
         this.renderSystem = get(MenuRenderSystem.class);
         this.hitSystem = get(ElementHitSystem.class);
-        this.lockSystem = get(CursorLockSystem.class);
+        this.lockSystem = get(LockSystem.class);
     }
 
     @Override
