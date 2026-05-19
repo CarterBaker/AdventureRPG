@@ -11,9 +11,22 @@ class PlayerInputSystem extends SystemPackage {
      * Translates raw hardware state into game-semantic entity input.
      * Called by PlayerManager once per player per frame, before movement runs.
      * The only place in the codebase that maps physical bindings to game actions.
+     * When input is locked, the entity handle is explicitly cleared to neutral
+     * so all downstream consumers — movement, placement, state — see no input.
+     * The lock flag is driven externally by PlayerManager on behalf of LockSystem.
      */
 
+    // Lock
+    private boolean inputLocked = false;
+
+    // Translate \\
+
     void translate(RawInputHandle raw, EntityInputHandle entity) {
+        if (inputLocked) {
+            entity.clear();
+            return;
+        }
+
         entity.setForward(raw.isBindingHeld(KeyBindings.MOVE_FORWARD));
         entity.setBack(raw.isBindingHeld(KeyBindings.MOVE_BACK));
         entity.setLeft(raw.isBindingHeld(KeyBindings.MOVE_LEFT));
@@ -23,5 +36,11 @@ class PlayerInputSystem extends SystemPackage {
         entity.setSprint(raw.isBindingHeld(KeyBindings.SPRINT));
         entity.setPrimaryAction(raw.isBindingHeld(KeyBindings.PRIMARY));
         entity.setSecondaryAction(raw.isBindingHeld(KeyBindings.SECONDARY));
+    }
+
+    // Lock \\
+
+    void setInputLocked(boolean locked) {
+        this.inputLocked = locked;
     }
 }

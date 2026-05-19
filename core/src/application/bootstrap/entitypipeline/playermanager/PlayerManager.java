@@ -234,4 +234,8 @@ public class PlayerManager extends ManagerPackage {
             return;
         internalBufferSystem.updatePlayerPosition(position);
     }
+
+    public void setInputLocked(boolean locked) {
+        playerInputSystem.setInputLocked(locked);
+    }
 }

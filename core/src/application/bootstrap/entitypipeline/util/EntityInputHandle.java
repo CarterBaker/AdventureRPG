@@ -136,4 +136,10 @@ public class EntityInputHandle extends HandlePackage {
     public boolean hasHorizontalInput() {
         return forward || back || left || right;
     }
+
+    public void clear() {
+        forward = back = left = right = false;
+        jump = walk = sprint = false;
+        primaryAction = secondaryAction = false;
+    }
 }
