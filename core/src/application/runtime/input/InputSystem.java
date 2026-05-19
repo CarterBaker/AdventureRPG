@@ -49,7 +49,7 @@ public class InputSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        bootstrapInput.writeRawInput(rawInputHandle);
+        bootstrapInput.writeRawInput(rawInputHandle, context.getWindow());
 
         int windowID = context.getWindow().getWindowID();
 
@@ -82,7 +82,7 @@ public class InputSystem extends SystemPackage {
         CameraInstance camera = playerManager.getCameraForWindow(windowID);
         if (camera == null)
             return;
-        camera.setRotation(bootstrapInput.getMouseDelta());
+        camera.setRotation(bootstrapInput.getMouseDelta(context.getWindow()));
     }
 
     private void writeFacingDirection(int windowID) {

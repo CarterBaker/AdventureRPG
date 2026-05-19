@@ -17,11 +17,14 @@ public class InputSystem extends SystemPackage {
      * Writes a full hardware snapshot into a RawInputHandle each frame —
      * reuses pre-allocated arrays to avoid per-frame heap allocation.
      *
-     * Input is hover-gated: if the context window is not the one the mouse
-     * is currently over, the handle is cleared to neutral. No concept of
-     * active or focused window — all windows are equal.
-     * Exception: when the cursor is captured, the hover gate is bypassed —
-     * capture is an explicit contract that this window owns the mouse.
+     * Input is hover-gated per window: each caller passes the WindowInstance
+     * it is serving. If that window is not the hovered window, the handle is
+     * cleared to neutral.
+     *
+     * Two conditions bypass the hover gate:
+     * - cursor capture: an explicit contract that this window owns the mouse.
+     * - input lock: a lock-input menu is open on this window, keeping it
+     * authoritative regardless of where the cursor physically is.
      */
 
     // Internal
@@ -56,19 +59,18 @@ public class InputSystem extends SystemPackage {
 
     // Guard \\
 
-    private boolean isHovered() {
+    private boolean isHovered(WindowInstance window) {
         if (cursorCaptured)
             return true;
-        WindowInstance ctx = windowManager.getContextWindow();
-        if (ctx == null)
+        if (window.getMenuListHandle().isInputLocked())
             return true;
-        return ctx == windowManager.getHoveredWindow();
+        return window == windowManager.getHoveredWindow();
     }
 
     // Frame write \\
 
-    public void writeRawInput(RawInputHandle handle) {
-        if (!isHovered()) {
+    public void writeRawInput(RawInputHandle handle, WindowInstance window) {
+        if (!isHovered(window)) {
             handle.clear();
             return;
         }
@@ -98,30 +100,30 @@ public class InputSystem extends SystemPackage {
 
     // Convenience — bindings \\
 
-    public boolean bindingHeld(Binding binding) {
-        return isHovered() && binding.isDown(EngineContext.input);
+    public boolean bindingHeld(Binding binding, WindowInstance window) {
+        return isHovered(window) && binding.isDown(EngineContext.input);
     }
 
-    public boolean bindingClicked(Binding binding) {
-        return isHovered() && binding.isClicked(EngineContext.input);
+    public boolean bindingClicked(Binding binding, WindowInstance window) {
+        return isHovered(window) && binding.isClicked(EngineContext.input);
     }
 
-    public boolean bindingReleased(Binding binding) {
-        return isHovered() && binding.isReleased(EngineContext.input);
+    public boolean bindingReleased(Binding binding, WindowInstance window) {
+        return isHovered(window) && binding.isReleased(EngineContext.input);
     }
 
     // Convenience — direct queries \\
 
-    public float getMouseX() {
-        return isHovered() ? EngineContext.input.getMouseX() : 0f;
+    public float getMouseX(WindowInstance window) {
+        return isHovered(window) ? EngineContext.input.getMouseX() : 0f;
     }
 
-    public float getMouseY() {
-        return isHovered() ? EngineContext.input.getMouseY() : 0f;
+    public float getMouseY(WindowInstance window) {
+        return isHovered(window) ? EngineContext.input.getMouseY() : 0f;
     }
 
-    public Vector2 getMouseDelta() {
-        if (!isHovered())
+    public Vector2 getMouseDelta(WindowInstance window) {
+        if (!isHovered(window))
             return ZERO_DELTA;
         mouseDelta.set(
                 EngineContext.input.getDeltaX() * internal.settings.mouseSensitivity,

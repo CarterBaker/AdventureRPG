@@ -103,13 +103,13 @@ public class ElementHitSystem extends SystemPackage {
             return;
 
         int rayWindowID = hoveredWindow.getWindowID();
-        float mouseX = inputSystem.getMouseX();
-        float mouseY = inputSystem.getMouseY();
+        float mouseX = inputSystem.getMouseX(hoveredWindow);
+        float mouseY = inputSystem.getMouseY(hoveredWindow);
 
         updateHover(activeMenus, mouseX, mouseY, rayWindowID);
         checkClickStateCollapse(mouseX, mouseY);
 
-        if (!inputSystem.bindingClicked(KeyBindings.PRIMARY))
+        if (!inputSystem.bindingClicked(KeyBindings.PRIMARY, hoveredWindow))
             return;
 
         for (int i = activeMenus.size() - 1; i >= 0; i--) {
