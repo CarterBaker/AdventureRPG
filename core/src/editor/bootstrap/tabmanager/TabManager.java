@@ -201,21 +201,22 @@ public class TabManager extends ManagerPackage {
         TabContext tabContext = handle.getTabContext();
         ContextPackage contentContext = handle.getContentContext();
 
-        // Capture windows before contexts are torn down
         WindowInstance tabWindow = tabContext.getWindow();
         WindowInstance contentWindow = contentContext.getWindow();
 
-        // Clear listener before teardown so a late-firing menu list remove()
-        // does not call back into InputSystem after the window is gone.
         contentWindow.getMenuListHandle().setLockReleaseListener(null);
 
         internal.destroyContext(contentContext);
         internal.destroyContext(tabContext);
 
-        // Unregister both logical windows from WindowManager so hover resolution,
-        // input routing, and the authority resolver lambda cannot reach stale refs.
         windowManager.removeWindow(contentWindow);
         windowManager.removeWindow(tabWindow);
+
+        // The hover lock is set by ElementHitSystem when the cursor enters the
+        // close button. The tab is destroyed before hover exit fires, so the lock
+        // is never released. Unlock here so syncHoveredWindow runs next frame and
+        // hover resolves to a valid window.
+        windowManager.unlockHoveredWindow();
 
         int tabID = getTabIDFromTabName(handle.getTabTitle());
         tabName2TabID.removeInt(handle.getTabTitle());
