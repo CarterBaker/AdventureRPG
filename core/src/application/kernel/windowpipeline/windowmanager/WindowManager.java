@@ -267,6 +267,10 @@ public class WindowManager extends ManagerPackage {
         return mainWindow != null;
     }
 
+    public WindowInstance getCapturedWindow() {
+        return capturedWindow;
+    }
+
     // Validation \\
 
     private void verifyWindowRegistration(WindowInstance window, boolean isMain) {

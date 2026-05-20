@@ -22,7 +22,7 @@ public class InputSystem extends SystemPackage {
      * cleared to neutral.
      *
      * Two conditions bypass the hover gate:
-     * - cursor capture: an explicit contract that this window owns the mouse.
+     * - cursor capture: the captured window owns the mouse exclusively.
      * - input lock: a lock-input menu is open on this window, keeping it
      * authoritative regardless of where the cursor physically is.
      */
@@ -33,9 +33,6 @@ public class InputSystem extends SystemPackage {
     // Mouse delta
     private Vector2 mouseDelta;
     private static final Vector2 ZERO_DELTA = new Vector2(0, 0);
-
-    // Cursor capture
-    private boolean cursorCaptured = false;
 
     // Pre-allocated snapshot buffers — reused every frame
     private final boolean[] kc = new boolean[512];
@@ -60,8 +57,9 @@ public class InputSystem extends SystemPackage {
     // Guard \\
 
     private boolean isHovered(WindowInstance window) {
-        if (cursorCaptured)
-            return true;
+        WindowInstance captured = windowManager.getCapturedWindow();
+        if (captured != null)
+            return window == captured;
         if (window.getMenuListHandle().isInputLocked())
             return true;
         return window == windowManager.getHoveredWindow();
@@ -134,11 +132,11 @@ public class InputSystem extends SystemPackage {
     // Platform \\
 
     public void captureCursor(boolean captured, WindowInstance window) {
-        this.cursorCaptured = captured;
-        if (captured)
+        if (captured) {
             windowManager.captureLockWindow(window);
-        else
+        } else if (windowManager.getCapturedWindow() == window) {
             windowManager.releaseCaptureLock();
+        }
         EngineContext.input.setCursorCatched(captured);
     }
 }
