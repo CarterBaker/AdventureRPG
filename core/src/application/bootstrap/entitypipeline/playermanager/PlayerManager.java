@@ -15,12 +15,12 @@ import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
+import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.assets.camera.CameraInstance;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class PlayerManager extends ManagerPackage {
@@ -34,6 +34,11 @@ public class PlayerManager extends ManagerPackage {
      * PlayerInputSystem translates RawInputHandle → EntityInputHandle each frame
      * before movement runs. No KeyBindings queries anywhere in this class —
      * all binding logic lives in PlayerInputSystem.
+     *
+     * Only the hovered window's player is updated each frame — WindowManager is
+     * the single authority on which window is active. All other players freeze.
+     * Movement is additionally gated on the window's menu lock state so that
+     * open menus suppress input without any external coordination.
      */
 
     // Internal
@@ -41,6 +46,7 @@ public class PlayerManager extends ManagerPackage {
     private EntityManager entityManager;
     private BlockManager blockManager;
     private WorldStreamManager worldStreamManager;
+    private WindowManager windowManager;
 
     // Systems
     private PlayerInputSystem playerInputSystem;
@@ -51,6 +57,7 @@ public class PlayerManager extends ManagerPackage {
     private Int2ObjectOpenHashMap<EntityInstance> windowID2Player;
     private Int2ObjectOpenHashMap<CameraInstance> windowID2Camera;
     private Int2ObjectOpenHashMap<RawInputHandle> windowID2RawInput;
+    private Int2ObjectOpenHashMap<WindowInstance> windowID2Window;
     private Int2BooleanOpenHashMap windowID2VerifyPlayerPosition;
 
     // Scratch
@@ -69,6 +76,7 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2Player = new Int2ObjectOpenHashMap<>();
         this.windowID2Camera = new Int2ObjectOpenHashMap<>();
         this.windowID2RawInput = new Int2ObjectOpenHashMap<>();
+        this.windowID2Window = new Int2ObjectOpenHashMap<>();
         this.windowID2VerifyPlayerPosition = new Int2BooleanOpenHashMap();
 
         this.cameraPosition = new Vector3();
@@ -81,6 +89,7 @@ public class PlayerManager extends ManagerPackage {
         this.entityManager = get(EntityManager.class);
         this.blockManager = get(BlockManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.windowManager = get(WindowManager.class);
     }
 
     @Override
@@ -89,17 +98,20 @@ public class PlayerManager extends ManagerPackage {
         if (windowID2Player.isEmpty())
             return;
 
-        for (Int2ObjectMap.Entry<EntityInstance> entry : windowID2Player.int2ObjectEntrySet()) {
-            int windowID = entry.getIntKey();
-            EntityInstance player = entry.getValue();
-            CameraInstance camera = windowID2Camera.get(windowID);
-            RawInputHandle raw = windowID2RawInput.get(windowID);
+        WindowInstance activeWindow = windowManager.getHoveredWindow();
 
-            if (camera == null || raw == null)
-                continue;
+        if (activeWindow == null)
+            return;
 
-            calculatePlayerPosition(windowID, player, camera, raw);
-        }
+        int windowID = activeWindow.getWindowID();
+        EntityInstance player = windowID2Player.get(windowID);
+        CameraInstance camera = windowID2Camera.get(windowID);
+        RawInputHandle raw = windowID2RawInput.get(windowID);
+
+        if (player == null || camera == null || raw == null)
+            return;
+
+        calculatePlayerPosition(windowID, player, camera, raw);
     }
 
     // Spawn \\
@@ -110,6 +122,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2Player.put(windowID, player);
         windowID2Camera.put(windowID, window.getActiveCamera());
         windowID2RawInput.put(windowID, rawInput);
+        windowID2Window.put(windowID, window);
         windowID2VerifyPlayerPosition.put(windowID, true);
         return player;
     }
@@ -130,6 +143,9 @@ public class PlayerManager extends ManagerPackage {
             windowID2VerifyPlayerPosition.put(windowID, verifyPlayerPosition);
             return;
         }
+
+        if (windowID2Window.get(windowID).getMenuListHandle().isInputLocked())
+            return;
 
         // Translate raw hardware → game intent before anything reads EntityInputHandle
         playerInputSystem.translate(raw, player.getEntityInputHandle());
