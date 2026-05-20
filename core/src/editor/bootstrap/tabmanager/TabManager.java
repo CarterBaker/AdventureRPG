@@ -201,14 +201,19 @@ public class TabManager extends ManagerPackage {
         TabContext tabContext = handle.getTabContext();
         ContextPackage contentContext = handle.getContentContext();
 
+        // Capture windows before contexts are torn down
         WindowInstance tabWindow = tabContext.getWindow();
         WindowInstance contentWindow = contentContext.getWindow();
 
+        // Clear listener before teardown so a late-firing menu list remove()
+        // does not call back into InputSystem after the window is gone.
         contentWindow.getMenuListHandle().setLockReleaseListener(null);
 
         internal.destroyContext(contentContext);
         internal.destroyContext(tabContext);
 
+        // Unregister both logical windows from WindowManager so hover resolution,
+        // input routing, and the authority resolver lambda cannot reach stale refs.
         windowManager.removeWindow(contentWindow);
         windowManager.removeWindow(tabWindow);
 
