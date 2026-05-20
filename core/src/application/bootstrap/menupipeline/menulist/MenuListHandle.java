@@ -16,9 +16,17 @@ public class MenuListHandle extends HandlePackage {
      * maintained as a separate counter. No counter means no drift and
      * no off-by-one on close — the answer is always exactly what is
      * actually open in this window right now.
+     *
+     * lockReleaseListener fires once when a remove() call transitions
+     * the list from locked to unlocked. InputSystem registers a callback
+     * so capture is automatically restored when the inventory (or any
+     * lock_input menu) closes — no click required.
      */
 
     private ObjectArrayList<MenuInstance> openMenus;
+
+    // Notified when the list transitions locked → unlocked on remove
+    private Runnable lockReleaseListener;
 
     // Internal \\
 
@@ -33,11 +41,20 @@ public class MenuListHandle extends HandlePackage {
     }
 
     public void remove(MenuInstance menu) {
+        boolean wasLocked = isInputLocked();
         openMenus.remove(menu);
+        if (wasLocked && !isInputLocked() && lockReleaseListener != null)
+            lockReleaseListener.run();
     }
 
     public boolean contains(MenuInstance menu) {
         return openMenus.contains(menu);
+    }
+
+    // Lock Release Listener \\
+
+    public void setLockReleaseListener(Runnable listener) {
+        this.lockReleaseListener = listener;
     }
 
     // Lock State — derived, never counted \\

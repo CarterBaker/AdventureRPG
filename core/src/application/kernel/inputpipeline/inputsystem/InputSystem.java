@@ -22,12 +22,30 @@ public class InputSystem extends SystemPackage {
      *
      * Focus is detected here each frame: any mouse click on a window that is
      * not already focused shifts focus to it and syncs capture state. Capture
-     * follows focus — granted when the focused window has no input-locked menus,
-     * released when it does.
+     * follows focus — granted when the resolved content window has no
+     * input-locked menus, released when it does.
+     *
+     * resolveInputAuthority() maps a focused window to the window that actually
+     * owns lock state. The resolver is pushed in by the editor layer (TabManager)
+     * so the kernel never names any editor type — only WindowInstance crosses
+     * the boundary. captureEligible on WindowInstance blocks editor chrome
+     * windows from ever capturing the cursor regardless of lock state.
+     *
+     * onInputLockReleased() is called by the editor layer when a lock_input menu
+     * closes on a content window. Capture is automatically restored without
+     * requiring a re-click. Package-accessible; not intended for game code.
      */
 
     // Internal
     private WindowManager windowManager;
+
+    // Authority resolver — pushed in by the editor layer, null in game-only builds
+    @FunctionalInterface
+    public interface InputAuthorityResolver {
+        WindowInstance resolve(WindowInstance focused);
+    }
+
+    private InputAuthorityResolver authorityResolver;
 
     // Mouse delta
     private Vector2 mouseDelta;
@@ -71,14 +89,49 @@ public class InputSystem extends SystemPackage {
     }
 
     private void onWindowFocused(WindowInstance window) {
+        if (!window.isCaptureEligible())
+            return;
+
         if (windowManager.getCapturedWindow() != null) {
             windowManager.releaseCaptureLock();
             EngineContext.input.setCursorCatched(false);
         }
-        if (!window.getMenuListHandle().isInputLocked()) {
-            windowManager.captureLockWindow(window);
-            EngineContext.input.setCursorCatched(true);
-        }
+
+        WindowInstance authority = resolveInputAuthority(window);
+        if (authority == null || authority.getMenuListHandle().isInputLocked())
+            return;
+
+        windowManager.captureLockWindow(authority);
+        EngineContext.input.setCursorCatched(true);
+
+        authority.getMenuListHandle().setLockReleaseListener(() -> onInputLockReleased(authority));
+    }
+
+    // Called by the editor layer when a lock_input menu closes on a content window.
+    public void onInputLockReleased(WindowInstance authority) {
+        WindowInstance focused = windowManager.getFocusedWindow();
+        if (focused == null)
+            return;
+
+        if (resolveInputAuthority(focused) != authority)
+            return;
+
+        windowManager.captureLockWindow(authority);
+        EngineContext.input.setCursorCatched(true);
+
+        authority.getMenuListHandle().setLockReleaseListener(() -> onInputLockReleased(authority));
+    }
+
+    private WindowInstance resolveInputAuthority(WindowInstance window) {
+        if (authorityResolver != null)
+            return authorityResolver.resolve(window);
+        return window;
+    }
+
+    // Resolver — pushed in by the editor layer once at startup \\
+
+    public void setAuthorityResolver(InputAuthorityResolver resolver) {
+        this.authorityResolver = resolver;
     }
 
     // Guard \\

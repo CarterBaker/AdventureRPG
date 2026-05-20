@@ -1,5 +1,6 @@
 package editor.bootstrap.tabmanager;
 
+import application.kernel.inputpipeline.inputsystem.InputSystem;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.docklayoutsystem.DockLayoutSystem;
@@ -38,6 +39,14 @@ public class TabManager extends ManagerPackage {
      * closed, dock canvas resized. The compositor calls setDockRect() on
      * resize. openTab() and closeTab() call pushRects() directly using the
      * cached bounds so every tab window always holds a valid composite rect.
+     *
+     * Authority resolution: InputSystem is kernel-level and cannot reach up to
+     * TabManager, so the dependency is inverted. TabManager pushes a resolver
+     * lambda into InputSystem once in get() — the kernel sees only
+     * WindowInstance in and WindowInstance out. getTabHandleForWindow() drives
+     * that resolver and is also used by the lock-release listener registered on
+     * each content window's MenuListHandle in openTab(), so capture is
+     * automatically restored when a lock_input menu closes without a re-click.
      */
 
     // Palette
@@ -60,6 +69,7 @@ public class TabManager extends ManagerPackage {
     // Internal
     private WindowManager windowManager;
     private DockLayoutSystem dockLayoutSystem;
+    private InputSystem inputSystem;
 
     // Internal \\
 
@@ -85,6 +95,15 @@ public class TabManager extends ManagerPackage {
         // Internal
         windowManager = get(WindowManager.class);
         dockLayoutSystem = get(DockLayoutSystem.class);
+        inputSystem = get(InputSystem.class);
+
+        // Invert the tab→input dependency: push a resolver lambda down into the
+        // kernel so InputSystem can map a focused tab chrome window to its content
+        // window without importing TabManager.
+        inputSystem.setAuthorityResolver(window -> {
+            TabHandle tab = getTabHandleForWindow(window);
+            return tab != null ? tab.getWindow() : window;
+        });
     }
 
     // Management \\
@@ -141,6 +160,12 @@ public class TabManager extends ManagerPackage {
         handle.constructor(new TabData(title, contentClass));
         handle.mount(tabContext, contentContext);
 
+        // Register a lock-release listener on the content window so InputSystem
+        // can restore capture automatically when a lock_input menu (e.g. inventory)
+        // closes — without requiring a re-click from the user.
+        contentWindow.getMenuListHandle().setLockReleaseListener(
+                () -> inputSystem.onInputLockReleased(contentWindow));
+
         int tabID = RegistryUtility.toIntID(title);
         tabName2TabID.put(title, tabID);
         tabID2TabHandle.put(tabID, handle);
@@ -164,6 +189,11 @@ public class TabManager extends ManagerPackage {
 
         TabContext tabContext = handle.getTabContext();
         ContextPackage contentContext = handle.getContentContext();
+
+        // Clear the listener before destroying so a late-firing remove() on the
+        // menu list during context teardown does not call back into InputSystem
+        // after the window is gone.
+        contentContext.getWindow().getMenuListHandle().setLockReleaseListener(null);
 
         internal.destroyContext(contentContext);
         internal.destroyContext(tabContext);
@@ -209,6 +239,20 @@ public class TabManager extends ManagerPackage {
             tabWindow.setCompositeRect(x, y, w, h);
             tabWindow.resize((int) w, (int) h);
         }
+    }
+
+    public TabHandle getTabHandleForWindow(WindowInstance window) {
+
+        Object[] elements = openTabs.elements();
+        int size = openTabs.size();
+
+        for (int i = 0; i < size; i++) {
+            TabHandle handle = (TabHandle) elements[i];
+            if (handle.getTabContext().getWindow() == window)
+                return handle;
+        }
+
+        return null;
     }
 
     public boolean hasTab(String name) {

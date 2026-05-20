@@ -55,10 +55,11 @@ public class InputSystem extends SystemPackage {
         if (!playerManager.hasPlayerForWindow(windowID))
             return;
 
+        handleInventoryInput(windowID);
+
         if (context.getWindow().getMenuListHandle().isInputLocked())
             return;
 
-        handleInventoryInput(windowID);
         updateCameraRotation(windowID);
         writeFacingDirection(windowID);
     }
@@ -66,8 +67,15 @@ public class InputSystem extends SystemPackage {
     // Input \\
 
     private void handleInventoryInput(int windowID) {
+
         if (!rawInputHandle.isBindingClicked(KeyBindings.INVENTORY))
             return;
+
+        // Block opening while another menu holds input lock.
+        // Closing always goes through so the inventory can never get stuck open.
+        if (!inventoryBranch.isOpen() && context.getWindow().getMenuListHandle().isInputLocked())
+            return;
+
         inventoryBranch.toggleInventory(
                 playerManager.getPlayerForWindow(windowID),
                 context.getWindow());

@@ -20,6 +20,11 @@ public class WindowInstance extends InstancePackage {
      * Depth controls draw order during the screen pass — OS windows are 0,
      * tab logical windows are 1. Higher depth always draws on top.
      * Input is hover-driven — no active or focus concept exists at this level.
+     *
+     * captureEligible gates whether InputSystem may capture this window.
+     * Editor chrome windows (main window, toolbar-only windows) are marked
+     * ineligible at creation time so onWindowFocused can never pin the cursor
+     * to them, regardless of lock state.
      */
 
     // Data
@@ -49,6 +54,9 @@ public class WindowInstance extends InstancePackage {
 
     // Draw order
     private int depth;
+
+    // Capture eligibility — false for editor chrome, true for all game windows
+    private boolean captureEligible = true;
 
     // Internal
     private RenderManager renderManager;
@@ -174,6 +182,16 @@ public class WindowInstance extends InstancePackage {
 
     public void setDepth(int depth) {
         this.depth = depth;
+    }
+
+    // Capture Eligibility \\
+
+    public boolean isCaptureEligible() {
+        return captureEligible;
+    }
+
+    public void setCaptureEligible(boolean captureEligible) {
+        this.captureEligible = captureEligible;
     }
 
     // Cameras \\
