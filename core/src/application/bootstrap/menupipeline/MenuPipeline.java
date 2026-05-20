@@ -4,7 +4,6 @@ import application.bootstrap.menupipeline.elementhitsystem.ElementHitSystem;
 import application.bootstrap.menupipeline.elementsystem.ElementSystem;
 import application.bootstrap.menupipeline.fontmanager.FontManager;
 import application.bootstrap.menupipeline.fontrendersystem.FontRenderSystem;
-import application.bootstrap.menupipeline.locksystem.LockSystem;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
 import engine.root.PipelinePackage;
@@ -26,6 +25,5 @@ public class MenuPipeline extends PipelinePackage {
         create(MenuRenderSystem.class);
         create(FontRenderSystem.class);
         create(MenuManager.class);
-        create(LockSystem.class);
     }
 }

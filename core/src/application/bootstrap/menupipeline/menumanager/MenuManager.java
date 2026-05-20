@@ -12,6 +12,7 @@ import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.menulist.MenuListHandle;
 import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.kernel.inputpipeline.inputsystem.InputSystem;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
@@ -37,6 +38,12 @@ public class MenuManager extends ManagerPackage {
      * Input and raycast lock state is derived live from each window's
      * MenuListHandle. Canvas bounds are owned by MenuInstance and written
      * directly by MenuRenderSystem each frame.
+     *
+     * Cursor capture is driven here as a side effect of menu lock state
+     * transitions — openMenu releases capture when a lock-input menu opens,
+     * flushPendingClosedMenus reclaims it when the last lock-input menu closes.
+     * Only the hovered window may reclaim capture so background tabs cannot
+     * steal focus.
      */
 
     // Internal
@@ -44,6 +51,7 @@ public class MenuManager extends ManagerPackage {
     private MenuRenderSystem renderSystem;
     private ElementHitSystem hitSystem;
     private WindowManager windowManager;
+    private InputSystem inputSystem;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
@@ -76,6 +84,7 @@ public class MenuManager extends ManagerPackage {
         this.renderSystem = get(MenuRenderSystem.class);
         this.hitSystem = get(ElementHitSystem.class);
         this.windowManager = get(WindowManager.class);
+        this.inputSystem = get(InputSystem.class);
     }
 
     @Override
@@ -121,8 +130,13 @@ public class MenuManager extends ManagerPackage {
 
         for (int i = 0; i < pendingCloseMenus.size(); i++) {
             MenuInstance instance = pendingCloseMenus.get(i);
+            WindowInstance window = instance.getWindow();
             renderSystem.releaseFontModels(instance.getElements());
-            instance.getWindow().getMenuListHandle().remove(instance);
+            window.getMenuListHandle().remove(instance);
+
+            if (!window.getMenuListHandle().isInputLocked()
+                    && window == windowManager.getHoveredWindow())
+                inputSystem.captureCursor(true, window);
         }
 
         pendingCloseMenus.clear();
@@ -214,6 +228,9 @@ public class MenuManager extends ManagerPackage {
         holder[0] = instance;
 
         window.getMenuListHandle().add(instance);
+
+        if (window.getMenuListHandle().isInputLocked())
+            inputSystem.captureCursor(false, window);
 
         return instance;
     }

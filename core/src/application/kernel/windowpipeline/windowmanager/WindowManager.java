@@ -31,6 +31,12 @@ public class WindowManager extends ManagerPackage {
      * hoveredWindowLocked prevents syncHoveredWindow from reassigning hoveredWindow
      * while an element hover is active. Lock is set by ElementHitSystem on hover
      * entry and released on hover exit.
+     *
+     * capturedWindow pins hoveredWindow when cursor capture is active. While set,
+     * syncHoveredWindow is bypassed entirely — the captured window is always
+     * considered hovered. Released when capture ends, restoring normal hover
+     * resolution. This prevents cursor-locked gameplay from losing window focus
+     * when multiple tabs are open.
      */
 
     private ObjectArrayList<WindowInstance> windows;
@@ -38,6 +44,7 @@ public class WindowManager extends ManagerPackage {
     private WindowInstance hoveredWindow;
     private WindowInstance renderWindow;
     private WindowInstance contextWindow;
+    private WindowInstance capturedWindow;
 
     private boolean hoveredWindowLocked;
 
@@ -90,6 +97,11 @@ public class WindowManager extends ManagerPackage {
 
         if (hoveredWindowLocked)
             return;
+
+        if (capturedWindow != null) {
+            hoveredWindow = capturedWindow;
+            return;
+        }
 
         float mx = EngineContext.input.getMouseX();
         float my = EngineContext.input.getMouseY();
@@ -179,6 +191,8 @@ public class WindowManager extends ManagerPackage {
 
     public void removeWindow(WindowInstance window) {
         windows.remove(window);
+        if (capturedWindow == window)
+            capturedWindow = null;
         if (hoveredWindow == window)
             hoveredWindow = null;
     }
@@ -215,6 +229,16 @@ public class WindowManager extends ManagerPackage {
 
     public void unlockHoveredWindow() {
         hoveredWindowLocked = false;
+    }
+
+    // Capture lock \\
+
+    public void captureLockWindow(WindowInstance window) {
+        this.capturedWindow = window;
+    }
+
+    public void releaseCaptureLock() {
+        this.capturedWindow = null;
     }
 
     // Accessors \\

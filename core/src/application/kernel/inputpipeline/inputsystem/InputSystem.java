@@ -133,8 +133,12 @@ public class InputSystem extends SystemPackage {
 
     // Platform \\
 
-    public void captureCursor(boolean captured) {
+    public void captureCursor(boolean captured, WindowInstance window) {
         this.cursorCaptured = captured;
+        if (captured)
+            windowManager.captureLockWindow(window);
+        else
+            windowManager.releaseCaptureLock();
         EngineContext.input.setCursorCatched(captured);
     }
 }
