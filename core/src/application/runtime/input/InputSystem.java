@@ -48,17 +48,17 @@ public class InputSystem extends SystemPackage {
 
     @Override
     protected void update() {
-        bootstrapInput.writeRawInput(rawInputHandle, context.getWindow());
 
+        bootstrapInput.writeRawInput(rawInputHandle, context.getWindow());
         int windowID = context.getWindow().getWindowID();
+
         if (!playerManager.hasPlayerForWindow(windowID))
             return;
-
-        handleInventoryInput(windowID);
 
         if (context.getWindow().getMenuListHandle().isInputLocked())
             return;
 
+        handleInventoryInput(windowID);
         updateCameraRotation(windowID);
         writeFacingDirection(windowID);
     }

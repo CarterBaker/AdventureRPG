@@ -40,10 +40,10 @@ public class MenuManager extends ManagerPackage {
      * directly by MenuRenderSystem each frame.
      *
      * Cursor capture is driven here as a side effect of menu lock state
-     * transitions — openMenu releases capture when a lock-input menu opens,
-     * flushPendingClosedMenus reclaims it when the last lock-input menu closes.
-     * Only the hovered window may reclaim capture so background tabs cannot
-     * steal focus.
+     * transitions — openMenu releases capture when a lock-input menu opens on
+     * the focused window, flushPendingClosedMenus reclaims it when the last
+     * lock-input menu closes on the focused window. Only the focused window
+     * may acquire or release capture so background tabs cannot affect input state.
      */
 
     // Internal
@@ -115,10 +115,10 @@ public class MenuManager extends ManagerPackage {
                 renderSystem.renderMenu(menus.get(j), menuTargetFbo, RuntimeSetting.LAYER_UI);
         }
 
-        WindowInstance hovered = windowManager.getHoveredWindow();
+        WindowInstance focused = windowManager.getFocusedWindow();
 
-        if (hovered != null && hovered.getMenuListHandle().isRaycastLocked())
-            hitSystem.updateRaycast(hovered.getMenuListHandle().getMenus());
+        if (focused != null && focused.getMenuListHandle().isRaycastLocked())
+            hitSystem.updateRaycast(focused.getMenuListHandle().getMenus());
     }
 
     // Deferred Menu Close \\
@@ -135,7 +135,7 @@ public class MenuManager extends ManagerPackage {
             window.getMenuListHandle().remove(instance);
 
             if (!window.getMenuListHandle().isInputLocked()
-                    && window == windowManager.getHoveredWindow())
+                    && window == windowManager.getFocusedWindow())
                 inputSystem.captureCursor(true, window);
         }
 
@@ -229,7 +229,8 @@ public class MenuManager extends ManagerPackage {
 
         window.getMenuListHandle().add(instance);
 
-        if (window.getMenuListHandle().isInputLocked())
+        if (window.getMenuListHandle().isInputLocked()
+                && window == windowManager.getFocusedWindow())
             inputSystem.captureCursor(false, window);
 
         return instance;

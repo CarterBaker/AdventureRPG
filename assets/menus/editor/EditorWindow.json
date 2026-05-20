@@ -68,6 +68,7 @@
     {
       "id": "Toolbar",
       "raycast_input": true,
+      "lock_input": true,
       "entry_points": ["testing_dropdown"],
       "elements": [
         {
@@ -120,6 +121,7 @@
     {
       "id": "Secondary",
       "raycast_input": true,
+      "lock_input": true,
       "elements": [
         {
           "id": "toolbar",

@@ -17,14 +17,13 @@ public class InputSystem extends SystemPackage {
      * Writes a full hardware snapshot into a RawInputHandle each frame —
      * reuses pre-allocated arrays to avoid per-frame heap allocation.
      *
-     * Input is hover-gated per window: each caller passes the WindowInstance
-     * it is serving. If that window is not the hovered window, the handle is
-     * cleared to neutral.
+     * Input routes to the focused window — the window the user last clicked.
+     * Cursor capture pins routing to the captured window while in play mode.
      *
-     * Two conditions bypass the hover gate:
-     * - cursor capture: the captured window owns the mouse exclusively.
-     * - input lock: a lock-input menu is open on this window, keeping it
-     * authoritative regardless of where the cursor physically is.
+     * Focus is detected here each frame: any mouse click on a window that is
+     * not already focused shifts focus to it and syncs capture state. Capture
+     * follows focus — granted when the focused window has no input-locked menus,
+     * released when it does.
      */
 
     // Internal
@@ -54,15 +53,41 @@ public class InputSystem extends SystemPackage {
         this.windowManager = get(WindowManager.class);
     }
 
+    @Override
+    protected void update() {
+        syncFocus();
+    }
+
+    // Focus \\
+
+    private void syncFocus() {
+        if (!EngineContext.input.isMouseClicked(0) && !EngineContext.input.isMouseClicked(1))
+            return;
+        WindowInstance hovered = windowManager.getHoveredWindow();
+        if (hovered == null || hovered == windowManager.getFocusedWindow())
+            return;
+        windowManager.setFocusedWindow(hovered);
+        onWindowFocused(hovered);
+    }
+
+    private void onWindowFocused(WindowInstance window) {
+        if (windowManager.getCapturedWindow() != null) {
+            windowManager.releaseCaptureLock();
+            EngineContext.input.setCursorCatched(false);
+        }
+        if (!window.getMenuListHandle().isInputLocked()) {
+            windowManager.captureLockWindow(window);
+            EngineContext.input.setCursorCatched(true);
+        }
+    }
+
     // Guard \\
 
     private boolean isHovered(WindowInstance window) {
         WindowInstance captured = windowManager.getCapturedWindow();
         if (captured != null)
             return window == captured;
-        if (window.getMenuListHandle().isInputLocked())
-            return true;
-        return window == windowManager.getHoveredWindow();
+        return window == windowManager.getFocusedWindow();
     }
 
     // Frame write \\
@@ -134,9 +159,10 @@ public class InputSystem extends SystemPackage {
     public void captureCursor(boolean captured, WindowInstance window) {
         if (captured) {
             windowManager.captureLockWindow(window);
+            EngineContext.input.setCursorCatched(true);
         } else if (windowManager.getCapturedWindow() == window) {
             windowManager.releaseCaptureLock();
+            EngineContext.input.setCursorCatched(false);
         }
-        EngineContext.input.setCursorCatched(captured);
     }
 }

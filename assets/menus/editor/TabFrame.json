@@ -3,6 +3,7 @@
     {
       "id": "TabFrame",
       "raycast_input": true,
+      "lock_input": true,
       "elements": [
         {
           "id": "window_frame",

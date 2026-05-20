@@ -32,16 +32,21 @@ public class WindowManager extends ManagerPackage {
      * while an element hover is active. Lock is set by ElementHitSystem on hover
      * entry and released on hover exit.
      *
+     * focusedWindow is the window that currently owns input. It is set by clicking
+     * on a window and is the single authority for input routing. Cursor capture
+     * follows focus — the kernel InputSystem drives capture transitions whenever
+     * focus changes or menu lock state changes on the focused window.
+     *
      * capturedWindow pins hoveredWindow when cursor capture is active. While set,
      * syncHoveredWindow is bypassed entirely — the captured window is always
      * considered hovered. Released when capture ends, restoring normal hover
-     * resolution. This prevents cursor-locked gameplay from losing window focus
-     * when multiple tabs are open.
+     * resolution.
      */
 
     private ObjectArrayList<WindowInstance> windows;
     private WindowInstance mainWindow;
     private WindowInstance hoveredWindow;
+    private WindowInstance focusedWindow;
     private WindowInstance renderWindow;
     private WindowInstance contextWindow;
     private WindowInstance capturedWindow;
@@ -150,6 +155,7 @@ public class WindowManager extends ManagerPackage {
         verifyWindowRegistration(window, true);
         this.mainWindow = window;
         this.hoveredWindow = window;
+        this.focusedWindow = window;
         registerWindow(window);
     }
 
@@ -195,6 +201,8 @@ public class WindowManager extends ManagerPackage {
             capturedWindow = null;
         if (hoveredWindow == window)
             hoveredWindow = null;
+        if (focusedWindow == window)
+            focusedWindow = null;
     }
 
     // Identity \\
@@ -251,6 +259,14 @@ public class WindowManager extends ManagerPackage {
         return hoveredWindow;
     }
 
+    public WindowInstance getFocusedWindow() {
+        return focusedWindow;
+    }
+
+    public void setFocusedWindow(WindowInstance window) {
+        this.focusedWindow = window;
+    }
+
     public WindowInstance getRenderWindow() {
         return renderWindow;
     }
@@ -259,16 +275,16 @@ public class WindowManager extends ManagerPackage {
         return contextWindow;
     }
 
+    public WindowInstance getCapturedWindow() {
+        return capturedWindow;
+    }
+
     public ObjectArrayList<WindowInstance> getWindows() {
         return windows;
     }
 
     public boolean hasMainWindow() {
         return mainWindow != null;
-    }
-
-    public WindowInstance getCapturedWindow() {
-        return capturedWindow;
     }
 
     // Validation \\
