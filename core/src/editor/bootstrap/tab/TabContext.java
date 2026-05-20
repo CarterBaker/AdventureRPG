@@ -71,6 +71,9 @@ public class TabContext extends ContextPackage {
             return;
 
         uiFbo.resize(width, height);
+
+        if (contentContext != null)
+            contentContext.getWindow().resize(width, height);
     }
 
     // Render \\

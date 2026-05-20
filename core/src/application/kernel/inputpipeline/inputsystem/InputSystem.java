@@ -34,6 +34,15 @@ public class InputSystem extends SystemPackage {
      * onInputLockReleased() is called by the editor layer when a lock_input menu
      * closes on a content window. Capture is automatically restored without
      * requiring a re-click. Package-accessible; not intended for game code.
+     *
+     * Mouse coordinates returned by getMouseX(), getMouseY(), and written by
+     * writeRawInput() are window-local — the composite rect origin is subtracted
+     * from the raw screen position before use. This is required for correct menu
+     * hit testing and game input on any tab that does not sit at the screen
+     * origin: element and FBO positions are always relative to the window's own
+     * top-left corner, so raw screen coords only happen to match for the first
+     * tab when the dock starts at (0, 0). Every subsequent tab has a non-zero
+     * offset and would receive mismatched coordinates without this adjustment.
      */
 
     // Internal
@@ -154,6 +163,20 @@ public class InputSystem extends SystemPackage {
         return window == windowManager.getFocusedWindow();
     }
 
+    // Coordinate utility — converts a raw screen coordinate to window-local
+    // by subtracting the composite rect origin. Element and FBO positions are
+    // always expressed relative to the window's own corner, so any window
+    // sitting at a non-zero screen position must have its origin stripped
+    // before the coordinate is used for hit testing or game input. \\
+
+    private float localX(WindowInstance window, float screenX) {
+        return window.hasCompositeRect() ? screenX - window.getCompositeX() : screenX;
+    }
+
+    private float localY(WindowInstance window, float screenY) {
+        return window.hasCompositeRect() ? screenY - window.getCompositeY() : screenY;
+    }
+
     // Frame write \\
 
     public void writeRawInput(RawInputHandle handle, WindowInstance window) {
@@ -180,8 +203,8 @@ public class InputSystem extends SystemPackage {
         handle.write(
                 kc, kh, kr,
                 bc, bh, br,
-                raw.getMouseX(),
-                raw.getMouseY(),
+                localX(window, raw.getMouseX()),
+                localY(window, raw.getMouseY()),
                 raw.getDeltaX() * internal.settings.mouseSensitivity,
                 raw.getDeltaY() * internal.settings.mouseSensitivity);
     }
@@ -203,11 +226,11 @@ public class InputSystem extends SystemPackage {
     // Convenience — direct queries \\
 
     public float getMouseX(WindowInstance window) {
-        return isHovered(window) ? EngineContext.input.getMouseX() : 0f;
+        return isHovered(window) ? localX(window, EngineContext.input.getMouseX()) : 0f;
     }
 
     public float getMouseY(WindowInstance window) {
-        return isHovered(window) ? EngineContext.input.getMouseY() : 0f;
+        return isHovered(window) ? localY(window, EngineContext.input.getMouseY()) : 0f;
     }
 
     public Vector2 getMouseDelta(WindowInstance window) {

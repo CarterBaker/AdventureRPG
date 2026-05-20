@@ -13,7 +13,7 @@
           "type": "button",
           "size": {"x": "150px", "y": "28px"},
           "on_click": {
-            "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
+            "class": "editor.runtime.editor.menueventsmanager.menus.EditorBranch",
             "method": "openSecondaryWindow"
           },
           "elements": [
@@ -29,7 +29,7 @@
           "type": "button",
           "size": {"x": "150px", "y": "28px"},
           "on_click": {
-            "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
+            "class": "editor.runtime.editor.menueventsmanager.menus.EditorBranch",
             "method": "openPreview"
           },
           "elements": [
@@ -89,7 +89,7 @@
                   "pivot": "bottom_left",
                   "size": {"x": "100px", "y": "28px"},
                   "on_click": {
-                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.runtime.editor.menueventsmanager.menus.EditorBranch",
                     "method": "toggleTestingDropdown",
                     "arg": "$parent"
                   },

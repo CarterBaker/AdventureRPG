@@ -47,6 +47,15 @@ public class TabManager extends ManagerPackage {
      * that resolver and is also used by the lock-release listener registered on
      * each content window's MenuListHandle in openTab(), so capture is
      * automatically restored when a lock_input menu closes without a re-click.
+     *
+     * pushRects() is the sole authority for composite rect position on both the
+     * tab chrome window and the content window. TabContext.onResize() must only
+     * forward canvas dimensions (w, h) to the content context for rendering —
+     * it must never call setCompositeRect on the content window because it does
+     * not have authoritative absolute position. Without the correct (x, y) on
+     * the content window, WindowManager.syncHoveredWindow() cannot resolve
+     * hover into it, blocking focus, input routing, and menu raycast for every
+     * tab beyond the first.
      */
 
     // Palette
@@ -152,8 +161,10 @@ public class TabManager extends ManagerPackage {
         ContextPackage contentContext = internal.createContext(contentClass, contentWindow);
 
         // Bridge the two peer contexts so TabContext.onResize() can cascade
-        // canvas bounds down to the content window — same pattern as the
+        // canvas dimensions down to the content window — same pattern as the
         // compositor cascading editor canvas bounds down to tab windows.
+        // TabContext.onResize() must only forward (w, h); composite position
+        // is owned exclusively by pushRects().
         tabContext.linkContent(contentContext);
 
         TabHandle handle = create(TabHandle.class);
@@ -238,6 +249,18 @@ public class TabManager extends ManagerPackage {
             WindowInstance tabWindow = handle.getTabContext().getWindow();
             tabWindow.setCompositeRect(x, y, w, h);
             tabWindow.resize((int) w, (int) h);
+            // ↑ resize cascades through TabContext.onResize → contentWindow.resize()
+            // → contentContext.onResize(). Any composite rect reset inside
+            // contentContext.onResize() fires here, before the line below.
+
+            // Set composite rect on the content window after the cascade so
+            // contentContext.onResize() cannot overwrite the correct (x, y).
+            // The content window must have its real screen position for
+            // WindowManager.syncHoveredWindow() to route hover into it —
+            // without this every content window sits at (0, 0) and
+            // WindowManager's tie-break permanently locks hover to tab 1.
+            WindowInstance contentWindow = handle.getContentContext().getWindow();
+            contentWindow.setCompositeRect(x, y, w, h);
         }
     }
 
