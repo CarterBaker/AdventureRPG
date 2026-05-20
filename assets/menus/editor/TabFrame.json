@@ -11,16 +11,31 @@
           "sprite": "menus/EditorTab",
           "anchor": "top_left",
           "pivot": "bottom_left",
-          "size": {"x": "100%", "y": "100%"},
+          "size": { "x": "100%", "y": "100%" },
           "color": [1.0, 1.0, 1.0, 1.0]
+        },
+        {
+          "id": "close_button",
+          "type": "button",
+          "sprite": "menus/CloseIcon",
+          "anchor": "top_right",
+          "pivot": "bottom_right",
+          "position": { "x": "-4px", "y": "-4px" },
+          "size": { "x": "20px", "y": "20px" },
+          "color": [1.0, 1.0, 1.0, 0.7],
+          "on_click": {
+              "class":  "editor.runtime.editor.menueventsmanager.menus.TabBranch",
+              "method": "closeTab",
+              "arg":    "$parent"
+          }
         },
         {
           "id": "tab_canvas",
           "type": "canvas_area",
           "anchor": "bottom_left",
           "pivot": "top_left",
-          "position": {"x": "5px", "y": "5px"},
-          "size": {"x": "calc(100% - 10px)", "y": "calc(100% - 33px)"}
+          "position": { "x": "5px", "y": "5px" },
+          "size": { "x": "calc(100% - 10px)", "y": "calc(100% - 33px)" }
         }
       ]
     }

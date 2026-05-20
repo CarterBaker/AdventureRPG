@@ -202,7 +202,7 @@ public class WindowManager extends ManagerPackage {
         if (hoveredWindow == window)
             hoveredWindow = null;
         if (focusedWindow == window)
-            focusedWindow = null;
+            focusedWindow = mainWindow;
     }
 
     // Identity \\

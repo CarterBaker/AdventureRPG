@@ -201,13 +201,16 @@ public class TabManager extends ManagerPackage {
         TabContext tabContext = handle.getTabContext();
         ContextPackage contentContext = handle.getContentContext();
 
-        // Clear the listener before destroying so a late-firing remove() on the
-        // menu list during context teardown does not call back into InputSystem
-        // after the window is gone.
-        contentContext.getWindow().getMenuListHandle().setLockReleaseListener(null);
+        WindowInstance tabWindow = tabContext.getWindow();
+        WindowInstance contentWindow = contentContext.getWindow();
+
+        contentWindow.getMenuListHandle().setLockReleaseListener(null);
 
         internal.destroyContext(contentContext);
         internal.destroyContext(tabContext);
+
+        windowManager.removeWindow(contentWindow);
+        windowManager.removeWindow(tabWindow);
 
         int tabID = getTabIDFromTabName(handle.getTabTitle());
         tabName2TabID.removeInt(handle.getTabTitle());
