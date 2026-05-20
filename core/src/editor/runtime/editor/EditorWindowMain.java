@@ -1,7 +1,6 @@
-package editor.runtime;
+package editor.runtime.editor;
 
-import editor.bootstrap.docklayoutsystem.DockLayoutSystem;
-import editor.runtime.menueventsmanager.EditorMenuEventsManager;
+import editor.runtime.editor.menueventsmanager.EditorMenuEventsManager;
 import engine.root.ContextPackage;
 
 public class EditorWindowMain extends ContextPackage {

@@ -79,16 +79,20 @@ public class InputSystem extends SystemPackage {
     // Focus \\
 
     private void syncFocus() {
+
         if (!EngineContext.input.isMouseClicked(0) && !EngineContext.input.isMouseClicked(1))
             return;
+
         WindowInstance hovered = windowManager.getHoveredWindow();
         if (hovered == null || hovered == windowManager.getFocusedWindow())
             return;
+
         windowManager.setFocusedWindow(hovered);
         onWindowFocused(hovered);
     }
 
     private void onWindowFocused(WindowInstance window) {
+
         if (!window.isCaptureEligible())
             return;
 
@@ -109,7 +113,9 @@ public class InputSystem extends SystemPackage {
 
     // Called by the editor layer when a lock_input menu closes on a content window.
     public void onInputLockReleased(WindowInstance authority) {
+
         WindowInstance focused = windowManager.getFocusedWindow();
+
         if (focused == null)
             return;
 
@@ -123,8 +129,10 @@ public class InputSystem extends SystemPackage {
     }
 
     private WindowInstance resolveInputAuthority(WindowInstance window) {
+
         if (authorityResolver != null)
             return authorityResolver.resolve(window);
+
         return window;
     }
 
@@ -137,15 +145,19 @@ public class InputSystem extends SystemPackage {
     // Guard \\
 
     private boolean isHovered(WindowInstance window) {
+
         WindowInstance captured = windowManager.getCapturedWindow();
+
         if (captured != null)
             return window == captured;
+
         return window == windowManager.getFocusedWindow();
     }
 
     // Frame write \\
 
     public void writeRawInput(RawInputHandle handle, WindowInstance window) {
+
         if (!isHovered(window)) {
             handle.clear();
             return;

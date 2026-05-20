@@ -115,7 +115,7 @@ public class TabManager extends ManagerPackage {
     public WindowInstance openSecondaryWindow() {
         return windowManager.openWindow(
                 EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY,
-                editor.runtime.EditorWindowSecondary.class);
+                editor.runtime.editor.EditorWindowSecondary.class);
     }
 
     // Accessible \\

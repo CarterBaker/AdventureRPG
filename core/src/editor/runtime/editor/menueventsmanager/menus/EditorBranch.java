@@ -1,10 +1,10 @@
-package editor.runtime.menueventsmanager.menus;
+package editor.runtime.editor.menueventsmanager.menus;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import editor.bootstrap.tabmanager.TabManager;
-import editor.runtime.EditorWindowSecondary;
+import editor.runtime.editor.EditorWindowSecondary;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 

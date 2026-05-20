@@ -1,5 +1,5 @@
 // core/src/editor/runtime/EditorWindowSecondary.java
-package editor.runtime;
+package editor.runtime.editor;
 
 import engine.root.ContextPackage;
 
