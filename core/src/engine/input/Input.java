@@ -4,7 +4,7 @@ public interface Input {
 
     /*
      * Platform input contract. Exposes click, held, and release state for both
-     * keys and mouse buttons, plus cursor position and deltas.
+     * keys and mouse buttons, plus cursor position, deltas, and cursor shape.
      */
 
     void addListener(InputListener listener);
@@ -32,4 +32,8 @@ public interface Input {
     float getDeltaY();
 
     void setCursorCatched(boolean captured);
+
+    void setCursorFromSprite(int gpuHandle, int width, int height);
+
+    void clearCursor();
 }

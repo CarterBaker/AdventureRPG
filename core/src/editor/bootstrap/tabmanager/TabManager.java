@@ -1,6 +1,6 @@
 package editor.bootstrap.tabmanager;
 
-import application.kernel.inputpipeline.inputsystem.InputSystem;
+import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.docklayoutsystem.DockLayoutSystem;
@@ -78,7 +78,7 @@ public class TabManager extends ManagerPackage {
     // Internal
     private WindowManager windowManager;
     private DockLayoutSystem dockLayoutSystem;
-    private InputSystem inputSystem;
+    private InputManager inputManager;
 
     // Internal \\
 
@@ -104,12 +104,12 @@ public class TabManager extends ManagerPackage {
         // Internal
         windowManager = get(WindowManager.class);
         dockLayoutSystem = get(DockLayoutSystem.class);
-        inputSystem = get(InputSystem.class);
+        inputManager = get(InputManager.class);
 
         // Invert the tab→input dependency: push a resolver lambda down into the
         // kernel so InputSystem can map a focused tab chrome window to its content
         // window without importing TabManager.
-        inputSystem.setAuthorityResolver(window -> {
+        inputManager.setAuthorityResolver(window -> {
             TabHandle tab = getTabHandleForWindow(window);
             return tab != null ? tab.getWindow() : window;
         });
@@ -175,7 +175,7 @@ public class TabManager extends ManagerPackage {
         // can restore capture automatically when a lock_input menu (e.g. inventory)
         // closes — without requiring a re-click from the user.
         contentWindow.getMenuListHandle().setLockReleaseListener(
-                () -> inputSystem.onInputLockReleased(contentWindow));
+                () -> inputManager.onInputLockReleased(contentWindow));
 
         int tabID = RegistryUtility.toIntID(title);
         tabName2TabID.put(title, tabID);

@@ -6,7 +6,7 @@ import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
-import application.kernel.inputpipeline.inputsystem.InputSystem;
+import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
@@ -65,7 +65,7 @@ public class ElementHitSystem extends SystemPackage {
 
     // Internal
     private WindowManager windowManager;
-    private InputSystem inputSystem;
+    private InputManager inputManager;
 
     // State
     private ElementInstance hoveredElement;
@@ -90,7 +90,7 @@ public class ElementHitSystem extends SystemPackage {
     @Override
     protected void get() {
         this.windowManager = get(WindowManager.class);
-        this.inputSystem = get(InputSystem.class);
+        this.inputManager = get(InputManager.class);
     }
 
     // Entry Point \\
@@ -103,13 +103,13 @@ public class ElementHitSystem extends SystemPackage {
             return;
 
         int rayWindowID = hoveredWindow.getWindowID();
-        float mouseX = inputSystem.getMouseX(hoveredWindow);
-        float mouseY = inputSystem.getMouseY(hoveredWindow);
+        float mouseX = inputManager.getMouseX(hoveredWindow);
+        float mouseY = inputManager.getMouseY(hoveredWindow);
 
         updateHover(activeMenus, mouseX, mouseY, rayWindowID);
         checkClickStateCollapse(mouseX, mouseY);
 
-        if (!inputSystem.bindingClicked(KeyBindings.PRIMARY, hoveredWindow))
+        if (!inputManager.bindingClicked(KeyBindings.PRIMARY, hoveredWindow))
             return;
 
         for (int i = activeMenus.size() - 1; i >= 0; i--) {

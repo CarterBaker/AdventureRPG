@@ -23,7 +23,7 @@ public class InputSystem extends SystemPackage {
      */
 
     // Internal
-    private application.kernel.inputpipeline.inputsystem.InputSystem bootstrapInput;
+    private application.kernel.inputpipeline.inputmanager.InputManager bootstrapInput;
     private PlayerManager playerManager;
     private MenuManager menuManager;
     private InventoryBranch inventoryBranch;
@@ -40,7 +40,7 @@ public class InputSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.bootstrapInput = get(application.kernel.inputpipeline.inputsystem.InputSystem.class);
+        this.bootstrapInput = get(application.kernel.inputpipeline.inputmanager.InputManager.class);
         this.playerManager = get(PlayerManager.class);
         this.menuManager = get(MenuManager.class);
         this.inventoryBranch = get(InventoryBranch.class);

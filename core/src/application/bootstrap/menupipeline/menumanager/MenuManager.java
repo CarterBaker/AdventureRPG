@@ -12,7 +12,7 @@ import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.menulist.MenuListHandle;
 import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.kernel.inputpipeline.inputsystem.InputSystem;
+import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
@@ -51,7 +51,7 @@ public class MenuManager extends ManagerPackage {
     private MenuRenderSystem renderSystem;
     private ElementHitSystem hitSystem;
     private WindowManager windowManager;
-    private InputSystem inputSystem;
+    private InputManager inputManager;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
@@ -84,7 +84,7 @@ public class MenuManager extends ManagerPackage {
         this.renderSystem = get(MenuRenderSystem.class);
         this.hitSystem = get(ElementHitSystem.class);
         this.windowManager = get(WindowManager.class);
-        this.inputSystem = get(InputSystem.class);
+        this.inputManager = get(InputManager.class);
     }
 
     @Override
@@ -136,7 +136,7 @@ public class MenuManager extends ManagerPackage {
 
             if (!window.getMenuListHandle().isInputLocked()
                     && window == windowManager.getFocusedWindow())
-                inputSystem.captureCursor(true, window);
+                inputManager.captureCursor(true, window);
         }
 
         pendingCloseMenus.clear();
@@ -231,7 +231,7 @@ public class MenuManager extends ManagerPackage {
 
         if (window.getMenuListHandle().isInputLocked()
                 && window == windowManager.getFocusedWindow())
-            inputSystem.captureCursor(false, window);
+            inputManager.captureCursor(false, window);
 
         return instance;
     }

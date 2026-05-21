@@ -1,15 +1,17 @@
-package application.kernel.inputpipeline.inputsystem;
+package application.kernel.inputpipeline.inputmanager;
 
+import application.bootstrap.shaderpipeline.sprite.SpriteHandle;
+import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.input.Binding;
 import engine.input.Input;
 import engine.root.EngineContext;
-import engine.root.SystemPackage;
+import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector2;
 
-public class InputSystem extends SystemPackage {
+public class InputManager extends ManagerPackage {
 
     /*
      * Thin bridge between the engine input backend and bootstrap systems.
@@ -43,9 +45,14 @@ public class InputSystem extends SystemPackage {
      * top-left corner, so raw screen coords only happen to match for the first
      * tab when the dock starts at (0, 0). Every subsequent tab has a non-zero
      * offset and would receive mismatched coordinates without this adjustment.
+     *
+     * All cursor platform calls are owned by CursorSystem. InputManager drives
+     * when capture is granted or released; CursorSystem executes the calls.
+     * The sprite cursor and clearCursor methods here are pointers to CursorSystem.
      */
 
     // Internal
+    private CursorSystem cursorSystem;
     private WindowManager windowManager;
 
     // Authority resolver — pushed in by the editor layer, null in game-only builds
@@ -72,6 +79,7 @@ public class InputSystem extends SystemPackage {
 
     @Override
     protected void create() {
+        this.cursorSystem = create(CursorSystem.class);
         this.mouseDelta = new Vector2();
     }
 
@@ -105,18 +113,14 @@ public class InputSystem extends SystemPackage {
         if (!window.isCaptureEligible())
             return;
 
-        if (windowManager.getCapturedWindow() != null) {
-            windowManager.releaseCaptureLock();
-            EngineContext.input.setCursorCatched(false);
-        }
+        if (windowManager.getCapturedWindow() != null)
+            cursorSystem.releaseCapture();
 
         WindowInstance authority = resolveInputAuthority(window);
         if (authority == null || authority.getMenuListHandle().isInputLocked())
             return;
 
-        windowManager.captureLockWindow(authority);
-        EngineContext.input.setCursorCatched(true);
-
+        cursorSystem.capture(authority);
         authority.getMenuListHandle().setLockReleaseListener(() -> onInputLockReleased(authority));
     }
 
@@ -131,9 +135,7 @@ public class InputSystem extends SystemPackage {
         if (resolveInputAuthority(focused) != authority)
             return;
 
-        windowManager.captureLockWindow(authority);
-        EngineContext.input.setCursorCatched(true);
-
+        cursorSystem.capture(authority);
         authority.getMenuListHandle().setLockReleaseListener(() -> onInputLockReleased(authority));
     }
 
@@ -242,15 +244,21 @@ public class InputSystem extends SystemPackage {
         return mouseDelta;
     }
 
-    // Platform \\
+    // Platform — delegates to CursorSystem \\
 
     public void captureCursor(boolean captured, WindowInstance window) {
-        if (captured) {
-            windowManager.captureLockWindow(window);
-            EngineContext.input.setCursorCatched(true);
-        } else if (windowManager.getCapturedWindow() == window) {
-            windowManager.releaseCaptureLock();
-            EngineContext.input.setCursorCatched(false);
-        }
+        cursorSystem.captureCursor(captured, window);
+    }
+
+    public void setCursorSprite(SpriteHandle handle) {
+        cursorSystem.setCursorSprite(handle);
+    }
+
+    public void setCursorSprite(SpriteInstance instance) {
+        cursorSystem.setCursorSprite(instance);
+    }
+
+    public void clearCursor() {
+        cursorSystem.clearCursor();
     }
 }

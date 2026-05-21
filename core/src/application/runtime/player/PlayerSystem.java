@@ -14,18 +14,18 @@ public class PlayerSystem extends SystemPackage {
 
     // Internal
     private PlayerManager playerManager;
-    private InputSystem inputSystem;
+    private InputSystem inputManager;
 
     // Internal \\
 
     @Override
     protected void get() {
         this.playerManager = get(PlayerManager.class);
-        this.inputSystem = get(InputSystem.class);
+        this.inputManager = get(InputSystem.class);
     }
 
     @Override
     protected void awake() {
-        playerManager.spawnPlayer(context.getWindow(), inputSystem.getRawInputHandle());
+        playerManager.spawnPlayer(context.getWindow(), inputManager.getRawInputHandle());
     }
 }

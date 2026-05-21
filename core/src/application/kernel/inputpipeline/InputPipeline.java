@@ -1,6 +1,6 @@
 package application.kernel.inputpipeline;
 
-import application.kernel.inputpipeline.inputsystem.InputSystem;
+import application.kernel.inputpipeline.inputmanager.InputManager;
 import engine.root.PipelinePackage;
 
 public class InputPipeline extends PipelinePackage {
@@ -13,6 +13,6 @@ public class InputPipeline extends PipelinePackage {
 
     @Override
     protected void create() {
-        create(InputSystem.class);
+        create(InputManager.class);
     }
 }

@@ -1,9 +1,16 @@
 package engine.lwjgl3;
 
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+
+import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWImage;
+import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryStack;
 
 import engine.input.Input;
@@ -16,6 +23,11 @@ class Lwjgl3Input implements Input {
      * Collects raw GLFW events and forwards them to registered InputListeners.
      * Tracks clicked, held, and released state for keys and mouse buttons.
      * Click and release latches are cleared each frame in endFrame().
+     *
+     * Sprite cursors are created on first use via glGetTexImage readback and
+     * cached by GPU handle. Subsequent calls with the same handle skip the
+     * readback and set the cursor directly. All cached cursors are destroyed
+     * in destroyCursors().
      */
 
     // Internal
@@ -42,13 +54,18 @@ class Lwjgl3Input implements Input {
     private long cursorResizeH;
     private long cursorResizeV;
 
+    // Sprite Cursor Cache — gpuHandle → GLFW cursor handle
+    private final Int2LongOpenHashMap spriteCursorCache = new Int2LongOpenHashMap();
+
     Lwjgl3Input(long window) {
         this.window = window;
+        this.spriteCursorCache.defaultReturnValue(0L);
     }
 
     // Internal \\
 
     void onCursor(double x, double y) {
+
         double yUp = toYUp(y);
 
         if (firstCursor) {
@@ -146,6 +163,11 @@ class Lwjgl3Input implements Input {
         GLFW.glfwDestroyCursor(cursorDefault);
         GLFW.glfwDestroyCursor(cursorResizeH);
         GLFW.glfwDestroyCursor(cursorResizeV);
+
+        for (long cursor : spriteCursorCache.values())
+            GLFW.glfwDestroyCursor(cursor);
+
+        spriteCursorCache.clear();
     }
 
     // Input \\
@@ -216,5 +238,32 @@ class Lwjgl3Input implements Input {
                 window,
                 GLFW.GLFW_CURSOR,
                 captured ? GLFW.GLFW_CURSOR_DISABLED : GLFW.GLFW_CURSOR_NORMAL);
+    }
+
+    @Override
+    public void setCursorFromSprite(int gpuHandle, int width, int height) {
+
+        long cursor = spriteCursorCache.get(gpuHandle);
+
+        if (cursor == 0L) {
+            ByteBuffer pixels = BufferUtils.createByteBuffer(width * height * 4);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, gpuHandle);
+            GL11.glGetTexImage(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+
+            GLFWImage image = GLFWImage.malloc();
+            image.set(width, height, pixels);
+            cursor = GLFW.glfwCreateCursor(image, 0, 0);
+            image.free();
+
+            spriteCursorCache.put(gpuHandle, cursor);
+        }
+
+        GLFW.glfwSetCursor(window, cursor);
+    }
+
+    @Override
+    public void clearCursor() {
+        GLFW.glfwSetCursor(window, 0L);
     }
 }
