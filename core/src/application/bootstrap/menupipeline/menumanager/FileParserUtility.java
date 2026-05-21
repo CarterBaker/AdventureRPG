@@ -16,26 +16,48 @@ import engine.util.mathematics.vectors.Vector2;
 class FileParserUtility extends EngineUtility {
 
     /*
-     * Stateless JSON parsing helpers shared by InternalBuilder. Handles
-     * on_click resolution, element type mapping, color parsing, layout parsing,
-     * and origin field parsing. Package-private — only InternalBuilder may call
-     * these.
+     * Stateless JSON parsing helpers shared by InternalBuilder.
+     *
+     * parseStateBlock handles on_hover_enter, on_hover, on_hover_exit, and
+     * click_state — all four are identical in shape: optional use/inline element,
+     * sprite, layout, color, text, children, and optional method callback.
+     *
+     * parseOnDrag parses on_drag — method callback only, no element swap.
+     * parseOnClick parses on_click — method callback only, no element swap.
      */
 
-    // On Click \\
+    // Callbacks — method only \\
 
     static String[] parseOnClick(JsonObject json) {
+        return parseCallback(json, "on_click");
+    }
 
-        if (!json.has("on_click"))
+    static String[] parseOnDrag(JsonObject json) {
+        return parseCallback(json, "on_drag");
+    }
+
+    private static String[] parseCallback(JsonObject json, String key) {
+
+        if (!json.has(key))
             return null;
 
-        JsonObject clickJson = json.getAsJsonObject("on_click");
+        JsonObject obj = json.getAsJsonObject(key);
 
         return new String[] {
-                JsonUtility.validateString(clickJson, "class"),
-                JsonUtility.validateString(clickJson, "method"),
-                JsonUtility.getString(clickJson, "arg", null)
+                JsonUtility.validateString(obj, "class"),
+                JsonUtility.validateString(obj, "method"),
+                JsonUtility.getString(obj, "arg", null)
         };
+    }
+
+    // State Block Keys \\
+
+    static boolean hasStateBlock(JsonObject json, String key) {
+        return json.has(key);
+    }
+
+    static JsonObject getStateBlock(JsonObject json, String key) {
+        return json.getAsJsonObject(key);
     }
 
     // Element Type \\
@@ -127,7 +149,6 @@ class FileParserUtility extends EngineUtility {
     static Vector2 parseOriginName(String name) {
 
         String normalized = name.toLowerCase();
-
         float x = 0.5f;
         float y = 0.5f;
 

@@ -25,39 +25,21 @@ import engine.util.registry.RegistryUtility;
 public class ElementSystem extends SystemPackage {
 
     /*
-     * Owns the master element registry and drives runtime instantiation of element
-     * trees. Masters are registered during bootstrap keyed by composite
-     * file/element path. Cycle detection prevents circular file dependencies during
-     * template resolution.
+     * Owns the master element registry and drives runtime instantiation.
      *
-     * At runtime, createInstances walks the MenuNodeStruct tree passed to it.
-     * master.getChildren() is a bootstrap-only concept used when building ref nodes
-     * — ElementSystem never reads it during instantiation.
-     *
-     * For each element, hover and click state sprite instances are cloned from
-     * the state's sprite override (if any), and hover/click state children are
-     * instantiated from their respective MenuNodeStruct lists. All three are
-     * passed into the ElementInstance constructor so the hit and render systems
-     * can traverse them without re-resolving the handle each frame.
-     *
-     * When a hover state has a master handle, a hoverStateRoot ElementInstance is
-     * built from that master with the hover children as its child list. The render
-     * system renders it as a full positioned overlay so its own layout, visuals,
-     * and stack direction are respected.
+     * For each element, sprite instances are cloned for all four states
+     * (hoverEnter, hover, hoverExit, click). State children are instantiated
+     * from their respective MenuNodeStruct lists. When a state has a master
+     * handle, a state root ElementInstance is built from that master so the
+     * render system can position and render it as a full positioned overlay.
      */
 
-    // Internal
     private SpriteManager spriteManager;
     private FontManager fontManager;
 
-    // Palette
     private Object2IntOpenHashMap<String> masterKey2MasterID;
     private Int2ObjectOpenHashMap<ElementHandle> masterID2MasterHandle;
-
-    // State
     private ObjectOpenHashSet<String> loadingFiles;
-
-    // Internal \\
 
     @Override
     protected void create() {
@@ -94,8 +76,6 @@ public class ElementSystem extends SystemPackage {
         return masterKey2MasterID.keySet();
     }
 
-    // Cycle Detection \\
-
     public boolean isFileLoading(String filePath) {
         return loadingFiles.contains(filePath);
     }
@@ -115,196 +95,189 @@ public class ElementSystem extends SystemPackage {
             Supplier<MenuInstance> parentRef) {
 
         ObjectArrayList<ElementInstance> result = new ObjectArrayList<>(nodes.size());
-
         for (int i = 0; i < nodes.size(); i++)
             result.add(createInstance(nodes.get(i), parentRef));
-
         return result;
     }
 
-    private ElementInstance createInstance(
-            MenuNodeStruct node,
-            Supplier<MenuInstance> parentRef) {
+    private ElementInstance createInstance(MenuNodeStruct node, Supplier<MenuInstance> parentRef) {
 
         ElementHandle master = node.getMaster();
         ElementData data = master.getElementData();
 
-        // Default sprite — node override takes priority over handle definition
+        // Default sprite
         String sourceName = node.getSpriteNameOverride() != null
                 ? node.getSpriteNameOverride()
                 : data.getSpriteName();
-
         SpriteInstance spriteInstance = sourceName != null
                 ? spriteManager.cloneSprite(sourceName)
                 : null;
 
-        // Hover sprite — cloned from state sprite override if present
+        // State sprites
+        ElementStateStruct hoverEnterState = master.getHoverEnterState();
         ElementStateStruct hoverState = master.getHoverState();
-        SpriteInstance hoverSpriteInstance = null;
-
-        if (hoverState != null && hoverState.hasSpriteOverride())
-            hoverSpriteInstance = spriteManager.cloneSprite(hoverState.getSpriteOverride());
-
-        // Click sprite — cloned from state sprite override if present
+        ElementStateStruct hoverExitState = master.getHoverExitState();
         ElementStateStruct clickState = master.getClickState();
-        SpriteInstance clickSpriteInstance = null;
 
-        if (clickState != null && clickState.hasSpriteOverride())
-            clickSpriteInstance = spriteManager.cloneSprite(clickState.getSpriteOverride());
+        SpriteInstance hoverEnterSprite = hoverEnterState != null && hoverEnterState.hasSpriteOverride()
+                ? spriteManager.cloneSprite(hoverEnterState.getSpriteOverride())
+                : null;
+        SpriteInstance hoverSprite = hoverState != null && hoverState.hasSpriteOverride()
+                ? spriteManager.cloneSprite(hoverState.getSpriteOverride())
+                : null;
+        SpriteInstance hoverExitSprite = hoverExitState != null && hoverExitState.hasSpriteOverride()
+                ? spriteManager.cloneSprite(hoverExitState.getSpriteOverride())
+                : null;
+        SpriteInstance clickSprite = clickState != null && clickState.hasSpriteOverride()
+                ? spriteManager.cloneSprite(clickState.getSpriteOverride())
+                : null;
 
         // Font
-        FontInstance fontInstance = null;
-
-        String resolvedFontName = data.hasFont()
-                ? data.getFontName()
-                : data.getType() == ElementType.LABEL ? EngineSetting.FONT_DEFAULT_NAME : null;
-
-        if (resolvedFontName != null) {
-
-            String materialName = data.hasMaterial()
-                    ? data.getMaterialName()
-                    : EngineSetting.FONT_DEFAULT_MATERIAL;
-
-            fontInstance = fontManager.cloneFont(resolvedFontName, materialName);
-
-            Color color = node.hasColorOverride()
-                    ? node.getColorOverride()
-                    : data.hasColor()
-                            ? data.getColor()
-                            : EngineSetting.FONT_DEFAULT_COLOR;
-
-            fontInstance.setColor(color.r, color.g, color.b, color.a);
-
-            String text = node.getTextOverride() != null
-                    ? node.getTextOverride()
-                    : data.getText();
-
-            if (text != null)
-                fontInstance.setText(text);
-        }
+        FontInstance fontInstance = buildFontInstance(data, node);
 
         // Default children
         ObjectArrayList<MenuNodeStruct> childNodes = node.getChildren();
         ObjectArrayList<ElementInstance> childInstances = new ObjectArrayList<>(childNodes.size());
-
         for (int i = 0; i < childNodes.size(); i++)
             childInstances.add(createInstance(childNodes.get(i), parentRef));
 
-        // Hover state children — replace default children in-place when hovered
-        ObjectArrayList<ElementInstance> hoverStateInstances = new ObjectArrayList<>();
-
-        if (hoverState != null && hoverState.hasChildren()) {
-            ObjectArrayList<MenuNodeStruct> hoverNodes = hoverState.getChildren();
-            for (int i = 0; i < hoverNodes.size(); i++)
-                hoverStateInstances.add(createInstance(hoverNodes.get(i), parentRef));
-        }
-
-        // Click state children — rendered as dropdown overlay when click-expanded
-        ObjectArrayList<ElementInstance> clickStateInstances = new ObjectArrayList<>();
-
-        if (clickState != null && clickState.hasChildren()) {
-            ObjectArrayList<MenuNodeStruct> clickStateNodes = clickState.getChildren();
-            for (int i = 0; i < clickStateNodes.size(); i++)
-                clickStateInstances.add(createInstance(clickStateNodes.get(i), parentRef));
-        }
+        // State children
+        ObjectArrayList<ElementInstance> hoverEnterChildren = buildStateChildren(hoverEnterState, parentRef);
+        ObjectArrayList<ElementInstance> hoverChildren = buildStateChildren(hoverState, parentRef);
+        ObjectArrayList<ElementInstance> hoverExitChildren = buildStateChildren(hoverExitState, parentRef);
+        ObjectArrayList<ElementInstance> clickChildren = buildStateChildren(clickState, parentRef);
 
         ElementInstance instance = create(ElementInstance.class);
         instance.constructor(
                 master,
                 spriteInstance,
-                hoverSpriteInstance,
-                clickSpriteInstance,
+                hoverEnterSprite,
+                hoverSprite,
+                hoverExitSprite,
+                clickSprite,
                 fontInstance,
                 node.getTextOverride(),
-                null,
                 node.getActionClassOverride(),
                 node.getActionMethodOverride(),
                 node.getActionArgOverride(),
-                master.getActionClass(),
-                master.getActionMethod(),
-                master.getActionArg(),
+                node.getOnDragClassOverride(),
+                node.getOnDragMethodOverride(),
+                node.getOnDragArgOverride(),
                 node.getLayoutOverride(),
                 childInstances,
-                hoverStateInstances,
-                clickStateInstances);
+                hoverEnterChildren,
+                hoverChildren,
+                hoverExitChildren,
+                clickChildren);
 
-        // Hover state root — when the hover state references a master handle,
-        // build a full ElementInstance for that container so the render system
-        // can position and render it as a proper overlay with its own layout,
-        // visuals, and stack direction rather than inlining children into this
-        // element's bounds
-        if (hoverState != null && hoverState.hasMaster()) {
-            ElementInstance hoverStateRoot = createHoverStateRoot(
-                    hoverState.getMaster(), hoverStateInstances, parentRef);
-            instance.setHoverStateRoot(hoverStateRoot);
-        }
+        // State roots — when state has a master, build a full positioned overlay
+        if (hoverEnterState != null && hoverEnterState.hasMaster())
+            instance.setHoverEnterStateRoot(
+                    buildStateRoot(hoverEnterState.getMaster(), hoverEnterChildren));
+        if (hoverState != null && hoverState.hasMaster())
+            instance.setHoverStateRoot(
+                    buildStateRoot(hoverState.getMaster(), hoverChildren));
+        if (hoverExitState != null && hoverExitState.hasMaster())
+            instance.setHoverExitStateRoot(
+                    buildStateRoot(hoverExitState.getMaster(), hoverExitChildren));
 
         return instance;
     }
 
-    private ElementInstance createHoverStateRoot(
-            ElementHandle master,
-            ObjectArrayList<ElementInstance> hoverChildren,
+    private ObjectArrayList<ElementInstance> buildStateChildren(
+            ElementStateStruct state,
             Supplier<MenuInstance> parentRef) {
+
+        ObjectArrayList<ElementInstance> result = new ObjectArrayList<>();
+
+        if (state != null && state.hasChildren()) {
+            ObjectArrayList<MenuNodeStruct> nodes = state.getChildren();
+            for (int i = 0; i < nodes.size(); i++)
+                result.add(createInstance(nodes.get(i), parentRef));
+        }
+
+        return result;
+    }
+
+    private ElementInstance buildStateRoot(
+            ElementHandle master,
+            ObjectArrayList<ElementInstance> stateChildren) {
 
         ElementData data = master.getElementData();
 
-        // Sprite for the root container panel itself
         SpriteInstance spriteInstance = data.hasSprite()
                 ? spriteManager.cloneSprite(data.getSpriteName())
                 : null;
 
-        // Font for the root container — labels directly on the panel are rare
-        // but supported
-        FontInstance fontInstance = null;
+        FontInstance fontInstance = buildFontInstanceFromData(data);
 
-        String resolvedFontName = data.hasFont()
-                ? data.getFontName()
-                : data.getType() == ElementType.LABEL ? EngineSetting.FONT_DEFAULT_NAME : null;
-
-        if (resolvedFontName != null) {
-
-            String materialName = data.hasMaterial()
-                    ? data.getMaterialName()
-                    : EngineSetting.FONT_DEFAULT_MATERIAL;
-
-            fontInstance = fontManager.cloneFont(resolvedFontName, materialName);
-
-            if (data.hasColor()) {
-                Color color = data.getColor();
-                fontInstance.setColor(color.r, color.g, color.b, color.a);
-            } else {
-                Color color = EngineSetting.FONT_DEFAULT_COLOR;
-                fontInstance.setColor(color.r, color.g, color.b, color.a);
-            }
-
-            if (data.getText() != null)
-                fontInstance.setText(data.getText());
-        }
-
-        // The hover children are already instantiated — pass them directly as
-        // the child list so the root renders them through its own stack logic
         ElementInstance root = create(ElementInstance.class);
         root.constructor(
                 master,
                 spriteInstance,
-                null,
-                null,
+                null, null, null, null,
                 fontInstance,
                 null,
+                null, null, null,
+                null, null, null,
                 null,
-                null,
-                null,
-                null,
-                master.getActionClass(),
-                master.getActionMethod(),
-                master.getActionArg(),
-                null,
-                hoverChildren,
+                stateChildren,
+                new ObjectArrayList<>(),
+                new ObjectArrayList<>(),
                 new ObjectArrayList<>(),
                 new ObjectArrayList<>());
 
         return root;
+    }
+
+    private FontInstance buildFontInstance(ElementData data, MenuNodeStruct node) {
+
+        String resolvedFontName = data.hasFont() ? data.getFontName()
+                : data.getType() == ElementType.LABEL ? EngineSetting.FONT_DEFAULT_NAME : null;
+
+        if (resolvedFontName == null)
+            return null;
+
+        String materialName = data.hasMaterial()
+                ? data.getMaterialName()
+                : EngineSetting.FONT_DEFAULT_MATERIAL;
+
+        FontInstance fontInstance = fontManager.cloneFont(resolvedFontName, materialName);
+
+        Color color = node.hasColorOverride() ? node.getColorOverride()
+                : data.hasColor() ? data.getColor()
+                        : EngineSetting.FONT_DEFAULT_COLOR;
+
+        fontInstance.setColor(color.r, color.g, color.b, color.a);
+
+        String text = node.getTextOverride() != null ? node.getTextOverride() : data.getText();
+        if (text != null)
+            fontInstance.setText(text);
+
+        return fontInstance;
+    }
+
+    private FontInstance buildFontInstanceFromData(ElementData data) {
+
+        String resolvedFontName = data.hasFont() ? data.getFontName()
+                : data.getType() == ElementType.LABEL ? EngineSetting.FONT_DEFAULT_NAME : null;
+
+        if (resolvedFontName == null)
+            return null;
+
+        String materialName = data.hasMaterial()
+                ? data.getMaterialName()
+                : EngineSetting.FONT_DEFAULT_MATERIAL;
+
+        FontInstance fontInstance = fontManager.cloneFont(resolvedFontName, materialName);
+
+        Color color = data.hasColor() ? data.getColor() : EngineSetting.FONT_DEFAULT_COLOR;
+        fontInstance.setColor(color.r, color.g, color.b, color.a);
+
+        if (data.getText() != null)
+            fontInstance.setText(data.getText());
+
+        return fontInstance;
     }
 
     public ElementInstance createDetachedInstance(MenuNodeStruct node) {

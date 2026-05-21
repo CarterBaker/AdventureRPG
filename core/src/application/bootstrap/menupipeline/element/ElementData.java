@@ -13,6 +13,11 @@ public class ElementData extends DataPackage {
      * Persistent element definition. Holds all immutable visual and layout
      * fields shared across every instance of this element. Owned by ElementHandle,
      * created with new during bootstrap.
+     *
+     * on_click fires once on primary press — method only, no element swap.
+     * on_drag fires every frame while primary held — method only, no element swap.
+     * Visual hover behavior is handled by ElementStateStruct blocks on
+     * ElementHandle.
      */
 
     // Identity
@@ -38,10 +43,15 @@ public class ElementData extends DataPackage {
     // Expansion
     private final boolean startExpanded;
 
-    // Action
+    // on_click
     private final String actionClass;
     private final String actionMethod;
     private final String actionArg;
+
+    // on_drag
+    private final String onDragClass;
+    private final String onDragMethod;
+    private final String onDragArg;
 
     // Constructor \\
 
@@ -63,13 +73,13 @@ public class ElementData extends DataPackage {
             boolean startExpanded,
             String actionClass,
             String actionMethod,
-            String actionArg) {
+            String actionArg,
+            String onDragClass,
+            String onDragMethod,
+            String onDragArg) {
 
-        // Identity
         this.id = id;
         this.type = type;
-
-        // Visuals
         this.spriteName = spriteName;
         this.text = text;
         this.fontName = fontName;
@@ -77,21 +87,18 @@ public class ElementData extends DataPackage {
         this.fontSize = fontSize;
         this.explicitFontSize = explicitFontSize;
         this.color = color;
-
-        // Layout
         this.layout = layout;
         this.mask = mask;
         this.stackDirection = stackDirection;
         this.spacing = spacing;
         this.textAlign = textAlign;
-
-        // Expansion
         this.startExpanded = startExpanded;
-
-        // Action
         this.actionClass = actionClass;
         this.actionMethod = actionMethod;
         this.actionArg = actionArg;
+        this.onDragClass = onDragClass;
+        this.onDragMethod = onDragMethod;
+        this.onDragArg = onDragArg;
     }
 
     // Accessible \\
@@ -170,6 +177,22 @@ public class ElementData extends DataPackage {
 
     public boolean hasAction() {
         return actionClass != null && actionMethod != null;
+    }
+
+    public String getOnDragClass() {
+        return onDragClass;
+    }
+
+    public String getOnDragMethod() {
+        return onDragMethod;
+    }
+
+    public String getOnDragArg() {
+        return onDragArg;
+    }
+
+    public boolean hasOnDrag() {
+        return onDragClass != null && onDragMethod != null;
     }
 
     public boolean hasSprite() {

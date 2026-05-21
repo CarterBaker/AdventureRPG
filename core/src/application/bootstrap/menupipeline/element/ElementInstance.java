@@ -11,36 +11,39 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ElementInstance extends InstancePackage {
 
     /*
-     * Runtime instance of a UI element. Holds a reference to the shared handle
-     * and its ElementData definition, resolved sprite and font instances, optional
-     * placement overrides, computed layout values updated each frame, and scroll,
-     * content, expansion, hover, and click-state.
+     * Runtime instance of a UI element.
      *
-     * Hover and click state sprite instances are cloned at open time from the
-     * state's sprite override so the render system can swap without re-resolving.
-     * Hover state children replace the default child list in-place when hovered.
-     * Click state children render as an additional overlay below the element.
+     * activeHoverState is set by ElementHitSystem:
+     * on enter → hoverEnterState
+     * per frame → hoverState (if defined, replaces enter state)
+     * on exit → hoverExitState
+     * on clear → null
      *
-     * When the hover state has a master handle, hoverStateRoot holds a full
-     * ElementInstance for that master container. The render system renders it as
-     * a positioned overlay so its own layout (position offset, size, color, stack)
-     * is respected rather than inlining its children into this element's bounds.
+     * The render system reads activeHoverState via resolveActiveState.
+     * Sprite instances are cloned for all four states at open time.
      */
 
     // Internal
     private ElementHandle handle;
     private ElementData data;
     private SpriteInstance spriteInstance;
+    private SpriteInstance hoverEnterSpriteInstance;
     private SpriteInstance hoverSpriteInstance;
+    private SpriteInstance hoverExitSpriteInstance;
     private SpriteInstance clickSpriteInstance;
     private FontInstance fontInstance;
-    private Runnable resolvedAction;
+
+    // Action overrides — on_click
     private String actionClassOverride;
     private String actionMethodOverride;
     private String actionArgOverride;
-    private String actionClass;
-    private String actionMethod;
-    private String actionArg;
+
+    // Action overrides — on_drag
+    private String onDragClassOverride;
+    private String onDragMethodOverride;
+    private String onDragArgOverride;
+
+    // Layout
     private LayoutStruct layoutOverride;
     private DimensionVector2 positionOverride;
 
@@ -49,12 +52,18 @@ public class ElementInstance extends InstancePackage {
 
     // Children
     private ObjectArrayList<ElementInstance> children;
+    private ObjectArrayList<ElementInstance> hoverEnterStateChildren;
     private ObjectArrayList<ElementInstance> hoverStateChildren;
+    private ObjectArrayList<ElementInstance> hoverExitStateChildren;
     private ObjectArrayList<ElementInstance> clickStateChildren;
 
-    // Hover State Root — full instance of the master container when hover state has
-    // a master
+    // Hover state root instances — for master-based state overlays
+    private ElementInstance hoverEnterStateRoot;
     private ElementInstance hoverStateRoot;
+    private ElementInstance hoverExitStateRoot;
+
+    // Active hover state — set by ElementHitSystem
+    private ElementStateStruct activeHoverState;
 
     // Computed
     private Matrix4 transform;
@@ -77,11 +86,9 @@ public class ElementInstance extends InstancePackage {
     // Expansion
     private boolean expanded;
 
-    // Hover / Click-State
+    // State flags
     private boolean hovered;
     private boolean clickExpanded;
-
-    // Internal \\
 
     @Override
     protected void create() {
@@ -93,41 +100,141 @@ public class ElementInstance extends InstancePackage {
     public void constructor(
             ElementHandle handle,
             SpriteInstance spriteInstance,
+            SpriteInstance hoverEnterSpriteInstance,
             SpriteInstance hoverSpriteInstance,
+            SpriteInstance hoverExitSpriteInstance,
             SpriteInstance clickSpriteInstance,
             FontInstance fontInstance,
             String textOverride,
-            Runnable resolvedAction,
             String actionClassOverride,
             String actionMethodOverride,
             String actionArgOverride,
-            String actionClass,
-            String actionMethod,
-            String actionArg,
+            String onDragClassOverride,
+            String onDragMethodOverride,
+            String onDragArgOverride,
             LayoutStruct layoutOverride,
             ObjectArrayList<ElementInstance> children,
+            ObjectArrayList<ElementInstance> hoverEnterStateChildren,
             ObjectArrayList<ElementInstance> hoverStateChildren,
+            ObjectArrayList<ElementInstance> hoverExitStateChildren,
             ObjectArrayList<ElementInstance> clickStateChildren) {
 
         this.handle = handle;
         this.data = handle.getElementData();
         this.spriteInstance = spriteInstance;
+        this.hoverEnterSpriteInstance = hoverEnterSpriteInstance;
         this.hoverSpriteInstance = hoverSpriteInstance;
+        this.hoverExitSpriteInstance = hoverExitSpriteInstance;
         this.clickSpriteInstance = clickSpriteInstance;
         this.fontInstance = fontInstance;
         this.textOverride = textOverride;
-        this.resolvedAction = resolvedAction;
         this.actionClassOverride = actionClassOverride;
         this.actionMethodOverride = actionMethodOverride;
         this.actionArgOverride = actionArgOverride;
-        this.actionClass = actionClass;
-        this.actionMethod = actionMethod;
-        this.actionArg = actionArg;
+        this.onDragClassOverride = onDragClassOverride;
+        this.onDragMethodOverride = onDragMethodOverride;
+        this.onDragArgOverride = onDragArgOverride;
         this.layoutOverride = layoutOverride;
         this.children = children;
+        this.hoverEnterStateChildren = hoverEnterStateChildren;
         this.hoverStateChildren = hoverStateChildren;
+        this.hoverExitStateChildren = hoverExitStateChildren;
         this.clickStateChildren = clickStateChildren;
         this.expanded = data.isStartExpanded();
+    }
+
+    // Active Hover State \\
+
+    public void setActiveHoverState(ElementStateStruct state) {
+        this.activeHoverState = state;
+    }
+
+    public void clearActiveHoverState() {
+        this.activeHoverState = null;
+    }
+
+    public ElementStateStruct getActiveHoverState() {
+        return activeHoverState;
+    }
+
+    public boolean hasActiveHoverState() {
+        return activeHoverState != null;
+    }
+
+    // Hover State Root \\
+
+    public void setHoverEnterStateRoot(ElementInstance root) {
+        this.hoverEnterStateRoot = root;
+    }
+
+    public ElementInstance getHoverEnterStateRoot() {
+        return hoverEnterStateRoot;
+    }
+
+    public boolean hasHoverEnterStateRoot() {
+        return hoverEnterStateRoot != null;
+    }
+
+    public void setHoverStateRoot(ElementInstance root) {
+        this.hoverStateRoot = root;
+    }
+
+    public ElementInstance getHoverStateRoot() {
+        return hoverStateRoot;
+    }
+
+    public boolean hasHoverStateRoot() {
+        return hoverStateRoot != null;
+    }
+
+    public void setHoverExitStateRoot(ElementInstance root) {
+        this.hoverExitStateRoot = root;
+    }
+
+    public ElementInstance getHoverExitStateRoot() {
+        return hoverExitStateRoot;
+    }
+
+    public boolean hasHoverExitStateRoot() {
+        return hoverExitStateRoot != null;
+    }
+
+    // Effective Action Accessors \\
+
+    public String getEffectiveActionClass() {
+        return actionClassOverride != null ? actionClassOverride : data.getActionClass();
+    }
+
+    public String getEffectiveActionMethod() {
+        return actionMethodOverride != null ? actionMethodOverride : data.getActionMethod();
+    }
+
+    public String getEffectiveActionArg() {
+        return actionArgOverride != null ? actionArgOverride : data.getActionArg();
+    }
+
+    public String getEffectiveOnDragClass() {
+        return onDragClassOverride != null ? onDragClassOverride : data.getOnDragClass();
+    }
+
+    public String getEffectiveOnDragMethod() {
+        return onDragMethodOverride != null ? onDragMethodOverride : data.getOnDragMethod();
+    }
+
+    public String getEffectiveOnDragArg() {
+        return onDragArgOverride != null ? onDragArgOverride : data.getOnDragArg();
+    }
+
+    public boolean hasAction() {
+        return getEffectiveActionClass() != null && getEffectiveActionMethod() != null;
+    }
+
+    public boolean hasOnDrag() {
+        return getEffectiveOnDragClass() != null && getEffectiveOnDragMethod() != null;
+    }
+
+    public boolean isHoverable() {
+        return handle.isHoverable() || hasAction() || hasOnDrag();
     }
 
     // Layout \\
@@ -168,23 +275,13 @@ public class ElementInstance extends InstancePackage {
         this.computedW = w;
         this.computedH = h;
 
-        transform.set(
-                w, 0, 0, tx,
-                0, h, 0, ty,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
+        transform.set(w, 0, 0, tx, 0, h, 0, ty, 0, 0, 1, 0, 0, 0, 0, 1);
     }
 
-    public void computeTransform(
-            float parentLeft, float parentTop,
-            float parentW, float parentH) {
+    public void computeTransform(float parentLeft, float parentTop, float parentW, float parentH) {
         computeTransform(parentLeft, parentTop, parentW, parentH, null);
     }
 
-    /*
-     * Used by stacked containers — ignores anchor, pivot, and position. Places
-     * the element at the given cursor. Size resolves from the active layout.
-     */
     public void computeStackedTransform(
             float left, float top,
             float parentW, float parentH,
@@ -212,23 +309,13 @@ public class ElementInstance extends InstancePackage {
         this.computedW = w;
         this.computedH = h;
 
-        transform.set(
-                w, 0, 0, left,
-                0, h, 0, top,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
+        transform.set(w, 0, 0, left, 0, h, 0, top, 0, 0, 1, 0, 0, 0, 0, 1);
     }
 
-    public void computeStackedTransform(
-            float left, float top,
-            float parentW, float parentH) {
+    public void computeStackedTransform(float left, float top, float parentW, float parentH) {
         computeStackedTransform(left, top, parentW, parentH, null);
     }
 
-    /*
-     * Used by toolbar elements — forces full screen width, top-of-screen
-     * placement. Only height resolves from layout.
-     */
     public void computeToolbarTransform(float screenW, float screenH) {
 
         LayoutStruct layout = layoutOverride != null ? layoutOverride : data.getLayout();
@@ -237,7 +324,6 @@ public class ElementInstance extends InstancePackage {
 
         if (layout.hasMinSize())
             h = Math.max(h, layout.getMinSize().getY().resolve(screenH));
-
         if (layout.hasMaxSize())
             h = Math.min(h, layout.getMaxSize().getY().resolve(screenH));
 
@@ -248,34 +334,7 @@ public class ElementInstance extends InstancePackage {
         this.computedW = screenW;
         this.computedH = h;
 
-        transform.set(
-                screenW, 0, 0, 0f,
-                0, h, 0, top,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
-    }
-
-    // Action \\
-
-    public String getEffectiveActionClass() {
-        return actionClassOverride != null ? actionClassOverride : actionClass;
-    }
-
-    public String getEffectiveActionMethod() {
-        return actionMethodOverride != null ? actionMethodOverride : actionMethod;
-    }
-
-    public String getEffectiveActionArg() {
-        return actionArgOverride != null ? actionArgOverride : actionArg;
-    }
-
-    public boolean hasAction() {
-        return getEffectiveActionClass() != null && getEffectiveActionMethod() != null;
-    }
-
-    public void execute() {
-        if (resolvedAction != null)
-            resolvedAction.run();
+        transform.set(screenW, 0, 0, 0f, 0, h, 0, top, 0, 0, 1, 0, 0, 0, 0, 1);
     }
 
     // Child Mutation \\
@@ -289,20 +348,14 @@ public class ElementInstance extends InstancePackage {
     }
 
     public ElementInstance findChildById(String id) {
-
         for (int i = 0; i < children.size(); i++) {
-
             ElementInstance child = children.get(i);
-
             if (child.getElementData().getId().equals(id))
                 return child;
-
             ElementInstance found = child.findChildById(id);
-
             if (found != null)
                 return found;
         }
-
         return null;
     }
 
@@ -390,10 +443,6 @@ public class ElementInstance extends InstancePackage {
         return hovered;
     }
 
-    public boolean hasHoverState() {
-        return handle.hasHoverState();
-    }
-
     // Click-State \\
 
     public void setClickExpanded(boolean clickExpanded) {
@@ -416,21 +465,15 @@ public class ElementInstance extends InstancePackage {
         return clickStateChildren;
     }
 
-    // Hover State Root \\
-
-    public void setHoverStateRoot(ElementInstance root) {
-        this.hoverStateRoot = root;
-    }
-
-    public ElementInstance getHoverStateRoot() {
-        return hoverStateRoot;
-    }
-
-    public boolean hasHoverStateRoot() {
-        return hoverStateRoot != null;
-    }
-
     // Hover State Children \\
+
+    public boolean hasHoverEnterStateChildren() {
+        return hoverEnterStateChildren != null && !hoverEnterStateChildren.isEmpty();
+    }
+
+    public ObjectArrayList<ElementInstance> getHoverEnterStateChildren() {
+        return hoverEnterStateChildren;
+    }
 
     public boolean hasHoverStateChildren() {
         return hoverStateChildren != null && !hoverStateChildren.isEmpty();
@@ -438,6 +481,28 @@ public class ElementInstance extends InstancePackage {
 
     public ObjectArrayList<ElementInstance> getHoverStateChildren() {
         return hoverStateChildren;
+    }
+
+    public boolean hasHoverExitStateChildren() {
+        return hoverExitStateChildren != null && !hoverExitStateChildren.isEmpty();
+    }
+
+    public ObjectArrayList<ElementInstance> getHoverExitStateChildren() {
+        return hoverExitStateChildren;
+    }
+
+    // Sprite Instances \\
+
+    public SpriteInstance getHoverEnterSpriteInstance() {
+        return hoverEnterSpriteInstance;
+    }
+
+    public SpriteInstance getHoverSpriteInstance() {
+        return hoverSpriteInstance;
+    }
+
+    public SpriteInstance getHoverExitSpriteInstance() {
+        return hoverExitSpriteInstance;
     }
 
     // Accessible \\
@@ -452,10 +517,6 @@ public class ElementInstance extends InstancePackage {
 
     public SpriteInstance getSpriteInstance() {
         return spriteInstance;
-    }
-
-    public SpriteInstance getHoverSpriteInstance() {
-        return hoverSpriteInstance;
     }
 
     public SpriteInstance getClickSpriteInstance() {

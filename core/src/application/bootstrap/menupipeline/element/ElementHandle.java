@@ -13,8 +13,17 @@ public class ElementHandle extends HandlePackage {
 
     /*
      * Persistent template for a single UI element. Owns the default child tree
-     * and any visual state overrides (hover, click). Instances are cloned from
-     * this handle at menu open time and are safe to mutate independently.
+     * and all state overrides. Instances are cloned from this handle at menu
+     * open time and are safe to mutate independently.
+     *
+     * Four state blocks are supported:
+     * on_hover_enter — fires once when hover begins, swaps element
+     * on_hover — fires every frame while hovered, swaps element
+     * on_hover_exit — fires once when hover ends, swaps element
+     * click_state — active while click-expanded
+     *
+     * on_drag is a method-only callback stored as plain strings — no element swap.
+     * All three hover states are identical in capability to click_state.
      */
 
     // Data
@@ -24,23 +33,23 @@ public class ElementHandle extends HandlePackage {
     private ObjectArrayList<MenuNodeStruct> children;
 
     // States
+    private ElementStateStruct hoverEnterState;
     private ElementStateStruct hoverState;
+    private ElementStateStruct hoverExitState;
     private ElementStateStruct clickState;
 
     public void constructor(
             ElementData elementData,
             ObjectArrayList<MenuNodeStruct> children,
+            ElementStateStruct hoverEnterState,
             ElementStateStruct hoverState,
+            ElementStateStruct hoverExitState,
             ElementStateStruct clickState) {
-
-        // Data
         this.elementData = elementData;
-
-        // Tree
         this.children = children;
-
-        // States
+        this.hoverEnterState = hoverEnterState;
         this.hoverState = hoverState;
+        this.hoverExitState = hoverExitState;
         this.clickState = clickState;
     }
 
@@ -54,6 +63,14 @@ public class ElementHandle extends HandlePackage {
         return children;
     }
 
+    public ElementStateStruct getHoverEnterState() {
+        return hoverEnterState;
+    }
+
+    public boolean hasHoverEnterState() {
+        return hoverEnterState != null;
+    }
+
     public ElementStateStruct getHoverState() {
         return hoverState;
     }
@@ -62,12 +79,25 @@ public class ElementHandle extends HandlePackage {
         return hoverState != null;
     }
 
+    public ElementStateStruct getHoverExitState() {
+        return hoverExitState;
+    }
+
+    public boolean hasHoverExitState() {
+        return hoverExitState != null;
+    }
+
     public ElementStateStruct getClickState() {
         return clickState;
     }
 
     public boolean hasClickState() {
         return clickState != null;
+    }
+
+    public boolean isHoverable() {
+        return hoverEnterState != null || hoverState != null
+                || hoverExitState != null || elementData.hasOnDrag();
     }
 
     public String getId() {

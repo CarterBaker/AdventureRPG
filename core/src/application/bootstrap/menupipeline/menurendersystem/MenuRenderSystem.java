@@ -24,6 +24,24 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuRenderSystem extends SystemPackage {
 
+    /*
+     * Renders all visible menu element trees each frame.
+     *
+     * resolveActiveState checks click state first, then activeHoverState.
+     * activeHoverState is set by ElementHitSystem — whichever state is active
+     * (enter, hover, exit) is treated identically here. The render system does
+     * not distinguish between the three hover states — it just renders whatever
+     * state is currently active.
+     *
+     * When the active state has a master (root-based overlay), the state root
+     * instance is rendered as a full positioned element with its own layout,
+     * visuals, and children. When the active state has inline children, those
+     * replace the default child list. Both paths apply to all four states equally.
+     *
+     * resolveSprite picks the correct sprite instance for the active state:
+     * hoverEnter, hover, hoverExit, or click.
+     */
+
     private RenderManager renderManager;
     private FontRenderSystem fontRenderSystem;
     private FboRenderSystem fboRenderSystem;
@@ -34,8 +52,6 @@ public class MenuRenderSystem extends SystemPackage {
     private MenuInstance currentMenu;
     private WindowInstance currentWindow;
     private FboInstance targetFbo;
-
-    // Internal \\
 
     @Override
     protected void create() {
@@ -94,12 +110,9 @@ public class MenuRenderSystem extends SystemPackage {
         }
 
         if (type == ElementType.CANVAS_AREA) {
-            int cx = (int) element.getComputedLeft();
-            int cy = (int) element.getComputedTop();
-            int cw = (int) element.getComputedW();
-            int ch = (int) element.getComputedH();
-
-            currentMenu.getCanvas().set(cx, cy, cw, ch);
+            currentMenu.getCanvas().set(
+                    (int) element.getComputedLeft(), (int) element.getComputedTop(),
+                    (int) element.getComputedW(), (int) element.getComputedH());
         }
 
         renderElementContent(element, activeState);
@@ -131,52 +144,86 @@ public class MenuRenderSystem extends SystemPackage {
         if (element.hasFont())
             pushFontRenderCall(element, activeState);
 
-        if (activeState != null
-                && !element.isClickExpanded()
-                && activeState.hasMaster()
-                && element.hasHoverStateRoot()) {
+        // Active hover state — root-based overlay takes priority over inline children
+        if (activeState != null && !element.isClickExpanded()) {
 
-            renderElement(
-                    element.getHoverStateRoot(),
-                    element.getComputedLeft(), element.getComputedTop(),
-                    element.getComputedW(), element.getComputedH());
+            ElementInstance activeRoot = resolveActiveHoverRoot(element, activeState);
+
+            if (activeRoot != null) {
+                renderElement(activeRoot,
+                        element.getComputedLeft(), element.getComputedTop(),
+                        element.getComputedW(), element.getComputedH());
+                // root renders its own children — skip default and inline
+            } else {
+                ObjectArrayList<ElementInstance> activeChildren = resolveActiveHoverChildren(element, activeState);
+
+                renderChildren(element, data, activeChildren != null && !activeChildren.isEmpty()
+                        ? activeChildren
+                        : element.getChildren());
+            }
 
         } else {
-
-            boolean useHoverChildren = activeState != null
-                    && !element.isClickExpanded()
-                    && element.hasHoverStateChildren();
-
-            ObjectArrayList<ElementInstance> activeChildren = useHoverChildren
-                    ? element.getHoverStateChildren()
-                    : element.getChildren();
-
-            if (!activeChildren.isEmpty()) {
-
-                if (data.isMask())
-                    pushMask(element);
-
-                StackDirection stack = type == ElementType.TOOLBAR
-                        ? StackDirection.HORIZONTAL
-                        : data.getStackDirection();
-
-                if (stack != StackDirection.NONE)
-                    renderStacked(element, activeChildren, stack);
-                else {
-                    for (int i = 0; i < activeChildren.size(); i++)
-                        renderElement(
-                                activeChildren.get(i),
-                                element.getComputedLeft(), element.getComputedTop(),
-                                element.getComputedW(), element.getComputedH());
-                }
-
-                if (data.isMask())
-                    popMask();
-            }
+            renderChildren(element, data, element.getChildren());
         }
 
         if (element.isClickExpanded() && element.hasClickStateChildren())
             renderClickStateChildren(element);
+    }
+
+    private void renderChildren(
+            ElementInstance parent,
+            ElementData data,
+            ObjectArrayList<ElementInstance> children) {
+
+        if (children.isEmpty())
+            return;
+
+        if (data.isMask())
+            pushMask(parent);
+
+        ElementType type = data.getType();
+        StackDirection stack = type == ElementType.TOOLBAR
+                ? StackDirection.HORIZONTAL
+                : data.getStackDirection();
+
+        if (stack != StackDirection.NONE)
+            renderStacked(parent, children, stack);
+        else
+            for (int i = 0; i < children.size(); i++)
+                renderElement(children.get(i),
+                        parent.getComputedLeft(), parent.getComputedTop(),
+                        parent.getComputedW(), parent.getComputedH());
+
+        if (data.isMask())
+            popMask();
+    }
+
+    // Active State Helpers \\
+
+    private ElementInstance resolveActiveHoverRoot(ElementInstance element,
+            ElementStateStruct activeState) {
+        if (!activeState.hasMaster())
+            return null;
+        ElementHandle handle = element.getHandle();
+        if (activeState == handle.getHoverEnterState())
+            return element.getHoverEnterStateRoot();
+        if (activeState == handle.getHoverState())
+            return element.getHoverStateRoot();
+        if (activeState == handle.getHoverExitState())
+            return element.getHoverExitStateRoot();
+        return null;
+    }
+
+    private ObjectArrayList<ElementInstance> resolveActiveHoverChildren(ElementInstance element,
+            ElementStateStruct activeState) {
+        ElementHandle handle = element.getHandle();
+        if (activeState == handle.getHoverEnterState())
+            return element.getHoverEnterStateChildren();
+        if (activeState == handle.getHoverState())
+            return element.getHoverStateChildren();
+        if (activeState == handle.getHoverExitState())
+            return element.getHoverExitStateChildren();
+        return null;
     }
 
     // State Resolution \\
@@ -185,17 +232,24 @@ public class MenuRenderSystem extends SystemPackage {
         ElementHandle handle = element.getHandle();
         if (element.isClickExpanded() && handle.hasClickState())
             return handle.getClickState();
-        if (element.isHovered() && handle.hasHoverState())
-            return handle.getHoverState();
+        if (element.hasActiveHoverState())
+            return element.getActiveHoverState();
         return null;
     }
 
     private SpriteInstance resolveSprite(ElementInstance element, ElementStateStruct activeState) {
 
         if (activeState != null && activeState.hasSpriteOverride()) {
-            SpriteInstance stateSprite = element.isClickExpanded()
-                    ? element.getClickSpriteInstance()
-                    : element.getHoverSpriteInstance();
+            ElementHandle handle = element.getHandle();
+            SpriteInstance stateSprite = null;
+            if (element.isClickExpanded())
+                stateSprite = element.getClickSpriteInstance();
+            else if (activeState == handle.getHoverEnterState())
+                stateSprite = element.getHoverEnterSpriteInstance();
+            else if (activeState == handle.getHoverState())
+                stateSprite = element.getHoverSpriteInstance();
+            else if (activeState == handle.getHoverExitState())
+                stateSprite = element.getHoverExitSpriteInstance();
             if (stateSprite != null)
                 return stateSprite;
         }
@@ -232,7 +286,6 @@ public class MenuRenderSystem extends SystemPackage {
 
             if (layout.hasMinSize())
                 childH = Math.max(childH, layout.getMinSize().getY().resolve(parentH));
-
             if (layout.hasMaxSize())
                 childH = Math.min(childH, layout.getMaxSize().getY().resolve(parentH));
 
@@ -277,7 +330,6 @@ public class MenuRenderSystem extends SystemPackage {
 
                 if (layout.hasMinSize())
                     childH = Math.max(childH, layout.getMinSize().getY().resolve(parentH));
-
                 if (layout.hasMaxSize())
                     childH = Math.min(childH, layout.getMaxSize().getY().resolve(parentH));
 
@@ -304,11 +356,8 @@ public class MenuRenderSystem extends SystemPackage {
     // Render Calls \\
 
     private void pushSpriteRenderCall(ElementInstance element, SpriteInstance sprite) {
-        sprite.getModelInstance()
-                .getMaterial()
-                .setUniform("u_transform", element.getTransform());
-        renderManager.pushRenderCall(
-                sprite.getModelInstance(),
+        sprite.getModelInstance().getMaterial().setUniform("u_transform", element.getTransform());
+        renderManager.pushRenderCall(sprite.getModelInstance(),
                 targetFbo, 0, currentMask(), currentWindow);
     }
 
@@ -403,10 +452,12 @@ public class MenuRenderSystem extends SystemPackage {
 
             if (el.hasChildren())
                 releaseFontModels(el.getChildren());
-
+            if (el.hasHoverEnterStateChildren())
+                releaseFontModels(el.getHoverEnterStateChildren());
             if (el.hasHoverStateChildren())
                 releaseFontModels(el.getHoverStateChildren());
-
+            if (el.hasHoverExitStateChildren())
+                releaseFontModels(el.getHoverExitStateChildren());
             if (el.hasClickStateChildren())
                 releaseFontModels(el.getClickStateChildren());
         }

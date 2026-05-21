@@ -9,20 +9,27 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ElementStateStruct extends StructPackage {
 
     /*
-     * Immutable visual state override applied when an element is hovered or
-     * clicked. Null master means apply overrides on top of the owning element
-     * itself. Non-null master swaps the base entirely to the referenced handle.
-     * Empty children list means inherit from the base at runtime.
+     * Defines a visual state override for an element. Used by click_state,
+     * on_hover_enter, on_hover, and on_hover_exit. All four are identical in
+     * capability — sprite, layout, color, text, children, master reference,
+     * and an optional method callback.
      */
 
+    // Master
     private final ElementHandle master;
+
+    // Visuals
     private final String spriteOverride;
     private final String textOverride;
     private final Color colorOverride;
     private final LayoutStruct layoutOverride;
-    private final String actionClassOverride;
-    private final String actionMethodOverride;
-    private final String actionArgOverride;
+
+    // Callback
+    private final String actionClass;
+    private final String actionMethod;
+    private final String actionArg;
+
+    // Children
     private final ObjectArrayList<MenuNodeStruct> children;
 
     public ElementStateStruct(
@@ -31,28 +38,20 @@ public class ElementStateStruct extends StructPackage {
             String textOverride,
             Color colorOverride,
             LayoutStruct layoutOverride,
-            String actionClassOverride,
-            String actionMethodOverride,
-            String actionArgOverride,
+            String actionClass,
+            String actionMethod,
+            String actionArg,
             ObjectArrayList<MenuNodeStruct> children) {
-
-        // Base
         this.master = master;
-
-        // Overrides
         this.spriteOverride = spriteOverride;
         this.textOverride = textOverride;
         this.colorOverride = colorOverride;
         this.layoutOverride = layoutOverride;
-        this.actionClassOverride = actionClassOverride;
-        this.actionMethodOverride = actionMethodOverride;
-        this.actionArgOverride = actionArgOverride;
-
-        // Tree
+        this.actionClass = actionClass;
+        this.actionMethod = actionMethod;
+        this.actionArg = actionArg;
         this.children = children;
     }
-
-    // Accessible \\
 
     public ElementHandle getMaster() {
         return master;
@@ -94,20 +93,20 @@ public class ElementStateStruct extends StructPackage {
         return layoutOverride != null;
     }
 
-    public String getActionClassOverride() {
-        return actionClassOverride;
+    public String getActionClass() {
+        return actionClass;
     }
 
-    public String getActionMethodOverride() {
-        return actionMethodOverride;
+    public String getActionMethod() {
+        return actionMethod;
     }
 
-    public String getActionArgOverride() {
-        return actionArgOverride;
+    public String getActionArg() {
+        return actionArg;
     }
 
-    public boolean hasActionOverride() {
-        return actionClassOverride != null;
+    public boolean hasAction() {
+        return actionClass != null && actionMethod != null;
     }
 
     public ObjectArrayList<MenuNodeStruct> getChildren() {
@@ -115,6 +114,6 @@ public class ElementStateStruct extends StructPackage {
     }
 
     public boolean hasChildren() {
-        return !children.isEmpty();
+        return children != null && !children.isEmpty();
     }
 }

@@ -28,15 +28,14 @@ class InternalBuilder extends BuilderPackage {
 
     /*
      * Parses menu JSON files into MenuHandles and ElementHandles during bootstrap.
-     * Builds a fully resolved MenuNodeStruct tree per menu — children always live
-     * in the node, never looked up from masters at runtime.
      *
-     * ElementHandle.children holds the default subtree for ref copying only.
-     * Hover and click states are parsed after the master is created and stored
-     * directly on the handle. Deferred ref resolution runs after all files are
-     * processed.
+     * Four state blocks are parsed per element: on_hover_enter, on_hover,
+     * on_hover_exit, click_state. All four go through parseStateBlock which
+     * handles use/inline element, sprite, layout, color, text, children, and
+     * optional method callback identically.
      *
-     * All stateless JSON parsing helpers live in FileParserUtility.
+     * on_drag is parsed as a plain method callback — no state block, no element
+     * swap. on_click is unchanged.
      */
 
     private static final String PARENT_ARG = "$parent";
@@ -47,8 +46,6 @@ class InternalBuilder extends BuilderPackage {
     private File root;
     private ObjectOpenHashSet<String> registeredFiles;
     private ObjectArrayList<Runnable> deferredRefs;
-
-    // Internal \\
 
     @Override
     protected void get() {
@@ -120,13 +117,11 @@ class InternalBuilder extends BuilderPackage {
         }
 
         ObjectArrayList<MenuNodeStruct> nodes = buildNodes(
-                filePath,
-                menuJson,
-                null,
-                DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT),
-                true);
+                filePath, menuJson, null,
+                DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT), true);
 
-        MenuData data = new MenuData(filePath + "/" + id, lockInput, raycastInput, hasCanvasArea, entryPoints);
+        MenuData data = new MenuData(
+                filePath + "/" + id, lockInput, raycastInput, hasCanvasArea, entryPoints);
         MenuHandle handle = create(MenuHandle.class);
         handle.constructor(data, nodes);
 
@@ -171,15 +166,9 @@ class InternalBuilder extends BuilderPackage {
             String key = filePath + "/" + id;
 
             if (!elementSystem.hasMaster(key))
-                elementSystem.registerMaster(
-                        key,
-                        buildMasterFromJson(
-                                filePath,
-                                id,
-                                el,
-                                null,
-                                DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT),
-                                true));
+                elementSystem.registerMaster(key,
+                        buildMasterFromJson(filePath, id, el, null,
+                                DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT), true));
         }
     }
 
@@ -199,12 +188,8 @@ class InternalBuilder extends BuilderPackage {
         ObjectArrayList<MenuNodeStruct> nodes = new ObjectArrayList<>(array.size());
 
         for (int i = 0; i < array.size(); i++)
-            nodes.add(buildNode(
-                    filePath,
-                    array.get(i).getAsJsonObject(),
-                    inheritedFontName,
-                    inheritedFontSize,
-                    inheritedExplicitFontSize));
+            nodes.add(buildNode(filePath, array.get(i).getAsJsonObject(),
+                    inheritedFontName, inheritedFontSize, inheritedExplicitFontSize));
 
         return nodes;
     }
@@ -241,8 +226,8 @@ class InternalBuilder extends BuilderPackage {
         ElementHandle master = elementSystem.getMaster(key);
 
         if (master == null) {
-            master = buildMasterFromJson(filePath, id, json, inheritedFontName, inheritedFontSize,
-                    inheritedExplicitFontSize);
+            master = buildMasterFromJson(filePath, id, json, inheritedFontName,
+                    inheritedFontSize, inheritedExplicitFontSize);
             elementSystem.registerMaster(key, master);
         }
 
@@ -282,14 +267,11 @@ class InternalBuilder extends BuilderPackage {
         String textOverride = JsonUtility.getString(json, "text", null);
         Color colorOverride = FileParserUtility.parseColor(json);
         String[] onClick = FileParserUtility.parseOnClick(json);
-        String actionClassOverride = onClick != null ? onClick[0] : null;
-        String actionMethodOverride = onClick != null ? onClick[1] : null;
-        String actionArgOverride = onClick != null ? onClick[2] : null;
+        String[] onDrag = FileParserUtility.parseOnDrag(json);
 
         boolean hasOverride = layoutOverride != null || spriteNameOverride != null
                 || textOverride != null || colorOverride != null
-                || actionClassOverride != null || actionMethodOverride != null
-                || actionArgOverride != null;
+                || onClick != null || onDrag != null;
 
         if (!hasOverride)
             return new MenuNodeStruct(template, children);
@@ -299,11 +281,12 @@ class InternalBuilder extends BuilderPackage {
                 spriteNameOverride,
                 textOverride,
                 colorOverride,
-                null,
-                null,
-                actionClassOverride,
-                actionMethodOverride,
-                actionArgOverride,
+                onClick != null ? onClick[0] : null,
+                onClick != null ? onClick[1] : null,
+                onClick != null ? onClick[2] : null,
+                onDrag != null ? onDrag[0] : null,
+                onDrag != null ? onDrag[1] : null,
+                onDrag != null ? onDrag[2] : null,
                 layoutOverride,
                 children);
     }
@@ -323,15 +306,15 @@ class InternalBuilder extends BuilderPackage {
             ObjectArrayList<MenuNodeStruct> children = resolved.getChildren();
 
             return layoutOverride != null
-                    ? new MenuNodeStruct(resolved, null, null, null, null, null, null, null, null,
-                            layoutOverride, children)
+                    ? new MenuNodeStruct(resolved, null, null, null, null, null, null,
+                            null, null, null, layoutOverride, children)
                     : new MenuNodeStruct(resolved, children);
         }
 
         ObjectArrayList<MenuNodeStruct> children = new ObjectArrayList<>();
         MenuNodeStruct placeholder = partialOverride != null
-                ? new MenuNodeStruct(null, null, null, null, null, null, null, null, null,
-                        partialOverride, children)
+                ? new MenuNodeStruct(null, null, null, null, null, null, null,
+                        null, null, null, partialOverride, children)
                 : new MenuNodeStruct(null, children);
 
         deferredRefs.add(() -> {
@@ -341,7 +324,8 @@ class InternalBuilder extends BuilderPackage {
                 throwException("Unresolved ref: '" + refKey + "' (id: '" + id + "')");
 
             if (partialOverride != null)
-                placeholder.setLayoutOverride(LayoutStruct.merge(target.getLayout(), partialOverride));
+                placeholder.setLayoutOverride(
+                        LayoutStruct.merge(target.getLayout(), partialOverride));
 
             placeholder.setMaster(target);
             children.addAll(target.getChildren());
@@ -386,9 +370,7 @@ class InternalBuilder extends BuilderPackage {
         String spriteName = resolveSpriteName(id, spritePath);
 
         String[] onClick = FileParserUtility.parseOnClick(json);
-        String actionClass = onClick != null ? onClick[0] : null;
-        String actionMethod = onClick != null ? onClick[1] : null;
-        String actionArg = onClick != null ? onClick[2] : null;
+        String[] onDrag = FileParserUtility.parseOnDrag(json);
 
         ObjectArrayList<MenuNodeStruct> defaultChildren = buildNodes(
                 filePath, json, fontName, fontSize, explicitFontSize);
@@ -396,20 +378,29 @@ class InternalBuilder extends BuilderPackage {
         ElementData data = new ElementData(
                 id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize,
                 color, layout, mask, stackDirection, spacing, textAlign, startExpanded,
-                actionClass, actionMethod, actionArg);
+                onClick != null ? onClick[0] : null,
+                onClick != null ? onClick[1] : null,
+                onClick != null ? onClick[2] : null,
+                onDrag != null ? onDrag[0] : null,
+                onDrag != null ? onDrag[1] : null,
+                onDrag != null ? onDrag[2] : null);
 
+        ElementStateStruct hoverEnterState = parseStateBlock(
+                filePath, id, json, "on_hover_enter", fontName, fontSize, explicitFontSize);
         ElementStateStruct hoverState = parseStateBlock(
-                filePath, id, json, "hover_state", fontName, fontSize, explicitFontSize);
+                filePath, id, json, "on_hover", fontName, fontSize, explicitFontSize);
+        ElementStateStruct hoverExitState = parseStateBlock(
+                filePath, id, json, "on_hover_exit", fontName, fontSize, explicitFontSize);
         ElementStateStruct clickState = parseStateBlock(
                 filePath, id, json, "click_state", fontName, fontSize, explicitFontSize);
 
         ElementHandle master = create(ElementHandle.class);
-        master.constructor(data, defaultChildren, hoverState, clickState);
+        master.constructor(data, defaultChildren, hoverEnterState, hoverState, hoverExitState, clickState);
 
         return master;
     }
 
-    // State Building \\
+    // State Block Parsing \\
 
     private ElementStateStruct parseStateBlock(
             String filePath,
@@ -433,7 +424,9 @@ class InternalBuilder extends BuilderPackage {
         }
 
         boolean explicitFontSize = stateJson.has("font_size")
-                || (baseMaster != null ? baseMaster.hasExplicitFontSize() : inheritedExplicitFontSize);
+                || (baseMaster != null
+                        ? baseMaster.hasExplicitFontSize()
+                        : inheritedExplicitFontSize);
         String fontName = JsonUtility.getString(stateJson, "font",
                 baseMaster != null ? baseMaster.getFontName() : inheritedFontName);
         DimensionValue fontSize = stateJson.has("font_size")
@@ -449,20 +442,20 @@ class InternalBuilder extends BuilderPackage {
         LayoutStruct partialLayout = FileParserUtility.parseLayoutOverride(stateJson);
         LayoutStruct layoutOverride = null;
 
-        if (partialLayout != null) {
+        if (partialLayout != null)
             layoutOverride = baseMaster != null
                     ? LayoutStruct.merge(baseMaster.getLayout(), partialLayout)
                     : partialLayout;
-        }
 
         String spritePath = JsonUtility.getString(stateJson, "sprite", null);
         String spriteOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
         String textOverride = JsonUtility.getString(stateJson, "text", null);
         Color colorOverride = FileParserUtility.parseColor(stateJson);
-        String[] onClick = FileParserUtility.parseOnClick(stateJson);
-        String actionClassOverride = onClick != null ? onClick[0] : null;
-        String actionMethodOverride = onClick != null ? onClick[1] : null;
-        String actionArgOverride = onClick != null ? onClick[2] : null;
+
+        String[] callback = FileParserUtility.parseOnClick(stateJson);
+        String actionClass = callback != null ? callback[0] : null;
+        String actionMethod = callback != null ? callback[1] : null;
+        String actionArg = callback != null ? callback[2] : null;
 
         return new ElementStateStruct(
                 baseMaster,
@@ -470,9 +463,9 @@ class InternalBuilder extends BuilderPackage {
                 textOverride,
                 colorOverride,
                 layoutOverride,
-                actionClassOverride,
-                actionMethodOverride,
-                actionArgOverride,
+                actionClass,
+                actionMethod,
+                actionArg,
                 children);
     }
 

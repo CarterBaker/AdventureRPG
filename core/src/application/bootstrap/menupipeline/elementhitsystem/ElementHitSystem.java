@@ -2,8 +2,9 @@ package application.bootstrap.menupipeline.elementhitsystem;
 
 import java.lang.reflect.Method;
 
-import application.bootstrap.menupipeline.element.ElementData;
+import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
+import application.bootstrap.menupipeline.element.ElementStateStruct;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.kernel.inputpipeline.inputmanager.InputManager;
@@ -20,65 +21,33 @@ public class ElementHitSystem extends SystemPackage {
     /*
      * Handles all interactive element behavior per frame.
      *
-     * Hover state is updated every frame. An element is hovered when the cursor is
-     * within its own bounds OR within its hover state children's bounds (inline) OR
-     * within its hoverStateRoot's children's bounds (master-based overlay).
+     * Hover lifecycle:
+     * Enter — activeHoverState set to hoverEnterState, callback fired once,
+     * then immediately transitions to hoverState if defined.
+     * Per frame — if hoverState defined, activeHoverState set to hoverState,
+     * callback fired each frame.
+     * Exit — activeHoverState set to hoverExitState, callback fired once,
+     * then cleared to null.
      *
-     * For master-based hover overlays (hasHoverStateRoot), the root's children are
-     * tested only when the cursor is over the owning element (bootstraps hover on
-     * first entry) OR the element is already hovered (maintains hover while the
-     * cursor moves into the panel). This prevents phantom hover when the cursor
-     * passes over the panel's rendered region before the trigger is hovered.
+     * hoverTestElements uses the active hover state's children/root for hit
+     * testing so the expanded element region is included while hovered.
      *
-     * For inline hover children (hasHoverStateChildren, no root), the owning
-     * element must already be hovered before its children are tested in both
-     * systems. The anchor mechanism keeps the parent marked hovered while the
-     * cursor is over a child.
-     *
-     * hitTestElements gates master-based overlay children on isHovered() so buttons
-     * inside the panel are only clickable when the panel is actually visible.
-     *
-     * Two tracking fields manage anchor state:
-     * hoveredElement — the innermost element directly under the cursor.
-     * hoverAnchor — the parent whose hover region contains the cursor; remains
-     * hovered so it continues to render its hover state.
-     *
-     * hoverAnchorCapture is a scratch field valid only during a single
-     * hoverTestElements traversal.
-     *
-     * Click detection uses bindingClicked — already a single-frame latch,
-     * no wasPressed edge detection needed.
-     * Action resolution is cached on first call.
-     *
-     * Interactivity is capability-driven — any element with a hover state, click
-     * state, or action participates in hit testing regardless of element type.
-     *
-     * Y axis: menu layout and hit testing use the same visual coordinate space.
-     * computedTop is the element bottom edge; computedTop + computedH is top.
-     *
-     * When an element hover fires, WindowManager.lockHoveredWindow() is called to
-     * prevent syncHoveredWindow from reassigning hoveredWindow mid-hover. The lock
-     * is released in clearHover() on hover exit.
+     * on_drag fires per frame while primary held on hoveredElement.
+     * on_click fires once on primary press.
+     * All callbacks follow the identical class/method/arg resolution path.
      */
 
     private static final String PARENT_ARG = "$parent";
 
-    // Internal
     private WindowManager windowManager;
     private InputManager inputManager;
 
-    // State
     private ElementInstance hoveredElement;
-    private ElementInstance hoverAnchor;
-    private ElementInstance hoverAnchorCapture;
     private ElementInstance openClickState;
     private float collapseTolerance;
 
-    // Action Cache
     private Object2ObjectOpenHashMap<String, Runnable> resolvedActions;
     private Object2ObjectOpenHashMap<String, MenuAwareAction> resolvedMenuAwareActions;
-
-    // Internal \\
 
     @Override
     protected void create() {
@@ -107,7 +76,16 @@ public class ElementHitSystem extends SystemPackage {
         float mouseY = inputManager.getMouseY(hoveredWindow);
 
         updateHover(activeMenus, mouseX, mouseY, rayWindowID);
+        fireOnHoverPerFrame();
         checkClickStateCollapse(mouseX, mouseY);
+
+        if (hoveredElement != null && hoveredElement.hasOnDrag()
+                && inputManager.bindingHeld(KeyBindings.PRIMARY, hoveredWindow))
+            executeCallback(
+                    hoveredElement.getEffectiveOnDragClass(),
+                    hoveredElement.getEffectiveOnDragMethod(),
+                    hoveredElement.getEffectiveOnDragArg(),
+                    null);
 
         if (!inputManager.bindingClicked(KeyBindings.PRIMARY, hoveredWindow))
             return;
@@ -144,7 +122,6 @@ public class ElementHitSystem extends SystemPackage {
             int rayWindowID) {
 
         ElementInstance next = null;
-        hoverAnchorCapture = null;
 
         for (int i = activeMenus.size() - 1; i >= 0; i--) {
 
@@ -165,43 +142,90 @@ public class ElementHitSystem extends SystemPackage {
                 break;
         }
 
-        if (next == hoveredElement && hoverAnchorCapture == hoverAnchor)
+        if (next == hoveredElement)
             return;
 
-        clearHover();
+        // Exit previous
+        if (hoveredElement != null) {
+            ElementStateStruct exitState = hoveredElement.getHandle().getHoverExitState();
+            hoveredElement.setActiveHoverState(exitState);
+
+            if (exitState != null && exitState.hasAction())
+                executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
+                        exitState.getActionArg(), null);
+
+            hoveredElement.setHovered(false);
+            hoveredElement = null;
+            windowManager.unlockHoveredWindow();
+        }
 
         if (next == null)
             return;
 
-        next.setHovered(true);
+        // Enter next
         hoveredElement = next;
+        hoveredElement.setHovered(true);
         windowManager.lockHoveredWindow();
 
-        if (hoverAnchorCapture != null && hoverAnchorCapture != next) {
-            hoverAnchorCapture.setHovered(true);
-            hoverAnchor = hoverAnchorCapture;
-        }
+        ElementStateStruct enterState = hoveredElement.getHandle().getHoverEnterState();
+        hoveredElement.setActiveHoverState(enterState);
+
+        if (enterState != null && enterState.hasAction())
+            executeCallback(enterState.getActionClass(), enterState.getActionMethod(),
+                    enterState.getActionArg(), null);
+
+        // Immediately transition to hoverState if defined
+        ElementStateStruct hoverState = hoveredElement.getHandle().getHoverState();
+        if (hoverState != null)
+            hoveredElement.setActiveHoverState(hoverState);
     }
+
+    private void fireOnHoverPerFrame() {
+
+        if (hoveredElement == null)
+            return;
+
+        ElementStateStruct hoverState = hoveredElement.getHandle().getHoverState();
+
+        if (hoverState == null)
+            return;
+
+        hoveredElement.setActiveHoverState(hoverState);
+
+        if (hoverState.hasAction())
+            executeCallback(hoverState.getActionClass(), hoverState.getActionMethod(),
+                    hoverState.getActionArg(), null);
+    }
+
+    private void clearHover() {
+
+        if (hoveredElement == null)
+            return;
+
+        hoveredElement.clearActiveHoverState();
+        hoveredElement.setHovered(false);
+        hoveredElement = null;
+        windowManager.unlockHoveredWindow();
+    }
+
+    // Hover Test \\
 
     private ElementInstance hoverTestElements(
             ObjectArrayList<ElementInstance> elements,
-            float mouseX,
-            float mouseY,
-            float clipLeft,
-            float clipTop,
-            float clipRight,
-            float clipBottom) {
+            float mouseX, float mouseY,
+            float clipLeft, float clipTop,
+            float clipRight, float clipBottom) {
 
         for (int i = elements.size() - 1; i >= 0; i--) {
 
             ElementInstance element = elements.get(i);
-            ElementData data = element.getElementData();
 
+            // Test default children
             if (element.hasChildren()) {
 
                 float cl = clipLeft, ct = clipTop, cr = clipRight, cb = clipBottom;
 
-                if (data.isMask()) {
+                if (element.getElementData().isMask()) {
                     cl = Math.max(cl, element.getComputedLeft());
                     ct = Math.max(ct, element.getComputedTop());
                     cr = Math.min(cr, element.getComputedLeft() + element.getComputedW());
@@ -215,55 +239,44 @@ public class ElementHitSystem extends SystemPackage {
                     return childHit;
             }
 
+            // Test click state children
             if (element.isClickExpanded() && element.hasClickStateChildren()) {
-
                 ElementInstance childHit = hoverTestElements(
                         element.getClickStateChildren(), mouseX, mouseY,
                         clipLeft, clipTop, clipRight, clipBottom);
-
                 if (childHit != null)
                     return childHit;
             }
 
-            if (element.hasHoverStateRoot()) {
+            // Test active hover state region
+            if (element.isHovered() && element.hasActiveHoverState()) {
 
-                if (element.isHovered() || isHit(element, mouseX, mouseY)) {
+                ElementStateStruct active = element.getActiveHoverState();
 
-                    ElementInstance prevCapture = hoverAnchorCapture;
-                    hoverAnchorCapture = element;
+                // Master-based root
+                ElementInstance activeRoot = resolveActiveHoverRoot(element);
 
+                if (activeRoot != null) {
                     ElementInstance childHit = hoverTestElements(
-                            element.getHoverStateRoot().getChildren(), mouseX, mouseY,
+                            activeRoot.getChildren(), mouseX, mouseY,
                             clipLeft, clipTop, clipRight, clipBottom);
-
-                    if (childHit != null) {
-                        hoverAnchorCapture = element;
+                    if (childHit != null)
                         return childHit;
-                    }
-
-                    hoverAnchorCapture = prevCapture;
                 }
 
-            } else if (element.isHovered() && element.hasHoverStateChildren()) {
+                // Inline children
+                ObjectArrayList<ElementInstance> activeChildren = resolveActiveHoverChildren(element);
 
-                ElementInstance prevCapture = hoverAnchorCapture;
-                hoverAnchorCapture = element;
-
-                ElementInstance childHit = hoverTestElements(
-                        element.getHoverStateChildren(), mouseX, mouseY,
-                        clipLeft, clipTop, clipRight, clipBottom);
-
-                if (childHit != null) {
-                    hoverAnchorCapture = element;
-                    return childHit;
+                if (activeChildren != null && !activeChildren.isEmpty()) {
+                    ElementInstance childHit = hoverTestElements(
+                            activeChildren, mouseX, mouseY,
+                            clipLeft, clipTop, clipRight, clipBottom);
+                    if (childHit != null)
+                        return childHit;
                 }
-
-                hoverAnchorCapture = prevCapture;
             }
 
-            boolean hoverable = element.hasHoverState() || element.hasClickState() || data.hasAction();
-
-            if (!hoverable)
+            if (!element.isHoverable())
                 continue;
 
             if (mouseX < clipLeft || mouseX > clipRight || mouseY < clipTop || mouseY > clipBottom)
@@ -276,19 +289,133 @@ public class ElementHitSystem extends SystemPackage {
         return null;
     }
 
-    private void clearHover() {
+    // Hit Test (click) \\
 
-        if (hoveredElement != null) {
-            hoveredElement.setHovered(false);
-            hoveredElement = null;
+    private boolean hitTestElements(
+            ObjectArrayList<ElementInstance> elements,
+            float mouseX, float mouseY,
+            float clipLeft, float clipTop,
+            float clipRight, float clipBottom,
+            MenuInstance menu) {
+
+        for (int i = elements.size() - 1; i >= 0; i--) {
+
+            ElementInstance element = elements.get(i);
+
+            if (element.hasChildren()) {
+
+                float cl = clipLeft, ct = clipTop, cr = clipRight, cb = clipBottom;
+
+                if (element.getElementData().isMask()) {
+                    cl = Math.max(cl, element.getComputedLeft());
+                    ct = Math.max(ct, element.getComputedTop());
+                    cr = Math.min(cr, element.getComputedLeft() + element.getComputedW());
+                    cb = Math.min(cb, element.getComputedTop() + element.getComputedH());
+                }
+
+                if (hitTestElements(element.getChildren(), mouseX, mouseY,
+                        cl, ct, cr, cb, menu))
+                    return true;
+            }
+
+            if (element.isClickExpanded() && element.hasClickStateChildren()) {
+                if (hitTestElements(element.getClickStateChildren(), mouseX, mouseY,
+                        clipLeft, clipTop, clipRight, clipBottom, menu))
+                    return true;
+            }
+
+            // Active hover state region is clickable
+            if (element.isHovered() && element.hasActiveHoverState()) {
+
+                ElementInstance activeRoot = resolveActiveHoverRoot(element);
+
+                if (activeRoot != null) {
+                    if (hitTestElements(activeRoot.getChildren(), mouseX, mouseY,
+                            clipLeft, clipTop, clipRight, clipBottom, menu))
+                        return true;
+                }
+
+                ObjectArrayList<ElementInstance> activeChildren = resolveActiveHoverChildren(element);
+
+                if (activeChildren != null && !activeChildren.isEmpty()) {
+                    if (hitTestElements(activeChildren, mouseX, mouseY,
+                            clipLeft, clipTop, clipRight, clipBottom, menu))
+                        return true;
+                }
+            }
+
+            boolean interactive = element.hasClickState() || element.hasAction();
+
+            if (!interactive)
+                continue;
+
+            if (mouseX < clipLeft || mouseX > clipRight || mouseY < clipTop || mouseY > clipBottom)
+                continue;
+
+            if (!isHit(element, mouseX, mouseY))
+                continue;
+
+            if (element.hasClickState() && element.hasClickStateChildren()) {
+                toggleClickState(element);
+                return true;
+            }
+
+            executeCallback(
+                    element.getEffectiveActionClass(),
+                    element.getEffectiveActionMethod(),
+                    element.getEffectiveActionArg(),
+                    menu);
+            return true;
         }
 
-        if (hoverAnchor != null) {
-            hoverAnchor.setHovered(false);
-            hoverAnchor = null;
-        }
+        return false;
+    }
 
-        windowManager.unlockHoveredWindow();
+    // Active Hover State Helpers \\
+
+    private ElementInstance resolveActiveHoverRoot(ElementInstance element) {
+        ElementStateStruct active = element.getActiveHoverState();
+        if (active == null || !active.hasMaster())
+            return null;
+        ElementHandle handle = element.getHandle();
+        if (active == handle.getHoverEnterState())
+            return element.getHoverEnterStateRoot();
+        if (active == handle.getHoverState())
+            return element.getHoverStateRoot();
+        if (active == handle.getHoverExitState())
+            return element.getHoverExitStateRoot();
+        return null;
+    }
+
+    private ObjectArrayList<ElementInstance> resolveActiveHoverChildren(ElementInstance element) {
+        ElementStateStruct active = element.getActiveHoverState();
+        if (active == null)
+            return null;
+        ElementHandle handle = element.getHandle();
+        if (active == handle.getHoverEnterState())
+            return element.getHoverEnterStateChildren();
+        if (active == handle.getHoverState())
+            return element.getHoverStateChildren();
+        if (active == handle.getHoverExitState())
+            return element.getHoverExitStateChildren();
+        return null;
+    }
+
+    // Toggle \\
+
+    private void toggleClickState(ElementInstance element) {
+
+        if (openClickState != null && openClickState != element)
+            collapseClickState();
+
+        boolean expanding = !element.isClickExpanded();
+        element.setClickExpanded(expanding);
+        openClickState = expanding ? element : null;
+    }
+
+    private void collapseClickState() {
+        openClickState.setClickExpanded(false);
+        openClickState = null;
     }
 
     // Collapse \\
@@ -307,183 +434,88 @@ public class ElementHitSystem extends SystemPackage {
             collapseClickState();
     }
 
-    private void collapseClickState() {
-        openClickState.setClickExpanded(false);
-        openClickState = null;
-    }
+    // Callbacks \\
 
-    // Hit Testing \\
+    private void executeCallback(String actionClass, String actionMethod,
+            String actionArg, MenuInstance menu) {
 
-    private boolean hitTestElements(
-            ObjectArrayList<ElementInstance> elements,
-            float mouseX,
-            float mouseY,
-            float clipLeft,
-            float clipTop,
-            float clipRight,
-            float clipBottom,
-            MenuInstance menu) {
-
-        for (int i = elements.size() - 1; i >= 0; i--) {
-
-            ElementInstance element = elements.get(i);
-            ElementData data = element.getElementData();
-
-            if (element.hasChildren()) {
-
-                float cl = clipLeft, ct = clipTop, cr = clipRight, cb = clipBottom;
-
-                if (data.isMask()) {
-                    cl = Math.max(cl, element.getComputedLeft());
-                    ct = Math.max(ct, element.getComputedTop());
-                    cr = Math.min(cr, element.getComputedLeft() + element.getComputedW());
-                    cb = Math.min(cb, element.getComputedTop() + element.getComputedH());
-                }
-
-                if (hitTestElements(element.getChildren(), mouseX, mouseY,
-                        cl, ct, cr, cb, menu))
-                    return true;
-            }
-
-            if (element.isClickExpanded() && element.hasClickStateChildren()) {
-
-                if (hitTestElements(element.getClickStateChildren(), mouseX, mouseY,
-                        clipLeft, clipTop, clipRight, clipBottom, menu))
-                    return true;
-            }
-
-            if (element.isHovered() && element.hasHoverStateRoot()) {
-
-                if (hitTestElements(element.getHoverStateRoot().getChildren(), mouseX, mouseY,
-                        clipLeft, clipTop, clipRight, clipBottom, menu))
-                    return true;
-
-            } else if (element.isHovered() && element.hasHoverStateChildren()) {
-
-                if (hitTestElements(element.getHoverStateChildren(), mouseX, mouseY,
-                        clipLeft, clipTop, clipRight, clipBottom, menu))
-                    return true;
-            }
-
-            boolean interactive = element.hasClickState() || data.hasAction();
-
-            if (!interactive)
-                continue;
-
-            if (mouseX < clipLeft || mouseX > clipRight || mouseY < clipTop || mouseY > clipBottom)
-                continue;
-
-            if (!isHit(element, mouseX, mouseY))
-                continue;
-
-            if (element.hasClickState() && element.hasClickStateChildren()) {
-                toggleClickState(element);
-                return true;
-            }
-
-            executeAction(data, menu);
-            return true;
-        }
-
-        return false;
-    }
-
-    // Toggle \\
-
-    private void toggleClickState(ElementInstance element) {
-
-        if (openClickState != null && openClickState != element)
-            collapseClickState();
-
-        boolean expanding = !element.isClickExpanded();
-        element.setClickExpanded(expanding);
-        openClickState = expanding ? element : null;
-    }
-
-    // Actions \\
-
-    private void executeAction(ElementData data, MenuInstance parent) {
-
-        if (!data.hasAction())
+        if (actionClass == null || actionMethod == null)
             return;
 
-        String key = data.getActionClass() + "#" + data.getActionMethod() + "#" + data.getActionArg();
+        String key = actionClass + "#" + actionMethod + "#" + actionArg;
 
-        if (PARENT_ARG.equals(data.getActionArg())) {
+        if (PARENT_ARG.equals(actionArg)) {
 
             MenuAwareAction action = resolvedMenuAwareActions.get(key);
 
             if (action == null) {
-                action = resolveMenuAwareAction(data);
+                action = resolveMenuAwareAction(actionClass, actionMethod);
                 resolvedMenuAwareActions.put(key, action);
             }
 
-            action.execute(parent);
+            action.execute(menu);
             return;
         }
 
         Runnable action = resolvedActions.get(key);
 
         if (action == null) {
-            action = resolveRunnableAction(data);
+            action = resolveRunnableAction(actionClass, actionMethod, actionArg);
             resolvedActions.put(key, action);
         }
 
         action.run();
     }
 
-    private Runnable resolveRunnableAction(ElementData data) {
+    private Runnable resolveRunnableAction(String actionClass, String actionMethod, String actionArg) {
 
         try {
-            Class<?> clazz = Class.forName(data.getActionClass());
+            Class<?> clazz = Class.forName(actionClass);
             Object target = internal.getUnchecked(clazz);
 
             if (target == null)
-                throwException("on_click class not registered: '" + data.getActionClass() + "'");
+                throwException("Callback class not registered: '" + actionClass + "'");
 
-            Method method = data.getActionArg() != null
-                    ? target.getClass().getMethod(data.getActionMethod(), String.class)
-                    : target.getClass().getMethod(data.getActionMethod());
-            String arg = data.getActionArg();
+            Method method = actionArg != null
+                    ? target.getClass().getMethod(actionMethod, String.class)
+                    : target.getClass().getMethod(actionMethod);
 
-            if (arg != null)
-                return () -> invoke(method, target, arg);
+            if (actionArg != null)
+                return () -> invoke(method, target, actionArg);
 
             return () -> invoke(method, target);
 
         } catch (Exception e) {
-            throwException("Failed to resolve button action: "
-                    + data.getActionClass() + "#" + data.getActionMethod(), e);
+            throwException("Failed to resolve callback: " + actionClass + "#" + actionMethod, e);
             return null;
         }
     }
 
-    private MenuAwareAction resolveMenuAwareAction(ElementData data) {
+    private MenuAwareAction resolveMenuAwareAction(String actionClass, String actionMethod) {
 
         try {
-            Class<?> clazz = Class.forName(data.getActionClass());
+            Class<?> clazz = Class.forName(actionClass);
             Object target = internal.getUnchecked(clazz);
 
             if (target == null)
-                throwException("on_click class not registered: '" + data.getActionClass() + "'");
+                throwException("Callback class not registered: '" + actionClass + "'");
 
-            Method method = target.getClass().getMethod(data.getActionMethod(), MenuInstance.class);
+            Method method = target.getClass().getMethod(actionMethod, MenuInstance.class);
 
             return p -> invoke(method, target, p);
 
         } catch (Exception e) {
-            throwException("Failed to resolve menu-aware action: "
-                    + data.getActionClass() + "#" + data.getActionMethod(), e);
+            throwException("Failed to resolve menu-aware callback: "
+                    + actionClass + "#" + actionMethod, e);
             return null;
         }
     }
 
     private void invoke(Method method, Object target, Object... args) {
-
         try {
             method.invoke(target, args);
         } catch (Exception e) {
-            throwException("Button action failed: " + method.getName(), e);
+            throwException("Callback failed: " + method.getName(), e);
         }
     }
 

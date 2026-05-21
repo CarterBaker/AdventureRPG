@@ -2,7 +2,6 @@ package application.bootstrap.menupipeline.menu;
 
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.util.LayoutStruct;
-import application.bootstrap.menupipeline.util.MenuAwareAction;
 import engine.graphics.color.Color;
 import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -11,29 +10,31 @@ public class MenuNodeStruct extends StructPackage {
 
     /*
      * One node in a resolved menu element tree. References a master ElementHandle,
-     * carries optional per-placement overrides, and owns an ordered child node
-     * list.
-     * Built during bootstrap and owned by MenuHandle or parent MenuNodeStructs.
-     * Master may be null initially for deferred ref nodes; resolved via
-     * setMaster().
-     * Children are always fully resolved at build time — ElementSystem never
-     * touches
-     * master.getChildren() at runtime, only node.getChildren().
+     * carries optional per-placement overrides for on_click and on_drag (method
+     * callbacks only), sprite, text, color, layout, and owns an ordered child list.
+     *
+     * Hover states are not overridable at the node level — they are defined on
+     * the master ElementHandle and apply uniformly wherever it is placed.
      */
 
     // Master
     private ElementHandle master;
 
-    // Overrides
+    // Overrides — visuals
     private final String spriteNameOverride;
     private final String textOverride;
     private final Color colorOverride;
-    private final Runnable clickActionOverride;
-    private final MenuAwareAction menuAwareActionOverride;
+    private LayoutStruct layoutOverride;
+
+    // Overrides — on_click
     private final String actionClassOverride;
     private final String actionMethodOverride;
     private final String actionArgOverride;
-    private LayoutStruct layoutOverride;
+
+    // Overrides — on_drag
+    private final String onDragClassOverride;
+    private final String onDragMethodOverride;
+    private final String onDragArgOverride;
 
     // Tree
     private final ObjectArrayList<MenuNodeStruct> children;
@@ -44,12 +45,13 @@ public class MenuNodeStruct extends StructPackage {
         this.spriteNameOverride = null;
         this.textOverride = null;
         this.colorOverride = null;
-        this.clickActionOverride = null;
-        this.menuAwareActionOverride = null;
+        this.layoutOverride = null;
         this.actionClassOverride = null;
         this.actionMethodOverride = null;
         this.actionArgOverride = null;
-        this.layoutOverride = null;
+        this.onDragClassOverride = null;
+        this.onDragMethodOverride = null;
+        this.onDragArgOverride = null;
         this.children = children != null ? children : new ObjectArrayList<>();
     }
 
@@ -59,28 +61,29 @@ public class MenuNodeStruct extends StructPackage {
             String spriteNameOverride,
             String textOverride,
             Color colorOverride,
-            Runnable clickActionOverride,
-            MenuAwareAction menuAwareActionOverride,
             String actionClassOverride,
             String actionMethodOverride,
             String actionArgOverride,
+            String onDragClassOverride,
+            String onDragMethodOverride,
+            String onDragArgOverride,
             LayoutStruct layoutOverride,
             ObjectArrayList<MenuNodeStruct> children) {
         this.master = master;
         this.spriteNameOverride = spriteNameOverride;
         this.textOverride = textOverride;
         this.colorOverride = colorOverride;
-        this.clickActionOverride = clickActionOverride;
-        this.menuAwareActionOverride = menuAwareActionOverride;
         this.actionClassOverride = actionClassOverride;
         this.actionMethodOverride = actionMethodOverride;
         this.actionArgOverride = actionArgOverride;
+        this.onDragClassOverride = onDragClassOverride;
+        this.onDragMethodOverride = onDragMethodOverride;
+        this.onDragArgOverride = onDragArgOverride;
         this.layoutOverride = layoutOverride;
         this.children = children != null ? children : new ObjectArrayList<>();
     }
 
     // Deferred Resolution \\
-
     public void setMaster(ElementHandle master) {
         this.master = master;
     }
@@ -90,7 +93,6 @@ public class MenuNodeStruct extends StructPackage {
     }
 
     // Accessible \\
-
     public ElementHandle getMaster() {
         return master;
     }
@@ -107,12 +109,20 @@ public class MenuNodeStruct extends StructPackage {
         return colorOverride;
     }
 
-    public Runnable getClickActionOverride() {
-        return clickActionOverride;
+    public boolean hasColorOverride() {
+        return colorOverride != null;
     }
 
-    public MenuAwareAction getMenuAwareActionOverride() {
-        return menuAwareActionOverride;
+    public LayoutStruct getLayoutOverride() {
+        return layoutOverride;
+    }
+
+    public boolean hasChildren() {
+        return !children.isEmpty();
+    }
+
+    public ObjectArrayList<MenuNodeStruct> getChildren() {
+        return children;
     }
 
     public String getActionClassOverride() {
@@ -127,23 +137,15 @@ public class MenuNodeStruct extends StructPackage {
         return actionArgOverride;
     }
 
-    public boolean hasActionOverride() {
-        return actionClassOverride != null;
+    public String getOnDragClassOverride() {
+        return onDragClassOverride;
     }
 
-    public LayoutStruct getLayoutOverride() {
-        return layoutOverride;
+    public String getOnDragMethodOverride() {
+        return onDragMethodOverride;
     }
 
-    public ObjectArrayList<MenuNodeStruct> getChildren() {
-        return children;
-    }
-
-    public boolean hasColorOverride() {
-        return colorOverride != null;
-    }
-
-    public boolean hasChildren() {
-        return !children.isEmpty();
+    public String getOnDragArgOverride() {
+        return onDragArgOverride;
     }
 }
