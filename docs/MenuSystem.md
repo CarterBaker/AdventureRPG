@@ -158,7 +158,7 @@ Values can be a percentage of parent size (`"5%"`) or absolute pixels (`"10px"`)
 {
     "id":     "my_element",
     "type":   "sprite",
-    "sprite": "menus/DebugElement",
+    "sprite": "menus/DefaultElement",
     "anchor": "center",
     "pivot":  "center",
     "position": { "x": "0%",  "y": "0%"  },

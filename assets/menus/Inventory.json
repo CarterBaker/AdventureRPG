@@ -10,7 +10,7 @@
                 {
                     "id": "panel",
                     "type": "sprite",
-                    "sprite": "menus/DebugElement",
+                    "sprite": "menus/DefaultElement",
                     "anchor": "left",
                     "pivot":  "left",
                     "position": { "x": "1%", "y": "0%" },
@@ -29,7 +29,7 @@
                         {
                             "id": "scrollbar_track",
                             "type": "sprite",
-                            "sprite": "menus/DebugElement",
+                            "sprite": "menus/DefaultElement",
                             "anchor": "top_right",
                             "pivot":  "bottom_right",
                             "size":   { "x": "10%", "y": "100%" },
@@ -37,7 +37,7 @@
                                 {
                                     "id": "scroll_handle",
                                     "type": "sprite",
-                                    "sprite": "menus/DebugElement",
+                                    "sprite": "menus/DefaultElement",
                                     "anchor":   "top_left",
                                     "pivot":    "bottom_left",
                                     "position": { "x": "0%", "y": "0%" },

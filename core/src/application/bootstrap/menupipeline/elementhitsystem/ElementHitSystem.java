@@ -19,22 +19,25 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ElementHitSystem extends SystemPackage {
 
     /*
-     * Handles all interactive element behavior per frame.
-     *
      * Hover lifecycle:
-     * Enter — activeHoverState set to hoverEnterState, callback fired once,
-     * then immediately transitions to hoverState if defined.
-     * Per frame — if hoverState defined, activeHoverState set to hoverState,
-     * callback fired each frame.
-     * Exit — activeHoverState set to hoverExitState, callback fired once,
-     * then cleared to null.
+     * Enter — if hoverEnterState defined: set as activeHoverState, fire callback.
+     * Immediately transitions to hoverState if also defined.
+     * Per frame — if hoverState defined: set as activeHoverState, fire callback.
+     * Exit — if hoverExitState defined: set as activeHoverState, fire callback.
+     * If NOT defined: activeHoverState is left as-is. Nothing reverts implicitly.
+     * resetPressed — hard reset, clears activeHoverState unconditionally.
      *
-     * hoverTestElements uses the active hover state's children/root for hit
-     * testing so the expanded element region is included while hovered.
+     * Hover state root/children belong to the parent element for hover purposes.
+     * When the mouse is anywhere within the active hover state root or its
+     * children,
+     * the parent element remains hoveredElement. The expanded region is part of the
+     * parent's hit surface and does not trigger exit.
      *
-     * on_drag fires per frame while primary held on hoveredElement.
+     * Clicks on state root children are dispatched independently by hitTestElements
+     * regardless of hoveredElement.
+     *
+     * on_drag fires each frame while primary held on hoveredElement.
      * on_click fires once on primary press.
-     * All callbacks follow the identical class/method/arg resolution path.
      */
 
     private static final String PARENT_ARG = "$parent";
@@ -147,12 +150,17 @@ public class ElementHitSystem extends SystemPackage {
 
         // Exit previous
         if (hoveredElement != null) {
-            ElementStateStruct exitState = hoveredElement.getHandle().getHoverExitState();
-            hoveredElement.setActiveHoverState(exitState);
 
-            if (exitState != null && exitState.hasAction())
-                executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
-                        exitState.getActionArg(), null);
+            ElementStateStruct exitState = hoveredElement.getHandle().getHoverExitState();
+
+            if (exitState != null) {
+                hoveredElement.setActiveHoverState(exitState);
+                if (exitState.hasAction())
+                    executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
+                            exitState.getActionArg(), null);
+            }
+            // No exit state defined — activeHoverState left as-is, nothing reverts
+            // implicitly.
 
             hoveredElement.setHovered(false);
             hoveredElement = null;
@@ -168,11 +176,13 @@ public class ElementHitSystem extends SystemPackage {
         windowManager.lockHoveredWindow();
 
         ElementStateStruct enterState = hoveredElement.getHandle().getHoverEnterState();
-        hoveredElement.setActiveHoverState(enterState);
 
-        if (enterState != null && enterState.hasAction())
-            executeCallback(enterState.getActionClass(), enterState.getActionMethod(),
-                    enterState.getActionArg(), null);
+        if (enterState != null) {
+            hoveredElement.setActiveHoverState(enterState);
+            if (enterState.hasAction())
+                executeCallback(enterState.getActionClass(), enterState.getActionMethod(),
+                        enterState.getActionArg(), null);
+        }
 
         // Immediately transition to hoverState if defined
         ElementStateStruct hoverState = hoveredElement.getHandle().getHoverState();
@@ -202,6 +212,8 @@ public class ElementHitSystem extends SystemPackage {
         if (hoveredElement == null)
             return;
 
+        // Hard reset — clears activeHoverState unconditionally regardless of
+        // whether an exit state is defined. Called only from resetPressed().
         hoveredElement.clearActiveHoverState();
         hoveredElement.setHovered(false);
         hoveredElement = null;
@@ -220,7 +232,7 @@ public class ElementHitSystem extends SystemPackage {
 
             ElementInstance element = elements.get(i);
 
-            // Test default children
+            // Default children — tested before the element itself
             if (element.hasChildren()) {
 
                 float cl = clipLeft, ct = clipTop, cr = clipRight, cb = clipBottom;
@@ -239,7 +251,7 @@ public class ElementHitSystem extends SystemPackage {
                     return childHit;
             }
 
-            // Test click state children
+            // Click state children
             if (element.isClickExpanded() && element.hasClickStateChildren()) {
                 ElementInstance childHit = hoverTestElements(
                         element.getClickStateChildren(), mouseX, mouseY,
@@ -248,23 +260,30 @@ public class ElementHitSystem extends SystemPackage {
                     return childHit;
             }
 
-            // Test active hover state region
-            if (element.isHovered() && element.hasActiveHoverState()) {
+            /*
+             * Active hover state region — the parent owns this entire region.
+             * Any hit within the state root or its children returns the parent,
+             * keeping hoveredElement stable across the full expanded visual area.
+             */
+            if (element.hasActiveHoverState()) {
 
-                ElementStateStruct active = element.getActiveHoverState();
-
-                // Master-based root
                 ElementInstance activeRoot = resolveActiveHoverRoot(element);
 
                 if (activeRoot != null) {
+
+                    if (isHit(activeRoot, mouseX, mouseY)
+                            && mouseX >= clipLeft && mouseX <= clipRight
+                            && mouseY >= clipTop && mouseY <= clipBottom)
+                        return element;
+
                     ElementInstance childHit = hoverTestElements(
                             activeRoot.getChildren(), mouseX, mouseY,
                             clipLeft, clipTop, clipRight, clipBottom);
+
                     if (childHit != null)
-                        return childHit;
+                        return element;
                 }
 
-                // Inline children
                 ObjectArrayList<ElementInstance> activeChildren = resolveActiveHoverChildren(element);
 
                 if (activeChildren != null && !activeChildren.isEmpty()) {
@@ -272,7 +291,7 @@ public class ElementHitSystem extends SystemPackage {
                             activeChildren, mouseX, mouseY,
                             clipLeft, clipTop, clipRight, clipBottom);
                     if (childHit != null)
-                        return childHit;
+                        return element;
                 }
             }
 
@@ -324,8 +343,8 @@ public class ElementHitSystem extends SystemPackage {
                     return true;
             }
 
-            // Active hover state region is clickable
-            if (element.isHovered() && element.hasActiveHoverState()) {
+            // State root children are independently clickable regardless of hoveredElement.
+            if (element.hasActiveHoverState()) {
 
                 ElementInstance activeRoot = resolveActiveHoverRoot(element);
 
@@ -404,10 +423,8 @@ public class ElementHitSystem extends SystemPackage {
     // Toggle \\
 
     private void toggleClickState(ElementInstance element) {
-
         if (openClickState != null && openClickState != element)
             collapseClickState();
-
         boolean expanding = !element.isClickExpanded();
         element.setClickExpanded(expanding);
         openClickState = expanding ? element : null;
@@ -467,7 +484,8 @@ public class ElementHitSystem extends SystemPackage {
         action.run();
     }
 
-    private Runnable resolveRunnableAction(String actionClass, String actionMethod, String actionArg) {
+    private Runnable resolveRunnableAction(String actionClass, String actionMethod,
+            String actionArg) {
 
         try {
             Class<?> clazz = Class.forName(actionClass);

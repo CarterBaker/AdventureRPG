@@ -1,8 +1,23 @@
 {
   "elements": [
     {
+      "id": "testing_button_default",
+      "type": "button",
+      "anchor": "top_left",
+      "pivot": "bottom_left",
+      "size": {"x": "100px", "y": "28px"},
+      "elements": [
+        {
+          "id": "testing_label",
+          "type": "label",
+          "text": "Testing"
+        }
+      ]
+    },
+    {
       "id": "testing_dropdown_panel",
-      "type": "container",
+      "type": "sprite",
+      "sprite": "menus/DefaultElement",
       "anchor": "bottom_left",
       "pivot": "top_left",
       "size": {"x": "150px", "y": "56px"},
@@ -11,6 +26,7 @@
         {
           "id": "open_window_button",
           "type": "button",
+          "sprite": "menus/DefaultElement",
           "size": {"x": "150px", "y": "28px"},
           "on_click": {
             "class": "editor.runtime.editor.menueventsmanager.menus.EditorBranch",
@@ -27,6 +43,7 @@
         {
           "id": "open_preview_button",
           "type": "button",
+          "sprite": "menus/DefaultElement",
           "size": {"x": "150px", "y": "28px"},
           "on_click": {
             "class": "editor.runtime.editor.menueventsmanager.menus.EditorBranch",
@@ -89,6 +106,9 @@
                   "size": {"x": "100px", "y": "28px"},
                   "on_hover_enter": {
                     "use": "editor/EditorWindow/testing_dropdown_panel"
+                  },
+                  "on_hover_exit": {
+                    "use": "editor/EditorWindow/testing_button_default"
                   },
                   "elements": [
                     {

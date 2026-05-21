@@ -3,7 +3,7 @@
         {
             "id":     "quit",
             "type":   "button",
-            "sprite": "menus/DebugElement",
+            "sprite": "menus/DefaultElement",
             "anchor": "center",
             "pivot":  "center",
             "on_click": {

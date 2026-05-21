@@ -218,8 +218,8 @@ C:.
 |   |           
 |   +---sprites
 |   |   \---menus
-|   |           DebugElement.json
-|   |           DebugElement.png
+|   |           DefaultElement.json
+|   |           DefaultElement.png
 |   |           Title.png
 |   |           
 |   +---textureAliases
@@ -2772,8 +2772,8 @@ C:.
     |       |           
     |       +---sprites
     |       |   \---menus
-    |       |           DebugElement.json
-    |       |           DebugElement.png
+    |       |           DefaultElement.json
+    |       |           DefaultElement.png
     |       |           Title.png
     |       |           
     |       +---textureAliases
@@ -3014,8 +3014,8 @@ C:.
     |   |       |           
     |   |       +---sprites
     |   |       |   \---menus
-    |   |       |           DebugElement.json
-    |   |       |           DebugElement.png
+    |   |       |           DefaultElement.json
+    |   |       |           DefaultElement.png
     |   |       |           Title.png
     |   |       |           
     |   |       +---textureAliases
