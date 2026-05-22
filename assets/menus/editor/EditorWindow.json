@@ -1,25 +1,10 @@
 {
   "elements": [
     {
-      "id": "testing_button_default",
-      "type": "button",
-      "anchor": "top_left",
-      "pivot": "bottom_left",
-      "size": {"x": "100px", "y": "28px"},
-      "elements": [
-        {
-          "id": "testing_label",
-          "type": "label",
-          "text": "Testing"
-        }
-      ]
-    },
-    {
       "id": "testing_dropdown_panel",
-      "type": "sprite",
-      "sprite": "menus/DefaultElement",
+      "type": "container",
       "anchor": "bottom_left",
-      "pivot": "top_left",
+      "pivot": "bottom_left",
       "size": {"x": "150px", "y": "56px"},
       "elements": [
         {
@@ -29,6 +14,8 @@
           "pivot": "bottom_left",
           "size": {"x": "150px", "y": "56px"},
           "stack": "vertical",
+          "font_size": "50%",
+          "sprite": "menus/DefaultElement",
           "elements": [
             {
               "id": "open_window_button",
@@ -43,7 +30,8 @@
                 {
                   "id": "open_window_label",
                   "type": "label",
-                  "text": "Open Window"
+                  "text": "Open Window",
+                  "color": [0, 0, 0, 1]
                 }
               ]
             },
@@ -60,7 +48,8 @@
                 {
                   "id": "open_preview_label",
                   "type": "label",
-                  "text": "Open Preview"
+                  "text": "Open Preview",
+                  "color": [0, 0, 0, 1]
                 }
               ]
             }
@@ -108,6 +97,23 @@
               "size": {"x": "100px", "y": "28px"},
               "elements": [
                 {
+                  "id": "testing_button_bg",
+                  "type": "sprite",
+                  "sprite": "menus/DefaultElement",
+                  "anchor": "top_left",
+                  "pivot": "bottom_left",
+                  "size": {"x": "100px", "y": "28px"},
+                  "elements": [
+                    {
+                      "id": "testing_bg_label",
+                      "type": "label",
+                      "text": "Testing",
+                      "font_size": "50%",
+                      "color": [0, 0, 0, 1]
+                    }
+                  ]
+                },
+                {
                   "id": "testing_button",
                   "type": "button",
                   "anchor": "top_left",
@@ -115,17 +121,7 @@
                   "size": {"x": "100px", "y": "28px"},
                   "on_hover_enter": {
                     "use": "editor/EditorWindow/testing_dropdown_panel"
-                  },
-                  "on_hover_exit": {
-                    "use": "editor/EditorWindow/testing_button_default"
-                  },
-                  "elements": [
-                    {
-                      "id": "testing_label",
-                      "type": "label",
-                      "text": "Testing"
-                    }
-                  ]
+                  }
                 }
               ]
             }
