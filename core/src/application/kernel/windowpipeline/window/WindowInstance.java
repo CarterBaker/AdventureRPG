@@ -17,14 +17,19 @@ public class WindowInstance extends InstancePackage {
      * and menu list. Logical windows (tabs) have no native handle — they carry
      * a composite target and rect so FboRenderSystem can transparently redirect
      * their pushFbo calls to the correct OS window and screen region.
-     * Depth controls draw order during the screen pass — OS windows are 0,
-     * tab logical windows are 1. Higher depth always draws on top.
-     * Input is hover-driven — no active or focus concept exists at this level.
      *
-     * captureEligible gates whether InputSystem may capture this window.
+     * Depth controls draw order during the screen pass — OS windows are 0,
+     * tab logical windows are 1+. Higher depth draws on top.
+     *
+     * captureEligible gates whether InputManager may capture this window.
      * Editor chrome windows (main window, toolbar-only windows) are marked
-     * ineligible at creation time so onWindowFocused can never pin the cursor
-     * to them, regardless of lock state.
+     * ineligible at creation so onWindowFocused can never pin the cursor to
+     * them regardless of menu lock state.
+     *
+     * alwaysHover opts a window into hover-driven menu raycast regardless of
+     * focus. Set on editor chrome windows so menus respond to hover without
+     * requiring a prior click. Game content windows leave this false —
+     * requiring a click to gain control, preserving click-to-capture behavior.
      */
 
     // Data
@@ -57,6 +62,9 @@ public class WindowInstance extends InstancePackage {
 
     // Capture eligibility — false for editor chrome, true for all game windows
     private boolean captureEligible = true;
+
+    // Hover-driven raycast — true for editor chrome, false for game content windows
+    private boolean alwaysHover = false;
 
     // Internal
     private RenderManager renderManager;
@@ -100,8 +108,8 @@ public class WindowInstance extends InstancePackage {
         return context;
     }
 
-    public void setContext(ContextPackage context) {
-        this.context = context;
+    public void setContext(ContextPackage ctx) {
+        this.context = ctx;
     }
 
     public boolean hasContext() {
@@ -114,8 +122,8 @@ public class WindowInstance extends InstancePackage {
         return nativeHandle;
     }
 
-    public void setNativeHandle(long nativeHandle) {
-        this.nativeHandle = nativeHandle;
+    public void setNativeHandle(long handle) {
+        this.nativeHandle = handle;
     }
 
     public boolean hasNativeHandle() {
@@ -128,8 +136,8 @@ public class WindowInstance extends InstancePackage {
         return compositeTarget;
     }
 
-    public void setCompositeTarget(WindowInstance compositeTarget) {
-        this.compositeTarget = compositeTarget;
+    public void setCompositeTarget(WindowInstance t) {
+        this.compositeTarget = t;
     }
 
     public boolean hasCompositeTarget() {
@@ -180,8 +188,8 @@ public class WindowInstance extends InstancePackage {
         return depth;
     }
 
-    public void setDepth(int depth) {
-        this.depth = depth;
+    public void setDepth(int d) {
+        this.depth = d;
     }
 
     // Capture Eligibility \\
@@ -190,8 +198,18 @@ public class WindowInstance extends InstancePackage {
         return captureEligible;
     }
 
-    public void setCaptureEligible(boolean captureEligible) {
-        this.captureEligible = captureEligible;
+    public void setCaptureEligible(boolean flag) {
+        this.captureEligible = flag;
+    }
+
+    // Always Hover \\
+
+    public boolean isAlwaysHover() {
+        return alwaysHover;
+    }
+
+    public void setAlwaysHover(boolean flag) {
+        this.alwaysHover = flag;
     }
 
     // Cameras \\
@@ -200,16 +218,16 @@ public class WindowInstance extends InstancePackage {
         return activeCamera;
     }
 
-    public void setActiveCamera(CameraInstance activeCamera) {
-        this.activeCamera = activeCamera;
+    public void setActiveCamera(CameraInstance c) {
+        this.activeCamera = c;
     }
 
     public OrthographicCameraInstance getOrthoCamera() {
         return orthoCamera;
     }
 
-    public void setOrthoCamera(OrthographicCameraInstance orthoCamera) {
-        this.orthoCamera = orthoCamera;
+    public void setOrthoCamera(OrthographicCameraInstance c) {
+        this.orthoCamera = c;
     }
 
     // Accessible \\
@@ -220,10 +238,8 @@ public class WindowInstance extends InstancePackage {
 
         if (activeCamera != null)
             activeCamera.updateViewport(width, height);
-
         if (orthoCamera != null)
             orthoCamera.updateViewport(width, height);
-
         if (context != null)
             context.onResize(width, height);
     }
@@ -240,10 +256,6 @@ public class WindowInstance extends InstancePackage {
 
     public WindowData getWindowData() {
         return windowData;
-    }
-
-    public RenderQueueHandle getRenderQueueHandle() {
-        return hasCompositeTarget() ? compositeTarget.getRenderQueueHandle() : renderQueueHandle;
     }
 
     public MenuListHandle getMenuListHandle() {
@@ -264,5 +276,9 @@ public class WindowInstance extends InstancePackage {
 
     public String getTitle() {
         return windowData.getTitle();
+    }
+
+    public RenderQueueHandle getRenderQueueHandle() {
+        return hasCompositeTarget() ? compositeTarget.getRenderQueueHandle() : renderQueueHandle;
     }
 }

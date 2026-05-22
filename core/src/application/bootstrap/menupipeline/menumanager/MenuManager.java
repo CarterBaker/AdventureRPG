@@ -40,10 +40,14 @@ public class MenuManager extends ManagerPackage {
      * directly by MenuRenderSystem each frame.
      *
      * Cursor capture is driven here as a side effect of menu lock state
-     * transitions — openMenu releases capture when a lock-input menu opens on
-     * the focused window, flushPendingClosedMenus reclaims it when the last
-     * lock-input menu closes on the focused window. Only the focused window
+     * transitions — openMenu releases capture when a lock_input menu opens on
+     * the focused window; flushPendingClosedMenus reclaims it when the last
+     * lock_input menu closes on the focused window. Only the focused window
      * may acquire or release capture so background tabs cannot affect input state.
+     *
+     * Raycast authority is resolved once per frame and passed to ElementHitSystem.
+     * alwaysHover windows (editor chrome) are raycasted by hover — content windows
+     * fall through to the focused window, preserving click-to-capture behavior.
      */
 
     // Internal
@@ -67,7 +71,6 @@ public class MenuManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
         this.menuName2MenuID = new Object2IntOpenHashMap<>();
         this.menuID2MenuHandle = new Int2ObjectOpenHashMap<>();
         this.menuName2MenuID.defaultReturnValue(-1);
@@ -104,7 +107,6 @@ public class MenuManager extends ManagerPackage {
                 continue;
 
             FboInstance menuTargetFbo = window2MenuTargetFbo.get(window);
-
             if (menuTargetFbo == null)
                 continue;
 
@@ -115,10 +117,23 @@ public class MenuManager extends ManagerPackage {
                 renderSystem.renderMenu(menus.get(j), menuTargetFbo, RuntimeSetting.LAYER_UI);
         }
 
+        // Resolve raycast authority once per frame.
+        // alwaysHover windows (editor chrome) get hover-driven raycast without
+        // requiring focus. Content windows fall through to focused, preserving
+        // click-to-capture behavior.
+        WindowInstance hovered = windowManager.getHoveredWindow();
         WindowInstance focused = windowManager.getFocusedWindow();
 
-        if (focused != null && focused.getMenuListHandle().isRaycastLocked())
-            hitSystem.updateRaycast(focused.getMenuListHandle().getMenus());
+        WindowInstance raycastTarget = (hovered != null && hovered.isAlwaysHover())
+                ? hovered
+                : focused;
+
+        // Always sync — fires hover exit if the window changed even when the
+        // new target has no raycast-locked menus.
+        hitSystem.syncRaycastTarget(raycastTarget, hovered);
+
+        if (raycastTarget != null && raycastTarget.getMenuListHandle().isRaycastLocked())
+            hitSystem.updateRaycast(raycastTarget.getMenuListHandle().getMenus(), raycastTarget);
     }
 
     // Deferred Menu Close \\
@@ -171,11 +186,9 @@ public class MenuManager extends ManagerPackage {
     }
 
     public void eject(MenuInstance menu, int entryPoint, ElementInstance instance) {
-
         ObjectArrayList<ElementInstance> single = new ObjectArrayList<>(1);
         single.add(instance);
         renderSystem.releaseFontModels(single);
-
         menu.removeFromEntryPoint(entryPoint, instance);
     }
 
@@ -194,20 +207,15 @@ public class MenuManager extends ManagerPackage {
     }
 
     public int getMenuIDFromMenuName(String menuName) {
-
         if (!menuName2MenuID.containsKey(menuName))
             request(menuName);
-
         return menuName2MenuID.getInt(menuName);
     }
 
     public MenuHandle getMenuHandleFromMenuID(int menuID) {
-
         MenuHandle handle = menuID2MenuHandle.get(menuID);
-
         if (handle == null)
             throwException("Menu ID not found: " + menuID);
-
         return handle;
     }
 
@@ -265,15 +273,11 @@ public class MenuManager extends ManagerPackage {
     }
 
     public void setMenuTargetFbo(WindowInstance window, FboInstance menuTargetFbo) {
-
         if (window == null)
             return;
-
-        if (menuTargetFbo == null) {
+        if (menuTargetFbo == null)
             window2MenuTargetFbo.remove(window);
-            return;
-        }
-
-        window2MenuTargetFbo.put(window, menuTargetFbo);
+        else
+            window2MenuTargetFbo.put(window, menuTargetFbo);
     }
 }

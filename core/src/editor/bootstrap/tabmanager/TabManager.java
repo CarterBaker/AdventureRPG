@@ -157,6 +157,7 @@ public class TabManager extends ManagerPackage {
         // Content window is depth 2 — draws on top of chrome.
         WindowInstance contentWindow = windowManager.createLogicalWindow(title, mainWindow);
         contentWindow.setDepth(2);
+        tabWindow.setAlwaysHover(true);
 
         ContextPackage contentContext = internal.createContext(contentClass, contentWindow);
 
