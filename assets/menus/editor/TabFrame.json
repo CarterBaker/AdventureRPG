@@ -16,15 +16,13 @@
           "on_hover": {
             "on_click": {
               "class": "editor.runtime.editor.menueventsmanager.menus.TabBranch",
-              "method": "onTabFrameHover",
-              "arg": "$parent"
+              "method": "onTabFrameHover"
             }
           },
           "on_hover_exit": {
             "on_click": {
               "class": "editor.runtime.editor.menueventsmanager.menus.TabBranch",
-              "method": "onTabFrameHoverExit",
-              "arg": "$parent"
+              "method": "onTabFrameHoverExit"
             }
           }
         },
