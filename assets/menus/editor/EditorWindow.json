@@ -98,8 +98,7 @@
               "elements": [
                 {
                   "id": "testing_button_bg",
-                  "type": "sprite",
-                  "sprite": "menus/DefaultElement",
+                  "type": "container",
                   "anchor": "top_left",
                   "pivot": "bottom_left",
                   "size": {"x": "100px", "y": "28px"},
@@ -121,7 +120,8 @@
                   "size": {"x": "100px", "y": "28px"},
                   "on_hover_enter": {
                     "use": "editor/EditorWindow/testing_dropdown_panel"
-                  }
+                  },
+                  "on_hover_exit": {}
                 }
               ]
             }
