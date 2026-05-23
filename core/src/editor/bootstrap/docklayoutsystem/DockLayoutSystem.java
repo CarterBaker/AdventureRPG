@@ -12,7 +12,16 @@ public class DockLayoutSystem extends SystemPackage {
      * removeTab() prunes empty leaves and collapses redundant split nodes.
      * computeRects() propagates the dock canvas bounds down the tree each frame
      * so every leaf knows its screen rect without storing stale state.
+     *
+     * Each split node owns a ratio in [0.1, 0.9] (default 0.5) controlling
+     * where its divider sits. findDividerAt() walks the tree bottom-up so the
+     * innermost node always wins when dividers are nested. setSplitRatio()
+     * clamps and writes the ratio; propagateRect() reads it.
      */
+
+    private static final float DIVIDER_HIT_TOLERANCE = 6f;
+    private static final float RATIO_MIN = 0.1f;
+    private static final float RATIO_MAX = 0.9f;
 
     // Tree
     private DockNodeStruct root;
@@ -85,6 +94,46 @@ public class DockLayoutSystem extends SystemPackage {
         return node.getTabs().get(node.getActiveIndex()) == handle;
     }
 
+    // Divider \\
+
+    public DockNodeStruct findDividerAt(float screenX, float screenY) {
+        return findDividerAt(root, screenX, screenY);
+    }
+
+    private DockNodeStruct findDividerAt(DockNodeStruct node, float sx, float sy) {
+
+        if (node == null || !node.isSplit())
+            return null;
+
+        DockNodeStruct hit = findDividerAt(node.getFirst(), sx, sy);
+        if (hit != null)
+            return hit;
+
+        hit = findDividerAt(node.getSecond(), sx, sy);
+        if (hit != null)
+            return hit;
+
+        if (node.isSplitHorizontal()) {
+            float dividerY = node.getY() + node.getH() * node.getRatio();
+            if (sx >= node.getX() && sx <= node.getX() + node.getW()
+                    && sy >= dividerY - DIVIDER_HIT_TOLERANCE
+                    && sy <= dividerY + DIVIDER_HIT_TOLERANCE)
+                return node;
+        } else {
+            float dividerX = node.getX() + node.getW() * node.getRatio();
+            if (sy >= node.getY() && sy <= node.getY() + node.getH()
+                    && sx >= dividerX - DIVIDER_HIT_TOLERANCE
+                    && sx <= dividerX + DIVIDER_HIT_TOLERANCE)
+                return node;
+        }
+
+        return null;
+    }
+
+    public void setSplitRatio(DockNodeStruct node, float ratio) {
+        node.setRatio(Math.max(RATIO_MIN, Math.min(RATIO_MAX, ratio)));
+    }
+
     // Tree Traversal \\
 
     private DockNodeStruct findLargestLeaf(DockNodeStruct node) {
@@ -122,14 +171,16 @@ public class DockLayoutSystem extends SystemPackage {
         if (!node.isSplit())
             return;
 
+        float ratio = node.getRatio();
+
         if (node.isSplitHorizontal()) {
-            float half = h * 0.5f;
-            propagateRect(node.getFirst(), x, y, w, half);
-            propagateRect(node.getSecond(), x, y + half, w, half);
+            float split = h * ratio;
+            propagateRect(node.getFirst(), x, y, w, split);
+            propagateRect(node.getSecond(), x, y + split, w, h - split);
         } else {
-            float half = w * 0.5f;
-            propagateRect(node.getFirst(), x, y, half, h);
-            propagateRect(node.getSecond(), x + half, y, half, h);
+            float split = w * ratio;
+            propagateRect(node.getFirst(), x, y, split, h);
+            propagateRect(node.getSecond(), x + split, y, w - split, h);
         }
     }
 
@@ -171,10 +222,8 @@ public class DockLayoutSystem extends SystemPackage {
 
         if (node.getFirst() == null && node.getSecond() == null)
             return null;
-
         if (node.getFirst() == null)
             return node.getSecond();
-
         if (node.getSecond() == null)
             return node.getFirst();
 

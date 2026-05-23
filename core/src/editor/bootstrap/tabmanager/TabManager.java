@@ -236,7 +236,7 @@ public class TabManager extends ManagerPackage {
         pushRects();
     }
 
-    private void pushRects() {
+    public void pushRects() {
 
         if (dockW <= 0 || dockH <= 0)
             return;

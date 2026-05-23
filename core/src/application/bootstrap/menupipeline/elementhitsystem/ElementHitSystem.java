@@ -11,6 +11,7 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
+import engine.root.EngineContext;
 import engine.root.SystemPackage;
 import engine.settings.KeyBindings;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -35,8 +36,13 @@ public class ElementHitSystem extends SystemPackage {
      * Clicks on state root children are dispatched independently by hitTestElements
      * regardless of hoveredElement.
      *
-     * on_drag fires each frame while primary held on hoveredElement.
-     * on_click fires once on primary press.
+     * on_drag latches on the frame primary is first pressed over an element that
+     * has on_drag defined. While latched the callback fires every frame the
+     * primary button is physically held — queried directly from EngineContext.input
+     * so window focus, hover state, and window boundaries cannot interrupt the
+     * gesture. All hover and click machinery is bypassed for the duration.
+     * The latch releases the frame the button is no longer held.
+     * on_click fires once on primary press when no drag is latching.
      */
 
     private static final String PARENT_ARG = "$parent";
@@ -45,6 +51,7 @@ public class ElementHitSystem extends SystemPackage {
     private InputManager inputManager;
 
     private ElementInstance hoveredElement;
+    private ElementInstance draggedElement;
     private ElementInstance openClickState;
     private WindowInstance hoveredElementWindow;
     private float collapseTolerance;
@@ -69,6 +76,20 @@ public class ElementHitSystem extends SystemPackage {
 
     public void updateRaycast(ObjectArrayList<MenuInstance> activeMenus) {
 
+        // Drag is fully independent of hover and window focus. Query the raw
+        // button state directly so window boundaries cannot interrupt the gesture.
+        if (draggedElement != null) {
+            if (EngineContext.input.isMouseDown(0)) {
+                executeCallback(
+                        draggedElement.getEffectiveOnDragClass(),
+                        draggedElement.getEffectiveOnDragMethod(),
+                        draggedElement.getEffectiveOnDragArg(),
+                        null);
+                return;
+            }
+            draggedElement = null;
+        }
+
         WindowInstance hoveredWindow = windowManager.getHoveredWindow();
 
         if (hoveredWindow == null)
@@ -82,15 +103,16 @@ public class ElementHitSystem extends SystemPackage {
         fireOnHoverPerFrame();
         checkClickStateCollapse(mouseX, mouseY);
 
-        if (hoveredElement != null && hoveredElement.hasOnDrag()
-                && inputManager.bindingHeld(KeyBindings.PRIMARY, hoveredWindow))
-            executeCallback(
-                    hoveredElement.getEffectiveOnDragClass(),
-                    hoveredElement.getEffectiveOnDragMethod(),
-                    hoveredElement.getEffectiveOnDragArg(),
-                    null);
+        boolean primaryClicked = inputManager.bindingClicked(KeyBindings.PRIMARY, hoveredWindow);
 
-        if (!inputManager.bindingClicked(KeyBindings.PRIMARY, hoveredWindow))
+        // Latch drag on the frame primary is first pressed over a draggable element.
+        // Return immediately so the press is not also treated as a click.
+        if (primaryClicked && hoveredElement != null && hoveredElement.hasOnDrag()) {
+            draggedElement = hoveredElement;
+            return;
+        }
+
+        if (!primaryClicked)
             return;
 
         for (int i = activeMenus.size() - 1; i >= 0; i--) {
@@ -113,6 +135,7 @@ public class ElementHitSystem extends SystemPackage {
 
     public void resetPressed() {
         this.openClickState = null;
+        this.draggedElement = null;
         clearHover();
     }
 
@@ -154,7 +177,6 @@ public class ElementHitSystem extends SystemPackage {
         if (next == null)
             return;
 
-        // Enter next
         hoveredElement = next;
         hoveredElement.setHovered(true);
         hoveredElementWindow = windowManager.getHoveredWindow();
@@ -185,8 +207,6 @@ public class ElementHitSystem extends SystemPackage {
                 executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
                         exitState.getActionArg(), null);
         }
-        // No exit state defined — activeHoverState left as-is, nothing reverts
-        // implicitly.
 
         hoveredElement.setHovered(false);
         hoveredElement = null;
@@ -216,8 +236,6 @@ public class ElementHitSystem extends SystemPackage {
         if (hoveredElement == null)
             return;
 
-        // Hard reset — clears activeHoverState unconditionally regardless of
-        // whether an exit state is defined. Called only from resetPressed().
         hoveredElement.clearActiveHoverState();
         hoveredElement.setHovered(false);
         hoveredElement = null;
@@ -248,7 +266,6 @@ public class ElementHitSystem extends SystemPackage {
 
             ElementInstance element = elements.get(i);
 
-            // Default children — tested before the element itself
             if (element.hasChildren()) {
 
                 float cl = clipLeft, ct = clipTop, cr = clipRight, cb = clipBottom;
@@ -267,7 +284,6 @@ public class ElementHitSystem extends SystemPackage {
                     return childHit;
             }
 
-            // Click state children
             if (element.isClickExpanded() && element.hasClickStateChildren()) {
                 ElementInstance childHit = hoverTestElements(
                         element.getClickStateChildren(), mouseX, mouseY,
@@ -276,11 +292,6 @@ public class ElementHitSystem extends SystemPackage {
                     return childHit;
             }
 
-            /*
-             * Active hover state region — the parent owns this entire region.
-             * Any hit within the state root or its children returns the parent,
-             * keeping hoveredElement stable across the full expanded visual area.
-             */
             if (element.hasActiveHoverState()) {
 
                 ElementInstance activeRoot = resolveActiveHoverRoot(element);
@@ -359,7 +370,6 @@ public class ElementHitSystem extends SystemPackage {
                     return true;
             }
 
-            // State root children are independently clickable regardless of hoveredElement.
             if (element.hasActiveHoverState()) {
 
                 ElementInstance activeRoot = resolveActiveHoverRoot(element);

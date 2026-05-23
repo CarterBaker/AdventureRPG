@@ -13,6 +13,10 @@
           "pivot": "bottom_left",
           "size": {"x": "100%", "y": "100%"},
           "color": [1.0, 1.0, 1.0, 1.0],
+          "on_drag": {
+            "class": "editor.runtime.editor.menueventsmanager.menus.TabBranch",
+            "method": "onTabFrameDrag"
+          },
           "on_hover": {
             "on_click": {
               "class": "editor.runtime.editor.menueventsmanager.menus.TabBranch",

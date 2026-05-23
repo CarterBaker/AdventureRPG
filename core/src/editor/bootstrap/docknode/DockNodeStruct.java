@@ -10,6 +10,10 @@ public class DockNodeStruct extends StructPackage {
      * One node in the dock BSP tree. Leaf nodes own a tab list and track the
      * active tab index. Split nodes own two children and hold no tabs.
      * Bounds are recomputed each frame top-down from the dock canvas rect.
+     *
+     * ratio controls where the divider sits along the split axis — 0.5 is
+     * centre. Clamped to [0.1, 0.9] by DockLayoutSystem.setSplitRatio so
+     * neither panel can collapse to nothing. Only meaningful on split nodes.
      */
 
     // Bounds
@@ -23,6 +27,7 @@ public class DockNodeStruct extends StructPackage {
     private boolean splitHorizontal;
     private DockNodeStruct first;
     private DockNodeStruct second;
+    private float ratio = 0.5f;
 
     // Leaf
     private ObjectArrayList<TabHandle> tabs;
@@ -100,6 +105,14 @@ public class DockNodeStruct extends StructPackage {
 
     public void setSecond(DockNodeStruct second) {
         this.second = second;
+    }
+
+    public float getRatio() {
+        return ratio;
+    }
+
+    public void setRatio(float ratio) {
+        this.ratio = ratio;
     }
 
     // Leaf \\
