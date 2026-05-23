@@ -31,6 +31,11 @@ public class TabBranch extends BranchPackage {
      * WindowManager instead. window_frame covers the full tab so window bounds
      * are used for edge detection — no element lookup needed.
      *
+     * getHoverMouseX/Y is used in checkResizeCursor rather than getMouseX/Y.
+     * Hover callbacks fire based on spatial position and must not gate on focus
+     * — an unfocused tab still needs correct cursor feedback when the mouse is
+     * over its edge.
+     *
      * Mouse Y from GLFW is already converted to Y-up in Lwjgl3Input so no flip
      * is needed when comparing against window bounds.
      */
@@ -73,26 +78,20 @@ public class TabBranch extends BranchPackage {
         inputManager.clearCursor();
     }
 
-    // Resize Cursor — reusable \\
+    // Resize Cursor \\
 
     private void checkResizeCursor(WindowInstance window) {
-
         float mouseX = inputManager.getHoverMouseX(window);
         float mouseY = inputManager.getHoverMouseY(window);
-
         float w = window.getWidth();
         float h = window.getHeight();
         float t = EditorWindowSetting.RESIZE_EDGE_TOLERANCE;
-
         boolean onHEdge = mouseX <= t || mouseX >= w - t;
         boolean onVEdge = mouseY <= t || mouseY >= h - t;
-
         if (onHEdge)
             inputManager.setCursorSprite(cursorResizeH);
-
         else if (onVEdge)
             inputManager.setCursorSprite(cursorResizeV);
-
         else
             inputManager.clearCursor();
     }

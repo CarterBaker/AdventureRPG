@@ -29,9 +29,8 @@ public class ElementHitSystem extends SystemPackage {
      *
      * Hover state root/children belong to the parent element for hover purposes.
      * When the mouse is anywhere within the active hover state root or its
-     * children,
-     * the parent element remains hoveredElement. The expanded region is part of the
-     * parent's hit surface and does not trigger exit.
+     * children, the parent element remains hoveredElement. The expanded region
+     * is part of the parent's hit surface and does not trigger exit.
      *
      * Clicks on state root children are dispatched independently by hitTestElements
      * regardless of hoveredElement.
@@ -149,23 +148,8 @@ public class ElementHitSystem extends SystemPackage {
         if (next == hoveredElement)
             return;
 
-        // Exit previous
-        if (hoveredElement != null) {
-
-            ElementStateStruct exitState = hoveredElement.getHandle().getHoverExitState();
-
-            if (exitState != null) {
-                hoveredElement.setActiveHoverState(exitState);
-                if (exitState.hasAction())
-                    executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
-                            exitState.getActionArg(), null);
-            }
-
-            hoveredElement.setHovered(false);
-            hoveredElement = null;
-            hoveredElementWindow = null; // ← add
-            windowManager.unlockHoveredWindow();
-        }
+        if (hoveredElement != null)
+            fireHoverExit();
 
         if (next == null)
             return;
@@ -173,7 +157,7 @@ public class ElementHitSystem extends SystemPackage {
         // Enter next
         hoveredElement = next;
         hoveredElement.setHovered(true);
-        hoveredElementWindow = windowManager.getHoveredWindow(); // ← add
+        hoveredElementWindow = windowManager.getHoveredWindow();
         windowManager.lockHoveredWindow();
 
         ElementStateStruct enterState = hoveredElement.getHandle().getHoverEnterState();
@@ -189,6 +173,25 @@ public class ElementHitSystem extends SystemPackage {
         ElementStateStruct hoverState = hoveredElement.getHandle().getHoverState();
         if (hoverState != null)
             hoveredElement.setActiveHoverState(hoverState);
+    }
+
+    private void fireHoverExit() {
+
+        ElementStateStruct exitState = hoveredElement.getHandle().getHoverExitState();
+
+        if (exitState != null) {
+            hoveredElement.setActiveHoverState(exitState);
+            if (exitState.hasAction())
+                executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
+                        exitState.getActionArg(), null);
+        }
+        // No exit state defined — activeHoverState left as-is, nothing reverts
+        // implicitly.
+
+        hoveredElement.setHovered(false);
+        hoveredElement = null;
+        hoveredElementWindow = null;
+        windowManager.unlockHoveredWindow();
     }
 
     private void fireOnHoverPerFrame() {
@@ -213,6 +216,8 @@ public class ElementHitSystem extends SystemPackage {
         if (hoveredElement == null)
             return;
 
+        // Hard reset — clears activeHoverState unconditionally regardless of
+        // whether an exit state is defined. Called only from resetPressed().
         hoveredElement.clearActiveHoverState();
         hoveredElement.setHovered(false);
         hoveredElement = null;
@@ -220,10 +225,6 @@ public class ElementHitSystem extends SystemPackage {
         windowManager.unlockHoveredWindow();
     }
 
-    // Called by MenuManager each frame before the raycast guard. Fires hover
-    // exit for the current hoveredElement when the hovered window has changed
-    // so exits always fire on window transitions even when the incoming window
-    // has no raycast-locked menus.
     public void clearHoverIfWindowChanged(WindowInstance currentHoveredWindow) {
 
         if (hoveredElement == null)
@@ -232,19 +233,7 @@ public class ElementHitSystem extends SystemPackage {
         if (hoveredElementWindow == currentHoveredWindow)
             return;
 
-        ElementStateStruct exitState = hoveredElement.getHandle().getHoverExitState();
-
-        if (exitState != null) {
-            hoveredElement.setActiveHoverState(exitState);
-            if (exitState.hasAction())
-                executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
-                        exitState.getActionArg(), null);
-        }
-
-        hoveredElement.setHovered(false);
-        hoveredElement = null;
-        hoveredElementWindow = null;
-        windowManager.unlockHoveredWindow();
+        fireHoverExit();
     }
 
     // Hover Test \\

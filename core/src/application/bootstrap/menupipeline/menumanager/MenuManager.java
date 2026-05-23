@@ -40,10 +40,15 @@ public class MenuManager extends ManagerPackage {
      * directly by MenuRenderSystem each frame.
      *
      * Cursor capture is driven here as a side effect of menu lock state
-     * transitions — openMenu releases capture when a lock-input menu opens on
+     * transitions — openMenu releases capture when a lock_input menu opens on
      * the focused window, flushPendingClosedMenus reclaims it when the last
      * lock-input menu closes on the focused window. Only the focused window
      * may acquire or release capture so background tabs cannot affect input state.
+     *
+     * clearHoverIfWindowChanged is called unconditionally each frame before the
+     * raycast guard. This ensures hover exit fires whenever the hovered window
+     * changes — even when the incoming window has no raycast-locked menus and
+     * updateRaycast would not otherwise run.
      */
 
     // Internal
@@ -117,8 +122,6 @@ public class MenuManager extends ManagerPackage {
 
         WindowInstance hovered = windowManager.getHoveredWindow();
 
-        // Always fire hover exit when the window under the cursor changes,
-        // regardless of whether the incoming window has raycast-locked menus.
         hitSystem.clearHoverIfWindowChanged(hovered);
 
         if (hovered != null && hovered.getMenuListHandle().isRaycastLocked())
