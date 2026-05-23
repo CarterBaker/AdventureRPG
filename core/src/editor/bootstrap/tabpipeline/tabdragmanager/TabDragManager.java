@@ -22,47 +22,48 @@ public class TabDragManager extends ManagerPackage {
     /*
      * Owns the full tab drag lifecycle. Called on the first drag frame by
      * TabBranch via onTabDragUpdate to latch the source tab. All per-frame
-     * work after latch — ghost position, drop target resolution, release
-     * detection — runs in update() so the drag is never interrupted by hover
-     * state changes. Once draggedHandle is set, the drag continues until
+     * work after latch runs in update() so the drag is never interrupted by
+     * hover state changes. Once draggedHandle is set, the drag continues until
      * isMouseReleased(0) regardless of which window the cursor is over.
      *
-     * onTabDragUpdate is kept minimal: it latches the handle on the first
-     * call and does nothing else. Subsequent on_drag callbacks are ignored
-     * because update() owns the active drag loop.
+     * On latch: the handle is removed from the BSP immediately so remaining
+     * tabs reflow into the vacated space. Tab dimensions are cached from the
+     * tab window before pushRects() overwrites them. The actual tabWindow and
+     * contentWindow are then driven by updateDraggedWindows() each frame so
+     * the full chrome and content travel with the cursor. No separate drag
+     * ghost window is created — the real windows are the ghost.
      *
-     * Two ghost menus are managed:
-     * dragGhost — mimics the dragged tab, follows the cursor, lives on the
-     * main window at TAB_DRAG_GHOST_DEPTH. Always paints above
-     * the zone ghost.
-     * zoneGhost — half-panel drop preview on the target OS window, one depth
-     * below the drag ghost so the cursor ghost always reads on top.
-     * Opened and closed as the resolved drop zone changes each frame.
-     * Closed immediately on drop — it is a preview only.
+     * zoneGhost — half-panel drop preview rendered on the target OS window at
+     * one depth below TAB_DRAG_GHOST_DEPTH. Opened and closed as the resolved
+     * DropZone changes each frame. Closed immediately before drop — it is a
+     * preview only.
      *
-     * Ghost menus are plain visuals — TabGhost has no canvas_area, no close
-     * button, and no interactive elements. Ghost windows are flagged
-     * captureEligible=false and focusIndependent=true so they do not affect
-     * focus or cursor capture, but they still participate in hover detection.
-     * This is why all active drag logic lives in update() rather than relying
-     * on on_drag callbacks from a specific element.
-     *
-     * Drop resolution walks all OS windows each frame by native bounds to find
-     * which one the raw screen cursor is inside, then delegates to
-     * DockLayoutSystem.findLeafAt() to get the leaf, then classifies the
-     * cursor position within that leaf into a DropZone. The center region
-     * (inner 50%) resolves to the nearest edge zone so every pixel of the
-     * leaf has a defined destination.
+     * Drop resolution walks only OS windows (hasNativeHandle) each frame to
+     * find which one contains the raw screen cursor, then delegates to
+     * DockLayoutSystem.findLeafAt() for the leaf, then classifies the cursor
+     * position within that leaf into a DropZone. The center region resolves
+     * to the nearest edge zone so every pixel of a leaf has a defined
+     * destination.
      *
      * On release:
-     * 1. Remove handle from source BSP. Auto-close source OS window if empty
-     * and not the main window.
-     * 2a. If drop target exists — addTabToLeaf on the target leaf.
-     * 2b. If no drop target — open a new secondary OS window for the handle.
-     * 3. pushRects() propagates all composite rects.
+     * 1. Check whether the source OS window is now empty, excluding the
+     *    dragged handle itself (which is about to be re-inserted elsewhere).
+     *    Close it if so and it is not the main window.
+     * 2a. Drop target exists — addTabToLeaf on the resolved leaf.
+     * 2b. No drop target — open a new secondary OS window for the handle.
+     * 3. pushRects() propagates all composite rects so the re-inserted tab
+     *    lands at its final BSP-assigned position.
+     * 4. clearState() resets all drag fields.
      *
-     * grabOffsetX/Y is the cursor position within the dragged tab window at
-     * latch time so the ghost does not snap to the cursor corner on pickup.
+     * grabOffsetX/Y is the cursor offset within the dragged tab window at
+     * latch time so the content does not snap to the cursor corner on pickup.
+     * dragW/H caches the tab dimensions before pushRects() clears them.
+     *
+     * Note: when a tab is dropped onto a different OS window the existing
+     * tabWindow and contentWindow keep their original composite target. For
+     * single-OS-window editors this is invisible. Multi-monitor tear-off will
+     * need setCompositeTarget() support on WindowInstance and a re-parent step
+     * in executeDrop before pushRects().
      */
 
     // Constants
@@ -80,12 +81,10 @@ public class TabDragManager extends ManagerPackage {
     private TabHandle draggedHandle;
     private float grabOffsetX;
     private float grabOffsetY;
+    private float dragW;
+    private float dragH;
 
-    // Drag ghost — follows cursor on main window
-    private MenuInstance dragGhost;
-    private WindowInstance dragGhostWindow;
-
-    // Zone ghost — preview on target window, one depth below drag ghost
+    // Zone ghost — drop-target preview on the target OS window
     private MenuInstance zoneGhost;
     private WindowInstance zoneGhostWindow;
 
@@ -123,7 +122,7 @@ public class TabDragManager extends ManagerPackage {
         float screenX = EngineContext.input.getMouseX();
         float screenY = EngineContext.input.getMouseY();
 
-        updateDragGhost(screenX, screenY);
+        updateDraggedWindows(screenX, screenY);
 
         DropTargetStruct target = resolveDropTarget(screenX, screenY);
         updateZoneGhost(target);
@@ -153,63 +152,53 @@ public class TabDragManager extends ManagerPackage {
         if (handle == null)
             return;
 
+        WindowInstance tabWindow = handle.getTabContext().getWindow();
+
+        float screenX = EngineContext.input.getMouseX();
+        float screenY = EngineContext.input.getMouseY();
+        grabOffsetX = screenX - tabWindow.getCompositeX();
+        grabOffsetY = screenY - tabWindow.getCompositeY();
+
+        // Cache tab dimensions before BSP reflow overwrites the composite rect.
+        dragW = tabWindow.getCompositeW();
+        dragH = tabWindow.getCompositeH();
+
         draggedHandle = handle;
 
-        float screenX = EngineContext.input.getMouseX();
-        float screenY = EngineContext.input.getMouseY();
-        grabOffsetX = screenX - sourceWindow.getCompositeX();
-        grabOffsetY = screenY - sourceWindow.getCompositeY();
+        // Remove from BSP immediately so remaining tabs reflow into the gap.
+        tabManager.getDockLayoutSystem().removeTab(handle);
+        tabManager.pushRects();
 
-        openDragGhost(sourceWindow);
+        // Place the actual windows at the cursor on the first frame.
+        updateDraggedWindows(screenX, screenY);
     }
 
-    // Drag Ghost \\
+    // Dragged Window Tracking \\
 
-    private void openDragGhost(WindowInstance sourceWindow) {
-
-        WindowInstance mainWindow = windowManager.getMainWindow();
-
-        dragGhostWindow = windowManager.createLogicalWindow(
-                EngineSetting.TAB_DRAG_GHOST_WINDOW_TITLE, mainWindow);
-        dragGhostWindow.setDepth(EngineSetting.TAB_DRAG_GHOST_DEPTH);
-        dragGhostWindow.setCaptureEligible(false);
-        dragGhostWindow.setFocusIndependent(true);
-
-        float w = sourceWindow.getCompositeW();
-        float h = sourceWindow.getCompositeH();
-        float screenX = EngineContext.input.getMouseX();
-        float screenY = EngineContext.input.getMouseY();
-
-        dragGhostWindow.setCompositeRect(
-                screenX - grabOffsetX,
-                screenY - grabOffsetY,
-                w, h);
-        dragGhostWindow.resize((int) w, (int) h);
-
-        FboInstance fbo = fboManager.cloneFbo(
-                application.runtime.RuntimeSetting.FBO_UI, dragGhostWindow);
-        menuManager.setMenuTargetFbo(dragGhostWindow, fbo);
-
-        dragGhost = menuManager.openMenu(menuTabGhost, dragGhostWindow);
-    }
-
-    private void updateDragGhost(float screenX, float screenY) {
-
-        if (dragGhostWindow == null)
-            return;
+    /*
+     * Moves both the chrome window and the content window each frame so the
+     * full tab — toolbar, chrome menu, and content — travels with the cursor.
+     * Both windows keep their existing composite target (the source OS window);
+     * their new composite rects simply describe where within that target they
+     * render.
+     */
+    private void updateDraggedWindows(float screenX, float screenY) {
 
         float x = screenX - grabOffsetX;
         float y = screenY - grabOffsetY;
-        float w = dragGhostWindow.getCompositeW();
-        float h = dragGhostWindow.getCompositeH();
 
-        dragGhostWindow.setCompositeRect(x, y, w, h);
+        WindowInstance tabWindow = draggedHandle.getTabContext().getWindow();
+        WindowInstance contentWindow = draggedHandle.getContentContext().getWindow();
+
+        tabWindow.setCompositeRect(x, y, dragW, dragH);
+        contentWindow.setCompositeRect(x, y, dragW, dragH);
     }
 
     // Zone Ghost \\
 
     private void updateZoneGhost(DropTargetStruct target) {
 
+        // Nothing changed — keep the existing ghost.
         if (target != null && target.matches(lastDropTarget))
             return;
 
@@ -236,13 +225,6 @@ public class TabDragManager extends ManagerPackage {
         float ghostY = layoutSystem.zoneY(leafY, leafH, zone);
         float ghostW = layoutSystem.zoneW(leafW, zone);
         float ghostH = layoutSystem.zoneH(leafH, zone);
-
-        float osX = targetOsWindow.hasCompositeRect()
-                ? targetOsWindow.getCompositeX()
-                : 0f;
-        float osY = targetOsWindow.hasCompositeRect()
-                ? targetOsWindow.getCompositeY()
-                : 0f;
 
         zoneGhostWindow = windowManager.createLogicalWindow(
                 EngineSetting.TAB_ZONE_GHOST_WINDOW_TITLE, targetOsWindow);
@@ -290,6 +272,7 @@ public class TabDragManager extends ManagerPackage {
 
             WindowInstance w = (WindowInstance) elements[i];
 
+            // Only consider real OS windows, not logical/ghost windows.
             if (!w.hasNativeHandle())
                 continue;
 
@@ -329,6 +312,7 @@ public class TabDragManager extends ManagerPackage {
                     && sy >= w.getCompositeY()
                     && sy < w.getCompositeY() + w.getCompositeH();
 
+        // Window fills its entire monitor — always a candidate.
         return true;
     }
 
@@ -356,10 +340,10 @@ public class TabDragManager extends ManagerPackage {
         if (relY > 1f - edge)
             return DropZone.BOTTOM;
 
-        // Center — resolve to nearest edge
-        float distLeft = relX;
-        float distRight = 1f - relX;
-        float distTop = relY;
+        // Center region — resolve to nearest edge so every pixel has a destination.
+        float distLeft   = relX;
+        float distRight  = 1f - relX;
+        float distTop    = relY;
         float distBottom = 1f - relY;
 
         float minH = Math.min(distLeft, distRight);
@@ -383,12 +367,13 @@ public class TabDragManager extends ManagerPackage {
         DropTargetStruct target = lastDropTarget;
 
         WindowInstance sourceTabWindow = draggedHandle.getTabContext().getWindow();
-        WindowInstance sourceOsWindow = resolveOsWindow(sourceTabWindow);
+        WindowInstance sourceOsWindow  = resolveOsWindow(sourceTabWindow);
 
-        tabManager.getDockLayoutSystem().removeTab(draggedHandle);
-
-        boolean sourceIsMain = sourceOsWindow == windowManager.getMainWindow();
-        boolean sourceNowEmpty = tabManager.isOsWindowEmpty(sourceOsWindow);
+        // The handle was already removed from the BSP at latch time.
+        // Check whether any other tab still composites to the source OS window
+        // before deciding to close it.
+        boolean sourceIsMain   = sourceOsWindow == windowManager.getMainWindow();
+        boolean sourceNowEmpty = isSourceOsWindowEmpty(sourceOsWindow);
 
         if (!sourceIsMain && sourceNowEmpty)
             tabManager.closeOsWindow(sourceOsWindow);
@@ -404,27 +389,47 @@ public class TabDragManager extends ManagerPackage {
         clearState();
     }
 
+    /*
+     * Returns true if no tab other than the currently dragged one has its
+     * chrome window compositing to the given OS window. The dragged handle is
+     * excluded because it is about to be re-inserted somewhere else and should
+     * not prevent an empty source window from being closed.
+     */
+    private boolean isSourceOsWindowEmpty(WindowInstance osWindow) {
+
+        ObjectArrayList<TabHandle> openTabs = tabManager.getOpenTabs();
+        Object[] elements = openTabs.elements();
+        int size = openTabs.size();
+
+        for (int i = 0; i < size; i++) {
+
+            TabHandle handle = (TabHandle) elements[i];
+
+            if (handle == draggedHandle)
+                continue;
+
+            WindowInstance tabWindow = handle.getTabContext().getWindow();
+            WindowInstance composite = tabWindow.getCompositeTarget();
+
+            if (composite == osWindow)
+                return false;
+        }
+
+        return true;
+    }
+
     // State Cleanup \\
 
     private void clearState() {
 
         closeZoneGhost();
 
-        if (dragGhost != null) {
-            menuManager.closeMenu(dragGhost);
-            dragGhost = null;
-        }
-
-        if (dragGhostWindow != null) {
-            menuManager.setMenuTargetFbo(dragGhostWindow, null);
-            windowManager.removeWindow(dragGhostWindow);
-            dragGhostWindow = null;
-        }
-
         draggedHandle = null;
         lastDropTarget = null;
         grabOffsetX = 0f;
         grabOffsetY = 0f;
+        dragW       = 0f;
+        dragH       = 0f;
     }
 
     // Utility \\
