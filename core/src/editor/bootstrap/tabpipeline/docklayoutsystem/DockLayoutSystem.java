@@ -1,7 +1,8 @@
-package editor.bootstrap.docklayoutsystem;
+package editor.bootstrap.tabpipeline.docklayoutsystem;
 
-import editor.bootstrap.docknode.DockNodeStruct;
-import editor.bootstrap.tab.TabHandle;
+import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
+import editor.bootstrap.tabpipeline.tab.TabHandle;
+import editor.bootstrap.tabpipeline.util.DropZone;
 import engine.root.SystemPackage;
 
 public class DockLayoutSystem extends SystemPackage {
@@ -9,6 +10,8 @@ public class DockLayoutSystem extends SystemPackage {
     /*
      * Manages the dock BSP tree. addTab() always targets the largest leaf and
      * splits it — wide panels split left/right, tall panels split top/bottom.
+     * addTabToLeaf() performs a directed split on a specific leaf at a given
+     * DropZone so tab drag-and-drop can place tabs precisely.
      * removeTab() prunes empty leaves and collapses redundant split nodes.
      * computeRects() propagates the dock canvas bounds down the tree each frame
      * so every leaf knows its screen rect without storing stale state.
@@ -17,6 +20,10 @@ public class DockLayoutSystem extends SystemPackage {
      * where its divider sits. findDividerAt() walks the tree bottom-up so the
      * innermost node always wins when dividers are nested. setSplitRatio()
      * clamps and writes the ratio; propagateRect() reads it.
+     *
+     * findLeafAt() walks the tree by rect containment and returns the leaf
+     * whose bounds contain the given screen coordinate. Used by TabDragSystem
+     * each frame to resolve which leaf the cursor is over.
      */
 
     private static final float DIVIDER_HIT_TOLERANCE = 6f;
@@ -43,7 +50,15 @@ public class DockLayoutSystem extends SystemPackage {
             return;
         }
 
-        splitNode(findLargestLeaf(root), handle);
+        splitNode(findLargestLeaf(root), handle, resolveSplitDirection(findLargestLeaf(root)));
+    }
+
+    public void addTabToLeaf(DockNodeStruct leaf, TabHandle handle, DropZone zone) {
+
+        if (leaf == null || handle == null || zone == null)
+            return;
+
+        splitNode(leaf, handle, zone);
     }
 
     public void removeTab(TabHandle handle) {
@@ -106,10 +121,12 @@ public class DockLayoutSystem extends SystemPackage {
             return null;
 
         DockNodeStruct hit = findDividerAt(node.getFirst(), sx, sy);
+
         if (hit != null)
             return hit;
 
         hit = findDividerAt(node.getSecond(), sx, sy);
+
         if (hit != null)
             return hit;
 
@@ -132,6 +149,38 @@ public class DockLayoutSystem extends SystemPackage {
 
     public void setSplitRatio(DockNodeStruct node, float ratio) {
         node.setRatio(Math.max(RATIO_MIN, Math.min(RATIO_MAX, ratio)));
+    }
+
+    // Leaf At Screen Point \\
+
+    public DockNodeStruct findLeafAt(float screenX, float screenY) {
+        return findLeafAt(root, screenX, screenY);
+    }
+
+    private DockNodeStruct findLeafAt(DockNodeStruct node, float sx, float sy) {
+
+        if (node == null)
+            return null;
+
+        if (!containsPoint(node, sx, sy))
+            return null;
+
+        if (!node.isSplit())
+            return node;
+
+        DockNodeStruct hit = findLeafAt(node.getFirst(), sx, sy);
+
+        if (hit != null)
+            return hit;
+
+        return findLeafAt(node.getSecond(), sx, sy);
+    }
+
+    private boolean containsPoint(DockNodeStruct node, float sx, float sy) {
+        return sx >= node.getX()
+                && sx < node.getX() + node.getW()
+                && sy >= node.getY()
+                && sy < node.getY() + node.getH();
     }
 
     // Tree Traversal \\
@@ -158,6 +207,7 @@ public class DockLayoutSystem extends SystemPackage {
             return node.getTabs().contains(handle) ? node : null;
 
         DockNodeStruct result = findLeaf(node.getFirst(), handle);
+
         return result != null ? result : findLeaf(node.getSecond(), handle);
     }
 
@@ -186,9 +236,14 @@ public class DockLayoutSystem extends SystemPackage {
 
     // Split / Merge \\
 
-    private void splitNode(DockNodeStruct leaf, TabHandle incoming) {
+    private DropZone resolveSplitDirection(DockNodeStruct leaf) {
+        return leaf.getH() > leaf.getW() ? DropZone.BOTTOM : DropZone.RIGHT;
+    }
 
-        boolean splitHorizontal = leaf.getH() > leaf.getW();
+    private void splitNode(DockNodeStruct leaf, TabHandle incoming, DropZone zone) {
+
+        boolean splitHorizontal = zone == DropZone.TOP || zone == DropZone.BOTTOM;
+        boolean incomingIsSecond = zone == DropZone.RIGHT || zone == DropZone.BOTTOM;
 
         DockNodeStruct preserved = new DockNodeStruct();
         preserved.getTabs().addAll(leaf.getTabs());
@@ -201,8 +256,15 @@ public class DockLayoutSystem extends SystemPackage {
         leaf.setSplitHorizontal(splitHorizontal);
         leaf.setTabs(null);
         leaf.setActiveIndex(0);
-        leaf.setFirst(preserved);
-        leaf.setSecond(created);
+        leaf.setRatio(0.5f);
+
+        if (incomingIsSecond) {
+            leaf.setFirst(preserved);
+            leaf.setSecond(created);
+        } else {
+            leaf.setFirst(created);
+            leaf.setSecond(preserved);
+        }
     }
 
     private DockNodeStruct pruneTab(DockNodeStruct node, TabHandle handle) {
@@ -222,8 +284,10 @@ public class DockLayoutSystem extends SystemPackage {
 
         if (node.getFirst() == null && node.getSecond() == null)
             return null;
+
         if (node.getFirst() == null)
             return node.getSecond();
+
         if (node.getSecond() == null)
             return node.getFirst();
 

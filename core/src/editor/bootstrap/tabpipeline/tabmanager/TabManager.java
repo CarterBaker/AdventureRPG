@@ -1,12 +1,12 @@
-package editor.bootstrap.tabmanager;
+package editor.bootstrap.tabpipeline.tabmanager;
 
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import editor.bootstrap.docklayoutsystem.DockLayoutSystem;
-import editor.bootstrap.tab.TabContext;
-import editor.bootstrap.tab.TabData;
-import editor.bootstrap.tab.TabHandle;
+import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
+import editor.bootstrap.tabpipeline.tab.TabContext;
+import editor.bootstrap.tabpipeline.tab.TabData;
+import editor.bootstrap.tabpipeline.tab.TabHandle;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -22,8 +22,7 @@ public class TabManager extends ManagerPackage {
      * Both the TabContext shell and the content context are created as peers via
      * internal.createContext() — no parent/child nesting. The returned references
      * are wired via linkContent() so TabContext.onResize() can cascade canvas
-     * bounds down to the content window, the same way EditorTabCompositorSystem
-     * cascades editor canvas bounds down to tab windows.
+     * bounds down to the content window.
      * Notifies DockLayoutSystem on every open and close so the BSP tree stays
      * in sync with the live tab set.
      *
@@ -31,31 +30,28 @@ public class TabManager extends ManagerPackage {
      * class. A per-class counter produces "Preview 1", "Preview 2", etc. so
      * any number of tabs of the same type can be open simultaneously.
      *
-     * FboRenderSystem sort key = windowDepth * LAYER_STRIDE + layer, so this
-     * ordering is automatically enforced each frame without any manual sorting
-     * at this level.
-     *
      * Rect propagation fires only on structural changes — tab opened, tab
      * closed, dock canvas resized. The compositor calls setDockRect() on
-     * resize. openTab() and closeTab() call pushRects() directly using the
-     * cached bounds so every tab window always holds a valid composite rect.
+     * resize. openTab() and closeTab() call pushRects() directly.
      *
-     * Authority resolution: InputSystem is kernel-level and cannot reach up to
-     * TabManager, so the dependency is inverted. TabManager pushes a resolver
-     * lambda into InputSystem once in get() — the kernel sees only
-     * WindowInstance in and WindowInstance out. getTabHandleForWindow() drives
-     * that resolver and is also used by the lock-release listener registered on
-     * each content window's MenuListHandle in openTab(), so capture is
-     * automatically restored when a lock_input menu closes without a re-click.
+     * Authority resolution: TabManager pushes a resolver lambda into InputSystem
+     * once in get() so the kernel never names any editor type.
      *
-     * pushRects() is the sole authority for composite rect position on both the
-     * tab chrome window and the content window. TabContext.onResize() must only
-     * forward canvas dimensions (w, h) to the content context for rendering —
-     * it must never call setCompositeRect on the content window because it does
-     * not have authoritative absolute position. Without the correct (x, y) on
-     * the content window, WindowManager.syncHoveredWindow() cannot resolve
-     * hover into it, blocking focus, input routing, and menu raycast for every
-     * tab beyond the first.
+     * getDockLayoutSystem() is package-accessible to TabDragSystem so drag
+     * resolution can call findLeafAt() and addTabToLeaf() without TabManager
+     * re-exposing every DockLayoutSystem method.
+     *
+     * isOsWindowEmpty() walks open tabs and checks whether any tab's chrome
+     * window resolves to the given OS window. Used by TabDragSystem after
+     * removeTab() to decide whether to close a vacated secondary window.
+     *
+     * closeOsWindow() destroys the platform window and removes all logical
+     * windows that composite into it. Safe to call only when the window has
+     * no remaining tabs.
+     *
+     * openSecondaryWindowForTab() opens a new OS window and registers the
+     * given handle into a fresh BSP tree rooted in that window. Called by
+     * TabDragSystem when a tab is dropped outside all existing OS windows.
      */
 
     // Palette
@@ -65,8 +61,7 @@ public class TabManager extends ManagerPackage {
     // Active
     private ObjectArrayList<TabHandle> openTabs;
 
-    // Counter — tracks how many instances of each content class have been
-    // opened so every generated title is unique for the lifetime of the session.
+    // Counter
     private Object2IntOpenHashMap<Class<? extends ContextPackage>> classInstanceCounter;
 
     // Dock Rect
@@ -106,9 +101,6 @@ public class TabManager extends ManagerPackage {
         dockLayoutSystem = get(DockLayoutSystem.class);
         inputManager = get(InputManager.class);
 
-        // Invert the tab→input dependency: push a resolver lambda down into the
-        // kernel so InputSystem can map a focused tab chrome window to its content
-        // window without importing TabManager.
         inputManager.setAuthorityResolver(window -> {
             TabHandle tab = getTabHandleForWindow(window);
             return tab != null ? tab.getWindow() : window;
@@ -148,32 +140,22 @@ public class TabManager extends ManagerPackage {
 
         WindowInstance mainWindow = windowManager.getMainWindow();
 
-        // Tab window is depth 1 — chrome draws on top of the editor base layer.
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, mainWindow);
         tabWindow.setDepth(1);
 
         TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
 
-        // Content window is depth 2 — draws on top of chrome.
         WindowInstance contentWindow = windowManager.createLogicalWindow(title, mainWindow);
         contentWindow.setDepth(2);
 
         ContextPackage contentContext = internal.createContext(contentClass, contentWindow);
 
-        // Bridge the two peer contexts so TabContext.onResize() can cascade
-        // canvas dimensions down to the content window — same pattern as the
-        // compositor cascading editor canvas bounds down to tab windows.
-        // TabContext.onResize() must only forward (w, h); composite position
-        // is owned exclusively by pushRects().
         tabContext.linkContent(contentContext);
 
         TabHandle handle = create(TabHandle.class);
         handle.constructor(new TabData(title, contentClass));
         handle.mount(tabContext, contentContext);
 
-        // Register a lock-release listener on the content window so InputSystem
-        // can restore capture automatically when a lock_input menu (e.g. inventory)
-        // closes — without requiring a re-click from the user.
         contentWindow.getMenuListHandle().setLockReleaseListener(
                 () -> inputManager.onInputLockReleased(contentWindow));
 
@@ -212,10 +194,6 @@ public class TabManager extends ManagerPackage {
         windowManager.removeWindow(contentWindow);
         windowManager.removeWindow(tabWindow);
 
-        // The hover lock is set by ElementHitSystem when the cursor enters the
-        // close button. The tab is destroyed before hover exit fires, so the lock
-        // is never released. Unlock here so syncHoveredWindow runs next frame and
-        // hover resolves to a valid window.
         windowManager.unlockHoveredWindow();
 
         int tabID = getTabIDFromTabName(handle.getTabTitle());
@@ -224,6 +202,82 @@ public class TabManager extends ManagerPackage {
         openTabs.remove(handle);
 
         pushRects();
+    }
+
+    public void openSecondaryWindowForTab(TabHandle handle) {
+
+        if (handle == null)
+            throwException("Cannot open secondary window for null tab handle.");
+
+        WindowInstance osWindow = windowManager.openWindow(
+                EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY,
+                editor.runtime.editor.EditorWindowSecondary.class);
+
+        WindowInstance tabWindow = windowManager.createLogicalWindow(
+                handle.getTabTitle(), osWindow);
+        tabWindow.setDepth(1);
+
+        TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
+
+        WindowInstance contentWindow = windowManager.createLogicalWindow(
+                handle.getTabTitle(), osWindow);
+        contentWindow.setDepth(2);
+
+        tabContext.linkContent(handle.getContentContext());
+        handle.mount(tabContext, handle.getContentContext());
+
+        contentWindow.getMenuListHandle().setLockReleaseListener(
+                () -> inputManager.onInputLockReleased(contentWindow));
+
+        dockLayoutSystem.addTab(handle);
+        pushRects();
+    }
+
+    public boolean isOsWindowEmpty(WindowInstance osWindow) {
+
+        Object[] elements = openTabs.elements();
+        int size = openTabs.size();
+
+        for (int i = 0; i < size; i++) {
+
+            TabHandle handle = (TabHandle) elements[i];
+            WindowInstance tabWindow = handle.getTabContext().getWindow();
+            WindowInstance composite = tabWindow.getCompositeTarget();
+
+            if (composite == osWindow)
+                return false;
+        }
+
+        return true;
+    }
+
+    public void closeOsWindow(WindowInstance osWindow) {
+
+        if (osWindow == null)
+            return;
+
+        if (osWindow == windowManager.getMainWindow())
+            return;
+
+        ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
+        ObjectArrayList<WindowInstance> toRemove = new ObjectArrayList<>();
+
+        Object[] elements = windows.elements();
+        int size = windows.size();
+
+        for (int i = 0; i < size; i++) {
+            WindowInstance w = (WindowInstance) elements[i];
+            if (w.getCompositeTarget() == osWindow)
+                toRemove.add(w);
+        }
+
+        Object[] removeElements = toRemove.elements();
+        int removeSize = toRemove.size();
+
+        for (int i = 0; i < removeSize; i++)
+            windowManager.removeWindow((WindowInstance) removeElements[i]);
+
+        windowManager.removeWindow(osWindow);
     }
 
     public void setDockRect(float x, float y, float w, float h) {
@@ -258,16 +312,7 @@ public class TabManager extends ManagerPackage {
             WindowInstance tabWindow = handle.getTabContext().getWindow();
             tabWindow.setCompositeRect(x, y, w, h);
             tabWindow.resize((int) w, (int) h);
-            // ↑ resize cascades through TabContext.onResize → contentWindow.resize()
-            // → contentContext.onResize(). Any composite rect reset inside
-            // contentContext.onResize() fires here, before the line below.
 
-            // Set composite rect on the content window after the cascade so
-            // contentContext.onResize() cannot overwrite the correct (x, y).
-            // The content window must have its real screen position for
-            // WindowManager.syncHoveredWindow() to route hover into it —
-            // without this every content window sits at (0, 0) and
-            // WindowManager's tie-break permanently locks hover to tab 1.
             WindowInstance contentWindow = handle.getContentContext().getWindow();
             contentWindow.setCompositeRect(x, y, w, h);
         }
@@ -315,5 +360,9 @@ public class TabManager extends ManagerPackage {
 
     public ObjectArrayList<TabHandle> getOpenTabs() {
         return openTabs;
+    }
+
+    public DockLayoutSystem getDockLayoutSystem() {
+        return dockLayoutSystem;
     }
 }

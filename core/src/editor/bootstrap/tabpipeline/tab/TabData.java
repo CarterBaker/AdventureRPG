@@ -1,4 +1,4 @@
-package editor.bootstrap.tab;
+package editor.bootstrap.tabpipeline.tab;
 
 import engine.root.ContextPackage;
 import engine.root.DataPackage;

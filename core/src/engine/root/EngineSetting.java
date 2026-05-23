@@ -312,6 +312,7 @@ public class EngineSetting {
         // Menu \\
 
         public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";
+        public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
         public static final String MENU_EDITOR_BASE = "editor/EditorWindow/Base";
         public static final String MENU_EDITOR_TOOLBAR = "editor/EditorWindow/Toolbar";
         public static final String WINDOW_TITLE_EDITOR_TOOLBAR = "Editor Toolbar";
@@ -325,4 +326,11 @@ public class EngineSetting {
         public static final String ELEMENT_DEFAULT_POSITION = "0%";
         public static final String ELEMENT_DEFAULT_SIZE = "100%";
         public static final int MAX_MASK_DEPTH = 8;
+
+        // Tab Drag \\
+
+        public static final float TAB_DRAG_EDGE_FRACTION = 0.25f;
+        public static final int TAB_DRAG_GHOST_DEPTH = 4;
+        public static final String TAB_DRAG_GHOST_WINDOW_TITLE = "TabDragGhost";
+        public static final String TAB_ZONE_GHOST_WINDOW_TITLE = "TabZoneGhost";
 }

@@ -1,7 +1,6 @@
 package editor.bootstrap;
 
-import editor.bootstrap.docklayoutsystem.DockLayoutSystem;
-import editor.bootstrap.tabmanager.TabManager;
+import editor.bootstrap.tabpipeline.TabPipeline;
 import engine.root.AssemblyPackage;
 
 public class BootstrapAssembly extends AssemblyPackage {
@@ -12,9 +11,9 @@ public class BootstrapAssembly extends AssemblyPackage {
      */
 
     // Internal \\
+
     @Override
     protected void create() {
-        create(TabManager.class);
-        create(DockLayoutSystem.class);
+        create(TabPipeline.class);
     }
 }

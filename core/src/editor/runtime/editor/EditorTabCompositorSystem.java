@@ -3,9 +3,9 @@ package editor.runtime.editor;
 import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
-import editor.bootstrap.tab.TabContext;
-import editor.bootstrap.tab.TabHandle;
-import editor.bootstrap.tabmanager.TabManager;
+import editor.bootstrap.tabpipeline.tab.TabContext;
+import editor.bootstrap.tabpipeline.tab.TabHandle;
+import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

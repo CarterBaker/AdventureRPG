@@ -1,4 +1,4 @@
-package editor.bootstrap.tab;
+package editor.bootstrap.tabpipeline.tab;
 
 import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;

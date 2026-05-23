@@ -1,4 +1,4 @@
-package editor.bootstrap.tab;
+package editor.bootstrap.tabpipeline.tab;
 
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ContextPackage;

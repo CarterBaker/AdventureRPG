@@ -1,6 +1,6 @@
-package editor.bootstrap.docknode;
+package editor.bootstrap.tabpipeline.docknode;
 
-import editor.bootstrap.tab.TabHandle;
+import editor.bootstrap.tabpipeline.tab.TabHandle;
 import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

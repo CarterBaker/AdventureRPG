@@ -6,10 +6,11 @@ import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import editor.bootstrap.docklayoutsystem.DockLayoutSystem;
-import editor.bootstrap.docknode.DockNodeStruct;
-import editor.bootstrap.tab.TabHandle;
-import editor.bootstrap.tabmanager.TabManager;
+import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
+import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
+import editor.bootstrap.tabpipeline.tab.TabHandle;
+import editor.bootstrap.tabpipeline.tabdragmanager.TabDragManager;
+import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.runtime.editor.EditorWindowSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineContext;
@@ -19,51 +20,50 @@ public class TabBranch extends BranchPackage {
     /*
      * Menu event handlers for tab chrome menus (TabFrame).
      *
-     * Each TabFrame menu instance is owned by a TabContext whose window is
-     * registered in TabManager. Resolving the MenuInstance back to a TabHandle
-     * goes through getTabHandleForWindow() — the same resolver that InputSystem
-     * uses for authority mapping — so there is no separate lookup table to
-     * maintain here.
+     * onTabFrameDrag distinguishes two gesture types on the first drag frame
+     * by checking findDividerAt before latching anything. If a divider is under
+     * the cursor the gesture is a resize and is handled identically to before.
+     * If no divider is found the gesture is a tab drag and is delegated to
+     * TabDragSystem for every subsequent frame. The divider latch and tab drag
+     * flag are mutually exclusive — whichever is set on frame one is held for
+     * the life of the gesture.
      *
-     * closeTab() is intentionally a no-op when the handle is not found rather
-     * than throwing, because a rapid double-click could fire the handler a
-     * second time after the tab is already gone.
+     * isDividerDrag is set to true on the first frame a divider is found and
+     * held until mouse release, matching the dragNode pattern. isTabDrag mirrors
+     * this for the tab drag path. Both are cleared on release.
      *
      * Hover callbacks receive null for MenuInstance from ElementHitSystem so
      * $parent cannot be used. The hovered window is resolved directly via
-     * WindowManager instead. window_frame covers the full tab so window bounds
-     * are used for edge detection — no element lookup needed.
+     * WindowManager instead.
      *
-     * getHoverMouseX/Y is used in checkResizeCursor rather than getMouseX/Y.
-     * Hover callbacks fire based on spatial position and must not gate on focus
-     * — an unfocused tab still needs correct cursor feedback when the mouse is
-     * over its edge.
+     * getHoverMouseX/Y is used in checkResizeCursor — hover callbacks must not
+     * gate on focus so an unfocused tab still shows correct cursor feedback.
      *
-     * Mouse Y from GLFW is already converted to Y-up in Lwjgl3Input so no flip
-     * is needed when comparing against window bounds.
-     *
-     * onTabFrameDrag reads raw screen-space coords directly from
-     * EngineContext.input
-     * so window boundaries, hover state, and focus cannot interrupt the gesture.
-     * BSP node bounds are in screen space so no conversion is needed.
-     *
-     * dragNode is latched on the first drag frame a divider is found and held
-     * for the duration of the gesture. Re-testing findDividerAt every frame
-     * would drop the drag the moment the cursor moves outside the hit tolerance
-     * band. Since on_drag only fires while the button is held, the latch is
-     * implicitly released when the gesture ends and onTabFrameDrag stops firing.
+     * onTabFrameDragEnd is called on the release frame inside onTabFrameDrag
+     * before clearing local state, so TabDragSystem receives the release signal
+     * before the branch resets.
      */
 
+    // Internal
     private TabManager tabManager;
     private WindowManager windowManager;
     private InputManager inputManager;
     private SpriteManager spriteManager;
     private DockLayoutSystem dockLayoutSystem;
+    private TabDragManager tabDragManager;
 
+    // Cursor sprites
     private SpriteHandle cursorResizeH;
     private SpriteHandle cursorResizeV;
 
+    // Divider drag state
     private DockNodeStruct dragNode;
+    private boolean isDividerDrag;
+
+    // Tab drag state
+    private boolean isTabDrag;
+
+    // Internal \\
 
     @Override
     protected void get() {
@@ -72,6 +72,7 @@ public class TabBranch extends BranchPackage {
         this.inputManager = get(InputManager.class);
         this.spriteManager = get(SpriteManager.class);
         this.dockLayoutSystem = get(DockLayoutSystem.class);
+        this.tabDragManager = get(TabDragManager.class);
         this.cursorResizeH = spriteManager.getSpriteHandleFromSpriteName(EditorWindowSetting.CURSOR_RESIZE_H);
         this.cursorResizeV = spriteManager.getSpriteHandleFromSpriteName(EditorWindowSetting.CURSOR_RESIZE_V);
     }
@@ -114,14 +115,44 @@ public class TabBranch extends BranchPackage {
 
     public void onTabFrameDrag() {
 
-        float screenX = EngineContext.input.getMouseX();
-        float screenY = EngineContext.input.getMouseY();
+        boolean released = EngineContext.input.isMouseReleased(0);
 
-        if (dragNode == null)
+        if (!isDividerDrag && !isTabDrag) {
+
+            float screenX = EngineContext.input.getMouseX();
+            float screenY = EngineContext.input.getMouseY();
+
             dragNode = dockLayoutSystem.findDividerAt(screenX, screenY);
+
+            if (dragNode != null)
+                isDividerDrag = true;
+            else
+                isTabDrag = true;
+        }
+
+        if (isDividerDrag) {
+            handleDividerDrag(released);
+            return;
+        }
+
+        handleTabDrag(released);
+    }
+
+    // Divider Drag \\
+
+    private void handleDividerDrag(boolean released) {
+
+        if (released) {
+            dragNode = null;
+            isDividerDrag = false;
+            return;
+        }
 
         if (dragNode == null)
             return;
+
+        float screenX = EngineContext.input.getMouseX();
+        float screenY = EngineContext.input.getMouseY();
 
         float ratio = dragNode.isSplitHorizontal()
                 ? (screenY - dragNode.getY()) / dragNode.getH()
@@ -129,6 +160,18 @@ public class TabBranch extends BranchPackage {
 
         dockLayoutSystem.setSplitRatio(dragNode, ratio);
         tabManager.pushRects();
+    }
+
+    // Tab Drag \\
+
+    private void handleTabDrag(boolean released) {
+
+        WindowInstance window = windowManager.getHoveredWindow();
+
+        tabDragManager.onTabDragUpdate(window);
+
+        if (released)
+            isTabDrag = false;
     }
 
     // Resize Cursor \\
