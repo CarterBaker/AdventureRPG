@@ -20,17 +20,22 @@ public class TabBranch extends BranchPackage {
     /*
      * Menu event handlers for tab chrome menus (TabFrame).
      *
-     * onTabFrameDrag distinguishes two gesture types on the first drag frame
-     * by checking findDividerAt before latching anything. If a divider is under
-     * the cursor the gesture is a resize and is handled identically to before.
-     * If no divider is found the gesture is a tab drag and is delegated to
-     * TabDragSystem for every subsequent frame. The divider latch and tab drag
-     * flag are mutually exclusive — whichever is set on frame one is held for
-     * the life of the gesture.
+     * Drag concerns are separated by element:
      *
-     * isDividerDrag is set to true on the first frame a divider is found and
-     * held until mouse release, matching the dragNode pattern. isTabDrag mirrors
-     * this for the tab drag path. Both are cleared on release.
+     * window_frame (on_drag → onTabFrameDrag):
+     * Handles BSP divider resize only. On the first drag frame it calls
+     * findDividerAt — if no divider is found the gesture is ignored entirely,
+     * so dragging the tab background never accidentally triggers a tab move.
+     * Window-edge resize is handled natively by the OS.
+     *
+     * tab_toolbar (on_drag → onTabToolbarDrag):
+     * Delegates entirely to TabDragManager. The manager latches the handle on
+     * the first call and then owns the drag loop via update(); subsequent
+     * on_drag callbacks are ignored because draggedHandle is already set.
+     *
+     * isDividerDrag is set on the first frame a divider is confirmed and held
+     * until mouse release. It is the only latch flag remaining — isTabDrag has
+     * been removed because TabDragManager owns that state internally.
      *
      * Hover callbacks receive null for MenuInstance from ElementHitSystem so
      * $parent cannot be used. The hovered window is resolved directly via
@@ -39,9 +44,9 @@ public class TabBranch extends BranchPackage {
      * getHoverMouseX/Y is used in checkResizeCursor — hover callbacks must not
      * gate on focus so an unfocused tab still shows correct cursor feedback.
      *
-     * onTabFrameDragEnd is called on the release frame inside onTabFrameDrag
-     * before clearing local state, so TabDragSystem receives the release signal
-     * before the branch resets.
+     * onTabFrameHoverExit is wired to window_frame only. If the cursor moves
+     * from window_frame into tab_toolbar the exit fires and clears the cursor,
+     * which is correct because the toolbar area should not show resize feedback.
      */
 
     // Internal
@@ -59,9 +64,6 @@ public class TabBranch extends BranchPackage {
     // Divider drag state
     private DockNodeStruct dragNode;
     private boolean isDividerDrag;
-
-    // Tab drag state
-    private boolean isTabDrag;
 
     // Internal \\
 
@@ -113,29 +115,34 @@ public class TabBranch extends BranchPackage {
         inputManager.clearCursor();
     }
 
+    // window_frame drag — BSP divider resize only.
+    // If the cursor is not over a divider the gesture is ignored.
+    // Tab dragging is handled by onTabToolbarDrag below.
     public void onTabFrameDrag() {
 
         boolean released = EngineContext.input.isMouseReleased(0);
 
-        if (!isDividerDrag && !isTabDrag) {
-
+        if (!isDividerDrag) {
             float screenX = EngineContext.input.getMouseX();
             float screenY = EngineContext.input.getMouseY();
 
             dragNode = dockLayoutSystem.findDividerAt(screenX, screenY);
 
-            if (dragNode != null)
-                isDividerDrag = true;
-            else
-                isTabDrag = true;
+            if (dragNode == null)
+                return; // Not a divider — nothing for the background drag to do.
+
+            isDividerDrag = true;
         }
 
-        if (isDividerDrag) {
-            handleDividerDrag(released);
-            return;
-        }
+        handleDividerDrag(released);
+    }
 
-        handleTabDrag(released);
+    // tab_toolbar drag — tab repositioning only.
+    // TabDragManager latches the handle on the first call and then owns the
+    // drag loop via update(); subsequent callbacks are no-ops.
+    public void onTabToolbarDrag() {
+        WindowInstance window = windowManager.getHoveredWindow();
+        tabDragManager.onTabDragUpdate(window);
     }
 
     // Divider Drag \\
@@ -160,18 +167,6 @@ public class TabBranch extends BranchPackage {
 
         dockLayoutSystem.setSplitRatio(dragNode, ratio);
         tabManager.pushRects();
-    }
-
-    // Tab Drag \\
-
-    private void handleTabDrag(boolean released) {
-
-        WindowInstance window = windowManager.getHoveredWindow();
-
-        tabDragManager.onTabDragUpdate(window);
-
-        if (released)
-            isTabDrag = false;
     }
 
     // Resize Cursor \\

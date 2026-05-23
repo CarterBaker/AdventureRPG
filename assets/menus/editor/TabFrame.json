@@ -37,6 +37,10 @@
           "anchor": "top_left",
           "pivot": "bottom_left",
           "size": { "x": "100%", "y": "28px" },
+          "on_drag": {
+            "class": "editor.runtime.editor.menueventsmanager.menus.TabBranch",
+            "method": "onTabToolbarDrag"
+          },
           "elements": [
             {
               "id": "close_button",
