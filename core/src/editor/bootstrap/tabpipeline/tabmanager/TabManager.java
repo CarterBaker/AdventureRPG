@@ -141,12 +141,12 @@ public class TabManager extends ManagerPackage {
         WindowInstance mainWindow = windowManager.getMainWindow();
 
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, mainWindow);
-        tabWindow.setDepth(1);
+        tabWindow.setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
 
         TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
 
         WindowInstance contentWindow = windowManager.createLogicalWindow(title, mainWindow);
-        contentWindow.setDepth(2);
+        contentWindow.setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
 
         ContextPackage contentContext = internal.createContext(contentClass, contentWindow);
 

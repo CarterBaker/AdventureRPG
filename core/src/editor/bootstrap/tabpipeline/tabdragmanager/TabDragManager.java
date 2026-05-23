@@ -33,10 +33,19 @@ public class TabDragManager extends ManagerPackage {
      * the full chrome and content travel with the cursor. No separate drag
      * ghost window is created — the real windows are the ghost.
      *
+     * Depth during drag: the tab window and content window are elevated to
+     * TAB_DRAG_TAB_DEPTH and TAB_DRAG_CONTENT_DEPTH so they render above the
+     * zone ghost. On drop they are restored to TAB_DEFAULT_TAB_DEPTH and
+     * TAB_DEFAULT_CONTENT_DEPTH. These four constants are the single source of
+     * truth — no arithmetic on depth values anywhere in this class.
+     *
      * zoneGhost — half-panel drop preview rendered on the target OS window at
-     * one depth below TAB_DRAG_GHOST_DEPTH. Opened and closed as the resolved
-     * DropZone changes each frame. Closed immediately before drop — it is a
-     * preview only.
+     * TAB_DRAG_GHOST_DEPTH. The ghost window and FBO are allocated once per
+     * drag gesture when the first drop target is resolved. On subsequent zone
+     * changes within the same OS window the ghost is simply repositioned and
+     * the FBO resized — no teardown. If the cursor moves to a different OS
+     * window the ghost is fully torn down and rebuilt against the new target.
+     * Closed immediately before drop — it is a preview only.
      *
      * Drop resolution walks only OS windows (hasNativeHandle) each frame to
      * find which one contains the raw screen cursor, then delegates to
@@ -47,12 +56,12 @@ public class TabDragManager extends ManagerPackage {
      *
      * On release:
      * 1. Check whether the source OS window is now empty, excluding the
-     *    dragged handle itself (which is about to be re-inserted elsewhere).
-     *    Close it if so and it is not the main window.
+     * dragged handle itself (which is about to be re-inserted elsewhere).
+     * Close it if so and it is not the main window.
      * 2a. Drop target exists — addTabToLeaf on the resolved leaf.
      * 2b. No drop target — open a new secondary OS window for the handle.
      * 3. pushRects() propagates all composite rects so the re-inserted tab
-     *    lands at its final BSP-assigned position.
+     * lands at its final BSP-assigned position.
      * 4. clearState() resets all drag fields.
      *
      * grabOffsetX/Y is the cursor offset within the dragged tab window at
@@ -87,6 +96,7 @@ public class TabDragManager extends ManagerPackage {
     // Zone ghost — drop-target preview on the target OS window
     private MenuInstance zoneGhost;
     private WindowInstance zoneGhostWindow;
+    private FboInstance zoneGhostFbo;
 
     // Drop resolution
     private DropTargetStruct lastDropTarget;
@@ -165,6 +175,10 @@ public class TabDragManager extends ManagerPackage {
 
         draggedHandle = handle;
 
+        // Elevate above the zone ghost for the duration of the drag.
+        tabWindow.setDepth(EngineSetting.TAB_DRAG_TAB_DEPTH);
+        handle.getContentContext().getWindow().setDepth(EngineSetting.TAB_DRAG_CONTENT_DEPTH);
+
         // Remove from BSP immediately so remaining tabs reflow into the gap.
         tabManager.getDockLayoutSystem().removeTab(handle);
         tabManager.pushRects();
@@ -196,12 +210,28 @@ public class TabDragManager extends ManagerPackage {
 
     // Zone Ghost \\
 
+    /*
+     * Three tiers of work per frame:
+     * - Zone unchanged → nothing (early return on matches).
+     * - Zone changed, same OS → reposition and resize only, FBO reused.
+     * - OS window changed → full teardown then rebuild against new target.
+     */
     private void updateZoneGhost(DropTargetStruct target) {
 
-        // Nothing changed — keep the existing ghost.
+        // Zone unchanged — nothing to do.
         if (target != null && target.matches(lastDropTarget))
             return;
 
+        // Same OS window, zone changed — reposition without teardown.
+        if (target != null
+                && lastDropTarget != null
+                && target.getWindow() == lastDropTarget.getWindow()
+                && zoneGhostWindow != null) {
+            repositionZoneGhost(target);
+            return;
+        }
+
+        // OS window changed, no target, or ghost not open — full cycle.
         closeZoneGhost();
 
         if (target == null)
@@ -216,30 +246,40 @@ public class TabDragManager extends ManagerPackage {
         DropZone zone = target.getZone();
         WindowInstance targetOsWindow = resolveOsWindow(target.getWindow());
 
-        float leafX = leaf.getX();
-        float leafY = leaf.getY();
-        float leafW = leaf.getW();
-        float leafH = leaf.getH();
-
-        float ghostX = layoutSystem.zoneX(leafX, leafW, zone);
-        float ghostY = layoutSystem.zoneY(leafY, leafH, zone);
-        float ghostW = layoutSystem.zoneW(leafW, zone);
-        float ghostH = layoutSystem.zoneH(leafH, zone);
+        float ghostX = layoutSystem.zoneX(leaf.getX(), leaf.getW(), zone);
+        float ghostY = layoutSystem.zoneY(leaf.getY(), leaf.getH(), zone);
+        float ghostW = layoutSystem.zoneW(leaf.getW(), zone);
+        float ghostH = layoutSystem.zoneH(leaf.getH(), zone);
 
         zoneGhostWindow = windowManager.createLogicalWindow(
                 EngineSetting.TAB_ZONE_GHOST_WINDOW_TITLE, targetOsWindow);
-        zoneGhostWindow.setDepth(EngineSetting.TAB_DRAG_GHOST_DEPTH - 1);
+        zoneGhostWindow.setDepth(EngineSetting.TAB_DRAG_GHOST_DEPTH);
         zoneGhostWindow.setCaptureEligible(false);
         zoneGhostWindow.setFocusIndependent(true);
 
         zoneGhostWindow.setCompositeRect(ghostX, ghostY, ghostW, ghostH);
         zoneGhostWindow.resize((int) ghostW, (int) ghostH);
 
-        FboInstance fbo = fboManager.cloneFbo(
+        zoneGhostFbo = fboManager.cloneFbo(
                 application.runtime.RuntimeSetting.FBO_UI, zoneGhostWindow);
-        menuManager.setMenuTargetFbo(zoneGhostWindow, fbo);
+        menuManager.setMenuTargetFbo(zoneGhostWindow, zoneGhostFbo);
 
         zoneGhost = menuManager.openMenu(menuTabGhost, zoneGhostWindow);
+    }
+
+    private void repositionZoneGhost(DropTargetStruct target) {
+
+        DockNodeStruct leaf = target.getLeaf();
+        DropZone zone = target.getZone();
+
+        float ghostX = layoutSystem.zoneX(leaf.getX(), leaf.getW(), zone);
+        float ghostY = layoutSystem.zoneY(leaf.getY(), leaf.getH(), zone);
+        float ghostW = layoutSystem.zoneW(leaf.getW(), zone);
+        float ghostH = layoutSystem.zoneH(leaf.getH(), zone);
+
+        zoneGhostWindow.setCompositeRect(ghostX, ghostY, ghostW, ghostH);
+        zoneGhostWindow.resize((int) ghostW, (int) ghostH);
+        zoneGhostFbo.resize((int) ghostW, (int) ghostH);
     }
 
     private void closeZoneGhost() {
@@ -254,6 +294,8 @@ public class TabDragManager extends ManagerPackage {
             windowManager.removeWindow(zoneGhostWindow);
             zoneGhostWindow = null;
         }
+
+        zoneGhostFbo = null;
     }
 
     // Drop Resolution \\
@@ -341,9 +383,9 @@ public class TabDragManager extends ManagerPackage {
             return DropZone.BOTTOM;
 
         // Center region — resolve to nearest edge so every pixel has a destination.
-        float distLeft   = relX;
-        float distRight  = 1f - relX;
-        float distTop    = relY;
+        float distLeft = relX;
+        float distRight = 1f - relX;
+        float distTop = relY;
         float distBottom = 1f - relY;
 
         float minH = Math.min(distLeft, distRight);
@@ -367,12 +409,12 @@ public class TabDragManager extends ManagerPackage {
         DropTargetStruct target = lastDropTarget;
 
         WindowInstance sourceTabWindow = draggedHandle.getTabContext().getWindow();
-        WindowInstance sourceOsWindow  = resolveOsWindow(sourceTabWindow);
+        WindowInstance sourceOsWindow = resolveOsWindow(sourceTabWindow);
 
         // The handle was already removed from the BSP at latch time.
         // Check whether any other tab still composites to the source OS window
         // before deciding to close it.
-        boolean sourceIsMain   = sourceOsWindow == windowManager.getMainWindow();
+        boolean sourceIsMain = sourceOsWindow == windowManager.getMainWindow();
         boolean sourceNowEmpty = isSourceOsWindowEmpty(sourceOsWindow);
 
         if (!sourceIsMain && sourceNowEmpty)
@@ -424,12 +466,18 @@ public class TabDragManager extends ManagerPackage {
 
         closeZoneGhost();
 
+        // Restore default render order.
+        if (draggedHandle != null) {
+            draggedHandle.getTabContext().getWindow().setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
+            draggedHandle.getContentContext().getWindow().setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
+        }
+
         draggedHandle = null;
         lastDropTarget = null;
         grabOffsetX = 0f;
         grabOffsetY = 0f;
-        dragW       = 0f;
-        dragH       = 0f;
+        dragW = 0f;
+        dragH = 0f;
     }
 
     // Utility \\
