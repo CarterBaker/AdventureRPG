@@ -25,33 +25,19 @@ public class ElementHitSystem extends SystemPackage {
      * Per frame — if hoverState defined: set as activeHoverState, fire callback.
      * Exit — if hoverExitState defined: set as activeHoverState, fire callback.
      * If NOT defined: activeHoverState is left as-is. Nothing reverts implicitly.
-     * resetPressed — hard reset; clears activeHoverState unconditionally.
+     * resetPressed — hard reset, clears activeHoverState unconditionally.
      *
      * Hover state root/children belong to the parent element for hover purposes.
-     * Any hit within the active hover state root or its children returns the
-     * parent,
-     * keeping hoveredElement stable across the full expanded visual area.
+     * When the mouse is anywhere within the active hover state root or its
+     * children,
+     * the parent element remains hoveredElement. The expanded region is part of the
+     * parent's hit surface and does not trigger exit.
      *
      * Clicks on state root children are dispatched independently by hitTestElements
      * regardless of hoveredElement.
      *
-     * on_drag fires each frame while primary is held on hoveredElement.
+     * on_drag fires each frame while primary held on hoveredElement.
      * on_click fires once on primary press.
-     *
-     * forceHoverExit() fires the exit state and callback for the current
-     * hoveredElement then clears it. The single exit path — called on raycast
-     * window switch, null hover, ownership change, and resetPressed.
-     *
-     * syncRaycastTarget detects two exit conditions each frame:
-     * 1. The raycast/focused window changed — always exit.
-     * 2. hoveredWindow changed and hoveredElement belongs to the PREVIOUS
-     * hoveredWindow (lastHoveredWindow) — the mouse moved from an alwaysHover
-     * chrome window onto an overlapping content window. The element lives on
-     * the chrome window that was just left, so exit must fire even though the
-     * raycast target itself did not change. Checking lastHoveredWindow (not
-     * the current hoveredWindow) is critical — by the time syncRaycastTarget
-     * runs, hoveredWindow has already been updated to the content window, so
-     * checking the current hoveredWindow would look at the wrong menu list.
      */
 
     private static final String PARENT_ARG = "$parent";
@@ -61,8 +47,6 @@ public class ElementHitSystem extends SystemPackage {
 
     private ElementInstance hoveredElement;
     private ElementInstance openClickState;
-    private WindowInstance lastRaycastWindow;
-    private WindowInstance lastHoveredWindow;
     private float collapseTolerance;
 
     private Object2ObjectOpenHashMap<String, Runnable> resolvedActions;
@@ -83,15 +67,16 @@ public class ElementHitSystem extends SystemPackage {
 
     // Entry Point \\
 
-    public void updateRaycast(ObjectArrayList<MenuInstance> activeMenus, WindowInstance raycastWindow) {
+    public void updateRaycast(ObjectArrayList<MenuInstance> activeMenus) {
 
         WindowInstance hoveredWindow = windowManager.getHoveredWindow();
+
         if (hoveredWindow == null)
             return;
 
-        int rayWindowID = raycastWindow.getWindowID();
-        float mouseX = inputManager.getMouseXLocal(hoveredWindow);
-        float mouseY = inputManager.getMouseYLocal(hoveredWindow);
+        int rayWindowID = hoveredWindow.getWindowID();
+        float mouseX = inputManager.getMouseX(hoveredWindow);
+        float mouseY = inputManager.getMouseY(hoveredWindow);
 
         updateHover(activeMenus, mouseX, mouseY, rayWindowID);
         fireOnHoverPerFrame();
@@ -116,6 +101,7 @@ public class ElementHitSystem extends SystemPackage {
                 continue;
 
             WindowInstance window = instance.getWindow();
+
             if (window.getWindowID() != rayWindowID)
                 continue;
 
@@ -125,40 +111,9 @@ public class ElementHitSystem extends SystemPackage {
         }
     }
 
-    // Called every frame by MenuManager before updateRaycast.
-    // Fires forceHoverExit when the raycast target changes, or when the physical
-    // hover window changed and hoveredElement belongs to the window just left.
-    public void syncRaycastTarget(WindowInstance raycastTarget, WindowInstance hoveredWindow) {
-
-        if (hoveredWindow == null || raycastTarget == null) {
-            forceHoverExit();
-            lastRaycastWindow = null;
-            lastHoveredWindow = null;
-            return;
-        }
-
-        if (lastRaycastWindow != null && lastRaycastWindow != raycastTarget) {
-            // Raycast/focused window changed — always exit.
-            forceHoverExit();
-        } else if (hoveredElement != null
-                && lastHoveredWindow != null
-                && lastHoveredWindow != hoveredWindow
-                && elementBelongsToWindow(hoveredElement, lastHoveredWindow)) {
-            // Physical hover moved to a different window (e.g. mouse crossed from
-            // alwaysHover tab chrome onto the overlapping content window).
-            // Check lastHoveredWindow — not hoveredWindow — because by this point
-            // hoveredWindow already reflects the new window. The element lives on
-            // the window we just left, so that is the list to search.
-            forceHoverExit();
-        }
-
-        lastRaycastWindow = raycastTarget;
-        lastHoveredWindow = hoveredWindow;
-    }
-
     public void resetPressed() {
         this.openClickState = null;
-        forceHoverExit();
+        clearHover();
     }
 
     // Hover \\
@@ -204,7 +159,8 @@ public class ElementHitSystem extends SystemPackage {
                     executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
                             exitState.getActionArg(), null);
             }
-            // No exit state defined — activeHoverState left as-is.
+            // No exit state defined — activeHoverState left as-is, nothing reverts
+            // implicitly.
 
             hoveredElement.setHovered(false);
             hoveredElement = null;
@@ -240,6 +196,7 @@ public class ElementHitSystem extends SystemPackage {
             return;
 
         ElementStateStruct hoverState = hoveredElement.getHandle().getHoverState();
+
         if (hoverState == null)
             return;
 
@@ -250,51 +207,17 @@ public class ElementHitSystem extends SystemPackage {
                     hoverState.getActionArg(), null);
     }
 
-    // Fires the exit state and callback for hoveredElement then clears it.
-    // The single exit path — called on raycast window switch, null hover,
-    // ownership change detection in syncRaycastTarget, and resetPressed.
-    private void forceHoverExit() {
+    private void clearHover() {
 
         if (hoveredElement == null)
             return;
 
-        ElementStateStruct exitState = hoveredElement.getHandle().getHoverExitState();
-
-        if (exitState != null) {
-            hoveredElement.setActiveHoverState(exitState);
-            if (exitState.hasAction())
-                executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
-                        exitState.getActionArg(), null);
-        }
-
+        // Hard reset — clears activeHoverState unconditionally regardless of
+        // whether an exit state is defined. Called only from resetPressed().
+        hoveredElement.clearActiveHoverState();
         hoveredElement.setHovered(false);
         hoveredElement = null;
         windowManager.unlockHoveredWindow();
-    }
-
-    // Element Ownership \\
-
-    // Returns true if element lives in any menu currently open on window.
-    // Used by syncRaycastTarget to scope hover exit to elements that actually
-    // belong to the window being left, not the window being entered.
-    private boolean elementBelongsToWindow(ElementInstance element, WindowInstance window) {
-        ObjectArrayList<MenuInstance> menus = window.getMenuListHandle().getMenus();
-        for (int i = 0; i < menus.size(); i++) {
-            if (containsElement(menus.get(i).getElements(), element))
-                return true;
-        }
-        return false;
-    }
-
-    private boolean containsElement(ObjectArrayList<ElementInstance> elements, ElementInstance target) {
-        for (int i = 0; i < elements.size(); i++) {
-            ElementInstance e = elements.get(i);
-            if (e == target)
-                return true;
-            if (e.hasChildren() && containsElement(e.getChildren(), target))
-                return true;
-        }
-        return false;
     }
 
     // Hover Test \\
@@ -337,9 +260,11 @@ public class ElementHitSystem extends SystemPackage {
                     return childHit;
             }
 
-            // Active hover state region — the parent owns this entire region.
-            // Any hit within the state root or its children returns the parent,
-            // keeping hoveredElement stable across the full expanded visual area.
+            /*
+             * Active hover state region — the parent owns this entire region.
+             * Any hit within the state root or its children returns the parent,
+             * keeping hoveredElement stable across the full expanded visual area.
+             */
             if (element.hasActiveHoverState()) {
 
                 ElementInstance activeRoot = resolveActiveHoverRoot(element);
@@ -439,6 +364,7 @@ public class ElementHitSystem extends SystemPackage {
             }
 
             boolean interactive = element.hasClickState() || element.hasAction();
+
             if (!interactive)
                 continue;
 
@@ -560,6 +486,7 @@ public class ElementHitSystem extends SystemPackage {
 
     private Runnable resolveRunnableAction(String actionClass, String actionMethod,
             String actionArg) {
+
         try {
             Class<?> clazz = Class.forName(actionClass);
             Object target = internal.getUnchecked(clazz);
@@ -571,9 +498,10 @@ public class ElementHitSystem extends SystemPackage {
                     ? target.getClass().getMethod(actionMethod, String.class)
                     : target.getClass().getMethod(actionMethod);
 
-            return actionArg != null
-                    ? () -> invoke(method, target, actionArg)
-                    : () -> invoke(method, target);
+            if (actionArg != null)
+                return () -> invoke(method, target, actionArg);
+
+            return () -> invoke(method, target);
 
         } catch (Exception e) {
             throwException("Failed to resolve callback: " + actionClass + "#" + actionMethod, e);
@@ -582,6 +510,7 @@ public class ElementHitSystem extends SystemPackage {
     }
 
     private MenuAwareAction resolveMenuAwareAction(String actionClass, String actionMethod) {
+
         try {
             Class<?> clazz = Class.forName(actionClass);
             Object target = internal.getUnchecked(clazz);

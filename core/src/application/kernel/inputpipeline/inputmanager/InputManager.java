@@ -39,14 +39,16 @@ public class InputManager extends ManagerPackage {
      *
      * Mouse coordinates returned by getMouseX(), getMouseY(), and written by
      * writeRawInput() are window-local — the composite rect origin is subtracted
-     * from the raw screen position before use. Required for correct menu hit
-     * testing and game input on any tab that does not sit at the screen origin:
-     * element and FBO positions are always relative to the window's own top-left
-     * corner, so raw screen coords only happen to match for the first tab when
-     * the dock starts at (0, 0).
+     * from the raw screen position before use. This is required for correct menu
+     * hit testing and game input on any tab that does not sit at the screen
+     * origin: element and FBO positions are always relative to the window's own
+     * top-left corner, so raw screen coords only happen to match for the first
+     * tab when the dock starts at (0, 0). Every subsequent tab has a non-zero
+     * offset and would receive mismatched coordinates without this adjustment.
      *
      * All cursor platform calls are owned by CursorSystem. InputManager drives
      * when capture is granted or released; CursorSystem executes the calls.
+     * The sprite cursor and clearCursor methods here are pointers to CursorSystem.
      */
 
     // Internal
@@ -126,6 +128,7 @@ public class InputManager extends ManagerPackage {
     public void onInputLockReleased(WindowInstance authority) {
 
         WindowInstance focused = windowManager.getFocusedWindow();
+
         if (focused == null)
             return;
 
@@ -137,7 +140,11 @@ public class InputManager extends ManagerPackage {
     }
 
     private WindowInstance resolveInputAuthority(WindowInstance window) {
-        return authorityResolver != null ? authorityResolver.resolve(window) : window;
+
+        if (authorityResolver != null)
+            return authorityResolver.resolve(window);
+
+        return window;
     }
 
     // Resolver — pushed in by the editor layer once at startup \\
@@ -149,17 +156,20 @@ public class InputManager extends ManagerPackage {
     // Guard \\
 
     private boolean isHovered(WindowInstance window) {
+
         WindowInstance captured = windowManager.getCapturedWindow();
-        return captured != null ? window == captured : window == windowManager.getFocusedWindow();
+
+        if (captured != null)
+            return window == captured;
+
+        return window == windowManager.getFocusedWindow();
     }
 
-    // Coordinate utility \\
-
-    // Converts a raw screen coordinate to window-local by subtracting the
-    // composite rect origin. Element and FBO positions are always expressed
-    // relative to the window's own corner, so any window sitting at a non-zero
-    // screen position must have its origin stripped before coordinates are used
-    // for hit testing or game input.
+    // Coordinate utility — converts a raw screen coordinate to window-local
+    // by subtracting the composite rect origin. Element and FBO positions are
+    // always expressed relative to the window's own corner, so any window
+    // sitting at a non-zero screen position must have its origin stripped
+    // before the coordinate is used for hit testing or game input. \\
 
     private float localX(WindowInstance window, float screenX) {
         return window.hasCompositeRect() ? screenX - window.getCompositeX() : screenX;
@@ -167,18 +177,6 @@ public class InputManager extends ManagerPackage {
 
     private float localY(WindowInstance window, float screenY) {
         return window.hasCompositeRect() ? screenY - window.getCompositeY() : screenY;
-    }
-
-    // Hover-safe coordinate queries — window-local without focus guard.
-    // Used by ElementHitSystem when the raycast target is an alwaysHover window
-    // that is hovered but not focused. Geometry-only; no capture or focus check.
-
-    public float getMouseXLocal(WindowInstance window) {
-        return localX(window, EngineContext.input.getMouseX());
-    }
-
-    public float getMouseYLocal(WindowInstance window) {
-        return localY(window, EngineContext.input.getMouseY());
     }
 
     // Frame write \\

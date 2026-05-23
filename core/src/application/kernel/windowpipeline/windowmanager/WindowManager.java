@@ -12,31 +12,35 @@ public class WindowManager extends ManagerPackage {
 
     /*
      * Owns all engine windows. Each frame resolves which window the cursor is
-     * geometrically inside and stores it as hoveredWindow.
+     * geometrically inside and stores it as hoveredWindow. No concept of active,
+     * focused, or foreground window — all windows are equal participants. Input
+     * routing is entirely hover-driven.
      *
      * OS windows are depth 0. Logical windows (tabs) are depth 1+.
      *
      * Hover resolution uses tightest-rect-wins: among all windows whose bounds
      * contain the cursor, the window with the smallest compositeRect area wins.
-     * Depth breaks ties only when two windows have identical area. This prevents
-     * full-screen overlay windows from stealing hover from smaller, precisely-
-     * positioned windows at lower depth.
+     * Depth breaks ties only when two windows have the same area. This prevents
+     * full-screen overlay windows (e.g. toolbar at depth 3 with a full-screen
+     * compositeRect) from stealing hover from smaller precisely-positioned windows
+     * (e.g. tab windows at depth 1 with a dock-sized compositeRect).
      *
      * Windows without a compositeRect but with a native handle are treated as
      * infinite area and only win when no compositeRect window contains the cursor.
      *
      * hoveredWindowLocked prevents syncHoveredWindow from reassigning hoveredWindow
-     * while an element hover is active. Set by ElementHitSystem on hover entry,
-     * released on hover exit.
+     * while an element hover is active. Lock is set by ElementHitSystem on hover
+     * entry and released on hover exit.
      *
-     * focusedWindow is the window that currently owns input. Set by clicking on a
-     * window; the single authority for input routing. Cursor capture follows focus
-     * — InputManager drives capture transitions whenever focus changes or menu lock
-     * state changes on the focused window.
+     * focusedWindow is the window that currently owns input. It is set by clicking
+     * on a window and is the single authority for input routing. Cursor capture
+     * follows focus — the kernel InputSystem drives capture transitions whenever
+     * focus changes or menu lock state changes on the focused window.
      *
      * capturedWindow pins hoveredWindow when cursor capture is active. While set,
-     * syncHoveredWindow is bypassed entirely. Released when capture ends, restoring
-     * normal hover resolution.
+     * syncHoveredWindow is bypassed entirely — the captured window is always
+     * considered hovered. Released when capture ends, restoring normal hover
+     * resolution.
      */
 
     private ObjectArrayList<WindowInstance> windows;
@@ -96,6 +100,9 @@ public class WindowManager extends ManagerPackage {
 
     private void syncHoveredWindow() {
 
+        if (hoveredWindowLocked)
+            return;
+
         if (capturedWindow != null) {
             hoveredWindow = capturedWindow;
             return;
@@ -124,15 +131,6 @@ public class WindowManager extends ManagerPackage {
                 topHit = w;
             }
         }
-
-        // Respect the hover lock only when the top-resolution window hasn't changed.
-        // If a different window now wins the cursor — even while still inside the
-        // locked window's rect — the lock must yield so ElementHitSystem can fire
-        // the exit cleanly. This is the overlap case: tab chrome and content window
-        // share the same screen region; the content window wins as soon as the mouse
-        // enters its tighter rect.
-        if (hoveredWindowLocked && topHit == hoveredWindow)
-            return;
 
         hoveredWindow = topHit;
 
@@ -265,6 +263,10 @@ public class WindowManager extends ManagerPackage {
         return focusedWindow;
     }
 
+    public void setFocusedWindow(WindowInstance window) {
+        this.focusedWindow = window;
+    }
+
     public WindowInstance getRenderWindow() {
         return renderWindow;
     }
@@ -275,10 +277,6 @@ public class WindowManager extends ManagerPackage {
 
     public WindowInstance getCapturedWindow() {
         return capturedWindow;
-    }
-
-    public void setFocusedWindow(WindowInstance window) {
-        this.focusedWindow = window;
     }
 
     public ObjectArrayList<WindowInstance> getWindows() {
