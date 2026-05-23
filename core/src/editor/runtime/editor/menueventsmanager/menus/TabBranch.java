@@ -77,8 +77,9 @@ public class TabBranch extends BranchPackage {
 
     private void checkResizeCursor(WindowInstance window) {
 
-        float mouseX = inputManager.getMouseX(window);
-        float mouseY = inputManager.getMouseY(window);
+        float mouseX = inputManager.getHoverMouseX(window);
+        float mouseY = inputManager.getHoverMouseY(window);
+
         float w = window.getWidth();
         float h = window.getHeight();
         float t = EditorWindowSetting.RESIZE_EDGE_TOLERANCE;
@@ -88,8 +89,10 @@ public class TabBranch extends BranchPackage {
 
         if (onHEdge)
             inputManager.setCursorSprite(cursorResizeH);
+
         else if (onVEdge)
             inputManager.setCursorSprite(cursorResizeV);
+
         else
             inputManager.clearCursor();
     }

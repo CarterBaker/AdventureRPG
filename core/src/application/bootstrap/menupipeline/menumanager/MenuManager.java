@@ -115,10 +115,14 @@ public class MenuManager extends ManagerPackage {
                 renderSystem.renderMenu(menus.get(j), menuTargetFbo, RuntimeSetting.LAYER_UI);
         }
 
-        WindowInstance focused = windowManager.getFocusedWindow();
+        WindowInstance hovered = windowManager.getHoveredWindow();
 
-        if (focused != null && focused.getMenuListHandle().isRaycastLocked())
-            hitSystem.updateRaycast(focused.getMenuListHandle().getMenus());
+        // Always fire hover exit when the window under the cursor changes,
+        // regardless of whether the incoming window has raycast-locked menus.
+        hitSystem.clearHoverIfWindowChanged(hovered);
+
+        if (hovered != null && hovered.getMenuListHandle().isRaycastLocked())
+            hitSystem.updateRaycast(hovered.getMenuListHandle().getMenus());
     }
 
     // Deferred Menu Close \\

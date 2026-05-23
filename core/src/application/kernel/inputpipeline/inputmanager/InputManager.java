@@ -268,4 +268,14 @@ public class InputManager extends ManagerPackage {
     public void clearCursor() {
         cursorSystem.clearCursor();
     }
+
+    // Hover coordinates — no focus gate. Position testing does not require
+    // input authority; only binding queries do.
+    public float getHoverMouseX(WindowInstance window) {
+        return localX(window, EngineContext.input.getMouseX());
+    }
+
+    public float getHoverMouseY(WindowInstance window) {
+        return localY(window, EngineContext.input.getMouseY());
+    }
 }
