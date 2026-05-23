@@ -49,6 +49,10 @@ public class InputManager extends ManagerPackage {
      * All cursor platform calls are owned by CursorSystem. InputManager drives
      * when capture is granted or released; CursorSystem executes the calls.
      * The sprite cursor and clearCursor methods here are pointers to CursorSystem.
+     *
+     * focusIndependent windows (e.g. the toolbar) bypass the focus check in
+     * isHovered() and route against hoveredWindow instead, allowing editor
+     * chrome to remain interactive without ever acquiring focus.
      */
 
     // Internal
@@ -161,6 +165,9 @@ public class InputManager extends ManagerPackage {
 
         if (captured != null)
             return window == captured;
+
+        if (window.isFocusIndependent())
+            return window == windowManager.getHoveredWindow();
 
         return window == windowManager.getFocusedWindow();
     }

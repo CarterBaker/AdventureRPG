@@ -22,9 +22,11 @@ public class WindowInstance extends InstancePackage {
      * Input is hover-driven — no active or focus concept exists at this level.
      *
      * captureEligible gates whether InputSystem may capture this window.
-     * Editor chrome windows (main window, toolbar-only windows) are marked
-     * ineligible at creation time so onWindowFocused can never pin the cursor
-     * to them, regardless of lock state.
+     * focusIndependent marks windows that must receive hover-driven input
+     * regardless of which window owns focus. Editor chrome windows (e.g. the
+     * toolbar) set both flags: captureEligible false so the cursor is never
+     * pinned to them, focusIndependent true so menus and hit testing work
+     * without requiring a prior click.
      */
 
     // Data
@@ -57,6 +59,10 @@ public class WindowInstance extends InstancePackage {
 
     // Capture eligibility — false for editor chrome, true for all game windows
     private boolean captureEligible = true;
+
+    // Focus-independent input — true for windows that must remain interactive
+    // regardless of focus, such as the toolbar
+    private boolean focusIndependent;
 
     // Internal
     private RenderManager renderManager;
@@ -192,6 +198,14 @@ public class WindowInstance extends InstancePackage {
 
     public void setCaptureEligible(boolean captureEligible) {
         this.captureEligible = captureEligible;
+    }
+
+    public boolean isFocusIndependent() {
+        return focusIndependent;
+    }
+
+    public void setFocusIndependent(boolean focusIndependent) {
+        this.focusIndependent = focusIndependent;
     }
 
     // Cameras \\
