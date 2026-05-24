@@ -68,11 +68,9 @@ public class TabDragManager extends ManagerPackage {
      * latch time so the content does not snap to the cursor corner on pickup.
      * dragW/H caches the tab dimensions before pushRects() clears them.
      *
-     * Note: when a tab is dropped onto a different OS window the existing
-     * tabWindow and contentWindow keep their original composite target. For
-     * single-OS-window editors this is invisible. Multi-monitor tear-off will
-     * need setCompositeTarget() support on WindowInstance and a re-parent step
-     * in executeDrop before pushRects().
+     * resolveOsWindow() is used in latchDrag() to pass the correct OS window
+     * key to DockLayoutSystem.removeTab() — the tab window is a logical window
+     * compositing into an OS window, not an OS window itself.
      */
 
     // Constants
@@ -179,8 +177,10 @@ public class TabDragManager extends ManagerPackage {
         tabWindow.setDepth(EngineSetting.TAB_DRAG_TAB_DEPTH);
         handle.getContentContext().getWindow().setDepth(EngineSetting.TAB_DRAG_CONTENT_DEPTH);
 
-        // Remove from BSP immediately so remaining tabs reflow into the gap.
-        tabManager.getDockLayoutSystem().removeTab(handle);
+        // Remove from the correct per-OS-window BSP tree immediately so
+        // remaining tabs reflow into the gap.
+        WindowInstance osWindow = resolveOsWindow(tabWindow);
+        tabManager.getDockLayoutSystem().removeTab(osWindow, handle);
         tabManager.pushRects();
 
         // Place the actual windows at the cursor on the first frame.

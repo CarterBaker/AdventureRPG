@@ -3,29 +3,28 @@ package editor.runtime.editor;
 import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.tabpipeline.tab.TabContext;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class EditorTabCompositorSystem extends SystemPackage {
+public class SecondaryTabCompositorSystem extends SystemPackage {
 
     /*
-     * Drives dock rect updates and content rect sync for the main OS window.
-     * Reads the dock canvas from EditorMenuSystem and calls
-     * tabManager.setDockRect() with the main window so the per-window BSP tree
-     * is updated independently of any secondary windows.
+     * Drives dock rect updates and content rect sync for a secondary OS window.
+     * Mirrors EditorTabCompositorSystem exactly — the only differences are:
      *
-     * syncContentRects() filters by composite target — only tabs whose chrome
-     * window composites to the main OS window are synced here. Tabs on secondary
-     * windows are synced by SecondaryTabCompositorSystem.
+     * 1. Reads base menu from SecondaryMenuSystem instead of EditorMenuSystem.
+     * 2. Passes context.getWindow() (the secondary OS window) to
+     * tabManager.setDockRect() so the correct per-window BSP tree is updated.
+     * 3. syncContentRects() filters to tabs whose chrome window composites to
+     * this secondary OS window only — tabs on other windows are handled by
+     * their own compositor instance.
      */
 
     private TabManager tabManager;
-    private EditorMenuSystem editorMenuSystem;
-    private WindowManager windowManager;
+    private SecondaryMenuSystem secondaryMenuSystem;
 
     private float lastX;
     private float lastY;
@@ -37,14 +36,13 @@ public class EditorTabCompositorSystem extends SystemPackage {
     @Override
     protected void get() {
         tabManager = get(TabManager.class);
-        editorMenuSystem = get(EditorMenuSystem.class);
-        windowManager = get(WindowManager.class);
+        secondaryMenuSystem = get(SecondaryMenuSystem.class);
     }
 
     @Override
     protected void update() {
 
-        MenuInstance baseMenu = editorMenuSystem.getBaseMenu();
+        MenuInstance baseMenu = secondaryMenuSystem.getBaseMenu();
         CanvasInstance canvas = baseMenu.getCanvas();
 
         if (canvas == null)
@@ -60,7 +58,7 @@ public class EditorTabCompositorSystem extends SystemPackage {
             lastY = y;
             lastW = w;
             lastH = h;
-            tabManager.setDockRect(windowManager.getMainWindow(), x, y, w, h);
+            tabManager.setDockRect(context.getWindow(), x, y, w, h);
         }
 
         syncContentRects();
@@ -70,7 +68,7 @@ public class EditorTabCompositorSystem extends SystemPackage {
 
     private void syncContentRects() {
 
-        WindowInstance mainWindow = windowManager.getMainWindow();
+        WindowInstance myOsWindow = context.getWindow();
         ObjectArrayList<TabHandle> tabs = tabManager.getOpenTabs();
         Object[] elements = tabs.elements();
         int size = tabs.size();
@@ -81,8 +79,8 @@ public class EditorTabCompositorSystem extends SystemPackage {
             TabContext tabContext = handle.getTabContext();
             WindowInstance tabWindow = tabContext.getWindow();
 
-            // Only sync tabs that belong to the main OS window.
-            if (tabWindow.getCompositeTarget() != mainWindow)
+            // Only sync tabs that belong to this secondary OS window.
+            if (tabWindow.getCompositeTarget() != myOsWindow)
                 continue;
 
             if (!tabWindow.hasCompositeRect())

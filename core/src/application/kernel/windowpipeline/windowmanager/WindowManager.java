@@ -287,6 +287,10 @@ public class WindowManager extends ManagerPackage {
         return mainWindow != null;
     }
 
+    public void reparentWindow(WindowInstance window, WindowInstance newParent) {
+        window.setCompositeTarget(newParent);
+    }
+
     // Validation \\
 
     private void verifyWindowRegistration(WindowInstance window, boolean isMain) {

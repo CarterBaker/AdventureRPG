@@ -135,15 +135,11 @@
       "lock_input": true,
       "elements": [
         {
-          "id": "toolbar",
-          "use": "util/ToolBar"
-        },
-        {
           "id": "dock_canvas",
           "type": "canvas_area",
           "anchor": "bottom_left",
           "pivot": "top_left",
-          "size": {"x": "100%", "y": "calc(100% - 28px)"}
+          "size": {"x": "100%", "y": "100%"}
         }
       ]
     }
