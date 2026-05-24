@@ -79,6 +79,14 @@ public class TabBranch extends BranchPackage {
         this.cursorResizeV = spriteManager.getSpriteHandleFromSpriteName(EditorWindowSetting.CURSOR_RESIZE_V);
     }
 
+    @Override
+protected void update() {
+    if (isDividerDrag && EngineContext.input.isMouseReleased(0)) {
+        dragNode = null;
+        isDividerDrag = false;
+    }
+}
+
     // Tab Events \\
 
     public void closeTab(MenuInstance menu) {
