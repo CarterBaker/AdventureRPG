@@ -58,6 +58,15 @@ public class TabManager extends ManagerPackage {
      * compositor fires for the first time, tears down the old TabContext and its
      * logical window, creates a new TabContext under the secondary OS window,
      * and re-parents the content window via setCompositeTarget().
+     *
+     * moveTabToOsWindow() re-parents an existing tab to a different OS window
+     * that is already open and registered. Used by TabDragManager when a drag
+     * is dropped onto an existing OS window rather than the void. Tears down the
+     * old TabContext and its logical window, creates a fresh TabContext shell
+     * under the target OS window, and re-parents the content window. Does not
+     * touch the BSP — addTabToLeaf in executeDrop handles insertion. Ensures
+     * dockRects has a valid entry for the target OS window so pushRects() does
+     * not skip it on the same frame.
      */
 
     // Palette
@@ -263,6 +272,53 @@ public class TabManager extends ManagerPackage {
 
         dockLayoutSystem.addTab(osWindow, handle);
         pushRects();
+    }
+
+    public void moveTabToOsWindow(TabHandle handle, WindowInstance targetOsWindow) {
+
+        if (handle == null)
+            throwException("Cannot move a null tab handle to an OS window.");
+
+        if (targetOsWindow == null)
+            throwException("Cannot move tab to a null OS window.");
+
+        // Ensure dockRects has an entry for the target OS window so pushRects()
+        // does not skip it on the first frame after the move. If a compositor has
+        // already registered the window the existing rect is preserved — only seed
+        // when the key is absent.
+        if (!dockRects.containsKey(targetOsWindow))
+            dockRects.put(targetOsWindow,
+                    new float[] { 0f, 0f, targetOsWindow.getWidth(), targetOsWindow.getHeight() });
+
+        // Tear down the old TabContext and its logical window. It still composites
+        // to the source OS window and must not linger — it would render ghost
+        // chrome on the wrong window.
+        TabContext oldTabContext = handle.getTabContext();
+        if (oldTabContext != null) {
+            WindowInstance oldTabWindow = oldTabContext.getWindow();
+            internal.destroyContext(oldTabContext);
+            windowManager.removeWindow(oldTabWindow);
+        }
+
+        // Create a fresh TabContext shell under the target OS window.
+        WindowInstance tabWindow = windowManager.createLogicalWindow(
+                handle.getTabTitle(), targetOsWindow);
+        tabWindow.setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
+
+        TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
+
+        // Re-parent the existing content window to the target OS window so its
+        // FBO blits route to the correct render target. The content context itself
+        // is untouched — only the composite target changes.
+        WindowInstance contentWindow = handle.getContentContext().getWindow();
+        windowManager.reparentWindow(contentWindow, targetOsWindow);
+        contentWindow.setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
+
+        tabContext.linkContent(handle.getContentContext());
+        handle.mount(tabContext, handle.getContentContext());
+
+        contentWindow.getMenuListHandle().setLockReleaseListener(
+                () -> inputManager.onInputLockReleased(contentWindow));
     }
 
     public boolean isOsWindowEmpty(WindowInstance osWindow) {

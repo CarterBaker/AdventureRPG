@@ -67,23 +67,24 @@ public class TabDragManager extends ManagerPackage {
      * screen position.
      *
      * OS window selection in resolveDropTarget was also broken:
-     * isScreenPointInOsWindow
-     * previously returned true for every OS window (no compositeRect), so
-     * bestWindow
-     * was always the first OS window in the list regardless of cursor position.
-     * The fix tests the cursor against each OS window's actual screen bounds
-     * using getScreenX/Y() + getWidth/Height(), and uses the window's real area
-     * (not Long.MAX_VALUE) as the tie-break so the smallest containing window wins.
+     * isScreenPointInOsWindow previously returned true for every OS window
+     * (no compositeRect), so bestWindow was always the first OS window in
+     * the list regardless of cursor position. The fix tests the cursor
+     * against each OS window's actual screen bounds using getScreenX/Y()
+     * + getWidth/Height(), and uses the window's real area (not Long.MAX_VALUE)
+     * as the tie-break so the smallest containing window wins.
      *
      * On release:
-     * 1. Check whether the source OS window is now empty, excluding the
-     * dragged handle itself (which is about to be re-inserted elsewhere).
-     * Close it if so and it is not the main window.
+     * 1. If the drop crosses OS windows, moveTabToOsWindow() re-parents the
+     * tab chrome and content to the target OS window before any BSP work.
      * 2a. Drop target exists — addTabToLeaf on the resolved leaf.
      * 2b. No drop target — open a new secondary OS window for the handle.
-     * 3. pushRects() propagates all composite rects so the re-inserted tab
+     * 3. Check whether the source OS window is now empty after the move and
+     * close it if so (and it is not the main window). The check runs after
+     * the move so the dragged handle is no longer counted against the source.
+     * 4. pushRects() propagates all composite rects so the re-inserted tab
      * lands at its final BSP-assigned position.
-     * 4. clearState() resets all drag fields.
+     * 5. clearState() resets all drag fields.
      *
      * grabOffsetX/Y is the cursor offset within the dragged tab window at
      * latch time so the content does not snap to the cursor corner on pickup.
@@ -470,20 +471,35 @@ public class TabDragManager extends ManagerPackage {
         WindowInstance sourceTabWindow = draggedHandle.getTabContext().getWindow();
         WindowInstance sourceOsWindow = resolveOsWindow(sourceTabWindow);
 
-        // The handle was already removed from the BSP at latch time.
-        // Check whether any other tab still composites to the source OS window
-        // before deciding to close it.
+        if (target != null) {
+
+            WindowInstance targetOsWindow = target.getWindow();
+
+            // Re-parent chrome and content to the target OS window before any BSP
+            // work. The old TabContext and its logical window are destroyed here —
+            // after this point sourceTabWindow is stale and must not be read.
+            if (targetOsWindow != sourceOsWindow)
+                tabManager.moveTabToOsWindow(draggedHandle, targetOsWindow);
+
+            tabManager.getDockLayoutSystem()
+                    .addTabToLeaf(target.getLeaf(), draggedHandle, target.getZone());
+
+        } else {
+
+            // No target — float into a brand-new OS window. openSecondaryWindowForTab
+            // handles its own teardown and re-parent internally.
+            tabManager.openSecondaryWindowForTab(draggedHandle);
+        }
+
+        // Check emptiness after the move so the dragged handle is no longer
+        // counted against the source OS window. The old tab chrome window was
+        // removed by moveTabToOsWindow or openSecondaryWindowForTab, so
+        // isSourceOsWindowEmpty now reflects the post-move state accurately.
         boolean sourceIsMain = sourceOsWindow == windowManager.getMainWindow();
         boolean sourceNowEmpty = isSourceOsWindowEmpty(sourceOsWindow);
 
         if (!sourceIsMain && sourceNowEmpty)
             tabManager.closeOsWindow(sourceOsWindow);
-
-        if (target != null)
-            tabManager.getDockLayoutSystem()
-                    .addTabToLeaf(target.getLeaf(), draggedHandle, target.getZone());
-        else
-            tabManager.openSecondaryWindowForTab(draggedHandle);
 
         tabManager.pushRects();
 
