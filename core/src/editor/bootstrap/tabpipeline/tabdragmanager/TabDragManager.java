@@ -4,6 +4,7 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
@@ -47,12 +48,32 @@ public class TabDragManager extends ManagerPackage {
      * window the ghost is fully torn down and rebuilt against the new target.
      * Closed immediately before drop — it is a preview only.
      *
-     * Drop resolution walks only OS windows (hasNativeHandle) each frame to
-     * find which one contains the raw screen cursor, then delegates to
-     * DockLayoutSystem.findLeafAt() for the leaf, then classifies the cursor
-     * position within that leaf into a DropZone. The center region resolves
-     * to the nearest edge zone so every pixel of a leaf has a defined
-     * destination.
+     * Drop resolution uses two separate coordinate values per frame:
+     *
+     * dragX/dragY — from getGlobalMouseX/Y(). Used only by
+     * updateDraggedWindows() to position the floating chrome
+     * and content windows within the source OS window's
+     * composite space. These are the same coords as before
+     * the fix and must not change.
+     *
+     * resolveDropTarget(dragX, dragY) — receives the same global coords for
+     * OS window hit testing, but then queries the platform
+     * directly (getCursorXForWindow / getCursorYForWindow) to
+     * get window-local coords before calling findLeafAt. This
+     * is the key fix: BSP trees store window-local coordinates
+     * (origin at the dock canvas top-left within the window),
+     * so comparing them against source-window-relative cursor
+     * coords fails for any secondary window not at the same
+     * screen position.
+     *
+     * OS window selection in resolveDropTarget was also broken:
+     * isScreenPointInOsWindow
+     * previously returned true for every OS window (no compositeRect), so
+     * bestWindow
+     * was always the first OS window in the list regardless of cursor position.
+     * The fix tests the cursor against each OS window's actual screen bounds
+     * using getScreenX/Y() + getWidth/Height(), and uses the window's real area
+     * (not Long.MAX_VALUE) as the tie-break so the smallest containing window wins.
      *
      * On release:
      * 1. Check whether the source OS window is now empty, excluding the
@@ -82,6 +103,7 @@ public class TabDragManager extends ManagerPackage {
     private MenuManager menuManager;
     private FboManager fboManager;
     private TabManager tabManager;
+    private InputManager inputManager;
     private TabDragLayoutStruct layoutSystem;
 
     // Drag state
@@ -114,6 +136,7 @@ public class TabDragManager extends ManagerPackage {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FboManager.class);
         this.tabManager = get(TabManager.class);
+        this.inputManager = get(InputManager.class);
     }
 
     @Override
@@ -127,12 +150,15 @@ public class TabDragManager extends ManagerPackage {
             return;
         }
 
-        float screenX = EngineContext.input.getMouseX();
-        float screenY = EngineContext.input.getMouseY();
+        // dragX/dragY are used for updateDraggedWindows — they position the
+        // floating chrome within the source OS window's composite space and
+        // must remain the same global coords used at latch time.
+        float dragX = inputManager.getGlobalMouseX();
+        float dragY = inputManager.getGlobalMouseY();
 
-        updateDraggedWindows(screenX, screenY);
+        updateDraggedWindows(dragX, dragY);
 
-        DropTargetStruct target = resolveDropTarget(screenX, screenY);
+        DropTargetStruct target = resolveDropTarget(dragX, dragY);
         updateZoneGhost(target);
 
         lastDropTarget = target;
@@ -162,10 +188,10 @@ public class TabDragManager extends ManagerPackage {
 
         WindowInstance tabWindow = handle.getTabContext().getWindow();
 
-        float screenX = EngineContext.input.getMouseX();
-        float screenY = EngineContext.input.getMouseY();
-        grabOffsetX = screenX - tabWindow.getCompositeX();
-        grabOffsetY = screenY - tabWindow.getCompositeY();
+        float globalX = inputManager.getGlobalMouseX();
+        float globalY = inputManager.getGlobalMouseY();
+        grabOffsetX = globalX - tabWindow.getCompositeX();
+        grabOffsetY = globalY - tabWindow.getCompositeY();
 
         // Cache tab dimensions before BSP reflow overwrites the composite rect.
         dragW = tabWindow.getCompositeW();
@@ -184,7 +210,7 @@ public class TabDragManager extends ManagerPackage {
         tabManager.pushRects();
 
         // Place the actual windows at the cursor on the first frame.
-        updateDraggedWindows(screenX, screenY);
+        updateDraggedWindows(globalX, globalY);
     }
 
     // Dragged Window Tracking \\
@@ -194,12 +220,14 @@ public class TabDragManager extends ManagerPackage {
      * full tab — toolbar, chrome menu, and content — travels with the cursor.
      * Both windows keep their existing composite target (the source OS window);
      * their new composite rects simply describe where within that target they
-     * render.
+     * render. Uses global cursor coords, which are in the same space as the
+     * source OS window's local coords when that window is at screen (0,0) or
+     * when the input has been synced to it.
      */
-    private void updateDraggedWindows(float screenX, float screenY) {
+    private void updateDraggedWindows(float dragX, float dragY) {
 
-        float x = screenX - grabOffsetX;
-        float y = screenY - grabOffsetY;
+        float x = dragX - grabOffsetX;
+        float y = dragY - grabOffsetY;
 
         WindowInstance tabWindow = draggedHandle.getTabContext().getWindow();
         WindowInstance contentWindow = draggedHandle.getContentContext().getWindow();
@@ -300,7 +328,28 @@ public class TabDragManager extends ManagerPackage {
 
     // Drop Resolution \\
 
-    private DropTargetStruct resolveDropTarget(float screenX, float screenY) {
+    /*
+     * Two-phase resolution:
+     *
+     * Phase 1 — OS window selection.
+     * Walk all OS windows (hasNativeHandle) and test the global cursor
+     * position against each window's real screen bounds using getScreenX/Y()
+     * + getWidth/Height(). Previously this used compositeRect, which OS
+     * windows never have, causing isScreenPointInOsWindow to always return
+     * true and bestWindow to always be the first OS window (main). The fix
+     * uses the real screen area as the tie-break so the smallest containing
+     * OS window wins, matching the intent of the original algorithm.
+     *
+     * Phase 2 — BSP leaf lookup.
+     * Once bestWindow is known, obtain the cursor position relative to THAT
+     * window by querying the platform directly via getCursorXForWindow/Y.
+     * This bypasses hoveredWindowLocked and the syncInputForWindow mechanism,
+     * both of which may still reflect the drag-source window. Pass those
+     * window-local coords to the scoped findLeafAt(osWindow, localX, localY)
+     * overload so the search only covers the correct BSP tree with matching
+     * coordinates.
+     */
+    private DropTargetStruct resolveDropTarget(float globalX, float globalY) {
 
         ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
         Object[] elements = windows.elements();
@@ -318,12 +367,12 @@ public class TabDragManager extends ManagerPackage {
             if (!w.hasNativeHandle())
                 continue;
 
-            if (!isScreenPointInOsWindow(w, screenX, screenY))
+            if (!isGlobalPointInOsWindow(w, globalX, globalY))
                 continue;
 
-            long area = w.hasCompositeRect()
-                    ? (long) w.getCompositeW() * (long) w.getCompositeH()
-                    : Long.MAX_VALUE;
+            // Use the real window area rather than Long.MAX_VALUE so the
+            // smallest containing OS window wins when windows overlap.
+            long area = (long) w.getWidth() * (long) w.getHeight();
 
             if (area < bestArea || (area == bestArea && w.getDepth() > bestDepth)) {
                 bestArea = area;
@@ -335,38 +384,48 @@ public class TabDragManager extends ManagerPackage {
         if (bestWindow == null)
             return null;
 
+        // Get cursor position in bestWindow's local space via a direct platform
+        // query — independent of which window syncInputForWindow last targeted.
+        float localX = inputManager.getCursorXForWindow(bestWindow);
+        float localY = inputManager.getCursorYForWindow(bestWindow);
+
         DockNodeStruct leaf = tabManager.getDockLayoutSystem()
-                .findLeafAt(screenX, screenY);
+                .findLeafAt(bestWindow, localX, localY);
 
         if (leaf == null)
             return null;
 
-        DropZone zone = classifyZone(leaf, screenX, screenY);
+        DropZone zone = classifyZone(leaf, localX, localY);
 
         return new DropTargetStruct(bestWindow, leaf, zone);
     }
 
-    private boolean isScreenPointInOsWindow(WindowInstance w, float sx, float sy) {
-
-        if (w.hasCompositeRect())
-            return sx >= w.getCompositeX()
-                    && sx < w.getCompositeX() + w.getCompositeW()
-                    && sy >= w.getCompositeY()
-                    && sy < w.getCompositeY() + w.getCompositeH();
-
-        // Window fills its entire monitor — always a candidate.
-        return true;
+    /*
+     * Tests whether the global screen cursor position falls within an OS
+     * window's real screen bounds. Uses getScreenX/Y() (set by the platform
+     * layer on open and on window-moved callbacks) plus getWidth/Height().
+     *
+     * Previously this method returned true unconditionally for OS windows
+     * because compositeRect is never set on them. That caused every OS window
+     * to be a candidate, made the area tie-break meaningless (all Long.MAX_VALUE),
+     * and forced bestWindow to always be the first OS window in the list.
+     */
+    private boolean isGlobalPointInOsWindow(WindowInstance w, float globalX, float globalY) {
+        return globalX >= w.getScreenX()
+                && globalX < w.getScreenX() + w.getWidth()
+                && globalY >= w.getScreenY()
+                && globalY < w.getScreenY() + w.getHeight();
     }
 
-    private DropZone classifyZone(DockNodeStruct leaf, float screenX, float screenY) {
+    private DropZone classifyZone(DockNodeStruct leaf, float localX, float localY) {
 
         float lx = leaf.getX();
         float ly = leaf.getY();
         float lw = leaf.getW();
         float lh = leaf.getH();
 
-        float relX = (screenX - lx) / lw;
-        float relY = (screenY - ly) / lh;
+        float relX = (localX - lx) / lw;
+        float relY = (localY - ly) / lh;
 
         float edge = dropZoneEdgeFraction;
 

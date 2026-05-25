@@ -13,6 +13,7 @@ import engine.input.Input;
 import engine.root.EngineContext;
 import engine.root.WindowPlatform;
 
+import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
 
 public class Lwjgl3WindowPlatform implements WindowPlatform {
@@ -32,6 +33,12 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     private final Int2LongOpenHashMap windowID2Handle = new Int2LongOpenHashMap();
     private final Int2ObjectOpenHashMap<GLCapabilities> windowID2Capabilities = new Int2ObjectOpenHashMap<>();
     private final Long2IntOpenHashMap handle2WindowID = new Long2IntOpenHashMap();
+
+    // Scratch buffers — reused to avoid per-call allocation
+    private final DoubleBuffer cursorScratchX = BufferUtils.createDoubleBuffer(1);
+    private final DoubleBuffer cursorScratchY = BufferUtils.createDoubleBuffer(1);
+    private final IntBuffer posScratchX = BufferUtils.createIntBuffer(1);
+    private final IntBuffer posScratchY = BufferUtils.createIntBuffer(1);
 
     public Lwjgl3WindowPlatform() {
         windowID2Handle.defaultReturnValue(0L);
@@ -58,6 +65,11 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         GLFW.glfwShowWindow(handle);
 
         syncWindowSize(window);
+        syncScreenPosition(window);
+
+        GLFW.glfwSetWindowPosCallback(handle, (h, x, y) -> {
+            window.setScreenPosition(x, y);
+        });
     }
 
     @Override
@@ -161,6 +173,91 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
         if (width > 0 && height > 0)
             window.resize(width, height);
+    }
+
+    // Cursor position — window-local, no context switch \\
+
+    /*
+     * Returns the cursor X position relative to the given OS window's client
+     * area. glfwGetCursorPos does not require the window to be the current
+     * GL context, so this is safe to call for any native window at any time
+     * without disturbing the input-sync state. Used by InputManager to serve
+     * TabDragManager during cross-window drag resolution.
+     */
+    @Override
+    public float getCursorX(WindowInstance window) {
+
+        if (!window.hasNativeHandle())
+            return 0f;
+
+        cursorScratchX.clear();
+        cursorScratchY.clear();
+        GLFW.glfwGetCursorPos(window.getNativeHandle(), cursorScratchX, cursorScratchY);
+        return (float) cursorScratchX.get(0);
+    }
+
+    @Override
+    public float getCursorY(WindowInstance window) {
+
+        if (!window.hasNativeHandle())
+            return 0f;
+
+        cursorScratchX.clear();
+        cursorScratchY.clear();
+        GLFW.glfwGetCursorPos(window.getNativeHandle(), cursorScratchX, cursorScratchY);
+        return (float) cursorScratchY.get(0);
+    }
+
+    // Screen position — OS-level window origin \\
+
+    /*
+     * Returns the screen X/Y of the window's top-left corner as reported by
+     * the OS. Written into WindowInstance.screenX/Y so TabDragManager can test
+     * whether the global cursor falls within a specific OS window's bounds
+     * during drag resolution. Also called from openWindow and the
+     * glfwSetWindowPosCallback installed there.
+     */
+    @Override
+    public float getScreenX(WindowInstance window) {
+
+        if (!window.hasNativeHandle())
+            return 0f;
+
+        posScratchX.clear();
+        posScratchY.clear();
+        GLFW.glfwGetWindowPos(window.getNativeHandle(), posScratchX, posScratchY);
+        return posScratchX.get(0);
+    }
+
+    @Override
+    public float getScreenY(WindowInstance window) {
+
+        if (!window.hasNativeHandle())
+            return 0f;
+
+        posScratchX.clear();
+        posScratchY.clear();
+        GLFW.glfwGetWindowPos(window.getNativeHandle(), posScratchX, posScratchY);
+        return posScratchY.get(0);
+    }
+
+    // Internal \\
+
+    /*
+     * Queries glfwGetWindowPos and writes the result into WindowInstance so
+     * the engine-side screen position stays in sync with the OS. Called from
+     * openWindow after the handle is live, and automatically kept current by
+     * the glfwSetWindowPosCallback installed in openWindow.
+     */
+    private void syncScreenPosition(WindowInstance window) {
+
+        if (!window.hasNativeHandle())
+            return;
+
+        posScratchX.clear();
+        posScratchY.clear();
+        GLFW.glfwGetWindowPos(window.getNativeHandle(), posScratchX, posScratchY);
+        window.setScreenPosition(posScratchX.get(0), posScratchY.get(0));
     }
 
     private long resolveOrCreateHandle(WindowInstance window) {

@@ -21,9 +21,16 @@ public class DockLayoutSystem extends SystemPackage {
      * entry exists before any tab is added. removeWindow() cleans up the entry
      * when a secondary OS window is closed.
      *
-     * findDividerAt() and findLeafAt() walk all trees — callers do not need to
-     * know which window a divider or leaf belongs to. All other methods are
-     * window-scoped so per-tree rect math stays isolated.
+     * findDividerAt() and the global findLeafAt() walk all trees — callers do
+     * not need to know which window a divider or leaf belongs to. All other
+     * methods are window-scoped so per-tree rect math stays isolated.
+     *
+     * findLeafAt(osWindow, localX, localY) is the window-scoped overload used
+     * by TabDragManager. It searches only the given window's BSP tree using
+     * coordinates that are already in that window's local space. This avoids
+     * the coordinate-space mismatch that occurs when the cursor is over a
+     * secondary OS window but EngineContext.input still reports coords relative
+     * to the drag-source window.
      *
      * Each split node owns a ratio in [0.1, 0.9] (default 0.5) controlling
      * where its divider sits. findDividerAt() walks each tree bottom-up so the
@@ -182,8 +189,13 @@ public class DockLayoutSystem extends SystemPackage {
         node.setRatio(Math.max(RATIO_MIN, Math.min(RATIO_MAX, ratio)));
     }
 
-    // Leaf At Screen Point \\
+    // Leaf At Screen Point — global (walks all trees) \\
 
+    /*
+     * Walks all registered BSP trees. Callers that already know which OS
+     * window they are targeting should use findLeafAt(osWindow, localX, localY)
+     * instead to avoid coordinate-space ambiguity.
+     */
     public DockNodeStruct findLeafAt(float screenX, float screenY) {
 
         for (DockNodeStruct root : roots.values()) {
@@ -193,6 +205,20 @@ public class DockLayoutSystem extends SystemPackage {
         }
 
         return null;
+    }
+
+    // Leaf At Screen Point — window-scoped \\
+
+    /*
+     * Searches only the BSP tree for the given OS window using coordinates
+     * that are already in that window's local space. Use this during drag
+     * resolution after identifying which OS window the cursor is over —
+     * passing window-local coordinates avoids the mismatch that arises when
+     * EngineContext.input still reflects the drag-source window's coordinate
+     * space rather than the target window's.
+     */
+    public DockNodeStruct findLeafAt(WindowInstance osWindow, float localX, float localY) {
+        return findLeafAt(roots.get(osWindow), localX, localY);
     }
 
     private DockNodeStruct findLeafAt(DockNodeStruct node, float sx, float sy) {

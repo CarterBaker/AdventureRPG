@@ -27,6 +27,14 @@ public class WindowInstance extends InstancePackage {
      * toolbar) set both flags: captureEligible false so the cursor is never
      * pinned to them, focusIndependent true so menus and hit testing work
      * without requiring a prior click.
+     *
+     * screenX/screenY holds the OS-level screen position of this window as
+     * reported by the platform (e.g. glfwGetWindowPos). Set by the platform
+     * layer on window creation and on any window-moved callback. Only
+     * meaningful for OS windows (hasNativeHandle() == true); logical windows
+     * are positioned via compositeRect instead. Used by TabDragManager to
+     * convert global screen cursor coordinates into window-local coordinates
+     * for BSP drop-target resolution.
      */
 
     // Data
@@ -56,6 +64,10 @@ public class WindowInstance extends InstancePackage {
 
     // Draw order
     private int depth;
+
+    // OS-level screen position — OS windows only, set by platform layer
+    private float screenX;
+    private float screenY;
 
     // Capture eligibility — false for editor chrome, true for all game windows
     private boolean captureEligible = true;
@@ -178,6 +190,27 @@ public class WindowInstance extends InstancePackage {
         if (hasNativeHandle())
             return this;
         return compositeTarget != null ? compositeTarget.getGLWindow() : this;
+    }
+
+    // Screen Position — OS windows only \\
+
+    public float getScreenX() {
+        return screenX;
+    }
+
+    public float getScreenY() {
+        return screenY;
+    }
+
+    /*
+     * Called by the platform layer (e.g. glfwGetWindowPos callback and on
+     * window creation) to record where this OS window sits on the desktop.
+     * TabDragManager uses this to translate a global screen cursor position
+     * into window-local coordinates before querying the BSP tree.
+     */
+    public void setScreenPosition(float x, float y) {
+        this.screenX = x;
+        this.screenY = y;
     }
 
     // Depth \\

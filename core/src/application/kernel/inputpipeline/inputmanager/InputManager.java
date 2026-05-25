@@ -53,6 +53,20 @@ public class InputManager extends ManagerPackage {
      * focusIndependent windows (e.g. the toolbar) bypass the focus check in
      * isHovered() and route against hoveredWindow instead, allowing editor
      * chrome to remain interactive without ever acquiring focus.
+     *
+     * getGlobalMouseX/Y() returns the raw cursor position as provided by the
+     * platform for the currently input-synced window. This is NOT translated
+     * into any window's local coordinate space — it is the value before any
+     * localX/localY adjustment. Used by TabDragManager exclusively for OS
+     * window hit testing and cross-window BSP lookup during drag resolution.
+     *
+     * getCursorXForWindow/getCursorYForWindow() query the platform directly for
+     * the cursor position relative to a specific OS window, bypassing the
+     * hoveredWindowLocked / syncInputForWindow mechanism entirely. This is the
+     * only correct way to get window-local cursor coords during a drag when the
+     * input-synced window differs from the OS window being tested. Callers must
+     * pass a window with a native handle; results for logical windows are
+     * undefined.
      */
 
     // Internal
@@ -249,6 +263,45 @@ public class InputManager extends ManagerPackage {
                 EngineContext.input.getDeltaX() * internal.settings.mouseSensitivity,
                 EngineContext.input.getDeltaY() * internal.settings.mouseSensitivity);
         return mouseDelta;
+    }
+
+    // Global cursor position \\
+
+    /*
+     * Returns the raw cursor X as provided by the platform for the currently
+     * input-synced window. No composite-rect subtraction is applied. Use this
+     * when you need a coordinate that can be compared against OS window screen
+     * positions (e.g. TabDragManager.resolveDropTarget) rather than against
+     * element/FBO layout coordinates.
+     *
+     * This is distinct from getMouseX(window), which (a) gates on focus/hover
+     * and (b) subtracts the compositeRect origin for logical windows.
+     */
+    public float getGlobalMouseX() {
+        return EngineContext.input.getMouseX();
+    }
+
+    public float getGlobalMouseY() {
+        return EngineContext.input.getMouseY();
+    }
+
+    /*
+     * Returns the cursor position relative to a specific OS window, bypassing
+     * hoveredWindowLocked and the syncInputForWindow / focused-window mechanism
+     * entirely. Backed by a direct platform query (e.g. glfwGetCursorPos).
+     *
+     * This is the only correct way to get window-local coords during a drag
+     * when the input-synced window (the drag source) is different from the OS
+     * window being tested as a drop target. The caller is responsible for
+     * passing a window with a native handle — results for logical windows are
+     * undefined.
+     */
+    public float getCursorXForWindow(WindowInstance osWindow) {
+        return internal.windowPlatform.getCursorX(osWindow);
+    }
+
+    public float getCursorYForWindow(WindowInstance osWindow) {
+        return internal.windowPlatform.getCursorY(osWindow);
     }
 
     // Platform — delegates to CursorSystem \\
