@@ -121,12 +121,19 @@ public class InputManager extends ManagerPackage {
     // Focus \\
 
     /*
-     * Detects a click on a window that does not already own focus and shifts
-     * focus to it. EngineContext.input reflects the hovered window at this
+     * Detects a click on a window and either shifts focus to it or restores
+     * capture on it. EngineContext.input reflects the hovered window at this
      * point because WindowManager.update() has already run syncHoveredWindow(),
-     * which calls syncInputForWindow on the resolved OS window. bindContext
-     * does not reassign EngineContext.input, so no GL context switch between
+     * which calls syncInputForWindow on the resolved window. bindContext does
+     * not reassign EngineContext.input, so no GL context switch between
      * syncHoveredWindow and here can corrupt it.
+     *
+     * Two cases are handled uniformly through onWindowFocused:
+     * Focus shift — click lands on a window that is not the focused window.
+     * Capture restore — click lands on the already-focused window while no
+     * capture is active. This is the pause/resume path: releasing capture
+     * does not clear focusedWindow, so the re-click to resume would be
+     * silently dropped by the focus-change guard without this second check.
      */
     private void syncFocus() {
 
@@ -134,11 +141,20 @@ public class InputManager extends ManagerPackage {
             return;
 
         WindowInstance hovered = windowManager.getHoveredWindow();
-        if (hovered == null || hovered == windowManager.getFocusedWindow())
+        if (hovered == null)
             return;
 
-        windowManager.setFocusedWindow(hovered);
-        onWindowFocused(hovered);
+        if (hovered != windowManager.getFocusedWindow()) {
+            windowManager.setFocusedWindow(hovered);
+            onWindowFocused(hovered);
+            return;
+        }
+
+        // Same window clicked — only act if capture is absent. This is the
+        // resume path: focus is already correct but the cursor is free and
+        // needs to be re-captured without requiring a focus change.
+        if (windowManager.getCapturedWindow() == null)
+            onWindowFocused(hovered);
     }
 
     private void onWindowFocused(WindowInstance window) {

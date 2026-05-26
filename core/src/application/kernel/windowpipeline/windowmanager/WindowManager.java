@@ -62,9 +62,11 @@ public class WindowManager extends ManagerPackage {
      * focused window.
      *
      * capturedWindow pins hoveredWindow when cursor capture is active. While
-     * set, syncHoveredWindow is bypassed entirely — the captured window is
-     * always considered hovered. Released when capture ends, restoring normal
-     * hover resolution.
+     * set, phase 1 and 2 are skipped — the captured window is always considered
+     * hovered. syncInputForWindow is still called on the captured window's GL
+     * window so EngineContext.input is actively maintained every frame rather
+     * than relying on whatever the last resolved OS window happened to be.
+     * Released when capture ends, restoring normal hover resolution.
      */
 
     private ObjectArrayList<WindowInstance> windows;
@@ -133,14 +135,21 @@ public class WindowManager extends ManagerPackage {
             // GLFW cursor callbacks only deliver to the OS-focused window, so
             // without this refresh the hovered window's Lwjgl3Input stales out
             // whenever a secondary window holds OS focus, and hover exit never
-            // fires.
+            // fires. getGLWindow() is required because hoveredWindow may be a
+            // logical window with no native handle — syncInputForWindow would
+            // be a no-op on it and the cursor would never refresh.
             if (hoveredWindow != null)
-                internal.windowPlatform.syncInputForWindow(hoveredWindow);
+                internal.windowPlatform.syncInputForWindow(hoveredWindow.getGLWindow());
             return;
         }
 
         if (capturedWindow != null) {
             hoveredWindow = capturedWindow;
+            // EngineContext.input must be actively maintained even while captured
+            // so it is always correct when InputManager reads it. Without this,
+            // input context reflects whatever the last resolved OS window was
+            // rather than the window that actually owns capture.
+            internal.windowPlatform.syncInputForWindow(capturedWindow.getGLWindow());
             return;
         }
 
