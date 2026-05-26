@@ -42,14 +42,18 @@ public class WindowManager extends ManagerPackage {
      *
      * The original single-pass approach failed for secondary windows because
      * EngineContext.input always reflected the main window before
-     * syncInputForWindow
-     * was called — secondary logical windows have composite rects in their own
-     * OS window's local space so the hit test always failed for them. Phase 1
-     * resolves the correct OS window first so the sync precedes the test.
+     * syncInputForWindow was called — secondary logical windows have composite
+     * rects in their own OS window's local space so the hit test always failed
+     * for them. Phase 1 resolves the correct OS window first so the sync
+     * precedes the test.
      *
      * hoveredWindowLocked prevents syncHoveredWindow from reassigning
      * hoveredWindow while an element hover is active. Lock is set by
-     * ElementHitSystem on hover entry and released on hover exit.
+     * ElementHitSystem on hover entry and released on hover exit. While locked,
+     * syncInputForWindow is still called on the current hoveredWindow so cursor
+     * coordinates stay current for hover-exit testing — GLFW cursor callbacks
+     * only fire on the OS-focused window, so without this refresh the coords
+     * stale out when a secondary window has OS focus and hover-exit never fires.
      *
      * focusedWindow is the window that currently owns input. It is set by
      * clicking on a window and is the single authority for input routing.
@@ -74,6 +78,9 @@ public class WindowManager extends ManagerPackage {
     private boolean hoveredWindowLocked;
 
     private int nextWindowID;
+
+    // Scratch — reused per frame to avoid allocation in the OS-window hot path
+    private final float[] cursorPosScratch = new float[2];
 
     // Internal \\
 
@@ -120,8 +127,17 @@ public class WindowManager extends ManagerPackage {
 
     private void syncHoveredWindow() {
 
-        if (hoveredWindowLocked)
+        if (hoveredWindowLocked) {
+            // Cursor coordinates must stay current even while locked so
+            // hover-exit testing in ElementHitSystem can fire correctly.
+            // GLFW cursor callbacks only deliver to the OS-focused window, so
+            // without this refresh the hovered window's Lwjgl3Input stales out
+            // whenever a secondary window holds OS focus, and hover exit never
+            // fires.
+            if (hoveredWindow != null)
+                internal.windowPlatform.syncInputForWindow(hoveredWindow);
             return;
+        }
 
         if (capturedWindow != null) {
             hoveredWindow = capturedWindow;
@@ -184,7 +200,9 @@ public class WindowManager extends ManagerPackage {
      * area using a direct glfwGetCursorPos query per window. The bounds check
      * uses raw Y-down coords from the platform — the valid range [0, height)
      * is the same in both Y-down and Y-up so no conversion is needed here.
-     * Smallest area wins when OS windows overlap.
+     * Smallest area wins when OS windows overlap. getCursorPos is used instead
+     * of separate getCursorX/getCursorY calls to avoid a redundant platform
+     * round-trip per window per frame.
      */
     private WindowInstance resolveHoveredOsWindow() {
 
@@ -198,8 +216,9 @@ public class WindowManager extends ManagerPackage {
             if (!w.hasNativeHandle())
                 continue;
 
-            float lx = internal.windowPlatform.getCursorX(w);
-            float ly = internal.windowPlatform.getCursorY(w);
+            internal.windowPlatform.getCursorPos(w, cursorPosScratch);
+            float lx = cursorPosScratch[0];
+            float ly = cursorPosScratch[1];
 
             if (lx < 0 || lx >= w.getWidth() || ly < 0 || ly >= w.getHeight())
                 continue;

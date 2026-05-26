@@ -3,11 +3,13 @@ package engine.root;
 import application.kernel.windowpipeline.window.WindowInstance;
 
 public interface WindowPlatform {
+
     /*
      * Backend contract for all GLFW window operations. Implemented once per
      * platform and injected at launch. The engine never calls GLFW directly —
      * all window management routes through here.
      */
+
     void openWindow(WindowInstance window);
 
     void destroyWindow(WindowInstance window);
@@ -44,6 +46,17 @@ public interface WindowPlatform {
     float getCursorX(WindowInstance window);
 
     float getCursorY(WindowInstance window);
+
+    /*
+     * Fills out[0] with the cursor X and out[1] with cursor Y relative to the
+     * given OS window's client area in a single platform query. Prefer this
+     * over calling getCursorX and getCursorY separately when both coordinates
+     * are needed — avoids a redundant glfwGetCursorPos round-trip per window
+     * per frame in the OS-window hot path (e.g. resolveHoveredOsWindow).
+     *
+     * Same handle and undefined-for-logical-windows constraints as getCursorX/Y.
+     */
+    void getCursorPos(WindowInstance window, float[] out);
 
     /*
      * Returns the OS-level screen position of the given window's top-left

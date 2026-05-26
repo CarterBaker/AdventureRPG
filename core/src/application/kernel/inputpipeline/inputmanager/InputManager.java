@@ -27,6 +27,13 @@ public class InputManager extends ManagerPackage {
      * follows focus — granted when the resolved content window has no
      * input-locked menus, released when it does.
      *
+     * syncFocus reads EngineContext.input which is set exclusively by
+     * syncInputForWindow, called from WindowManager.syncHoveredWindow() earlier
+     * in the same frame update. bindContext no longer touches EngineContext.input,
+     * so GL context switches during rendering cannot corrupt the input context
+     * established by syncHoveredWindow. WindowManager must update before
+     * InputManager for EngineContext.input to be correct here.
+     *
      * resolveInputAuthority() maps a focused window to the window that actually
      * owns lock state. The resolver is pushed in by the editor layer (TabManager)
      * so the kernel never names any editor type — only WindowInstance crosses
@@ -113,6 +120,14 @@ public class InputManager extends ManagerPackage {
 
     // Focus \\
 
+    /*
+     * Detects a click on a window that does not already own focus and shifts
+     * focus to it. EngineContext.input reflects the hovered window at this
+     * point because WindowManager.update() has already run syncHoveredWindow(),
+     * which calls syncInputForWindow on the resolved OS window. bindContext
+     * does not reassign EngineContext.input, so no GL context switch between
+     * syncHoveredWindow and here can corrupt it.
+     */
     private void syncFocus() {
 
         if (!EngineContext.input.isMouseClicked(0) && !EngineContext.input.isMouseClicked(1))

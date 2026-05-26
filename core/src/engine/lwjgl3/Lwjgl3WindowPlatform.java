@@ -22,6 +22,15 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
      * Bridges the engine WindowPlatform contract to raw GLFW. Maps engine window
      * IDs to native handles. All windows — main and secondary — share identical
      * open, draw, swap, and destroy paths with no special casing.
+     *
+     * GL context switching and input context switching are intentionally
+     * decoupled. bindContext only makes a GL context current and ensures its
+     * GLCapabilities are loaded — it never touches EngineContext.input.
+     * syncInputForCurrentContext is called exclusively from syncInputForWindow,
+     * which WindowManager drives once per frame after resolving the hovered OS
+     * window. This ensures that render-loop context switches (makeContextCurrent
+     * on secondary windows) cannot corrupt the input context that was established
+     * by syncHoveredWindow earlier in the same frame.
      */
 
     // Application
@@ -222,6 +231,29 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         return (float) cursorScratchY.get(0);
     }
 
+    /*
+     * Fills out[0]/out[1] with cursor X/Y in a single glfwGetCursorPos call.
+     * Use this instead of getCursorX + getCursorY when both values are needed
+     * together — avoids a redundant platform round-trip per window per frame.
+     * Called from resolveHoveredOsWindow which queries every registered OS
+     * window every frame.
+     */
+    @Override
+    public void getCursorPos(WindowInstance window, float[] out) {
+
+        if (!window.hasNativeHandle()) {
+            out[0] = 0f;
+            out[1] = 0f;
+            return;
+        }
+
+        cursorScratchX.clear();
+        cursorScratchY.clear();
+        GLFW.glfwGetCursorPos(window.getNativeHandle(), cursorScratchX, cursorScratchY);
+        out[0] = (float) cursorScratchX.get(0);
+        out[1] = (float) cursorScratchY.get(0);
+    }
+
     // Screen position — OS-level window origin \\
 
     /*
@@ -311,17 +343,21 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         if (windowID == UNKNOWN_WINDOW_ID) {
             GLFW.glfwMakeContextCurrent(windowHandle);
             GL.setCapabilities(previousCapabilities);
-            syncInputForCurrentContext(windowHandle);
             return;
         }
 
         bindContext(windowID, windowHandle);
     }
 
+    /*
+     * Makes the given GL context current and ensures its GLCapabilities are
+     * loaded. Does NOT touch EngineContext.input — input context is owned
+     * exclusively by syncInputForWindow and must not be reassigned as a side
+     * effect of GL context switches during rendering or window initialisation.
+     */
     private void bindContext(int windowID, long windowHandle) {
         GLFW.glfwMakeContextCurrent(windowHandle);
         ensureCapabilitiesForCurrentContext(windowID);
-        syncInputForCurrentContext(windowHandle);
     }
 
     private void ensureCapabilitiesForCurrentContext(int windowID) {
