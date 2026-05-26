@@ -151,18 +151,9 @@ public class TabDragManager extends ManagerPackage {
             return;
         }
 
-        // Local coords — in the source OS window's coordinate space.
-        // Used by updateDraggedWindows to position floating chrome within
-        // the source window's composite rect. Must not have screenX/Y added.
+        WindowInstance sourceOsWindow = resolveOsWindow(draggedHandle.getTabContext().getWindow());
         float localX = inputManager.getGlobalMouseX();
         float localY = inputManager.getGlobalMouseY();
-
-        // Screen coords — local offset by the source OS window's screen position.
-        // Required by resolveDropTarget which tests against getScreenX/Y() on each
-        // OS window. Without this, dragging from any secondary window that is not
-        // at screen (0,0) produces coords in the wrong space and resolveDropTarget
-        // fails to match any existing window, opening a new one on every drop.
-        WindowInstance sourceOsWindow = resolveOsWindow(draggedHandle.getTabContext().getWindow());
         float screenX = localX + sourceOsWindow.getScreenX();
         float screenY = localY + sourceOsWindow.getScreenY();
 
@@ -171,7 +162,35 @@ public class TabDragManager extends ManagerPackage {
         DropTargetStruct target = resolveDropTarget(screenX, screenY);
         updateZoneGhost(target);
 
-        lastDropTarget = target;
+        // Three cases:
+        // 1. Valid target found — update normally.
+        // 2. Cursor inside an OS window but over toolbar or tab chrome — no BSP
+        // leaf resolves, but this is not a void drop. Retain the last valid
+        // target so releasing here lands in the last resolved pane rather than
+        // opening a new secondary window.
+        // 3. Cursor outside all OS windows entirely — clear, a void drop should
+        // open a new secondary window.
+        if (target != null)
+            lastDropTarget = target;
+        else if (!isCursorOverAnyOsWindow(screenX, screenY))
+            lastDropTarget = null;
+    }
+
+    private boolean isCursorOverAnyOsWindow(float globalX, float globalY) {
+
+        ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
+        Object[] elements = windows.elements();
+        int size = windows.size();
+
+        for (int i = 0; i < size; i++) {
+            WindowInstance w = (WindowInstance) elements[i];
+            if (!w.hasNativeHandle())
+                continue;
+            if (isGlobalPointInOsWindow(w, globalX, globalY))
+                return true;
+        }
+
+        return false;
     }
 
     // Entry Point \\
