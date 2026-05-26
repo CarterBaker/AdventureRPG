@@ -14,7 +14,7 @@ public class KernelAssembly extends AssemblyPackage {
     @Override
     public void create() {
         create(ThreadPipeline.class);
-        create(InputPipeline.class);
         create(WindowPipeline.class);
+        create(InputPipeline.class);
     }
 }
