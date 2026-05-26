@@ -5,6 +5,7 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.runtime.editor.EditorWindowSecondary;
+import editor.runtime.editor.EditorWindowSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 
@@ -43,6 +44,6 @@ public class EditorBranch extends BranchPackage {
     }
 
     public void openSecondaryWindow() {
-        tabManager.openTab(EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY, EditorWindowSecondary.class);
+        tabManager.openTab(EditorWindowSetting.WINDOW_TITLE_EDITOR_SECONDARY, EditorWindowSecondary.class);
     }
 }

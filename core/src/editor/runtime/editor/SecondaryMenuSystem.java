@@ -44,7 +44,7 @@ public class SecondaryMenuSystem extends SystemPackage {
 
         FboInstance baseFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, osWindow);
         menuManager.setMenuTargetFbo(osWindow, baseFbo);
-        baseMenu = menuManager.openMenu(EngineSetting.MENU_EDITOR_BASE, osWindow);
+        baseMenu = menuManager.openMenu(EditorWindowSetting.MENU_EDITOR_SECONDARY, osWindow);
     }
 
     // Accessible \\

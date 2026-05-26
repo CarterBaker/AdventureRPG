@@ -68,17 +68,17 @@ public class EditorMenuSystem extends SystemPackage {
         // Base — background + dock canvas, depth 0
         FboInstance baseFbo = fboManager.getFbo(RuntimeSetting.FBO_UI);
         menuManager.setMenuTargetFbo(mainWindow, baseFbo);
-        baseMenu = menuManager.openMenu(EngineSetting.MENU_EDITOR_BASE, mainWindow);
+        baseMenu = menuManager.openMenu(EditorWindowSetting.MENU_EDITOR_BASE, mainWindow);
 
         // Toolbar — own logical window at depth 3, own cloned FBO, always receives
         // input
         toolbarWindow = windowManager.createLogicalWindow(
-                EngineSetting.WINDOW_TITLE_EDITOR_TOOLBAR, mainWindow);
+                EditorWindowSetting.WINDOW_TITLE_EDITOR_TOOLBAR, mainWindow);
         toolbarWindow.setDepth(3);
 
         FboInstance toolbarFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, toolbarWindow);
         menuManager.setMenuTargetFbo(toolbarWindow, toolbarFbo);
-        toolbarMenu = menuManager.openMenu(EngineSetting.MENU_EDITOR_TOOLBAR, toolbarWindow);
+        toolbarMenu = menuManager.openMenu(EditorWindowSetting.MENU_EDITOR_TOOLBAR, toolbarWindow);
     }
 
     // Update \\
