@@ -144,15 +144,18 @@ public class InputManager extends ManagerPackage {
         if (hovered == null)
             return;
 
+        // Focus-independent windows (toolbar, tab chrome) must never steal
+        // focusedWindow. They are hover-routed only — a click on them must not
+        // displace the content window that currently owns focus and capture.
+        if (hovered.isFocusIndependent())
+            return;
+
         if (hovered != windowManager.getFocusedWindow()) {
             windowManager.setFocusedWindow(hovered);
             onWindowFocused(hovered);
             return;
         }
 
-        // Same window clicked — only act if capture is absent. This is the
-        // resume path: focus is already correct but the cursor is free and
-        // needs to be re-captured without requiring a focus change.
         if (windowManager.getCapturedWindow() == null)
             onWindowFocused(hovered);
     }

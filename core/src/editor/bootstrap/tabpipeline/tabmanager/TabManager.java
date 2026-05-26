@@ -155,6 +155,8 @@ public class TabManager extends ManagerPackage {
 
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, mainWindow);
         tabWindow.setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
+        tabWindow.setCaptureEligible(false);
+        tabWindow.setFocusIndependent(true);
 
         TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
 
@@ -216,6 +218,9 @@ public class TabManager extends ManagerPackage {
         openTabs.remove(handle);
 
         pushRects();
+
+        if (osWindow != windowManager.getMainWindow() && isOsWindowEmpty(osWindow))
+            closeOsWindow(osWindow);
     }
 
     public void openSecondaryWindowForTab(TabHandle handle) {
@@ -254,6 +259,8 @@ public class TabManager extends ManagerPackage {
         WindowInstance tabWindow = windowManager.createLogicalWindow(
                 handle.getTabTitle(), osWindow);
         tabWindow.setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
+        tabWindow.setCaptureEligible(false);
+        tabWindow.setFocusIndependent(true);
 
         TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
 
@@ -304,6 +311,8 @@ public class TabManager extends ManagerPackage {
         WindowInstance tabWindow = windowManager.createLogicalWindow(
                 handle.getTabTitle(), targetOsWindow);
         tabWindow.setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
+        tabWindow.setCaptureEligible(false);
+        tabWindow.setFocusIndependent(true);
 
         TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
 
@@ -368,7 +377,7 @@ public class TabManager extends ManagerPackage {
         for (int i = 0; i < removeSize; i++)
             windowManager.removeWindow((WindowInstance) removeElements[i]);
 
-        windowManager.removeWindow(osWindow);
+        windowManager.destroyOsWindow(osWindow);
     }
 
     public void setDockRect(WindowInstance osWindow, float x, float y, float w, float h) {

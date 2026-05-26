@@ -151,15 +151,24 @@ public class TabDragManager extends ManagerPackage {
             return;
         }
 
-        // dragX/dragY are used for updateDraggedWindows — they position the
-        // floating chrome within the source OS window's composite space and
-        // must remain the same global coords used at latch time.
-        float dragX = inputManager.getGlobalMouseX();
-        float dragY = inputManager.getGlobalMouseY();
+        // Local coords — in the source OS window's coordinate space.
+        // Used by updateDraggedWindows to position floating chrome within
+        // the source window's composite rect. Must not have screenX/Y added.
+        float localX = inputManager.getGlobalMouseX();
+        float localY = inputManager.getGlobalMouseY();
 
-        updateDraggedWindows(dragX, dragY);
+        // Screen coords — local offset by the source OS window's screen position.
+        // Required by resolveDropTarget which tests against getScreenX/Y() on each
+        // OS window. Without this, dragging from any secondary window that is not
+        // at screen (0,0) produces coords in the wrong space and resolveDropTarget
+        // fails to match any existing window, opening a new one on every drop.
+        WindowInstance sourceOsWindow = resolveOsWindow(draggedHandle.getTabContext().getWindow());
+        float screenX = localX + sourceOsWindow.getScreenX();
+        float screenY = localY + sourceOsWindow.getScreenY();
 
-        DropTargetStruct target = resolveDropTarget(dragX, dragY);
+        updateDraggedWindows(localX, localY);
+
+        DropTargetStruct target = resolveDropTarget(screenX, screenY);
         updateZoneGhost(target);
 
         lastDropTarget = target;

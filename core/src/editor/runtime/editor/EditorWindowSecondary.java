@@ -29,6 +29,5 @@ public class EditorWindowSecondary extends ContextPackage {
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
-        getWindow().setFocusIndependent(true);
     }
 }

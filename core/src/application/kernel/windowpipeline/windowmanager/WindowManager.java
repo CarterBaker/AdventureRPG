@@ -412,4 +412,16 @@ public class WindowManager extends ManagerPackage {
                 return true;
         return false;
     }
+
+    public void destroyOsWindow(WindowInstance window) {
+
+        if (window == null || window == mainWindow || !window.hasNativeHandle())
+            return;
+
+        unlockHoveredWindow();
+        internal.windowPlatform.makeContextCurrent(window);
+
+        window.dispose();
+        internal.windowPlatform.destroyWindow(window);
+    }
 }
