@@ -266,4 +266,17 @@ class Lwjgl3Input implements Input {
     public void clearCursor() {
         GLFW.glfwSetCursor(window, 0L);
     }
+
+    /*
+     * Updates cursorX/Y from a direct platform query without computing delta
+     * or notifying listeners. Called by the platform after syncInputForWindow
+     * so getMouseX/Y() returns current coords even when this window has no OS
+     * focus and cursor-move callbacks have not fired. firstCursor is left
+     * untouched — the next real onCursor call will handle delta correctly
+     * from the refreshed position.
+     */
+    void refreshCursor(double x, double yDown) {
+        cursorX = x;
+        cursorY = toYUp(yDown);
+    }
 }
