@@ -141,11 +141,11 @@ public class TabDragManager extends ManagerPackage {
 
         float globalX = inputManager.getGlobalMouseX();
         float globalY = inputManager.getGlobalMouseY();
-        grabOffsetX = globalX - tabWindow.getCompositeX();
-        grabOffsetY = globalY - tabWindow.getCompositeY();
+        grabOffsetX = 0f;
+        grabOffsetY = 0f;
 
-        dragW = tabWindow.getCompositeW();
-        dragH = tabWindow.getCompositeH();
+        dragW = EngineSetting.TAB_DRAG_PREVIEW_W;
+        dragH = EngineSetting.TAB_DRAG_PREVIEW_H;
 
         draggedHandle = handle;
 
