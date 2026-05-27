@@ -87,6 +87,18 @@ public class TabContext extends ContextPackage {
         fboRenderSystem.pushFbo(uiFbo, RuntimeSetting.LAYER_UI, getWindow());
     }
 
+    // Dispose \\
+
+    @Override
+    protected void dispose() {
+        if (chromeMenu != null) {
+            menuManager.closeMenu(chromeMenu);
+            chromeMenu = null;
+        }
+        menuManager.setMenuTargetFbo(getWindow(), null);
+        // release uiFbo if fboManager has a dispose API
+    }
+
     // Management \\
 
     public void linkContent(ContextPackage contentContext) {
