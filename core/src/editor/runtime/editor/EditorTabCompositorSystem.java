@@ -2,16 +2,25 @@ package editor.runtime.editor;
 
 import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
+import editor.bootstrap.tabpipeline.tab.TabContext;
+import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.root.SystemPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EditorTabCompositorSystem extends SystemPackage {
 
     /*
-     * Drives dock rect updates for the main OS window. Detects canvas changes
-     * and forwards them to TabManager.setDockRect(), which calls pushRects().
-     * pushRects() calls TabContext.placeAt() on every tab — chrome and content
-     * are positioned together in that single call. No per-tab sync needed here.
+     * Drives dock rect updates and per-frame content sync for the main OS window.
+     *
+     * setDockRect() triggers pushRects() which calls placeAt() on every chrome
+     * window. syncContent() is then called every frame on every tab whose chrome
+     * composites to this OS window — it reads the canvas bounds that
+     * MenuRenderSystem just wrote and pushes them to the content window.
+     *
+     * The two-call split matters: placeAt() runs on structural changes,
+     * syncContent() runs every frame so content placement always uses the
+     * current frame's canvas bounds rather than stale ones.
      */
 
     private TabManager tabManager;
@@ -50,6 +59,28 @@ public class EditorTabCompositorSystem extends SystemPackage {
             lastW = w;
             lastH = h;
             tabManager.setDockRect(context.getWindow(), x, y, w, h);
+        }
+
+        syncContentRects();
+    }
+
+    // Sync \\
+
+    private void syncContentRects() {
+
+        ObjectArrayList<TabHandle> tabs = tabManager.getOpenTabs();
+        Object[] elements = tabs.elements();
+        int size = tabs.size();
+
+        for (int i = 0; i < size; i++) {
+
+            TabHandle handle = (TabHandle) elements[i];
+            TabContext tabContext = handle.getTabContext();
+
+            if (tabContext.getWindow().getCompositeTarget() != context.getWindow())
+                continue;
+
+            tabContext.syncContent();
         }
     }
 }

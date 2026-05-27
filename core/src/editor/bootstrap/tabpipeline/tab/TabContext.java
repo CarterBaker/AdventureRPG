@@ -18,16 +18,13 @@ public class TabContext extends ContextPackage {
      * Owns the chrome window, chrome FBO, chrome menu, and the content context
      * that lives inside the tab's canvas area.
      *
-     * placeAt() is the single method for positioning this tab. It sets the chrome
-     * window rect and derives the content rect from the chrome canvas in one call.
-     * Every caller — pushRects, compositor sync, drag tracking — uses placeAt().
-     * Neither chrome nor content composite rects are written anywhere else.
+     * placeAt() positions the chrome window. The compositor calls syncContent()
+     * each frame after MenuRenderSystem has written fresh canvas bounds — that
+     * is the only place the content window's composite rect is set. Keeping the
+     * two calls separate means content placement always uses the current frame's
+     * canvas bounds, never stale ones from before the menu rendered.
      *
-     * moveTo() reparents both windows to a new OS window. No destroy, no rebuild,
-     * no lifecycle gap.
-     *
-     * onResize() resizes the FBO when the engine drives a window resize after
-     * placeAt() calls tabWindow.resize().
+     * moveTo() reparents both windows to a new OS window. No destroy, no rebuild.
      */
 
     // Internal
@@ -112,55 +109,57 @@ public class TabContext extends ContextPackage {
     }
 
     /*
-     * The single method for positioning this tab. Places the chrome window at the
-     * given rect, then derives the content window position from the tab_canvas
-     * element bounds inside the chrome menu.
-     *
-     * The canvas stores its position in the chrome window's local pixel space
-     * (origin at top-left of the chrome window). Adding the chrome window's
-     * composite origin converts those local coords to OS-window composite space,
-     * which is what setCompositeRect expects.
-     *
-     * If the canvas is not yet ready (menu hasn't rendered its first frame),
-     * content falls back to the full chrome rect. The compositor will push a
-     * corrected placeAt() on the next frame once canvas bounds are written.
-     *
-     * This is the only place either window's composite rect is written.
+     * Positions the chrome window. Called by pushRects() and drag tracking.
+     * Content placement is handled separately by syncContent() each frame after
+     * MenuRenderSystem has written fresh canvas bounds.
      */
     public void placeAt(float x, float y, float w, float h) {
 
         if (w <= 0 || h <= 0)
             return;
 
-        // Chrome — always gets the full BSP rect
         WindowInstance tabWindow = getWindow();
         tabWindow.setCompositeRect(x, y, w, h);
         tabWindow.resize((int) w, (int) h);
+    }
 
-        if (contentContext == null)
+    /*
+     * Pushes the current canvas bounds to the content window. Called by the
+     * compositor each frame after MenuRenderSystem has rendered and written fresh
+     * bounds into the canvas. This is the only place the content window's
+     * composite rect is written.
+     *
+     * Canvas coords are in chrome-local pixel space (origin top-left of chrome
+     * window). Adding the chrome composite origin gives OS-window space.
+     */
+    public void syncContent() {
+
+        if (contentContext == null || chromeMenu == null)
             return;
+
+        if (chromeMenu.getCanvas() == null)
+            return;
+
+        float cw = chromeMenu.getCanvas().getW();
+        float ch = chromeMenu.getCanvas().getH();
+
+        if (cw <= 0 || ch <= 0)
+            return;
+
+        WindowInstance tabWindow = getWindow();
+        float cx = tabWindow.getCompositeX() + chromeMenu.getCanvas().getX();
+        float cy = tabWindow.getCompositeY() + chromeMenu.getCanvas().getY();
 
         WindowInstance contentWindow = contentContext.getWindow();
 
-        // Canvas is in chrome-local pixel space — offset by chrome composite origin
-        // to get OS-window composite space for the content window.
-        if (chromeMenu != null && chromeMenu.getCanvas() != null) {
+        if (cx == contentWindow.getCompositeX()
+                && cy == contentWindow.getCompositeY()
+                && cw == contentWindow.getCompositeW()
+                && ch == contentWindow.getCompositeH())
+            return;
 
-            float cw = chromeMenu.getCanvas().getW();
-            float ch = chromeMenu.getCanvas().getH();
-
-            if (cw > 0 && ch > 0) {
-                float cx = x + chromeMenu.getCanvas().getX();
-                float cy = y + chromeMenu.getCanvas().getY();
-                contentWindow.setCompositeRect(cx, cy, cw, ch);
-                contentWindow.resize((int) cw, (int) ch);
-                return;
-            }
-        }
-
-        // Canvas not ready yet — use full chrome rect until first render writes bounds
-        contentWindow.setCompositeRect(x, y, w, h);
-        contentWindow.resize((int) w, (int) h);
+        contentWindow.setCompositeRect(cx, cy, cw, ch);
+        contentWindow.resize((int) cw, (int) ch);
     }
 
     /*
@@ -171,6 +170,10 @@ public class TabContext extends ContextPackage {
 
         windowManager.reparentWindow(getWindow(), targetOsWindow);
         windowManager.reparentWindow(contentContext.getWindow(), targetOsWindow);
+
+        // Reset to default depths — drag may have elevated them
+        getWindow().setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
+        contentContext.getWindow().setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
     }
 
     // Accessible \\
