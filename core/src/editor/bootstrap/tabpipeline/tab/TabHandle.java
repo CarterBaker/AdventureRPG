@@ -8,34 +8,32 @@ public class TabHandle extends HandlePackage {
 
     /*
      * Runtime handle for one registered open tab. Wraps immutable TabData and
-     * carries live context references after TabManager creates both the shell
-     * and content contexts. isOpen() gates all close-path logic in TabManager.
+     * carries the live TabContext, which owns both chrome and content.
      *
-     * getWindow() is a convenience shortcut to the content window used by
-     * InputSystem's resolveInputAuthority — callers should prefer this over
-     * getContentContext().getWindow() to keep the indirection in one place.
+     * All access to content goes through getTabContext().getContentContext()
+     * so the tab remains the single unit of ownership. getWindow() is a
+     * convenience shortcut to the content window for InputSystem's authority
+     * resolver — the only place direct content window access is appropriate.
+     *
+     * isOpen() gates all close-path logic in TabManager.
      */
 
     // Data
     private TabData tabData;
 
-    // Active
+    // Active — TabContext owns both chrome and content
     private TabContext tabContext;
-    private ContextPackage contentContext;
 
     // Internal \\
 
     public void constructor(TabData tabData) {
-        // Data
         this.tabData = tabData;
     }
 
     // Management \\
 
-    public void mount(TabContext tabContext, ContextPackage contentContext) {
-        // Active
+    public void mount(TabContext tabContext) {
         this.tabContext = tabContext;
-        this.contentContext = contentContext;
     }
 
     // Accessible \\
@@ -56,15 +54,20 @@ public class TabHandle extends HandlePackage {
         return tabContext;
     }
 
-    public ContextPackage getContentContext() {
-        return contentContext;
-    }
-
+    /*
+     * Convenience for InputSystem's authority resolver. Content window is the
+     * input authority — accessed through the TabContext ownership chain.
+     */
     public WindowInstance getWindow() {
-        return contentContext != null ? contentContext.getWindow() : null;
+
+        if (tabContext == null)
+            return null;
+
+        ContextPackage content = tabContext.getContentContext();
+        return content != null ? content.getWindow() : null;
     }
 
     public boolean isOpen() {
-        return tabContext != null && contentContext != null;
+        return tabContext != null;
     }
 }

@@ -2,30 +2,20 @@ package editor.runtime.editor;
 
 import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
-import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
-import editor.bootstrap.tabpipeline.tab.TabContext;
-import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.root.SystemPackage;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EditorTabCompositorSystem extends SystemPackage {
 
     /*
-     * Drives dock rect updates and content rect sync for the main OS window.
-     * Reads the dock canvas from EditorMenuSystem and calls
-     * tabManager.setDockRect() with the main window so the per-window BSP tree
-     * is updated independently of any secondary windows.
-     *
-     * syncContentRects() filters by composite target — only tabs whose chrome
-     * window composites to the main OS window are synced here. Tabs on secondary
-     * windows are synced by SecondaryTabCompositorSystem.
+     * Drives dock rect updates for the main OS window. Detects canvas changes
+     * and forwards them to TabManager.setDockRect(), which calls pushRects().
+     * pushRects() calls TabContext.placeAt() on every tab — chrome and content
+     * are positioned together in that single call. No per-tab sync needed here.
      */
 
     private TabManager tabManager;
     private EditorMenuSystem editorMenuSystem;
-    private WindowManager windowManager;
 
     private float lastX;
     private float lastY;
@@ -38,7 +28,6 @@ public class EditorTabCompositorSystem extends SystemPackage {
     protected void get() {
         tabManager = get(TabManager.class);
         editorMenuSystem = get(EditorMenuSystem.class);
-        windowManager = get(WindowManager.class);
     }
 
     @Override
@@ -60,67 +49,7 @@ public class EditorTabCompositorSystem extends SystemPackage {
             lastY = y;
             lastW = w;
             lastH = h;
-            tabManager.setDockRect(windowManager.getMainWindow(), x, y, w, h);
-        }
-
-        syncContentRects();
-    }
-
-    // Sync \\
-
-    private void syncContentRects() {
-
-        WindowInstance mainWindow = windowManager.getMainWindow();
-        ObjectArrayList<TabHandle> tabs = tabManager.getOpenTabs();
-        Object[] elements = tabs.elements();
-        int size = tabs.size();
-
-        for (int i = 0; i < size; i++) {
-
-            TabHandle handle = (TabHandle) elements[i];
-            TabContext tabContext = handle.getTabContext();
-            WindowInstance tabWindow = tabContext.getWindow();
-
-            // Only sync tabs that belong to the main OS window.
-            if (tabWindow.getCompositeTarget() != mainWindow)
-                continue;
-
-            if (!tabWindow.hasCompositeRect())
-                continue;
-
-            int targetW = (int) tabWindow.getCompositeW();
-            int targetH = (int) tabWindow.getCompositeH();
-
-            if (tabWindow.getWidth() != targetW || tabWindow.getHeight() != targetH) {
-                tabWindow.resize(targetW, targetH);
-                continue;
-            }
-
-            MenuInstance chromeMenu = tabContext.getChromeMenu();
-
-            if (chromeMenu == null)
-                continue;
-
-            CanvasInstance tabCanvas = chromeMenu.getCanvas();
-
-            if (tabCanvas == null || tabCanvas.getW() <= 0 || tabCanvas.getH() <= 0)
-                continue;
-
-            float cx = tabWindow.getCompositeX() + tabCanvas.getX();
-            float cy = tabWindow.getCompositeY() + tabCanvas.getY();
-            float cw = tabCanvas.getW();
-            float ch = tabCanvas.getH();
-
-            WindowInstance contentWindow = handle.getContentContext().getWindow();
-
-            if (cx == contentWindow.getCompositeX()
-                    && cy == contentWindow.getCompositeY()
-                    && cw == contentWindow.getCompositeW()
-                    && ch == contentWindow.getCompositeH())
-                continue;
-
-            contentWindow.setCompositeRect(cx, cy, cw, ch);
-            contentWindow.resize((int) cw, (int) ch);
+            tabManager.setDockRect(context.getWindow(), x, y, w, h);
         }
     }
 }
