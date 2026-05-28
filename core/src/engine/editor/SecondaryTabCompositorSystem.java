@@ -1,4 +1,4 @@
-package editor.runtime.editor;
+package engine.editor;
 
 import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
@@ -8,23 +8,15 @@ import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class EditorTabCompositorSystem extends SystemPackage {
+public class SecondaryTabCompositorSystem extends SystemPackage {
 
     /*
-     * Drives dock rect updates and per-frame content sync for the main OS window.
-     *
-     * setDockRect() triggers pushRects() which calls placeAt() on every chrome
-     * window. syncContent() is then called every frame on every tab whose chrome
-     * composites to this OS window — it reads the canvas bounds that
-     * MenuRenderSystem just wrote and pushes them to the content window.
-     *
-     * The two-call split matters: placeAt() runs on structural changes,
-     * syncContent() runs every frame so content placement always uses the
-     * current frame's canvas bounds rather than stale ones.
+     * Mirrors EditorTabCompositorSystem exactly for secondary OS windows.
+     * See that class for the placeAt/syncContent split rationale.
      */
 
     private TabManager tabManager;
-    private EditorMenuSystem editorMenuSystem;
+    private SecondaryMenuSystem secondaryMenuSystem;
 
     private float lastX;
     private float lastY;
@@ -36,13 +28,13 @@ public class EditorTabCompositorSystem extends SystemPackage {
     @Override
     protected void get() {
         tabManager = get(TabManager.class);
-        editorMenuSystem = get(EditorMenuSystem.class);
+        secondaryMenuSystem = get(SecondaryMenuSystem.class);
     }
 
     @Override
     protected void update() {
 
-        MenuInstance baseMenu = editorMenuSystem.getBaseMenu();
+        MenuInstance baseMenu = secondaryMenuSystem.getBaseMenu();
         CanvasInstance canvas = baseMenu.getCanvas();
 
         if (canvas == null)

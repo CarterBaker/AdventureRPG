@@ -92,7 +92,7 @@ public class TabManager extends ManagerPackage {
     public WindowInstance openSecondaryWindow() {
         return windowManager.openWindow(
                 EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY,
-                editor.runtime.editor.EditorWindowSecondary.class);
+                engine.editor.EditorWindowSecondary.class);
     }
 
     /*
@@ -223,7 +223,7 @@ public class TabManager extends ManagerPackage {
 
         WindowInstance osWindow = windowManager.openWindow(
                 EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY,
-                editor.runtime.editor.EditorWindowSecondary.class);
+                engine.editor.EditorWindowSecondary.class);
 
         dockLayoutSystem.initWindow(osWindow);
         dockRects.put(osWindow, new float[] { 0f, 0f, osWindow.getWidth(), osWindow.getHeight() });

@@ -14,18 +14,18 @@
           "size": { "x": "100%", "y": "100%" },
           "color": [1.0, 1.0, 1.0, 1.0],
           "on_drag": {
-            "class": "editor.runtime.editor.menueventsmanager.menus.TabBranch",
+            "class": "engine.editor.menueventsmanager.menus.TabBranch",
             "method": "onTabFrameDrag"
           },
           "on_hover": {
             "on_click": {
-              "class": "editor.runtime.editor.menueventsmanager.menus.TabBranch",
+              "class": "engine.editor.menueventsmanager.menus.TabBranch",
               "method": "onTabFrameHover"
             }
           },
           "on_hover_exit": {
             "on_click": {
-              "class": "editor.runtime.editor.menueventsmanager.menus.TabBranch",
+              "class": "engine.editor.menueventsmanager.menus.TabBranch",
               "method": "onTabFrameHoverExit"
             }
           }
@@ -38,7 +38,7 @@
           "pivot": "bottom_left",
           "size": { "x": "100%", "y": "28px" },
           "on_drag": {
-            "class": "editor.runtime.editor.menueventsmanager.menus.TabBranch",
+            "class": "engine.editor.menueventsmanager.menus.TabBranch",
             "method": "onTabToolbarDrag"
           },
           "elements": [
@@ -52,7 +52,7 @@
               "size": { "x": "20px", "y": "20px" },
               "color": [1.0, 1.0, 1.0, 0.7],
               "on_click": {
-                "class": "editor.runtime.editor.menueventsmanager.menus.TabBranch",
+                "class": "engine.editor.menueventsmanager.menus.TabBranch",
                 "method": "closeTab",
                 "arg": "$parent"
               }

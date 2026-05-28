@@ -1,4 +1,4 @@
-package editor.runtime.editor;
+package engine.editor;
 
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;

@@ -324,6 +324,9 @@ public class EngineSetting {
 
         // Tab Drag \\
 
+        public static final float DIVIDER_HIT_TOLERANCE = 6f;
+        public static final float RATIO_MIN = 0.1f;
+        public static final float RATIO_MAX = 0.9f;
         public static final int TAB_DRAG_PREVIEW_W = 256;
         public static final int TAB_DRAG_PREVIEW_H = 144;
         public static final int TAB_DEFAULT_TAB_DEPTH = 1;

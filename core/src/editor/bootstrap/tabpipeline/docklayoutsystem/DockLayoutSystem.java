@@ -4,6 +4,7 @@ import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -37,10 +38,6 @@ public class DockLayoutSystem extends SystemPackage {
      * innermost node always wins when dividers are nested. setSplitRatio()
      * clamps and writes the ratio; propagateRect() reads it.
      */
-
-    private static final float DIVIDER_HIT_TOLERANCE = 6f;
-    private static final float RATIO_MIN = 0.1f;
-    private static final float RATIO_MAX = 0.9f;
 
     // Per-OS-window BSP roots — null root means window is registered but empty.
     private Object2ObjectOpenHashMap<WindowInstance, DockNodeStruct> roots;
@@ -171,14 +168,14 @@ public class DockLayoutSystem extends SystemPackage {
         if (node.isSplitHorizontal()) {
             float dividerY = node.getY() + node.getH() * node.getRatio();
             if (sx >= node.getX() && sx <= node.getX() + node.getW()
-                    && sy >= dividerY - DIVIDER_HIT_TOLERANCE
-                    && sy <= dividerY + DIVIDER_HIT_TOLERANCE)
+                    && sy >= dividerY - EngineSetting.DIVIDER_HIT_TOLERANCE
+                    && sy <= dividerY + EngineSetting.DIVIDER_HIT_TOLERANCE)
                 return node;
         } else {
             float dividerX = node.getX() + node.getW() * node.getRatio();
             if (sy >= node.getY() && sy <= node.getY() + node.getH()
-                    && sx >= dividerX - DIVIDER_HIT_TOLERANCE
-                    && sx <= dividerX + DIVIDER_HIT_TOLERANCE)
+                    && sx >= dividerX - EngineSetting.DIVIDER_HIT_TOLERANCE
+                    && sx <= dividerX + EngineSetting.DIVIDER_HIT_TOLERANCE)
                 return node;
         }
 
@@ -186,7 +183,7 @@ public class DockLayoutSystem extends SystemPackage {
     }
 
     public void setSplitRatio(DockNodeStruct node, float ratio) {
-        node.setRatio(Math.max(RATIO_MIN, Math.min(RATIO_MAX, ratio)));
+        node.setRatio(Math.max(EngineSetting.RATIO_MIN, Math.min(EngineSetting.RATIO_MAX, ratio)));
     }
 
     // Leaf At Screen Point — global (walks all trees) \\

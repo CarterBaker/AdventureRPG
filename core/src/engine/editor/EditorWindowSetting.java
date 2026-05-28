@@ -1,4 +1,4 @@
-package editor.runtime.editor;
+package engine.editor;
 
 public class EditorWindowSetting {
 

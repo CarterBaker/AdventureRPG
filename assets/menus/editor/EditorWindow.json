@@ -23,7 +23,7 @@
               "sprite": "menus/DefaultElement",
               "size": {"x": "150px", "y": "28px"},
               "on_click": {
-                "class": "editor.runtime.editor.menueventsmanager.menus.EditorBranch",
+                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
                 "method": "openSecondaryWindow"
               },
               "elements": [
@@ -41,7 +41,7 @@
               "sprite": "menus/DefaultElement",
               "size": {"x": "150px", "y": "28px"},
               "on_click": {
-                "class": "editor.runtime.editor.menueventsmanager.menus.EditorBranch",
+                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
                 "method": "openPreview"
               },
               "elements": [

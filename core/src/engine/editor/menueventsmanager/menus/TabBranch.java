@@ -1,4 +1,4 @@
-package editor.runtime.editor.menueventsmanager.menus;
+package engine.editor.menueventsmanager.menus;
 
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.shaderpipeline.sprite.SpriteHandle;
@@ -11,7 +11,7 @@ import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabdragmanager.TabDragManager;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
-import editor.runtime.editor.EditorWindowSetting;
+import engine.editor.EditorWindowSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineContext;
 
@@ -80,12 +80,12 @@ public class TabBranch extends BranchPackage {
     }
 
     @Override
-protected void update() {
-    if (isDividerDrag && EngineContext.input.isMouseReleased(0)) {
-        dragNode = null;
-        isDividerDrag = false;
+    protected void update() {
+        if (isDividerDrag && EngineContext.input.isMouseReleased(0)) {
+            dragNode = null;
+            isDividerDrag = false;
+        }
     }
-}
 
     // Tab Events \\
 

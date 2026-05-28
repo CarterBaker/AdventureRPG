@@ -2,7 +2,7 @@ package engine.root;
 
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import editor.runtime.editor.EditorWindowMain;
+import engine.editor.EditorWindowMain;
 
 public class EditorEngine extends EnginePackage {
 

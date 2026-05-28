@@ -373,8 +373,14 @@ public class TabDragManager extends ManagerPackage {
             return;
         }
 
-        DropTargetStruct target = lastDropTarget;
+        // Reset depths before any rect propagation so the compositor never
+        // sees a drop frame with drag-elevated windows.
+        draggedHandle.getTabContext().getWindow()
+                .setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
+        draggedHandle.getTabContext().getContentContext().getWindow()
+                .setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
 
+        DropTargetStruct target = lastDropTarget;
         WindowInstance sourceOsWindow = resolveOsWindow(
                 draggedHandle.getTabContext().getWindow());
 
@@ -385,20 +391,19 @@ public class TabDragManager extends ManagerPackage {
             if (targetOsWindow != sourceOsWindow)
                 tabManager.moveTabToOsWindow(draggedHandle, targetOsWindow);
 
-            tabManager.getDockLayoutSystem()
-                    .addTabToLeaf(target.getLeaf(), draggedHandle, target.getZone());
-
-        } else {
-
-            tabManager.openSecondaryWindowForTab(draggedHandle);
+            tabManager.getDockLayoutSystem().addTabToLeaf(
+                    target.getLeaf(),
+                    draggedHandle, target.getZone());
         }
+
+        else
+            tabManager.openSecondaryWindowForTab(draggedHandle);
 
         if (sourceOsWindow != windowManager.getMainWindow()
                 && isSourceOsWindowEmpty(sourceOsWindow))
             tabManager.closeOsWindow(sourceOsWindow);
 
         tabManager.pushRects();
-
         clearState();
     }
 
@@ -427,6 +432,7 @@ public class TabDragManager extends ManagerPackage {
     private void clearState() {
 
         closeZoneGhost();
+        windowManager.unlockHoveredWindow();
 
         if (draggedHandle != null) {
             draggedHandle.getTabContext().getWindow()

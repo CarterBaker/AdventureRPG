@@ -1,6 +1,6 @@
-package editor.runtime.editor;
+package engine.editor;
 
-import editor.runtime.editor.menueventsmanager.EditorMenuEventsManager;
+import engine.editor.menueventsmanager.EditorMenuEventsManager;
 import engine.root.ContextPackage;
 
 public class EditorWindowMain extends ContextPackage {
