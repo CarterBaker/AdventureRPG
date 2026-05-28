@@ -423,5 +423,6 @@ public class WindowManager extends ManagerPackage {
 
         window.dispose();
         internal.windowPlatform.destroyWindow(window);
+        internal.windowPlatform.restoreMainContext();
     }
 }
