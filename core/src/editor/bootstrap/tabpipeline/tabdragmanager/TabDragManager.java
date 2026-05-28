@@ -404,6 +404,11 @@ public class TabDragManager extends ManagerPackage {
             tabManager.closeOsWindow(sourceOsWindow);
 
         tabManager.pushRects();
+
+        WindowInstance contentWindow = draggedHandle.getTabContext().getContentContext().getWindow();
+        if (contentWindow != null)
+            windowManager.setFocusedWindow(contentWindow);
+
         clearState();
     }
 
