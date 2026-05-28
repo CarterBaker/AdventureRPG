@@ -131,8 +131,6 @@
     },
     {
       "id": "Secondary",
-      "raycast_input": true,
-      "lock_input": true,
       "elements": [
         {
           "id": "dock_canvas",

@@ -11,7 +11,7 @@ import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabdragmanager.TabDragManager;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
-import engine.editor.EditorWindowSetting;
+import engine.editor.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineContext;
 
@@ -75,8 +75,8 @@ public class TabBranch extends BranchPackage {
         this.spriteManager = get(SpriteManager.class);
         this.dockLayoutSystem = get(DockLayoutSystem.class);
         this.tabDragManager = get(TabDragManager.class);
-        this.cursorResizeH = spriteManager.getSpriteHandleFromSpriteName(EditorWindowSetting.CURSOR_RESIZE_H);
-        this.cursorResizeV = spriteManager.getSpriteHandleFromSpriteName(EditorWindowSetting.CURSOR_RESIZE_V);
+        this.cursorResizeH = spriteManager.getSpriteHandleFromSpriteName(EditorSetting.CURSOR_RESIZE_H);
+        this.cursorResizeV = spriteManager.getSpriteHandleFromSpriteName(EditorSetting.CURSOR_RESIZE_V);
     }
 
     @Override
@@ -183,7 +183,7 @@ public class TabBranch extends BranchPackage {
 
         float w = window.getWidth();
         float h = window.getHeight();
-        float t = EditorWindowSetting.RESIZE_EDGE_TOLERANCE;
+        float t = EditorSetting.RESIZE_EDGE_TOLERANCE;
 
         boolean onHEdge = mouseX <= t || mouseX >= w - t;
         boolean onVEdge = mouseY <= t || mouseY >= h - t;

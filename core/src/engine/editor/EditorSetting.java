@@ -1,6 +1,6 @@
 package engine.editor;
 
-public class EditorWindowSetting {
+public class EditorSetting {
 
     // Cursors \\
     public static final String CURSOR_RESIZE_H = "menus/CursorStretchIconHorizontal";
