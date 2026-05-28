@@ -201,6 +201,9 @@ public class TabDragManager extends ManagerPackage {
 
     private void openZoneGhost(DropTargetStruct target) {
 
+        if (target.getLeaf() == null)
+            return;
+
         DockNodeStruct leaf = target.getLeaf();
         DropZone zone = target.getZone();
         WindowInstance targetOsWindow = resolveOsWindow(target.getWindow());
@@ -298,7 +301,7 @@ public class TabDragManager extends ManagerPackage {
                 .findLeafAt(bestWindow, localX, localY);
 
         if (leaf == null)
-            return null;
+            return new DropTargetStruct(bestWindow, null, DropZone.BOTTOM);
 
         DropZone zone = classifyZone(leaf, localX, localY);
 
@@ -391,9 +394,14 @@ public class TabDragManager extends ManagerPackage {
             if (targetOsWindow != sourceOsWindow)
                 tabManager.moveTabToOsWindow(draggedHandle, targetOsWindow);
 
-            tabManager.getDockLayoutSystem().addTabToLeaf(
-                    target.getLeaf(),
-                    draggedHandle, target.getZone());
+            if (target.getLeaf() != null)
+                // Occupied window — split the leaf the cursor is over.
+                tabManager.getDockLayoutSystem().addTabToLeaf(
+                        target.getLeaf(),
+                        draggedHandle, target.getZone());
+            else
+                // Empty window — BSP tree is null, insert as the root tab.
+                tabManager.getDockLayoutSystem().addTab(targetOsWindow, draggedHandle);
         }
 
         else
