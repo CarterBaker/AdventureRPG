@@ -4,6 +4,7 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
+import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
 import editor.bootstrap.tabpipeline.tab.TabContext;
 import editor.bootstrap.tabpipeline.tab.TabData;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
@@ -31,6 +32,11 @@ public class TabManager extends ManagerPackage {
      *
      * pushRects() is the only call site for TabContext.placeAt(). Content
      * placement is fully handled inside placeAt() — no compositor sync needed.
+     *
+     * notifyLayoutChanged() is the single call site for layout persistence.
+     * All structural mutations (open, close, secondary window) route through
+     * it. TabDragManager calls it after drop resolution via the same method.
+     * LayoutManager suppresses re-entrant calls during restore.
      */
 
     // Palette
@@ -50,6 +56,7 @@ public class TabManager extends ManagerPackage {
     private WindowManager windowManager;
     private DockLayoutSystem dockLayoutSystem;
     private InputManager inputManager;
+    private LayoutManager layoutManager;
 
     // Internal \\
 
@@ -74,6 +81,7 @@ public class TabManager extends ManagerPackage {
         windowManager = get(WindowManager.class);
         dockLayoutSystem = get(DockLayoutSystem.class);
         inputManager = get(InputManager.class);
+        layoutManager = get(LayoutManager.class);
 
         inputManager.setAuthorityResolver(window -> {
             TabHandle tab = getTabHandleForWindow(window);
@@ -129,12 +137,11 @@ public class TabManager extends ManagerPackage {
         // Contexts
         TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
         ContextPackage contentContext = internal.createContext(contentClass, contentWindow);
-
         tabContext.linkContent(contentContext);
 
         // Handle
         TabHandle handle = create(TabHandle.class);
-        handle.constructor(new TabData(title, contentClass));
+        handle.constructor(new TabData(baseTitle, title, contentClass));
         handle.mount(tabContext);
 
         int tabID = RegistryUtility.toIntID(title);
@@ -144,6 +151,7 @@ public class TabManager extends ManagerPackage {
 
         dockLayoutSystem.addTab(mainWindow, handle);
         pushRects();
+        notifyLayoutChanged();
 
         return handle;
     }
@@ -178,7 +186,6 @@ public class TabManager extends ManagerPackage {
         windowManager.removeWindow(tabWindow);
 
         handle.mount(null);
-
         windowManager.unlockHoveredWindow();
 
         int tabID = getTabIDFromTabName(handle.getTabTitle());
@@ -187,6 +194,7 @@ public class TabManager extends ManagerPackage {
         openTabs.remove(handle);
 
         pushRects();
+        notifyLayoutChanged();
 
         if (osWindow != windowManager.getMainWindow() && isOsWindowEmpty(osWindow))
             closeOsWindow(osWindow);
@@ -232,6 +240,7 @@ public class TabManager extends ManagerPackage {
         moveTabToOsWindow(handle, osWindow);
 
         pushRects();
+        notifyLayoutChanged();
     }
 
     // OS Window Lifecycle \\
@@ -334,6 +343,26 @@ public class TabManager extends ManagerPackage {
 
             h.getTabContext().placeAt(x, y, w, hh);
         }
+    }
+
+    // Layout \\
+
+    /*
+     * Routes to LayoutManager. Called by this manager after every structural
+     * mutation and by TabDragManager after drop resolution. LayoutManager
+     * suppresses calls during restore via its own restoring flag.
+     */
+    public void notifyLayoutChanged() {
+        if (layoutManager != null)
+            layoutManager.notifyLayoutChanged();
+    }
+
+    /*
+     * Clears all tab instance counters. Called by LayoutManager before
+     * re-opening tabs during restore so generated titles are deterministic.
+     */
+    public void resetCounters() {
+        classInstanceCounter.clear();
     }
 
     // Lookup \\

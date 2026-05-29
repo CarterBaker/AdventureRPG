@@ -40,6 +40,11 @@ public class TabDragManager extends ManagerPackage {
      * Into leaf — addTabToLeaf on the resolved BSP leaf.
      * Void — tabManager.openSecondaryWindowForTab() into a new window.
      * pushRects() settles all positions. clearState() resets drag fields.
+     *
+     * tabManager.notifyLayoutChanged() is called once at the end of a
+     * successful drop. openSecondaryWindowForTab already notifies internally,
+     * but a plain leaf drop or cross-window reparent does not — the single
+     * call here covers all cases without double-firing.
      */
 
     // Constants
@@ -149,7 +154,6 @@ public class TabDragManager extends ManagerPackage {
 
         draggedHandle = handle;
 
-        // Elevate above zone ghost for the duration of drag
         tabWindow.setDepth(EngineSetting.TAB_DRAG_TAB_DEPTH);
         handle.getTabContext().getContentContext().getWindow()
                 .setDepth(EngineSetting.TAB_DRAG_CONTENT_DEPTH);
@@ -163,16 +167,9 @@ public class TabDragManager extends ManagerPackage {
 
     // Drag Tracking \\
 
-    /*
-     * Positions the dragged tab each frame via placeAt() so chrome and content
-     * always travel together. This is the only place drag-frame positioning
-     * happens.
-     */
     private void updateDraggedTab(float globalX, float globalY) {
-
         float x = globalX - grabOffsetX;
         float y = globalY - grabOffsetY;
-
         draggedHandle.getTabContext().placeAt(x, y, dragW, dragH);
     }
 
@@ -218,14 +215,12 @@ public class TabDragManager extends ManagerPackage {
         zoneGhostWindow.setDepth(EngineSetting.TAB_DRAG_GHOST_DEPTH);
         zoneGhostWindow.setCaptureEligible(false);
         zoneGhostWindow.setFocusIndependent(true);
-
         zoneGhostWindow.setCompositeRect(ghostX, ghostY, ghostW, ghostH);
         zoneGhostWindow.resize((int) ghostW, (int) ghostH);
 
         zoneGhostFbo = fboManager.cloneFbo(
                 application.runtime.RuntimeSetting.FBO_UI, zoneGhostWindow);
         menuManager.setMenuTargetFbo(zoneGhostWindow, zoneGhostFbo);
-
         zoneGhost = menuManager.openMenu(menuTabGhost, zoneGhostWindow);
     }
 
@@ -304,7 +299,6 @@ public class TabDragManager extends ManagerPackage {
             return new DropTargetStruct(bestWindow, null, DropZone.BOTTOM);
 
         DropZone zone = classifyZone(leaf, localX, localY);
-
         return new DropTargetStruct(bestWindow, leaf, zone);
     }
 
@@ -341,7 +335,6 @@ public class TabDragManager extends ManagerPackage {
 
         float relX = (localX - lx) / lw;
         float relY = (localY - ly) / lh;
-
         float edge = dropZoneEdgeFraction;
 
         if (relX < edge)
@@ -376,8 +369,6 @@ public class TabDragManager extends ManagerPackage {
             return;
         }
 
-        // Reset depths before any rect propagation so the compositor never
-        // sees a drop frame with drag-elevated windows.
         draggedHandle.getTabContext().getWindow()
                 .setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
         draggedHandle.getTabContext().getContentContext().getWindow()
@@ -395,23 +386,21 @@ public class TabDragManager extends ManagerPackage {
                 tabManager.moveTabToOsWindow(draggedHandle, targetOsWindow);
 
             if (target.getLeaf() != null)
-                // Occupied window — split the leaf the cursor is over.
                 tabManager.getDockLayoutSystem().addTabToLeaf(
-                        target.getLeaf(),
-                        draggedHandle, target.getZone());
+                        target.getLeaf(), draggedHandle, target.getZone());
             else
-                // Empty window — BSP tree is null, insert as the root tab.
                 tabManager.getDockLayoutSystem().addTab(targetOsWindow, draggedHandle);
-        }
 
-        else
+        } else {
             tabManager.openSecondaryWindowForTab(draggedHandle);
+        }
 
         if (sourceOsWindow != windowManager.getMainWindow()
                 && isSourceOsWindowEmpty(sourceOsWindow))
             tabManager.closeOsWindow(sourceOsWindow);
 
         tabManager.pushRects();
+        tabManager.notifyLayoutChanged();
 
         WindowInstance contentWindow = draggedHandle.getTabContext().getContentContext().getWindow();
         if (contentWindow != null)
@@ -427,12 +416,9 @@ public class TabDragManager extends ManagerPackage {
         int size = openTabs.size();
 
         for (int i = 0; i < size; i++) {
-
             TabHandle handle = (TabHandle) elements[i];
-
             if (handle == draggedHandle)
                 continue;
-
             if (handle.getTabContext().getWindow().getCompositeTarget() == osWindow)
                 return false;
         }

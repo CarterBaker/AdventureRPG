@@ -37,6 +37,10 @@ public class DockLayoutSystem extends SystemPackage {
      * where its divider sits. findDividerAt() walks each tree bottom-up so the
      * innermost node always wins when dividers are nested. setSplitRatio()
      * clamps and writes the ratio; propagateRect() reads it.
+     *
+     * getRoots() exposes the raw map to LayoutManager for serialization.
+     * restoreRoot() lets LayoutManager replace the auto-built BSP after
+     * reopening tabs during a restore pass.
      */
 
     // Per-OS-window BSP roots — null root means window is registered but empty.
@@ -156,12 +160,10 @@ public class DockLayoutSystem extends SystemPackage {
             return null;
 
         DockNodeStruct hit = findDividerAt(node.getFirst(), sx, sy);
-
         if (hit != null)
             return hit;
 
         hit = findDividerAt(node.getSecond(), sx, sy);
-
         if (hit != null)
             return hit;
 
@@ -188,11 +190,6 @@ public class DockLayoutSystem extends SystemPackage {
 
     // Leaf At Screen Point — global (walks all trees) \\
 
-    /*
-     * Walks all registered BSP trees. Callers that already know which OS
-     * window they are targeting should use findLeafAt(osWindow, localX, localY)
-     * instead to avoid coordinate-space ambiguity.
-     */
     public DockNodeStruct findLeafAt(float screenX, float screenY) {
 
         for (DockNodeStruct root : roots.values()) {
@@ -206,14 +203,6 @@ public class DockLayoutSystem extends SystemPackage {
 
     // Leaf At Screen Point — window-scoped \\
 
-    /*
-     * Searches only the BSP tree for the given OS window using coordinates
-     * that are already in that window's local space. Use this during drag
-     * resolution after identifying which OS window the cursor is over —
-     * passing window-local coordinates avoids the mismatch that arises when
-     * EngineContext.input still reflects the drag-source window's coordinate
-     * space rather than the target window's.
-     */
     public DockNodeStruct findLeafAt(WindowInstance osWindow, float localX, float localY) {
         return findLeafAt(roots.get(osWindow), localX, localY);
     }
@@ -230,7 +219,6 @@ public class DockLayoutSystem extends SystemPackage {
             return node;
 
         DockNodeStruct hit = findLeafAt(node.getFirst(), sx, sy);
-
         if (hit != null)
             return hit;
 
@@ -268,7 +256,6 @@ public class DockLayoutSystem extends SystemPackage {
             return node.getTabs().contains(handle) ? node : null;
 
         DockNodeStruct result = findLeaf(node.getFirst(), handle);
-
         return result != null ? result : findLeaf(node.getSecond(), handle);
     }
 
@@ -353,5 +340,25 @@ public class DockLayoutSystem extends SystemPackage {
             return node.getFirst();
 
         return node;
+    }
+
+    // Layout Persistence \\
+
+    /*
+     * Package-private — LayoutManager reads this to serialize each tree.
+     * Not exposed publicly; callers outside this pipeline have no business
+     * walking raw BSP roots.
+     */
+    public Object2ObjectOpenHashMap<WindowInstance, DockNodeStruct> getRoots() {
+        return roots;
+    }
+
+    /*
+     * Replaces the auto-built BSP for the given OS window with a deserialized
+     * tree after LayoutManager has reopened all tabs in the correct order.
+     * pushRects() must be called by the caller after this returns.
+     */
+    public void restoreRoot(WindowInstance osWindow, DockNodeStruct root) {
+        roots.put(osWindow, root);
     }
 }

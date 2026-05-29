@@ -21,6 +21,12 @@ public class ElementInstance extends InstancePackage {
      *
      * The render system reads activeHoverState via resolveActiveState.
      * Sprite instances are cloned for all four states at open time.
+     *
+     * setActionArgOverride() allows runtime injection of click arguments —
+     * used by EditorBranch to wire each injected layout button to its name.
+     *
+     * setFontText() updates both the local textOverride field and the live
+     * FontInstance so the rendered label reflects the new string immediately.
      */
 
     // Internal
@@ -197,6 +203,28 @@ public class ElementInstance extends InstancePackage {
 
     public boolean hasHoverExitStateRoot() {
         return hoverExitStateRoot != null;
+    }
+
+    // Runtime Mutation \\
+
+    /*
+     * Writes the click argument at runtime. Used by EditorBranch to wire each
+     * injected layout list button to its layout name without rebuilding the
+     * element from scratch.
+     */
+    public void setActionArgOverride(String arg) {
+        this.actionArgOverride = arg;
+    }
+
+    /*
+     * Updates the visible label text at runtime. Writes both the local
+     * textOverride field (returned by getText()) and the live FontInstance so
+     * the render system sees the new string immediately on the next frame.
+     */
+    public void setFontText(String text) {
+        this.textOverride = text;
+        if (fontInstance != null)
+            fontInstance.setText(text);
     }
 
     // Effective Action Accessors \\

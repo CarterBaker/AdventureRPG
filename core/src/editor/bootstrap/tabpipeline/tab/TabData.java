@@ -12,6 +12,7 @@ public class TabData extends DataPackage {
      */
 
     // Identity
+    private final String baseTitle;
     private final String tabTitle;
 
     // Content
@@ -20,10 +21,12 @@ public class TabData extends DataPackage {
     // Internal \\
 
     public TabData(
+            String baseTitle,
             String tabTitle,
             Class<? extends ContextPackage> contentContextClass) {
 
         // Identity
+        this.baseTitle = baseTitle;
         this.tabTitle = tabTitle;
 
         // Content
@@ -31,6 +34,10 @@ public class TabData extends DataPackage {
     }
 
     // Accessible \\
+
+    public String getBaseTitle() {
+        return baseTitle;
+    }
 
     public String getTabTitle() {
         return tabTitle;

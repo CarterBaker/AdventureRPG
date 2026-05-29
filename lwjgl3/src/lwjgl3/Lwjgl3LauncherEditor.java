@@ -48,13 +48,19 @@ public class Lwjgl3LauncherEditor {
     }
 
     private static void createApplication() {
-
-        File baseGameDir = new File(System.getProperty("user.home"), "Documents/My Games/" + GAME_DIRECTORY);
-
+        File baseGameDir = new File(
+                System.getProperty("user.home"),
+                EngineSetting.GAME_DOCUMENTS_SUBPATH + "/" + EngineSetting.GAME_DIRECTORY);
         if (!baseGameDir.exists())
             baseGameDir.mkdirs();
 
-        File settingsFile = new File(baseGameDir, "EditorSettings.json");
+        File editorLayoutDir = new File(
+                baseGameDir,
+                EngineSetting.BIN_DIRECTORY + "/" + EngineSetting.EDITOR_LAYOUT_DIRECTORY);
+        if (!editorLayoutDir.exists())
+            editorLayoutDir.mkdirs();
+
+        File settingsFile = new File(baseGameDir, EngineSetting.EDITOR_SETTINGS_FILE_NAME);
         Settings settings = SettingsUtility.load(settingsFile, ENGINE_GSON);
         SettingsUtility.applyBindings(settings);
 

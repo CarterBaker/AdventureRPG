@@ -10,6 +10,16 @@ public class EngineSetting {
          * values from this class instead of embedding literals in logic.
          */
 
+        // Application \\
+
+        public static final String GAME_DIRECTORY = "AdventureRPG";
+        public static final String GAME_DOCUMENTS_SUBPATH = "Documents/My Games";
+        public static final String SETTINGS_FILE_NAME = "Settings.json";
+        public static final String EDITOR_SETTINGS_FILE_NAME = "EditorSettings.json";
+        public static final String BIN_DIRECTORY = "bin";
+        public static final String EDITOR_LAYOUT_DIRECTORY = "editorLayout";
+        public static final String EDITOR_LAYOUT_SESSION_FILE = "LastSession.json";
+
         // Engine \\
 
         public static final String VERSION = "0.0.0.1a";
