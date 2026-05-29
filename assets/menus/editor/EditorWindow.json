@@ -333,12 +333,10 @@
       "elements": [
         {
           "id": "dialog_frame",
-          "type": "sprite",
+          "type": "container",
           "anchor": "center",
           "pivot": "center",
-          "size": {"x": "320px", "y": "148px"},
-          "sprite": "util/Default",
-          "color": [0.18, 0.18, 0.18, 1.0],
+          "size": {"x": "320px", "y": "112px"},
           "stack": "vertical",
           "elements": [
             {
@@ -347,13 +345,6 @@
               "sprite": "menus/DefaultElement",
               "size": {"x": "320px", "y": "28px"},
               "elements": [
-                {
-                  "id": "dialog_title_label",
-                  "type": "label",
-                  "text": "Create Layout",
-                  "font_size": "50%",
-                  "color": [0, 0, 0, 1]
-                },
                 {
                   "id": "dialog_close_button",
                   "type": "button",
@@ -374,7 +365,7 @@
             {
               "id": "dialog_body",
               "type": "container",
-              "size": {"x": "320px", "y": "120px"},
+              "size": {"x": "320px", "y": "84px"},
               "stack": "vertical",
               "spacing": "8px",
               "elements": [
@@ -395,49 +386,21 @@
                   ]
                 },
                 {
-                  "id": "create_dialog_buttons",
-                  "type": "container",
-                  "size": {"x": "288px", "y": "32px"},
-                  "stack": "horizontal",
-                  "spacing": "8px",
+                  "id": "create_confirm_button",
+                  "type": "button",
+                  "size": {"x": "288px", "y": "28px"},
+                  "sprite": "menus/DefaultElement",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "method": "confirmCreate"
+                  },
                   "elements": [
                     {
-                      "id": "create_confirm_button",
-                      "type": "button",
-                      "size": {"x": "136px", "y": "28px"},
-                      "sprite": "menus/DefaultElement",
-                      "on_click": {
-                        "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                        "method": "confirmCreate"
-                      },
-                      "elements": [
-                        {
-                          "id": "create_confirm_label",
-                          "type": "label",
-                          "text": "OK",
-                          "font_size": "50%",
-                          "color": [0, 0, 0, 1]
-                        }
-                      ]
-                    },
-                    {
-                      "id": "create_cancel_button",
-                      "type": "button",
-                      "size": {"x": "136px", "y": "28px"},
-                      "sprite": "menus/DefaultElement",
-                      "on_click": {
-                        "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                        "method": "cancelCreate"
-                      },
-                      "elements": [
-                        {
-                          "id": "create_cancel_label",
-                          "type": "label",
-                          "text": "Cancel",
-                          "font_size": "50%",
-                          "color": [0, 0, 0, 1]
-                        }
-                      ]
+                      "id": "create_confirm_label",
+                      "type": "label",
+                      "text": "OK",
+                      "font_size": "50%",
+                      "color": [0, 0, 0, 1]
                     }
                   ]
                 }

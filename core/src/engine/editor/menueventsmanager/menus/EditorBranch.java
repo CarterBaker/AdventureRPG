@@ -11,7 +11,6 @@ import engine.root.EngineContext;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EditorBranch extends BranchPackage {
-
     /*
      * Menu event handlers for the main editor menu.
      *
@@ -26,7 +25,8 @@ public class EditorBranch extends BranchPackage {
      * appending typed characters to nameBuffer and pushing the result to the
      * name display label via setFontText(). Backspace trims, Enter confirms.
      * confirmCreate(MenuInstance) — saves nameBuffer content if non-empty, closes.
-     * cancelCreate(MenuInstance) — closes without saving.
+     * cancelCreate(MenuInstance) — closes without saving; called by the toolbar
+     * close button (arg: $parent).
      * confirmSave(MenuInstance) — saves nameBuffer content if non-empty, closes.
      * cancelSave(MenuInstance) — closes without saving.
      * loadLayout(String) — loads a named layout via LayoutManager.
@@ -39,24 +39,19 @@ public class EditorBranch extends BranchPackage {
      * populates into EngineContext.input. No new binding type is needed since
      * the dialogs are editor-only and not remappable.
      */
-
     // Menu paths
     private static final String SAVE_LAYOUT_DIALOG = "editor/EditorWindow/SaveLayoutDialog";
     private static final String CREATE_LAYOUT_DIALOG = "editor/EditorWindow/CreateLayoutDialog";
     private static final String LAYOUT_ITEM_TEMPLATE = "editor/EditorWindow/layout_item_template";
     private static final String LAYOUT_ITEM_LABEL_ID = "layout_item_label";
-
     // Entry point indices — Toolbar menu
     private static final int ENTRY_TESTING_DROPDOWN = 0;
     private static final int ENTRY_LAYOUTS_DROPDOWN = 1;
     private static final int ENTRY_LAYOUTS_LIST = 2;
-
     // Entry point indices — SaveLayoutDialog menu
     private static final int ENTRY_SAVE_NAME_LABEL = 0;
-
     // Entry point indices — CreateLayoutDialog menu
     private static final int ENTRY_CREATE_NAME_LABEL = 0;
-
     // GLFW key codes
     private static final int KEY_BACKSPACE = 259;
     private static final int KEY_ENTER = 257;
@@ -70,13 +65,11 @@ public class EditorBranch extends BranchPackage {
     private static final int KEY_9 = 57;
     private static final int KEY_LEFT_SHIFT = 340;
     private static final int KEY_RIGHT_SHIFT = 344;
-
     // Internal
     private MenuManager menuManager;
     private WindowManager windowManager;
     private TabManager tabManager;
     private LayoutManager layoutManager;
-
     // State
     private MenuInstance saveDialog;
     private MenuInstance createDialog;
@@ -84,7 +77,6 @@ public class EditorBranch extends BranchPackage {
     private ObjectArrayList<ElementInstance> injectedLayoutItems;
 
     // Base \\
-
     @Override
     protected void create() {
         this.nameBuffer = new StringBuilder();
@@ -108,7 +100,6 @@ public class EditorBranch extends BranchPackage {
     }
 
     // Tab Operations \\
-
     public void toggleTestingDropdown(MenuInstance parent) {
         ElementInstance dropdown = parent.getEntryPoint(ENTRY_TESTING_DROPDOWN);
         if (dropdown == null)
@@ -125,7 +116,6 @@ public class EditorBranch extends BranchPackage {
     }
 
     // Layout Dropdown \\
-
     /*
      * Toggles the layout dropdown. When opening, ejects stale injected items
      * then injects one button per layout found on disk. Each button's label
@@ -133,19 +123,14 @@ public class EditorBranch extends BranchPackage {
      * the same name so loadLayout() receives it on click.
      */
     public void toggleLayoutDropdown(MenuInstance parent) {
-
         ElementInstance dropdown = parent.getEntryPoint(ENTRY_LAYOUTS_DROPDOWN);
         if (dropdown == null)
             return;
-
         if (!dropdown.isExpanded()) {
-
             for (int i = 0; i < injectedLayoutItems.size(); i++)
                 menuManager.eject(parent, ENTRY_LAYOUTS_LIST, injectedLayoutItems.get(i));
             injectedLayoutItems.clear();
-
             ObjectArrayList<String> layouts = layoutManager.listLayouts();
-
             for (int i = 0; i < layouts.size(); i++) {
                 String name = layouts.get(i);
                 ElementInstance item = menuManager.inject(
@@ -159,12 +144,10 @@ public class EditorBranch extends BranchPackage {
                 injectedLayoutItems.add(item);
             }
         }
-
         dropdown.toggleExpanded();
     }
 
     // Create Layout Dialog \\
-
     /*
      * Opens the modal create dialog on the main window. Guards against opening
      * a second instance if one is already active. Clears the name buffer so
@@ -180,7 +163,7 @@ public class EditorBranch extends BranchPackage {
 
     /*
      * Saves the current nameBuffer content if non-empty then closes. Called by
-     * the confirm button on_click and by Enter key in updateNameInput().
+     * the OK button on_click and by Enter key in updateNameInput().
      */
     public void confirmCreate(MenuInstance parent) {
         String name = nameBuffer.toString().trim();
@@ -201,7 +184,6 @@ public class EditorBranch extends BranchPackage {
     }
 
     // Save Layout Dialog \\
-
     /*
      * Opens the modal save dialog on the main window. Guards against opening
      * a second instance if one is already active. Clears the name buffer so
@@ -238,7 +220,6 @@ public class EditorBranch extends BranchPackage {
     }
 
     // Name Input \\
-
     /*
      * Polls EngineContext.input each frame while a dialog is open.
      * Appends printable characters to nameBuffer and calls refreshNameLabel()
@@ -248,9 +229,7 @@ public class EditorBranch extends BranchPackage {
      * isCreate distinguishes which dialog to confirm or cancel.
      */
     private void updateNameInput(MenuInstance dialog, boolean isCreate) {
-
         int nameLabel = isCreate ? ENTRY_CREATE_NAME_LABEL : ENTRY_SAVE_NAME_LABEL;
-
         if (EngineContext.input.isKeyClicked(KEY_ESCAPE)) {
             if (isCreate)
                 closeCreateDialog(dialog);
@@ -258,7 +237,6 @@ public class EditorBranch extends BranchPackage {
                 closeSaveDialog(dialog);
             return;
         }
-
         if (EngineContext.input.isKeyClicked(KEY_ENTER)
                 || EngineContext.input.isKeyClicked(KEY_ENTER_NUMPAD)) {
             if (isCreate)
@@ -267,29 +245,24 @@ public class EditorBranch extends BranchPackage {
                 confirmSave(dialog);
             return;
         }
-
         if (EngineContext.input.isKeyClicked(KEY_BACKSPACE)) {
             if (nameBuffer.length() > 0)
                 nameBuffer.deleteCharAt(nameBuffer.length() - 1);
             refreshNameLabel(dialog, nameLabel);
             return;
         }
-
         if (EngineContext.input.isKeyClicked(KEY_SPACE)) {
             nameBuffer.append('_');
             refreshNameLabel(dialog, nameLabel);
             return;
         }
-
         if (EngineContext.input.isKeyClicked(KEY_MINUS)) {
             nameBuffer.append('-');
             refreshNameLabel(dialog, nameLabel);
             return;
         }
-
         boolean shift = EngineContext.input.isKeyDown(KEY_LEFT_SHIFT)
                 || EngineContext.input.isKeyDown(KEY_RIGHT_SHIFT);
-
         for (int key = KEY_A; key <= KEY_Z; key++) {
             if (EngineContext.input.isKeyClicked(key)) {
                 nameBuffer.append(shift ? (char) key : (char) (key + 32));
@@ -297,7 +270,6 @@ public class EditorBranch extends BranchPackage {
                 return;
             }
         }
-
         for (int key = KEY_0; key <= KEY_9; key++) {
             if (EngineContext.input.isKeyClicked(key)) {
                 nameBuffer.append((char) key);
@@ -316,7 +288,6 @@ public class EditorBranch extends BranchPackage {
     }
 
     // Load \\
-
     /*
      * Receives the layout name as the click action arg wired by the injected
      * button in toggleLayoutDropdown(). Delegates directly to LayoutManager.

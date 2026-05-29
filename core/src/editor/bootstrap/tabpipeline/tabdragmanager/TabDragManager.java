@@ -19,7 +19,6 @@ import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TabDragManager extends ManagerPackage {
-
     /*
      * Owns the full tab drag lifecycle. Never touches composite rects directly —
      * all positioning goes through TabContext.placeAt() so chrome and content
@@ -46,11 +45,9 @@ public class TabDragManager extends ManagerPackage {
      * but a plain leaf drop or cross-window reparent does not — the single
      * call here covers all cases without double-firing.
      */
-
     // Constants
     private float dropZoneEdgeFraction;
     private String menuTabGhost;
-
     // Internal
     private WindowManager windowManager;
     private MenuManager menuManager;
@@ -58,24 +55,20 @@ public class TabDragManager extends ManagerPackage {
     private TabManager tabManager;
     private InputManager inputManager;
     private TabDragLayoutStruct layoutSystem;
-
     // Drag state
     private TabHandle draggedHandle;
     private float grabOffsetX;
     private float grabOffsetY;
     private float dragW;
     private float dragH;
-
     // Zone ghost
     private MenuInstance zoneGhost;
     private WindowInstance zoneGhostWindow;
     private FboInstance zoneGhostFbo;
-
     // Drop resolution
     private DropTargetStruct lastDropTarget;
 
     // Internal \\
-
     @Override
     protected void create() {
         this.layoutSystem = new TabDragLayoutStruct();
@@ -94,26 +87,20 @@ public class TabDragManager extends ManagerPackage {
 
     @Override
     protected void update() {
-
         if (draggedHandle == null)
             return;
-
         if (EngineContext.input.isMouseReleased(0)) {
             executeDrop();
             return;
         }
-
         WindowInstance sourceOsWindow = resolveOsWindow(draggedHandle.getTabContext().getWindow());
         float globalX = inputManager.getGlobalMouseX();
         float globalY = inputManager.getGlobalMouseY();
         float screenX = globalX + sourceOsWindow.getScreenX();
         float screenY = globalY + sourceOsWindow.getScreenY();
-
         updateDraggedTab(globalX, globalY);
-
         DropTargetStruct target = resolveDropTarget(screenX, screenY);
         updateZoneGhost(target);
-
         if (target != null)
             lastDropTarget = target;
         else if (!isCursorOverAnyOsWindow(screenX, screenY))
@@ -121,52 +108,37 @@ public class TabDragManager extends ManagerPackage {
     }
 
     // Entry Point \\
-
     public void onTabDragUpdate(WindowInstance sourceWindow) {
-
         if (draggedHandle != null)
             return;
-
         if (EngineContext.input.isMouseReleased(0))
             return;
-
         latchDrag(sourceWindow);
     }
 
     // Drag Start \\
-
     private void latchDrag(WindowInstance sourceWindow) {
-
         TabHandle handle = tabManager.getTabHandleForWindow(sourceWindow);
-
         if (handle == null)
             return;
-
         WindowInstance tabWindow = handle.getTabContext().getWindow();
-
         float globalX = inputManager.getGlobalMouseX();
         float globalY = inputManager.getGlobalMouseY();
         grabOffsetX = 0f;
         grabOffsetY = 0f;
-
         dragW = EngineSetting.TAB_DRAG_PREVIEW_W;
         dragH = EngineSetting.TAB_DRAG_PREVIEW_H;
-
         draggedHandle = handle;
-
         tabWindow.setDepth(EngineSetting.TAB_DRAG_TAB_DEPTH);
         handle.getTabContext().getContentContext().getWindow()
                 .setDepth(EngineSetting.TAB_DRAG_CONTENT_DEPTH);
-
         WindowInstance osWindow = resolveOsWindow(tabWindow);
         tabManager.getDockLayoutSystem().removeTab(osWindow, handle);
         tabManager.pushRects();
-
         updateDraggedTab(globalX, globalY);
     }
 
     // Drag Tracking \\
-
     private void updateDraggedTab(float globalX, float globalY) {
         float x = globalX - grabOffsetX;
         float y = globalY - grabOffsetY;
@@ -174,12 +146,9 @@ public class TabDragManager extends ManagerPackage {
     }
 
     // Zone Ghost \\
-
     private void updateZoneGhost(DropTargetStruct target) {
-
         if (target != null && target.matches(lastDropTarget))
             return;
-
         if (target != null
                 && lastDropTarget != null
                 && target.getWindow() == lastDropTarget.getWindow()
@@ -187,29 +156,22 @@ public class TabDragManager extends ManagerPackage {
             repositionZoneGhost(target);
             return;
         }
-
         closeZoneGhost();
-
         if (target == null)
             return;
-
         openZoneGhost(target);
     }
 
     private void openZoneGhost(DropTargetStruct target) {
-
         if (target.getLeaf() == null)
             return;
-
         DockNodeStruct leaf = target.getLeaf();
         DropZone zone = target.getZone();
         WindowInstance targetOsWindow = resolveOsWindow(target.getWindow());
-
         float ghostX = layoutSystem.zoneX(leaf.getX(), leaf.getW(), zone);
         float ghostY = layoutSystem.zoneY(leaf.getY(), leaf.getH(), zone);
         float ghostW = layoutSystem.zoneW(leaf.getW(), zone);
         float ghostH = layoutSystem.zoneH(leaf.getH(), zone);
-
         zoneGhostWindow = windowManager.createLogicalWindow(
                 EngineSetting.TAB_ZONE_GHOST_WINDOW_TITLE, targetOsWindow);
         zoneGhostWindow.setDepth(EngineSetting.TAB_DRAG_GHOST_DEPTH);
@@ -217,7 +179,6 @@ public class TabDragManager extends ManagerPackage {
         zoneGhostWindow.setFocusIndependent(true);
         zoneGhostWindow.setCompositeRect(ghostX, ghostY, ghostW, ghostH);
         zoneGhostWindow.resize((int) ghostW, (int) ghostH);
-
         zoneGhostFbo = fboManager.cloneFbo(
                 application.runtime.RuntimeSetting.FBO_UI, zoneGhostWindow);
         menuManager.setMenuTargetFbo(zoneGhostWindow, zoneGhostFbo);
@@ -225,79 +186,59 @@ public class TabDragManager extends ManagerPackage {
     }
 
     private void repositionZoneGhost(DropTargetStruct target) {
-
         DockNodeStruct leaf = target.getLeaf();
         DropZone zone = target.getZone();
-
         float ghostX = layoutSystem.zoneX(leaf.getX(), leaf.getW(), zone);
         float ghostY = layoutSystem.zoneY(leaf.getY(), leaf.getH(), zone);
         float ghostW = layoutSystem.zoneW(leaf.getW(), zone);
         float ghostH = layoutSystem.zoneH(leaf.getH(), zone);
-
         zoneGhostWindow.setCompositeRect(ghostX, ghostY, ghostW, ghostH);
         zoneGhostWindow.resize((int) ghostW, (int) ghostH);
         zoneGhostFbo.resize((int) ghostW, (int) ghostH);
     }
 
     private void closeZoneGhost() {
-
         if (zoneGhost != null) {
             menuManager.closeMenu(zoneGhost);
             zoneGhost = null;
         }
-
         if (zoneGhostWindow != null) {
             menuManager.setMenuTargetFbo(zoneGhostWindow, null);
             windowManager.removeWindow(zoneGhostWindow);
             zoneGhostWindow = null;
         }
-
         zoneGhostFbo = null;
     }
 
     // Drop Resolution \\
-
     private DropTargetStruct resolveDropTarget(float globalX, float globalY) {
-
         ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
         Object[] elements = windows.elements();
         int size = windows.size();
-
         WindowInstance bestWindow = null;
         long bestArea = Long.MAX_VALUE;
         int bestDepth = Integer.MIN_VALUE;
-
         for (int i = 0; i < size; i++) {
-
             WindowInstance w = (WindowInstance) elements[i];
-
             if (!w.hasNativeHandle())
                 continue;
-
             if (!isGlobalPointInOsWindow(w, globalX, globalY))
                 continue;
-
             long area = (long) w.getWidth() * (long) w.getHeight();
-
             if (area < bestArea || (area == bestArea && w.getDepth() > bestDepth)) {
                 bestArea = area;
                 bestDepth = w.getDepth();
                 bestWindow = w;
             }
         }
-
         if (bestWindow == null)
             return null;
-
         float localX = inputManager.getCursorXForWindow(bestWindow);
         float localY = inputManager.getCursorYForWindow(bestWindow);
-
         DockNodeStruct leaf = tabManager.getDockLayoutSystem()
                 .findLeafAt(bestWindow, localX, localY);
-
         if (leaf == null)
             return new DropTargetStruct(bestWindow, null, DropZone.BOTTOM);
-
         DropZone zone = classifyZone(leaf, localX, localY);
         return new DropTargetStruct(bestWindow, leaf, zone);
     }
@@ -310,11 +251,9 @@ public class TabDragManager extends ManagerPackage {
     }
 
     private boolean isCursorOverAnyOsWindow(float globalX, float globalY) {
-
         ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
         Object[] elements = windows.elements();
         int size = windows.size();
-
         for (int i = 0; i < size; i++) {
             WindowInstance w = (WindowInstance) elements[i];
             if (!w.hasNativeHandle())
@@ -322,21 +261,17 @@ public class TabDragManager extends ManagerPackage {
             if (isGlobalPointInOsWindow(w, globalX, globalY))
                 return true;
         }
-
         return false;
     }
 
     private DropZone classifyZone(DockNodeStruct leaf, float localX, float localY) {
-
         float lx = leaf.getX();
         float ly = leaf.getY();
         float lw = leaf.getW();
         float lh = leaf.getH();
-
         float relX = (localX - lx) / lw;
         float relY = (localY - ly) / lh;
         float edge = dropZoneEdgeFraction;
-
         if (relX < edge)
             return DropZone.LEFT;
         if (relX > 1f - edge)
@@ -345,76 +280,57 @@ public class TabDragManager extends ManagerPackage {
             return DropZone.TOP;
         if (relY > 1f - edge)
             return DropZone.BOTTOM;
-
         float distLeft = relX;
         float distRight = 1f - relX;
         float distTop = relY;
         float distBottom = 1f - relY;
-
         float minH = Math.min(distLeft, distRight);
         float minV = Math.min(distTop, distBottom);
-
         if (minH <= minV)
             return distLeft < distRight ? DropZone.LEFT : DropZone.RIGHT;
-
         return distTop < distBottom ? DropZone.TOP : DropZone.BOTTOM;
     }
 
     // Drop Execution \\
-
     private void executeDrop() {
-
         if (draggedHandle == null) {
             clearState();
             return;
         }
-
         draggedHandle.getTabContext().getWindow()
                 .setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
         draggedHandle.getTabContext().getContentContext().getWindow()
                 .setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
-
         DropTargetStruct target = lastDropTarget;
         WindowInstance sourceOsWindow = resolveOsWindow(
                 draggedHandle.getTabContext().getWindow());
-
         if (target != null) {
-
             WindowInstance targetOsWindow = target.getWindow();
-
             if (targetOsWindow != sourceOsWindow)
                 tabManager.moveTabToOsWindow(draggedHandle, targetOsWindow);
-
             if (target.getLeaf() != null)
                 tabManager.getDockLayoutSystem().addTabToLeaf(
                         target.getLeaf(), draggedHandle, target.getZone());
             else
                 tabManager.getDockLayoutSystem().addTab(targetOsWindow, draggedHandle);
-
         } else {
             tabManager.openSecondaryWindowForTab(draggedHandle);
         }
-
         if (sourceOsWindow != windowManager.getMainWindow()
                 && isSourceOsWindowEmpty(sourceOsWindow))
             tabManager.closeOsWindow(sourceOsWindow);
-
         tabManager.pushRects();
         tabManager.notifyLayoutChanged();
-
         WindowInstance contentWindow = draggedHandle.getTabContext().getContentContext().getWindow();
         if (contentWindow != null)
             windowManager.setFocusedWindow(contentWindow);
-
         clearState();
     }
 
     private boolean isSourceOsWindowEmpty(WindowInstance osWindow) {
-
         ObjectArrayList<TabHandle> openTabs = tabManager.getOpenTabs();
         Object[] elements = openTabs.elements();
         int size = openTabs.size();
-
         for (int i = 0; i < size; i++) {
             TabHandle handle = (TabHandle) elements[i];
             if (handle == draggedHandle)
@@ -422,24 +338,19 @@ public class TabDragManager extends ManagerPackage {
             if (handle.getTabContext().getWindow().getCompositeTarget() == osWindow)
                 return false;
         }
-
         return true;
     }
 
     // State Cleanup \\
-
     private void clearState() {
-
         closeZoneGhost();
         windowManager.unlockHoveredWindow();
-
         if (draggedHandle != null) {
             draggedHandle.getTabContext().getWindow()
                     .setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
             draggedHandle.getTabContext().getContentContext().getWindow()
                     .setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
         }
-
         draggedHandle = null;
         lastDropTarget = null;
         grabOffsetX = 0f;
@@ -449,22 +360,16 @@ public class TabDragManager extends ManagerPackage {
     }
 
     // Utility \\
-
     private WindowInstance resolveOsWindow(WindowInstance window) {
-
         if (window.hasNativeHandle())
             return window;
-
         WindowInstance composite = window.getCompositeTarget();
-
         if (composite != null && composite.hasNativeHandle())
             return composite;
-
         return windowManager.getMainWindow();
     }
 
     // Accessible \\
-
     public boolean isDragging() {
         return draggedHandle != null;
     }
