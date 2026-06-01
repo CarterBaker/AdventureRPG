@@ -1,6 +1,7 @@
 package application.bootstrap.menupipeline.elementhitsystem;
 
 import java.lang.reflect.Method;
+import java.util.function.Consumer;
 
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
@@ -32,6 +33,14 @@ public class ElementHitSystem extends SystemPackage {
      * this system runs, so cursor coordinates are always current on every
      * window. hoveredElementWindow is tracked locally to detect cross-window
      * hover changes.
+     *
+     * focusCallback is wired by MenuManager at startup. When a click is
+     * consumed by a window that is capture-eligible and not focus-independent,
+     * the callback fires and that window becomes the focused window. This is
+     * what allows logical content windows (e.g. a RuntimeContext tab) to
+     * acquire cursor capture — in the standalone runtime the context window
+     * IS the main OS window so it was always focused; in the editor the
+     * content window is a logical window that must earn focus via a click.
      *
      * Hover lifecycle:
      * Enter — if hoverEnterState defined: set as activeHoverState, fire callback.
@@ -70,6 +79,8 @@ public class ElementHitSystem extends SystemPackage {
     private WindowInstance hoveredElementWindow;
     private WindowInstance openClickStateWindow;
     private float collapseTolerance;
+
+    private Consumer<WindowInstance> focusCallback;
 
     private Object2ObjectOpenHashMap<String, Runnable> resolvedActions;
     private Object2ObjectOpenHashMap<String, MenuAwareAction> resolvedMenuAwareActions;
@@ -142,8 +153,19 @@ public class ElementHitSystem extends SystemPackage {
                 if (!menu.isVisible())
                     continue;
                 if (hitTestElements(menu.getElements(), mx, my,
-                        0, 0, window.getWidth(), window.getHeight(), menu))
+                        0, 0, window.getWidth(), window.getHeight(), menu)) {
+                    // Focus windows eligible for cursor capture on click.
+                    // captureEligible=false excludes tab chrome and overlays.
+                    // focusIndependent=true excludes toolbars and editor chrome.
+                    // Content windows pass both checks and correctly acquire focus,
+                    // allowing logical tab windows to trigger cursor capture via
+                    // MenuManager.flushPendingClosedMenus on the following frame.
+                    if (focusCallback != null
+                            && window.isCaptureEligible()
+                            && !window.isFocusIndependent())
+                        focusCallback.accept(window);
                     return;
+                }
             }
         }
     }
@@ -153,6 +175,12 @@ public class ElementHitSystem extends SystemPackage {
         this.openClickStateWindow = null;
         this.draggedElement = null;
         clearHover();
+    }
+
+    // Focus \\
+
+    public void setFocusCallback(Consumer<WindowInstance> callback) {
+        this.focusCallback = callback;
     }
 
     // Hover \\

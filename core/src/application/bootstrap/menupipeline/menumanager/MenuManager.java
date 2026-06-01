@@ -37,6 +37,13 @@ public class MenuManager extends ManagerPackage {
      * full hoveredWindows list from WindowManager. The hit system iterates windows
      * in priority order (index 0 first) and dispatches to the highest hit.
      *
+     * Focus-on-click is wired here via hitSystem.setFocusCallback. When a click
+     * is consumed by a capture-eligible, non-focus-independent window, that window
+     * becomes the focused window. This is what allows logical content windows (e.g.
+     * a RuntimeContext running inside an editor tab) to acquire cursor capture —
+     * without this, flushPendingClosedMenus would never see window == focusedWindow
+     * and captureCursor would never fire for logical windows.
+     *
      * Cursor capture is driven here as a side effect of menu lock state
      * transitions.
      * openMenu releases capture when a lock_input menu opens on the focused window.
@@ -80,6 +87,7 @@ public class MenuManager extends ManagerPackage {
         this.hitSystem = get(ElementHitSystem.class);
         this.windowManager = get(WindowManager.class);
         this.inputManager = get(InputManager.class);
+        hitSystem.setFocusCallback(windowManager::setFocusedWindow);
     }
 
     @Override
