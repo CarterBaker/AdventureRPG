@@ -342,9 +342,9 @@ public class TabDragManager extends ManagerPackage {
     }
 
     // State Cleanup \\
+
     private void clearState() {
         closeZoneGhost();
-        windowManager.unlockHoveredWindow();
         if (draggedHandle != null) {
             draggedHandle.getTabContext().getWindow()
                     .setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
@@ -360,6 +360,7 @@ public class TabDragManager extends ManagerPackage {
     }
 
     // Utility \\
+
     private WindowInstance resolveOsWindow(WindowInstance window) {
         if (window.hasNativeHandle())
             return window;

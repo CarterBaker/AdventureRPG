@@ -26,29 +26,22 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MenuManager extends ManagerPackage {
 
     /*
-     * Owns the menu palette and drives the menu lifecycle. Handles opening and
-     * closing MenuInstances and runtime element injection. Rendering and hit
-     * testing are delegated to dedicated systems.
+     * Owns the menu palette and drives the menu lifecycle.
      *
-     * Open menu state is per-window. Each WindowInstance owns a MenuListHandle
-     * — the single source of truth for which menus are active in that window.
-     * MenuManager holds no global active list; it iterates WindowManager's
-     * window list each frame and renders each window's menus against its FBO.
+     * Open menu state is per-window. Each WindowInstance owns a MenuListHandle —
+     * the single source of truth for which menus are active in that window.
+     * MenuManager holds no global active list; it iterates WindowManager's window
+     * list each frame and renders each window's menus against its FBO.
      *
-     * Input and raycast lock state is derived live from each window's
-     * MenuListHandle. Canvas bounds are owned by MenuInstance and written
-     * directly by MenuRenderSystem each frame.
+     * Input routing delegates entirely to ElementHitSystem, which receives the
+     * full hoveredWindows list from WindowManager. The hit system iterates windows
+     * in priority order (index 0 first) and dispatches to the highest hit.
      *
      * Cursor capture is driven here as a side effect of menu lock state
-     * transitions — openMenu releases capture when a lock_input menu opens on
-     * the focused window, flushPendingClosedMenus reclaims it when the last
-     * lock-input menu closes on the focused window. Only the focused window
-     * may acquire or release capture so background tabs cannot affect input state.
-     *
-     * clearHoverIfWindowChanged is called unconditionally each frame before the
-     * raycast guard. This ensures hover exit fires whenever the hovered window
-     * changes — even when the incoming window has no raycast-locked menus and
-     * updateRaycast would not otherwise run.
+     * transitions.
+     * openMenu releases capture when a lock_input menu opens on the focused window.
+     * flushPendingClosedMenus reclaims it when the last lock_input menu closes on
+     * the focused window. Only the focused window may acquire or release capture.
      */
 
     // Internal
@@ -72,14 +65,11 @@ public class MenuManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
         this.menuName2MenuID = new Object2IntOpenHashMap<>();
         this.menuID2MenuHandle = new Int2ObjectOpenHashMap<>();
         this.menuName2MenuID.defaultReturnValue(-1);
-
         this.pendingCloseMenus = new ObjectArrayList<>();
         this.window2MenuTargetFbo = new Object2ObjectOpenHashMap<>();
-
         create(InternalLoader.class);
     }
 
@@ -97,35 +87,30 @@ public class MenuManager extends ManagerPackage {
 
         flushPendingClosedMenus();
 
+        // Render — all windows, regardless of hover state
         ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
         int windowCount = windows.size();
 
         for (int i = 0; i < windowCount; i++) {
-
             WindowInstance window = windows.get(i);
             MenuListHandle menuList = window.getMenuListHandle();
-
             if (menuList.isEmpty())
                 continue;
-
             FboInstance menuTargetFbo = window2MenuTargetFbo.get(window);
-
             if (menuTargetFbo == null)
                 continue;
-
             ObjectArrayList<MenuInstance> menus = menuList.getMenus();
             int menuCount = menus.size();
-
             for (int j = 0; j < menuCount; j++)
                 renderSystem.renderMenu(menus.get(j), menuTargetFbo, RuntimeSetting.LAYER_UI);
         }
 
-        WindowInstance hovered = windowManager.getHoveredWindow();
+        // Input — ordered list of all hovered windows, highest priority first.
+        // ElementHitSystem iterates the list and dispatches to the first hit.
+        ObjectArrayList<WindowInstance> hoveredWindows = windowManager.getHoveredWindows();
 
-        hitSystem.clearHoverIfWindowChanged(hovered);
-
-        if (hovered != null && hovered.getMenuListHandle().isRaycastLocked())
-            hitSystem.updateRaycast(hovered.getMenuListHandle().getMenus());
+        hitSystem.clearHoverIfWindowChanged(hoveredWindows);
+        hitSystem.updateRaycast(hoveredWindows);
     }
 
     // Deferred Menu Close \\
@@ -169,7 +154,6 @@ public class MenuManager extends ManagerPackage {
             customizer.accept(instance);
 
         menu.addToEntryPoint(entryPoint, instance);
-
         return instance;
     }
 
@@ -178,11 +162,9 @@ public class MenuManager extends ManagerPackage {
     }
 
     public void eject(MenuInstance menu, int entryPoint, ElementInstance instance) {
-
         ObjectArrayList<ElementInstance> single = new ObjectArrayList<>(1);
         single.add(instance);
         renderSystem.releaseFontModels(single);
-
         menu.removeFromEntryPoint(entryPoint, instance);
     }
 
@@ -201,20 +183,15 @@ public class MenuManager extends ManagerPackage {
     }
 
     public int getMenuIDFromMenuName(String menuName) {
-
         if (!menuName2MenuID.containsKey(menuName))
             request(menuName);
-
         return menuName2MenuID.getInt(menuName);
     }
 
     public MenuHandle getMenuHandleFromMenuID(int menuID) {
-
         MenuHandle handle = menuID2MenuHandle.get(menuID);
-
         if (handle == null)
             throwException("Menu ID not found: " + menuID);
-
         return handle;
     }
 
@@ -272,15 +249,12 @@ public class MenuManager extends ManagerPackage {
     }
 
     public void setMenuTargetFbo(WindowInstance window, FboInstance menuTargetFbo) {
-
         if (window == null)
             return;
-
         if (menuTargetFbo == null) {
             window2MenuTargetFbo.remove(window);
             return;
         }
-
         window2MenuTargetFbo.put(window, menuTargetFbo);
     }
 }

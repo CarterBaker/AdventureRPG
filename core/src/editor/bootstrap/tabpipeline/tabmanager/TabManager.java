@@ -1,4 +1,5 @@
 package editor.bootstrap.tabpipeline.tabmanager;
+
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
@@ -15,6 +16,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+
 public class TabManager extends ManagerPackage {
     /*
      * Coordinates tab registration, BSP bookkeeping, and rect propagation.
@@ -49,6 +51,7 @@ public class TabManager extends ManagerPackage {
     private DockLayoutSystem dockLayoutSystem;
     private InputManager inputManager;
     private LayoutManager layoutManager;
+
     // Internal \\
     @Override
     protected void create() {
@@ -60,6 +63,7 @@ public class TabManager extends ManagerPackage {
         classInstanceCounter.defaultReturnValue(0);
         dockRects = new Object2ObjectOpenHashMap<>();
     }
+
     @Override
     protected void get() {
         windowManager = get(WindowManager.class);
@@ -72,15 +76,18 @@ public class TabManager extends ManagerPackage {
         });
         dockLayoutSystem.initWindow(windowManager.getMainWindow());
     }
+
     // Management \\
     public TabHandle openPreview() {
         return openTab(EngineSetting.TAB_TITLE_PREVIEW, application.runtime.RuntimeContext.class);
     }
+
     public WindowInstance openSecondaryWindow() {
         return windowManager.openWindow(
                 EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY,
                 engine.editor.EditorWindowSecondary.class);
     }
+
     /*
      * Registers a new tab. Creates chrome and content windows under the main OS
      * window, links them, adds to BSP, and pushes rects.
@@ -121,6 +128,7 @@ public class TabManager extends ManagerPackage {
         notifyLayoutChanged();
         return handle;
     }
+
     /*
      * Removes from BSP, destroys both contexts and windows, deregisters.
      * Closes the source OS window if it is now empty and is not main.
@@ -130,9 +138,12 @@ public class TabManager extends ManagerPackage {
             throwException("Cannot close a null tab handle.");
         if (!handle.isOpen())
             throwException("Cannot close tab that is not open: " + handle.getTabTitle());
+
         TabContext tabContext = handle.getTabContext();
         WindowInstance osWindow = resolveOsWindow(tabContext.getWindow());
+
         dockLayoutSystem.removeTab(osWindow, handle);
+
         ContextPackage contentContext = tabContext.getContentContext();
         if (contentContext != null) {
             contentContext.getWindow().getMenuListHandle().setLockReleaseListener(null);
@@ -140,20 +151,25 @@ public class TabManager extends ManagerPackage {
             internal.destroyContext(contentContext);
             windowManager.removeWindow(contentWindow);
         }
+
         WindowInstance tabWindow = tabContext.getWindow();
         internal.destroyContext(tabContext);
         windowManager.removeWindow(tabWindow);
+
         handle.mount(null);
-        windowManager.unlockHoveredWindow();
+
         int tabID = getTabIDFromTabName(handle.getTabTitle());
         tabName2TabID.removeInt(handle.getTabTitle());
         tabID2TabHandle.remove(tabID);
         openTabs.remove(handle);
+
         pushRects();
         notifyLayoutChanged();
+
         if (osWindow != windowManager.getMainWindow() && isOsWindowEmpty(osWindow))
             closeOsWindow(osWindow);
     }
+
     /*
      * Reparents chrome and content to the target OS window via TabContext.moveTo().
      * Ensures dockRects has a valid entry for the target. BSP insertion is handled
@@ -169,6 +185,7 @@ public class TabManager extends ManagerPackage {
                     new float[] { 0f, 0f, targetOsWindow.getWidth(), targetOsWindow.getHeight() });
         handle.getTabContext().moveTo(targetOsWindow);
     }
+
     /*
      * Opens a new OS window, registers its BSP tree and dockRects entry, adds
      * the tab to the new tree, then delegates to moveTabToOsWindow().
@@ -186,6 +203,7 @@ public class TabManager extends ManagerPackage {
         pushRects();
         notifyLayoutChanged();
     }
+
     // OS Window Lifecycle \\
     public boolean isOsWindowEmpty(WindowInstance osWindow) {
         Object[] elements = openTabs.elements();
@@ -197,6 +215,7 @@ public class TabManager extends ManagerPackage {
         }
         return true;
     }
+
     public void closeOsWindow(WindowInstance osWindow) {
         if (osWindow == null || osWindow == windowManager.getMainWindow())
             return;
@@ -217,6 +236,7 @@ public class TabManager extends ManagerPackage {
             windowManager.removeWindow((WindowInstance) removeElements[i]);
         windowManager.destroyOsWindow(osWindow);
     }
+
     // Rect Propagation \\
     public void setDockRect(WindowInstance osWindow, float x, float y, float w, float h) {
         if (osWindow == null)
@@ -232,14 +252,14 @@ public class TabManager extends ManagerPackage {
         rect[3] = h;
         pushRects();
     }
+
     /*
      * The only call site for TabContext.placeAt(). Recomputes BSP rects for every
      * registered OS window then calls placeAt() on each tab — chrome and content
      * are positioned together in that single call.
      */
     public void pushRects() {
-        for (Object2ObjectOpenHashMap.Entry<WindowInstance, float[]> entry :
-                dockRects.object2ObjectEntrySet()) {
+        for (Object2ObjectOpenHashMap.Entry<WindowInstance, float[]> entry : dockRects.object2ObjectEntrySet()) {
             WindowInstance osWindow = entry.getKey();
             float[] r = entry.getValue();
             if (r[2] <= 0 || r[3] <= 0)
@@ -258,6 +278,7 @@ public class TabManager extends ManagerPackage {
             h.getTabContext().placeAt(x, y, w, hh);
         }
     }
+
     // Layout \\
     /*
      * Routes to LayoutManager. Called by this manager after every structural
@@ -268,6 +289,7 @@ public class TabManager extends ManagerPackage {
         if (layoutManager != null)
             layoutManager.notifyLayoutChanged();
     }
+
     /*
      * Clears all tab instance counters. Called by LayoutManager before
      * re-opening tabs during restore so generated titles are deterministic.
@@ -275,6 +297,7 @@ public class TabManager extends ManagerPackage {
     public void resetCounters() {
         classInstanceCounter.clear();
     }
+
     // Lookup \\
     public TabHandle getTabHandleForWindow(WindowInstance window) {
         Object[] elements = openTabs.elements();
@@ -286,29 +309,36 @@ public class TabManager extends ManagerPackage {
         }
         return null;
     }
+
     public boolean hasTab(String name) {
         return tabName2TabID.containsKey(name);
     }
+
     public int getTabIDFromTabName(String name) {
         if (!tabName2TabID.containsKey(name))
             throwException("Tab name not found: " + name);
         return tabName2TabID.getInt(name);
     }
+
     public TabHandle getTabHandleFromTabID(int id) {
         TabHandle handle = tabID2TabHandle.get(id);
         if (handle == null)
             throwException("Tab ID not found: " + id);
         return handle;
     }
+
     public TabHandle getTabHandleFromTabName(String name) {
         return getTabHandleFromTabID(getTabIDFromTabName(name));
     }
+
     public ObjectArrayList<TabHandle> getOpenTabs() {
         return openTabs;
     }
+
     public DockLayoutSystem getDockLayoutSystem() {
         return dockLayoutSystem;
     }
+
     // Utility \\
     private WindowInstance resolveOsWindow(WindowInstance window) {
         if (window.hasNativeHandle())
