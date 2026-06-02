@@ -3,9 +3,14 @@ package engine.editor.menueventsmanager.menus;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import application.runtime.RuntimeSetting;
 import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import engine.editor.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineContext;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -19,8 +24,10 @@ public class EditorBranch extends BranchPackage {
      * Layout operations:
      * toggleLayoutDropdown(MenuInstance) — toggles the layout list and populates
      * it fresh from disk each time it opens so the list is always current.
-     * openCreateLayoutDialog() — opens the modal create dialog on the main window.
-     * openSaveDialog() — opens the modal save dialog on the main window.
+     * openCreateLayoutDialog() — opens the modal create dialog in its own logical
+     * window at toolbar depth so it composites above tabs.
+     * openSaveDialog() — opens the modal save dialog in its own logical window
+     * at toolbar depth so it composites above tabs.
      * update() — polls keyboard input each frame while a dialog is open,
      * appending typed characters to nameBuffer and pushing the result to the
      * name display label via setFontText(). Backspace trims, Enter confirms.
@@ -70,9 +77,14 @@ public class EditorBranch extends BranchPackage {
     private WindowManager windowManager;
     private TabManager tabManager;
     private LayoutManager layoutManager;
+    private FboManager fboManager;
     // State
     private MenuInstance saveDialog;
     private MenuInstance createDialog;
+    private WindowInstance saveDialogWindow;
+    private WindowInstance createDialogWindow;
+    private FboInstance saveDialogFbo;
+    private FboInstance createDialogFbo;
     private StringBuilder nameBuffer;
     private ObjectArrayList<ElementInstance> injectedLayoutItems;
 
@@ -89,6 +101,7 @@ public class EditorBranch extends BranchPackage {
         this.windowManager = get(WindowManager.class);
         this.tabManager = get(TabManager.class);
         this.layoutManager = get(LayoutManager.class);
+        this.fboManager = get(FboManager.class);
     }
 
     @Override
@@ -149,15 +162,26 @@ public class EditorBranch extends BranchPackage {
 
     // Create Layout Dialog \\
     /*
-     * Opens the modal create dialog on the main window. Guards against opening
-     * a second instance if one is already active. Clears the name buffer so
-     * the dialog always starts empty.
+     * Opens the modal create dialog in its own logical window cloned from the
+     * UI FBO at toolbar depth so it composites above tabs. Guards against
+     * opening a second instance if one is already active. Clears the name
+     * buffer so the dialog always starts empty.
      */
     public void openCreateLayoutDialog() {
         if (createDialog != null)
             return;
         nameBuffer.setLength(0);
-        createDialog = menuManager.openMenu(CREATE_LAYOUT_DIALOG, windowManager.getMainWindow());
+        createDialogWindow = windowManager.createLogicalWindow("CreateLayoutDialog", windowManager.getMainWindow());
+        createDialogWindow.setDepth(EditorSetting.TOOLBAR_WINDOW_DEPTH);
+        createDialogWindow.setCaptureEligible(false);
+        createDialogWindow.setFocusIndependent(true);
+        int w = windowManager.getMainWindow().getWidth();
+        int h = windowManager.getMainWindow().getHeight();
+        createDialogWindow.setCompositeRect(0, 0, w, h);
+        createDialogWindow.resize(w, h);
+        createDialogFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, createDialogWindow);
+        menuManager.setMenuTargetFbo(createDialogWindow, createDialogFbo);
+        createDialog = menuManager.openMenu(CREATE_LAYOUT_DIALOG, createDialogWindow);
         refreshNameLabel(createDialog, ENTRY_CREATE_NAME_LABEL);
     }
 
@@ -179,21 +203,36 @@ public class EditorBranch extends BranchPackage {
 
     private void closeCreateDialog(MenuInstance parent) {
         menuManager.closeMenu(parent);
+        menuManager.setMenuTargetFbo(createDialogWindow, null);
+        windowManager.removeWindow(createDialogWindow);
+        createDialogWindow = null;
+        createDialogFbo = null;
         createDialog = null;
         nameBuffer.setLength(0);
     }
 
     // Save Layout Dialog \\
     /*
-     * Opens the modal save dialog on the main window. Guards against opening
-     * a second instance if one is already active. Clears the name buffer so
-     * the dialog always starts empty.
+     * Opens the modal save dialog in its own logical window cloned from the
+     * UI FBO at toolbar depth so it composites above tabs. Guards against
+     * opening a second instance if one is already active. Clears the name
+     * buffer so the dialog always starts empty.
      */
     public void openSaveDialog() {
         if (saveDialog != null)
             return;
         nameBuffer.setLength(0);
-        saveDialog = menuManager.openMenu(SAVE_LAYOUT_DIALOG, windowManager.getMainWindow());
+        saveDialogWindow = windowManager.createLogicalWindow("SaveLayoutDialog", windowManager.getMainWindow());
+        saveDialogWindow.setDepth(EditorSetting.TOOLBAR_WINDOW_DEPTH);
+        createDialogWindow.setCaptureEligible(false);
+        createDialogWindow.setFocusIndependent(true);
+        int w = windowManager.getMainWindow().getWidth();
+        int h = windowManager.getMainWindow().getHeight();
+        saveDialogWindow.setCompositeRect(0, 0, w, h);
+        saveDialogWindow.resize(w, h);
+        saveDialogFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, saveDialogWindow);
+        menuManager.setMenuTargetFbo(saveDialogWindow, saveDialogFbo);
+        saveDialog = menuManager.openMenu(SAVE_LAYOUT_DIALOG, saveDialogWindow);
         refreshNameLabel(saveDialog, ENTRY_SAVE_NAME_LABEL);
     }
 
@@ -215,6 +254,10 @@ public class EditorBranch extends BranchPackage {
 
     private void closeSaveDialog(MenuInstance parent) {
         menuManager.closeMenu(parent);
+        menuManager.setMenuTargetFbo(saveDialogWindow, null);
+        windowManager.removeWindow(saveDialogWindow);
+        saveDialogWindow = null;
+        saveDialogFbo = null;
         saveDialog = null;
         nameBuffer.setLength(0);
     }
