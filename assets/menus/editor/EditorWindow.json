@@ -392,7 +392,8 @@
                   "sprite": "menus/DefaultElement",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                    "method": "confirmCreate"
+                    "method": "confirmCreate",
+                    "arg": "$parent"
                   },
                   "elements": [
                     {
