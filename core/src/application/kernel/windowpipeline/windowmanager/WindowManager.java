@@ -75,7 +75,9 @@ public class WindowManager extends ManagerPackage {
 
     @Override
     protected void update() {
+
         syncHoveredWindows();
+        resolveClickFocus();
 
         for (int i = windows.size() - 1; i >= 0; i--) {
             WindowInstance window = windows.get(i);
@@ -174,6 +176,30 @@ public class WindowManager extends ManagerPackage {
                 && mx < w.getCompositeX() + w.getCompositeW()
                 && my >= w.getCompositeY()
                 && my < w.getCompositeY() + w.getCompositeH();
+    }
+
+    private void resolveClickFocus() {
+
+        if (hoveredWindows.isEmpty())
+            return;
+
+        // Only act on the frame the primary button is first pressed.
+        // EngineContext.input is already current — syncHoveredWindows just ran.
+        if (!EngineContext.input.isMouseClicked(0))
+            return;
+
+        // Walk depth-sorted list. focusIndependent=true means the window is
+        // intentionally transparent to focus (toolbar, tab chrome). The first
+        // non-transparent window geometrically under the cursor owns the click,
+        // regardless of whether any UI element was hit inside it.
+        for (int i = 0; i < hoveredWindows.size(); i++) {
+
+            WindowInstance w = hoveredWindows.get(i);
+            if (!w.isFocusIndependent()) {
+                focusedWindow = w;
+                return;
+            }
+        }
     }
 
     // Registration \\

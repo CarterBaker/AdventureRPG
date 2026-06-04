@@ -5,14 +5,20 @@
       "type": "container",
       "anchor": "bottom_left",
       "pivot": "bottom_left",
-      "size": {"x": "150px", "y": "56px"},
+      "size": {
+        "x": "150px",
+        "y": "56px"
+      },
       "elements": [
         {
           "id": "testing_dropdown_content",
           "type": "container",
           "anchor": "top_left",
           "pivot": "bottom_left",
-          "size": {"x": "150px", "y": "56px"},
+          "size": {
+            "x": "150px",
+            "y": "56px"
+          },
           "stack": "vertical",
           "font_size": "50%",
           "sprite": "menus/DefaultElement",
@@ -21,7 +27,10 @@
               "id": "open_window_button",
               "type": "button",
               "sprite": "menus/DefaultElement",
-              "size": {"x": "150px", "y": "28px"},
+              "size": {
+                "x": "150px",
+                "y": "28px"
+              },
               "on_click": {
                 "class": "engine.editor.menueventsmanager.menus.EditorBranch",
                 "method": "openSecondaryWindow"
@@ -31,7 +40,12 @@
                   "id": "open_window_label",
                   "type": "label",
                   "text": "Open Window",
-                  "color": [0, 0, 0, 1]
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
                 }
               ]
             },
@@ -39,7 +53,10 @@
               "id": "open_preview_button",
               "type": "button",
               "sprite": "menus/DefaultElement",
-              "size": {"x": "150px", "y": "28px"},
+              "size": {
+                "x": "150px",
+                "y": "28px"
+              },
               "on_click": {
                 "class": "engine.editor.menueventsmanager.menus.EditorBranch",
                 "method": "openPreview"
@@ -49,7 +66,12 @@
                   "id": "open_preview_label",
                   "type": "label",
                   "text": "Open Preview",
-                  "color": [0, 0, 0, 1]
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
                 }
               ]
             }
@@ -62,14 +84,20 @@
       "type": "container",
       "anchor": "bottom_right",
       "pivot": "bottom_right",
-      "size": {"x": "180px", "y": "308px"},
+      "size": {
+        "x": "180px",
+        "y": "308px"
+      },
       "elements": [
         {
           "id": "layouts_dropdown_content",
           "type": "container",
           "anchor": "top_right",
           "pivot": "bottom_right",
-          "size": {"x": "180px", "y": "308px"},
+          "size": {
+            "x": "180px",
+            "y": "308px"
+          },
           "stack": "vertical",
           "font_size": "50%",
           "sprite": "menus/DefaultElement",
@@ -78,7 +106,10 @@
               "id": "create_layout_button",
               "type": "button",
               "sprite": "menus/DefaultElement",
-              "size": {"x": "180px", "y": "28px"},
+              "size": {
+                "x": "180px",
+                "y": "28px"
+              },
               "on_click": {
                 "class": "engine.editor.menueventsmanager.menus.EditorBranch",
                 "method": "openCreateLayoutDialog"
@@ -88,14 +119,22 @@
                   "id": "create_layout_label",
                   "type": "label",
                   "text": "Create New",
-                  "color": [0, 0, 0, 1]
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
                 }
               ]
             },
             {
               "id": "layouts_list_container",
               "type": "container",
-              "size": {"x": "180px", "y": "280px"},
+              "size": {
+                "x": "180px",
+                "y": "280px"
+              },
               "stack": "vertical"
             }
           ]
@@ -106,7 +145,10 @@
       "id": "layout_item_template",
       "type": "button",
       "sprite": "menus/DefaultElement",
-      "size": {"x": "180px", "y": "28px"},
+      "size": {
+        "x": "180px",
+        "y": "28px"
+      },
       "on_click": {
         "class": "engine.editor.menueventsmanager.menus.EditorBranch",
         "method": "loadLayout"
@@ -116,7 +158,12 @@
           "id": "layout_item_label",
           "type": "label",
           "text": "",
-          "color": [0, 0, 0, 1]
+          "color": [
+            0,
+            0,
+            0,
+            1
+          ]
         }
       ]
     }
@@ -130,16 +177,27 @@
           "type": "sprite",
           "anchor": "top_left",
           "pivot": "bottom_left",
-          "size": {"x": "100%", "y": "100%"},
+          "size": {
+            "x": "100%",
+            "y": "100%"
+          },
           "sprite": "util/Default",
-          "color": [0.13, 0.13, 0.13, 1.0]
+          "color": [
+            0.13,
+            0.13,
+            0.13,
+            1.0
+          ]
         },
         {
           "id": "dock_canvas",
           "type": "canvas_area",
           "anchor": "bottom_left",
           "pivot": "top_left",
-          "size": {"x": "100%", "y": "calc(100% - 28px)"}
+          "size": {
+            "x": "100%",
+            "y": "calc(100% - 28px)"
+          }
         }
       ]
     },
@@ -162,21 +220,32 @@
               "type": "container",
               "anchor": "top_left",
               "pivot": "bottom_left",
-              "size": {"x": "100px", "y": "28px"},
+              "size": {
+                "x": "100px",
+                "y": "28px"
+              },
               "elements": [
                 {
                   "id": "testing_button_bg",
                   "type": "container",
                   "anchor": "top_left",
                   "pivot": "bottom_left",
-                  "size": {"x": "100px", "y": "28px"},
+                  "size": {
+                    "x": "100px",
+                    "y": "28px"
+                  },
                   "elements": [
                     {
                       "id": "testing_bg_label",
                       "type": "label",
                       "text": "Testing",
                       "font_size": "50%",
-                      "color": [0, 0, 0, 1]
+                      "color": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ]
                     }
                   ]
                 },
@@ -185,7 +254,10 @@
                   "type": "button",
                   "anchor": "top_left",
                   "pivot": "bottom_left",
-                  "size": {"x": "100px", "y": "28px"},
+                  "size": {
+                    "x": "100px",
+                    "y": "28px"
+                  },
                   "on_hover_enter": {
                     "use": "editor/EditorWindow/testing_dropdown_panel"
                   },
@@ -198,21 +270,32 @@
               "type": "container",
               "anchor": "top_right",
               "pivot": "bottom_right",
-              "size": {"x": "100px", "y": "28px"},
+              "size": {
+                "x": "100px",
+                "y": "28px"
+              },
               "elements": [
                 {
                   "id": "layouts_button_bg",
                   "type": "container",
                   "anchor": "top_right",
                   "pivot": "bottom_right",
-                  "size": {"x": "100px", "y": "28px"},
+                  "size": {
+                    "x": "100px",
+                    "y": "28px"
+                  },
                   "elements": [
                     {
                       "id": "layouts_bg_label",
                       "type": "label",
                       "text": "Layouts",
                       "font_size": "50%",
-                      "color": [0, 0, 0, 1]
+                      "color": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ]
                     }
                   ]
                 },
@@ -221,7 +304,10 @@
                   "type": "button",
                   "anchor": "top_right",
                   "pivot": "bottom_right",
-                  "size": {"x": "100px", "y": "28px"},
+                  "size": {
+                    "x": "100px",
+                    "y": "28px"
+                  },
                   "on_hover_enter": {
                     "use": "editor/EditorWindow/layouts_dropdown_panel"
                   },
@@ -237,54 +323,89 @@
       "id": "SaveLayoutDialog",
       "raycast_input": true,
       "lock_input": true,
-      "entry_points": ["name_display_label"],
+      "entry_points": [
+        "name_display_label"
+      ],
       "elements": [
         {
           "id": "dialog_backing",
           "type": "sprite",
           "anchor": "center",
           "pivot": "center",
-          "size": {"x": "320px", "y": "120px"},
+          "size": {
+            "x": "320px",
+            "y": "120px"
+          },
           "sprite": "util/Default",
-          "color": [0.18, 0.18, 0.18, 1.0],
+          "color": [
+            0.18,
+            0.18,
+            0.18,
+            1.0
+          ],
           "stack": "vertical",
           "spacing": "8px",
           "elements": [
             {
               "id": "dialog_title",
               "type": "label",
-              "size": {"x": "100%", "y": "28px"},
+              "size": {
+                "x": "100%",
+                "y": "28px"
+              },
               "text": "Save Layout",
               "font_size": "50%",
-              "color": [1, 1, 1, 1]
+              "color": [
+                1,
+                1,
+                1,
+                1
+              ]
             },
             {
               "id": "name_input_backing",
               "type": "sprite",
-              "size": {"x": "288px", "y": "32px"},
+              "size": {
+                "x": "288px",
+                "y": "32px"
+              },
               "sprite": "menus/DefaultElement",
               "elements": [
                 {
                   "id": "name_display_label",
                   "type": "label",
-                  "size": {"x": "100%", "y": "100%"},
+                  "size": {
+                    "x": "100%",
+                    "y": "100%"
+                  },
                   "text": "",
                   "font_size": "50%",
-                  "color": [0, 0, 0, 1]
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
                 }
               ]
             },
             {
               "id": "dialog_buttons",
               "type": "container",
-              "size": {"x": "288px", "y": "32px"},
+              "size": {
+                "x": "288px",
+                "y": "32px"
+              },
               "stack": "horizontal",
               "spacing": "8px",
               "elements": [
                 {
                   "id": "confirm_button",
                   "type": "button",
-                  "size": {"x": "136px", "y": "28px"},
+                  "size": {
+                    "x": "136px",
+                    "y": "28px"
+                  },
                   "sprite": "menus/DefaultElement",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.EditorBranch",
@@ -296,14 +417,22 @@
                       "type": "label",
                       "text": "Save",
                       "font_size": "50%",
-                      "color": [0, 0, 0, 1]
+                      "color": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ]
                     }
                   ]
                 },
                 {
                   "id": "cancel_button",
                   "type": "button",
-                  "size": {"x": "136px", "y": "28px"},
+                  "size": {
+                    "x": "136px",
+                    "y": "28px"
+                  },
                   "sprite": "menus/DefaultElement",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.EditorBranch",
@@ -315,7 +444,12 @@
                       "type": "label",
                       "text": "Cancel",
                       "font_size": "50%",
-                      "color": [0, 0, 0, 1]
+                      "color": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ]
                     }
                   ]
                 }
@@ -329,21 +463,31 @@
       "id": "CreateLayoutDialog",
       "raycast_input": true,
       "lock_input": true,
-      "entry_points": ["create_name_display_label"],
+      "entry_points": [
+        "create_name_display_label"
+      ],
       "elements": [
         {
           "id": "dialog_frame",
           "type": "container",
           "anchor": "center",
           "pivot": "center",
-          "size": {"x": "320px", "y": "112px"},
-          "stack": "vertical",
+          "size": {
+            "x": "320px",
+            "y": "112px"
+          },
+          "sprite": "menus/DefaultElement",
           "elements": [
             {
               "id": "dialog_toolbar",
               "type": "sprite",
+              "anchor": "top_left",
+              "pivot": "top_left",
               "sprite": "menus/DefaultElement",
-              "size": {"x": "320px", "y": "28px"},
+              "size": {
+                "x": "320px",
+                "y": "28px"
+              },
               "elements": [
                 {
                   "id": "dialog_close_button",
@@ -351,9 +495,20 @@
                   "sprite": "menus/CloseIcon",
                   "anchor": "top_right",
                   "pivot": "top_right",
-                  "position": {"x": "-4px", "y": "-4px"},
-                  "size": {"x": "20px", "y": "20px"},
-                  "color": [1.0, 1.0, 1.0, 0.7],
+                  "position": {
+                    "x": "-4px",
+                    "y": "-4px"
+                  },
+                  "size": {
+                    "x": "20px",
+                    "y": "20px"
+                  },
+                  "color": [
+                    1.0,
+                    1.0,
+                    1.0,
+                    0.7
+                  ],
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.EditorBranch",
                     "method": "cancelCreate",
@@ -365,30 +520,53 @@
             {
               "id": "dialog_body",
               "type": "container",
-              "size": {"x": "320px", "y": "84px"},
+              "anchor": "top_left",
+              "pivot": "top_left",
+              "position": {
+                "x": "16px",
+                "y": "-36px"
+              },
+              "size": {
+                "x": "288px",
+                "y": "68px"
+              },
               "stack": "vertical",
               "spacing": "8px",
               "elements": [
                 {
                   "id": "create_name_input_backing",
                   "type": "sprite",
-                  "size": {"x": "288px", "y": "32px"},
+                  "size": {
+                    "x": "288px",
+                    "y": "32px"
+                  },
                   "sprite": "menus/DefaultElement",
                   "elements": [
                     {
                       "id": "create_name_display_label",
                       "type": "label",
-                      "size": {"x": "100%", "y": "100%"},
+                      "size": {
+                        "x": "100%",
+                        "y": "100%"
+                      },
                       "text": "",
                       "font_size": "50%",
-                      "color": [0, 0, 0, 1]
+                      "color": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ]
                     }
                   ]
                 },
                 {
                   "id": "create_confirm_button",
                   "type": "button",
-                  "size": {"x": "288px", "y": "28px"},
+                  "size": {
+                    "x": "288px",
+                    "y": "28px"
+                  },
                   "sprite": "menus/DefaultElement",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.EditorBranch",
@@ -401,7 +579,12 @@
                       "type": "label",
                       "text": "OK",
                       "font_size": "50%",
-                      "color": [0, 0, 0, 1]
+                      "color": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ]
                     }
                   ]
                 }
@@ -419,7 +602,10 @@
           "type": "canvas_area",
           "anchor": "bottom_left",
           "pivot": "top_left",
-          "size": {"x": "100%", "y": "100%"}
+          "size": {
+            "x": "100%",
+            "y": "100%"
+          }
         }
       ]
     }

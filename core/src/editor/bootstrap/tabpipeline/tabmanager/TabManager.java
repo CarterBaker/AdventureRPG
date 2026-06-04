@@ -111,6 +111,7 @@ public class TabManager extends ManagerPackage {
         // Content window
         WindowInstance contentWindow = windowManager.createLogicalWindow(title, mainWindow);
         contentWindow.setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
+        contentWindow.setCaptureEligible(true);
         // Contexts
         TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
         ContextPackage contentContext = internal.createContext(contentClass, contentWindow);
