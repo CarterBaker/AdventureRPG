@@ -282,6 +282,8 @@ public class ElementHitSystem extends SystemPackage {
     public void clearHoverIfWindowChanged(ObjectArrayList<WindowInstance> hoveredWindows) {
         if (hoveredElement == null)
             return;
+        if (draggedElement != null)
+            return;
         if (hoveredWindows.contains(hoveredElementWindow))
             return;
         fireHoverExit();
