@@ -8,6 +8,7 @@ flat in float vOrient;
 #include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
 #include "includes/DirectionalLightData.glsl"
+#include "surface/includes/AtmosphericFog.glsl"
 #include "surface/includes/TiledSampling.glsl"
 #include "surface/includes/Albedo.glsl"
 
@@ -16,13 +17,13 @@ out vec4 FragColor;
 void main() {
     vec2 tiledUV = tileUV(vLocalPos, vUVOrigin, vNormal, vOrient);
     vec4 albedo  = sampleLayerTiled(tiledUV, u_layer_albedo);
-
     if (albedo.a < 0.01)
     discard;
 
-    float diff    = max(dot(normalize(vNormal), normalize(-u_lightDirection)), 0.0);
-    float ambient = 0.15;
+    float diff     = max(dot(normalize(vNormal), normalize(-u_lightDirection)), 0.0);
+    float ambient  = 0.15;
     vec3  lighting = u_lightColor * u_lightIntensity * (ambient + diff * (1.0 - ambient));
+    vec3  lit      = albedo.rgb * lighting;
 
-    FragColor = vec4(albedo.rgb * lighting, albedo.a);
+    FragColor = vec4(applyAtmosphericFog(lit), albedo.a);
 }

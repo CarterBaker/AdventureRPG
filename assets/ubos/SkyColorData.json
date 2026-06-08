@@ -1,0 +1,8 @@
+{
+    "blockName": "SkyColorData",
+    "uniforms": [
+        { "name": "u_skyHorizonColor",       "type": "VECTOR3" },
+        { "name": "u_maxDistanceFromCenter",  "type": "FLOAT"   },
+        { "name": "u_skyZenithColor",         "type": "VECTOR3" }
+    ]
+}

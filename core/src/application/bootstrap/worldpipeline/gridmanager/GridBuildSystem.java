@@ -147,14 +147,11 @@ class GridBuildSystem extends SystemPackage {
 
             UBOInstance slotUBO = uboManager.createUBOInstance(baseUBO);
 
-            int gridX = Coordinate2Long.unpackX(gridCoordinate) * chunkSize;
-            int gridY = Coordinate2Long.unpackY(gridCoordinate) * chunkSize;
-
-            slotUBO.updateUniform("u_gridPosition", new Vector2(gridX, gridY));
-            uboManager.push(slotUBO);
-
             int chunkX = Coordinate2Long.unpackX(gridCoordinate);
             int chunkY = Coordinate2Long.unpackY(gridCoordinate);
+
+            int gridX = chunkX * chunkSize;
+            int gridY = chunkY * chunkSize;
 
             float absoluteChunkDistance = (float) Math.sqrt(chunkX * chunkX + chunkY * chunkY);
             GridSlotDetailLevel detailLevel = GridSlotDetailLevel.getDetailLevelForDistance(absoluteChunkDistance);
@@ -169,6 +166,10 @@ class GridBuildSystem extends SystemPackage {
             float mcy = chunkY + halfMega;
             float megaDistanceFromCenter = mcx * mcx + mcy * mcy;
             float megaAngleFromCenter = (float) Math.atan2(mcy, mcx);
+
+            slotUBO.updateUniform("u_gridPosition", new Vector2(gridX, gridY));
+            slotUBO.updateUniform("u_distanceFromCenter", chunkDistanceFromCenter);
+            uboManager.push(slotUBO);
 
             gridSlots.putIfAbsent(
                     gridCoordinate,
