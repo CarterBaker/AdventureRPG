@@ -8,6 +8,7 @@ import application.bootstrap.lightingpipeline.LightingPipeline;
 import application.bootstrap.menupipeline.MenuPipeline;
 import application.bootstrap.physicspipeline.PhysicsPipeline;
 import application.bootstrap.renderpipeline.RenderPipeline;
+import application.bootstrap.settingspipeline.SettingsPipeline;
 import application.bootstrap.shaderpipeline.ShaderPipeline;
 import application.bootstrap.worldpipeline.WorldPipeline;
 import engine.root.AssemblyPackage;
@@ -31,5 +32,6 @@ public class BootstrapAssembly extends AssemblyPackage {
         create(CalendarPipeline.class);
         create(LightingPipeline.class);
         create(MenuPipeline.class);
+        create(SettingsPipeline.class);
     }
 }

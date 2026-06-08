@@ -76,6 +76,10 @@ public class EngineSetting {
         public static final String UBO_JSON_PATH = "ubos";
         public static final String WORLD_TEXTURE_PATH = "worlds";
 
+        // Settings \\
+
+        public static final String SETTINGS_UBO = "SettingsData";
+
         // Pass Names \\
 
         public static final String PASS_SKY = "Sky";

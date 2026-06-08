@@ -1,0 +1,6 @@
+{
+    "blockName": "SettingsData",
+    "uniforms": [
+        { "name": "u_renderDistance", "type": "FLOAT" }
+    ]
+}

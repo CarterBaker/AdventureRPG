@@ -13,7 +13,8 @@ class SkyColorBranch extends BranchPackage {
      * Replicates SkyColor.glsl CPU-side at altitude=0 (horizon) and altitude=1
      * (zenith), then pushes both to SkyColorData UBO each frame. The sky shader
      * reads these directly instead of recomputing them. Chunk shaders use
-     * u_skyHorizonColor + u_maxDistanceFromCenter for distance fog blending.
+     * u_skyHorizonColor for distance fog blending via AtmosphericFog.glsl.
+     * u_maxDistanceFromCenter is owned by SettingsSystem via SettingsData UBO.
      *
      * NOTE: computeCycleFactors() and computeSeasonFactors() mirror
      * DayNightCycle.glsl and SeasonCycle.glsl — verify against your GLSL if
@@ -27,9 +28,6 @@ class SkyColorBranch extends BranchPackage {
     // UBO
     private UBOHandle skyColorData;
 
-    // Cached
-    private float maxDistanceFromCenter;
-
     // Internal \\
 
     @Override
@@ -40,8 +38,6 @@ class SkyColorBranch extends BranchPackage {
     @Override
     protected void awake() {
         this.skyColorData = uboManager.getUBOHandleFromUBOName(EngineSetting.SKY_COLOR_UBO);
-        float radius = settings.maxRenderDistance / 2f;
-        this.maxDistanceFromCenter = radius * radius;
     }
 
     // Assignment \\
@@ -143,11 +139,10 @@ class SkyColorBranch extends BranchPackage {
 
         skyColorData.updateUniform("u_skyHorizonColor", new Vector3(horizon[0], horizon[1], horizon[2]));
         skyColorData.updateUniform("u_skyZenithColor", new Vector3(zenith[0], zenith[1], zenith[2]));
-        skyColorData.updateUniform("u_maxDistanceFromCenter", maxDistanceFromCenter);
         uboManager.push(skyColorData);
     }
+
     // Cycle Factors \\
-    // Mirrors DayNightCycle.glsl — verify breakpoints match your GLSL
 
     private float[] computeCycleFactors(float t) {
 
@@ -165,7 +160,6 @@ class SkyColorBranch extends BranchPackage {
     }
 
     // Season Factors \\
-    // Mirrors SeasonCycle.glsl — verify breakpoints match your GLSL
 
     private float[] computeSeasonFactors(float y) {
 
@@ -178,7 +172,6 @@ class SkyColorBranch extends BranchPackage {
     }
 
     // Daily Variation Mask \\
-    // Mirrors calculateDailyVariation() in SkyNoise.glsl — avoids midnight pop
 
     private float computeDailyVariationMask(float t) {
         float rise = smoothstep((float) EngineSetting.CLOCK_SUNRISE_MIN, (float) EngineSetting.CLOCK_SUNRISE_MAX, t);
