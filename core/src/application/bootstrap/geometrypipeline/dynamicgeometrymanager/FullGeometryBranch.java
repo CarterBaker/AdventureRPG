@@ -545,16 +545,9 @@ class FullGeometryBranch extends BranchPackage {
             Int2ObjectOpenHashMap<FloatArrayList> verts,
             DynamicPacketInstance dynamicPacketInstance,
             Direction3Vector direction3Vector,
-            int materialId,
-            TextureHandle textureHandle,
-            int vert0XYZ,
-            int vert1XYZ,
-            int vert2XYZ,
-            int vert3XYZ,
-            float vert0Color,
-            float vert1Color,
-            float vert2Color,
-            float vert3Color,
+            int materialId, TextureHandle textureHandle,
+            int vert0XYZ, int vert1XYZ, int vert2XYZ, int vert3XYZ,
+            float vert0Color, float vert1Color, float vert2Color, float vert3Color,
             int encodedFace) {
 
         FloatArrayList buffer = verts.computeIfAbsent(materialId, k -> new FloatArrayList());
