@@ -9,7 +9,6 @@ flat in float vOrient;
 #include "includes/BlockOrientationMapData.glsl"
 #include "includes/DirectionalLightData.glsl"
 #include "surface/includes/AtmosphericFog.glsl"
-#include "surface/includes/BlockEdgeSoftening.glsl"
 #include "surface/includes/TiledSampling.glsl"
 #include "surface/includes/Albedo.glsl"
 
@@ -26,7 +25,6 @@ void main() {
     vec3  lighting = u_lightColor * u_lightIntensity * (ambient + diff * (1.0 - ambient));
     vec3  lit      = albedo.rgb * lighting;
 
-    lit = applyBlockEdgeSoftening(lit, vLocalPos, vNormal);
     lit = applyAtmosphericFog(lit);
 
     FragColor = vec4(lit, albedo.a);

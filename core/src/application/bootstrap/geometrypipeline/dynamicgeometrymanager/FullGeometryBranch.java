@@ -392,16 +392,9 @@ class FullGeometryBranch extends BranchPackage {
                 verts,
                 dynamicPacketInstance,
                 direction3Vector,
-                materialID,
-                textureHandle,
-                vert0XYZ,
-                vert1XYZ,
-                vert2XYZ,
-                vert3XYZ,
-                vert0Color,
-                vert1Color,
-                vert2Color,
-                vert3Color,
+                materialID, textureHandle,
+                vert0XYZ, vert1XYZ, vert2XYZ, vert3XYZ,
+                vert0Color, vert1Color, vert2Color, vert3Color,
                 encodedFace);
     }
 
