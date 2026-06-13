@@ -9,5 +9,7 @@ public enum ShaderType {
     VERT,
     FRAG,
     INCLUDE,
-    PROGRAM
+    PROGRAM,
+    TCS,
+    TES
 }

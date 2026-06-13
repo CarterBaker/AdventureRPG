@@ -2,6 +2,8 @@ package engine.root;
 
 import java.util.concurrent.Future;
 
+import application.kernel.inputpipeline.InputPipeline;
+import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
 import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
 import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
@@ -31,8 +33,17 @@ public abstract class EngineUtility {
     };
 
     static EnginePackage engine;
+    static InputManager inputManager;
     static InternalThreadManager threadManager;
     static WindowManager windowManager;
+
+    public static void assignInputManager(InputManager input) {
+
+        if (inputManager != null)
+            throwException("Illegal reassignment of input manager attempted during runtime");
+
+        inputManager = input;
+    }
 
     public static void assignThreadManager(InternalThreadManager input) {
 

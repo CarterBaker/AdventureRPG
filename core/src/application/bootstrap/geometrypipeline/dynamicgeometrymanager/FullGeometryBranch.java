@@ -395,7 +395,8 @@ class FullGeometryBranch extends BranchPackage {
                 materialID, textureHandle,
                 vert0XYZ, vert1XYZ, vert2XYZ, vert3XYZ,
                 vert0Color, vert1Color, vert2Color, vert3Color,
-                encodedFace);
+                encodedFace,
+                sizeA, sizeB);
     }
 
     private int resolveOrientation(BlockPaletteHandle rotationPaletteHandle, int xyz) {
@@ -548,7 +549,8 @@ class FullGeometryBranch extends BranchPackage {
             int materialId, TextureHandle textureHandle,
             int vert0XYZ, int vert1XYZ, int vert2XYZ, int vert3XYZ,
             float vert0Color, float vert1Color, float vert2Color, float vert3Color,
-            int encodedFace) {
+            int encodedFace,
+            int sizeA, int sizeB) {
 
         FloatArrayList buffer = verts.computeIfAbsent(materialId, k -> new FloatArrayList());
 
@@ -556,6 +558,7 @@ class FullGeometryBranch extends BranchPackage {
         float fEncodedFace = (float) encodedFace;
         float u0 = textureHandle.getU0();
         float v0 = textureHandle.getV0();
+        float fQuadSize = (float) ((sizeA & 0xFF) | ((sizeB & 0xFF) << 8));
 
         // Vert 0
         buffer.add((float) Coordinate3Int.unpackX(vert0XYZ));
@@ -566,7 +569,7 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(u0);
         buffer.add(v0);
         buffer.add(fEncodedFace);
-        buffer.add(0f);
+        buffer.add(fQuadSize);
 
         // Vert 1
         buffer.add((float) Coordinate3Int.unpackX(vert1XYZ));
@@ -577,7 +580,7 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(u0);
         buffer.add(v0);
         buffer.add(fEncodedFace);
-        buffer.add(0f);
+        buffer.add(fQuadSize);
 
         // Vert 2
         buffer.add((float) Coordinate3Int.unpackX(vert2XYZ));
@@ -588,7 +591,7 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(u0);
         buffer.add(v0);
         buffer.add(fEncodedFace);
-        buffer.add(0f);
+        buffer.add(fQuadSize);
 
         // Vert 3
         buffer.add((float) Coordinate3Int.unpackX(vert3XYZ));
@@ -599,7 +602,7 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(u0);
         buffer.add(v0);
         buffer.add(fEncodedFace);
-        buffer.add(0f);
+        buffer.add(fQuadSize);
 
         return true;
     }

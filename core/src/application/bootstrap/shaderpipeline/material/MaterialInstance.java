@@ -77,4 +77,12 @@ public class MaterialInstance extends InstancePackage {
     public UniformStruct<?> getUniform(String uniformName) {
         return data.getUniform(uniformName);
     }
+
+    public boolean usesTessellation() {
+        return data.usesTessellation();
+    }
+
+    public int getPatchVertexCount() {
+        return data.getPatchVertexCount();
+    }
 }

@@ -58,4 +58,12 @@ public class ShaderHandle extends HandlePackage {
     public ObjectArrayList<String> getCompiledUBOBlockNames() {
         return shaderData.getCompiledUBOBlockNames();
     }
+
+    public boolean usesTessellation() {
+        return shaderData.usesTessellation();
+    }
+
+    public int getPatchVertexCount() {
+        return shaderData.getPatchVertexCount();
+    }
 }

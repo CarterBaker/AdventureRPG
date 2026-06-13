@@ -2,12 +2,12 @@ package engine.lwjgl3;
 
 import org.lwjgl.opengl.*;
 
-import engine.graphics.gl.GL30;
+import engine.graphics.gl.GL40;
 import engine.root.EngineUtility;
 
 import java.nio.*;
 
-class Lwjgl3GL implements GL30 {
+class Lwjgl3GL implements GL40 {
 
     /*
      * Thin delegation layer mapping the engine GL30 interface onto LWJGL3 calls.
@@ -403,7 +403,17 @@ class Lwjgl3GL implements GL30 {
         GL11.glDrawElements(mode, count, type, indices);
     }
 
+    public void glDrawArrays(int mode, int first, int count) {
+        GL11.glDrawArrays(mode, first, count);
+    }
+
     public void glDrawElementsInstanced(int mode, int count, int type, int indices, int instancecount) {
         GL31C.glDrawElementsInstanced(mode, count, type, indices, instancecount);
+    }
+
+    // Tessellation \\
+
+    public void glPatchParameteri(int pname, int value) {
+        GL40C.glPatchParameteri(pname, value);
     }
 }

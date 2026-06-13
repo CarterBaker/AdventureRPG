@@ -52,6 +52,10 @@ public class EngineSetting {
                         new String[] { "png", "jpg", "jpeg", "tga", "bmp" });
         public static final ObjectArraySet<String> VERT_FILE_EXTENSIONS = new ObjectArraySet<>(
                         new String[] { "vsh", "vert", "vs", "vertex" });
+        public static final ObjectArraySet<String> TCS_FILE_EXTENSIONS = new ObjectArraySet<>(
+                        new String[] { "tcs", "tesc" });
+        public static final ObjectArraySet<String> TES_FILE_EXTENSIONS = new ObjectArraySet<>(
+                        new String[] { "tes", "tese" });
 
         // Asset Paths \\
 
@@ -100,6 +104,7 @@ public class EngineSetting {
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
 
         // Cursor \\
+
         public static final int CURSOR_DEFAULT = 0;
         public static final int CURSOR_RESIZE_H = 1;
         public static final int CURSOR_RESIZE_V = 2;
@@ -125,6 +130,8 @@ public class EngineSetting {
         public static final int SHADER_ALIAS_LIBRARY_GROWTH_FACTOR = 2;
         public static final float SHADER_ALIAS_DEFAULT_ALPHA = 1.0f;
         public static final int SHADER_UBO_UNSPECIFIED_BINDING = INDEX_NOT_FOUND;
+        public static final int GL_TESS_CONTROL_SHADER = 0x8E88;
+        public static final int GL_TESS_EVALUATION_SHADER = 0x8E87;
 
         // Composite Rendering \\
 
@@ -179,6 +186,8 @@ public class EngineSetting {
 
         // Geometry \\
 
+        public static final int QUAD_VERTEX_COUNT = 4;
+        public static final int QUAD_INDEX_COUNT = 6;
         public static final int COMPOSITE_BUFFER_INITIAL_CAPACITY = 64;
 
         // UBOs \\

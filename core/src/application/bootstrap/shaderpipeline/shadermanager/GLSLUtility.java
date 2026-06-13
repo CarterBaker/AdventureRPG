@@ -4,7 +4,6 @@ import java.nio.IntBuffer;
 
 import application.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
 import engine.graphics.gl.GL20;
-import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -34,6 +33,25 @@ class GLSLUtility extends EngineUtility {
                 fragSource,
                 assembly.getFrag().getShaderName());
 
+        int tcsShader = 0;
+        int tesShader = 0;
+
+        if (assembly.getTCS() != null) {
+            String tcsSource = preprocessShaderSource(assembly, assembly.getTCS());
+            tcsShader = compileShaderFromSource(
+                    EngineSetting.GL_TESS_CONTROL_SHADER,
+                    tcsSource,
+                    assembly.getTCS().getShaderName());
+        }
+
+        if (assembly.getTES() != null) {
+            String tesSource = preprocessShaderSource(assembly, assembly.getTES());
+            tesShader = compileShaderFromSource(
+                    EngineSetting.GL_TESS_EVALUATION_SHADER,
+                    tesSource,
+                    assembly.getTES().getShaderName());
+        }
+
         int program = EngineContext.gl20.glCreateProgram();
 
         if (program == 0)
@@ -41,6 +59,12 @@ class GLSLUtility extends EngineUtility {
 
         EngineContext.gl20.glAttachShader(program, vertShader);
         EngineContext.gl20.glAttachShader(program, fragShader);
+
+        if (tcsShader != 0)
+            EngineContext.gl20.glAttachShader(program, tcsShader);
+        if (tesShader != 0)
+            EngineContext.gl20.glAttachShader(program, tesShader);
+
         EngineContext.gl20.glLinkProgram(program);
 
         IntBuffer statusBuf = BufferUtils.newIntBuffer(1);
@@ -52,6 +76,12 @@ class GLSLUtility extends EngineUtility {
             EngineContext.gl20.glDeleteProgram(program);
             EngineContext.gl20.glDeleteShader(vertShader);
             EngineContext.gl20.glDeleteShader(fragShader);
+
+            if (tcsShader != 0)
+                EngineContext.gl20.glDeleteShader(tcsShader);
+            if (tesShader != 0)
+                EngineContext.gl20.glDeleteShader(tesShader);
+
             throwException("Failed to link shader " + assembly.getShaderName() + ": " + log);
         }
 
@@ -59,6 +89,15 @@ class GLSLUtility extends EngineUtility {
         EngineContext.gl20.glDetachShader(program, fragShader);
         EngineContext.gl20.glDeleteShader(vertShader);
         EngineContext.gl20.glDeleteShader(fragShader);
+
+        if (tcsShader != 0) {
+            EngineContext.gl20.glDetachShader(program, tcsShader);
+            EngineContext.gl20.glDeleteShader(tcsShader);
+        }
+        if (tesShader != 0) {
+            EngineContext.gl20.glDetachShader(program, tesShader);
+            EngineContext.gl20.glDeleteShader(tesShader);
+        }
 
         return program;
     }

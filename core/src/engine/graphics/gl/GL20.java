@@ -149,6 +149,8 @@ public interface GL20 {
 
     void glDrawElements(int mode, int count, int type, int indices);
 
+    void glDrawArrays(int mode, int first, int count);
+
     // Uniforms — Scalar \\
 
     void glUniform1i(int loc, int v0);

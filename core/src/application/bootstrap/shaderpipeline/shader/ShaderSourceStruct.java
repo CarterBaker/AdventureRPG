@@ -29,6 +29,10 @@ public class ShaderSourceStruct extends StructPackage {
     // Assembly
     private ShaderSourceStruct vert;
     private ShaderSourceStruct frag;
+    private ShaderSourceStruct tcs;
+    private ShaderSourceStruct tes;
+    private int patchVertexCount;
+
     private final ObjectArrayList<ShaderSourceStruct> flattenedIncludes;
 
     // Constructor \\
@@ -72,8 +76,20 @@ public class ShaderSourceStruct extends StructPackage {
         this.frag = frag;
     }
 
+    public void setTES(ShaderSourceStruct tes) {
+        this.tes = tes;
+    }
+
+    public void setTCS(ShaderSourceStruct tcs) {
+        this.tcs = tcs;
+    }
+
     public void addFlattenedInclude(ShaderSourceStruct include) {
         flattenedIncludes.add(include);
+    }
+
+    public void setPatchVertexCount(int count) {
+        this.patchVertexCount = count;
     }
 
     // Accessible \\
@@ -114,7 +130,19 @@ public class ShaderSourceStruct extends StructPackage {
         return frag;
     }
 
+    public ShaderSourceStruct getTES() {
+        return tes;
+    }
+
+    public ShaderSourceStruct getTCS() {
+        return tcs;
+    }
+
     public ObjectArrayList<ShaderSourceStruct> getFlattenedIncludes() {
         return flattenedIncludes;
+    }
+
+    public int getPatchVertexCount() {
+        return patchVertexCount;
     }
 }

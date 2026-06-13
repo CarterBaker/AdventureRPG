@@ -1,6 +1,7 @@
-#version 330 core
+#version 400 core
 
 in vec3       vLocalPos;
+in vec3       vUVLocalPos;
 in vec3       vNormal;
 flat in vec2  vUVOrigin;
 flat in float vOrient;
@@ -15,8 +16,13 @@ flat in float vOrient;
 out vec4 FragColor;
 
 void main() {
-    vec2 tiledUV = tileUV(vLocalPos, vUVOrigin, vNormal, vOrient);
+    // UV is computed from the UNDISPLACED position, so the texture stays
+    // anchored to its original tile in the atlas and doesn't bleed into
+    // neighboring tiles (e.g. dirt showing through on a grass top face)
+    // when the geometry itself is displaced.
+    vec2 tiledUV = tileUV(vUVLocalPos, vUVOrigin, vNormal, vOrient);
     vec4 albedo  = sampleLayerTiled(tiledUV, u_layer_albedo);
+
     if (albedo.a < 0.01)
     discard;
 

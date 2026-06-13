@@ -76,11 +76,12 @@ public class Lwjgl3Application {
 
         display.setMainHandle(mainHandle);
 
-        Lwjgl3GL gl20 = new Lwjgl3GL();
+        Lwjgl3GL gl = new Lwjgl3GL();
         EngineContext.display = display;
         EngineContext.input = input;
-        EngineContext.gl20 = gl20;
-        EngineContext.gl30 = gl20;
+        EngineContext.gl20 = gl;
+        EngineContext.gl30 = gl;
+        EngineContext.gl40 = gl;
 
         registerCallbacks(mainHandle, input, config.getCloseCallback());
         GLFW.glfwSetWindowPosCallback(mainHandle, (w, x, y) -> {

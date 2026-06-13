@@ -43,6 +43,14 @@ class InternalBuilder extends BuilderPackage {
 
         source.setVersion(parseVersionInfo(lines));
 
+        if (source.getShaderType() == ShaderType.TCS) {
+
+            int count = parsePatchVertexCount(lines);
+
+            if (count > 0)
+                source.setPatchVertexCount(count);
+        }
+
         parseUniforms(source, lines);
         parseIncludes(source, lines);
     }
@@ -247,6 +255,7 @@ class InternalBuilder extends BuilderPackage {
         JsonObject obj = JsonUtility.loadJsonObject(jsonFile);
         ShaderSourceStruct vertSource = internalLoader.getSourceStruct(obj.get("vert").getAsString());
         ShaderSourceStruct fragSource = internalLoader.getSourceStruct(obj.get("frag").getAsString());
+        ShaderSourceStruct tcsSource = null, tesSource = null;
 
         if (vertSource == null || fragSource == null)
             throwException("JSON error: " + jsonFile.getName() + " — vert or frag file not found.");
@@ -254,9 +263,28 @@ class InternalBuilder extends BuilderPackage {
         if (vertSource.getShaderType() != ShaderType.VERT || fragSource.getShaderType() != ShaderType.FRAG)
             throwException("JSON error: " + jsonFile.getName() + " — vert/frag type mismatch.");
 
+        if (obj.has("tcs")) {
+
+            tcsSource = internalLoader.getSourceStruct(obj.get("tcs").getAsString());
+            if (tcsSource == null || tcsSource.getShaderType() != ShaderType.TCS)
+                throwException("JSON error: " + jsonFile.getName() + " — invalid tcs.");
+        }
+
+        if (obj.has("tes")) {
+
+            tesSource = internalLoader.getSourceStruct(obj.get("tes").getAsString());
+            if (tesSource == null || tesSource.getShaderType() != ShaderType.TES)
+                throwException("JSON error: " + jsonFile.getName() + " — invalid tes.");
+        }
+
         ShaderSourceStruct assembly = new ShaderSourceStruct(ShaderType.PROGRAM, shaderName, null);
         assembly.setVert(vertSource);
         assembly.setFrag(fragSource);
+        assembly.setTCS(tcsSource);
+        assembly.setTES(tesSource);
+
+        if (tcsSource != null)
+            assembly.setPatchVertexCount(tcsSource.getPatchVertexCount());
 
         return collectIncludes(assembly);
     }
@@ -266,6 +294,13 @@ class InternalBuilder extends BuilderPackage {
         ObjectArrayList<ShaderSourceStruct> visited = new ObjectArrayList<>();
 
         collectPostOrder(assembly, assembly.getVert(), visited);
+
+        if (assembly.getTCS() != null)
+            collectPostOrder(assembly, assembly.getTCS(), visited);
+
+        if (assembly.getTES() != null)
+            collectPostOrder(assembly, assembly.getTES(), visited);
+
         collectPostOrder(assembly, assembly.getFrag(), visited);
 
         return assembly;
@@ -289,5 +324,36 @@ class InternalBuilder extends BuilderPackage {
         if (source.getShaderType() == ShaderType.INCLUDE &&
                 !assembly.getFlattenedIncludes().contains(source))
             assembly.addFlattenedInclude(source);
+    }
+
+    private int parsePatchVertexCount(ObjectArrayList<String> lines) {
+
+        for (int i = 0; i < lines.size(); i++) {
+
+            String line = lines.get(i).trim();
+
+            if (line.contains("layout") && line.contains("vertices") && line.contains("out")) {
+
+                int verticesIdx = line.indexOf("vertices");
+                String after = line.substring(verticesIdx + "vertices".length()).trim();
+
+                if (after.startsWith("=")) {
+
+                    String rest = after.substring(1).trim();
+                    StringBuilder num = new StringBuilder();
+
+                    for (int j = 0; j < rest.length(); j++)
+                        if (Character.isDigit(rest.charAt(j)))
+                            num.append(rest.charAt(j));
+                        else
+                            break;
+
+                    if (num.length() > 0)
+                        return Integer.parseInt(num.toString());
+                }
+            }
+        }
+
+        return 0;
     }
 }

@@ -100,6 +100,10 @@ class InternalLoader extends LoaderPackage {
             shaderType = ShaderType.VERT;
         else if (EngineSetting.FRAG_FILE_EXTENSIONS.contains(extension))
             shaderType = ShaderType.FRAG;
+        else if (EngineSetting.TCS_FILE_EXTENSIONS.contains(extension))
+            shaderType = ShaderType.TCS;
+        else if (EngineSetting.TES_FILE_EXTENSIONS.contains(extension))
+            shaderType = ShaderType.TES;
         else if (EngineSetting.INCLUDE_FILE_EXTENSIONS.contains(extension))
             shaderType = ShaderType.INCLUDE;
 
@@ -143,7 +147,20 @@ class InternalLoader extends LoaderPackage {
         int shaderID = RegistryUtility.toIntID(assembly.getShaderName());
         int gpuHandle = GLSLUtility.createShaderProgram(assembly);
 
-        ShaderData data = new ShaderData(assembly.getShaderName(), shaderID, gpuHandle);
+        boolean usesTessellation = assembly.getTCS() != null && assembly.getTES() != null;
+        int patchVertexCount = usesTessellation ? assembly.getPatchVertexCount() : 0;
+
+        if (usesTessellation && patchVertexCount <= 0)
+            throwException("Tessellated shader '" + assembly.getShaderName()
+                    + "' — TCS file is missing 'layout(vertices = N) out;'");
+
+        ShaderData data = new ShaderData(
+                assembly.getShaderName(),
+                shaderID,
+                gpuHandle,
+                usesTessellation,
+                patchVertexCount);
+
         ShaderHandle shader = create(ShaderHandle.class);
         shader.constructor(data);
 
@@ -158,8 +175,13 @@ class InternalLoader extends LoaderPackage {
     private void assembleBuffers(ShaderHandle shader, ShaderSourceStruct assembly) {
 
         addBuffersFromSource(shader, assembly.getVert());
-        addBuffersFromSource(shader, assembly.getFrag());
 
+        if (assembly.getTCS() != null)
+            addBuffersFromSource(shader, assembly.getTCS());
+        if (assembly.getTES() != null)
+            addBuffersFromSource(shader, assembly.getTES());
+
+        addBuffersFromSource(shader, assembly.getFrag());
         ObjectArrayList<ShaderSourceStruct> includes = assembly.getFlattenedIncludes();
 
         for (int i = 0; i < includes.size(); i++)
@@ -181,6 +203,11 @@ class InternalLoader extends LoaderPackage {
     private void assembleUniforms(ShaderHandle shader, ShaderSourceStruct assembly) {
 
         addUniformsFromSource(shader, assembly.getVert());
+
+        if (assembly.getTCS() != null)
+            addUniformsFromSource(shader, assembly.getTCS());
+        if (assembly.getTES() != null)
+            addUniformsFromSource(shader, assembly.getTES());
         addUniformsFromSource(shader, assembly.getFrag());
 
         ObjectArrayList<ShaderSourceStruct> includes = assembly.getFlattenedIncludes();

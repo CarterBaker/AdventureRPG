@@ -16,6 +16,7 @@ import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -135,6 +136,10 @@ class RenderSystem extends SystemPackage {
             bindMaterial(representative);
             bindSourceUBOs(batch);
 
+            boolean tessellated = representative.usesTessellation();
+            if (tessellated)
+                GLSLUtility.setPatchVertices(representative.getPatchVertexCount());
+
             ObjectArrayList<RenderCallStruct> renderCalls = batch.getRenderCalls();
             Object[] callElements = renderCalls.elements();
             int callCount = renderCalls.size();
@@ -156,7 +161,7 @@ class RenderSystem extends SystemPackage {
 
                 pushInstanceUBOs(renderCall);
                 pushInstanceUniforms(renderCall);
-                drawBatchedRenderCall(renderCall, window);
+                drawBatchedRenderCall(renderCall, window, tessellated);
             }
 
             batch.clear();
@@ -222,14 +227,20 @@ class RenderSystem extends SystemPackage {
         }
     }
 
-    private void drawBatchedRenderCall(RenderCallStruct renderCall, WindowInstance window) {
+    private void drawBatchedRenderCall(RenderCallStruct renderCall, WindowInstance window, boolean tessellated) {
 
         ModelInstance model = renderCall.getModelInstance();
         MeshData meshData = model.getMeshData();
         int vao = vaoManager.getVAOForWindow(meshData, window.getWindowID());
 
         GLSLUtility.bindVAO(vao);
-        GLSLUtility.drawElements(model.getIndexCount());
+
+        if (tessellated)
+            GLSLUtility.drawPatches(
+                    model.getIndexCount() / EngineSetting.QUAD_INDEX_COUNT * EngineSetting.QUAD_VERTEX_COUNT);
+        else
+            GLSLUtility.drawElements(model.getIndexCount());
+
         GLSLUtility.unbindVAO();
     }
 

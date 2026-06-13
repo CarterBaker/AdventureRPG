@@ -124,4 +124,12 @@ public class MaterialData extends DataPackage {
     public UniformStruct<?> getUniform(String uniformName) {
         return uniforms.get(uniformName);
     }
+
+    public boolean usesTessellation() {
+        return shaderHandle.usesTessellation();
+    }
+
+    public int getPatchVertexCount() {
+        return shaderHandle.getPatchVertexCount();
+    }
 }

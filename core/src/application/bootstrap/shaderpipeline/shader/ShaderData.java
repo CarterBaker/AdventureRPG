@@ -18,6 +18,8 @@ public class ShaderData extends DataPackage {
     private final String shaderName;
     private final int shaderID;
     private final int gpuHandle;
+    private final boolean usesTessellation;
+    private final int patchVertexCount;
 
     // Runtime
     private final Object2ObjectOpenHashMap<String, UniformStruct<?>> compiledUniforms;
@@ -25,11 +27,18 @@ public class ShaderData extends DataPackage {
 
     // Constructor \\
 
-    public ShaderData(String shaderName, int shaderID, int gpuHandle) {
+    public ShaderData(
+            String shaderName,
+            int shaderID,
+            int gpuHandle,
+            boolean usesTessellation,
+            int patchVertexCount) {
 
         this.shaderName = shaderName;
         this.shaderID = shaderID;
         this.gpuHandle = gpuHandle;
+        this.usesTessellation = usesTessellation;
+        this.patchVertexCount = patchVertexCount;
         this.compiledUniforms = new Object2ObjectOpenHashMap<>();
         this.compiledUBOBlockNames = new ObjectArrayList<>();
     }
@@ -64,5 +73,13 @@ public class ShaderData extends DataPackage {
 
     public ObjectArrayList<String> getCompiledUBOBlockNames() {
         return compiledUBOBlockNames;
+    }
+
+    public boolean usesTessellation() {
+        return usesTessellation;
+    }
+
+    public int getPatchVertexCount() {
+        return patchVertexCount;
     }
 }

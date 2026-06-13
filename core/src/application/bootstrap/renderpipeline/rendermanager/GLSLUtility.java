@@ -4,6 +4,7 @@ import org.lwjgl.glfw.GLFW;
 
 import engine.graphics.gl.GL20;
 import engine.graphics.gl.GL30;
+import engine.graphics.gl.GL40;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -110,6 +111,10 @@ class GLSLUtility extends EngineUtility {
                 EngineSetting.GL_HANDLE_NONE);
     }
 
+    static void drawPatches(int vertexCount) {
+        EngineContext.gl20.glDrawArrays(GL40.GL_PATCHES, 0, vertexCount);
+    }
+
     // UBO \\
 
     static void bindUniformBuffer(int bindingPoint, int gpuHandle) {
@@ -132,5 +137,11 @@ class GLSLUtility extends EngineUtility {
 
     static void swapBuffers(long nativeHandle) {
         GLFW.glfwSwapBuffers(nativeHandle);
+    }
+
+    // Tessellation \\
+
+    static void setPatchVertices(int count) {
+        EngineContext.gl40.glPatchParameteri(GL40.GL_PATCH_VERTICES, count);
     }
 }

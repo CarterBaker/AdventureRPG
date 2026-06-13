@@ -8,6 +8,7 @@ import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.input.Binding;
 import engine.input.Input;
 import engine.root.EngineContext;
+import engine.root.EngineUtility;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector2;
 
@@ -111,6 +112,11 @@ public class InputManager extends ManagerPackage {
     @Override
     protected void get() {
         this.windowManager = get(WindowManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        EngineUtility.assignInputManager(this);
     }
 
     @Override

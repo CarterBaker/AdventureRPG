@@ -1,0 +1,141 @@
+#version 400 core
+
+layout(quads, equal_spacing, ccw) in;
+
+in vec3  teWorldPos[];
+in vec3  teNormal[];
+in vec2  teUVOrigin[];
+in float teOrient[];
+in float teColor[];
+in float teQuadSize[];
+
+out vec3       vLocalPos;
+out vec3       vUVLocalPos;
+out vec3       vNormal;
+flat out vec2  vUVOrigin;
+flat out float vOrient;
+out float      vColor;
+
+#include "includes/CameraData.glsl"
+#include "includes/GridCoordinateData.glsl"
+#include "includes/SettingsData.glsl"
+
+// Chunk dimension in blocks. Hardcoded to match EngineSetting.CHUNK_SIZE (16)
+// since CHUNK_SIZE is not currently exposed through any UBO.
+const float CHUNK_SIZE_F = 16.0;
+
+// Scale applied to seed (worldPos.xz) before sampling noise. When the grid
+// shifts by one chunk (CHUNK_SIZE_F world units), the *noise input* shifts
+// by CHUNK_SIZE_F * NOISE_SEED_SCALE. The periodic noise period below must
+// match that shifted amount, not CHUNK_SIZE_F itself, or the wrap seam
+// will not line up across a grid shift.
+const float NOISE_SEED_SCALE = 0.5;
+const float NOISE_PERIOD = CHUNK_SIZE_F * NOISE_SEED_SCALE; // = 8.0
+
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+// Periodic in X/Z with the given period (in *input* space, i.e. after any
+// scaling has already been applied to p). Wrapping the lattice cell
+// coordinate before hashing (rather than wrapping the input position)
+// avoids a seam at the period boundary, since cell N and cell N+period
+// hash identically.
+//
+// Because all displacement (horizontal AND vertical) is derived purely from
+// this function of (x,z), a given local (x,z) always produces the same
+// displacement regardless of where its chunk currently sits in the grid.
+float periodicValueNoise(vec2 p, float period) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    vec2 i00 = mod(i,                  period);
+    vec2 i10 = mod(i + vec2(1.0, 0.0), period);
+    vec2 i01 = mod(i + vec2(0.0, 1.0), period);
+    vec2 i11 = mod(i + vec2(1.0, 1.0), period);
+
+    return mix(
+        mix(hash(i00), hash(i10), f.x),
+        mix(hash(i01), hash(i11), f.x), f.y);
+}
+
+void main() {
+    float u = gl_TessCoord.x;
+    float v = gl_TessCoord.y;
+
+    vec3 worldPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
+                        mix(teWorldPos[3], teWorldPos[2], u), v);
+
+    // Snapshot the undisplaced position BEFORE noise is applied. This is
+    // what the fragment shader uses for UV sampling, so texture tiles stay
+    // anchored to the original quad and never bleed into neighboring atlas
+    // tiles even when the visual geometry is displaced.
+    vec3 uvLocalPos = worldPos;
+
+    vec3 normal = normalize(
+                  mix(mix(teNormal[0], teNormal[1], u),
+                      mix(teNormal[3], teNormal[2], u), v));
+
+    float halfD      = u_renderDistance * 0.5 - 0.5;
+    float maxDist    = halfD * halfD * 2.0;
+    float linearDist = sqrt(clamp(u_distanceFromCenter / maxDist, 0.0, 1.0));
+
+    float nearStrength = 1.0 - smoothstep(0.0,  0.25, linearDist);
+    float farStrength  =       smoothstep(0.70, 0.90, linearDist);
+    float edgeStrength =       smoothstep(0.90, 1.00, linearDist);
+
+    vec2 seed = worldPos.xz;
+
+    if (nearStrength > 0.001) {
+
+        // All three noise samples are functions of (x,z) only, using the
+        // same periodic basis. A given local (x,z) therefore always yields
+        // the same nX/nZ/nY regardless of which grid slot the chunk is in —
+        // no pop on grid shift.
+        vec2 nSeed = seed * NOISE_SEED_SCALE;
+        float nX = (periodicValueNoise(nSeed + vec2(17.3,  0.0), NOISE_PERIOD) - 0.5);
+        float nZ = (periodicValueNoise(nSeed + vec2( 0.0, 31.7), NOISE_PERIOD) - 0.5);
+        float nY = (periodicValueNoise(nSeed + vec2(53.1, 83.2), NOISE_PERIOD) - 0.5);
+
+        // Horizontal a bit more pronounced (organic, rocky feel),
+        // vertical softened a lot (was causing a seasick "drunk" wobble).
+        worldPos.x += nX * 0.4  * nearStrength;
+        worldPos.z += nZ * 0.4  * nearStrength;
+        worldPos.y += nY * 0.08 * nearStrength;
+    }
+
+    if (farStrength > 0.001 && normal.y > 0.5) {
+        float heightScale = clamp(worldPos.y / 80.0, 0.0, 1.0);
+        float nY = (periodicValueNoise(seed * 0.1, NOISE_PERIOD / 0.1) - 0.5) * 2.0;
+        worldPos.y += nY * 3.0 * farStrength * heightScale;
+    }
+
+    // Very edge of render distance: large-scale rolling hills / mountain
+    // silhouettes on the horizon. Uses a much lower-frequency noise sample
+    // (bigger features) and a much larger amplitude than the mid-range
+    // "far" hills above. Gated to top faces only, same as the far block.
+    if (edgeStrength > 0.001 && normal.y > 0.5) {
+        const float MOUNTAIN_SEED_SCALE = 0.0625; // 1/16 — large features
+        const float MOUNTAIN_PERIOD = NOISE_PERIOD / MOUNTAIN_SEED_SCALE; // = 128.0
+        const float MOUNTAIN_AMPLITUDE = 25.0;
+
+        float nMountain = (periodicValueNoise(
+            seed * MOUNTAIN_SEED_SCALE + vec2(91.7, 12.4),
+            MOUNTAIN_PERIOD) - 0.5);
+
+        worldPos.y += nMountain * MOUNTAIN_AMPLITUDE * edgeStrength;
+    }
+
+    vLocalPos   = worldPos;
+    vUVLocalPos = uvLocalPos;
+    vNormal     = normal;
+    vUVOrigin   = teUVOrigin[0];
+    vOrient     = teOrient[0];
+
+    // Interpolate AO color across the quad instead of flattening to corner 0
+    vColor = mix(mix(teColor[0], teColor[1], u),
+                 mix(teColor[3], teColor[2], u), v);
+
+    gl_Position = u_viewProjection * vec4(worldPos, 1.0);
+}
