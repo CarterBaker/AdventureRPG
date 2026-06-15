@@ -3,7 +3,6 @@ package application.runtime.world;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.runtime.RuntimeSetting;
 import engine.root.SystemPackage;
@@ -19,7 +18,6 @@ public class WorldSystem extends SystemPackage {
     private PlayerManager playerManager;
     private WorldStreamManager worldStreamManager;
     private FboManager fboManager;
-    private FboRenderSystem fboRenderSystem;
 
     // Render Target
     private FboInstance worldFbo;
@@ -31,7 +29,6 @@ public class WorldSystem extends SystemPackage {
         this.playerManager = get(PlayerManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.fboManager = get(FboManager.class);
-        this.fboRenderSystem = get(FboRenderSystem.class);
     }
 
     @Override
@@ -43,11 +40,6 @@ public class WorldSystem extends SystemPackage {
                 playerManager.getPlayerForWindow(windowID),
                 context.getWindow(),
                 worldFbo);
-    }
-
-    @Override
-    protected void update() {
-        fboRenderSystem.pushFbo(worldFbo, RuntimeSetting.LAYER_WORLD, context.getWindow());
     }
 
     // Accessible \\

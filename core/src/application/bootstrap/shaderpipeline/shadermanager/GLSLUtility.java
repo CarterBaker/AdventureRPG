@@ -3,7 +3,6 @@ package application.bootstrap.shaderpipeline.shadermanager;
 import java.nio.IntBuffer;
 
 import application.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
-import engine.graphics.gl.GL20;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -25,11 +24,11 @@ class GLSLUtility extends EngineUtility {
         String fragSource = preprocessShaderSource(assembly, assembly.getFrag());
 
         int vertShader = compileShaderFromSource(
-                GL20.GL_VERTEX_SHADER,
+                EngineSetting.GL_VERTEX_SHADER,
                 vertSource,
                 assembly.getVert().getShaderName());
         int fragShader = compileShaderFromSource(
-                GL20.GL_FRAGMENT_SHADER,
+                EngineSetting.GL_FRAGMENT_SHADER,
                 fragSource,
                 assembly.getFrag().getShaderName());
 
@@ -68,7 +67,7 @@ class GLSLUtility extends EngineUtility {
         EngineContext.gl20.glLinkProgram(program);
 
         IntBuffer statusBuf = BufferUtils.newIntBuffer(1);
-        EngineContext.gl20.glGetProgramiv(program, GL20.GL_LINK_STATUS, statusBuf);
+        EngineContext.gl20.glGetProgramiv(program, EngineSetting.GL_LINK_STATUS, statusBuf);
         statusBuf.rewind();
 
         if (statusBuf.get(0) == 0) {
@@ -115,7 +114,7 @@ class GLSLUtility extends EngineUtility {
         EngineContext.gl20.glCompileShader(shaderID);
 
         IntBuffer compiled = BufferUtils.newIntBuffer(1);
-        EngineContext.gl20.glGetShaderiv(shaderID, GL20.GL_COMPILE_STATUS, compiled);
+        EngineContext.gl20.glGetShaderiv(shaderID, EngineSetting.GL_COMPILE_STATUS, compiled);
         compiled.rewind();
 
         if (compiled.get(0) == 0) {

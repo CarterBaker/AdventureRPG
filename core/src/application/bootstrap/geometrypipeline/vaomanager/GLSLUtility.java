@@ -10,6 +10,7 @@ import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import engine.graphics.gl.GL20;
 import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 
 class GLSLUtility {
 
@@ -42,7 +43,7 @@ class GLSLUtility {
                 int vao = id.get(0);
 
                 gl30.glBindVertexArray(vao);
-                gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vertexHandle);
+                gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vertexHandle);
 
                 int strideBytes = 0;
                 for (int size : attrSizes)
@@ -51,12 +52,13 @@ class GLSLUtility {
                 int byteOffset = 0;
                 for (int i = 0; i < attrSizes.length; i++) {
                         gl20.glEnableVertexAttribArray(i);
-                        gl20.glVertexAttribPointer(i, attrSizes[i], GL20.GL_FLOAT, false, strideBytes, byteOffset);
+                        gl20.glVertexAttribPointer(i, attrSizes[i], EngineSetting.GL_FLOAT, false, strideBytes,
+                                        byteOffset);
                         byteOffset += attrSizes[i] * Float.BYTES;
                 }
 
-                gl20.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, indexHandle);
-                gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+                gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, indexHandle);
+                gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
                 gl30.glBindVertexArray(0);
 
                 return vao;

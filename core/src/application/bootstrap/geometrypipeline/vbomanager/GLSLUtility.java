@@ -12,6 +12,7 @@ import application.bootstrap.geometrypipeline.vbo.VBOInstance;
 import engine.graphics.gl.GL20;
 import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 
 class GLSLUtility {
 
@@ -54,7 +55,7 @@ class GLSLUtility {
                 gl30.glBindVertexArray(vaoData.getAttributeHandle());
 
                 int vbo = gl20.glGenBuffer();
-                gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
+                gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
 
                 FloatBuffer buffer = ByteBuffer
                                 .allocateDirect(size)
@@ -62,7 +63,7 @@ class GLSLUtility {
                                 .asFloatBuffer();
                 buffer.put(vertices).flip();
 
-                gl20.glBufferData(GL20.GL_ARRAY_BUFFER, size, buffer, GL20.GL_STATIC_DRAW);
+                gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, buffer, EngineSetting.GL_STATIC_DRAW);
 
                 int strideBytes = vaoData.getVertStride() * Float.BYTES;
                 int[] attrSizes = vaoData.getAttrSizes();
@@ -70,12 +71,13 @@ class GLSLUtility {
 
                 for (int i = 0; i < attrSizes.length; i++) {
                         gl20.glEnableVertexAttribArray(i);
-                        gl20.glVertexAttribPointer(i, attrSizes[i], GL20.GL_FLOAT, false, strideBytes, byteOffset);
+                        gl20.glVertexAttribPointer(i, attrSizes[i], EngineSetting.GL_FLOAT, false, strideBytes,
+                                        byteOffset);
                         byteOffset += attrSizes[i] * Float.BYTES;
                 }
 
                 gl30.glBindVertexArray(0);
-                gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+                gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
                 return new VBOData(vbo, vertices.length / vaoData.getVertStride());
         }

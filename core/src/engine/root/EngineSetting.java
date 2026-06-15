@@ -10,6 +10,86 @@ public class EngineSetting {
          * values from this class instead of embedding literals in logic.
          */
 
+        // GL — Buffers \\
+
+        public static final int GL_ARRAY_BUFFER = 0x8892;
+        public static final int GL_ELEMENT_ARRAY_BUFFER = 0x8893;
+        public static final int GL_UNIFORM_BUFFER = 0x8A11;
+        public static final int GL_DYNAMIC_DRAW = 0x88E8;
+        public static final int GL_STATIC_DRAW = 0x88E4;
+
+        // GL — Primitives \\
+
+        public static final int GL_TRIANGLES = 0x0004;
+        public static final int GL_UNSIGNED_SHORT = 0x1403;
+        public static final int GL_UNSIGNED_BYTE = 0x1401;
+        public static final int GL_FLOAT = 0x1406;
+        public static final int GL_PATCHES = 0x000E;
+
+        // GL — Textures \\
+
+        public static final int GL_TEXTURE_2D = 0x0DE1;
+        public static final int GL_TEXTURE_2D_ARRAY = 0x8C1A;
+        public static final int GL_TEXTURE0 = 0x84C0;
+        public static final int GL_TEXTURE_MIN_FILTER = 0x2801;
+        public static final int GL_TEXTURE_MAG_FILTER = 0x2800;
+        public static final int GL_TEXTURE_WRAP_S = 0x2802;
+        public static final int GL_TEXTURE_WRAP_T = 0x2803;
+        public static final int GL_LINEAR = 0x2601;
+        public static final int GL_NEAREST = 0x2600;
+        public static final int GL_CLAMP_TO_EDGE = 0x812F;
+        public static final int GL_REPEAT = 0x2901;
+
+        // GL — Texture Formats \\
+
+        public static final int GL_RGBA = 0x1908;
+        public static final int GL_RGB = 0x1907;
+        public static final int GL_DEPTH_COMPONENT = 0x1902;
+        public static final int GL_RGBA8 = 0x8058;
+        public static final int GL_RGB8 = 0x8051;
+        public static final int GL_RGB16F = 0x881B;
+        public static final int GL_RGB32F = 0x8815;
+        public static final int GL_RGBA16F = 0x881A;
+        public static final int GL_DEPTH_COMPONENT24 = 0x81A6;
+        public static final int GL_DEPTH_COMPONENT32F = 0x8CAC;
+
+        // GL — State \\
+
+        public static final int GL_DEPTH_TEST = 0x0B71;
+        public static final int GL_BLEND = 0x0BE2;
+        public static final int GL_CULL_FACE = 0x0B44;
+        public static final int GL_SCISSOR_TEST = 0x0C11;
+        public static final int GL_SRC_ALPHA = 0x0302;
+        public static final int GL_ONE_MINUS_SRC_ALPHA = 0x0303;
+        public static final int GL_BACK = 0x0405;
+        public static final int GL_CCW = 0x0901;
+        public static final int GL_LEQUAL = 0x0203;
+        public static final int GL_NO_ERROR = 0;
+
+        // GL — Shaders \\
+
+        public static final int GL_VERTEX_SHADER = 0x8B31;
+        public static final int GL_FRAGMENT_SHADER = 0x8B30;
+        public static final int GL_LINK_STATUS = 0x8B82;
+        public static final int GL_COMPILE_STATUS = 0x8B81;
+
+        // GL — Framebuffers \\
+
+        public static final int GL_FRAMEBUFFER = 0x8D40;
+        public static final int GL_RENDERBUFFER = 0x8D41;
+        public static final int GL_COLOR_BUFFER_BIT = 0x4000;
+        public static final int GL_DEPTH_BUFFER_BIT = 0x0100;
+        public static final int GL_COLOR_ATTACHMENT0 = 0x8CE0;
+        public static final int GL_COLOR_ATTACHMENT1 = 0x8CE1;
+        public static final int GL_COLOR_ATTACHMENT2 = 0x8CE2;
+        public static final int GL_COLOR_ATTACHMENT3 = 0x8CE3;
+        public static final int GL_DEPTH_ATTACHMENT = 0x8D00;
+        public static final int GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
+
+        // GL — Tessellation \\
+
+        public static final int GL_PATCH_VERTICES = 0x8E72;
+
         // Application \\
 
         public static final String GAME_DIRECTORY = "AdventureRPG";
@@ -35,7 +115,6 @@ public class EngineSetting {
 
         public static final int GL_HANDLE_NONE = 0;
         public static final int GL_INVALID_INDEX = 0xFFFFFFFF;
-        public static final int GL_NEAREST = 0x2600;
         public static final int INDEX_NOT_FOUND = -1;
 
         // File Extensions \\
@@ -83,10 +162,6 @@ public class EngineSetting {
         // Settings \\
 
         public static final String SETTINGS_UBO = "SettingsData";
-
-        // Pass Names \\
-
-        public static final String PASS_SKY = "Sky";
 
         // Window \\
 
@@ -199,6 +274,11 @@ public class EngineSetting {
         public static final String ORTHO_DATA_UBO = "OrthoData";
         public static final String PLAYER_POSITION_UBO = "PlayerPositionData";
         public static final String UBO_TIME_DATA_NAME = "TimeData";
+
+        // Post Processing \\
+
+        public static final String SSAO_DATA_UBO = "SSAOData";
+        public static final int SSAO_KERNEL_SIZE = 64;
 
         // Block \\
 

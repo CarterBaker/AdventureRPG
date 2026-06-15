@@ -2,21 +2,41 @@
     "fbos": [
         {
             "name": "SkyScene",
-            "format": "RGBA8",
-            "depth": false,
-            "sizingStrategy": "WINDOW_RELATIVE"
+            "sizingStrategy": "WINDOW_RELATIVE",
+            "attachments": [
+                { "type": "color", "format": "RGBA8", "name": "color" }
+            ]
         },
         {
             "name": "MainScene",
-            "format": "RGBA8",
-            "depth": true,
-            "sizingStrategy": "WINDOW_RELATIVE"
+            "sizingStrategy": "WINDOW_RELATIVE",
+            "attachments": [
+                { "type": "color",  "format": "RGBA8",  "name": "albedo"   },
+                { "type": "color",  "format": "RGB16F", "name": "normal"   },
+                { "type": "color",  "format": "RGBA8",  "name": "material" },
+                { "type": "depth",  "format": "DEPTH24","name": "depth"    }
+            ]
+        },
+        {
+            "name": "LitScene",
+            "sizingStrategy": "WINDOW_RELATIVE",
+            "attachments": [
+                { "type": "color", "format": "RGBA8", "name": "color" }
+            ]
+        },
+        {
+            "name": "SSAOScene",
+            "sizingStrategy": "WINDOW_RELATIVE",
+            "attachments": [
+                { "type": "color", "format": "RGBA8", "name": "ao" }
+            ]
         },
         {
             "name": "UIScene",
-            "format": "RGBA8",
-            "depth": false,
-            "sizingStrategy": "WINDOW_RELATIVE"
+            "sizingStrategy": "WINDOW_RELATIVE",
+            "attachments": [
+                { "type": "color", "format": "RGBA8", "name": "color" }
+            ]
         }
     ]
 }

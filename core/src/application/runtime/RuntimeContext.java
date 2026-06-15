@@ -5,6 +5,7 @@ import application.runtime.lighting.SkySystem;
 import application.runtime.menu.MenuSystem;
 import application.runtime.menueventsmanager.MenuEventsManager;
 import application.runtime.player.PlayerSystem;
+import application.runtime.postprocessing.PostProcessingManager;
 import application.runtime.world.WorldSystem;
 import engine.root.ContextPackage;
 
@@ -26,6 +27,7 @@ public class RuntimeContext extends ContextPackage {
     private MenuEventsManager menuEventsManager;
     private WorldSystem worldSystem;
     private InputSystem playerInputSystem;
+    private PostProcessingManager postProcessingManager;
 
     // Internal \\
 
@@ -39,5 +41,6 @@ public class RuntimeContext extends ContextPackage {
         this.menuEventsManager = create(MenuEventsManager.class);
         this.worldSystem = create(WorldSystem.class);
         this.playerInputSystem = create(InputSystem.class);
+        this.postProcessingManager = create(PostProcessingManager.class);
     }
 }

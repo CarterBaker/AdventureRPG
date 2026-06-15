@@ -38,7 +38,7 @@ public class FboInstance extends InstancePackage {
     // GL Resources
     private IntArrayList framebuffers;
     private IntArrayList textures;
-    private IntArrayList depthRenderbuffers;
+    private IntArrayList depthTextures;
 
     // Dimensions
     private int width;
@@ -64,13 +64,14 @@ public class FboInstance extends InstancePackage {
             FboData data,
             IntArrayList framebuffers,
             IntArrayList textures,
-            IntArrayList depthRenderbuffers,
+            IntArrayList depthTextures,
             int width,
             int height) {
+
         this.data = data;
         this.framebuffers = framebuffers;
         this.textures = textures;
-        this.depthRenderbuffers = depthRenderbuffers;
+        this.depthTextures = depthTextures;
         this.width = width;
         this.height = height;
     }
@@ -110,8 +111,13 @@ public class FboInstance extends InstancePackage {
 
     // Push \\
 
-    public void setPushData(WindowInstance window, int layer, int sortKey, int screenOrder,
+    public void setPushData(
+            WindowInstance window,
+            int layer,
+            int sortKey,
+            int screenOrder,
             FBODestinationStruct destRect) {
+
         pushWindow = window;
         pushLayer = layer;
         pushSortKey = sortKey;
@@ -137,8 +143,26 @@ public class FboInstance extends InstancePackage {
         return textures;
     }
 
-    public IntArrayList getDepthRenderbuffers() {
-        return depthRenderbuffers;
+    public int getColorTexture(String attachmentName) {
+
+        int index = data.getColorIndex(attachmentName);
+
+        if (index == -1)
+            throwException("No color attachment named '" + attachmentName + "' on FBO: " + data.getName());
+
+        return textures.getInt(index);
+    }
+
+    public int getDepthTexture() {
+
+        if (depthTextures.isEmpty())
+            throwException("FBO has no depth attachment: " + data.getName());
+
+        return depthTextures.getInt(0);
+    }
+
+    public IntArrayList getDepthTextures() {
+        return depthTextures;
     }
 
     public int getWidth() {

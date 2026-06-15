@@ -2,8 +2,8 @@ package application.bootstrap.shaderpipeline.uniforms.samplers;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import engine.graphics.gl.GL20;
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 
 public final class SampleImage2DUniform extends UniformAttributeStruct<Integer> {
 
@@ -26,8 +26,8 @@ public final class SampleImage2DUniform extends UniformAttributeStruct<Integer> 
     @Override
     public void bindTexture(int unit) {
         this.textureUnit = unit;
-        EngineContext.gl20.glActiveTexture(GL20.GL_TEXTURE0 + unit);
-        EngineContext.gl20.glBindTexture(GL20.GL_TEXTURE_2D, value);
+        EngineContext.gl20.glActiveTexture(EngineSetting.GL_TEXTURE0 + unit);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, value);
     }
 
     @Override

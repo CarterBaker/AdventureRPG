@@ -416,4 +416,14 @@ class Lwjgl3GL implements GL40 {
     public void glPatchParameteri(int pname, int value) {
         GL40C.glPatchParameteri(pname, value);
     }
+
+    // GBuffer \\
+
+    public void glDrawBuffers(int[] buffers) {
+        org.lwjgl.system.MemoryStack stack = org.lwjgl.system.MemoryStack.stackPush();
+        IntBuffer buf = stack.mallocInt(buffers.length);
+        buf.put(buffers).flip();
+        GL30C.glDrawBuffers(buf);
+        stack.pop();
+    }
 }

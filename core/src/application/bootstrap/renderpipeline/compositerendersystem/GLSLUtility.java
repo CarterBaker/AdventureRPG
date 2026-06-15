@@ -22,35 +22,35 @@ class GLSLUtility extends EngineUtility {
     // UI Pass State \\
 
     static void beginUIPass() {
-        EngineContext.gl20.glDisable(GL20.GL_DEPTH_TEST);
+        EngineContext.gl20.glDisable(EngineSetting.GL_DEPTH_TEST);
         EngineContext.gl20.glDepthMask(false);
-        EngineContext.gl20.glEnable(GL20.GL_BLEND);
-        EngineContext.gl20.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        EngineContext.gl20.glEnable(EngineSetting.GL_BLEND);
+        EngineContext.gl20.glBlendFunc(EngineSetting.GL_SRC_ALPHA, EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
     }
 
     static void endUIPass() {
-        EngineContext.gl20.glEnable(GL20.GL_DEPTH_TEST);
+        EngineContext.gl20.glEnable(EngineSetting.GL_DEPTH_TEST);
         EngineContext.gl20.glDepthMask(true);
-        EngineContext.gl20.glDisable(GL20.GL_BLEND);
+        EngineContext.gl20.glDisable(EngineSetting.GL_BLEND);
     }
 
     // Upload \\
 
     static void updateInstanceVBO(int vbo, FloatBuffer data, int floatCount) {
-        EngineContext.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
-        EngineContext.gl20.glBufferSubData(GL20.GL_ARRAY_BUFFER, 0, floatCount * Float.BYTES, data);
-        EngineContext.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
+        EngineContext.gl20.glBufferSubData(EngineSetting.GL_ARRAY_BUFFER, 0, floatCount * Float.BYTES, data);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
     }
 
     static int createDynamicInstanceVBO(int maxInstances, int floatsPerInstance) {
         int vbo = EngineContext.gl20.glGenBuffer();
-        EngineContext.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
         EngineContext.gl20.glBufferData(
-                GL20.GL_ARRAY_BUFFER,
+                EngineSetting.GL_ARRAY_BUFFER,
                 maxInstances * floatsPerInstance * Float.BYTES,
                 null,
-                GL20.GL_DYNAMIC_DRAW);
-        EngineContext.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+                EngineSetting.GL_DYNAMIC_DRAW);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
         return vbo;
     }
 
@@ -67,7 +67,7 @@ class GLSLUtility extends EngineUtility {
         int vao = idBuffer.get(0);
 
         EngineContext.gl30.glBindVertexArray(vao);
-        EngineContext.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, meshVBOHandle);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, meshVBOHandle);
 
         int meshStride = 0;
         for (int i = 0; i < meshAttrSizes.length; i++)
@@ -78,7 +78,7 @@ class GLSLUtility extends EngineUtility {
         for (int i = 0; i < meshAttrSizes.length; i++) {
             EngineContext.gl20.glEnableVertexAttribArray(i);
             EngineContext.gl20.glVertexAttribPointer(
-                    i, meshAttrSizes[i], GL20.GL_FLOAT, false, meshStrideBytes, meshOffsetBytes);
+                    i, meshAttrSizes[i], EngineSetting.GL_FLOAT, false, meshStrideBytes, meshOffsetBytes);
             meshOffsetBytes += meshAttrSizes[i] * Float.BYTES;
         }
 
@@ -87,7 +87,7 @@ class GLSLUtility extends EngineUtility {
             instanceStride += instanceAttrSizes[i];
         int instanceStrideBytes = instanceStride * Float.BYTES;
 
-        EngineContext.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, instanceVBOHandle);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, instanceVBOHandle);
 
         int instanceOffsetBytes = 0;
         for (int i = 0; i < instanceAttrSizes.length; i++) {
@@ -96,7 +96,7 @@ class GLSLUtility extends EngineUtility {
             EngineContext.gl20.glVertexAttribPointer(
                     location,
                     instanceAttrSizes[i],
-                    GL20.GL_FLOAT,
+                    EngineSetting.GL_FLOAT,
                     false,
                     instanceStrideBytes,
                     instanceOffsetBytes);
@@ -104,9 +104,9 @@ class GLSLUtility extends EngineUtility {
             instanceOffsetBytes += instanceAttrSizes[i] * Float.BYTES;
         }
 
-        EngineContext.gl20.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, meshIBOHandle);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, meshIBOHandle);
         EngineContext.gl30.glBindVertexArray(0);
-        EngineContext.gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
         return vao;
     }
@@ -116,7 +116,7 @@ class GLSLUtility extends EngineUtility {
     static void drawElementsInstanced(int vao, int indexCount, int instanceCount) {
         EngineContext.gl30.glBindVertexArray(vao);
         EngineContext.gl30.glDrawElementsInstanced(
-                GL20.GL_TRIANGLES, indexCount, GL20.GL_UNSIGNED_SHORT, 0, instanceCount);
+                EngineSetting.GL_TRIANGLES, indexCount, EngineSetting.GL_UNSIGNED_SHORT, 0, instanceCount);
         EngineContext.gl30.glBindVertexArray(0);
     }
 
@@ -135,7 +135,7 @@ class GLSLUtility extends EngineUtility {
     }
 
     static void bindUniformBuffer(int bindingPoint, int gpuHandle) {
-        EngineContext.gl30.glBindBufferBase(GL30.GL_UNIFORM_BUFFER, bindingPoint, gpuHandle);
+        EngineContext.gl30.glBindBufferBase(EngineSetting.GL_UNIFORM_BUFFER, bindingPoint, gpuHandle);
     }
 
     static void deleteBuffer(int handle) {

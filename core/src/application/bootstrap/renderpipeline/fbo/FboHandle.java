@@ -17,7 +17,7 @@ public class FboHandle extends HandlePackage {
     // GL Resources
     private IntArrayList framebuffers;
     private IntArrayList textures;
-    private IntArrayList depthRenderbuffers;
+    private IntArrayList depthTextures;
 
     // Dimensions
     private int width;
@@ -29,13 +29,14 @@ public class FboHandle extends HandlePackage {
             FboData data,
             IntArrayList framebuffers,
             IntArrayList textures,
-            IntArrayList depthRenderbuffers,
+            IntArrayList depthTextures,
             int width,
             int height) {
+
         this.data = data;
         this.framebuffers = framebuffers;
         this.textures = textures;
-        this.depthRenderbuffers = depthRenderbuffers;
+        this.depthTextures = depthTextures;
         this.width = width;
         this.height = height;
     }
@@ -61,8 +62,8 @@ public class FboHandle extends HandlePackage {
         return textures;
     }
 
-    public IntArrayList getDepthRenderbuffers() {
-        return depthRenderbuffers;
+    public IntArrayList getDepthTextures() {
+        return depthTextures;
     }
 
     public int getWidth() {
@@ -72,5 +73,4 @@ public class FboHandle extends HandlePackage {
     public int getHeight() {
         return height;
     }
-
 }

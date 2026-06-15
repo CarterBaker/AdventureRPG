@@ -10,20 +10,6 @@ public interface GL30 extends GL20 {
          * binding, instanced drawing, and 3D texture support.
          */
 
-        // Constants
-        int GL_UNIFORM_BUFFER = 0x8A11;
-        int GL_TEXTURE_2D_ARRAY = 0x8C1A;
-        int GL_COLOR_BUFFER_BIT = 0x4000;
-        int GL_DEPTH_BUFFER_BIT = 0x0100;
-        int GL_FRAMEBUFFER = 0x8D40;
-        int GL_RENDERBUFFER = 0x8D41;
-        int GL_COLOR_ATTACHMENT0 = 0x8CE0;
-        int GL_DEPTH_ATTACHMENT = 0x8D00;
-        int GL_DEPTH_COMPONENT24 = 0x81A6;
-        int GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
-        int GL_RGBA16F = 0x881A;
-        int GL_RGB8 = 0x8051;
-
         // Vertex Arrays \\
 
         void glGenVertexArrays(int n, IntBuffer arrays);
@@ -74,4 +60,6 @@ public interface GL30 extends GL20 {
         void glTexSubImage3D(int target, int level, int xoffset, int yoffset, int zoffset, int width, int height,
                         int depth,
                         int format, int type, ByteBuffer pixels);
+
+        void glDrawBuffers(int[] buffers);
 }

@@ -1,0 +1,4 @@
+{
+    "material": "fullscreen/SSAO",
+    "mesh": "util/PlanarPass"
+}

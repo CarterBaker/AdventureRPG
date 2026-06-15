@@ -7,6 +7,7 @@ import java.nio.IntBuffer;
 import engine.graphics.gl.GL20;
 import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 
 class GLSLUtility {
 
@@ -23,9 +24,9 @@ class GLSLUtility {
         int size = maxInstances * floatsPerInstance * Float.BYTES;
 
         int vbo = gl20.glGenBuffer();
-        gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, vbo);
-        gl20.glBufferData(GL20.GL_ARRAY_BUFFER, size, null, GL20.GL_DYNAMIC_DRAW);
-        gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+        gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
+        gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, null, EngineSetting.GL_DYNAMIC_DRAW);
+        gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
         return vbo;
     }
@@ -49,7 +50,7 @@ class GLSLUtility {
 
         gl30.glBindVertexArray(vao);
 
-        gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, meshVBOHandle);
+        gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, meshVBOHandle);
 
         int meshStride = 0;
         for (int s : meshAttrSizes)
@@ -59,7 +60,7 @@ class GLSLUtility {
 
         for (int i = 0; i < meshAttrSizes.length; i++) {
             gl20.glEnableVertexAttribArray(i);
-            gl20.glVertexAttribPointer(i, meshAttrSizes[i], GL20.GL_FLOAT, false, meshStrideBytes, byteOffset);
+            gl20.glVertexAttribPointer(i, meshAttrSizes[i], EngineSetting.GL_FLOAT, false, meshStrideBytes, byteOffset);
             byteOffset += meshAttrSizes[i] * Float.BYTES;
         }
 
@@ -68,23 +69,23 @@ class GLSLUtility {
             instanceStride += s;
         int instanceStrideBytes = instanceStride * Float.BYTES;
 
-        gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, instanceVBOHandle);
+        gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, instanceVBOHandle);
 
         int instanceByteOffset = 0;
 
         for (int i = 0; i < instanceAttrSizes.length; i++) {
             int loc = meshAttrSizes.length + i;
             gl20.glEnableVertexAttribArray(loc);
-            gl20.glVertexAttribPointer(loc, instanceAttrSizes[i], GL20.GL_FLOAT, false,
+            gl20.glVertexAttribPointer(loc, instanceAttrSizes[i], EngineSetting.GL_FLOAT, false,
                     instanceStrideBytes, instanceByteOffset);
             gl30.glVertexAttribDivisor(loc, 1);
             instanceByteOffset += instanceAttrSizes[i] * Float.BYTES;
         }
 
-        gl20.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, meshIBOHandle);
+        gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, meshIBOHandle);
 
         gl30.glBindVertexArray(0);
-        gl20.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+        gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
         return vao;
     }

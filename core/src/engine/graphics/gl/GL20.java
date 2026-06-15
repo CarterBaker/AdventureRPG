@@ -11,51 +11,6 @@ public interface GL20 {
      * the engine. Implemented by the backend GL delegation class.
      */
 
-    // Constants — Buffers
-    int GL_ARRAY_BUFFER = 0x8892;
-    int GL_ELEMENT_ARRAY_BUFFER = 0x8893;
-    int GL_DYNAMIC_DRAW = 0x88E8;
-    int GL_STATIC_DRAW = 0x88E4;
-
-    // Constants — Primitives
-    int GL_FLOAT = 0x1406;
-    int GL_TRIANGLES = 0x0004;
-    int GL_UNSIGNED_SHORT = 0x1403;
-    int GL_UNSIGNED_BYTE = 0x1401;
-
-    // Constants — Textures
-    int GL_TEXTURE_2D = 0x0DE1;
-    int GL_TEXTURE0 = 0x84C0;
-    int GL_RGBA = 0x1908;
-    int GL_RGBA8 = 0x8058;
-    int GL_TEXTURE_MIN_FILTER = 0x2801;
-    int GL_TEXTURE_MAG_FILTER = 0x2800;
-    int GL_TEXTURE_WRAP_S = 0x2802;
-    int GL_TEXTURE_WRAP_T = 0x2803;
-    int GL_LINEAR = 0x2601;
-    int GL_CLAMP_TO_EDGE = 0x812F;
-    int GL_REPEAT = 0x2901;
-
-    // Constants — State
-    int GL_DEPTH_TEST = 0x0B71;
-    int GL_BLEND = 0x0BE2;
-    int GL_SRC_ALPHA = 0x0302;
-    int GL_ONE_MINUS_SRC_ALPHA = 0x0303;
-    int GL_CULL_FACE = 0x0B44;
-    int GL_BACK = 0x0405;
-    int GL_CCW = 0x0901;
-    int GL_SCISSOR_TEST = 0x0C11;
-    int GL_LEQUAL = 0x0203;
-
-    // Constants — Shaders
-    int GL_VERTEX_SHADER = 0x8B31;
-    int GL_FRAGMENT_SHADER = 0x8B30;
-    int GL_LINK_STATUS = 0x8B82;
-    int GL_COMPILE_STATUS = 0x8B81;
-
-    // Constants — Error
-    int GL_NO_ERROR = 0;
-
     // State \\
 
     void glEnable(int cap);

@@ -11,6 +11,7 @@ import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import engine.graphics.gl.GL20;
 import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 
 class GLSLUtility {
 
@@ -52,7 +53,7 @@ class GLSLUtility {
                 gl30.glBindVertexArray(vaoInstance.getVAOData().getAttributeHandle());
 
                 int ibo = gl20.glGenBuffer();
-                gl20.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, ibo);
+                gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, ibo);
 
                 ShortBuffer buffer = ByteBuffer
                                 .allocateDirect(size)
@@ -60,7 +61,7 @@ class GLSLUtility {
                                 .asShortBuffer();
                 buffer.put(indices).flip();
 
-                gl20.glBufferData(GL20.GL_ELEMENT_ARRAY_BUFFER, size, buffer, GL20.GL_STATIC_DRAW);
+                gl20.glBufferData(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, size, buffer, EngineSetting.GL_STATIC_DRAW);
                 gl30.glBindVertexArray(0);
 
                 return new IBOData(ibo, indices.length);

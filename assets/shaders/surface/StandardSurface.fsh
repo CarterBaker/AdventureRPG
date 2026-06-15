@@ -5,33 +5,35 @@ in vec3       vUVLocalPos;
 in vec3       vNormal;
 flat in vec2  vUVOrigin;
 flat in float vOrient;
+in float      vColor;
 
+#include "includes/CameraData.glsl"
+#include "includes/GridCoordinateData.glsl"
+#include "includes/SettingsData.glsl"
 #include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
-#include "includes/DirectionalLightData.glsl"
-#include "surface/includes/AtmosphericFog.glsl"
 #include "surface/includes/TiledSampling.glsl"
 #include "surface/includes/Albedo.glsl"
 
-out vec4 FragColor;
+layout(location = 0) out vec4 gAlbedo;
+layout(location = 1) out vec3 gNormal;
+layout(location = 2) out vec4 gMaterial;
 
 void main() {
-    // UV is computed from the UNDISPLACED position, so the texture stays
-    // anchored to its original tile in the atlas and doesn't bleed into
-    // neighboring tiles (e.g. dirt showing through on a grass top face)
-    // when the geometry itself is displaced.
     vec2 tiledUV = tileUV(vUVLocalPos, vUVOrigin, vNormal, vOrient);
     vec4 albedo  = sampleLayerTiled(tiledUV, u_layer_albedo);
 
     if (albedo.a < 0.01)
     discard;
 
-    float diff     = max(dot(normalize(vNormal), normalize(-u_lightDirection)), 0.0);
-    float ambient  = 0.15;
-    vec3  lighting = u_lightColor * u_lightIntensity * (ambient + diff * (1.0 - ambient));
-    vec3  lit      = albedo.rgb * lighting;
+    float halfD      = u_renderDistance * 0.5 - 0.5;
+    float trueMax    = halfD * halfD * 2.0;
+    float fogDist    = clamp(u_distanceFromCenter / trueMax, 0.0, 1.0);
+    float linearDist = sqrt(fogDist);
+    float fogT       = smoothstep(0.0, 0.5, linearDist) * 0.25
+    + smoothstep(0.5, 1.0, linearDist) * 0.15;
 
-    lit = applyAtmosphericFog(lit);
-
-    FragColor = vec4(lit, albedo.a);
+    gAlbedo   = vec4(albedo.rgb, 1.0);
+    gNormal   = normalize(mat3(u_view) * vNormal);
+    gMaterial = vec4(0.5, 0.0, vColor, clamp(fogT, 0.0, 0.9));
 }

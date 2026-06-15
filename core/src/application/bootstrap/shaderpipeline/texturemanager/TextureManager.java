@@ -167,4 +167,8 @@ public class TextureManager extends ManagerPackage {
     public TextureHandle getTextureHandleFromArrayName(String arrayName) {
         return getTextureHandleFromArrayID(getArrayIDFromArrayName(arrayName));
     }
+
+    public int createFloatTexture2D(float[] pixels, int width, int height, int wrapMode, int filterMode) {
+        return GLSLUtility.createFloatTexture2D(pixels, width, height, wrapMode, filterMode);
+    }
 }

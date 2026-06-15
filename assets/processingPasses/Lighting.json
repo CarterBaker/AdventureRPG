@@ -1,0 +1,4 @@
+{
+    "material": "fullscreen/Lighting",
+    "mesh": "util/PlanarPass"
+}

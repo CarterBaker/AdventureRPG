@@ -46,16 +46,16 @@ class GLSLUtility extends EngineUtility {
         if (handle == 0)
             throwException("GPU handle could not be generated for texture array");
 
-        EngineContext.gl20.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, handle);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, handle);
 
         gl30.glTexImage3D(
-                GL30.GL_TEXTURE_2D_ARRAY,
+                EngineSetting.GL_TEXTURE_2D_ARRAY,
                 0,
-                GL30.GL_RGBA8,
+                EngineSetting.GL_RGBA8,
                 width, height, depth,
                 0,
-                GL30.GL_RGBA,
-                GL30.GL_UNSIGNED_BYTE,
+                EngineSetting.GL_RGBA,
+                EngineSetting.GL_UNSIGNED_BYTE,
                 (ByteBuffer) null);
 
         for (int layer = 0; layer < depth; layer++) {
@@ -63,24 +63,46 @@ class GLSLUtility extends EngineUtility {
             ByteBuffer pixels = pix.getPixels();
             pixels.position(0);
             gl30.glTexSubImage3D(
-                    GL30.GL_TEXTURE_2D_ARRAY,
+                    EngineSetting.GL_TEXTURE_2D_ARRAY,
                     0,
                     0, 0, layer,
                     width, height, 1,
-                    GL30.GL_RGBA,
-                    GL30.GL_UNSIGNED_BYTE,
+                    EngineSetting.GL_RGBA,
+                    EngineSetting.GL_UNSIGNED_BYTE,
                     pixels);
             pix.dispose();
         }
 
-        EngineContext.gl20.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MIN_FILTER,
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_MIN_FILTER,
                 EngineSetting.GL_NEAREST);
-        EngineContext.gl20.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MAG_FILTER,
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_MAG_FILTER,
                 EngineSetting.GL_NEAREST);
-        EngineContext.gl20.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
-        EngineContext.gl20.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_WRAP_S,
+                EngineSetting.GL_CLAMP_TO_EDGE);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_WRAP_T,
+                EngineSetting.GL_CLAMP_TO_EDGE);
 
-        EngineContext.gl20.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_HANDLE_NONE);
+
+        return handle;
+    }
+
+    static int createFloatTexture2D(float[] pixels, int width, int height, int wrapMode, int filterMode) {
+        java.nio.FloatBuffer buffer = engine.util.memory.BufferUtils.newFloatBuffer(pixels.length);
+        buffer.put(pixels).flip();
+
+        int handle = EngineContext.gl20.glGenTexture();
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, handle);
+        EngineContext.gl20.glTexImage2D(
+                EngineSetting.GL_TEXTURE_2D, 0, EngineSetting.GL_RGB32F,
+                width, height, 0, EngineSetting.GL_RGB, EngineSetting.GL_FLOAT, buffer);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_WRAP_S, wrapMode);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_WRAP_T, wrapMode);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_MIN_FILTER,
+                filterMode);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_MAG_FILTER,
+                filterMode);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
 
         return handle;
     }
@@ -92,7 +114,7 @@ class GLSLUtility extends EngineUtility {
         if (handle == 0)
             return;
 
-        EngineContext.gl20.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, 0);
         EngineContext.gl20.glDeleteTexture(handle);
     }
 }

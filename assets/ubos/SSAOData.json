@@ -1,0 +1,9 @@
+{
+    "blockName": "SSAOData",
+    "uniforms": [
+        { "name": "u_samples",    "type": "VECTOR4", "count": 64 },
+        { "name": "u_kernelSize", "type": "INT" },
+        { "name": "u_radius",     "type": "FLOAT" },
+        { "name": "u_bias",       "type": "FLOAT" }
+    ]
+}

@@ -8,9 +8,16 @@ public class RuntimeSetting {
      * control blit order — lower renders first, higher composites on top.
      */
 
+    // Full Screen Passes
+    public static final String PASS_SKY = "Sky";
+    public static final String PASS_SSAO = "SSAO";
+    public static final String PASS_LIGHTING = "Lighting";
+
     // FBO Targets
     public static final String FBO_SKY = "SkyScene";
     public static final String FBO_WORLD = "MainScene";
+    public static final String FBO_LIT = "LitScene";
+    public static final String FBO_SSAO = "SSAOScene";
     public static final String FBO_UI = "UIScene";
 
     // Composite Layers

@@ -1,0 +1,4 @@
+{
+    "vert": "postprocessing/ssao/SSAO.vsh",
+    "frag": "postprocessing/ssao/SSAO.fsh"
+}

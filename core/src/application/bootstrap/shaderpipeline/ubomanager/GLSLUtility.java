@@ -3,9 +3,8 @@ package application.bootstrap.shaderpipeline.ubomanager;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-import engine.graphics.gl.GL20;
-import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.memory.BufferUtils;
 
@@ -23,21 +22,22 @@ class GLSLUtility extends EngineUtility {
     }
 
     static void allocateUniformBuffer(int buffer, int sizeBytes) {
-        EngineContext.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, buffer);
-        EngineContext.gl30.glBufferData(GL30.GL_UNIFORM_BUFFER, sizeBytes, null, GL20.GL_DYNAMIC_DRAW);
-        EngineContext.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, 0);
+        EngineContext.gl30.glBindBuffer(EngineSetting.GL_UNIFORM_BUFFER, buffer);
+        EngineContext.gl30.glBufferData(EngineSetting.GL_UNIFORM_BUFFER, sizeBytes, null,
+                EngineSetting.GL_DYNAMIC_DRAW);
+        EngineContext.gl30.glBindBuffer(EngineSetting.GL_UNIFORM_BUFFER, 0);
     }
 
     static void bindUniformBufferBase(int buffer, int bindingPoint) {
-        EngineContext.gl30.glBindBufferBase(GL30.GL_UNIFORM_BUFFER, bindingPoint, buffer);
+        EngineContext.gl30.glBindBufferBase(EngineSetting.GL_UNIFORM_BUFFER, bindingPoint, buffer);
     }
 
     // UBO Upload \\
 
     static void updateUniformBuffer(int buffer, int offset, ByteBuffer data) {
-        EngineContext.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, buffer);
-        EngineContext.gl30.glBufferSubData(GL30.GL_UNIFORM_BUFFER, offset, data.remaining(), data);
-        EngineContext.gl30.glBindBuffer(GL30.GL_UNIFORM_BUFFER, 0);
+        EngineContext.gl30.glBindBuffer(EngineSetting.GL_UNIFORM_BUFFER, buffer);
+        EngineContext.gl30.glBufferSubData(EngineSetting.GL_UNIFORM_BUFFER, offset, data.remaining(), data);
+        EngineContext.gl30.glBindBuffer(EngineSetting.GL_UNIFORM_BUFFER, 0);
     }
 
     // UBO Deletion \\

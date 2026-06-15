@@ -1,5 +1,6 @@
 package application.bootstrap.renderpipeline.fbomanager;
 
+import application.bootstrap.renderpipeline.fbo.AttachmentStruct;
 import application.bootstrap.renderpipeline.fbo.FboData;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbo.FboSizingStrategy;
@@ -98,12 +99,26 @@ public class FboManager extends ManagerPackage {
         if (fbo == null || width <= 0 || height <= 0)
             return;
 
-        GLSLUtility.resizeTexture(fbo.getTextures().getInt(0), fbo.getFboData().getFormat(), width, height);
+        ObjectArrayList<AttachmentStruct> attachments = fbo.getFboData().getAttachments();
+        int colorIndex = 0;
 
-        if (fbo.getFboData().hasDepth() && !fbo.getDepthRenderbuffers().isEmpty()) {
-            GLSLUtility.bindRenderbuffer(fbo.getDepthRenderbuffers().getInt(0));
-            GLSLUtility.renderbufferStorage(GL30.GL_DEPTH_COMPONENT24, width, height);
-            GLSLUtility.unbindRenderbuffer();
+        for (int i = 0; i < attachments.size(); i++) {
+            AttachmentStruct attachment = attachments.get(i);
+
+            if (attachment.isDepth()) {
+                if (!fbo.getDepthTextures().isEmpty())
+                    GLSLUtility.resizeDepthTexture(fbo.getDepthTextures().getInt(0), width, height);
+            }
+
+            else {
+
+                if (colorIndex < fbo.getTextures().size())
+                    GLSLUtility.resizeColorTexture(
+                            fbo.getTextures().getInt(colorIndex),
+                            attachment.getInternalFormat(),
+                            width, height);
+                colorIndex++;
+            }
         }
 
         fbo.setSize(width, height);

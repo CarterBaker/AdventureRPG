@@ -5,9 +5,9 @@ import java.nio.ByteBuffer;
 
 import engine.assets.image.Pixmap;
 import engine.assets.image.PixmapUtility;
-import engine.graphics.gl.GL20;
 import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 
 class GLSLUtility extends EngineUtility {
@@ -43,16 +43,16 @@ class GLSLUtility extends EngineUtility {
         if (handle == 0)
             throwException("[GLSLUtility] Failed to generate GPU handle for font texture array");
 
-        EngineContext.gl20.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, handle);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, handle);
 
         gl30.glTexImage3D(
-                GL30.GL_TEXTURE_2D_ARRAY,
+                EngineSetting.GL_TEXTURE_2D_ARRAY,
                 0,
-                GL30.GL_RGBA8,
+                EngineSetting.GL_RGBA8,
                 width, height, depth,
                 0,
-                GL30.GL_RGBA,
-                GL30.GL_UNSIGNED_BYTE,
+                EngineSetting.GL_RGBA,
+                EngineSetting.GL_UNSIGNED_BYTE,
                 (ByteBuffer) null);
 
         for (int layer = 0; layer < depth; layer++) {
@@ -62,23 +62,27 @@ class GLSLUtility extends EngineUtility {
             pixels.position(0);
 
             gl30.glTexSubImage3D(
-                    GL30.GL_TEXTURE_2D_ARRAY,
+                    EngineSetting.GL_TEXTURE_2D_ARRAY,
                     0,
                     0, 0, layer,
                     width, height, 1,
-                    GL30.GL_RGBA,
-                    GL30.GL_UNSIGNED_BYTE,
+                    EngineSetting.GL_RGBA,
+                    EngineSetting.GL_UNSIGNED_BYTE,
                     pixels);
 
             pix.dispose();
         }
 
-        EngineContext.gl20.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR);
-        EngineContext.gl20.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR);
-        EngineContext.gl20.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
-        EngineContext.gl20.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_MIN_FILTER,
+                EngineSetting.GL_LINEAR);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_MAG_FILTER,
+                EngineSetting.GL_LINEAR);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_WRAP_S,
+                EngineSetting.GL_CLAMP_TO_EDGE);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_WRAP_T,
+                EngineSetting.GL_CLAMP_TO_EDGE);
 
-        EngineContext.gl20.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, 0);
 
         return handle;
     }
@@ -90,7 +94,7 @@ class GLSLUtility extends EngineUtility {
         if (handle == 0)
             return;
 
-        EngineContext.gl20.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, 0);
         EngineContext.gl20.glDeleteTexture(handle);
     }
 }
