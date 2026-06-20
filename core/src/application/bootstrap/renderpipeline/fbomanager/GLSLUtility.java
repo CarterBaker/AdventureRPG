@@ -1,7 +1,5 @@
 package application.bootstrap.renderpipeline.fbomanager;
 
-import engine.graphics.gl.GL20;
-import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;

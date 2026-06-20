@@ -1,8 +1,0 @@
-{
-    "blockName": "DirectionalLightData",
-    "uniforms": [
-        { "name": "u_lightDirection", "type": "VECTOR3" },
-        { "name": "u_lightIntensity", "type": "FLOAT"   },
-        { "name": "u_lightColor",     "type": "VECTOR3" }
-    ]
-}

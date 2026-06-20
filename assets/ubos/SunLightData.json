@@ -1,0 +1,8 @@
+{
+    "blockName": "SunLightData",
+    "uniforms": [
+        { "name": "u_sunDirection", "type": "VECTOR3" },
+        { "name": "u_sunIntensity", "type": "FLOAT" },
+        { "name": "u_sunColor", "type": "VECTOR3" }
+    ]
+}

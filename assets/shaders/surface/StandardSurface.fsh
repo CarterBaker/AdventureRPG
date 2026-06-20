@@ -30,10 +30,10 @@ void main() {
     float trueMax    = halfD * halfD * 2.0;
     float fogDist    = clamp(u_distanceFromCenter / trueMax, 0.0, 1.0);
     float linearDist = sqrt(fogDist);
-    float fogT       = smoothstep(0.0, 0.5, linearDist) * 0.25
+    float fogT        = smoothstep(0.0, 0.5, linearDist) * 0.25
     + smoothstep(0.5, 1.0, linearDist) * 0.15;
 
     gAlbedo   = vec4(albedo.rgb, 1.0);
     gNormal   = normalize(mat3(u_view) * vNormal);
-    gMaterial = vec4(0.5, 0.0, vColor, clamp(fogT, 0.0, 0.9));
+    gMaterial = vec4(fogT, 0.0, 1.0, 1.0);
 }

@@ -1,0 +1,8 @@
+{
+    "blockName": "MoonLightData",
+    "uniforms": [
+        { "name": "u_moonDirection", "type": "VECTOR3" },
+        { "name": "u_moonIntensity", "type": "FLOAT" },
+        { "name": "u_moonColor", "type": "VECTOR3" }
+    ]
+}

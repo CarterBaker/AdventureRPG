@@ -268,12 +268,22 @@ public class EngineSetting {
         // UBOs \\
 
         public static final String CAMERA_DATA_UBO = "CameraData";
-        public static final String DIRECTIONAL_LIGHT_UBO = "DirectionalLightData";
+        public static final String SUN_LIGHT_UBO = "SunLightData";
+        public static final String MOON_LIGHT_UBO = "MoonLightData";
         public static final String GRID_COORDINATE_UBO = "GridCoordinateData";
         public static final String ITEM_ROTATION_UBO = "ItemRotationData";
         public static final String ORTHO_DATA_UBO = "OrthoData";
         public static final String PLAYER_POSITION_UBO = "PlayerPositionData";
         public static final String UBO_TIME_DATA_NAME = "TimeData";
+
+        // Sun/Moon UBO Uniforms \\
+
+        public static final String UNIFORM_SUN_DIRECTION = "u_sunDirection";
+        public static final String UNIFORM_SUN_INTENSITY = "u_sunIntensity";
+        public static final String UNIFORM_SUN_COLOR = "u_sunColor";
+        public static final String UNIFORM_MOON_DIRECTION = "u_moonDirection";
+        public static final String UNIFORM_MOON_INTENSITY = "u_moonIntensity";
+        public static final String UNIFORM_MOON_COLOR = "u_moonColor";
 
         // Post Processing \\
 
