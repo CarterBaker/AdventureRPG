@@ -6,6 +6,7 @@ import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
+import application.bootstrap.renderpipeline.fbo.FboData;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
@@ -15,6 +16,7 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
+import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -218,12 +220,17 @@ class RenderSystem extends SystemPackage {
         int textureUnit = 0;
 
         for (int i = 0; i < uniforms.length; i++) {
+
             UniformStruct<?> uniform = uniforms[i];
+
             if (uniform.attribute().isSampler()) {
                 uniform.attribute().bindTexture(textureUnit);
+                GLSLUtility.bindSamplerUniform(uniform.getUniformHandle(), textureUnit);
                 textureUnit++;
             }
-            uniform.push();
+
+            else
+                uniform.push();
         }
     }
 

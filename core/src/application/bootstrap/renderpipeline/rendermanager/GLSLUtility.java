@@ -130,6 +130,12 @@ class GLSLUtility extends EngineUtility {
         EngineContext.gl30.glBindBuffer(EngineSetting.GL_UNIFORM_BUFFER, EngineSetting.GL_HANDLE_NONE);
     }
 
+    // Texture \\
+
+    static void bindSamplerUniform(int location, int unit) {
+        EngineContext.gl20.glUniform1i(location, unit);
+    }
+
     // Presentation \\
 
     static void swapBuffers(long nativeHandle) {

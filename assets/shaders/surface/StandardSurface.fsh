@@ -16,7 +16,7 @@ in float      vColor;
 #include "surface/includes/Albedo.glsl"
 
 layout(location = 0) out vec4 gAlbedo;
-layout(location = 1) out vec3 gNormal;
+layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
 
 void main() {
@@ -34,6 +34,6 @@ void main() {
     + smoothstep(0.5, 1.0, linearDist) * 0.15;
 
     gAlbedo   = vec4(albedo.rgb, 1.0);
-    gNormal   = normalize(mat3(u_view) * vNormal);
+    gNormal = vec4(normalize(mat3(u_view) * vNormal), 1.0);
     gMaterial = vec4(fogT, 0.0, 1.0, 1.0);
 }

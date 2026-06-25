@@ -28,15 +28,19 @@ public class RenderCallStruct extends StructPackage {
     // Init \\
 
     public void init(ModelInstance modelInstance, MaskStruct mask) {
-
         this.modelInstance = modelInstance;
         this.materialInstance = modelInstance.getMaterial();
         this.mask = mask;
 
-        var uniforms = materialInstance.getUniforms();
-        this.cachedUniforms = (uniforms != null && !uniforms.isEmpty())
-                ? uniforms.values().toArray(new UniformStruct<?>[0])
-                : EMPTY_UNIFORMS;
+        var keys = materialInstance.getUniformKeys();
+        if (keys != null && !keys.isEmpty()) {
+            var uniforms = materialInstance.getUniforms();
+            this.cachedUniforms = new UniformStruct<?>[keys.size()];
+            for (int i = 0; i < keys.size(); i++)
+                this.cachedUniforms[i] = uniforms.get(keys.get(i));
+        } else {
+            this.cachedUniforms = EMPTY_UNIFORMS;
+        }
 
         var instanceUBOs = materialInstance.getInstanceUBOs();
         this.cachedInstanceUBOs = (instanceUBOs != null && !instanceUBOs.isEmpty())
