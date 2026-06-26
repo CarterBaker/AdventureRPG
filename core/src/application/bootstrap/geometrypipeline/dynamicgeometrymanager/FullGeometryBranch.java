@@ -195,9 +195,8 @@ class FullGeometryBranch extends BranchPackage {
         byte sizeA = 1;
         byte sizeB = 1;
 
-        Direction3Vector[] tangents = Direction3Vector.getTangents(direction3Vector);
-        Direction3Vector comparativeDirectionA = tangents[0];
-        Direction3Vector comparativeDirectionB = tangents[1];
+        Direction3Vector comparativeDirectionA = Direction3Vector.getTangentA(direction3Vector);
+        Direction3Vector comparativeDirectionB = Direction3Vector.getTangentB(direction3Vector);
 
         short baseOrientation = rotationPaletteHandle.getBlock(xyz);
 
@@ -388,6 +387,77 @@ class FullGeometryBranch extends BranchPackage {
         TextureHandle textureHandle = textureManager.getTextureHandleFromTileID(textureID);
         int encodedFace = resolveEncodedFace(blockHandle, direction3Vector, orientation);
 
+        int iSizeA = sizeA & 0xFF;
+        int iSizeB = sizeB & 0xFF;
+
+        Direction3Vector oppA = Direction3Vector.getOpposite(tangentDirectionA);
+        Direction3Vector oppB = Direction3Vector.getOpposite(tangentDirectionB);
+
+        int maskA0 = 0;
+        int maskA1 = 0;
+        int maskB0 = 0;
+        int maskB1 = 0;
+
+        // maskA0 — walk B=0..sizeB-1 cells at A=0, check convex+exposed in -A direction
+        for (int j = 0; j < iSizeB; j++) {
+
+            int cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, j);
+
+            if (cellXYZ != -1 && isConvexExposedOnSide(
+                    chunkInstance, subChunkInstance,
+                    cellXYZ, direction3Vector,
+                    oppA, blockHandle))
+
+                maskA0 |= (1 << j);
+        }
+
+        // maskA1 — walk B=0..sizeB-1 cells at A=sizeA-1, check convex+exposed in +A
+        // direction
+        int baseA1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, iSizeA - 1);
+        for (int j = 0; j < iSizeB; j++) {
+
+            int cellXYZ = (baseA1 != -1)
+                    ? ChunkCoordinate3Int.getNeighborWithOffset(baseA1, tangentDirectionB, j)
+                    : -1;
+
+            if (cellXYZ != -1 && isConvexExposedOnSide(
+                    chunkInstance, subChunkInstance,
+                    cellXYZ, direction3Vector,
+                    tangentDirectionA, blockHandle))
+
+                maskA1 |= (1 << j);
+        }
+
+        // maskB0 — walk A=0..sizeA-1 cells at B=0, check convex+exposed in -B direction
+        for (int i = 0; i < iSizeA; i++) {
+
+            int cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, i);
+
+            if (cellXYZ != -1 && isConvexExposedOnSide(
+                    chunkInstance, subChunkInstance,
+                    cellXYZ, direction3Vector,
+                    oppB, blockHandle))
+
+                maskB0 |= (1 << i);
+        }
+
+        // maskB1 — walk A=0..sizeA-1 cells at B=sizeB-1, check convex+exposed in +B
+        // direction
+        int baseB1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, iSizeB - 1);
+        for (int i = 0; i < iSizeA; i++) {
+
+            int cellXYZ = (baseB1 != -1)
+                    ? ChunkCoordinate3Int.getNeighborWithOffset(baseB1, tangentDirectionA, i)
+                    : -1;
+
+            if (cellXYZ != -1 && isConvexExposedOnSide(
+                    chunkInstance, subChunkInstance,
+                    cellXYZ, direction3Vector,
+                    tangentDirectionB, blockHandle))
+
+                maskB1 |= (1 << i);
+        }
+
         return finalizeFace(
                 verts,
                 dynamicPacketInstance,
@@ -396,7 +466,8 @@ class FullGeometryBranch extends BranchPackage {
                 vert0XYZ, vert1XYZ, vert2XYZ, vert3XYZ,
                 vert0Color, vert1Color, vert2Color, vert3Color,
                 encodedFace,
-                sizeA, sizeB);
+                sizeA, sizeB,
+                maskA0, maskA1, maskB0, maskB1);
     }
 
     private int resolveOrientation(BlockPaletteHandle rotationPaletteHandle, int xyz) {
@@ -431,6 +502,80 @@ class FullGeometryBranch extends BranchPackage {
         }
 
         return Direction3Vector.getEncodedFace(orientation, worldFace);
+    }
+
+    /*
+     * Returns true only when the edge at sideDirection from cellXYZ is both
+     * convex (the tangent neighbor is open / different geometry) and exposed
+     * (no flush coplanar face from that neighbor in faceDirection).
+     *
+     * Concave edges — where the tangent neighbor is the same solid geometry
+     * continuing alongside — are explicitly excluded. Beveling an interior
+     * corner requires pushing the vertex in the opposite direction to a
+     * convex bevel, which breaks the invariant that adjacent beveled faces
+     * converge at the same corner point. Leave concave corners sharp.
+     */
+    private boolean isConvexExposedOnSide(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            int cellXYZ,
+            Direction3Vector faceDirection,
+            Direction3Vector sideDirection,
+            BlockHandle blockHandle) {
+
+        SubChunkInstance sideSubChunk = getComparativeSubChunkInstance(
+                chunkInstance, subChunkInstance, cellXYZ, sideDirection);
+
+        if (sideSubChunk == null || sideSubChunk == ERROR)
+            return true; // world boundary → open/convex, consistent with isExposedOnSide
+
+        int sideXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
+
+        BlockPaletteHandle sidePalette = sideSubChunk.getBlockPaletteHandle();
+        short sideBlockID = sidePalette.getBlock(sideXYZ);
+        BlockHandle sideBlock = blockManager.getBlockHandleFromBlockID(sideBlockID);
+
+        // Concave: tangent neighbor is same solid geometry → interior corner → no bevel
+        if (sideBlock.getGeometry() == blockHandle.getGeometry())
+            return false;
+
+        // Convex: tangent neighbor is open or a different type. Confirm the edge is
+        // actually exposed — if the tangent neighbor has its own coplanar face in
+        // faceDirection, the two faces are flush and neither should bevel.
+        if (blockHasFace(chunkInstance, sideSubChunk, sideXYZ, faceDirection, null, sideBlock))
+            return false;
+
+        return true;
+    }
+
+    private boolean isExposedOnSide(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            int cellXYZ,
+            Direction3Vector faceDirection,
+            Direction3Vector sideDirection) {
+
+        SubChunkInstance neighborSubChunk = getComparativeSubChunkInstance(
+                chunkInstance, subChunkInstance, cellXYZ, sideDirection);
+
+        if (neighborSubChunk == null || neighborSubChunk == ERROR)
+            return true;
+
+        int neighborXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
+
+        BlockPaletteHandle neighborBlockPalette = neighborSubChunk.getBlockPaletteHandle();
+        short neighborBlockID = neighborBlockPalette.getBlock(neighborXYZ);
+        BlockHandle neighborBlockHandle = blockManager.getBlockHandleFromBlockID(neighborBlockID);
+
+        BlockPaletteHandle neighborBiomePalette = neighborSubChunk.getBiomePaletteHandle();
+        short neighborBiomeID = neighborBiomePalette.getBlock(neighborXYZ);
+        BiomeHandle neighborBiomeHandle = biomeManager.getBiomeHandleFromBiomeID(neighborBiomeID);
+
+        if (blockHasFace(chunkInstance, neighborSubChunk, neighborXYZ, faceDirection,
+                neighborBiomeHandle, neighborBlockHandle))
+            return false;
+
+        return true;
     }
 
     // Vert Color \\
@@ -550,17 +695,22 @@ class FullGeometryBranch extends BranchPackage {
             int vert0XYZ, int vert1XYZ, int vert2XYZ, int vert3XYZ,
             float vert0Color, float vert1Color, float vert2Color, float vert3Color,
             int encodedFace,
-            int sizeA, int sizeB) {
+            int sizeA, int sizeB,
+            int maskA0, int maskA1, int maskB0, int maskB1) {
 
         FloatArrayList buffer = verts.computeIfAbsent(materialId, k -> new FloatArrayList());
 
         float nor = (float) direction3Vector.index;
-        float fEncodedFace = (float) encodedFace;
+        float fEncFace = (float) encodedFace;
         float u0 = textureHandle.getU0();
         float v0 = textureHandle.getV0();
         float fQuadSize = (float) ((sizeA & 0xFF) | ((sizeB & 0xFF) << 8));
+        float fMaskA0 = (float) maskA0;
+        float fMaskA1 = (float) maskA1;
+        float fMaskB0 = (float) maskB0;
+        float fMaskB1 = (float) maskB1;
 
-        // Vert 0
+        // vert 0
         buffer.add((float) Coordinate3Int.unpackX(vert0XYZ));
         buffer.add((float) Coordinate3Int.unpackY(vert0XYZ));
         buffer.add((float) Coordinate3Int.unpackZ(vert0XYZ));
@@ -568,10 +718,14 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(vert0Color);
         buffer.add(u0);
         buffer.add(v0);
-        buffer.add(fEncodedFace);
+        buffer.add(fEncFace);
         buffer.add(fQuadSize);
+        buffer.add(fMaskA0);
+        buffer.add(fMaskA1);
+        buffer.add(fMaskB0);
+        buffer.add(fMaskB1);
 
-        // Vert 1
+        // vert 1
         buffer.add((float) Coordinate3Int.unpackX(vert1XYZ));
         buffer.add((float) Coordinate3Int.unpackY(vert1XYZ));
         buffer.add((float) Coordinate3Int.unpackZ(vert1XYZ));
@@ -579,10 +733,14 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(vert1Color);
         buffer.add(u0);
         buffer.add(v0);
-        buffer.add(fEncodedFace);
+        buffer.add(fEncFace);
         buffer.add(fQuadSize);
+        buffer.add(fMaskA0);
+        buffer.add(fMaskA1);
+        buffer.add(fMaskB0);
+        buffer.add(fMaskB1);
 
-        // Vert 2
+        // vert 2
         buffer.add((float) Coordinate3Int.unpackX(vert2XYZ));
         buffer.add((float) Coordinate3Int.unpackY(vert2XYZ));
         buffer.add((float) Coordinate3Int.unpackZ(vert2XYZ));
@@ -590,10 +748,14 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(vert2Color);
         buffer.add(u0);
         buffer.add(v0);
-        buffer.add(fEncodedFace);
+        buffer.add(fEncFace);
         buffer.add(fQuadSize);
+        buffer.add(fMaskA0);
+        buffer.add(fMaskA1);
+        buffer.add(fMaskB0);
+        buffer.add(fMaskB1);
 
-        // Vert 3
+        // vert 3
         buffer.add((float) Coordinate3Int.unpackX(vert3XYZ));
         buffer.add((float) Coordinate3Int.unpackY(vert3XYZ));
         buffer.add((float) Coordinate3Int.unpackZ(vert3XYZ));
@@ -601,8 +763,12 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(vert3Color);
         buffer.add(u0);
         buffer.add(v0);
-        buffer.add(fEncodedFace);
+        buffer.add(fEncFace);
         buffer.add(fQuadSize);
+        buffer.add(fMaskA0);
+        buffer.add(fMaskA1);
+        buffer.add(fMaskB0);
+        buffer.add(fMaskB1);
 
         return true;
     }

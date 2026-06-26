@@ -1,5 +1,4 @@
 #version 400 core
-
 layout(vertices = 4) out;
 
 in  vec3  tcWorldPos[];
@@ -8,6 +7,10 @@ in  vec2  tcUVOrigin[];
 in  float tcOrient[];
 in  float tcColor[];
 in  float tcQuadSize[];
+in  float tcBevelMaskA0[];
+in  float tcBevelMaskA1[];
+in  float tcBevelMaskB0[];
+in  float tcBevelMaskB1[];
 
 out vec3  teWorldPos[];
 out vec3  teNormal[];
@@ -15,22 +18,28 @@ out vec2  teUVOrigin[];
 out float teOrient[];
 out float teColor[];
 out float teQuadSize[];
+out float teBevelMaskA0[];
+out float teBevelMaskA1[];
+out float teBevelMaskB0[];
+out float teBevelMaskB1[];
 
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
-
-    teWorldPos[gl_InvocationID] = tcWorldPos[gl_InvocationID];
-    teNormal[gl_InvocationID]   = tcNormal[gl_InvocationID];
-    teUVOrigin[gl_InvocationID] = tcUVOrigin[gl_InvocationID];
-    teOrient[gl_InvocationID]   = tcOrient[gl_InvocationID];
-    teColor[gl_InvocationID]    = tcColor[gl_InvocationID];
-    teQuadSize[gl_InvocationID] = tcQuadSize[gl_InvocationID];
+    teWorldPos   [gl_InvocationID] = tcWorldPos   [gl_InvocationID];
+    teNormal     [gl_InvocationID] = tcNormal     [gl_InvocationID];
+    teUVOrigin   [gl_InvocationID] = tcUVOrigin   [gl_InvocationID];
+    teOrient     [gl_InvocationID] = tcOrient     [gl_InvocationID];
+    teColor      [gl_InvocationID] = tcColor      [gl_InvocationID];
+    teQuadSize   [gl_InvocationID] = tcQuadSize   [gl_InvocationID];
+    teBevelMaskA0[gl_InvocationID] = tcBevelMaskA0[gl_InvocationID];
+    teBevelMaskA1[gl_InvocationID] = tcBevelMaskA1[gl_InvocationID];
+    teBevelMaskB0[gl_InvocationID] = tcBevelMaskB0[gl_InvocationID];
+    teBevelMaskB1[gl_InvocationID] = tcBevelMaskB1[gl_InvocationID];
 
     if (gl_InvocationID == 0) {
-
         int   quadPack = int(tcQuadSize[0]);
         float sizeA    = float(quadPack & 0xFF);
         float sizeB    = float((quadPack >> 8) & 0xFF);
@@ -39,25 +48,19 @@ void main() {
         float maxDist    = halfD * halfD * 2.0;
         float linearDist = sqrt(clamp(u_distanceFromCenter / maxDist, 0.0, 1.0));
 
-        // Subdivisions per block-length, blended by distance from camera.
-        // Close up we want lots of geometry for displacement to act on;
-        // far away we collapse back toward 1 (flat quad).
         const float NEAR_DENSITY = 4.0;
         const float FAR_DENSITY  = 1.0;
 
         float nearStrength = 1.0 - smoothstep(0.0, 0.5, linearDist);
-        float density = mix(FAR_DENSITY, NEAR_DENSITY, nearStrength);
+        float density      = mix(FAR_DENSITY, NEAR_DENSITY, nearStrength);
 
         float levelA = clamp(sizeA * density, 1.0, 64.0);
         float levelB = clamp(sizeB * density, 1.0, 64.0);
 
-        // Outer[0] and [2] are the left/right edges — they run along v, so they need B density
-        // Outer[1] and [3] are the bottom/top edges — they run along u, so they need A density
         gl_TessLevelOuter[0] = levelB;
         gl_TessLevelOuter[1] = levelA;
         gl_TessLevelOuter[2] = levelB;
         gl_TessLevelOuter[3] = levelA;
-
         gl_TessLevelInner[0] = levelA;
         gl_TessLevelInner[1] = levelB;
     }

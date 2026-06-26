@@ -25,6 +25,7 @@ public enum Direction3Vector {
 	private static final Direction3Vector[][] TANGENTS_LOOKUP = new Direction3Vector[LENGTH][];
 	private static final Direction2Vector[] TO_2D_LOOKUP = new Direction2Vector[LENGTH];
 	private static final Direction3Vector[][][] DIRECTION_LOOKUP = new Direction3Vector[3][3][3];
+	private static final Direction3Vector[] OPPOSITE_LOOKUP = new Direction3Vector[LENGTH];
 	private static final Direction3Vector[] X_AXIS_LOOKUP = new Direction3Vector[3];
 	private static final Direction3Vector[] Y_AXIS_LOOKUP = new Direction3Vector[3];
 	private static final Direction3Vector[] Z_AXIS_LOOKUP = new Direction3Vector[3];
@@ -82,6 +83,9 @@ public enum Direction3Vector {
 		Z_AXIS_LOOKUP[0] = SOUTH;
 		Z_AXIS_LOOKUP[1] = null;
 		Z_AXIS_LOOKUP[2] = NORTH;
+
+		for (Direction3Vector d : VALUES)
+			OPPOSITE_LOOKUP[d.ordinal()] = DIRECTION_LOOKUP[-d.x + 1][-d.y + 1][-d.z + 1];
 	}
 
 	// FACE_REMAP \\
@@ -184,10 +188,7 @@ public enum Direction3Vector {
 				for (int worldFaceIdx = 0; worldFaceIdx < LENGTH; worldFaceIdx++) {
 					Direction3Vector worldFace = VALUES[worldFaceIdx];
 
-					// Get texture face from remap
 					Direction3Vector textureFace = VALUES[FACE_REMAP[orientation][worldFaceIdx]];
-
-					// Compute texture spin
 					int textureSpin = computeTextureSpin(worldFace, facing, spin);
 
 					ENCODED_FACE_LOOKUP[orientation][worldFaceIdx] = textureFace.ordinal() * 4 + textureSpin;
@@ -198,30 +199,22 @@ public enum Direction3Vector {
 
 	private static int computeTextureSpin(Direction3Vector worldFace, Direction3Vector facing, int blockSpin) {
 
-		// Top or bottom face — use block spin directly
 		if (worldFace == facing)
 			return blockSpin;
 
-		Direction3Vector opposite = getDirection(-facing.x, -facing.y, -facing.z);
-		if (worldFace == opposite)
+		if (worldFace == OPPOSITE_LOOKUP[facing.ordinal()])
 			return blockSpin;
 
-		// Side face — find where facing points relative to this face's tangent axes
-		Direction3Vector[] tangents = TANGENTS_LOOKUP[worldFace.ordinal()];
-		Direction3Vector faceRight = tangents[0];
-		Direction3Vector faceUp = tangents[1];
+		Direction3Vector faceRight = TANGENTS_LOOKUP[worldFace.ordinal()][0];
+		Direction3Vector faceUp = TANGENTS_LOOKUP[worldFace.ordinal()][1];
 
 		if (facing == faceUp)
 			return 0;
 		if (facing == faceRight)
 			return 1;
-
-		Direction3Vector negUp = getDirection(-faceUp.x, -faceUp.y, -faceUp.z);
-		Direction3Vector negRight = getDirection(-faceRight.x, -faceRight.y, -faceRight.z);
-
-		if (facing == negUp)
+		if (facing == OPPOSITE_LOOKUP[faceUp.ordinal()])
 			return 2;
-		if (facing == negRight)
+		if (facing == OPPOSITE_LOOKUP[faceRight.ordinal()])
 			return 3;
 
 		return 0;
@@ -252,6 +245,18 @@ public enum Direction3Vector {
 
 	public static Direction3Vector[] getTangents(Direction3Vector normal) {
 		return TANGENTS_LOOKUP[normal.ordinal()];
+	}
+
+	public static Direction3Vector getTangentA(Direction3Vector normal) {
+		return TANGENTS_LOOKUP[normal.ordinal()][0];
+	}
+
+	public static Direction3Vector getTangentB(Direction3Vector normal) {
+		return TANGENTS_LOOKUP[normal.ordinal()][1];
+	}
+
+	public static Direction3Vector getOpposite(Direction3Vector d) {
+		return OPPOSITE_LOOKUP[d.ordinal()];
 	}
 
 	public static Direction3Vector getDirection(int x, int y, int z) {
