@@ -28,187 +28,214 @@ const float NOISE_SEED_SCALE = 0.5;
 const float NOISE_PERIOD = CHUNK_SIZE_F * NOISE_SEED_SCALE;
 
 // ── Bevel tunables ─────────────────────────────────────────────────────────
-const float BEVEL_RADIUS = 0.30;
-const float BEVEL_SIZE = 0.09;
+const float BEVEL_RADIUS       = 0.30;
+const float BEVEL_SIZE         = 0.09;
 const float BEVEL_NORMAL_BLEND = 0.60;
 // ──────────────────────────────────────────────────────────────────────────
 
 float hash(vec2 p) {
-return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
 float periodicValueNoise(vec2 p, float period) {
-vec2 i = floor(p);
-vec2 f = fract(p);
-f = f * f * (3.0 - 2.0 * f);
-vec2 i00 = mod(i, period);
-vec2 i10 = mod(i + vec2(1.0, 0.0), period);
-vec2 i01 = mod(i + vec2(0.0, 1.0), period);
-vec2 i11 = mod(i + vec2(1.0, 1.0), period);
-return mix(
-mix(hash(i00), hash(i10), f.x),
-mix(hash(i01), hash(i11), f.x), f.y);
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    vec2 i00 = mod(i,                  period);
+    vec2 i10 = mod(i + vec2(1.0, 0.0), period);
+    vec2 i01 = mod(i + vec2(0.0, 1.0), period);
+    vec2 i11 = mod(i + vec2(1.0, 1.0), period);
+    return mix(
+        mix(hash(i00), hash(i10), f.x),
+        mix(hash(i01), hash(i11), f.x), f.y);
 }
 
 // Returns 1.0 if bit 'bit' is set in the float-encoded mask, else 0.0.
 // Masks are exact-integer floats, so int() conversion is lossless.
 float maskBit(float mask, int bit) {
-return float((int(mask) >> bit) & 1);
+    return float((int(mask) >> bit) & 1);
 }
 
 void main() {
-float u = gl_TessCoord.x;
-float v = gl_TessCoord.y;
-vec3 worldPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
-                    mix(teWorldPos[3], teWorldPos[2], u), v);
-vec3 uvLocalPos = worldPos;
 
-vec3 normal = normalize(
-              mix(mix(teNormal[0], teNormal[1], u),
-                  mix(teNormal[3], teNormal[2], u), v));
+    float u = gl_TessCoord.x;
+    float v = gl_TessCoord.y;
 
-float halfD      = u_renderDistance * 0.5 - 0.5;
-float maxDist    = halfD * halfD * 2.0;
-float linearDist = sqrt(clamp(u_distanceFromCenter / maxDist, 0.0, 1.0));
+    vec3 worldPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
+                        mix(teWorldPos[3], teWorldPos[2], u), v);
+    vec3 uvLocalPos = worldPos;
 
-float nearStrength = 1.0 - smoothstep(0.0,  0.25, linearDist);
-float farStrength  =       smoothstep(0.70, 0.90, linearDist);
-float edgeStrength =       smoothstep(0.90, 1.00, linearDist);
+    vec3 normal = normalize(
+                  mix(mix(teNormal[0], teNormal[1], u),
+                      mix(teNormal[3], teNormal[2], u), v));
 
-vec2 seed = worldPos.xz;
+    float halfD      = u_renderDistance * 0.5 - 0.5;
+    float maxDist    = halfD * halfD * 2.0;
+    float linearDist = sqrt(clamp(u_distanceFromCenter / maxDist, 0.0, 1.0));
 
-if (nearStrength > 0.001) {
-    vec2  nSeed = seed * NOISE_SEED_SCALE;
-    float nX    = periodicValueNoise(nSeed + vec2(17.3,  0.0), NOISE_PERIOD) - 0.5;
-    float nZ    = periodicValueNoise(nSeed + vec2( 0.0, 31.7), NOISE_PERIOD) - 0.5;
-    float nY    = periodicValueNoise(nSeed + vec2(53.1, 83.2), NOISE_PERIOD) - 0.5;
-    worldPos.x += nX * 0.4  * nearStrength;
-    worldPos.z += nZ * 0.4  * nearStrength;
-    worldPos.y += nY * 0.08 * nearStrength;
-}
+    float nearStrength = 1.0 - smoothstep(0.0,  0.25, linearDist);
+    float farStrength  =       smoothstep(0.70, 0.90, linearDist);
+    float edgeStrength =       smoothstep(0.90, 1.00, linearDist);
 
-if (farStrength > 0.001 && normal.y > 0.5) {
-    float heightScale = clamp(worldPos.y / 80.0, 0.0, 1.0);
-    float nY = (periodicValueNoise(seed * 0.1, NOISE_PERIOD / 0.1) - 0.5) * 2.0;
-    worldPos.y += nY * 3.0 * farStrength * heightScale;
-}
+    vec2 seed = worldPos.xz;
 
-if (edgeStrength > 0.001 && normal.y > 0.5) {
-    const float MOUNTAIN_SEED_SCALE = 0.0625;
-    const float MOUNTAIN_PERIOD     = NOISE_PERIOD / MOUNTAIN_SEED_SCALE;
-    const float MOUNTAIN_AMPLITUDE  = 25.0;
-    float nMountain = periodicValueNoise(
-        seed * MOUNTAIN_SEED_SCALE + vec2(91.7, 12.4),
-        MOUNTAIN_PERIOD) - 0.5;
-    worldPos.y += nMountain * MOUNTAIN_AMPLITUDE * edgeStrength;
-}
+    if (nearStrength > 0.001) {
+        vec2  nSeed = seed * NOISE_SEED_SCALE;
+        float nX    = periodicValueNoise(nSeed + vec2(17.3,  0.0), NOISE_PERIOD) - 0.5;
+        float nZ    = periodicValueNoise(nSeed + vec2( 0.0, 31.7), NOISE_PERIOD) - 0.5;
+        float nY    = periodicValueNoise(nSeed + vec2(53.1, 83.2), NOISE_PERIOD) - 0.5;
+        worldPos.x += nX * 0.4  * nearStrength;
+        worldPos.z += nZ * 0.4  * nearStrength;
+        worldPos.y += nY * 0.08 * nearStrength;
+    }
 
-// ── Block-face bevel ───────────────────────────────────────────────────
-//
-// Only true exposed block edges get the chamfer. "Exposed" means the
-// mesher confirmed there is no flush coplanar neighbor on that side.
-// The four edge-exposure masks encode this per cell:
-//
-//   maskA0 : A=0   side of quad, bit j = is cell j along B exposed here?
-//   maskA1 : A=end side of quad, bit j = cell j along B
-//   maskB0 : B=0   side of quad, bit i = cell i along A
-//   maskB1 : B=end side of quad, bit i = cell i along A
-//
-// For any tessellated point near a quad edge, we look up the bit for the
-// block cell we are currently in — if it is 0, that side is flush against
-// a neighbor and we do not bevel. If it is 1, we bevel exactly as the
-// original single-quad design: tangent pullback + normal push + normal tilt.
-//
-// Interior edges (not on the outer quad boundary) are never touched —
-// BEVEL_RADIUS < 1 means the smoothstep for a genuine interior point
-// (distance 0.5 from nearest cell edge) evaluates to 0 before we ever
-// consult a mask. The mask lookup is only meaningful when the smoothstep
-// says we are near an outer edge, which is exactly when we want the check.
-{
-    int   quadPack = int(teQuadSize[0]);
-    float sizeA    = float(quadPack & 0xFF);
-    float sizeB    = float((quadPack >> 8) & 0xFF);
+    if (farStrength > 0.001 && normal.y > 0.5) {
+        float heightScale = clamp(worldPos.y / 80.0, 0.0, 1.0);
+        float nY = (periodicValueNoise(seed * 0.1, NOISE_PERIOD / 0.1) - 0.5) * 2.0;
+        worldPos.y += nY * 3.0 * farStrength * heightScale;
+    }
 
-    // Flat mask values — same for every invocation in the patch.
-    float maskA0 = teBevelMaskA0[0];
-    float maskA1 = teBevelMaskA1[0];
-    float maskB0 = teBevelMaskB0[0];
-    float maskB1 = teBevelMaskB1[0];
+    if (edgeStrength > 0.001 && normal.y > 0.5) {
+        const float MOUNTAIN_SEED_SCALE = 0.0625;
+        const float MOUNTAIN_PERIOD     = NOISE_PERIOD / MOUNTAIN_SEED_SCALE;
+        const float MOUNTAIN_AMPLITUDE  = 25.0;
+        float nMountain = periodicValueNoise(
+            seed * MOUNTAIN_SEED_SCALE + vec2(91.7, 12.4),
+            MOUNTAIN_PERIOD) - 0.5;
+        worldPos.y += nMountain * MOUNTAIN_AMPLITUDE * edgeStrength;
+    }
 
-    vec3 quadTangentA = normalize(teWorldPos[1] - teWorldPos[0]);
-    vec3 quadTangentB = normalize(teWorldPos[3] - teWorldPos[0]);
+    // ── Block-face bevel ───────────────────────────────────────────────────
+    //
+    // Chamfers every convex exposed block edge. The mesher emits four
+    // per-quad bitmasks recording which cells are convex-exposed on each
+    // outer edge:
+    //
+    //   maskA0  bit j = cell j along B is exposed on the A=0   side
+    //   maskA1  bit j = cell j along B is exposed on the A=max side
+    //   maskB0  bit i = cell i along A is exposed on the B=0   side
+    //   maskB1  bit i = cell i along A is exposed on the B=max side
+    //
+    // ── Interior-corner fix ───────────────────────────────────────────────
+    //
+    // At a concave (interior) world corner, an exposed quad edge meets an
+    // unexposed perpendicular edge. Without correction the exposed edge's
+    // bevel displaces its corner vertex while the adjacent face's corner
+    // stays at its original world position — opening a hole.
+    //
+    // Fix: multiply each edge bevel by a per-corner fade factor:
+    //
+    //   mix( smoothstep(0, BEVEL_RADIUS, dist_from_perp_edge), 1.0, exposed )
+    //
+    // When the perpendicular edge is NOT exposed (exposed=0): the factor
+    // is smoothstep → 0 right on the corner boundary, reaching 1 at
+    // BEVEL_RADIUS away — zeroing the displacement at the corner vertex so
+    // it stays at its original position and seams are closed.
+    // When exposed (=1): factor = 1, exterior corner is unchanged.
+    //
+    // Mask-bit indexing: because BEVEL_RADIUS (0.30) < 1 block unit,
+    // whenever rawBevelA0 is nonzero (posA < 0.30) it is guaranteed that
+    // cellIndexA == 0. So the perpendicular B-edges at both end-corners of
+    // the A=0 edge are always at cellIndexA=0, giving bits maskB0[0] and
+    // maskB1[0]. Symmetric reasoning fixes bits for A1 (cellIndexA==iLastA),
+    // B0 (cellIndexB==0), and B1 (cellIndexB==iLastB).
+    {
+        int   quadPack = int(teQuadSize[0]);
+        float sizeA    = float(quadPack & 0xFF);
+        float sizeB    = float((quadPack >> 8) & 0xFF);
 
-    // Position in block units.
-    float posA = u * sizeA;
-    float posB = v * sizeB;
+        float maskA0 = teBevelMaskA0[0];
+        float maskA1 = teBevelMaskA1[0];
+        float maskB0 = teBevelMaskB0[0];
+        float maskB1 = teBevelMaskB1[0];
 
-    // Which block cell we are in along each axis (0-based integer index).
-    int cellIndexA = int(floor(posA));
-    int cellIndexB = int(floor(posB));
+        vec3 quadTangentA = normalize(teWorldPos[1] - teWorldPos[0]);
+        vec3 quadTangentB = normalize(teWorldPos[3] - teWorldPos[0]);
 
-    // Clamp to valid range — at u=1 exactly, floor gives sizeA which is
-    // one past the end. Map it back to the last cell.
-    cellIndexA = clamp(cellIndexA, 0, int(sizeA) - 1);
-    cellIndexB = clamp(cellIndexB, 0, int(sizeB) - 1);
+        // Position in block units within the quad.
+        float posA = u * sizeA;
+        float posB = v * sizeB;
 
-    // Distance from this vertex to the nearest outer quad edge, in block units.
-    float outerDistA = min(posA, sizeA - posA);   // 0 at A=0 and A=sizeA
-    float outerDistB = min(posB, sizeB - posB);   // 0 at B=0 and B=sizeB
+        // Integer cell indices, clamped to valid range.
+        int cellIndexA = clamp(int(floor(posA)), 0, int(sizeA) - 1);
+        int cellIndexB = clamp(int(floor(posB)), 0, int(sizeB) - 1);
 
-    // Bevel weight for each outer edge (1.0 right on the edge, 0 at BEVEL_RADIUS in).
-    float rawBevelA0 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, posA);
-    float rawBevelA1 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, sizeA - posA);
-    float rawBevelB0 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, posB);
-    float rawBevelB1 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, sizeB - posB);
+        // Last-cell indices for the A=max and B=max corner lookups.
+        int iLastA = int(sizeA) - 1;
+        int iLastB = int(sizeB) - 1;
 
-    // Gate each weight through the per-cell exposure mask bit.
-    // If the bit is 0, this side is flush against a neighbor — zero the weight.
-    float bevelA0 = rawBevelA0 * maskBit(maskA0, cellIndexB);
-    float bevelA1 = rawBevelA1 * maskBit(maskA1, cellIndexB);
-    float bevelB0 = rawBevelB0 * maskBit(maskB0, cellIndexA);
-    float bevelB1 = rawBevelB1 * maskBit(maskB1, cellIndexA);
+        // Raw per-edge bevel weights: 1.0 on the outer edge, 0.0 at BEVEL_RADIUS in.
+        float rawBevelA0 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, posA);
+        float rawBevelA1 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, sizeA - posA);
+        float rawBevelB0 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, posB);
+        float rawBevelB1 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, sizeB - posB);
 
-    // Collapse to per-axis totals and overall max.
-    // A axis: the two A-edges oppose each other, so combine with max.
-    float bevelA   = max(bevelA0, bevelA1);
-    float bevelB   = max(bevelB0, bevelB1);
-    float bevelMax = max(bevelA, bevelB);
+        // bevelA0 — A=0 outer edge
+        //   corner (A=0,   B=0)   → perpendicular B=0   exposure: maskB0[0]
+        //   corner (A=0,   B=max) → perpendicular B=max exposure: maskB1[0]
+        float bevelA0 = rawBevelA0 * maskBit(maskA0, cellIndexB)
+            * mix(smoothstep(0.0, BEVEL_RADIUS, posB),         1.0, maskBit(maskB0, 0))
+            * mix(smoothstep(0.0, BEVEL_RADIUS, sizeB - posB), 1.0, maskBit(maskB1, 0));
 
-    if (bevelMax > 0.001) {
-        // Pull toward the face centre — positive at A0 edge (u near 0),
-        // negative at A1 edge (u near 1). sign(0.5-u) is safe here because
-        // the quad center (where it hits 0) is never in the bevel zone of
-        // a real outer edge.
-        vec3 towardCenterA = quadTangentA * sign(0.5 - u);
-        vec3 towardCenterB = quadTangentB * sign(0.5 - v);
+        // bevelA1 — A=max outer edge
+        //   corner (A=max, B=0)   → perpendicular B=0   exposure: maskB0[iLastA]
+        //   corner (A=max, B=max) → perpendicular B=max exposure: maskB1[iLastA]
+        float bevelA1 = rawBevelA1 * maskBit(maskA1, cellIndexB)
+            * mix(smoothstep(0.0, BEVEL_RADIUS, posB),         1.0, maskBit(maskB0, iLastA))
+            * mix(smoothstep(0.0, BEVEL_RADIUS, sizeB - posB), 1.0, maskBit(maskB1, iLastA));
 
-        // Tangent pullback: chamfer the exposed edge inward.
-        worldPos += towardCenterA * BEVEL_SIZE * bevelA;
-        worldPos += towardCenterB * BEVEL_SIZE * bevelB;
+        // bevelB0 — B=0 outer edge
+        //   corner (A=0,   B=0) → perpendicular A=0   exposure: maskA0[0]
+        //   corner (A=max, B=0) → perpendicular A=max exposure: maskA1[0]
+        float bevelB0 = rawBevelB0 * maskBit(maskB0, cellIndexA)
+            * mix(smoothstep(0.0, BEVEL_RADIUS, posA),         1.0, maskBit(maskA0, 0))
+            * mix(smoothstep(0.0, BEVEL_RADIUS, sizeA - posA), 1.0, maskBit(maskA1, 0));
 
-        // Normal push: sink the chamfer below the face plane.
-        worldPos -= normal * BEVEL_SIZE * bevelMax;
+        // bevelB1 — B=max outer edge
+        //   corner (A=0,   B=max) → perpendicular A=0   exposure: maskA0[iLastB]
+        //   corner (A=max, B=max) → perpendicular A=max exposure: maskA1[iLastB]
+        float bevelB1 = rawBevelB1 * maskBit(maskB1, cellIndexA)
+            * mix(smoothstep(0.0, BEVEL_RADIUS, posA),         1.0, maskBit(maskA0, iLastB))
+            * mix(smoothstep(0.0, BEVEL_RADIUS, sizeA - posA), 1.0, maskBit(maskA1, iLastB));
 
-        // Normal tilt: rotate the surface normal toward the edge so
-        // shading reinforces the rounded impression.
-        vec3  edgeDir = -towardCenterA * bevelA - towardCenterB * bevelB;
-        float edgeLen = length(edgeDir);
-        if (edgeLen > 0.001) {
-            normal = normalize(mix(normal,
-                                   edgeDir / edgeLen,
-                                   bevelMax * BEVEL_NORMAL_BLEND));
+        // Collapse to per-axis totals and overall max.
+        float bevelA   = max(bevelA0, bevelA1);
+        float bevelB   = max(bevelB0, bevelB1);
+        float bevelMax = max(bevelA, bevelB);
+
+        if (bevelMax > 0.001) {
+
+            // Pull toward the face centre along each tangent axis.
+            vec3 towardCenterA = quadTangentA * sign(0.5 - u);
+            vec3 towardCenterB = quadTangentB * sign(0.5 - v);
+
+            // Tangent pullback: chamfer the exposed edge inward.
+            worldPos += towardCenterA * BEVEL_SIZE * bevelA;
+            worldPos += towardCenterB * BEVEL_SIZE * bevelB;
+
+            // Normal push: sink the chamfer below the face plane.
+            worldPos -= normal * BEVEL_SIZE * bevelMax;
+
+            // Normal tilt: rotate the surface normal toward the chamfer edge
+            // so lighting reinforces the rounded impression.
+            vec3  edgeDir = -towardCenterA * bevelA - towardCenterB * bevelB;
+            float edgeLen = length(edgeDir);
+            if (edgeLen > 0.001) {
+                normal = normalize(mix(normal,
+                                       edgeDir / edgeLen,
+                                       bevelMax * BEVEL_NORMAL_BLEND));
+            }
         }
     }
-}
-// ──────────────────────────────────────────────────────────────────────
+    // ──────────────────────────────────────────────────────────────────────
 
-vLocalPos   = worldPos;
-vUVLocalPos = uvLocalPos;
-vNormal     = normal;
-vUVOrigin   = teUVOrigin[0];
-vOrient     = teOrient[0];
-vColor = mix(mix(teColor[0], teColor[1], u),
-             mix(teColor[3], teColor[2], u), v);
+    vLocalPos   = worldPos;
+    vUVLocalPos = uvLocalPos;
+    vNormal     = normal;
+    vUVOrigin   = teUVOrigin[0];
+    vOrient     = teOrient[0];
+    vColor = mix(mix(teColor[0], teColor[1], u),
+                 mix(teColor[3], teColor[2], u), v);
 
-gl_Position = u_viewProjection * vec4(worldPos, 1.0);
+    gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }
