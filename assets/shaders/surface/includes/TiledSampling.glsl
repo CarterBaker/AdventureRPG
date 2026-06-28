@@ -11,7 +11,6 @@ int blockPosHash(ivec3 p) {
 }
 
 vec2 tileUV(vec3 localPos, vec2 uvOrigin, vec3 normal, float encodedFaceF) {
-
     int encodedFace = int(encodedFaceF);
     int axisMode;
     int spin;
@@ -19,12 +18,12 @@ vec2 tileUV(vec3 localPos, vec2 uvOrigin, vec3 normal, float encodedFaceF) {
     if (encodedFace >= 24) {
         int faceOrdinal = encodedFace - 24;
         axisMode = 0;
-
         ivec3 blockPos = ivec3(floor(localPos - normal * 0.5));
-
-        int hash = blockPosHash(blockPos + ivec3(faceOrdinal * 7, faceOrdinal * 13, faceOrdinal * 3));
+        // Mask to [0, CHUNK_SIZE-1] so block (1,1,1) hashes identically in every chunk.
+        // u_chunkSize = 16 (const from SettingsData.glsl); power-of-two so & mask is exact,
+        // and two's complement makes it correct for negative coordinates too.
+        int hash = blockPosHash((blockPos & ivec3(int(u_chunkSize) - 1)) + ivec3(faceOrdinal * 7, faceOrdinal * 13, faceOrdinal * 3));
         spin = abs(hash) & 3;
-
     } else {
         vec2 faceData = u_faceOrientations[encodedFace];
         axisMode = int(faceData.x);

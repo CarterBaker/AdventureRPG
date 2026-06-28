@@ -548,36 +548,6 @@ class FullGeometryBranch extends BranchPackage {
         return true;
     }
 
-    private boolean isExposedOnSide(
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance,
-            int cellXYZ,
-            Direction3Vector faceDirection,
-            Direction3Vector sideDirection) {
-
-        SubChunkInstance neighborSubChunk = getComparativeSubChunkInstance(
-                chunkInstance, subChunkInstance, cellXYZ, sideDirection);
-
-        if (neighborSubChunk == null || neighborSubChunk == ERROR)
-            return true;
-
-        int neighborXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
-
-        BlockPaletteHandle neighborBlockPalette = neighborSubChunk.getBlockPaletteHandle();
-        short neighborBlockID = neighborBlockPalette.getBlock(neighborXYZ);
-        BlockHandle neighborBlockHandle = blockManager.getBlockHandleFromBlockID(neighborBlockID);
-
-        BlockPaletteHandle neighborBiomePalette = neighborSubChunk.getBiomePaletteHandle();
-        short neighborBiomeID = neighborBiomePalette.getBlock(neighborXYZ);
-        BiomeHandle neighborBiomeHandle = biomeManager.getBiomeHandleFromBiomeID(neighborBiomeID);
-
-        if (blockHasFace(chunkInstance, neighborSubChunk, neighborXYZ, faceDirection,
-                neighborBiomeHandle, neighborBlockHandle))
-            return false;
-
-        return true;
-    }
-
     // Vert Color \\
 
     private float getVertColor(
