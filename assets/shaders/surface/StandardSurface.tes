@@ -58,29 +58,30 @@ float maskBit(float mask, int bit) {
     return float((int(mask) >> bit) & 1);
 }
 
-// Smoothly blends the per-cell exposure bit across internal cell boundaries
-// along an edge. A greedy-merged quad can span many cells whose convex-
-// exposure pattern changes partway along the edge (e.g. a staircase
-// boundary baked into one merged quad); without this, the bevel weight
-// cliffs from full to zero at that internal seam, tearing a hole in the
-// surface. This blends only within MASK_BLEND of the boundary itself — the
-// rest of each cell keeps its exact bit value, so jaggedness at block scale
-// is fully preserved. Quad corners (idx 0 / lastIndex) are untouched here;
-// those are handled separately by the interior-corner fade below.
+// Smoothly blends the per-cell exposure bit across internal cell boundaries.
+// Unlike a per-cell (floor-based) blend, this is centered ON each boundary,
+// so approaching from either side converges to the identical value at the
+// boundary itself — which is exactly where T-junctions and concave-corner
+// crossings land, since those always fall on integer cell lines.
 float maskBitSmooth(float mask, float pos, int lastIndex) {
-    int   idx  = clamp(int(floor(pos)), 0, lastIndex);
-    float frac = pos - float(idx);
-
+    int idx = clamp(int(floor(pos)), 0, lastIndex);
     float thisBit = maskBit(mask, idx);
-    float prevBit = (idx > 0)         ? maskBit(mask, idx - 1) : thisBit;
-    float nextBit = (idx < lastIndex) ? maskBit(mask, idx + 1) : thisBit;
 
-    float toPrev = 1.0 - smoothstep(0.0, MASK_BLEND, frac);
-    float toNext =       smoothstep(1.0 - MASK_BLEND, 1.0, frac);
+    float nearestBoundary = floor(pos + 0.5);
+    int   boundaryIdx      = int(nearestBoundary);
 
-    float result = mix(thisBit, prevBit, toPrev);
-    result        = mix(result,  nextBit, toNext);
-    return result;
+    // No internal boundary nearby — we're at/near an outer quad corner,
+    // which stays untouched here as before.
+    if (boundaryIdx <= 0 || boundaryIdx > lastIndex)
+        return thisBit;
+
+    float dist = pos - nearestBoundary; // signed, in roughly [-0.5, 0.5]
+
+    float belowBit = maskBit(mask, boundaryIdx - 1);
+    float aboveBit = maskBit(mask, boundaryIdx);
+
+    float t = smoothstep(-MASK_BLEND * 0.5, MASK_BLEND * 0.5, dist);
+    return mix(belowBit, aboveBit, t);
 }
 
 void main() {
