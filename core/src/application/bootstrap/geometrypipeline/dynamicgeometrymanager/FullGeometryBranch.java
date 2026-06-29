@@ -527,23 +527,38 @@ class FullGeometryBranch extends BranchPackage {
                 chunkInstance, subChunkInstance, cellXYZ, sideDirection);
 
         if (sideSubChunk == null || sideSubChunk == ERROR)
-            return true; // world boundary → open/convex, consistent with isExposedOnSide
+            return true;
 
         int sideXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
-
         BlockPaletteHandle sidePalette = sideSubChunk.getBlockPaletteHandle();
         short sideBlockID = sidePalette.getBlock(sideXYZ);
         BlockHandle sideBlock = blockManager.getBlockHandleFromBlockID(sideBlockID);
 
-        // Concave: tangent neighbor is same solid geometry → interior corner → no bevel
         if (sideBlock.getGeometry() == blockHandle.getGeometry())
             return false;
 
-        // Convex: tangent neighbor is open or a different type. Confirm the edge is
-        // actually exposed — if the tangent neighbor has its own coplanar face in
-        // faceDirection, the two faces are flush and neither should bevel.
         if (blockHasFace(chunkInstance, sideSubChunk, sideXYZ, faceDirection, null, sideBlock))
             return false;
+
+        // Symmetric partner check: the neighbor in faceDirection (e.g. U for TOP's
+        // call,
+        // N for NORTH's call) might itself have an exposed face in sideDirection. This
+        // is
+        // exactly the *other* adjacent face's flush test for this same corner. Without
+        // this, TOP and NORTH can independently disagree about the same physical edge —
+        // one bevels, one doesn't, and the surfaces no longer meet.
+        SubChunkInstance faceSubChunk = getComparativeSubChunkInstance(
+                chunkInstance, subChunkInstance, cellXYZ, faceDirection);
+
+        if (faceSubChunk != null && faceSubChunk != ERROR) {
+            int faceXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, faceDirection);
+            BlockPaletteHandle facePalette = faceSubChunk.getBlockPaletteHandle();
+            short faceBlockID = facePalette.getBlock(faceXYZ);
+            BlockHandle faceBlock = blockManager.getBlockHandleFromBlockID(faceBlockID);
+
+            if (blockHasFace(chunkInstance, faceSubChunk, faceXYZ, sideDirection, null, faceBlock))
+                return false;
+        }
 
         return true;
     }
