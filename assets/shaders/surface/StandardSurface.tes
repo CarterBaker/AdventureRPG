@@ -26,6 +26,9 @@ out float vColor;
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
 
+// Same per-draw flag as StandardSurface.fsh / .tcs.
+uniform bool u_forceFlatUnderlay;
+
 const float CHUNK_SIZE_F = 16.0;
 const float NOISE_SEED_SCALE = 0.5;
 const float NOISE_PERIOD = CHUNK_SIZE_F * NOISE_SEED_SCALE;
@@ -199,11 +202,6 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     // ──────────────────────────────────────────────────────────────────────
 
     // ── Height-map displacement ─────────────────────────────────────────────
-    // Real vertex displacement along the bevel-adjusted normal — this is the
-    // actual geometric bump, not a fragment-shader fake. Gated by nearStrength
-    // so cost is only paid where the TCS has already boosted tessellation
-    // density enough to resolve it. uvLocalPos (the pre-displacement bilinear
-    // position) keeps the tiling stable as the surface deforms underneath it.
     if (nearStrength > 0.001) {
         vec2  tiledUV = tileUV(uvLocalPos, teUVOrigin[0], normal, teOrient[0]);
         float h       = texture(u_textureArray, vec3(tiledUV, float(u_layer_height))).r;
@@ -219,20 +217,34 @@ void main() {
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
 
+    if (u_forceFlatUnderlay) {
+        // Cheap hole-filling underlay: flat bilinear interpolation only —
+        // no terrain noise, no bevel, no height bump, no FD normal
+        // reconstruction. Matches the original greedy-meshed quad exactly,
+        // so it's watertight by construction. Drawn before the full Detail
+        // pass (StandardSurface.fsh) so tessellation/bevel cracks in that
+        // pass fall back to this instead of showing the void.
+        vec3 worldPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
+                             mix(teWorldPos[3], teWorldPos[2], u), v);
+        vec3 normal   = normalize(mix(mix(teNormal[0], teNormal[1], u),
+                                       mix(teNormal[3], teNormal[2], u), v));
+
+        vLocalPos   = worldPos;
+        vUVLocalPos = worldPos;
+        vNormal     = normal;
+        vUVOrigin   = teUVOrigin[0];
+        vOrient     = teOrient[0];
+        vColor = mix(mix(teColor[0], teColor[1], u),
+                     mix(teColor[3], teColor[2], u), v);
+
+        gl_Position = u_viewProjection * vec4(worldPos, 1.0);
+        return;
+    }
+
     vec3 normal;
     vec3 worldPos = evalDisplacedSurface(u, v, normal);
 
     // ── Finite-difference normal reconstruction ─────────────────────────────
-    // The height displacement above moves worldPos but the analytic normal
-    // carried alongside it doesn't know about the *slope* that displacement
-    // just created. Re-derive the true normal from two neighboring displaced
-    // samples so lighting, the normal map's TBN, and SSAO all see the real
-    // bumped surface — not the flat (or bevel-only) one underneath it.
-    //
-    // Steps are signed so they always point toward the interior of the patch
-    // (stepping backward near u=1 or v=1 instead of overshooting past the
-    // edge), which keeps the tangent's directional sense consistent without
-    // extra branching logic.
     float halfD0       = u_renderDistance * 0.5 - 0.5;
     float maxDist0      = halfD0 * halfD0 * 2.0;
     float linearDist0   = sqrt(clamp(u_distanceFromCenter / maxDist0, 0.0, 1.0));
@@ -251,9 +263,6 @@ void main() {
 
         if (length(tangentU) > 1e-6 && length(tangentV) > 1e-6) {
             vec3 fdNormal = normalize(cross(tangentU, tangentV));
-            // Cross-product winding depends on face orientation; snap to
-            // the same hemisphere as the analytic normal rather than trying
-            // to derive the correct order per face.
             if (dot(fdNormal, normal) < 0.0)
                 fdNormal = -fdNormal;
             normal = normalize(mix(normal, fdNormal, nearStrength0));
