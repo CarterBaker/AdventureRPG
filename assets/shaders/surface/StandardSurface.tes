@@ -22,6 +22,9 @@ out float vColor;
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
+#include "surface/includes/SurfaceStandard.glsl"
+#include "includes/BlockOrientationMapData.glsl"
+#include "surface/includes/TiledSampling.glsl"
 
 const float CHUNK_SIZE_F = 16.0;
 const float NOISE_SEED_SCALE = 0.5;
@@ -31,8 +34,12 @@ const float NOISE_PERIOD = CHUNK_SIZE_F * NOISE_SEED_SCALE;
 const float BEVEL_RADIUS       = 0.30;
 const float BEVEL_SIZE         = 0.09;
 const float BEVEL_NORMAL_BLEND = 0.60;
-const float MASK_BLEND         = 0.15; // blend half-width (block units) around
-                                        // internal cell-mask transitions
+const float MASK_BLEND         = 0.15;
+// ──────────────────────────────────────────────────────────────────────────
+
+// ── Height-displacement tunables ───────────────────────────────────────────
+const float HEIGHT_DISPLACE_SCALE = 0.12; // block units, peak bump height
+const float HEIGHT_FD_EPSILON     = 0.02; // finite-difference step, tess-coord space
 // ──────────────────────────────────────────────────────────────────────────
 
 float hash(vec2 p) {
@@ -52,17 +59,10 @@ float periodicValueNoise(vec2 p, float period) {
         mix(hash(i01), hash(i11), f.x), f.y);
 }
 
-// Returns 1.0 if bit 'bit' is set in the float-encoded mask, else 0.0.
-// Masks are exact-integer floats, so int() conversion is lossless.
 float maskBit(float mask, int bit) {
     return float((int(mask) >> bit) & 1);
 }
 
-// Smoothly blends the per-cell exposure bit across internal cell boundaries.
-// Unlike a per-cell (floor-based) blend, this is centered ON each boundary,
-// so approaching from either side converges to the identical value at the
-// boundary itself — which is exactly where T-junctions and concave-corner
-// crossings land, since those always fall on integer cell lines.
 float maskBitSmooth(float mask, float pos, int lastIndex) {
     int idx = clamp(int(floor(pos)), 0, lastIndex);
     float thisBit = maskBit(mask, idx);
@@ -70,12 +70,10 @@ float maskBitSmooth(float mask, float pos, int lastIndex) {
     float nearestBoundary = floor(pos + 0.5);
     int   boundaryIdx      = int(nearestBoundary);
 
-    // No internal boundary nearby — we're at/near an outer quad corner,
-    // which stays untouched here as before.
     if (boundaryIdx <= 0 || boundaryIdx > lastIndex)
         return thisBit;
 
-    float dist = pos - nearestBoundary; // signed, in roughly [-0.5, 0.5]
+    float dist = pos - nearestBoundary;
 
     float belowBit = maskBit(mask, boundaryIdx - 1);
     float aboveBit = maskBit(mask, boundaryIdx);
@@ -84,13 +82,15 @@ float maskBitSmooth(float mask, float pos, int lastIndex) {
     return mix(belowBit, aboveBit, t);
 }
 
-void main() {
+// Computes the fully displaced world position (terrain noise + bevel +
+// height-map bump) for an arbitrary point in the patch's (u,v) domain, and
+// the bevel-adjusted analytic normal at that point. Pure function of its
+// (u,v) args plus the patch's per-corner inputs — safe to call multiple
+// times per invocation, which main() does to finite-difference the normal.
+vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
 
-    float u = gl_TessCoord.x;
-    float v = gl_TessCoord.y;
-
-    vec3 worldPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
-                        mix(teWorldPos[3], teWorldPos[2], u), v);
+    vec3 worldPos   = mix(mix(teWorldPos[0], teWorldPos[1], u),
+                          mix(teWorldPos[3], teWorldPos[2], u), v);
     vec3 uvLocalPos = worldPos;
 
     vec3 normal = normalize(
@@ -147,41 +147,33 @@ void main() {
         vec3 quadTangentA = normalize(teWorldPos[1] - teWorldPos[0]);
         vec3 quadTangentB = normalize(teWorldPos[3] - teWorldPos[0]);
 
-        // Position in block units within the quad.
         float posA = u * sizeA;
         float posB = v * sizeB;
 
-        // Last-cell indices for the A=max and B=max corner lookups.
         int iLastA = int(sizeA) - 1;
         int iLastB = int(sizeB) - 1;
 
-        // Raw per-edge bevel weights: 1.0 on the outer edge, 0.0 at BEVEL_RADIUS in.
         float rawBevelA0 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, posA);
         float rawBevelA1 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, sizeA - posA);
         float rawBevelB0 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, posB);
         float rawBevelB1 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, sizeB - posB);
 
-        // bevelA0 — A=0 outer edge
         float bevelA0 = rawBevelA0 * maskBitSmooth(maskA0, posB, iLastB)
             * mix(smoothstep(0.0, BEVEL_RADIUS, posB),         1.0, maskBit(maskB0, 0))
             * mix(smoothstep(0.0, BEVEL_RADIUS, sizeB - posB), 1.0, maskBit(maskB1, 0));
 
-        // bevelA1 — A=max outer edge
         float bevelA1 = rawBevelA1 * maskBitSmooth(maskA1, posB, iLastB)
             * mix(smoothstep(0.0, BEVEL_RADIUS, posB),         1.0, maskBit(maskB0, iLastA))
             * mix(smoothstep(0.0, BEVEL_RADIUS, sizeB - posB), 1.0, maskBit(maskB1, iLastA));
 
-        // bevelB0 — B=0 outer edge
         float bevelB0 = rawBevelB0 * maskBitSmooth(maskB0, posA, iLastA)
             * mix(smoothstep(0.0, BEVEL_RADIUS, posA),         1.0, maskBit(maskA0, 0))
             * mix(smoothstep(0.0, BEVEL_RADIUS, sizeA - posA), 1.0, maskBit(maskA1, 0));
 
-        // bevelB1 — B=max outer edge
         float bevelB1 = rawBevelB1 * maskBitSmooth(maskB1, posA, iLastA)
             * mix(smoothstep(0.0, BEVEL_RADIUS, posA),         1.0, maskBit(maskA0, iLastB))
             * mix(smoothstep(0.0, BEVEL_RADIUS, sizeA - posA), 1.0, maskBit(maskA1, iLastB));
 
-        // Collapse to per-axis totals and overall max.
         float bevelA   = max(bevelA0, bevelA1);
         float bevelB   = max(bevelB0, bevelB1);
         float bevelMax = max(bevelA, bevelB);
@@ -205,6 +197,71 @@ void main() {
         }
     }
     // ──────────────────────────────────────────────────────────────────────
+
+    // ── Height-map displacement ─────────────────────────────────────────────
+    // Real vertex displacement along the bevel-adjusted normal — this is the
+    // actual geometric bump, not a fragment-shader fake. Gated by nearStrength
+    // so cost is only paid where the TCS has already boosted tessellation
+    // density enough to resolve it. uvLocalPos (the pre-displacement bilinear
+    // position) keeps the tiling stable as the surface deforms underneath it.
+    if (nearStrength > 0.001) {
+        vec2  tiledUV = tileUV(uvLocalPos, teUVOrigin[0], normal, teOrient[0]);
+        float h       = texture(u_textureArray, vec3(tiledUV, float(u_layer_height))).r;
+        worldPos += normal * (h - 0.5) * HEIGHT_DISPLACE_SCALE * nearStrength;
+    }
+
+    outNormal = normal;
+    return worldPos;
+}
+
+void main() {
+
+    float u = gl_TessCoord.x;
+    float v = gl_TessCoord.y;
+
+    vec3 normal;
+    vec3 worldPos = evalDisplacedSurface(u, v, normal);
+
+    // ── Finite-difference normal reconstruction ─────────────────────────────
+    // The height displacement above moves worldPos but the analytic normal
+    // carried alongside it doesn't know about the *slope* that displacement
+    // just created. Re-derive the true normal from two neighboring displaced
+    // samples so lighting, the normal map's TBN, and SSAO all see the real
+    // bumped surface — not the flat (or bevel-only) one underneath it.
+    //
+    // Steps are signed so they always point toward the interior of the patch
+    // (stepping backward near u=1 or v=1 instead of overshooting past the
+    // edge), which keeps the tangent's directional sense consistent without
+    // extra branching logic.
+    float halfD0       = u_renderDistance * 0.5 - 0.5;
+    float maxDist0      = halfD0 * halfD0 * 2.0;
+    float linearDist0   = sqrt(clamp(u_distanceFromCenter / maxDist0, 0.0, 1.0));
+    float nearStrength0 = 1.0 - smoothstep(0.0, 0.25, linearDist0);
+
+    if (nearStrength0 > 0.001) {
+        float uStep = (u + HEIGHT_FD_EPSILON <= 1.0) ?  HEIGHT_FD_EPSILON : -HEIGHT_FD_EPSILON;
+        float vStep = (v + HEIGHT_FD_EPSILON <= 1.0) ?  HEIGHT_FD_EPSILON : -HEIGHT_FD_EPSILON;
+
+        vec3 dummyNormal;
+        vec3 posU = evalDisplacedSurface(u + uStep, v, dummyNormal);
+        vec3 posV = evalDisplacedSurface(u, v + vStep, dummyNormal);
+
+        vec3 tangentU = (posU - worldPos) / uStep;
+        vec3 tangentV = (posV - worldPos) / vStep;
+
+        if (length(tangentU) > 1e-6 && length(tangentV) > 1e-6) {
+            vec3 fdNormal = normalize(cross(tangentU, tangentV));
+            // Cross-product winding depends on face orientation; snap to
+            // the same hemisphere as the analytic normal rather than trying
+            // to derive the correct order per face.
+            if (dot(fdNormal, normal) < 0.0)
+                fdNormal = -fdNormal;
+            normal = normalize(mix(normal, fdNormal, nearStrength0));
+        }
+    }
+
+    vec3 uvLocalPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
+                          mix(teWorldPos[3], teWorldPos[2], u), v);
 
     vLocalPos   = worldPos;
     vUVLocalPos = uvLocalPos;

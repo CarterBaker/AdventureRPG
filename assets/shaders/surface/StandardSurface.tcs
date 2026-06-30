@@ -25,6 +25,9 @@ out float teBevelMaskB1[];
 
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
+#include "surface/includes/SurfaceStandard.glsl"
+#include "includes/BlockOrientationMapData.glsl"
+#include "surface/includes/TiledSampling.glsl"
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
@@ -56,6 +59,36 @@ void main() {
 
         float levelA = clamp(sizeA * density, 1.0, 64.0);
         float levelB = clamp(sizeB * density, 1.0, 64.0);
+
+        // ── Height-map adaptive tessellation boost ──────────────────────────
+        // TCS has no screen-space derivatives, so LOD must be explicit
+        // (textureLod, not texture()). Sample height at all 4 patch corners
+        // and use their spread as a roughness proxy: bumpy patches get extra
+        // subdivision stacked ON TOP of the distance-based density above;
+        // flat patches (flat content, or a height map filled with the
+        // neutral default colour) get none. Faded out at distance same as
+        // the rest of the near-density logic, since far patches won't have
+        // enough screen-space size to show the bump anyway.
+        const float HEIGHT_TESS_BOOST = 24.0;
+        const float HEIGHT_LOD        = 2.0;
+
+        vec2 uv0 = tileUV(tcWorldPos[0], tcUVOrigin[0], tcNormal[0], tcOrient[0]);
+        vec2 uv1 = tileUV(tcWorldPos[1], tcUVOrigin[0], tcNormal[0], tcOrient[0]);
+        vec2 uv2 = tileUV(tcWorldPos[2], tcUVOrigin[0], tcNormal[0], tcOrient[0]);
+        vec2 uv3 = tileUV(tcWorldPos[3], tcUVOrigin[0], tcNormal[0], tcOrient[0]);
+
+        float h0 = textureLod(u_textureArray, vec3(uv0, float(u_layer_height)), HEIGHT_LOD).r;
+        float h1 = textureLod(u_textureArray, vec3(uv1, float(u_layer_height)), HEIGHT_LOD).r;
+        float h2 = textureLod(u_textureArray, vec3(uv2, float(u_layer_height)), HEIGHT_LOD).r;
+        float h3 = textureLod(u_textureArray, vec3(uv3, float(u_layer_height)), HEIGHT_LOD).r;
+
+        float heightRange = max(max(h0, h1), max(h2, h3))
+                           - min(min(h0, h1), min(h2, h3));
+
+        float heightBoost = heightRange * HEIGHT_TESS_BOOST * nearStrength;
+
+        levelA = clamp(levelA + heightBoost, 1.0, 64.0);
+        levelB = clamp(levelB + heightBoost, 1.0, 64.0);
 
         gl_TessLevelOuter[0] = levelB;
         gl_TessLevelOuter[1] = levelA;
