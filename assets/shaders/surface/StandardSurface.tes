@@ -26,9 +26,6 @@ out float vColor;
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
 
-// Same per-draw flag as StandardSurface.fsh / .tcs.
-uniform bool u_forceFlatUnderlay;
-
 const float CHUNK_SIZE_F = 16.0;
 const float NOISE_SEED_SCALE = 0.5;
 const float NOISE_PERIOD = CHUNK_SIZE_F * NOISE_SEED_SCALE;
@@ -85,11 +82,6 @@ float maskBitSmooth(float mask, float pos, int lastIndex) {
     return mix(belowBit, aboveBit, t);
 }
 
-// Computes the fully displaced world position (terrain noise + bevel +
-// height-map bump) for an arbitrary point in the patch's (u,v) domain, and
-// the bevel-adjusted analytic normal at that point. Pure function of its
-// (u,v) args plus the patch's per-corner inputs — safe to call multiple
-// times per invocation, which main() does to finite-difference the normal.
 vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
 
     vec3 worldPos   = mix(mix(teWorldPos[0], teWorldPos[1], u),
@@ -217,34 +209,9 @@ void main() {
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
 
-    if (u_forceFlatUnderlay) {
-        // Cheap hole-filling underlay: flat bilinear interpolation only —
-        // no terrain noise, no bevel, no height bump, no FD normal
-        // reconstruction. Matches the original greedy-meshed quad exactly,
-        // so it's watertight by construction. Drawn before the full Detail
-        // pass (StandardSurface.fsh) so tessellation/bevel cracks in that
-        // pass fall back to this instead of showing the void.
-        vec3 worldPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
-                             mix(teWorldPos[3], teWorldPos[2], u), v);
-        vec3 normal   = normalize(mix(mix(teNormal[0], teNormal[1], u),
-                                       mix(teNormal[3], teNormal[2], u), v));
-
-        vLocalPos   = worldPos;
-        vUVLocalPos = worldPos;
-        vNormal     = normal;
-        vUVOrigin   = teUVOrigin[0];
-        vOrient     = teOrient[0];
-        vColor = mix(mix(teColor[0], teColor[1], u),
-                     mix(teColor[3], teColor[2], u), v);
-
-        gl_Position = u_viewProjection * vec4(worldPos, 1.0);
-        return;
-    }
-
     vec3 normal;
     vec3 worldPos = evalDisplacedSurface(u, v, normal);
 
-    // ── Finite-difference normal reconstruction ─────────────────────────────
     float halfD0       = u_renderDistance * 0.5 - 0.5;
     float maxDist0      = halfD0 * halfD0 * 2.0;
     float linearDist0   = sqrt(clamp(u_distanceFromCenter / maxDist0, 0.0, 1.0));

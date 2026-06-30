@@ -9,6 +9,19 @@ out vec4 fragColor;
 #include "includes/SkyColorData.glsl"
 #include "postprocessing/includes/ViewPosReconstruct.glsl"
 
+// fogT (material.r) arrives pre-computed from StandardSurface.fsh via
+// computeFogAmount() in surface/includes/AtmosphericFog.glsl — that's the
+// single source of truth for the distance curve. It can't be recomputed
+// here: u_distanceFromCenter is only valid during a chunk's own draw call,
+// and this is a single deferred fullscreen pass that runs after every
+// chunk has already drawn, so that UBO would just hold stale leftover data.
+//
+// FOG_SHADOW_SCALE / FOG_LIT_SCALE re-weight the incoming fogT by how
+// directly lit the fragment is, since fog should read stronger on sunlit
+// distant terrain and weaker in shadow — not the reverse.
+const float FOG_SHADOW_SCALE = 0.35;
+const float FOG_LIT_SCALE    = 1.6;
+
 void main() {
     float depth = texture(u_gDepth, v_texCoord).r;
     if (depth >= 1.0) {
@@ -29,7 +42,6 @@ void main() {
     float ssaoAO = texture(u_ssaoTex, v_texCoord).r;
     float ao     = vertAO * ssaoAO;
 
-    // Fixed dielectric F0 — no metallic channel right now.
     vec3 specColor = vec3(0.04);
 
     vec3 fragPosView = reconstructViewPos(v_texCoord);
@@ -62,8 +74,11 @@ void main() {
 
     vec3 lit = albedo * skyAmbient + sunContrib + moonContrib;
 
+    float litAmount = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
+    float fogBlend  = clamp(fogT * mix(FOG_SHADOW_SCALE, FOG_LIT_SCALE, litAmount), 0.0, 1.0);
+
     vec3 fogColor = u_skyHorizonColor + 0.04;
-    lit = mix(lit, fogColor, fogT);
+    lit = mix(lit, fogColor, fogBlend);
 
     fragColor = vec4(lit, 1.0);
 }
