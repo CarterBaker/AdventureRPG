@@ -62,9 +62,10 @@ const float TIER1_MAX_SQ_DIST = 8.5;
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── Distant terrain rise tunables ──────────────────────────────────────
-// Must match TIER1_MAX_SQ_DIST/DISTORT_START gating in StandardSurface.tcs
-// (that's what actually gives this ring the interior vertices to work
-// with — see the block below for why).
+// TIER1_MAX_SQ_DIST above must match StandardSurface.tcs/.fsh — that's what
+// gives this ring the interior vertices to work with. StandardSurface.tcs
+// now tessellates the WHOLE far ring at one flat level rather than only
+// the part past DISTORT_START — see the comment there for why.
 const float DISTORT_START         = 0.55;   // fraction of render distance where the rise starts fading in
 const float DISTORT_SHARPEN       = 3.0;    // ease-in exponent — sharper rise right at the edge
 const float DISTORT_AMPLITUDE     = 500.0;  // max vertical rise in blocks, reached at the edge of view
@@ -132,9 +133,28 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
 
     float noisePeriod = u_chunkSize * NOISE_SEED_SCALE;
 
-    float halfD      = u_renderDistance * 0.5 - 0.5;
-    float maxDist    = halfD * halfD * 2.0;
-    float linearDist = sqrt(clamp(u_distanceFromCenter / maxDist, 0.0, 1.0));
+    // Continuous, per-vertex distance from the grid center, in WORLD space
+    // — not the per-chunk-quantized u_distanceFromCenter. worldPos above is
+    // already this vertex's true world position (teWorldPos is aPos +
+    // this chunk's u_gridPosition offset, set in StandardSurface.vsh, and
+    // u_gridPosition is itself relative to the center grid slot), so
+    // dot(worldPos.xz, worldPos.xz) IS squared distance-from-center,
+    // evaluated per vertex instead of once per chunk.
+    //
+    // This is the fix for the disconnected/"wireframe" seams between far
+    // chunks: two neighboring chunks sharing an edge share the exact same
+    // world-space vertex positions along it, so with this formula they now
+    // compute the exact same farDistortStrength (below) for those shared
+    // vertices too — same input, same math, bit-identical result. The old
+    // version kept u_distanceFromCenter here, which is constant across an
+    // entire chunk but different between two neighboring chunks (their
+    // dx*dx+dy*dy from center essentially never matches), so a shared-edge
+    // vertex got the same noise height sampled but scaled by two different
+    // strengths depending which chunk's draw call touched it — a real
+    // vertical gap at nearly every far-ring chunk boundary.
+    float halfDWorld   = (u_renderDistance * 0.5 - 0.5) * u_chunkSize;
+    float maxDistWorld = halfDWorld * halfDWorld * 2.0;
+    float linearDist   = sqrt(clamp(dot(worldPos.xz, worldPos.xz) / maxDistWorld, 0.0, 1.0));
 
     // Binary, tied to the same grid-slot UBO value the TCS gates on —
     // not a fraction of render distance.
@@ -163,10 +183,13 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     // merged quads spanning many blocks, that produced sharp faceted
     // "wireframe" hills instead of smooth noise-driven terrain.
     //
-    // Fixed now by giving this ring light tessellation (see
+    // Fixed now by giving this ring light, UNIFORM tessellation (see
     // StandardSurface.tcs) and sampling noise HERE, per real tessellated
     // vertex, off this vertex's own worldPos.xz — every point across a
-    // merged quad gets its own height instead of only the corners.
+    // merged quad gets its own height instead of only the corners. The
+    // linearDist fed into farDistortT below is the world-space version
+    // computed above, not u_distanceFromCenter — see that block for why
+    // that specific swap is what stops the chunk-seam cracking.
     //
     // Gated on u_distanceFromCenter > TIER1_MAX_SQ_DIST, not just
     // linearDist, so this can never fire inside Tier0/Tier1 — nearby-chunk

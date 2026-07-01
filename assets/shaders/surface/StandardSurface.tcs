@@ -41,27 +41,42 @@ out float teBevelMaskB1[];
 const float TIER0_MAX_SQ_DIST = 2.5;
 // ──────────────────────────────────────────────────────────────────────────
 
-// ── Far ring — light tessellation for the distant terrain rise ─────────
-// Must match TIER1_MAX_SQ_DIST and DISTORT_START in StandardSurface.tes —
-// same ring boundary and same fade-in curve the noise-based rise there
-// uses; this branch exists purely to give that ring enough interior
-// vertices to actually follow the noise instead of just moving 4 corners.
+// ── Far ring — block-exact tessellation for the distant terrain rise ────
+// Must match TIER1_MAX_SQ_DIST in StandardSurface.tes — same ring boundary
+// the noise-based rise there uses; this branch exists purely to give that
+// ring enough interior vertices to actually follow the noise instead of
+// just moving 4 corners.
+//
+// Level = this quad's OWN block count per axis (from aQuadSize, same
+// unpack Tier0 uses below) — one tessellation segment per block, no
+// density multiplier. This used to be a single fixed FAR_TESS_LEVEL
+// constant shared by every far-ring quad regardless of size, which looked
+// "uniform" but wasn't actually crack-free: OpenGL only guarantees a
+// sealed shared edge when both patches touching it use the IDENTICAL
+// outer tess level for that edge, and a fixed level gives a huge merged
+// quad and a tiny neighboring one the same segment COUNT but wildly
+// different segment LENGTHS — their corners matched, nothing between them
+// did, so the (correctly-computed, post-last-fix) noise displacement
+// bulged away from a straight line on the finer side. Real cracks, not a
+// height-math problem.
+//
+// One-segment-per-own-block-count fixes this without requiring any quad
+// to know how its neighbor is subdivided: every quad, whatever its size,
+// places a vertex at EVERY block boundary within its own footprint (it
+// never skips one, since level == block count). Block boundaries are an
+// absolute, shared world-space grid, so wherever two quads' footprints
+// touch — same-size neighbors, or a T-junction where one big quad meets
+// several smaller ones — every quad involved still drops a vertex on
+// every block boundary along the shared line. That shared set of points
+// is what actually seals the seam; last turn's world-space distance fix
+// (StandardSurface.tes) made sure those shared points agree on HEIGHT,
+// this makes sure they exist in the first place on both sides.
 //
 // Deliberately separate from the Tier0 branch above and does not touch
 // it: Tier0 (dist <= 2.5) and Tier1/Mid (2.5 < dist <= 8.5) both still
 // only ever reach the levelA = levelB = 1.0 fallback below exactly as
-// before this change. Only patches beyond the Mid ring, and only once
-// they're far enough out for the rise to actually be fading in, take
-// this new branch.
-//
-// FAR_TESS_LEVEL is fixed and NOT scaled by quad size the way Tier0's
-// NEAR_DENSITY is — merged quads out here can be huge (aQuadSize packs
-// up to 255 per axis), and scaling density by size would make this the
-// opposite of "light". A flat level is enough to break up the faceting;
-// it doesn't need to be dense, just non-1.
+// before this change. Only patches beyond the Mid ring take this branch.
 const float TIER1_MAX_SQ_DIST = 8.5;
-const float DISTORT_START     = 0.55;
-const float FAR_TESS_LEVEL    = 8.0;
 // ──────────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -124,17 +139,25 @@ void main() {
 
         } else if (u_distanceFromCenter > TIER1_MAX_SQ_DIST) {
 
-            float halfDFar     = u_renderDistance * 0.5 - 0.5;
-            float maxDistFar    = halfDFar * halfDFar * 2.0;
-            float linearDistFar = sqrt(clamp(u_distanceFromCenter / maxDistFar, 0.0, 1.0));
+            int   quadPack = int(tcQuadSize[0]);
+            float sizeA    = float(quadPack & 0xFF);
+            float sizeB    = float((quadPack >> 8) & 0xFF);
 
-            if (linearDistFar >= DISTORT_START) {
-                levelA = FAR_TESS_LEVEL;
-                levelB = FAR_TESS_LEVEL;
-            } else {
-                levelA = 1.0;
-                levelB = 1.0;
-            }
+            // GL_MAX_TESS_GEN_LEVEL is only spec-guaranteed >= 64 (and 64 is
+            // the actual hardware ceiling on most GPUs). A merged quad wider
+            // than that (aQuadSize allows up to 255) gets clamped below its
+            // true block count, which breaks the one-vertex-per-block
+            // guarantee explained above FOR THAT QUAD ONLY — its segments
+            // stop landing on integer block positions. A same-size-or-smaller
+            // neighboring quad is unaffected and still places one vertex per
+            // block as normal, so an oversized quad is the one remaining
+            // place a seam can reappear. If that shows up in practice, the
+            // real fix is capping merged quad size at <=64 in the far ring
+            // during greedy meshing (outside these shader files) — clamping
+            // the level here only avoids a GL error, it doesn't reproduce
+            // the guarantee for that quad.
+            levelA = clamp(sizeA, 1.0, 64.0);
+            levelB = clamp(sizeB, 1.0, 64.0);
 
         } else {
             levelA = 1.0;
