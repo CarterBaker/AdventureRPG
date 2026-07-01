@@ -156,10 +156,8 @@ class GridBuildSystem extends SystemPackage {
             float absoluteChunkDistance = (float) Math.sqrt(chunkX * chunkX + chunkY * chunkY);
             GridSlotDetailLevel detailLevel = GridSlotDetailLevel.getDetailLevelForDistance(absoluteChunkDistance);
 
-            float ccx = chunkX + 0.5f;
-            float ccy = chunkY + 0.5f;
-            float chunkDistanceFromCenter = ccx * ccx + ccy * ccy;
-            float chunkAngleFromCenter = (float) Math.atan2(ccy, ccx);
+            float chunkDistanceFromCenter = chunkX * chunkX + chunkY * chunkY;
+            float chunkAngleFromCenter = (float) Math.atan2(chunkY, chunkX);
 
             float halfMega = megaChunkSize / 2f;
             float mcx = chunkX + halfMega;
