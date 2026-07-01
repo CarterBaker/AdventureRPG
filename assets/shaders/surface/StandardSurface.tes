@@ -57,28 +57,31 @@ const float HEIGHT_FD_EPSILON     = 0.02; // finite-difference step, tess-coord 
 const float TIER0_MAX_SQ_DIST = 2.5;
 // Must match TIER1_MAX_SQ_DIST in StandardSurface.fsh/.tcs — same 5x5 ring.
 // Used below only to keep the Distant terrain rise block from ever
-// reaching into the Mid ring, no matter how the fade-in curve is tuned.
+// reaching into the Mid ring, no matter how far the start margin or curve
+// below is tuned.
 const float TIER1_MAX_SQ_DIST = 8.5;
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── Distant terrain rise tunables ──────────────────────────────────────
 // TIER1_MAX_SQ_DIST above must match StandardSurface.tcs/.fsh — that's what
 // gives this ring the interior vertices to work with. StandardSurface.tcs
-// now tessellates the WHOLE far ring at one flat level rather than only
-// the part past DISTORT_START — see the comment there for why.
-const float DISTORT_START         = 0.55;   // fraction of render distance where the rise starts fading in
-const float DISTORT_SHARPEN       = 3.0;    // ease-in exponent — sharper rise right at the edge
-const float DISTORT_AMPLITUDE     = 500.0;  // max vertical rise in blocks, reached at the edge of view
-const float DISTORT_FREQ_LOW      = 0.012;  // world-space frequency — big rolling shapes
-const float DISTORT_FREQ_HIGH     = 0.05;   // world-space frequency — finer ridges on top
-// Noise wrap period, in CHUNKS, multiplied by u_chunkSize below at the call
-// site. Used to be a bare DISTORT_PERIOD = 4096.0 with no relation to the
-// engine's actual chunk size setting — same category of bug NOISE_PERIOD
-// had above, and the same fix TiledSampling.glsl already uses u_chunkSize
-// for (masking block position so it repeats identically every chunk).
-// 256 chunks keeps the wrap far outside any sane render distance while
-// staying tied to the real setting instead of a magic number.
-const float DISTORT_PERIOD_CHUNKS = 256.0;
+// tessellates the WHOLE far ring at one flat level (see the comment there).
+//
+// Max distance is NEVER a fixed constant — see maxDistanceWorld in
+// evalDisplacedSurface(), computed fresh every call straight from
+// u_renderDistance (SettingsData UBO). Change render distance in settings
+// and both the start point and the reach of the rise move with it
+// automatically; nothing below needs retuning when that setting changes.
+const float DISTORT_MAX_HEIGHT   = 400.0; // block units — height reached exactly AT max distance
+const float DISTORT_START_MARGIN = 512.0;  // block units subtracted from max distance — rise starts fading in at (max distance - this), NOT 32 blocks from center
+// Curve shape, 0.0–1.0, hard-clamped at the call site (1.0 itself is
+// excluded there to avoid an infinite exponent). Maps to an exponent via
+// 1 / (1 - DISTORT_CURVE):
+//   0.0  -> exponent 1.0   (perfectly linear ramp start->max)
+//   0.05 -> exponent ~1.05 (practically indistinguishable from linear)
+//   0.6  -> exponent 2.5   (moderate ease-in)
+//   ->1.0-> exponent -> huge (near-vertical rise right at the very top)
+const float DISTORT_CURVE        = 1.0;
 // ──────────────────────────────────────────────────────────────────────────
 
 float hash(vec2 p) {
@@ -133,28 +136,27 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
 
     float noisePeriod = u_chunkSize * NOISE_SEED_SCALE;
 
-    // Continuous, per-vertex distance from the grid center, in WORLD space
-    // — not the per-chunk-quantized u_distanceFromCenter. worldPos above is
+    // True world-space edge of the render volume, derived entirely from
+    // u_renderDistance and u_chunkSize (SettingsData UBO) — never a fixed
+    // constant. Same diagonal convention documented in the tier-selection
+    // comments in StandardSurface.fsh: half-width along one axis, in
+    // blocks, times sqrt(2) for the diagonal/corner case.
+    float halfDWorld       = (u_renderDistance * 0.5 - 0.5) * u_chunkSize;
+    float maxDistanceWorld = halfDWorld * sqrt(2.0);
+
+    // This vertex's own radial distance from center, in the same
+    // world-space block units as maxDistanceWorld — NOT normalized, and
+    // NOT the per-chunk-quantized u_distanceFromCenter. worldPos above is
     // already this vertex's true world position (teWorldPos is aPos +
-    // this chunk's u_gridPosition offset, set in StandardSurface.vsh, and
-    // u_gridPosition is itself relative to the center grid slot), so
-    // dot(worldPos.xz, worldPos.xz) IS squared distance-from-center,
-    // evaluated per vertex instead of once per chunk.
+    // this chunk's u_gridPosition offset, set in StandardSurface.vsh,
+    // itself relative to the center grid slot).
     //
-    // This is the fix for the disconnected/"wireframe" seams between far
-    // chunks: two neighboring chunks sharing an edge share the exact same
-    // world-space vertex positions along it, so with this formula they now
-    // compute the exact same farDistortStrength (below) for those shared
-    // vertices too — same input, same math, bit-identical result. The old
-    // version kept u_distanceFromCenter here, which is constant across an
-    // entire chunk but different between two neighboring chunks (their
-    // dx*dx+dy*dy from center essentially never matches), so a shared-edge
-    // vertex got the same noise height sampled but scaled by two different
-    // strengths depending which chunk's draw call touched it — a real
-    // vertical gap at nearly every far-ring chunk boundary.
-    float halfDWorld   = (u_renderDistance * 0.5 - 0.5) * u_chunkSize;
-    float maxDistWorld = halfDWorld * halfDWorld * 2.0;
-    float linearDist   = sqrt(clamp(dot(worldPos.xz, worldPos.xz) / maxDistWorld, 0.0, 1.0));
+    // Two neighboring quads sharing a world-space edge — top/top, top/wall,
+    // or wall/wall — share the exact same worldPos.xz along it, so this
+    // gives them the exact same farDistortStrength (below) at every shared
+    // vertex: same input, same math, bit-identical result, regardless of
+    // which draw call touched which quad.
+    float radialDist = sqrt(dot(worldPos.xz, worldPos.xz));
 
     // Binary, tied to the same grid-slot UBO value the TCS gates on —
     // not a fraction of render distance.
@@ -173,41 +175,29 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     }
 
     // ── Distant terrain rise — Far ring only ────────────────────────────
-    // Replaces two earlier attempts at this same effect that used to live
-    // here: a smaller mountain-bump version (~25 blocks, keyed off
-    // linearDist bands) and, more recently, a vertex-shader-only version
-    // (up to 500 blocks, StandardSurface.vsh). Both shared the same flaw —
-    // outside the Tier0 ring the TCS pins tess level to 1, so a height
-    // offset computed per-corner (or per-vertex pre-tessellation, same
-    // thing) can only ever move the 4 corners of a patch. With greedy-
-    // merged quads spanning many blocks, that produced sharp faceted
-    // "wireframe" hills instead of smooth noise-driven terrain.
+    // Applies to EVERY vertex in the far ring, not just top-facing quads
+    // (that top-only gate used to cause a "ladder" look — see the fix
+    // notes from the previous change; the short version: a wall quad's
+    // vertices share worldPos.xz with the top quad's edge but differ in Y,
+    // and this rise never depends on Y, so a wall rises by the exact same
+    // amount as the top it's attached to and stays welded to it, height
+    // preserved).
     //
-    // Fixed now by giving this ring light, UNIFORM tessellation (see
-    // StandardSurface.tcs) and sampling noise HERE, per real tessellated
-    // vertex, off this vertex's own worldPos.xz — every point across a
-    // merged quad gets its own height instead of only the corners. The
-    // linearDist fed into farDistortT below is the world-space version
-    // computed above, not u_distanceFromCenter — see that block for why
-    // that specific swap is what stops the chunk-seam cracking.
-    //
-    // Gated on u_distanceFromCenter > TIER1_MAX_SQ_DIST, not just
-    // linearDist, so this can never fire inside Tier0/Tier1 — nearby-chunk
-    // rendering is untouched no matter how render distance or the fade-in
-    // curve below is tuned.
-    if (u_distanceFromCenter > TIER1_MAX_SQ_DIST && normal.y > 0.5) {
-        float farDistortT        = clamp((linearDist - DISTORT_START) / (1.0 - DISTORT_START), 0.0, 1.0);
-        float farDistortStrength = pow(farDistortT, DISTORT_SHARPEN);
+    // Start point is (max distance - DISTORT_START_MARGIN), in real block
+    // units, not a fraction — so the fade-in band is always exactly
+    // DISTORT_START_MARGIN blocks wide, however render distance is set.
+    if (u_distanceFromCenter > TIER1_MAX_SQ_DIST) {
+        float startDistanceWorld = max(maxDistanceWorld - DISTORT_START_MARGIN, 0.0);
+        float fadeRange          = max(maxDistanceWorld - startDistanceWorld, 0.0001);
+        float farDistortT        = clamp((radialDist - startDistanceWorld) / fadeRange, 0.0, 1.0);
 
-        if (farDistortStrength > 0.001) {
-            float distortPeriod = u_chunkSize * DISTORT_PERIOD_CHUNKS;
+        // See DISTORT_CURVE comment above for the exponent mapping. Clamp
+        // is duplicated here (not just at declaration) so this expression
+        // can never divide by zero no matter what value someone pokes in.
+        float curveExponent      = 1.0 / max(1.0 - clamp(DISTORT_CURVE, 0.0, 0.99), 0.0001);
+        float farDistortStrength = pow(farDistortT, curveExponent);
 
-            float nLow  = periodicValueNoise(seed * DISTORT_FREQ_LOW, distortPeriod);
-            float nHigh = periodicValueNoise(seed * DISTORT_FREQ_HIGH + vec2(91.7, 12.4), distortPeriod);
-            float h     = clamp(nLow * 0.7 + nHigh * 0.3, 0.0, 1.0);
-
-            worldPos.y += h * DISTORT_AMPLITUDE * farDistortStrength;
-        }
+        worldPos.y += DISTORT_MAX_HEIGHT * farDistortStrength;
     }
     // ──────────────────────────────────────────────────────────────────────
 

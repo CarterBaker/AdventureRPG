@@ -24,8 +24,21 @@
 
 // Raised from the original 0.25 / 0.15 — fog was barely visible at the old
 // weights. Single source of truth for both call sites below.
+//
+// FOG_MAX_AMOUNT is a hard ceiling, independent of whatever the near/far
+// weights below add up to. Whatever the deferred pass does with fogT
+// (mix(litColor, fogColor, fogT) is the expected use), this guarantees the
+// result is never more than FOG_MAX_AMOUNT fog color — at least
+// (1.0 - FOG_MAX_AMOUNT) of the final pixel is always the surface's own
+// lit/albedo color. That matters most right at the render-distance edge,
+// where the far-ring "distant terrain rise" (see StandardSurface.tes) is
+// biggest and any remaining geometry seams are most visible — at 0.80 the
+// result reads as strongly sky-tinted without fully flattening into a
+// featureless fogColor cutout, so distant terrain still reads as ground,
+// not as a hole in the world.
 const float FOG_NEAR_CURVE_WEIGHT = 0.45;
 const float FOG_FAR_CURVE_WEIGHT  = 0.35;
+const float FOG_MAX_AMOUNT        = 0.80;
 
 float computeFogAmount() {
     float halfD       = u_renderDistance * 0.5 - 0.5;
@@ -33,14 +46,19 @@ float computeFogAmount() {
     float fogDist       = clamp(u_distanceFromCenter / trueMax, 0.0, 1.0);
     float linearDist     = sqrt(fogDist);
 
-    return smoothstep(0.0, 0.5, linearDist) * FOG_NEAR_CURVE_WEIGHT
+    float rawFog = smoothstep(0.0, 0.5, linearDist) * FOG_NEAR_CURVE_WEIGHT
     + smoothstep(0.5, 1.0, linearDist) * FOG_FAR_CURVE_WEIGHT;
+
+    // Explicit clamp rather than relying on the two weights above happening
+    // to sum to FOG_MAX_AMOUNT — so retuning either weight later can never
+    // silently push the total past the cap.
+    return min(rawFog, FOG_MAX_AMOUNT);
 }
 
 vec3 applyAtmosphericFog(vec3 litColor) {
     float fogT = computeFogAmount();
     vec3 fogColor = u_skyHorizonColor + 0.04;
-    return mix(litColor, fogColor, clamp(fogT, 0.0, 0.9));
+    return mix(litColor, fogColor, fogT);
 }
 
 #endif
