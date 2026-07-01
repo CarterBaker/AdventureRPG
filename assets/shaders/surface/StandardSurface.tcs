@@ -41,6 +41,29 @@ out float teBevelMaskB1[];
 const float TIER0_MAX_SQ_DIST = 2.5;
 // ──────────────────────────────────────────────────────────────────────────
 
+// ── Far ring — light tessellation for the distant terrain rise ─────────
+// Must match TIER1_MAX_SQ_DIST and DISTORT_START in StandardSurface.tes —
+// same ring boundary and same fade-in curve the noise-based rise there
+// uses; this branch exists purely to give that ring enough interior
+// vertices to actually follow the noise instead of just moving 4 corners.
+//
+// Deliberately separate from the Tier0 branch above and does not touch
+// it: Tier0 (dist <= 2.5) and Tier1/Mid (2.5 < dist <= 8.5) both still
+// only ever reach the levelA = levelB = 1.0 fallback below exactly as
+// before this change. Only patches beyond the Mid ring, and only once
+// they're far enough out for the rise to actually be fading in, take
+// this new branch.
+//
+// FAR_TESS_LEVEL is fixed and NOT scaled by quad size the way Tier0's
+// NEAR_DENSITY is — merged quads out here can be huge (aQuadSize packs
+// up to 255 per axis), and scaling density by size would make this the
+// opposite of "light". A flat level is enough to break up the faceting;
+// it doesn't need to be dense, just non-1.
+const float TIER1_MAX_SQ_DIST = 8.5;
+const float DISTORT_START     = 0.55;
+const float FAR_TESS_LEVEL    = 8.0;
+// ──────────────────────────────────────────────────────────────────────────
+
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
     teWorldPos   [gl_InvocationID] = tcWorldPos   [gl_InvocationID];
@@ -98,6 +121,20 @@ void main() {
 
             levelA = clamp(levelA + heightBoost, 1.0, 64.0);
             levelB = clamp(levelB + heightBoost, 1.0, 64.0);
+
+        } else if (u_distanceFromCenter > TIER1_MAX_SQ_DIST) {
+
+            float halfDFar     = u_renderDistance * 0.5 - 0.5;
+            float maxDistFar    = halfDFar * halfDFar * 2.0;
+            float linearDistFar = sqrt(clamp(u_distanceFromCenter / maxDistFar, 0.0, 1.0));
+
+            if (linearDistFar >= DISTORT_START) {
+                levelA = FAR_TESS_LEVEL;
+                levelB = FAR_TESS_LEVEL;
+            } else {
+                levelA = 1.0;
+                levelB = 1.0;
+            }
 
         } else {
             levelA = 1.0;

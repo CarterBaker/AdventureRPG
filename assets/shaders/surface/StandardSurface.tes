@@ -26,9 +26,13 @@ out float vColor;
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
 
-const float CHUNK_SIZE_F = 16.0;
 const float NOISE_SEED_SCALE = 0.5;
-const float NOISE_PERIOD = CHUNK_SIZE_F * NOISE_SEED_SCALE;
+// NOISE_PERIOD used to be derived from a local CHUNK_SIZE_F = 16.0 const
+// instead of the actual u_chunkSize setting (SettingsData UBO) — silently
+// correct only as long as nobody ever changed the chunk size setting.
+// u_chunkSize is a uniform, not a compile-time constant, so this can't be
+// a global 'const' anymore; it's computed once per evalDisplacedSurface()
+// call instead (one multiply, negligible).
 
 // ── Bevel tunables ─────────────────────────────────────────────────────────
 const float BEVEL_RADIUS       = 0.30;
@@ -51,6 +55,29 @@ const float HEIGHT_FD_EPSILON     = 0.02; // finite-difference step, tess-coord 
 // actually stops bevel/noise/height from ever touching those corners —
 // the TCS's tess-level-1 alone only stops subdivision, not evaluation.
 const float TIER0_MAX_SQ_DIST = 2.5;
+// Must match TIER1_MAX_SQ_DIST in StandardSurface.fsh/.tcs — same 5x5 ring.
+// Used below only to keep the Distant terrain rise block from ever
+// reaching into the Mid ring, no matter how the fade-in curve is tuned.
+const float TIER1_MAX_SQ_DIST = 8.5;
+// ──────────────────────────────────────────────────────────────────────────
+
+// ── Distant terrain rise tunables ──────────────────────────────────────
+// Must match TIER1_MAX_SQ_DIST/DISTORT_START gating in StandardSurface.tcs
+// (that's what actually gives this ring the interior vertices to work
+// with — see the block below for why).
+const float DISTORT_START         = 0.55;   // fraction of render distance where the rise starts fading in
+const float DISTORT_SHARPEN       = 3.0;    // ease-in exponent — sharper rise right at the edge
+const float DISTORT_AMPLITUDE     = 500.0;  // max vertical rise in blocks, reached at the edge of view
+const float DISTORT_FREQ_LOW      = 0.012;  // world-space frequency — big rolling shapes
+const float DISTORT_FREQ_HIGH     = 0.05;   // world-space frequency — finer ridges on top
+// Noise wrap period, in CHUNKS, multiplied by u_chunkSize below at the call
+// site. Used to be a bare DISTORT_PERIOD = 4096.0 with no relation to the
+// engine's actual chunk size setting — same category of bug NOISE_PERIOD
+// had above, and the same fix TiledSampling.glsl already uses u_chunkSize
+// for (masking block position so it repeats identically every chunk).
+// 256 chunks keeps the wrap far outside any sane render distance while
+// staying tied to the real setting instead of a magic number.
+const float DISTORT_PERIOD_CHUNKS = 256.0;
 // ──────────────────────────────────────────────────────────────────────────
 
 float hash(vec2 p) {
@@ -103,6 +130,8 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
                   mix(mix(teNormal[0], teNormal[1], u),
                       mix(teNormal[3], teNormal[2], u), v));
 
+    float noisePeriod = u_chunkSize * NOISE_SEED_SCALE;
+
     float halfD      = u_renderDistance * 0.5 - 0.5;
     float maxDist    = halfD * halfD * 2.0;
     float linearDist = sqrt(clamp(u_distanceFromCenter / maxDist, 0.0, 1.0));
@@ -110,36 +139,54 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     // Binary, tied to the same grid-slot UBO value the TCS gates on —
     // not a fraction of render distance.
     float nearStrength = u_distanceFromCenter <= TIER0_MAX_SQ_DIST ? 1.0 : 0.0;
-    float farStrength   = smoothstep(0.70, 0.90, linearDist);
-    float edgeStrength  = smoothstep(0.90, 1.00, linearDist);
 
     vec2 seed = worldPos.xz;
 
     if (nearStrength > 0.001) {
         vec2  nSeed = seed * NOISE_SEED_SCALE;
-        float nX    = periodicValueNoise(nSeed + vec2(17.3,  0.0), NOISE_PERIOD) - 0.5;
-        float nZ    = periodicValueNoise(nSeed + vec2( 0.0, 31.7), NOISE_PERIOD) - 0.5;
-        float nY    = periodicValueNoise(nSeed + vec2(53.1, 83.2), NOISE_PERIOD) - 0.5;
+        float nX    = periodicValueNoise(nSeed + vec2(17.3,  0.0), noisePeriod) - 0.5;
+        float nZ    = periodicValueNoise(nSeed + vec2( 0.0, 31.7), noisePeriod) - 0.5;
+        float nY    = periodicValueNoise(nSeed + vec2(53.1, 83.2), noisePeriod) - 0.5;
         worldPos.x += nX * 0.4  * nearStrength;
         worldPos.z += nZ * 0.4  * nearStrength;
         worldPos.y += nY * 0.08 * nearStrength;
     }
 
-    if (farStrength > 0.001 && normal.y > 0.5) {
-        float heightScale = clamp(worldPos.y / 80.0, 0.0, 1.0);
-        float nY = (periodicValueNoise(seed * 0.1, NOISE_PERIOD / 0.1) - 0.5) * 2.0;
-        worldPos.y += nY * 3.0 * farStrength * heightScale;
-    }
+    // ── Distant terrain rise — Far ring only ────────────────────────────
+    // Replaces two earlier attempts at this same effect that used to live
+    // here: a smaller mountain-bump version (~25 blocks, keyed off
+    // linearDist bands) and, more recently, a vertex-shader-only version
+    // (up to 500 blocks, StandardSurface.vsh). Both shared the same flaw —
+    // outside the Tier0 ring the TCS pins tess level to 1, so a height
+    // offset computed per-corner (or per-vertex pre-tessellation, same
+    // thing) can only ever move the 4 corners of a patch. With greedy-
+    // merged quads spanning many blocks, that produced sharp faceted
+    // "wireframe" hills instead of smooth noise-driven terrain.
+    //
+    // Fixed now by giving this ring light tessellation (see
+    // StandardSurface.tcs) and sampling noise HERE, per real tessellated
+    // vertex, off this vertex's own worldPos.xz — every point across a
+    // merged quad gets its own height instead of only the corners.
+    //
+    // Gated on u_distanceFromCenter > TIER1_MAX_SQ_DIST, not just
+    // linearDist, so this can never fire inside Tier0/Tier1 — nearby-chunk
+    // rendering is untouched no matter how render distance or the fade-in
+    // curve below is tuned.
+    if (u_distanceFromCenter > TIER1_MAX_SQ_DIST && normal.y > 0.5) {
+        float farDistortT        = clamp((linearDist - DISTORT_START) / (1.0 - DISTORT_START), 0.0, 1.0);
+        float farDistortStrength = pow(farDistortT, DISTORT_SHARPEN);
 
-    if (edgeStrength > 0.001 && normal.y > 0.5) {
-        const float MOUNTAIN_SEED_SCALE = 0.0625;
-        const float MOUNTAIN_PERIOD     = NOISE_PERIOD / MOUNTAIN_SEED_SCALE;
-        const float MOUNTAIN_AMPLITUDE  = 25.0;
-        float nMountain = periodicValueNoise(
-            seed * MOUNTAIN_SEED_SCALE + vec2(91.7, 12.4),
-            MOUNTAIN_PERIOD) - 0.5;
-        worldPos.y += nMountain * MOUNTAIN_AMPLITUDE * edgeStrength;
+        if (farDistortStrength > 0.001) {
+            float distortPeriod = u_chunkSize * DISTORT_PERIOD_CHUNKS;
+
+            float nLow  = periodicValueNoise(seed * DISTORT_FREQ_LOW, distortPeriod);
+            float nHigh = periodicValueNoise(seed * DISTORT_FREQ_HIGH + vec2(91.7, 12.4), distortPeriod);
+            float h     = clamp(nLow * 0.7 + nHigh * 0.3, 0.0, 1.0);
+
+            worldPos.y += h * DISTORT_AMPLITUDE * farDistortStrength;
+        }
     }
+    // ──────────────────────────────────────────────────────────────────────
 
     // ── Block-face bevel — Tier0 only, see TIER0_MAX_SQ_DIST comment above ──
     if (nearStrength > 0.001) {
@@ -225,11 +272,15 @@ void main() {
     vec3 normal;
     vec3 worldPos = evalDisplacedSurface(u, v, normal);
 
-    // Same Tier0 gate as evalDisplacedSurface — only recompute the
-    // finite-difference normal where geometry actually ran.
-    float nearStrength0 = u_distanceFromCenter <= TIER0_MAX_SQ_DIST ? 1.0 : 0.0;
+    // Same gates as evalDisplacedSurface (Tier0 for near, Far ring for the
+    // distant rise) — only recompute the finite-difference normal where
+    // geometry actually ran. Mid ring (Tier0 < dist <= Tier1) still gets
+    // neither, exactly as before this change.
+    float nearStrength0  = u_distanceFromCenter <= TIER0_MAX_SQ_DIST ? 1.0 : 0.0;
+    float farRingActive0 = u_distanceFromCenter > TIER1_MAX_SQ_DIST  ? 1.0 : 0.0;
+    float geometryBlend  = max(nearStrength0, farRingActive0);
 
-    if (nearStrength0 > 0.001) {
+    if (geometryBlend > 0.001) {
         float uStep = (u + HEIGHT_FD_EPSILON <= 1.0) ?  HEIGHT_FD_EPSILON : -HEIGHT_FD_EPSILON;
         float vStep = (v + HEIGHT_FD_EPSILON <= 1.0) ?  HEIGHT_FD_EPSILON : -HEIGHT_FD_EPSILON;
 
@@ -244,7 +295,7 @@ void main() {
             vec3 fdNormal = normalize(cross(tangentU, tangentV));
             if (dot(fdNormal, normal) < 0.0)
                 fdNormal = -fdNormal;
-            normal = normalize(mix(normal, fdNormal, nearStrength0));
+            normal = normalize(mix(normal, fdNormal, geometryBlend));
         }
     }
 
