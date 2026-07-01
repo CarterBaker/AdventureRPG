@@ -42,6 +42,17 @@ const float HEIGHT_DISPLACE_SCALE = 0.12; // block units, peak bump height
 const float HEIGHT_FD_EPSILON     = 0.02; // finite-difference step, tess-coord space
 // ──────────────────────────────────────────────────────────────────────────
 
+// ── Tier gating ─────────────────────────────────────────────────────────
+// Must match TIER0_MAX_SQ_DIST in StandardSurface.fsh/.tcs — same 3x3 ring.
+// Bevel and height displacement are both per-vertex geometry, gated
+// identically to the tessellation density in the TCS: with tess level
+// pinned to 1 outside this ring, the TES still runs at the patch's 4
+// corners even with zero subdivision, so this block-level flag is what
+// actually stops bevel/noise/height from ever touching those corners —
+// the TCS's tess-level-1 alone only stops subdivision, not evaluation.
+const float TIER0_MAX_SQ_DIST = 2.5;
+// ──────────────────────────────────────────────────────────────────────────
+
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
@@ -96,9 +107,11 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     float maxDist    = halfD * halfD * 2.0;
     float linearDist = sqrt(clamp(u_distanceFromCenter / maxDist, 0.0, 1.0));
 
-    float nearStrength = 1.0 - smoothstep(0.0,  0.25, linearDist);
-    float farStrength  =       smoothstep(0.70, 0.90, linearDist);
-    float edgeStrength =       smoothstep(0.90, 1.00, linearDist);
+    // Binary, tied to the same grid-slot UBO value the TCS gates on —
+    // not a fraction of render distance.
+    float nearStrength = u_distanceFromCenter <= TIER0_MAX_SQ_DIST ? 1.0 : 0.0;
+    float farStrength   = smoothstep(0.70, 0.90, linearDist);
+    float edgeStrength  = smoothstep(0.90, 1.00, linearDist);
 
     vec2 seed = worldPos.xz;
 
@@ -128,8 +141,8 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
         worldPos.y += nMountain * MOUNTAIN_AMPLITUDE * edgeStrength;
     }
 
-    // ── Block-face bevel ───────────────────────────────────────────────────
-    {
+    // ── Block-face bevel — Tier0 only, see TIER0_MAX_SQ_DIST comment above ──
+    if (nearStrength > 0.001) {
         int   quadPack = int(teQuadSize[0]);
         float sizeA    = float(quadPack & 0xFF);
         float sizeB    = float((quadPack >> 8) & 0xFF);
@@ -193,7 +206,7 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     }
     // ──────────────────────────────────────────────────────────────────────
 
-    // ── Height-map displacement ─────────────────────────────────────────────
+    // ── Height-map displacement — Tier0 only ────────────────────────────────
     if (nearStrength > 0.001) {
         vec2  tiledUV = tileUV(uvLocalPos, teUVOrigin[0], normal, teOrient[0]);
         float h       = texture(u_textureArray, vec3(tiledUV, float(u_layer_height))).r;
@@ -212,10 +225,9 @@ void main() {
     vec3 normal;
     vec3 worldPos = evalDisplacedSurface(u, v, normal);
 
-    float halfD0       = u_renderDistance * 0.5 - 0.5;
-    float maxDist0      = halfD0 * halfD0 * 2.0;
-    float linearDist0   = sqrt(clamp(u_distanceFromCenter / maxDist0, 0.0, 1.0));
-    float nearStrength0 = 1.0 - smoothstep(0.0, 0.25, linearDist0);
+    // Same Tier0 gate as evalDisplacedSurface — only recompute the
+    // finite-difference normal where geometry actually ran.
+    float nearStrength0 = u_distanceFromCenter <= TIER0_MAX_SQ_DIST ? 1.0 : 0.0;
 
     if (nearStrength0 > 0.001) {
         float uStep = (u + HEIGHT_FD_EPSILON <= 1.0) ?  HEIGHT_FD_EPSILON : -HEIGHT_FD_EPSILON;
