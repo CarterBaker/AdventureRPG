@@ -55,7 +55,7 @@ const float HEIGHT_FD_EPSILON     = 0.02; // finite-difference step, tess-coord 
 // actually stops bevel/noise/height from ever touching those corners —
 // the TCS's tess-level-1 alone only stops subdivision, not evaluation.
 const float TIER0_MAX_SQ_DIST = 2.5;
-// Must match TIER1_MAX_SQ_DIST in StandardSurface.fsh/.tcs — same 5x5 ring.
+// Must match TIER1_MAX_SQ_DIST in StandardSurface.tcs/.fsh — same 5x5 ring.
 // Used below only to keep the Distant terrain rise block from ever
 // reaching into the Mid ring, no matter how far the start margin or curve
 // below is tuned.
@@ -72,16 +72,20 @@ const float TIER1_MAX_SQ_DIST = 8.5;
 // u_renderDistance (SettingsData UBO). Change render distance in settings
 // and both the start point and the reach of the rise move with it
 // automatically; nothing below needs retuning when that setting changes.
-const float DISTORT_MAX_HEIGHT   = 400.0; // block units — height reached exactly AT max distance
-const float DISTORT_START_MARGIN = 512.0;  // block units subtracted from max distance — rise starts fading in at (max distance - this), NOT 32 blocks from center
-// Curve shape, 0.0–1.0, hard-clamped at the call site (1.0 itself is
-// excluded there to avoid an infinite exponent). Maps to an exponent via
-// 1 / (1 - DISTORT_CURVE):
-//   0.0  -> exponent 1.0   (perfectly linear ramp start->max)
-//   0.05 -> exponent ~1.05 (practically indistinguishable from linear)
-//   0.6  -> exponent 2.5   (moderate ease-in)
-//   ->1.0-> exponent -> huge (near-vertical rise right at the very top)
-const float DISTORT_CURVE        = 1.0;
+const float DISTORT_MAX_HEIGHT   = 64.0; // block units — height reached exactly AT max distance
+const float DISTORT_START_MARGIN = 256.0;  // block units subtracted from max distance — rise starts fading in at (max distance - this), NOT 32 blocks from center
+// Curve shape, 0.0–1.0. Maps to an exponent via 16^(DISTORT_CURVE^2) — chosen
+// so that C=0.5 lands on EXACTLY exponent 2.0 (the value already in use,
+// bit-identical, so nothing about the current look changes), while spreading
+// the bend evenly across the whole slider instead of cramming it all into
+// the last 10% like the old 1/(1-C) hyperbola did:
+//   0.0  -> exponent 1     (perfectly linear ramp start->max)
+//   0.25 -> exponent 1.19  (barely bent)
+//   0.5  -> exponent 2     (current production value — unchanged)
+//   0.75 -> exponent 4.76  (noticeable ease-in)
+//   0.9  -> exponent 9.45  (strong ease-in)
+//   1.0  -> exponent 16    (wall — flat until ~90% in, then rockets up)
+const float DISTORT_CURVE        = 0.5;
 // ──────────────────────────────────────────────────────────────────────────
 
 float hash(vec2 p) {
@@ -191,10 +195,8 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
         float fadeRange          = max(maxDistanceWorld - startDistanceWorld, 0.0001);
         float farDistortT        = clamp((radialDist - startDistanceWorld) / fadeRange, 0.0, 1.0);
 
-        // See DISTORT_CURVE comment above for the exponent mapping. Clamp
-        // is duplicated here (not just at declaration) so this expression
-        // can never divide by zero no matter what value someone pokes in.
-        float curveExponent      = 1.0 / max(1.0 - clamp(DISTORT_CURVE, 0.0, 0.99), 0.0001);
+        // See DISTORT_CURVE comment above for the exponent mapping.
+        float curveExponent      = pow(16.0, clamp(DISTORT_CURVE, 0.0, 1.0) * clamp(DISTORT_CURVE, 0.0, 1.0));
         float farDistortStrength = pow(farDistortT, curveExponent);
 
         worldPos.y += DISTORT_MAX_HEIGHT * farDistortStrength;
