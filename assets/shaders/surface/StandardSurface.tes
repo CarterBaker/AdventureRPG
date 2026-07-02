@@ -73,7 +73,7 @@ const float TIER1_MAX_SQ_DIST = 8.5;
 // and both the start point and the reach of the rise move with it
 // automatically; nothing below needs retuning when that setting changes.
 const float DISTORT_MAX_HEIGHT   = 64.0; // block units — height reached exactly AT max distance
-const float DISTORT_START_MARGIN = 512.0;  // block units subtracted from max distance — rise starts fading in at (max distance - this), NOT 32 blocks from center
+const float DISTORT_START_MARGIN = 256.0;  // block units subtracted from max distance — rise starts fading in at (max distance - this), NOT 32 blocks from center
 // Curve shape, 0.0–1.0. Maps to an exponent via 16^(DISTORT_CURVE^2) — chosen
 // so that C=0.5 lands on EXACTLY exponent 2.0 (the value already in use,
 // bit-identical, so nothing about the current look changes), while spreading
