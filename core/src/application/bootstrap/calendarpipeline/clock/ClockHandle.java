@@ -83,6 +83,10 @@ public class ClockHandle extends HandlePackage {
         clockData.setVisualYearProgress(visualYearProgress);
     }
 
+    public Season getCurrentSeason() {
+        return Season.fromYearProgress(clockData.getYearProgress());
+    }
+
     public int getCurrentMinute() {
         return clockData.getCurrentMinute();
     }
