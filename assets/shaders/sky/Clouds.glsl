@@ -5,18 +5,46 @@
 #include "includes/SkyColorData.glsl"
 
 /*
-* Puff-blob cloud system — v6 (toon shading, overlap-gated).
+* Puff-blob cloud system — v8 (multi-pass layered puffs, toon shading, height-driven ring shading).
  *
  * Puff shape (unchanged in concept)
  * ----------------------------------
- * back circle  (radius PUFF_OUTER_RADIUS) — the "ring". Mostly white with a
+ * back circle  (radius outerR, see below) — the "ring". Mostly white with a
  *              bit of horizon sky colour mixed in — lighter than the core.
- * front circle (radius PUFF_INNER_RADIUS) — the "core". Smaller, darker.
+ * front circle (radius innerR, see below) — the "core". Smaller, darker.
  *              Still white blended WITH sky colour, just a smaller white
  *              mix than the ring. Never pure sky colour on its own. NEVER
- *              shaded, NEVER faded, NEVER gated — always identical
- *              regardless of position or what's behind it.
- * Fixed radii and rim width — every puff, everywhere, is identically sized.
+ *              shaded, NEVER faded, NEVER gated — colour and alpha
+ *              treatment is always identical regardless of position or
+ *              what's behind it. Its SIZE, however, now varies (see
+ *              "Multi-pass layering" and "Height-based sizing" below).
+ * Rim width scales with the puff, so the ring stays proportionally the
+ * same thickness relative to the puff at every size.
+ *
+ * Multi-pass layering
+ * ---------------------
+ * A cloud is built from NUM_PUFF_PASSES layers, each one a full sweep of
+ * the same puff-placement logic over the same fine grid, but with
+ * different tuning (PASS_SIZE_SCALE, PASS_REACH, PASS_LIFT):
+ *
+ *   pass 0: baseline puff size, full reach (spans the whole blob, edge
+ *           to edge), no lift. This is the "base coat" that establishes
+ *           the cloud's overall silhouette.
+ *   pass 1..N-1: each pass is smaller than the one before it, and its
+ *           puffs are only allowed to spawn in a region pulled inward
+ *           toward the blob's centre of mass and lifted upward within
+ *           the blob. Later passes layer on top of earlier ones,
+ *           building progressively smaller, more-central, higher-sitting
+ *           puff clusters — the piled-up "cauliflower" look of a toon
+ *           cumulus cloud.
+ *
+ * Height-based sizing
+ * ---------------------
+ * Independent of which pass drew it, every puff is also sized by how high
+ * it sits within its OWN blob (bottom of blob = full size, top of blob =
+ * PUFF_TOP_SIZE_MUL of full size). This one rule applies identically in
+ * every pass — passes only change the baseline size and where puffs are
+ * allowed to spawn, not this per-puff height falloff.
  *
  * Blobs, not a band
  * ------------------
@@ -28,38 +56,65 @@
  *
  * Layered compositing
  * ---------------------
- * Puffs are painted one on top of another with a real src-over-dst blend,
- * bottom-to-top, back circle then front circle per puff — NOT merged with
- * max().
+ * Puffs are painted one on top of another with a real src-over-dst blend
+ * — back circle then front circle per puff, NOT merged with max(). Passes
+ * are drawn in order (pass 0 first), and within a pass, cells are swept
+ * bottom-to-top so lower puffs land first and higher puffs land on top.
  *
- * Ring shading — overlap-gated, colour-based, NOT alpha-based
+ * Ring shading — colour-based, NOT alpha-based, entirely height-driven
  * --------------------------------------------------------------
  * The ring's ALPHA never changes — it is always fully opaque. This is
  * intentional: alpha-fading the ring reads as the cloud dissolving into
  * the sky, which is wrong for a toon look.
  *
- * Instead, only the ring's COLOUR can shift, from the bright ring colour
- * toward the core colour — a flat, opaque "shadow band", not a see-
- * through fade. And that colour shift is GATED: it is only allowed to
- * happen where this ring pixel already has another puff painted behind it
- * (tested via the accumulated alpha in `result` at the moment this ring
- * is drawn). If nothing is behind a given ring pixel yet, that pixel IS
- * part of the outer silhouette of the whole cloud at that point, and it
- * must stay the plain, unshaded ring colour — full stop, no exceptions.
+ * Instead, only the ring's COLOUR shifts, from the plain ring colour
+ * toward the EXACT core colour — a flat, opaque "shadow band", not a
+ * see-through fade. The shift amount has exactly one input: how high
+ * this puff sits within its own blob (puffHeightInBlob). Nothing else —
+ * not overlap with other puffs, not this puff's own local top/bottom —
+ * feeds into it.
  *
- * Where the gate IS open (something behind it), the shift strength still
- * follows the same two rules as always: more at THIS puff's own bottom
- * than its own top, and more the lower this puff sits within its blob.
+ *   bottom of blob -> shift = PUFF_SHADE_MAX -> ring colour becomes the
+ *                      core colour exactly.
+ *   top of blob    -> shift = PUFF_SHADE_MIN -> ring stays mostly (but
+ *                      not entirely) its own colour.
+ *
+ * Every puff at a given height shades the same amount, regardless of
+ * pass, regardless of what's behind it.
  */
 
-// ── Puff shape — identical for every puff, always ────────────────────────────
+// ── Puff shape — pass-0 (base layer) baseline; later passes scale this
+// down via PASS_SIZE_SCALE ──────────────────────────────────────────────────
 const float PUFF_SCALE        = 26.0;
 const float PUFF_OUTER_RADIUS = 0.85;
 const float PUFF_RIM_WIDTH    = 0.24;
-const float PUFF_INNER_RADIUS = PUFF_OUTER_RADIUS - PUFF_RIM_WIDTH;
 const float PUFF_JITTER       = 0.55;
 const float PUFF_EDGE_AA      = 0.06;
 const int   PUFFS_PER_CELL    = 3;
+
+// ── Multi-pass layering — see "Multi-pass layering" above ──────────────────
+const int NUM_PUFF_PASSES = 4;
+
+// Puff-size multiplier per pass. Pass 0 = 1.0 (full baseline size); each
+// later pass is smaller. To add a 5th pass: bump NUM_PUFF_PASSES to 5 and
+// append one more (smaller / lower-reach / higher-lift) entry to each of
+// the three arrays below, e.g. ..., 0.26) / ..., 0.20) / ..., 0.46).
+const float PASS_SIZE_SCALE[NUM_PUFF_PASSES] = float[NUM_PUFF_PASSES](1.00, 0.72, 0.52, 0.37);
+
+// How far each pass's puffs may spawn from the blob's centre, as a
+// fraction of the full blob radius. 1.0 = full span (edge to edge),
+// smaller = pulled in toward the centre of mass.
+const float PASS_REACH[NUM_PUFF_PASSES] = float[NUM_PUFF_PASSES](1.00, 0.70, 0.48, 0.32);
+
+// How far each pass's spawn region is lifted upward within the blob, as a
+// fraction of the blob's full vertical diameter. Combined with PASS_REACH,
+// this is what pulls later passes toward the upper-centre of the cloud.
+const float PASS_LIFT[NUM_PUFF_PASSES] = float[NUM_PUFF_PASSES](0.00, 0.12, 0.24, 0.36);
+
+// Height-based sizing (applies identically in every pass): a puff at the
+// very top of its blob is this fraction of the size it would be at the
+// very bottom.
+const float PUFF_TOP_SIZE_MUL = 0.55;
 
 // ── Domain warp — keeps puff placement from reading as a lattice ───────────
 const float WARP_FREQ = 0.09;
@@ -79,15 +134,12 @@ const float CLOUD_DIR_Y_MIN        = 0.02;
 const float CLOUD_DIR_Y_MAX        = 0.46;
 const float CLOUD_DIR_Y_HARD_LIMIT = 0.62; // absolute safety bound, backstop only
 
-// ── Ring shading behaviour (toon, overlap-gated) ────────────────────────────
-const float PUFF_SHADE_MIN = 0.15;  // shade strength for puffs at the TOP of their blob
-const float PUFF_SHADE_MAX = 0.95;  // shade strength for puffs at the BOTTOM of their blob
+// ── Ring shading behaviour (toon, height-driven) ────────────────────────────
+const float PUFF_SHADE_MIN = 0.15;  // shade amount for puffs at the TOP of their blob (ring stays mostly its own colour)
+const float PUFF_SHADE_MAX = 1.00;  // shade amount for puffs at the BOTTOM of their blob (ring becomes the core colour exactly)
 
 const float PUFF_BASE_ALPHA = 0.92;
 const float PUFF_CORE_ALPHA = 1.0;
-
-// Threshold on accumulated alpha to decide "is there a puff behind me".
-const float PUFF_OVERLAP_EPS = 0.001;
 
 // ── Puff colour mixing ──────────────────────────────────────────────────────
 const float PUFF_BACK_WHITE_MIX  = 0.75; // ring: mostly white, lightly sky-tinted
@@ -169,62 +221,78 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
 
     vec4 result = vec4(0.0);
 
-    // y outermost so lower puffs are drawn first (background) and higher
-    // puffs are drawn last (on top).
-    for (int y = -1; y <= 1; y++)
-    for (int x = -1; x <= 1; x++)
-    for (int z = -1; z <= 1; z++) {
-        vec3 cell = ip + vec3(x, y, z);
+    // Pass 0 first (base coat, full span), each later pass layered on top,
+    // pulled toward the blob's centre and shrunk down.
+    for (int passIdx = 0; passIdx < NUM_PUFF_PASSES; passIdx++) {
+        float passScale = PASS_SIZE_SCALE[passIdx];
+        float reach     = PASS_REACH[passIdx];
+        float liftAmt   = PASS_LIFT[passIdx] * BLOB_RADIUS_Y * 2.0;
 
-        vec3  cellPos    = cell + 0.5;
-        vec3  cd         = (cellPos - blobCenter) / vec3(BLOB_RADIUS_XZ, BLOB_RADIUS_Y, BLOB_RADIUS_XZ);
-        float cellEll    = length(cd);
-        float edgeJitter = (_puffHash3(cell).x - 0.5) * BLOB_EDGE_NOISE;
-        if (cellEll > 1.0 + edgeJitter) continue;
+        vec3 passRadii  = vec3(BLOB_RADIUS_XZ, BLOB_RADIUS_Y, BLOB_RADIUS_XZ) * reach;
+        vec3 passCenter = blobCenter + vec3(0.0, liftAmt, 0.0);
 
-        float puffHeightInBlob = clamp(
-            (cellPos.y - (blobCenter.y - BLOB_RADIUS_Y)) / (2.0 * BLOB_RADIUS_Y), 0.0, 1.0);
+        // y outermost so lower puffs are drawn first (background) and
+        // higher puffs are drawn last (on top), same as before — now just
+        // repeated once per pass.
+        for (int y = -1; y <= 1; y++)
+        for (int x = -1; x <= 1; x++)
+        for (int z = -1; z <= 1; z++) {
+            vec3 cell = ip + vec3(x, y, z);
 
-        for (int k = 0; k < PUFFS_PER_CELL; k++) {
-            vec3  seed   = cell + vec3(0.0, 0.0, float(k) * 17.13 + 4.7);
-            vec3  jitter = _puffHash3(seed);
-            vec3  ctr    = cell + 0.5 + (jitter - 0.5) * PUFF_JITTER;
-            float dist   = length(pWarped - ctr);
+            vec3  cellPos    = cell + 0.5;
+            vec3  cd         = (cellPos - passCenter) / passRadii;
+            float cellEll    = length(cd);
+            float edgeJitter = (_puffHash3(cell + vec3(0.0, float(passIdx) * 91.7, 0.0)).x - 0.5) * BLOB_EDGE_NOISE;
+            if (cellEll > 1.0 + edgeJitter) continue;
 
-            float outerMask = 1.0 - smoothstep(PUFF_OUTER_RADIUS - PUFF_EDGE_AA,
-                PUFF_OUTER_RADIUS + PUFF_EDGE_AA, dist);
-            if (outerMask <= 0.001) continue;
+            // Height within the TRUE blob (always the full, un-pulled-in
+            // extent) — this is what drives the bigger-at-bottom /
+            // smaller-at-top size falloff AND the ring-shading falloff,
+            // identically in every pass.
+            float puffHeightInBlob = clamp(
+                (cellPos.y - (blobCenter.y - BLOB_RADIUS_Y)) / (2.0 * BLOB_RADIUS_Y), 0.0, 1.0);
+            float heightSizeMul = mix(1.0, PUFF_TOP_SIZE_MUL, puffHeightInBlob);
+            float sizeMul       = passScale * heightSizeMul;
 
-            float coreMask = 1.0 - smoothstep(PUFF_INNER_RADIUS - PUFF_EDGE_AA,
-                PUFF_INNER_RADIUS + PUFF_EDGE_AA, dist);
+            float outerR    = PUFF_OUTER_RADIUS * sizeMul;
+            float rimW      = PUFF_RIM_WIDTH * sizeMul;
+            float innerR    = outerR - rimW;
+            float aa        = PUFF_EDGE_AA * sizeMul;
+            float jitterAmt = PUFF_JITTER * passScale;
 
-            // 0 at this puff's own bottom edge, 1 at its own top edge.
-            float localV = smoothstep(-PUFF_OUTER_RADIUS, PUFF_OUTER_RADIUS, pWarped.y - ctr.y);
+            // Ring -> core colour shift for every puff in this cell: purely
+            // a function of height in the blob (see header comment), no
+            // other inputs. Same value for every puff drawn from this cell.
+            float shadeAmount = mix(PUFF_SHADE_MIN, PUFF_SHADE_MAX, 1.0 - puffHeightInBlob);
 
-            vec3 frontSkyTint = mix(u_skyHorizonColor, u_skyZenithColor, PUFF_FRONT_SKY_MIX);
-            vec3 backColor    = mix(u_skyHorizonColor, vec3(1.0), PUFF_BACK_WHITE_MIX);
-            vec3 frontColor   = mix(frontSkyTint,       vec3(1.0), PUFF_FRONT_WHITE_MIX);
+            for (int k = 0; k < PUFFS_PER_CELL; k++) {
+                vec3  seed   = cell + vec3(0.0, 0.0, float(k) * 17.13 + 4.7 + float(passIdx) * 133.7);
+                vec3  jitter = _puffHash3(seed);
+                vec3  ctr    = cell + 0.5 + (jitter - 0.5) * jitterAmt;
+                float dist   = length(pWarped - ctr);
 
-            // GATE: does this ring pixel already have a puff behind it?
-            // This is checked BEFORE we draw anything for this puff.
-            bool hasPuffBehind = result.a > PUFF_OVERLAP_EPS;
+                float outerMask = 1.0 - smoothstep(outerR - aa, outerR + aa, dist);
+                if (outerMask <= 0.001) continue;
 
-            float shadeStrength = mix(PUFF_SHADE_MIN, PUFF_SHADE_MAX, 1.0 - puffHeightInBlob);
-            float shadeAmount   = hasPuffBehind ? (1.0 - localV) * shadeStrength : 0.0;
+                float coreMask = 1.0 - smoothstep(innerR - aa, innerR + aa, dist);
 
-            // Ring (back circle): fully opaque always. Colour only shifts
-            // toward the core colour when gated open (something behind
-            // it). Otherwise it's the plain, unshaded ring colour — this
-            // is what keeps the true outer cloud silhouette crisp and
-            // un-shaded, exactly as it should be.
-            vec3 ringColor = mix(backColor, frontColor, shadeAmount);
-            vec4 srcBack   = vec4(ringColor, outerMask * PUFF_BASE_ALPHA);
-            result = _cloudOver(result, srcBack);
+                vec3 frontSkyTint = mix(u_skyHorizonColor, u_skyZenithColor, PUFF_FRONT_SKY_MIX);
+                vec3 backColor    = mix(u_skyHorizonColor, vec3(1.0), PUFF_BACK_WHITE_MIX);
+                vec3 frontColor   = mix(frontSkyTint,       vec3(1.0), PUFF_FRONT_WHITE_MIX);
 
-            // Core (front circle): never changes. Not shaded, not gated,
-            // not faded — always the same solid colour and alpha.
-            vec4 srcFront = vec4(frontColor, coreMask * PUFF_CORE_ALPHA);
-            result = _cloudOver(result, srcFront);
+                // Ring (back circle): fully opaque always. Colour shifts
+                // toward the core colour purely based on shadeAmount (this
+                // puff's height in its blob) — same value for every puff in
+                // this cell, no other inputs.
+                vec3 ringColor = mix(backColor, frontColor, shadeAmount);
+                vec4 srcBack   = vec4(ringColor, outerMask * PUFF_BASE_ALPHA);
+                result = _cloudOver(result, srcBack);
+
+                // Core (front circle): never shaded, never faded — always
+                // the same solid colour and alpha treatment.
+                vec4 srcFront = vec4(frontColor, coreMask * PUFF_CORE_ALPHA);
+                result = _cloudOver(result, srcFront);
+            }
         }
     }
 
