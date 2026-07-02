@@ -1,2 +1,8 @@
 {
+    "weathers": {
+        "SPRING": ["standard/Sunny", "standard/Cloudy"],
+        "SUMMER": ["standard/Sunny", "standard/Cloudy"],
+        "FALL":   ["standard/Sunny", "standard/Cloudy"],
+        "WINTER": ["standard/Sunny", "standard/Cloudy"]
+    }
 }

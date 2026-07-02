@@ -158,6 +158,7 @@ public class EngineSetting {
         public static final String TOOL_TYPE_JSON_PATH = "tools";
         public static final String UBO_JSON_PATH = "ubos";
         public static final String WORLD_TEXTURE_PATH = "worlds";
+        public static final String WEATHER_JSON_PATH = "weathers";
 
         // Settings \\
 
@@ -323,6 +324,14 @@ public class EngineSetting {
         public static final String SKY_COLOR_UBO = "SkyColorData";
         public static final float SKY_FOG_BLEND_START = 0.4f;
         public static final float SKY_ALTITUDE_POWER = 1.2f;
+
+        // Weather \\
+
+        public static final String WEATHER_DATA_UBO = "WeatherData";
+        public static final String WEATHER_REGION_DATA_UBO = "WeatherRegionData";
+        public static final int WEATHER_REGION_SAMPLE_DISTANCE = 96; // chunk units between cardinal samples
+        public static final float WEATHER_NOISE_CELL_SIZE = 256.0f; // chunk units per noise cell
+        public static final float WEATHER_WIND_DRIFT_SPEED = 0.01f; // noise-space units per second
 
         // Sky Noise
         public static final float SKY_NOISE_ALTITUDE_BLEND = 0.35f;
