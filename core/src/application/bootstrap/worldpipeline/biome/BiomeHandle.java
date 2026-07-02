@@ -1,7 +1,9 @@
 package application.bootstrap.worldpipeline.biome;
 
+import application.bootstrap.calendarpipeline.clock.Season;
 import engine.graphics.color.Color;
 import engine.root.HandlePackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class BiomeHandle extends HandlePackage {
 
@@ -35,5 +37,15 @@ public class BiomeHandle extends HandlePackage {
 
     public Color getBiomeColor() {
         return biomeData.getBiomeColor();
+    }
+
+    public String[] getWeatherNamesForSeason(Season season) {
+
+        ObjectArrayList<String> names = biomeData.getSeasonWeatherNames().get(season);
+
+        if (names == null)
+            return new String[0];
+
+        return names.toArray(new String[0]);
     }
 }
