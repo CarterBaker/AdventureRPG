@@ -22,6 +22,7 @@ out float vColor;
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
+#include "includes/WorldCurvature.glsl"
 #include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
@@ -73,7 +74,7 @@ const float TIER1_MAX_SQ_DIST = 8.5;
 // and both the start point and the reach of the rise move with it
 // automatically; nothing below needs retuning when that setting changes.
 const float DISTORT_MAX_HEIGHT   = 64.0; // block units — height reached exactly AT max distance
-const float DISTORT_START_MARGIN = 256.0;  // block units subtracted from max distance — rise starts fading in at (max distance - this), NOT 32 blocks from center
+const float DISTORT_START_MARGIN = 512.0;  // block units subtracted from max distance — rise starts fading in at (max distance - this), NOT 32 blocks from center
 // Curve shape, 0.0–1.0. Maps to an exponent via 16^(DISTORT_CURVE^2) — chosen
 // so that C=0.5 lands on EXACTLY exponent 2.0 (the value already in use,
 // bit-identical, so nothing about the current look changes), while spreading
@@ -85,7 +86,7 @@ const float DISTORT_START_MARGIN = 256.0;  // block units subtracted from max di
 //   0.75 -> exponent 4.76  (noticeable ease-in)
 //   0.9  -> exponent 9.45  (strong ease-in)
 //   1.0  -> exponent 16    (wall — flat until ~90% in, then rockets up)
-const float DISTORT_CURVE        = 0.25;
+const float DISTORT_CURVE        = 0.35;
 // ──────────────────────────────────────────────────────────────────────────
 
 float hash(vec2 p) {
@@ -133,6 +134,27 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     vec3 worldPos   = mix(mix(teWorldPos[0], teWorldPos[1], u),
                           mix(teWorldPos[3], teWorldPos[2], u), v);
     vec3 uvLocalPos = worldPos;
+
+    // ── World curvature — ALL tiers, see includes/WorldCurvature.glsl ──
+    // Applied to worldPos only, never to uvLocalPos above — same
+    // UV-decoupling rule the noise/rise/bevel/height blocks below already
+    // follow, so distant walls don't get their textures dragged
+    // vertically as the ground curves out from under them.
+    //
+    // Unlike those blocks, this one is NOT tier-gated. They're all
+    // high-frequency (noise has no smoothness bound) so they need real
+    // tessellation density to avoid faceting — that's the whole reason
+    // Tier0 goes up to 64 subdivisions and the Far ring goes block-exact
+    // (see StandardSurface.tcs). Curvature is a plain quadratic — its
+    // second derivative is the constant 2*WORLD_CURVATURE_STRENGTH
+    // everywhere, so the worst-case sag across an untessellated
+    // level-1 Mid-ring quad is sag ≈ WORLD_CURVATURE_STRENGTH *
+    // (span/2)^2, a function of that quad's OWN size, not of how far out
+    // it is. At the current strength a 64-block quad sags ~0.08 blocks —
+    // invisible, and already inside the greedy-merge cap the Far-ring
+    // tess-level clamp assumes (see StandardSurface.tcs). No Mid-ring
+    // tessellation change needed to support this.
+    worldPos = applyWorldCurvature(worldPos);
 
     vec3 normal = normalize(
                   mix(mix(teNormal[0], teNormal[1], u),

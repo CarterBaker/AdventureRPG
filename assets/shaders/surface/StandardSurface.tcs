@@ -160,6 +160,17 @@ void main() {
             levelB = clamp(sizeB, 1.0, 64.0);
 
         } else {
+            // Mid ring — flat level-1 tessellation, unchanged. World
+            // curvature (includes/WorldCurvature.glsl, applied in
+            // StandardSurface.tes) now runs here too, unlike the
+            // noise/bevel/height effects that stay gated to Tier0/Far —
+            // but it doesn't need density to go with it: curvature's
+            // second derivative is the same constant everywhere, so a
+            // merged quad's worst-case sag is fixed by ITS OWN span, not
+            // by distance from center. A 64-block quad sags ~0.08 blocks
+            // at the current WORLD_CURVATURE_STRENGTH — invisible, and
+            // already inside the merge-size cap the Far-ring clamp above
+            // assumes. No changes needed here.
             levelA = 1.0;
             levelB = 1.0;
         }
