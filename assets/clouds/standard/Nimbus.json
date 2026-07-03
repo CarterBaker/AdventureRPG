@@ -1,0 +1,10 @@
+{
+    "color": { "r": 0.35, "g": 0.37, "b": 0.42 },
+    "scale": 1.4,
+    "density": 0.95,
+    "verticalThickness": 26.0,
+    "edgeSoftness": 0.04,
+    "puffJitter": 0.35,
+    "baseAltitude": 90.0,
+    "driftSpeedScale": 1.3
+}
