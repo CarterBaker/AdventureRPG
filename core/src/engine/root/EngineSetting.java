@@ -153,6 +153,7 @@ public class EngineSetting {
         public static final String MESH_JSON_PATH = "mesh";
         public static final String PASS_JSON_PATH = "processingpasses";
         public static final String SHADER_PATH = "shaders";
+        public static final String RIG_JSON_PATH = "rigs";
         public static final String SPRITE_PATH = "sprites";
         public static final String THREAD_CATALOG_PATH = "application/threads";
         public static final String TOOL_TYPE_JSON_PATH = "tools";
@@ -495,6 +496,12 @@ public class EngineSetting {
         public static final float DEFAULT_SPRINT_SPEED = 7f;
         public static final float DEFAULT_WALK_SPEED = 1.4f;
 
+        // Rig \\
+
+        public static final float DEFAULT_BONE_SIZE = 0.25f;
+        public static final int MAX_BONE_INFLUENCES = 4;
+        public static final float BONE_WEIGHT_SUM_EPSILON = 0.001f;
+
         // Player \\
 
         public static final float BLOCK_PLACEMENT_INTERVAL = 0.1f;
@@ -507,8 +514,7 @@ public class EngineSetting {
 
         // Font \\
 
-        public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-                        + "0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
+        public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
         public static final Color FONT_DEFAULT_COLOR = Color.RED;
         public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;
         public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;

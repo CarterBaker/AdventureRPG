@@ -1,0 +1,19 @@
+{
+  "bones": [
+    { "name": "lower_torso", "position": { "x": 0.0, "y": 1.02, "z": 0.0 }, "size": { "x": 0.5, "y": 0.25, "z": 0.28 } },
+    { "name": "upper_torso", "parent": "lower_torso", "position": { "x": 0.0, "y": 0.25, "z": 0.0 }, "size": { "x": 0.55, "y": 0.45, "z": 0.3 } },
+    { "name": "head", "parent": "upper_torso", "position": { "x": 0.0, "y": 0.45, "z": 0.0 }, "size": { "x": 0.32, "y": 0.32, "z": 0.32 } },
+    { "name": "upper_arm_l", "parent": "upper_torso", "position": { "x": 0.32, "y": 0.4, "z": 0.0 }, "size": { "x": 0.16, "y": 0.28, "z": 0.16 } },
+    { "name": "lower_arm_l", "parent": "upper_arm_l", "position": { "x": 0.0, "y": -0.28, "z": 0.0 }, "size": { "x": 0.14, "y": 0.26, "z": 0.14 } },
+    { "name": "hand_l", "parent": "lower_arm_l", "position": { "x": 0.0, "y": -0.26, "z": 0.0 }, "size": { "x": 0.14, "y": 0.18, "z": 0.08 } },
+    { "name": "upper_arm_r", "parent": "upper_torso", "position": { "x": -0.32, "y": 0.4, "z": 0.0 }, "size": { "x": 0.16, "y": 0.28, "z": 0.16 } },
+    { "name": "lower_arm_r", "parent": "upper_arm_r", "position": { "x": 0.0, "y": -0.28, "z": 0.0 }, "size": { "x": 0.14, "y": 0.26, "z": 0.14 } },
+    { "name": "hand_r", "parent": "lower_arm_r", "position": { "x": 0.0, "y": -0.26, "z": 0.0 }, "size": { "x": 0.14, "y": 0.18, "z": 0.08 } },
+    { "name": "thigh_l", "parent": "lower_torso", "position": { "x": 0.18, "y": 0.0, "z": 0.0 }, "size": { "x": 0.22, "y": 0.45, "z": 0.22 } },
+    { "name": "shin_l", "parent": "thigh_l", "position": { "x": 0.0, "y": -0.45, "z": 0.0 }, "size": { "x": 0.18, "y": 0.45, "z": 0.18 } },
+    { "name": "foot_l", "parent": "shin_l", "position": { "x": 0.0, "y": -0.45, "z": 0.0 }, "size": { "x": 0.18, "y": 0.12, "z": 0.3 } },
+    { "name": "thigh_r", "parent": "lower_torso", "position": { "x": -0.18, "y": 0.0, "z": 0.0 }, "size": { "x": 0.22, "y": 0.45, "z": 0.22 } },
+    { "name": "shin_r", "parent": "thigh_r", "position": { "x": 0.0, "y": -0.45, "z": 0.0 }, "size": { "x": 0.18, "y": 0.45, "z": 0.18 } },
+    { "name": "foot_r", "parent": "shin_r", "position": { "x": 0.0, "y": -0.45, "z": 0.0 }, "size": { "x": 0.18, "y": 0.12, "z": 0.3 } }
+  ]
+}
