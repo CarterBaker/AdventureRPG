@@ -51,12 +51,12 @@ public class FboManager extends ManagerPackage {
         this.fboName2Instance = new Object2ObjectOpenHashMap<>();
         this.orderedFboData = new ObjectArrayList<>();
         this.window2RelativeInstances = new Object2ObjectOpenHashMap<>();
-        this.internalBuilder = create(InternalBuilder.class);
         create(InternalLoader.class);
     }
 
     @Override
     protected void get() {
+        this.internalBuilder = get(InternalBuilder.class);
         this.windowManager = get(WindowManager.class);
     }
 
