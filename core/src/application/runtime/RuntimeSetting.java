@@ -19,9 +19,11 @@ public class RuntimeSetting {
     public static final String FBO_LIT = "LitScene";
     public static final String FBO_SSAO = "SSAOScene";
     public static final String FBO_UI = "UIScene";
+    public static final String FBO_OVERHEAD = "OverheadScene";
 
     // Composite Layers
     public static final int LAYER_SKY = -10;
+    public static final int LAYER_OVERHEAD = -5;
     public static final int LAYER_WORLD = 0;
     public static final int LAYER_UI = 10;
 }

@@ -159,6 +159,8 @@ public class EngineSetting {
         public static final String UBO_JSON_PATH = "ubos";
         public static final String WORLD_TEXTURE_PATH = "worlds";
         public static final String WEATHER_JSON_PATH = "weathers";
+        public static final String CLOUD_JSON_PATH = "clouds";
+        public static final String SEASON_JSON_PATH = "seasons";
 
         // Settings \\
 
@@ -332,6 +334,12 @@ public class EngineSetting {
         public static final int WEATHER_REGION_SAMPLE_DISTANCE = 96; // chunk units between cardinal samples
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f; // chunk units per noise cell
         public static final float WEATHER_WIND_DRIFT_SPEED = 0.01f; // noise-space units per second
+
+        // Horizon & Overhead \\
+
+        public static final float HORIZON_DISTANCE = 1024.0f; // Radius from the player used for weather sampling
+        public static final int OVERHEAD_CELL_SIZE = 64; // chunk units per overhead cell edge
+        public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4; // max overhead cells created/released per frame
 
         // Sky Noise
         public static final float SKY_NOISE_ALTITUDE_BLEND = 0.35f;
