@@ -1,6 +1,7 @@
 package application.bootstrap.geometrypipeline.rig;
 
 import engine.root.HandlePackage;
+import engine.util.mathematics.matrices.Matrix4;
 
 public class RigHandle extends HandlePackage {
 
@@ -42,5 +43,13 @@ public class RigHandle extends HandlePackage {
 
     public int getBoneIndex(String boneName) {
         return rigData.getBoneIndex(boneName);
+    }
+
+    public Matrix4 getBindWorldMatrix(int boneIndex) {
+        return rigData.getBindWorldMatrix(boneIndex);
+    }
+
+    public Matrix4 getBindWorldInverseMatrix(int boneIndex) {
+        return rigData.getBindWorldInverseMatrix(boneIndex);
     }
 }

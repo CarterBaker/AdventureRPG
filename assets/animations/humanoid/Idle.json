@@ -1,0 +1,26 @@
+{
+  "rig": "Humanoid",
+  "loop": true,
+  "tracks": {
+    "upper_torso": [
+      { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": 0 }, "position": { "x": 0, "y": 0, "z": 0 } },
+      { "time": 1.2, "rotation": { "x": 1.5, "y": 0, "z": 0 }, "position": { "x": 0, "y": 0.015, "z": 0 } },
+      { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": 0 }, "position": { "x": 0, "y": 0, "z": 0 } }
+    ],
+    "head": [
+      { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": 0 } },
+      { "time": 1.2, "rotation": { "x": 0, "y": 5, "z": 0 } },
+      { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": 0 } }
+    ],
+    "upper_arm_l": [
+      { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": 0 } },
+      { "time": 1.2, "rotation": { "x": 0, "y": 0, "z": -2 } },
+      { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": 0 } }
+    ],
+    "upper_arm_r": [
+      { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": 0 } },
+      { "time": 1.2, "rotation": { "x": 0, "y": 0, "z": 2 } },
+      { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": 0 } }
+    ]
+  }
+}

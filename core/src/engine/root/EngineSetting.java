@@ -138,6 +138,7 @@ public class EngineSetting {
 
         // Asset Paths \\
 
+        public static final String ANIMATION_JSON_PATH = "animations";
         public static final String BEHAVIOR_JSON_PATH = "behaviors";
         public static final String BIOME_JSON_PATH = "biomes";
         public static final String BLOCK_JSON_PATH = "blocks";

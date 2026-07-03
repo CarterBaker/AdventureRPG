@@ -1,5 +1,6 @@
 package application.bootstrap;
 
+import application.bootstrap.animationpipeline.AnimationPipeline;
 import application.bootstrap.calendarpipeline.CalendarPipeline;
 import application.bootstrap.entitypipeline.EntityPipeline;
 import application.bootstrap.geometrypipeline.GeometryPipeline;
@@ -24,6 +25,7 @@ public class BootstrapAssembly extends AssemblyPackage {
     @Override
     public void create() {
         create(GeometryPipeline.class);
+        create(AnimationPipeline.class);
         create(ShaderPipeline.class);
         create(RenderPipeline.class);
         create(ItemPipeline.class);
