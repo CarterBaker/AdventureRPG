@@ -341,6 +341,19 @@ public class EngineSetting {
         public static final int OVERHEAD_CELL_SIZE = 64; // chunk units per overhead cell edge
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4; // max overhead cells created/released per frame
 
+        // Wind \\
+
+        public static final float WIND_GLOBAL_DIRECTION_DEGREES = 45.0f; // fixed planetary prevailing airflow
+        public static final float WIND_GLOBAL_SPEED = 1.0f; // base wind speed scale — not a real-world unit yet
+        public static final float WIND_SPRING_DIRECTION_OFFSET = 10.0f; // degrees added to the global angle
+        public static final float WIND_SUMMER_DIRECTION_OFFSET = -15.0f;
+        public static final float WIND_FALL_DIRECTION_OFFSET = 20.0f;
+        public static final float WIND_WINTER_DIRECTION_OFFSET = -25.0f;
+        public static final float WIND_SPRING_SPEED_MUL = 1.00f;
+        public static final float WIND_SUMMER_SPEED_MUL = 0.85f;
+        public static final float WIND_FALL_SPEED_MUL = 1.15f;
+        public static final float WIND_WINTER_SPEED_MUL = 1.35f;
+
         // Sky Noise
         public static final float SKY_NOISE_ALTITUDE_BLEND = 0.35f;
         public static final float SKY_NOISE_TEXTURE_STRENGTH = 0.02f;

@@ -162,4 +162,12 @@ public class WeatherManager extends ManagerPackage {
     public void setReferenceCoordinate(long chunkCoordinate) {
         regionSampleBranch.setReferenceCoordinate(chunkCoordinate);
     }
+
+    /*
+     * Exposes the reference region's blended windSpeedScale for WindManager's
+     * LocalWindBranch, without leaking the package-private WeatherSampleStruct.
+     */
+    public float getWindSpeedScale() {
+        return regionSampleBranch.getCenterSample().getWindSpeedScale();
+    }
 }
