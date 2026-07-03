@@ -7,7 +7,8 @@ public class WeatherData extends DataPackage {
 
     /*
      * Immutable weather definition loaded from JSON. Holds the shader-facing
-     * cloud and precipitation values for one named weather. Owned by
+     * cloud and precipitation values for one named weather, plus its
+     * selection chance used by RegionSampleBranch's weighted blend. Owned by
      * WeatherHandle for the engine lifetime.
      */
 
@@ -25,6 +26,9 @@ public class WeatherData extends DataPackage {
     private final float windSpeedScale;
     private final float fogDensityScale;
 
+    // Selection
+    private final float chance;
+
     // Constructor \\
 
     public WeatherData(
@@ -35,7 +39,8 @@ public class WeatherData extends DataPackage {
             Vector3 cloudColor,
             float precipitationIntensity,
             float windSpeedScale,
-            float fogDensityScale) {
+            float fogDensityScale,
+            float chance) {
 
         // Internal
         this.weatherName = weatherName;
@@ -50,6 +55,9 @@ public class WeatherData extends DataPackage {
         this.precipitationIntensity = precipitationIntensity;
         this.windSpeedScale = windSpeedScale;
         this.fogDensityScale = fogDensityScale;
+
+        // Selection
+        this.chance = chance;
     }
 
     // Accessible \\
@@ -84,5 +92,9 @@ public class WeatherData extends DataPackage {
 
     public float getFogDensityScale() {
         return fogDensityScale;
+    }
+
+    public float getChance() {
+        return chance;
     }
 }

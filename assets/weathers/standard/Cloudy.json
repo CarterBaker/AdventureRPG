@@ -4,5 +4,6 @@
     "cloudColor": { "r": 0.85, "g": 0.85, "b": 0.88 },
     "precipitationIntensity": 0.0,
     "windSpeedScale": 1.0,
-    "fogDensityScale": 1.15
+    "fogDensityScale": 1.15,
+    "chance": 1.0
 }

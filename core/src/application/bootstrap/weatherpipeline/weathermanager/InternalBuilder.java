@@ -35,6 +35,7 @@ class InternalBuilder extends BuilderPackage {
         float precipitationIntensity = parseFloat(json, "precipitationIntensity", 0f);
         float windSpeedScale = parseFloat(json, "windSpeedScale", 1f);
         float fogDensityScale = parseFloat(json, "fogDensityScale", 1f);
+        float chance = parseFloat(json, "chance", 1f);
 
         WeatherData weatherData = new WeatherData(
                 weatherName,
@@ -44,7 +45,8 @@ class InternalBuilder extends BuilderPackage {
                 cloudColor,
                 precipitationIntensity,
                 windSpeedScale,
-                fogDensityScale);
+                fogDensityScale,
+                chance);
 
         WeatherHandle weatherHandle = create(WeatherHandle.class);
         weatherHandle.constructor(weatherData);
