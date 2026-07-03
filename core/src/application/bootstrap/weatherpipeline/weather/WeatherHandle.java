@@ -56,8 +56,4 @@ public class WeatherHandle extends HandlePackage {
     public float getFogDensityScale() {
         return weatherData.getFogDensityScale();
     }
-
-    public float getChance() {
-        return weatherData.getChance();
-    }
 }

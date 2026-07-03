@@ -1,12 +1,9 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
-import application.bootstrap.weatherpipeline.wind.WindHandle;
-import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
-import engine.util.mathematics.vectors.Vector3;
 
 class RegionSampleBranch extends BranchPackage {
 
@@ -15,19 +12,14 @@ class RegionSampleBranch extends BranchPackage {
      * chunk coordinates at the reference coordinate and its four cardinal
      * neighbors. Each sample resolves against the pool handed to it by
      * WeatherManager (already sorted by ascending cloud coverage) and blends
-     * between the two nearest entries — weighted by each entry's own
-     * 'chance' from its JSON definition, see rebuildWeightedPositions() —
-     * so weather never pops as the noise field drifts, and higher-chance
-     * weathers show up more often than low-chance ones. Noise drift follows
-     * WindManager's local wind direction instead of a fixed axis.
+     * between the two nearest entries so weather never pops as the noise
+     * field drifts — it fades.
      */
 
     // Settings
     private int sampleDistance;
     private float noiseCellSize;
-
-    // Internal
-    private WindManager windManager;
+    private float windDriftSpeed;
 
     // Reference
     private long referenceCoordinate;
@@ -38,10 +30,6 @@ class RegionSampleBranch extends BranchPackage {
     // Samples — CENTER, NORTH, EAST, SOUTH, WEST
     private WeatherSampleStruct[] samples;
 
-    // Weighted Pool
-    private WeatherHandle[] cachedPool;
-    private float[] cachedPositions;
-
     // Internal \\
 
     @Override
@@ -50,6 +38,7 @@ class RegionSampleBranch extends BranchPackage {
         // Settings
         this.sampleDistance = EngineSetting.WEATHER_REGION_SAMPLE_DISTANCE;
         this.noiseCellSize = EngineSetting.WEATHER_NOISE_CELL_SIZE;
+        this.windDriftSpeed = EngineSetting.WEATHER_WIND_DRIFT_SPEED;
 
         // Reference
         this.referenceCoordinate = Coordinate2Long.pack(0, 0);
@@ -58,13 +47,6 @@ class RegionSampleBranch extends BranchPackage {
         this.samples = new WeatherSampleStruct[5];
         for (int i = 0; i < samples.length; i++)
             samples[i] = new WeatherSampleStruct();
-    }
-
-    @Override
-    protected void get() {
-
-        // Internal
-        this.windManager = get(WindManager.class);
     }
 
     // Reference \\
@@ -103,62 +85,17 @@ class RegionSampleBranch extends BranchPackage {
 
     private void blendPool(WeatherSampleStruct sample, WeatherHandle[] pool, float noise) {
 
-        if (pool != cachedPool)
-            rebuildWeightedPositions(pool);
-
         if (pool.length == 1) {
             writeSample(sample, pool[0], pool[0], 0f);
             return;
         }
 
-        int lowIndex = 0;
-
-        while (lowIndex < pool.length - 2 && noise >= cachedPositions[lowIndex + 1])
-            lowIndex++;
-
-        int highIndex = lowIndex + 1;
-        float segmentStart = cachedPositions[lowIndex];
-        float segmentEnd = cachedPositions[highIndex];
-        float t = segmentEnd > segmentStart ? (noise - segmentStart) / (segmentEnd - segmentStart) : 0f;
+        float scaled = noise * (pool.length - 1);
+        int lowIndex = (int) scaled;
+        int highIndex = Math.min(lowIndex + 1, pool.length - 1);
+        float t = scaled - lowIndex;
 
         writeSample(sample, pool[lowIndex], pool[highIndex], t);
-    }
-
-    /*
-     * Rebuilds the weighted blend breakpoints whenever WeatherManager hands
-     * over a new pool reference — only happens on season change, see
-     * WeatherManager.update(). Entry i's breakpoint spacing is proportional
-     * to the combined chance of entries i and i+1, so a higher-chance entry
-     * claims a wider share of the noise domain and gets blended toward more
-     * often as the noise field drifts. Reduces to the old even 1/(N-1)
-     * spacing exactly when every entry's chance is equal.
-     */
-    private void rebuildWeightedPositions(WeatherHandle[] pool) {
-
-        cachedPool = pool;
-
-        if (pool.length == 1)
-            return;
-
-        if (cachedPositions == null || cachedPositions.length != pool.length)
-            cachedPositions = new float[pool.length];
-
-        float totalGap = 0f;
-
-        for (int i = 0; i < pool.length - 1; i++)
-            totalGap += pool[i].getChance() + pool[i + 1].getChance();
-
-        if (totalGap <= 0f)
-            throwException("Weather pool has zero total chance — every entry's 'chance' is 0 or unset");
-
-        cachedPositions[0] = 0f;
-
-        float runningGap = 0f;
-
-        for (int i = 1; i < pool.length; i++) {
-            runningGap += pool[i - 1].getChance() + pool[i].getChance();
-            cachedPositions[i] = runningGap / totalGap;
-        }
     }
 
     private void writeSample(
@@ -186,27 +123,17 @@ class RegionSampleBranch extends BranchPackage {
     // Noise \\
 
     /*
-     * Coherent 2D value noise over chunk coordinates, drifted by the current
-     * local wind (WindManager) instead of a fixed +X axis — direction comes
-     * straight from WindHandle.getLocalWindDirection(), already blended by
-     * season and active weather, so weather fronts visibly move with
-     * whichever way the wind is actually blowing. Mirrors the bilinear
-     * hash-noise approach used by Clouds.glsl, kept CPU-side and
-     * self-contained here.
-     *
-     * NOT YET WRAPPED — chunkX/chunkY should route through WorldWrapUtility
-     * the same way GridInstance does, so sampling is consistent across the
-     * world seam. Blocked on that utility's API — see chat.
+     * Coherent 2D value noise over chunk coordinates, drifted over real time
+     * so weather fronts visibly move across the world instead of sitting
+     * static on the grid. Mirrors the bilinear hash-noise approach used by
+     * Clouds.glsl, kept CPU-side and self-contained here.
      */
     private float sampleNoise(int chunkX, int chunkY) {
 
-        WindHandle windHandle = windManager.getWindHandle();
-        Vector3 windDirection = windHandle.getLocalWindDirection();
-        float windSpeed = windHandle.getLocalWindSpeed();
-        float driftDistance = elapsedTime * windSpeed * EngineSetting.WEATHER_WIND_DRIFT_SCALE;
+        float drift = elapsedTime * windDriftSpeed;
 
-        float sampleX = chunkX / noiseCellSize + windDirection.x * driftDistance;
-        float sampleY = chunkY / noiseCellSize + windDirection.z * driftDistance;
+        float sampleX = chunkX / noiseCellSize + drift;
+        float sampleY = chunkY / noiseCellSize;
 
         int x0 = (int) Math.floor(sampleX);
         int y0 = (int) Math.floor(sampleY);
