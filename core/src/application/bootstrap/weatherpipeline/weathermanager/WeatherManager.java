@@ -1,16 +1,16 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
-import java.util.Arrays;
-
-import application.bootstrap.calendarpipeline.clock.Season;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
+import application.bootstrap.weatherpipeline.season.Season;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.biome.WeatherChanceStruct;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class WeatherManager extends ManagerPackage {
@@ -37,7 +37,7 @@ public class WeatherManager extends ManagerPackage {
 
     // Season Tracking
     private Season lastSeason;
-    private WeatherHandle[] activeWeatherPool;
+    private ObjectArrayList<WeatherPoolEntryStruct> activeWeatherPool;
 
     // Base \\
 
@@ -109,24 +109,26 @@ public class WeatherManager extends ManagerPackage {
     // Biome Resolution \\
 
     /*
-     * Resolves a biome's seasonal weather names into live handles, sorted by
-     * ascending cloud coverage so RegionSampleBranch can blend smoothly
-     * between neighboring entries by noise position alone.
+     * Resolves a biome's seasonal weather chance entries into live handles,
+     * preserving JSON declaration order — RegionSampleBranch blends across
+     * this pool by chance-weighted band, not array position, so no sort
+     * is needed here.
      */
-    private WeatherHandle[] resolveWeatherPool(BiomeHandle biomeHandle, Season season) {
+    private ObjectArrayList<WeatherPoolEntryStruct> resolveWeatherPool(BiomeHandle biomeHandle, Season season) {
 
-        String[] weatherNames = biomeHandle.getWeatherNamesForSeason(season);
+        ObjectArrayList<WeatherChanceStruct> entries = biomeHandle.getWeatherEntriesForSeason(season);
 
-        if (weatherNames.length == 0)
+        if (entries.isEmpty())
             throwException("Biome \"" + biomeHandle.getBiomeName() +
                     "\" has no weathers defined for season " + season);
 
-        WeatherHandle[] pool = new WeatherHandle[weatherNames.length];
+        ObjectArrayList<WeatherPoolEntryStruct> pool = new ObjectArrayList<>(entries.size());
 
-        for (int i = 0; i < weatherNames.length; i++)
-            pool[i] = getWeatherHandleFromWeatherName(weatherNames[i]);
-
-        Arrays.sort(pool, (a, b) -> Float.compare(a.getCloudCoverage(), b.getCloudCoverage()));
+        for (int i = 0; i < entries.size(); i++) {
+            WeatherChanceStruct entry = entries.get(i);
+            WeatherHandle handle = getWeatherHandleFromWeatherName(entry.getWeatherName());
+            pool.add(new WeatherPoolEntryStruct(handle, entry.getChance()));
+        }
 
         return pool;
     }

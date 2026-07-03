@@ -54,7 +54,7 @@ class InternalBufferBranch extends BranchPackage {
 
         weatherData.updateUniform("u_cloudCoverage", center.getCloudCoverage());
         weatherData.updateUniform("u_cloudColor", center.getCloudColor());
-        weatherData.updateUniform("u_cloudType", center.getCloudType());
+        weatherData.updateUniform("u_cloudAltitude", center.getCloudAltitude());
         weatherData.updateUniform("u_precipitationIntensity", center.getPrecipitationIntensity());
         weatherData.updateUniform("u_windSpeedScale", center.getWindSpeedScale());
         weatherData.updateUniform("u_fogDensityScale", center.getFogDensityScale());
@@ -65,13 +65,13 @@ class InternalBufferBranch extends BranchPackage {
     private void pushWeatherRegionData() {
 
         pushRegion(regionSampleBranch.getNorthSample(),
-                "u_cloudCoverageNorth", "u_cloudColorNorth", "u_cloudTypeNorth");
+                "u_cloudCoverageNorth", "u_cloudColorNorth", "u_cloudAltitudeNorth");
         pushRegion(regionSampleBranch.getEastSample(),
-                "u_cloudCoverageEast", "u_cloudColorEast", "u_cloudTypeEast");
+                "u_cloudCoverageEast", "u_cloudColorEast", "u_cloudAltitudeEast");
         pushRegion(regionSampleBranch.getSouthSample(),
-                "u_cloudCoverageSouth", "u_cloudColorSouth", "u_cloudTypeSouth");
+                "u_cloudCoverageSouth", "u_cloudColorSouth", "u_cloudAltitudeSouth");
         pushRegion(regionSampleBranch.getWestSample(),
-                "u_cloudCoverageWest", "u_cloudColorWest", "u_cloudTypeWest");
+                "u_cloudCoverageWest", "u_cloudColorWest", "u_cloudAltitudeWest");
 
         uboManager.push(weatherRegionData);
     }
@@ -80,10 +80,10 @@ class InternalBufferBranch extends BranchPackage {
             WeatherSampleStruct sample,
             String coverageUniform,
             String colorUniform,
-            String typeUniform) {
+            String altitudeUniform) {
 
         weatherRegionData.updateUniform(coverageUniform, sample.getCloudCoverage());
         weatherRegionData.updateUniform(colorUniform, sample.getCloudColor());
-        weatherRegionData.updateUniform(typeUniform, sample.getCloudType());
+        weatherRegionData.updateUniform(altitudeUniform, sample.getCloudAltitude());
     }
 }

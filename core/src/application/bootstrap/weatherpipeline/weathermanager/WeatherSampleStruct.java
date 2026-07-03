@@ -9,12 +9,15 @@ class WeatherSampleStruct extends StructPackage {
      * Pure data holder for one sampled weather region's blended shader-facing
      * values. RegionSampleBranch owns five instances — one per cardinal
      * direction plus the centre — and writes into them each update.
+     * cloudColor and cloudAltitude are sourced from each blended weather's
+     * primary cloud (see WeatherHandle.getPrimaryCloud()) — representative
+     * single values for horizon tinting, not a full per-cloud breakdown.
      */
 
     // Cloud
     private final Vector3 cloudColor;
     private float cloudCoverage;
-    private float cloudType;
+    private float cloudAltitude;
 
     // Atmosphere
     private float precipitationIntensity;
@@ -45,12 +48,12 @@ class WeatherSampleStruct extends StructPackage {
         this.cloudCoverage = cloudCoverage;
     }
 
-    float getCloudType() {
-        return cloudType;
+    float getCloudAltitude() {
+        return cloudAltitude;
     }
 
-    void setCloudType(float cloudType) {
-        this.cloudType = cloudType;
+    void setCloudAltitude(float cloudAltitude) {
+        this.cloudAltitude = cloudAltitude;
     }
 
     float getPrecipitationIntensity() {

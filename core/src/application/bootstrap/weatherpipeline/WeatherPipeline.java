@@ -1,6 +1,7 @@
 package application.bootstrap.weatherpipeline;
 
 import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
+import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import engine.root.PipelinePackage;
@@ -23,5 +24,6 @@ public class WeatherPipeline extends PipelinePackage {
         create(CloudManager.class);
         create(WindManager.class);
         create(WeatherManager.class);
+        create(SeasonManager.class);
     }
 }

@@ -1,8 +1,22 @@
 {
     "weathers": {
-        "SPRING": ["standard/Sunny", "standard/Cloudy"],
-        "SUMMER": ["standard/Sunny", "standard/Cloudy"],
-        "FALL":   ["standard/Sunny", "standard/Cloudy"],
-        "WINTER": ["standard/Sunny", "standard/Cloudy"]
+        "SPRING": [
+            { "name": "standard/Sunny",  "chance": 65 },
+            { "name": "standard/Cloudy", "chance": 35 }
+        ],
+        "SUMMER": [
+            { "name": "standard/Sunny",  "chance": 80 },
+            { "name": "standard/Cloudy", "chance": 20 }
+        ],
+        "FALL": [
+            { "name": "standard/Sunny",  "chance": 40 },
+            { "name": "standard/Cloudy", "chance": 45 },
+            { "name": "standard/Stormy", "chance": 15 }
+        ],
+        "WINTER": [
+            { "name": "standard/Cloudy", "chance": 55 },
+            { "name": "standard/Sunny",  "chance": 25 },
+            { "name": "standard/Stormy", "chance": 20 }
+        ]
     }
 }

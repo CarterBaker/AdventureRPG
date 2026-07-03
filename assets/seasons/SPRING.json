@@ -1,0 +1,8 @@
+{
+    "baseWindSpeed": 3.5,
+    "windVariance": 1.5,
+    "prevailingWindDirectionDegrees": 250.0,
+    "baseTemperature": 13.0,
+    "temperatureVariance": 6.0,
+    "precipitationChanceScale": 1.15
+}

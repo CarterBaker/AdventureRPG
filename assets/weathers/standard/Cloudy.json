@@ -1,8 +1,10 @@
 {
-    "cloudType": "STRATUS",
-    "cloudCoverage": 0.65,
-    "cloudColor": { "r": 0.85, "g": 0.85, "b": 0.88 },
+    "clouds": [
+        { "name": "standard/Stratus", "chance": 60 },
+        { "name": "standard/Cumulus", "chance": 40, "altitudeOverride": 130.0 }
+    ],
+    "cloudCoverage": 0.6,
     "precipitationIntensity": 0.0,
-    "windSpeedScale": 1.0,
-    "fogDensityScale": 1.15
+    "windSpeedScale": 1.1,
+    "fogDensityScale": 1.05
 }

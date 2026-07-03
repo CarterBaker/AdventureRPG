@@ -6,9 +6,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import application.bootstrap.calendarpipeline.clock.Season;
+import application.bootstrap.weatherpipeline.season.Season;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.biome.WeatherChanceStruct;
 import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.util.io.FileUtility;
@@ -21,9 +22,15 @@ class InternalBuilder extends BuilderPackage {
 
     /*
      * Parses biome JSON into a BiomeData and wraps it in a BiomeHandle.
-     * Reads the optional "weathers" block into a per-season name pool that
-     * WeatherManager resolves into live WeatherHandles on demand.
+     * Reads the optional "weathers" block into a per-season chance-weighted
+     * pool that WeatherManager resolves into live WeatherHandles on demand.
+     * Each season's array accepts either a bare weather name string (given
+     * a default relative chance) or an object with explicit "name" and
+     * "chance" fields — both forms may be mixed freely within one array.
      */
+
+    // Default relative weight applied to a bare weather-name string entry.
+    private static final float DEFAULT_WEATHER_CHANCE = 1.0f;
 
     // Build \\
 
@@ -33,9 +40,10 @@ class InternalBuilder extends BuilderPackage {
         short biomeID = RegistryUtility.toShortID(biomeName);
 
         JsonObject json = JsonUtility.loadJsonObject(file);
-        Object2ObjectOpenHashMap<Season, ObjectArrayList<String>> seasonWeatherNames = parseWeathers(json);
+        Object2ObjectOpenHashMap<Season, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries = parseWeathers(
+                json);
 
-        BiomeData biomeData = new BiomeData(biomeName, biomeID, Color.WHITE, seasonWeatherNames);
+        BiomeData biomeData = new BiomeData(biomeName, biomeID, Color.WHITE, seasonWeatherEntries);
 
         BiomeHandle biomeHandle = create(BiomeHandle.class);
         biomeHandle.constructor(biomeData);
@@ -45,12 +53,12 @@ class InternalBuilder extends BuilderPackage {
 
     // Parsing \\
 
-    private Object2ObjectOpenHashMap<Season, ObjectArrayList<String>> parseWeathers(JsonObject json) {
+    private Object2ObjectOpenHashMap<Season, ObjectArrayList<WeatherChanceStruct>> parseWeathers(JsonObject json) {
 
-        Object2ObjectOpenHashMap<Season, ObjectArrayList<String>> seasonWeatherNames = new Object2ObjectOpenHashMap<>();
+        Object2ObjectOpenHashMap<Season, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries = new Object2ObjectOpenHashMap<>();
 
         if (!json.has("weathers"))
-            return seasonWeatherNames;
+            return seasonWeatherEntries;
 
         JsonObject weathersObject = json.getAsJsonObject("weathers");
 
@@ -60,14 +68,28 @@ class InternalBuilder extends BuilderPackage {
                 continue;
 
             JsonArray weatherArray = weathersObject.getAsJsonArray(season.name());
-            ObjectArrayList<String> weatherNames = new ObjectArrayList<>(weatherArray.size());
+            ObjectArrayList<WeatherChanceStruct> entries = new ObjectArrayList<>(weatherArray.size());
 
             for (JsonElement element : weatherArray)
-                weatherNames.add(element.getAsString());
+                entries.add(parseWeatherEntry(element));
 
-            seasonWeatherNames.put(season, weatherNames);
+            seasonWeatherEntries.put(season, entries);
         }
 
-        return seasonWeatherNames;
+        return seasonWeatherEntries;
+    }
+
+    private WeatherChanceStruct parseWeatherEntry(JsonElement element) {
+
+        if (element.isJsonPrimitive())
+            return new WeatherChanceStruct(element.getAsString(), DEFAULT_WEATHER_CHANCE);
+
+        JsonObject entryObject = element.getAsJsonObject();
+        String weatherName = JsonUtility.validateString(entryObject, "name");
+        float chance = entryObject.has("chance")
+                ? entryObject.get("chance").getAsFloat()
+                : DEFAULT_WEATHER_CHANCE;
+
+        return new WeatherChanceStruct(weatherName, chance);
     }
 }

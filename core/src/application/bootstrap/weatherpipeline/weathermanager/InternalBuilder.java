@@ -2,23 +2,42 @@ package application.bootstrap.weatherpipeline.weathermanager;
 
 import java.io.File;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import application.bootstrap.weatherpipeline.weather.CloudType;
+import application.bootstrap.weatherpipeline.cloud.CloudHandle;
+import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
+import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherData;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import engine.root.BuilderPackage;
 import engine.util.io.FileUtility;
 import engine.util.io.JsonUtility;
-import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InternalBuilder extends BuilderPackage {
 
     /*
      * Parses weather JSON into a WeatherData and wraps it in a WeatherHandle.
-     * Bootstrap-only and on-demand.
+     * The "clouds" array is required — every weather must define at least
+     * one cloud it can spawn, each with a relative chance and an optional
+     * altitude override. Cloud names are resolved through CloudManager,
+     * the same on-demand-capable lookup pattern used for shaders, textures,
+     * and every other cross-manager reference in bootstrap. Bootstrap-only
+     * and on-demand.
      */
+
+    // Internal
+    private CloudManager cloudManager;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.cloudManager = get(CloudManager.class);
+    }
 
     // Build \\
 
@@ -29,9 +48,8 @@ class InternalBuilder extends BuilderPackage {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
 
-        CloudType cloudType = parseCloudType(json);
+        ObjectArrayList<CloudChanceStruct> cloudEntries = parseClouds(json, weatherName);
         float cloudCoverage = parseFloat(json, "cloudCoverage", 0f);
-        Vector3 cloudColor = parseColor(json, "cloudColor");
         float precipitationIntensity = parseFloat(json, "precipitationIntensity", 0f);
         float windSpeedScale = parseFloat(json, "windSpeedScale", 1f);
         float fogDensityScale = parseFloat(json, "fogDensityScale", 1f);
@@ -39,9 +57,8 @@ class InternalBuilder extends BuilderPackage {
         WeatherData weatherData = new WeatherData(
                 weatherName,
                 weatherID,
-                cloudType,
+                cloudEntries,
                 cloudCoverage,
-                cloudColor,
                 precipitationIntensity,
                 windSpeedScale,
                 fogDensityScale);
@@ -54,12 +71,37 @@ class InternalBuilder extends BuilderPackage {
 
     // Parsing \\
 
-    private CloudType parseCloudType(JsonObject json) {
+    private ObjectArrayList<CloudChanceStruct> parseClouds(JsonObject json, String weatherName) {
 
-        if (!json.has("cloudType"))
-            throwException("Weather JSON missing 'cloudType' field");
+        if (!json.has("clouds"))
+            throwException("Weather \"" + weatherName + "\" JSON is missing required 'clouds' array");
 
-        return CloudType.valueOf(json.get("cloudType").getAsString());
+        JsonArray cloudsArray = json.getAsJsonArray("clouds");
+        ObjectArrayList<CloudChanceStruct> entries = new ObjectArrayList<>(cloudsArray.size());
+
+        for (JsonElement element : cloudsArray)
+            entries.add(parseCloudEntry(element.getAsJsonObject()));
+
+        if (entries.isEmpty())
+            throwException("Weather \"" + weatherName + "\" 'clouds' array must define at least one entry");
+
+        return entries;
+    }
+
+    private CloudChanceStruct parseCloudEntry(JsonObject entryObject) {
+
+        String cloudName = JsonUtility.validateString(entryObject, "name");
+        CloudHandle cloudHandle = cloudManager.getCloudHandleFromCloudName(cloudName);
+
+        float chance = entryObject.has("chance")
+                ? entryObject.get("chance").getAsFloat()
+                : 1.0f;
+
+        float altitudeOverride = entryObject.has("altitudeOverride")
+                ? entryObject.get("altitudeOverride").getAsFloat()
+                : CloudChanceStruct.NO_ALTITUDE_OVERRIDE;
+
+        return new CloudChanceStruct(cloudHandle, chance, altitudeOverride);
     }
 
     private float parseFloat(JsonObject json, String field, float fallback) {
@@ -68,19 +110,5 @@ class InternalBuilder extends BuilderPackage {
             return fallback;
 
         return json.get(field).getAsFloat();
-    }
-
-    private Vector3 parseColor(JsonObject json, String field) {
-
-        if (!json.has(field))
-            return new Vector3(1f, 1f, 1f);
-
-        JsonObject colorObject = json.getAsJsonObject(field);
-
-        float r = colorObject.get("r").getAsFloat();
-        float g = colorObject.get("g").getAsFloat();
-        float b = colorObject.get("b").getAsFloat();
-
-        return new Vector3(r, g, b);
     }
 }

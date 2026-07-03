@@ -1,13 +1,19 @@
 package application.bootstrap.weatherpipeline.weather;
 
 import engine.root.HandlePackage;
-import engine.util.mathematics.vectors.Vector3;
+import engine.util.random.WeightedChanceUtility;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WeatherHandle extends HandlePackage {
 
     /*
      * Persistent reference to a loaded weather definition. Registered and
      * owned by WeatherManager. Delegates all accessors through WeatherData.
+     * Clouds are exposed as the full chance-weighted list — callers that
+     * need genuine per-instance variety (e.g. each overhead cell) should
+     * pick from getCloudEntries() themselves via WeightedChanceUtility;
+     * getPrimaryCloud() is a deterministic convenience for single-value
+     * uses like horizon tinting, always returning the highest-chance entry.
      */
 
     // Internal
@@ -33,16 +39,32 @@ public class WeatherHandle extends HandlePackage {
         return weatherData.getWeatherID();
     }
 
-    public CloudType getCloudType() {
-        return weatherData.getCloudType();
+    public ObjectArrayList<CloudChanceStruct> getCloudEntries() {
+        return weatherData.getCloudEntries();
+    }
+
+    public CloudChanceStruct getPrimaryCloud() {
+
+        ObjectArrayList<CloudChanceStruct> entries = weatherData.getCloudEntries();
+
+        if (entries.isEmpty())
+            throwException("Weather \"" + getWeatherName() + "\" has no clouds defined");
+
+        CloudChanceStruct best = entries.get(0);
+
+        for (int i = 1; i < entries.size(); i++)
+            if (entries.get(i).getChance() > best.getChance())
+                best = entries.get(i);
+
+        return best;
+    }
+
+    public CloudChanceStruct pickCloud(float noise01) {
+        return WeightedChanceUtility.pickWeighted(weatherData.getCloudEntries(), noise01);
     }
 
     public float getCloudCoverage() {
         return weatherData.getCloudCoverage();
-    }
-
-    public Vector3 getCloudColor() {
-        return weatherData.getCloudColor();
     }
 
     public float getPrecipitationIntensity() {

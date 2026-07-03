@@ -3,18 +3,18 @@
     "uniforms": [
         { "name": "u_cloudCoverageNorth", "type": "FLOAT"   },
         { "name": "u_cloudColorNorth",    "type": "VECTOR3" },
-        { "name": "u_cloudTypeNorth",     "type": "FLOAT"   },
+        { "name": "u_cloudAltitudeNorth", "type": "FLOAT"   },
 
         { "name": "u_cloudCoverageEast",  "type": "FLOAT"   },
         { "name": "u_cloudColorEast",     "type": "VECTOR3" },
-        { "name": "u_cloudTypeEast",      "type": "FLOAT"   },
+        { "name": "u_cloudAltitudeEast",  "type": "FLOAT"   },
 
         { "name": "u_cloudCoverageSouth", "type": "FLOAT"   },
         { "name": "u_cloudColorSouth",    "type": "VECTOR3" },
-        { "name": "u_cloudTypeSouth",     "type": "FLOAT"   },
+        { "name": "u_cloudAltitudeSouth", "type": "FLOAT"   },
 
         { "name": "u_cloudCoverageWest",  "type": "FLOAT"   },
         { "name": "u_cloudColorWest",     "type": "VECTOR3" },
-        { "name": "u_cloudTypeWest",      "type": "FLOAT"   }
+        { "name": "u_cloudAltitudeWest",  "type": "FLOAT"   }
     ]
 }

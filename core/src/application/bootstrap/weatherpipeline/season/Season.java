@@ -1,4 +1,4 @@
-package application.bootstrap.calendarpipeline.clock;
+package application.bootstrap.weatherpipeline.season;
 
 public enum Season {
 

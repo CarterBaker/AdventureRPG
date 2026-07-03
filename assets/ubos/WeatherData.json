@@ -3,7 +3,7 @@
     "uniforms": [
         { "name": "u_cloudCoverage",          "type": "FLOAT"   },
         { "name": "u_cloudColor",             "type": "VECTOR3" },
-        { "name": "u_cloudType",              "type": "FLOAT"   },
+        { "name": "u_cloudAltitude",          "type": "FLOAT"   },
         { "name": "u_precipitationIntensity", "type": "FLOAT"   },
         { "name": "u_windSpeedScale",         "type": "FLOAT"   },
         { "name": "u_fogDensityScale",        "type": "FLOAT"   }

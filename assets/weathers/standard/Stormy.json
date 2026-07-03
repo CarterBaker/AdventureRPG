@@ -1,0 +1,10 @@
+{
+    "clouds": [
+        { "name": "standard/Nimbus", "chance": 80 },
+        { "name": "standard/Stratus", "chance": 20, "altitudeOverride": 180.0 }
+    ],
+    "cloudCoverage": 0.9,
+    "precipitationIntensity": 0.85,
+    "windSpeedScale": 1.6,
+    "fogDensityScale": 1.3
+}

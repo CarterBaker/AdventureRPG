@@ -1,5 +1,6 @@
 package application.bootstrap.calendarpipeline.clock;
 
+import application.bootstrap.weatherpipeline.season.Season;
 import engine.root.HandlePackage;
 
 public class ClockHandle extends HandlePackage {

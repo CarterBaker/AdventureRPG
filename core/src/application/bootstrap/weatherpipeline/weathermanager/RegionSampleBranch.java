@@ -1,19 +1,25 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
+import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.random.WeightedChanceUtility;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RegionSampleBranch extends BranchPackage {
 
     /*
      * Continuously samples a coherent, drifting noise field over world-space
      * chunk coordinates at the reference coordinate and its four cardinal
-     * neighbors. Each sample resolves against the pool handed to it by
-     * WeatherManager (already sorted by ascending cloud coverage) and blends
-     * between the two nearest entries so weather never pops as the noise
-     * field drifts — it fades.
+     * neighbors. Each sample resolves against the chance-weighted pool
+     * handed to it by WeatherManager: noise position maps to a cumulative
+     * chance band per weather (see blendPool), so a weather with a larger
+     * relative chance occupies a proportionally wider band of the drifting
+     * noise field and appears more often — never a single evenly-spaced
+     * slot. Blending happens across the boundary between adjacent bands so
+     * weather never pops as the noise field drifts — it fades.
      */
 
     // Settings
@@ -57,7 +63,7 @@ class RegionSampleBranch extends BranchPackage {
 
     // Sampling \\
 
-    void sampleRegions(WeatherHandle[] pool) {
+    void sampleRegions(ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
         elapsedTime += internal.getDeltaTime();
 
@@ -75,7 +81,7 @@ class RegionSampleBranch extends BranchPackage {
             WeatherSampleStruct sample,
             int chunkX,
             int chunkY,
-            WeatherHandle[] pool) {
+            ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
         float noise = sampleNoise(chunkX, chunkY);
         blendPool(sample, pool, noise);
@@ -83,19 +89,54 @@ class RegionSampleBranch extends BranchPackage {
 
     // Blend \\
 
-    private void blendPool(WeatherSampleStruct sample, WeatherHandle[] pool, float noise) {
+    /*
+     * Maps noise01 onto a cumulative chance-weighted band across the pool,
+     * in JSON declaration order. Within the band a sample lands in, it
+     * blends toward the NEXT pool entry as noise approaches the top of that
+     * band — the same "fade across the seam" behavior the old uniform-slot
+     * version had, just with band width driven by relative chance instead
+     * of array position.
+     */
+    private void blendPool(WeatherSampleStruct sample, ObjectArrayList<WeatherPoolEntryStruct> pool, float noise) {
 
-        if (pool.length == 1) {
-            writeSample(sample, pool[0], pool[0], 0f);
+        if (pool.size() == 1) {
+            WeatherHandle only = pool.get(0).getWeatherHandle();
+            writeSample(sample, only, only, 0f);
             return;
         }
 
-        float scaled = noise * (pool.length - 1);
-        int lowIndex = (int) scaled;
-        int highIndex = Math.min(lowIndex + 1, pool.length - 1);
-        float t = scaled - lowIndex;
+        float total = WeightedChanceUtility.totalChance(pool);
 
-        writeSample(sample, pool[lowIndex], pool[highIndex], t);
+        if (total <= 0f) {
+            WeatherHandle first = pool.get(0).getWeatherHandle();
+            writeSample(sample, first, first, 0f);
+            return;
+        }
+
+        float target = clamp01(noise) * total;
+        float cumulative = 0f;
+
+        for (int i = 0; i < pool.size(); i++) {
+
+            float chance = Math.max(0f, pool.get(i).getChance());
+            float bandEnd = cumulative + chance;
+            boolean isLast = i == pool.size() - 1;
+
+            if (target <= bandEnd || isLast) {
+
+                WeatherHandle low = pool.get(i).getWeatherHandle();
+                int nextIndex = isLast ? i : i + 1;
+                WeatherHandle high = pool.get(nextIndex).getWeatherHandle();
+
+                float bandWidth = Math.max(bandEnd - cumulative, 0.0001f);
+                float t = clamp01((target - cumulative) / bandWidth);
+
+                writeSample(sample, low, high, t);
+                return;
+            }
+
+            cumulative = bandEnd;
+        }
     }
 
     private void writeSample(
@@ -104,20 +145,27 @@ class RegionSampleBranch extends BranchPackage {
             WeatherHandle high,
             float t) {
 
+        CloudChanceStruct lowCloud = low.getPrimaryCloud();
+        CloudChanceStruct highCloud = high.getPrimaryCloud();
+
         sample.setCloudCoverage(lerp(low.getCloudCoverage(), high.getCloudCoverage(), t));
         sample.setPrecipitationIntensity(lerp(low.getPrecipitationIntensity(), high.getPrecipitationIntensity(), t));
         sample.setWindSpeedScale(lerp(low.getWindSpeedScale(), high.getWindSpeedScale(), t));
         sample.setFogDensityScale(lerp(low.getFogDensityScale(), high.getFogDensityScale(), t));
-        sample.setCloudType(lerp(low.getCloudType().ordinal(), high.getCloudType().ordinal(), t));
+        sample.setCloudAltitude(lerp(lowCloud.getEffectiveAltitude(), highCloud.getEffectiveAltitude(), t));
 
         sample.setCloudColor(
-                lerp(low.getCloudColor().x, high.getCloudColor().x, t),
-                lerp(low.getCloudColor().y, high.getCloudColor().y, t),
-                lerp(low.getCloudColor().z, high.getCloudColor().z, t));
+                lerp(lowCloud.getCloudHandle().getCloudColor().x, highCloud.getCloudHandle().getCloudColor().x, t),
+                lerp(lowCloud.getCloudHandle().getCloudColor().y, highCloud.getCloudHandle().getCloudColor().y, t),
+                lerp(lowCloud.getCloudHandle().getCloudColor().z, highCloud.getCloudHandle().getCloudColor().z, t));
     }
 
     private float lerp(float a, float b, float t) {
         return a + (b - a) * t;
+    }
+
+    private float clamp01(float value) {
+        return Math.max(0f, Math.min(1f, value));
     }
 
     // Noise \\
@@ -126,7 +174,9 @@ class RegionSampleBranch extends BranchPackage {
      * Coherent 2D value noise over chunk coordinates, drifted over real time
      * so weather fronts visibly move across the world instead of sitting
      * static on the grid. Mirrors the bilinear hash-noise approach used by
-     * Clouds.glsl, kept CPU-side and self-contained here.
+     * Clouds.glsl, kept CPU-side and self-contained here. Not yet wrapped
+     * at world edges — that arrives with the horizon sampling step, where
+     * this same function grows a second long-distance call site.
      */
     private float sampleNoise(int chunkX, int chunkY) {
 

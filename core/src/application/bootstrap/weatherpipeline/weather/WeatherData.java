@@ -1,26 +1,28 @@
 package application.bootstrap.weatherpipeline.weather;
 
 import engine.root.DataPackage;
-import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WeatherData extends DataPackage {
 
     /*
-     * Immutable weather definition loaded from JSON. Holds the shader-facing
-     * cloud and precipitation values for one named weather. Owned by
-     * WeatherHandle for the engine lifetime.
+     * Immutable weather definition loaded from JSON. Holds the condition-level
+     * shader-facing values for one named weather plus the chance-weighted set
+     * of clouds that may appear under this condition — see CloudChanceStruct.
+     * Cloud shape, color, and default altitude live entirely on the
+     * referenced CloudHandle; this class only ever carries per-condition
+     * numbers. Owned by WeatherHandle for the engine lifetime.
      */
 
     // Internal
     private final String weatherName;
     private final short weatherID;
 
-    // Cloud
-    private final CloudType cloudType;
-    private final float cloudCoverage;
-    private final Vector3 cloudColor;
+    // Clouds
+    private final ObjectArrayList<CloudChanceStruct> cloudEntries;
 
     // Atmosphere
+    private final float cloudCoverage;
     private final float precipitationIntensity;
     private final float windSpeedScale;
     private final float fogDensityScale;
@@ -30,9 +32,8 @@ public class WeatherData extends DataPackage {
     public WeatherData(
             String weatherName,
             short weatherID,
-            CloudType cloudType,
+            ObjectArrayList<CloudChanceStruct> cloudEntries,
             float cloudCoverage,
-            Vector3 cloudColor,
             float precipitationIntensity,
             float windSpeedScale,
             float fogDensityScale) {
@@ -41,12 +42,11 @@ public class WeatherData extends DataPackage {
         this.weatherName = weatherName;
         this.weatherID = weatherID;
 
-        // Cloud
-        this.cloudType = cloudType;
-        this.cloudCoverage = cloudCoverage;
-        this.cloudColor = cloudColor;
+        // Clouds
+        this.cloudEntries = cloudEntries;
 
         // Atmosphere
+        this.cloudCoverage = cloudCoverage;
         this.precipitationIntensity = precipitationIntensity;
         this.windSpeedScale = windSpeedScale;
         this.fogDensityScale = fogDensityScale;
@@ -62,16 +62,12 @@ public class WeatherData extends DataPackage {
         return weatherID;
     }
 
-    public CloudType getCloudType() {
-        return cloudType;
+    public ObjectArrayList<CloudChanceStruct> getCloudEntries() {
+        return cloudEntries;
     }
 
     public float getCloudCoverage() {
         return cloudCoverage;
-    }
-
-    public Vector3 getCloudColor() {
-        return cloudColor;
     }
 
     public float getPrecipitationIntensity() {

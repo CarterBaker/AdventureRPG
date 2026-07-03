@@ -1,6 +1,6 @@
 package application.bootstrap.worldpipeline.biome;
 
-import application.bootstrap.calendarpipeline.clock.Season;
+import application.bootstrap.weatherpipeline.season.Season;
 import engine.graphics.color.Color;
 import engine.root.DataPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -10,9 +10,11 @@ public class BiomeData extends DataPackage {
 
     /*
      * Persistent biome record. Holds identity, biome color, and the seasonal
-     * weather name pools WeatherManager resolves into live handles on demand.
-     * Color is immutable — set at bootstrap from JSON definition.
-     * Owned by BiomeHandle for the full engine session.
+     * weather chance pools WeatherManager resolves into live handles on
+     * demand. Each pool entry pairs a weather name with its relative chance
+     * weight — see WeatherChanceStruct. Color is immutable — set at
+     * bootstrap from JSON definition. Owned by BiomeHandle for the full
+     * engine session.
      */
 
     // Identity
@@ -23,7 +25,7 @@ public class BiomeData extends DataPackage {
     private final Color biomeColor;
 
     // Weather
-    private final Object2ObjectOpenHashMap<Season, ObjectArrayList<String>> seasonWeatherNames;
+    private final Object2ObjectOpenHashMap<Season, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries;
 
     // Constructor \\
 
@@ -31,7 +33,7 @@ public class BiomeData extends DataPackage {
             String biomeName,
             short biomeID,
             Color biomeColor,
-            Object2ObjectOpenHashMap<Season, ObjectArrayList<String>> seasonWeatherNames) {
+            Object2ObjectOpenHashMap<Season, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries) {
 
         // Identity
         this.biomeName = biomeName;
@@ -41,7 +43,7 @@ public class BiomeData extends DataPackage {
         this.biomeColor = biomeColor;
 
         // Weather
-        this.seasonWeatherNames = seasonWeatherNames;
+        this.seasonWeatherEntries = seasonWeatherEntries;
     }
 
     // Accessible \\
@@ -58,7 +60,7 @@ public class BiomeData extends DataPackage {
         return biomeColor;
     }
 
-    public Object2ObjectOpenHashMap<Season, ObjectArrayList<String>> getSeasonWeatherNames() {
-        return seasonWeatherNames;
+    public Object2ObjectOpenHashMap<Season, ObjectArrayList<WeatherChanceStruct>> getSeasonWeatherEntries() {
+        return seasonWeatherEntries;
     }
 }
