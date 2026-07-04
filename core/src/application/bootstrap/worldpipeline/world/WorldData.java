@@ -9,9 +9,9 @@ public class WorldData extends DataPackage {
 
     /*
      * Immutable world definition loaded from a PNG map and optional companion
-     * JSON. Holds identity, pixel map, scale, gravity, and time configuration.
-     * worldEpochStart is the one mutable field — written from the save file at
-     * runtime, never from the world definition itself.
+     * JSON. Holds identity, pixel map, scale, gravity, rotation, and time
+     * configuration. worldEpochStart is the one mutable field — written from
+     * the save file at runtime, never from the world definition itself.
      */
 
     // Identity
@@ -29,6 +29,9 @@ public class WorldData extends DataPackage {
     private final String calendarName;
     private long worldEpochStart;
 
+    // Rotation
+    private final float rotationSpeed;
+
     // Constructor \\
 
     public WorldData(
@@ -39,7 +42,8 @@ public class WorldData extends DataPackage {
             float gravityMultiplier,
             Vector3 gravityDirection,
             float daysPerDay,
-            String calendarName) {
+            String calendarName,
+            float rotationSpeed) {
 
         // Identity
         this.worldName = worldName;
@@ -55,6 +59,9 @@ public class WorldData extends DataPackage {
         this.daysPerDay = daysPerDay;
         this.calendarName = calendarName;
         this.worldEpochStart = -1L;
+
+        // Rotation
+        this.rotationSpeed = rotationSpeed;
     }
 
     // Accessible \\
@@ -97,5 +104,9 @@ public class WorldData extends DataPackage {
 
     public void setWorldEpochStart(long worldEpochStart) {
         this.worldEpochStart = worldEpochStart;
+    }
+
+    public float getRotationSpeed() {
+        return rotationSpeed;
     }
 }

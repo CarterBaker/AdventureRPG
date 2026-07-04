@@ -13,14 +13,20 @@ class RegionSampleBranch extends BranchPackage {
     /*
      * Continuously samples a coherent, drifting noise field over world-space
      * chunk coordinates at the reference coordinate and its four cardinal
-     * neighbors. Each sample resolves against the chance-weighted pool
-     * handed to it by WeatherManager: noise position maps to a cumulative
-     * chance band per weather (see blendPool), so a weather with a larger
-     * relative chance occupies a proportionally wider band of the drifting
-     * noise field and appears more often — never a single evenly-spaced
-     * slot. Blending happens across the boundary between adjacent bands so
-     * weather never pops as the noise field drifts — it fades.
+     * neighbors. Each direction's local drift noise is blended with
+     * GlobalNoiseBranch's planet-rotation-driven noise (see
+     * EngineSetting.GLOBAL_WEATHER_INFLUENCE for the blend weight) before
+     * resolving against the chance-weighted pool handed to it by
+     * WeatherManager: noise position maps to a cumulative chance band per
+     * weather (see blendPool), so a weather with a larger relative chance
+     * occupies a proportionally wider band of the combined noise field and
+     * appears more often — never a single evenly-spaced slot. Blending
+     * happens across the boundary between adjacent bands so weather never
+     * pops as the noise field drifts — it fades.
      */
+
+    // Internal
+    private GlobalNoiseBranch globalNoiseBranch;
 
     // Settings
     private int sampleDistance;
@@ -55,6 +61,11 @@ class RegionSampleBranch extends BranchPackage {
             samples[i] = new WeatherSampleStruct();
     }
 
+    @Override
+    protected void get() {
+        this.globalNoiseBranch = get(GlobalNoiseBranch.class);
+    }
+
     // Reference \\
 
     void setReferenceCoordinate(long chunkCoordinate) {
@@ -83,8 +94,11 @@ class RegionSampleBranch extends BranchPackage {
             int chunkY,
             ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
-        float noise = sampleNoise(chunkX, chunkY);
-        blendPool(sample, pool, noise);
+        float localNoise = sampleNoise(chunkX, chunkY);
+        float globalIntensity = globalNoiseBranch.sampleGlobalIntensity(Coordinate2Long.pack(chunkX, chunkY));
+        float combinedNoise = lerp(localNoise, globalIntensity, globalNoiseBranch.getGlobalInfluence());
+
+        blendPool(sample, pool, combinedNoise);
     }
 
     // Blend \\
@@ -172,11 +186,11 @@ class RegionSampleBranch extends BranchPackage {
 
     /*
      * Coherent 2D value noise over chunk coordinates, drifted over real time
-     * so weather fronts visibly move across the world instead of sitting
-     * static on the grid. Mirrors the bilinear hash-noise approach used by
-     * Clouds.glsl, kept CPU-side and self-contained here. Not yet wrapped
-     * at world edges — that arrives with the horizon sampling step, where
-     * this same function grows a second long-distance call site.
+     * so weather fronts visibly move across the world independently of the
+     * planet's rotation. Mirrors the bilinear hash-noise approach used by
+     * Clouds.glsl, kept CPU-side and self-contained here. Not yet wrapped at
+     * world edges — that arrives with the horizon sampling step, where this
+     * same function grows a second long-distance call site.
      */
     private float sampleNoise(int chunkX, int chunkY) {
 

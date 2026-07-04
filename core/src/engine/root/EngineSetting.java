@@ -322,6 +322,11 @@ public class EngineSetting {
         public static final float DEFAULT_GRAVITY_X = 0.0f;
         public static final float DEFAULT_GRAVITY_Y = -1.0f;
         public static final float DEFAULT_GRAVITY_Z = 0.0f;
+        public static final float DEFAULT_WORLD_ROTATION_SPEED = 0.3f;
+
+        // Rotation \\
+
+        public static final double DEGREES_PER_FULL_ROTATION = 360.0;
 
         // Sky \\
 
@@ -336,6 +341,11 @@ public class EngineSetting {
         public static final int WEATHER_REGION_SAMPLE_DISTANCE = 96; // chunk units between cardinal samples
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f; // chunk units per noise cell
         public static final float WEATHER_WIND_DRIFT_SPEED = 0.01f; // noise-space units per second
+
+        // Global Weather Noise \\
+
+        public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f; // chunk units per global noise cell
+        public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f; // 0..1 blend weight of global rotating noise
 
         // Horizon & Overhead \\
 

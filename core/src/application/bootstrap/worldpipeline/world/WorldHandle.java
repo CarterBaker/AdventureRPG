@@ -67,4 +67,8 @@ public class WorldHandle extends HandlePackage {
     public void setWorldEpochStart(long worldEpochStart) {
         data.setWorldEpochStart(worldEpochStart);
     }
+
+    public float getRotationSpeed() {
+        return data.getRotationSpeed();
+    }
 }

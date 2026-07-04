@@ -39,6 +39,7 @@ class InternalBuilder extends BuilderPackage {
                 EngineSetting.DEFAULT_GRAVITY_Z);
         float daysPerDay = EngineSetting.DEFAULT_DAYS_PER_DAY;
         String calendarName = EngineSetting.DEFAULT_CALENDAR_NAME;
+        float rotationSpeed = EngineSetting.DEFAULT_WORLD_ROTATION_SPEED;
 
         File jsonFile = resolveCompanionJson(file);
 
@@ -61,6 +62,9 @@ class InternalBuilder extends BuilderPackage {
 
             if (json.has("calendar"))
                 calendarName = json.get("calendar").getAsString();
+
+            if (json.has("rotation"))
+                rotationSpeed = json.get("rotation").getAsFloat();
         }
 
         WorldData data = new WorldData(
@@ -71,7 +75,8 @@ class InternalBuilder extends BuilderPackage {
                 gravityMultiplier,
                 gravityDirection,
                 daysPerDay,
-                calendarName);
+                calendarName,
+                rotationSpeed);
 
         WorldHandle handle = create(WorldHandle.class);
         handle.constructor(data);

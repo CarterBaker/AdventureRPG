@@ -20,7 +20,8 @@ public class WeatherManager extends ManagerPackage {
      * weather simulation. Supports on-demand loading via InternalLoader on a
      * cache miss, keyed by weather name (e.g. "standard/Sunny"). The active
      * seasonal pool is re-resolved only when the season changes; per-frame
-     * region sampling and the GPU UBO pushes are delegated to branches.
+     * region sampling, the planet-rotation-driven global noise overlay, and
+     * the GPU UBO pushes are delegated to branches.
      */
 
     // Internal
@@ -28,6 +29,7 @@ public class WeatherManager extends ManagerPackage {
     private BiomeManager biomeManager;
 
     // Branches
+    private GlobalNoiseBranch globalNoiseBranch;
     private RegionSampleBranch regionSampleBranch;
     private InternalBufferBranch internalBuffer;
 
@@ -49,6 +51,7 @@ public class WeatherManager extends ManagerPackage {
         this.weatherID2WeatherHandle = new Short2ObjectOpenHashMap<>();
 
         // Branches
+        this.globalNoiseBranch = create(GlobalNoiseBranch.class);
         this.regionSampleBranch = create(RegionSampleBranch.class);
         this.internalBuffer = create(InternalBufferBranch.class);
 
@@ -171,5 +174,15 @@ public class WeatherManager extends ManagerPackage {
      */
     public float getWindSpeedScale() {
         return regionSampleBranch.getCenterSample().getWindSpeedScale();
+    }
+
+    /*
+     * Direct CPU-side query for the planet-rotation-driven global weather
+     * noise at any world-space chunk coordinate — for systems that need more
+     * than the reference-region blend already flowing through the UBOs
+     * (e.g. the overhead cell system deciding its own local intensity).
+     */
+    public float getGlobalStormIntensityAt(long chunkCoordinate) {
+        return globalNoiseBranch.sampleGlobalIntensity(chunkCoordinate);
     }
 }
