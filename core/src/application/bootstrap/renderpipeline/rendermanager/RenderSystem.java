@@ -2,7 +2,10 @@ package application.bootstrap.renderpipeline.rendermanager;
 
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.geometrypipeline.mesh.MeshData;
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBufferInstance;
+import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
@@ -11,6 +14,7 @@ import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
 import application.bootstrap.renderpipeline.renderqueue.RenderQueueHandle;
+import application.bootstrap.renderpipeline.skinnedbatch.SkinnedBatchStruct;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
@@ -20,8 +24,10 @@ import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RenderSystem extends SystemPackage {
@@ -29,12 +35,25 @@ class RenderSystem extends SystemPackage {
     private CompositeRenderSystem compositeRenderSystem;
     private VAOManager vaoManager;
     private CameraManager cameraManager;
+    private SkinnedBufferManager skinnedBufferManager;
+
+    // Skinned — per-window instanced VAO cache. VAOs are context-local and
+    // cannot be shared, so each window gets its own compiled VAO the first
+    // time a given SkinnedBufferInstance is drawn in it, mirroring
+    // CompositeRenderSystem.windowID2BufferGpuState.
+    private Int2ObjectOpenHashMap<Object2IntOpenHashMap<SkinnedBufferInstance>> windowID2SkinnedVAOCache;
+
+    @Override
+    protected void create() {
+        this.windowID2SkinnedVAOCache = new Int2ObjectOpenHashMap<>();
+    }
 
     @Override
     protected void get() {
         this.compositeRenderSystem = get(CompositeRenderSystem.class);
         this.vaoManager = get(VAOManager.class);
         this.cameraManager = get(CameraManager.class);
+        this.skinnedBufferManager = get(SkinnedBufferManager.class);
     }
 
     void drawToMappedTargets(WindowInstance window) {
@@ -64,6 +83,7 @@ class RenderSystem extends SystemPackage {
             GLSLUtility.clearDepthBuffer();
 
             drawDepthSortedBatches(queue, target, window);
+            drawSkinnedBatches(queue, target, window);
             compositeRenderSystem.draw(queue, target, window);
             target.unbind();
         }
@@ -272,8 +292,7 @@ class RenderSystem extends SystemPackage {
             queue.fbo2Depth2MaterialBatches.put(fbo, depth2MaterialBatches);
             queue.fbo2Depth2BatchList.put(fbo, new Int2ObjectOpenHashMap<>());
             queue.fbo2DepthOrder.put(fbo, new IntArrayList());
-            queue.queuedFbos.add(fbo);
-            queue.fbo2Window.put(fbo, window);
+            ensureFboQueued(queue, fbo, window);
         }
 
         Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = depth2MaterialBatches.get(depth);
@@ -345,5 +364,178 @@ class RenderSystem extends SystemPackage {
 
     void removeWindowResources(WindowInstance window) {
         compositeRenderSystem.removeWindow(window.getWindowID());
+    }
+
+    // Skinned \\
+
+    /*
+     * Queues one entity's contribution into the shared instanced buffer for
+     * its (mesh, material) pair, creating that buffer on first use. Actual
+     * upload and drawing happen once per buffer in drawSkinnedBatches, not
+     * here — this only ever appends CPU-side instance data and makes sure
+     * the batch is registered against this fbo for the current frame.
+     */
+    void pushSkinnedCall(
+            MeshHandle meshHandle,
+            MaterialInstance material,
+            Matrix4 modelMatrix,
+            Matrix4[] skinningMatrices,
+            FboInstance fbo,
+            WindowInstance window) {
+
+        RenderQueueHandle queue = window.getRenderQueueHandle();
+
+        if (queue == null || fbo == null)
+            return;
+
+        SkinnedBufferInstance skinnedBuffer = skinnedBufferManager.getSkinnedBuffer(meshHandle, material);
+        skinnedBuffer.addInstance(modelMatrix, skinningMatrices);
+
+        ensureSkinnedBatchQueued(queue, fbo, skinnedBuffer, material, window);
+    }
+
+    private void ensureSkinnedBatchQueued(
+            RenderQueueHandle queue,
+            FboInstance fbo,
+            SkinnedBufferInstance skinnedBuffer,
+            MaterialInstance material,
+            WindowInstance window) {
+
+        ObjectArrayList<SkinnedBatchStruct> batches = queue.fbo2SkinnedBatchList.get(fbo);
+
+        if (batches == null) {
+            batches = new ObjectArrayList<>();
+            queue.fbo2SkinnedBatchList.put(fbo, batches);
+        }
+
+        Object[] elements = batches.elements();
+        int count = batches.size();
+
+        for (int i = 0; i < count; i++)
+            if (((SkinnedBatchStruct) elements[i]).getSkinnedBuffer() == skinnedBuffer)
+                return;
+
+        batches.add(new SkinnedBatchStruct(skinnedBuffer, material));
+        ensureFboQueued(queue, fbo, window);
+    }
+
+    private void ensureFboQueued(RenderQueueHandle queue, FboInstance fbo, WindowInstance window) {
+
+        if (queue.queuedFbos.contains(fbo))
+            return;
+
+        queue.queuedFbos.add(fbo);
+        queue.fbo2Window.put(fbo, window);
+    }
+
+    private void drawSkinnedBatches(RenderQueueHandle queue, FboInstance fbo, WindowInstance window) {
+
+        ObjectArrayList<SkinnedBatchStruct> batches = queue.fbo2SkinnedBatchList.get(fbo);
+
+        if (batches == null || batches.isEmpty())
+            return;
+
+        Object[] elements = batches.elements();
+        int count = batches.size();
+
+        for (int i = 0; i < count; i++) {
+
+            SkinnedBatchStruct batch = (SkinnedBatchStruct) elements[i];
+            SkinnedBufferInstance skinnedBuffer = batch.getSkinnedBuffer();
+
+            if (skinnedBuffer.isEmpty())
+                continue;
+
+            skinnedBufferManager.upload(skinnedBuffer);
+
+            MaterialInstance material = batch.getMaterial();
+            material.setUniform("u_bonePalette", skinnedBuffer.getBonePaletteTexture());
+
+            bindSkinnedMaterial(batch, material);
+
+            int vao = getOrCreateSkinnedVAO(skinnedBuffer, window);
+
+            GLSLUtility.bindVAO(vao);
+            GLSLUtility.drawElementsInstanced(
+                    skinnedBuffer.getMeshHandle().getIndexCount(),
+                    skinnedBuffer.getInstanceCount());
+            GLSLUtility.unbindVAO();
+        }
+    }
+
+    private void bindSkinnedMaterial(SkinnedBatchStruct batch, MaterialInstance material) {
+
+        int shaderHandle = material.getShaderHandle().getGpuHandle();
+        GLSLUtility.useShader(shaderHandle);
+
+        UBOHandle[] handles = batch.getCachedSourceUBOs();
+
+        for (int i = 0; i < handles.length; i++) {
+            UBOHandle ubo = handles[i];
+            GLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
+            GLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+        }
+
+        pushMaterialUniforms(material);
+    }
+
+    private void pushMaterialUniforms(MaterialInstance material) {
+
+        var keys = material.getUniformKeys();
+
+        if (keys == null || keys.isEmpty())
+            return;
+
+        int textureUnit = 0;
+
+        for (int i = 0; i < keys.size(); i++) {
+
+            UniformStruct<?> uniform = material.getUniform(keys.get(i));
+
+            if (uniform.attribute().isSampler()) {
+                uniform.attribute().bindTexture(textureUnit);
+                GLSLUtility.bindSamplerUniform(uniform.getUniformHandle(), textureUnit);
+                textureUnit++;
+            }
+
+            else
+                uniform.push();
+        }
+    }
+
+    /*
+     * One instanced VAO per (window, SkinnedBufferInstance) pair — never
+     * shared across windows, since VAOs are context-local. The instance
+     * attribute layout is always {4,4,4,4}: the four vec4 columns GLSL
+     * packs automatically into a single mat4 instance attribute.
+     */
+    private int getOrCreateSkinnedVAO(SkinnedBufferInstance skinnedBuffer, WindowInstance window) {
+
+        int windowID = window.getWindowID();
+        Object2IntOpenHashMap<SkinnedBufferInstance> buffer2VAO = windowID2SkinnedVAOCache.get(windowID);
+
+        if (buffer2VAO == null) {
+            buffer2VAO = new Object2IntOpenHashMap<>();
+            buffer2VAO.defaultReturnValue(0);
+            windowID2SkinnedVAOCache.put(windowID, buffer2VAO);
+        }
+
+        int vao = buffer2VAO.getInt(skinnedBuffer);
+
+        if (vao != 0)
+            return vao;
+
+        int[] instanceAttrSizes = { 4, 4, 4, 4 };
+
+        vao = GLSLUtility.createInstancedVAO(
+                skinnedBuffer.getMeshHandle().getVertexHandle(),
+                skinnedBuffer.getMeshHandle().getAttrSizes(),
+                skinnedBuffer.getMeshHandle().getIndexHandle(),
+                skinnedBuffer.getInstanceVBO(),
+                instanceAttrSizes);
+
+        buffer2VAO.put(skinnedBuffer, vao);
+
+        return vao;
     }
 }

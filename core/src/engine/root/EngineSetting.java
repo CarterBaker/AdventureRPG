@@ -49,6 +49,7 @@ public class EngineSetting {
         public static final int GL_RGB8 = 0x8051;
         public static final int GL_RGB16F = 0x881B;
         public static final int GL_RGB32F = 0x8815;
+        public static final int GL_RGBA32F = 0x8814;
         public static final int GL_RGBA16F = 0x881A;
         public static final int GL_DEPTH_COMPONENT24 = 0x81A6;
         public static final int GL_DEPTH_COMPONENT32F = 0x8CAC;
@@ -347,6 +348,10 @@ public class EngineSetting {
         public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f; // chunk units per global noise cell
         public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f; // 0..1 blend weight of global rotating noise
 
+        // Season Blend \\
+
+        public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f; // minimum blend-factor shift
+
         // Horizon & Overhead \\
 
         public static final float HORIZON_DISTANCE = 1024.0f; // Radius from the player used for weather sampling
@@ -512,6 +517,9 @@ public class EngineSetting {
         public static final float DEFAULT_BONE_SIZE = 0.25f;
         public static final int MAX_BONE_INFLUENCES = 4;
         public static final float BONE_WEIGHT_SUM_EPSILON = 0.001f;
+        public static final int SKINNED_BONE_TEXELS_PER_BONE = 3;
+        public static final int SKINNED_INSTANCE_MODEL_FLOATS = 16;
+        public static final int SKINNED_INSTANCE_INITIAL_CAPACITY = 64;
 
         // Player \\
 

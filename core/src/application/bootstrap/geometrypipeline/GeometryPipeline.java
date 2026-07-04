@@ -6,6 +6,7 @@ import application.bootstrap.geometrypipeline.ibomanager.IBOManager;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
+import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.geometrypipeline.vbomanager.VBOManager;
 import engine.root.PipelinePackage;
@@ -18,6 +19,11 @@ public class GeometryPipeline extends PipelinePackage {
      * assembly depends on all three buffer systems being available.
      * RigManager is registered before MeshManager since rig-declaring
      * meshes resolve bone names against it during quad expansion.
+     * SkinnedBufferManager has no load-time dependency on any of these — it
+     * only builds GPU buffers on demand, later, when EntityRenderSystem
+     * first requests one for a given rigged MeshHandle — but is registered
+     * last here since every buffer it manages is created from a mesh this
+     * pipeline already owns.
      */
 
     @Override
@@ -30,5 +36,6 @@ public class GeometryPipeline extends PipelinePackage {
         create(ModelManager.class);
         create(DynamicGeometryManager.class);
         create(CompositeBufferManager.class);
+        create(SkinnedBufferManager.class);
     }
 }

@@ -2,7 +2,9 @@ package application.bootstrap.renderpipeline.rendermanager;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
+import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
@@ -14,6 +16,7 @@ import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RenderManager extends ManagerPackage {
@@ -43,6 +46,7 @@ public class RenderManager extends ManagerPackage {
     private UBOManager uboManager;
     private FboManager fboManager;
     private FboRenderSystem fboRenderSystem;
+    private SkinnedBufferManager skinnedBufferManager;
 
     private RenderSystem renderSystem;
 
@@ -60,6 +64,7 @@ public class RenderManager extends ManagerPackage {
         this.uboManager = get(UBOManager.class);
         this.fboManager = get(FboManager.class);
         this.fboRenderSystem = get(FboRenderSystem.class);
+        this.skinnedBufferManager = get(SkinnedBufferManager.class);
     }
 
     // Draw \\
@@ -200,6 +205,37 @@ public class RenderManager extends ManagerPackage {
             FboInstance fbo,
             WindowInstance window) {
         renderSystem.pushCompositeCall(material, buffer, fbo, window);
+    }
+
+    // Skinned Calls \\
+
+    /*
+     * Clears every skinned buffer's instance count to zero. Must be called
+     * exactly once per frame, before any pushSkinnedCall for that frame —
+     * the entity gather pass (EntityRenderSystem, next step) owns calling
+     * this at the start of its loop.
+     */
+    public void clearSkinnedBuffers() {
+        skinnedBufferManager.clearAll();
+    }
+
+    public void pushSkinnedCall(
+            MeshHandle meshHandle,
+            MaterialInstance material,
+            Matrix4 modelMatrix,
+            Matrix4[] skinningMatrices,
+            FboInstance fbo) {
+        renderSystem.pushSkinnedCall(meshHandle, material, modelMatrix, skinningMatrices, fbo, resolveDefaultWindow());
+    }
+
+    public void pushSkinnedCall(
+            MeshHandle meshHandle,
+            MaterialInstance material,
+            Matrix4 modelMatrix,
+            Matrix4[] skinningMatrices,
+            FboInstance fbo,
+            WindowInstance window) {
+        renderSystem.pushSkinnedCall(meshHandle, material, modelMatrix, skinningMatrices, fbo, window);
     }
 
     public void removeWindowResources(WindowInstance window) {

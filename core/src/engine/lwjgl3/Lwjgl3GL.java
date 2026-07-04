@@ -272,6 +272,23 @@ class Lwjgl3GL implements GL40 {
             EngineUtility.throwException("Unsupported pixel buffer type: " + pixels.getClass().getSimpleName());
     }
 
+    public void glTexSubImage2D(
+            int target, int level,
+            int xoffset, int yoffset, int width, int height,
+            int format, int type, Buffer pixels) {
+
+        if (pixels instanceof ByteBuffer bb)
+            GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, bb);
+        else if (pixels instanceof ShortBuffer sb)
+            GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, sb);
+        else if (pixels instanceof IntBuffer ib)
+            GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, ib);
+        else if (pixels instanceof FloatBuffer fb)
+            GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, fb);
+        else
+            EngineUtility.throwException("Unsupported pixel buffer type: " + pixels.getClass().getSimpleName());
+    }
+
     public void glTexImage3D(
             int target, int level, int internalformat,
             int width, int height, int depth, int border,

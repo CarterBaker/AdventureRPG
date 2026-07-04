@@ -1,5 +1,9 @@
 package application.bootstrap.renderpipeline.rendermanager;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
+
 import org.lwjgl.glfw.GLFW;
 
 import engine.root.EngineContext;
@@ -146,5 +150,87 @@ class GLSLUtility extends EngineUtility {
 
     static void setPatchVertices(int count) {
         EngineContext.gl40.glPatchParameteri(EngineSetting.GL_PATCH_VERTICES, count);
+    }
+
+    // Instanced VAO \\
+
+    /*
+     * Builds a VAO combining a rigged mesh's own vertex attributes (as laid
+     * out by meshAttrSizes — position, uv, boneIndices, boneWeights) with a
+     * per-instance attribute set sourced from instanceVBOHandle, one
+     * attribute location per entry in instanceAttrSizes, each with a vertex
+     * attrib divisor of 1. A 4-entry {4,4,4,4} instanceAttrSizes produces
+     * the four consecutive vec4 locations GLSL packs into a single mat4
+     * instance attribute automatically.
+     */
+    static int createInstancedVAO(
+            int meshVBOHandle,
+            int[] meshAttrSizes,
+            int meshIBOHandle,
+            int instanceVBOHandle,
+            int[] instanceAttrSizes) {
+
+        IntBuffer idBuffer = ByteBuffer.allocateDirect(Integer.BYTES)
+                .order(ByteOrder.nativeOrder()).asIntBuffer();
+        EngineContext.gl30.glGenVertexArrays(1, idBuffer);
+        int vao = idBuffer.get(0);
+
+        EngineContext.gl30.glBindVertexArray(vao);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, meshVBOHandle);
+
+        int meshStride = 0;
+        for (int i = 0; i < meshAttrSizes.length; i++)
+            meshStride += meshAttrSizes[i];
+        int meshStrideBytes = meshStride * Float.BYTES;
+
+        int meshOffsetBytes = 0;
+        for (int i = 0; i < meshAttrSizes.length; i++) {
+            EngineContext.gl20.glEnableVertexAttribArray(i);
+            EngineContext.gl20.glVertexAttribPointer(
+                    i, meshAttrSizes[i], EngineSetting.GL_FLOAT, false, meshStrideBytes, meshOffsetBytes);
+            meshOffsetBytes += meshAttrSizes[i] * Float.BYTES;
+        }
+
+        int instanceStride = 0;
+        for (int i = 0; i < instanceAttrSizes.length; i++)
+            instanceStride += instanceAttrSizes[i];
+        int instanceStrideBytes = instanceStride * Float.BYTES;
+
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, instanceVBOHandle);
+
+        int instanceOffsetBytes = 0;
+        for (int i = 0; i < instanceAttrSizes.length; i++) {
+            int location = meshAttrSizes.length + i;
+            EngineContext.gl20.glEnableVertexAttribArray(location);
+            EngineContext.gl20.glVertexAttribPointer(
+                    location, instanceAttrSizes[i], EngineSetting.GL_FLOAT, false,
+                    instanceStrideBytes, instanceOffsetBytes);
+            EngineContext.gl30.glVertexAttribDivisor(location, 1);
+            instanceOffsetBytes += instanceAttrSizes[i] * Float.BYTES;
+        }
+
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, meshIBOHandle);
+        EngineContext.gl30.glBindVertexArray(0);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
+
+        return vao;
+    }
+
+    static void deleteVAO(int handle) {
+
+        if (handle == 0)
+            return;
+
+        IntBuffer idBuffer = ByteBuffer.allocateDirect(Integer.BYTES)
+                .order(ByteOrder.nativeOrder()).asIntBuffer();
+        idBuffer.put(handle).flip();
+
+        EngineContext.gl30.glDeleteVertexArrays(1, idBuffer);
+    }
+
+    static void drawElementsInstanced(int indexCount, int instanceCount) {
+        EngineContext.gl30.glDrawElementsInstanced(
+                EngineSetting.GL_TRIANGLES, indexCount, EngineSetting.GL_UNSIGNED_SHORT,
+                EngineSetting.GL_HANDLE_NONE, instanceCount);
     }
 }
