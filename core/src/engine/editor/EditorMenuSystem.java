@@ -71,12 +71,16 @@ public class EditorMenuSystem extends SystemPackage {
         baseMenu = menuManager.openMenu(EditorSetting.MENU_EDITOR_BASE, mainWindow);
 
         // Toolbar — own logical window at depth 3, own cloned FBO, always receives
-        // input
+        // input, never eligible for cursor capture or engine-wide focus
         toolbarWindow = windowManager.createLogicalWindow(
                 EditorSetting.WINDOW_TITLE_EDITOR_TOOLBAR, mainWindow);
         toolbarWindow.setDepth(EditorSetting.TOOLBAR_WINDOW_DEPTH);
         toolbarWindow.setCaptureEligible(false);
         toolbarWindow.setFocusIndependent(true);
+
+        FboInstance toolbarFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, toolbarWindow);
+        menuManager.setMenuTargetFbo(toolbarWindow, toolbarFbo);
+        toolbarMenu = menuManager.openMenu(EditorSetting.MENU_EDITOR_TOOLBAR, toolbarWindow);
     }
 
     // Update \\
