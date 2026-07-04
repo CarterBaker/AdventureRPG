@@ -153,19 +153,8 @@ public class ElementHitSystem extends SystemPackage {
                 if (!menu.isVisible())
                     continue;
                 if (hitTestElements(menu.getElements(), mx, my,
-                        0, 0, window.getWidth(), window.getHeight(), menu)) {
-                    // Focus windows eligible for cursor capture on click.
-                    // captureEligible=false excludes tab chrome and overlays.
-                    // focusIndependent=true excludes toolbars and editor chrome.
-                    // Content windows pass both checks and correctly acquire focus,
-                    // allowing logical tab windows to trigger cursor capture via
-                    // MenuManager.flushPendingClosedMenus on the following frame.
-                    if (focusCallback != null
-                            && window.isCaptureEligible()
-                            && !window.isFocusIndependent())
-                        focusCallback.accept(window);
+                        0, 0, window.getWidth(), window.getHeight(), menu))
                     return;
-                }
             }
         }
     }

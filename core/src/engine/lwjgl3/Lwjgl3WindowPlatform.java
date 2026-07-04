@@ -129,21 +129,25 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         if (!window.hasNativeHandle())
             return;
 
-        syncInputForCurrentContext(window.getNativeHandle());
-
-        // Refresh the now-active input's cursor position from a direct platform
-        // query. glfwGetCursorPos works regardless of OS focus, so this keeps
-        // getMouseX/Y() current on secondary windows that have never received a
-        // cursor-move callback — which GLFW only delivers to the focused window.
-        // Without this, phase 2 of syncHoveredWindow reads stale coords, the
-        // logical window hit test fails, and hoveredWindow falls back to the OS
-        // window shell, breaking the entire input chain for that window.
+        // Refreshes this window's own Input object from a direct platform query
+        // so getMouseX/Y() is current even on windows that never received a
+        // cursor-move callback. Does NOT touch EngineContext.input — ownership
+        // of that reference belongs exclusively to InputManager, decided once
+        // per frame after focus is resolved, never as a side effect of syncing
+        // every window in a loop.
         cursorScratchX.clear();
         cursorScratchY.clear();
         GLFW.glfwGetCursorPos(window.getNativeHandle(), cursorScratchX, cursorScratchY);
         Lwjgl3Input windowInput = application.getLwjglInputForHandle(window.getNativeHandle());
         if (windowInput != null)
             windowInput.refreshCursor(cursorScratchX.get(0), cursorScratchY.get(0));
+    }
+
+    @Override
+    public Input getInputForWindow(WindowInstance window) {
+        if (!window.hasNativeHandle())
+            return null;
+        return application.getInputForHandle(window.getNativeHandle());
     }
 
     @Override

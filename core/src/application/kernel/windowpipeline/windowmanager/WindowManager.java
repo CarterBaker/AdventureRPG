@@ -2,8 +2,8 @@ package application.kernel.windowpipeline.windowmanager;
 
 import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.input.Input;
 import engine.root.ContextPackage;
-import engine.root.EngineContext;
 import engine.root.EngineUtility;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -11,40 +11,25 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WindowManager extends ManagerPackage {
 
     /*
-     * Owns all engine windows. Each frame rebuilds hoveredWindows — the ordered
-     * list of every window the cursor is currently inside, sorted by depth
-     * descending, area ascending on ties. Index 0 is always the highest-priority
-     * window; input systems iterate the list in order and take the first hit.
+     * Owns all engine windows. Each frame rebuilds hoveredWindows — every
+     * window the cursor is currently inside, sorted depth descending, area
+     * ascending on ties. OS windows are depth 0; logical windows (tabs,
+     * composited panels) are depth 1+.
      *
-     * OS windows are depth 0. Logical windows (tabs, composited panels) are
-     * depth 1+, so they always sort above OS windows.
+     * Phase 1 — every OS window is queried and synced unconditionally,
+     * regardless of OS focus (GLFW only calls back into the focused window).
+     * Phase 2 — each hit OS window's own Input (fetched directly, never
+     * through a shared global) locates logical windows composited onto it.
      *
-     * Hover resolution is two-phase, executed per OS window:
+     * This method never assigns EngineContext.input. That happens exactly
+     * once, in InputManager.publishActiveInput(), after focus is resolved
+     * for the frame. It used to happen here, mid-loop, which left the global
+     * bound to whichever OS window was synced last — simply wrong the moment
+     * a second OS window existed.
      *
-     * Phase 1 — all OS windows are queried via glfwGetCursorPos and synced via
-     * syncInputForWindow unconditionally every frame, not just the ones the cursor
-     * is inside. This eliminates cursor-staleness completely: GLFW cursor callbacks
-     * only fire on the OS-focused window, but the direct query bypasses that.
-     * No external lock mechanism is needed to keep coordinates current.
-     * OS windows where the cursor falls within [0, width) × [0, height) are added
-     * to hoveredWindows.
-     *
-     * Phase 2 — immediately after syncing each hit OS window, EngineContext.input
-     * reflects its coordinate space. Logical windows whose composite target is
-     * that OS window are tested against the Y-up cursor position. All matching
-     * logical windows are added.
-     *
-     * The list is sorted once after all windows are evaluated. Downstream systems
-     * receive it via getHoveredWindows() and iterate from index 0.
-     *
-     * capturedWindow overrides the scan — while set, hoveredWindows contains only
-     * the captured window and its GL window is synced. This ensures
-     * EngineContext.input
-     * is maintained correctly during capture without any special-casing elsewhere.
-     *
-     * focusedWindow is the window that currently owns input. It is set on click
-     * and is the single authority for cursor capture transitions. Capture follows
-     * focus, not hover — only the focused window may acquire or release capture.
+     * focusedWindow may only be changed via setFocusedWindow, called
+     * exclusively from InputManager's own click resolution. WindowManager no
+     * longer makes that decision itself — there is exactly one authority.
      */
 
     private ObjectArrayList<WindowInstance> windows;
@@ -57,10 +42,7 @@ public class WindowManager extends ManagerPackage {
 
     private int nextWindowID;
 
-    // Scratch — reused per frame to avoid allocation in the OS-window hot path
     private final float[] cursorPosScratch = new float[2];
-
-    // Internal \\
 
     @Override
     protected void create() {
@@ -77,7 +59,6 @@ public class WindowManager extends ManagerPackage {
     protected void update() {
 
         syncHoveredWindows();
-        resolveClickFocus();
 
         for (int i = windows.size() - 1; i >= 0; i--) {
             WindowInstance window = windows.get(i);
@@ -122,9 +103,6 @@ public class WindowManager extends ManagerPackage {
             if (!w.hasNativeHandle())
                 continue;
 
-            // Query and sync unconditionally — every OS window gets current cursor
-            // coords regardless of which window holds OS focus. This is the only
-            // place syncInputForWindow is called; no external refresh is needed.
             internal.windowPlatform.getCursorPos(w, cursorPosScratch);
             internal.windowPlatform.syncInputForWindow(w);
 
@@ -134,14 +112,11 @@ public class WindowManager extends ManagerPackage {
             if (lx < 0 || lx >= w.getWidth() || ly < 0 || ly >= w.getHeight())
                 continue;
 
-            // Phase 1 — OS window is hit
             hoveredWindows.add(w);
 
-            // Phase 2 — logical windows targeting this OS window.
-            // EngineContext.input now reflects this window's coordinate space,
-            // so getMouseX/Y() matches the Y-up local space of composite rects.
-            float mx = EngineContext.input.getMouseX();
-            float my = EngineContext.input.getMouseY();
+            Input windowInput = internal.windowPlatform.getInputForWindow(w);
+            float mx = windowInput.getMouseX();
+            float my = windowInput.getMouseY();
 
             for (int j = 0; j < windows.size(); j++) {
                 WindowInstance logical = windows.get(j);
@@ -156,7 +131,6 @@ public class WindowManager extends ManagerPackage {
             }
         }
 
-        // Deepest depth first; smallest area wins on equal depth.
         hoveredWindows.sort((a, b) -> {
             int depthCmp = b.getDepth() - a.getDepth();
             if (depthCmp != 0)
@@ -177,32 +151,6 @@ public class WindowManager extends ManagerPackage {
                 && my >= w.getCompositeY()
                 && my < w.getCompositeY() + w.getCompositeH();
     }
-
-    private void resolveClickFocus() {
-
-        if (hoveredWindows.isEmpty())
-            return;
-
-        // Only act on the frame the primary button is first pressed.
-        // EngineContext.input is already current — syncHoveredWindows just ran.
-        if (!EngineContext.input.isMouseClicked(0))
-            return;
-
-        // Walk depth-sorted list. focusIndependent=true means the window is
-        // intentionally transparent to focus (toolbar, tab chrome). The first
-        // non-transparent window geometrically under the cursor owns the click,
-        // regardless of whether any UI element was hit inside it.
-        for (int i = 0; i < hoveredWindows.size(); i++) {
-
-            WindowInstance w = hoveredWindows.get(i);
-            if (!w.isFocusIndependent()) {
-                focusedWindow = w;
-                return;
-            }
-        }
-    }
-
-    // Registration \\
 
     public void registerMainWindow(WindowInstance window) {
         verifyWindowRegistration(window, true);
@@ -256,13 +204,9 @@ public class WindowManager extends ManagerPackage {
             focusedWindow = null;
     }
 
-    // Identity \\
-
     public int issueWindowID() {
         return nextWindowID++;
     }
-
-    // Render / context frame tracking \\
 
     public void beginRenderWindow(WindowInstance window) {
         this.renderWindow = window;
@@ -280,8 +224,6 @@ public class WindowManager extends ManagerPackage {
         this.contextWindow = null;
     }
 
-    // Capture \\
-
     public void captureLockWindow(WindowInstance window) {
         this.capturedWindow = window;
     }
@@ -289,8 +231,6 @@ public class WindowManager extends ManagerPackage {
     public void releaseCaptureLock() {
         this.capturedWindow = null;
     }
-
-    // Accessors \\
 
     public WindowInstance getMainWindow() {
         return mainWindow;
@@ -316,15 +256,10 @@ public class WindowManager extends ManagerPackage {
         this.focusedWindow = window;
     }
 
-    /** The highest-priority hovered window (index 0 of hoveredWindows), or null. */
     public WindowInstance getHoveredWindow() {
         return hoveredWindows.isEmpty() ? null : hoveredWindows.get(0);
     }
 
-    /**
-     * All windows the cursor is currently inside, sorted depth descending, area
-     * ascending.
-     */
     public ObjectArrayList<WindowInstance> getHoveredWindows() {
         return hoveredWindows;
     }
@@ -340,8 +275,6 @@ public class WindowManager extends ManagerPackage {
     public void reparentWindow(WindowInstance window, WindowInstance newParent) {
         window.setCompositeTarget(newParent);
     }
-
-    // Validation \\
 
     private void verifyWindowRegistration(WindowInstance window, boolean isMain) {
         if (window == null)

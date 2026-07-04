@@ -42,12 +42,14 @@ public class CursorSystem extends SystemPackage {
 
     void capture(WindowInstance window) {
         windowManager.captureLockWindow(window);
-        EngineContext.input.setCursorCatched(true);
+        internal.windowPlatform.getInputForWindow(window.getGLWindow()).setCursorCatched(true);
     }
 
     void releaseCapture() {
+        WindowInstance previouslyCaptured = windowManager.getCapturedWindow();
         windowManager.releaseCaptureLock();
-        EngineContext.input.setCursorCatched(false);
+        if (previouslyCaptured != null)
+            internal.windowPlatform.getInputForWindow(previouslyCaptured.getGLWindow()).setCursorCatched(false);
     }
 
     void releaseCaptureIfOwner(WindowInstance window) {

@@ -143,15 +143,8 @@ public class DockLayoutSystem extends SystemPackage {
 
     // Divider \\
 
-    public DockNodeStruct findDividerAt(float screenX, float screenY) {
-
-        for (DockNodeStruct root : roots.values()) {
-            DockNodeStruct hit = findDividerAt(root, screenX, screenY);
-            if (hit != null)
-                return hit;
-        }
-
-        return null;
+    public DockNodeStruct findDividerAt(WindowInstance osWindow, float x, float y) {
+        return findDividerAt(roots.get(osWindow), x, y);
     }
 
     private DockNodeStruct findDividerAt(DockNodeStruct node, float sx, float sy) {

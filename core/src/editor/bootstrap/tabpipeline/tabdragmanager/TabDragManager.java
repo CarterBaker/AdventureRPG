@@ -13,6 +13,7 @@ import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.bootstrap.tabpipeline.util.DropTargetStruct;
 import editor.bootstrap.tabpipeline.util.DropZone;
 import editor.bootstrap.tabpipeline.util.TabDragLayoutStruct;
+import engine.input.Input;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -87,20 +88,27 @@ public class TabDragManager extends ManagerPackage {
 
     @Override
     protected void update() {
+
         if (draggedHandle == null)
             return;
-        if (EngineContext.input.isMouseReleased(0)) {
+
+        WindowInstance sourceOsWindow = draggedHandle.getTabContext().getWindow().getGLWindow();
+        Input sourceInput = inputManager.getRawInput(sourceOsWindow);
+
+        if (sourceInput.isMouseReleased(0)) {
             executeDrop();
             return;
         }
-        WindowInstance sourceOsWindow = resolveOsWindow(draggedHandle.getTabContext().getWindow());
-        float globalX = inputManager.getGlobalMouseX();
-        float globalY = inputManager.getGlobalMouseY();
+
+        float globalX = inputManager.getGlobalMouseX(sourceOsWindow);
+        float globalY = inputManager.getGlobalMouseY(sourceOsWindow);
         float screenX = globalX + sourceOsWindow.getScreenX();
         float screenY = globalY + sourceOsWindow.getScreenY();
+
         updateDraggedTab(globalX, globalY);
         DropTargetStruct target = resolveDropTarget(screenX, screenY);
         updateZoneGhost(target);
+
         if (target != null)
             lastDropTarget = target;
         else if (!isCursorOverAnyOsWindow(screenX, screenY))
@@ -108,22 +116,30 @@ public class TabDragManager extends ManagerPackage {
     }
 
     // Entry Point \\
+
     public void onTabDragUpdate(WindowInstance sourceWindow) {
+
         if (draggedHandle != null)
             return;
-        if (EngineContext.input.isMouseReleased(0))
+
+        if (inputManager.getRawInput(sourceWindow.getGLWindow()).isMouseReleased(0))
             return;
+
         latchDrag(sourceWindow);
     }
 
     // Drag Start \\
     private void latchDrag(WindowInstance sourceWindow) {
+
         TabHandle handle = tabManager.getTabHandleForWindow(sourceWindow);
+
         if (handle == null)
             return;
+
         WindowInstance tabWindow = handle.getTabContext().getWindow();
-        float globalX = inputManager.getGlobalMouseX();
-        float globalY = inputManager.getGlobalMouseY();
+        float globalX = inputManager.getGlobalMouseX(tabWindow.getGLWindow());
+        float globalY = inputManager.getGlobalMouseY(tabWindow.getGLWindow());
+
         grabOffsetX = 0f;
         grabOffsetY = 0f;
         dragW = EngineSetting.TAB_DRAG_PREVIEW_W;
@@ -132,7 +148,8 @@ public class TabDragManager extends ManagerPackage {
         tabWindow.setDepth(EngineSetting.TAB_DRAG_TAB_DEPTH);
         handle.getTabContext().getContentContext().getWindow()
                 .setDepth(EngineSetting.TAB_DRAG_CONTENT_DEPTH);
-        WindowInstance osWindow = resolveOsWindow(tabWindow);
+
+        WindowInstance osWindow = tabWindow.getGLWindow();
         tabManager.getDockLayoutSystem().removeTab(osWindow, handle);
         tabManager.pushRects();
         updateDraggedTab(globalX, globalY);

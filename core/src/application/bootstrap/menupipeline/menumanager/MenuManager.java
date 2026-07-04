@@ -87,7 +87,6 @@ public class MenuManager extends ManagerPackage {
         this.hitSystem = get(ElementHitSystem.class);
         this.windowManager = get(WindowManager.class);
         this.inputManager = get(InputManager.class);
-        hitSystem.setFocusCallback(windowManager::setFocusedWindow);
     }
 
     @Override

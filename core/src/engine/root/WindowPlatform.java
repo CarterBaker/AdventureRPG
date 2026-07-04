@@ -1,14 +1,9 @@
 package engine.root;
 
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.input.Input;
 
 public interface WindowPlatform {
-
-    /*
-     * Backend contract for all GLFW window operations. Implemented once per
-     * platform and injected at launch. The engine never calls GLFW directly —
-     * all window management routes through here.
-     */
 
     void openWindow(WindowInstance window);
 
@@ -33,38 +28,23 @@ public interface WindowPlatform {
     void exit();
 
     /*
-     * Returns the cursor position relative to the given OS window's client
-     * area, queried directly from the platform without affecting the current
-     * input context or hoveredWindow state. Used by TabDragManager to obtain
-     * window-local cursor coordinates for BSP drop-target resolution when the
-     * input-synced window (the drag source) differs from the window being
-     * tested as a drop target.
+     * Returns the Input object backing the given OS window, queried directly
+     * from the platform. Pure lookup — never assigns any shared/global input
+     * state. This is the only correct way to obtain "the" input for a
+     * specific window; EngineContext.input is scoped to "whatever currently
+     * owns focus" and is not guaranteed to be this window.
      *
-     * Callers must pass a window with a valid native handle. Results for
-     * logical windows (no native handle) are undefined.
+     * Callers must pass a window with a native handle. Results for logical
+     * windows are undefined — resolve via WindowInstance.getGLWindow() first.
      */
+    Input getInputForWindow(WindowInstance window);
+
     float getCursorX(WindowInstance window);
 
     float getCursorY(WindowInstance window);
 
-    /*
-     * Fills out[0] with the cursor X and out[1] with cursor Y relative to the
-     * given OS window's client area in a single platform query. Prefer this
-     * over calling getCursorX and getCursorY separately when both coordinates
-     * are needed — avoids a redundant glfwGetCursorPos round-trip per window
-     * per frame in the OS-window hot path (e.g. resolveHoveredOsWindow).
-     *
-     * Same handle and undefined-for-logical-windows constraints as getCursorX/Y.
-     */
     void getCursorPos(WindowInstance window, float[] out);
 
-    /*
-     * Returns the OS-level screen position of the given window's top-left
-     * corner. Called by openWindow and by any window-moved callback so
-     * WindowInstance.screenX/Y stays current. Used by TabDragManager to test
-     * whether the global cursor position falls within a specific OS window's
-     * screen bounds during drag resolution.
-     */
     float getScreenX(WindowInstance window);
 
     float getScreenY(WindowInstance window);
