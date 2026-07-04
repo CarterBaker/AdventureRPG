@@ -454,22 +454,7 @@ public class EngineSetting {
 
         // Time \\
 
-        public static final int DAYS_PER_DAY = 20;
-        public static final int HOURS_PER_DAY = 24;
-        public static final int LUNAR_CYCLE_DAYS = 28;
         public static final long MILLIS_PER_REAL_DAY = 86400000L;
-        public static final float MIDDAY_OFFSET = 0.5f;
-        public static final int MINUTES_PER_HOUR = 60;
-        public static final int YEARS_PER_AGE = 1500;
-
-        // Starting Time \\
-
-        public static final int STARTING_AGE = 3;
-        public static final int STARTING_DAY_OF_MONTH = 15;
-        public static final int STARTING_HOUR = 12;
-        public static final int STARTING_MINUTE = 30;
-        public static final int STARTING_MONTH = 6;
-        public static final int STARTING_YEAR = 1356;
 
         // Clock \\
 

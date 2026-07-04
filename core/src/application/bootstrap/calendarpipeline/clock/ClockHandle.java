@@ -1,6 +1,6 @@
 package application.bootstrap.calendarpipeline.clock;
 
-import application.bootstrap.weatherpipeline.season.Season;
+import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import engine.root.HandlePackage;
 
 public class ClockHandle extends HandlePackage {
@@ -8,7 +8,10 @@ public class ClockHandle extends HandlePackage {
     /*
      * Runtime handle wrapping ClockData. Owned by ClockManager and passed to
      * all clock branches for reading and writing time state each frame.
-     * Delegates all accessors and mutators through ClockData.
+     * Delegates all accessors and mutators through ClockData. The current
+     * season is resolved live from the active calendar rather than a fixed
+     * enum — see CalendarData.getSeasonNameForMonth() — so it reflects
+     * whatever seasons that calendar defines.
      */
 
     // Internal
@@ -26,6 +29,14 @@ public class ClockHandle extends HandlePackage {
 
     public ClockData getClockData() {
         return clockData;
+    }
+
+    public CalendarHandle getCalendarHandle() {
+        return clockData.getCalendarHandle();
+    }
+
+    public void setCalendarHandle(CalendarHandle calendarHandle) {
+        clockData.setCalendarHandle(calendarHandle);
     }
 
     public long getWorldEpochStart() {
@@ -84,8 +95,19 @@ public class ClockHandle extends HandlePackage {
         clockData.setVisualYearProgress(visualYearProgress);
     }
 
-    public Season getCurrentSeason() {
-        return Season.fromYearProgress(clockData.getYearProgress());
+    /*
+     * Resolves the current season's name from the active calendar and the
+     * current month. Returns null if no calendar has been assigned yet, or
+     * if the active calendar defines no seasons.
+     */
+    public String getCurrentSeason() {
+
+        CalendarHandle calendarHandle = clockData.getCalendarHandle();
+
+        if (calendarHandle == null)
+            return null;
+
+        return calendarHandle.getSeasonNameForDate(clockData.getCurrentMonth(), clockData.getCurrentDayOfMonth());
     }
 
     public int getCurrentMinute() {

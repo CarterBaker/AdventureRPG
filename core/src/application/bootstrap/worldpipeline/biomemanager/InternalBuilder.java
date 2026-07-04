@@ -6,7 +6,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import application.bootstrap.weatherpipeline.season.Season;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.WeatherChanceStruct;
@@ -24,6 +23,9 @@ class InternalBuilder extends BuilderPackage {
      * Parses biome JSON into a BiomeData and wraps it in a BiomeHandle.
      * Reads the optional "weathers" block into a per-season chance-weighted
      * pool that WeatherManager resolves into live WeatherHandles on demand.
+     * Season names are read directly from whatever keys appear in the
+     * "weathers" object — there's no fixed set to validate against, since
+     * the active calendar is free to define any named seasons it likes.
      * Each season's array accepts either a bare weather name string (given
      * a default relative chance) or an object with explicit "name" and
      * "chance" fields — both forms may be mixed freely within one array.
@@ -40,7 +42,7 @@ class InternalBuilder extends BuilderPackage {
         short biomeID = RegistryUtility.toShortID(biomeName);
 
         JsonObject json = JsonUtility.loadJsonObject(file);
-        Object2ObjectOpenHashMap<Season, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries = parseWeathers(
+        Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries = parseWeathers(
                 json);
 
         BiomeData biomeData = new BiomeData(biomeName, biomeID, Color.WHITE, seasonWeatherEntries);
@@ -53,27 +55,24 @@ class InternalBuilder extends BuilderPackage {
 
     // Parsing \\
 
-    private Object2ObjectOpenHashMap<Season, ObjectArrayList<WeatherChanceStruct>> parseWeathers(JsonObject json) {
+    private Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> parseWeathers(JsonObject json) {
 
-        Object2ObjectOpenHashMap<Season, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries = new Object2ObjectOpenHashMap<>();
+        Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries = new Object2ObjectOpenHashMap<>();
 
         if (!json.has("weathers"))
             return seasonWeatherEntries;
 
         JsonObject weathersObject = json.getAsJsonObject("weathers");
 
-        for (Season season : Season.values()) {
+        for (String seasonName : weathersObject.keySet()) {
 
-            if (!weathersObject.has(season.name()))
-                continue;
-
-            JsonArray weatherArray = weathersObject.getAsJsonArray(season.name());
+            JsonArray weatherArray = weathersObject.getAsJsonArray(seasonName);
             ObjectArrayList<WeatherChanceStruct> entries = new ObjectArrayList<>(weatherArray.size());
 
             for (JsonElement element : weatherArray)
                 entries.add(parseWeatherEntry(element));
 
-            seasonWeatherEntries.put(season, entries);
+            seasonWeatherEntries.put(seasonName, entries);
         }
 
         return seasonWeatherEntries;

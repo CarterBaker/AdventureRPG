@@ -1,7 +1,6 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
-import application.bootstrap.weatherpipeline.season.Season;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.WeatherChanceStruct;
@@ -19,9 +18,13 @@ public class WeatherManager extends ManagerPackage {
      * Owns the weather palette for the engine lifetime and drives the live
      * weather simulation. Supports on-demand loading via InternalLoader on a
      * cache miss, keyed by weather name (e.g. "standard/Sunny"). The active
-     * seasonal pool is re-resolved only when the season changes; per-frame
-     * region sampling, the planet-rotation-driven global noise overlay, and
-     * the GPU UBO pushes are delegated to branches.
+     * seasonal pool is re-resolved only when the season changes — season
+     * identity now comes from the active calendar (see
+     * ClockHandle.getCurrentSeason()) rather than a fixed enum, so biomes
+     * can define weather pools for whatever named seasons their world's
+     * calendar uses. Per-frame region sampling, the planet-rotation-driven
+     * global noise overlay, and the GPU UBO pushes are delegated to
+     * branches.
      */
 
     // Internal
@@ -38,7 +41,7 @@ public class WeatherManager extends ManagerPackage {
     private Short2ObjectOpenHashMap<WeatherHandle> weatherID2WeatherHandle;
 
     // Season Tracking
-    private Season lastSeason;
+    private String lastSeason;
     private ObjectArrayList<WeatherPoolEntryStruct> activeWeatherPool;
 
     // Base \\
@@ -74,9 +77,9 @@ public class WeatherManager extends ManagerPackage {
     @Override
     protected void update() {
 
-        Season currentSeason = clockManager.getClockHandle().getCurrentSeason();
+        String currentSeason = clockManager.getClockHandle().getCurrentSeason();
 
-        if (currentSeason != lastSeason) {
+        if (currentSeason != null && !currentSeason.equals(lastSeason)) {
             BiomeHandle activeBiome = biomeManager.getBiomeHandleFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
             this.activeWeatherPool = resolveWeatherPool(activeBiome, currentSeason);
             this.lastSeason = currentSeason;
@@ -112,18 +115,18 @@ public class WeatherManager extends ManagerPackage {
     // Biome Resolution \\
 
     /*
-     * Resolves a biome's seasonal weather chance entries into live handles,
-     * preserving JSON declaration order — RegionSampleBranch blends across
-     * this pool by chance-weighted band, not array position, so no sort
-     * is needed here.
+     * Resolves a biome's named-season weather chance entries into live
+     * handles, preserving JSON declaration order — RegionSampleBranch blends
+     * across this pool by chance-weighted band, not array position, so no
+     * sort is needed here.
      */
-    private ObjectArrayList<WeatherPoolEntryStruct> resolveWeatherPool(BiomeHandle biomeHandle, Season season) {
+    private ObjectArrayList<WeatherPoolEntryStruct> resolveWeatherPool(BiomeHandle biomeHandle, String season) {
 
         ObjectArrayList<WeatherChanceStruct> entries = biomeHandle.getWeatherEntriesForSeason(season);
 
         if (entries.isEmpty())
             throwException("Biome \"" + biomeHandle.getBiomeName() +
-                    "\" has no weathers defined for season " + season);
+                    "\" has no weathers defined for season \"" + season + "\"");
 
         ObjectArrayList<WeatherPoolEntryStruct> pool = new ObjectArrayList<>(entries.size());
 

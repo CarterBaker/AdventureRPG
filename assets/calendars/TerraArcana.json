@@ -1,4 +1,18 @@
 {
+    "start": {
+        "year": 1356,
+        "age": 3,
+        "month": 6,
+        "dayOfMonth": 15,
+        "hour": 12,
+        "minute": 30
+    },
+    "daysPerDay": 20,
+    "hoursPerDay": 24,
+    "minutesPerHour": 60,
+    "lunarCycleDays": 28,
+    "middayOffset": 0.5,
+    "yearsPerAge": 1500,
     "daysOfWeek": [
         "Onesday",
         "Ensday",
@@ -9,53 +23,23 @@
         "Lunaday"
     ],
     "months": [
-        {
-            "name": "Dawnrise",
-            "days": 30
-        },
-        {
-            "name": "Blossomreach",
-            "days": 31
-        },
-        {
-            "name": "Suncrest",
-            "days": 30
-        },
-        {
-            "name": "Highflame",
-            "days": 31
-        },
-        {
-            "name": "Emberfall",
-            "days": 30
-        },
-        {
-            "name": "Duskwane",
-            "days": 31
-        },
-        {
-            "name": "Moonveil",
-            "days": 30
-        },
-        {
-            "name": "Frostwane",
-            "days": 31
-        },
-        {
-            "name": "Deepice",
-            "days": 30
-        },
-        {
-            "name": "Thawmarch",
-            "days": 31
-        },
-        {
-            "name": "Greentide",
-            "days": 30
-        },
-        {
-            "name": "Starseed",
-            "days": 31
-        }
+        { "name": "Dawnrise", "days": 30 },
+        { "name": "Blossomreach", "days": 31 },
+        { "name": "Suncrest", "days": 30 },
+        { "name": "Highflame", "days": 31 },
+        { "name": "Emberfall", "days": 30 },
+        { "name": "Duskwane", "days": 31 },
+        { "name": "Moonveil", "days": 30 },
+        { "name": "Frostwane", "days": 31 },
+        { "name": "Deepice", "days": 30 },
+        { "name": "Thawmarch", "days": 31 },
+        { "name": "Greentide", "days": 30 },
+        { "name": "Starseed", "days": 31 }
+    ],
+    "seasons": [
+        { "name": "Spring", "startMonth": 0, "startDayOfMonth": 1 },
+        { "name": "Summer", "startMonth": 3, "startDayOfMonth": 1 },
+        { "name": "Autumn", "startMonth": 6, "startDayOfMonth": 1 },
+        { "name": "Winter", "startMonth": 9, "startDayOfMonth": 1 }
     ]
 }

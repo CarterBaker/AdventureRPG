@@ -4,7 +4,6 @@ import java.io.File;
 
 import com.google.gson.JsonObject;
 
-import application.bootstrap.weatherpipeline.season.Season;
 import application.bootstrap.weatherpipeline.season.SeasonData;
 import application.bootstrap.weatherpipeline.season.SeasonHandle;
 import engine.root.BuilderPackage;
@@ -15,16 +14,18 @@ class InternalBuilder extends BuilderPackage {
 
     /*
      * Parses season JSON into a SeasonData and wraps it in a SeasonHandle.
-     * The filename (without extension) must match a Season enum constant
-     * exactly — e.g. "SPRING.json" resolves to Season.SPRING. Bootstrap-only.
+     * The season's name is taken directly from the file name — whatever
+     * named seasons the active calendar defines is whatever files should
+     * exist here (e.g. "Spring.json", "Summer.json", "Autumn.json",
+     * "Winter.json", or entirely different names for an alien calendar).
+     * Bootstrap-only and on-demand.
      */
 
     // Build \\
 
     SeasonHandle build(File file, File root) {
 
-        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-        Season season = resolveSeason(resourceName, file);
+        String seasonName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
 
         JsonObject json = JsonUtility.loadJsonObject(file);
 
@@ -36,7 +37,7 @@ class InternalBuilder extends BuilderPackage {
         float precipitationChanceScale = parseFloat(json, "precipitationChanceScale", 1.0f);
 
         SeasonData seasonData = new SeasonData(
-                season,
+                seasonName,
                 baseWindSpeed,
                 windVariance,
                 prevailingWindDirectionDegrees,
@@ -51,16 +52,6 @@ class InternalBuilder extends BuilderPackage {
     }
 
     // Parsing \\
-
-    private Season resolveSeason(String resourceName, File file) {
-
-        try {
-            return Season.valueOf(resourceName);
-        } catch (IllegalArgumentException e) {
-            return throwException("Season file name must match a Season enum constant "
-                    + "(SPRING, SUMMER, FALL, WINTER): " + file.getName());
-        }
-    }
 
     private float parseFloat(JsonObject json, String field, float fallback) {
 

@@ -1,18 +1,24 @@
 package application.bootstrap.calendarpipeline.clock;
 
+import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import engine.root.DataPackage;
 
 public class ClockData extends DataPackage {
 
     /*
      * Mutable runtime clock state for one world. Holds the epoch anchor used
-     * to derive all time values, plus all calculated current time fields updated
-     * each frame by the clock branches. The epoch is the only field that needs
-     * to be persisted to disk to fully restore session state.
+     * to derive all time values, a reference to the active world's calendar
+     * (source of the current season and the world's starting point), plus
+     * all calculated current time fields updated each frame by the clock
+     * branches. The epoch is the only field that needs to be persisted to
+     * disk to fully restore session state.
      */
 
     // Epoch
     private long worldEpochStart;
+
+    // Calendar
+    private CalendarHandle calendarHandle;
 
     // Time State
     private long totalDaysElapsed;
@@ -50,6 +56,14 @@ public class ClockData extends DataPackage {
 
     public void setWorldEpochStart(long worldEpochStart) {
         this.worldEpochStart = worldEpochStart;
+    }
+
+    public CalendarHandle getCalendarHandle() {
+        return calendarHandle;
+    }
+
+    public void setCalendarHandle(CalendarHandle calendarHandle) {
+        this.calendarHandle = calendarHandle;
     }
 
     public long getTotalDaysElapsed() {

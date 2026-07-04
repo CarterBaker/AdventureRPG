@@ -5,10 +5,11 @@ import engine.root.HandlePackage;
 public class SeasonHandle extends HandlePackage {
 
     /*
-     * Persistent climate record for one season. Wraps SeasonData and
+     * Persistent climate record for one named season. Wraps SeasonData and
      * delegates all access through it. Registered in SeasonManager from
-     * bootstrap to shutdown — all four seasons load eagerly, never on
-     * demand.
+     * bootstrap to shutdown, keyed by name — the same open-ended registry
+     * pattern as clouds, weathers, and biomes, since the set of seasons is
+     * entirely defined by whichever calendar a world uses.
      */
 
     // Internal
@@ -26,8 +27,8 @@ public class SeasonHandle extends HandlePackage {
         return seasonData;
     }
 
-    public Season getSeason() {
-        return seasonData.getSeason();
+    public String getSeasonName() {
+        return seasonData.getSeasonName();
     }
 
     public float getBaseWindSpeed() {

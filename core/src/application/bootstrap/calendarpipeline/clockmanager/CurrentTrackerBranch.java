@@ -1,5 +1,6 @@
 package application.bootstrap.calendarpipeline.clockmanager;
 
+import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -11,13 +12,13 @@ class CurrentTrackerBranch extends BranchPackage {
      * real system clock modulo the game day length so time of day is always
      * consistent regardless of session start time. Derives total days elapsed
      * from the world epoch so the in-game date accumulates correctly across
-     * sessions. Returns true when the day rolls over.
+     * sessions. Returns true when the day rolls over. Hours-per-day, minutes-
+     * per-hour, and the midday offset all come from the active calendar now,
+     * rather than fixed engine-wide constants — MILLIS_PER_REAL_DAY is the
+     * one real-world unit left, so it stays put in EngineSetting.
      */
 
     // Internal
-    private int MINUTES_PER_HOUR;
-    private int HOURS_PER_DAY;
-    private float MIDDAY_OFFSET;
     private long MILLIS_PER_REAL_DAY;
 
     // Seasonal Bending
@@ -30,6 +31,9 @@ class CurrentTrackerBranch extends BranchPackage {
     private double NOON;
     private double QUARTER;
     private double THREE_QUARTERS;
+
+    // Calendar
+    private CalendarHandle calendarHandle;
 
     // Per-world
     private float daysPerDay;
@@ -44,9 +48,6 @@ class CurrentTrackerBranch extends BranchPackage {
     protected void create() {
 
         // Internal
-        this.MINUTES_PER_HOUR = EngineSetting.MINUTES_PER_HOUR;
-        this.HOURS_PER_DAY = EngineSetting.HOURS_PER_DAY;
-        this.MIDDAY_OFFSET = EngineSetting.MIDDAY_OFFSET;
         this.MILLIS_PER_REAL_DAY = EngineSetting.MILLIS_PER_REAL_DAY;
 
         // Seasonal Bending
@@ -66,9 +67,14 @@ class CurrentTrackerBranch extends BranchPackage {
 
     // Assignment \\
 
-    void assignData(ClockHandle clockHandle, float daysPerDay) {
+    void assignData(CalendarHandle calendarHandle, ClockHandle clockHandle, float daysPerDay) {
+        this.calendarHandle = calendarHandle;
         this.clockHandle = clockHandle;
         this.daysPerDay = daysPerDay;
+    }
+
+    void setCalendarHandle(CalendarHandle calendarHandle) {
+        this.calendarHandle = calendarHandle;
     }
 
     void setDaysPerDay(float daysPerDay) {
@@ -115,7 +121,7 @@ class CurrentTrackerBranch extends BranchPackage {
 
     double calculateRawTimeOfDay(double dayProgress) {
 
-        double raw = (dayProgress + MIDDAY_OFFSET) % 1.0;
+        double raw = (dayProgress + calendarHandle.getMiddayOffset()) % 1.0;
 
         if (raw < 0)
             raw += 1.0;
@@ -124,11 +130,15 @@ class CurrentTrackerBranch extends BranchPackage {
     }
 
     int calculateMinute(double rawTimeOfDay) {
-        return (int) ((rawTimeOfDay * HOURS_PER_DAY * MINUTES_PER_HOUR) % MINUTES_PER_HOUR);
+
+        int hoursPerDay = calendarHandle.getHoursPerDay();
+        int minutesPerHour = calendarHandle.getMinutesPerHour();
+
+        return (int) ((rawTimeOfDay * hoursPerDay * minutesPerHour) % minutesPerHour);
     }
 
     int calculateHour(double rawTimeOfDay) {
-        return (int) (rawTimeOfDay * HOURS_PER_DAY);
+        return (int) (rawTimeOfDay * calendarHandle.getHoursPerDay());
     }
 
     /*

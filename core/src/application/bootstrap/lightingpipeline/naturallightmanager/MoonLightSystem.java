@@ -11,6 +11,11 @@ public class MoonLightSystem extends SystemPackage {
      * Computes moon direction, color, and intensity each frame from the current
      * visual time of day and lunar phase. Moon is offset half a cycle from the
      * sun. Intensity and color tint scale with the current lunar phase.
+     *
+     * Lunar cycle length is calendar data now (it can differ per world), so it
+     * is read live off the active CalendarHandle via ClockManager each time the
+     * phase is computed, rather than cached once at create() — this keeps it
+     * correct across a switchWorld() calendar swap too.
      */
 
     // Output
@@ -22,7 +27,6 @@ public class MoonLightSystem extends SystemPackage {
     private ClockManager clockManager;
 
     // Settings
-    private int LUNAR_CYCLE_DAYS;
     private float MOON_BRIGHTNESS_BASE;
     private float MOON_BRIGHTNESS_LUNAR_SCALE;
     private float MOON_COLOR_R;
@@ -39,7 +43,6 @@ public class MoonLightSystem extends SystemPackage {
     protected void create() {
 
         // Settings
-        this.LUNAR_CYCLE_DAYS = EngineSetting.LUNAR_CYCLE_DAYS;
         this.MOON_BRIGHTNESS_BASE = EngineSetting.MOON_BRIGHTNESS_BASE;
         this.MOON_BRIGHTNESS_LUNAR_SCALE = EngineSetting.MOON_BRIGHTNESS_LUNAR_SCALE;
         this.MOON_COLOR_R = EngineSetting.MOON_COLOR_R;
@@ -83,8 +86,13 @@ public class MoonLightSystem extends SystemPackage {
 
     private float computeLunarPhase() {
 
+        int lunarCycleDays = clockManager.getClockHandle().getCalendarHandle().getLunarCycleDays();
+
+        if (lunarCycleDays <= 0)
+            return 0f;
+
         long totalDays = clockManager.getClockHandle().getTotalDaysElapsed();
-        float cycleProgress = (totalDays % LUNAR_CYCLE_DAYS) / (float) LUNAR_CYCLE_DAYS;
+        float cycleProgress = (totalDays % lunarCycleDays) / (float) lunarCycleDays;
 
         return (1f + (float) Math.sin(cycleProgress * Math.PI * 2f - Math.PI / 2f)) / 2f;
     }

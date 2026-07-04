@@ -6,16 +6,17 @@ import application.bootstrap.calendarpipeline.clock.ClockData;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
-import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 
 public class ClockManager extends ManagerPackage {
 
     /*
      * Drives the in-game clock for the active world. Owns the ClockHandle and
-     * all tracker branches. Validates calendar settings on awake, wires branches
-     * to the active world's epoch, and advances time each update frame.
-     * Supports world switching by rewiring branches to the new world's data.
+     * all tracker branches. Wires branches to the active world's calendar and
+     * epoch, and advances time each update frame. Supports world switching by
+     * rewiring branches to the new world's data. Every fixed time constant —
+     * starting point, day/year shape, years-per-age — now comes from the
+     * active calendar, validated once at calendar build time.
      */
 
     // Internal
@@ -70,8 +71,8 @@ public class ClockManager extends ManagerPackage {
 
         ClockData clockData = new ClockData(activeWorld.getWorldEpochStart());
         clockHandle.constructor(clockData);
+        clockHandle.setCalendarHandle(calendarHandle);
 
-        validateSettings();
         wireData(activeWorld);
     }
 
@@ -82,26 +83,8 @@ public class ClockManager extends ManagerPackage {
 
     // Clock \\
 
-    private void validateSettings() {
-
-        int startingMonth = EngineSetting.STARTING_MONTH;
-        int startingDayOfMonth = EngineSetting.STARTING_DAY_OF_MONTH;
-        int monthCount = calendarHandle.getMonthCount();
-
-        if (startingMonth < 0 || startingMonth >= monthCount)
-            throwException("Invalid STARTING_MONTH: " + startingMonth +
-                    ". Must be between 0 and " + (monthCount - 1));
-
-        int daysInStartingMonth = calendarHandle.getMonthDays(startingMonth);
-
-        if (startingDayOfMonth < 1 || startingDayOfMonth > daysInStartingMonth)
-            throwException("Invalid STARTING_DAY_OF_MONTH: " + startingDayOfMonth +
-                    ". Must be between 1 and " + daysInStartingMonth +
-                    " for month " + calendarHandle.getMonthName(startingMonth));
-    }
-
     private void wireData(WorldHandle activeWorld) {
-        currentTracker.assignData(clockHandle, activeWorld.getDaysPerDay());
+        currentTracker.assignData(calendarHandle, clockHandle, activeWorld.getDaysPerDay());
         dayTracker.assignData(calendarHandle, clockHandle);
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
@@ -131,6 +114,8 @@ public class ClockManager extends ManagerPackage {
             newWorld.setWorldEpochStart(System.currentTimeMillis());
 
         clockHandle.setWorldEpochStart(newWorld.getWorldEpochStart());
+        clockHandle.setCalendarHandle(calendarHandle);
+        currentTracker.setCalendarHandle(calendarHandle);
         currentTracker.setDaysPerDay(newWorld.getDaysPerDay());
 
         dayTracker.assignData(calendarHandle, clockHandle);

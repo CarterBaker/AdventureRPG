@@ -5,15 +5,17 @@ import engine.root.DataPackage;
 public class SeasonData extends DataPackage {
 
     /*
-     * Immutable climate definition for one season, loaded from JSON. Keyed
-     * by the Season enum directly rather than a hashed ID — seasons are a
-     * fixed four-value set, not an open-ended named registry. Feeds base
-     * wind and temperature values that WindManager and WeatherManager read
-     * each frame. Owned by SeasonHandle for the full engine session.
+     * Immutable climate definition for one season, loaded from JSON and
+     * identified by name. Season identity and ordering are entirely defined
+     * by the active calendar (see CalendarData.getSeasons()) — this class
+     * only carries the climate numbers a named season contributes once it's
+     * active. Feeds base wind and temperature values that WindManager and
+     * WeatherManager read each frame. Owned by SeasonHandle for the full
+     * engine session.
      */
 
     // Identity
-    private final Season season;
+    private final String seasonName;
 
     // Wind
     private final float baseWindSpeed;
@@ -30,7 +32,7 @@ public class SeasonData extends DataPackage {
     // Constructor \\
 
     public SeasonData(
-            Season season,
+            String seasonName,
             float baseWindSpeed,
             float windVariance,
             float prevailingWindDirectionDegrees,
@@ -39,7 +41,7 @@ public class SeasonData extends DataPackage {
             float precipitationChanceScale) {
 
         // Identity
-        this.season = season;
+        this.seasonName = seasonName;
 
         // Wind
         this.baseWindSpeed = baseWindSpeed;
@@ -56,8 +58,8 @@ public class SeasonData extends DataPackage {
 
     // Accessible \\
 
-    public Season getSeason() {
-        return season;
+    public String getSeasonName() {
+        return seasonName;
     }
 
     public float getBaseWindSpeed() {

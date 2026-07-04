@@ -12,14 +12,26 @@ class DayTrackerBranch extends BranchPackage {
     /*
      * Advances the day-level clock when the day rolls over. Builds lookup
      * tables from the calendar definition for fast day-of-year to month and
-     * day-of-month resolution. Returns true when the month advances.
+     * day-of-month resolution. Month/day-of-month/day-of-week/year-progress
+     * are always derived directly from the elapsed day count (never
+     * incremented one day at a time), so any gap — the game being closed
+     * for days, months, or years — lands on the correct values in one shot.
+     *
+     * advanceTime() returns true whenever the day was actually recomputed
+     * (the elapsed day count changed) — not only when the new day-of-month
+     * happens to be 1. MonthTrackerBranch/YearTrackerBranch each do their
+     * own direct "did this actually change" comparison downstream, so it's
+     * cheap and correct to let them check every time a day passes; gating
+     * on day-of-month == 1 would miss any month/year rollover that doesn't
+     * land exactly on the 1st, which is guaranteed to happen after a long
+     * enough absence (or even on a freshly created world whose calendar
+     * start date isn't the 1st of its first month).
+     *
+     * The world's starting year/month/day and years-per-age all come from
+     * the active calendar now, rather than fixed engine-wide constants.
      */
 
     // Internal
-    private int STARTING_DAY_OF_MONTH;
-    private int STARTING_MONTH;
-    private int STARTING_YEAR;
-    private int YEARS_PER_AGE;
     private long NOISE_MASK;
     private double NOISE_DIVISOR;
     private long NOISE_MULTIPLIER;
@@ -41,10 +53,6 @@ class DayTrackerBranch extends BranchPackage {
     protected void create() {
 
         // Internal
-        this.STARTING_DAY_OF_MONTH = EngineSetting.STARTING_DAY_OF_MONTH;
-        this.STARTING_MONTH = EngineSetting.STARTING_MONTH;
-        this.STARTING_YEAR = EngineSetting.STARTING_YEAR;
-        this.YEARS_PER_AGE = EngineSetting.YEARS_PER_AGE;
         this.NOISE_MASK = EngineSetting.CLOCK_NOISE_MASK;
         this.NOISE_DIVISOR = EngineSetting.CLOCK_NOISE_DIVISOR;
         this.NOISE_MULTIPLIER = EngineSetting.CLOCK_NOISE_MULTIPLIER;
@@ -123,21 +131,25 @@ class DayTrackerBranch extends BranchPackage {
         clockHandle.setCurrentDayOfMonth(currentDayOfMonth);
         clockHandle.setCurrentMonth(currentMonth);
 
-        return currentDayOfMonth == 1;
+        return true;
     }
 
     // Calculations \\
 
     long calculateTotalDaysWithOffset(long totalDaysElapsed) {
 
+        int startMonth = calendarHandle.getStartMonth();
+        int startDayOfMonth = calendarHandle.getStartDayOfMonth();
+        int startYear = calendarHandle.getStartYear();
+
         int dayOfYear = 0;
 
-        for (int i = 0; i < STARTING_MONTH - 1; i++)
+        for (int i = 0; i < startMonth; i++)
             dayOfYear += calendarHandle.getMonthDays(i);
 
-        dayOfYear += STARTING_DAY_OF_MONTH - 1;
+        dayOfYear += startDayOfMonth - 1;
 
-        long dayOffset = (long) STARTING_YEAR * calendarHandle.getTotalDaysInYear() + dayOfYear;
+        long dayOffset = (long) startYear * calendarHandle.getTotalDaysInYear() + dayOfYear;
 
         return totalDaysElapsed + dayOffset;
     }
@@ -158,7 +170,8 @@ class DayTrackerBranch extends BranchPackage {
     double calculateYearProgress(long totalDaysWithOffset) {
 
         int totalDaysInYear = calendarHandle.getTotalDaysInYear();
-        long dayOfAge = totalDaysWithOffset % ((long) YEARS_PER_AGE * totalDaysInYear);
+        long yearsPerAgeDays = (long) calendarHandle.getYearsPerAge() * totalDaysInYear;
+        long dayOfAge = totalDaysWithOffset % yearsPerAgeDays;
 
         return (double) (dayOfAge % totalDaysInYear) / totalDaysInYear;
     }
