@@ -12,9 +12,9 @@ public class WindowManager extends ManagerPackage {
 
     /*
      * Owns all engine windows. Each frame rebuilds hoveredWindows — every
-     * window the cursor is currently inside, sorted depth descending, area
-     * ascending on ties. OS windows are depth 0; logical windows (tabs,
-     * composited panels) are depth 1+.
+     * window the cursor is currently inside, sorted by zOrder descending,
+     * area ascending on ties. OS windows are zOrder 0; logical windows
+     * (tabs, composited panels) get a unique zOrder via bringToFront().
      *
      * Phase 1 — every OS window is queried and synced unconditionally,
      * regardless of OS focus (GLFW only calls back into the focused window).
@@ -23,13 +23,11 @@ public class WindowManager extends ManagerPackage {
      *
      * This method never assigns EngineContext.input. That happens exactly
      * once, in InputManager.publishActiveInput(), after focus is resolved
-     * for the frame. It used to happen here, mid-loop, which left the global
-     * bound to whichever OS window was synced last — simply wrong the moment
-     * a second OS window existed.
+     * for the frame.
      *
      * focusedWindow may only be changed via setFocusedWindow, called
-     * exclusively from InputManager's own click resolution. WindowManager no
-     * longer makes that decision itself — there is exactly one authority.
+     * exclusively from InputManager's click resolution. WindowManager makes
+     * no focus decisions of its own.
      */
 
     private ObjectArrayList<WindowInstance> windows;
@@ -41,6 +39,7 @@ public class WindowManager extends ManagerPackage {
     private WindowInstance capturedWindow;
 
     private int nextWindowID;
+    private int nextZOrder = 1;
 
     private final float[] cursorPosScratch = new float[2];
 
@@ -132,9 +131,9 @@ public class WindowManager extends ManagerPackage {
         }
 
         hoveredWindows.sort((a, b) -> {
-            int depthCmp = b.getDepth() - a.getDepth();
-            if (depthCmp != 0)
-                return depthCmp;
+            int zCmp = b.getZOrder() - a.getZOrder();
+            if (zCmp != 0)
+                return zCmp;
             return Long.compare(effectiveArea(a), effectiveArea(b));
         });
     }
@@ -151,6 +150,8 @@ public class WindowManager extends ManagerPackage {
                 && my >= w.getCompositeY()
                 && my < w.getCompositeY() + w.getCompositeH();
     }
+
+    // Registration \\
 
     public void registerMainWindow(WindowInstance window) {
         verifyWindowRegistration(window, true);
@@ -204,9 +205,28 @@ public class WindowManager extends ManagerPackage {
             focusedWindow = null;
     }
 
+    // Identity \\
+
     public int issueWindowID() {
         return nextWindowID++;
     }
+
+    // Z-Order \\
+
+    /*
+     * Assigns the given window a zOrder strictly higher than every zOrder
+     * ever handed out before it — guaranteeing it renders above and wins
+     * hit-test priority over anything currently open. There is exactly one
+     * counter, so there is exactly one way for a window to become "the
+     * topmost thing right now," and no fixed per-role constant can ever
+     * collide with another. OS windows never call this and stay at their
+     * default zOrder of 0, which is intentionally always the lowest.
+     */
+    public void bringToFront(WindowInstance window) {
+        window.setZOrder(nextZOrder++);
+    }
+
+    // Render / context frame tracking \\
 
     public void beginRenderWindow(WindowInstance window) {
         this.renderWindow = window;
@@ -224,6 +244,8 @@ public class WindowManager extends ManagerPackage {
         this.contextWindow = null;
     }
 
+    // Capture \\
+
     public void captureLockWindow(WindowInstance window) {
         this.capturedWindow = window;
     }
@@ -231,6 +253,8 @@ public class WindowManager extends ManagerPackage {
     public void releaseCaptureLock() {
         this.capturedWindow = null;
     }
+
+    // Accessors \\
 
     public WindowInstance getMainWindow() {
         return mainWindow;
@@ -275,6 +299,8 @@ public class WindowManager extends ManagerPackage {
     public void reparentWindow(WindowInstance window, WindowInstance newParent) {
         window.setCompositeTarget(newParent);
     }
+
+    // Validation \\
 
     private void verifyWindowRegistration(WindowInstance window, boolean isMain) {
         if (window == null)

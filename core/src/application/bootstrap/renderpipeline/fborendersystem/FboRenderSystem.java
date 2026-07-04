@@ -78,7 +78,7 @@ public class FboRenderSystem extends SystemPackage {
         if (queue.size() >= EngineSetting.MAX_RENDER_CALLS_PER_FRAME)
             return;
 
-        int sortKey = window.getDepth() * LAYER_STRIDE + layer;
+        int sortKey = window.getZOrder() * LAYER_STRIDE + layer;
 
         fbo.setPushData(window, layer, sortKey, screenOrder, resolveDestRect(window, destRect));
         queue.add(fbo);

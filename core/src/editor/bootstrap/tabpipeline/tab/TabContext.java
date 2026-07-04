@@ -24,7 +24,14 @@ public class TabContext extends ContextPackage {
      * two calls separate means content placement always uses the current frame's
      * canvas bounds, never stale ones from before the menu rendered.
      *
-     * moveTo() reparents both windows to a new OS window. No destroy, no rebuild.
+     * moveTo() reparents both windows to a new OS window. No destroy, no rebuild,
+     * no z-order bookkeeping — zOrder is independent of which OS window a
+     * logical window composites onto.
+     *
+     * bringToFront() is the single place chrome and content zOrder are ever
+     * set. Content is always exactly chrome's zOrder + 1 — nothing outside
+     * this method ever assigns either window's zOrder directly, so the two
+     * can never drift out of their required relative order.
      */
 
     // Internal
@@ -109,6 +116,22 @@ public class TabContext extends ContextPackage {
     }
 
     /*
+     * Elevates this tab — chrome and content together — strictly above
+     * everything else currently open. Called once when the tab is opened,
+     * and again whenever it needs to float above everything else (e.g. the
+     * start of a drag). Must be called only after linkContent().
+     */
+    public void bringToFront() {
+
+        if (contentContext == null)
+            throwException("bringToFront() called before linkContent() — chrome and content must be paired first.");
+
+        WindowInstance chromeWindow = getWindow();
+        windowManager.bringToFront(chromeWindow);
+        contentContext.getWindow().setZOrder(chromeWindow.getZOrder() + 1);
+    }
+
+    /*
      * Positions the chrome window. Called by pushRects() and drag tracking.
      * Content placement is handled separately by syncContent() each frame after
      * MenuRenderSystem has written fresh canvas bounds.
@@ -167,13 +190,8 @@ public class TabContext extends ContextPackage {
      * window. Both contexts stay alive — no rebuild, no lifecycle gap.
      */
     public void moveTo(WindowInstance targetOsWindow) {
-
         windowManager.reparentWindow(getWindow(), targetOsWindow);
         windowManager.reparentWindow(contentContext.getWindow(), targetOsWindow);
-
-        // Reset to default depths — drag may have elevated them
-        getWindow().setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
-        contentContext.getWindow().setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
     }
 
     // Accessible \\

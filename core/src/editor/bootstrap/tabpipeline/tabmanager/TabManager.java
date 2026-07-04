@@ -36,6 +36,12 @@ public class TabManager extends ManagerPackage {
      * All structural mutations (open, close, secondary window) route through
      * it. TabDragManager calls it after drop resolution via the same method.
      * LayoutManager suppresses re-entrant calls during restore.
+     *
+     * Every tab window resolves its own OS window via WindowInstance.getGLWindow()
+     * — a chrome/content window that already has a native handle returns itself,
+     * a logical window recurses through its composite target. There is no
+     * separate "resolve the OS window" helper anywhere in this class; the one
+     * already on WindowInstance is the only one that exists in the codebase.
      */
     // Palette
     private Object2IntOpenHashMap<String> tabName2TabID;
@@ -105,17 +111,16 @@ public class TabManager extends ManagerPackage {
         WindowInstance mainWindow = windowManager.getMainWindow();
         // Chrome window
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, mainWindow);
-        tabWindow.setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
         tabWindow.setCaptureEligible(false);
         tabWindow.setFocusIndependent(true);
         // Content window
         WindowInstance contentWindow = windowManager.createLogicalWindow(title, mainWindow);
-        contentWindow.setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
         contentWindow.setCaptureEligible(true);
         // Contexts
         TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
         ContextPackage contentContext = internal.createContext(contentClass, contentWindow);
         tabContext.linkContent(contentContext);
+        tabContext.bringToFront();
         // Handle
         TabHandle handle = create(TabHandle.class);
         handle.constructor(new TabData(baseTitle, title, contentClass));
@@ -141,7 +146,7 @@ public class TabManager extends ManagerPackage {
             throwException("Cannot close tab that is not open: " + handle.getTabTitle());
 
         TabContext tabContext = handle.getTabContext();
-        WindowInstance osWindow = resolveOsWindow(tabContext.getWindow());
+        WindowInstance osWindow = tabContext.getWindow().getGLWindow();
 
         dockLayoutSystem.removeTab(osWindow, handle);
 
@@ -271,7 +276,7 @@ public class TabManager extends ManagerPackage {
         int size = openTabs.size();
         for (int i = 0; i < size; i++) {
             TabHandle h = (TabHandle) elements[i];
-            WindowInstance osWindow = resolveOsWindow(h.getTabContext().getWindow());
+            WindowInstance osWindow = h.getTabContext().getWindow().getGLWindow();
             float x = dockLayoutSystem.getTabX(osWindow, h);
             float y = dockLayoutSystem.getTabY(osWindow, h);
             float w = dockLayoutSystem.getTabW(osWindow, h);
@@ -338,15 +343,5 @@ public class TabManager extends ManagerPackage {
 
     public DockLayoutSystem getDockLayoutSystem() {
         return dockLayoutSystem;
-    }
-
-    // Utility \\
-    private WindowInstance resolveOsWindow(WindowInstance window) {
-        if (window.hasNativeHandle())
-            return window;
-        WindowInstance composite = window.getCompositeTarget();
-        if (composite != null && composite.hasNativeHandle())
-            return composite;
-        return windowManager.getMainWindow();
     }
 }

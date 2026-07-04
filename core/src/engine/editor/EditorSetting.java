@@ -21,9 +21,6 @@ public class EditorSetting {
     public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
     public static final String WINDOW_TITLE_EDITOR_CREATE_LAYOUT_DIALOG = "CreateLayoutDialog";
 
-    // Depths \\
-    public static final int TOOLBAR_WINDOW_DEPTH = 3;
-
     // Elements \\
     public static final String ELEMENT_LAYOUT_ITEM_LABEL = "layout_item_label";
 

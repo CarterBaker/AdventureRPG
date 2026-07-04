@@ -555,11 +555,6 @@ public class EngineSetting {
         public static final float RATIO_MAX = 0.9f;
         public static final int TAB_DRAG_PREVIEW_W = 256;
         public static final int TAB_DRAG_PREVIEW_H = 144;
-        public static final int TAB_DEFAULT_TAB_DEPTH = 1;
-        public static final int TAB_DEFAULT_CONTENT_DEPTH = 2;
-        public static final int TAB_DRAG_GHOST_DEPTH = 3;
-        public static final int TAB_DRAG_TAB_DEPTH = 4;
-        public static final int TAB_DRAG_CONTENT_DEPTH = 5;
         public static final float TAB_DRAG_EDGE_FRACTION = 0.25f;
         public static final String TAB_ZONE_GHOST_WINDOW_TITLE = "TabZoneGhost";
 }

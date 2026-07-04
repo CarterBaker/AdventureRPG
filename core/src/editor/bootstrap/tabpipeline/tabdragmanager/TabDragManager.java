@@ -14,7 +14,6 @@ import editor.bootstrap.tabpipeline.util.DropTargetStruct;
 import editor.bootstrap.tabpipeline.util.DropZone;
 import editor.bootstrap.tabpipeline.util.TabDragLayoutStruct;
 import engine.input.Input;
-import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -26,11 +25,19 @@ public class TabDragManager extends ManagerPackage {
      * always move together.
      *
      * On latch: the handle is removed from the BSP so remaining tabs reflow.
-     * Tab dimensions are cached before pushRects() overwrites them. Depth is
-     * elevated on both windows so the dragged tab floats above everything.
+     * Tab dimensions are cached before pushRects() overwrites them.
+     * TabContext.bringToFront() elevates chrome+content together above
+     * everything currently open — no fixed depth constants, nothing to reset
+     * on drop.
      *
      * Each frame: updateDraggedTab() calls placeAt() with the cursor-tracked rect.
      * Chrome and content follow together in that single call.
+     *
+     * All input polling here goes through InputManager.getRawInput(window) /
+     * getGlobalMouseX(window)/getGlobalMouseY(window), always resolved against
+     * the dragged tab's own OS window — never against an ambient global —
+     * so the gesture behaves identically regardless of which window currently
+     * owns engine-wide focus.
      *
      * zoneGhost — half-panel drop preview on the target OS window. Repositioned
      * on zone change, rebuilt on OS window change, closed before drop.
@@ -116,7 +123,6 @@ public class TabDragManager extends ManagerPackage {
     }
 
     // Entry Point \\
-
     public void onTabDragUpdate(WindowInstance sourceWindow) {
 
         if (draggedHandle != null)
@@ -145,9 +151,7 @@ public class TabDragManager extends ManagerPackage {
         dragW = EngineSetting.TAB_DRAG_PREVIEW_W;
         dragH = EngineSetting.TAB_DRAG_PREVIEW_H;
         draggedHandle = handle;
-        tabWindow.setDepth(EngineSetting.TAB_DRAG_TAB_DEPTH);
-        handle.getTabContext().getContentContext().getWindow()
-                .setDepth(EngineSetting.TAB_DRAG_CONTENT_DEPTH);
+        handle.getTabContext().bringToFront();
 
         WindowInstance osWindow = tabWindow.getGLWindow();
         tabManager.getDockLayoutSystem().removeTab(osWindow, handle);
@@ -184,18 +188,18 @@ public class TabDragManager extends ManagerPackage {
             return;
         DockNodeStruct leaf = target.getLeaf();
         DropZone zone = target.getZone();
-        WindowInstance targetOsWindow = resolveOsWindow(target.getWindow());
+        WindowInstance targetOsWindow = target.getWindow();
         float ghostX = layoutSystem.zoneX(leaf.getX(), leaf.getW(), zone);
         float ghostY = layoutSystem.zoneY(leaf.getY(), leaf.getH(), zone);
         float ghostW = layoutSystem.zoneW(leaf.getW(), zone);
         float ghostH = layoutSystem.zoneH(leaf.getH(), zone);
         zoneGhostWindow = windowManager.createLogicalWindow(
                 EngineSetting.TAB_ZONE_GHOST_WINDOW_TITLE, targetOsWindow);
-        zoneGhostWindow.setDepth(EngineSetting.TAB_DRAG_GHOST_DEPTH);
         zoneGhostWindow.setCaptureEligible(false);
         zoneGhostWindow.setFocusIndependent(true);
         zoneGhostWindow.setCompositeRect(ghostX, ghostY, ghostW, ghostH);
         zoneGhostWindow.resize((int) ghostW, (int) ghostH);
+        windowManager.bringToFront(zoneGhostWindow);
         zoneGhostFbo = fboManager.cloneFbo(
                 application.runtime.RuntimeSetting.FBO_UI, zoneGhostWindow);
         menuManager.setMenuTargetFbo(zoneGhostWindow, zoneGhostFbo);
@@ -234,7 +238,7 @@ public class TabDragManager extends ManagerPackage {
         int size = windows.size();
         WindowInstance bestWindow = null;
         long bestArea = Long.MAX_VALUE;
-        int bestDepth = Integer.MIN_VALUE;
+        int bestZOrder = Integer.MIN_VALUE;
         for (int i = 0; i < size; i++) {
             WindowInstance w = (WindowInstance) elements[i];
             if (!w.hasNativeHandle())
@@ -242,9 +246,9 @@ public class TabDragManager extends ManagerPackage {
             if (!isGlobalPointInOsWindow(w, globalX, globalY))
                 continue;
             long area = (long) w.getWidth() * (long) w.getHeight();
-            if (area < bestArea || (area == bestArea && w.getDepth() > bestDepth)) {
+            if (area < bestArea || (area == bestArea && w.getZOrder() > bestZOrder)) {
                 bestArea = area;
-                bestDepth = w.getDepth();
+                bestZOrder = w.getZOrder();
                 bestWindow = w;
             }
         }
@@ -314,13 +318,8 @@ public class TabDragManager extends ManagerPackage {
             clearState();
             return;
         }
-        draggedHandle.getTabContext().getWindow()
-                .setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
-        draggedHandle.getTabContext().getContentContext().getWindow()
-                .setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
         DropTargetStruct target = lastDropTarget;
-        WindowInstance sourceOsWindow = resolveOsWindow(
-                draggedHandle.getTabContext().getWindow());
+        WindowInstance sourceOsWindow = draggedHandle.getTabContext().getWindow().getGLWindow();
         if (target != null) {
             WindowInstance targetOsWindow = target.getWindow();
             if (targetOsWindow != sourceOsWindow)
@@ -362,29 +361,12 @@ public class TabDragManager extends ManagerPackage {
 
     private void clearState() {
         closeZoneGhost();
-        if (draggedHandle != null) {
-            draggedHandle.getTabContext().getWindow()
-                    .setDepth(EngineSetting.TAB_DEFAULT_TAB_DEPTH);
-            draggedHandle.getTabContext().getContentContext().getWindow()
-                    .setDepth(EngineSetting.TAB_DEFAULT_CONTENT_DEPTH);
-        }
         draggedHandle = null;
         lastDropTarget = null;
         grabOffsetX = 0f;
         grabOffsetY = 0f;
         dragW = 0f;
         dragH = 0f;
-    }
-
-    // Utility \\
-
-    private WindowInstance resolveOsWindow(WindowInstance window) {
-        if (window.hasNativeHandle())
-            return window;
-        WindowInstance composite = window.getCompositeTarget();
-        if (composite != null && composite.hasNativeHandle())
-            return composite;
-        return windowManager.getMainWindow();
     }
 
     // Accessible \\

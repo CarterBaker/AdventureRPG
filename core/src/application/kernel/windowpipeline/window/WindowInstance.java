@@ -17,8 +17,16 @@ public class WindowInstance extends InstancePackage {
      * and menu list. Logical windows (tabs) have no native handle — they carry
      * a composite target and rect so FboRenderSystem can transparently redirect
      * their pushFbo calls to the correct OS window and screen region.
-     * Depth controls draw order during the screen pass — OS windows are 0,
-     * tab logical windows are 1. Higher depth always draws on top.
+     *
+     * zOrder controls both draw order during the screen pass and hit-test
+     * priority when windows overlap — higher always wins both. OS windows
+     * default to 0 and never change it. Every logical window is assigned a
+     * unique, strictly increasing value via WindowManager.bringToFront() at
+     * creation time, or whenever it needs to supersede everything else
+     * currently open (a drag, a modal dialog, a drop-target preview). There
+     * are no fixed per-role depth constants, so there is no way for two
+     * unrelated windows to end up pinned to the same value by accident.
+     *
      * Input is hover-driven — no active or focus concept exists at this level.
      *
      * captureEligible gates whether InputSystem may capture this window.
@@ -62,8 +70,8 @@ public class WindowInstance extends InstancePackage {
     private float compositeH;
     private boolean compositeRect;
 
-    // Draw order
-    private int depth;
+    // Draw / hit-test order
+    private int zOrder;
 
     // OS-level screen position — OS windows only, set by platform layer
     private float screenX;
@@ -202,25 +210,19 @@ public class WindowInstance extends InstancePackage {
         return screenY;
     }
 
-    /*
-     * Called by the platform layer (e.g. glfwGetWindowPos callback and on
-     * window creation) to record where this OS window sits on the desktop.
-     * TabDragManager uses this to translate a global screen cursor position
-     * into window-local coordinates before querying the BSP tree.
-     */
     public void setScreenPosition(float x, float y) {
         this.screenX = x;
         this.screenY = y;
     }
 
-    // Depth \\
+    // Z-Order \\
 
-    public int getDepth() {
-        return depth;
+    public int getZOrder() {
+        return zOrder;
     }
 
-    public void setDepth(int depth) {
-        this.depth = depth;
+    public void setZOrder(int zOrder) {
+        this.zOrder = zOrder;
     }
 
     // Capture Eligibility \\

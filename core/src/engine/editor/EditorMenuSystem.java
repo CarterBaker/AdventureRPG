@@ -7,7 +7,6 @@ import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
-import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
 public class EditorMenuSystem extends SystemPackage {
@@ -15,12 +14,15 @@ public class EditorMenuSystem extends SystemPackage {
     /*
      * Opens two menus against two logical windows on the main window's GL context.
      *
-     * Base window (depth 0) — background sprite and dock canvas area. This is
-     * what EditorTabCompositorSystem reads for dock bounds.
+     * Base window (zOrder 0, inherited from the main OS window) — background
+     * sprite and dock canvas area. This is what EditorTabCompositorSystem reads
+     * for dock bounds.
      *
-     * Toolbar window (depth 3) — toolbar chrome only. Sits above tabs (depth 1)
-     * and content (depth 2) so dropdowns and toolbar elements always composite
-     * on top regardless of what the tab stack is doing. Each window gets its
+     * Toolbar window — toolbar chrome only, brought to front once at creation
+     * so it starts above anything already open. It never needs to be brought
+     * to front again: tabs live in the dock canvas region and the toolbar
+     * lives in its own strip, so their rects never overlap and their relative
+     * zOrder never matters for rendering or hit-testing. Each window gets its
      * own cloned FBO so they write to separate render targets and neither
      * overwrites the other.
      *
@@ -28,8 +30,9 @@ public class EditorMenuSystem extends SystemPackage {
      * The OS window has no compositeRect — its source of truth is getWidth()
      * and getHeight(). Fires only when dimensions change.
      *
-     * Toolbar window is marked alwaysInputActive so InputSystem passes input
-     * through regardless of OS focus state.
+     * captureEligible(false) + focusIndependent(true) mean the toolbar never
+     * pins the cursor and always receives hover-driven input regardless of
+     * which window currently owns engine-wide focus.
      */
 
     // Internal
@@ -65,18 +68,17 @@ public class EditorMenuSystem extends SystemPackage {
 
         mainWindow = windowManager.getMainWindow();
 
-        // Base — background + dock canvas, depth 0
+        // Base — background + dock canvas
         FboInstance baseFbo = fboManager.getFbo(RuntimeSetting.FBO_UI);
         menuManager.setMenuTargetFbo(mainWindow, baseFbo);
         baseMenu = menuManager.openMenu(EditorSetting.MENU_EDITOR_BASE, mainWindow);
 
-        // Toolbar — own logical window at depth 3, own cloned FBO, always receives
-        // input, never eligible for cursor capture or engine-wide focus
+        // Toolbar — own logical window, own cloned FBO, always receives input
         toolbarWindow = windowManager.createLogicalWindow(
                 EditorSetting.WINDOW_TITLE_EDITOR_TOOLBAR, mainWindow);
-        toolbarWindow.setDepth(EditorSetting.TOOLBAR_WINDOW_DEPTH);
         toolbarWindow.setCaptureEligible(false);
         toolbarWindow.setFocusIndependent(true);
+        windowManager.bringToFront(toolbarWindow);
 
         FboInstance toolbarFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, toolbarWindow);
         menuManager.setMenuTargetFbo(toolbarWindow, toolbarFbo);
