@@ -1,12 +1,9 @@
 #version 330 core
 
 layout(location = 0) in vec3 a_position;
-layout(location = 1) in vec2 a_uv;
-layout(location = 2) in vec4 a_boneIndices;
-layout(location = 3) in vec4 a_boneWeights;
-layout(location = 4) in mat4 a_instanceModel;
-
-out vec2 v_uv;
+layout(location = 1) in vec4 a_boneIndices;
+layout(location = 2) in vec4 a_boneWeights;
+layout(location = 3) in mat4 a_instanceModel;
 
 #include "includes/CameraData.glsl"
 
@@ -37,5 +34,4 @@ void main() {
     vec4 worldPosition    = a_instanceModel * skinnedPosition;
 
     gl_Position = u_viewProjection * worldPosition;
-    v_uv = a_uv;
 }

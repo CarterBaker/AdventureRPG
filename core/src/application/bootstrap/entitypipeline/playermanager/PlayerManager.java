@@ -1,5 +1,6 @@
 package application.bootstrap.entitypipeline.playermanager;
 
+import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
@@ -39,6 +40,14 @@ public class PlayerManager extends ManagerPackage {
      * the single authority on which window is active. All other players freeze.
      * Movement is additionally gated on the window's menu lock state so that
      * open menus suppress input without any external coordination.
+     *
+     * Animation clip selection is driven here too, immediately after movement
+     * state is resolved each frame — entityData.getClipForState() maps the
+     * EntityState the entity is already in to whatever clip that template
+     * authored for it. Entities with no character model skip this entirely.
+     * JUMPING/FALLING states are never actually set anywhere in this class —
+     * that's MovementManager's responsibility once real jump/fall detection
+     * exists — so those two clips are wired and ready but currently unreachable.
      */
 
     // Internal
@@ -151,6 +160,7 @@ public class PlayerManager extends ManagerPackage {
         playerInputSystem.translate(raw, player.getEntityInputHandle());
 
         writeMovementState(player);
+        updateAnimationState(player);
         movementManager.move(player);
 
         cameraOffset.set(
@@ -192,6 +202,22 @@ public class PlayerManager extends ManagerPackage {
             state.setMovementState(EntityState.RUNNING);
         else
             state.setMovementState(EntityState.MOVING);
+    }
+
+    // Animation \\
+
+    private void updateAnimationState(EntityInstance player) {
+
+        if (!player.hasAnimationState())
+            return;
+
+        EntityState state = player.getEntityStateHandle().getMovementState();
+        AnimationClipHandle clip = player.getEntityData().getClipForState(state);
+
+        if (clip != null)
+            player.getAnimationStateHandle().setClip(clip);
+
+        player.getAnimationStateHandle().update(internal.getDeltaTime());
     }
 
     // Spawn Verification \\

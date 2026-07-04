@@ -7,6 +7,7 @@ import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
+import application.bootstrap.renderpipeline.entityrendermanager.EntityRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
@@ -54,6 +55,7 @@ public class RenderManager extends ManagerPackage {
     protected void create() {
         create(CompositeRenderSystem.class);
         this.renderSystem = create(RenderSystem.class);
+        create(EntityRenderSystem.class);
     }
 
     @Override
@@ -209,12 +211,6 @@ public class RenderManager extends ManagerPackage {
 
     // Skinned Calls \\
 
-    /*
-     * Clears every skinned buffer's instance count to zero. Must be called
-     * exactly once per frame, before any pushSkinnedCall for that frame —
-     * the entity gather pass (EntityRenderSystem, next step) owns calling
-     * this at the start of its loop.
-     */
     public void clearSkinnedBuffers() {
         skinnedBufferManager.clearAll();
     }
@@ -255,9 +251,6 @@ public class RenderManager extends ManagerPackage {
         if (contextWindow != null)
             return contextWindow.getGLWindow();
 
-        // No hover fallback here — render resolution is context-driven, not
-        // cursor-driven.
-        // If neither render nor context window is set, fall straight to main.
         return windowManager.getMainWindow();
     }
 }

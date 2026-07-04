@@ -165,6 +165,10 @@ public class EngineSetting {
         public static final String CLOUD_JSON_PATH = "clouds";
         public static final String SEASON_JSON_PATH = "seasons";
 
+        // FBO \\
+
+        public static final String SCENE_FBO_NAME = "MainScene";
+
         // Settings \\
 
         public static final String SETTINGS_UBO = "SettingsData";

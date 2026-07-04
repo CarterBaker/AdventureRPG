@@ -1,5 +1,6 @@
 package application.bootstrap.entitypipeline.entity;
 
+import application.bootstrap.entitypipeline.animation.AnimationStateHandle;
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
@@ -31,6 +32,9 @@ public class EntityInstance extends InstancePackage {
 
     // Input
     private EntityInputHandle EntityInputHandle;
+
+    // Animation — created only if entityData.hasCharacterModel()
+    private AnimationStateHandle animationStateHandle;
 
     // Physics
     private WorldPositionStruct worldPositionStruct;
@@ -83,6 +87,14 @@ public class EntityInstance extends InstancePackage {
         // Runtime
         setEntitySize(size);
         this.weight = weight;
+
+        // Animation
+        if (entityData.hasCharacterModel()) {
+            this.animationStateHandle = create(AnimationStateHandle.class);
+            this.animationStateHandle.constructor(
+                    entityData.getRigHandle(),
+                    entityData.getClipForState(EntityState.IDLE));
+        }
     }
 
     // Utility \\
@@ -136,6 +148,14 @@ public class EntityInstance extends InstancePackage {
 
     public EntityInputHandle getEntityInputHandle() {
         return EntityInputHandle;
+    }
+
+    public boolean hasAnimationState() {
+        return animationStateHandle != null;
+    }
+
+    public AnimationStateHandle getAnimationStateHandle() {
+        return animationStateHandle;
     }
 
     public WorldPositionStruct getWorldPositionStruct() {
