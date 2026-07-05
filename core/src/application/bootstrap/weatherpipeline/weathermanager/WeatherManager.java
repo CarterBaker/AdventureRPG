@@ -26,6 +26,13 @@ public class WeatherManager extends ManagerPackage {
      * calendar uses. Per-frame region sampling, the planet-rotation-driven
      * global noise overlay, live temperature, and the GPU UBO pushes are
      * delegated to branches.
+     *
+     * activeWeatherPool stays null until the calendar resolves its first
+     * named season, which requires at least one day-tick — normal at
+     * startup. update() skips sampling entirely until then, and any
+     * cross-package caller of resolveWeatherBand() should check
+     * hasActiveWeatherPool() first; calling it before that point throws
+     * rather than silently resolving against nothing.
      */
 
     // Internal
@@ -87,6 +94,9 @@ public class WeatherManager extends ManagerPackage {
             this.activeWeatherPool = resolveWeatherPool(activeBiome, currentSeason);
             this.lastSeason = currentSeason;
         }
+
+        if (activeWeatherPool == null)
+            return;
 
         regionSampleBranch.sampleRegions(activeWeatherPool);
         temperatureBranch.updateTemperature(regionSampleBranch.getCenterSample());
@@ -175,6 +185,19 @@ public class WeatherManager extends ManagerPackage {
         regionSampleBranch.setReferenceCoordinate(chunkCoordinate);
     }
 
+    public long getReferenceCoordinate() {
+        return regionSampleBranch.getReferenceCoordinate();
+    }
+
+    /*
+     * Whether a seasonal weather pool has ever been resolved. False for the
+     * first frame(s) of a session, before the calendar's first day-tick —
+     * see the class comment.
+     */
+    public boolean hasActiveWeatherPool() {
+        return activeWeatherPool != null;
+    }
+
     /*
      * Exposes the reference region's blended windSpeedScale for WindManager's
      * LocalWindBranch, without leaking the package-private WeatherSampleStruct.
@@ -205,18 +228,16 @@ public class WeatherManager extends ManagerPackage {
      * Resolves which weather(s) the given world-space chunk coordinate
      * currently sits between, against this manager's own active seasonal
      * pool — the same canonical noise-and-chance-band algorithm this
-     * manager's own 5-point region sampling already uses (see
-     * RegionSampleBranch.resolveBand()), exposed here so any other system
-     * (the overhead cloud grid, eventually) resolves weather identically
-     * rather than reimplementing the noise math a second time.
-     *
-     * Writes into the caller-supplied struct rather than allocating, since
-     * this may be called at grid scale every frame. Today this always
-     * resolves against the single default-biome pool (see
-     * DEFAULT_BIOME_NAME) — once per-coordinate biome lookup exists, a
-     * biome-aware overload can be added without touching this one.
+     * manager's own 5-point region sampling already uses. Throws if called
+     * before hasActiveWeatherPool() is true — callers driving a grid (the
+     * overhead cloud system) are expected to check that first and simply
+     * skip work for the frame, rather than treat this as a normal path.
      */
     public void resolveWeatherBand(WeatherBandStruct out, long chunkCoordinate) {
+
+        if (activeWeatherPool == null)
+            throwException("Cannot resolve a weather band before any season has been resolved. "
+                    + "Callers should check hasActiveWeatherPool() first.");
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkY = Coordinate2Long.unpackY(chunkCoordinate);

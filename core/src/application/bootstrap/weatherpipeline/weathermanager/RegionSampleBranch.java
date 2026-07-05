@@ -30,12 +30,12 @@ class RegionSampleBranch extends BranchPackage {
      * noise currently sits between and how far across that blend band it
      * is — see WeatherBandStruct. It does not remember anything between
      * calls. A caller that wants a stable, non-reblending weather identity
-     * (an overhead cell, eventually) is expected to read
-     * WeatherBandStruct.getPrimary() once and hold onto it itself,
-     * re-resolving only when it chooses to transition — this class's own
-     * sampleDirection() deliberately does the opposite, reblending every
-     * call, since the 5 region samples exist purely to drive smoothly
-     * fading fog/cloud UBO values, not a persistent identity.
+     * (an overhead cell) is expected to read WeatherBandStruct.getPrimary()
+     * once and hold onto it itself, re-resolving only when it chooses to
+     * transition — this class's own sampleDirection() deliberately does
+     * the opposite, reblending every call, since the 5 region samples
+     * exist purely to drive smoothly fading fog/cloud UBO values, not a
+     * persistent identity.
      *
      * Noise position maps to a cumulative chance band per weather (see
      * bandFromPool), so a weather with a larger relative chance occupies a
@@ -105,6 +105,10 @@ class RegionSampleBranch extends BranchPackage {
 
     void setReferenceCoordinate(long chunkCoordinate) {
         this.referenceCoordinate = chunkCoordinate;
+    }
+
+    long getReferenceCoordinate() {
+        return referenceCoordinate;
     }
 
     // Sampling \\
@@ -204,7 +208,7 @@ class RegionSampleBranch extends BranchPackage {
      * Converts a resolved band into flattened, continuously-blended visual
      * values for the region-sampling UBO path — a genuine reblend every
      * call, not the identity-preserving path a persistent overhead cell
-     * will use.
+     * uses.
      */
     private void writeSample(
             WeatherSampleStruct sample,
