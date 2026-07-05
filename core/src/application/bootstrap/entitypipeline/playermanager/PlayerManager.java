@@ -30,11 +30,16 @@ public class PlayerManager extends ManagerPackage {
      * Owns and drives the player entity and its camera. spawnPlayer() takes the
      * window the player renders into and the context's RawInputHandle —
      * caller decides both, no internal lookups.
-     * Camera position is synchronized to the player eye position each frame.
+     *
+     * The camera trails the player's eye position each frame at a fixed
+     * third-person distance behind it along the view direction. This
+     * distance is currently a constant (cameraDistance) — it becomes
+     * player-adjustable (scroll to zoom, a key to snap to first person) in
+     * a later pass. Gameplay logic (raycasts, placement) always reads from
+     * the eye position, never the visual camera position, so aiming stays
+     * correct regardless of how far the camera is pulled back.
+     *
      * Camera rotation is driven externally by the runtime context.
-     * PlayerInputSystem translates RawInputHandle → EntityInputHandle each frame
-     * before movement runs. No KeyBindings queries anywhere in this class —
-     * all binding logic lives in PlayerInputSystem.
      *
      * Only the hovered window's player is updated each frame — WindowManager is
      * the single authority on which window is active. All other players freeze.
@@ -72,6 +77,10 @@ public class PlayerManager extends ManagerPackage {
     // Scratch
     private Vector3 cameraPosition;
     private Vector3 cameraOffset;
+    private Vector3 eyePosition;
+
+    // Camera — temporary fixed value, replaced by adjustable zoom next step
+    private float cameraDistance;
 
     // Internal \\
 
@@ -90,6 +99,9 @@ public class PlayerManager extends ManagerPackage {
 
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
+        this.eyePosition = new Vector3();
+
+        this.cameraDistance = 4.0f;
     }
 
     @Override
@@ -163,19 +175,32 @@ public class PlayerManager extends ManagerPackage {
         updateAnimationState(player);
         movementManager.move(player);
 
+        // Eye position — where gameplay (aiming, raycasts) actually happens,
+        // regardless of where the visual camera ends up.
         cameraOffset.set(
                 player.getSize().x / 2,
                 player.getEyeHeight(),
                 player.getSize().z / 2);
 
-        cameraPosition.set(worldPositionStruct.getPosition());
-        cameraPosition.add(cameraOffset);
+        eyePosition.set(worldPositionStruct.getPosition());
+        eyePosition.add(cameraOffset);
+
+        // Visual camera — pulled back behind the eye along the view direction.
+        // cameraDistance == 0 would put it exactly at the eye (first person).
+        Vector3 direction = camera.getDirection();
+
+        cameraPosition.set(eyePosition);
+        cameraPosition.subtract(
+                direction.x * cameraDistance,
+                direction.y * cameraDistance,
+                direction.z * cameraDistance);
+
         camera.setPosition(cameraPosition);
 
         EntityInputHandle input = player.getEntityInputHandle();
         placementManager.update(
                 player,
-                cameraPosition,
+                eyePosition,
                 camera.getDirection(),
                 input.isPrimaryAction(),
                 input.isSecondaryAction());
