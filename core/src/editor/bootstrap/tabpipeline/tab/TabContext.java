@@ -9,6 +9,8 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
+import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
+import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 
@@ -16,22 +18,30 @@ public class TabContext extends ContextPackage {
 
     /*
      * Owns the chrome window, chrome FBO, chrome menu, and the content context
-     * that lives inside the tab's canvas area.
+     * that lives inside the tab's canvas area. A "tab" is really this one
+     * object wrapping two windows — nothing outside TabContext ever touches
+     * the content window directly.
      *
      * placeAt() positions the chrome window. The compositor calls syncContent()
      * each frame after MenuRenderSystem has written fresh canvas bounds — that
-     * is the only place the content window's composite rect is set. Keeping the
-     * two calls separate means content placement always uses the current frame's
-     * canvas bounds, never stale ones from before the menu rendered.
+     * is the only place the content window's composite rect is set.
      *
-     * moveTo() reparents both windows to a new OS window. No destroy, no rebuild,
-     * no z-order bookkeeping — zOrder is independent of which OS window a
-     * logical window composites onto.
+     * moveTo() reparents both windows to a new OS window. No destroy, no rebuild.
      *
-     * bringToFront() is the single place chrome and content zOrder are ever
-     * set. Content is always exactly chrome's zOrder + 1 — nothing outside
-     * this method ever assigns either window's zOrder directly, so the two
-     * can never drift out of their required relative order.
+     * bringToFront() elevates chrome and content together, always keeping
+     * content exactly one zOrder above chrome — the only place either
+     * window's zOrder is ever assigned.
+     *
+     * dispose() is the single teardown path for a tab, regardless of what
+     * triggered it — TabManager.closeTab() disposing this tab specifically,
+     * the OS window it lives on being disposed (which cascades into every
+     * window composited onto it, this one included), or the whole engine
+     * shutting down. It removes this tab from the dock tree, disposes the
+     * content window (which cascades into the content context, its VAOs,
+     * and its render resources exactly like any other window teardown),
+     * closes the chrome menu, and deregisters from TabManager's bookkeeping.
+     * TabManager never reaches into a tab's teardown by hand — it only ever
+     * calls dispose() on the chrome window and lets this method do the rest.
      */
 
     // Internal
@@ -40,6 +50,8 @@ public class TabContext extends ContextPackage {
     private FboRenderSystem fboRenderSystem;
     private WindowManager windowManager;
     private InputManager inputManager;
+    private DockLayoutSystem dockLayoutSystem;
+    private TabManager tabManager;
 
     // Render Target
     private FboInstance uiFbo;
@@ -50,6 +62,11 @@ public class TabContext extends ContextPackage {
     // Content — owned by this tab, positioned within this tab's canvas
     private ContextPackage contentContext;
 
+    // Identity — the handle that owns this context, wired immediately after
+    // both are constructed. Lets dispose() deregister itself from TabManager
+    // without TabManager needing to know anything about teardown order.
+    private TabHandle ownerHandle;
+
     // Internal \\
 
     @Override
@@ -59,6 +76,8 @@ public class TabContext extends ContextPackage {
         fboRenderSystem = get(FboRenderSystem.class);
         windowManager = get(WindowManager.class);
         inputManager = get(InputManager.class);
+        dockLayoutSystem = get(DockLayoutSystem.class);
+        tabManager = get(TabManager.class);
     }
 
     @Override
@@ -93,12 +112,22 @@ public class TabContext extends ContextPackage {
     @Override
     protected void dispose() {
 
+        WindowInstance osWindow = getWindow().getGLWindow();
+        dockLayoutSystem.removeTab(osWindow, ownerHandle);
+
+        if (contentContext != null) {
+            contentContext.getWindow().getMenuListHandle().setLockReleaseListener(null);
+            contentContext.getWindow().dispose();
+        }
+
         if (chromeMenu != null) {
             menuManager.closeMenu(chromeMenu);
             chromeMenu = null;
         }
 
         menuManager.setMenuTargetFbo(getWindow(), null);
+
+        tabManager.deregisterTab(ownerHandle);
     }
 
     // Management \\
@@ -116,10 +145,20 @@ public class TabContext extends ContextPackage {
     }
 
     /*
+     * Wires this context back to the TabHandle that owns it. Called once,
+     * immediately after both are constructed, alongside linkContent().
+     */
+    public void setOwnerHandle(TabHandle handle) {
+        this.ownerHandle = handle;
+    }
+
+    /*
      * Elevates this tab — chrome and content together — strictly above
      * everything else currently open. Called once when the tab is opened,
      * and again whenever it needs to float above everything else (e.g. the
-     * start of a drag). Must be called only after linkContent().
+     * start of a drag). Content always ends up exactly one zOrder above
+     * chrome; nothing outside this method ever assigns either window's
+     * zOrder directly.
      */
     public void bringToFront() {
 

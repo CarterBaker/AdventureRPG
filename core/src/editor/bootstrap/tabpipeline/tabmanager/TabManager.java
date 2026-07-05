@@ -21,27 +21,37 @@ public class TabManager extends ManagerPackage {
     /*
      * Coordinates tab registration, BSP bookkeeping, and rect propagation.
      *
-     * Three structural operations:
-     * openTab() — register, create chrome + content, add to BSP
-     * closeTab() — remove from BSP, destroy, deregister
-     * moveTabToOsWindow() — reparent via TabContext.moveTo(), update BSP
+     * Two structural operations, both single call sites for tearing a tab
+     * down or bringing one up:
      *
-     * openSecondaryWindowForTab() opens a new OS window then delegates to
-     * moveTabToOsWindow() — no special casing.
+     * openTab() — register, create chrome + content, pair them, add to BSP.
+     * closeTab() — dispose the chrome window; TabContext.dispose() cascades
+     * into everything else a tab owns (content window, BSP membership,
+     * TabManager's own bookkeeping via deregisterTab()) exactly the same
+     * way whether closeTab() triggered it, the OS window it lived on was
+     * closed by the user via the platform's own close button, or the whole
+     * engine is shutting down. There is no second, hand-rolled teardown
+     * path anywhere.
+     *
+     * openSecondaryOsWindow() is the one and only way a secondary editor OS
+     * window is ever created — it registers the dock tree, the dock rect,
+     * and a dispose listener that unregisters both automatically when the
+     * window closes, however it closes. openSecondaryWindow(),
+     * openSecondaryWindowForTab(), and LayoutManager's restore path all
+     * call it, so none of them can drift out of sync with what "a window
+     * that can host tabs" requires.
+     *
+     * moveTabToOsWindow() — reparent via TabContext.moveTo(), update BSP.
      *
      * pushRects() is the only call site for TabContext.placeAt(). Content
      * placement is fully handled inside placeAt() — no compositor sync needed.
      *
      * notifyLayoutChanged() is the single call site for layout persistence.
-     * All structural mutations (open, close, secondary window) route through
-     * it. TabDragManager calls it after drop resolution via the same method.
-     * LayoutManager suppresses re-entrant calls during restore.
+     * All structural mutations route through it. LayoutManager suppresses
+     * re-entrant calls during restore.
      *
      * Every tab window resolves its own OS window via WindowInstance.getGLWindow()
-     * — a chrome/content window that already has a native handle returns itself,
-     * a logical window recurses through its composite target. There is no
-     * separate "resolve the OS window" helper anywhere in this class; the one
-     * already on WindowInstance is the only one that exists in the codebase.
+     * — the only "what OS window is this on" logic that exists anywhere.
      */
     // Palette
     private Object2IntOpenHashMap<String> tabName2TabID;
@@ -89,14 +99,12 @@ public class TabManager extends ManagerPackage {
     }
 
     public WindowInstance openSecondaryWindow() {
-        return windowManager.openWindow(
-                EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY,
-                engine.editor.EditorWindowSecondary.class);
+        return openSecondaryOsWindow();
     }
 
     /*
      * Registers a new tab. Creates chrome and content windows under the main OS
-     * window, links them, adds to BSP, and pushes rects.
+     * window, pairs them, adds to BSP, and pushes rects.
      */
     public TabHandle openTab(String baseTitle, Class<? extends ContextPackage> contentClass) {
         if (baseTitle == null)
@@ -125,6 +133,7 @@ public class TabManager extends ManagerPackage {
         TabHandle handle = create(TabHandle.class);
         handle.constructor(new TabData(baseTitle, title, contentClass));
         handle.mount(tabContext);
+        tabContext.setOwnerHandle(handle);
         int tabID = RegistryUtility.toIntID(title);
         tabName2TabID.put(title, tabID);
         tabID2TabHandle.put(tabID, handle);
@@ -136,8 +145,11 @@ public class TabManager extends ManagerPackage {
     }
 
     /*
-     * Removes from BSP, destroys both contexts and windows, deregisters.
-     * Closes the source OS window if it is now empty and is not main.
+     * Closes a tab by disposing its chrome window. TabContext.dispose() —
+     * triggered as part of that — removes the tab from the BSP, disposes
+     * the content window, and deregisters this tab from TabManager's own
+     * tables. Closes the source OS window afterward if it is now empty and
+     * is not main.
      */
     public void closeTab(TabHandle handle) {
         if (handle == null)
@@ -145,35 +157,32 @@ public class TabManager extends ManagerPackage {
         if (!handle.isOpen())
             throwException("Cannot close tab that is not open: " + handle.getTabTitle());
 
-        TabContext tabContext = handle.getTabContext();
-        WindowInstance osWindow = tabContext.getWindow().getGLWindow();
+        WindowInstance osWindow = handle.getTabContext().getWindow().getGLWindow();
 
-        dockLayoutSystem.removeTab(osWindow, handle);
-
-        ContextPackage contentContext = tabContext.getContentContext();
-        if (contentContext != null) {
-            contentContext.getWindow().getMenuListHandle().setLockReleaseListener(null);
-            WindowInstance contentWindow = contentContext.getWindow();
-            internal.destroyContext(contentContext);
-            windowManager.removeWindow(contentWindow);
-        }
-
-        WindowInstance tabWindow = tabContext.getWindow();
-        internal.destroyContext(tabContext);
-        windowManager.removeWindow(tabWindow);
-
-        handle.mount(null);
-
-        int tabID = getTabIDFromTabName(handle.getTabTitle());
-        tabName2TabID.removeInt(handle.getTabTitle());
-        tabID2TabHandle.remove(tabID);
-        openTabs.remove(handle);
+        handle.getTabContext().getWindow().dispose();
 
         pushRects();
         notifyLayoutChanged();
 
         if (osWindow != windowManager.getMainWindow() && isOsWindowEmpty(osWindow))
             closeOsWindow(osWindow);
+    }
+
+    /*
+     * Removes the given tab from every bookkeeping table TabManager owns.
+     * Called exactly once, from within TabContext.dispose(), regardless of
+     * what triggered that dispose. Safe to call more than once — a second
+     * call for a handle that's already gone is a no-op, matching the same
+     * idempotent-teardown guarantee WindowInstance.dispose() itself relies on.
+     */
+    public void deregisterTab(TabHandle handle) {
+        if (handle == null || !openTabs.contains(handle))
+            return;
+        int tabID = getTabIDFromTabName(handle.getTabTitle());
+        tabName2TabID.removeInt(handle.getTabTitle());
+        tabID2TabHandle.remove(tabID);
+        openTabs.remove(handle);
+        handle.mount(null);
     }
 
     /*
@@ -199,15 +208,32 @@ public class TabManager extends ManagerPackage {
     public void openSecondaryWindowForTab(TabHandle handle) {
         if (handle == null)
             throwException("Cannot open secondary window for null tab handle.");
+        WindowInstance osWindow = openSecondaryOsWindow();
+        dockLayoutSystem.addTab(osWindow, handle);
+        moveTabToOsWindow(handle, osWindow);
+        pushRects();
+        notifyLayoutChanged();
+    }
+
+    /*
+     * The one and only way a secondary editor OS window is ever created.
+     * Registers the dock tree and dock rect for it, and wires a dispose
+     * listener that unregisters both the moment the window is torn down —
+     * whether via closeOsWindow(), the platform's own window-close button,
+     * or engine shutdown. LayoutManager's restore path calls this too, so
+     * a restored window is set up identically to a freshly opened one.
+     */
+    public WindowInstance openSecondaryOsWindow() {
         WindowInstance osWindow = windowManager.openWindow(
                 EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY,
                 engine.editor.EditorWindowSecondary.class);
         dockLayoutSystem.initWindow(osWindow);
         dockRects.put(osWindow, new float[] { 0f, 0f, osWindow.getWidth(), osWindow.getHeight() });
-        dockLayoutSystem.addTab(osWindow, handle);
-        moveTabToOsWindow(handle, osWindow);
-        pushRects();
-        notifyLayoutChanged();
+        osWindow.setDisposeListener(() -> {
+            dockLayoutSystem.removeWindow(osWindow);
+            dockRects.remove(osWindow);
+        });
+        return osWindow;
     }
 
     // OS Window Lifecycle \\
@@ -222,24 +248,17 @@ public class TabManager extends ManagerPackage {
         return true;
     }
 
+    /*
+     * Disposes the OS window. Everything composited onto it — every tab's
+     * chrome and content windows, any toolbar, any dialog or drag ghost —
+     * is torn down automatically as part of that single dispose() call, and
+     * this window's own dispose listener unregisters its dock tree and dock
+     * rect at the same time. There is nothing left for this method to do
+     * by hand.
+     */
     public void closeOsWindow(WindowInstance osWindow) {
         if (osWindow == null || osWindow == windowManager.getMainWindow())
             return;
-        dockLayoutSystem.removeWindow(osWindow);
-        dockRects.remove(osWindow);
-        ObjectArrayList<WindowInstance> windows = windowManager.getWindows();
-        ObjectArrayList<WindowInstance> toRemove = new ObjectArrayList<>();
-        Object[] elements = windows.elements();
-        int size = windows.size();
-        for (int i = 0; i < size; i++) {
-            WindowInstance w = (WindowInstance) elements[i];
-            if (w.getCompositeTarget() == osWindow)
-                toRemove.add(w);
-        }
-        Object[] removeElements = toRemove.elements();
-        int removeSize = toRemove.size();
-        for (int i = 0; i < removeSize; i++)
-            windowManager.removeWindow((WindowInstance) removeElements[i]);
         windowManager.destroyOsWindow(osWindow);
     }
 

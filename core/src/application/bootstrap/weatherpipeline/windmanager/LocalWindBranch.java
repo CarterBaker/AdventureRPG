@@ -1,6 +1,8 @@
 package application.bootstrap.weatherpipeline.windmanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
+import application.bootstrap.weatherpipeline.season.SeasonHandle;
+import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.weatherpipeline.wind.WindHandle;
 import engine.root.BranchPackage;
@@ -10,57 +12,47 @@ import engine.util.mathematics.vectors.Vector3;
 class LocalWindBranch extends BranchPackage {
 
     /*
-     * Recomputes local wind every frame by rotating the fixed global wind
-     * direction by a smoothly-blended seasonal offset, then scaling global
-     * wind speed by a seasonal multiplier and the active weather's
-     * windSpeedScale. Season blending mirrors SkyColorBranch's triangleWave
-     * factors so wind never pops at a season boundary.
+     * Recomputes local wind every frame. Direction is the fixed global
+     * prevailing airflow rotated by the active season's own prevailing
+     * direction offset (see SeasonData.getPrevailingWindDirectionDegrees()),
+     * plus a small continuous gust wobble. Speed is the active season's own
+     * base wind speed (see SeasonData.getBaseWindSpeed()) varied by a slow
+     * two-layer gust oscillation scaled by the season's windVariance,
+     * shaped by a diurnal (time-of-day) curve, floored above zero, then
+     * scaled by the active weather's windSpeedScale.
+     *
+     * Season identity comes from ClockHandle.getCurrentSeason() — the same
+     * calendar-driven named season WeatherManager already resolves its
+     * weather pool against — so wind and weather never disagree about which
+     * season is currently active. Season changes snap immediately, matching
+     * WeatherManager's own pool-resolution behavior; continuous life within
+     * a season comes entirely from the gust and diurnal terms below, driven
+     * by windVariance, rather than from blending between two named seasons.
      */
-
-    // Settings
-    private float springDirectionOffset;
-    private float summerDirectionOffset;
-    private float fallDirectionOffset;
-    private float winterDirectionOffset;
-    private float springSpeedMul;
-    private float summerSpeedMul;
-    private float fallSpeedMul;
-    private float winterSpeedMul;
 
     // Internal
     private ClockManager clockManager;
+    private SeasonManager seasonManager;
     private WeatherManager weatherManager;
 
     // Wind
     private WindHandle windHandle;
 
-    // Scratch
-    private float[] seasonFactors;
+    // Season Tracking
+    private String lastSeasonName;
+    private SeasonHandle activeSeason;
+
+    // Time
+    private float elapsedTime;
 
     // Internal \\
-
-    @Override
-    protected void create() {
-
-        // Settings
-        this.springDirectionOffset = EngineSetting.WIND_SPRING_DIRECTION_OFFSET;
-        this.summerDirectionOffset = EngineSetting.WIND_SUMMER_DIRECTION_OFFSET;
-        this.fallDirectionOffset = EngineSetting.WIND_FALL_DIRECTION_OFFSET;
-        this.winterDirectionOffset = EngineSetting.WIND_WINTER_DIRECTION_OFFSET;
-        this.springSpeedMul = EngineSetting.WIND_SPRING_SPEED_MUL;
-        this.summerSpeedMul = EngineSetting.WIND_SUMMER_SPEED_MUL;
-        this.fallSpeedMul = EngineSetting.WIND_FALL_SPEED_MUL;
-        this.winterSpeedMul = EngineSetting.WIND_WINTER_SPEED_MUL;
-
-        // Scratch
-        this.seasonFactors = new float[4];
-    }
 
     @Override
     protected void get() {
 
         // Internal
         this.clockManager = get(ClockManager.class);
+        this.seasonManager = get(SeasonManager.class);
         this.weatherManager = get(WeatherManager.class);
     }
 
@@ -74,54 +66,83 @@ class LocalWindBranch extends BranchPackage {
 
     void updateLocalWind() {
 
-        float yearProgress = (float) clockManager.getClockHandle().getVisualYearProgress();
-        float[] season = computeSeasonFactors(yearProgress);
+        elapsedTime += internal.getDeltaTime();
 
-        float directionOffset = season[0] * springDirectionOffset +
-                season[1] * summerDirectionOffset +
-                season[2] * fallDirectionOffset +
-                season[3] * winterDirectionOffset;
+        resolveActiveSeason();
 
-        float speedMultiplier = season[0] * springSpeedMul +
-                season[1] * summerSpeedMul +
-                season[2] * fallSpeedMul +
-                season[3] * winterSpeedMul;
+        float baseWindSpeed = EngineSetting.WIND_GLOBAL_SPEED;
+        float windVariance = 0f;
+        float seasonalDirectionOffsetDegrees = 0f;
+
+        if (activeSeason != null) {
+            baseWindSpeed = activeSeason.getBaseWindSpeed();
+            windVariance = activeSeason.getWindVariance();
+            seasonalDirectionOffsetDegrees = activeSeason.getPrevailingWindDirectionDegrees();
+        }
+
+        updateDirection(seasonalDirectionOffsetDegrees);
+        updateSpeed(baseWindSpeed, windVariance);
+    }
+
+    private void resolveActiveSeason() {
+
+        String currentSeasonName = clockManager.getClockHandle().getCurrentSeason();
+
+        if (currentSeasonName == null || currentSeasonName.equals(lastSeasonName))
+            return;
+
+        lastSeasonName = currentSeasonName;
+        activeSeason = seasonManager.getSeasonHandleFromSeasonName(currentSeasonName);
+    }
+
+    private void updateDirection(float seasonalDirectionOffsetDegrees) {
 
         Vector3 globalDirection = windHandle.getGlobalWindDirection();
         float globalAngle = (float) Math.atan2(globalDirection.z, globalDirection.x);
-        float localAngle = globalAngle + (float) Math.toRadians(directionOffset);
+
+        float seasonalOffsetRadians = (float) Math.toRadians(seasonalDirectionOffsetDegrees);
+        float gustWobbleRadians = (float) Math.toRadians(
+                Math.sin(elapsedTime * EngineSetting.WIND_GUST_DIRECTION_FREQUENCY)
+                        * EngineSetting.WIND_GUST_DIRECTION_WOBBLE_DEGREES);
+
+        float localAngle = globalAngle + seasonalOffsetRadians + gustWobbleRadians;
 
         windHandle.setLocalWindDirection(
                 (float) Math.cos(localAngle),
                 0.0f,
                 (float) Math.sin(localAngle));
+    }
+
+    private void updateSpeed(float baseWindSpeed, float windVariance) {
+
+        float speedGust = (float) (Math.sin(elapsedTime * EngineSetting.WIND_GUST_SPEED_FREQUENCY) * 0.6
+                + Math.sin(elapsedTime * EngineSetting.WIND_GUST_SPEED_FREQUENCY_SECONDARY + 1.7) * 0.4);
+
+        float seasonalSpeed = baseWindSpeed + speedGust * windVariance;
+
+        float diurnalFactor = 1f + computeDiurnalFactor() * EngineSetting.WIND_DIURNAL_STRENGTH;
+
+        float speedBeforeWeather = Math.max(
+                EngineSetting.WIND_MIN_SPEED_FLOOR,
+                seasonalSpeed * diurnalFactor);
 
         float weatherSpeedScale = weatherManager.getWindSpeedScale();
 
-        windHandle.setLocalWindSpeed(
-                windHandle.getGlobalWindSpeed() * speedMultiplier * weatherSpeedScale);
+        windHandle.setLocalWindSpeed(speedBeforeWeather * weatherSpeedScale);
     }
 
-    // Season Factors \\
+    // Diurnal \\
 
-    private float[] computeSeasonFactors(float y) {
+    /*
+     * Bell-shaped curve over the daily cycle, peaking at
+     * WIND_DIURNAL_PEAK_TIME. Returns roughly [-1, 1] — cosine of the
+     * angular distance from the peak around the full day.
+     */
+    private float computeDiurnalFactor() {
 
-        seasonFactors[0] = triangleWave(y, 0.00f, 0.25f, 0.50f);
-        seasonFactors[1] = triangleWave(y, 0.25f, 0.50f, 0.75f);
-        seasonFactors[2] = triangleWave(y, 0.50f, 0.75f, 1.00f);
-        seasonFactors[3] = Math.max(0.0f, 1.0f - seasonFactors[0] - seasonFactors[1] - seasonFactors[2]);
+        double visualTimeOfDay = clockManager.getClockHandle().getVisualTimeOfDay();
+        double angle = (visualTimeOfDay - EngineSetting.WIND_DIURNAL_PEAK_TIME) * Math.PI * 2.0;
 
-        return seasonFactors;
-    }
-
-    private float triangleWave(float y, float start, float peak, float end) {
-        if (y <= start || y >= end)
-            return 0.0f;
-        return y <= peak ? smoothstep(start, peak, y) : 1.0f - smoothstep(peak, end, y);
-    }
-
-    private float smoothstep(float edge0, float edge1, float t) {
-        t = Math.max(0.0f, Math.min(1.0f, (t - edge0) / (edge1 - edge0)));
-        return t * t * (3.0f - 2.0f * t);
+        return (float) Math.cos(angle);
     }
 }

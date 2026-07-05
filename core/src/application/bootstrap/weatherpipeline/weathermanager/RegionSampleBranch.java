@@ -2,6 +2,8 @@ package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
+import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
@@ -16,17 +18,46 @@ class RegionSampleBranch extends BranchPackage {
      * neighbors. Each direction's local drift noise is blended with
      * GlobalNoiseBranch's planet-rotation-driven noise (see
      * EngineSetting.GLOBAL_WEATHER_INFLUENCE for the blend weight) before
-     * resolving against the chance-weighted pool handed to it by
-     * WeatherManager: noise position maps to a cumulative chance band per
-     * weather (see blendPool), so a weather with a larger relative chance
-     * occupies a proportionally wider band of the combined noise field and
-     * appears more often — never a single evenly-spaced slot. Blending
-     * happens across the boundary between adjacent bands so weather never
-     * pops as the noise field drifts — it fades.
+     * resolving against the chance-weighted pool handed to it, via
+     * resolveBand() — the single canonical noise-to-weather resolution
+     * path, also reachable cross-package through
+     * WeatherManager.resolveWeatherBand() so a future overhead cloud grid
+     * resolves weather with the exact same algorithm this class already
+     * uses for its own 5-point region sampling, rather than a second,
+     * possibly-drifting copy of the same logic.
+     *
+     * resolveBand() only ever reports which two pool entries a coordinate's
+     * noise currently sits between and how far across that blend band it
+     * is — see WeatherBandStruct. It does not remember anything between
+     * calls. A caller that wants a stable, non-reblending weather identity
+     * (an overhead cell, eventually) is expected to read
+     * WeatherBandStruct.getPrimary() once and hold onto it itself,
+     * re-resolving only when it chooses to transition — this class's own
+     * sampleDirection() deliberately does the opposite, reblending every
+     * call, since the 5 region samples exist purely to drive smoothly
+     * fading fog/cloud UBO values, not a persistent identity.
+     *
+     * Noise position maps to a cumulative chance band per weather (see
+     * bandFromPool), so a weather with a larger relative chance occupies a
+     * proportionally wider band of the combined noise field and appears
+     * more often — never a single evenly-spaced slot. Blending happens
+     * across the boundary between adjacent bands so weather never pops as
+     * the noise field drifts — it fades.
+     *
+     * Local noise samples in normalized, wrapped world-UV space rather than
+     * raw chunk coordinates — chunk coordinates are converted to a UV
+     * fraction of the world's own chunk-space width/height in double
+     * precision, wrapped into [0, 1), scaled to a whole number of noise
+     * cells, and the hash lookup wraps cell indices with floorMod. This
+     * keeps the field seamless at the world edge instead of sampling two
+     * unrelated hash values on either side of the seam. elapsedTime is
+     * wrapped modulo a large but bounded period for the same reason
+     * GlobalNoiseBranch wraps its own rotation angle.
      */
 
     // Internal
     private GlobalNoiseBranch globalNoiseBranch;
+    private WorldManager worldManager;
 
     // Settings
     private int sampleDistance;
@@ -41,6 +72,9 @@ class RegionSampleBranch extends BranchPackage {
 
     // Samples — CENTER, NORTH, EAST, SOUTH, WEST
     private WeatherSampleStruct[] samples;
+
+    // Scratch — reused every sample call, never reallocated
+    private final WeatherBandStruct bandScratch = new WeatherBandStruct();
 
     // Internal \\
 
@@ -64,6 +98,7 @@ class RegionSampleBranch extends BranchPackage {
     @Override
     protected void get() {
         this.globalNoiseBranch = get(GlobalNoiseBranch.class);
+        this.worldManager = get(WorldManager.class);
     }
 
     // Reference \\
@@ -77,6 +112,7 @@ class RegionSampleBranch extends BranchPackage {
     void sampleRegions(ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
         elapsedTime += internal.getDeltaTime();
+        elapsedTime %= EngineSetting.WEATHER_LOCAL_DRIFT_TIME_WRAP;
 
         int originX = Coordinate2Long.unpackX(referenceCoordinate);
         int originY = Coordinate2Long.unpackY(referenceCoordinate);
@@ -94,28 +130,37 @@ class RegionSampleBranch extends BranchPackage {
             int chunkY,
             ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
+        resolveBand(bandScratch, chunkX, chunkY, pool);
+        writeSample(sample, bandScratch.getLow(), bandScratch.getHigh(), bandScratch.getBlendFactor());
+    }
+
+    // Resolution \\
+
+    /*
+     * Combines this coordinate's local drift noise with the global
+     * rotation-driven noise, then resolves the blend against the supplied
+     * chance-weighted pool. Writes into the caller-supplied struct rather
+     * than allocating — this is the method WeatherManager.resolveWeatherBand()
+     * calls on behalf of any cross-package caller.
+     */
+    void resolveBand(WeatherBandStruct out, int chunkX, int chunkY, ObjectArrayList<WeatherPoolEntryStruct> pool) {
+
         float localNoise = sampleNoise(chunkX, chunkY);
         float globalIntensity = globalNoiseBranch.sampleGlobalIntensity(Coordinate2Long.pack(chunkX, chunkY));
         float combinedNoise = lerp(localNoise, globalIntensity, globalNoiseBranch.getGlobalInfluence());
 
-        blendPool(sample, pool, combinedNoise);
+        bandFromPool(out, pool, combinedNoise);
     }
-
-    // Blend \\
 
     /*
      * Maps noise01 onto a cumulative chance-weighted band across the pool,
-     * in JSON declaration order. Within the band a sample lands in, it
-     * blends toward the NEXT pool entry as noise approaches the top of that
-     * band — the same "fade across the seam" behavior the old uniform-slot
-     * version had, just with band width driven by relative chance instead
-     * of array position.
+     * in JSON declaration order.
      */
-    private void blendPool(WeatherSampleStruct sample, ObjectArrayList<WeatherPoolEntryStruct> pool, float noise) {
+    private void bandFromPool(WeatherBandStruct out, ObjectArrayList<WeatherPoolEntryStruct> pool, float noise) {
 
         if (pool.size() == 1) {
             WeatherHandle only = pool.get(0).getWeatherHandle();
-            writeSample(sample, only, only, 0f);
+            out.set(only, only, 0f);
             return;
         }
 
@@ -123,7 +168,7 @@ class RegionSampleBranch extends BranchPackage {
 
         if (total <= 0f) {
             WeatherHandle first = pool.get(0).getWeatherHandle();
-            writeSample(sample, first, first, 0f);
+            out.set(first, first, 0f);
             return;
         }
 
@@ -145,7 +190,7 @@ class RegionSampleBranch extends BranchPackage {
                 float bandWidth = Math.max(bandEnd - cumulative, 0.0001f);
                 float t = clamp01((target - cumulative) / bandWidth);
 
-                writeSample(sample, low, high, t);
+                out.set(low, high, t);
                 return;
             }
 
@@ -153,6 +198,14 @@ class RegionSampleBranch extends BranchPackage {
         }
     }
 
+    // Visual Blend \\
+
+    /*
+     * Converts a resolved band into flattened, continuously-blended visual
+     * values for the region-sampling UBO path — a genuine reblend every
+     * call, not the identity-preserving path a persistent overhead cell
+     * will use.
+     */
     private void writeSample(
             WeatherSampleStruct sample,
             WeatherHandle low,
@@ -185,32 +238,43 @@ class RegionSampleBranch extends BranchPackage {
     // Noise \\
 
     /*
-     * Coherent 2D value noise over chunk coordinates, drifted over real time
-     * so weather fronts visibly move across the world independently of the
-     * planet's rotation. Mirrors the bilinear hash-noise approach used by
-     * Clouds.glsl, kept CPU-side and self-contained here. Not yet wrapped at
-     * world edges — that arrives with the horizon sampling step, where this
-     * same function grows a second long-distance call site.
+     * Coherent 2D value noise over chunk coordinates, wrapped seamlessly at
+     * the world edge and drifted over real time so weather fronts visibly
+     * move across the world independently of the planet's rotation.
      */
     private float sampleNoise(int chunkX, int chunkY) {
 
+        WorldHandle activeWorld = worldManager.getActiveWorld();
+
+        double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
+        double worldHeightChunks = activeWorld.getWorldScale().y / (double) EngineSetting.CHUNK_SIZE;
+
+        int cellsX = (int) Math.max(1L, Math.round(worldWidthChunks / noiseCellSize));
+        int cellsY = (int) Math.max(1L, Math.round(worldHeightChunks / noiseCellSize));
+
+        double u = wrap01(chunkX / worldWidthChunks);
+        double v = wrap01(chunkY / worldHeightChunks);
+
         float drift = elapsedTime * windDriftSpeed;
 
-        float sampleX = chunkX / noiseCellSize + drift;
-        float sampleY = chunkY / noiseCellSize;
+        double sampleX = u * cellsX + drift;
+        double sampleY = v * cellsY;
 
         int x0 = (int) Math.floor(sampleX);
         int y0 = (int) Math.floor(sampleY);
-        int x1 = x0 + 1;
-        int y1 = y0 + 1;
 
-        float tx = sampleX - x0;
-        float ty = sampleY - y0;
+        float tx = (float) (sampleX - x0);
+        float ty = (float) (sampleY - y0);
 
-        float n00 = hash(x0, y0);
-        float n10 = hash(x1, y0);
-        float n01 = hash(x0, y1);
-        float n11 = hash(x1, y1);
+        int wrappedX0 = Math.floorMod(x0, cellsX);
+        int wrappedY0 = Math.floorMod(y0, cellsY);
+        int wrappedX1 = Math.floorMod(x0 + 1, cellsX);
+        int wrappedY1 = Math.floorMod(y0 + 1, cellsY);
+
+        float n00 = hash(wrappedX0, wrappedY0);
+        float n10 = hash(wrappedX1, wrappedY0);
+        float n01 = hash(wrappedX0, wrappedY1);
+        float n11 = hash(wrappedX1, wrappedY1);
 
         float smoothTx = smoothstep(tx);
         float smoothTy = smoothstep(ty);
@@ -219,6 +283,11 @@ class RegionSampleBranch extends BranchPackage {
         float nx1 = lerp(n01, n11, smoothTx);
 
         return lerp(nx0, nx1, smoothTy);
+    }
+
+    private double wrap01(double value) {
+        double wrapped = value % 1.0;
+        return wrapped < 0 ? wrapped + 1.0 : wrapped;
     }
 
     private float hash(int x, int y) {

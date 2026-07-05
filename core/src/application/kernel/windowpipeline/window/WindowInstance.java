@@ -9,6 +9,7 @@ import engine.assets.camera.CameraInstance;
 import engine.assets.camera.OrthographicCameraInstance;
 import engine.root.ContextPackage;
 import engine.root.InstancePackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WindowInstance extends InstancePackage {
 
@@ -19,13 +20,23 @@ public class WindowInstance extends InstancePackage {
      * their pushFbo calls to the correct OS window and screen region.
      *
      * zOrder controls both draw order during the screen pass and hit-test
-     * priority when windows overlap — higher always wins both. OS windows
-     * default to 0 and never change it. Every logical window is assigned a
-     * unique, strictly increasing value via WindowManager.bringToFront() at
-     * creation time, or whenever it needs to supersede everything else
-     * currently open (a drag, a modal dialog, a drop-target preview). There
-     * are no fixed per-role depth constants, so there is no way for two
-     * unrelated windows to end up pinned to the same value by accident.
+     * priority when windows overlap — higher always wins both. See
+     * WindowManager.bringToFront().
+     *
+     * children is the reverse of compositeTarget — every window whose
+     * compositeTarget is this one. Maintained automatically by
+     * setCompositeTarget() so it can never drift out of sync with the
+     * forward reference. dispose() walks it to guarantee that tearing down
+     * a window always tears down everything visually composited onto it —
+     * every tab, every dialog, every drag ghost — with no separate manual
+     * scan anywhere else in the engine responsible for remembering to do so.
+     *
+     * disposeListener is an optional hook fired once, after this window is
+     * fully torn down, regardless of what triggered the teardown — an
+     * explicit close request, the platform's own window-close button, or
+     * engine shutdown. Editor-layer code (TabManager) uses this to keep its
+     * own per-window bookkeeping in sync without WindowInstance or
+     * WindowManager needing to know anything about tabs or docking.
      *
      * Input is hover-driven — no active or focus concept exists at this level.
      *
@@ -64,6 +75,7 @@ public class WindowInstance extends InstancePackage {
 
     // Composite routing — logical windows only
     private WindowInstance compositeTarget;
+    private final ObjectArrayList<WindowInstance> children = new ObjectArrayList<>();
     private float compositeX;
     private float compositeY;
     private float compositeW;
@@ -83,6 +95,9 @@ public class WindowInstance extends InstancePackage {
     // Focus-independent input — true for windows that must remain interactive
     // regardless of focus, such as the toolbar
     private boolean focusIndependent;
+
+    // Disposal
+    private Runnable disposeListener;
 
     // Internal
     private RenderManager renderManager;
@@ -154,8 +169,20 @@ public class WindowInstance extends InstancePackage {
         return compositeTarget;
     }
 
+    /*
+     * Sets which window this one composites onto, keeping that window's
+     * children list in sync automatically — detaching from the previous
+     * target and attaching to the new one in the same call. This is the
+     * only place either side of that relationship is ever touched, so the
+     * forward reference (compositeTarget) and the reverse reference
+     * (children) can never disagree with each other.
+     */
     public void setCompositeTarget(WindowInstance compositeTarget) {
+        if (this.compositeTarget != null)
+            this.compositeTarget.children.remove(this);
         this.compositeTarget = compositeTarget;
+        if (compositeTarget != null)
+            compositeTarget.children.add(this);
     }
 
     public boolean hasCompositeTarget() {
@@ -243,6 +270,19 @@ public class WindowInstance extends InstancePackage {
         this.focusIndependent = focusIndependent;
     }
 
+    // Disposal \\
+
+    /*
+     * Registers a callback fired once dispose() has fully torn this window
+     * down — resources released, context destroyed, removed from
+     * WindowManager. Fires no matter which of the (identical) code paths
+     * triggered that teardown. One listener per window is sufficient for
+     * every current use; nothing has needed more than one reason to care.
+     */
+    public void setDisposeListener(Runnable listener) {
+        this.disposeListener = listener;
+    }
+
     // Cameras \\
 
     public CameraInstance getActiveCamera() {
@@ -277,14 +317,38 @@ public class WindowInstance extends InstancePackage {
             context.onResize(width, height);
     }
 
+    /*
+     * Tears this window down completely and unconditionally cascades to
+     * every window composited onto it first — so closing an OS window
+     * always closes every tab, dialog, and drag ghost living on it, with
+     * no separate manual cleanup required anywhere else. Iterates a
+     * snapshot of children since each child's own dispose() mutates this
+     * window's live children list via setCompositeTarget(null).
+     *
+     * Safe to call more than once on the same instance — every step here
+     * is a no-op the second time (empty children, context already
+     * detached, compositeTarget already cleared, already removed from
+     * WindowManager), which is what lets ownership-level teardown code
+     * (e.g. TabContext explicitly disposing its content window) and this
+     * generic composite-cascade both reach the same window without either
+     * needing to coordinate who goes first.
+     */
     public void dispose() {
+
+        for (WindowInstance child : new ObjectArrayList<>(children))
+            child.dispose();
+
         vaoManager.removeWindowVAOs(getWindowID());
         renderManager.removeWindowResources(this);
 
         if (context != null)
             internal.destroyContext(context);
 
+        setCompositeTarget(null);
         windowManager.removeWindow(this);
+
+        if (disposeListener != null)
+            disposeListener.run();
     }
 
     public WindowData getWindowData() {

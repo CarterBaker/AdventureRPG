@@ -37,11 +37,11 @@ public class LayoutManager extends ManagerPackage {
      * 2. Reset tab counters so titles reproduce deterministically.
      * 3. Open tabs in JSON order via TabManager.openTab() — all land on main.
      * 4. Pass 1: restore the main window BSP via restoreRoot().
-     * 5. Pass 2: for each secondary window entry, open an OS window, collect
-     * the tab handles referenced in that BSP via collectTabs(), call
-     * moveTabToOsWindow() for each (which reparents and registers the
-     * window's dockRect entry as a side effect), then commit the BSP via
-     * restoreRoot().
+     * 5. Pass 2: for each secondary window entry, open an OS window via
+     * tabManager.openSecondaryOsWindow() — the same entry point every other
+     * secondary window in the editor goes through — collect the tab handles
+     * referenced in that BSP via collectTabs(), call moveTabToOsWindow() for
+     * each, then commit the BSP via restoreRoot().
      * 6. pushRects() settles all positions.
      *
      * The restoring flag suppresses re-entrant notifyLayoutChanged() calls
@@ -202,10 +202,13 @@ public class LayoutManager extends ManagerPackage {
     /*
      * Two-pass restore so the main window BSP is committed before any secondary
      * window is opened. Pass 1 iterates windowsArray for the main entry and
-     * calls restoreRoot. Pass 2 opens each secondary OS window, deserializes
-     * its BSP, moves every tab in that BSP to the new window via
-     * moveTabToOsWindow (which also registers the dockRect entry), then
-     * commits the BSP. pushRects() settles everything at the end.
+     * calls restoreRoot. Pass 2 opens each secondary OS window via
+     * tabManager.openSecondaryOsWindow() — the single shared entry point every
+     * secondary window in the editor goes through, so a restored window ends
+     * up with exactly the same dock-tree/dock-rect/dispose-listener setup as
+     * one opened interactively — deserializes its BSP, moves every tab in that
+     * BSP to the new window via moveTabToOsWindow, then commits the BSP via
+     * restoreRoot(). pushRects() settles everything at the end.
      */
     private void restoreWindows(JsonArray windowsArray, TabHandle[] handles) {
         for (int i = 0; i < windowsArray.size(); i++) {
@@ -223,10 +226,7 @@ public class LayoutManager extends ManagerPackage {
                 continue;
             if (!windowObj.has("node"))
                 continue;
-            WindowInstance osWindow = windowManager.openWindow(
-                    EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY,
-                    engine.editor.EditorWindowSecondary.class);
-            dockLayoutSystem.initWindow(osWindow);
+            WindowInstance osWindow = tabManager.openSecondaryOsWindow();
             DockNodeStruct restoredRoot = deserializeNode(windowObj.getAsJsonObject("node"), handles);
             ObjectArrayList<TabHandle> windowTabs = new ObjectArrayList<>();
             collectTabs(restoredRoot, windowTabs);

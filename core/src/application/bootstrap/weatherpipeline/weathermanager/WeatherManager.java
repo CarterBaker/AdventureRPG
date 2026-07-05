@@ -7,6 +7,7 @@ import application.bootstrap.worldpipeline.biome.WeatherChanceStruct;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -23,8 +24,8 @@ public class WeatherManager extends ManagerPackage {
      * ClockHandle.getCurrentSeason()) rather than a fixed enum, so biomes
      * can define weather pools for whatever named seasons their world's
      * calendar uses. Per-frame region sampling, the planet-rotation-driven
-     * global noise overlay, and the GPU UBO pushes are delegated to
-     * branches.
+     * global noise overlay, live temperature, and the GPU UBO pushes are
+     * delegated to branches.
      */
 
     // Internal
@@ -34,6 +35,7 @@ public class WeatherManager extends ManagerPackage {
     // Branches
     private GlobalNoiseBranch globalNoiseBranch;
     private RegionSampleBranch regionSampleBranch;
+    private TemperatureBranch temperatureBranch;
     private InternalBufferBranch internalBuffer;
 
     // Palette
@@ -56,6 +58,7 @@ public class WeatherManager extends ManagerPackage {
         // Branches
         this.globalNoiseBranch = create(GlobalNoiseBranch.class);
         this.regionSampleBranch = create(RegionSampleBranch.class);
+        this.temperatureBranch = create(TemperatureBranch.class);
         this.internalBuffer = create(InternalBufferBranch.class);
 
         create(InternalLoader.class);
@@ -86,6 +89,7 @@ public class WeatherManager extends ManagerPackage {
         }
 
         regionSampleBranch.sampleRegions(activeWeatherPool);
+        temperatureBranch.updateTemperature(regionSampleBranch.getCenterSample());
     }
 
     // Management \\
@@ -180,6 +184,14 @@ public class WeatherManager extends ManagerPackage {
     }
 
     /*
+     * Exposes the reference region's live computed temperature, without
+     * leaking TemperatureBranch itself.
+     */
+    public float getCurrentTemperature() {
+        return temperatureBranch.getCurrentTemperature();
+    }
+
+    /*
      * Direct CPU-side query for the planet-rotation-driven global weather
      * noise at any world-space chunk coordinate — for systems that need more
      * than the reference-region blend already flowing through the UBOs
@@ -187,5 +199,28 @@ public class WeatherManager extends ManagerPackage {
      */
     public float getGlobalStormIntensityAt(long chunkCoordinate) {
         return globalNoiseBranch.sampleGlobalIntensity(chunkCoordinate);
+    }
+
+    /*
+     * Resolves which weather(s) the given world-space chunk coordinate
+     * currently sits between, against this manager's own active seasonal
+     * pool — the same canonical noise-and-chance-band algorithm this
+     * manager's own 5-point region sampling already uses (see
+     * RegionSampleBranch.resolveBand()), exposed here so any other system
+     * (the overhead cloud grid, eventually) resolves weather identically
+     * rather than reimplementing the noise math a second time.
+     *
+     * Writes into the caller-supplied struct rather than allocating, since
+     * this may be called at grid scale every frame. Today this always
+     * resolves against the single default-biome pool (see
+     * DEFAULT_BIOME_NAME) — once per-coordinate biome lookup exists, a
+     * biome-aware overload can be added without touching this one.
+     */
+    public void resolveWeatherBand(WeatherBandStruct out, long chunkCoordinate) {
+
+        int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
+        int chunkY = Coordinate2Long.unpackY(chunkCoordinate);
+
+        regionSampleBranch.resolveBand(out, chunkX, chunkY, activeWeatherPool);
     }
 }

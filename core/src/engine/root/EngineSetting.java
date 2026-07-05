@@ -346,6 +346,7 @@ public class EngineSetting {
         public static final int WEATHER_REGION_SAMPLE_DISTANCE = 96; // chunk units between cardinal samples
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f; // chunk units per noise cell
         public static final float WEATHER_WIND_DRIFT_SPEED = 0.01f; // noise-space units per second
+        public static final float WEATHER_LOCAL_DRIFT_TIME_WRAP = 100000.0f;
 
         // Global Weather Noise \\
 
@@ -366,14 +367,21 @@ public class EngineSetting {
 
         public static final float WIND_GLOBAL_DIRECTION_DEGREES = 45.0f; // fixed planetary prevailing airflow
         public static final float WIND_GLOBAL_SPEED = 1.0f; // base wind speed scale — not a real-world unit yet
-        public static final float WIND_SPRING_DIRECTION_OFFSET = 10.0f; // degrees added to the global angle
-        public static final float WIND_SUMMER_DIRECTION_OFFSET = -15.0f;
-        public static final float WIND_FALL_DIRECTION_OFFSET = 20.0f;
-        public static final float WIND_WINTER_DIRECTION_OFFSET = -25.0f;
-        public static final float WIND_SPRING_SPEED_MUL = 1.00f;
-        public static final float WIND_SUMMER_SPEED_MUL = 0.85f;
-        public static final float WIND_FALL_SPEED_MUL = 1.15f;
-        public static final float WIND_WINTER_SPEED_MUL = 1.35f;
+        public static final float WIND_MIN_SPEED_FLOOR = 0.05f; // seasonal/diurnal/gust speed floor, before scaling
+        public static final float WIND_GUST_SPEED_FREQUENCY = 0.13f; // primary gust oscillation rate, radians/sec
+        public static final float WIND_GUST_SPEED_FREQUENCY_SECONDARY = 0.045f; // secondary slower gust layer
+        public static final float WIND_GUST_DIRECTION_FREQUENCY = 0.07f; // direction wobble oscillation rate
+        public static final float WIND_GUST_DIRECTION_WOBBLE_DEGREES = 8.0f; // max direction wobble amplitude
+        public static final float WIND_DIURNAL_PEAK_TIME = 0.65f; // visual time-of-day (0-1) where wind speed peaks
+        public static final float WIND_DIURNAL_STRENGTH = 0.25f; // how much day/night swings wind speed, 0 = none
+
+        // Temperature \\
+
+        public static final float DEFAULT_BASE_TEMPERATURE = 15.0f; // fallback before any season has resolved
+        public static final float TEMPERATURE_DIURNAL_PEAK_TIME = 0.65f; // visual time-of-day (0-1) where temperature
+                                                                         // peaks
+        public static final float TEMPERATURE_DRIFT_FREQUENCY = 0.02f; // slow multi-minute drift oscillation rate
+        public static final float TEMPERATURE_PRECIPITATION_COOLING = 4.0f; // degrees subtracted at full precipitation
 
         // Sky Noise
         public static final float SKY_NOISE_ALTITUDE_BLEND = 0.35f;
