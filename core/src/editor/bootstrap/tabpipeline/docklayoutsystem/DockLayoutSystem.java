@@ -11,31 +11,33 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 public class DockLayoutSystem extends SystemPackage {
 
     /*
-     * Manages one BSP tree per OS window. addTab() always targets the largest
-     * leaf in the given window's tree and splits it. addTabToLeaf() performs a
-     * directed split on a specific leaf at a given DropZone. removeTab() prunes
-     * empty leaves and collapses redundant split nodes. computeRects() propagates
-     * dock canvas bounds down the tree each frame so every leaf knows its screen
-     * rect without storing stale state.
+     * Manages one BSP tree per OS window. Every leaf holds exactly one tab —
+     * there is no stacked-tab concept anywhere in this class, and therefore
+     * no tab-strip switching logic to get wrong.
      *
-     * initWindow() must be called when a new OS window is registered so the map
-     * entry exists before any tab is added. removeWindow() cleans up the entry
-     * when a secondary OS window is closed.
+     * addTab() always targets the largest leaf in the given window's tree
+     * and splits it. addTabToLeaf() performs a directed split on a specific
+     * leaf at a given DropZone. removeTab() removes the leaf holding the
+     * given tab outright and collapses redundant split nodes above it.
+     * computeRects() propagates dock canvas bounds down the tree each frame
+     * so every leaf knows its screen rect without storing stale state.
      *
-     * findDividerAt() and the global findLeafAt() walk all trees — callers do
-     * not need to know which window a divider or leaf belongs to. All other
-     * methods are window-scoped so per-tree rect math stays isolated.
+     * initWindow() must be called when a new OS window is registered so the
+     * map entry exists before any tab is added. removeWindow() cleans up
+     * the entry when an OS window is closed.
      *
-     * findLeafAt(osWindow, localX, localY) is the window-scoped overload used
-     * by TabDragManager. It searches only the given window's BSP tree using
-     * coordinates that are already in that window's local space. This avoids
-     * the coordinate-space mismatch that occurs when the cursor is over a
-     * secondary OS window but EngineContext.input still reports coords relative
-     * to the drag-source window.
+     * findDividerAt() and findLeafAt() are both window-scoped — every
+     * coordinate this class ever receives is already local to a specific OS
+     * window, and every method that walks a tree takes that window
+     * explicitly rather than guessing which tree a raw (x, y) pair belongs
+     * to. There is no global, all-windows variant of either — that
+     * ambiguity is exactly what used to make dividers in one window
+     * resolve against another window's tree when more than one OS window
+     * was open.
      *
      * Each split node owns a ratio in [0.1, 0.9] (default 0.5) controlling
-     * where its divider sits. findDividerAt() walks each tree bottom-up so the
-     * innermost node always wins when dividers are nested. setSplitRatio()
+     * where its divider sits. findDividerAt() walks each tree bottom-up so
+     * the innermost node always wins when dividers are nested. setSplitRatio()
      * clamps and writes the ratio; propagateRect() reads it.
      *
      * getRoots() exposes the raw map to LayoutManager for serialization.
@@ -71,7 +73,7 @@ public class DockLayoutSystem extends SystemPackage {
 
         if (root == null) {
             root = new DockNodeStruct();
-            root.getTabs().add(handle);
+            root.setTab(handle);
             roots.put(osWindow, root);
             return;
         }
@@ -131,16 +133,6 @@ public class DockLayoutSystem extends SystemPackage {
         return node != null ? node.getH() : 0f;
     }
 
-    public boolean isTabActive(WindowInstance osWindow, TabHandle handle) {
-
-        DockNodeStruct node = findLeaf(roots.get(osWindow), handle);
-
-        if (node == null || node.getTabs().isEmpty())
-            return false;
-
-        return node.getTabs().get(node.getActiveIndex()) == handle;
-    }
-
     // Divider \\
 
     public DockNodeStruct findDividerAt(WindowInstance osWindow, float x, float y) {
@@ -179,19 +171,6 @@ public class DockLayoutSystem extends SystemPackage {
 
     public void setSplitRatio(DockNodeStruct node, float ratio) {
         node.setRatio(Math.max(EngineSetting.RATIO_MIN, Math.min(EngineSetting.RATIO_MAX, ratio)));
-    }
-
-    // Leaf At Screen Point — global (walks all trees) \\
-
-    public DockNodeStruct findLeafAt(float screenX, float screenY) {
-
-        for (DockNodeStruct root : roots.values()) {
-            DockNodeStruct hit = findLeafAt(root, screenX, screenY);
-            if (hit != null)
-                return hit;
-        }
-
-        return null;
     }
 
     // Leaf At Screen Point — window-scoped \\
@@ -246,7 +225,7 @@ public class DockLayoutSystem extends SystemPackage {
             return null;
 
         if (!node.isSplit())
-            return node.getTabs().contains(handle) ? node : null;
+            return node.getTab() == handle ? node : null;
 
         DockNodeStruct result = findLeaf(node.getFirst(), handle);
         return result != null ? result : findLeaf(node.getSecond(), handle);
@@ -287,16 +266,14 @@ public class DockLayoutSystem extends SystemPackage {
         boolean incomingIsSecond = zone == DropZone.RIGHT || zone == DropZone.BOTTOM;
 
         DockNodeStruct preserved = new DockNodeStruct();
-        preserved.getTabs().addAll(leaf.getTabs());
-        preserved.setActiveIndex(leaf.getActiveIndex());
+        preserved.setTab(leaf.getTab());
 
         DockNodeStruct created = new DockNodeStruct();
-        created.getTabs().add(incoming);
+        created.setTab(incoming);
 
         leaf.setSplit(true);
         leaf.setSplitHorizontal(splitHorizontal);
-        leaf.setTabs(null);
-        leaf.setActiveIndex(0);
+        leaf.setTab(null);
         leaf.setRatio(0.5f);
 
         if (incomingIsSecond) {
@@ -308,17 +285,22 @@ public class DockLayoutSystem extends SystemPackage {
         }
     }
 
+    /*
+     * Removes the leaf holding the given tab and collapses the tree above
+     * it. This is the one and only tree-collapse rule in the editor:
+     * both children gone → this node is gone too; one child gone → the
+     * other is promoted in its place. LayoutManager.deserializeNode() uses
+     * this exact same rule when a saved tab fails to reopen during restore
+     * — a tab vanishing live and a tab failing to restore are handled by
+     * identical logic, not two.
+     */
     private DockNodeStruct pruneTab(DockNodeStruct node, TabHandle handle) {
 
         if (node == null)
             return null;
 
-        if (!node.isSplit()) {
-            node.getTabs().remove(handle);
-            if (node.getActiveIndex() >= node.getTabs().size())
-                node.setActiveIndex(Math.max(0, node.getTabs().size() - 1));
-            return node.getTabs().isEmpty() ? null : node;
-        }
+        if (!node.isSplit())
+            return node.getTab() == handle ? null : node;
 
         node.setFirst(pruneTab(node.getFirst(), handle));
         node.setSecond(pruneTab(node.getSecond(), handle));
@@ -338,9 +320,8 @@ public class DockLayoutSystem extends SystemPackage {
     // Layout Persistence \\
 
     /*
-     * Package-private — LayoutManager reads this to serialize each tree.
-     * Not exposed publicly; callers outside this pipeline have no business
-     * walking raw BSP roots.
+     * Exposes the raw map to LayoutManager for serialization. Callers
+     * outside this pipeline have no business walking raw BSP roots.
      */
     public Object2ObjectOpenHashMap<WindowInstance, DockNodeStruct> getRoots() {
         return roots;

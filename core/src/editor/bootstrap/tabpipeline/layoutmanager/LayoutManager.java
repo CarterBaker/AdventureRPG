@@ -15,6 +15,7 @@ import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.io.JsonUtility;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -27,25 +28,40 @@ public class LayoutManager extends ManagerPackage {
      * editorLayout/<name>.json. listLayouts() scans the directory, excluding
      * the session file.
      *
-     * Save format: a "tabs" array (order defines restore order and BSP indices)
-     * and a "windows" array where each entry carries isMain, optional screen
-     * metadata, and a serialized BSP node tree. Legacy files with a bare "node"
-     * key instead of "windows" are still loadable.
+     * Save format: a "tabs" array — each entry carries a stable "id" (see
+     * TabHandle.getTabId()) plus baseTitle and contentClass — and a
+     * "windows" array where each entry carries isMain, optional screen
+     * metadata, and a serialized BSP node tree whose leaves reference a tab
+     * by that same id, never by array position.
+     *
+     * Referencing tabs by id is what makes restore resilient to a single
+     * tab failing to reopen (its content class no longer exists, or throws
+     * during construction): deserializeNode() returns null for a leaf whose
+     * id isn't in the id→handle map built during the open pass, and the
+     * split above it collapses using the exact same rule
+     * DockLayoutSystem.pruneTab() uses when a tab closes live — one rule,
+     * used identically whether a tab disappears live or during restore.
      *
      * Restoration flow:
      * 1. Close all currently open tabs.
      * 2. Reset tab counters so titles reproduce deterministically.
-     * 3. Open tabs in JSON order via TabManager.openTab() — all land on main.
+     * 3. Open each saved tab. A tab that fails for any reason is logged and
+     * skipped rather than aborting the rest of the restore. Every tab that
+     * opens successfully is recorded in an id→handle map.
      * 4. Pass 1: restore the main window BSP via restoreRoot().
-     * 5. Pass 2: for each secondary window entry, open an OS window via
-     * tabManager.openSecondaryOsWindow() — the same entry point every other
-     * secondary window in the editor goes through — collect the tab handles
-     * referenced in that BSP via collectTabs(), call moveTabToOsWindow() for
-     * each, then commit the BSP via restoreRoot().
+     * 5. Pass 2: for each secondary window entry, deserialize its BSP first
+     * — if every tab it referenced failed to restore, the whole tree
+     * collapses to null and no empty window is ever created for it —
+     * otherwise open the secondary OS window via
+     * tabManager.openSecondaryOsWindow(), move every surviving tab onto it,
+     * and commit the BSP via restoreRoot().
      * 6. pushRects() settles all positions.
      *
-     * The restoring flag suppresses re-entrant notifyLayoutChanged() calls
-     * triggered by openTab/closeTab inside restore().
+     * The entire restore runs inside tabManager.beginBatch()/endBatch(), and
+     * both entry points (awake() and loadLayout()) go through the same
+     * restoreSafely() wrapper, so a corrupt or incompatible file logs an
+     * error and leaves the editor with no tabs open instead of crashing it
+     * — the same defensive posture in both places, not just one.
      *
      * Divider-drag ratio changes are serialized in each BSP node's "ratio"
      * field. The divider drag manager must call tabManager.notifyLayoutChanged()
@@ -55,8 +71,6 @@ public class LayoutManager extends ManagerPackage {
     private TabManager tabManager;
     private DockLayoutSystem dockLayoutSystem;
     private WindowManager windowManager;
-    // State
-    private boolean restoring;
 
     // Base \\
     @Override
@@ -70,13 +84,11 @@ public class LayoutManager extends ManagerPackage {
     protected void awake() {
         File sessionFile = getSessionFile();
         if (sessionFile.exists())
-            restore(sessionFile);
+            restoreSafely(sessionFile);
     }
 
     // Notification \\
     public void notifyLayoutChanged() {
-        if (restoring)
-            return;
         save(getSessionFile());
     }
 
@@ -95,6 +107,7 @@ public class LayoutManager extends ManagerPackage {
         for (int i = 0; i < openTabs.size(); i++) {
             TabHandle handle = openTabs.get(i);
             JsonObject tabObj = new JsonObject();
+            tabObj.addProperty("id", handle.getTabId());
             tabObj.addProperty("baseTitle", handle.getTabData().getBaseTitle());
             tabObj.addProperty("contentClass", handle.getTabData().getContentContextClass().getName());
             tabsArray.add(tabObj);
@@ -116,7 +129,7 @@ public class LayoutManager extends ManagerPackage {
                 windowObj.addProperty("width", w.getWidth());
                 windowObj.addProperty("height", w.getHeight());
             }
-            windowObj.add("node", serializeNode(bspRoot, openTabs));
+            windowObj.add("node", serializeNode(bspRoot));
             windowsArray.add(windowObj);
         }
         root.add("windows", windowsArray);
@@ -127,24 +140,16 @@ public class LayoutManager extends ManagerPackage {
         }
     }
 
-    private JsonObject serializeNode(DockNodeStruct node, ObjectArrayList<TabHandle> openTabs) {
+    private JsonObject serializeNode(DockNodeStruct node) {
         JsonObject obj = new JsonObject();
         obj.addProperty("split", node.isSplit());
         if (node.isSplit()) {
             obj.addProperty("splitHorizontal", node.isSplitHorizontal());
             obj.addProperty("ratio", node.getRatio());
-            obj.add("first", serializeNode(node.getFirst(), openTabs));
-            obj.add("second", serializeNode(node.getSecond(), openTabs));
+            obj.add("first", serializeNode(node.getFirst()));
+            obj.add("second", serializeNode(node.getSecond()));
         } else {
-            obj.addProperty("activeIndex", node.getActiveIndex());
-            JsonArray tabIndices = new JsonArray();
-            ObjectArrayList<TabHandle> nodeTabs = node.getTabs();
-            for (int i = 0; i < nodeTabs.size(); i++) {
-                int idx = openTabs.indexOf(nodeTabs.get(i));
-                if (idx >= 0)
-                    tabIndices.add(idx);
-            }
-            obj.add("tabs", tabIndices);
+            obj.addProperty("tab", node.getTab().getTabId());
         }
         return obj;
     }
@@ -156,122 +161,165 @@ public class LayoutManager extends ManagerPackage {
         File file = new File(getEditorLayoutDir(), name.trim() + ".json");
         if (!file.exists())
             throwException("Layout not found: " + file.getAbsolutePath());
-        restore(file);
-        save(getSessionFile());
+        if (restoreSafely(file))
+            save(getSessionFile());
+    }
+
+    /*
+     * Attempts a restore and never lets it crash the editor. Both callers —
+     * awake() on startup and loadLayout() on explicit user action — go
+     * through this exact same wrapper, so a corrupt or schema-incompatible
+     * file behaves identically no matter which path triggered the read:
+     * logged, skipped, editor keeps running with whatever tabs (if any)
+     * had already opened successfully before the failure.
+     */
+    private boolean restoreSafely(File file) {
+        try {
+            restore(file);
+            return true;
+        } catch (RuntimeException e) {
+            errorLog("Failed to restore layout from '" + file.getName() + "': " + e.getMessage());
+            return false;
+        }
     }
 
     private void restore(File file) {
-        restoring = true;
+        tabManager.beginBatch();
         try {
             JsonObject root = JsonUtility.loadJsonObject(file);
             JsonArray tabsArray = root.getAsJsonArray("tabs");
             if (tabsArray == null || tabsArray.size() == 0)
                 return;
+
             ObjectArrayList<TabHandle> existing = new ObjectArrayList<>(tabManager.getOpenTabs());
             for (int i = 0; i < existing.size(); i++)
                 tabManager.closeTab(existing.get(i));
             tabManager.resetCounters();
-            TabHandle[] handles = new TabHandle[tabsArray.size()];
+
+            Int2ObjectOpenHashMap<TabHandle> restoredById = new Int2ObjectOpenHashMap<>();
+
             for (int i = 0; i < tabsArray.size(); i++) {
+
                 JsonObject tabObj = tabsArray.get(i).getAsJsonObject();
+                int savedId = tabObj.get("id").getAsInt();
                 String baseTitle = tabObj.get("baseTitle").getAsString();
                 String className = tabObj.get("contentClass").getAsString();
+
                 try {
                     @SuppressWarnings("unchecked")
                     Class<? extends ContextPackage> contentClass = (Class<? extends ContextPackage>) Class
                             .forName(className);
-                    handles[i] = tabManager.openTab(baseTitle, contentClass);
-                } catch (ClassNotFoundException e) {
-                    throwException("Layout restore failed — class not found: " + className, e);
+                    restoredById.put(savedId, tabManager.openTab(baseTitle, contentClass));
+                } catch (Exception e) {
+                    errorLog("Layout restore: skipping tab '" + baseTitle
+                            + "' (" + className + ") — " + e.getMessage());
                 }
             }
-            if (root.has("windows")) {
-                restoreWindows(root.getAsJsonArray("windows"), handles);
-            } else if (root.has("node")) {
-                // Legacy single-window format.
-                DockNodeStruct restoredRoot = deserializeNode(root.getAsJsonObject("node"), handles);
-                dockLayoutSystem.restoreRoot(windowManager.getMainWindow(), restoredRoot);
-                tabManager.pushRects();
-            }
+
+            if (root.has("windows"))
+                restoreWindows(root.getAsJsonArray("windows"), restoredById);
+
         } finally {
-            restoring = false;
+            tabManager.endBatch();
         }
     }
 
     // Window Restore \\
     /*
-     * Two-pass restore so the main window BSP is committed before any secondary
-     * window is opened. Pass 1 iterates windowsArray for the main entry and
-     * calls restoreRoot. Pass 2 opens each secondary OS window via
-     * tabManager.openSecondaryOsWindow() — the single shared entry point every
-     * secondary window in the editor goes through, so a restored window ends
-     * up with exactly the same dock-tree/dock-rect/dispose-listener setup as
-     * one opened interactively — deserializes its BSP, moves every tab in that
-     * BSP to the new window via moveTabToOsWindow, then commits the BSP via
-     * restoreRoot(). pushRects() settles everything at the end.
+     * Two-pass restore so the main window BSP is committed before any
+     * secondary window is opened. Pass 1 restores the main entry's tree
+     * directly. Pass 2 deserializes each secondary entry's tree first — a
+     * tree that collapses to null (every tab it referenced failed to
+     * restore) is discarded before any OS window is opened for it —
+     * otherwise opens the OS window via tabManager.openSecondaryOsWindow(),
+     * moves every surviving tab onto it, and commits the tree.
      */
-    private void restoreWindows(JsonArray windowsArray, TabHandle[] handles) {
+    private void restoreWindows(JsonArray windowsArray, Int2ObjectOpenHashMap<TabHandle> restoredById) {
+
         for (int i = 0; i < windowsArray.size(); i++) {
             JsonObject windowObj = windowsArray.get(i).getAsJsonObject();
             if (!windowObj.get("isMain").getAsBoolean())
                 continue;
             if (!windowObj.has("node"))
                 continue;
-            DockNodeStruct restoredRoot = deserializeNode(windowObj.getAsJsonObject("node"), handles);
+            DockNodeStruct restoredRoot = deserializeNode(windowObj.getAsJsonObject("node"), restoredById);
             dockLayoutSystem.restoreRoot(windowManager.getMainWindow(), restoredRoot);
         }
+
         for (int i = 0; i < windowsArray.size(); i++) {
+
             JsonObject windowObj = windowsArray.get(i).getAsJsonObject();
+
             if (windowObj.get("isMain").getAsBoolean())
                 continue;
             if (!windowObj.has("node"))
                 continue;
+
+            DockNodeStruct restoredRoot = deserializeNode(windowObj.getAsJsonObject("node"), restoredById);
+
+            if (restoredRoot == null)
+                continue;
+
             WindowInstance osWindow = tabManager.openSecondaryOsWindow();
-            DockNodeStruct restoredRoot = deserializeNode(windowObj.getAsJsonObject("node"), handles);
+
             ObjectArrayList<TabHandle> windowTabs = new ObjectArrayList<>();
             collectTabs(restoredRoot, windowTabs);
+
             for (int j = 0; j < windowTabs.size(); j++)
                 tabManager.moveTabToOsWindow(windowTabs.get(j), osWindow);
+
             dockLayoutSystem.restoreRoot(osWindow, restoredRoot);
         }
-        tabManager.pushRects();
     }
 
     private void collectTabs(DockNodeStruct node, ObjectArrayList<TabHandle> result) {
         if (node == null)
             return;
         if (!node.isSplit()) {
-            ObjectArrayList<TabHandle> nodeTabs = node.getTabs();
-            for (int i = 0; i < nodeTabs.size(); i++)
-                result.add(nodeTabs.get(i));
+            result.add(node.getTab());
             return;
         }
         collectTabs(node.getFirst(), result);
         collectTabs(node.getSecond(), result);
     }
 
-    private DockNodeStruct deserializeNode(JsonObject obj, TabHandle[] handles) {
-        DockNodeStruct node = new DockNodeStruct();
+    /*
+     * Rebuilds a BSP subtree from JSON, resolving each leaf's saved tab id
+     * against the tabs that actually opened successfully this restore. A
+     * leaf whose id has no match returns null. A split node collapses using
+     * the exact same rule DockLayoutSystem.pruneTab() uses when a tab
+     * closes live — both children gone means this node is gone too, one
+     * child gone means the other is promoted in its place.
+     */
+    private DockNodeStruct deserializeNode(JsonObject obj, Int2ObjectOpenHashMap<TabHandle> restoredById) {
+
         boolean split = obj.get("split").getAsBoolean();
-        if (split) {
-            node.setSplit(true);
-            node.setSplitHorizontal(obj.get("splitHorizontal").getAsBoolean());
-            node.setRatio(obj.get("ratio").getAsFloat());
-            node.setFirst(deserializeNode(obj.getAsJsonObject("first"), handles));
-            node.setSecond(deserializeNode(obj.getAsJsonObject("second"), handles));
-            node.setTabs(null);
-        } else {
-            JsonArray tabIndices = obj.getAsJsonArray("tabs");
-            ObjectArrayList<TabHandle> nodeTabs = new ObjectArrayList<>();
-            for (int i = 0; i < tabIndices.size(); i++) {
-                int idx = tabIndices.get(i).getAsInt();
-                if (idx >= 0 && idx < handles.length && handles[idx] != null)
-                    nodeTabs.add(handles[idx]);
-            }
-            node.setTabs(nodeTabs);
-            int activeIndex = obj.get("activeIndex").getAsInt();
-            node.setActiveIndex(Math.min(activeIndex, Math.max(0, nodeTabs.size() - 1)));
+
+        if (!split) {
+            TabHandle handle = restoredById.get(obj.get("tab").getAsInt());
+            if (handle == null)
+                return null;
+            DockNodeStruct leaf = new DockNodeStruct();
+            leaf.setTab(handle);
+            return leaf;
         }
+
+        DockNodeStruct first = deserializeNode(obj.getAsJsonObject("first"), restoredById);
+        DockNodeStruct second = deserializeNode(obj.getAsJsonObject("second"), restoredById);
+
+        if (first == null && second == null)
+            return null;
+        if (first == null)
+            return second;
+        if (second == null)
+            return first;
+
+        DockNodeStruct node = new DockNodeStruct();
+        node.setSplit(true);
+        node.setSplitHorizontal(obj.get("splitHorizontal").getAsBoolean());
+        node.setRatio(obj.get("ratio").getAsFloat());
+        node.setFirst(first);
+        node.setSecond(second);
         return node;
     }
 

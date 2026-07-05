@@ -21,34 +21,30 @@ public class TabManager extends ManagerPackage {
     /*
      * Coordinates tab registration, BSP bookkeeping, and rect propagation.
      *
-     * Two structural operations, both single call sites for tearing a tab
+     * Two structural operations, each a single call site for tearing a tab
      * down or bringing one up:
      *
      * openTab() — register, create chrome + content, pair them, add to BSP.
      * closeTab() — dispose the chrome window; TabContext.dispose() cascades
      * into everything else a tab owns (content window, BSP membership,
      * TabManager's own bookkeeping via deregisterTab()) exactly the same
-     * way whether closeTab() triggered it, the OS window it lived on was
-     * closed by the user via the platform's own close button, or the whole
-     * engine is shutting down. There is no second, hand-rolled teardown
-     * path anywhere.
+     * way regardless of what triggered it.
      *
      * openSecondaryOsWindow() is the one and only way a secondary editor OS
-     * window is ever created — it registers the dock tree, the dock rect,
-     * and a dispose listener that unregisters both automatically when the
-     * window closes, however it closes. openSecondaryWindow(),
-     * openSecondaryWindowForTab(), and LayoutManager's restore path all
-     * call it, so none of them can drift out of sync with what "a window
-     * that can host tabs" requires.
+     * window is ever created — interactive "open window", a tab dragged
+     * into empty space, and LayoutManager restoring a saved session all go
+     * through it, so none of them can drift out of sync with what "a
+     * window that can host tabs" requires.
      *
      * moveTabToOsWindow() — reparent via TabContext.moveTo(), update BSP.
      *
-     * pushRects() is the only call site for TabContext.placeAt(). Content
-     * placement is fully handled inside placeAt() — no compositor sync needed.
-     *
-     * notifyLayoutChanged() is the single call site for layout persistence.
-     * All structural mutations route through it. LayoutManager suppresses
-     * re-entrant calls during restore.
+     * pushRects() and notifyLayoutChanged() are the only call sites for
+     * rect propagation and layout persistence respectively. Both silently
+     * no-op while batching is active — see beginBatch()/endBatch() — so
+     * every caller can invoke either one unconditionally after any
+     * structural change, whether that change is happening one at a time
+     * during normal interactive use or dozens at a time during a layout
+     * restore, without needing to know which situation it's in.
      *
      * Every tab window resolves its own OS window via WindowInstance.getGLWindow()
      * — the only "what OS window is this on" logic that exists anywhere.
@@ -62,6 +58,9 @@ public class TabManager extends ManagerPackage {
     private Object2IntOpenHashMap<Class<? extends ContextPackage>> classInstanceCounter;
     // Dock Rects — one float[4] {x, y, w, h} per registered OS window
     private Object2ObjectOpenHashMap<WindowInstance, float[]> dockRects;
+    // Batch — suppresses pushRects()/notifyLayoutChanged() side effects while
+    // many structural changes happen back to back
+    private boolean batching;
     // Internal
     private WindowManager windowManager;
     private DockLayoutSystem dockLayoutSystem;
@@ -172,8 +171,7 @@ public class TabManager extends ManagerPackage {
      * Removes the given tab from every bookkeeping table TabManager owns.
      * Called exactly once, from within TabContext.dispose(), regardless of
      * what triggered that dispose. Safe to call more than once — a second
-     * call for a handle that's already gone is a no-op, matching the same
-     * idempotent-teardown guarantee WindowInstance.dispose() itself relies on.
+     * call for a handle that's already gone is a no-op.
      */
     public void deregisterTab(TabHandle handle) {
         if (handle == null || !openTabs.contains(handle))
@@ -253,8 +251,7 @@ public class TabManager extends ManagerPackage {
      * chrome and content windows, any toolbar, any dialog or drag ghost —
      * is torn down automatically as part of that single dispose() call, and
      * this window's own dispose listener unregisters its dock tree and dock
-     * rect at the same time. There is nothing left for this method to do
-     * by hand.
+     * rect at the same time.
      */
     public void closeOsWindow(WindowInstance osWindow) {
         if (osWindow == null || osWindow == windowManager.getMainWindow())
@@ -279,11 +276,18 @@ public class TabManager extends ManagerPackage {
     }
 
     /*
-     * The only call site for TabContext.placeAt(). Recomputes BSP rects for every
-     * registered OS window then calls placeAt() on each tab — chrome and content
-     * are positioned together in that single call.
+     * Recomputes BSP rects for every registered OS window then calls
+     * placeAt() on each tab — chrome and content are positioned together in
+     * that single call. No-ops while batching is active; endBatch() calls
+     * the underlying computation directly exactly once after the batch ends.
      */
     public void pushRects() {
+        if (batching)
+            return;
+        computeAndPlaceRects();
+    }
+
+    private void computeAndPlaceRects() {
         for (Object2ObjectOpenHashMap.Entry<WindowInstance, float[]> entry : dockRects.object2ObjectEntrySet()) {
             WindowInstance osWindow = entry.getKey();
             float[] r = entry.getValue();
@@ -307,12 +311,34 @@ public class TabManager extends ManagerPackage {
     // Layout \\
     /*
      * Routes to LayoutManager. Called by this manager after every structural
-     * mutation and by TabDragManager after drop resolution. LayoutManager
-     * suppresses calls during restore via its own restoring flag.
+     * mutation and by TabDragManager after drop resolution. No-ops while
+     * batching is active, for the same reason pushRects() does.
      */
     public void notifyLayoutChanged() {
+        if (batching)
+            return;
         if (layoutManager != null)
             layoutManager.notifyLayoutChanged();
+    }
+
+    /*
+     * Suppresses pushRects()/notifyLayoutChanged() side effects from every
+     * openTab()/closeTab() call until endBatch() is called. Used by
+     * LayoutManager to restore a whole saved session — closing the old tabs
+     * and opening the new ones — as a single operation instead of
+     * recomputing rects and re-saving the session file once per tab along
+     * the way. No call site of pushRects() or notifyLayoutChanged() needs
+     * to know whether a batch is active; only these two gated methods and
+     * endBatch() do. Not designed to nest — nothing in the editor needs
+     * more than one batch active at a time.
+     */
+    public void beginBatch() {
+        batching = true;
+    }
+
+    public void endBatch() {
+        batching = false;
+        computeAndPlaceRects();
     }
 
     /*

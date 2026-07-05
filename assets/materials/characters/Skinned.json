@@ -1,6 +1,7 @@
 {
     "shader": "Skinned",
     "uniforms": {
-        "u_color": { "value": [0.85, 0.7, 0.55, 1.0] }
+        "u_color": { "value": [1.0, 1.0, 1.0, 1.0] },
+        "u_texture": { "value": "surface/standard/GrassBlockUp" }
     }
 }

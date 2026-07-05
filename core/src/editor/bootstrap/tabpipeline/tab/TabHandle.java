@@ -3,6 +3,7 @@ package editor.bootstrap.tabpipeline.tab;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ContextPackage;
 import engine.root.HandlePackage;
+import engine.util.registry.RegistryUtility;
 
 public class TabHandle extends HandlePackage {
 
@@ -44,6 +45,22 @@ public class TabHandle extends HandlePackage {
 
     public String getTabTitle() {
         return tabData.getTabTitle();
+    }
+
+    /*
+     * Stable numeric identity for this tab, derived from its title. Titles
+     * are guaranteed unique among currently open tabs — TabManager.hasTab()
+     * enforces this at open time — and never change afterward, so this
+     * value is stable for the tab's entire lifetime with no extra state:
+     * it's the exact same identity TabManager's own tabName2TabID table
+     * already keys on internally, just exposed here as a formula instead
+     * of a second cached copy. LayoutManager persists this so a BSP leaf
+     * can reference a specific tab directly, independent of array position
+     * — the one thing that actually needs to survive a restore where some
+     * other tab among several might fail to reopen.
+     */
+    public int getTabId() {
+        return RegistryUtility.toIntID(getTabTitle());
     }
 
     public Class<? extends ContextPackage> getContentContextClass() {

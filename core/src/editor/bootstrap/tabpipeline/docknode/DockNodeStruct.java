@@ -2,14 +2,18 @@ package editor.bootstrap.tabpipeline.docknode;
 
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import engine.root.StructPackage;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class DockNodeStruct extends StructPackage {
 
     /*
-     * One node in the dock BSP tree. Leaf nodes own a tab list and track the
-     * active tab index. Split nodes own two children and hold no tabs.
-     * Bounds are recomputed each frame top-down from the dock canvas rect.
+     * One node in the dock BSP tree. Leaf nodes hold exactly one tab. Split
+     * nodes own two children and hold no tab. Bounds are recomputed each
+     * frame top-down from the dock canvas rect.
+     *
+     * There is no concept of multiple tabs sharing a leaf, and therefore no
+     * "active tab within a leaf" — the editor does not support stacked tabs.
+     * A leaf whose tab closes is removed from the tree entirely rather than
+     * falling back to some other tab; see DockLayoutSystem.pruneTab().
      *
      * ratio controls where the divider sits along the split axis — 0.5 is
      * centre. Clamped to [0.1, 0.9] by DockLayoutSystem.setSplitRatio so
@@ -30,14 +34,7 @@ public class DockNodeStruct extends StructPackage {
     private float ratio = 0.5f;
 
     // Leaf
-    private ObjectArrayList<TabHandle> tabs;
-    private int activeIndex;
-
-    // Internal \\
-
-    public DockNodeStruct() {
-        this.tabs = new ObjectArrayList<>();
-    }
+    private TabHandle tab;
 
     // Bounds \\
 
@@ -117,19 +114,11 @@ public class DockNodeStruct extends StructPackage {
 
     // Leaf \\
 
-    public ObjectArrayList<TabHandle> getTabs() {
-        return tabs;
+    public TabHandle getTab() {
+        return tab;
     }
 
-    public void setTabs(ObjectArrayList<TabHandle> tabs) {
-        this.tabs = tabs;
-    }
-
-    public int getActiveIndex() {
-        return activeIndex;
-    }
-
-    public void setActiveIndex(int activeIndex) {
-        this.activeIndex = activeIndex;
+    public void setTab(TabHandle tab) {
+        this.tab = tab;
     }
 }
