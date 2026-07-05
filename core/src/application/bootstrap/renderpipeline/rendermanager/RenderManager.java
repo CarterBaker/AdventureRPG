@@ -7,7 +7,7 @@ import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
-import application.bootstrap.renderpipeline.entityrendermanager.EntityRenderSystem;
+import application.bootstrap.renderpipeline.entityrendersystem.EntityRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;

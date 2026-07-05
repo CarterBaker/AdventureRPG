@@ -1,4 +1,4 @@
-package application.bootstrap.renderpipeline.entityrendermanager;
+package application.bootstrap.renderpipeline.entityrendersystem;
 
 import application.bootstrap.entitypipeline.animation.AnimationStateHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
