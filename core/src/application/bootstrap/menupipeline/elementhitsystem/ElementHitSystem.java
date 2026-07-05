@@ -1,18 +1,16 @@
 package application.bootstrap.menupipeline.elementhitsystem;
 
 import java.lang.reflect.Method;
-import java.util.function.Consumer;
 
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.element.ElementStateStruct;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menulist.MenuListHandle;
-import application.bootstrap.menupipeline.util.MenuAwareAction;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.input.Input;
 import engine.root.EngineSetting;
-import engine.root.EngineContext;
 import engine.root.SystemPackage;
 import engine.settings.KeyBindings;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -28,40 +26,33 @@ public class ElementHitSystem extends SystemPackage {
      * the highest-priority window). All iteration goes window-by-window in
      * that order. First hit wins, for both hover and click.
      *
-     * WindowManager has no lock or cursor-refresh dependency here. All OS
-     * windows are synced unconditionally every frame by WindowManager before
-     * this system runs, so cursor coordinates are always current on every
-     * window. hoveredElementWindow is tracked locally to detect cross-window
-     * hover changes.
+     * Callback dispatch — on_click, on_drag, and all three hover states —
+     * goes through the exact same executeCallback()/resolveCallback() path.
+     * The window and element the interaction happened on are always known
+     * at the call site (this system just finished determining them) and are
+     * always passed along; a target method opts into whichever pieces of
+     * that context it actually needs simply by declaring a parameter of
+     * that type — String for a literal/injected arg, MenuInstance,
+     * WindowInstance, or ElementInstance, in any combination, resolved once
+     * per (class, method) via reflection and cached. There is no separate
+     * "menu-aware" dispatch path and no sentinel argument value that means
+     * something different from a literal string — a method that wants the
+     * menu declares a MenuInstance parameter, full stop. This is what lets
+     * a handler like a tab-drag callback receive the exact window the
+     * gesture started on directly, instead of re-deriving "which window is
+     * this" a second time via a separately computed global lookup that
+     * isn't guaranteed to agree with the one that triggered the callback.
      *
-     * focusCallback is wired by MenuManager at startup. When a click is
-     * consumed by a window that is capture-eligible and not focus-independent,
-     * the callback fires and that window becomes the focused window. This is
-     * what allows logical content windows (e.g. a RuntimeContext tab) to
-     * acquire cursor capture — in the standalone runtime the context window
-     * IS the main OS window so it was always focused; in the editor the
-     * content window is a logical window that must earn focus via a click.
-     *
-     * Hover lifecycle:
-     * Enter — if hoverEnterState defined: set as activeHoverState, fire callback.
-     * Immediately transitions to hoverState if also defined.
-     * Per frame — if hoverState defined: set as activeHoverState, fire callback.
-     * Exit — if hoverExitState defined: set as activeHoverState, fire callback.
-     * If NOT defined: activeHoverState is left as-is. Nothing reverts implicitly.
-     * resetPressed — hard reset, clears activeHoverState unconditionally.
-     *
-     * Hover root/children belong to the parent element for hover purposes.
-     * When the mouse is anywhere within the active hover state root or its
-     * children, the parent element remains hoveredElement.
-     *
-     * on_drag latches on the frame primary is first pressed over an element that
-     * has on_drag defined. While latched the callback fires every frame the primary
-     * button is physically held — queried directly from EngineContext.input so
-     * window
-     * focus, hover state, and window boundaries cannot interrupt the gesture. All
-     * hover and click machinery is bypassed for the duration. The latch releases
-     * the frame the button is no longer held. on_click fires once on primary press
-     * when no drag is latching.
+     * on_drag latches on the frame primary is first pressed over an element
+     * that has on_drag defined, remembering both the element and the window
+     * it was hovered on at that moment. While latched the callback fires
+     * every frame the primary button is physically held on that same
+     * window — queried directly via InputManager.getRawInput(), never
+     * through the engine-wide EngineContext.input global, so a drag
+     * gesture's own continuation can't be corrupted by focus changing
+     * elsewhere in the meantime. The latch releases the frame the button is
+     * no longer held. on_click fires once on primary press when no drag is
+     * latching.
      *
      * openClickState — the currently expanded dropdown element, paired with
      * openClickStateWindow to track which window owns it. The collapse check
@@ -69,27 +60,22 @@ public class ElementHitSystem extends SystemPackage {
      * immediately if that window is no longer in hoveredWindows.
      */
 
-    private static final String PARENT_ARG = "$parent";
-
     private InputManager inputManager;
 
     private ElementInstance hoveredElement;
     private ElementInstance draggedElement;
     private ElementInstance openClickState;
     private WindowInstance hoveredElementWindow;
+    private WindowInstance draggedElementWindow;
     private WindowInstance openClickStateWindow;
     private float collapseTolerance;
 
-    private Consumer<WindowInstance> focusCallback;
-
-    private Object2ObjectOpenHashMap<String, Runnable> resolvedActions;
-    private Object2ObjectOpenHashMap<String, MenuAwareAction> resolvedMenuAwareActions;
+    private Object2ObjectOpenHashMap<String, ResolvedCallback> resolvedCallbacks;
 
     @Override
     protected void create() {
         this.collapseTolerance = EngineSetting.DROPDOWN_COLLAPSE_TOLERANCE;
-        this.resolvedActions = new Object2ObjectOpenHashMap<>();
-        this.resolvedMenuAwareActions = new Object2ObjectOpenHashMap<>();
+        this.resolvedCallbacks = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -101,18 +87,25 @@ public class ElementHitSystem extends SystemPackage {
 
     public void updateRaycast(ObjectArrayList<WindowInstance> hoveredWindows) {
 
-        // Drag is fully independent of hover and window focus. Query the raw
-        // button state directly so window boundaries cannot interrupt the gesture.
+        // Drag is fully independent of hover and window focus once latched.
+        // Polls the window it started on directly — never the ambient
+        // engine-wide input — so window boundaries or a focus change
+        // elsewhere cannot interrupt the gesture.
         if (draggedElement != null) {
-            if (EngineContext.input.isMouseDown(0)) {
+
+            Input rawInput = inputManager.getRawInput(draggedElementWindow);
+
+            if (rawInput.isMouseDown(0)) {
                 executeCallback(
                         draggedElement.getEffectiveOnDragClass(),
                         draggedElement.getEffectiveOnDragMethod(),
                         draggedElement.getEffectiveOnDragArg(),
-                        null);
+                        null, draggedElementWindow, draggedElement);
                 return;
             }
+
             draggedElement = null;
+            draggedElementWindow = null;
         }
 
         if (hoveredWindows.isEmpty())
@@ -127,9 +120,12 @@ public class ElementHitSystem extends SystemPackage {
         if (!inputManager.bindingClicked(KeyBindings.PRIMARY, hoveredWindows.get(0)))
             return;
 
-        // Latch drag on the frame primary is first pressed over a draggable element.
+        // Latch drag on the frame primary is first pressed over a draggable
+        // element. The window it was hovered on at this exact moment is
+        // remembered for the gesture's whole duration.
         if (hoveredElement != null && hoveredElement.hasOnDrag()) {
             draggedElement = hoveredElement;
+            draggedElementWindow = hoveredElementWindow;
             return;
         }
 
@@ -163,13 +159,8 @@ public class ElementHitSystem extends SystemPackage {
         this.openClickState = null;
         this.openClickStateWindow = null;
         this.draggedElement = null;
+        this.draggedElementWindow = null;
         clearHover();
-    }
-
-    // Focus \\
-
-    public void setFocusCallback(Consumer<WindowInstance> callback) {
-        this.focusCallback = callback;
     }
 
     // Hover \\
@@ -225,7 +216,7 @@ public class ElementHitSystem extends SystemPackage {
             hoveredElement.setActiveHoverState(enterState);
             if (enterState.hasAction())
                 executeCallback(enterState.getActionClass(), enterState.getActionMethod(),
-                        enterState.getActionArg(), null);
+                        enterState.getActionArg(), null, hoveredElementWindow, hoveredElement);
         }
 
         // Immediately transition to hoverState if defined
@@ -240,7 +231,7 @@ public class ElementHitSystem extends SystemPackage {
             hoveredElement.setActiveHoverState(exitState);
             if (exitState.hasAction())
                 executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
-                        exitState.getActionArg(), null);
+                        exitState.getActionArg(), null, hoveredElementWindow, hoveredElement);
         }
         hoveredElement.setHovered(false);
         hoveredElement = null;
@@ -256,7 +247,7 @@ public class ElementHitSystem extends SystemPackage {
         hoveredElement.setActiveHoverState(hoverState);
         if (hoverState.hasAction())
             executeCallback(hoverState.getActionClass(), hoverState.getActionMethod(),
-                    hoverState.getActionArg(), null);
+                    hoverState.getActionArg(), null, hoveredElementWindow, hoveredElement);
     }
 
     private void clearHover() {
@@ -409,7 +400,7 @@ public class ElementHitSystem extends SystemPackage {
                     element.getEffectiveActionClass(),
                     element.getEffectiveActionMethod(),
                     element.getEffectiveActionArg(),
-                    menu);
+                    menu, menu.getWindow(), element);
             return true;
         }
 
@@ -490,71 +481,116 @@ public class ElementHitSystem extends SystemPackage {
 
     // Callbacks \\
 
-    private void executeCallback(String actionClass, String actionMethod,
-            String actionArg, MenuInstance menu) {
+    /*
+     * Dispatches a class#method callback with whatever context is available
+     * at the call site. Resolution is cached per (class, method) — not per
+     * argument value, since which method gets called never depends on the
+     * runtime arg — so a dynamically injected arg that takes on many
+     * distinct values over a session (e.g. a layout name) never grows the
+     * cache; only the fixed, finite set of distinct callback methods does.
+     */
+    private void executeCallback(
+            String actionClass, String actionMethod, String actionArg,
+            MenuInstance menu, WindowInstance window, ElementInstance element) {
 
         if (actionClass == null || actionMethod == null)
             return;
 
-        String key = actionClass + "#" + actionMethod + "#" + actionArg;
+        String key = actionClass + "#" + actionMethod;
+        ResolvedCallback callback = resolvedCallbacks.get(key);
 
-        if (PARENT_ARG.equals(actionArg)) {
-            MenuAwareAction action = resolvedMenuAwareActions.get(key);
-            if (action == null) {
-                action = resolveMenuAwareAction(actionClass, actionMethod);
-                resolvedMenuAwareActions.put(key, action);
-            }
-            action.execute(menu);
-            return;
+        if (callback == null) {
+            callback = resolveCallback(actionClass, actionMethod);
+            resolvedCallbacks.put(key, callback);
         }
 
-        Runnable action = resolvedActions.get(key);
-        if (action == null) {
-            action = resolveRunnableAction(actionClass, actionMethod, actionArg);
-            resolvedActions.put(key, action);
-        }
-        action.run();
+        invoke(callback, actionArg, menu, window, element);
     }
 
-    private Runnable resolveRunnableAction(String actionClass, String actionMethod,
-            String actionArg) {
+    private ResolvedCallback resolveCallback(String actionClass, String actionMethod) {
         try {
             Class<?> clazz = Class.forName(actionClass);
             Object target = internal.getUnchecked(clazz);
+
             if (target == null)
-                throwException("Callback class not registered: '" + actionClass + "'");
-            Method method = actionArg != null
-                    ? target.getClass().getMethod(actionMethod, String.class)
-                    : target.getClass().getMethod(actionMethod);
-            if (actionArg != null)
-                return () -> invoke(method, target, actionArg);
-            return () -> invoke(method, target);
-        } catch (Exception e) {
-            throwException("Failed to resolve callback: " + actionClass + "#" + actionMethod, e);
-            return null;
+                return throwException("Callback class not registered: '" + actionClass + "'");
+
+            Method method = findCallbackMethod(target.getClass(), actionMethod);
+
+            if (method == null)
+                return throwException("No compatible method '" + actionMethod + "' on '" + actionClass
+                        + "' — every parameter must be one of String, MenuInstance, WindowInstance, ElementInstance.");
+
+            return new ResolvedCallback(target, method);
+
+        } catch (ClassNotFoundException e) {
+            return throwException("Callback class not found: " + actionClass, e);
         }
     }
 
-    private MenuAwareAction resolveMenuAwareAction(String actionClass, String actionMethod) {
+    /*
+     * Finds the named public method whose parameters are drawn entirely
+     * from the supported context types, in any order and any subset. This
+     * is what lets a callback declare exactly the context it needs — a
+     * window, an element, a menu, a literal arg, any combination, or
+     * nothing at all — without any per-call-site special casing: every
+     * on_click, on_drag, and hover-state callback in the engine resolves
+     * through this exact same lookup. Overloading a callback method name
+     * with two different supported signatures on the same class is not
+     * supported — use distinct method names instead, same as every
+     * existing callback in this codebase already does.
+     */
+    private Method findCallbackMethod(Class<?> targetClass, String methodName) {
+        for (Method m : targetClass.getMethods()) {
+            if (!m.getName().equals(methodName))
+                continue;
+            if (isFullySupported(m.getParameterTypes()))
+                return m;
+        }
+        return null;
+    }
+
+    private boolean isFullySupported(Class<?>[] paramTypes) {
+        for (Class<?> type : paramTypes)
+            if (type != String.class && type != MenuInstance.class
+                    && type != WindowInstance.class && type != ElementInstance.class)
+                return false;
+        return true;
+    }
+
+    private void invoke(ResolvedCallback callback, String arg,
+            MenuInstance menu, WindowInstance window, ElementInstance element) {
+
+        Class<?>[] paramTypes = callback.method.getParameterTypes();
+        Object[] args = new Object[paramTypes.length];
+
+        for (int i = 0; i < paramTypes.length; i++) {
+            Class<?> type = paramTypes[i];
+            if (type == String.class)
+                args[i] = arg;
+            else if (type == MenuInstance.class)
+                args[i] = menu;
+            else if (type == WindowInstance.class)
+                args[i] = window;
+            else
+                args[i] = element;
+        }
+
         try {
-            Class<?> clazz = Class.forName(actionClass);
-            Object target = internal.getUnchecked(clazz);
-            if (target == null)
-                throwException("Callback class not registered: '" + actionClass + "'");
-            Method method = target.getClass().getMethod(actionMethod, MenuInstance.class);
-            return p -> invoke(method, target, p);
+            callback.method.invoke(callback.target, args);
         } catch (Exception e) {
-            throwException("Failed to resolve menu-aware callback: "
-                    + actionClass + "#" + actionMethod, e);
-            return null;
+            throwException("Callback failed: " + callback.method.getName(), e);
         }
     }
 
-    private void invoke(Method method, Object target, Object... args) {
-        try {
-            method.invoke(target, args);
-        } catch (Exception e) {
-            throwException("Callback failed: " + method.getName(), e);
+    private static final class ResolvedCallback {
+
+        private final Object target;
+        private final Method method;
+
+        ResolvedCallback(Object target, Method method) {
+            this.target = target;
+            this.method = method;
         }
     }
 
