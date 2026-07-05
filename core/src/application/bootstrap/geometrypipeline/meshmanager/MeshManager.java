@@ -44,7 +44,7 @@ public class MeshManager extends ManagerPackage {
         // Palette
         this.meshName2MeshID = new Object2IntOpenHashMap<>();
         this.meshID2MeshHandle = new Int2ObjectOpenHashMap<>();
-        create(InternalLoader.class);
+        create(MeshLoader.class);
     }
 
     @Override
@@ -69,7 +69,7 @@ public class MeshManager extends ManagerPackage {
     // Accessible \\
 
     public void request(String resourceName) {
-        ((InternalLoader) internalLoader).request(resourceName);
+        ((MeshLoader) internalLoader).request(resourceName);
     }
 
     public boolean hasMesh(String meshName) {

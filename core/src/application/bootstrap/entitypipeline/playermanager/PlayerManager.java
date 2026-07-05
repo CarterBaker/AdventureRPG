@@ -64,7 +64,7 @@ public class PlayerManager extends ManagerPackage {
 
     // Systems
     private PlayerInputSystem playerInputSystem;
-    private InternalBufferSystem internalBufferSystem;
+    private PlayerBufferSystem internalBufferSystem;
     private PlacementManager placementManager;
 
     // Per-window
@@ -88,7 +88,7 @@ public class PlayerManager extends ManagerPackage {
     protected void create() {
 
         this.playerInputSystem = create(PlayerInputSystem.class);
-        this.internalBufferSystem = create(InternalBufferSystem.class);
+        this.internalBufferSystem = create(PlayerBufferSystem.class);
         this.placementManager = create(PlacementManager.class);
 
         this.windowID2Player = new Int2ObjectOpenHashMap<>();

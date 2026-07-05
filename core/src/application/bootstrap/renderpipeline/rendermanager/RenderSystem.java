@@ -76,11 +76,11 @@ class RenderSystem extends SystemPackage {
                 cameraManager.pushCamera(fboWindow);
 
             bindTarget(window, target);
-            GLSLUtility.enableDepth();
-            GLSLUtility.enableBlending();
-            GLSLUtility.disableCulling();
-            GLSLUtility.clearBuffer(0f, 0f, 0f, 0f);
-            GLSLUtility.clearDepthBuffer();
+            RenderGLSLUtility.enableDepth();
+            RenderGLSLUtility.enableBlending();
+            RenderGLSLUtility.disableCulling();
+            RenderGLSLUtility.clearBuffer(0f, 0f, 0f, 0f);
+            RenderGLSLUtility.clearDepthBuffer();
 
             drawDepthSortedBatches(queue, target, window);
             drawSkinnedBatches(queue, target, window);
@@ -99,11 +99,11 @@ class RenderSystem extends SystemPackage {
             return;
 
         bindTarget(window, target);
-        GLSLUtility.enableDepth();
-        GLSLUtility.enableBlending();
-        GLSLUtility.disableCulling();
-        GLSLUtility.clearBuffer();
-        GLSLUtility.clearDepthBuffer();
+        RenderGLSLUtility.enableDepth();
+        RenderGLSLUtility.enableBlending();
+        RenderGLSLUtility.disableCulling();
+        RenderGLSLUtility.clearBuffer();
+        RenderGLSLUtility.clearDepthBuffer();
 
         drawScreenPass(queue, window, 0);
         compositeRenderSystem.drawScreen(queue, window);
@@ -132,10 +132,10 @@ class RenderSystem extends SystemPackage {
         ObjectArrayList<RenderBatchStruct> batchList = queue.screenOrder2BatchList.get(order);
         if (batchList == null)
             return;
-        GLSLUtility.disableDepth();
-        GLSLUtility.enableBlending();
+        RenderGLSLUtility.disableDepth();
+        RenderGLSLUtility.enableBlending();
         drawBatches(batchList, window);
-        GLSLUtility.enableDepth();
+        RenderGLSLUtility.enableDepth();
     }
 
     private void drawBatches(ObjectArrayList<RenderBatchStruct> batchList, WindowInstance window) {
@@ -160,7 +160,7 @@ class RenderSystem extends SystemPackage {
 
             boolean tessellated = representative.usesTessellation();
             if (tessellated)
-                GLSLUtility.setPatchVertices(representative.getPatchVertexCount());
+                RenderGLSLUtility.setPatchVertices(representative.getPatchVertexCount());
 
             ObjectArrayList<RenderCallStruct> renderCalls = batch.getRenderCalls();
             Object[] callElements = renderCalls.elements();
@@ -173,11 +173,11 @@ class RenderSystem extends SystemPackage {
 
                 if (callMask != activeMask) {
                     if (callMask != null)
-                        GLSLUtility.enableScissor(
+                        RenderGLSLUtility.enableScissor(
                                 callMask.getX(), callMask.getY(),
                                 callMask.getW(), callMask.getH());
                     else
-                        GLSLUtility.disableScissor();
+                        RenderGLSLUtility.disableScissor();
                     activeMask = callMask;
                 }
 
@@ -190,14 +190,14 @@ class RenderSystem extends SystemPackage {
         }
 
         if (activeMask != null)
-            GLSLUtility.disableScissor();
+            RenderGLSLUtility.disableScissor();
     }
 
     private void bindTarget(WindowInstance window, FboInstance target) {
         if (target == null) {
             internal.windowPlatform.makeContextCurrent(window);
-            GLSLUtility.unbindFramebuffer();
-            GLSLUtility.setViewport(window.getWidth(), window.getHeight());
+            RenderGLSLUtility.unbindFramebuffer();
+            RenderGLSLUtility.setViewport(window.getWidth(), window.getHeight());
             return;
         }
 
@@ -205,7 +205,7 @@ class RenderSystem extends SystemPackage {
     }
 
     private void bindMaterial(MaterialInstance material) {
-        GLSLUtility.useShader(material.getShaderHandle().getGpuHandle());
+        RenderGLSLUtility.useShader(material.getShaderHandle().getGpuHandle());
     }
 
     private void bindSourceUBOs(RenderBatchStruct batch) {
@@ -219,8 +219,8 @@ class RenderSystem extends SystemPackage {
 
         for (int i = 0; i < handles.length; i++) {
             UBOHandle ubo = handles[i];
-            GLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
-            GLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+            RenderGLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
+            RenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
         }
     }
 
@@ -230,7 +230,7 @@ class RenderSystem extends SystemPackage {
 
         for (int i = 0; i < instances.length; i++) {
             UBOInstance ubo = instances[i];
-            GLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+            RenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
         }
     }
 
@@ -245,7 +245,7 @@ class RenderSystem extends SystemPackage {
 
             if (uniform.attribute().isSampler()) {
                 uniform.attribute().bindTexture(textureUnit);
-                GLSLUtility.bindSamplerUniform(uniform.getUniformHandle(), textureUnit);
+                RenderGLSLUtility.bindSamplerUniform(uniform.getUniformHandle(), textureUnit);
                 textureUnit++;
             }
 
@@ -260,15 +260,15 @@ class RenderSystem extends SystemPackage {
         MeshData meshData = model.getMeshData();
         int vao = vaoManager.getVAOForWindow(meshData, window.getWindowID());
 
-        GLSLUtility.bindVAO(vao);
+        RenderGLSLUtility.bindVAO(vao);
 
         if (tessellated)
-            GLSLUtility.drawPatches(
+            RenderGLSLUtility.drawPatches(
                     model.getIndexCount() / EngineSetting.QUAD_INDEX_COUNT * EngineSetting.QUAD_VERTEX_COUNT);
         else
-            GLSLUtility.drawElements(model.getIndexCount());
+            RenderGLSLUtility.drawElements(model.getIndexCount());
 
-        GLSLUtility.unbindVAO();
+        RenderGLSLUtility.unbindVAO();
     }
 
     void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
@@ -455,25 +455,25 @@ class RenderSystem extends SystemPackage {
 
             int vao = getOrCreateSkinnedVAO(skinnedBuffer, window);
 
-            GLSLUtility.bindVAO(vao);
-            GLSLUtility.drawElementsInstanced(
+            RenderGLSLUtility.bindVAO(vao);
+            RenderGLSLUtility.drawElementsInstanced(
                     skinnedBuffer.getMeshHandle().getIndexCount(),
                     skinnedBuffer.getInstanceCount());
-            GLSLUtility.unbindVAO();
+            RenderGLSLUtility.unbindVAO();
         }
     }
 
     private void bindSkinnedMaterial(SkinnedBatchStruct batch, MaterialInstance material) {
 
         int shaderHandle = material.getShaderHandle().getGpuHandle();
-        GLSLUtility.useShader(shaderHandle);
+        RenderGLSLUtility.useShader(shaderHandle);
 
         UBOHandle[] handles = batch.getCachedSourceUBOs();
 
         for (int i = 0; i < handles.length; i++) {
             UBOHandle ubo = handles[i];
-            GLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
-            GLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+            RenderGLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
+            RenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
         }
 
         pushMaterialUniforms(material);
@@ -494,7 +494,7 @@ class RenderSystem extends SystemPackage {
 
             if (uniform.attribute().isSampler()) {
                 uniform.attribute().bindTexture(textureUnit);
-                GLSLUtility.bindSamplerUniform(uniform.getUniformHandle(), textureUnit);
+                RenderGLSLUtility.bindSamplerUniform(uniform.getUniformHandle(), textureUnit);
                 textureUnit++;
             }
 
@@ -527,7 +527,7 @@ class RenderSystem extends SystemPackage {
 
         int[] instanceAttrSizes = { 4, 4, 4, 4 };
 
-        vao = GLSLUtility.createInstancedVAO(
+        vao = RenderGLSLUtility.createInstancedVAO(
                 skinnedBuffer.getMeshHandle().getVertexHandle(),
                 skinnedBuffer.getMeshHandle().getAttrSizes(),
                 skinnedBuffer.getMeshHandle().getIndexHandle(),

@@ -33,7 +33,7 @@ public class FontManager extends ManagerPackage {
         this.fontID2FontHandle = new Int2ObjectOpenHashMap<>();
         this.fontName2FontID.defaultReturnValue(-1);
 
-        create(InternalLoader.class);
+        create(FontLoader.class);
     }
 
     @Override
@@ -107,6 +107,6 @@ public class FontManager extends ManagerPackage {
     }
 
     public void request(String fontName) {
-        ((InternalLoader) internalLoader).request(fontName);
+        ((FontLoader) internalLoader).request(fontName);
     }
 }

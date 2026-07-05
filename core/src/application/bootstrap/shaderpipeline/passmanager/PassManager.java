@@ -23,7 +23,7 @@ public class PassManager extends ManagerPackage {
         this.passName2PassID = new Object2IntOpenHashMap<>();
         this.passID2PassHandle = new Int2ObjectOpenHashMap<>();
 
-        create(InternalLoader.class);
+        create(PassLoader.class);
     }
 
     @Override
@@ -37,7 +37,7 @@ public class PassManager extends ManagerPackage {
     }
 
     public void request(String passName) {
-        ((InternalLoader) internalLoader).request(passName);
+        ((PassLoader) internalLoader).request(passName);
     }
 
     public boolean hasPass(String passName) {

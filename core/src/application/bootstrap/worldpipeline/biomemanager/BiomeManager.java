@@ -20,7 +20,7 @@ public class BiomeManager extends ManagerPackage {
         this.biomeName2BiomeID = new Object2ShortOpenHashMap<>();
         this.biomeID2BiomeHandle = new Short2ObjectOpenHashMap<>();
 
-        create(InternalLoader.class);
+        create(BiomeLoader.class);
     }
 
     // Management \\
@@ -44,7 +44,7 @@ public class BiomeManager extends ManagerPackage {
     // On-Demand \\
 
     public void request(String biomeName) {
-        ((InternalLoader) internalLoader).request(biomeName);
+        ((BiomeLoader) internalLoader).request(biomeName);
     }
 
     // Accessible \\

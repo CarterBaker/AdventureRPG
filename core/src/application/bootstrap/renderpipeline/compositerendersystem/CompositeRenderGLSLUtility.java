@@ -1,0 +1,154 @@
+package application.bootstrap.renderpipeline.compositerendersystem;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+
+import engine.graphics.gl.GL20;
+import engine.graphics.gl.GL30;
+import engine.root.EngineContext;
+import engine.root.EngineSetting;
+import engine.root.EngineUtility;
+
+class CompositeRenderGLSLUtility extends EngineUtility {
+
+    /*
+     * Stateless OpenGL helpers for CompositeRenderSystem. Covers UI pass state,
+     * instance VBO upload, instanced draw calls, shader binding, and UBO binding.
+     * Package-private — only CompositeRenderSystem may call these.
+     */
+
+    // UI Pass State \\
+
+    static void beginUIPass() {
+        EngineContext.gl20.glDisable(EngineSetting.GL_DEPTH_TEST);
+        EngineContext.gl20.glDepthMask(false);
+        EngineContext.gl20.glEnable(EngineSetting.GL_BLEND);
+        EngineContext.gl20.glBlendFunc(EngineSetting.GL_SRC_ALPHA, EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    static void endUIPass() {
+        EngineContext.gl20.glEnable(EngineSetting.GL_DEPTH_TEST);
+        EngineContext.gl20.glDepthMask(true);
+        EngineContext.gl20.glDisable(EngineSetting.GL_BLEND);
+    }
+
+    // Upload \\
+
+    static void updateInstanceVBO(int vbo, FloatBuffer data, int floatCount) {
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
+        EngineContext.gl20.glBufferSubData(EngineSetting.GL_ARRAY_BUFFER, 0, floatCount * Float.BYTES, data);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
+    }
+
+    static int createDynamicInstanceVBO(int maxInstances, int floatsPerInstance) {
+        int vbo = EngineContext.gl20.glGenBuffer();
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
+        EngineContext.gl20.glBufferData(
+                EngineSetting.GL_ARRAY_BUFFER,
+                maxInstances * floatsPerInstance * Float.BYTES,
+                null,
+                EngineSetting.GL_DYNAMIC_DRAW);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
+        return vbo;
+    }
+
+    static int createInstancedVAO(
+            int meshVBOHandle,
+            int[] meshAttrSizes,
+            int meshIBOHandle,
+            int instanceVBOHandle,
+            int[] instanceAttrSizes) {
+
+        IntBuffer idBuffer = ByteBuffer.allocateDirect(Integer.BYTES)
+                .order(ByteOrder.nativeOrder()).asIntBuffer();
+        EngineContext.gl30.glGenVertexArrays(1, idBuffer);
+        int vao = idBuffer.get(0);
+
+        EngineContext.gl30.glBindVertexArray(vao);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, meshVBOHandle);
+
+        int meshStride = 0;
+        for (int i = 0; i < meshAttrSizes.length; i++)
+            meshStride += meshAttrSizes[i];
+        int meshStrideBytes = meshStride * Float.BYTES;
+
+        int meshOffsetBytes = 0;
+        for (int i = 0; i < meshAttrSizes.length; i++) {
+            EngineContext.gl20.glEnableVertexAttribArray(i);
+            EngineContext.gl20.glVertexAttribPointer(
+                    i, meshAttrSizes[i], EngineSetting.GL_FLOAT, false, meshStrideBytes, meshOffsetBytes);
+            meshOffsetBytes += meshAttrSizes[i] * Float.BYTES;
+        }
+
+        int instanceStride = 0;
+        for (int i = 0; i < instanceAttrSizes.length; i++)
+            instanceStride += instanceAttrSizes[i];
+        int instanceStrideBytes = instanceStride * Float.BYTES;
+
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, instanceVBOHandle);
+
+        int instanceOffsetBytes = 0;
+        for (int i = 0; i < instanceAttrSizes.length; i++) {
+            int location = meshAttrSizes.length + i;
+            EngineContext.gl20.glEnableVertexAttribArray(location);
+            EngineContext.gl20.glVertexAttribPointer(
+                    location,
+                    instanceAttrSizes[i],
+                    EngineSetting.GL_FLOAT,
+                    false,
+                    instanceStrideBytes,
+                    instanceOffsetBytes);
+            EngineContext.gl30.glVertexAttribDivisor(location, 1);
+            instanceOffsetBytes += instanceAttrSizes[i] * Float.BYTES;
+        }
+
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, meshIBOHandle);
+        EngineContext.gl30.glBindVertexArray(0);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
+
+        return vao;
+    }
+
+    // Draw \\
+
+    static void drawElementsInstanced(int vao, int indexCount, int instanceCount) {
+        EngineContext.gl30.glBindVertexArray(vao);
+        EngineContext.gl30.glDrawElementsInstanced(
+                EngineSetting.GL_TRIANGLES, indexCount, EngineSetting.GL_UNSIGNED_SHORT, 0, instanceCount);
+        EngineContext.gl30.glBindVertexArray(0);
+    }
+
+    // Shader \\
+
+    static void useShader(int shaderHandle) {
+        EngineContext.gl20.glUseProgram(shaderHandle);
+    }
+
+    // UBO \\
+
+    static void bindUniformBlock(int shaderProgram, String blockName, int bindingPoint) {
+        int blockIndex = EngineContext.gl30.glGetUniformBlockIndex(shaderProgram, blockName);
+        if (blockIndex != EngineSetting.GL_INVALID_INDEX)
+            EngineContext.gl30.glUniformBlockBinding(shaderProgram, blockIndex, bindingPoint);
+    }
+
+    static void bindUniformBuffer(int bindingPoint, int gpuHandle) {
+        EngineContext.gl30.glBindBufferBase(EngineSetting.GL_UNIFORM_BUFFER, bindingPoint, gpuHandle);
+    }
+
+    static void deleteBuffer(int handle) {
+        if (handle != 0)
+            EngineContext.gl20.glDeleteBuffer(handle);
+    }
+
+    static void deleteVAO(int handle) {
+        if (handle == 0)
+            return;
+        IntBuffer idBuffer = ByteBuffer.allocateDirect(Integer.BYTES)
+                .order(ByteOrder.nativeOrder()).asIntBuffer();
+        idBuffer.put(handle).flip();
+        EngineContext.gl30.glDeleteVertexArrays(1, idBuffer);
+    }
+}

@@ -27,7 +27,7 @@ public class ToolTypeManager extends ManagerPackage {
         // Palette
         this.toolTypeName2ToolTypeID = new Object2ShortOpenHashMap<>();
         this.toolTypeID2ToolTypeHandle = new Short2ObjectOpenHashMap<>();
-        create(InternalLoader.class);
+        create(ToolTypeLoader.class);
     }
 
     // Management \\
@@ -81,6 +81,6 @@ public class ToolTypeManager extends ManagerPackage {
     }
 
     public void request(String toolTypeName) {
-        ((InternalLoader) internalLoader).request(toolTypeName);
+        ((ToolTypeLoader) internalLoader).request(toolTypeName);
     }
 }

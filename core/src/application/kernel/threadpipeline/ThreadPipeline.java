@@ -1,6 +1,6 @@
 package application.kernel.threadpipeline;
 
-import application.kernel.threadpipeline.threadmanager.InternalThreadManager;
+import application.kernel.threadpipeline.threadmanager.ThreadManager;
 import engine.root.PipelinePackage;
 
 public class ThreadPipeline extends PipelinePackage {
@@ -10,6 +10,6 @@ public class ThreadPipeline extends PipelinePackage {
      */
     @Override
     protected void create() {
-        create(InternalThreadManager.class);
+        create(ThreadManager.class);
     }
 }

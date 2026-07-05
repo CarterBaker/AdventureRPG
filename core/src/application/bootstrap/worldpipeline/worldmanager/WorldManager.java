@@ -32,7 +32,7 @@ public class WorldManager extends ManagerPackage {
         this.worldID2WorldHandle = new Int2ObjectOpenHashMap<>();
         this.worldName2WorldID.defaultReturnValue(-1);
 
-        create(InternalLoader.class);
+        create(WorldLoader.class);
     }
 
     // Management \\
@@ -91,6 +91,6 @@ public class WorldManager extends ManagerPackage {
     }
 
     public void request(String worldName) {
-        ((InternalLoader) internalLoader).request(worldName);
+        ((WorldLoader) internalLoader).request(worldName);
     }
 }

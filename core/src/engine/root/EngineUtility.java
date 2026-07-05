@@ -9,7 +9,7 @@ import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
 import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
 import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
 import application.kernel.threadpipeline.thread.ThreadHandle;
-import application.kernel.threadpipeline.threadmanager.InternalThreadManager;
+import application.kernel.threadpipeline.threadmanager.ThreadManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.assets.camera.CameraData;
 import engine.assets.camera.CameraInstance;
@@ -34,7 +34,7 @@ public abstract class EngineUtility {
 
     static EnginePackage engine;
     static InputManager inputManager;
-    static InternalThreadManager threadManager;
+    static ThreadManager threadManager;
     static WindowManager windowManager;
 
     public static void assignInputManager(InputManager input) {
@@ -45,7 +45,7 @@ public abstract class EngineUtility {
         inputManager = input;
     }
 
-    public static void assignThreadManager(InternalThreadManager input) {
+    public static void assignThreadManager(ThreadManager input) {
 
         if (threadManager != null)
             throwException("Illegal reassignment of thread manager attempted during runtime");

@@ -25,7 +25,7 @@ public class SeasonManager extends ManagerPackage {
         // Palette
         this.seasonName2SeasonHandle = new Object2ObjectOpenHashMap<>();
 
-        create(InternalLoader.class);
+        create(SeasonLoader.class);
     }
 
     // Management \\
@@ -37,7 +37,7 @@ public class SeasonManager extends ManagerPackage {
     // On-Demand \\
 
     public void request(String seasonName) {
-        ((InternalLoader) internalLoader).request(seasonName);
+        ((SeasonLoader) internalLoader).request(seasonName);
     }
 
     // Accessible \\

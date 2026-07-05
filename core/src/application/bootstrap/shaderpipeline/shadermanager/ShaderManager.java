@@ -32,7 +32,7 @@ public class ShaderManager extends ManagerPackage {
         this.shaderName2ShaderID = new Object2IntOpenHashMap<>();
         this.shaderID2ShaderHandle = new Int2ObjectOpenHashMap<>();
 
-        create(InternalLoader.class);
+        create(ShaderLoader.class);
     }
 
     @Override
@@ -44,7 +44,7 @@ public class ShaderManager extends ManagerPackage {
     protected void dispose() {
 
         for (ShaderHandle handle : shaderID2ShaderHandle.values())
-            GLSLUtility.deleteShaderProgram(handle.getGpuHandle());
+            ShaderGLSLUtility.deleteShaderProgram(handle.getGpuHandle());
 
         shaderName2ShaderID.clear();
         shaderID2ShaderHandle.clear();
@@ -60,13 +60,13 @@ public class ShaderManager extends ManagerPackage {
 
     void bindShaderToUBO(ShaderHandle shader, String blockName) {
         UBOHandle ubo = uboManager.getUBOHandleFromUBOName(blockName);
-        GLSLUtility.bindUniformBlock(shader.getGpuHandle(), blockName, ubo.getBindingPoint());
+        ShaderGLSLUtility.bindUniformBlock(shader.getGpuHandle(), blockName, ubo.getBindingPoint());
     }
 
     // Accessible \\
 
     public void request(String shaderName) {
-        ((InternalLoader) internalLoader).request(shaderName);
+        ((ShaderLoader) internalLoader).request(shaderName);
     }
 
     public boolean hasShader(String shaderName) {

@@ -28,7 +28,7 @@ public class CloudManager extends ManagerPackage {
         this.cloudName2CloudID = new Object2ShortOpenHashMap<>();
         this.cloudID2CloudHandle = new Short2ObjectOpenHashMap<>();
 
-        create(InternalLoader.class);
+        create(CloudLoader.class);
     }
 
     // Management \\
@@ -52,7 +52,7 @@ public class CloudManager extends ManagerPackage {
     // On-Demand \\
 
     public void request(String cloudName) {
-        ((InternalLoader) internalLoader).request(cloudName);
+        ((CloudLoader) internalLoader).request(cloudName);
     }
 
     // Accessible \\

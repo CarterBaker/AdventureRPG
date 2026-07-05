@@ -26,7 +26,7 @@ public class CalendarManager extends ManagerPackage {
         // Palette
         this.calendarName2CalendarHandle = new Object2ObjectOpenHashMap<>();
         this.calendarID2CalendarHandle = new Short2ObjectOpenHashMap<>();
-        create(InternalLoader.class);
+        create(CalendarLoader.class);
     }
 
     // Management \\
@@ -48,7 +48,7 @@ public class CalendarManager extends ManagerPackage {
     public short getCalendarIDFromCalendarName(String calendarName) {
 
         if (!calendarName2CalendarHandle.containsKey(calendarName))
-            ((InternalLoader) internalLoader).request(calendarName);
+            ((CalendarLoader) internalLoader).request(calendarName);
 
         return RegistryUtility.toShortID(calendarName);
     }
@@ -62,7 +62,7 @@ public class CalendarManager extends ManagerPackage {
         CalendarHandle handle = calendarName2CalendarHandle.get(calendarName);
 
         if (handle == null) {
-            ((InternalLoader) internalLoader).request(calendarName);
+            ((CalendarLoader) internalLoader).request(calendarName);
             handle = calendarName2CalendarHandle.get(calendarName);
         }
 

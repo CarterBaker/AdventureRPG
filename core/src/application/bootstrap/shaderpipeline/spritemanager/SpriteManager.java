@@ -42,7 +42,7 @@ public class SpriteManager extends ManagerPackage {
         this.spriteName2SpriteID = new Object2IntOpenHashMap<>();
         this.spriteID2SpriteHandle = new Int2ObjectOpenHashMap<>();
 
-        create(InternalLoader.class);
+        create(SpriteLoader.class);
     }
 
     @Override
@@ -56,7 +56,7 @@ public class SpriteManager extends ManagerPackage {
     protected void dispose() {
 
         for (SpriteHandle handle : spriteID2SpriteHandle.values())
-            GLSLUtility.deleteSprite(handle.getGpuHandle());
+            SpriteGLSLUtility.deleteSprite(handle.getGpuHandle());
 
         spriteName2SpriteID.clear();
         spriteID2SpriteHandle.clear();
@@ -73,7 +73,7 @@ public class SpriteManager extends ManagerPackage {
     // Accessible \\
 
     public void request(String spriteName) {
-        ((InternalLoader) internalLoader).request(spriteName);
+        ((SpriteLoader) internalLoader).request(spriteName);
     }
 
     public boolean hasSprite(String spriteName) {
@@ -110,7 +110,7 @@ public class SpriteManager extends ManagerPackage {
 
         SpriteHandle handle = getSpriteHandleFromSpriteName(spriteName);
 
-        InternalLoader loader = (InternalLoader) internalLoader;
+        SpriteLoader loader = (SpriteLoader) internalLoader;
 
         MaterialInstance material = materialManager.cloneMaterial(loader.getDefaultMaterialID());
         material.setUniform("u_sprite", handle.getGpuHandle());

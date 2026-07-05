@@ -9,7 +9,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 public class BlockManager extends ManagerPackage {
 
     // Internal
-    private InternalBufferSystem internalBufferSystem;
+    private BlockBufferSystem internalBufferSystem;
 
     // Palette
     private Object2IntOpenHashMap<String> blockName2BlockID;
@@ -23,9 +23,9 @@ public class BlockManager extends ManagerPackage {
         this.blockName2BlockID = new Object2IntOpenHashMap<>();
         this.blockID2BlockHandle = new Int2ObjectOpenHashMap<>();
 
-        this.internalBufferSystem = create(InternalBufferSystem.class);
+        this.internalBufferSystem = create(BlockBufferSystem.class);
 
-        create(InternalLoader.class);
+        create(BlockLoader.class);
     }
 
     // Management \\
@@ -49,7 +49,7 @@ public class BlockManager extends ManagerPackage {
     // On-Demand \\
 
     public void request(String blockName) {
-        ((InternalLoader) internalLoader).request(blockName);
+        ((BlockLoader) internalLoader).request(blockName);
     }
 
     // Accessible \\

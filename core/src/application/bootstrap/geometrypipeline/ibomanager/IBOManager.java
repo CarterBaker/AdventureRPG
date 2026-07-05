@@ -62,7 +62,7 @@ public class IBOManager extends ManagerPackage {
             short[] indices,
             VAOInstance vaoInstance) {
 
-        IBOHandle handle = GLSLUtility.uploadIndexData(
+        IBOHandle handle = IBOGLSLUtility.uploadIndexData(
                 vaoInstance,
                 create(IBOHandle.class),
                 indices);
@@ -105,7 +105,7 @@ public class IBOManager extends ManagerPackage {
     // Runtime \\
 
     public IBOInstance createIBOInstance(VAOInstance vaoInstance, ShortArrayList indices) {
-        return GLSLUtility.uploadIndexData(
+        return IBOGLSLUtility.uploadIndexData(
                 vaoInstance,
                 create(IBOInstance.class),
                 indices.toShortArray());
@@ -114,14 +114,14 @@ public class IBOManager extends ManagerPackage {
     // Removal \\
 
     public void removeIBO(IBOData iboData) {
-        GLSLUtility.removeIndexData(iboData);
+        IBOGLSLUtility.removeIndexData(iboData);
     }
 
     public void removeIBO(IBOHandle iboHandle) {
-        GLSLUtility.removeIndexData(iboHandle.getIBOData());
+        IBOGLSLUtility.removeIndexData(iboHandle.getIBOData());
     }
 
     public void removeIBOInstance(IBOInstance iboInstance) {
-        GLSLUtility.removeIndexData(iboInstance.getIBOData());
+        IBOGLSLUtility.removeIndexData(iboInstance.getIBOData());
     }
 }

@@ -17,7 +17,7 @@ public class DynamicGeometryManager extends ManagerPackage {
 
     // Internal
     private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
-    private InternalBuildManager internalBuildManager;
+    private GeometryBuildManager internalBuildManager;
 
     // Settings
     private int worldHeight;
@@ -29,7 +29,7 @@ public class DynamicGeometryManager extends ManagerPackage {
 
         // Internal
         this.dynamicGeometryAsyncContainer = create(DynamicGeometryAsyncContainer.class);
-        this.internalBuildManager = create(InternalBuildManager.class);
+        this.internalBuildManager = create(GeometryBuildManager.class);
 
         // Settings
         this.worldHeight = EngineSetting.WORLD_HEIGHT;

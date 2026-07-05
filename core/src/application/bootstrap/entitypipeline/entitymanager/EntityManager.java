@@ -38,7 +38,7 @@ public class EntityManager extends ManagerPackage {
         // Palette
         this.templateName2TemplateID = new Object2IntOpenHashMap<>();
         this.templateID2EntityHandle = new Int2ObjectOpenHashMap<>();
-        create(InternalLoader.class);
+        create(EntityLoader.class);
     }
 
     @Override
@@ -68,7 +68,7 @@ public class EntityManager extends ManagerPackage {
     public int getTemplateIDFromTemplateName(String templateName) {
 
         if (!templateName2TemplateID.containsKey(templateName))
-            ((InternalLoader) internalLoader).request(templateName);
+            ((EntityLoader) internalLoader).request(templateName);
 
         return templateName2TemplateID.getInt(templateName);
     }

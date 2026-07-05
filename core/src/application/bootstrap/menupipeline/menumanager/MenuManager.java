@@ -77,7 +77,7 @@ public class MenuManager extends ManagerPackage {
         this.menuName2MenuID.defaultReturnValue(-1);
         this.pendingCloseMenus = new ObjectArrayList<>();
         this.window2MenuTargetFbo = new Object2ObjectOpenHashMap<>();
-        create(InternalLoader.class);
+        create(MenuLoader.class);
     }
 
     @Override
@@ -252,7 +252,7 @@ public class MenuManager extends ManagerPackage {
     }
 
     public void request(String menuName) {
-        ((InternalLoader) internalLoader).request(menuName);
+        ((MenuLoader) internalLoader).request(menuName);
     }
 
     public void setMenuTargetFbo(WindowInstance window, FboInstance menuTargetFbo) {

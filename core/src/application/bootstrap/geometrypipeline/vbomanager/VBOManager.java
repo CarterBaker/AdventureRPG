@@ -62,7 +62,7 @@ public class VBOManager extends ManagerPackage {
             float[] vertices,
             VAOInstance vaoInstance) {
 
-        VBOHandle handle = GLSLUtility.uploadVertexData(
+        VBOHandle handle = VBOGLSLUtility.uploadVertexData(
                 vaoInstance,
                 create(VBOHandle.class),
                 vertices);
@@ -105,7 +105,7 @@ public class VBOManager extends ManagerPackage {
     // Runtime \\
 
     public VBOInstance createVBOInstance(VAOInstance vaoInstance, FloatArrayList vertices) {
-        return GLSLUtility.uploadVertexData(
+        return VBOGLSLUtility.uploadVertexData(
                 vaoInstance,
                 create(VBOInstance.class),
                 vertices.toFloatArray());
@@ -114,14 +114,14 @@ public class VBOManager extends ManagerPackage {
     // Removal \\
 
     public void removeVBO(VBOData vboData) {
-        GLSLUtility.removeVertexData(vboData);
+        VBOGLSLUtility.removeVertexData(vboData);
     }
 
     public void removeVBO(VBOHandle vboHandle) {
-        GLSLUtility.removeVertexData(vboHandle.getVBOData());
+        VBOGLSLUtility.removeVertexData(vboHandle.getVBOData());
     }
 
     public void removeVBOInstance(VBOInstance vboInstance) {
-        GLSLUtility.removeVertexData(vboInstance.getVBOData());
+        VBOGLSLUtility.removeVertexData(vboInstance.getVBOData());
     }
 }

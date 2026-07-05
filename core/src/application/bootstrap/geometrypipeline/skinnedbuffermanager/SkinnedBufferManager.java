@@ -100,12 +100,12 @@ public class SkinnedBufferManager extends ManagerPackage {
         SkinnedBufferData data = instance.getSkinnedBufferData();
         int instanceCount = data.getInstanceCount();
 
-        GLSLUtility.uploadInstanceVBO(
+        SkinnedBufferGLSLUtility.uploadInstanceVBO(
                 data.getInstanceVBO(),
                 data.getInstanceModelData(),
                 instanceCount * EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS);
 
-        GLSLUtility.uploadBonePalette(
+        SkinnedBufferGLSLUtility.uploadBonePalette(
                 data.getBonePaletteTexture(),
                 data.getBoneMatrixData(),
                 data.getBoneCapacity(),
@@ -118,8 +118,8 @@ public class SkinnedBufferManager extends ManagerPackage {
 
         SkinnedBufferData data = instance.getSkinnedBufferData();
 
-        int vbo = GLSLUtility.createDynamicInstanceVBO(data.getMaxInstances());
-        int texture = GLSLUtility.createBonePaletteTexture(data.getBoneCapacity(), data.getMaxInstances());
+        int vbo = SkinnedBufferGLSLUtility.createDynamicInstanceVBO(data.getMaxInstances());
+        int texture = SkinnedBufferGLSLUtility.createBonePaletteTexture(data.getBoneCapacity(), data.getMaxInstances());
 
         data.setInstanceVBO(vbo);
         data.setBonePaletteTexture(texture);
@@ -129,11 +129,11 @@ public class SkinnedBufferManager extends ManagerPackage {
 
         SkinnedBufferData data = instance.getSkinnedBufferData();
 
-        GLSLUtility.deleteBuffer(data.getInstanceVBO());
-        GLSLUtility.deleteTexture(data.getBonePaletteTexture());
+        SkinnedBufferGLSLUtility.deleteBuffer(data.getInstanceVBO());
+        SkinnedBufferGLSLUtility.deleteTexture(data.getBonePaletteTexture());
 
-        int vbo = GLSLUtility.createDynamicInstanceVBO(data.getMaxInstances());
-        int texture = GLSLUtility.createBonePaletteTexture(data.getBoneCapacity(), data.getMaxInstances());
+        int vbo = SkinnedBufferGLSLUtility.createDynamicInstanceVBO(data.getMaxInstances());
+        int texture = SkinnedBufferGLSLUtility.createBonePaletteTexture(data.getBoneCapacity(), data.getMaxInstances());
 
         data.setInstanceVBO(vbo);
         data.setBonePaletteTexture(texture);
@@ -151,8 +151,8 @@ public class SkinnedBufferManager extends ManagerPackage {
 
         for (int i = 0; i < count; i++) {
             SkinnedBufferData data = ((SkinnedBufferInstance) elements[i]).getSkinnedBufferData();
-            GLSLUtility.deleteBuffer(data.getInstanceVBO());
-            GLSLUtility.deleteTexture(data.getBonePaletteTexture());
+            SkinnedBufferGLSLUtility.deleteBuffer(data.getInstanceVBO());
+            SkinnedBufferGLSLUtility.deleteTexture(data.getBonePaletteTexture());
         }
 
         mesh2Material2SkinnedBuffer.clear();

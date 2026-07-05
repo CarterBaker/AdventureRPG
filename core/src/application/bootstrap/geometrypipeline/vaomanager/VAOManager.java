@@ -99,7 +99,7 @@ public class VAOManager extends ManagerPackage {
     // Instance Management \\
 
     public VAOInstance createVAOInstance(VAOHandle template) {
-        return GLSLUtility.createVAOInstance(create(VAOInstance.class), template);
+        return VAOGLSLUtility.createVAOInstance(create(VAOInstance.class), template);
     }
 
     public int getVAOForWindow(MeshData meshData, int windowID) {
@@ -117,7 +117,7 @@ public class VAOManager extends ManagerPackage {
          * cache key or leak entries that cannot be reclaimed by source VAO.
          */
         if (sourceVAO == 0)
-            return GLSLUtility.cloneVAO(
+            return VAOGLSLUtility.cloneVAO(
                     meshData.getVAOData().getAttrSizes(),
                     meshData.getVertexHandle(),
                     meshData.getIndexHandle());
@@ -128,7 +128,7 @@ public class VAOManager extends ManagerPackage {
         if (cachedVAO != 0)
             return cachedVAO;
 
-        int clonedVAO = GLSLUtility.cloneVAO(
+        int clonedVAO = VAOGLSLUtility.cloneVAO(
                 meshData.getVAOData().getAttrSizes(),
                 meshData.getVertexHandle(),
                 meshData.getIndexHandle());
@@ -159,7 +159,7 @@ public class VAOManager extends ManagerPackage {
             if (extractWindowID(entry.getLongKey()) != windowID)
                 continue;
 
-            GLSLUtility.removeVAOHandle(entry.getIntValue());
+            VAOGLSLUtility.removeVAOHandle(entry.getIntValue());
             iterator.remove();
         }
     }
@@ -193,7 +193,7 @@ public class VAOManager extends ManagerPackage {
                 currentWindowID = windowID;
             }
 
-            GLSLUtility.removeVAOHandle(entry.getIntValue());
+            VAOGLSLUtility.removeVAOHandle(entry.getIntValue());
             iterator.remove();
         }
 
@@ -204,11 +204,11 @@ public class VAOManager extends ManagerPackage {
     }
 
     public void removeVAOData(VAOData vaoData) {
-        GLSLUtility.removeVAOData(vaoData);
+        VAOGLSLUtility.removeVAOData(vaoData);
     }
 
     public void removeVAOInstance(VAOInstance vaoInstance) {
-        GLSLUtility.removeVAOInstance(vaoInstance);
+        VAOGLSLUtility.removeVAOInstance(vaoInstance);
     }
 
     private long composeWindowKey(int sourceVAO, int windowID) {

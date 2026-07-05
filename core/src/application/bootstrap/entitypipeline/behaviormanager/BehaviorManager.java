@@ -26,7 +26,7 @@ public class BehaviorManager extends ManagerPackage {
         // Palette
         this.behaviorName2BehaviorHandle = new Object2ObjectOpenHashMap<>();
         this.behaviorID2BehaviorHandle = new Short2ObjectOpenHashMap<>();
-        create(InternalLoader.class);
+        create(BehaviorLoader.class);
     }
 
     // Management \\
@@ -46,7 +46,7 @@ public class BehaviorManager extends ManagerPackage {
     public short getBehaviorIDFromBehaviorName(String behaviorName) {
 
         if (!behaviorName2BehaviorHandle.containsKey(behaviorName))
-            ((InternalLoader) internalLoader).request(behaviorName);
+            ((BehaviorLoader) internalLoader).request(behaviorName);
 
         return RegistryUtility.toShortID(behaviorName);
     }
@@ -60,7 +60,7 @@ public class BehaviorManager extends ManagerPackage {
         BehaviorHandle handle = behaviorName2BehaviorHandle.get(behaviorName);
 
         if (handle == null) {
-            ((InternalLoader) internalLoader).request(behaviorName);
+            ((BehaviorLoader) internalLoader).request(behaviorName);
             handle = behaviorName2BehaviorHandle.get(behaviorName);
         }
 

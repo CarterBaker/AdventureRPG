@@ -102,7 +102,7 @@ public class CompositeRenderSystem extends SystemPackage {
         if (batches == null || batches.isEmpty())
             return;
 
-        GLSLUtility.beginUIPass();
+        CompositeRenderGLSLUtility.beginUIPass();
         Object[] batchElements = batches.elements();
         int batchCount = batches.size();
 
@@ -125,7 +125,7 @@ public class CompositeRenderSystem extends SystemPackage {
             batch.clear();
         }
 
-        GLSLUtility.endUIPass();
+        CompositeRenderGLSLUtility.endUIPass();
     }
 
     public void drawScreen(RenderQueueHandle queue, WindowInstance window) {
@@ -142,8 +142,8 @@ public class CompositeRenderSystem extends SystemPackage {
         WindowBufferGpuState gpuState = getOrCreateGpuState(buffer, windowID);
 
         if (gpuState.maxInstances < buffer.getMaxInstances()) {
-            GLSLUtility.deleteBuffer(gpuState.instanceVBO);
-            GLSLUtility.deleteVAO(gpuState.compositeVAO);
+            CompositeRenderGLSLUtility.deleteBuffer(gpuState.instanceVBO);
+            CompositeRenderGLSLUtility.deleteVAO(gpuState.compositeVAO);
             gpuState.instanceVBO = EngineSetting.GL_HANDLE_NONE;
             gpuState.compositeVAO = EngineSetting.GL_HANDLE_NONE;
             gpuState.uploadedVersion = EngineSetting.COMPOSITE_UPLOAD_VERSION_UNINITIALIZED;
@@ -152,7 +152,7 @@ public class CompositeRenderSystem extends SystemPackage {
         ensureGpuObjects(buffer, gpuState);
         upload(buffer, gpuState);
 
-        GLSLUtility.drawElementsInstanced(
+        CompositeRenderGLSLUtility.drawElementsInstanced(
                 gpuState.compositeVAO,
                 buffer.getIndexCount(),
                 buffer.getInstanceCount());
@@ -172,7 +172,7 @@ public class CompositeRenderSystem extends SystemPackage {
         uploadBuffer.put(buffer.getInstanceData(), 0, floatCount);
         uploadBuffer.flip();
 
-        GLSLUtility.updateInstanceVBO(gpuState.instanceVBO, uploadBuffer, floatCount);
+        CompositeRenderGLSLUtility.updateInstanceVBO(gpuState.instanceVBO, uploadBuffer, floatCount);
         gpuState.uploadedVersion = cpuVersion;
     }
 
@@ -183,14 +183,14 @@ public class CompositeRenderSystem extends SystemPackage {
         MaterialInstance material = batch.getMaterial();
         int shaderHandle = material.getShaderHandle().getGpuHandle();
 
-        GLSLUtility.useShader(shaderHandle);
+        CompositeRenderGLSLUtility.useShader(shaderHandle);
 
         UBOHandle[] sourceUBOs = batch.getCachedSourceUBOs();
 
         for (int i = 0; i < sourceUBOs.length; i++) {
             UBOHandle ubo = sourceUBOs[i];
-            GLSLUtility.bindUniformBlock(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
-            GLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+            CompositeRenderGLSLUtility.bindUniformBlock(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
+            CompositeRenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
         }
 
         UniformStruct<?>[] uniforms = batch.getCachedUniforms();
@@ -226,10 +226,10 @@ public class CompositeRenderSystem extends SystemPackage {
                 && gpuState.compositeVAO != EngineSetting.GL_HANDLE_NONE)
             return;
 
-        gpuState.instanceVBO = GLSLUtility.createDynamicInstanceVBO(
+        gpuState.instanceVBO = CompositeRenderGLSLUtility.createDynamicInstanceVBO(
                 buffer.getMaxInstances(),
                 buffer.getFloatsPerInstance());
-        gpuState.compositeVAO = GLSLUtility.createInstancedVAO(
+        gpuState.compositeVAO = CompositeRenderGLSLUtility.createInstancedVAO(
                 buffer.getMeshHandle().getVertexHandle(),
                 buffer.getMeshHandle().getAttrSizes(),
                 buffer.getMeshHandle().getIndexHandle(),
@@ -266,8 +266,8 @@ public class CompositeRenderSystem extends SystemPackage {
             return;
 
         for (WindowBufferGpuState gpuState : buffer2State.values()) {
-            GLSLUtility.deleteBuffer(gpuState.instanceVBO);
-            GLSLUtility.deleteVAO(gpuState.compositeVAO);
+            CompositeRenderGLSLUtility.deleteBuffer(gpuState.instanceVBO);
+            CompositeRenderGLSLUtility.deleteVAO(gpuState.compositeVAO);
         }
     }
 

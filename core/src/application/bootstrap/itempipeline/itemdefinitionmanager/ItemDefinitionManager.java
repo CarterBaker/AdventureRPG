@@ -26,7 +26,7 @@ public class ItemDefinitionManager extends ManagerPackage {
         // Palette
         this.itemName2ItemID = new Object2IntOpenHashMap<>();
         this.itemID2ItemHandle = new Int2ObjectOpenHashMap<>();
-        create(InternalLoader.class);
+        create(ItemDefinitionLoader.class);
     }
 
     // Management \\
@@ -80,6 +80,6 @@ public class ItemDefinitionManager extends ManagerPackage {
     }
 
     public void request(String itemName) {
-        ((InternalLoader) internalLoader).request(itemName);
+        ((ItemDefinitionLoader) internalLoader).request(itemName);
     }
 }

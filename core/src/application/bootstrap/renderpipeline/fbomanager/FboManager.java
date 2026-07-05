@@ -30,7 +30,7 @@ public class FboManager extends ManagerPackage {
      */
 
     // Internal
-    private InternalBuilder internalBuilder;
+    private FBOBuilder internalBuilder;
     private WindowManager windowManager;
 
     // Data Registry
@@ -51,12 +51,12 @@ public class FboManager extends ManagerPackage {
         this.fboName2Instance = new Object2ObjectOpenHashMap<>();
         this.orderedFboData = new ObjectArrayList<>();
         this.window2RelativeInstances = new Object2ObjectOpenHashMap<>();
-        create(InternalLoader.class);
+        create(FBOLoader.class);
     }
 
     @Override
     protected void get() {
-        this.internalBuilder = get(InternalBuilder.class);
+        this.internalBuilder = get(FBOBuilder.class);
         this.windowManager = get(WindowManager.class);
     }
 
@@ -84,12 +84,12 @@ public class FboManager extends ManagerPackage {
             return;
         }
 
-        GLSLUtility.bindFramebuffer(fbo.getFramebuffers().getInt(0));
-        GLSLUtility.setViewport(fbo.getWidth(), fbo.getHeight());
+        FBOGLSLUtility.bindFramebuffer(fbo.getFramebuffers().getInt(0));
+        FBOGLSLUtility.setViewport(fbo.getWidth(), fbo.getHeight());
     }
 
     public void unbind() {
-        GLSLUtility.unbindFramebuffer();
+        FBOGLSLUtility.unbindFramebuffer();
     }
 
     // Resize \\
@@ -107,13 +107,13 @@ public class FboManager extends ManagerPackage {
 
             if (attachment.isDepth()) {
                 if (!fbo.getDepthTextures().isEmpty())
-                    GLSLUtility.resizeDepthTexture(fbo.getDepthTextures().getInt(0), width, height);
+                    FBOGLSLUtility.resizeDepthTexture(fbo.getDepthTextures().getInt(0), width, height);
             }
 
             else {
 
                 if (colorIndex < fbo.getTextures().size())
-                    GLSLUtility.resizeColorTexture(
+                    FBOGLSLUtility.resizeColorTexture(
                             fbo.getTextures().getInt(colorIndex),
                             attachment.getInternalFormat(),
                             width, height);
@@ -180,7 +180,7 @@ public class FboManager extends ManagerPackage {
     }
 
     public void request(String fboName) {
-        ((InternalLoader) internalLoader).request(fboName);
+        ((FBOLoader) internalLoader).request(fboName);
     }
 
     // Internal \\

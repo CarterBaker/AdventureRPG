@@ -6,6 +6,6 @@ public class ItemRotationManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        create(InternalBufferSystem.class);
+        create(ItemRotationBufferSystem.class);
     }
 }

@@ -27,7 +27,7 @@ public class AnimationManager extends ManagerPackage {
         // Palette
         this.clipName2ClipHandle = new Object2ObjectOpenHashMap<>();
         this.clipID2ClipHandle = new Short2ObjectOpenHashMap<>();
-        create(InternalLoader.class);
+        create(AnimationLoader.class);
     }
 
     // Management \\
@@ -55,7 +55,7 @@ public class AnimationManager extends ManagerPackage {
         AnimationClipHandle handle = clipName2ClipHandle.get(clipName);
 
         if (handle == null) {
-            ((InternalLoader) internalLoader).request(clipName);
+            ((AnimationLoader) internalLoader).request(clipName);
             handle = clipName2ClipHandle.get(clipName);
         }
 

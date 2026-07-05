@@ -28,7 +28,7 @@ public class RigManager extends ManagerPackage {
         // Palette
         this.rigName2RigHandle = new Object2ObjectOpenHashMap<>();
         this.rigID2RigHandle = new Short2ObjectOpenHashMap<>();
-        create(InternalLoader.class);
+        create(RigLoader.class);
     }
 
     // Management \\
@@ -56,7 +56,7 @@ public class RigManager extends ManagerPackage {
         RigHandle handle = rigName2RigHandle.get(rigName);
 
         if (handle == null) {
-            ((InternalLoader) internalLoader).request(rigName);
+            ((RigLoader) internalLoader).request(rigName);
             handle = rigName2RigHandle.get(rigName);
         }
 

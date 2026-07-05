@@ -29,7 +29,7 @@ public class MaterialManager extends ManagerPackage {
         this.materialID2MaterialHandle = new Int2ObjectOpenHashMap<>();
         this.materialName2MaterialID.defaultReturnValue(-1);
 
-        create(InternalLoader.class);
+        create(MaterialLoader.class);
     }
 
     // Management \\
@@ -43,7 +43,7 @@ public class MaterialManager extends ManagerPackage {
     // On-Demand \\
 
     public void request(String materialName) {
-        ((InternalLoader) internalLoader).request(materialName);
+        ((MaterialLoader) internalLoader).request(materialName);
     }
 
     // Accessible \\

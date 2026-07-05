@@ -19,8 +19,9 @@ public class CompositeBufferManager extends ManagerPackage {
         CompositeBufferData compositeBufferData = new CompositeBufferData(meshHandle, instanceAttrSizes);
         buffer.constructor(compositeBufferData);
 
-        int vbo = GLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(), buffer.getFloatsPerInstance());
-        int vao = GLSLUtility.createInstancedVAO(
+        int vbo = CompositeBufferGLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(),
+                buffer.getFloatsPerInstance());
+        int vao = CompositeBufferGLSLUtility.createInstancedVAO(
                 meshHandle.getVertexHandle(),
                 meshHandle.getAttrSizes(),
                 meshHandle.getIndexHandle(),
@@ -35,11 +36,12 @@ public class CompositeBufferManager extends ManagerPackage {
 
     public void grow(CompositeBufferInstance buffer) {
 
-        GLSLUtility.deleteBuffer(buffer.getInstanceVBO());
-        GLSLUtility.deleteVAO(buffer.getCompositeVAO());
+        CompositeBufferGLSLUtility.deleteBuffer(buffer.getInstanceVBO());
+        CompositeBufferGLSLUtility.deleteVAO(buffer.getCompositeVAO());
 
-        int vbo = GLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(), buffer.getFloatsPerInstance());
-        int vao = GLSLUtility.createInstancedVAO(
+        int vbo = CompositeBufferGLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(),
+                buffer.getFloatsPerInstance());
+        int vao = CompositeBufferGLSLUtility.createInstancedVAO(
                 buffer.getMeshHandle().getVertexHandle(),
                 buffer.getMeshHandle().getAttrSizes(),
                 buffer.getMeshHandle().getIndexHandle(),
@@ -54,7 +56,7 @@ public class CompositeBufferManager extends ManagerPackage {
     // Dispose \\
 
     public void dispose(CompositeBufferInstance buffer) {
-        GLSLUtility.deleteBuffer(buffer.getInstanceVBO());
-        GLSLUtility.deleteVAO(buffer.getCompositeVAO());
+        CompositeBufferGLSLUtility.deleteBuffer(buffer.getInstanceVBO());
+        CompositeBufferGLSLUtility.deleteVAO(buffer.getCompositeVAO());
     }
 }

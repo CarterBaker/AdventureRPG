@@ -24,7 +24,7 @@ class FontRasterizerUtility extends EngineUtility {
             File fontFile,
             int size,
             String charset,
-            InternalBuilder builder) {
+            FontBuilder builder) {
 
         Font awtFont = loadFont(fontFile, size);
         BufferedImage scratch = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);

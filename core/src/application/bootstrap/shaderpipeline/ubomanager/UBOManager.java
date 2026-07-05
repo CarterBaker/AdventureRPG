@@ -48,17 +48,17 @@ public class UBOManager extends ManagerPackage {
         this.uboID2UBOHandle = new Int2ObjectOpenHashMap<>();
         this.activeInstances = new ObjectArrayList<>();
 
-        create(InternalLoader.class);
+        create(UBOLoader.class);
     }
 
     @Override
     protected void dispose() {
 
         for (UBOHandle handle : uboID2UBOHandle.values())
-            GLSLUtility.deleteUniformBuffer(handle.getGpuHandle());
+            UBOGLSLUtility.deleteUniformBuffer(handle.getGpuHandle());
 
         for (int i = 0; i < activeInstances.size(); i++)
-            GLSLUtility.deleteUniformBuffer(activeInstances.get(i).getGpuHandle());
+            UBOGLSLUtility.deleteUniformBuffer(activeInstances.get(i).getGpuHandle());
 
         uboName2UBOID.clear();
         uboID2UBOHandle.clear();
@@ -78,15 +78,15 @@ public class UBOManager extends ManagerPackage {
 
         int binding = resolveBinding(handle.getRequestedBinding(), blockName);
         int id = RegistryUtility.toIntID(blockName);
-        int gpuHandle = GLSLUtility.createUniformBuffer();
+        int gpuHandle = UBOGLSLUtility.createUniformBuffer();
         int totalSize = computeStd140BufferSize(handle.getUniformDeclarations());
 
         handle.initRuntime(id, gpuHandle, binding, totalSize);
 
         populateUniforms(handle);
 
-        GLSLUtility.allocateUniformBuffer(gpuHandle, totalSize);
-        GLSLUtility.bindUniformBufferBase(gpuHandle, binding);
+        UBOGLSLUtility.allocateUniformBuffer(gpuHandle, totalSize);
+        UBOGLSLUtility.bindUniformBufferBase(gpuHandle, binding);
 
         uboName2UBOID.put(blockName, id);
         uboID2UBOHandle.put(id, handle);
@@ -97,9 +97,9 @@ public class UBOManager extends ManagerPackage {
         if (handle == null)
             throwException("Cannot create UBO instance — handle is null");
 
-        int newGpuHandle = GLSLUtility.createUniformBuffer();
-        GLSLUtility.allocateUniformBuffer(newGpuHandle, handle.getTotalSizeBytes());
-        GLSLUtility.bindUniformBufferBase(newGpuHandle, handle.getBindingPoint());
+        int newGpuHandle = UBOGLSLUtility.createUniformBuffer();
+        UBOGLSLUtility.allocateUniformBuffer(newGpuHandle, handle.getTotalSizeBytes());
+        UBOGLSLUtility.bindUniformBufferBase(newGpuHandle, handle.getBindingPoint());
 
         UBOData clonedData = new UBOData(handle.getUBOData(), newGpuHandle);
         UBOInstance instance = create(UBOInstance.class);
@@ -121,19 +121,19 @@ public class UBOManager extends ManagerPackage {
 
     public void destroyInstance(UBOInstance instance) {
         activeInstances.remove(instance);
-        GLSLUtility.deleteUniformBuffer(instance.getGpuHandle());
+        UBOGLSLUtility.deleteUniformBuffer(instance.getGpuHandle());
     }
 
     public void push(UBOHandle handle) {
         ByteBuffer staging = handle.getUBOData().getStagingBuffer();
         staging.rewind();
-        GLSLUtility.updateUniformBuffer(handle.getGpuHandle(), 0, staging);
+        UBOGLSLUtility.updateUniformBuffer(handle.getGpuHandle(), 0, staging);
     }
 
     public void push(UBOInstance instance) {
         ByteBuffer staging = instance.getUBOData().getStagingBuffer();
         staging.rewind();
-        GLSLUtility.updateUniformBuffer(instance.getGpuHandle(), 0, staging);
+        UBOGLSLUtility.updateUniformBuffer(instance.getGpuHandle(), 0, staging);
     }
 
     public void bindBuffersForCurrentContext() {
@@ -141,7 +141,7 @@ public class UBOManager extends ManagerPackage {
         // Shared/source UBO handles may not be re-bound every draw call.
         // Re-assert their binding points whenever a context is made current.
         for (UBOHandle handle : uboID2UBOHandle.values())
-            GLSLUtility.bindUniformBufferBase(handle.getGpuHandle(), handle.getBindingPoint());
+            UBOGLSLUtility.bindUniformBufferBase(handle.getGpuHandle(), handle.getBindingPoint());
     }
 
     // Binding Registry \\
@@ -217,7 +217,7 @@ public class UBOManager extends ManagerPackage {
     // Accessible \\
 
     public void request(String blockName) {
-        ((InternalLoader) internalLoader).request(blockName);
+        ((UBOLoader) internalLoader).request(blockName);
     }
 
     public boolean hasUBO(String uboName) {

@@ -40,14 +40,14 @@ public class TextureManager extends ManagerPackage {
         this.arrayName2ArrayID = new Object2IntOpenHashMap<>();
         this.arrayID2TextureHandle = new Int2ObjectOpenHashMap<>();
 
-        create(InternalLoader.class);
+        create(TextureLoader.class);
     }
 
     @Override
     protected void dispose() {
 
         for (TextureHandle handle : arrayID2TextureHandle.values())
-            GLSLUtility.deleteTextureArray(handle.getGpuHandle());
+            TextureGLSLUtility.deleteTextureArray(handle.getGpuHandle());
 
         textureName2TileID.clear();
         tileID2TextureHandle.clear();
@@ -101,7 +101,7 @@ public class TextureManager extends ManagerPackage {
     // On-Demand \\
 
     public void request(String arrayName) {
-        ((InternalLoader) internalLoader).request(arrayName);
+        ((TextureLoader) internalLoader).request(arrayName);
     }
 
     // Accessible \\
@@ -169,6 +169,6 @@ public class TextureManager extends ManagerPackage {
     }
 
     public int createFloatTexture2D(float[] pixels, int width, int height, int wrapMode, int filterMode) {
-        return GLSLUtility.createFloatTexture2D(pixels, width, height, wrapMode, filterMode);
+        return TextureGLSLUtility.createFloatTexture2D(pixels, width, height, wrapMode, filterMode);
     }
 }

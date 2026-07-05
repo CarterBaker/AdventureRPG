@@ -43,7 +43,7 @@ public class WeatherManager extends ManagerPackage {
     private GlobalNoiseBranch globalNoiseBranch;
     private RegionSampleBranch regionSampleBranch;
     private TemperatureBranch temperatureBranch;
-    private InternalBufferBranch internalBuffer;
+    private WeatherBufferBranch internalBuffer;
 
     // Palette
     private Object2ShortOpenHashMap<String> weatherName2WeatherID;
@@ -66,9 +66,9 @@ public class WeatherManager extends ManagerPackage {
         this.globalNoiseBranch = create(GlobalNoiseBranch.class);
         this.regionSampleBranch = create(RegionSampleBranch.class);
         this.temperatureBranch = create(TemperatureBranch.class);
-        this.internalBuffer = create(InternalBufferBranch.class);
+        this.internalBuffer = create(WeatherBufferBranch.class);
 
-        create(InternalLoader.class);
+        create(WeatherLoader.class);
     }
 
     @Override
@@ -123,7 +123,7 @@ public class WeatherManager extends ManagerPackage {
     // On-Demand \\
 
     public void request(String weatherName) {
-        ((InternalLoader) internalLoader).request(weatherName);
+        ((WeatherLoader) internalLoader).request(weatherName);
     }
 
     // Biome Resolution \\
