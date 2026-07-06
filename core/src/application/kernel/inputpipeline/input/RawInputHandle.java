@@ -31,12 +31,17 @@ public class RawInputHandle extends HandlePackage {
     private float deltaX;
     private float deltaY;
 
+    // Scroll — accumulated this frame
+    private float scrollX;
+    private float scrollY;
+
     // Internal \\
 
     public void write(
             boolean[] keysClicked, boolean[] keysHeld, boolean[] keysReleased,
             boolean[] buttonsClicked, boolean[] buttonsHeld, boolean[] buttonsReleased,
-            float mouseX, float mouseY, float deltaX, float deltaY) {
+            float mouseX, float mouseY, float deltaX, float deltaY,
+            float scrollX, float scrollY) {
 
         System.arraycopy(keysClicked, 0, this.keysClicked, 0, this.keysClicked.length);
         System.arraycopy(keysHeld, 0, this.keysHeld, 0, this.keysHeld.length);
@@ -49,6 +54,8 @@ public class RawInputHandle extends HandlePackage {
         this.mouseY = mouseY;
         this.deltaX = deltaX;
         this.deltaY = deltaY;
+        this.scrollX = scrollX;
+        this.scrollY = scrollY;
     }
 
     public void clear() {
@@ -59,6 +66,7 @@ public class RawInputHandle extends HandlePackage {
         java.util.Arrays.fill(buttonsHeld, false);
         java.util.Arrays.fill(buttonsReleased, false);
         mouseX = mouseY = deltaX = deltaY = 0f;
+        scrollX = scrollY = 0f;
     }
 
     // Keys \\
@@ -145,5 +153,15 @@ public class RawInputHandle extends HandlePackage {
 
     public float getDeltaY() {
         return deltaY;
+    }
+
+    // Scroll \\
+
+    public float getScrollX() {
+        return scrollX;
+    }
+
+    public float getScrollY() {
+        return scrollY;
     }
 }

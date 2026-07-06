@@ -18,10 +18,12 @@ import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.assets.camera.CameraInstance;
+import engine.input.Keys;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class PlayerManager extends ManagerPackage {
@@ -31,13 +33,18 @@ public class PlayerManager extends ManagerPackage {
      * window the player renders into and the context's RawInputHandle —
      * caller decides both, no internal lookups.
      *
-     * The camera trails the player's eye position each frame at a fixed
-     * third-person distance behind it along the view direction. This
-     * distance is currently a constant (cameraDistance) — it becomes
-     * player-adjustable (scroll to zoom, a key to snap to first person) in
-     * a later pass. Gameplay logic (raycasts, placement) always reads from
-     * the eye position, never the visual camera position, so aiming stays
-     * correct regardless of how far the camera is pulled back.
+     * The camera trails the player's eye position each frame at an adjustable
+     * third-person distance behind it along the view direction. Scroll wheel
+     * (raw.getScrollY()) moves the target distance continuously; F5 snaps the
+     * target straight to first person (distance 0). The actual distance
+     * smoothly lerps toward that target every frame rather than snapping, so
+     * scroll zoom feels continuous instead of stepping. Gameplay logic
+     * (raycasts, placement) always reads from the eye position, never the
+     * visual camera position, so aiming stays correct regardless of zoom.
+     *
+     * isFirstPerson(windowID) exposes whether the current distance is at/below
+     * the first-person threshold — consumed by the render side to decide
+     * whether to hide the character's head.
      *
      * Camera rotation is driven externally by the runtime context.
      *
@@ -74,13 +81,14 @@ public class PlayerManager extends ManagerPackage {
     private Int2ObjectOpenHashMap<WindowInstance> windowID2Window;
     private Int2BooleanOpenHashMap windowID2VerifyPlayerPosition;
 
+    // Per-window zoom
+    private Int2FloatOpenHashMap windowID2ZoomDistance;
+    private Int2FloatOpenHashMap windowID2ZoomTarget;
+
     // Scratch
     private Vector3 cameraPosition;
     private Vector3 cameraOffset;
     private Vector3 eyePosition;
-
-    // Camera — temporary fixed value, replaced by adjustable zoom next step
-    private float cameraDistance;
 
     // Internal \\
 
@@ -97,11 +105,12 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2Window = new Int2ObjectOpenHashMap<>();
         this.windowID2VerifyPlayerPosition = new Int2BooleanOpenHashMap();
 
+        this.windowID2ZoomDistance = new Int2FloatOpenHashMap();
+        this.windowID2ZoomTarget = new Int2FloatOpenHashMap();
+
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
         this.eyePosition = new Vector3();
-
-        this.cameraDistance = 4.0f;
     }
 
     @Override
@@ -145,6 +154,8 @@ public class PlayerManager extends ManagerPackage {
         windowID2RawInput.put(windowID, rawInput);
         windowID2Window.put(windowID, window);
         windowID2VerifyPlayerPosition.put(windowID, true);
+        windowID2ZoomDistance.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
+        windowID2ZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         return player;
     }
 
@@ -185,15 +196,17 @@ public class PlayerManager extends ManagerPackage {
         eyePosition.set(worldPositionStruct.getPosition());
         eyePosition.add(cameraOffset);
 
+        float distance = updateZoom(windowID, raw);
+
         // Visual camera — pulled back behind the eye along the view direction.
-        // cameraDistance == 0 would put it exactly at the eye (first person).
+        // distance == 0 puts it exactly at the eye (first person).
         Vector3 direction = camera.getDirection();
 
         cameraPosition.set(eyePosition);
         cameraPosition.subtract(
-                direction.x * cameraDistance,
-                direction.y * cameraDistance,
-                direction.z * cameraDistance);
+                direction.x * distance,
+                direction.y * distance,
+                direction.z * distance);
 
         camera.setPosition(cameraPosition);
 
@@ -206,6 +219,41 @@ public class PlayerManager extends ManagerPackage {
                 input.isSecondaryAction());
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
+    }
+
+    // Zoom \\
+
+    /*
+     * Scroll adjusts the target distance continuously; F5 snaps the target
+     * straight to first person. The actual distance smoothly lerps toward
+     * whatever the target is every frame — this is what produces the "camera
+     * eases toward the new distance" feel rather than an instant jump, and
+     * also means scroll and F5 read the same target rather than fighting
+     * over two different values.
+     */
+    private float updateZoom(int windowID, RawInputHandle raw) {
+
+        float target = windowID2ZoomTarget.get(windowID);
+
+        target -= raw.getScrollY() * EngineSetting.CAMERA_ZOOM_SCROLL_SPEED;
+        target = Math.max(EngineSetting.CAMERA_ZOOM_MIN, Math.min(EngineSetting.CAMERA_ZOOM_MAX, target));
+
+        if (raw.isKeyClicked(Keys.F5))
+            target = EngineSetting.CAMERA_ZOOM_MIN;
+
+        windowID2ZoomTarget.put(windowID, target);
+
+        float current = windowID2ZoomDistance.get(windowID);
+        float smoothing = Math.min(1f, internal.getDeltaTime() * EngineSetting.CAMERA_ZOOM_SMOOTHING);
+        current += (target - current) * smoothing;
+
+        windowID2ZoomDistance.put(windowID, current);
+
+        return current;
+    }
+
+    public boolean isFirstPerson(int windowID) {
+        return windowID2ZoomDistance.get(windowID) <= EngineSetting.CAMERA_FIRST_PERSON_THRESHOLD;
     }
 
     private void writeMovementState(EntityInstance player) {

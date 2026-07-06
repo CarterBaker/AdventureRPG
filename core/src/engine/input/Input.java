@@ -4,7 +4,8 @@ public interface Input {
 
     /*
      * Platform input contract. Exposes click, held, and release state for both
-     * keys and mouse buttons, plus cursor position, deltas, and cursor shape.
+     * keys and mouse buttons, plus cursor position, deltas, cursor shape, and
+     * accumulated scroll delta for this frame.
      */
 
     void addListener(InputListener listener);
@@ -30,6 +31,10 @@ public interface Input {
     float getDeltaX();
 
     float getDeltaY();
+
+    float getScrollX();
+
+    float getScrollY();
 
     void setCursorCatched(boolean captured);
 

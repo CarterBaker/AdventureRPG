@@ -229,6 +229,15 @@ public class EngineSetting {
         public static final float CAMERA_FAR_PLANE = 1000f;
         public static final float CAMERA_MAX_PITCH_DEGREES = 89f;
 
+        // Camera Zoom \\
+
+        public static final float CAMERA_ZOOM_MIN = 0f; // first person
+        public static final float CAMERA_ZOOM_MAX = 6f; // furthest third-person distance
+        public static final float CAMERA_ZOOM_DEFAULT = 4f; // starting distance on spawn
+        public static final float CAMERA_ZOOM_SCROLL_SPEED = 0.75f; // distance change per scroll unit
+        public static final float CAMERA_ZOOM_SMOOTHING = 10f; // lerp speed toward target distance
+        public static final float CAMERA_FIRST_PERSON_THRESHOLD = 0.1f;// at/below this distance counts as first person
+
         // Camera UBO Uniforms \\
 
         public static final String UNIFORM_CAM_FAR_PLANE = "u_farPlane";

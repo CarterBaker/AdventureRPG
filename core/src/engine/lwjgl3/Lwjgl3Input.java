@@ -24,6 +24,11 @@ class Lwjgl3Input implements Input {
      * Tracks clicked, held, and released state for keys and mouse buttons.
      * Click and release latches are cleared each frame in endFrame().
      *
+     * Scroll is accumulated into scrollX/scrollY as events arrive (a single
+     * frame can receive more than one scroll callback), exposed via
+     * getScrollX()/getScrollY() for polling, and reset to zero in endFrame() —
+     * same latch-then-clear pattern as clicked/released keys.
+     *
      * Sprite cursors are created on first use via glGetTexImage readback and
      * cached by GPU handle. Subsequent calls with the same handle skip the
      * readback and set the cursor directly. All cached cursors are destroyed
@@ -53,6 +58,10 @@ class Lwjgl3Input implements Input {
     private long cursorDefault;
     private long cursorResizeH;
     private long cursorResizeV;
+
+    // Scroll State — accumulated this frame, reset in endFrame()
+    private float scrollX;
+    private float scrollY;
 
     // Sprite Cursor Cache — gpuHandle → GLFW cursor handle
     private final Int2LongOpenHashMap spriteCursorCache = new Int2LongOpenHashMap();
@@ -109,6 +118,8 @@ class Lwjgl3Input implements Input {
     }
 
     void onScroll(double dx, double dy) {
+        scrollX += (float) dx;
+        scrollY += (float) dy;
         for (int i = 0; i < listeners.size(); i++)
             listeners.get(i).onScroll((float) dx, (float) dy);
     }
@@ -138,6 +149,8 @@ class Lwjgl3Input implements Input {
     void endFrame() {
         deltaX = 0;
         deltaY = 0;
+        scrollX = 0;
+        scrollY = 0;
         clickedKeys.clear();
         releasedKeys.clear();
         clickedButtons.clear();
@@ -230,6 +243,16 @@ class Lwjgl3Input implements Input {
     @Override
     public float getDeltaY() {
         return deltaY;
+    }
+
+    @Override
+    public float getScrollX() {
+        return scrollX;
+    }
+
+    @Override
+    public float getScrollY() {
+        return scrollY;
     }
 
     @Override

@@ -245,7 +245,9 @@ public class InputManager extends ManagerPackage {
                 localX(window, raw.getMouseX()),
                 localY(window, raw.getMouseY()),
                 raw.getDeltaX() * internal.settings.mouseSensitivity,
-                raw.getDeltaY() * internal.settings.mouseSensitivity);
+                raw.getDeltaY() * internal.settings.mouseSensitivity,
+                raw.getScrollX(),
+                raw.getScrollY());
     }
 
     public boolean bindingHeld(Binding binding, WindowInstance window) {
