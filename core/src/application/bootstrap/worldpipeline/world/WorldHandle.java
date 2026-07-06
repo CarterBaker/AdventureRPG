@@ -71,4 +71,8 @@ public class WorldHandle extends HandlePackage {
     public float getRotationSpeed() {
         return data.getRotationSpeed();
     }
+
+    public float getAxialTilt() {
+        return data.getAxialTilt();
+    }
 }

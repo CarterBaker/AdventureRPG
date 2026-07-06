@@ -17,12 +17,12 @@ public class EditorEngine extends EnginePackage {
      */
 
     // Kernel
-    private application.kernel.KernelAssembly kernelAssembly;
-    private editor.kernel.KernelAssembly editorKernelAssembly;
+    private application.kernel.ApplicationKernelAssembly kernelAssembly;
+    private editor.kernel.EditorKernelAssembly editorKernelAssembly;
 
     // Bootstrap
-    private application.bootstrap.BootstrapAssembly bootstrapAssembly;
-    private editor.bootstrap.BootstrapAssembly editorBootstrapAssembly;
+    private application.bootstrap.ApplicationBootstrapAssembly bootstrapAssembly;
+    private editor.bootstrap.EditorBootstrapAssembly editorBootstrapAssembly;
 
     // Runtime
     private EditorWindowMain runtimeContext;
@@ -35,8 +35,8 @@ public class EditorEngine extends EnginePackage {
 
     @Override
     protected void kernel() {
-        this.kernelAssembly = create(application.kernel.KernelAssembly.class);
-        this.editorKernelAssembly = create(editor.kernel.KernelAssembly.class);
+        this.kernelAssembly = create(application.kernel.ApplicationKernelAssembly.class);
+        this.editorKernelAssembly = create(editor.kernel.EditorKernelAssembly.class);
     }
 
     // Bootstrap \\
@@ -45,8 +45,8 @@ public class EditorEngine extends EnginePackage {
     protected void bootstrap() {
 
         // Bootstrap
-        this.bootstrapAssembly = create(application.bootstrap.BootstrapAssembly.class);
-        this.editorBootstrapAssembly = create(editor.bootstrap.BootstrapAssembly.class);
+        this.bootstrapAssembly = create(application.bootstrap.ApplicationBootstrapAssembly.class);
+        this.editorBootstrapAssembly = create(editor.bootstrap.EditorBootstrapAssembly.class);
     }
 
     // Get \\

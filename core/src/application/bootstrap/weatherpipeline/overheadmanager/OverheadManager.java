@@ -4,11 +4,13 @@ import application.bootstrap.weatherpipeline.overheadcell.OverheadCellHandle;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherBandStruct;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
+import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongIterator;
@@ -36,6 +38,15 @@ public class OverheadManager extends ManagerPackage {
      * unwrapped local frame, since wrapping the index first would corrupt
      * the sign of the very delta that needs to cross the seam correctly.
      *
+     * Each frame, every active cell's visual drift offset is also advanced
+     * from the current local wind (see advanceCellDrift()) — a purely
+     * rendering-facing nudge, bounded via the same wrappedDelta() helper,
+     * that never influences which grid slot a cell occupies or when it
+     * streams out. Grid streaming and visual drift are deliberately
+     * decoupled: the grid must stay simple and deterministic for the wrap
+     * math above to hold, so drift is layered on top rather than folded
+     * into it.
+     *
      * Does nothing until WeatherManager.hasActiveWeatherPool() is true —
      * see that class for why the window before the calendar's first
      * day-tick has no pool to resolve a cell's identity against.
@@ -44,6 +55,7 @@ public class OverheadManager extends ManagerPackage {
     // Internal
     private WeatherManager weatherManager;
     private WorldManager worldManager;
+    private WindManager windManager;
 
     // Settings
     private int cellSize;
@@ -83,6 +95,7 @@ public class OverheadManager extends ManagerPackage {
     protected void get() {
         this.weatherManager = get(WeatherManager.class);
         this.worldManager = get(WorldManager.class);
+        this.windManager = get(WindManager.class);
     }
 
     @Override
@@ -91,9 +104,42 @@ public class OverheadManager extends ManagerPackage {
         if (!weatherManager.hasActiveWeatherPool())
             return;
 
+        advanceCellDrift();
+
         rebuildDesiredSet();
         queueStreamingChanges();
         applyPendingChanges();
+    }
+
+    // Drift \\
+
+    /*
+     * Advances every active cell's visual drift offset from the current
+     * local wind, scaled by that cell's own cloud's driftSpeedScale — a
+     * dense storm cloud can drift slower or faster than a wispy one, using
+     * a field CloudData already parsed but nothing previously consumed.
+     * Wind's x/z map onto chunk-space x/y, matching the same horizontal-
+     * plane convention Direction3Vector already uses for its own
+     * coordinate2Long packing elsewhere in the engine.
+     */
+    private void advanceCellDrift() {
+
+        Vector3 windDirection = windManager.getWindHandle().getLocalWindDirection();
+        float windSpeed = windManager.getWindHandle().getLocalWindSpeed();
+        float deltaTime = internal.getDeltaTime();
+
+        float baseDeltaX = windDirection.x * windSpeed * EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE * deltaTime;
+        float baseDeltaY = windDirection.z * windSpeed * EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE * deltaTime;
+
+        for (OverheadCellHandle cell : activeCells.values()) {
+
+            float cloudDriftScale = cell.getCurrentCloud().getCloudHandle().getDriftSpeedScale();
+
+            float driftedX = wrappedDelta(cell.getDriftOffsetX() + baseDeltaX * cloudDriftScale, cellSize);
+            float driftedY = wrappedDelta(cell.getDriftOffsetY() + baseDeltaY * cloudDriftScale, cellSize);
+
+            cell.setDriftOffset(driftedX, driftedY);
+        }
     }
 
     // Desired Set \\
@@ -150,14 +196,15 @@ public class OverheadManager extends ManagerPackage {
     }
 
     /*
-     * Shortest signed distance between two points on a wrapped axis of the
-     * given period — e.g. a point one unit past the world's right edge and
-     * a point one unit past its left edge are two units apart on this
-     * axis, not (period - 2) units apart, which is what plain subtraction
-     * would report. Deltas here are always bounded by roughly
-     * HORIZON_DISTANCE, tiny magnitudes, so float is sufficient — this is
-     * a different situation from the large-magnitude rotation math in
-     * GlobalNoiseBranch, which needed double.
+     * Shortest signed distance of a raw value against a periodic axis —
+     * e.g. a point one unit past the world's right edge and a point one
+     * unit past its left edge are two units apart on this axis, not
+     * (period - 2) units apart, which plain subtraction/modulo would
+     * report. Used both for measuring wrapped world distance
+     * (rebuildDesiredSet()) and for keeping a drift accumulator's
+     * magnitude bounded to one period (advanceCellDrift()) — the same
+     * operation either way: fold a raw value into the shortest
+     * representative range around zero for a given period.
      */
     private float wrappedDelta(float raw, int period) {
 
@@ -169,7 +216,7 @@ public class OverheadManager extends ManagerPackage {
 
         if (wrapped < -halfPeriod)
             wrapped += period;
-        else if (wrapped > halfPeriod)
+        else if (wrapped >= halfPeriod)
             wrapped -= period;
 
         return wrapped;

@@ -1,5 +1,6 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.BranchPackage;
@@ -9,11 +10,16 @@ import engine.util.mathematics.extras.Coordinate2Long;
 class GlobalNoiseBranch extends BranchPackage {
 
     /*
-     * Owns the planet's continuous rotation angle and the CPU-side global
-     * weather noise overlay driven by it. Rotation advances independently of
-     * the in-game calendar — a flat rotationSpeed (degrees per real second)
-     * times deltaTime — so this is a pure atmospheric-simulation concept,
-     * never a calendar one.
+     * Owns the planet's continuous rotation angle, its seasonal axial-tilt
+     * latitude drift, and the CPU-side global weather noise overlay driven by
+     * both. Rotation advances independently of the in-game calendar — a flat
+     * rotationSpeed (degrees per real second) times deltaTime — so the
+     * steady east-west scroll is a pure atmospheric-simulation concept, never
+     * a calendar one. Tilt is the opposite: it deliberately rides the
+     * calendar's own yearProgress, exactly like SkyColorBranch's seasonal
+     * tint blend and CurrentTrackerBranch's sunrise/sunset shift, since a
+     * planet's storm-track latitude drifting north and south over the year
+     * IS the calendar's seasons acting on weather, not an independent clock.
      *
      * Sampling works entirely in normalized, wrapped world-UV space rather
      * than raw chunk coordinates:
@@ -43,7 +49,22 @@ class GlobalNoiseBranch extends BranchPackage {
      * planetary rotation drives broadly zonal (east-west) atmospheric
      * banding rather than swirling everything around one fixed pole.
      *
-     * 3. The nominal cell size (GLOBAL_WEATHER_NOISE_CELL_SIZE) is rounded
+     * 3. Axial tilt layers a second, independent drift on top of the U-axis
+     * rotation: a wrapped shift of the V (north-south) sampling coordinate,
+     * oscillating once per calendar year with Math.sin(yearProgress * 2π).
+     * A perfectly upright world (axialTilt == 0) contributes nothing here —
+     * the field degenerates back to the pre-tilt, pure east-west scroll.
+     * A tilted world's storm bands instead visibly migrate toward one pole
+     * during that hemisphere's summer and back during its winter, exactly
+     * as axial tilt drives real seasonal storm-track migration. The tilt
+     * angle itself (0-90 degrees, see WorldHandle.getAxialTilt()) is
+     * normalized against 90° and then scaled by GLOBAL_WEATHER_TILT_INFLUENCE
+     * so an Earth-like ~23° tilt produces a gentle drift, not a full pole-to-
+     * pole sweep. Recomputed once per frame in advanceTilt() rather than
+     * per sampleGlobalIntensity() call — yearProgress moves far too slowly
+     * to need finer granularity than that.
+     *
+     * 4. The nominal cell size (GLOBAL_WEATHER_NOISE_CELL_SIZE) is rounded
      * to the nearest whole number of cells across the world's width and
      * height, and the noise hash lookup wraps cell indices with floorMod —
      * both necessary so the field tiles with zero seam at the wrap
@@ -59,13 +80,19 @@ class GlobalNoiseBranch extends BranchPackage {
 
     // Internal
     private WorldManager worldManager;
+    private ClockManager clockManager;
 
     // Settings
     private float noiseCellSize;
     private float globalInfluence;
+    private float tiltInfluence;
 
     // Rotation
     private double rotationAngleDegrees;
+
+    // Tilt — recomputed once per frame by advanceTilt(), reused by every
+    // sampleGlobalIntensity() call that frame.
+    private double latitudeShift;
 
     // Internal \\
 
@@ -75,16 +102,19 @@ class GlobalNoiseBranch extends BranchPackage {
         // Settings
         this.noiseCellSize = EngineSetting.GLOBAL_WEATHER_NOISE_CELL_SIZE;
         this.globalInfluence = EngineSetting.GLOBAL_WEATHER_INFLUENCE;
+        this.tiltInfluence = EngineSetting.GLOBAL_WEATHER_TILT_INFLUENCE;
     }
 
     @Override
     protected void get() {
         this.worldManager = get(WorldManager.class);
+        this.clockManager = get(ClockManager.class);
     }
 
     @Override
     protected void update() {
         advanceRotation();
+        advanceTilt();
     }
 
     // Rotation \\
@@ -101,13 +131,31 @@ class GlobalNoiseBranch extends BranchPackage {
             this.rotationAngleDegrees += EngineSetting.DEGREES_PER_FULL_ROTATION;
     }
 
+    // Tilt \\
+
+    /*
+     * Derives this frame's seasonal north-south sampling shift from the
+     * active world's axial tilt and the active calendar's current
+     * yearProgress. See the class comment, point 3, for the full rationale.
+     */
+    private void advanceTilt() {
+
+        float axialTiltDegrees = worldManager.getActiveWorld().getAxialTilt();
+        double yearProgress = clockManager.getClockHandle().getYearProgress();
+
+        double tiltFraction = axialTiltDegrees / 90.0;
+        double tiltPhase = yearProgress * 2.0 * Math.PI;
+
+        this.latitudeShift = Math.sin(tiltPhase) * tiltFraction * tiltInfluence;
+    }
+
     // Sampling \\
 
     /*
-     * Samples the rotating global noise field at a world-space chunk
-     * coordinate, returning a coherent [0, 1] "global storm intensity"
+     * Samples the rotating, tilt-drifting global noise field at a world-space
+     * chunk coordinate, returning a coherent [0, 1] "global storm intensity"
      * value. See the class comment for why this works in wrapped UV space
-     * rather than raw coordinates.
+     * rather than raw coordinates, and for what the tilt term contributes.
      */
     float sampleGlobalIntensity(long chunkCoordinate) {
 
@@ -120,7 +168,7 @@ class GlobalNoiseBranch extends BranchPackage {
         int chunkY = Coordinate2Long.unpackY(chunkCoordinate);
 
         double u = wrap01(chunkX / worldWidthChunks);
-        double v = wrap01(chunkY / worldHeightChunks);
+        double v = wrap01(chunkY / worldHeightChunks + latitudeShift);
 
         int cellsX = (int) Math.max(1L, Math.round(worldWidthChunks / noiseCellSize));
         int cellsY = (int) Math.max(1L, Math.round(worldHeightChunks / noiseCellSize));
@@ -139,6 +187,10 @@ class GlobalNoiseBranch extends BranchPackage {
 
     double getRotationAngleDegrees() {
         return rotationAngleDegrees;
+    }
+
+    double getLatitudeShift() {
+        return latitudeShift;
     }
 
     // Wrap \\

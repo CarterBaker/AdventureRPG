@@ -9,7 +9,7 @@ public class WorldData extends DataPackage {
 
     /*
      * Immutable world definition loaded from a PNG map and optional companion
-     * JSON. Holds identity, pixel map, scale, gravity, rotation, and time
+     * JSON. Holds identity, pixel map, scale, gravity, rotation, tilt, and time
      * configuration. worldEpochStart is the one mutable field — written from
      * the save file at runtime, never from the world definition itself.
      */
@@ -32,6 +32,12 @@ public class WorldData extends DataPackage {
     // Rotation
     private final float rotationSpeed;
 
+    // Tilt — drives the seasonal north-south drift of the global weather
+    // noise field in GlobalNoiseBranch. Zero means a perfectly upright
+    // world: storm tracks never migrate north/south, only the steady
+    // east-west rotation scroll applies.
+    private final float axialTilt;
+
     // Constructor \\
 
     public WorldData(
@@ -43,7 +49,8 @@ public class WorldData extends DataPackage {
             Vector3 gravityDirection,
             float daysPerDay,
             String calendarName,
-            float rotationSpeed) {
+            float rotationSpeed,
+            float axialTilt) {
 
         // Identity
         this.worldName = worldName;
@@ -62,6 +69,9 @@ public class WorldData extends DataPackage {
 
         // Rotation
         this.rotationSpeed = rotationSpeed;
+
+        // Tilt
+        this.axialTilt = axialTilt;
     }
 
     // Accessible \\
@@ -108,5 +118,9 @@ public class WorldData extends DataPackage {
 
     public float getRotationSpeed() {
         return rotationSpeed;
+    }
+
+    public float getAxialTilt() {
+        return axialTilt;
     }
 }

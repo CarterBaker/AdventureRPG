@@ -2,6 +2,6 @@ package editor.kernel;
 
 import engine.root.AssemblyPackage;
 
-public class KernelAssembly extends AssemblyPackage {
+public class EditorKernelAssembly extends AssemblyPackage {
 
 }

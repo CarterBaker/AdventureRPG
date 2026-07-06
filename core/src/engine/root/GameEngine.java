@@ -1,8 +1,8 @@
 package engine.root;
 
-import application.bootstrap.BootstrapAssembly;
+import application.bootstrap.ApplicationBootstrapAssembly;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
-import application.kernel.KernelAssembly;
+import application.kernel.ApplicationKernelAssembly;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeContext;
 
@@ -18,10 +18,10 @@ public class GameEngine extends EnginePackage {
      */
 
     // Kernel
-    private KernelAssembly kernelAssembly;
+    private ApplicationKernelAssembly kernelAssembly;
 
     // Bootstrap
-    private BootstrapAssembly bootstrapAssembly;
+    private ApplicationBootstrapAssembly bootstrapAssembly;
 
     // Runtime
     private RuntimeContext runtimeContext;
@@ -34,14 +34,14 @@ public class GameEngine extends EnginePackage {
 
     @Override
     protected void kernel() {
-        this.kernelAssembly = create(KernelAssembly.class);
+        this.kernelAssembly = create(ApplicationKernelAssembly.class);
     }
 
     // Bootstrap \\
 
     @Override
     protected void bootstrap() {
-        this.bootstrapAssembly = create(BootstrapAssembly.class);
+        this.bootstrapAssembly = create(ApplicationBootstrapAssembly.class);
     }
 
     // Get \\

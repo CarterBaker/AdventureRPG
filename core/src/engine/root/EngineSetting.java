@@ -328,6 +328,7 @@ public class EngineSetting {
         public static final float DEFAULT_GRAVITY_Y = -1.0f;
         public static final float DEFAULT_GRAVITY_Z = 0.0f;
         public static final float DEFAULT_WORLD_ROTATION_SPEED = 0.3f;
+        public static final float DEFAULT_AXIAL_TILT_DEGREES = 23.5f;
 
         // Rotation \\
 
@@ -352,6 +353,7 @@ public class EngineSetting {
 
         public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f; // chunk units per global noise cell
         public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f; // 0..1 blend weight of global rotating noise
+        public static final float GLOBAL_WEATHER_TILT_INFLUENCE = 0.20f; // max fractional V-shift at solstice
 
         // Season Blend \\
 
@@ -362,6 +364,7 @@ public class EngineSetting {
         public static final float HORIZON_DISTANCE = 1024.0f; // Radius from the player used for weather sampling
         public static final int OVERHEAD_CELL_SIZE = 64; // chunk units per overhead cell edge
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4; // max overhead cells created/released per frame
+        public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.35f; // chunks/sec per unit of wind speed
 
         // Wind \\
 

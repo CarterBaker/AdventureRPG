@@ -5,7 +5,7 @@ import application.kernel.threadpipeline.ThreadPipeline;
 import application.kernel.windowpipeline.WindowPipeline;
 import engine.root.AssemblyPackage;
 
-public class KernelAssembly extends AssemblyPackage {
+public class ApplicationKernelAssembly extends AssemblyPackage {
     /*
      * Creates and owns all kernel pipelines in dependency order.
      * Thread infrastructure is registered before windowing since

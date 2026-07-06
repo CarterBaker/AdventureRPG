@@ -15,7 +15,7 @@ import application.bootstrap.weatherpipeline.WeatherPipeline;
 import application.bootstrap.worldpipeline.WorldPipeline;
 import engine.root.AssemblyPackage;
 
-public class BootstrapAssembly extends AssemblyPackage {
+public class ApplicationBootstrapAssembly extends AssemblyPackage {
 
     /*
      * Creates and owns all bootstrap pipelines in dependency order.

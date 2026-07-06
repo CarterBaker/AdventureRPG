@@ -3,7 +3,7 @@ package editor.bootstrap;
 import editor.bootstrap.tabpipeline.TabPipeline;
 import engine.root.AssemblyPackage;
 
-public class BootstrapAssembly extends AssemblyPackage {
+public class EditorBootstrapAssembly extends AssemblyPackage {
 
     /*
      * Editor bootstrap root. Registers editor-global bootstrap managers that
