@@ -25,7 +25,12 @@ class BiomeBuilder extends BuilderPackage {
      * pool that WeatherManager resolves into live WeatherHandles on demand.
      * Season names are read directly from whatever keys appear in the
      * "weathers" object — there's no fixed set to validate against, since
-     * the active calendar is free to define any named seasons it likes.
+     * the active calendar is free to define any named seasons it likes, and
+     * a single biome file may be shared across worlds running different
+     * calendars. seasonNames preserves JSON declaration order alongside the
+     * lookup map, purely so WeatherManager has a deterministic order to fall
+     * back through if the calendar's actual current season isn't one this
+     * biome defined — see WeatherManager.resolveWeatherPool().
      * Each season's array accepts either a bare weather name string (given
      * a default relative chance) or an object with explicit "name" and
      * "chance" fields — both forms may be mixed freely within one array.
@@ -42,10 +47,11 @@ class BiomeBuilder extends BuilderPackage {
         short biomeID = RegistryUtility.toShortID(biomeName);
 
         JsonObject json = JsonUtility.loadJsonObject(file);
+        ObjectArrayList<String> seasonNames = new ObjectArrayList<>();
         Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries = parseWeathers(
-                json);
+                json, seasonNames);
 
-        BiomeData biomeData = new BiomeData(biomeName, biomeID, Color.WHITE, seasonWeatherEntries);
+        BiomeData biomeData = new BiomeData(biomeName, biomeID, Color.WHITE, seasonWeatherEntries, seasonNames);
 
         BiomeHandle biomeHandle = create(BiomeHandle.class);
         biomeHandle.constructor(biomeData);
@@ -55,7 +61,9 @@ class BiomeBuilder extends BuilderPackage {
 
     // Parsing \\
 
-    private Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> parseWeathers(JsonObject json) {
+    private Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> parseWeathers(
+            JsonObject json,
+            ObjectArrayList<String> outSeasonNames) {
 
         Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries = new Object2ObjectOpenHashMap<>();
 
@@ -73,6 +81,7 @@ class BiomeBuilder extends BuilderPackage {
                 entries.add(parseWeatherEntry(element));
 
             seasonWeatherEntries.put(seasonName, entries);
+            outSeasonNames.add(seasonName);
         }
 
         return seasonWeatherEntries;

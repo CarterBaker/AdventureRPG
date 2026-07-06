@@ -47,4 +47,21 @@ public class BiomeHandle extends HandlePackage {
 
         return entries;
     }
+
+    public boolean hasWeathersForSeason(String seasonName) {
+        return biomeData.getSeasonWeatherEntries().containsKey(seasonName);
+    }
+
+    /*
+     * Every season name this biome actually defined a "weathers" block for,
+     * in JSON declaration order. Used by WeatherManager as a deterministic
+     * fallback sequence when the calendar's current season isn't among them.
+     */
+    public ObjectArrayList<String> getDefinedSeasonNames() {
+        return biomeData.getSeasonNames();
+    }
+
+    public boolean hasAnyWeathers() {
+        return !biomeData.getSeasonNames().isEmpty();
+    }
 }

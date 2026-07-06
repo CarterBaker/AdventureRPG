@@ -355,7 +355,7 @@ public class EngineSetting {
         public static final String WEATHER_REGION_DATA_UBO = "WeatherRegionData";
         public static final int WEATHER_REGION_SAMPLE_DISTANCE = 96; // chunk units between cardinal samples
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f; // chunk units per noise cell
-        public static final float WEATHER_WIND_DRIFT_SPEED = 0.01f; // noise-space units per second
+        public static final float WEATHER_WIND_DRIFT_SCALE = 0.35f; // chunks/sec per unit of wind speed
         public static final float WEATHER_LOCAL_DRIFT_TIME_WRAP = 100000.0f;
 
         // Global Weather Noise \\

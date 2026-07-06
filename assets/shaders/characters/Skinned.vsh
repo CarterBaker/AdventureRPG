@@ -9,6 +9,7 @@ layout(location = 4) in mat4 a_instanceModel;
 #include "includes/CameraData.glsl"
 
 uniform sampler2D u_bonePalette;
+uniform float u_hiddenBone;
 
 out vec2 v_uv;
 
@@ -26,6 +27,20 @@ mat4 fetchBoneMatrix(int boneIndex) {
         row0.w, row1.w, row2.w, 1.0);
 }
 
+bool isHiddenVertex() {
+    if (u_hiddenBone < 0.0)
+    return false;
+
+    int hidden = int(u_hiddenBone + 0.5);
+
+    if (a_boneWeights.x > 0.5 && int(a_boneIndices.x) == hidden) return true;
+    if (a_boneWeights.y > 0.5 && int(a_boneIndices.y) == hidden) return true;
+    if (a_boneWeights.z > 0.5 && int(a_boneIndices.z) == hidden) return true;
+    if (a_boneWeights.w > 0.5 && int(a_boneIndices.w) == hidden) return true;
+
+    return false;
+}
+
 void main() {
     mat4 skin =
     a_boneWeights.x * fetchBoneMatrix(int(a_boneIndices.x)) +
@@ -37,5 +52,9 @@ void main() {
     vec4 worldPosition    = a_instanceModel * skinnedPosition;
 
     v_uv = a_uv;
+
+    if (isHiddenVertex())
+    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+    else
     gl_Position = u_viewProjection * worldPosition;
 }

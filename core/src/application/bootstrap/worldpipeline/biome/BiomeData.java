@@ -13,6 +13,10 @@ public class BiomeData extends DataPackage {
      * on demand. Seasons are keyed by name rather than a fixed enum — the
      * active calendar decides what those names are, so a biome's "weathers"
      * block can use whatever season names its world's calendar defines.
+     * seasonNames preserves JSON declaration order for the same keys —
+     * WeatherManager falls back through this order when the calendar's
+     * actual current season isn't one this biome defined, rather than
+     * crashing the moment a rare or renamed season first becomes active.
      * Each pool entry pairs a weather name with its relative chance weight
      * — see WeatherChanceStruct. Color is immutable — set at bootstrap from
      * JSON definition. Owned by BiomeHandle for the full engine session.
@@ -27,6 +31,7 @@ public class BiomeData extends DataPackage {
 
     // Weather
     private final Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries;
+    private final ObjectArrayList<String> seasonNames;
 
     // Constructor \\
 
@@ -34,7 +39,8 @@ public class BiomeData extends DataPackage {
             String biomeName,
             short biomeID,
             Color biomeColor,
-            Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries) {
+            Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> seasonWeatherEntries,
+            ObjectArrayList<String> seasonNames) {
 
         // Identity
         this.biomeName = biomeName;
@@ -45,6 +51,7 @@ public class BiomeData extends DataPackage {
 
         // Weather
         this.seasonWeatherEntries = seasonWeatherEntries;
+        this.seasonNames = seasonNames;
     }
 
     // Accessible \\
@@ -63,5 +70,9 @@ public class BiomeData extends DataPackage {
 
     public Object2ObjectOpenHashMap<String, ObjectArrayList<WeatherChanceStruct>> getSeasonWeatherEntries() {
         return seasonWeatherEntries;
+    }
+
+    public ObjectArrayList<String> getSeasonNames() {
+        return seasonNames;
     }
 }

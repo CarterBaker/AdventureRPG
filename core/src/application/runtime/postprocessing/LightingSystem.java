@@ -35,28 +35,28 @@ public class LightingSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.passManager    = get(PassManager.class);
-        this.renderManager  = get(RenderManager.class);
-        this.fboManager     = get(FboManager.class);
+        this.passManager = get(PassManager.class);
+        this.renderManager = get(RenderManager.class);
+        this.fboManager = get(FboManager.class);
         this.fboRenderSystem = get(FboRenderSystem.class);
-        this.worldSystem    = get(WorldSystem.class);
-        this.ssaoSystem     = get(SSAOSystem.class);
+        this.worldSystem = get(WorldSystem.class);
+        this.ssaoSystem = get(SSAOSystem.class);
     }
 
     @Override
     protected void awake() {
         this.lightingPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_LIGHTING);
-        this.litFbo       = fboManager.cloneFbo(RuntimeSetting.FBO_LIT, context.getWindow());
+        this.litFbo = fboManager.cloneFbo(RuntimeSetting.FBO_LIT, context.getWindow());
 
         FboInstance worldFbo = worldSystem.getWorldFbo();
-        FboInstance ssaoFbo  = ssaoSystem.getSsaoFbo();
+        FboInstance ssaoFbo = ssaoSystem.getSsaoFbo();
         MaterialInstance mat = lightingPass.getModelInstance().getMaterial();
 
-        mat.setUniform("u_gAlbedo",   worldFbo.getColorTexture("albedo"));
-        mat.setUniform("u_gNormal",   worldFbo.getColorTexture("normal"));
+        mat.setUniform("u_gAlbedo", worldFbo.getColorTexture("albedo"));
+        mat.setUniform("u_gNormal", worldFbo.getColorTexture("normal"));
         mat.setUniform("u_gMaterial", worldFbo.getColorTexture("material"));
-        mat.setUniform("u_gDepth",    worldFbo.getDepthTexture());
-        mat.setUniform("u_ssaoTex",   ssaoFbo.getColorTexture("ao"));
+        mat.setUniform("u_gDepth", worldFbo.getDepthTexture());
+        mat.setUniform("u_ssaoTex", ssaoFbo.getColorTexture("ao"));
     }
 
     @Override

@@ -132,15 +132,15 @@ public class WeatherManager extends ManagerPackage {
      * Resolves a biome's named-season weather chance entries into live
      * handles, preserving JSON declaration order — RegionSampleBranch blends
      * across this pool by chance-weighted band, not array position, so no
-     * sort is needed here.
+     * sort is needed here. Falls back via resolveFallbackEntries() when the
+     * biome has no entries for this exact season name — see that method.
      */
     private ObjectArrayList<WeatherPoolEntryStruct> resolveWeatherPool(BiomeHandle biomeHandle, String season) {
 
         ObjectArrayList<WeatherChanceStruct> entries = biomeHandle.getWeatherEntriesForSeason(season);
 
         if (entries.isEmpty())
-            throwException("Biome \"" + biomeHandle.getBiomeName() +
-                    "\" has no weathers defined for season \"" + season + "\"");
+            entries = resolveFallbackEntries(biomeHandle, season);
 
         ObjectArrayList<WeatherPoolEntryStruct> pool = new ObjectArrayList<>(entries.size());
 
@@ -151,6 +151,37 @@ public class WeatherManager extends ManagerPackage {
         }
 
         return pool;
+    }
+
+    /*
+     * Called only when the biome has no "weathers" entry for the calendar's
+     * exact current season name — a mismatched or renamed season, not
+     * necessarily a malformed biome (one biome file may be shared across
+     * worlds running different calendars with different season names).
+     * Logs a clear warning naming both the missing season and the biome's
+     * actual defined seasons, then falls back to the first season the biome
+     * DID define (JSON declaration order) so an unexpected season name
+     * degrades to "wrong-but-plausible weather" instead of crashing the
+     * engine outright the first time that season becomes active — which,
+     * for a rare or custom-calendar season, could be arbitrarily far into a
+     * session. A biome with literally no "weathers" block at all is a
+     * genuine data error and still throws — there is nothing sensible to
+     * fall back to.
+     */
+    private ObjectArrayList<WeatherChanceStruct> resolveFallbackEntries(BiomeHandle biomeHandle, String season) {
+
+        if (!biomeHandle.hasAnyWeathers())
+            throwException("Biome \"" + biomeHandle.getBiomeName() +
+                    "\" has no \"weathers\" block defined at all — cannot resolve any season, including \""
+                    + season + "\"");
+
+        String fallbackSeason = biomeHandle.getDefinedSeasonNames().get(0);
+
+        errorLog("[WeatherManager] Biome \"" + biomeHandle.getBiomeName() +
+                "\" has no weathers defined for season \"" + season + "\" — falling back to \"" +
+                fallbackSeason + "\". Defined seasons: " + biomeHandle.getDefinedSeasonNames());
+
+        return biomeHandle.getWeatherEntriesForSeason(fallbackSeason);
     }
 
     // Accessible \\

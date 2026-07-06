@@ -2,21 +2,23 @@ package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
+import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.vectors.Vector3;
 import engine.util.random.WeightedChanceUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RegionSampleBranch extends BranchPackage {
 
     /*
-     * Continuously samples a coherent, drifting noise field over world-space
-     * chunk coordinates at the reference coordinate and its four cardinal
-     * neighbors. Each direction's local drift noise is blended with
-     * GlobalNoiseBranch's planet-rotation-driven noise (see
+     * Continuously samples a coherent noise field over world-space chunk
+     * coordinates at the reference coordinate and its four cardinal
+     * neighbors. Each direction's local noise is blended with
+     * GlobalNoiseBranch's planet-rotation-and-tilt-driven noise (see
      * EngineSetting.GLOBAL_WEATHER_INFLUENCE for the blend weight) before
      * resolving against the chance-weighted pool handed to it, via
      * resolveBand() — the single canonical noise-to-weather resolution
@@ -44,31 +46,60 @@ class RegionSampleBranch extends BranchPackage {
      * across the boundary between adjacent bands so weather never pops as
      * the noise field drifts — it fades.
      *
+     * Wind-driven drift — the actual "storms move with the wind" mechanic
+     * -------------------------------------------------------------------
+     * The local noise field's sampling position is displaced every frame by
+     * the SAME live WindHandle.getLocalWindDirection()/getLocalWindSpeed()
+     * every other wind-aware system reads (see LocalWindBranch) — not by a
+     * fixed elapsedTime * constant scroll the way this used to work. Wind
+     * x/z map onto chunk-space x/y, the same horizontal-plane convention
+     * OverheadManager already uses for its own cosmetic cloud-sprite drift,
+     * so the underlying storm PATTERN drifts in visual lockstep with the
+     * decorative clouds sitting on top of it rather than the two silently
+     * disagreeing.
+     *
+     * advanceWindDrift() integrates velocity into position incrementally,
+     * once per frame (driftChunksX/Y += direction * speed * scale * dt),
+     * rather than recomputing drift from elapsedTime * currentWind every
+     * call. The latter would retroactively apply this instant's wind to
+     * the entire session's accumulated history the moment wind direction
+     * or speed changes — a visible pop the moment a gust or season turn
+     * changes the wind. Both accumulators are wrapped modulo the active
+     * world's own chunk-space width/height every frame, exactly like
+     * GlobalNoiseBranch wraps its own rotation angle, so they never grow
+     * large enough to lose float precision over a long session — and,
+     * because LocalWindBranch itself reads WeatherManager.getWindSpeedScale()
+     * (this class's own center sample), wind and weather form one closed
+     * feedback loop: wind pushes the storm pattern, the storm's own
+     * windSpeedScale in turn shapes the wind blowing through it.
+     *
      * Local noise samples in normalized, wrapped world-UV space rather than
-     * raw chunk coordinates — chunk coordinates are converted to a UV
-     * fraction of the world's own chunk-space width/height in double
-     * precision, wrapped into [0, 1), scaled to a whole number of noise
-     * cells, and the hash lookup wraps cell indices with floorMod. This
-     * keeps the field seamless at the world edge instead of sampling two
-     * unrelated hash values on either side of the seam. elapsedTime is
-     * wrapped modulo a large but bounded period for the same reason
-     * GlobalNoiseBranch wraps its own rotation angle.
+     * raw chunk coordinates — chunk coordinates (including the drifted
+     * offset) are converted to a UV fraction of the world's own chunk-space
+     * width/height in double precision, wrapped into [0, 1), scaled to a
+     * whole number of noise cells, and the hash lookup wraps cell indices
+     * with floorMod. This keeps the field seamless at the world edge
+     * instead of sampling two unrelated hash values on either side of the
+     * seam.
      */
 
     // Internal
     private GlobalNoiseBranch globalNoiseBranch;
     private WorldManager worldManager;
+    private WindManager windManager;
 
     // Settings
     private int sampleDistance;
     private float noiseCellSize;
-    private float windDriftSpeed;
+    private float windDriftScale;
 
     // Reference
     private long referenceCoordinate;
 
-    // Drift
-    private float elapsedTime;
+    // Drift — accumulated chunk-space displacement of the local weather
+    // noise field, driven every frame by the live local wind vector.
+    private double driftChunksX;
+    private double driftChunksY;
 
     // Samples — CENTER, NORTH, EAST, SOUTH, WEST
     private WeatherSampleStruct[] samples;
@@ -84,7 +115,7 @@ class RegionSampleBranch extends BranchPackage {
         // Settings
         this.sampleDistance = EngineSetting.WEATHER_REGION_SAMPLE_DISTANCE;
         this.noiseCellSize = EngineSetting.WEATHER_NOISE_CELL_SIZE;
-        this.windDriftSpeed = EngineSetting.WEATHER_WIND_DRIFT_SPEED;
+        this.windDriftScale = EngineSetting.WEATHER_WIND_DRIFT_SCALE;
 
         // Reference
         this.referenceCoordinate = Coordinate2Long.pack(0, 0);
@@ -99,6 +130,7 @@ class RegionSampleBranch extends BranchPackage {
     protected void get() {
         this.globalNoiseBranch = get(GlobalNoiseBranch.class);
         this.worldManager = get(WorldManager.class);
+        this.windManager = get(WindManager.class);
     }
 
     // Reference \\
@@ -115,8 +147,7 @@ class RegionSampleBranch extends BranchPackage {
 
     void sampleRegions(ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
-        elapsedTime += internal.getDeltaTime();
-        elapsedTime %= EngineSetting.WEATHER_LOCAL_DRIFT_TIME_WRAP;
+        advanceWindDrift();
 
         int originX = Coordinate2Long.unpackX(referenceCoordinate);
         int originY = Coordinate2Long.unpackY(referenceCoordinate);
@@ -138,14 +169,49 @@ class RegionSampleBranch extends BranchPackage {
         writeSample(sample, bandScratch.getLow(), bandScratch.getHigh(), bandScratch.getBlendFactor());
     }
 
+    // Wind Drift \\
+
+    /*
+     * Advances the local weather noise field's drift from the live local
+     * wind vector — see the class comment for the full rationale. Called
+     * once per frame, before any of the 5 direction samples.
+     */
+    private void advanceWindDrift() {
+
+        Vector3 windDirection = windManager.getWindHandle().getLocalWindDirection();
+        float windSpeed = windManager.getWindHandle().getLocalWindSpeed();
+        float deltaTime = internal.getDeltaTime();
+
+        driftChunksX += windDirection.x * windSpeed * windDriftScale * deltaTime;
+        driftChunksY += windDirection.z * windSpeed * windDriftScale * deltaTime;
+
+        WorldHandle activeWorld = worldManager.getActiveWorld();
+        double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
+        double worldHeightChunks = activeWorld.getWorldScale().y / (double) EngineSetting.CHUNK_SIZE;
+
+        driftChunksX = wrapPeriod(driftChunksX, worldWidthChunks);
+        driftChunksY = wrapPeriod(driftChunksY, worldHeightChunks);
+    }
+
+    private double wrapPeriod(double value, double period) {
+
+        if (period <= 0)
+            return 0.0;
+
+        double wrapped = value % period;
+
+        return wrapped < 0 ? wrapped + period : wrapped;
+    }
+
     // Resolution \\
 
     /*
-     * Combines this coordinate's local drift noise with the global
-     * rotation-driven noise, then resolves the blend against the supplied
-     * chance-weighted pool. Writes into the caller-supplied struct rather
-     * than allocating — this is the method WeatherManager.resolveWeatherBand()
-     * calls on behalf of any cross-package caller.
+     * Combines this coordinate's wind-drifted local noise with the global
+     * rotation-and-tilt-driven noise, then resolves the blend against the
+     * supplied chance-weighted pool. Writes into the caller-supplied struct
+     * rather than allocating — this is the method
+     * WeatherManager.resolveWeatherBand() calls on behalf of any
+     * cross-package caller.
      */
     void resolveBand(WeatherBandStruct out, int chunkX, int chunkY, ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
@@ -243,8 +309,9 @@ class RegionSampleBranch extends BranchPackage {
 
     /*
      * Coherent 2D value noise over chunk coordinates, wrapped seamlessly at
-     * the world edge and drifted over real time so weather fronts visibly
-     * move across the world independently of the planet's rotation.
+     * the world edge and displaced by the wind-driven drift accumulators
+     * from advanceWindDrift() so weather fronts visibly move across the
+     * world with the wind, independently of the planet's rotation/tilt.
      */
     private float sampleNoise(int chunkX, int chunkY) {
 
@@ -256,12 +323,10 @@ class RegionSampleBranch extends BranchPackage {
         int cellsX = (int) Math.max(1L, Math.round(worldWidthChunks / noiseCellSize));
         int cellsY = (int) Math.max(1L, Math.round(worldHeightChunks / noiseCellSize));
 
-        double u = wrap01(chunkX / worldWidthChunks);
-        double v = wrap01(chunkY / worldHeightChunks);
+        double u = wrap01((chunkX + driftChunksX) / worldWidthChunks);
+        double v = wrap01((chunkY + driftChunksY) / worldHeightChunks);
 
-        float drift = elapsedTime * windDriftSpeed;
-
-        double sampleX = u * cellsX + drift;
+        double sampleX = u * cellsX;
         double sampleY = v * cellsY;
 
         int x0 = (int) Math.floor(sampleX);

@@ -5,6 +5,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
+import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.runtime.world.WorldSystem;
 import engine.assets.camera.CameraInstance;
 import engine.root.SystemPackage;
@@ -20,14 +21,32 @@ public class PlayerRenderSystem extends SystemPackage {
      * LightingSystem/SSAOSystem already read from, which is the one that
      * actually gets composited to the screen.
      *
-     * Lives here, inside RuntimeContext, rather than as a bootstrap-global
-     * system, specifically so it always has a direct reference to this exact
-     * window's own WorldSystem/FBO — mirrors SkySystem/SSAOSystem exactly.
-     *
      * Model matrix applies a yaw-only rotation sourced from this window's
      * camera direction so the body turns to face wherever the player looks.
      * Pitch is intentionally excluded — a body shouldn't tip forward/back
      * just because the camera looks up or down.
+     *
+     * First-person head hiding: when PlayerManager reports this window is at
+     * (or below) the first-person zoom threshold, the head bone's index is
+     * written into the shared character material's "u_hiddenBone" uniform
+     * every frame before the draw call is pushed. Skinned.vsh collapses any
+     * vertex whose dominant bone matches that index to a single clip-space
+     * point, producing a zero-area, unrasterized triangle — the head simply
+     * doesn't draw. Passing -1 (any negative) disables hiding entirely.
+     *
+     * This material is currently shared by every instance of the Humanoid
+     * template (EntityData clones one MaterialInstance per template at
+     * bootstrap, not per spawned entity) — fine while there is exactly one
+     * player. If NPCs or additional players ever share this template, this
+     * uniform would need to move to per-instance material state instead of
+     * living on the shared template material.
+     *
+     * There is no shadow-casting pass anywhere in this engine yet, so "hide
+     * the head but keep its shadow" simplifies for now to just hiding it in
+     * this one color draw call. Whenever a shadow pass exists, giving that
+     * pass its own draw call that always sets u_hiddenBone back to -1 before
+     * it submits is all that's needed to keep the head casting a shadow while
+     * staying invisible in the color pass.
      */
 
     // Internal
@@ -86,14 +105,28 @@ public class PlayerRenderSystem extends SystemPackage {
                 -sinYaw, 0, cosYaw, position.z,
                 0, 0, 0, 1);
 
+        MaterialInstance material = player.getEntityData().getCharacterMaterial();
+        applyHeadVisibility(windowID, player, material);
+
         FboInstance worldFbo = worldSystem.getWorldFbo();
 
         renderManager.pushSkinnedCall(
                 player.getEntityData().getCharacterMesh(),
-                player.getEntityData().getCharacterMaterial(),
+                material,
                 modelMatrixScratch,
                 animationState.getSkinningMatrices(),
                 worldFbo,
                 context.getWindow());
+    }
+
+    private void applyHeadVisibility(int windowID, EntityInstance player, MaterialInstance material) {
+
+        boolean firstPerson = playerManager.isFirstPerson(windowID);
+
+        float hiddenBone = firstPerson
+                ? (float) player.getEntityData().getRigHandle().getBoneIndex("head")
+                : -1f;
+
+        material.setUniform("u_hiddenBone", hiddenBone);
     }
 }
