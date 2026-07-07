@@ -8,9 +8,10 @@ import engine.root.EngineSetting;
 class WeatherBufferBranch extends BranchPackage {
 
     /*
-     * Pushes the centre weather sample to the WeatherData UBO and the four
-     * cardinal samples to the WeatherRegionData UBO every frame. Wired to
-     * RegionSampleBranch via assignData() after awake.
+     * Pushes the centre weather sample to the WeatherData UBO and all eight
+     * directional samples (N, NE, E, SE, S, SW, W, NW) to the
+     * WeatherRegionData UBO every frame. Wired to RegionSampleBranch via
+     * assignData() after awake.
      */
 
     // Internal
@@ -66,12 +67,20 @@ class WeatherBufferBranch extends BranchPackage {
 
         pushRegion(regionSampleBranch.getNorthSample(),
                 "u_cloudCoverageNorth", "u_cloudColorNorth", "u_cloudAltitudeNorth");
+        pushRegion(regionSampleBranch.getNortheastSample(),
+                "u_cloudCoverageNortheast", "u_cloudColorNortheast", "u_cloudAltitudeNortheast");
         pushRegion(regionSampleBranch.getEastSample(),
                 "u_cloudCoverageEast", "u_cloudColorEast", "u_cloudAltitudeEast");
+        pushRegion(regionSampleBranch.getSoutheastSample(),
+                "u_cloudCoverageSoutheast", "u_cloudColorSoutheast", "u_cloudAltitudeSoutheast");
         pushRegion(regionSampleBranch.getSouthSample(),
                 "u_cloudCoverageSouth", "u_cloudColorSouth", "u_cloudAltitudeSouth");
+        pushRegion(regionSampleBranch.getSouthwestSample(),
+                "u_cloudCoverageSouthwest", "u_cloudColorSouthwest", "u_cloudAltitudeSouthwest");
         pushRegion(regionSampleBranch.getWestSample(),
                 "u_cloudCoverageWest", "u_cloudColorWest", "u_cloudAltitudeWest");
+        pushRegion(regionSampleBranch.getNorthwestSample(),
+                "u_cloudCoverageNorthwest", "u_cloudColorNorthwest", "u_cloudAltitudeNorthwest");
 
         uboManager.push(weatherRegionData);
     }

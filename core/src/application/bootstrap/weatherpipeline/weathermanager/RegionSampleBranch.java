@@ -8,6 +8,7 @@ import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.extras.Direction2Vector;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.random.WeightedChanceUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -16,72 +17,57 @@ class RegionSampleBranch extends BranchPackage {
 
     /*
      * Continuously samples a coherent noise field over world-space chunk
-     * coordinates at the reference coordinate and its four cardinal
-     * neighbors. Each direction's local noise is blended with
-     * GlobalNoiseBranch's planet-rotation-and-tilt-driven noise (see
-     * EngineSetting.GLOBAL_WEATHER_INFLUENCE for the blend weight) before
-     * resolving against the chance-weighted pool handed to it, via
-     * resolveBand() — the single canonical noise-to-weather resolution
-     * path, also reachable cross-package through
-     * WeatherManager.resolveWeatherBand() so a future overhead cloud grid
-     * resolves weather with the exact same algorithm this class already
-     * uses for its own 5-point region sampling, rather than a second,
-     * possibly-drifting copy of the same logic.
+     * coordinates at the reference coordinate and its eight surrounding
+     * directions (Direction2Vector's own order: N, NE, E, SE, S, SW, W, NW).
+     * Each direction's local noise is blended with GlobalNoiseBranch's
+     * planet-rotation-and-tilt-driven noise
+     * (EngineSetting.GLOBAL_WEATHER_INFLUENCE)
+     * before resolving against the supplied chance-weighted pool via
+     * resolveBand() — the single canonical noise-to-weather resolution path,
+     * also reachable cross-package through WeatherManager.resolveWeatherBand().
      *
-     * resolveBand() only ever reports which two pool entries a coordinate's
-     * noise currently sits between and how far across that blend band it
-     * is — see WeatherBandStruct. It does not remember anything between
-     * calls. A caller that wants a stable, non-reblending weather identity
-     * (an overhead cell) is expected to read WeatherBandStruct.getPrimary()
-     * once and hold onto it itself, re-resolving only when it chooses to
-     * transition — this class's own sampleDirection() deliberately does
-     * the opposite, reblending every call, since the 5 region samples
-     * exist purely to drive smoothly fading fog/cloud UBO values, not a
-     * persistent identity.
+     * resolveBand() only reports which two pool entries a coordinate sits
+     * between and how far across that blend band it is (WeatherBandStruct).
+     * It remembers nothing between calls — a caller wanting a persistent,
+     * non-reblending identity (an overhead cell) should read
+     * WeatherBandStruct.getPrimary() once and hold it. This class's own
+     * sampleDirection() deliberately reblends every call since these 9
+     * samples only ever drive smoothly fading fog/cloud UBO values.
      *
-     * Noise position maps to a cumulative chance band per weather (see
-     * bandFromPool), so a weather with a larger relative chance occupies a
-     * proportionally wider band of the combined noise field and appears
-     * more often — never a single evenly-spaced slot. Blending happens
-     * across the boundary between adjacent bands so weather never pops as
-     * the noise field drifts — it fades.
+     * Diagonal samples are placed at the same Euclidean distance from the
+     * reference as the cardinal ones — a diagonal direction has both axes
+     * at full magnitude (dir.x, dir.y both ±1), which without correction
+     * would put it sqrt(2) times farther out. DIAGONAL_AXIS_SCALE (1/sqrt(2))
+     * corrects that per-axis before the offset is applied.
      *
      * Wind-driven drift — the actual "storms move with the wind" mechanic
      * -------------------------------------------------------------------
      * The local noise field's sampling position is displaced every frame by
-     * the SAME live WindHandle.getLocalWindDirection()/getLocalWindSpeed()
-     * every other wind-aware system reads (see LocalWindBranch) — not by a
-     * fixed elapsedTime * constant scroll the way this used to work. Wind
-     * x/z map onto chunk-space x/y, the same horizontal-plane convention
-     * OverheadManager already uses for its own cosmetic cloud-sprite drift,
-     * so the underlying storm PATTERN drifts in visual lockstep with the
-     * decorative clouds sitting on top of it rather than the two silently
-     * disagreeing.
-     *
-     * advanceWindDrift() integrates velocity into position incrementally,
-     * once per frame (driftChunksX/Y += direction * speed * scale * dt),
-     * rather than recomputing drift from elapsedTime * currentWind every
-     * call. The latter would retroactively apply this instant's wind to
-     * the entire session's accumulated history the moment wind direction
-     * or speed changes — a visible pop the moment a gust or season turn
-     * changes the wind. Both accumulators are wrapped modulo the active
+     * the SAME live WindHandle local wind vector every other wind-aware
+     * system reads (see LocalWindBranch) — not a fixed elapsedTime*constant
+     * scroll. advanceWindDrift() integrates velocity into position
+     * incrementally (drift += direction * speed * scale * dt) rather than
+     * recomputing from elapsedTime * currentWind, which would retroactively
+     * apply this instant's wind to the whole session's history the moment
+     * wind changes — a visible pop. Both drift accumulators wrap modulo the
      * world's own chunk-space width/height every frame, exactly like
-     * GlobalNoiseBranch wraps its own rotation angle, so they never grow
-     * large enough to lose float precision over a long session — and,
-     * because LocalWindBranch itself reads WeatherManager.getWindSpeedScale()
-     * (this class's own center sample), wind and weather form one closed
-     * feedback loop: wind pushes the storm pattern, the storm's own
-     * windSpeedScale in turn shapes the wind blowing through it.
+     * GlobalNoiseBranch wraps its rotation angle. Because LocalWindBranch
+     * itself reads WeatherManager.getWindSpeedScale() (this class's own
+     * center sample), wind and weather form one closed feedback loop: wind
+     * pushes the storm pattern, the storm's own windSpeedScale in turn
+     * shapes the wind blowing through it.
      *
-     * Local noise samples in normalized, wrapped world-UV space rather than
-     * raw chunk coordinates — chunk coordinates (including the drifted
-     * offset) are converted to a UV fraction of the world's own chunk-space
-     * width/height in double precision, wrapped into [0, 1), scaled to a
-     * whole number of noise cells, and the hash lookup wraps cell indices
-     * with floorMod. This keeps the field seamless at the world edge
-     * instead of sampling two unrelated hash values on either side of the
-     * seam.
+     * Local noise samples in normalized, wrapped world-UV space — chunk
+     * coordinates (plus the drifted offset) convert to a UV fraction of the
+     * world's own chunk-space width/height in double precision, wrapped
+     * into [0, 1), scaled to a whole number of noise cells, with the hash
+     * lookup wrapping cell indices via floorMod — seamless at the world
+     * edge instead of two unrelated hash values on either side of the seam.
      */
+
+    // Scales a diagonal direction's per-axis offset so its Euclidean
+    // distance from the reference matches the four cardinal samples exactly.
+    private static final float DIAGONAL_AXIS_SCALE = 0.70710678f;
 
     // Internal
     private GlobalNoiseBranch globalNoiseBranch;
@@ -101,7 +87,10 @@ class RegionSampleBranch extends BranchPackage {
     private double driftChunksX;
     private double driftChunksY;
 
-    // Samples — CENTER, NORTH, EAST, SOUTH, WEST
+    // Samples — index 0 is the centre; indices 1-8 mirror Direction2Vector's
+    // own ordinal order (NORTH, NORTHEAST, EAST, SOUTHEAST, SOUTH,
+    // SOUTHWEST, WEST, NORTHWEST), so a direction's ordinal and its sample
+    // index are always exactly one apart, with no separate lookup table.
     private WeatherSampleStruct[] samples;
 
     // Scratch — reused every sample call, never reallocated
@@ -120,8 +109,8 @@ class RegionSampleBranch extends BranchPackage {
         // Reference
         this.referenceCoordinate = Coordinate2Long.pack(0, 0);
 
-        // Samples
-        this.samples = new WeatherSampleStruct[5];
+        // Samples — centre + all 8 Direction2Vector entries
+        this.samples = new WeatherSampleStruct[1 + Direction2Vector.LENGTH];
         for (int i = 0; i < samples.length; i++)
             samples[i] = new WeatherSampleStruct();
     }
@@ -153,10 +142,18 @@ class RegionSampleBranch extends BranchPackage {
         int originY = Coordinate2Long.unpackY(referenceCoordinate);
 
         sampleDirection(samples[0], originX, originY, pool);
-        sampleDirection(samples[1], originX, originY - sampleDistance, pool);
-        sampleDirection(samples[2], originX + sampleDistance, originY, pool);
-        sampleDirection(samples[3], originX, originY + sampleDistance, pool);
-        sampleDirection(samples[4], originX - sampleDistance, originY, pool);
+
+        for (int i = 0; i < Direction2Vector.LENGTH; i++) {
+
+            Direction2Vector dir = Direction2Vector.VALUES[i];
+            boolean isDiagonal = dir.x != 0 && dir.y != 0;
+            float axisScale = isDiagonal ? DIAGONAL_AXIS_SCALE : 1.0f;
+
+            int sampleX = originX + Math.round(dir.x * sampleDistance * axisScale);
+            int sampleY = originY + Math.round(dir.y * sampleDistance * axisScale);
+
+            sampleDirection(samples[i + 1], sampleX, sampleY, pool);
+        }
     }
 
     private void sampleDirection(
@@ -174,7 +171,7 @@ class RegionSampleBranch extends BranchPackage {
     /*
      * Advances the local weather noise field's drift from the live local
      * wind vector — see the class comment for the full rationale. Called
-     * once per frame, before any of the 5 direction samples.
+     * once per frame, before any of the 9 direction samples.
      */
     private void advanceWindDrift() {
 
@@ -377,19 +374,39 @@ class RegionSampleBranch extends BranchPackage {
         return samples[0];
     }
 
+    WeatherSampleStruct getSampleForDirection(Direction2Vector direction) {
+        return samples[direction.index + 1];
+    }
+
     WeatherSampleStruct getNorthSample() {
-        return samples[1];
+        return samples[Direction2Vector.NORTH.index + 1];
+    }
+
+    WeatherSampleStruct getNortheastSample() {
+        return samples[Direction2Vector.NORTHEAST.index + 1];
     }
 
     WeatherSampleStruct getEastSample() {
-        return samples[2];
+        return samples[Direction2Vector.EAST.index + 1];
+    }
+
+    WeatherSampleStruct getSoutheastSample() {
+        return samples[Direction2Vector.SOUTHEAST.index + 1];
     }
 
     WeatherSampleStruct getSouthSample() {
-        return samples[3];
+        return samples[Direction2Vector.SOUTH.index + 1];
+    }
+
+    WeatherSampleStruct getSouthwestSample() {
+        return samples[Direction2Vector.SOUTHWEST.index + 1];
     }
 
     WeatherSampleStruct getWestSample() {
-        return samples[4];
+        return samples[Direction2Vector.WEST.index + 1];
+    }
+
+    WeatherSampleStruct getNorthwestSample() {
+        return samples[Direction2Vector.NORTHWEST.index + 1];
     }
 }

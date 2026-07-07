@@ -35,16 +35,26 @@ public class PlayerManager extends ManagerPackage {
      *
      * The camera trails the player's eye position each frame at an adjustable
      * third-person distance behind it along the view direction. Scroll wheel
-     * (raw.getScrollY()) moves the target distance continuously; F5 snaps the
-     * target straight to first person (distance 0). The actual distance
-     * smoothly lerps toward that target every frame rather than snapping, so
-     * scroll zoom feels continuous instead of stepping. Gameplay logic
-     * (raycasts, placement) always reads from the eye position, never the
-     * visual camera position, so aiming stays correct regardless of zoom.
+     * (raw.getScrollY()) moves the target distance continuously. F5 toggles
+     * first person: the first press snapshots whatever third-person distance
+     * the scroll wheel had already settled on into
+     * windowID2PreFirstPersonZoomTarget and snaps the target straight to
+     * EngineSetting.CAMERA_ZOOM_MIN; the second press restores that exact
+     * snapshotted distance rather than re-deriving one, so the camera comes
+     * back out to precisely where it was before going first person. The
+     * actual distance smoothly lerps toward that target every frame rather
+     * than snapping, so scroll zoom and the F5 toggle both feel continuous
+     * instead of stepping. Gameplay logic (raycasts, placement) always reads
+     * from the eye position, never the visual camera position, so aiming
+     * stays correct regardless of zoom.
      *
      * isFirstPerson(windowID) exposes whether the current distance is at/below
-     * the first-person threshold — consumed by the render side to decide
-     * whether to hide the character's head.
+     * the first-person threshold — consumed by the render side (via
+     * EntityRenderSystem.pushCharacter()'s hiddenBoneName) to decide whether
+     * to hide the character's head. This is a live distance check, not the
+     * F5 toggle state directly, so the head fades out/in exactly as the
+     * lerp crosses the threshold regardless of whether zero was reached by
+     * scrolling or by F5.
      *
      * Camera rotation is driven externally by the runtime context.
      *
@@ -60,6 +70,12 @@ public class PlayerManager extends ManagerPackage {
      * JUMPING/FALLING states are never actually set anywhere in this class —
      * that's MovementManager's responsibility once real jump/fall detection
      * exists — so those two clips are wired and ready but currently unreachable.
+     *
+     * Character rendering itself — model matrix, entity-size scale, and the
+     * actual skinned draw submission — lives entirely in the engine-side
+     * EntityRenderSystem.pushCharacter(), shared with every NPC. This class
+     * owns only the state that entry point needs: which entity, which
+     * camera, and (via isFirstPerson()) which bone to hide.
      */
 
     // Internal
@@ -85,6 +101,11 @@ public class PlayerManager extends ManagerPackage {
     private Int2FloatOpenHashMap windowID2ZoomDistance;
     private Int2FloatOpenHashMap windowID2ZoomTarget;
 
+    // Per-window first-person toggle (F5) — snapshot/restore of the third
+    // person distance the camera was at before the most recent F5 press.
+    private Int2BooleanOpenHashMap windowID2FirstPersonToggled;
+    private Int2FloatOpenHashMap windowID2PreFirstPersonZoomTarget;
+
     // Scratch
     private Vector3 cameraPosition;
     private Vector3 cameraOffset;
@@ -107,6 +128,9 @@ public class PlayerManager extends ManagerPackage {
 
         this.windowID2ZoomDistance = new Int2FloatOpenHashMap();
         this.windowID2ZoomTarget = new Int2FloatOpenHashMap();
+
+        this.windowID2FirstPersonToggled = new Int2BooleanOpenHashMap();
+        this.windowID2PreFirstPersonZoomTarget = new Int2FloatOpenHashMap();
 
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
@@ -156,6 +180,8 @@ public class PlayerManager extends ManagerPackage {
         windowID2VerifyPlayerPosition.put(windowID, true);
         windowID2ZoomDistance.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2ZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
+        windowID2FirstPersonToggled.put(windowID, false);
+        windowID2PreFirstPersonZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         return player;
     }
 
@@ -224,12 +250,12 @@ public class PlayerManager extends ManagerPackage {
     // Zoom \\
 
     /*
-     * Scroll adjusts the target distance continuously; F5 snaps the target
-     * straight to first person. The actual distance smoothly lerps toward
-     * whatever the target is every frame — this is what produces the "camera
-     * eases toward the new distance" feel rather than an instant jump, and
-     * also means scroll and F5 read the same target rather than fighting
-     * over two different values.
+     * Scroll adjusts the target distance continuously; F5 toggles first
+     * person via toggleFirstPerson() below. The actual distance smoothly
+     * lerps toward whatever the target is every frame — this is what
+     * produces the "camera eases toward the new distance" feel rather than
+     * an instant jump, and also means scroll and F5 read/write the same
+     * target rather than fighting over two different values.
      */
     private float updateZoom(int windowID, RawInputHandle raw) {
 
@@ -239,7 +265,7 @@ public class PlayerManager extends ManagerPackage {
         target = Math.max(EngineSetting.CAMERA_ZOOM_MIN, Math.min(EngineSetting.CAMERA_ZOOM_MAX, target));
 
         if (raw.isKeyClicked(Keys.F5))
-            target = EngineSetting.CAMERA_ZOOM_MIN;
+            target = toggleFirstPerson(windowID, target);
 
         windowID2ZoomTarget.put(windowID, target);
 
@@ -250,6 +276,32 @@ public class PlayerManager extends ManagerPackage {
         windowID2ZoomDistance.put(windowID, current);
 
         return current;
+    }
+
+    /*
+     * First press: snapshots whatever third-person target distance the
+     * scroll wheel had already settled on for this window, marks this
+     * window as toggled into first person, and returns
+     * EngineSetting.CAMERA_ZOOM_MIN as the new target.
+     *
+     * Second press: clears the toggle and returns the snapshotted distance,
+     * so the camera target jumps straight back to (and then smoothly lerps
+     * toward, same as any other target change) exactly the third-person
+     * distance it was at before the first press — never re-derived from a
+     * fixed default.
+     */
+    private float toggleFirstPerson(int windowID, float currentTarget) {
+
+        boolean firstPersonToggled = windowID2FirstPersonToggled.get(windowID);
+
+        if (!firstPersonToggled) {
+            windowID2PreFirstPersonZoomTarget.put(windowID, currentTarget);
+            windowID2FirstPersonToggled.put(windowID, true);
+            return EngineSetting.CAMERA_ZOOM_MIN;
+        }
+
+        windowID2FirstPersonToggled.put(windowID, false);
+        return windowID2PreFirstPersonZoomTarget.get(windowID);
     }
 
     public boolean isFirstPerson(int windowID) {
