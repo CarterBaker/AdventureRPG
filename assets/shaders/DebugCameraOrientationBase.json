@@ -1,4 +1,0 @@
-{
-    "vert": "util/PlanarPass.vsh",
-    "frag": "debug/DebugCameraOrientationBase.fsh"
-}

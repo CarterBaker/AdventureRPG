@@ -1,4 +1,4 @@
 {
-    "material": "fullscreen/Lighting",
+    "material": "postprocessing/LightingMaterial",
     "mesh": "util/PlanarPass"
 }

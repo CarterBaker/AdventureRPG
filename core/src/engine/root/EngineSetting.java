@@ -180,12 +180,12 @@ public class EngineSetting {
 
         // Blit \\
 
-        public static final String DEFAULT_BLIT_MATERIAL = "fullscreen/Blit";
+        public static final String DEFAULT_BLIT_MATERIAL = "util/BlitMaterial";
         public static final String DEFAULT_BLIT_MESH = "util/Blit";
 
         // Sprite \\
 
-        public static final String SPRITE_DEFAULT_MATERIAL = "util/SpriteDefault";
+        public static final String SPRITE_DEFAULT_MATERIAL = "sprites/StandardSpriteMaterial";
         public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
 
         // Cursor \\
@@ -358,8 +358,8 @@ public class EngineSetting {
         public static final int CLOUD_VOLUME_RAYMARCH_STEPS_NEAR = 48;
         public static final int CLOUD_VOLUME_RAYMARCH_STEPS_FAR = 16;
         public static final float CLOUD_VOLUME_TIER_NEAR_DISTANCE = 128f;
-        public static final String CLOUD_VOLUME_MESH_NAME = "clouds/CloudVolumeBox";
-        public static final String CLOUD_VOLUME_MATERIAL_NAME = "clouds/CloudVolume";
+        public static final String CLOUD_VOLUME_MESH_NAME = "clouds/CloudVolumeMesh";
+        public static final String CLOUD_VOLUME_MATERIAL_NAME = "clouds/CloudVolumeMaterial";
 
         // Weather \\
 
@@ -549,7 +549,7 @@ public class EngineSetting {
 
         // Item \\
 
-        public static final String DEFAULT_ITEM_MATERIAL = "items/StandardItems";
+        public static final String DEFAULT_ITEM_MATERIAL = "items/StandardItemMaterial";
         public static final short TOOL_NONE = 0;
 
         // Font \\
@@ -558,7 +558,7 @@ public class EngineSetting {
         public static final Color FONT_DEFAULT_COLOR = Color.RED;
         public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;
         public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;
-        public static final String FONT_DEFAULT_MATERIAL = "util/FontDefault";
+        public static final String FONT_DEFAULT_MATERIAL = "fonts/StandardFontMaterial";
         public static final String FONT_DEFAULT_MESH = "util/LabelQuad";
         public static final String FONT_DEFAULT_NAME = "MontserratAlternates";
         public static final String FONT_DEFAULT_SIZE_PERCENT = "50%";

@@ -1,0 +1,4 @@
+{
+    "vert": "debug/DebugUVShader.vsh",
+    "frag": "debug/DebugUVShader.fsh"
+}

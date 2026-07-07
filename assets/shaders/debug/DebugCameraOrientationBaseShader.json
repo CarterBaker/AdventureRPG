@@ -1,0 +1,4 @@
+{
+    "vert": "util/PlanarPassShader.vsh",
+    "frag": "debug/DebugCameraOrientationBaseShader.fsh"
+}

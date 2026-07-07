@@ -1,9 +1,0 @@
-{
-    "shader": "StandardSurface",
-    "uniforms": {
-        "u_textureArray": {
-            "type": "SAMPLE_IMAGE_2D_ARRAY",
-            "value": "surface/standard"
-        }
-    }
-}

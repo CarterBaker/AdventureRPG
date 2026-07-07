@@ -1,4 +1,4 @@
 {
-    "material": "fullscreen/SSAO",
+    "material": "postprocessing/SSAOMaterial",
     "mesh": "util/PlanarPass"
 }

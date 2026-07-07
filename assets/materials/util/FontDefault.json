@@ -1,6 +1,0 @@
-{
-    "shader": "Label",
-    "ubos": {
-        "CameraData": "CameraData"
-    }
-}

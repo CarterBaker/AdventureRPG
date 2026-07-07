@@ -1,4 +1,0 @@
-{
-    "vert": "util/Sprite.vsh",
-    "frag": "util/Sprite.fsh"
-}

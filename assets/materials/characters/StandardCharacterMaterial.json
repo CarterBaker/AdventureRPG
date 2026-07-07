@@ -1,0 +1,8 @@
+{
+    "shader": "characters/standard/StandardSkinnedShader",
+    "uniforms": {
+        "u_color": { "value": [1.0, 1.0, 1.0, 1.0] },
+        "u_texture": { "value": "surface/standard/GrassBlockUp" },
+        "u_hiddenBone": { "value": -1.0 }
+    }
+}

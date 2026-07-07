@@ -1,0 +1,4 @@
+{
+    "vert": "sprites/standard/StandardSpriteShader.vsh",
+    "frag": "sprites/standard/StandardSpriteShader.fsh"
+}

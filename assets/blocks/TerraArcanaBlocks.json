@@ -8,14 +8,14 @@
             "name": "Water",
             "type": "LIQUID",
             "break_tier": -1,
-            "material": "standard/StandardSurface",
+            "material": "surface/StandardSurfaceMaterial",
             "texture": "surface/standard/Water"
         },
         {
             "name": "Lava",
             "type": "LIQUID",
             "break_tier": -1,
-            "material": "standard/StandardSurface",
+            "material": "surface/StandardSurfaceMaterial",
             "texture": "surface/standard/Lava"
         },
         {
@@ -25,7 +25,7 @@
             "break_tier": 0,
             "required_tool": "Standard/Shovel",
             "durability": 3,
-            "material": "standard/StandardSurface",
+            "material": "surface/StandardSurfaceMaterial",
             "northTex": "surface/standard/GrassBlockNorth",
             "upTex": "surface/standard/GrassBlockUp",
             "downTex": "surface/standard/Dirt"
@@ -36,7 +36,7 @@
             "break_tier": 0,
             "required_tool": "Standard/Shovel",
             "durability": 2,
-            "material": "standard/StandardSurface",
+            "material": "surface/StandardSurfaceMaterial",
             "texture": "surface/standard/Dirt"
         },
         {
@@ -45,7 +45,7 @@
             "break_tier": 1,
             "required_tool": "Standard/Pickaxe",
             "durability": 6,
-            "material": "standard/StandardSurface",
+            "material": "surface/StandardSurfaceMaterial",
             "texture": "surface/standard/Stone"
         },
         {
@@ -54,7 +54,7 @@
             "break_tier": 1,
             "required_tool": "Standard/Pickaxe",
             "durability": 8,
-            "material": "standard/StandardSurface",
+            "material": "surface/StandardSurfaceMaterial",
             "texture": "surface/standard/CopperOre"
         },
         {
@@ -63,7 +63,7 @@
             "break_tier": 2,
             "required_tool": "Standard/Pickaxe",
             "durability": 10,
-            "material": "standard/StandardSurface",
+            "material": "surface/StandardSurfaceMaterial",
             "texture": "surface/standard/IronOre"
         },
         {
@@ -72,7 +72,7 @@
             "break_tier": 2,
             "required_tool": "Standard/Pickaxe",
             "durability": 10,
-            "material": "standard/StandardSurface",
+            "material": "surface/StandardSurfaceMaterial",
             "texture": "surface/standard/GoldOre"
         },
         {
@@ -81,7 +81,7 @@
             "break_tier": 1,
             "required_tool": "Standard/Pickaxe",
             "durability": 5,
-            "material": "standard/StandardSurface",
+            "material": "surface/StandardSurfaceMaterial",
             "texture": "surface/standard/CoalOre"
         },
         {
@@ -90,7 +90,7 @@
             "break_tier": 0,
             "required_tool": "Standard/Shovel",
             "durability": 2,
-            "material": "standard/StandardSurface",
+            "material": "surface/StandardSurfaceMaterial",
             "texture": "surface/standard/Sand"
         }
     ]

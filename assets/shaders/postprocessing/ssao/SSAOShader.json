@@ -1,0 +1,4 @@
+{
+    "vert": "postprocessing/ssao/SSAOShader.vsh",
+    "frag": "postprocessing/ssao/SSAOShader.fsh"
+}

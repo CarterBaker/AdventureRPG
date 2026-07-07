@@ -1,6 +1,0 @@
-{
-    "vert": "surface/StandardSurface.vsh",
-    "tcs":  "surface/StandardSurface.tcs",
-    "tes":  "surface/StandardSurface.tes",
-    "frag": "surface/StandardSurface.fsh"
-}

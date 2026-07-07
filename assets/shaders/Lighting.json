@@ -1,4 +1,0 @@
-{
-    "vert": "postprocessing/lighting/Lighting.vsh",
-    "frag": "postprocessing/lighting/Lighting.fsh"
-}

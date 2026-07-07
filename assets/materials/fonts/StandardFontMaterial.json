@@ -1,0 +1,6 @@
+{
+    "shader": "fonts/standard/StandardFontShader",
+    "ubos": {
+        "CameraData": "CameraData"
+    }
+}

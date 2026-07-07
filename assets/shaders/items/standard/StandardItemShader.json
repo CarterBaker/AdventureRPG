@@ -1,0 +1,4 @@
+{
+    "vert": "items/standard/StandardItemShader.vsh",
+    "frag": "items/standard/StandardItemShader.fsh"
+}

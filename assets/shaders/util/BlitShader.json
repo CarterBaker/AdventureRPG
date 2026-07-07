@@ -1,0 +1,4 @@
+{
+    "vert": "util/BlitShader.vsh",
+    "frag": "util/BlitShader.fsh"
+}

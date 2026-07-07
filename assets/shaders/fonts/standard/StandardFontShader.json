@@ -1,0 +1,4 @@
+{
+    "vert": "fonts/standard/StandardFontShader.vsh",
+    "frag": "fonts/standard/StandardFontShader.fsh"
+}
