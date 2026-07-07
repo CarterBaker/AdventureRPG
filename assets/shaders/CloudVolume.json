@@ -1,0 +1,4 @@
+{
+    "vert": "clouds/CloudVolume.vsh",
+    "frag": "clouds/CloudVolume.fsh"
+}

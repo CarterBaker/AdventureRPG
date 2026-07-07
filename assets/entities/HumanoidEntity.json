@@ -9,12 +9,12 @@
     "mesh": "characters/Humanoid",
     "material": "characters/Skinned",
     "animations": {
-      "idle": "humanoid/Idle",
-      "walking": "humanoid/Walk",
-      "moving": "humanoid/Walk",
-      "running": "humanoid/Run",
-      "jumping": "humanoid/Jump",
-      "falling": "humanoid/Fall"
+      "idle": "humanoid/HumanoidIdle",
+      "walking": "humanoid/HumanoidWalk",
+      "moving": "humanoid/HumanoidWalk",
+      "running": "humanoid/HumanoidRun",
+      "jumping": "humanoid/HumanoidJump",
+      "falling": "humanoid/HumanoidFall"
     }
   }
 }

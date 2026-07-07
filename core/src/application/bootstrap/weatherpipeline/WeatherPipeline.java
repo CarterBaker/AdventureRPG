@@ -1,7 +1,7 @@
 package application.bootstrap.weatherpipeline;
 
 import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
-import application.bootstrap.weatherpipeline.overheadmanager.OverheadManager;
+import application.bootstrap.weatherpipeline.cloudvolumemanager.CloudVolumeManager;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.weatherpipeline.windmanager.WindManager;
@@ -29,6 +29,6 @@ public class WeatherPipeline extends PipelinePackage {
         create(WindManager.class);
         create(WeatherManager.class);
         create(SeasonManager.class);
-        create(OverheadManager.class);
+        create(CloudVolumeManager.class);
     }
 }

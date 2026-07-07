@@ -311,14 +311,14 @@ public class EngineSetting {
 
         // Block \\
 
-        public static final String AIR_BLOCK_NAME = "TerraArcana/Air";
+        public static final String AIR_BLOCK_NAME = "TerraArcanaBlocks/Air";
         public static final short DEFAULT_BLOCK_ORIENTATION = (short) (DEFAULT_BLOCK_DIRECTION * 4);
         public static final int ENCODED_FACE_NATURAL_FULL_OFFSET = 24;
 
         // World \\
 
         public static final String CHUNK_VAO = "util/vao/ChunkVAO";
-        public static final String DEFAULT_BIOME_NAME = "Empty";
+        public static final String DEFAULT_BIOME_NAME = "TestBiome";
         public static final int CHUNK_POOL_MAX_OVERFLOW = 32;
         public static final int GRID_SLOTS_SCAN_PER_FRAME = 32;
         public static final int MAX_CHUNK_STREAM_PER_BATCH = 32;
@@ -348,6 +348,18 @@ public class EngineSetting {
         public static final String SKY_COLOR_UBO = "SkyColorData";
         public static final float SKY_FOG_BLEND_START = 0.4f;
         public static final float SKY_ALTITUDE_POWER = 1.2f;
+
+        // Cloud VOlume \\
+
+        public static final float CLOUD_VOLUME_BASE_ALTITUDE = 140f;
+        public static final float CLOUD_VOLUME_TOP_ALTITUDE = 220f;
+        public static final float CLOUD_VOLUME_HALF_EXTENT = 512f;
+        public static final float CLOUD_VOLUME_FADE_START_RATIO = 0.70f;
+        public static final int CLOUD_VOLUME_RAYMARCH_STEPS_NEAR = 48;
+        public static final int CLOUD_VOLUME_RAYMARCH_STEPS_FAR = 16;
+        public static final float CLOUD_VOLUME_TIER_NEAR_DISTANCE = 128f;
+        public static final String CLOUD_VOLUME_MESH_NAME = "clouds/CloudVolumeBox";
+        public static final String CLOUD_VOLUME_MATERIAL_NAME = "clouds/CloudVolume";
 
         // Weather \\
 
@@ -533,7 +545,7 @@ public class EngineSetting {
         // Player \\
 
         public static final float BLOCK_PLACEMENT_INTERVAL = 0.1f;
-        public static final String DEFAULT_PLAYER_RACE = "Humanoid";
+        public static final String DEFAULT_PLAYER_RACE = "HumanoidEntity";
 
         // Item \\
 
