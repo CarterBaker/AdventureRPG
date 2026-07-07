@@ -1,5 +1,5 @@
 {
-  "rig": "Humanoid",
+  "rig": "HumanoidRig",
   "loop": true,
   "tracks": {
     "thigh_l": [

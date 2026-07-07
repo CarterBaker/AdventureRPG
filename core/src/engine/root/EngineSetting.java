@@ -181,12 +181,12 @@ public class EngineSetting {
         // Blit \\
 
         public static final String DEFAULT_BLIT_MATERIAL = "util/BlitMaterial";
-        public static final String DEFAULT_BLIT_MESH = "util/Blit";
+        public static final String DEFAULT_BLIT_MESH = "util/BlitMesh";
 
         // Sprite \\
 
         public static final String SPRITE_DEFAULT_MATERIAL = "sprites/StandardSpriteMaterial";
-        public static final String SPRITE_DEFAULT_MESH = "util/Sprite";
+        public static final String SPRITE_DEFAULT_MESH = "sprites/SpriteMesh";
 
         // Cursor \\
 
@@ -559,7 +559,7 @@ public class EngineSetting {
         public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;
         public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;
         public static final String FONT_DEFAULT_MATERIAL = "fonts/StandardFontMaterial";
-        public static final String FONT_DEFAULT_MESH = "util/LabelQuad";
+        public static final String FONT_DEFAULT_MESH = "fonts/FontMesh";
         public static final String FONT_DEFAULT_NAME = "MontserratAlternates";
         public static final String FONT_DEFAULT_SIZE_PERCENT = "50%";
         public static final String FONT_DEFAULT_VAO = "util/vao/LabelVAO";

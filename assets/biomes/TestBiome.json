@@ -1,22 +1,22 @@
 {
     "weathers": {
         "Spring": [
-            { "name": "standard/Sunny",  "chance": 65 },
-            { "name": "standard/Cloudy", "chance": 35 }
+            { "name": "standard/SunnyWeather",  "chance": 65 },
+            { "name": "standard/CloudyWeather", "chance": 35 }
         ],
         "Summer": [
-            { "name": "standard/Sunny",  "chance": 80 },
-            { "name": "standard/Cloudy", "chance": 20 }
+            { "name": "standard/SunnyWeather",  "chance": 80 },
+            { "name": "standard/CloudyWeather", "chance": 20 }
         ],
         "Autumn": [
-            { "name": "standard/Sunny",  "chance": 40 },
-            { "name": "standard/Cloudy", "chance": 45 },
-            { "name": "standard/Stormy", "chance": 15 }
+            { "name": "standard/SunnyWeather",  "chance": 40 },
+            { "name": "standard/CloudyWeather", "chance": 45 },
+            { "name": "standard/StormyWeather", "chance": 15 }
         ],
         "Winter": [
-            { "name": "standard/Cloudy", "chance": 55 },
-            { "name": "standard/Sunny",  "chance": 25 },
-            { "name": "standard/Stormy", "chance": 20 }
+            { "name": "standard/CloudyWeather", "chance": 55 },
+            { "name": "standard/SunnyWeather",  "chance": 25 },
+            { "name": "standard/StormyWeather", "chance": 20 }
         ]
     }
 }

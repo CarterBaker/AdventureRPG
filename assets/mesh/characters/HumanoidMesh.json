@@ -1,5 +1,5 @@
 {
-  "rig": "Humanoid",
+  "rig": "HumanoidRig",
   "vao": [3, 2],
   "vbo": [
     { "quad": [[-0.25,1.02,-0.14],[0.25,1.02,-0.14],[0.25,1.02,0.14],[-0.25,1.02,0.14]], "bones": [{ "bone": "lower_torso" }], "texture": "surface/standard/GrassBlockUp" },

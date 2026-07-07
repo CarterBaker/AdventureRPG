@@ -213,7 +213,7 @@
       "elements": [
         {
           "id": "toolbar",
-          "use": "util/ToolBar",
+          "use": "util/MenuToolBar",
           "elements": [
             {
               "id": "testing_menu",
