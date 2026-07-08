@@ -231,12 +231,12 @@ public class EngineSetting {
 
         // Camera Zoom \\
 
-        public static final float CAMERA_ZOOM_MIN = 0f; // first person
-        public static final float CAMERA_ZOOM_MAX = 6f; // furthest third-person distance
-        public static final float CAMERA_ZOOM_DEFAULT = 4f; // starting distance on spawn
-        public static final float CAMERA_ZOOM_SCROLL_SPEED = 0.75f; // distance change per scroll unit
-        public static final float CAMERA_ZOOM_SMOOTHING = 10f; // lerp speed toward target distance
-        public static final float CAMERA_FIRST_PERSON_THRESHOLD = 0.1f;// at/below this distance counts as first person
+        public static final float CAMERA_ZOOM_MIN = 0f;
+        public static final float CAMERA_ZOOM_MAX = 6f;
+        public static final float CAMERA_ZOOM_DEFAULT = 4f;
+        public static final float CAMERA_ZOOM_SCROLL_SPEED = 0.75f;
+        public static final float CAMERA_ZOOM_SMOOTHING = 10f;
+        public static final float CAMERA_FIRST_PERSON_THRESHOLD = 0.1f;
 
         // Camera UBO Uniforms \\
 
@@ -361,51 +361,62 @@ public class EngineSetting {
         public static final String CLOUD_VOLUME_MESH_NAME = "clouds/CloudVolumeMesh";
         public static final String CLOUD_VOLUME_MATERIAL_NAME = "clouds/CloudVolumeMaterial";
 
+        // Cloud Instancing \\
+
+        public static final String CLOUD_CARD_MESH_NAME = "clouds/CloudCardMesh";
+        public static final String CLOUD_INSTANCED_MATERIAL_TEMPLATE = "clouds/CloudInstancedMaterial";
+        public static final int CLOUD_INSTANCE_INITIAL_CAPACITY = 64;
+        public static final String UNIFORM_CLOUD_COLOR = "u_cloudColor";
+        public static final String UNIFORM_CLOUD_SCALE = "u_cloudScale";
+        public static final String UNIFORM_CLOUD_DENSITY = "u_cloudDensity";
+        public static final String UNIFORM_CLOUD_VERTICAL_THICKNESS = "u_cloudVerticalThickness";
+        public static final String UNIFORM_CLOUD_EDGE_SOFTNESS = "u_cloudEdgeSoftness";
+        public static final String UNIFORM_CLOUD_PUFF_JITTER = "u_cloudPuffJitter";
+
         // Weather \\
 
         public static final String WEATHER_DATA_UBO = "WeatherData";
         public static final String WEATHER_REGION_DATA_UBO = "WeatherRegionData";
-        public static final int WEATHER_REGION_SAMPLE_DISTANCE = 96; // chunk units between cardinal samples
-        public static final float WEATHER_NOISE_CELL_SIZE = 256.0f; // chunk units per noise cell
-        public static final float WEATHER_WIND_DRIFT_SCALE = 0.35f; // chunks/sec per unit of wind speed
+        public static final int WEATHER_REGION_SAMPLE_DISTANCE = 96;
+        public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;
+        public static final float WEATHER_WIND_DRIFT_SCALE = 0.35f;
         public static final float WEATHER_LOCAL_DRIFT_TIME_WRAP = 100000.0f;
 
         // Global Weather Noise \\
 
-        public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f; // chunk units per global noise cell
-        public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f; // 0..1 blend weight of global rotating noise
-        public static final float GLOBAL_WEATHER_TILT_INFLUENCE = 0.20f; // max fractional V-shift at solstice
+        public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f;
+        public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f;
+        public static final float GLOBAL_WEATHER_TILT_INFLUENCE = 0.20f;
 
         // Season Blend \\
 
-        public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f; // minimum blend-factor shift
+        public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
 
         // Horizon & Overhead \\
 
-        public static final float HORIZON_DISTANCE = 1024.0f; // Radius from the player used for weather sampling
-        public static final int OVERHEAD_CELL_SIZE = 64; // chunk units per overhead cell edge
-        public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4; // max overhead cells created/released per frame
-        public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.35f; // chunks/sec per unit of wind speed
+        public static final float HORIZON_DISTANCE = 1024.0f;
+        public static final int OVERHEAD_CELL_SIZE = 64;
+        public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4;
+        public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.35f;
 
         // Wind \\
 
-        public static final float WIND_GLOBAL_DIRECTION_DEGREES = 45.0f; // fixed planetary prevailing airflow
-        public static final float WIND_GLOBAL_SPEED = 1.0f; // base wind speed scale — not a real-world unit yet
-        public static final float WIND_MIN_SPEED_FLOOR = 0.05f; // seasonal/diurnal/gust speed floor, before scaling
-        public static final float WIND_GUST_SPEED_FREQUENCY = 0.13f; // primary gust oscillation rate, radians/sec
-        public static final float WIND_GUST_SPEED_FREQUENCY_SECONDARY = 0.045f; // secondary slower gust layer
-        public static final float WIND_GUST_DIRECTION_FREQUENCY = 0.07f; // direction wobble oscillation rate
-        public static final float WIND_GUST_DIRECTION_WOBBLE_DEGREES = 8.0f; // max direction wobble amplitude
-        public static final float WIND_DIURNAL_PEAK_TIME = 0.65f; // visual time-of-day (0-1) where wind speed peaks
-        public static final float WIND_DIURNAL_STRENGTH = 0.25f; // how much day/night swings wind speed, 0 = none
+        public static final float WIND_GLOBAL_DIRECTION_DEGREES = 45.0f;
+        public static final float WIND_GLOBAL_SPEED = 1.0f;
+        public static final float WIND_MIN_SPEED_FLOOR = 0.05f;
+        public static final float WIND_GUST_SPEED_FREQUENCY = 0.13f;
+        public static final float WIND_GUST_SPEED_FREQUENCY_SECONDARY = 0.045f;
+        public static final float WIND_GUST_DIRECTION_FREQUENCY = 0.07f;
+        public static final float WIND_GUST_DIRECTION_WOBBLE_DEGREES = 8.0f;
+        public static final float WIND_DIURNAL_PEAK_TIME = 0.65f;
+        public static final float WIND_DIURNAL_STRENGTH = 0.25f;
 
         // Temperature \\
 
-        public static final float DEFAULT_BASE_TEMPERATURE = 15.0f; // fallback before any season has resolved
-        public static final float TEMPERATURE_DIURNAL_PEAK_TIME = 0.65f; // visual time-of-day (0-1) where temperature
-                                                                         // peaks
-        public static final float TEMPERATURE_DRIFT_FREQUENCY = 0.02f; // slow multi-minute drift oscillation rate
-        public static final float TEMPERATURE_PRECIPITATION_COOLING = 4.0f; // degrees subtracted at full precipitation
+        public static final float DEFAULT_BASE_TEMPERATURE = 15.0f;
+        public static final float TEMPERATURE_DIURNAL_PEAK_TIME = 0.65f;
+        public static final float TEMPERATURE_DRIFT_FREQUENCY = 0.02f;
+        public static final float TEMPERATURE_PRECIPITATION_COOLING = 4.0f;
 
         // Sky Noise
         public static final float SKY_NOISE_ALTITUDE_BLEND = 0.35f;
