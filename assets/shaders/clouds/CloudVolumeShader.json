@@ -1,4 +1,4 @@
 {
-    "vert": "clouds/CloudVolumeShader.vsh",
-    "frag": "clouds/CloudVolumeShader.fsh"
+    "vert": "clouds/CloudInstancedShader.vsh",
+    "frag": "clouds/CloudInstancedShader.fsh"
 }
