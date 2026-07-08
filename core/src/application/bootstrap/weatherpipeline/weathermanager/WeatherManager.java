@@ -1,13 +1,18 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
+import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.WeatherChanceStruct;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.kernel.windowpipeline.window.WindowInstance;
+import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -27,6 +32,14 @@ public class WeatherManager extends ManagerPackage {
      * global noise overlay, live temperature, and the GPU UBO pushes are
      * delegated to branches.
      *
+     * updateReferenceCoordinate() resolves the main window's player world
+     * position into a chunk coordinate every frame, before any sampling
+     * happens this frame, and writes it into RegionSampleBranch via
+     * setReferenceCoordinate() — this is the "grab the data for the part of
+     * the world we're actually standing in" hookup. Falls back to whatever
+     * the reference coordinate already was (default origin) if there is no
+     * main window or no spawned player yet — normal before a player exists.
+     *
      * activeWeatherPool stays null until the calendar resolves its first
      * named season, which requires at least one day-tick — normal at
      * startup. update() skips sampling entirely until then, and any
@@ -38,6 +51,8 @@ public class WeatherManager extends ManagerPackage {
     // Internal
     private ClockManager clockManager;
     private BiomeManager biomeManager;
+    private WindowManager windowManager;
+    private PlayerManager playerManager;
 
     // Branches
     private GlobalNoiseBranch globalNoiseBranch;
@@ -77,6 +92,8 @@ public class WeatherManager extends ManagerPackage {
         // Internal
         this.clockManager = get(ClockManager.class);
         this.biomeManager = get(BiomeManager.class);
+        this.windowManager = get(WindowManager.class);
+        this.playerManager = get(PlayerManager.class);
     }
 
     @Override
@@ -86,6 +103,8 @@ public class WeatherManager extends ManagerPackage {
 
     @Override
     protected void update() {
+
+        updateReferenceCoordinate();
 
         String currentSeason = clockManager.getClockHandle().getCurrentSeason();
 
@@ -100,6 +119,37 @@ public class WeatherManager extends ManagerPackage {
 
         regionSampleBranch.sampleRegions(activeWeatherPool);
         temperatureBranch.updateTemperature(regionSampleBranch.getCenterSample());
+    }
+
+    // Reference Coordinate \\
+
+    /*
+     * Resolves the main window's player position into a chunk coordinate and
+     * writes it as this frame's weather sampling reference — the point every
+     * downstream branch (region sampling, global noise, and OverheadManager's
+     * streaming grid) treats as "here". A no-op if there is no main window or
+     * no player has spawned into it yet, leaving the reference coordinate at
+     * whatever it last resolved to (origin by default).
+     */
+    private void updateReferenceCoordinate() {
+
+        WindowInstance mainWindow = windowManager.getMainWindow();
+
+        if (mainWindow == null)
+            return;
+
+        int windowID = mainWindow.getWindowID();
+
+        if (!playerManager.hasPlayerForWindow(windowID))
+            return;
+
+        EntityInstance player = playerManager.getPlayerForWindow(windowID);
+        Vector3 position = player.getWorldPositionStruct().getPosition();
+
+        int chunkX = Math.floorDiv((int) Math.floor(position.x), EngineSetting.CHUNK_SIZE);
+        int chunkZ = Math.floorDiv((int) Math.floor(position.z), EngineSetting.CHUNK_SIZE);
+
+        setReferenceCoordinate(Coordinate2Long.pack(chunkX, chunkZ));
     }
 
     // Management \\
