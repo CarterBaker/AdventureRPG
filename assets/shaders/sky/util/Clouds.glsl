@@ -3,6 +3,8 @@
 #include "includes/NoiseUtility.glsl"
 #include "includes/TimeData.glsl"
 #include "includes/SkyColorData.glsl"
+#include "includes/WeatherData.glsl"
+#include "includes/WeatherRegionData.glsl"
 
 /*
 * Puff-blob cloud system — v8 (multi-pass layered puffs, toon shading, height-driven ring shading).
@@ -81,6 +83,16 @@
  *
  * Every puff at a given height shades the same amount, regardless of
  * pass, regardless of what's behind it.
+ *
+ * Weather integration
+ * ---------------------
+ * Blob spawn density and puff color are no longer fixed constants — see
+ * "Weather-driven coverage & color" below. Coverage and color come from
+ * WeatherData (the player's own resolved weather) blended with
+ * WeatherRegionData's 8 compass-direction samples by the view ray's
+ * heading, so an approaching storm is visible building on the horizon in
+ * its own direction, in the same colour and density RegionSampleBranch
+ * already resolved for it on the CPU, before it ever reaches the player.
  */
 
 // ── Puff shape — pass-0 (base layer) baseline; later passes scale this
@@ -123,7 +135,8 @@ const float WARP_AMT  = 1.1;
 // ── Blob layer — defines the cloud regions themselves ───────────────────────
 const float BLOB_CELL_XZ      = 5.0;   // coarse grid spacing (horizontal only)
 const float BLOB_JITTER_XZ    = 2.0;   // how far a blob drifts off its cell centre
-const float BLOB_SPAWN_CHANCE = 0.60;  // probability a given cell has a cloud at all
+// Spawn chance used to be a fixed constant here — now resolved per-fragment
+// from live weather coverage, see "Weather-driven coverage & color" below.
 const float BLOB_RADIUS_XZ    = 3.0;   // horizontal radius
 const float BLOB_RADIUS_Y     = 1.4;   // vertical radius (flatter than wide)
 const float BLOB_EDGE_NOISE   = 0.22;  // per-cell randomised boundary roughness
@@ -142,11 +155,88 @@ const float PUFF_BASE_ALPHA = 0.92;
 const float PUFF_CORE_ALPHA = 1.0;
 
 // ── Puff colour mixing ──────────────────────────────────────────────────────
-const float PUFF_BACK_WHITE_MIX  = 0.75; // ring: mostly white, lightly sky-tinted
+const float PUFF_BACK_WHITE_MIX  = 0.75; // ring: mostly weather-tinted, lightly sky-tinted
 const float PUFF_FRONT_SKY_MIX   = 0.45; // core's underlying horizon/zenith blend
-const float PUFF_FRONT_WHITE_MIX = 0.55; // core: white mixed over that tint, still darker than the ring
+const float PUFF_FRONT_WHITE_MIX = 0.55; // core: weather-tinted colour mixed over that tint, still darker than the ring
 
 const float CLOUD_WIND_SPEED = 0.0035;
+
+// ── Weather-driven coverage & color ─────────────────────────────────────────
+// Ties this file's blob spawn density and puff color to the live weather
+// simulation instead of the fixed constants used previously. WeatherData
+// carries the resolved weather at the player's own position (already
+// blending local wind-drifted noise with GlobalNoiseBranch's planetary
+// rotation noise — see WeatherManager/RegionSampleBranch); WeatherRegionData
+// carries that same resolution 8 compass directions out
+// (WEATHER_REGION_SAMPLE_DISTANCE chunks away), refreshed every frame by
+// WeatherBufferBranch. Blending across those 8 directions by the view ray's
+// horizontal heading, then fading toward the player's own local sample as
+// the ray tilts up toward the zenith, is what makes an approaching storm
+// visible on the horizon in its own direction before it ever reaches the
+// player — the CPU-side sampling this reads already existed; this is the
+// GPU-side consumer that was missing.
+//
+// Compass convention matches Direction2Vector / RegionSampleBranch's own
+// sampling offsets: north = -Z, east = +X, south = +Z, west = -X, the same
+// axes chunk coordinates already sample against. If clouds appear to build
+// from the wrong horizon direction in testing, this is the mapping to fix.
+const float WEATHER_COVERAGE_SPAWN_MIN = 0.08; // clearest sky still shows a few stray puffs
+const float WEATHER_COVERAGE_SPAWN_MAX = 0.85; // fully overcast — blobs fill nearly every cell
+
+float _resolveSpawnChance(float coverage) {
+    return mix(WEATHER_COVERAGE_SPAWN_MIN, WEATHER_COVERAGE_SPAWN_MAX, clamp(coverage, 0.0, 1.0));
+}
+
+struct CompassSample {
+    float coverage;
+    vec3  color;
+};
+
+CompassSample _compassSample(int index) {
+    if (index == 0) return CompassSample(u_cloudCoverageNorth,     u_cloudColorNorth);
+    if (index == 1) return CompassSample(u_cloudCoverageNortheast, u_cloudColorNortheast);
+    if (index == 2) return CompassSample(u_cloudCoverageEast,      u_cloudColorEast);
+    if (index == 3) return CompassSample(u_cloudCoverageSoutheast, u_cloudColorSoutheast);
+    if (index == 4) return CompassSample(u_cloudCoverageSouth,     u_cloudColorSouth);
+    if (index == 5) return CompassSample(u_cloudCoverageSouthwest, u_cloudColorSouthwest);
+    if (index == 6) return CompassSample(u_cloudCoverageWest,      u_cloudColorWest);
+    return CompassSample(u_cloudCoverageNorthwest, u_cloudColorNorthwest);
+}
+
+// Blends the two nearest of the 8 compass samples by the view ray's
+// horizontal heading (see convention note above).
+void _sampleHorizonWeather(vec3 dir, out float coverage, out vec3 color) {
+    float headingDeg = degrees(atan(dir.x, -dir.z));
+    headingDeg = mod(headingDeg + 360.0, 360.0);
+
+    float sector = headingDeg / 45.0;
+    int i0 = int(floor(sector)) % 8;
+    int i1 = (i0 + 1) % 8;
+    float t = fract(sector);
+
+    CompassSample a = _compassSample(i0);
+    CompassSample b = _compassSample(i1);
+
+    coverage = mix(a.coverage, b.coverage, t);
+    color    = mix(a.color, b.color, t);
+}
+
+// Public: resolves the coverage and color the sky's puff system should use
+// for a given view ray. Fades from the horizon blend above toward the
+// player's own local WeatherData sample as dir.y rises — dir.y is already
+// clamped to [0, CLOUD_DIR_Y_HARD_LIMIT] by calculateClouds() before this
+// is ever called, so the fade completes within the cloud layer's own
+// visible vertical band rather than across the full hemisphere.
+void sampleWeatherForSky(vec3 dir, out float coverage, out vec3 color) {
+    float horizonCoverage;
+    vec3  horizonColor;
+    _sampleHorizonWeather(dir, horizonCoverage, horizonColor);
+
+    float zenithT = clamp(dir.y / CLOUD_DIR_Y_HARD_LIMIT, 0.0, 1.0);
+
+    coverage = mix(horizonCoverage, u_cloudCoverage, zenithT);
+    color    = mix(horizonColor, u_cloudColor, zenithT);
+}
 
 // ── Hash ──────────────────────────────────────────────────────────────────────
 vec3 _puffHash3(vec3 p) {
@@ -164,8 +254,11 @@ vec4 _cloudOver(vec4 dst, vec4 src) {
     return vec4(rgb, a);
 }
 
-// Finds the nearest cloud "blob" to sample point p.
-void _findNearestBlob(vec3 p, float dailySeed,
+// Finds the nearest cloud "blob" to sample point p. spawnChance comes from
+// live weather coverage (see _resolveSpawnChance above) rather than a fixed
+// constant, so overcast directions/positions fill in with blobs and clear
+// ones thin out.
+void _findNearestBlob(vec3 p, float dailySeed, float spawnChance,
     out vec3 blobCenter, out float blobEllDist, out bool blobFound) {
     vec2 cellCoord = floor(p.xz / BLOB_CELL_XZ);
 
@@ -178,7 +271,7 @@ void _findNearestBlob(vec3 p, float dailySeed,
         vec2 cell = cellCoord + vec2(x, z);
 
         vec3 hA = _puffHash3(vec3(cell.x, 3.17 + dailySeed, cell.y));
-        if (hA.x > BLOB_SPAWN_CHANCE) continue; // no blob in this cell
+        if (hA.x > spawnChance) continue; // no blob in this cell
 
         vec2 centerXZ = (cell + 0.5) * BLOB_CELL_XZ + (hA.yz - 0.5) * BLOB_JITTER_XZ;
 
@@ -202,6 +295,11 @@ void _findNearestBlob(vec3 p, float dailySeed,
 vec4 calculateClouds(vec3 dir, float dailySeed) {
     if (dir.y < 0.0 || dir.y > CLOUD_DIR_Y_HARD_LIMIT) return vec4(0.0);
 
+    float weatherCoverage;
+    vec3  weatherColor;
+    sampleWeatherForSky(dir, weatherCoverage, weatherColor);
+    float spawnChance = _resolveSpawnChance(weatherCoverage);
+
     vec3 wind = vec3(u_time * CLOUD_WIND_SPEED + dailySeed, 0.0,
         u_time * CLOUD_WIND_SPEED * 0.7 + dailySeed * 1.3);
     vec3 p = dir * PUFF_SCALE + wind;
@@ -209,7 +307,7 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
     vec3  blobCenter;
     float blobEllDist;
     bool  blobFound;
-    _findNearestBlob(p, dailySeed, blobCenter, blobEllDist, blobFound);
+    _findNearestBlob(p, dailySeed, spawnChance, blobCenter, blobEllDist, blobFound);
 
     if (!blobFound || blobEllDist > 1.5) return vec4(0.0);
 
@@ -277,8 +375,8 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
                 float coreMask = 1.0 - smoothstep(innerR - aa, innerR + aa, dist);
 
                 vec3 frontSkyTint = mix(u_skyHorizonColor, u_skyZenithColor, PUFF_FRONT_SKY_MIX);
-                vec3 backColor    = mix(u_skyHorizonColor, vec3(1.0), PUFF_BACK_WHITE_MIX);
-                vec3 frontColor   = mix(frontSkyTint,       vec3(1.0), PUFF_FRONT_WHITE_MIX);
+                vec3 backColor    = mix(u_skyHorizonColor, weatherColor, PUFF_BACK_WHITE_MIX);
+                vec3 frontColor   = mix(frontSkyTint,       weatherColor, PUFF_FRONT_WHITE_MIX);
 
                 // Ring (back circle): fully opaque always. Colour shifts
                 // toward the core colour purely based on shadeAmount (this
