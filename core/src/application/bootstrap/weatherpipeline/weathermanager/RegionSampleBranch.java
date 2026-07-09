@@ -333,7 +333,8 @@ class RegionSampleBranch extends BranchPackage {
      * humidity/visibility are blended the same way — both are now fully
      * resolved per-region values (previously parsed per-Weather but never
      * carried through sampling), available via
-     * WeatherManager.getHumidity()/getVisibility().
+     * WeatherManager.getHumidity()/getVisibility(). temperatureModifier is
+     * blended the same way and read by TemperatureBranch.
      */
     private void writeSample(
             WeatherSampleStruct sample,
@@ -348,6 +349,7 @@ class RegionSampleBranch extends BranchPackage {
         sample.setFogDensityScale(lerp(low.getFogDensityScale(), high.getFogDensityScale(), t));
         sample.setHumidity(lerp(low.getHumidity(), high.getHumidity(), t));
         sample.setVisibility(lerp(low.getVisibility(), high.getVisibility(), t));
+        sample.setTemperatureModifier(lerp(low.getTemperatureModifier(), high.getTemperatureModifier(), t));
 
         CloudChanceStruct lowCloud = low.getPrimaryCloud();
         CloudChanceStruct highCloud = high.getPrimaryCloud();

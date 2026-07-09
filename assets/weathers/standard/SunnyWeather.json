@@ -8,5 +8,6 @@
     "windTurbulenceScale": 0.3,
     "fogDensityScale": 0.9,
     "humidity": 0.25,
-    "visibility": 1.0
+    "visibility": 1.0,
+    "temperatureModifier": 2.0
 }

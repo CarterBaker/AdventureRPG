@@ -21,8 +21,16 @@ public class WeatherData extends DataPackage {
      * base wind speed, while windTurbulenceScale scales the AMPLITUDE of
      * the gust oscillation and direction wobble underneath it — a storm
      * should feel chaotic and erratic, not just uniformly stronger, so the
-     * two are kept as separate knobs rather than folded into one. Owned by
-     * WeatherHandle for the engine lifetime.
+     * two are kept as separate knobs rather than folded into one.
+     * temperatureModifier is a signed degrees offset applied on top of the
+     * active season's own baseTemperature/diurnal/drift terms and the
+     * precipitation-driven cooling TemperatureBranch already derives from
+     * precipitationIntensity — it represents this weather's own general
+     * air-mass character (e.g. a storm system running colder, a
+     * high-pressure sunny system running a touch warmer) independent of
+     * how much it happens to be precipitating. Defaults to 0 (neutral) when
+     * omitted from JSON, so existing weather files are unaffected until
+     * explicitly tuned. Owned by WeatherHandle for the engine lifetime.
      */
 
     // Internal
@@ -41,6 +49,9 @@ public class WeatherData extends DataPackage {
     private final float humidity;
     private final float visibility;
 
+    // Temperature
+    private final float temperatureModifier;
+
     // Constructor \\
 
     public WeatherData(
@@ -53,7 +64,8 @@ public class WeatherData extends DataPackage {
             float windTurbulenceScale,
             float fogDensityScale,
             float humidity,
-            float visibility) {
+            float visibility,
+            float temperatureModifier) {
 
         // Internal
         this.weatherName = weatherName;
@@ -70,6 +82,9 @@ public class WeatherData extends DataPackage {
         this.fogDensityScale = fogDensityScale;
         this.humidity = humidity;
         this.visibility = visibility;
+
+        // Temperature
+        this.temperatureModifier = temperatureModifier;
     }
 
     // Accessible \\
@@ -112,5 +127,9 @@ public class WeatherData extends DataPackage {
 
     public float getVisibility() {
         return visibility;
+    }
+
+    public float getTemperatureModifier() {
+        return temperatureModifier;
     }
 }

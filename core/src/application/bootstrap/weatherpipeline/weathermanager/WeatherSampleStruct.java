@@ -18,8 +18,10 @@ class WeatherSampleStruct extends StructPackage {
      * other its gust/direction-wobble amplitude. humidity and visibility
      * complete the full Weather property set (precipitation, wind,
      * humidity, visibility) — previously parsed per-Weather but never
-     * actually carried through region sampling; WeatherManager exposes
-     * both via getHumidity()/getVisibility().
+     * actually carried through sampling; WeatherManager exposes both via
+     * getHumidity()/getVisibility(). temperatureModifier is blended the
+     * same way and read by TemperatureBranch as an additive term on top of
+     * the season/diurnal/precipitation-cooling terms it already computes.
      */
 
     // Cloud
@@ -34,6 +36,9 @@ class WeatherSampleStruct extends StructPackage {
     private float fogDensityScale;
     private float humidity;
     private float visibility;
+
+    // Temperature
+    private float temperatureModifier;
 
     // Constructor \\
 
@@ -113,5 +118,13 @@ class WeatherSampleStruct extends StructPackage {
 
     void setVisibility(float visibility) {
         this.visibility = visibility;
+    }
+
+    float getTemperatureModifier() {
+        return temperatureModifier;
+    }
+
+    void setTemperatureModifier(float temperatureModifier) {
+        this.temperatureModifier = temperatureModifier;
     }
 }

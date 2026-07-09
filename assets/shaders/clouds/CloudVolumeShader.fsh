@@ -6,6 +6,7 @@ in vec3  vNormal;
 in vec2  vUV;
 in float vRandomSeed;
 in float vFadeAlpha;
+in float vIntensity;
 
 out vec4 fragColor;
 
@@ -39,6 +40,14 @@ uniform float u_cloudRimLightStrength;
 uniform float u_cloudAmbientOcclusionStrength;
 uniform float u_cloudBrightnessMultiplier;
 
+// Floor applied to vIntensity's density contribution (see main()) — a
+// forming/weakening cloud reads as thin and wispy, never as fully
+// invisible purely from intensity. True existence pop-in/pop-out is
+// vFadeAlpha's job alone (see CloudVolumeShader.vsh's horizonFade and
+// OverheadCellStruct.fadeAlpha) — intensity only ever thins density on
+// top of whatever vFadeAlpha already decided about existence.
+const float INTENSITY_ALPHA_FLOOR = 0.4;
+
 /*
 * Stamps a single soft, roughly circular "puff" onto the card's local XZ
  * footprint (vLocalPos ranges -0.5..0.5, so radialDist is 0 at the card's
@@ -55,7 +64,8 @@ uniform float u_cloudBrightnessMultiplier;
  *
  * This is still the legacy card/billboard shader — superseded by an actual
  * raymarched volumetric pass in the next stage. Left functionally
- * unchanged here; only the uniform declarations above are new.
+ * unchanged here except for vIntensity's density modulation; only the
+ * uniform declarations above and that one addition are new.
  */
 void main() {
     vec2 centered = vLocalPos.xz;
@@ -83,7 +93,14 @@ void main() {
     float heightShade = clamp(vLocalPos.y, 0.0, 1.0);
     finalColor = mix(finalColor * 0.85, finalColor, heightShade);
 
-    float alpha = shapeMask * u_cloudDensity * vFadeAlpha;
+    // How strongly this cell's weather is currently expressed — see
+    // WeatherBandStruct.getPrimaryIntensity() / OverheadManager.advanceIntensity().
+    // Never lets density hit true zero on its own; a cell whose intensity
+    // has genuinely bottomed out is already being retired through
+    // vFadeAlpha instead.
+    float intensityFactor = mix(INTENSITY_ALPHA_FLOOR, 1.0, clamp(vIntensity, 0.0, 1.0));
+
+    float alpha = shapeMask * u_cloudDensity * intensityFactor * vFadeAlpha;
 
     fragColor = vec4(finalColor, alpha);
 }

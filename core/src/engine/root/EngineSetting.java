@@ -488,6 +488,22 @@ public class EngineSetting {
         public static final float WEATHER_CELL_REEVALUATION_INTERVAL_MIN_SECONDS = 45.0f;
         public static final float WEATHER_CELL_REEVALUATION_INTERVAL_MAX_SECONDS = 90.0f;
 
+        // Fast, shared cadence (deliberately NOT jittered per-cell like the
+        // reevaluation interval above) on which every active overhead cell's
+        // live weather intensity is recomputed — see
+        // OverheadManager.advanceIntensity() and OverheadCellStruct's own doc
+        // comment on why intensity and identity are deliberately decoupled:
+        // identity must never appear to change in a visible synchronized
+        // wave, but intensity is a continuous value safe to recompute for
+        // every active cell on the same tick.
+        public static final float WEATHER_CELL_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
+
+        // Below this, a cell's live intensity is considered to have
+        // dissipated and the cell is retired through the normal fade-out
+        // path rather than allowed to silently revive from near-zero — see
+        // OverheadManager.advanceIntensity().
+        public static final float WEATHER_CELL_DISSIPATION_INTENSITY_THRESHOLD = 0.05f;
+
         // Wind \\
 
         public static final float WIND_GLOBAL_DIRECTION_DEGREES = 45.0f;

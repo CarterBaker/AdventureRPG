@@ -64,6 +64,23 @@ public class OverheadCellStruct extends StructPackage {
      * 1 -> 0 just before it is retired, so streaming pop-in/pop-out at the
      * ring edge is never visually abrupt. Owned and mutated exclusively by
      * OverheadManager.
+     *
+     * intensity is a live, continuously-updated measure (see
+     * OverheadManager.advanceIntensity()) of how strongly this cell's
+     * weather is currently expressed at its own home coordinate — derived
+     * fresh every recompute from WeatherBandStruct.getPrimaryIntensity(),
+     * never stored/latched between recomputes. Unlike weatherHandle/
+     * cloudHandle/effectiveAltitude, which are fixed for the cell's entire
+     * lifetime, intensity is expected to rise and fall continuously as the
+     * underlying noise field evolves — this is what lets a physical
+     * weather system visibly strengthen and weaken over time rather than
+     * only ever existing at full presence or not at all. It is recomputed
+     * on a fast, shared cadence deliberately decoupled from
+     * nextReevaluationTime's slow, per-cell-jittered identity check — see
+     * OverheadManager.advanceIntensity() for why the two must stay
+     * separate. A cell whose intensity decays near zero is retired there
+     * exactly like an identity mismatch, so a weather system that has
+     * genuinely weakened away dissipates rather than reviving in place.
      */
 
     // Identity
@@ -85,6 +102,9 @@ public class OverheadCellStruct extends StructPackage {
     private float fadeAlpha;
     private boolean retiring;
 
+    // Intensity — see OverheadManager.advanceIntensity().
+    private float intensity;
+
     // Weather Reevaluation — see OverheadManager.advanceWeatherReevaluation().
     // The simulation-time (elapsedSimTime) at which this cell should next
     // check whether the weather at its own home coordinate has changed.
@@ -99,7 +119,8 @@ public class OverheadCellStruct extends StructPackage {
             WeatherHandle weatherHandle,
             CloudHandle cloudHandle,
             float effectiveAltitude,
-            float randomSeed) {
+            float randomSeed,
+            float intensity) {
 
         // Identity
         this.cellKey = cellKey;
@@ -115,6 +136,9 @@ public class OverheadCellStruct extends StructPackage {
         // Fade
         this.fadeAlpha = 0f;
         this.retiring = false;
+
+        // Intensity
+        this.intensity = intensity;
     }
 
     // Drift \\
@@ -132,6 +156,12 @@ public class OverheadCellStruct extends StructPackage {
 
     void setFadeAlpha(float fadeAlpha) {
         this.fadeAlpha = fadeAlpha;
+    }
+
+    // Intensity \\
+
+    void setIntensity(float intensity) {
+        this.intensity = intensity;
     }
 
     // Weather Reevaluation \\
@@ -192,5 +222,9 @@ public class OverheadCellStruct extends StructPackage {
 
     public boolean isRetiring() {
         return retiring;
+    }
+
+    public float getIntensity() {
+        return intensity;
     }
 }

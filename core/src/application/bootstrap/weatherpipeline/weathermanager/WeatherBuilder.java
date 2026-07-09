@@ -35,7 +35,9 @@ class WeatherBuilder extends BuilderPackage {
      * windTurbulenceScale defaults to
      * EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE (a neutral 1.0)
      * when omitted, so existing weather JSON without the field keeps its
-     * old wind behavior unchanged. Bootstrap-only and on-demand.
+     * old wind behavior unchanged. temperatureModifier defaults to 0 (no
+     * adjustment) when omitted — see WeatherData's own doc comment for what
+     * it represents. Bootstrap-only and on-demand.
      */
 
     // Internal
@@ -66,6 +68,7 @@ class WeatherBuilder extends BuilderPackage {
         float fogDensityScale = parseFloat(json, "fogDensityScale", 1f);
         float humidity = parseFloat(json, "humidity", 0.5f);
         float visibility = parseFloat(json, "visibility", 1f);
+        float temperatureModifier = parseFloat(json, "temperatureModifier", 0f);
 
         WeatherData weatherData = new WeatherData(
                 weatherName,
@@ -77,7 +80,8 @@ class WeatherBuilder extends BuilderPackage {
                 windTurbulenceScale,
                 fogDensityScale,
                 humidity,
-                visibility);
+                visibility,
+                temperatureModifier);
 
         WeatherHandle weatherHandle = create(WeatherHandle.class);
         weatherHandle.constructor(weatherData);

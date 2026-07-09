@@ -59,11 +59,18 @@ class CloudRenderSystem extends SystemPackage {
 
     // Fixed instance layout: chunk index (2 — chunkX/chunkZ, reinterpreted
     // int bits packed into floats), local offset + altitude (3 — localX,
-    // altitudeY, localZ), random seed (1), fade alpha (1). See addInstance()
-    // for why the chunk index and its in-chunk remainder travel as two
-    // separate small-magnitude values instead of one pre-multiplied
-    // absolute world-space float.
-    private static final int[] CLOUD_INSTANCE_ATTR_SIZES = { 2, 3, 1, 1 };
+    // altitudeY, localZ), random seed (1), fade alpha (1), live weather
+    // intensity (1 — see OverheadCellStruct.getIntensity() / WeatherBandStruct
+    // .getPrimaryIntensity()). See addInstance() for why the chunk index and
+    // its in-chunk remainder travel as two separate small-magnitude values
+    // instead of one pre-multiplied absolute world-space float. Intensity was
+    // previously computed every WEATHER_CELL_INTENSITY_UPDATE_INTERVAL_SECONDS
+    // by OverheadManager.advanceIntensity() but never left the CPU side — it
+    // now rides along per-instance so CloudVolumeShader.fsh can visibly thin
+    // a cloud's density as its underlying weather weakens, and thicken it
+    // back up as that same weather re-strengthens, rather than only ever
+    // popping fully in/out at the streaming radius via fadeAlpha.
+    private static final int[] CLOUD_INSTANCE_ATTR_SIZES = { 2, 3, 1, 1, 1 };
 
     // Internal
     private OverheadManager overheadManager;
@@ -80,7 +87,7 @@ class CloudRenderSystem extends SystemPackage {
     private Object2ObjectOpenHashMap<CloudHandle, MaterialInstance> cloudHandle2Material;
 
     // Scratch — reused every rebuild pass, never reallocated
-    private final float[] instanceScratch = new float[7];
+    private final float[] instanceScratch = new float[8];
 
     // Internal \\
 
@@ -220,6 +227,7 @@ class CloudRenderSystem extends SystemPackage {
         instanceScratch[4] = localZ;
         instanceScratch[5] = cell.getRandomSeed();
         instanceScratch[6] = cell.getFadeAlpha();
+        instanceScratch[7] = cell.getIntensity();
 
         buffer.addInstance(instanceScratch);
     }

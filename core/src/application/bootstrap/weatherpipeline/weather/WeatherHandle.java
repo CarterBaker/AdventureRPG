@@ -109,4 +109,8 @@ public class WeatherHandle extends HandlePackage {
     public float getVisibility() {
         return weatherData.getVisibility();
     }
+
+    public float getTemperatureModifier() {
+        return weatherData.getTemperatureModifier();
+    }
 }

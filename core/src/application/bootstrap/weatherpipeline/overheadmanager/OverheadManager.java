@@ -42,13 +42,25 @@ public class OverheadManager extends ManagerPackage {
      * scan cycle. CloudRenderSystem skips these cells outright when
      * rebuilding its instance buffers — see OverheadCellStruct.hasCloud().
      *
-     * Streaming is split into three passes:
+     * Streaming is split into four passes:
      *
      * - Every frame, ALL active cells get a cheap pass: advance their wind
      * drift, check whether they've drifted out of the streaming radius, and
      * advance their fade-in/fade-out alpha. This is plain float math —
      * with a few hundred to ~1000 active cells it costs nothing, so it is
      * never budgeted.
+     *
+     * - A second pass, advanceIntensity() — deliberately NOT the same slow,
+     * jittered cadence advanceWeatherReevaluation() uses — recomputes every
+     * active cell's live intensity (see OverheadCellStruct's own doc
+     * comment and WeatherBandStruct.getPrimaryIntensity()) on a fast,
+     * shared cadence. This is what makes a streamed-in weather system
+     * visibly strengthen and weaken from moment to moment, rather than
+     * only ever existing at fixed full presence between the coarse
+     * identity checks below. A cell whose intensity has decayed near zero
+     * is retired here — through the same fade-out path an out-of-range or
+     * identity-mismatched cell uses — so a weather system that has
+     * genuinely weakened away dissipates instead of silently reviving.
      *
      * - A third, slower pass — advanceWeatherReevaluation() — is what keeps
      * this whole system from reading as static once a cell has streamed in.
@@ -127,6 +139,13 @@ public class OverheadManager extends ManagerPackage {
     // cell's own slow recheck.
     private double elapsedSimTime;
 
+    // Intensity — see advanceIntensity(). A plain shared accumulator,
+    // deliberately not jittered per-cell like elapsedSimTime's reevaluation
+    // scheduling — intensity is safe, and desirable, to recompute for
+    // every active cell on the same tick. See EngineSetting.
+    // WEATHER_CELL_INTENSITY_UPDATE_INTERVAL_SECONDS's own doc comment.
+    private float intensityUpdateAccumulator;
+
     // Scratch — reused every stream-in call, never reallocated
     private final WeatherBandStruct bandScratch = new WeatherBandStruct();
 
@@ -156,6 +175,9 @@ public class OverheadManager extends ManagerPackage {
 
         // Weather Reevaluation
         this.elapsedSimTime = 0.0;
+
+        // Intensity
+        this.intensityUpdateAccumulator = 0f;
     }
 
     @Override
@@ -180,6 +202,7 @@ public class OverheadManager extends ManagerPackage {
 
         advanceWindDrift();
         advanceWeatherReevaluation();
+        advanceIntensity();
         advanceFadesAndRetire(playerChunkX, playerChunkZ);
         streamInBudgeted(playerCellX, playerCellZ);
     }
@@ -258,6 +281,7 @@ public class OverheadManager extends ManagerPackage {
         weatherManager.resolveWeatherBand(bandScratch, chunkCoordinate);
 
         WeatherHandle weatherHandle = bandScratch.getPrimary();
+        float intensity = bandScratch.getPrimaryIntensity();
         float cloudPickNoise = hash01(cellKey);
         CloudChanceStruct cloudEntry = weatherHandle.pickCloud(cloudPickNoise);
         float randomSeed = hash01(cellKey ^ 0x9E3779B97F4A7C15L);
@@ -277,7 +301,8 @@ public class OverheadManager extends ManagerPackage {
                 weatherHandle,
                 cloudHandle,
                 effectiveAltitude,
-                randomSeed);
+                randomSeed,
+                intensity);
 
         cell.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(cellKey));
 
@@ -391,6 +416,57 @@ public class OverheadManager extends ManagerPackage {
                 cell.setRetiring(true);
             else
                 cell.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(cell.getCellKey()));
+        }
+    }
+
+    // Intensity \\
+
+    /*
+     * Recomputes every active, non-retiring cell's live weather intensity
+     * (see WeatherBandStruct.getPrimaryIntensity()) on a fast, shared
+     * cadence — deliberately not the same slow, per-cell-jittered cadence
+     * identity uses (see advanceWeatherReevaluation()). Intensity is a
+     * continuous measure of how strongly the current noise field expresses
+     * whichever weather is primary at this cell's own home coordinate right
+     * now; unlike identity it is meant to visibly rise and fall from moment
+     * to moment as the underlying noise evolves, which is what actually
+     * makes a weather system read as strengthening or weakening rather than
+     * only ever snapping between fixed states.
+     *
+     * A cell whose intensity has decayed below
+     * WEATHER_CELL_DISSIPATION_INTENSITY_THRESHOLD is retired here, through
+     * the exact same fade-out path advanceFadesAndRetire() already drives for
+     * an out-of-range or identity-mismatched cell — never swapped or revived
+     * in place. This is deliberately not a special case: the triangle-shaped
+     * intensity curve (see WeatherBandStruct.getPrimaryIntensity()) already
+     * dips to zero at exactly the moment a resolved band's identity would
+     * flip, so a low-intensity cell is already visually faded down before it
+     * would otherwise go stale, and letting it fully retire there rather than
+     * revive is what makes weather genuinely dissipate over time instead of
+     * only ever changing because the player wandered out of range.
+     */
+    private void advanceIntensity() {
+
+        intensityUpdateAccumulator += internal.getDeltaTime();
+
+        if (intensityUpdateAccumulator < EngineSetting.WEATHER_CELL_INTENSITY_UPDATE_INTERVAL_SECONDS)
+            return;
+
+        intensityUpdateAccumulator = 0f;
+
+        for (OverheadCellStruct cell : activeCells.values()) {
+
+            if (cell.isRetiring())
+                continue;
+
+            long homeCoordinate = Coordinate2Long.pack(cell.getHomeChunkX(), cell.getHomeChunkZ());
+            weatherManager.resolveWeatherBand(bandScratch, homeCoordinate);
+
+            float intensity = bandScratch.getPrimaryIntensity();
+            cell.setIntensity(intensity);
+
+            if (intensity <= EngineSetting.WEATHER_CELL_DISSIPATION_INTENSITY_THRESHOLD)
+                cell.setRetiring(true);
         }
     }
 

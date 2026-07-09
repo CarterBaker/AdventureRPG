@@ -7,6 +7,7 @@ layout (location = 3) in vec2  aInstanceChunk;  // chunkX, chunkZ — reinterpre
 layout (location = 4) in vec3  aInstanceLocal;  // localX, altitudeY, localZ
 layout (location = 5) in float aRandomSeed;
 layout (location = 6) in float aFadeAlpha;
+layout (location = 7) in float aIntensity;      // live weather intensity — see OverheadCellStruct.getIntensity()
 
 #include "includes/CameraData.glsl"
 #include "includes/CloudSettingsData.glsl"
@@ -24,6 +25,7 @@ out vec3  vNormal;
 out vec2  vUV;
 out float vRandomSeed;
 out float vFadeAlpha;
+out float vIntensity;
 
 /*
 * Player-chunk-relative instance position. aInstanceChunk carries this
@@ -73,6 +75,11 @@ out float vFadeAlpha;
  * RegionSampleBranch's far-range sampling), a different projection
  * entirely from these world-space instances, which never exist beyond
  * u_cloudHorizonDistance in the first place.
+ *
+ * vIntensity passes the cell's live weather-strength value straight
+ * through untouched — it is a fragment-level density modulation (see
+ * CloudVolumeShader.fsh), not a geometric one, so it never affects size
+ * or position here.
  */
 void main() {
     int chunkX = floatBitsToInt(aInstanceChunk.x);
@@ -106,6 +113,7 @@ void main() {
     vUV = aUV;
     vRandomSeed = aRandomSeed;
     vFadeAlpha = aFadeAlpha * horizonFade;
+    vIntensity = aIntensity;
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }

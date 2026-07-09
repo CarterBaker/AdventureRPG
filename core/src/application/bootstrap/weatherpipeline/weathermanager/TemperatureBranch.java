@@ -14,7 +14,13 @@ class TemperatureBranch extends BranchPackage {
      * getTemperatureVariance()), shaped by a diurnal day/night curve and a
      * slow deterministic drift, then cooled by the current precipitation
      * intensity — a storm measurably drops the temperature, a clear sky
-     * does not.
+     * does not. On top of all that, the currently resolved weather's own
+     * temperatureModifier (see WeatherData/WeatherHandle) is added as a
+     * final signed offset — this is what lets two weathers with identical
+     * precipitationIntensity still feel thermally different (a cold front
+     * versus a merely overcast, precipitation-free system), and completes
+     * temperature as a genuine per-weather-type property rather than a
+     * side effect of precipitation alone.
      *
      * CPU-side only for now — nothing on the GPU reads temperature yet.
      * Gameplay systems (cold damage, freezing water, crop growth, whatever
@@ -78,7 +84,8 @@ class TemperatureBranch extends BranchPackage {
         float precipitationCooling = centerSample.getPrecipitationIntensity()
                 * EngineSetting.TEMPERATURE_PRECIPITATION_COOLING;
 
-        this.currentTemperature = baseTemperature + diurnalOffset + driftOffset - precipitationCooling;
+        this.currentTemperature = baseTemperature + diurnalOffset + driftOffset - precipitationCooling
+                + centerSample.getTemperatureModifier();
     }
 
     private void resolveActiveSeason() {

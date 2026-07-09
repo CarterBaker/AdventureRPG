@@ -21,6 +21,20 @@ public class WeatherBandStruct extends StructPackage {
      * that shouldn't re-roll every frame) should read getPrimary() once and
      * hold onto the result itself — this struct never remembers anything
      * between calls; it is overwritten fresh every resolution.
+     *
+     * getPrimaryIntensity() derives a continuous "how strongly is the
+     * currently-primary weather actually expressed here" value from the
+     * same blendFactor, rather than adding any new state. Within pool
+     * entry i's band, blendFactor sweeps 0 (the start of that entry's
+     * share of the noise range) to 1 (the boundary where it crosses into
+     * the next entry) — so intensity is highest at the "purest" point of
+     * whichever side getPrimary() currently reports, and dips to exactly
+     * zero right at the crossover point where primary identity would
+     * flip. A caller holding a persistent identity (an overhead cell) can
+     * sample this every frame to let that identity's presence visibly
+     * strengthen and weaken as the underlying noise field drifts, without
+     * ever needing to know it just crossed — or is about to cross — into
+     * a neighboring weather's territory.
      */
 
     private WeatherHandle low;
@@ -57,5 +71,25 @@ public class WeatherBandStruct extends StructPackage {
      */
     public WeatherHandle getPrimary() {
         return blendFactor < 0.5f ? low : high;
+    }
+
+    /*
+     * How strongly getPrimary()'s current answer is actually expressed at
+     * this coordinate, in [0, 1]. 1.0 means noise sits at the purest point
+     * of the primary weather's own share of the band; 0.0 means noise
+     * sits exactly at the boundary where primary would flip to the other
+     * side. Continuous and symmetric around that boundary, so a caller
+     * sampling this repeatedly at the same coordinate sees the value rise
+     * and fall smoothly as the underlying noise field evolves — the basis
+     * for a physical weather system visibly strengthening, weakening, and
+     * ultimately dissipating rather than only ever popping between fixed
+     * states.
+     */
+    public float getPrimaryIntensity() {
+
+        if (blendFactor < 0.5f)
+            return 1f - (blendFactor / 0.5f);
+
+        return (blendFactor - 0.5f) / 0.5f;
     }
 }
