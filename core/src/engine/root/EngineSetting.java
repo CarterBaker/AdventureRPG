@@ -1,3 +1,4 @@
+// EngineSetting.java
 package engine.root;
 
 import engine.graphics.color.Color;
@@ -387,6 +388,13 @@ public class EngineSetting {
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;
         public static final float WEATHER_WIND_DRIFT_SCALE = 0.35f;
         public static final float WEATHER_LOCAL_DRIFT_TIME_WRAP = 100000.0f;
+        // Neutral fallbacks read by WeatherManager before any seasonal weather
+        // pool has ever resolved (first frame(s) of a session — see
+        // WeatherManager.hasActiveWeatherPool()). Both are 1.0 — "no
+        // weather-driven change" — rather than 0.0, so LocalWindBranch never
+        // reads a silently-unset multiplier and goes dead calm at world start.
+        public static final float DEFAULT_WEATHER_WIND_SPEED_SCALE = 1.0f;
+        public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
 
         // Global Weather Noise \\
 

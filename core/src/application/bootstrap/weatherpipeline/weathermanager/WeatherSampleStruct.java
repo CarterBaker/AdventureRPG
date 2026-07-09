@@ -1,3 +1,4 @@
+// WeatherSampleStruct.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import engine.root.StructPackage;
@@ -12,6 +13,9 @@ class WeatherSampleStruct extends StructPackage {
      * cloudColor and cloudAltitude are sourced from each blended weather's
      * primary cloud (see WeatherHandle.getPrimaryCloud()) — representative
      * single values for horizon tinting, not a full per-cloud breakdown.
+     * windTurbulenceScale mirrors windSpeedScale — both are blended the
+     * same way, one feeding LocalWindBranch's flat speed multiplier, the
+     * other its gust/direction-wobble amplitude.
      */
 
     // Cloud
@@ -22,6 +26,7 @@ class WeatherSampleStruct extends StructPackage {
     // Atmosphere
     private float precipitationIntensity;
     private float windSpeedScale;
+    private float windTurbulenceScale;
     private float fogDensityScale;
 
     // Constructor \\
@@ -70,6 +75,14 @@ class WeatherSampleStruct extends StructPackage {
 
     void setWindSpeedScale(float windSpeedScale) {
         this.windSpeedScale = windSpeedScale;
+    }
+
+    float getWindTurbulenceScale() {
+        return windTurbulenceScale;
+    }
+
+    void setWindTurbulenceScale(float windTurbulenceScale) {
+        this.windTurbulenceScale = windTurbulenceScale;
     }
 
     float getFogDensityScale() {

@@ -1,3 +1,4 @@
+// LocalWindBranch.java
 package application.bootstrap.weatherpipeline.windmanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
@@ -28,6 +29,24 @@ class LocalWindBranch extends BranchPackage {
      * WeatherManager's own pool-resolution behavior; continuous life within
      * a season comes entirely from the gust and diurnal terms below, driven
      * by windVariance, rather than from blending between two named seasons.
+     *
+     * Wind <-> weather feedback loop:
+     * - Weather -> wind: both the gust SPEED amplitude and the gust
+     * DIRECTION wobble are scaled by the active weather's own
+     * windTurbulenceScale (see WeatherData.getWindTurbulenceScale()), on
+     * top of the existing flat windSpeedScale multiplier applied to the
+     * final speed in updateSpeed(). A calm weather (low turbulence)
+     * barely perturbs the season's base wind; a storm (high turbulence)
+     * makes it visibly gustier and more directionally erratic, not just
+     * faster.
+     * - Wind -> weather: RegionSampleBranch's own local noise sampling
+     * point is dragged by this exact WindHandle (see
+     * RegionSampleBranch.advanceWindDrift()), so the resolved weather at
+     * any fixed world location keeps changing as the wind blows the
+     * pattern past it — weather moves with the wind it itself is shaping.
+     * WeatherManager.getWindSpeedScale()/getWindTurbulenceScale() both fall
+     * back to a neutral 1.0 before any weather pool has ever resolved, so
+     * wind is never accidentally zeroed out at world start.
      */
 
     // Internal
@@ -80,8 +99,10 @@ class LocalWindBranch extends BranchPackage {
             seasonalDirectionOffsetDegrees = activeSeason.getPrevailingWindDirectionDegrees();
         }
 
-        updateDirection(seasonalDirectionOffsetDegrees);
-        updateSpeed(baseWindSpeed, windVariance);
+        float weatherTurbulence = weatherManager.getWindTurbulenceScale();
+
+        updateDirection(seasonalDirectionOffsetDegrees, weatherTurbulence);
+        updateSpeed(baseWindSpeed, windVariance, weatherTurbulence);
     }
 
     private void resolveActiveSeason() {
@@ -95,7 +116,7 @@ class LocalWindBranch extends BranchPackage {
         activeSeason = seasonManager.getSeasonHandleFromSeasonName(currentSeasonName);
     }
 
-    private void updateDirection(float seasonalDirectionOffsetDegrees) {
+    private void updateDirection(float seasonalDirectionOffsetDegrees, float weatherTurbulence) {
 
         Vector3 globalDirection = windHandle.getGlobalWindDirection();
         float globalAngle = (float) Math.atan2(globalDirection.z, globalDirection.x);
@@ -103,7 +124,7 @@ class LocalWindBranch extends BranchPackage {
         float seasonalOffsetRadians = (float) Math.toRadians(seasonalDirectionOffsetDegrees);
         float gustWobbleRadians = (float) Math.toRadians(
                 Math.sin(elapsedTime * EngineSetting.WIND_GUST_DIRECTION_FREQUENCY)
-                        * EngineSetting.WIND_GUST_DIRECTION_WOBBLE_DEGREES);
+                        * EngineSetting.WIND_GUST_DIRECTION_WOBBLE_DEGREES * weatherTurbulence);
 
         float localAngle = globalAngle + seasonalOffsetRadians + gustWobbleRadians;
 
@@ -113,10 +134,11 @@ class LocalWindBranch extends BranchPackage {
                 (float) Math.sin(localAngle));
     }
 
-    private void updateSpeed(float baseWindSpeed, float windVariance) {
+    private void updateSpeed(float baseWindSpeed, float windVariance, float weatherTurbulence) {
 
         float speedGust = (float) (Math.sin(elapsedTime * EngineSetting.WIND_GUST_SPEED_FREQUENCY) * 0.6
-                + Math.sin(elapsedTime * EngineSetting.WIND_GUST_SPEED_FREQUENCY_SECONDARY + 1.7) * 0.4);
+                + Math.sin(elapsedTime * EngineSetting.WIND_GUST_SPEED_FREQUENCY_SECONDARY + 1.7) * 0.4)
+                * weatherTurbulence;
 
         float seasonalSpeed = baseWindSpeed + speedGust * windVariance;
 

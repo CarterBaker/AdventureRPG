@@ -1,3 +1,4 @@
+// WeatherManager.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
@@ -32,6 +33,21 @@ public class WeatherManager extends ManagerPackage {
      * global noise overlay, live temperature, and the GPU UBO pushes are
      * delegated to branches.
      *
+     * Weather is the fusion of three inputs, combined once per frame in
+     * RegionSampleBranch: which biome is active (resolveActiveBiome()),
+     * which named season that biome is currently in (the calendar, via
+     * ClockHandle.getCurrentSeason()), and the world's global, rotating
+     * weather noise (GlobalNoiseBranch — the "separate virtual noise map
+     * wrapped around the planet" — blended with a wind-drifted local noise
+     * layer). Neither wind nor weather is a one-way input to the other:
+     * wind drags the local noise sampling point (see
+     * RegionSampleBranch.advanceWindDrift()), so weather visibly travels
+     * with the wind, while the currently resolved weather's own
+     * windSpeedScale/windTurbulenceScale feed back into LocalWindBranch,
+     * making wind gustier and more erratic under a storm than under a
+     * clear sky. See LocalWindBranch's own doc comment for the wind side
+     * of this loop.
+     *
      * updateReferenceCoordinate() resolves the main window's player world
      * position into a chunk coordinate every frame, before any sampling
      * happens this frame, and writes it into RegionSampleBranch via
@@ -45,7 +61,11 @@ public class WeatherManager extends ManagerPackage {
      * startup. update() skips sampling entirely until then, and any
      * cross-package caller of resolveWeatherBand() should check
      * hasActiveWeatherPool() first; calling it before that point throws
-     * rather than silently resolving against nothing.
+     * rather than silently resolving against nothing. getWindSpeedScale()
+     * and getWindTurbulenceScale() are the two exceptions — both fall back
+     * to a neutral 1.0 multiplier before that point instead of throwing or
+     * silently reading an unset zero, so LocalWindBranch never goes dead
+     * calm during the first frames of a session.
      */
 
     // Internal
@@ -109,7 +129,7 @@ public class WeatherManager extends ManagerPackage {
         String currentSeason = clockManager.getClockHandle().getCurrentSeason();
 
         if (currentSeason != null && !currentSeason.equals(lastSeason)) {
-            BiomeHandle activeBiome = biomeManager.getBiomeHandleFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
+            BiomeHandle activeBiome = resolveActiveBiome();
             this.activeWeatherPool = resolveWeatherPool(activeBiome, currentSeason);
             this.lastSeason = currentSeason;
         }
@@ -150,6 +170,22 @@ public class WeatherManager extends ManagerPackage {
         int chunkZ = Math.floorDiv((int) Math.floor(position.z), EngineSetting.CHUNK_SIZE);
 
         setReferenceCoordinate(Coordinate2Long.pack(chunkX, chunkZ));
+    }
+
+    // Biome Selection \\
+
+    /*
+     * Resolves which biome supplies the active seasonal weather pool.
+     * Single hardcoded biome for now (EngineSetting.DEFAULT_BIOME_NAME) —
+     * this is the one integration point a future per-location biome lookup
+     * (sampling a biome map at the current reference coordinate, the same
+     * way the world generator assigns biomes per block) needs to replace.
+     * Kept as its own method precisely so that hookup is a one-line change
+     * here rather than a change to update()'s control flow or a second
+     * biome-resolution path growing somewhere else.
+     */
+    private BiomeHandle resolveActiveBiome() {
+        return biomeManager.getBiomeHandleFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
     }
 
     // Management \\
@@ -282,9 +318,30 @@ public class WeatherManager extends ManagerPackage {
     /*
      * Exposes the reference region's blended windSpeedScale for WindManager's
      * LocalWindBranch, without leaking the package-private WeatherSampleStruct.
+     * Falls back to a neutral 1.0 (EngineSetting.DEFAULT_WEATHER_WIND_SPEED_SCALE)
+     * before the first weather pool ever resolves, rather than reading
+     * WeatherSampleStruct's unset default of 0.0 and going dead calm.
      */
     public float getWindSpeedScale() {
+
+        if (!hasActiveWeatherPool())
+            return EngineSetting.DEFAULT_WEATHER_WIND_SPEED_SCALE;
+
         return regionSampleBranch.getCenterSample().getWindSpeedScale();
+    }
+
+    /*
+     * Exposes the reference region's blended windTurbulenceScale for
+     * WindManager's LocalWindBranch — mirrors getWindSpeedScale() exactly,
+     * just scaling gust amplitude and direction wobble instead of base
+     * speed. Same neutral 1.0 fallback before any weather pool has resolved.
+     */
+    public float getWindTurbulenceScale() {
+
+        if (!hasActiveWeatherPool())
+            return EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE;
+
+        return regionSampleBranch.getCenterSample().getWindTurbulenceScale();
     }
 
     /*

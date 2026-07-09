@@ -1,3 +1,4 @@
+// WeatherBuilder.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import java.io.File;
@@ -12,6 +13,7 @@ import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherData;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import engine.root.BuilderPackage;
+import engine.root.EngineSetting;
 import engine.util.io.FileUtility;
 import engine.util.io.JsonUtility;
 import engine.util.registry.RegistryUtility;
@@ -27,7 +29,10 @@ class WeatherBuilder extends BuilderPackage {
      * the same on-demand-capable lookup pattern used for shaders, textures,
      * and every other cross-manager reference in bootstrap. humidity and
      * visibility both fall back to neutral defaults when omitted, same as
-     * every other atmosphere field here. Bootstrap-only and on-demand.
+     * every other atmosphere field here. windTurbulenceScale defaults to
+     * EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE (a neutral 1.0)
+     * when omitted, so existing weather JSON without the field keeps its
+     * old wind behavior unchanged. Bootstrap-only and on-demand.
      */
 
     // Internal
@@ -53,6 +58,8 @@ class WeatherBuilder extends BuilderPackage {
         float cloudCoverage = parseFloat(json, "cloudCoverage", 0f);
         float precipitationIntensity = parseFloat(json, "precipitationIntensity", 0f);
         float windSpeedScale = parseFloat(json, "windSpeedScale", 1f);
+        float windTurbulenceScale = parseFloat(json, "windTurbulenceScale",
+                EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE);
         float fogDensityScale = parseFloat(json, "fogDensityScale", 1f);
         float humidity = parseFloat(json, "humidity", 0.5f);
         float visibility = parseFloat(json, "visibility", 1f);
@@ -64,6 +71,7 @@ class WeatherBuilder extends BuilderPackage {
                 cloudCoverage,
                 precipitationIntensity,
                 windSpeedScale,
+                windTurbulenceScale,
                 fogDensityScale,
                 humidity,
                 visibility);

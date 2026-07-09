@@ -5,6 +5,7 @@
     "cloudCoverage": 0.15,
     "precipitationIntensity": 0.0,
     "windSpeedScale": 0.8,
+    "windTurbulenceScale": 0.3,
     "fogDensityScale": 0.9,
     "humidity": 0.25,
     "visibility": 1.0

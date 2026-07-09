@@ -1,3 +1,4 @@
+// WeatherData.java
 package application.bootstrap.weatherpipeline.weather;
 
 import engine.root.DataPackage;
@@ -15,7 +16,13 @@ public class WeatherData extends DataPackage {
      * (biome/season/global-noise resolution) and by fog/haze rendering —
      * visibility is a multiplier where 1.0 is clear air and lower values
      * are hazier, distinct from fogDensityScale which tunes the distance
-     * fog curve itself. Owned by WeatherHandle for the engine lifetime.
+     * fog curve itself. windSpeedScale and windTurbulenceScale both feed
+     * LocalWindBranch: windSpeedScale is a flat multiplier on the season's
+     * base wind speed, while windTurbulenceScale scales the AMPLITUDE of
+     * the gust oscillation and direction wobble underneath it — a storm
+     * should feel chaotic and erratic, not just uniformly stronger, so the
+     * two are kept as separate knobs rather than folded into one. Owned by
+     * WeatherHandle for the engine lifetime.
      */
 
     // Internal
@@ -29,6 +36,7 @@ public class WeatherData extends DataPackage {
     private final float cloudCoverage;
     private final float precipitationIntensity;
     private final float windSpeedScale;
+    private final float windTurbulenceScale;
     private final float fogDensityScale;
     private final float humidity;
     private final float visibility;
@@ -42,6 +50,7 @@ public class WeatherData extends DataPackage {
             float cloudCoverage,
             float precipitationIntensity,
             float windSpeedScale,
+            float windTurbulenceScale,
             float fogDensityScale,
             float humidity,
             float visibility) {
@@ -57,6 +66,7 @@ public class WeatherData extends DataPackage {
         this.cloudCoverage = cloudCoverage;
         this.precipitationIntensity = precipitationIntensity;
         this.windSpeedScale = windSpeedScale;
+        this.windTurbulenceScale = windTurbulenceScale;
         this.fogDensityScale = fogDensityScale;
         this.humidity = humidity;
         this.visibility = visibility;
@@ -86,6 +96,10 @@ public class WeatherData extends DataPackage {
 
     public float getWindSpeedScale() {
         return windSpeedScale;
+    }
+
+    public float getWindTurbulenceScale() {
+        return windTurbulenceScale;
     }
 
     public float getFogDensityScale() {

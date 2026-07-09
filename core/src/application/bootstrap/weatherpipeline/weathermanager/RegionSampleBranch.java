@@ -1,3 +1,4 @@
+// RegionSampleBranch.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
@@ -52,10 +53,11 @@ class RegionSampleBranch extends BranchPackage {
      * wind changes — a visible pop. Both drift accumulators wrap modulo the
      * world's own chunk-space width/height every frame, exactly like
      * GlobalNoiseBranch wraps its rotation angle. Because LocalWindBranch
-     * itself reads WeatherManager.getWindSpeedScale() (this class's own
-     * center sample), wind and weather form one closed feedback loop: wind
-     * pushes the storm pattern, the storm's own windSpeedScale in turn
-     * shapes the wind blowing through it.
+     * itself reads WeatherManager.getWindSpeedScale()/getWindTurbulenceScale()
+     * (this class's own center sample), wind and weather form one closed
+     * feedback loop: wind pushes the storm pattern, the storm's own
+     * windSpeedScale/windTurbulenceScale in turn shape the wind blowing
+     * through it — see LocalWindBranch's own doc comment for that side.
      *
      * Local noise samples in normalized, wrapped world-UV space — chunk
      * coordinates (plus the drifted offset) convert to a UV fraction of the
@@ -271,7 +273,9 @@ class RegionSampleBranch extends BranchPackage {
      * Converts a resolved band into flattened, continuously-blended visual
      * values for the region-sampling UBO path — a genuine reblend every
      * call, not the identity-preserving path a persistent overhead cell
-     * uses.
+     * uses. windSpeedScale/windTurbulenceScale are blended identically to
+     * every other atmosphere field — see LocalWindBranch for how the
+     * centre sample's copy of these two feeds back into wind itself.
      */
     private void writeSample(
             WeatherSampleStruct sample,
@@ -285,6 +289,7 @@ class RegionSampleBranch extends BranchPackage {
         sample.setCloudCoverage(lerp(low.getCloudCoverage(), high.getCloudCoverage(), t));
         sample.setPrecipitationIntensity(lerp(low.getPrecipitationIntensity(), high.getPrecipitationIntensity(), t));
         sample.setWindSpeedScale(lerp(low.getWindSpeedScale(), high.getWindSpeedScale(), t));
+        sample.setWindTurbulenceScale(lerp(low.getWindTurbulenceScale(), high.getWindTurbulenceScale(), t));
         sample.setFogDensityScale(lerp(low.getFogDensityScale(), high.getFogDensityScale(), t));
         sample.setCloudAltitude(lerp(lowCloud.getEffectiveAltitude(), highCloud.getEffectiveAltitude(), t));
 

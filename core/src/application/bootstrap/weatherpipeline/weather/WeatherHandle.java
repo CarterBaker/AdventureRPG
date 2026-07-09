@@ -1,3 +1,4 @@
+// WeatherHandle.java
 package application.bootstrap.weatherpipeline.weather;
 
 import engine.root.HandlePackage;
@@ -73,6 +74,10 @@ public class WeatherHandle extends HandlePackage {
 
     public float getWindSpeedScale() {
         return weatherData.getWindSpeedScale();
+    }
+
+    public float getWindTurbulenceScale() {
+        return weatherData.getWindTurbulenceScale();
     }
 
     public float getFogDensityScale() {
