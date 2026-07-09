@@ -31,6 +31,7 @@ import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RenderSystem extends SystemPackage {
@@ -52,7 +53,15 @@ class RenderSystem extends SystemPackage {
     // "The VAO wrapping it IS context-local and cannot be shared, so it is
     // deliberately NOT built here — RenderSystem owns a per-window VAO cache
     // over these handles, exactly like it already does for skinned buffers."
-    private Int2ObjectOpenHashMap<Object2IntOpenHashMap<CloudBufferInstance>> windowID2WeatherVAOCache;
+    // Unlike the skinned cache, this one also tracks which instanceVBO handle
+    // each cached VAO was built against — a cloud archetype's instance VBO is
+    // a single GL object shared across every window (see CloudBufferManager),
+    // and CloudBufferManager.reallocateGpuObjects() deletes and recreates it
+    // whenever a buffer outgrows its capacity. Without tracking the handle, a
+    // cached VAO's own baked vertex attrib bindings would silently keep
+    // pointing at a deleted buffer name after such a realloc — see
+    // getOrCreateWeatherVAO().
+    private Int2ObjectOpenHashMap<Object2ObjectOpenHashMap<CloudBufferInstance, WeatherBufferGpuState>> windowID2WeatherVAOCache;
 
     @Override
     protected void create() {
@@ -97,7 +106,17 @@ class RenderSystem extends SystemPackage {
 
             drawDepthSortedBatches(queue, target, window);
             drawSkinnedBatches(queue, target, window);
+
+            // Cloud instances are translucent volumetric geometry drawn with
+            // blending enabled — depth WRITES must be off here so overlapping
+            // cloud instances blend against each other instead of silently
+            // depth-occluding based on draw order (which, for an instanced
+            // draw call, is not sorted back-to-front). Depth TEST stays on,
+            // so clouds still correctly sit behind terrain and characters.
+            RenderGLSLUtility.setDepthMask(false);
             drawWeatherBatches(queue, target, window);
+            RenderGLSLUtility.setDepthMask(true);
+
             compositeRenderSystem.draw(queue, target, window);
             target.unbind();
         }
@@ -654,36 +673,59 @@ class RenderSystem extends SystemPackage {
     /*
      * One instanced VAO per (window, CloudBufferInstance) pair — never
      * shared across windows, since VAOs are context-local. Mirrors
-     * getOrCreateSkinnedVAO exactly; the instance attribute layout comes
-     * straight off the buffer itself (see CloudBufferData) rather than a
-     * fixed {4,4,4,4}, since cloud instances carry a plain position/seed/
-     * fade payload instead of a skinning matrix.
+     * getOrCreateSkinnedVAO, with one addition: the cloud archetype's
+     * instance VBO is reallocated (new GL buffer name) by
+     * CloudBufferManager.reallocateGpuObjects() whenever the buffer grows
+     * past its current capacity — see CloudBufferInstance.grow(). A VAO's
+     * vertex attrib bindings are baked at creation time against a specific
+     * buffer name, so a cached VAO built before such a realloc would keep
+     * silently reading from a deleted buffer. WeatherBufferGpuState tracks
+     * the instanceVBO each cached VAO was built against so that mismatch
+     * can be detected and the stale VAO rebuilt, rather than reused.
      */
     private int getOrCreateWeatherVAO(CloudBufferInstance cloudBuffer, WindowInstance window) {
 
         int windowID = window.getWindowID();
-        Object2IntOpenHashMap<CloudBufferInstance> buffer2VAO = windowID2WeatherVAOCache.get(windowID);
+        Object2ObjectOpenHashMap<CloudBufferInstance, WeatherBufferGpuState> buffer2State = windowID2WeatherVAOCache
+                .get(windowID);
 
-        if (buffer2VAO == null) {
-            buffer2VAO = new Object2IntOpenHashMap<>();
-            buffer2VAO.defaultReturnValue(0);
-            windowID2WeatherVAOCache.put(windowID, buffer2VAO);
+        if (buffer2State == null) {
+            buffer2State = new Object2ObjectOpenHashMap<>();
+            windowID2WeatherVAOCache.put(windowID, buffer2State);
         }
 
-        int vao = buffer2VAO.getInt(cloudBuffer);
+        WeatherBufferGpuState state = buffer2State.get(cloudBuffer);
+        int currentInstanceVBO = cloudBuffer.getInstanceVBO();
 
-        if (vao != 0)
-            return vao;
+        if (state != null && state.instanceVBO == currentInstanceVBO)
+            return state.vao;
 
-        vao = RenderGLSLUtility.createInstancedVAO(
+        // First VAO for this buffer in this window, or the buffer's
+        // instanceVBO has changed out from under a previously cached VAO
+        // (a realloc happened since) — either way, (re)build fresh.
+        if (state != null)
+            RenderGLSLUtility.deleteVAO(state.vao);
+
+        int vao = RenderGLSLUtility.createInstancedVAO(
                 cloudBuffer.getMeshHandle().getVertexHandle(),
                 cloudBuffer.getMeshHandle().getAttrSizes(),
                 cloudBuffer.getMeshHandle().getIndexHandle(),
-                cloudBuffer.getInstanceVBO(),
+                currentInstanceVBO,
                 cloudBuffer.getInstanceAttrSizes());
 
-        buffer2VAO.put(cloudBuffer, vao);
+        buffer2State.put(cloudBuffer, new WeatherBufferGpuState(vao, currentInstanceVBO));
 
         return vao;
+    }
+
+    private static final class WeatherBufferGpuState {
+
+        private final int vao;
+        private final int instanceVBO;
+
+        private WeatherBufferGpuState(int vao, int instanceVBO) {
+            this.vao = vao;
+            this.instanceVBO = instanceVBO;
+        }
     }
 }

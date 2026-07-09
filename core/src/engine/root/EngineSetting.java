@@ -336,7 +336,19 @@ public class EngineSetting {
         public static final float DEFAULT_GRAVITY_X = 0.0f;
         public static final float DEFAULT_GRAVITY_Y = -1.0f;
         public static final float DEFAULT_GRAVITY_Z = 0.0f;
-        public static final float DEFAULT_WORLD_ROTATION_SPEED = 0.3f;
+        // Sole consumer: GlobalNoiseBranch.advanceRotation(), which drives only
+        // the global weather-noise field's slow east-west scroll (see that
+        // class's own doc comment) — never any visual day/night rotation,
+        // which is calendar-timed instead (see CalendarPipeline). Previously
+        // 0.3 (a full 360-degree sweep of the weather noise every 20 real-
+        // world minutes), which read as weather fronts racing across the
+        // entire planet. Slowed by roughly two orders of magnitude — at
+        // 0.0025 deg/sec a full sweep takes 144,000 real seconds (40 hours).
+        // The world being only 1/20th Earth's physical scale is exactly why
+        // this needs to stay this slow: large-scale planetary weather
+        // circulation should feel glacial even though every other distance
+        // in this world is compressed.
+        public static final float DEFAULT_WORLD_ROTATION_SPEED = 0.0025f;
         public static final float DEFAULT_AXIAL_TILT_DEGREES = 23.5f;
 
         // Rotation \\
@@ -354,9 +366,11 @@ public class EngineSetting {
         // Reserved for the volumetric/toon raymarch rework and the sky<->world
         // transition that consumes it (see CloudVolumeShader, Clouds.glsl, and
         // CloudSettingsData's own doc comment). CLOUD_VOLUME_FADE_START_RATIO is
-        // the fraction of the near streaming radius (WEATHER_NEAR_RANGE_CHUNKS,
-        // converted to world units as u_cloudHorizonDistance) at which real cloud
-        // objects begin fading in / the sky dome begins suppressing its own
+        // the fraction of the near streaming radius (the lesser of the player's
+        // configured render distance and WEATHER_NEAR_RANGE_CHUNKS, converted to
+        // world units as u_cloudHorizonDistance — see
+        // CloudRenderSystem.pushCloudSettings()) at which real cloud objects
+        // begin fading in / the sky dome begins suppressing its own
         // representation in that direction — consumed by u_cloudTransitionStart,
         // computed once in CloudRenderSystem.pushCloudSettings(). The altitude/
         // extent and raymarch step-count pairs are sized for a per-instance
@@ -405,6 +419,12 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_TRANSITION_START = "u_cloudTransitionStart";
         public static final float CLOUD_HORIZON_MIN_SCALE = 0.35f;
         public static final float CLOUD_HORIZON_MAX_SCALE = 1.0f;
+        // Scales the render-distance-derived cloud horizon (see
+        // CloudRenderSystem.pushCloudSettings()) — 1.0 places the horizon
+        // exactly at the edge of rendered terrain; lower values pull real
+        // cloud objects' fade-out in from that edge, e.g. to keep them clear
+        // of any far-plane fog pop.
+        public static final float CLOUD_HORIZON_RENDER_DISTANCE_SCALE = 1.0f;
         public static final float CLOUD_DEFAULT_SKY_ALTITUDE = 140.0f;
         public static final float CLOUD_DEFAULT_SKY_COLOR_R = 1.0f;
         public static final float CLOUD_DEFAULT_SKY_COLOR_G = 1.0f;
@@ -424,6 +444,17 @@ public class EngineSetting {
         public static final float DEFAULT_WEATHER_VISIBILITY = 1.0f;
 
         // Weather Sampling Ranges \\
+        //
+        // WEATHER_FAR_RANGE_CHUNKS bounds the sky-dome-only 8-direction
+        // sampling (see RegionSampleBranch) — the sky is explicitly allowed
+        // to represent weather far beyond the edge of actually-rendered
+        // terrain. WEATHER_NEAR_RANGE_CHUNKS is a design-intent CAP on real,
+        // world-space cloud objects; the actual runtime radius those objects
+        // stream and fade within is whichever is smaller of this and the
+        // player's own configured render distance (Settings.maxRenderDistance)
+        // — see OverheadManager and CloudRenderSystem.pushCloudSettings() —
+        // so a real cloud object is never rendered over ground that was
+        // never drawn.
 
         public static final int WEATHER_NEAR_RANGE_CHUNKS = 192;
         public static final int WEATHER_FAR_RANGE_CHUNKS = 384;
@@ -443,6 +474,19 @@ public class EngineSetting {
         public static final int OVERHEAD_CELL_SIZE = 64;
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4;
         public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.35f;
+
+        // Weather Cell Lifecycle \\
+        //
+        // How often, in real seconds, an already-streamed-in overhead cell
+        // re-checks whether the weather at its own fixed home coordinate has
+        // actually changed (see OverheadManager.advanceWeatherReevaluation()).
+        // Each cell's own interval is jittered somewhere within this range,
+        // derived from its cellKey and never re-randomized, so cells never
+        // all recheck in the same frame. Deliberately slow — a physical cloud
+        // should read as a persistent weather system that can take minutes to
+        // form or dissipate, never as noise flickering between cloud types.
+        public static final float WEATHER_CELL_REEVALUATION_INTERVAL_MIN_SECONDS = 45.0f;
+        public static final float WEATHER_CELL_REEVALUATION_INTERVAL_MAX_SECONDS = 90.0f;
 
         // Wind \\
 

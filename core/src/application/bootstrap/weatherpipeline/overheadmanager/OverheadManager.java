@@ -42,14 +42,30 @@ public class OverheadManager extends ManagerPackage {
      * scan cycle. CloudRenderSystem skips these cells outright when
      * rebuilding its instance buffers — see OverheadCellStruct.hasCloud().
      *
-     * Streaming is split into two passes, mirroring ChunkQueueManager's own
-     * cheap-scan-vs-budgeted-work split:
+     * Streaming is split into three passes:
      *
      * - Every frame, ALL active cells get a cheap pass: advance their wind
-     * drift, check whether they've drifted out of the streaming radius,
-     * and advance their fade-in/fade-out alpha. This is plain float math —
+     * drift, check whether they've drifted out of the streaming radius, and
+     * advance their fade-in/fade-out alpha. This is plain float math —
      * with a few hundred to ~1000 active cells it costs nothing, so it is
      * never budgeted.
+     *
+     * - A third, slower pass — advanceWeatherReevaluation() — is what keeps
+     * this whole system from reading as static once a cell has streamed in.
+     * Every active, non-retiring cell periodically re-resolves the weather
+     * at its own fixed home coordinate (the same resolveWeatherBand() call
+     * used at stream-in) on its own jittered cadence
+     * (EngineSetting.WEATHER_CELL_REEVALUATION_INTERVAL_MIN/MAX_SECONDS —
+     * cells never all recheck in the same frame). If the resolved weather's
+     * identity has changed, the cell is retired through the exact same
+     * fade-out path a cell walking out of range uses — it is never swapped
+     * in place — so a passing storm's cloud visibly dissipates rather than
+     * instantly mutating into a different cloud type, and the vacated slot
+     * is free to stream back in with whatever weather (and cloud, if any)
+     * now actually resolves there. This is the piece that makes "a weather
+     * is always active, but never static" true at the level of individual
+     * physical clouds, not only at the level of the continuously-reblending
+     * sky-dome samples RegionSampleBranch already produces.
      *
      * - Streaming a genuinely NEW cell in (resolving its weather band,
      * picking its cloud, allocating its struct) is capped at
@@ -69,11 +85,16 @@ public class OverheadManager extends ManagerPackage {
      * dimensions — see WorldBuilder) are simply never streamed in; this is
      * a bounded world, not a wrapping one, for cloud placement purposes.
      *
-     * Streaming radius is EngineSetting.WEATHER_NEAR_RANGE_CHUNKS — the
-     * near side of the near/far range pair (see EngineSetting's own doc
+     * Streaming radius is whichever is smaller of the player's configured
+     * render distance (Settings.maxRenderDistance) and
+     * EngineSetting.WEATHER_NEAR_RANGE_CHUNKS (see EngineSetting's own doc
      * comment) — deliberately smaller than RegionSampleBranch's far-range
      * 8-direction sample distance, so real cloud geometry only ever exists
-     * inside the range the sky-dome preview has already been showing.
+     * inside the range the sky-dome preview has already been showing, AND
+     * never past the edge of terrain that is actually being drawn this
+     * session. Render distance is almost always the smaller of the two in
+     * practice, which is exactly the point — a real cloud object must never
+     * be found floating over ground that was never rendered underneath it.
      */
 
     // Fade rates — alpha units per second
@@ -90,6 +111,8 @@ public class OverheadManager extends ManagerPackage {
     private float radiusChunks;
     private int maxStreamPerFrame;
     private float driftScale;
+    private float reevaluationMinSeconds;
+    private float reevaluationMaxSeconds;
 
     // Registry
     private Long2ObjectOpenHashMap<OverheadCellStruct> activeCells;
@@ -98,6 +121,11 @@ public class OverheadManager extends ManagerPackage {
     // reference cell, walked round-robin across frames.
     private ObjectArrayList<int[]> candidateOffsets;
     private int scanCursor;
+
+    // Weather Reevaluation — see advanceWeatherReevaluation(). A monotonic
+    // simulation clock, advanced by deltaTime, purely for scheduling each
+    // cell's own slow recheck.
+    private double elapsedSimTime;
 
     // Scratch — reused every stream-in call, never reallocated
     private final WeatherBandStruct bandScratch = new WeatherBandStruct();
@@ -109,9 +137,15 @@ public class OverheadManager extends ManagerPackage {
 
         // Settings
         this.cellSizeChunks = EngineSetting.OVERHEAD_CELL_SIZE;
-        this.radiusChunks = EngineSetting.WEATHER_NEAR_RANGE_CHUNKS;
+        // Real cloud objects never stream past the edge of actually-drawn
+        // terrain — see the class doc comment above and
+        // CloudRenderSystem.pushCloudSettings(), which derives
+        // u_cloudHorizonDistance from this exact same expression.
+        this.radiusChunks = Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
         this.maxStreamPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
         this.driftScale = EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE;
+        this.reevaluationMinSeconds = EngineSetting.WEATHER_CELL_REEVALUATION_INTERVAL_MIN_SECONDS;
+        this.reevaluationMaxSeconds = EngineSetting.WEATHER_CELL_REEVALUATION_INTERVAL_MAX_SECONDS;
 
         // Registry
         this.activeCells = new Long2ObjectOpenHashMap<>();
@@ -119,6 +153,9 @@ public class OverheadManager extends ManagerPackage {
         // Streaming
         this.candidateOffsets = buildCandidateOffsets();
         this.scanCursor = 0;
+
+        // Weather Reevaluation
+        this.elapsedSimTime = 0.0;
     }
 
     @Override
@@ -142,6 +179,7 @@ public class OverheadManager extends ManagerPackage {
         int playerCellZ = Math.floorDiv(playerChunkZ, cellSizeChunks);
 
         advanceWindDrift();
+        advanceWeatherReevaluation();
         advanceFadesAndRetire(playerChunkX, playerChunkZ);
         streamInBudgeted(playerCellX, playerCellZ);
     }
@@ -241,6 +279,8 @@ public class OverheadManager extends ManagerPackage {
                 effectiveAltitude,
                 randomSeed);
 
+        cell.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(cellKey));
+
         activeCells.put(cellKey, cell);
     }
 
@@ -266,6 +306,18 @@ public class OverheadManager extends ManagerPackage {
      * two can be tuned independently (visible cloud objects drifting at a
      * different apparent rate than the CPU noise field driving them is
      * fine — they're not required to stay pixel-locked to each other).
+     *
+     * Each cell's own CloudHandle.getDriftSpeedScale() is applied on top of
+     * the shared wind vector — previously every cell drifted at the exact
+     * same rate regardless of cloud type, leaving CloudData.driftSpeedScale
+     * entirely unread. A high, thin Stratus and a low, heavy Nimbus now
+     * genuinely separate over time under the same wind instead of marching
+     * across the sky in lockstep. Cloudless cells (Clear weather) have no
+     * CloudHandle to read a scale from, so they fall back to 1.0 — they
+     * have nothing rendered to visibly drift anyway, but keeping the drift
+     * accumulator advancing at a neutral rate avoids any special-cased
+     * discontinuity if that cell's weather later resolves to a cloud-
+     * bearing one without ever restarting its drift from zero.
      */
     private void advanceWindDrift() {
 
@@ -273,11 +325,80 @@ public class OverheadManager extends ManagerPackage {
         float windSpeed = windManager.getWindHandle().getLocalWindSpeed();
         float deltaTime = internal.getDeltaTime();
 
-        double deltaChunkX = windDirection.x * windSpeed * driftScale * deltaTime;
-        double deltaChunkZ = windDirection.z * windSpeed * driftScale * deltaTime;
+        double baseDeltaChunkX = windDirection.x * windSpeed * driftScale * deltaTime;
+        double baseDeltaChunkZ = windDirection.z * windSpeed * driftScale * deltaTime;
 
-        for (OverheadCellStruct cell : activeCells.values())
-            cell.advanceDrift(deltaChunkX, deltaChunkZ);
+        for (OverheadCellStruct cell : activeCells.values()) {
+
+            float cellDriftScale = cell.hasCloud() ? cell.getCloudHandle().getDriftSpeedScale() : 1f;
+
+            cell.advanceDrift(baseDeltaChunkX * cellDriftScale, baseDeltaChunkZ * cellDriftScale);
+        }
+    }
+
+    // Weather Reevaluation \\
+
+    /*
+     * Slowly re-checks each active, non-retiring cell's weather against the
+     * CURRENT active weather pool at that cell's fixed home coordinate — the
+     * same resolution WeatherManager already performs for the reference
+     * region and for a cell's initial stream-in (see streamInCell() and
+     * WeatherManager.resolveWeatherBand()). If the resolved primary weather
+     * has changed since this cell was last evaluated, the cell is retired
+     * exactly like a cell that has drifted out of streaming range — it fades
+     * out via the existing fade/retire pipeline (advanceFadesAndRetire(),
+     * called right after this each frame) and, once fully gone, the normal
+     * streamInBudgeted() pass is free to fill that location again on a
+     * later frame, at which point it picks up whatever weather now resolves
+     * there. This is what makes "a weather is always active, but never
+     * static" true at the level of individual physical clouds, not just the
+     * continuously-reblending sky-dome samples RegionSampleBranch already
+     * produces — without this, a cloud streamed in under a passing storm
+     * would keep that storm's cloud type forever, even long after the
+     * storm noise had moved on, until the player wandered far enough away
+     * to force a restream.
+     *
+     * Deliberately does NOT swap the cell's cloud/weather fields in place —
+     * they are immutable for a cell's lifetime by design (see
+     * OverheadCellStruct) — an instant swap would pop a fully-formed cloud
+     * into a different type/altitude/color with no transition. Fading the
+     * old cloud out and letting a fresh cell fade a new one in nearby reads
+     * as actual weather change — a storm cloud dissipating, a fair-weather
+     * cloud forming — rather than a glitch.
+     *
+     * Each cell's own recheck cadence is a fixed, per-cell jittered interval
+     * derived from its own cellKey (same hashing approach used for its
+     * cloud pick and random seed) — deliberately not re-randomized every
+     * check, so a cell's personal cadence stays stable and cells never
+     * happen to sync up with each other.
+     */
+    private void advanceWeatherReevaluation() {
+
+        elapsedSimTime += internal.getDeltaTime();
+
+        for (OverheadCellStruct cell : activeCells.values()) {
+
+            if (cell.isRetiring())
+                continue;
+
+            if (elapsedSimTime < cell.getNextReevaluationTime())
+                continue;
+
+            long homeCoordinate = Coordinate2Long.pack(cell.getHomeChunkX(), cell.getHomeChunkZ());
+            weatherManager.resolveWeatherBand(bandScratch, homeCoordinate);
+
+            if (bandScratch.getPrimary() != cell.getWeatherHandle())
+                cell.setRetiring(true);
+            else
+                cell.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(cell.getCellKey()));
+        }
+    }
+
+    private float reevaluationIntervalFor(long cellKey) {
+
+        float t = hash01(cellKey ^ 0xD1B54A32D192ED03L);
+
+        return lerp(reevaluationMinSeconds, reevaluationMaxSeconds, t);
     }
 
     // Fade / Retire \\
@@ -338,6 +459,10 @@ public class OverheadManager extends ManagerPackage {
         h ^= (h >>> 33);
 
         return (float) ((h >>> 11) / (double) (1L << 53));
+    }
+
+    private static float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
     }
 
     // Accessible \\

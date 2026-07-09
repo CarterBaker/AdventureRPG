@@ -17,8 +17,21 @@ public class OverheadCellStruct extends StructPackage {
      * CloudHandle + effective altitude picked from that weather's chance-
      * weighted cloud pool at that same moment. All three stay fixed for the
      * cell's entire lifetime — a cell never re-rolls its own weather or
-     * cloud choice; only the region sampling used for horizon/skybox
+     * cloud choice in place; only the region sampling used for horizon/skybox
      * rendering reblends continuously.
+     *
+     * That fixed identity does eventually change, though — see
+     * nextReevaluationTime and OverheadManager.advanceWeatherReevaluation().
+     * On a slow, per-cell jittered cadence, the manager re-resolves the
+     * weather at this cell's own home coordinate; if it no longer matches
+     * this cell's weatherHandle, the cell is retired through the exact same
+     * fade-out path a cell that drifted out of streaming range uses. This is
+     * deliberately never an in-place field swap — a cloud silently mutating
+     * into a different type/color/altitude would look like a glitch, not
+     * like weather changing. Fading out and letting a fresh cell fade back
+     * in at that same physical slot (picking up whatever now resolves there)
+     * is what makes weather form and dissipate over time rather than only
+     * ever changing because the player walked away.
      *
      * cloudHandle may be null — a cell whose resolved weather defines no
      * clouds at all (a Clear weather; see WeatherHandle.hasClouds()) still
@@ -72,6 +85,11 @@ public class OverheadCellStruct extends StructPackage {
     private float fadeAlpha;
     private boolean retiring;
 
+    // Weather Reevaluation — see OverheadManager.advanceWeatherReevaluation().
+    // The simulation-time (elapsedSimTime) at which this cell should next
+    // check whether the weather at its own home coordinate has changed.
+    private double nextReevaluationTime;
+
     // Constructor \\
 
     OverheadCellStruct(
@@ -114,6 +132,16 @@ public class OverheadCellStruct extends StructPackage {
 
     void setFadeAlpha(float fadeAlpha) {
         this.fadeAlpha = fadeAlpha;
+    }
+
+    // Weather Reevaluation \\
+
+    double getNextReevaluationTime() {
+        return nextReevaluationTime;
+    }
+
+    void setNextReevaluationTime(double nextReevaluationTime) {
+        this.nextReevaluationTime = nextReevaluationTime;
     }
 
     // Accessible \\

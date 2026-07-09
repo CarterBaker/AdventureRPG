@@ -57,8 +57,13 @@ class CloudRenderSystem extends SystemPackage {
      * GridInstance by WorldRenderManager each call.
      */
 
-    // Fixed instance layout: world position (3), random seed (1), fade alpha (1)
-    private static final int[] CLOUD_INSTANCE_ATTR_SIZES = { 3, 1, 1 };
+    // Fixed instance layout: chunk index (2 — chunkX/chunkZ, reinterpreted
+    // int bits packed into floats), local offset + altitude (3 — localX,
+    // altitudeY, localZ), random seed (1), fade alpha (1). See addInstance()
+    // for why the chunk index and its in-chunk remainder travel as two
+    // separate small-magnitude values instead of one pre-multiplied
+    // absolute world-space float.
+    private static final int[] CLOUD_INSTANCE_ATTR_SIZES = { 2, 3, 1, 1 };
 
     // Internal
     private OverheadManager overheadManager;
@@ -75,7 +80,7 @@ class CloudRenderSystem extends SystemPackage {
     private Object2ObjectOpenHashMap<CloudHandle, MaterialInstance> cloudHandle2Material;
 
     // Scratch — reused every rebuild pass, never reallocated
-    private final float[] instanceScratch = new float[5];
+    private final float[] instanceScratch = new float[7];
 
     // Internal \\
 
@@ -106,30 +111,40 @@ class CloudRenderSystem extends SystemPackage {
 
     /*
      * Pushed once at bootstrap, never per frame — see CloudSettingsData.glsl's
-     * own doc comment. horizonDistanceBlocks converts WEATHER_NEAR_RANGE_CHUNKS
-     * — the same near-range radius OverheadManager streams real cloud
-     * objects within — from chunk units to world/block units, since
-     * CloudVolumeShader.vsh compares it directly against world-space camera
-     * distance. Individual cloud cards shrink toward CLOUD_HORIZON_MIN_SCALE
-     * as they approach the edge of that radius, so a cloud dissolving into
-     * the sky-dome preview and a cloud streaming out of OverheadManager's
-     * registry always happen at the same boundary.
+     * own doc comment. Real cloud OBJECTS are capped to whichever is smaller:
+     * the actual configured render distance (Settings.maxRenderDistance), or
+     * the weather simulation's own design-intent near range
+     * (EngineSetting.WEATHER_NEAR_RANGE_CHUNKS) — render distance is almost
+     * always the smaller of the two in practice, since terrain itself never
+     * draws past it, which is exactly what guarantees a real cloud object is
+     * never rendered floating over ground that was never drawn. Individual
+     * cloud cards shrink toward CLOUD_HORIZON_MIN_SCALE as they approach the
+     * edge of that radius, so a cloud dissolving into the sky-dome preview
+     * and a cloud streaming out of OverheadManager's registry always happen
+     * at the same boundary — see OverheadManager, which derives its own
+     * streaming radius from this identical expression.
      *
      * skyViewDistanceBlocks is the world-unit version of
      * WEATHER_FAR_RANGE_CHUNKS — the same radius RegionSampleBranch already
-     * samples its 8 compass directions within — so the sky dome never
-     * implies weather exists farther out than the simulation actually
-     * resolves. transitionStartBlocks marks where, within the near radius,
-     * real cloud objects should start taking over from that sky
-     * representation (CLOUD_VOLUME_FADE_START_RATIO of the way to the
-     * streaming edge). Neither is consumed by any shader yet — see
-     * CloudSettingsData.glsl.
+     * samples its 8 compass directions within, and deliberately untouched
+     * by render distance — so the sky dome never implies weather exists
+     * farther out than the simulation actually resolves, regardless of how
+     * far terrain itself is currently configured to draw.
+     * transitionStartBlocks marks where, within the near radius, real cloud
+     * objects should start taking over from that sky representation
+     * (CLOUD_VOLUME_FADE_START_RATIO of the way to the streaming edge).
+     * Neither is consumed by any shader yet — see CloudSettingsData.glsl.
      */
     private void pushCloudSettings() {
 
         UBOHandle cloudSettingsData = uboManager.getUBOHandleFromUBOName(EngineSetting.CLOUD_SETTINGS_DATA_UBO);
 
-        float horizonDistanceBlocks = EngineSetting.WEATHER_NEAR_RANGE_CHUNKS * EngineSetting.CHUNK_SIZE;
+        float cloudObjectRangeChunks = Math.min(
+                settings.maxRenderDistance,
+                (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
+
+        float horizonDistanceBlocks = cloudObjectRangeChunks * EngineSetting.CHUNK_SIZE
+                * EngineSetting.CLOUD_HORIZON_RENDER_DISTANCE_SCALE;
         float skyViewDistanceBlocks = EngineSetting.WEATHER_FAR_RANGE_CHUNKS * EngineSetting.CHUNK_SIZE;
         float transitionStartBlocks = horizonDistanceBlocks * EngineSetting.CLOUD_VOLUME_FADE_START_RATIO;
 
@@ -172,11 +187,39 @@ class CloudRenderSystem extends SystemPackage {
         CloudBufferInstance buffer = cloudBufferManager.getOrCreateCloudBuffer(
                 cloudHandle, cloudMeshHandle, CLOUD_INSTANCE_ATTR_SIZES);
 
-        instanceScratch[0] = (float) (cell.getCurrentChunkX() * EngineSetting.CHUNK_SIZE);
-        instanceScratch[1] = cell.getEffectiveAltitude();
-        instanceScratch[2] = (float) (cell.getCurrentChunkZ() * EngineSetting.CHUNK_SIZE);
-        instanceScratch[3] = cell.getRandomSeed();
-        instanceScratch[4] = cell.getFadeAlpha();
+        // Player-chunk-relative encoding — mirrors StandardItemShader.vsh's
+        // chunk/local split exactly (see that shader's own comment). The
+        // cell's current position is chunk-space with a fractional wind-
+        // drift remainder (see OverheadCellStruct.getCurrentChunkX/Z()).
+        // Splitting it into a whole chunk index (precise as a reinterpreted
+        // int at any distance from world origin) plus a small in-chunk
+        // remainder in blocks — rather than pre-multiplying into one large
+        // absolute-world float here — is what lets the vertex shader
+        // reconstruct render-space position relative to u_playerChunkX/Z
+        // (see PlayerPositionData.glsl) instead of having to subtract the
+        // camera position back out of an already-large float. u_view/
+        // u_cameraPosition are themselves expressed in that same
+        // player-chunk-recentered space (see StandardSurfaceShader's own
+        // u_gridPosition offset for the terrain-side equivalent), so an
+        // instance position built any other way silently drifts out of
+        // agreement with the camera transform as the player moves — which
+        // is what previously read as clouds "snapping" between chunks.
+        double currentChunkX = cell.getCurrentChunkX();
+        double currentChunkZ = cell.getCurrentChunkZ();
+
+        int chunkX = (int) Math.floor(currentChunkX);
+        int chunkZ = (int) Math.floor(currentChunkZ);
+
+        float localX = (float) ((currentChunkX - chunkX) * EngineSetting.CHUNK_SIZE);
+        float localZ = (float) ((currentChunkZ - chunkZ) * EngineSetting.CHUNK_SIZE);
+
+        instanceScratch[0] = Float.intBitsToFloat(chunkX);
+        instanceScratch[1] = Float.intBitsToFloat(chunkZ);
+        instanceScratch[2] = localX;
+        instanceScratch[3] = cell.getEffectiveAltitude();
+        instanceScratch[4] = localZ;
+        instanceScratch[5] = cell.getRandomSeed();
+        instanceScratch[6] = cell.getFadeAlpha();
 
         buffer.addInstance(instanceScratch);
     }
