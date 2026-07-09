@@ -36,10 +36,15 @@ class CloudRenderSystem extends SystemPackage {
      * cached forever — every instance sharing that archetype draws
      * through the exact same MaterialInstance, so the whole archetype is
      * one instanced draw call regardless of how many OverheadCellStructs
-     * reference it. Baked-once uniforms (colour, scale, density, edge
-     * softness, puff jitter) come straight off CloudData — see the "Baked
-     * once per material clone in CloudRenderSystem.resolveMaterial()" doc
-     * comments already sitting on CloudVolumeShader.vsh/.fsh.
+     * reference it. Baked-once uniforms come straight off CloudData — see
+     * resolveMaterial() below. This now includes the full volumetric/toon
+     * field set (topColor, toonBands, densityNoiseScale, noiseWarpStrength,
+     * coverageBias, silhouetteSoftness, shadowColor, shadeStrength,
+     * rimLightStrength, ambientOcclusionStrength, brightnessMultiplier) —
+     * previously only the legacy card-shader fields were baked here. The
+     * shader itself doesn't act on the new fields yet; that lands with the
+     * volumetric raymarch rework. Wiring them here first means that rework
+     * only has to touch GLSL, not the Java baking path.
      *
      * Owned by WeatherRenderSystem, which supplies the per-window
      * fbo/window pairs to submit() — this class has no window/grid
@@ -173,6 +178,16 @@ class CloudRenderSystem extends SystemPackage {
 
     // Material Resolution \\
 
+    /*
+     * Bakes every archetype-level (never-per-instance) value off CloudData
+     * into a single cloned MaterialInstance, shared by every instance of
+     * this cloud type. Split into two groups purely for readability:
+     * - legacy card-shader fields (still read by the current
+     * CloudVolumeShader.fsh)
+     * - volumetric/toon fields (declared as uniforms in the shader but not
+     * yet consumed by its shading logic — staged ahead of the raymarch
+     * rework so that rework only has to change GLSL, not this method).
+     */
     private MaterialInstance resolveMaterial(CloudHandle cloudHandle) {
 
         MaterialInstance existing = cloudHandle2Material.get(cloudHandle);
@@ -182,12 +197,28 @@ class CloudRenderSystem extends SystemPackage {
 
         MaterialInstance material = materialManager.cloneMaterial(EngineSetting.CLOUD_VOLUME_MATERIAL_NAME);
 
+        // Legacy card-shader fields
         material.setUniform(EngineSetting.UNIFORM_CLOUD_COLOR, cloudHandle.getCloudColor());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_SCALE, cloudHandle.getScale());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_VERTICAL_THICKNESS, cloudHandle.getVerticalThickness());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_DENSITY, cloudHandle.getDensity());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_EDGE_SOFTNESS, cloudHandle.getEdgeSoftness());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_PUFF_JITTER, cloudHandle.getPuffJitter());
+
+        // Volumetric / toon fields
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_TOP_COLOR, cloudHandle.getTopColor());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_TOON_BANDS, cloudHandle.getToonBands());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_DENSITY_NOISE_SCALE, cloudHandle.getDensityNoiseScale());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_NOISE_WARP_STRENGTH, cloudHandle.getNoiseWarpStrength());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_COVERAGE_BIAS, cloudHandle.getCoverageBias());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_SILHOUETTE_SOFTNESS, cloudHandle.getSilhouetteSoftness());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_SHADOW_COLOR, cloudHandle.getShadowColor());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_SHADE_STRENGTH, cloudHandle.getShadeStrength());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_RIM_LIGHT_STRENGTH, cloudHandle.getRimLightStrength());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_AMBIENT_OCCLUSION_STRENGTH,
+                cloudHandle.getAmbientOcclusionStrength());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_BRIGHTNESS_MULTIPLIER,
+                cloudHandle.getBrightnessMultiplier());
 
         cloudHandle2Material.put(cloudHandle, material);
 

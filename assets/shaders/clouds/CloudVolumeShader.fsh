@@ -21,6 +21,24 @@ uniform float u_cloudDensity;
 uniform float u_cloudEdgeSoftness;
 uniform float u_cloudPuffJitter;
 
+// Volumetric toon shading uniforms — baked per material clone alongside the
+// legacy fields above (see CloudRenderSystem.resolveMaterial()), but not yet
+// read by the shading logic below. This stage is pure data plumbing so the
+// upcoming raymarched volumetric toon rework only has to change GLSL, not
+// the Java baking path. See CloudData's own doc comment for what each of
+// these drives once consumed.
+uniform vec3  u_cloudTopColor;
+uniform int   u_cloudToonBands;
+uniform float u_cloudDensityNoiseScale;
+uniform float u_cloudNoiseWarpStrength;
+uniform float u_cloudCoverageBias;
+uniform float u_cloudSilhouetteSoftness;
+uniform vec3  u_cloudShadowColor;
+uniform float u_cloudShadeStrength;
+uniform float u_cloudRimLightStrength;
+uniform float u_cloudAmbientOcclusionStrength;
+uniform float u_cloudBrightnessMultiplier;
+
 /*
 * Stamps a single soft, roughly circular "puff" onto the card's local XZ
  * footprint (vLocalPos ranges -0.5..0.5, so radialDist is 0 at the card's
@@ -34,6 +52,10 @@ uniform float u_cloudPuffJitter;
  * drifts with the wind, instead of swimming in place. u_time adds a slow
  * independent breathing motion on top, distinct from the wind-driven
  * translation already baked into vWorldPos upstream.
+ *
+ * This is still the legacy card/billboard shader — superseded by an actual
+ * raymarched volumetric pass in the next stage. Left functionally
+ * unchanged here; only the uniform declarations above are new.
  */
 void main() {
     vec2 centered = vLocalPos.xz;

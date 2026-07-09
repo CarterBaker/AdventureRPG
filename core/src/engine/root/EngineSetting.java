@@ -1,4 +1,3 @@
-// EngineSetting.java
 package engine.root;
 
 import engine.graphics.color.Color;
@@ -373,6 +372,24 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_VERTICAL_THICKNESS = "u_cloudVerticalThickness";
         public static final String UNIFORM_CLOUD_EDGE_SOFTNESS = "u_cloudEdgeSoftness";
         public static final String UNIFORM_CLOUD_PUFF_JITTER = "u_cloudPuffJitter";
+
+        // Cloud Volumetric Toon Shading — baked once per material clone in
+        // CloudRenderSystem.resolveMaterial(), consumed by the raymarched
+        // volumetric toon shading pass landing in the Stage 2 shader rework.
+        // Declared now purely as data plumbing — CloudVolumeShader.fsh already
+        // declares matching uniforms but does not yet act on them.
+        public static final String UNIFORM_CLOUD_TOP_COLOR = "u_cloudTopColor";
+        public static final String UNIFORM_CLOUD_TOON_BANDS = "u_cloudToonBands";
+        public static final String UNIFORM_CLOUD_DENSITY_NOISE_SCALE = "u_cloudDensityNoiseScale";
+        public static final String UNIFORM_CLOUD_NOISE_WARP_STRENGTH = "u_cloudNoiseWarpStrength";
+        public static final String UNIFORM_CLOUD_COVERAGE_BIAS = "u_cloudCoverageBias";
+        public static final String UNIFORM_CLOUD_SILHOUETTE_SOFTNESS = "u_cloudSilhouetteSoftness";
+        public static final String UNIFORM_CLOUD_SHADOW_COLOR = "u_cloudShadowColor";
+        public static final String UNIFORM_CLOUD_SHADE_STRENGTH = "u_cloudShadeStrength";
+        public static final String UNIFORM_CLOUD_RIM_LIGHT_STRENGTH = "u_cloudRimLightStrength";
+        public static final String UNIFORM_CLOUD_AMBIENT_OCCLUSION_STRENGTH = "u_cloudAmbientOcclusionStrength";
+        public static final String UNIFORM_CLOUD_BRIGHTNESS_MULTIPLIER = "u_cloudBrightnessMultiplier";
+
         public static final String CLOUD_SETTINGS_DATA_UBO = "CloudSettingsData";
         public static final String UNIFORM_CLOUD_HORIZON_DISTANCE = "u_cloudHorizonDistance";
         public static final String UNIFORM_CLOUD_MIN_SCALE = "u_cloudMinScale";
@@ -388,11 +405,6 @@ public class EngineSetting {
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;
         public static final float WEATHER_WIND_DRIFT_SCALE = 0.35f;
         public static final float WEATHER_LOCAL_DRIFT_TIME_WRAP = 100000.0f;
-        // Neutral fallbacks read by WeatherManager before any seasonal weather
-        // pool has ever resolved (first frame(s) of a session — see
-        // WeatherManager.hasActiveWeatherPool()). Both are 1.0 — "no
-        // weather-driven change" — rather than 0.0, so LocalWindBranch never
-        // reads a silently-unset multiplier and goes dead calm at world start.
         public static final float DEFAULT_WEATHER_WIND_SPEED_SCALE = 1.0f;
         public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
 
