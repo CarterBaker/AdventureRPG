@@ -35,6 +35,13 @@ class RegionSampleBranch extends BranchPackage {
      * sampleDirection() deliberately reblends every call since these 9
      * samples only ever drive smoothly fading fog/cloud UBO values.
      *
+     * Sample distance uses EngineSetting.WEATHER_FAR_RANGE_CHUNKS — the
+     * far side of the near/far range pair (see EngineSetting's own doc
+     * comment). Deliberately larger than OverheadManager's near-range
+     * streaming radius, so the 8-direction sky-dome preview always shows
+     * an approaching weather system before it ever reaches the range real
+     * cloud objects populate.
+     *
      * Diagonal samples are placed at the same Euclidean distance from the
      * reference as the cardinal ones — a diagonal direction has both axes
      * at full magnitude (dir.x, dir.y both ±1), which without correction
@@ -104,7 +111,7 @@ class RegionSampleBranch extends BranchPackage {
     protected void create() {
 
         // Settings
-        this.sampleDistance = EngineSetting.WEATHER_REGION_SAMPLE_DISTANCE;
+        this.sampleDistance = EngineSetting.WEATHER_FAR_RANGE_CHUNKS;
         this.noiseCellSize = EngineSetting.WEATHER_NOISE_CELL_SIZE;
         this.windDriftScale = EngineSetting.WEATHER_WIND_DRIFT_SCALE;
 
@@ -283,20 +290,49 @@ class RegionSampleBranch extends BranchPackage {
             WeatherHandle high,
             float t) {
 
-        CloudChanceStruct lowCloud = low.getPrimaryCloud();
-        CloudChanceStruct highCloud = high.getPrimaryCloud();
-
         sample.setCloudCoverage(lerp(low.getCloudCoverage(), high.getCloudCoverage(), t));
         sample.setPrecipitationIntensity(lerp(low.getPrecipitationIntensity(), high.getPrecipitationIntensity(), t));
         sample.setWindSpeedScale(lerp(low.getWindSpeedScale(), high.getWindSpeedScale(), t));
         sample.setWindTurbulenceScale(lerp(low.getWindTurbulenceScale(), high.getWindTurbulenceScale(), t));
         sample.setFogDensityScale(lerp(low.getFogDensityScale(), high.getFogDensityScale(), t));
-        sample.setCloudAltitude(lerp(lowCloud.getEffectiveAltitude(), highCloud.getEffectiveAltitude(), t));
+
+        CloudChanceStruct lowCloud = low.getPrimaryCloud();
+        CloudChanceStruct highCloud = high.getPrimaryCloud();
+
+        sample.setCloudAltitude(lerp(resolveCloudAltitude(lowCloud), resolveCloudAltitude(highCloud), t));
 
         sample.setCloudColor(
-                lerp(lowCloud.getCloudHandle().getCloudColor().x, highCloud.getCloudHandle().getCloudColor().x, t),
-                lerp(lowCloud.getCloudHandle().getCloudColor().y, highCloud.getCloudHandle().getCloudColor().y, t),
-                lerp(lowCloud.getCloudHandle().getCloudColor().z, highCloud.getCloudHandle().getCloudColor().z, t));
+                lerp(resolveCloudColorR(lowCloud), resolveCloudColorR(highCloud), t),
+                lerp(resolveCloudColorG(lowCloud), resolveCloudColorG(highCloud), t),
+                lerp(resolveCloudColorB(lowCloud), resolveCloudColorB(highCloud), t));
+    }
+
+    // Cloud Fallback \\
+
+    /*
+     * A weather with no clouds defined (e.g. Clear) resolves its cloud-
+     * specific sample fields to a neutral fallback here rather than
+     * throwing — the sky pass still needs an altitude/color value to blend
+     * toward even when one side of the band has nothing to actually draw.
+     * cloudCoverage itself already carries the real "how much sky is
+     * covered" signal independent of these fallbacks, so a Clear weather
+     * still reads as an empty sky regardless of what these placeholder
+     * values are.
+     */
+    private float resolveCloudAltitude(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getEffectiveAltitude() : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;
+    }
+
+    private float resolveCloudColorR(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getCloudColor().x : EngineSetting.CLOUD_DEFAULT_SKY_COLOR_R;
+    }
+
+    private float resolveCloudColorG(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getCloudColor().y : EngineSetting.CLOUD_DEFAULT_SKY_COLOR_G;
+    }
+
+    private float resolveCloudColorB(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getCloudColor().z : EngineSetting.CLOUD_DEFAULT_SKY_COLOR_B;
     }
 
     private float lerp(float a, float b, float t) {

@@ -15,6 +15,14 @@ public class WeatherHandle extends HandlePackage {
      * pick from getCloudEntries() themselves via WeightedChanceUtility;
      * getPrimaryCloud() is a deterministic convenience for single-value
      * uses like horizon tinting, always returning the highest-chance entry.
+     *
+     * A weather may define no clouds at all — see standard/ClearWeather.json
+     * — in which case hasClouds() is false and both getPrimaryCloud() and
+     * pickCloud() return null rather than throwing. Every location in the
+     * world always resolves to SOME WeatherHandle (see
+     * WeatherManager.resolveWeatherBand()), clear weather included, so
+     * "no clouds right now" is a normal, fully-supported outcome, not a
+     * missing-data error.
      */
 
     // Internal
@@ -44,12 +52,16 @@ public class WeatherHandle extends HandlePackage {
         return weatherData.getCloudEntries();
     }
 
+    public boolean hasClouds() {
+        return !weatherData.getCloudEntries().isEmpty();
+    }
+
     public CloudChanceStruct getPrimaryCloud() {
 
         ObjectArrayList<CloudChanceStruct> entries = weatherData.getCloudEntries();
 
         if (entries.isEmpty())
-            throwException("Weather \"" + getWeatherName() + "\" has no clouds defined");
+            return null;
 
         CloudChanceStruct best = entries.get(0);
 
@@ -61,7 +73,13 @@ public class WeatherHandle extends HandlePackage {
     }
 
     public CloudChanceStruct pickCloud(float noise01) {
-        return WeightedChanceUtility.pickWeighted(weatherData.getCloudEntries(), noise01);
+
+        ObjectArrayList<CloudChanceStruct> entries = weatherData.getCloudEntries();
+
+        if (entries.isEmpty())
+            return null;
+
+        return WeightedChanceUtility.pickWeighted(entries, noise01);
     }
 
     public float getCloudCoverage() {

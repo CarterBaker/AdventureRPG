@@ -10,15 +10,22 @@ public class OverheadCellStruct extends StructPackage {
      * One streamed cell in the overhead cloud grid. Represents a single
      * physical patch of the world's cloud layer — never a single visual
      * cloud object; the render pipeline decides how many actual cloud
-     * instances a cell renders as (currently: exactly one). Holds a
-     * persistent, non-reblending WeatherHandle identity (resolved once via
-     * WeatherManager.resolveWeatherBand().getPrimary() at stream-in time —
-     * see OverheadManager.streamInCell()) and the CloudHandle + effective
-     * altitude picked from that weather's chance-weighted cloud pool at
-     * that same moment. All three stay fixed for the cell's entire
-     * lifetime — a cell never re-rolls its own weather or cloud choice;
-     * only the region sampling used for horizon/skybox rendering reblends
-     * continuously.
+     * instances a cell renders as (currently: exactly one, or zero — see
+     * below). Holds a persistent, non-reblending WeatherHandle identity
+     * (resolved once via WeatherManager.resolveWeatherBand().getPrimary()
+     * at stream-in time — see OverheadManager.streamInCell()) and the
+     * CloudHandle + effective altitude picked from that weather's chance-
+     * weighted cloud pool at that same moment. All three stay fixed for the
+     * cell's entire lifetime — a cell never re-rolls its own weather or
+     * cloud choice; only the region sampling used for horizon/skybox
+     * rendering reblends continuously.
+     *
+     * cloudHandle may be null — a cell whose resolved weather defines no
+     * clouds at all (a Clear weather; see WeatherHandle.hasClouds()) still
+     * streams in and holds its weatherHandle identity like any other cell,
+     * since the weather itself is active there even though nothing is
+     * drawn. hasCloud() is the single source of truth for whether this
+     * cell should ever reach CloudRenderSystem's instance buffers.
      *
      * Public rather than package-private — mirrors WeatherBandStruct's own
      * precedent — because the render pipeline (a different package) reads
@@ -121,6 +128,10 @@ public class OverheadCellStruct extends StructPackage {
 
     public CloudHandle getCloudHandle() {
         return cloudHandle;
+    }
+
+    public boolean hasCloud() {
+        return cloudHandle != null;
     }
 
     public float getEffectiveAltitude() {

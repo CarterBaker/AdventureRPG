@@ -1,5 +1,6 @@
 package application.bootstrap.weatherpipeline.overheadmanager;
 
+import application.bootstrap.weatherpipeline.cloud.CloudHandle;
 import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherBandStruct;
@@ -31,6 +32,16 @@ public class OverheadManager extends ManagerPackage {
      * own identity every frame or every cloud in the sky would flicker
      * between types constantly.
      *
+     * A cell whose resolved weather defines no clouds at all (see
+     * WeatherHandle.hasClouds()) — a Clear weather — still streams in and
+     * holds its WeatherHandle identity exactly like any other cell; only
+     * its CloudHandle is null. That is deliberate: the weather itself is
+     * still "active" at that patch of sky even though nothing is drawn
+     * there, and keeping the cell (rather than skipping the slot entirely)
+     * is what stops a clear patch from being re-attempted every single
+     * scan cycle. CloudRenderSystem skips these cells outright when
+     * rebuilding its instance buffers — see OverheadCellStruct.hasCloud().
+     *
      * Streaming is split into two passes, mirroring ChunkQueueManager's own
      * cheap-scan-vs-budgeted-work split:
      *
@@ -57,6 +68,12 @@ public class OverheadManager extends ManagerPackage {
      * the active world's own bounds (derived from the world PNG's pixel
      * dimensions — see WorldBuilder) are simply never streamed in; this is
      * a bounded world, not a wrapping one, for cloud placement purposes.
+     *
+     * Streaming radius is EngineSetting.WEATHER_NEAR_RANGE_CHUNKS — the
+     * near side of the near/far range pair (see EngineSetting's own doc
+     * comment) — deliberately smaller than RegionSampleBranch's far-range
+     * 8-direction sample distance, so real cloud geometry only ever exists
+     * inside the range the sky-dome preview has already been showing.
      */
 
     // Fade rates — alpha units per second
@@ -92,7 +109,7 @@ public class OverheadManager extends ManagerPackage {
 
         // Settings
         this.cellSizeChunks = EngineSetting.OVERHEAD_CELL_SIZE;
-        this.radiusChunks = EngineSetting.HORIZON_DISTANCE;
+        this.radiusChunks = EngineSetting.WEATHER_NEAR_RANGE_CHUNKS;
         this.maxStreamPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
         this.driftScale = EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE;
 
@@ -207,12 +224,21 @@ public class OverheadManager extends ManagerPackage {
         CloudChanceStruct cloudEntry = weatherHandle.pickCloud(cloudPickNoise);
         float randomSeed = hash01(cellKey ^ 0x9E3779B97F4A7C15L);
 
+        // A Clear (or otherwise cloudless) weather resolves to a null
+        // cloud entry — the cell still streams in and carries its
+        // WeatherHandle identity, it simply has nothing to draw. See the
+        // class doc comment.
+        CloudHandle cloudHandle = cloudEntry != null ? cloudEntry.getCloudHandle() : null;
+        float effectiveAltitude = cloudEntry != null
+                ? cloudEntry.getEffectiveAltitude()
+                : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;
+
         OverheadCellStruct cell = new OverheadCellStruct(
                 cellKey,
                 homeChunkX, homeChunkZ,
                 weatherHandle,
-                cloudEntry.getCloudHandle(),
-                cloudEntry.getEffectiveAltitude(),
+                cloudHandle,
+                effectiveAltitude,
                 randomSeed);
 
         activeCells.put(cellKey, cell);

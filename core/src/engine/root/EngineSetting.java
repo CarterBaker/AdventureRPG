@@ -372,12 +372,6 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_VERTICAL_THICKNESS = "u_cloudVerticalThickness";
         public static final String UNIFORM_CLOUD_EDGE_SOFTNESS = "u_cloudEdgeSoftness";
         public static final String UNIFORM_CLOUD_PUFF_JITTER = "u_cloudPuffJitter";
-
-        // Cloud Volumetric Toon Shading — baked once per material clone in
-        // CloudRenderSystem.resolveMaterial(), consumed by the raymarched
-        // volumetric toon shading pass landing in the Stage 2 shader rework.
-        // Declared now purely as data plumbing — CloudVolumeShader.fsh already
-        // declares matching uniforms but does not yet act on them.
         public static final String UNIFORM_CLOUD_TOP_COLOR = "u_cloudTopColor";
         public static final String UNIFORM_CLOUD_TOON_BANDS = "u_cloudToonBands";
         public static final String UNIFORM_CLOUD_DENSITY_NOISE_SCALE = "u_cloudDensityNoiseScale";
@@ -389,24 +383,31 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_RIM_LIGHT_STRENGTH = "u_cloudRimLightStrength";
         public static final String UNIFORM_CLOUD_AMBIENT_OCCLUSION_STRENGTH = "u_cloudAmbientOcclusionStrength";
         public static final String UNIFORM_CLOUD_BRIGHTNESS_MULTIPLIER = "u_cloudBrightnessMultiplier";
-
         public static final String CLOUD_SETTINGS_DATA_UBO = "CloudSettingsData";
         public static final String UNIFORM_CLOUD_HORIZON_DISTANCE = "u_cloudHorizonDistance";
         public static final String UNIFORM_CLOUD_MIN_SCALE = "u_cloudMinScale";
         public static final String UNIFORM_CLOUD_MAX_SCALE = "u_cloudMaxScale";
         public static final float CLOUD_HORIZON_MIN_SCALE = 0.35f;
         public static final float CLOUD_HORIZON_MAX_SCALE = 1.0f;
+        public static final float CLOUD_DEFAULT_SKY_ALTITUDE = 140.0f;
+        public static final float CLOUD_DEFAULT_SKY_COLOR_R = 1.0f;
+        public static final float CLOUD_DEFAULT_SKY_COLOR_G = 1.0f;
+        public static final float CLOUD_DEFAULT_SKY_COLOR_B = 1.0f;
 
         // Weather \\
 
         public static final String WEATHER_DATA_UBO = "WeatherData";
         public static final String WEATHER_REGION_DATA_UBO = "WeatherRegionData";
-        public static final int WEATHER_REGION_SAMPLE_DISTANCE = 96;
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;
         public static final float WEATHER_WIND_DRIFT_SCALE = 0.35f;
         public static final float WEATHER_LOCAL_DRIFT_TIME_WRAP = 100000.0f;
         public static final float DEFAULT_WEATHER_WIND_SPEED_SCALE = 1.0f;
         public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
+
+        // Weather Sampling Ranges \\
+
+        public static final int WEATHER_NEAR_RANGE_CHUNKS = 192;
+        public static final int WEATHER_FAR_RANGE_CHUNKS = 384;
 
         // Global Weather Noise \\
 
@@ -418,9 +419,8 @@ public class EngineSetting {
 
         public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
 
-        // Horizon & Overhead \\
+        // Overhead \\
 
-        public static final float HORIZON_DISTANCE = 1024.0f;
         public static final int OVERHEAD_CELL_SIZE = 64;
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4;
         public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.35f;

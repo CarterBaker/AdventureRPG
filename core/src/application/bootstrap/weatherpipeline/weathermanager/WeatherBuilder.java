@@ -23,13 +23,16 @@ class WeatherBuilder extends BuilderPackage {
 
     /*
      * Parses weather JSON into a WeatherData and wraps it in a WeatherHandle.
-     * The "clouds" array is required — every weather must define at least
-     * one cloud it can spawn, each with a relative chance and an optional
-     * altitude override. Cloud names are resolved through CloudManager,
-     * the same on-demand-capable lookup pattern used for shaders, textures,
-     * and every other cross-manager reference in bootstrap. humidity and
-     * visibility both fall back to neutral defaults when omitted, same as
-     * every other atmosphere field here. windTurbulenceScale defaults to
+     * The "clouds" array is optional — a weather that omits it, or declares
+     * it empty, spawns no cloud objects and paints nothing extra on the sky,
+     * which is exactly what a genuinely clear weather is (see
+     * standard/ClearWeather.json). Any entries that are present each carry a
+     * relative chance and an optional altitude override, and are resolved
+     * through CloudManager, the same on-demand-capable lookup pattern used
+     * for shaders, textures, and every other cross-manager reference in
+     * bootstrap. humidity and visibility both fall back to neutral defaults
+     * when omitted, same as every other atmosphere field here.
+     * windTurbulenceScale defaults to
      * EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE (a neutral 1.0)
      * when omitted, so existing weather JSON without the field keeps its
      * old wind behavior unchanged. Bootstrap-only and on-demand.
@@ -54,7 +57,7 @@ class WeatherBuilder extends BuilderPackage {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
 
-        ObjectArrayList<CloudChanceStruct> cloudEntries = parseClouds(json, weatherName);
+        ObjectArrayList<CloudChanceStruct> cloudEntries = parseClouds(json);
         float cloudCoverage = parseFloat(json, "cloudCoverage", 0f);
         float precipitationIntensity = parseFloat(json, "precipitationIntensity", 0f);
         float windSpeedScale = parseFloat(json, "windSpeedScale", 1f);
@@ -84,19 +87,16 @@ class WeatherBuilder extends BuilderPackage {
 
     // Parsing \\
 
-    private ObjectArrayList<CloudChanceStruct> parseClouds(JsonObject json, String weatherName) {
+    private ObjectArrayList<CloudChanceStruct> parseClouds(JsonObject json) {
 
         if (!json.has("clouds"))
-            throwException("Weather \"" + weatherName + "\" JSON is missing required 'clouds' array");
+            return new ObjectArrayList<>();
 
         JsonArray cloudsArray = json.getAsJsonArray("clouds");
         ObjectArrayList<CloudChanceStruct> entries = new ObjectArrayList<>(cloudsArray.size());
 
         for (JsonElement element : cloudsArray)
             entries.add(parseCloudEntry(element.getAsJsonObject()));
-
-        if (entries.isEmpty())
-            throwException("Weather \"" + weatherName + "\" 'clouds' array must define at least one entry");
 
         return entries;
     }

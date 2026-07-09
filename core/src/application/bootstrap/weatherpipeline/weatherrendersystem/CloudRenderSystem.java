@@ -32,6 +32,11 @@ class CloudRenderSystem extends SystemPackage {
      * see CloudBufferManager; "driven by CloudRenderSystem.render()" — see
      * CloudBufferInstance) — this is that missing driver.
      *
+     * Cells whose resolved weather has no cloud at all (OverheadCellStruct.
+     * hasCloud() == false — a Clear weather) are skipped entirely here.
+     * They still occupy a registry slot in OverheadManager (see its own
+     * doc comment for why), they simply never reach a CloudBufferInstance.
+     *
      * Materials are cloned once per distinct CloudHandle archetype and
      * cached forever — every instance sharing that archetype draws
      * through the exact same MaterialInstance, so the whole archetype is
@@ -43,8 +48,7 @@ class CloudRenderSystem extends SystemPackage {
      * rimLightStrength, ambientOcclusionStrength, brightnessMultiplier) —
      * previously only the legacy card-shader fields were baked here. The
      * shader itself doesn't act on the new fields yet; that lands with the
-     * volumetric raymarch rework. Wiring them here first means that rework
-     * only has to touch GLSL, not the Java baking path.
+     * volumetric raymarch rework (Stage 5).
      *
      * Owned by WeatherRenderSystem, which supplies the per-window
      * fbo/window pairs to submit() — this class has no window/grid
@@ -102,16 +106,20 @@ class CloudRenderSystem extends SystemPackage {
 
     /*
      * Pushed once at bootstrap, never per frame — see CloudSettingsData.glsl's
-     * own doc comment. Horizon distance converts HORIZON_DISTANCE from chunk
-     * units to world/block units, the same convention OverheadManager and
-     * RegionSampleBranch already use, since CloudVolumeShader.vsh compares it
-     * directly against world-space camera distance.
+     * own doc comment. Horizon distance converts WEATHER_NEAR_RANGE_CHUNKS —
+     * the same near-range radius OverheadManager streams real cloud objects
+     * within — from chunk units to world/block units, since
+     * CloudVolumeShader.vsh compares it directly against world-space camera
+     * distance. Individual cloud cards shrink toward CLOUD_HORIZON_MIN_SCALE
+     * as they approach the edge of that radius, so a cloud dissolving into
+     * the sky-dome preview and a cloud streaming out of OverheadManager's
+     * registry always happen at the same boundary.
      */
     private void pushCloudSettings() {
 
         UBOHandle cloudSettingsData = uboManager.getUBOHandleFromUBOName(EngineSetting.CLOUD_SETTINGS_DATA_UBO);
 
-        float horizonDistanceBlocks = EngineSetting.HORIZON_DISTANCE * EngineSetting.CHUNK_SIZE;
+        float horizonDistanceBlocks = EngineSetting.WEATHER_NEAR_RANGE_CHUNKS * EngineSetting.CHUNK_SIZE;
 
         cloudSettingsData.updateUniform(EngineSetting.UNIFORM_CLOUD_HORIZON_DISTANCE, horizonDistanceBlocks);
         cloudSettingsData.updateUniform(EngineSetting.UNIFORM_CLOUD_MIN_SCALE, EngineSetting.CLOUD_HORIZON_MIN_SCALE);
@@ -138,6 +146,12 @@ class CloudRenderSystem extends SystemPackage {
     }
 
     private void addInstance(OverheadCellStruct cell) {
+
+        // Clear (or otherwise cloudless) cells still exist in the registry
+        // so their patch of weather stays trackable — see OverheadManager's
+        // own doc comment — but there is nothing to instance here.
+        if (!cell.hasCloud())
+            return;
 
         CloudHandle cloudHandle = cell.getCloudHandle();
 
