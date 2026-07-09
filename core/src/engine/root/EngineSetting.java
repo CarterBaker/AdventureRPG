@@ -372,6 +372,12 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_VERTICAL_THICKNESS = "u_cloudVerticalThickness";
         public static final String UNIFORM_CLOUD_EDGE_SOFTNESS = "u_cloudEdgeSoftness";
         public static final String UNIFORM_CLOUD_PUFF_JITTER = "u_cloudPuffJitter";
+        public static final String CLOUD_SETTINGS_DATA_UBO = "CloudSettingsData";
+        public static final String UNIFORM_CLOUD_HORIZON_DISTANCE = "u_cloudHorizonDistance";
+        public static final String UNIFORM_CLOUD_MIN_SCALE = "u_cloudMinScale";
+        public static final String UNIFORM_CLOUD_MAX_SCALE = "u_cloudMaxScale";
+        public static final float CLOUD_HORIZON_MIN_SCALE = 0.35f;
+        public static final float CLOUD_HORIZON_MAX_SCALE = 1.0f;
 
         // Weather \\
 

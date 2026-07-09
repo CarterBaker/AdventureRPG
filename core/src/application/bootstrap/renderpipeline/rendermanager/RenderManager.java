@@ -14,6 +14,7 @@ import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import application.bootstrap.weatherpipeline.cloudbuffer.CloudBufferInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.ManagerPackage;
@@ -232,6 +233,23 @@ public class RenderManager extends ManagerPackage {
             FboInstance fbo,
             WindowInstance window) {
         renderSystem.pushSkinnedCall(meshHandle, material, modelMatrix, skinningMatrices, fbo, window);
+    }
+
+    // Weather Calls \\
+
+    /*
+     * Registers one cloud archetype's shared instanced buffer for drawing
+     * against the given fbo/window this frame. Called once per active grid
+     * window by WeatherRenderSystem's CloudRenderSystem — mirrors
+     * pushSkinnedCall/pushCompositeCall exactly, just for cloud instance
+     * buffers instead of skinned/composite ones.
+     */
+    public void pushWeatherCall(
+            CloudBufferInstance cloudBuffer,
+            MaterialInstance material,
+            FboInstance fbo,
+            WindowInstance window) {
+        renderSystem.pushWeatherCall(cloudBuffer, material, fbo, window);
     }
 
     public void removeWindowResources(WindowInstance window) {
