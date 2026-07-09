@@ -48,7 +48,7 @@ class CloudRenderSystem extends SystemPackage {
      * rimLightStrength, ambientOcclusionStrength, brightnessMultiplier) —
      * previously only the legacy card-shader fields were baked here. The
      * shader itself doesn't act on the new fields yet; that lands with the
-     * volumetric raymarch rework (Stage 5).
+     * volumetric raymarch rework (Stage 2).
      *
      * Owned by WeatherRenderSystem, which supplies the per-window
      * fbo/window pairs to submit() — this class has no window/grid
@@ -106,24 +106,38 @@ class CloudRenderSystem extends SystemPackage {
 
     /*
      * Pushed once at bootstrap, never per frame — see CloudSettingsData.glsl's
-     * own doc comment. Horizon distance converts WEATHER_NEAR_RANGE_CHUNKS —
-     * the same near-range radius OverheadManager streams real cloud objects
-     * within — from chunk units to world/block units, since
+     * own doc comment. horizonDistanceBlocks converts WEATHER_NEAR_RANGE_CHUNKS
+     * — the same near-range radius OverheadManager streams real cloud
+     * objects within — from chunk units to world/block units, since
      * CloudVolumeShader.vsh compares it directly against world-space camera
      * distance. Individual cloud cards shrink toward CLOUD_HORIZON_MIN_SCALE
      * as they approach the edge of that radius, so a cloud dissolving into
      * the sky-dome preview and a cloud streaming out of OverheadManager's
      * registry always happen at the same boundary.
+     *
+     * skyViewDistanceBlocks is the world-unit version of
+     * WEATHER_FAR_RANGE_CHUNKS — the same radius RegionSampleBranch already
+     * samples its 8 compass directions within — so the sky dome never
+     * implies weather exists farther out than the simulation actually
+     * resolves. transitionStartBlocks marks where, within the near radius,
+     * real cloud objects should start taking over from that sky
+     * representation (CLOUD_VOLUME_FADE_START_RATIO of the way to the
+     * streaming edge). Neither is consumed by any shader yet — see
+     * CloudSettingsData.glsl.
      */
     private void pushCloudSettings() {
 
         UBOHandle cloudSettingsData = uboManager.getUBOHandleFromUBOName(EngineSetting.CLOUD_SETTINGS_DATA_UBO);
 
         float horizonDistanceBlocks = EngineSetting.WEATHER_NEAR_RANGE_CHUNKS * EngineSetting.CHUNK_SIZE;
+        float skyViewDistanceBlocks = EngineSetting.WEATHER_FAR_RANGE_CHUNKS * EngineSetting.CHUNK_SIZE;
+        float transitionStartBlocks = horizonDistanceBlocks * EngineSetting.CLOUD_VOLUME_FADE_START_RATIO;
 
         cloudSettingsData.updateUniform(EngineSetting.UNIFORM_CLOUD_HORIZON_DISTANCE, horizonDistanceBlocks);
         cloudSettingsData.updateUniform(EngineSetting.UNIFORM_CLOUD_MIN_SCALE, EngineSetting.CLOUD_HORIZON_MIN_SCALE);
         cloudSettingsData.updateUniform(EngineSetting.UNIFORM_CLOUD_MAX_SCALE, EngineSetting.CLOUD_HORIZON_MAX_SCALE);
+        cloudSettingsData.updateUniform(EngineSetting.UNIFORM_CLOUD_SKY_VIEW_DISTANCE, skyViewDistanceBlocks);
+        cloudSettingsData.updateUniform(EngineSetting.UNIFORM_CLOUD_TRANSITION_START, transitionStartBlocks);
 
         uboManager.push(cloudSettingsData);
     }

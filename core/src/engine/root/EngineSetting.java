@@ -349,7 +349,21 @@ public class EngineSetting {
         public static final float SKY_FOG_BLEND_START = 0.4f;
         public static final float SKY_ALTITUDE_POWER = 1.2f;
 
-        // Cloud VOlume \\
+        // Cloud Volume \\
+        //
+        // Reserved for the volumetric/toon raymarch rework and the sky<->world
+        // transition that consumes it (see CloudVolumeShader, Clouds.glsl, and
+        // CloudSettingsData's own doc comment). CLOUD_VOLUME_FADE_START_RATIO is
+        // the fraction of the near streaming radius (WEATHER_NEAR_RANGE_CHUNKS,
+        // converted to world units as u_cloudHorizonDistance) at which real cloud
+        // objects begin fading in / the sky dome begins suppressing its own
+        // representation in that direction — consumed by u_cloudTransitionStart,
+        // computed once in CloudRenderSystem.pushCloudSettings(). The altitude/
+        // extent and raymarch step-count pairs are sized for a per-instance
+        // bounding-volume raymarch (one box per CloudBufferInstance draw, not one
+        // giant sky-spanning volume) and a near/far quality tier split, mirroring
+        // StandardSurfaceShader's own distance-tiered shading. None of this is
+        // consumed by shading logic yet.
 
         public static final float CLOUD_VOLUME_BASE_ALTITUDE = 140f;
         public static final float CLOUD_VOLUME_TOP_ALTITUDE = 220f;
@@ -387,6 +401,8 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_HORIZON_DISTANCE = "u_cloudHorizonDistance";
         public static final String UNIFORM_CLOUD_MIN_SCALE = "u_cloudMinScale";
         public static final String UNIFORM_CLOUD_MAX_SCALE = "u_cloudMaxScale";
+        public static final String UNIFORM_CLOUD_SKY_VIEW_DISTANCE = "u_cloudSkyViewDistance";
+        public static final String UNIFORM_CLOUD_TRANSITION_START = "u_cloudTransitionStart";
         public static final float CLOUD_HORIZON_MIN_SCALE = 0.35f;
         public static final float CLOUD_HORIZON_MAX_SCALE = 1.0f;
         public static final float CLOUD_DEFAULT_SKY_ALTITUDE = 140.0f;

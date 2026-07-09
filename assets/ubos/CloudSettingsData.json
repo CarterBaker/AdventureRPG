@@ -3,6 +3,8 @@
     "uniforms": [
         { "name": "u_cloudHorizonDistance", "type": "FLOAT" },
         { "name": "u_cloudMinScale",        "type": "FLOAT" },
-        { "name": "u_cloudMaxScale",         "type": "FLOAT" }
+        { "name": "u_cloudMaxScale",        "type": "FLOAT" },
+        { "name": "u_cloudSkyViewDistance", "type": "FLOAT" },
+        { "name": "u_cloudTransitionStart", "type": "FLOAT" }
     ]
 }
