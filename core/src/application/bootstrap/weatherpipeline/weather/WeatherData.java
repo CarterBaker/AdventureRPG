@@ -11,7 +11,11 @@ public class WeatherData extends DataPackage {
      * of clouds that may appear under this condition — see CloudChanceStruct.
      * Cloud shape, color, and default altitude live entirely on the
      * referenced CloudHandle; this class only ever carries per-condition
-     * numbers. Owned by WeatherHandle for the engine lifetime.
+     * numbers. humidity and visibility are read by the weather simulation
+     * (biome/season/global-noise resolution) and by fog/haze rendering —
+     * visibility is a multiplier where 1.0 is clear air and lower values
+     * are hazier, distinct from fogDensityScale which tunes the distance
+     * fog curve itself. Owned by WeatherHandle for the engine lifetime.
      */
 
     // Internal
@@ -26,6 +30,8 @@ public class WeatherData extends DataPackage {
     private final float precipitationIntensity;
     private final float windSpeedScale;
     private final float fogDensityScale;
+    private final float humidity;
+    private final float visibility;
 
     // Constructor \\
 
@@ -36,7 +42,9 @@ public class WeatherData extends DataPackage {
             float cloudCoverage,
             float precipitationIntensity,
             float windSpeedScale,
-            float fogDensityScale) {
+            float fogDensityScale,
+            float humidity,
+            float visibility) {
 
         // Internal
         this.weatherName = weatherName;
@@ -50,6 +58,8 @@ public class WeatherData extends DataPackage {
         this.precipitationIntensity = precipitationIntensity;
         this.windSpeedScale = windSpeedScale;
         this.fogDensityScale = fogDensityScale;
+        this.humidity = humidity;
+        this.visibility = visibility;
     }
 
     // Accessible \\
@@ -80,5 +90,13 @@ public class WeatherData extends DataPackage {
 
     public float getFogDensityScale() {
         return fogDensityScale;
+    }
+
+    public float getHumidity() {
+        return humidity;
+    }
+
+    public float getVisibility() {
+        return visibility;
     }
 }

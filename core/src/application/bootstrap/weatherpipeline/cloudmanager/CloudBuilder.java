@@ -30,7 +30,7 @@ class CloudBuilder extends BuilderPackage {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
 
-        Vector3 cloudColor = parseColor(json, "color");
+        Vector3 cloudColor = parseColor(json, "color", new Vector3(1f, 1f, 1f));
         float scale = parseFloat(json, "scale", 1.0f);
         float density = parseFloat(json, "density", 0.8f);
         float verticalThickness = parseFloat(json, "verticalThickness", 8.0f);
@@ -38,6 +38,12 @@ class CloudBuilder extends BuilderPackage {
         float puffJitter = parseFloat(json, "puffJitter", 0.55f);
         float baseAltitude = parseFloat(json, "baseAltitude", 128.0f);
         float driftSpeedScale = parseFloat(json, "driftSpeedScale", 1.0f);
+
+        Vector3 shadowColor = parseColor(json, "shadowColor", new Vector3(0.6f, 0.63f, 0.7f));
+        float shadeStrength = parseFloat(json, "shadeStrength", 0.5f);
+        float rimLightStrength = parseFloat(json, "rimLightStrength", 0.35f);
+        float ambientOcclusionStrength = parseFloat(json, "ambientOcclusionStrength", 0.4f);
+        float brightnessMultiplier = parseFloat(json, "brightnessMultiplier", 1.0f);
 
         CloudData cloudData = new CloudData(
                 cloudName,
@@ -49,7 +55,12 @@ class CloudBuilder extends BuilderPackage {
                 edgeSoftness,
                 puffJitter,
                 baseAltitude,
-                driftSpeedScale);
+                driftSpeedScale,
+                shadowColor,
+                shadeStrength,
+                rimLightStrength,
+                ambientOcclusionStrength,
+                brightnessMultiplier);
 
         CloudHandle cloudHandle = create(CloudHandle.class);
         cloudHandle.constructor(cloudData);
@@ -67,10 +78,10 @@ class CloudBuilder extends BuilderPackage {
         return json.get(field).getAsFloat();
     }
 
-    private Vector3 parseColor(JsonObject json, String field) {
+    private Vector3 parseColor(JsonObject json, String field, Vector3 fallback) {
 
         if (!json.has(field))
-            return new Vector3(1f, 1f, 1f);
+            return fallback;
 
         JsonObject colorObject = json.getAsJsonObject(field);
 

@@ -25,8 +25,9 @@ class WeatherBuilder extends BuilderPackage {
      * one cloud it can spawn, each with a relative chance and an optional
      * altitude override. Cloud names are resolved through CloudManager,
      * the same on-demand-capable lookup pattern used for shaders, textures,
-     * and every other cross-manager reference in bootstrap. Bootstrap-only
-     * and on-demand.
+     * and every other cross-manager reference in bootstrap. humidity and
+     * visibility both fall back to neutral defaults when omitted, same as
+     * every other atmosphere field here. Bootstrap-only and on-demand.
      */
 
     // Internal
@@ -53,6 +54,8 @@ class WeatherBuilder extends BuilderPackage {
         float precipitationIntensity = parseFloat(json, "precipitationIntensity", 0f);
         float windSpeedScale = parseFloat(json, "windSpeedScale", 1f);
         float fogDensityScale = parseFloat(json, "fogDensityScale", 1f);
+        float humidity = parseFloat(json, "humidity", 0.5f);
+        float visibility = parseFloat(json, "visibility", 1f);
 
         WeatherData weatherData = new WeatherData(
                 weatherName,
@@ -61,7 +64,9 @@ class WeatherBuilder extends BuilderPackage {
                 cloudCoverage,
                 precipitationIntensity,
                 windSpeedScale,
-                fogDensityScale);
+                fogDensityScale,
+                humidity,
+                visibility);
 
         WeatherHandle weatherHandle = create(WeatherHandle.class);
         weatherHandle.constructor(weatherData);

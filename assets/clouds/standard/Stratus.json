@@ -6,5 +6,10 @@
     "edgeSoftness": 0.18,
     "puffJitter": 0.10,
     "baseAltitude": 220.0,
-    "driftSpeedScale": 0.6
+    "driftSpeedScale": 0.6,
+    "shadowColor": { "r": 0.55, "g": 0.57, "b": 0.62 },
+    "shadeStrength": 0.3,
+    "rimLightStrength": 0.2,
+    "ambientOcclusionStrength": 0.15,
+    "brightnessMultiplier": 0.95
 }

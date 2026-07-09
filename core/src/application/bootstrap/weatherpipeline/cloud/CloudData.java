@@ -7,10 +7,10 @@ public class CloudData extends DataPackage {
 
     /*
      * Immutable cloud archetype definition loaded from JSON. Holds shape,
-     * color, altitude, and motion tuning for one named cloud. Weathers
-     * reference these by name — never cloned, since a cloud archetype
-     * carries no per-instance mutable state. Owned by CloudHandle for the
-     * full engine session.
+     * color, altitude, motion, and lighting tuning for one named cloud.
+     * Weathers reference these by name — never cloned, since a cloud
+     * archetype carries no per-instance mutable state. Owned by CloudHandle
+     * for the full engine session.
      */
 
     // Identity
@@ -33,6 +33,20 @@ public class CloudData extends DataPackage {
     // Motion
     private final float driftSpeedScale;
 
+    // Lighting — drives the volumetric toon shading pass. shadowColor is
+    // the tint blended in on a cloud's unlit/interior side (the "shade
+    // band" of the toon look); shadeStrength controls how far that blend
+    // reaches. rimLightStrength brightens the silhouette facing the light
+    // source. ambientOcclusionStrength darkens deep/thick regions of the
+    // volume. brightnessMultiplier is a final exposure scalar applied to
+    // the lit color, letting e.g. a storm cloud read as inherently darker
+    // than a cumulus cloud even under identical sun conditions.
+    private final Vector3 shadowColor;
+    private final float shadeStrength;
+    private final float rimLightStrength;
+    private final float ambientOcclusionStrength;
+    private final float brightnessMultiplier;
+
     // Constructor \\
 
     public CloudData(
@@ -45,7 +59,12 @@ public class CloudData extends DataPackage {
             float edgeSoftness,
             float puffJitter,
             float baseAltitude,
-            float driftSpeedScale) {
+            float driftSpeedScale,
+            Vector3 shadowColor,
+            float shadeStrength,
+            float rimLightStrength,
+            float ambientOcclusionStrength,
+            float brightnessMultiplier) {
 
         // Identity
         this.cloudName = cloudName;
@@ -66,6 +85,13 @@ public class CloudData extends DataPackage {
 
         // Motion
         this.driftSpeedScale = driftSpeedScale;
+
+        // Lighting
+        this.shadowColor = shadowColor;
+        this.shadeStrength = shadeStrength;
+        this.rimLightStrength = rimLightStrength;
+        this.ambientOcclusionStrength = ambientOcclusionStrength;
+        this.brightnessMultiplier = brightnessMultiplier;
     }
 
     // Accessible \\
@@ -108,5 +134,25 @@ public class CloudData extends DataPackage {
 
     public float getDriftSpeedScale() {
         return driftSpeedScale;
+    }
+
+    public Vector3 getShadowColor() {
+        return shadowColor;
+    }
+
+    public float getShadeStrength() {
+        return shadeStrength;
+    }
+
+    public float getRimLightStrength() {
+        return rimLightStrength;
+    }
+
+    public float getAmbientOcclusionStrength() {
+        return ambientOcclusionStrength;
+    }
+
+    public float getBrightnessMultiplier() {
+        return brightnessMultiplier;
     }
 }

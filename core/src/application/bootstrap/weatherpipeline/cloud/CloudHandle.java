@@ -66,4 +66,24 @@ public class CloudHandle extends HandlePackage {
     public float getDriftSpeedScale() {
         return cloudData.getDriftSpeedScale();
     }
+
+    public Vector3 getShadowColor() {
+        return cloudData.getShadowColor();
+    }
+
+    public float getShadeStrength() {
+        return cloudData.getShadeStrength();
+    }
+
+    public float getRimLightStrength() {
+        return cloudData.getRimLightStrength();
+    }
+
+    public float getAmbientOcclusionStrength() {
+        return cloudData.getAmbientOcclusionStrength();
+    }
+
+    public float getBrightnessMultiplier() {
+        return cloudData.getBrightnessMultiplier();
+    }
 }

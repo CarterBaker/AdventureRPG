@@ -78,4 +78,12 @@ public class WeatherHandle extends HandlePackage {
     public float getFogDensityScale() {
         return weatherData.getFogDensityScale();
     }
+
+    public float getHumidity() {
+        return weatherData.getHumidity();
+    }
+
+    public float getVisibility() {
+        return weatherData.getVisibility();
+    }
 }
