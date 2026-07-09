@@ -31,11 +31,17 @@ class CloudBuilder extends BuilderPackage {
         JsonObject json = JsonUtility.loadJsonObject(file);
 
         Vector3 cloudColor = parseColor(json, "color", new Vector3(1f, 1f, 1f));
+        Vector3 topColor = parseColor(json, "topColor", new Vector3(1f, 1f, 1f));
         float scale = parseFloat(json, "scale", 1.0f);
         float density = parseFloat(json, "density", 0.8f);
         float verticalThickness = parseFloat(json, "verticalThickness", 8.0f);
         float edgeSoftness = parseFloat(json, "edgeSoftness", 0.06f);
         float puffJitter = parseFloat(json, "puffJitter", 0.55f);
+        int toonBands = parseInt(json, "toonBands", 3);
+        float densityNoiseScale = parseFloat(json, "densityNoiseScale", 1.0f);
+        float noiseWarpStrength = parseFloat(json, "noiseWarpStrength", 0.6f);
+        float coverageBias = parseFloat(json, "coverageBias", 0.5f);
+        float silhouetteSoftness = parseFloat(json, "silhouetteSoftness", 0.08f);
         float baseAltitude = parseFloat(json, "baseAltitude", 128.0f);
         float driftSpeedScale = parseFloat(json, "driftSpeedScale", 1.0f);
 
@@ -49,11 +55,17 @@ class CloudBuilder extends BuilderPackage {
                 cloudName,
                 cloudID,
                 cloudColor,
+                topColor,
                 scale,
                 density,
                 verticalThickness,
                 edgeSoftness,
                 puffJitter,
+                toonBands,
+                densityNoiseScale,
+                noiseWarpStrength,
+                coverageBias,
+                silhouetteSoftness,
                 baseAltitude,
                 driftSpeedScale,
                 shadowColor,
@@ -76,6 +88,14 @@ class CloudBuilder extends BuilderPackage {
             return fallback;
 
         return json.get(field).getAsFloat();
+    }
+
+    private int parseInt(JsonObject json, String field, int fallback) {
+
+        if (!json.has(field))
+            return fallback;
+
+        return json.get(field).getAsInt();
     }
 
     private Vector3 parseColor(JsonObject json, String field, Vector3 fallback) {

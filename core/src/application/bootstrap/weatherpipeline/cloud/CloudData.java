@@ -11,6 +11,26 @@ public class CloudData extends DataPackage {
      * Weathers reference these by name — never cloned, since a cloud
      * archetype carries no per-instance mutable state. Owned by CloudHandle
      * for the full engine session.
+     *
+     * Volumetric/toon fields (topColor, toonBands, densityNoiseScale,
+     * noiseWarpStrength, coverageBias, silhouetteSoftness) back the
+     * raymarched volumetric cloud shader landing in the next stage.
+     * topColor lets toon shading blend from cloudColor (shadowed/base
+     * tint) toward a brighter top-facing tint without a second lighting
+     * pass; toonBands posterizes that blend into discrete steps for the
+     * toon look. densityNoiseScale/noiseWarpStrength drive a 3D fbm
+     * density field sampled in world space, so no two instances of the
+     * same archetype look identical — each warps based on its own world
+     * position rather than a per-instance seed alone. coverageBias shifts
+     * the density threshold separating "inside the cloud" from "empty
+     * sky" — live weather cloudCoverage will bias this further at render
+     * time. silhouetteSoftness controls how soft the raymarched edge
+     * falloff is where the density field crosses that threshold.
+     *
+     * edgeSoftness/puffJitter are the old card-shader tuning knobs — left
+     * in place for now since CloudVolumeShader still reads them; they are
+     * superseded by silhouetteSoftness/noiseWarpStrength once the shader
+     * rework lands and will be removed then.
      */
 
     // Identity
@@ -19,6 +39,7 @@ public class CloudData extends DataPackage {
 
     // Color
     private final Vector3 cloudColor;
+    private final Vector3 topColor;
 
     // Shape
     private final float scale;
@@ -26,6 +47,17 @@ public class CloudData extends DataPackage {
     private final float verticalThickness;
     private final float edgeSoftness;
     private final float puffJitter;
+
+    // Toon Shading
+    private final int toonBands;
+
+    // Density Noise
+    private final float densityNoiseScale;
+    private final float noiseWarpStrength;
+    private final float coverageBias;
+
+    // Silhouette
+    private final float silhouetteSoftness;
 
     // Placement
     private final float baseAltitude;
@@ -53,11 +85,17 @@ public class CloudData extends DataPackage {
             String cloudName,
             short cloudID,
             Vector3 cloudColor,
+            Vector3 topColor,
             float scale,
             float density,
             float verticalThickness,
             float edgeSoftness,
             float puffJitter,
+            int toonBands,
+            float densityNoiseScale,
+            float noiseWarpStrength,
+            float coverageBias,
+            float silhouetteSoftness,
             float baseAltitude,
             float driftSpeedScale,
             Vector3 shadowColor,
@@ -72,6 +110,7 @@ public class CloudData extends DataPackage {
 
         // Color
         this.cloudColor = cloudColor;
+        this.topColor = topColor;
 
         // Shape
         this.scale = scale;
@@ -79,6 +118,17 @@ public class CloudData extends DataPackage {
         this.verticalThickness = verticalThickness;
         this.edgeSoftness = edgeSoftness;
         this.puffJitter = puffJitter;
+
+        // Toon Shading
+        this.toonBands = toonBands;
+
+        // Density Noise
+        this.densityNoiseScale = densityNoiseScale;
+        this.noiseWarpStrength = noiseWarpStrength;
+        this.coverageBias = coverageBias;
+
+        // Silhouette
+        this.silhouetteSoftness = silhouetteSoftness;
 
         // Placement
         this.baseAltitude = baseAltitude;
@@ -108,6 +158,10 @@ public class CloudData extends DataPackage {
         return cloudColor;
     }
 
+    public Vector3 getTopColor() {
+        return topColor;
+    }
+
     public float getScale() {
         return scale;
     }
@@ -126,6 +180,26 @@ public class CloudData extends DataPackage {
 
     public float getPuffJitter() {
         return puffJitter;
+    }
+
+    public int getToonBands() {
+        return toonBands;
+    }
+
+    public float getDensityNoiseScale() {
+        return densityNoiseScale;
+    }
+
+    public float getNoiseWarpStrength() {
+        return noiseWarpStrength;
+    }
+
+    public float getCoverageBias() {
+        return coverageBias;
+    }
+
+    public float getSilhouetteSoftness() {
+        return silhouetteSoftness;
     }
 
     public float getBaseAltitude() {

@@ -39,6 +39,10 @@ public class CloudHandle extends HandlePackage {
         return cloudData.getCloudColor();
     }
 
+    public Vector3 getTopColor() {
+        return cloudData.getTopColor();
+    }
+
     public float getScale() {
         return cloudData.getScale();
     }
@@ -57,6 +61,26 @@ public class CloudHandle extends HandlePackage {
 
     public float getPuffJitter() {
         return cloudData.getPuffJitter();
+    }
+
+    public int getToonBands() {
+        return cloudData.getToonBands();
+    }
+
+    public float getDensityNoiseScale() {
+        return cloudData.getDensityNoiseScale();
+    }
+
+    public float getNoiseWarpStrength() {
+        return cloudData.getNoiseWarpStrength();
+    }
+
+    public float getCoverageBias() {
+        return cloudData.getCoverageBias();
+    }
+
+    public float getSilhouetteSoftness() {
+        return cloudData.getSilhouetteSoftness();
     }
 
     public float getBaseAltitude() {
