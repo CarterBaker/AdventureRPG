@@ -4,6 +4,7 @@ package application.bootstrap.weatherpipeline.weathermanager;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
+import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.WeatherChanceStruct;
@@ -48,6 +49,13 @@ public class WeatherManager extends ManagerPackage {
      * clear sky. See LocalWindBranch's own doc comment for the wind side
      * of this loop.
      *
+     * The active season contributes more than just its name as a lookup
+     * key, too — resolveWeatherPool() reads that season's own
+     * precipitationChanceScale (SeasonData/SeasonHandle) and uses it to
+     * bias the chance weight of every precipitating weather in the
+     * biome's pool for that season, so "biome + season + noise" really
+     * does fold in the season's own climate numbers, not just its name.
+     *
      * updateReferenceCoordinate() resolves the main window's player world
      * position into a chunk coordinate every frame, before any sampling
      * happens this frame, and writes it into RegionSampleBranch via
@@ -61,11 +69,12 @@ public class WeatherManager extends ManagerPackage {
      * startup. update() skips sampling entirely until then, and any
      * cross-package caller of resolveWeatherBand() should check
      * hasActiveWeatherPool() first; calling it before that point throws
-     * rather than silently resolving against nothing. getWindSpeedScale()
-     * and getWindTurbulenceScale() are the two exceptions — both fall back
-     * to a neutral 1.0 multiplier before that point instead of throwing or
-     * silently reading an unset zero, so LocalWindBranch never goes dead
-     * calm during the first frames of a session.
+     * rather than silently resolving against nothing. getWindSpeedScale(),
+     * getWindTurbulenceScale(), getHumidity(), and getVisibility() are the
+     * exceptions — all four fall back to a neutral value before that point
+     * instead of throwing or silently reading an unset zero, so nothing
+     * downstream (wind, fog, gameplay) goes to a dead/degenerate state
+     * during the first frames of a session.
      */
 
     // Internal
@@ -73,6 +82,7 @@ public class WeatherManager extends ManagerPackage {
     private BiomeManager biomeManager;
     private WindowManager windowManager;
     private PlayerManager playerManager;
+    private SeasonManager seasonManager;
 
     // Branches
     private GlobalNoiseBranch globalNoiseBranch;
@@ -114,6 +124,7 @@ public class WeatherManager extends ManagerPackage {
         this.biomeManager = get(BiomeManager.class);
         this.windowManager = get(WindowManager.class);
         this.playerManager = get(PlayerManager.class);
+        this.seasonManager = get(SeasonManager.class);
     }
 
     @Override
@@ -220,6 +231,11 @@ public class WeatherManager extends ManagerPackage {
      * across this pool by chance-weighted band, not array position, so no
      * sort is needed here. Falls back via resolveFallbackEntries() when the
      * biome has no entries for this exact season name — see that method.
+     *
+     * Every entry whose weather actually precipitates additionally has its
+     * chance weight scaled by the active season's own precipitationChanceScale
+     * (see resolvePrecipitationBias()) — this is what makes the active
+     * SEASON DATA, not just the season name, part of weather resolution.
      */
     private ObjectArrayList<WeatherPoolEntryStruct> resolveWeatherPool(BiomeHandle biomeHandle, String season) {
 
@@ -228,15 +244,39 @@ public class WeatherManager extends ManagerPackage {
         if (entries.isEmpty())
             entries = resolveFallbackEntries(biomeHandle, season);
 
+        float precipitationBias = resolvePrecipitationBias(season);
+
         ObjectArrayList<WeatherPoolEntryStruct> pool = new ObjectArrayList<>(entries.size());
 
         for (int i = 0; i < entries.size(); i++) {
+
             WeatherChanceStruct entry = entries.get(i);
             WeatherHandle handle = getWeatherHandleFromWeatherName(entry.getWeatherName());
-            pool.add(new WeatherPoolEntryStruct(handle, entry.getChance()));
+            float chance = entry.getChance();
+
+            if (handle.getPrecipitationIntensity() > 0f)
+                chance *= precipitationBias;
+
+            pool.add(new WeatherPoolEntryStruct(handle, chance));
         }
 
         return pool;
+    }
+
+    /*
+     * Resolves the active season's own precipitationChanceScale (a per-
+     * season climate multiplier — see SeasonData) so wetter seasons
+     * visibly skew their biome's pool toward precipitating weathers and
+     * drier seasons skew away from them. Deliberately does not guard
+     * against a missing SeasonHandle the way resolveFallbackEntries()
+     * guards against a missing biome pool — LocalWindBranch and
+     * TemperatureBranch already assume every calendar season name has a
+     * companion season climate file and resolve it unguarded, so a
+     * genuinely missing file is a data error that should surface the same
+     * way here as it already does for wind and temperature.
+     */
+    private float resolvePrecipitationBias(String season) {
+        return seasonManager.getSeasonHandleFromSeasonName(season).getPrecipitationChanceScale();
     }
 
     /*
@@ -342,6 +382,41 @@ public class WeatherManager extends ManagerPackage {
             return EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE;
 
         return regionSampleBranch.getCenterSample().getWindTurbulenceScale();
+    }
+
+    /*
+     * Exposes the reference region's blended humidity — completes the full
+     * Weather property set (precipitation, wind, humidity, visibility) at
+     * the resolved-region level; previously parsed per-Weather but never
+     * carried through sampling. No renderer consumes this yet — it's
+     * available for future gameplay systems (crop growth, item spoilage,
+     * etc.) the same way getCurrentTemperature() already is. Falls back to
+     * a neutral 0.5 (EngineSetting.DEFAULT_WEATHER_HUMIDITY) before the
+     * first weather pool ever resolves.
+     */
+    public float getHumidity() {
+
+        if (!hasActiveWeatherPool())
+            return EngineSetting.DEFAULT_WEATHER_HUMIDITY;
+
+        return regionSampleBranch.getCenterSample().getHumidity();
+    }
+
+    /*
+     * Exposes the reference region's blended visibility — a multiplier
+     * where 1.0 is clear air and lower values are hazier. Not yet wired
+     * into fog rendering (that needs a WeatherData UBO/shader change —
+     * see the next stage); this is the CPU-side value that stage will
+     * push to the GPU. Falls back to a neutral 1.0
+     * (EngineSetting.DEFAULT_WEATHER_VISIBILITY) before the first weather
+     * pool ever resolves.
+     */
+    public float getVisibility() {
+
+        if (!hasActiveWeatherPool())
+            return EngineSetting.DEFAULT_WEATHER_VISIBILITY;
+
+        return regionSampleBranch.getCenterSample().getVisibility();
     }
 
     /*

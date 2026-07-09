@@ -15,7 +15,11 @@ class WeatherSampleStruct extends StructPackage {
      * single values for horizon tinting, not a full per-cloud breakdown.
      * windTurbulenceScale mirrors windSpeedScale — both are blended the
      * same way, one feeding LocalWindBranch's flat speed multiplier, the
-     * other its gust/direction-wobble amplitude.
+     * other its gust/direction-wobble amplitude. humidity and visibility
+     * complete the full Weather property set (precipitation, wind,
+     * humidity, visibility) — previously parsed per-Weather but never
+     * actually carried through region sampling; WeatherManager exposes
+     * both via getHumidity()/getVisibility().
      */
 
     // Cloud
@@ -28,6 +32,8 @@ class WeatherSampleStruct extends StructPackage {
     private float windSpeedScale;
     private float windTurbulenceScale;
     private float fogDensityScale;
+    private float humidity;
+    private float visibility;
 
     // Constructor \\
 
@@ -91,5 +97,21 @@ class WeatherSampleStruct extends StructPackage {
 
     void setFogDensityScale(float fogDensityScale) {
         this.fogDensityScale = fogDensityScale;
+    }
+
+    float getHumidity() {
+        return humidity;
+    }
+
+    void setHumidity(float humidity) {
+        this.humidity = humidity;
+    }
+
+    float getVisibility() {
+        return visibility;
+    }
+
+    void setVisibility(float visibility) {
+        this.visibility = visibility;
     }
 }

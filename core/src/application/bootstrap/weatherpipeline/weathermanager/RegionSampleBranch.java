@@ -66,6 +66,20 @@ class RegionSampleBranch extends BranchPackage {
      * windSpeedScale/windTurbulenceScale in turn shape the wind blowing
      * through it — see LocalWindBranch's own doc comment for that side.
      *
+     * Independent temporal evolution
+     * -------------------------------
+     * Wind-driven drift alone would mean a perfectly calm sky (wind speed
+     * pinned near WIND_MIN_SPEED_FLOOR) never meaningfully changes the
+     * local weather noise — the sample point simply wouldn't move very
+     * far. advanceEvolution() adds a second, fully wind-independent
+     * mechanic: the underlying hashed noise field itself is blended
+     * between two independently-seeded "time layers" a
+     * WEATHER_LOCAL_EVOLUTION_PERIOD apart (see evolvingHash()), so the
+     * resolved value at any fixed point still rises and falls smoothly
+     * over time even with no wind at all — a weather system can genuinely
+     * form and dissipate in place, not only ever change because it has
+     * been advected somewhere else.
+     *
      * Local noise samples in normalized, wrapped world-UV space — chunk
      * coordinates (plus the drifted offset) convert to a UV fraction of the
      * world's own chunk-space width/height in double precision, wrapped
@@ -95,6 +109,14 @@ class RegionSampleBranch extends BranchPackage {
     // noise field, driven every frame by the live local wind vector.
     private double driftChunksX;
     private double driftChunksY;
+
+    // Evolution — independent of wind or drift; slowly morphs the local
+    // noise field itself over time so a weather system can intensify and
+    // fade in place, not only ever change because it has been advected
+    // somewhere else. See advanceEvolution() and evolvingHash().
+    private double evolutionElapsedSeconds;
+    private int evolutionTimeCell;
+    private float evolutionTimeBlend;
 
     // Samples — index 0 is the centre; indices 1-8 mirror Direction2Vector's
     // own ordinal order (NORTH, NORTHEAST, EAST, SOUTHEAST, SOUTH,
@@ -146,6 +168,7 @@ class RegionSampleBranch extends BranchPackage {
     void sampleRegions(ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
         advanceWindDrift();
+        advanceEvolution();
 
         int originX = Coordinate2Long.unpackX(referenceCoordinate);
         int originY = Coordinate2Long.unpackY(referenceCoordinate);
@@ -207,6 +230,30 @@ class RegionSampleBranch extends BranchPackage {
         double wrapped = value % period;
 
         return wrapped < 0 ? wrapped + period : wrapped;
+    }
+
+    // Evolution \\
+
+    /*
+     * Advances the local noise field's independent time-evolution phase —
+     * see the class comment and the "Evolution" field group above.
+     * evolutionElapsedSeconds is wrapped against
+     * EngineSetting.WEATHER_LOCAL_DRIFT_TIME_WRAP purely to keep the
+     * accumulator bounded over an arbitrarily long session; that wrap
+     * period is far longer than WEATHER_LOCAL_EVOLUTION_PERIOD, so it
+     * never produces a visible seam in practice. Called once per frame,
+     * alongside advanceWindDrift(), before any of the 9 direction samples.
+     */
+    private void advanceEvolution() {
+
+        evolutionElapsedSeconds += internal.getDeltaTime();
+        evolutionElapsedSeconds %= EngineSetting.WEATHER_LOCAL_DRIFT_TIME_WRAP;
+
+        double phase = evolutionElapsedSeconds / EngineSetting.WEATHER_LOCAL_EVOLUTION_PERIOD;
+        double cell = Math.floor(phase);
+
+        evolutionTimeCell = (int) cell;
+        evolutionTimeBlend = smoothstep((float) (phase - cell));
     }
 
     // Resolution \\
@@ -283,6 +330,10 @@ class RegionSampleBranch extends BranchPackage {
      * uses. windSpeedScale/windTurbulenceScale are blended identically to
      * every other atmosphere field — see LocalWindBranch for how the
      * centre sample's copy of these two feeds back into wind itself.
+     * humidity/visibility are blended the same way — both are now fully
+     * resolved per-region values (previously parsed per-Weather but never
+     * carried through sampling), available via
+     * WeatherManager.getHumidity()/getVisibility().
      */
     private void writeSample(
             WeatherSampleStruct sample,
@@ -295,6 +346,8 @@ class RegionSampleBranch extends BranchPackage {
         sample.setWindSpeedScale(lerp(low.getWindSpeedScale(), high.getWindSpeedScale(), t));
         sample.setWindTurbulenceScale(lerp(low.getWindTurbulenceScale(), high.getWindTurbulenceScale(), t));
         sample.setFogDensityScale(lerp(low.getFogDensityScale(), high.getFogDensityScale(), t));
+        sample.setHumidity(lerp(low.getHumidity(), high.getHumidity(), t));
+        sample.setVisibility(lerp(low.getVisibility(), high.getVisibility(), t));
 
         CloudChanceStruct lowCloud = low.getPrimaryCloud();
         CloudChanceStruct highCloud = high.getPrimaryCloud();
@@ -350,6 +403,9 @@ class RegionSampleBranch extends BranchPackage {
      * the world edge and displaced by the wind-driven drift accumulators
      * from advanceWindDrift() so weather fronts visibly move across the
      * world with the wind, independently of the planet's rotation/tilt.
+     * Each grid point is itself blended between two time-decorrelated
+     * hash layers via evolvingHash() (see advanceEvolution()), so the
+     * field also morphs in place over time, independent of drift.
      */
     private float sampleNoise(int chunkX, int chunkY) {
 
@@ -378,10 +434,10 @@ class RegionSampleBranch extends BranchPackage {
         int wrappedX1 = Math.floorMod(x0 + 1, cellsX);
         int wrappedY1 = Math.floorMod(y0 + 1, cellsY);
 
-        float n00 = hash(wrappedX0, wrappedY0);
-        float n10 = hash(wrappedX1, wrappedY0);
-        float n01 = hash(wrappedX0, wrappedY1);
-        float n11 = hash(wrappedX1, wrappedY1);
+        float n00 = evolvingHash(wrappedX0, wrappedY0);
+        float n10 = evolvingHash(wrappedX1, wrappedY0);
+        float n01 = evolvingHash(wrappedX0, wrappedY1);
+        float n11 = evolvingHash(wrappedX1, wrappedY1);
 
         float smoothTx = smoothstep(tx);
         float smoothTy = smoothstep(ty);
@@ -397,9 +453,26 @@ class RegionSampleBranch extends BranchPackage {
         return wrapped < 0 ? wrapped + 1.0 : wrapped;
     }
 
-    private float hash(int x, int y) {
+    /*
+     * Value noise at one grid point, blended between two independently
+     * hashed time layers a full WEATHER_LOCAL_EVOLUTION_PERIOD apart — see
+     * advanceEvolution(). This is what lets local weather genuinely
+     * intensify and fade IN PLACE rather than only ever changing because
+     * the sample point itself was advected elsewhere by wind: even a
+     * perfectly still point sees its value drift smoothly between two
+     * decorrelated fields.
+     */
+    private float evolvingHash(int x, int y) {
 
-        int h = x * 374761393 + y * 668265263;
+        float layerA = hash(x, y, evolutionTimeCell);
+        float layerB = hash(x, y, evolutionTimeCell + 1);
+
+        return lerp(layerA, layerB, evolutionTimeBlend);
+    }
+
+    private float hash(int x, int y, int timeLayer) {
+
+        int h = x * 374761393 + y * 668265263 + timeLayer * 1013904223;
         h = (h ^ (h >>> 13)) * 1274126177;
 
         return ((h ^ (h >>> 16)) & 0x7fffffff) / (float) Integer.MAX_VALUE;
