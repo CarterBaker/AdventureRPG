@@ -30,12 +30,18 @@ uniform float u_cloudInstanceFadeAlpha;   // streaming fade — see OverheadCell
 uniform float u_cloudInstanceIntensity;   // live weather strength — see OverheadCellStruct.getIntensity()
 
 out vec3  vWorldPos;
-out vec3  vLocalPos;
 out vec3  vNormal;
-out vec2  vUV;
 out float vRandomSeed;
 out float vFadeAlpha;
 out float vIntensity;
+
+// This instance's own world-space (render-space) AABB, computed once here
+// rather than re-derived per fragment. flat since every fragment of this
+// instance's draw call shares the exact same box — see
+// CloudVolumeShader.fsh's raymarch, which finds where its view ray exits
+// this box to know how far to march.
+flat out vec3 vBoxMin;
+flat out vec3 vBoxMax;
 
 /*
 * Player-chunk-relative instance position. u_cloudInstanceChunk carries
@@ -91,6 +97,12 @@ out float vIntensity;
  * through untouched — it is a fragment-level density modulation (see
  * CloudVolumeShader.fsh), not a geometric one, so it never affects size
  * or position here.
+ *
+ * vBoxMin/vBoxMax are this instance's AABB in that same render space,
+ * built from the identical instancePos/finalScaleXZ/finalScaleY used to
+ * place the mesh itself, so the fragment shader's raymarch always bounds
+ * itself to exactly the box GL actually rasterized — never a mismatched
+ * or stale volume.
  */
 void main() {
     float relChunkX = float(u_cloudInstanceChunk.x - u_playerChunkX);
@@ -115,10 +127,11 @@ void main() {
     vec3 scaledLocal = vec3(aPos.x * finalScaleXZ, aPos.y * finalScaleY, aPos.z * finalScaleXZ);
     vec3 worldPos = instancePos + scaledLocal;
 
+    vBoxMin = vec3(instancePos.x - finalScaleXZ * 0.5, instancePos.y, instancePos.z - finalScaleXZ * 0.5);
+    vBoxMax = vec3(instancePos.x + finalScaleXZ * 0.5, instancePos.y + finalScaleY, instancePos.z + finalScaleXZ * 0.5);
+
     vWorldPos = worldPos;
-    vLocalPos = aPos;
     vNormal = aNormal;
-    vUV = aUV;
     vRandomSeed = u_cloudInstanceRandomSeed;
     vFadeAlpha = u_cloudInstanceFadeAlpha * horizonFade;
     vIntensity = u_cloudInstanceIntensity;
