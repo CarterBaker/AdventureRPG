@@ -1,7 +1,7 @@
 {
     "color": { "r": 0.35, "g": 0.37, "b": 0.42 },
     "topColor": { "r": 0.55, "g": 0.57, "b": 0.62 },
-    "scale": 1.4,
+    "scale": 84.0,
     "density": 0.95,
     "verticalThickness": 26.0,
     "edgeSoftness": 0.04,

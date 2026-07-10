@@ -394,6 +394,17 @@ public class EngineSetting {
         public static final String CLOUD_CARD_MESH_NAME = "clouds/CloudCardMesh";
         public static final String CLOUD_INSTANCED_MATERIAL_TEMPLATE = "clouds/CloudInstancedMaterial";
         public static final int CLOUD_INSTANCE_INITIAL_CAPACITY = 64;
+        // Default world-space diameter, IN BLOCKS, applied to a cloud
+        // archetype's unit-cube volume mesh when its JSON omits "scale" — see
+        // CloudBuilder.build(). CloudVolumeMesh is a literal 1x1x1 unit cube
+        // (see CloudVolumeMesh.json / CloudVolumeShader.vsh), and u_cloudScale
+        // multiplies it directly with no other implicit base size — so this
+        // constant, and every archetype's own "scale" field, IS the cloud's
+        // full XZ width in blocks, not a small unitless multiplier. Getting
+        // this wrong (previously every archetype specified scale 1.0-3.0, a
+        // 1-3 BLOCK wide cloud) is what made every cloud object render as an
+        // imperceptible speck rather than a visible cloud.
+        public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 48.0f;
         public static final String UNIFORM_CLOUD_COLOR = "u_cloudColor";
         public static final String UNIFORM_CLOUD_SCALE = "u_cloudScale";
         public static final String UNIFORM_CLOUD_DENSITY = "u_cloudDensity";
@@ -488,9 +499,27 @@ public class EngineSetting {
         public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
 
         // Overhead \\
-
-        public static final int OVERHEAD_CELL_SIZE = 64;
-        public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4;
+        //
+        // OVERHEAD_CELL_SIZE is in CHUNKS. This must stay comfortably smaller
+        // than any realistic Settings.maxRenderDistance: a cell only ever
+        // streams in once its fixed home CENTER — cellIndex * OVERHEAD_CELL_SIZE
+        // + half a cell — falls within the streaming radius of the player
+        // (min(maxRenderDistance, WEATHER_NEAR_RANGE_CHUNKS) — see
+        // OverheadManager.advanceFadesAndRetire()). At the previous value of
+        // 64 chunks, a cell's nearest possible home center sat tens of chunks
+        // away from any player position — farther than every ordinary render
+        // distance (8-32 chunks) — so that distance check could never pass:
+        // OverheadManager.activeCells stayed permanently empty and no overhead
+        // cloud ever streamed in, regardless of what the weather simulation
+        // resolved. 4 chunks (64 blocks) keeps several cells within range even
+        // at short render distances, so cover reads as a field of individual
+        // systems rather than one giant, never-streamed slab.
+        public static final int OVERHEAD_CELL_SIZE = 4;
+        // Raised alongside the cell-size fix above — a typical render distance
+        // now covers dozens of cells instead of zero, so the initial stream-in
+        // needs a bigger per-frame budget to fill in within a second or two of
+        // world load rather than trickling in over many seconds.
+        public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 8;
         public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.35f;
 
         // Weather Cell Lifecycle \\
