@@ -141,6 +141,16 @@ class CloudRenderSystem extends SystemPackage {
 
         float horizonDistanceBlocks = cloudObjectRangeChunks * EngineSetting.CHUNK_SIZE
                 * EngineSetting.CLOUD_HORIZON_RENDER_DISTANCE_SCALE;
+
+        // Safety clamp — see EngineSetting.CLOUD_HORIZON_FAR_PLANE_SAFETY_MARGIN's
+        // own doc comment. A large configured render distance previously let
+        // this horizon sit beyond the camera's own far clip plane, silently
+        // clipping every cloud object before it was ever drawn — visually
+        // indistinguishable from "overhead clouds are not rendering at all".
+        float maxSafeHorizonBlocks = EngineSetting.CAMERA_FAR_PLANE
+                * EngineSetting.CLOUD_HORIZON_FAR_PLANE_SAFETY_MARGIN;
+        horizonDistanceBlocks = Math.min(horizonDistanceBlocks, maxSafeHorizonBlocks);
+
         float skyViewDistanceBlocks = EngineSetting.WEATHER_FAR_RANGE_CHUNKS * EngineSetting.CHUNK_SIZE;
         float transitionStartBlocks = horizonDistanceBlocks * EngineSetting.CLOUD_VOLUME_FADE_START_RATIO;
 
@@ -151,6 +161,10 @@ class CloudRenderSystem extends SystemPackage {
         cloudSettingsData.updateUniform(EngineSetting.UNIFORM_CLOUD_TRANSITION_START, transitionStartBlocks);
 
         uboManager.push(cloudSettingsData);
+
+        log("[CloudRenderSystem] cloud horizon distance pushed: " + horizonDistanceBlocks
+                + " blocks (transition start " + transitionStartBlocks
+                + ", far plane " + EngineSetting.CAMERA_FAR_PLANE + ")");
     }
 
     // Update \\

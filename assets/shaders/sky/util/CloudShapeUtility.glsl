@@ -106,6 +106,58 @@ vec3 shadeCloudToon(
 }
 
 /*
+* Unlit (shape-only) toon shading for a raymarched PHYSICAL cloud sample —
+ * used by clouds/CloudVolumeShader.fsh, which writes into the same
+ * deferred G-buffer every opaque terrain fragment writes into
+ * (gAlbedo/gNormal/gMaterial). The shared Lighting.fsh pass reads gAlbedo
+ * as raw unlit surface color and applies real sun/moon/ambient lighting
+ * to it — exactly once, using gNormal for the directional terms and
+ * gMaterial.b for ambient occlusion. This function must therefore never
+ * bake a light's own color or intensity into its result, or that pixel
+ * gets lit a second time by Lighting.fsh on top of whatever this function
+ * already did (crushing dark or blowing out white depending on angle —
+ * this was the actual bug behind "no clouds visible": a cloud already lit
+ * once here, blended toward the sky-color fallback, then re-lit into
+ * something close to invisible against the sky it was just blended into).
+ *
+ * lightLift is still real light-DIRECTION shape information — a self-
+ * shadow density tap toward wherever the sun/moon actually is (see the
+ * call site) — not a radiance value, so folding it into the toon band
+ * alongside heightT has no relighting risk, any more than baking a
+ * vertex's own ambient occlusion into gMaterial.b does for terrain.
+ * outAO returns that same banded occlusion term so the caller can
+ * accumulate a real ambient-occlusion value into gMaterial.b instead of
+ * a hardcoded "fully exposed" constant.
+ */
+vec3 shadeCloudUnlit(
+    vec3 baseColor,
+    vec3 topColor,
+    vec3 shadowColor,
+    float heightT,
+    float lightLift,
+    float density,
+    int toonBands,
+    float shadeStrength,
+    float ambientOcclusionStrength,
+    float brightnessMultiplier,
+    out float outAO) {
+    float litAmount = clamp(heightT * 0.5 + lightLift * 0.5, 0.0, 1.0);
+
+    float bands = max(float(toonBands), 1.0);
+    float banded = floor(litAmount * bands) / max(bands - 1.0, 1.0);
+
+    vec3 lit = mix(baseColor, topColor, banded);
+    vec3 shaded = mix(lit, shadowColor, (1.0 - banded) * shadeStrength);
+
+    float ao = mix(1.0 - ambientOcclusionStrength, 1.0, banded);
+    shaded *= ao;
+    shaded = mix(shadowColor, shaded, clamp(density * 2.0, 0.0, 1.0));
+
+    outAO = ao;
+    return shaded * brightnessMultiplier;
+}
+
+/*
 * Ray/AABB slab intersection, used by any raymarching caller that bounds
  * its march to a physical volume (currently: CloudVolumeShader.fsh's
  * per-instance box). Returns (tNear, tFar) along rayDir from rayOrigin —
@@ -127,9 +179,15 @@ vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
 }
 
 /*
-* Real-light toon shading for a raymarched sample, replacing
- * shadeCloudToon()'s raymarch-order-proxy heightT with two genuine
- * spatial/lighting measures instead:
+* Real-light toon shading for a raymarched sample — kept for potential
+ * future forward-shaded/direct callers (e.g. anything that draws straight
+ * to a final color target rather than through the deferred G-buffer, the
+ * same way the sky dome's shadeCloudToon() is unlit because
+ * sky/standard/StandardSkyShader.fsh writes directly to its own FBO with
+ * no relighting pass downstream). NOT currently called by
+ * CloudVolumeShader.fsh — see shadeCloudUnlit() above for why a G-buffer
+ * writer must never use this. Replaces shadeCloudToon()'s raymarch-order-
+ * proxy heightT with two genuine spatial/lighting measures instead:
  *
  * - heightT: this sample's ACTUAL height within the cloud's own vertical
  * extent (0 = base, 1 = top) — a real physical quantity, not a stand-in

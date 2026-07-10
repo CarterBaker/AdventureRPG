@@ -207,7 +207,16 @@ public class EngineSetting {
 
         // Rendering \\
 
-        public static final int MAX_RENDER_CALLS_PER_FRAME = 4096;
+        // Raised from 4096 — at moderate/large render distances, terrain alone
+        // (pushed to the queue before weather, every frame — see
+        // WorldPipeline/WeatherPipeline creation order) could approach the old
+        // ceiling. RenderSystem.pushRenderCall() silently drops anything
+        // submitted once the ring buffer is full — no error, nothing drawn —
+        // so an exhausted buffer looks EXACTLY like "clouds never render",
+        // when the true cause is terrain alone eating the whole budget before
+        // CloudRenderSystem ever gets a turn this frame. Cheap to raise —
+        // RenderQueueHandle preallocates RenderCallStruct[], negligible memory.
+        public static final int MAX_RENDER_CALLS_PER_FRAME = 16384;
 
         // Shader Pipeline \\
 
@@ -386,6 +395,14 @@ public class EngineSetting {
         public static final int CLOUD_VOLUME_RAYMARCH_STEPS_NEAR = 48;
         public static final int CLOUD_VOLUME_RAYMARCH_STEPS_FAR = 16;
         public static final float CLOUD_VOLUME_TIER_NEAR_DISTANCE = 128f;
+        // Safety clamp — u_cloudHorizonDistance (see
+        // CloudRenderSystem.pushCloudSettings()) must never be pushed out past
+        // a safe fraction of CAMERA_FAR_PLANE. Without this, a large configured
+        // render distance can place the cloud streaming/fade horizon beyond the
+        // camera's own far clip plane, which silently clips every cloud object
+        // before it is ever drawn — visually indistinguishable from "overhead
+        // clouds are not rendering at all".
+        public static final float CLOUD_HORIZON_FAR_PLANE_SAFETY_MARGIN = 0.85f;
         public static final String CLOUD_VOLUME_MESH_NAME = "clouds/CloudVolumeMesh";
         public static final String CLOUD_VOLUME_MATERIAL_NAME = "clouds/CloudVolumeMaterial";
 

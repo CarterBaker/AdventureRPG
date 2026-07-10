@@ -39,16 +39,39 @@ layout(location = 2) out vec4 gMaterial;
  * shader marches from the fragment's own position toward wherever that
  * same view ray exits the box (a simple AABB slab test against
  * vBoxMin/vBoxMax), accumulating density front-to-back exactly like the
- * sky dome's own raymarch, then shades each sample with a real sun/moon
- * light direction (a one-tap self-shadow estimate plus true height within
- * the box) instead of the old raymarch-order/box-mask proxies.
+ * sky dome's own raymarch.
+ *
+ * DEFERRED-LIGHTING FIX — this used to also shade each sample with real
+ * sun/moon color and intensity (shadeCloudLit()), bake THAT into the
+ * accumulated color, and write it straight into gAlbedo. But gAlbedo
+ * feeds the exact same deferred Lighting.fsh pass every opaque terrain
+ * fragment goes through — see LightingShader.fsh, which treats gAlbedo as
+ * raw UNLIT surface color and multiplies it by sky ambient plus sun/moon
+ * diffuse and specular all over again, using gNormal for the directional
+ * terms. Every cloud pixel was getting lit TWICE: once here, once in the
+ * deferred pass. Depending on view/light angle that either crushed
+ * clouds down into a dark smudge that blended into the sky-color fallback
+ * below — reading as "no clouds visible at all", the reported bug — or
+ * blew them out to flat white, and the look changed unpredictably with
+ * time of day since both passes were independently reacting to the same
+ * sun/moon direction.
+ *
+ * This shader now only ever produces UNLIT shape data — a toon-banded
+ * base color via shadeCloudUnlit() (the deferred-safe sibling of the sky
+ * dome's own shadeCloudToon(), with a real light-direction self-shadow
+ * tap folded in as shape/AO information rather than surface radiance)
+ * plus a real accumulated ambient-occlusion value for gMaterial.b.
+ * Lighting.fsh is completely unmodified — it already knows how to light
+ * an albedo+normal+ao G-buffer fragment; it now only ever does that once
+ * for a cloud pixel, exactly like it already does for every terrain
+ * fragment.
  *
  * Still writes a COMPLETE G-buffer output (albedo, normal, material) and
  * real depth, exactly like StandardSurfaceShader.fsh — this pass runs
  * with blending ENABLED (see RenderSystem.drawToMappedTargets), so every
  * output here still forces alpha = 1.0 and instead pre-blends the
- * raymarched cloud color against an approximated sky-behind color itself,
- * same as before.
+ * raymarched (still unlit) cloud color against an approximated
+ * (also unlit) sky-behind color itself, same as before.
  * ============================================================================
  */
 
@@ -116,20 +139,17 @@ void main() {
     int steps = camDist < CLOUD_RAYMARCH_TIER_DISTANCE ? CLOUD_RAYMARCH_STEPS_NEAR : CLOUD_RAYMARCH_STEPS_FAR;
     float stepSize = marchLen / float(steps);
 
-    // Directional light — sun by day, blending toward moon as the sun
-    // weakens, mirroring the same two-light setup LightingShader.fsh
-    // composites for terrain, just resolved to one dominant direction/
-    // color here so the per-step self-shadow tap only costs one extra
-    // density sample rather than two.
-    float sunWeight       = clamp(u_sunIntensity / 0.3, 0.0, 1.0);
-    vec3  lightDir        = normalize(mix(u_moonDirection, u_sunDirection, sunWeight));
-    vec3  lightColor      = mix(u_moonColor, u_sunColor, sunWeight);
-    float lightIntensity  = max(u_sunIntensity, u_moonIntensity * 0.6);
+    // Real light DIRECTION only — sun by day, blending toward moon as the
+    // sun weakens, exactly like before. Never converted into a color/
+    // intensity that could tint albedo — see the header comment.
+    float sunWeight = clamp(u_sunIntensity / 0.3, 0.0, 1.0);
+    vec3  lightDir  = normalize(mix(u_moonDirection, u_sunDirection, sunWeight));
 
     float intensityFactor = mix(INTENSITY_DENSITY_FLOOR, 1.0, clamp(vIntensity, 0.0, 1.0));
     float boxHeight        = max(vBoxMax.y - vBoxMin.y, 0.001);
 
-    vec4 accum = vec4(0.0);
+    vec4  accum   = vec4(0.0);
+    float accumAO = 0.0;
 
     for (int i = 0; i < CLOUD_RAYMARCH_STEPS_NEAR; i++) {
         if (i >= steps)
@@ -148,6 +168,10 @@ void main() {
         if (density > 0.01) {
             float heightT = clamp((p.y - vBoxMin.y) / boxHeight, 0.0, 1.0);
 
+            // Self-shadow tap — a second density sample one step toward the
+            // light source. Shape/AO information only (how buried this
+            // point is in cloud material relative to the light), never a
+            // radiance value — see the header comment.
             float rawLit = sampleCloudDensity(
                 p + lightDir * CLOUD_LIGHT_TAP_DISTANCE,
                 u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength, u_cloudPuffJitter,
@@ -156,16 +180,20 @@ void main() {
 
             float lightLift = clamp((density - litDensity) * 2.0 + 0.5, 0.0, 1.0);
 
-            vec3 shaded = shadeCloudLit(
+            float stepAO;
+            vec3 shaded = shadeCloudUnlit(
                 u_cloudColor, u_cloudTopColor, u_cloudShadowColor,
-                lightColor, lightIntensity,
                 heightT, lightLift, density,
-                u_cloudToonBands, u_cloudShadeStrength, u_cloudRimLightStrength,
-                u_cloudAmbientOcclusionStrength, u_cloudBrightnessMultiplier);
+                u_cloudToonBands, u_cloudShadeStrength,
+                u_cloudAmbientOcclusionStrength, u_cloudBrightnessMultiplier,
+                stepAO);
 
             float stepAlpha = clamp(density * CLOUD_RAYMARCH_STEP_ALPHA_SCALE * stepSize, 0.0, 1.0);
-            accum.rgb += (1.0 - accum.a) * stepAlpha * shaded;
-            accum.a   += (1.0 - accum.a) * stepAlpha;
+            float contribution = (1.0 - accum.a) * stepAlpha;
+
+            accum.rgb += contribution * shaded;
+            accumAO   += contribution * stepAO;
+            accum.a   += contribution;
         }
     }
 
@@ -177,19 +205,31 @@ void main() {
     // Manual "blend" against an approximate sky background, using the
     // actual view ray's altitude the same way the real sky pass blends
     // horizon -> zenith — see the header comment above for why this
-    // replaces GL_SRC_ALPHA blending for a G-buffer write.
+    // replaces GL_SRC_ALPHA blending for a G-buffer write. This is still
+    // UNLIT sky color (u_skyHorizonColor/u_skyZenithColor already bake in
+    // day/night/season tinting from SkyColorBranch) mixed with UNLIT cloud
+    // color — Lighting.fsh applies real sun/moon/ambient to the combined
+    // result exactly once, same as every other gAlbedo fragment.
     float skyAltitude = clamp(rayDir.y * 0.5 + 0.5, 0.0, 1.0);
     vec3  approxSky    = mix(u_skyHorizonColor, u_skyZenithColor, skyAltitude);
     vec3  blended      = mix(approxSky, accum.rgb, finalAlpha);
+
+    // Average AO across accumulated samples — accum.a is the premultiplied
+    // weight accumAO was built against, so dividing back out gives a
+    // genuine [0,1] AO rather than an alpha-scaled one. Falls back to 1.0
+    // (no occlusion) for the sky-only sliver of a fragment's coverage.
+    float ao = mix(1.0, accumAO / max(accum.a, 0.0001), finalAlpha);
 
     vec3 normalView = normalize(mat3(u_view) * normalize(vNormal));
 
     // Cloud material packing mirrors StandardSurfaceShader's gMaterial
     // convention (r = fogT, g = specular, b = ao). Clouds don't apply the
-    // terrain's distance-fog curve to themselves (r = 0), are non-shiny
-    // (g = 0), and are never additionally ambient-occluded on top of
-    // their own volumetric shading (b = 1).
+    // terrain's distance-fog curve to themselves (r = 0) and are non-shiny
+    // (g = 0) — b now carries the raymarch's own accumulated self-shadow
+    // AO instead of a hardcoded 1.0, so Lighting.fsh's ambient term
+    // actually responds to cloud shape instead of treating every cloud
+    // pixel as fully exposed.
     gAlbedo   = vec4(blended, 1.0);
     gNormal   = vec4(normalView, 1.0);
-    gMaterial = vec4(0.0, 0.0, 1.0, 1.0);
+    gMaterial = vec4(0.0, 0.0, ao, 1.0);
 }
