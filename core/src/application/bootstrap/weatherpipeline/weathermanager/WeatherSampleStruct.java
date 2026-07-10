@@ -22,6 +22,14 @@ class WeatherSampleStruct extends StructPackage {
      * getHumidity()/getVisibility(). temperatureModifier is blended the
      * same way and read by TemperatureBranch as an additive term on top of
      * the season/diurnal/precipitation-cooling terms it already computes.
+     *
+     * Instances of this struct are never written to directly from a raw
+     * noise resolution — see RegionSampleBranch.advanceSmoothing(). Each
+     * externally-read sample glides toward a same-shaped "target" instance
+     * every frame via lerpToward(); copyFrom() is used exactly once, the
+     * first time a target is ever resolved, so the sky doesn't have to
+     * visibly fade up from a zeroed default over the full smoothing window
+     * at world start.
      */
 
     // Cloud
@@ -44,6 +52,54 @@ class WeatherSampleStruct extends StructPackage {
 
     WeatherSampleStruct() {
         this.cloudColor = new Vector3();
+    }
+
+    // Smoothing \\
+
+    /*
+     * Hard-copies every field from source. Used once per sample, the first
+     * time it's ever resolved, so this sample doesn't have to glide up from
+     * a zeroed (black, zero-coverage) default over
+     * EngineSetting.WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS at world start —
+     * see RegionSampleBranch.advanceSmoothing().
+     */
+    void copyFrom(WeatherSampleStruct source) {
+        this.cloudColor.set(source.cloudColor.x, source.cloudColor.y, source.cloudColor.z);
+        this.cloudCoverage = source.cloudCoverage;
+        this.cloudAltitude = source.cloudAltitude;
+        this.precipitationIntensity = source.precipitationIntensity;
+        this.windSpeedScale = source.windSpeedScale;
+        this.windTurbulenceScale = source.windTurbulenceScale;
+        this.fogDensityScale = source.fogDensityScale;
+        this.humidity = source.humidity;
+        this.visibility = source.visibility;
+        this.temperatureModifier = source.temperatureModifier;
+    }
+
+    /*
+     * Glides every field a fraction `alpha` of the way toward target's
+     * current value. See RegionSampleBranch.advanceSmoothing() for how
+     * alpha is derived from EngineSetting.WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS
+     * — this is what turns an instantaneous jump in the raw resolved
+     * weather (a chance-band boundary crossing, a season pool swap, the sky
+     * dome's own daily cloud reseed) into a multi-second glide everywhere
+     * this sample is read, rather than every reader having to smooth it
+     * independently.
+     */
+    void lerpToward(WeatherSampleStruct target, float alpha) {
+        this.cloudColor.set(
+                this.cloudColor.x + (target.cloudColor.x - this.cloudColor.x) * alpha,
+                this.cloudColor.y + (target.cloudColor.y - this.cloudColor.y) * alpha,
+                this.cloudColor.z + (target.cloudColor.z - this.cloudColor.z) * alpha);
+        this.cloudCoverage += (target.cloudCoverage - this.cloudCoverage) * alpha;
+        this.cloudAltitude += (target.cloudAltitude - this.cloudAltitude) * alpha;
+        this.precipitationIntensity += (target.precipitationIntensity - this.precipitationIntensity) * alpha;
+        this.windSpeedScale += (target.windSpeedScale - this.windSpeedScale) * alpha;
+        this.windTurbulenceScale += (target.windTurbulenceScale - this.windTurbulenceScale) * alpha;
+        this.fogDensityScale += (target.fogDensityScale - this.fogDensityScale) * alpha;
+        this.humidity += (target.humidity - this.humidity) * alpha;
+        this.visibility += (target.visibility - this.visibility) * alpha;
+        this.temperatureModifier += (target.temperatureModifier - this.temperatureModifier) * alpha;
     }
 
     // Accessible \\

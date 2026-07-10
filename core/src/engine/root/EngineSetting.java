@@ -459,6 +459,24 @@ public class EngineSetting {
         public static final int WEATHER_NEAR_RANGE_CHUNKS = 192;
         public static final int WEATHER_FAR_RANGE_CHUNKS = 384;
 
+        // Weather Sampling Smoothing \\
+        //
+        // Every value RegionSampleBranch resolves — the centre sample and
+        // all eight compass directions — is exposed to the rest of the
+        // engine (the WeatherData/WeatherRegionData UBOs, wind, temperature)
+        // only after passing through an exponential smoothing filter (see
+        // RegionSampleBranch.advanceSmoothing()), never as the raw
+        // resolution directly. Raw resolution can still change abruptly
+        // frame to frame — a noise value crossing a chance-band boundary, a
+        // biome/season pool swap, the sky dome's own daily cloud reseed —
+        // this constant is what keeps every visible or gameplay-facing
+        // consequence of those jumps arriving as a smooth multi-second
+        // glide instead of an instant snap. Expressed as a time constant
+        // (seconds to close ~63% of the remaining gap to the new target)
+        // rather than a flat per-frame blend factor, so the glide rate is
+        // identical regardless of frame rate.
+        public static final float WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS = 9.0f;
+
         // Global Weather Noise \\
 
         public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f;

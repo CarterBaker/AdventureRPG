@@ -86,6 +86,18 @@ class RegionSampleBranch extends BranchPackage {
      * into [0, 1), scaled to a whole number of noise cells, with the hash
      * lookup wrapping cell indices via floorMod — seamless at the world
      * edge instead of two unrelated hash values on either side of the seam.
+     *
+     * Temporal smoothing
+     * -------------------
+     * Every value this class resolves is exposed only after passing
+     * through advanceSmoothing() — an exponential glide toward whatever
+     * was most recently resolved, rather than the raw resolution itself.
+     * The raw path (chance-band boundaries, biome/season pool swaps) can
+     * still change abruptly frame to frame; this is what keeps every
+     * visible or gameplay-facing consequence of that (sky colour and
+     * coverage on the UBOs, wind, temperature) arriving as a smooth glide
+     * instead of a snap. See EngineSetting.
+     * WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS's own doc comment.
      */
 
     // Scales a diagonal direction's per-axis offset so its Euclidean
@@ -122,7 +134,17 @@ class RegionSampleBranch extends BranchPackage {
     // own ordinal order (NORTH, NORTHEAST, EAST, SOUTHEAST, SOUTH,
     // SOUTHWEST, WEST, NORTHWEST), so a direction's ordinal and its sample
     // index are always exactly one apart, with no separate lookup table.
+    // This is the SMOOTHED array — every external reader (getCenterSample(),
+    // WeatherBufferBranch, WeatherManager's wind/humidity/visibility
+    // getters) reads from here, never from targetSamples directly.
     private WeatherSampleStruct[] samples;
+
+    // Smoothing — this frame's raw resolution, before the glide applied by
+    // advanceSmoothing(). Same indexing as samples. See EngineSetting.
+    // WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS's own doc comment for why
+    // samples itself is never written to directly from a resolution call.
+    private WeatherSampleStruct[] targetSamples;
+    private boolean smoothingInitialized;
 
     // Scratch — reused every sample call, never reallocated
     private final WeatherBandStruct bandScratch = new WeatherBandStruct();
@@ -142,8 +164,14 @@ class RegionSampleBranch extends BranchPackage {
 
         // Samples — centre + all 8 Direction2Vector entries
         this.samples = new WeatherSampleStruct[1 + Direction2Vector.LENGTH];
-        for (int i = 0; i < samples.length; i++)
+        this.targetSamples = new WeatherSampleStruct[1 + Direction2Vector.LENGTH];
+        for (int i = 0; i < samples.length; i++) {
             samples[i] = new WeatherSampleStruct();
+            targetSamples[i] = new WeatherSampleStruct();
+        }
+
+        // Smoothing
+        this.smoothingInitialized = false;
     }
 
     @Override
@@ -173,7 +201,7 @@ class RegionSampleBranch extends BranchPackage {
         int originX = Coordinate2Long.unpackX(referenceCoordinate);
         int originY = Coordinate2Long.unpackY(referenceCoordinate);
 
-        sampleDirection(samples[0], originX, originY, pool);
+        sampleDirection(targetSamples[0], originX, originY, pool);
 
         for (int i = 0; i < Direction2Vector.LENGTH; i++) {
 
@@ -184,8 +212,10 @@ class RegionSampleBranch extends BranchPackage {
             int sampleX = originX + Math.round(dir.x * sampleDistance * axisScale);
             int sampleY = originY + Math.round(dir.y * sampleDistance * axisScale);
 
-            sampleDirection(samples[i + 1], sampleX, sampleY, pool);
+            sampleDirection(targetSamples[i + 1], sampleX, sampleY, pool);
         }
+
+        advanceSmoothing();
     }
 
     private void sampleDirection(
@@ -196,6 +226,34 @@ class RegionSampleBranch extends BranchPackage {
 
         resolveBand(bandScratch, chunkX, chunkY, pool);
         writeSample(sample, bandScratch.getLow(), bandScratch.getHigh(), bandScratch.getBlendFactor());
+    }
+
+    // Smoothing \\
+
+    /*
+     * Glides the externally-read `samples` array a bounded fraction of the
+     * way toward this frame's freshly resolved `targetSamples` — see
+     * EngineSetting.WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS's own doc comment
+     * for why. The very first resolution snaps immediately instead of
+     * gliding from samples' zeroed defaults — otherwise the sky would
+     * visibly fade up from black/zero-coverage over the full smoothing
+     * window at world start, which reads as a bug rather than "weather
+     * settling in."
+     */
+    private void advanceSmoothing() {
+
+        if (!smoothingInitialized) {
+            for (int i = 0; i < samples.length; i++)
+                samples[i].copyFrom(targetSamples[i]);
+            smoothingInitialized = true;
+            return;
+        }
+
+        float deltaTime = internal.getDeltaTime();
+        float alpha = 1f - (float) Math.exp(-deltaTime / EngineSetting.WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS);
+
+        for (int i = 0; i < samples.length; i++)
+            samples[i].lerpToward(targetSamples[i], alpha);
     }
 
     // Wind Drift \\

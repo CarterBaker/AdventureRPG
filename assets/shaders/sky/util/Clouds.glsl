@@ -65,9 +65,10 @@
  *
  * Ring shading — colour-based, NOT alpha-based, entirely height-driven
  * --------------------------------------------------------------
- * The ring's ALPHA never changes — it is always fully opaque. This is
- * intentional: alpha-fading the ring reads as the cloud dissolving into
- * the sky, which is wrong for a toon look.
+ * The ring's ALPHA never changes — it is always fully opaque (before the
+ * whole-blob presence fade described below is applied). This is
+ * intentional: alpha-fading the ring on its own reads as the cloud
+ * dissolving into the sky, which is wrong for a toon look.
  *
  * Instead, only the ring's COLOUR shifts, from the plain ring colour
  * toward the EXACT core colour — a flat, opaque "shadow band", not a
@@ -93,6 +94,33 @@
  * heading, so an approaching storm is visible building on the horizon in
  * its own direction, in the same colour and density RegionSampleBranch
  * already resolved for it on the CPU, before it ever reaches the player.
+ *
+ * Smooth existence & smooth sector blending
+ * -------------------------------------------
+ * Two changes here specifically target the "clouds flicker / cut on and
+ * off / colour changes too fast" failure mode:
+ *
+ * 1. Every value WeatherData/WeatherRegionData carries has already been
+ *    passed through RegionSampleBranch's own temporal smoothing (see
+ *    EngineSetting.WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS) before it ever
+ *    reaches these uniforms, so u_cloudCoverage and every
+ *    u_cloudCoverage<Direction> value can only glide, never snap.
+ * 2. Individual blob EXISTENCE is no longer a hard per-cell boolean
+ *    (previously: `if (hA.x > spawnChance) continue;`). With dozens of
+ *    blob cells each carrying their own fixed random threshold, a
+ *    smoothly rising or falling coverage value would still cross many of
+ *    those thresholds in quick succession, reading as clouds flickering
+ *    on and off across the sky ("windshield wipers") even once the
+ *    coverage value itself was smooth. _findNearestBlob now returns a
+ *    continuous blobPresence in [0,1] — a narrow smoothstep band around
+ *    each cell's own threshold — and calculateClouds scales the whole
+ *    blob's final alpha by it, so a blob now visibly thins into
+ *    translucency and back rather than popping.
+ * 3. _sampleHorizonWeather's blend across the 8 compass sectors now uses
+ *    smoothstep instead of a linear mix — still only 8 samples, but the
+ *    RATE of change is now continuous at each sector boundary too (not
+ *    just the value), which removes the visible "crease" a linear blend
+ *    leaves at every 45-degree seam.
  */
 
 // ── Puff shape — pass-0 (base layer) baseline; later passes scale this
@@ -140,6 +168,15 @@ const float BLOB_JITTER_XZ    = 2.0;   // how far a blob drifts off its cell cen
 const float BLOB_RADIUS_XZ    = 3.0;   // horizontal radius
 const float BLOB_RADIUS_Y     = 1.4;   // vertical radius (flatter than wide)
 const float BLOB_EDGE_NOISE   = 0.22;  // per-cell randomised boundary roughness
+
+// How gradually an individual blob fades in/out of existence as the
+// resolved spawnChance drifts past that blob's own fixed per-cell
+// threshold — see "Smooth existence & smooth sector blending" above. A
+// wider range fades more gradually (softer, but a coverage change takes
+// longer to visibly add/remove blobs); narrower snaps back closer to the
+// old hard-cutoff look. 0.12 reads as a soft thinning-in/out over a
+// believable few seconds of coverage drift, not an instant pop.
+const float BLOB_PRESENCE_FADE_RANGE = 0.12;
 
 // Vertical placement range for blob CENTRES — this is what lets clouds
 // spawn higher or lower instead of locking to one band.
@@ -204,7 +241,11 @@ CompassSample _compassSample(int index) {
 }
 
 // Blends the two nearest of the 8 compass samples by the view ray's
-// horizontal heading (see convention note above).
+// horizontal heading (see convention note above). Uses a smoothstep-eased
+// blend factor rather than a raw linear one — a linear mix is continuous
+// in VALUE at each 45-degree sector boundary but not in its RATE of
+// change, which shows up as a visible "crease" sweeping across the sky as
+// the underlying compass values update. Easing removes that crease.
 void _sampleHorizonWeather(vec3 dir, out float coverage, out vec3 color) {
     float headingDeg = degrees(atan(dir.x, -dir.z));
     headingDeg = mod(headingDeg + 360.0, 360.0);
@@ -212,7 +253,7 @@ void _sampleHorizonWeather(vec3 dir, out float coverage, out vec3 color) {
     float sector = headingDeg / 45.0;
     int i0 = int(floor(sector)) % 8;
     int i1 = (i0 + 1) % 8;
-    float t = fract(sector);
+    float t = smoothstep(0.0, 1.0, fract(sector));
 
     CompassSample a = _compassSample(i0);
     CompassSample b = _compassSample(i1);
@@ -257,21 +298,25 @@ vec4 _cloudOver(vec4 dst, vec4 src) {
 // Finds the nearest cloud "blob" to sample point p. spawnChance comes from
 // live weather coverage (see _resolveSpawnChance above) rather than a fixed
 // constant, so overcast directions/positions fill in with blobs and clear
-// ones thin out.
+// ones thin out. blobPresence is a continuous [0,1] existence factor for
+// whichever blob is nearest — see "Smooth existence & smooth sector
+// blending" in the file header for why this replaced a hard boolean gate.
 void _findNearestBlob(vec3 p, float dailySeed, float spawnChance,
-    out vec3 blobCenter, out float blobEllDist, out bool blobFound) {
+    out vec3 blobCenter, out float blobEllDist, out bool blobFound, out float blobPresence) {
     vec2 cellCoord = floor(p.xz / BLOB_CELL_XZ);
 
-    blobFound   = false;
-    blobEllDist = 1.0e6;
-    blobCenter  = vec3(0.0);
+    blobFound    = false;
+    blobEllDist  = 1.0e6;
+    blobCenter   = vec3(0.0);
+    blobPresence = 0.0;
 
     for (int x = -1; x <= 1; x++)
     for (int z = -1; z <= 1; z++) {
         vec2 cell = cellCoord + vec2(x, z);
 
         vec3 hA = _puffHash3(vec3(cell.x, 3.17 + dailySeed, cell.y));
-        if (hA.x > spawnChance) continue; // no blob in this cell
+        float presence = smoothstep(0.0, BLOB_PRESENCE_FADE_RANGE, spawnChance - hA.x);
+        if (presence <= 0.001) continue; // fully faded out — skip, still an optimization
 
         vec2 centerXZ = (cell + 0.5) * BLOB_CELL_XZ + (hA.yz - 0.5) * BLOB_JITTER_XZ;
 
@@ -283,9 +328,10 @@ void _findNearestBlob(vec3 p, float dailySeed, float spawnChance,
         float ellDist = length(d);
 
         if (ellDist < blobEllDist) {
-            blobEllDist = ellDist;
-            blobCenter  = center;
-            blobFound   = true;
+            blobEllDist  = ellDist;
+            blobCenter   = center;
+            blobFound    = true;
+            blobPresence = presence;
         }
     }
 }
@@ -307,7 +353,8 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
     vec3  blobCenter;
     float blobEllDist;
     bool  blobFound;
-    _findNearestBlob(p, dailySeed, spawnChance, blobCenter, blobEllDist, blobFound);
+    float blobPresence;
+    _findNearestBlob(p, dailySeed, spawnChance, blobCenter, blobEllDist, blobFound, blobPresence);
 
     if (!blobFound || blobEllDist > 1.5) return vec4(0.0);
 
@@ -394,6 +441,9 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
         }
     }
 
-    return result;
+    // Whole-blob presence fade — see "Smooth existence & smooth sector
+    // blending" in the file header. Scales only alpha, never rgb, so a
+    // half-formed blob reads as thin/translucent rather than discolored.
+    return vec4(result.rgb, result.a * blobPresence);
 }
 #endif
