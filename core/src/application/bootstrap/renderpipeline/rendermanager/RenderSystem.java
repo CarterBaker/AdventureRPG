@@ -107,15 +107,18 @@ class RenderSystem extends SystemPackage {
             drawDepthSortedBatches(queue, target, window);
             drawSkinnedBatches(queue, target, window);
 
-            // Cloud instances are translucent volumetric geometry drawn with
-            // blending enabled — depth WRITES must be off here so overlapping
-            // cloud instances blend against each other instead of silently
-            // depth-occluding based on draw order (which, for an instanced
-            // draw call, is not sorted back-to-front). Depth TEST stays on,
-            // so clouds still correctly sit behind terrain and characters.
-            RenderGLSLUtility.setDepthMask(false);
+            // Cloud instances now write a complete G-buffer output (albedo,
+            // normal, material) and real depth, exactly like any other
+            // opaque-ish surface drawn into this target — see
+            // CloudVolumeShader.fsh's own doc comment for the full
+            // rationale. Depth writes used to be disabled here, which left
+            // every cloud pixel drawn over open sky at the frame-clear
+            // depth of 1.0; the deferred Lighting pass treats depth >= 1.0
+            // as "nothing was drawn here" and silently dropped the cloud's
+            // contribution entirely (see LightingShader.fsh). Leaving the
+            // depth mask at its default (enabled, set by enableDepth()
+            // above) fixes that.
             drawWeatherBatches(queue, target, window);
-            RenderGLSLUtility.setDepthMask(true);
 
             compositeRenderSystem.draw(queue, target, window);
             target.unbind();

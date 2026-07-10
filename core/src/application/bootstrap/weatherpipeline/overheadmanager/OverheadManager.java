@@ -53,14 +53,21 @@ public class OverheadManager extends ManagerPackage {
      * - A second pass, advanceIntensity() — deliberately NOT the same slow,
      * jittered cadence advanceWeatherReevaluation() uses — recomputes every
      * active cell's live intensity (see OverheadCellStruct's own doc
-     * comment and WeatherBandStruct.getPrimaryIntensity()) on a fast,
-     * shared cadence. This is what makes a streamed-in weather system
-     * visibly strengthen and weaken from moment to moment, rather than
-     * only ever existing at fixed full presence between the coarse
-     * identity checks below. A cell whose intensity has decayed near zero
-     * is retired here — through the same fade-out path an out-of-range or
-     * identity-mismatched cell uses — so a weather system that has
-     * genuinely weakened away dissipates instead of silently reviving.
+     * comment and WeatherBandStruct.getIntensityFor()) on a fast, shared
+     * cadence. This is what makes a streamed-in weather system visibly
+     * strengthen and weaken from moment to moment, rather than only ever
+     * existing at fixed full presence between the coarse identity checks
+     * below. Intensity is resolved specifically FOR the cell's own frozen
+     * weatherHandle — not for whichever weather the band's noise currently
+     * favors — and then scaled by that weather's own cloudCoverage, so a
+     * thin, low-coverage weather (a sunny day with only occasional puffs)
+     * reads as genuinely wispy while a high-coverage weather (a storm)
+     * reads as dense and near-total, rather than every weather rendering
+     * at the same strength whenever its noise band happens to be pure.
+     * A cell whose intensity has decayed near zero is retired here — through
+     * the same fade-out path an out-of-range or identity-mismatched cell
+     * uses — so a weather system that has genuinely weakened away
+     * dissipates instead of silently reviving.
      *
      * - A third, slower pass — advanceWeatherReevaluation() — is what keeps
      * this whole system from reading as static once a cell has streamed in.
@@ -281,7 +288,14 @@ public class OverheadManager extends ManagerPackage {
         weatherManager.resolveWeatherBand(bandScratch, chunkCoordinate);
 
         WeatherHandle weatherHandle = bandScratch.getPrimary();
-        float intensity = bandScratch.getPrimaryIntensity();
+        // See advanceIntensity()'s own doc comment for the full rationale
+        // behind resolveCellIntensity() over a bare getPrimaryIntensity()
+        // call. At this exact moment weatherHandle was JUST set to
+        // getPrimary(), so the two are numerically identical here — but
+        // routing through the shared helper keeps this call site and
+        // advanceIntensity()'s recompute call site permanently in
+        // agreement, rather than silently diverging later.
+        float intensity = resolveCellIntensity(bandScratch, weatherHandle);
         float cloudPickNoise = hash01(cellKey);
         CloudChanceStruct cloudEntry = weatherHandle.pickCloud(cloudPickNoise);
         float randomSeed = hash01(cellKey ^ 0x9E3779B97F4A7C15L);
@@ -423,27 +437,45 @@ public class OverheadManager extends ManagerPackage {
 
     /*
      * Recomputes every active, non-retiring cell's live weather intensity
-     * (see WeatherBandStruct.getPrimaryIntensity()) on a fast, shared
-     * cadence — deliberately not the same slow, per-cell-jittered cadence
-     * identity uses (see advanceWeatherReevaluation()). Intensity is a
-     * continuous measure of how strongly the current noise field expresses
-     * whichever weather is primary at this cell's own home coordinate right
-     * now; unlike identity it is meant to visibly rise and fall from moment
-     * to moment as the underlying noise evolves, which is what actually
-     * makes a weather system read as strengthening or weakening rather than
-     * only ever snapping between fixed states.
+     * on a fast, shared cadence — deliberately not the same slow, per-cell-
+     * jittered cadence identity uses (see advanceWeatherReevaluation()).
      *
-     * A cell whose intensity has decayed below
+     * Resolves intensity specifically for THIS CELL'S OWN frozen
+     * weatherHandle via WeatherBandStruct.getIntensityFor(), not via
+     * getPrimaryIntensity(). An earlier version of this method called
+     * getPrimaryIntensity() directly, which describes whichever weather
+     * the band's noise currently favors — not necessarily the weather this
+     * cell actually committed to at stream-in. Once a cell's identity has
+     * drifted out of "primary" (the noise has moved on to favor a
+     * neighboring weather, but this cell's own slow, jittered reevaluation
+     * hasn't yet caught up to notice — see advanceWeatherReevaluation()),
+     * that older code would silently report the NEW, rising neighbor's
+     * intensity as if it belonged to this cell, so a cell whose weather
+     * should already be fading could instead appear to hold steady or even
+     * strengthen for up to a full reevaluation interval. getIntensityFor()
+     * fixes this by always measuring the specific handle passed in,
+     * correctly reading as near-zero the moment this cell's own identity
+     * stops being favored, regardless of what the noise has moved on to.
+     *
+     * The result is then scaled by that weather's own cloudCoverage (see
+     * WeatherData/WeatherHandle) — a purely noise-purity intensity treats
+     * every weather as equally "thick" whenever its band is pure, which
+     * made a wispy, low-coverage weather (a sunny day's occasional puffs)
+     * read exactly as dense as a high-coverage storm. Multiplying by
+     * coverage is what makes light weather actually look light and heavy
+     * weather actually look heavy.
+     *
+     * A cell whose final intensity has decayed below
      * WEATHER_CELL_DISSIPATION_INTENSITY_THRESHOLD is retired here, through
      * the exact same fade-out path advanceFadesAndRetire() already drives for
      * an out-of-range or identity-mismatched cell — never swapped or revived
      * in place. This is deliberately not a special case: the triangle-shaped
-     * intensity curve (see WeatherBandStruct.getPrimaryIntensity()) already
-     * dips to zero at exactly the moment a resolved band's identity would
-     * flip, so a low-intensity cell is already visually faded down before it
-     * would otherwise go stale, and letting it fully retire there rather than
-     * revive is what makes weather genuinely dissipate over time instead of
-     * only ever changing because the player wandered out of range.
+     * intensity curve already dips to zero at exactly the moment a resolved
+     * band's identity would flip, so a low-intensity cell is already
+     * visually faded down before it would otherwise go stale, and letting it
+     * fully retire there rather than revive is what makes weather genuinely
+     * dissipate over time instead of only ever changing because the player
+     * wandered out of range.
      */
     private void advanceIntensity() {
 
@@ -462,12 +494,27 @@ public class OverheadManager extends ManagerPackage {
             long homeCoordinate = Coordinate2Long.pack(cell.getHomeChunkX(), cell.getHomeChunkZ());
             weatherManager.resolveWeatherBand(bandScratch, homeCoordinate);
 
-            float intensity = bandScratch.getPrimaryIntensity();
+            float intensity = resolveCellIntensity(bandScratch, cell.getWeatherHandle());
             cell.setIntensity(intensity);
 
             if (intensity <= EngineSetting.WEATHER_CELL_DISSIPATION_INTENSITY_THRESHOLD)
                 cell.setRetiring(true);
         }
+    }
+
+    /*
+     * Resolves a specific weather handle's intensity within an already-
+     * resolved band, then scales it by that weather's own cloudCoverage.
+     * See advanceIntensity()'s doc comment for the full rationale — in
+     * short: WeatherBandStruct.getIntensityFor(handle) rather than
+     * getPrimaryIntensity() so a cell's reported intensity always tracks
+     * its OWN identity rather than whichever weather the noise currently
+     * favors, and the cloudCoverage scale so a thin weather renders thin
+     * and a thick weather renders thick, rather than every weather looking
+     * equally dense whenever its own band happens to be pure.
+     */
+    private float resolveCellIntensity(WeatherBandStruct band, WeatherHandle handle) {
+        return band.getIntensityFor(handle) * handle.getCloudCoverage();
     }
 
     private float reevaluationIntervalFor(long cellKey) {

@@ -66,21 +66,33 @@ public class OverheadCellStruct extends StructPackage {
      * OverheadManager.
      *
      * intensity is a live, continuously-updated measure (see
-     * OverheadManager.advanceIntensity()) of how strongly this cell's
+     * OverheadManager.advanceIntensity()) of how strongly this cell's OWN
      * weather is currently expressed at its own home coordinate — derived
-     * fresh every recompute from WeatherBandStruct.getPrimaryIntensity(),
-     * never stored/latched between recomputes. Unlike weatherHandle/
-     * cloudHandle/effectiveAltitude, which are fixed for the cell's entire
-     * lifetime, intensity is expected to rise and fall continuously as the
-     * underlying noise field evolves — this is what lets a physical
-     * weather system visibly strengthen and weaken over time rather than
-     * only ever existing at full presence or not at all. It is recomputed
-     * on a fast, shared cadence deliberately decoupled from
-     * nextReevaluationTime's slow, per-cell-jittered identity check — see
-     * OverheadManager.advanceIntensity() for why the two must stay
-     * separate. A cell whose intensity decays near zero is retired there
-     * exactly like an identity mismatch, so a weather system that has
-     * genuinely weakened away dissipates rather than reviving in place.
+     * fresh every recompute from WeatherBandStruct.getIntensityFor(this
+     * cell's weatherHandle), then scaled by that weather's own
+     * cloudCoverage, never stored/latched between recomputes. Resolving
+     * intensity for this cell's specific weatherHandle, rather than
+     * whichever weather the band's noise currently favors, matters once
+     * the noise has drifted past this cell's own identity but before its
+     * own slow, jittered reevaluation has caught up — see
+     * advanceWeatherReevaluation() — otherwise a cell already on its way
+     * out could briefly read as strengthening again, borrowing whatever
+     * intensity actually belongs to the neighboring weather about to
+     * replace it. Unlike weatherHandle/cloudHandle/effectiveAltitude, which
+     * are fixed for the cell's entire lifetime, intensity is expected to
+     * rise and fall continuously as the underlying noise field evolves —
+     * this is what lets a physical weather system visibly strengthen and
+     * weaken over time rather than only ever existing at fixed full
+     * presence or not at all, and the cloudCoverage scale is what keeps a
+     * thin, low-coverage weather reading as genuinely wispy rather than as
+     * dense as a high-coverage storm whenever its own band happens to be
+     * pure. It is recomputed on a fast, shared cadence deliberately
+     * decoupled from nextReevaluationTime's slow, per-cell-jittered
+     * identity check — see OverheadManager.advanceIntensity() for why the
+     * two must stay separate. A cell whose intensity decays near zero is
+     * retired here exactly like an identity mismatch, so a weather system
+     * that has genuinely weakened away dissipates rather than reviving in
+     * place.
      */
 
     // Identity

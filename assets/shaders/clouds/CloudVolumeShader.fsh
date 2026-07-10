@@ -8,8 +8,11 @@ in float vRandomSeed;
 in float vFadeAlpha;
 in float vIntensity;
 
-out vec4 fragColor;
+layout(location = 0) out vec4 gAlbedo;
+layout(location = 1) out vec4 gNormal;
+layout(location = 2) out vec4 gMaterial;
 
+#include "includes/CameraData.glsl"
 #include "includes/NoiseUtility.glsl"
 #include "includes/TimeData.glsl"
 #include "includes/SkyColorData.glsl"
@@ -49,7 +52,50 @@ uniform float u_cloudBrightnessMultiplier;
 const float INTENSITY_ALPHA_FLOOR = 0.4;
 
 /*
-* Stamps a single soft, roughly circular "puff" onto the card's local XZ
+* ============================================================================
+ * STAGE 1 FIX — this pass now writes a COMPLETE G-buffer output (albedo,
+ * normal, material) and real depth, exactly like StandardSurfaceShader.fsh
+ * does for terrain, instead of a single un-located `fragColor` blended via
+ * GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA with depth writes disabled.
+ *
+ * That old setup is why no overhead clouds were ever actually visible:
+ * - With no explicit output location, the lone `fragColor` bound to
+ *   attachment 0 (gAlbedo) only. gNormal/gMaterial were never written, and
+ *   with depth writes disabled the depth buffer kept its cleared value of
+ *   1.0 wherever a cloud drew over open sky — i.e. almost everywhere a
+ *   cloud actually is, since clouds sit far above terrain.
+ * - LightingShader.fsh's very first line is `if (depth >= 1.0) { fragColor
+ *   = vec4(0,0,0,0); return; }` — its shorthand for "nothing was drawn
+ *   here." Since the cloud never wrote depth, every cloud-over-sky pixel
+ *   hit that branch and was silently dropped from the final lit image.
+ * - Anywhere a cloud DID happen to sit in front of real terrain, its own
+ *   color blended into gAlbedo, but gNormal/gMaterial were still the
+ *   terrain's, so the lighting pass relit "cloud color" using the
+ *   terrain's own normal — never a coherent cloud look either way.
+ *
+ * The fix mirrors how every other opaque-ish surface in this deferred
+ * renderer already behaves (see StandardSurfaceShader.fsh's own doc
+ * comment): output alpha = 1.0 on every channel, every time, and do any
+ * translucency blending manually against a known background BEFORE
+ * writing, rather than leaning on the GPU's blend stage — the G-buffer
+ * has no idea what "behind" a translucent fragment means once the
+ * deferred lighting pass runs a frame later, so GL blending against
+ * whatever the buffer happened to already hold (black, most of the time)
+ * produced a dim, black-tinted cloud look even where it partially worked.
+ * The known background used here is an approximation of the sky color
+ * this shader can already sample (u_skyHorizonColor/u_skyZenithColor),
+ * blended by the fragment's height within the cloud's own local cube, so
+ * a soft edge fades toward "roughly sky-colored" instead of "toward
+ * black." This is a stopgap for a card/cube proxy — Stage 3's volumetric
+ * rewrite replaces it with a real raymarched silhouette.
+ *
+ * The puff/shape math below is otherwise UNCHANGED — still the legacy
+ * card-circle look this whole effort exists to replace next. This pass
+ * only exists to prove the render pipeline itself is fixed before that
+ * rewrite lands.
+ * ============================================================================
+ *
+ * Stamps a single soft, roughly circular "puff" onto the card's local XZ
  * footprint (vLocalPos ranges -0.5..0.5, so radialDist is 0 at the card's
  * center and ~1.4 at its corners — corners fall outside the cutoff and are
  * discarded, rounding the square card into a blob).
@@ -61,11 +107,6 @@ const float INTENSITY_ALPHA_FLOOR = 0.4;
  * drifts with the wind, instead of swimming in place. u_time adds a slow
  * independent breathing motion on top, distinct from the wind-driven
  * translation already baked into vWorldPos upstream.
- *
- * This is still the legacy card/billboard shader — superseded by an actual
- * raymarched volumetric pass in the next stage. Left functionally
- * unchanged here except for vIntensity's density modulation; only the
- * uniform declarations above and that one addition are new.
  */
 void main() {
     vec2 centered = vLocalPos.xz;
@@ -100,7 +141,22 @@ void main() {
     // vFadeAlpha instead.
     float intensityFactor = mix(INTENSITY_ALPHA_FLOOR, 1.0, clamp(vIntensity, 0.0, 1.0));
 
-    float alpha = shapeMask * u_cloudDensity * intensityFactor * vFadeAlpha;
+    float alpha = clamp(shapeMask * u_cloudDensity * intensityFactor * vFadeAlpha, 0.0, 1.0);
 
-    fragColor = vec4(finalColor, alpha);
+    // Manual "blend" against an approximate sky background, height-blended
+    // the same way the real sky pass blends horizon -> zenith — see the
+    // STAGE 1 FIX note above for why this replaces GL_SRC_ALPHA blending
+    // for a G-buffer write.
+    vec3 approxSky = mix(u_skyHorizonColor, u_skyZenithColor, heightShade);
+    vec3 blended = mix(approxSky, finalColor, alpha);
+
+    vec3 normalView = normalize(mat3(u_view) * normalize(vNormal));
+
+    // Cloud material packing mirrors StandardSurfaceShader's gMaterial
+    // convention (r = fogT, g = specular, b = ao). Clouds don't apply the
+    // terrain's distance-fog curve to themselves (r = 0), are non-shiny
+    // (g = 0), and are never additionally ambient-occluded (b = 1).
+    gAlbedo   = vec4(blended, 1.0);
+    gNormal   = vec4(normalView, 1.0);
+    gMaterial = vec4(0.0, 0.0, 1.0, 1.0);
 }
