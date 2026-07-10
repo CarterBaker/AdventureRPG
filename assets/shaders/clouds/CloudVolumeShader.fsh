@@ -49,22 +49,28 @@ layout(location = 2) out vec4 gMaterial;
  * raw UNLIT surface color and multiplies it by sky ambient plus sun/moon
  * diffuse and specular all over again, using gNormal for the directional
  * terms. Every cloud pixel was getting lit TWICE: once here, once in the
- * deferred pass. Depending on view/light angle that either crushed
- * clouds down into a dark smudge that blended into the sky-color fallback
- * below — reading as "no clouds visible at all", the reported bug — or
- * blew them out to flat white, and the look changed unpredictably with
- * time of day since both passes were independently reacting to the same
- * sun/moon direction.
+ * deferred pass.
  *
  * This shader now only ever produces UNLIT shape data — a toon-banded
  * base color via shadeCloudUnlit() (the deferred-safe sibling of the sky
- * dome's own shadeCloudToon(), with a real light-direction self-shadow
+ * dome's own shadeCloudLit(), with a real light-direction self-shadow
  * tap folded in as shape/AO information rather than surface radiance)
  * plus a real accumulated ambient-occlusion value for gMaterial.b.
  * Lighting.fsh is completely unmodified — it already knows how to light
  * an albedo+normal+ao G-buffer fragment; it now only ever does that once
  * for a cloud pixel, exactly like it already does for every terrain
  * fragment.
+ *
+ * STAGE 1 — height-shaped density. sampleCloudDensity() now takes a
+ * heightT parameter (this sample's normalized position within the box,
+ * 0 = base, 1 = top — already computed below as `heightT`, just moved
+ * earlier in the loop so both density calls can use it) and uses it to
+ * both stretch the sampling domain (thin/streaky near the top of the
+ * box, compact/puffy near the base) and apply a vertical density
+ * gradient (flat-ish base, softer eroding top) — see
+ * CloudShapeUtility.glsl's own doc comment. This is what gives an
+ * individual Cumulus instance its flat underside and rounded top instead
+ * of a uniform blob regardless of where in the box a sample falls.
  *
  * Still writes a COMPLETE G-buffer output (albedo, normal, material) and
  * real depth, exactly like StandardSurfaceShader.fsh — this pass runs
@@ -160,20 +166,23 @@ void main() {
 
         vec3 p = rayOrigin + rayDir * (marchStart + (float(i) + 0.5) * stepSize);
 
+        // Moved above the density sample (Stage 1) — sampleCloudDensity()
+        // now needs this to shape the cloud's own flat-base/rounded-top
+        // silhouette and to stretch its sampling domain near the box top.
+        float heightT = clamp((p.y - vBoxMin.y) / boxHeight, 0.0, 1.0);
+
         float rawDensity = sampleCloudDensity(
-            p, u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength, u_cloudPuffJitter,
+            p, heightT, u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength, u_cloudPuffJitter,
             u_cloudCoverageBias, u_cloudSilhouetteSoftness, vRandomSeed, u_time);
         float density = rawDensity * u_cloudDensity * intensityFactor;
 
         if (density > 0.01) {
-            float heightT = clamp((p.y - vBoxMin.y) / boxHeight, 0.0, 1.0);
-
             // Self-shadow tap — a second density sample one step toward the
             // light source. Shape/AO information only (how buried this
             // point is in cloud material relative to the light), never a
             // radiance value — see the header comment.
             float rawLit = sampleCloudDensity(
-                p + lightDir * CLOUD_LIGHT_TAP_DISTANCE,
+                p + lightDir * CLOUD_LIGHT_TAP_DISTANCE, heightT,
                 u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength, u_cloudPuffJitter,
                 u_cloudCoverageBias, u_cloudSilhouetteSoftness, vRandomSeed, u_time);
             float litDensity = rawLit * u_cloudDensity * intensityFactor;

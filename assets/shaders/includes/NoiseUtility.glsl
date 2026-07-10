@@ -1,6 +1,22 @@
 #ifndef NOISE_UTILITY_GLSL
 #define NOISE_UTILITY_GLSL
 
+/*
+* Shared noise primitives for every sky, weather, and cloud shader in the
+ * engine. Two families live here:
+ *
+ * - The original value-noise set (hash31/smoothNoise3D/fbmNoise3D/
+ *   fbmNoise2D/cellNoise) — kept unchanged for SkyNoise.glsl's existing
+ *   daily-variation dithering, which doesn't need anything fancier.
+ *
+ * - A gradient (Perlin-style) noise + Worley (cellular) noise set, added
+ *   for the volumetric cloud rework (see sky/util/CloudShapeUtility.glsl).
+ *   Value noise alone reads as smooth, grainy, and "cheap" — real clouds
+ *   have soft billowing macro-shape (gradient noise's job) PLUS a bumpy,
+ *   cauliflower-like edge detail (Worley's job); neither alone looks
+ *   right, which is why CloudShapeUtility layers both together.
+ */
+
 float hash31(vec3 p) {
     p = fract(p * 0.1031);
     p += dot(p, p.yzx + 33.33);
@@ -75,6 +91,98 @@ float cellNoise(vec3 p) {
     }
 
     return 1.0 - sqrt(res);
+}
+
+// ── Gradient (Perlin-style) noise ───────────────────────────────────────
+// Smooth, continuously-varying 3D noise — the macro "billow" shape of a
+// cloud. hash33 supplies a pseudo-random gradient direction per lattice
+// corner; gradientNoise3D dots that direction against the sample's own
+// offset from the corner, exactly like classic Perlin noise.
+
+vec3 hash33(vec3 p) {
+    p = vec3(
+        dot(p, vec3(127.1, 311.7, 74.7)),
+        dot(p, vec3(269.5, 183.3, 246.1)),
+        dot(p, vec3(113.5, 271.9, 124.6)));
+    return fract(sin(p) * 43758.5453123) * 2.0 - 1.0;
+}
+
+float gradientNoise3D(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    vec3 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+
+    float n000 = dot(hash33(i + vec3(0.0, 0.0, 0.0)), f - vec3(0.0, 0.0, 0.0));
+    float n100 = dot(hash33(i + vec3(1.0, 0.0, 0.0)), f - vec3(1.0, 0.0, 0.0));
+    float n010 = dot(hash33(i + vec3(0.0, 1.0, 0.0)), f - vec3(0.0, 1.0, 0.0));
+    float n110 = dot(hash33(i + vec3(1.0, 1.0, 0.0)), f - vec3(1.0, 1.0, 0.0));
+    float n001 = dot(hash33(i + vec3(0.0, 0.0, 1.0)), f - vec3(0.0, 0.0, 1.0));
+    float n101 = dot(hash33(i + vec3(1.0, 0.0, 1.0)), f - vec3(1.0, 0.0, 1.0));
+    float n011 = dot(hash33(i + vec3(0.0, 1.0, 1.0)), f - vec3(0.0, 1.0, 1.0));
+    float n111 = dot(hash33(i + vec3(1.0, 1.0, 1.0)), f - vec3(1.0, 1.0, 1.0));
+
+    float nx00 = mix(n000, n100, u.x);
+    float nx10 = mix(n010, n110, u.x);
+    float nx01 = mix(n001, n101, u.x);
+    float nx11 = mix(n011, n111, u.x);
+
+    float nxy0 = mix(nx00, nx10, u.y);
+    float nxy1 = mix(nx01, nx11, u.y);
+
+    return mix(nxy0, nxy1, u.z);
+}
+
+// 4-octave FBM over gradientNoise3D — remapped to roughly [0, 1]. This is
+// the cloud macro-shape function: soft, continuous billows rather than
+// the grainier look a value-noise fbm produces.
+float fbmGradient3D(vec3 p) {
+    float sum = 0.0;
+    float amp = 0.5;
+    vec3 pos = p;
+
+    for (int i = 0; i < 4; i++) {
+        sum += amp * gradientNoise3D(pos);
+        pos *= 2.03; // non-power-of-2 lacunarity avoids repeating lattices
+        amp *= 0.5;
+    }
+
+    return clamp(sum * 0.5 + 0.5, 0.0, 1.0);
+}
+
+// ── Worley (cellular) noise ─────────────────────────────────────────────
+// Distance to the nearest of 27 randomly-offset feature points in the
+// surrounding 3x3x3 lattice cells, remapped so 1.0 sits at a feature
+// point's own core and falls toward 0.0 at a cell boundary. This is what
+// gives cloud edges their bumpy, "cauliflower" silhouette instead of a
+// smoothly rounded blob.
+float worleyNoise3D(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    float minDistSq = 1.0;
+
+    for (int z = -1; z <= 1; z++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+                vec3 neighbor = vec3(float(x), float(y), float(z));
+                vec3 point = hash33(i + neighbor) * 0.5 + 0.5;
+                vec3 diff = neighbor + point - f;
+                minDistSq = min(minDistSq, dot(diff, diff));
+            }
+        }
+    }
+
+    return 1.0 - clamp(sqrt(minDistSq), 0.0, 1.0);
+}
+
+// Two-octave Worley — a second, higher-frequency layer blended under the
+// first so cell walls read as thin wisps rather than solid cell blobs.
+// Kept to two taps (rather than three or more) so the per-sample cost of
+// the volumetric raymarch stays reasonable — see CloudShapeUtility.glsl's
+// own doc comment on where this gets called from and how often.
+float worleyFbm3D(vec3 p) {
+    float w1 = worleyNoise3D(p);
+    float w2 = worleyNoise3D(p * 2.4);
+    return clamp(w1 * 0.65 + w2 * 0.35, 0.0, 1.0);
 }
 
 #endif

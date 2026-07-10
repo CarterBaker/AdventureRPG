@@ -161,10 +161,6 @@ class CloudRenderSystem extends SystemPackage {
         cloudSettingsData.updateUniform(EngineSetting.UNIFORM_CLOUD_TRANSITION_START, transitionStartBlocks);
 
         uboManager.push(cloudSettingsData);
-
-        log("[CloudRenderSystem] cloud horizon distance pushed: " + horizonDistanceBlocks
-                + " blocks (transition start " + transitionStartBlocks
-                + ", far plane " + EngineSetting.CAMERA_FAR_PLANE + ")");
     }
 
     // Update \\

@@ -20,17 +20,76 @@
  * position, so the field is genuinely 3D and shifts continuously with
  * true position — never a repeating 2D tile — which is what eliminates
  * the visible repetition a fixed-pattern grid would otherwise show.
+ *
+ * Stage 1 rework — height-shaped density + real lighting
+ * -------------------------------------------------------
+ * Two things were missing before this pass, both directly responsible for
+ * the "cheap, flat, just noise" look reported against the sky dome:
+ *
+ * 1. sampleCloudDensity() now takes a `heightT` parameter — the caller's
+ *    own normalized "how high up within this cloud/layer is this sample"
+ *    value (a physical cloud's true position within its own box; the sky
+ *    dome's elevation-angle proxy — see Clouds.glsl) — and uses it for
+ *    TWO things: heightGradient() shapes density into a comparatively
+ *    sharp, flat cloud base with a softer, eroding top (real clouds have
+ *    a floor discontinuity but never the exact opposite — a hard top —
+ *    so the top is deliberately the softer of the two edges), and
+ *    stretch() widens the sampling domain horizontally the higher up a
+ *    sample sits, so shapes read as long, thin streaks near the top of
+ *    the layer and compact, rounded puffs near the bottom. Both effects
+ *    are pure functions of heightT and the resolved weather's own
+ *    coverageBias — nothing here is a fixed vertical band a caller has
+ *    to impose from the outside; a dense, high-coverage storm naturally
+ *    reads as a thicker, taller deck than a wisp of fair-weather cumulus,
+ *    purely because coverageBias shifts where heightGradient's own
+ *    top-erosion point sits.
+ *
+ * 2. shadeCloudLit() — already written for exactly this purpose but never
+ *    actually called by anything — is now the sky dome's real shading
+ *    path (see Clouds.glsl), so distant clouds react to the same sun/moon
+ *    direction, color, and intensity the physical cloud objects already
+ *    did, and are tinted using the sky's own horizon/zenith color rather
+ *    than flat white/black toon bands.
+ *
+ * Macro shape now comes from fbmGradient3D() (gradient/Perlin noise)
+ * blended with worleyFbm3D() (cellular noise) — see NoiseUtility.glsl's
+ * own doc comment for why value noise alone read as smooth and grainy
+ * rather than properly billowing and bumpy-edged.
  */
 
 // Cheap two-axis domain warp — offsets a sample position using a second,
 // decorrelated noise field scaled by `strength`. Only X/Z are warped
 // (matching the technique the old sky-dome warp used) since vertical
 // warp buys little for a thin cloud layer but costs a full extra noise
-// evaluation per sample.
+// evaluation per sample. Uses gradient noise rather than value noise so
+// the warp itself is smooth — a grainy warp field shows up directly as
+// grain in the warped shape.
 vec3 warpCloudDomain(vec3 p, float strength, vec3 seedOffset) {
-    float wx = fbmNoise3D(p.yzx * 0.7 + seedOffset) - 0.5;
-    float wz = fbmNoise3D(p.zxy * 0.7 + seedOffset + 11.3) - 0.5;
+    float wx = gradientNoise3D(p.yzx * 0.7 + seedOffset);
+    float wz = gradientNoise3D(p.zxy * 0.7 + seedOffset + 11.3);
     return p + vec3(wx, 0.0, wz) * strength;
+}
+
+/*
+* Vertical density gradient within a cloud's own layer. heightT is
+ * [0, 1]: 0 at the cloud's own base, 1 at the top of its own vertical
+ * extent (a physical cloud's own box height, or the sky dome's visible-
+ * elevation proxy). Real clouds condense at a fairly consistent altitude
+ * within a given layer, giving them a comparatively sharp flat base, then
+ * erode gradually into clear air above — never the reverse. coverageBias
+ * is the same live weather value already driving sampleCloudDensity's
+ * threshold; a denser/stormier weather pushes the top-erosion point
+ * higher, so a storm deck reads as thicker and taller than a fair-weather
+ * puff without either caller having to special-case that difference.
+ */
+float heightGradient(float heightT, float coverageBias) {
+    float baseCutoff = 0.06;
+    float baseRamp = smoothstep(baseCutoff, baseCutoff + 0.14, heightT);
+
+    float topStart = mix(0.50, 0.88, clamp(coverageBias, 0.0, 1.0));
+    float topRamp = 1.0 - smoothstep(topStart, 1.0, heightT);
+
+    return baseRamp * topRamp;
 }
 
 /*
@@ -45,10 +104,13 @@ vec3 warpCloudDomain(vec3 p, float strength, vec3 seedOffset) {
  * fine cauliflower-like detail. seed decorrelates this sample from every
  * other cloud — or sky direction — sampling the same nominal position,
  * and timeSeconds drives a slow, near-imperceptible internal drift so a
- * stationary cloud still isn't perfectly static.
+ * stationary cloud still isn't perfectly static. heightT drives both the
+ * horizontal stretch and the vertical heightGradient() falloff — see the
+ * class comment above.
  */
 float sampleCloudDensity(
     vec3 worldPos,
+    float heightT,
     float noiseScale,
     float warpStrength,
     float detailJitter,
@@ -56,19 +118,30 @@ float sampleCloudDensity(
     float edgeSoftness,
     float seed,
     float timeSeconds) {
+    // Stretch the horizontal sampling domain the higher up this sample
+    // sits — a stretched (lower-frequency) domain reads as long, thin
+    // streaks; a compact one reads as rounded puffs. Purely a function of
+    // heightT, so this falls out naturally rather than needing a fixed
+    // per-archetype "cloud type" switch.
+    float stretch = mix(1.0, 2.4, clamp(heightT, 0.0, 1.0));
+
     vec3 seedOffset = vec3(seed * 173.13, seed * 57.31, seed * 91.7);
-    vec3 coord = worldPos * noiseScale + seedOffset + vec3(0.0, 0.0, timeSeconds * 0.003);
+    vec3 stretchedPos = worldPos * vec3(1.0 / stretch, 1.0, 1.0 / stretch);
+    vec3 coord = stretchedPos * noiseScale + seedOffset + vec3(0.0, 0.0, timeSeconds * 0.003);
 
     vec3 warped = warpCloudDomain(coord, warpStrength, seedOffset);
 
-    float detail = (fbmNoise3D(warped * 3.7 + seedOffset.yzx) - 0.5) * detailJitter;
-    warped += detail;
+    // Macro billow (gradient FBM) blended with a cellular detail layer for
+    // the bumpy, cauliflower-like edge real clouds show — see
+    // NoiseUtility.glsl's own doc comment.
+    float macro = fbmGradient3D(warped);
+    float bump = worleyFbm3D(warped * 3.2 + seedOffset.yzx);
+    float n = clamp(mix(macro, bump, 0.35) + (macro - 0.5) * detailJitter, 0.0, 1.0);
 
-    float n = fbmNoise3D(warped);
+    float threshold = mix(0.74, 0.22, clamp(coverageBias, 0.0, 1.0));
+    float shape = smoothstep(threshold - edgeSoftness, threshold + edgeSoftness, n);
 
-    float threshold = mix(0.75, 0.15, clamp(coverageBias, 0.0, 1.0));
-
-    return smoothstep(threshold - edgeSoftness, threshold + edgeSoftness, n);
+    return shape * heightGradient(heightT, coverageBias);
 }
 
 /*
@@ -81,6 +154,10 @@ float sampleCloudDensity(
  * physical instance's own local Y, or a raymarch-depth proxy for the sky
  * dome. density gently pulls the thinnest, wispiest samples back toward
  * shadowColor so edges never read as flatly lit as the core.
+ *
+ * Retained for reference/fallback use — the sky dome now calls
+ * shadeCloudLit() instead (see Clouds.glsl) so it reacts to real sun/moon
+ * lighting rather than a fixed toon ramp.
  */
 vec3 shadeCloudToon(
     vec3 baseColor,
@@ -115,10 +192,7 @@ vec3 shadeCloudToon(
  * gMaterial.b for ambient occlusion. This function must therefore never
  * bake a light's own color or intensity into its result, or that pixel
  * gets lit a second time by Lighting.fsh on top of whatever this function
- * already did (crushing dark or blowing out white depending on angle —
- * this was the actual bug behind "no clouds visible": a cloud already lit
- * once here, blended toward the sky-color fallback, then re-lit into
- * something close to invisible against the sky it was just blended into).
+ * already did.
  *
  * lightLift is still real light-DIRECTION shape information — a self-
  * shadow density tap toward wherever the sun/moon actually is (see the
@@ -179,24 +253,20 @@ vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
 }
 
 /*
-* Real-light toon shading for a raymarched sample — kept for potential
- * future forward-shaded/direct callers (e.g. anything that draws straight
- * to a final color target rather than through the deferred G-buffer, the
- * same way the sky dome's shadeCloudToon() is unlit because
- * sky/standard/StandardSkyShader.fsh writes directly to its own FBO with
- * no relighting pass downstream). NOT currently called by
- * CloudVolumeShader.fsh — see shadeCloudUnlit() above for why a G-buffer
- * writer must never use this. Replaces shadeCloudToon()'s raymarch-order-
- * proxy heightT with two genuine spatial/lighting measures instead:
+* Real-light toon shading for a raymarched sample. This is now the sky
+ * dome's own shading path (see Clouds.glsl) as well as being available
+ * for any future forward-shaded/direct caller (anything that draws
+ * straight to a final color target rather than through the deferred
+ * G-buffer). NOT called by CloudVolumeShader.fsh — see shadeCloudUnlit()
+ * above for why a G-buffer writer must never use this.
  *
- * - heightT: this sample's ACTUAL height within the cloud's own vertical
- * extent (0 = base, 1 = top) — a real physical quantity, not a stand-in
- * for "how many steps into the march are we."
+ * - heightT: this sample's height within its own layer (0 = base,
+ *   1 = top) — see heightGradient()'s own doc comment.
  * - lightLift: a cheap one-tap self-shadow term, expected pre-computed
- * and pre-clamped to [0,1] by the caller (density at this sample minus
- * density one small step toward the light, rescaled) — near 1 means
- * this point sits on the side facing the light with little material in
- * the way, near 0 means it's buried in shadow under more cloud.
+ *   and pre-clamped to [0,1] by the caller (density at this sample minus
+ *   density one small step toward the light, rescaled) — near 1 means
+ *   this point sits on the side facing the light with little material in
+ *   the way, near 0 means it's buried in shadow under more cloud.
  *
  * Both are blended into one "how lit is this point" value, then
  * posterized into toonBands exactly like shadeCloudToon()'s ring/core
