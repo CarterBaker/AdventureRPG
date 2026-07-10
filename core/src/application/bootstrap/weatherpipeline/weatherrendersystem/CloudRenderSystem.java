@@ -2,6 +2,8 @@ package application.bootstrap.weatherpipeline.weatherrendersystem;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
+import application.bootstrap.geometrypipeline.model.ModelInstance;
+import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
@@ -9,46 +11,50 @@ import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
-import application.bootstrap.weatherpipeline.cloudbuffer.CloudBufferInstance;
-import application.bootstrap.weatherpipeline.cloudbuffermanager.CloudBufferManager;
 import application.bootstrap.weatherpipeline.overheadmanager.OverheadCellStruct;
 import application.bootstrap.weatherpipeline.overheadmanager.OverheadManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import engine.util.mathematics.vectors.Vector2Int;
+import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 class CloudRenderSystem extends SystemPackage {
 
     /*
-     * Rebuilds every cloud archetype's shared instanced buffer once per
-     * frame from OverheadManager's live cell grid, then registers each
-     * non-empty buffer into every active grid window's render queue via
-     * RenderManager.pushWeatherCall(). This is exactly the class
-     * CloudBufferManager/CloudBufferInstance's own doc comments have been
-     * describing all along ("Every buffer here is fully rebuilt every
-     * frame by CloudRenderSystem from OverheadManager's live cell grid" —
-     * see CloudBufferManager; "driven by CloudRenderSystem.render()" — see
-     * CloudBufferInstance) — this is that missing driver.
+     * Owns exactly one ModelInstance per active, cloud-bearing overhead cell
+     * — created the moment a cell first streams in with a cloud, refreshed
+     * in place every frame, and dropped the moment that cell disappears from
+     * OverheadManager's registry. Each instance draws through the exact same
+     * generic path terrain already uses (ModelManager.createModel() +
+     * RenderManager.pushRenderCall()) — no cloud-specific instanced-buffer
+     * system, and no cloud-specific hooks anywhere in RenderQueueHandle,
+     * RenderSystem, or RenderManager. As far as the render pipeline is
+     * concerned, a cloud object is just another model sharing a mesh and a
+     * material definition with its neighbors, exactly like a chunk sharing
+     * StandardSurfaceMaterial.
      *
-     * Cells whose resolved weather has no cloud at all (OverheadCellStruct.
-     * hasCloud() == false — a Clear weather) are skipped entirely here.
-     * They still occupy a registry slot in OverheadManager (see its own
-     * doc comment for why), they simply never reach a CloudBufferInstance.
+     * Every cloud instance's MaterialInstance is its own clone of
+     * EngineSetting.CLOUD_VOLUME_MATERIAL_NAME — one shared shader/material
+     * DEFINITION per CloudType, individually cloned per physical cloud
+     * object, mirroring exactly how WorldRenderManager clones one shared
+     * terrain material per chunk mesh. Archetype-level values that never
+     * change for the life of the instance (color, scale, density, toon
+     * shading numbers — see bakeArchetypeUniforms()) are baked in once, at
+     * creation. Per-instance values that DO change every frame — world
+     * position (chunk index + in-chunk remainder + altitude), streaming
+     * fade alpha, and live weather intensity — are refreshed every frame in
+     * updateInstance() via ordinary MaterialInstance.setUniform() calls, the
+     * same mechanism EntityRenderSystem already uses for u_hiddenBone.
      *
-     * Materials are cloned once per distinct CloudHandle archetype and
-     * cached forever — every instance sharing that archetype draws
-     * through the exact same MaterialInstance, so the whole archetype is
-     * one instanced draw call regardless of how many OverheadCellStructs
-     * reference it. Baked-once uniforms come straight off CloudData — see
-     * resolveMaterial() below. This now includes the full volumetric/toon
-     * field set (topColor, toonBands, densityNoiseScale, noiseWarpStrength,
-     * coverageBias, silhouetteSoftness, shadowColor, shadeStrength,
-     * rimLightStrength, ambientOcclusionStrength, brightnessMultiplier) —
-     * previously only the legacy card-shader fields were baked here. The
-     * shader itself doesn't act on the new fields yet; that lands with the
-     * volumetric raymarch rework (Stage 2).
+     * There is deliberately no clear-and-rebuild-every-frame pass here
+     * (unlike the old GPU-instanced buffer this replaces) — a cloud's
+     * ModelInstance is stable for the entire life of its cell, so a cell
+     * that was already streamed in last frame costs nothing more than a
+     * handful of setUniform() calls this frame.
      *
      * Owned by WeatherRenderSystem, which supplies the per-window
      * fbo/window pairs to submit() — this class has no window/grid
@@ -57,51 +63,34 @@ class CloudRenderSystem extends SystemPackage {
      * GridInstance by WorldRenderManager each call.
      */
 
-    // Fixed instance layout: chunk index (2 — chunkX/chunkZ, reinterpreted
-    // int bits packed into floats), local offset + altitude (3 — localX,
-    // altitudeY, localZ), random seed (1), fade alpha (1), live weather
-    // intensity (1 — see OverheadCellStruct.getIntensity() / WeatherBandStruct
-    // .getPrimaryIntensity()). See addInstance() for why the chunk index and
-    // its in-chunk remainder travel as two separate small-magnitude values
-    // instead of one pre-multiplied absolute world-space float. Intensity was
-    // previously computed every WEATHER_CELL_INTENSITY_UPDATE_INTERVAL_SECONDS
-    // by OverheadManager.advanceIntensity() but never left the CPU side — it
-    // now rides along per-instance so CloudVolumeShader.fsh can visibly thin
-    // a cloud's density as its underlying weather weakens, and thicken it
-    // back up as that same weather re-strengthens, rather than only ever
-    // popping fully in/out at the streaming radius via fadeAlpha.
-    private static final int[] CLOUD_INSTANCE_ATTR_SIZES = { 2, 3, 1, 1, 1 };
-
     // Internal
     private OverheadManager overheadManager;
-    private CloudBufferManager cloudBufferManager;
     private MeshManager meshManager;
     private MaterialManager materialManager;
+    private ModelManager modelManager;
     private UBOManager uboManager;
     private RenderManager renderManager;
 
     // Mesh
     private MeshHandle cloudMeshHandle;
 
-    // Material Cache — one clone per distinct cloud archetype, never rebuilt
-    private Object2ObjectOpenHashMap<CloudHandle, MaterialInstance> cloudHandle2Material;
-
-    // Scratch — reused every rebuild pass, never reallocated
-    private final float[] instanceScratch = new float[8];
+    // Registry — one ModelInstance per active, cloud-bearing cell, keyed by
+    // OverheadCellStruct.getCellKey(). Populated/pruned in updateInstances().
+    private Long2ObjectOpenHashMap<ModelInstance> cellKey2Model;
 
     // Internal \\
 
     @Override
     protected void create() {
-        this.cloudHandle2Material = new Object2ObjectOpenHashMap<>();
+        this.cellKey2Model = new Long2ObjectOpenHashMap<>();
     }
 
     @Override
     protected void get() {
         this.overheadManager = get(OverheadManager.class);
-        this.cloudBufferManager = get(CloudBufferManager.class);
         this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
+        this.modelManager = get(ModelManager.class);
         this.uboManager = get(UBOManager.class);
         this.renderManager = get(RenderManager.class);
     }
@@ -125,11 +114,11 @@ class CloudRenderSystem extends SystemPackage {
      * always the smaller of the two in practice, since terrain itself never
      * draws past it, which is exactly what guarantees a real cloud object is
      * never rendered floating over ground that was never drawn. Individual
-     * cloud cards shrink toward CLOUD_HORIZON_MIN_SCALE as they approach the
-     * edge of that radius, so a cloud dissolving into the sky-dome preview
-     * and a cloud streaming out of OverheadManager's registry always happen
-     * at the same boundary — see OverheadManager, which derives its own
-     * streaming radius from this identical expression.
+     * clouds shrink toward CLOUD_HORIZON_MIN_SCALE as they approach the edge
+     * of that radius, so a cloud dissolving into the sky-dome preview and a
+     * cloud streaming out of OverheadManager's registry always happen at the
+     * same boundary — see OverheadManager, which derives its own streaming
+     * radius from this identical expression.
      *
      * skyViewDistanceBlocks is the world-unit version of
      * WEATHER_FAR_RANGE_CHUNKS — the same radius RegionSampleBranch already
@@ -164,53 +153,73 @@ class CloudRenderSystem extends SystemPackage {
         uboManager.push(cloudSettingsData);
     }
 
-    // Rebuild \\
+    // Update \\
 
     /*
-     * Clears every archetype buffer, then walks every currently active
-     * overhead cell and re-adds its instance data fresh. Called once per
-     * frame, before any window submits — never per-window, since the
-     * underlying cell grid is itself global (see OverheadManager's own
-     * doc comment on why a cell's identity must never re-roll per frame).
+     * Prunes any ModelInstance whose cell no longer exists, then walks
+     * every currently active overhead cell and creates or refreshes its
+     * instance. Called once per frame, before any window submits — never
+     * per-window, since the underlying cell grid is itself global (see
+     * OverheadManager's own doc comment on why a cell's identity must never
+     * re-roll per frame).
      */
-    void rebuildInstances() {
+    void updateInstances() {
 
-        cloudBufferManager.clearAll();
+        pruneRetiredCells();
 
         for (OverheadCellStruct cell : overheadManager.getActiveCells().values())
-            addInstance(cell);
+            updateInstance(cell);
     }
 
-    private void addInstance(OverheadCellStruct cell) {
+    private void pruneRetiredCells() {
 
-        // Clear (or otherwise cloudless) cells still exist in the registry
-        // so their patch of weather stays trackable — see OverheadManager's
-        // own doc comment — but there is nothing to instance here.
+        if (cellKey2Model.isEmpty())
+            return;
+
+        ObjectIterator<Long2ObjectMap.Entry<ModelInstance>> iterator = cellKey2Model.long2ObjectEntrySet()
+                .iterator();
+
+        while (iterator.hasNext()) {
+            Long2ObjectMap.Entry<ModelInstance> entry = iterator.next();
+            if (!overheadManager.getActiveCells().containsKey(entry.getLongKey()))
+                iterator.remove();
+        }
+    }
+
+    /*
+     * Clear (or otherwise cloudless) cells still exist in OverheadManager's
+     * registry so their patch of weather stays trackable — see
+     * OverheadManager's own doc comment — but there is nothing to render
+     * here, and no ModelInstance is ever created for one. A cell's cloud
+     * choice is fixed for its entire lifetime (see OverheadCellStruct), so
+     * once an instance exists its archetype-level uniforms never need
+     * re-baking — only position/fade/intensity are refreshed below.
+     */
+    private void updateInstance(OverheadCellStruct cell) {
+
         if (!cell.hasCloud())
             return;
 
-        CloudHandle cloudHandle = cell.getCloudHandle();
+        ModelInstance model = cellKey2Model.get(cell.getCellKey());
 
-        CloudBufferInstance buffer = cloudBufferManager.getOrCreateCloudBuffer(
-                cloudHandle, cloudMeshHandle, CLOUD_INSTANCE_ATTR_SIZES);
+        if (model == null) {
+            model = createInstance(cell);
+            cellKey2Model.put(cell.getCellKey(), model);
+        }
+
+        MaterialInstance material = model.getMaterial();
 
         // Player-chunk-relative encoding — mirrors StandardItemShader.vsh's
         // chunk/local split exactly (see that shader's own comment). The
         // cell's current position is chunk-space with a fractional wind-
         // drift remainder (see OverheadCellStruct.getCurrentChunkX/Z()).
-        // Splitting it into a whole chunk index (precise as a reinterpreted
-        // int at any distance from world origin) plus a small in-chunk
+        // Splitting it into a whole chunk index (precise as a genuine ivec2
+        // uniform at any distance from world origin) plus a small in-chunk
         // remainder in blocks — rather than pre-multiplying into one large
         // absolute-world float here — is what lets the vertex shader
         // reconstruct render-space position relative to u_playerChunkX/Z
         // (see PlayerPositionData.glsl) instead of having to subtract the
-        // camera position back out of an already-large float. u_view/
-        // u_cameraPosition are themselves expressed in that same
-        // player-chunk-recentered space (see StandardSurfaceShader's own
-        // u_gridPosition offset for the terrain-side equivalent), so an
-        // instance position built any other way silently drifts out of
-        // agreement with the camera transform as the player moves — which
-        // is what previously read as clouds "snapping" between chunks.
+        // camera position back out of an already-large float.
         double currentChunkX = cell.getCurrentChunkX();
         double currentChunkZ = cell.getCurrentChunkZ();
 
@@ -220,61 +229,40 @@ class CloudRenderSystem extends SystemPackage {
         float localX = (float) ((currentChunkX - chunkX) * EngineSetting.CHUNK_SIZE);
         float localZ = (float) ((currentChunkZ - chunkZ) * EngineSetting.CHUNK_SIZE);
 
-        instanceScratch[0] = Float.intBitsToFloat(chunkX);
-        instanceScratch[1] = Float.intBitsToFloat(chunkZ);
-        instanceScratch[2] = localX;
-        instanceScratch[3] = cell.getEffectiveAltitude();
-        instanceScratch[4] = localZ;
-        instanceScratch[5] = cell.getRandomSeed();
-        instanceScratch[6] = cell.getFadeAlpha();
-        instanceScratch[7] = cell.getIntensity();
-
-        buffer.addInstance(instanceScratch);
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_CHUNK, new Vector2Int(chunkX, chunkZ));
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_LOCAL,
+                new Vector3(localX, cell.getEffectiveAltitude(), localZ));
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_FADE_ALPHA, cell.getFadeAlpha());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_INTENSITY, cell.getIntensity());
     }
 
-    // Submit \\
+    private ModelInstance createInstance(OverheadCellStruct cell) {
 
-    /*
-     * Registers every non-empty cloud archetype buffer into this window's
-     * render queue for the given target fbo. Safe to call once per active
-     * grid window each frame — RenderManager.pushWeatherCall() dedupes
-     * against a buffer already queued for this fbo this frame.
-     */
-    void submit(FboInstance fbo, WindowInstance window) {
+        MaterialInstance material = materialManager.cloneMaterial(EngineSetting.CLOUD_VOLUME_MATERIAL_NAME);
 
-        for (Object2ObjectMap.Entry<CloudHandle, CloudBufferInstance> entry : cloudBufferManager.getBufferMap()
-                .object2ObjectEntrySet()) {
+        bakeArchetypeUniforms(material, cell.getCloudHandle());
 
-            CloudBufferInstance buffer = entry.getValue();
+        // Stable for the cell's entire lifetime — baked once here rather
+        // than refreshed alongside position/fade/intensity every frame.
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_RANDOM_SEED, cell.getRandomSeed());
 
-            if (buffer.isEmpty())
-                continue;
-
-            MaterialInstance material = resolveMaterial(entry.getKey());
-            renderManager.pushWeatherCall(buffer, material, fbo, window);
-        }
+        return modelManager.createModel(cloudMeshHandle, material);
     }
 
     // Material Resolution \\
 
     /*
      * Bakes every archetype-level (never-per-instance) value off CloudData
-     * into a single cloned MaterialInstance, shared by every instance of
-     * this cloud type. Split into two groups purely for readability:
+     * into this instance's own cloned MaterialInstance. Called exactly once,
+     * when a cell's ModelInstance is first created — see createInstance().
+     * Split into two groups purely for readability:
      * - legacy card-shader fields (still read by the current
      * CloudVolumeShader.fsh)
      * - volumetric/toon fields (declared as uniforms in the shader but not
      * yet consumed by its shading logic — staged ahead of the raymarch
      * rework so that rework only has to change GLSL, not this method).
      */
-    private MaterialInstance resolveMaterial(CloudHandle cloudHandle) {
-
-        MaterialInstance existing = cloudHandle2Material.get(cloudHandle);
-
-        if (existing != null)
-            return existing;
-
-        MaterialInstance material = materialManager.cloneMaterial(EngineSetting.CLOUD_VOLUME_MATERIAL_NAME);
+    private void bakeArchetypeUniforms(MaterialInstance material, CloudHandle cloudHandle) {
 
         // Legacy card-shader fields
         material.setUniform(EngineSetting.UNIFORM_CLOUD_COLOR, cloudHandle.getCloudColor());
@@ -298,9 +286,20 @@ class CloudRenderSystem extends SystemPackage {
                 cloudHandle.getAmbientOcclusionStrength());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_BRIGHTNESS_MULTIPLIER,
                 cloudHandle.getBrightnessMultiplier());
+    }
 
-        cloudHandle2Material.put(cloudHandle, material);
+    // Submit \\
 
-        return material;
+    /*
+     * Pushes every active cloud instance into this window's render queue
+     * for the given target fbo, through the exact same
+     * RenderManager.pushRenderCall() every other opaque-ish world-space
+     * draw (terrain, entities) already goes through. Safe to call once per
+     * active grid window each frame.
+     */
+    void submit(FboInstance fbo, WindowInstance window) {
+
+        for (ModelInstance model : cellKey2Model.values())
+            renderManager.pushRenderCall(model, fbo, 0, window);
     }
 }

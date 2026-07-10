@@ -17,17 +17,19 @@ public class WeatherRenderSystem extends ManagerPackage {
      * submissions through the shared render pipeline for every active
      * grid window.
      *
-     * All weather-specific CPU/GPU logic is delegated to CloudRenderSystem
-     * — this class only sequences the two passes (rebuild once globally,
-     * then submit once per window) and owns the one cross-pipeline lookup
-     * CloudRenderSystem itself has no business reaching for
-     * (WorldStreamManager lives in worldpipeline, not weatherpipeline).
+     * All weather-specific CPU logic is delegated to CloudRenderSystem —
+     * this class only sequences the two passes (update every active cell's
+     * ModelInstance once globally, then submit once per window) and owns
+     * the one cross-pipeline lookup CloudRenderSystem itself has no
+     * business reaching for (WorldStreamManager lives in worldpipeline, not
+     * weatherpipeline).
      *
      * Belongs entirely to the weather pipeline — see WeatherPipeline. The
      * only points where this touches the shared render pipeline are the
      * ones that are genuinely unavoidable: reading each grid's own window
-     * and world-scene fbo, and CloudRenderSystem's calls into
-     * RenderManager.pushWeatherCall() to actually queue a draw.
+     * and world-scene fbo, and CloudRenderSystem's calls into the same
+     * RenderManager.pushRenderCall() every other world-space draw already
+     * goes through — see CloudRenderSystem's own doc comment.
      */
 
     // Internal
@@ -49,7 +51,7 @@ public class WeatherRenderSystem extends ManagerPackage {
     @Override
     protected void lateUpdate() {
 
-        cloudRenderSystem.rebuildInstances();
+        cloudRenderSystem.updateInstances();
 
         submitToGrids();
     }

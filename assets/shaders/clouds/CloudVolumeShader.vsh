@@ -3,21 +3,31 @@
 layout (location = 0) in vec3  aPos;
 layout (location = 1) in vec3  aNormal;
 layout (location = 2) in vec2  aUV;
-layout (location = 3) in vec2  aInstanceChunk;  // chunkX, chunkZ — reinterpreted int bits
-layout (location = 4) in vec3  aInstanceLocal;  // localX, altitudeY, localZ
-layout (location = 5) in float aRandomSeed;
-layout (location = 6) in float aFadeAlpha;
-layout (location = 7) in float aIntensity;      // live weather intensity — see OverheadCellStruct.getIntensity()
 
 #include "includes/CameraData.glsl"
 #include "includes/CloudSettingsData.glsl"
 #include "includes/PlayerPositionData.glsl"
 
-// Baked once per material clone in CloudRenderSystem.resolveMaterial() —
-// one archetype's own shape numbers, shared by every instance drawn
-// through this material.
+// Baked once per instance in CloudRenderSystem.createInstance() — one
+// archetype's own shape numbers, shared by every cloud drawn through this
+// same CloudType (each with its own cloned MaterialInstance, exactly like
+// terrain clones one shared material per chunk mesh).
 uniform float u_cloudScale;
 uniform float u_cloudVerticalThickness;
+
+// Per-instance state — this specific cloud object's own position, seed,
+// and live fade/intensity. Clouds now draw through the exact same generic
+// ModelInstance/MaterialInstance path terrain uses (see CloudRenderSystem
+// and RenderManager.pushRenderCall()) — one ordinary, non-instanced draw
+// call per cloud object rather than a GPU-instanced batch — so these
+// arrive as plain uniforms on this draw's own material, refreshed every
+// frame in CloudRenderSystem.updateInstance(), instead of as per-vertex
+// instance attributes read off a shared instance VBO with a divisor of 1.
+uniform ivec2 u_cloudInstanceChunk;       // this cloud's home chunk index — exact at any distance from origin
+uniform vec3  u_cloudInstanceLocal;       // localX, altitudeY, localZ — in-chunk remainder + altitude
+uniform float u_cloudInstanceRandomSeed;  // stable per-cloud shape/warp seed
+uniform float u_cloudInstanceFadeAlpha;   // streaming fade — see OverheadCellStruct.fadeAlpha
+uniform float u_cloudInstanceIntensity;   // live weather strength — see OverheadCellStruct.getIntensity()
 
 out vec3  vWorldPos;
 out vec3  vLocalPos;
@@ -28,21 +38,22 @@ out float vFadeAlpha;
 out float vIntensity;
 
 /*
-* Player-chunk-relative instance position. aInstanceChunk carries this
- * instance's home chunk index as reinterpreted int bits — precise at any
- * distance from world origin, since it's a whole chunk count, never a
- * fractional world coordinate. aInstanceLocal carries the small in-chunk
- * remainder (wind drift fraction converted to blocks) plus altitude.
- * Reconstructing render-space position here, relative to
+* Player-chunk-relative instance position. u_cloudInstanceChunk carries
+ * this cloud's home chunk index directly as a genuine integer uniform —
+ * precise at any distance from world origin, since it's a whole chunk
+ * count, never a fractional world coordinate (no floatBitsToInt bit-
+ * punning needed here, unlike the old GPU-instanced version of this
+ * shader — a uniform can just BE an ivec2). u_cloudInstanceLocal carries
+ * the small in-chunk remainder (wind drift fraction converted to blocks)
+ * plus altitude. Reconstructing render-space position here, relative to
  * u_playerChunkX/Z (see PlayerPositionData.glsl), mirrors
  * StandardItemShader.vsh's identical technique exactly — u_cameraPosition
  * and u_viewProjection are themselves expressed in that same
  * player-chunk-recentered space (see StandardSurfaceShader's own
  * u_gridPosition offset for the terrain-side equivalent), so an instance
- * position built any other way — e.g. a raw absolute chunk*CHUNK_SIZE
- * float, as before this fix — silently drifts out of agreement with the
- * camera transform as the player moves, which is what previously read as
- * clouds "snapping" between chunks. See CloudRenderSystem.addInstance()
+ * position built any other way silently drifts out of agreement with the
+ * camera transform as the player moves — which is what previously read as
+ * clouds "snapping" between chunks. See CloudRenderSystem.updateInstance()
  * for the CPU-side half of this encoding.
  *
  * "The clouds will always be render distance at max away" (horizon
@@ -82,16 +93,13 @@ out float vIntensity;
  * or position here.
  */
 void main() {
-    int chunkX = floatBitsToInt(aInstanceChunk.x);
-    int chunkZ = floatBitsToInt(aInstanceChunk.y);
-
-    float relChunkX = float(chunkX - u_playerChunkX);
-    float relChunkZ = float(chunkZ - u_playerChunkZ);
+    float relChunkX = float(u_cloudInstanceChunk.x - u_playerChunkX);
+    float relChunkZ = float(u_cloudInstanceChunk.y - u_playerChunkZ);
 
     vec3 instancePos = vec3(
-        relChunkX * 16.0 + aInstanceLocal.x,
-        aInstanceLocal.y,
-        relChunkZ * 16.0 + aInstanceLocal.z);
+        relChunkX * 16.0 + u_cloudInstanceLocal.x,
+        u_cloudInstanceLocal.y,
+        relChunkZ * 16.0 + u_cloudInstanceLocal.z);
 
     float distFromCamera = length(instancePos.xz - u_cameraPosition.xz);
     float distanceT = clamp(distFromCamera / u_cloudHorizonDistance, 0.0, 1.0);
@@ -111,9 +119,9 @@ void main() {
     vLocalPos = aPos;
     vNormal = aNormal;
     vUV = aUV;
-    vRandomSeed = aRandomSeed;
-    vFadeAlpha = aFadeAlpha * horizonFade;
-    vIntensity = aIntensity;
+    vRandomSeed = u_cloudInstanceRandomSeed;
+    vFadeAlpha = u_cloudInstanceFadeAlpha * horizonFade;
+    vIntensity = u_cloudInstanceIntensity;
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }

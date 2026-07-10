@@ -374,7 +374,7 @@ public class EngineSetting {
         // representation in that direction — consumed by u_cloudTransitionStart,
         // computed once in CloudRenderSystem.pushCloudSettings(). The altitude/
         // extent and raymarch step-count pairs are sized for a per-instance
-        // bounding-volume raymarch (one box per CloudBufferInstance draw, not one
+        // bounding-volume raymarch (one box per cloud instance draw, not one
         // giant sky-spanning volume) and a near/far quality tier split, mirroring
         // StandardSurfaceShader's own distance-tiered shading. None of this is
         // consumed by shading logic yet.
@@ -393,7 +393,6 @@ public class EngineSetting {
 
         public static final String CLOUD_CARD_MESH_NAME = "clouds/CloudCardMesh";
         public static final String CLOUD_INSTANCED_MATERIAL_TEMPLATE = "clouds/CloudInstancedMaterial";
-        public static final int CLOUD_INSTANCE_INITIAL_CAPACITY = 64;
         // Default world-space diameter, IN BLOCKS, applied to a cloud
         // archetype's unit-cube volume mesh when its JSON omits "scale" — see
         // CloudBuilder.build(). CloudVolumeMesh is a literal 1x1x1 unit cube
@@ -422,6 +421,19 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_RIM_LIGHT_STRENGTH = "u_cloudRimLightStrength";
         public static final String UNIFORM_CLOUD_AMBIENT_OCCLUSION_STRENGTH = "u_cloudAmbientOcclusionStrength";
         public static final String UNIFORM_CLOUD_BRIGHTNESS_MULTIPLIER = "u_cloudBrightnessMultiplier";
+
+        // Cloud Instance Uniforms — per-cloud-object state, pushed fresh every
+        // frame by CloudRenderSystem onto that instance's own cloned
+        // MaterialInstance (see CloudRenderSystem.updateInstance()). Clouds
+        // draw through the same generic ModelInstance/MaterialInstance path
+        // terrain uses — no per-instance vertex attributes or shared instance
+        // VBO anymore, so these arrive as ordinary uniforms instead.
+        public static final String UNIFORM_CLOUD_INSTANCE_CHUNK = "u_cloudInstanceChunk";
+        public static final String UNIFORM_CLOUD_INSTANCE_LOCAL = "u_cloudInstanceLocal";
+        public static final String UNIFORM_CLOUD_INSTANCE_RANDOM_SEED = "u_cloudInstanceRandomSeed";
+        public static final String UNIFORM_CLOUD_INSTANCE_FADE_ALPHA = "u_cloudInstanceFadeAlpha";
+        public static final String UNIFORM_CLOUD_INSTANCE_INTENSITY = "u_cloudInstanceIntensity";
+
         public static final String CLOUD_SETTINGS_DATA_UBO = "CloudSettingsData";
         public static final String UNIFORM_CLOUD_HORIZON_DISTANCE = "u_cloudHorizonDistance";
         public static final String UNIFORM_CLOUD_MIN_SCALE = "u_cloudMinScale";

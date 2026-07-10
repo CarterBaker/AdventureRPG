@@ -21,9 +21,6 @@ import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
-import application.bootstrap.weatherpipeline.cloudbuffer.CloudBufferInstance;
-import application.bootstrap.weatherpipeline.cloudbuffermanager.CloudBufferManager;
-import application.bootstrap.weatherpipeline.weatherbatch.WeatherBatchStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -31,7 +28,6 @@ import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RenderSystem extends SystemPackage {
@@ -40,7 +36,6 @@ class RenderSystem extends SystemPackage {
     private VAOManager vaoManager;
     private CameraManager cameraManager;
     private SkinnedBufferManager skinnedBufferManager;
-    private CloudBufferManager cloudBufferManager;
 
     // Skinned — per-window instanced VAO cache. VAOs are context-local and
     // cannot be shared, so each window gets its own compiled VAO the first
@@ -48,25 +43,9 @@ class RenderSystem extends SystemPackage {
     // CompositeRenderSystem.windowID2BufferGpuState.
     private Int2ObjectOpenHashMap<Object2IntOpenHashMap<SkinnedBufferInstance>> windowID2SkinnedVAOCache;
 
-    // Weather — same per-window instanced VAO cache pattern, keyed by
-    // CloudBufferInstance instead. See CloudBufferManager's own doc comment:
-    // "The VAO wrapping it IS context-local and cannot be shared, so it is
-    // deliberately NOT built here — RenderSystem owns a per-window VAO cache
-    // over these handles, exactly like it already does for skinned buffers."
-    // Unlike the skinned cache, this one also tracks which instanceVBO handle
-    // each cached VAO was built against — a cloud archetype's instance VBO is
-    // a single GL object shared across every window (see CloudBufferManager),
-    // and CloudBufferManager.reallocateGpuObjects() deletes and recreates it
-    // whenever a buffer outgrows its capacity. Without tracking the handle, a
-    // cached VAO's own baked vertex attrib bindings would silently keep
-    // pointing at a deleted buffer name after such a realloc — see
-    // getOrCreateWeatherVAO().
-    private Int2ObjectOpenHashMap<Object2ObjectOpenHashMap<CloudBufferInstance, WeatherBufferGpuState>> windowID2WeatherVAOCache;
-
     @Override
     protected void create() {
         this.windowID2SkinnedVAOCache = new Int2ObjectOpenHashMap<>();
-        this.windowID2WeatherVAOCache = new Int2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -75,7 +54,6 @@ class RenderSystem extends SystemPackage {
         this.vaoManager = get(VAOManager.class);
         this.cameraManager = get(CameraManager.class);
         this.skinnedBufferManager = get(SkinnedBufferManager.class);
-        this.cloudBufferManager = get(CloudBufferManager.class);
     }
 
     void drawToMappedTargets(WindowInstance window) {
@@ -104,21 +82,15 @@ class RenderSystem extends SystemPackage {
             RenderGLSLUtility.clearBuffer(0f, 0f, 0f, 0f);
             RenderGLSLUtility.clearDepthBuffer();
 
+            // Cloud objects are queued as ordinary depth-sorted render
+            // calls (see CloudRenderSystem.submit() / RenderManager
+            // .pushRenderCall()) — no separate weather draw pass. They
+            // write a complete G-buffer output (albedo, normal, material)
+            // and real depth exactly like any other opaque-ish surface —
+            // see CloudVolumeShader.fsh's own doc comment — so they need
+            // nothing more than the depth-sorted pass below.
             drawDepthSortedBatches(queue, target, window);
             drawSkinnedBatches(queue, target, window);
-
-            // Cloud instances now write a complete G-buffer output (albedo,
-            // normal, material) and real depth, exactly like any other
-            // opaque-ish surface drawn into this target — see
-            // CloudVolumeShader.fsh's own doc comment for the full
-            // rationale. Depth writes used to be disabled here, which left
-            // every cloud pixel drawn over open sky at the frame-clear
-            // depth of 1.0; the deferred Lighting pass treats depth >= 1.0
-            // as "nothing was drawn here" and silently dropped the cloud's
-            // contribution entirely (see LightingShader.fsh). Leaving the
-            // depth mask at its default (enabled, set by enableDepth()
-            // above) fixes that.
-            drawWeatherBatches(queue, target, window);
 
             compositeRenderSystem.draw(queue, target, window);
             target.unbind();
@@ -573,162 +545,5 @@ class RenderSystem extends SystemPackage {
         buffer2VAO.put(skinnedBuffer, vao);
 
         return vao;
-    }
-
-    // Weather \\
-
-    /*
-     * Queues one cloud archetype's shared instanced buffer for drawing
-     * against the given fbo/window this frame. Instance data (world
-     * position, random seed, fade alpha) is already populated by
-     * CloudRenderSystem before this call — RenderSystem never touches
-     * cloud instance contents, only registers the buffer for the draw
-     * phase, exactly mirroring pushSkinnedCall.
-     */
-    void pushWeatherCall(
-            CloudBufferInstance cloudBuffer,
-            MaterialInstance material,
-            FboInstance fbo,
-            WindowInstance window) {
-
-        RenderQueueHandle queue = window.getRenderQueueHandle();
-
-        if (queue == null || fbo == null)
-            return;
-
-        ensureWeatherBatchQueued(queue, fbo, cloudBuffer, material, window);
-    }
-
-    private void ensureWeatherBatchQueued(
-            RenderQueueHandle queue,
-            FboInstance fbo,
-            CloudBufferInstance cloudBuffer,
-            MaterialInstance material,
-            WindowInstance window) {
-
-        ObjectArrayList<WeatherBatchStruct> batches = queue.fbo2WeatherBatchList.get(fbo);
-
-        if (batches == null) {
-            batches = new ObjectArrayList<>();
-            queue.fbo2WeatherBatchList.put(fbo, batches);
-        }
-
-        Object[] elements = batches.elements();
-        int count = batches.size();
-
-        for (int i = 0; i < count; i++)
-            if (((WeatherBatchStruct) elements[i]).getCloudBuffer() == cloudBuffer)
-                return;
-
-        batches.add(new WeatherBatchStruct(cloudBuffer, material));
-        ensureFboQueued(queue, fbo, window);
-    }
-
-    private void drawWeatherBatches(RenderQueueHandle queue, FboInstance fbo, WindowInstance window) {
-
-        ObjectArrayList<WeatherBatchStruct> batches = queue.fbo2WeatherBatchList.get(fbo);
-
-        if (batches == null || batches.isEmpty())
-            return;
-
-        Object[] elements = batches.elements();
-        int count = batches.size();
-
-        for (int i = 0; i < count; i++) {
-
-            WeatherBatchStruct batch = (WeatherBatchStruct) elements[i];
-            CloudBufferInstance cloudBuffer = batch.getCloudBuffer();
-
-            if (cloudBuffer.isEmpty())
-                continue;
-
-            cloudBufferManager.upload(cloudBuffer);
-
-            MaterialInstance material = batch.getMaterial();
-            bindWeatherMaterial(batch, material);
-
-            int vao = getOrCreateWeatherVAO(cloudBuffer, window);
-
-            RenderGLSLUtility.bindVAO(vao);
-            RenderGLSLUtility.drawElementsInstanced(
-                    cloudBuffer.getIndexCount(),
-                    cloudBuffer.getInstanceCount());
-            RenderGLSLUtility.unbindVAO();
-        }
-    }
-
-    private void bindWeatherMaterial(WeatherBatchStruct batch, MaterialInstance material) {
-
-        int shaderHandle = material.getShaderHandle().getGpuHandle();
-        RenderGLSLUtility.useShader(shaderHandle);
-
-        UBOHandle[] handles = batch.getCachedSourceUBOs();
-
-        for (int i = 0; i < handles.length; i++) {
-            UBOHandle ubo = handles[i];
-            RenderGLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
-            RenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
-        }
-
-        pushMaterialUniforms(material);
-    }
-
-    /*
-     * One instanced VAO per (window, CloudBufferInstance) pair — never
-     * shared across windows, since VAOs are context-local. Mirrors
-     * getOrCreateSkinnedVAO, with one addition: the cloud archetype's
-     * instance VBO is reallocated (new GL buffer name) by
-     * CloudBufferManager.reallocateGpuObjects() whenever the buffer grows
-     * past its current capacity — see CloudBufferInstance.grow(). A VAO's
-     * vertex attrib bindings are baked at creation time against a specific
-     * buffer name, so a cached VAO built before such a realloc would keep
-     * silently reading from a deleted buffer. WeatherBufferGpuState tracks
-     * the instanceVBO each cached VAO was built against so that mismatch
-     * can be detected and the stale VAO rebuilt, rather than reused.
-     */
-    private int getOrCreateWeatherVAO(CloudBufferInstance cloudBuffer, WindowInstance window) {
-
-        int windowID = window.getWindowID();
-        Object2ObjectOpenHashMap<CloudBufferInstance, WeatherBufferGpuState> buffer2State = windowID2WeatherVAOCache
-                .get(windowID);
-
-        if (buffer2State == null) {
-            buffer2State = new Object2ObjectOpenHashMap<>();
-            windowID2WeatherVAOCache.put(windowID, buffer2State);
-        }
-
-        WeatherBufferGpuState state = buffer2State.get(cloudBuffer);
-        int currentInstanceVBO = cloudBuffer.getInstanceVBO();
-
-        if (state != null && state.instanceVBO == currentInstanceVBO)
-            return state.vao;
-
-        // First VAO for this buffer in this window, or the buffer's
-        // instanceVBO has changed out from under a previously cached VAO
-        // (a realloc happened since) — either way, (re)build fresh.
-        if (state != null)
-            RenderGLSLUtility.deleteVAO(state.vao);
-
-        int vao = RenderGLSLUtility.createInstancedVAO(
-                cloudBuffer.getMeshHandle().getVertexHandle(),
-                cloudBuffer.getMeshHandle().getAttrSizes(),
-                cloudBuffer.getMeshHandle().getIndexHandle(),
-                currentInstanceVBO,
-                cloudBuffer.getInstanceAttrSizes());
-
-        buffer2State.put(cloudBuffer, new WeatherBufferGpuState(vao, currentInstanceVBO));
-
-        return vao;
-    }
-
-    private static final class WeatherBufferGpuState {
-
-        private final int vao;
-        private final int instanceVBO;
-
-        private WeatherBufferGpuState(int vao, int instanceVBO) {
-            this.vao = vao;
-            this.instanceVBO = instanceVBO;
-        }
     }
 }
