@@ -60,6 +60,28 @@ public class OverheadCellStruct extends StructPackage {
      * each cell's cloud instance can vary shape/warp without ever
      * re-rolling and without every cell in the world looking identical.
      *
+     * sizeVariance and domainRotation are two further stable per-cell
+     * floats serving the same "never re-rolled" purpose, added to answer
+     * a real visual complaint: every physical cloud of a given CloudType
+     * previously rendered at that type's exact scale/verticalThickness
+     * every single time, and the raymarch's horizontal stretch elongated
+     * equally along both local axes as it climbed toward heightT = 1 —
+     * which never actually produces a directional "streak", only a
+     * uniformly smoother, larger-scale blob, regardless of instance. Two
+     * clouds of the same type were therefore visually indistinguishable
+     * except for exactly where the same noise field happened to be
+     * sampled. sizeVariance (see CloudRenderSystem.bakeArchetypeUniforms())
+     * scales both an instance's baked scale and verticalThickness
+     * together — so proportions stay true to the archetype (a Stratus
+     * stays flat and wide, a Nimbus stays tall and dense) while the actual
+     * size of any two same-type clouds now genuinely differs, the way a
+     * real cloud field never renders two identically-sized decks side by
+     * side. domainRotation (see VolumetricCloudUtility.glsl's own "Shape
+     * diversity fix" doc comment) picks the compass direction THIS
+     * instance's raymarch stretches toward as it climbs — so its
+     * elongation is a real, visible streak in a random direction, not a
+     * symmetric bulge every instance shares.
+     *
      * fadeAlpha ramps 0 -> 1 over the cell's first moments alive and
      * 1 -> 0 just before it is retired, so streaming pop-in/pop-out at the
      * ring edge is never visually abrupt. Owned and mutated exclusively by
@@ -101,6 +123,8 @@ public class OverheadCellStruct extends StructPackage {
     private final CloudHandle cloudHandle;
     private final float effectiveAltitude;
     private final float randomSeed;
+    private final float sizeVariance;
+    private final float domainRotation;
 
     // Home Position — fixed for the cell's lifetime
     private final int homeChunkX;
@@ -132,6 +156,8 @@ public class OverheadCellStruct extends StructPackage {
             CloudHandle cloudHandle,
             float effectiveAltitude,
             float randomSeed,
+            float sizeVariance,
+            float domainRotation,
             float intensity) {
 
         // Identity
@@ -140,6 +166,8 @@ public class OverheadCellStruct extends StructPackage {
         this.cloudHandle = cloudHandle;
         this.effectiveAltitude = effectiveAltitude;
         this.randomSeed = randomSeed;
+        this.sizeVariance = sizeVariance;
+        this.domainRotation = domainRotation;
 
         // Home Position
         this.homeChunkX = homeChunkX;
@@ -210,6 +238,14 @@ public class OverheadCellStruct extends StructPackage {
 
     public float getRandomSeed() {
         return randomSeed;
+    }
+
+    public float getSizeVariance() {
+        return sizeVariance;
+    }
+
+    public float getDomainRotation() {
+        return domainRotation;
     }
 
     public int getHomeChunkX() {

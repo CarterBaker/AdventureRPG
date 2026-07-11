@@ -395,8 +395,20 @@ public class EngineSetting {
         // one plain vec3.
         public static final String UNIFORM_CLOUD_INSTANCE_POSITION = "u_cloudInstancePosition";
         public static final String UNIFORM_CLOUD_INSTANCE_RANDOM_SEED = "u_cloudInstanceRandomSeed";
+        public static final String UNIFORM_CLOUD_INSTANCE_DOMAIN_ROTATION = "u_cloudInstanceDomainRotation";
         public static final String UNIFORM_CLOUD_INSTANCE_FADE_ALPHA = "u_cloudInstanceFadeAlpha";
         public static final String UNIFORM_CLOUD_INSTANCE_INTENSITY = "u_cloudInstanceIntensity";
+
+        // Cloud Instance Shape Diversity \\
+        //
+        // Per-cell random multiplier applied to BOTH a cloud instance's
+        // baked scale and verticalThickness together (see CloudRenderSystem
+        // .bakeArchetypeUniforms()) — varies overall cloud size within a
+        // single CloudType while preserving that type's own width/height
+        // proportions, so two same-type clouds are never rendered at
+        // identical dimensions. See OverheadCellStruct's own doc comment.
+        public static final float CLOUD_INSTANCE_SIZE_VARIANCE_MIN = 0.75f;
+        public static final float CLOUD_INSTANCE_SIZE_VARIANCE_MAX = 1.3f;
 
         public static final String CLOUD_SETTINGS_DATA_UBO = "CloudSettingsData";
         public static final String UNIFORM_CLOUD_HORIZON_DISTANCE = "u_cloudHorizonDistance";

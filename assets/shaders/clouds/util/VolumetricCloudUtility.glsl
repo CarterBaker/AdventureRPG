@@ -31,7 +31,7 @@
  * the field reads as "inside") stayed just as dense right up against the
  * box wall as it was in the interior. The raymarch then simply stopped at
  * that wall, which is exactly what a hard-edged box looks like — this is
- * the root cause of the "clouds just look like boxes" complaint.
+ * a root cause of the "clouds just look like boxes" complaint.
  * silhouetteMask() below fixes this by tapering density to zero well
  * before the true AABB boundary, in a jittered (not perfectly circular)
  * radius around the box's own horizontal center, so the visible silhouette
@@ -70,6 +70,33 @@
  * (0.3-0.85 in every shipped archetype) actually do something — against
  * the old raw-world-scale coordinate, an offset that small was never more
  * than a rounding error.
+ *
+ * Shape diversity fix
+ * --------------------
+ * Even after the domain scale fix above, sampleVolumetricCloudDensity()
+ * still stretched BOTH local horizontal axes by the identical factor as
+ * heightT climbed toward the top of the box. Scaling x and z equally can
+ * only make the noise domain uniformly coarser near the top — a smoother,
+ * larger-scale blob — it can never actually produce a directional streak,
+ * since a symmetric domain has no "direction" for a streak to point in.
+ * Two instances of the same archetype, differing only by a phase-shifted
+ * seedOffset, therefore shared the exact same silhouette CHARACTER (same
+ * roundness, same billowiness, same "how streaky it gets up top") and
+ * only ever differed in exactly where that character happened to be
+ * sampled — which reads, correctly, as "every cloud looks the same
+ * shape."
+ *
+ * sampleVolumetricCloudDensity() now takes a domainRotation parameter — a
+ * stable per-instance angle (see OverheadCellStruct's own doc comment;
+ * baked once at stream-in via CloudRenderSystem.createInstance(), never
+ * re-rolled) — and rotates localPos.xz into that instance's own axis
+ * frame before stretching. The stretch itself is now ANISOTROPIC: only
+ * the rotated long axis compresses (elongates) with height; the
+ * perpendicular short axis stays comparatively compact. This is what
+ * actually produces the long, thin striations real cumulus/stratus decks
+ * fray into near their tops, and — because domainRotation differs per
+ * instance — gives every physical cloud its own streak direction instead
+ * of every instance of one CloudType sharing one identical bulge.
  */
 
 // Fixed internal contrast boost blended into the base fbm/worley mix.
@@ -158,10 +185,11 @@ float silhouetteMask(vec3 worldPos, vec3 boxMin, vec3 boxMax, float silhouetteSo
  * comment. seed decorrelates this sample from every other cloud sampling
  * the same nominal position, and timeSeconds drives a slow, near-
  * imperceptible internal drift so a stationary cloud still isn't
- * perfectly static. heightT drives both the horizontal stretch and the
- * vertical heightGradient() falloff — see heightGradient()'s own doc
- * comment. worldPos is recentered on the box and normalized by its own
- * size before any of that — see this file's "Domain scale fix" doc
+ * perfectly static. heightT drives the vertical heightGradient() falloff
+ * — see that function's own doc comment. domainRotation picks this
+ * instance's own stretch-axis direction — see the class comment's "Shape
+ * diversity fix". worldPos is recentered on the box and normalized by its
+ * own size before any of that — see this file's "Domain scale fix" doc
  * comment above.
  */
 float sampleVolumetricCloudDensity(
@@ -174,14 +202,8 @@ float sampleVolumetricCloudDensity(
     float coverageBias,
     float silhouetteSoftness,
     float seed,
-    float timeSeconds) {
-    // Stretch the horizontal sampling domain the higher up this sample
-    // sits — a stretched (lower-frequency) domain reads as long, thin
-    // streaks; a compact one reads as rounded puffs. Purely a function of
-    // heightT, so this falls out naturally rather than needing a fixed
-    // per-archetype "cloud type" switch.
-    float stretch = mix(1.0, 2.4, clamp(heightT, 0.0, 1.0));
-
+    float timeSeconds,
+    float domainRotation) {
     // Recenter on the box and normalize by its own size — see the class
     // comment's "Domain scale fix". localPos sits roughly in [-0.5, 0.5]
     // along each axis regardless of the archetype's absolute scale, which
@@ -190,8 +212,33 @@ float sampleVolumetricCloudDensity(
     vec3 boxSize = max(boxMax - boxMin, vec3(0.0001));
     vec3 localPos = (worldPos - (boxMin + boxMax) * 0.5) / boxSize;
 
+    // Rotate into this instance's own stretch-axis frame before doing
+    // anything height-dependent — see the class comment's "Shape
+    // diversity fix". domainRotation is a stable per-instance angle
+    // (baked once at stream-in — see OverheadCellStruct), so the axis
+    // that ends up elongated below is a different compass direction for
+    // every cloud, not always world +X.
+    float rotCos = cos(domainRotation);
+    float rotSin = sin(domainRotation);
+    vec2 rotatedXZ = vec2(
+        localPos.x * rotCos - localPos.z * rotSin,
+        localPos.x * rotSin + localPos.z * rotCos);
+
+    // Anisotropic stretch — ONLY the rotated long axis (x') elongates as
+    // heightT climbs; the perpendicular short axis (z') stays compact.
+    // The previous version stretched both local axes by the same factor,
+    // which only ever made the noise domain uniformly coarser near the
+    // top of the box — a smoother blob, never an actual streak, since a
+    // symmetric domain has no "direction" to streak toward. Elongating a
+    // single, per-instance-random axis instead is what actually produces
+    // the long, thin striations real cumulus/stratus decks show fraying
+    // out near their tops, and gives every instance its own streak
+    // direction rather than sharing one.
+    float stretch = mix(1.0, 2.4, clamp(heightT, 0.0, 1.0));
+    vec2 stretchedXZ = vec2(rotatedXZ.x / stretch, rotatedXZ.y);
+
     vec3 seedOffset = vec3(seed * 173.13, seed * 57.31, seed * 91.7);
-    vec3 stretchedPos = localPos * vec3(1.0 / stretch, 1.0, 1.0 / stretch);
+    vec3 stretchedPos = vec3(stretchedXZ.x, localPos.y, stretchedXZ.y);
     vec3 coord = stretchedPos * (noiseScale * CLOUD_NOISE_BILLOW_CYCLES)
     + seedOffset + vec3(0.0, 0.0, timeSeconds * 0.015);
 

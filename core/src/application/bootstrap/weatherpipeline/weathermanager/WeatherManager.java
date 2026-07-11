@@ -1,4 +1,3 @@
-// WeatherManager.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
@@ -14,7 +13,6 @@ import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
-import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -56,13 +54,19 @@ public class WeatherManager extends ManagerPackage {
      * biome's pool for that season, so "biome + season + noise" really
      * does fold in the season's own climate numbers, not just its name.
      *
-     * updateReferenceCoordinate() resolves the main window's player world
-     * position into a chunk coordinate every frame, before any sampling
-     * happens this frame, and writes it into RegionSampleBranch via
-     * setReferenceCoordinate() — this is the "grab the data for the part of
-     * the world we're actually standing in" hookup. Falls back to whatever
-     * the reference coordinate already was (default origin) if there is no
-     * main window or no spawned player yet — normal before a player exists.
+     * updateReferenceCoordinate() mirrors the main window's player onto
+     * RegionSampleBranch's reference coordinate every frame, before any
+     * sampling happens this frame — this is the "grab the data for the
+     * part of the world we're actually standing in" hookup. It reads
+     * WorldPositionStruct.getChunkCoordinate() directly — the exact same
+     * field GridInstance's own terrain recentering treats as authoritative
+     * (see GridInstance.updateActiveChunkCoordinate()) — rather than
+     * re-deriving a chunk coordinate from the player's raw continuous
+     * position. See updateReferenceCoordinate()'s own doc comment for the
+     * bug that mismatch caused and why reading the identical field fixes
+     * it outright. Falls back to whatever the reference coordinate already
+     * was (default origin) if there is no main window or no spawned player
+     * yet — normal before a player exists.
      *
      * getReferenceCoordinate() — the INTEGER chunk-granular coordinate — is
      * the single reference position both OverheadManager's cell streaming
@@ -178,12 +182,38 @@ public class WeatherManager extends ManagerPackage {
     // Reference Coordinate \\
 
     /*
-     * Resolves the main window's player position into the chunk coordinate
-     * every downstream system treats as "here" — the single reference
-     * position both weather sampling and cloud/overhead-cell rendering
-     * anchor against. A no-op if there is no main window or no player has
-     * spawned into it yet, leaving the reference at whatever it last
-     * resolved to (origin by default).
+     * Mirrors the main window's player onto the exact same chunk-granular
+     * reference every downstream weather/cloud system treats as "here".
+     *
+     * Reads WorldPositionStruct.getChunkCoordinate() directly rather than
+     * independently re-deriving a chunk coordinate from the player's raw
+     * continuous position (the previous approach). GridInstance —
+     * terrain's own moving-world recentering — already treats that exact
+     * same field as the single source of truth for "what chunk is the
+     * player standing in" (see GridInstance.updateActiveChunkCoordinate()).
+     * A second, independently-computed notion of the same concept here had
+     * no way to guarantee it would ever equal terrain's value on the exact
+     * same frame — any difference in update timing or rounding between the
+     * two computations desynced WeatherManager's reference coordinate from
+     * the terrain grid's activeChunkCoordinate for however long that
+     * mismatch lasted, most visibly right at the instant the player's
+     * chunk changes. Every position downstream of this reference
+     * (OverheadManager's cell streaming/retirement, CloudRenderSystem's
+     * per-frame cloud recentring) is expressed relative to it exactly the
+     * way terrain's own u_gridPosition is expressed relative to
+     * GridInstance's activeChunkCoordinate — so a one-frame desync between
+     * the two was exactly what read as "clouds shift slightly relative to
+     * the ground when the player crosses a chunk boundary", and, when the
+     * desync spanned more than one frame under faster movement, as several
+     * overhead cells retiring and streaming back in within the same short
+     * window rather than one at a time. Reading the identical field
+     * terrain already treats as authoritative removes the second
+     * computation entirely, so the two systems can never disagree about
+     * which chunk "here" is.
+     *
+     * A no-op if there is no main window or no player has spawned into it
+     * yet, leaving the reference at whatever it last resolved to (origin
+     * by default).
      */
     private void updateReferenceCoordinate() {
 
@@ -198,12 +228,8 @@ public class WeatherManager extends ManagerPackage {
             return;
 
         EntityInstance player = playerManager.getPlayerForWindow(windowID);
-        Vector3 position = player.getWorldPositionStruct().getPosition();
 
-        int chunkX = Math.floorDiv((int) Math.floor(position.x), EngineSetting.CHUNK_SIZE);
-        int chunkZ = Math.floorDiv((int) Math.floor(position.z), EngineSetting.CHUNK_SIZE);
-
-        setReferenceCoordinate(Coordinate2Long.pack(chunkX, chunkZ));
+        setReferenceCoordinate(player.getWorldPositionStruct().getChunkCoordinate());
     }
 
     // Biome Selection \\

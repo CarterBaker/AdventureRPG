@@ -12,12 +12,14 @@ uniform float u_cloudVerticalThickness;
 
 uniform vec3  u_cloudInstancePosition;    // fully resolved render-space position — CPU-computed every frame, see CloudRenderSystem.updateInstance(). x/z already relative to the player's current chunk; y is world altitude.
 uniform float u_cloudInstanceRandomSeed;  // stable per-cloud shape/warp seed
+uniform float u_cloudInstanceDomainRotation; // stable per-cloud stretch-axis angle (radians) — see VolumetricCloudUtility.glsl's "Shape diversity fix"
 uniform float u_cloudInstanceFadeAlpha;   // streaming fade — see OverheadCellStruct.fadeAlpha
 uniform float u_cloudInstanceIntensity;   // live weather strength — see OverheadCellStruct.getIntensity()
 
 out vec3  vWorldPos;
 out vec3  vNormal;
 out float vRandomSeed;
+out float vDomainRotation;
 out float vFadeAlpha;
 out float vIntensity;
 
@@ -75,6 +77,7 @@ void main() {
     vWorldPos = worldPos;
     vNormal = aNormal;
     vRandomSeed = u_cloudInstanceRandomSeed;
+    vDomainRotation = u_cloudInstanceDomainRotation;
     vFadeAlpha = u_cloudInstanceFadeAlpha * horizonFade;
     vIntensity = u_cloudInstanceIntensity;
 

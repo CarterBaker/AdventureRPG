@@ -132,6 +132,18 @@ public class OverheadManager extends ManagerPackage {
      * session. Render distance is almost always the smaller of the two in
      * practice, which is exactly the point — a real cloud object must never
      * be found floating over ground that was never rendered underneath it.
+     *
+     * All streaming/retirement math below is anchored to
+     * WeatherManager.getReferenceCoordinate() — which, as of this stage,
+     * is read directly off the same WorldPositionStruct field terrain's
+     * own moving-world recentering treats as authoritative (see
+     * WeatherManager.updateReferenceCoordinate()'s own doc comment). That
+     * fix is what this class depends on to guarantee playerChunkX/Z below
+     * never disagrees, even for a single frame, with the chunk terrain is
+     * actually rendering relative to — a prior desync there was the real
+     * cause of cells appearing to shift or retire/restream in visible
+     * batches right at chunk boundaries, not anything in this class's own
+     * math.
      */
 
     // Fade rates — alpha units per second
@@ -350,6 +362,23 @@ public class OverheadManager extends ManagerPackage {
         CloudChanceStruct cloudEntry = coveredByCloud ? weatherHandle.pickCloud(cloudPickNoise) : null;
         float randomSeed = hash01(cellKey ^ 0x9E3779B97F4A7C15L);
 
+        // Size/shape diversity — see OverheadCellStruct's own doc comment
+        // for why these exist. Both derived from cellKey via distinct
+        // salts, the exact same "never re-rolled for this cell's lifetime"
+        // approach as every other per-cell random above, so a cell's size
+        // and stretch direction are exactly as stable as its cloud choice.
+        // sizeVariance scales an instance's baked scale/verticalThickness
+        // together (see CloudRenderSystem.bakeArchetypeUniforms()) so its
+        // proportions stay true to its archetype while its overall size
+        // still varies. domainRotation picks which compass direction this
+        // instance's raymarch stretch elongates toward (see
+        // VolumetricCloudUtility.glsl's "Shape diversity fix").
+        float sizeVariance = lerp(
+                EngineSetting.CLOUD_INSTANCE_SIZE_VARIANCE_MIN,
+                EngineSetting.CLOUD_INSTANCE_SIZE_VARIANCE_MAX,
+                hash01(cellKey ^ 0xBF58476D1CE4E5B9L));
+        float domainRotation = hash01(cellKey ^ 0x94D049BB133111EBL) * (float) (Math.PI * 2.0);
+
         // A Clear weather, a weather whose coverage roll missed, or any
         // other cloudless resolution all land here identically — the cell
         // still streams in and carries its WeatherHandle identity, it
@@ -366,6 +395,8 @@ public class OverheadManager extends ManagerPackage {
                 cloudHandle,
                 effectiveAltitude,
                 randomSeed,
+                sizeVariance,
+                domainRotation,
                 intensity);
 
         cell.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(cellKey));

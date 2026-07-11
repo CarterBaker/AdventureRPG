@@ -48,11 +48,13 @@ class CloudRenderSystem extends SystemPackage {
      * terrain material per chunk mesh. Archetype-level values that never
      * change for the life of the instance (color, scale, density, toon
      * shading numbers — see bakeArchetypeUniforms()) are baked in once, at
-     * creation. Per-instance values that DO change every frame — render
-     * position, streaming fade alpha, and live weather intensity — are
-     * refreshed every frame in updateInstance() via ordinary
-     * MaterialInstance.setUniform() calls, the same mechanism
-     * EntityRenderSystem already uses for u_hiddenBone.
+     * creation — including this cell's own random size/shape variance (see
+     * OverheadCellStruct's own doc comment), which is exactly as fixed for
+     * the instance's lifetime as its archetype choice. Per-instance values
+     * that DO change every frame — render position, streaming fade alpha,
+     * and live weather intensity — are refreshed every frame in
+     * updateInstance() via ordinary MaterialInstance.setUniform() calls,
+     * the same mechanism EntityRenderSystem already uses for u_hiddenBone.
      *
      * Positioning is resolved ENTIRELY on the CPU, once per instance per
      * frame — see updateInstance()'s own doc comment. Nothing about cloud
@@ -199,7 +201,12 @@ class CloudRenderSystem extends SystemPackage {
      * items recenter against via u_playerChunkX/u_playerChunkZ in
      * StandardItemShader.vsh. A cloud's render position must be expressed
      * in that exact same frame or it silently drifts out of sync with
-     * everything else sharing the screen.
+     * everything else sharing the screen. As of this stage,
+     * getReferenceCoordinate() is backed directly by the identical
+     * WorldPositionStruct field GridInstance's own recentering reads — see
+     * WeatherManager.updateReferenceCoordinate()'s own doc comment — so
+     * that guarantee now actually holds on every frame, not just most of
+     * them.
      *
      * An earlier version of this method used a CONTINUOUS chunk-space
      * coordinate instead — WeatherManager.getReferenceChunkXContinuous()/
@@ -222,8 +229,7 @@ class CloudRenderSystem extends SystemPackage {
      * chunk is picked up automatically by the view transform, exactly as
      * it already is for every chunk-snapped terrain and world-item offset
      * in the engine, so there is nothing left for this method to
-     * double-apply. Stage 3 re-audits this against GridInstance's own
-     * recentering cadence to confirm the two can never desync by a frame.
+     * double-apply.
      *
      * The active world is likewise resolved once here and threaded through
      * to updateInstance() — every cell's render position is rebuilt from
@@ -322,7 +328,12 @@ class CloudRenderSystem extends SystemPackage {
      * the camera's own continuous motion inside that chunk is picked up
      * automatically by the view transform, exactly as it already is for
      * every chunk-snapped terrain and world-item offset in the engine, so
-     * there is nothing left for this method to double-apply.
+     * there is nothing left for this method to double-apply. The
+     * remaining source of that symptom — referenceChunkX/Z itself
+     * disagreeing with terrain's own activeChunkCoordinate for part of a
+     * frame — is fixed one level up, in
+     * WeatherManager.updateReferenceCoordinate(); see that method's own
+     * doc comment.
      *
      * The vertex shader receives that one resolved vec3 directly as
      * u_cloudInstancePosition and does no chunk-index math, no ivec2 split,
@@ -367,11 +378,12 @@ class CloudRenderSystem extends SystemPackage {
 
         MaterialInstance material = materialManager.cloneMaterial(EngineSetting.CLOUD_VOLUME_MATERIAL_NAME);
 
-        bakeArchetypeUniforms(material, cell.getCloudHandle());
+        bakeArchetypeUniforms(material, cell.getCloudHandle(), cell.getSizeVariance());
 
         // Stable for the cell's entire lifetime — baked once here rather
         // than refreshed alongside position/fade/intensity every frame.
         material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_RANDOM_SEED, cell.getRandomSeed());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_DOMAIN_ROTATION, cell.getDomainRotation());
 
         return modelManager.createModel(cloudMeshHandle, material);
     }
@@ -380,21 +392,28 @@ class CloudRenderSystem extends SystemPackage {
 
     /*
      * Bakes every archetype-level (never-per-instance) value off CloudData
-     * into this instance's own cloned MaterialInstance. Called exactly once,
-     * when a cell's ModelInstance is first created — see createInstance().
-     * Previously split into "legacy card-shader" and "volumetric/toon"
-     * groups while CloudVolumeShader.fsh still read both — that split is
-     * gone now that the legacy edgeSoftness/puffJitter knobs have been
-     * fully retired from CloudData (see CloudData's own doc comment):
-     * silhouetteSoftness and noiseWarpStrength now own 100% of this
-     * archetype's shape, exactly as originally anticipated when those two
-     * fields were first marked superseded.
+     * into this instance's own cloned MaterialInstance, PLUS this cell's
+     * own fixed sizeVariance (see OverheadCellStruct's own doc comment).
+     * Called exactly once, when a cell's ModelInstance is first created —
+     * see createInstance(). sizeVariance multiplies both scale and
+     * verticalThickness together rather than either alone, so an
+     * instance's proportions still read as its archetype (a Stratus stays
+     * flat and wide, a Nimbus stays tall and dense) — only its overall size
+     * varies, the way real clouds of one type are never all identically
+     * sized. Previously split into "legacy card-shader" and
+     * "volumetric/toon" groups while CloudVolumeShader.fsh still read both
+     * — that split is gone now that the legacy edgeSoftness/puffJitter
+     * knobs have been fully retired from CloudData (see CloudData's own
+     * doc comment): silhouetteSoftness and noiseWarpStrength now own 100%
+     * of this archetype's shape, exactly as originally anticipated when
+     * those two fields were first marked superseded.
      */
-    private void bakeArchetypeUniforms(MaterialInstance material, CloudHandle cloudHandle) {
+    private void bakeArchetypeUniforms(MaterialInstance material, CloudHandle cloudHandle, float sizeVariance) {
 
         material.setUniform(EngineSetting.UNIFORM_CLOUD_COLOR, cloudHandle.getCloudColor());
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_SCALE, cloudHandle.getScale());
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_VERTICAL_THICKNESS, cloudHandle.getVerticalThickness());
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_SCALE, cloudHandle.getScale() * sizeVariance);
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_VERTICAL_THICKNESS,
+                cloudHandle.getVerticalThickness() * sizeVariance);
         material.setUniform(EngineSetting.UNIFORM_CLOUD_DENSITY, cloudHandle.getDensity());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_TOP_COLOR, cloudHandle.getTopColor());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_TOON_BANDS, cloudHandle.getToonBands());

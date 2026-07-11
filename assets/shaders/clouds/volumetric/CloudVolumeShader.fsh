@@ -3,6 +3,7 @@
 in vec3  vWorldPos;
 in vec3  vNormal;
 in float vRandomSeed;
+in float vDomainRotation;
 in float vFadeAlpha;
 in float vIntensity;
 flat in vec3 vBoxMin;
@@ -32,7 +33,11 @@ layout(location = 2) out vec4 gMaterial;
  * responsible for clouds reading as boxes. u_cloudEdgeSoftness and
  * u_cloudPuffJitter have been retired along with it — silhouetteSoftness
  * now drives both the density-threshold blur and the box-relative taper
- * that used to be split across those two legacy knobs.
+ * that used to be split across those two legacy knobs. vDomainRotation
+ * (see VolumetricCloudUtility.glsl's "Shape diversity fix") is the newest
+ * addition to that same density field — a stable per-instance angle that
+ * gives every cloud its own elongation direction instead of every
+ * instance of one CloudType sharing an identical silhouette character.
  *
  * CAMERA POSITION FIX: rayDir/camDist previously differenced vWorldPos
  * against u_cameraPosition directly. vWorldPos is expressed in the
@@ -112,7 +117,7 @@ void main() {
             p, vBoxMin, vBoxMax, heightT,
             u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
             u_cloudCoverageBias, u_cloudSilhouetteSoftness,
-            vRandomSeed, u_time);
+            vRandomSeed, u_time, vDomainRotation);
         float density = rawDensity * u_cloudDensity * intensityFactor;
 
         if (density > 0.01) {
@@ -120,7 +125,7 @@ void main() {
                 p + lightDir * CLOUD_LIGHT_TAP_DISTANCE, vBoxMin, vBoxMax, heightT,
                 u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
                 u_cloudCoverageBias, u_cloudSilhouetteSoftness,
-                vRandomSeed, u_time);
+                vRandomSeed, u_time, vDomainRotation);
             float litDensity = rawLit * u_cloudDensity * intensityFactor;
 
             float lightLift = clamp((density - litDensity) * 2.0 + 0.5, 0.0, 1.0);
