@@ -19,8 +19,8 @@
  * a reason to model a raymarch layer thickness. The two now share only
  * the same CPU-side weather data (WeatherHandle/CloudHandle) and the same
  * low-level noise primitives (NoiseUtility.glsl) — never the same shading
- * function. See sky/util/SkyCloudUtility.glsl (landing in the next stage)
- * for the sky dome's own, independent copy of this idea.
+ * function. See sky/util/SkyCloudUtility.glsl for the sky dome's own,
+ * independent copy of this idea.
  *
  * Silhouette fix
  * --------------
@@ -39,6 +39,37 @@
  * rather than the box itself. Vertical shape is untouched — heightGradient()
  * already gives clouds a flat-ish base and eroding top, which is correct
  * cloud behavior and was never the source of the boxy look.
+ *
+ * Domain scale fix
+ * -----------------
+ * sampleVolumetricCloudDensity() previously fed the noise functions a
+ * coordinate built directly from RAW WORLD POSITION — worldPos * noiseScale
+ * — with worldPos routinely tens to well over a hundred units in
+ * magnitude (a cloud instance's own XZ scale, per CloudBuilder, is
+ * anywhere from ~48 to ~130 blocks; its Y position carries the full world
+ * altitude on top of that, ~90-220). gradientNoise3D/worleyNoise3D both
+ * key off ONE WORLD UNIT PER LATTICE CELL, so a noiseScale in the
+ * 0.6-1.4 range (CloudData's actual authored values) applied directly to
+ * that raw position put 50-150+ noise lattice cells across a SINGLE
+ * cloud — far beyond anything these functions can represent as a smooth
+ * billow. The result reads as fine, chaotic grain, and any two cloud
+ * instances — or the same instance from one frame to the next as it
+ * drifts — sample what is statistically indistinguishable from
+ * independent noise, which is exactly why every cloud ends up reading as
+ * the same featureless "blob": there is no large-scale structure left for
+ * a viewer to recognize as billowing shape.
+ *
+ * silhouetteMask() below never had this problem — it already normalizes
+ * worldPos against the instance's own boxMin/boxMax before sampling.
+ * sampleVolumetricCloudDensity() now follows that same established
+ * pattern: worldPos is recentered on the box and divided by the box's own
+ * size before noiseScale is applied, so a noiseScale of 1.0 means the
+ * same thing — a small, fixed number of billow cycles across the WHOLE
+ * cloud, via CLOUD_NOISE_BILLOW_CYCLES below — regardless of whether
+ * CloudData.scale says 48 or 130. This is also what makes warpStrength
+ * (0.3-0.85 in every shipped archetype) actually do something — against
+ * the old raw-world-scale coordinate, an offset that small was never more
+ * than a rounding error.
  */
 
 // Fixed internal contrast boost blended into the base fbm/worley mix.
@@ -46,6 +77,15 @@
 // doc comment for why that field was retired rather than kept as a
 // second detail-texture control alongside silhouetteSoftness.
 const float DETAIL_CONTRAST = 0.5;
+
+// How many billow cycles a densityNoiseScale of 1.0 (CloudBuilder's own
+// default) spans across a cloud instance's FULL local extent (-0.5 to 0.5
+// once normalized by box size — see this file's own "Domain scale fix"
+// doc comment above). Purely a "how busy does the shape look" authoring
+// knob now that the coordinate feeding the noise is properly normalized —
+// tuned so a single cloud reads as a handful of connected billows rather
+// than either one flat blob (too low) or fine static-like grain (too high).
+const float CLOUD_NOISE_BILLOW_CYCLES = 6.0;
 
 // Cheap two-axis domain warp — offsets a sample position using a second,
 // decorrelated noise field scaled by `strength`. Only X/Z are warped —
@@ -120,7 +160,9 @@ float silhouetteMask(vec3 worldPos, vec3 boxMin, vec3 boxMax, float silhouetteSo
  * imperceptible internal drift so a stationary cloud still isn't
  * perfectly static. heightT drives both the horizontal stretch and the
  * vertical heightGradient() falloff — see heightGradient()'s own doc
- * comment.
+ * comment. worldPos is recentered on the box and normalized by its own
+ * size before any of that — see this file's "Domain scale fix" doc
+ * comment above.
  */
 float sampleVolumetricCloudDensity(
     vec3 worldPos,
@@ -140,9 +182,18 @@ float sampleVolumetricCloudDensity(
     // per-archetype "cloud type" switch.
     float stretch = mix(1.0, 2.4, clamp(heightT, 0.0, 1.0));
 
+    // Recenter on the box and normalize by its own size — see the class
+    // comment's "Domain scale fix". localPos sits roughly in [-0.5, 0.5]
+    // along each axis regardless of the archetype's absolute scale, which
+    // is what makes CLOUD_NOISE_BILLOW_CYCLES/noiseScale mean the same
+    // thing for every cloud type.
+    vec3 boxSize = max(boxMax - boxMin, vec3(0.0001));
+    vec3 localPos = (worldPos - (boxMin + boxMax) * 0.5) / boxSize;
+
     vec3 seedOffset = vec3(seed * 173.13, seed * 57.31, seed * 91.7);
-    vec3 stretchedPos = worldPos * vec3(1.0 / stretch, 1.0, 1.0 / stretch);
-    vec3 coord = stretchedPos * noiseScale + seedOffset + vec3(0.0, 0.0, timeSeconds * 0.003);
+    vec3 stretchedPos = localPos * vec3(1.0 / stretch, 1.0, 1.0 / stretch);
+    vec3 coord = stretchedPos * (noiseScale * CLOUD_NOISE_BILLOW_CYCLES)
+    + seedOffset + vec3(0.0, 0.0, timeSeconds * 0.015);
 
     vec3 warped = warpCloudDomain(coord, warpStrength, seedOffset);
 

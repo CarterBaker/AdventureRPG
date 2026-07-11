@@ -412,6 +412,34 @@ public class EngineSetting {
         public static final float CLOUD_DEFAULT_SKY_COLOR_G = 1.0f;
         public static final float CLOUD_DEFAULT_SKY_COLOR_B = 1.0f;
 
+        // Cloud Fallbacks — Directional Sky Sampling \\
+        //
+        // Used by RegionSampleBranch when a direction's/zenith's primary
+        // weather defines no cloud entry at all (a Clear weather — see
+        // WeatherHandle.hasClouds()). Mirror CloudBuilder's own per-field
+        // JSON defaults exactly, so "no cloud resolved" reads as a neutral,
+        // generic cloud rather than an arbitrary/inconsistent placeholder —
+        // harmless in practice since cloudCoverage is near zero whenever
+        // these are actually read, but keeping them numerically consistent
+        // with a real archetype's defaults avoids a discontinuity if
+        // coverage briefly rises before a fresh cloud choice resolves.
+        public static final float CLOUD_DEFAULT_DENSITY = 0.8f;
+        public static final float CLOUD_DEFAULT_SHADOW_COLOR_R = 0.6f;
+        public static final float CLOUD_DEFAULT_SHADOW_COLOR_G = 0.63f;
+        public static final float CLOUD_DEFAULT_SHADOW_COLOR_B = 0.7f;
+        public static final float CLOUD_DEFAULT_SHADE_STRENGTH = 0.5f;
+        public static final float CLOUD_DEFAULT_RIM_LIGHT_STRENGTH = 0.35f;
+        public static final float CLOUD_DEFAULT_AMBIENT_OCCLUSION_STRENGTH = 0.4f;
+        public static final float CLOUD_DEFAULT_BRIGHTNESS_MULTIPLIER = 1.0f;
+        public static final float CLOUD_DEFAULT_TOON_BANDS = 3.0f;
+        public static final float CLOUD_DEFAULT_DENSITY_NOISE_SCALE = 1.0f;
+        public static final float CLOUD_DEFAULT_NOISE_WARP_STRENGTH = 0.6f;
+        public static final float CLOUD_DEFAULT_COVERAGE_BIAS = 0.5f;
+        public static final float CLOUD_DEFAULT_SILHOUETTE_SOFTNESS = 0.08f;
+        public static final float CLOUD_DEFAULT_SKY_TOP_COLOR_R = 1.0f;
+        public static final float CLOUD_DEFAULT_SKY_TOP_COLOR_G = 1.0f;
+        public static final float CLOUD_DEFAULT_SKY_TOP_COLOR_B = 1.0f;
+
         // Weather \\
 
         public static final String WEATHER_DATA_UBO = "WeatherData";

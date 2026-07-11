@@ -393,6 +393,18 @@ class RegionSampleBranch extends BranchPackage {
      * carried through sampling), available via
      * WeatherManager.getHumidity()/getVisibility(). temperatureModifier is
      * blended the same way and read by TemperatureBranch.
+     *
+     * Every field describing the resolved cloud's actual shape/shading
+     * (color, topColor, shadowColor, density, shadeStrength,
+     * rimLightStrength, ambientOcclusionStrength, brightnessMultiplier,
+     * toonBands, densityNoiseScale, noiseWarpStrength, coverageBias,
+     * silhouetteSoftness) is now blended here too, from each side's own
+     * primary cloud archetype — this is the full CloudData surface, not
+     * just a single representative tint, so the sky dome (Clouds.glsl) can
+     * finally render each direction with its actual archetype's real shape
+     * and lighting character instead of a fixed constant shared by every
+     * direction and every weather. See resolveCloudXxx()'s own doc comment
+     * for the Clear-weather (no cloud) fallback path.
      */
     private void writeSample(
             WeatherSampleStruct sample,
@@ -418,19 +430,50 @@ class RegionSampleBranch extends BranchPackage {
                 lerp(resolveCloudColorR(lowCloud), resolveCloudColorR(highCloud), t),
                 lerp(resolveCloudColorG(lowCloud), resolveCloudColorG(highCloud), t),
                 lerp(resolveCloudColorB(lowCloud), resolveCloudColorB(highCloud), t));
+
+        sample.setCloudTopColor(
+                lerp(resolveCloudTopColorR(lowCloud), resolveCloudTopColorR(highCloud), t),
+                lerp(resolveCloudTopColorG(lowCloud), resolveCloudTopColorG(highCloud), t),
+                lerp(resolveCloudTopColorB(lowCloud), resolveCloudTopColorB(highCloud), t));
+
+        sample.setCloudShadowColor(
+                lerp(resolveCloudShadowColorR(lowCloud), resolveCloudShadowColorR(highCloud), t),
+                lerp(resolveCloudShadowColorG(lowCloud), resolveCloudShadowColorG(highCloud), t),
+                lerp(resolveCloudShadowColorB(lowCloud), resolveCloudShadowColorB(highCloud), t));
+
+        sample.setCloudDensity(lerp(resolveCloudDensity(lowCloud), resolveCloudDensity(highCloud), t));
+        sample.setCloudShadeStrength(
+                lerp(resolveCloudShadeStrength(lowCloud), resolveCloudShadeStrength(highCloud), t));
+        sample.setCloudRimLightStrength(
+                lerp(resolveCloudRimLightStrength(lowCloud), resolveCloudRimLightStrength(highCloud), t));
+        sample.setCloudAmbientOcclusionStrength(lerp(
+                resolveCloudAmbientOcclusionStrength(lowCloud), resolveCloudAmbientOcclusionStrength(highCloud), t));
+        sample.setCloudBrightnessMultiplier(
+                lerp(resolveCloudBrightnessMultiplier(lowCloud), resolveCloudBrightnessMultiplier(highCloud), t));
+        sample.setCloudToonBands(lerp(resolveCloudToonBands(lowCloud), resolveCloudToonBands(highCloud), t));
+        sample.setCloudDensityNoiseScale(
+                lerp(resolveCloudDensityNoiseScale(lowCloud), resolveCloudDensityNoiseScale(highCloud), t));
+        sample.setCloudNoiseWarpStrength(
+                lerp(resolveCloudNoiseWarpStrength(lowCloud), resolveCloudNoiseWarpStrength(highCloud), t));
+        sample.setCloudCoverageBias(lerp(resolveCloudCoverageBias(lowCloud), resolveCloudCoverageBias(highCloud), t));
+        sample.setCloudSilhouetteSoftness(
+                lerp(resolveCloudSilhouetteSoftness(lowCloud), resolveCloudSilhouetteSoftness(highCloud), t));
     }
 
     // Cloud Fallback \\
 
     /*
-     * A weather with no clouds defined (e.g. Clear) resolves its cloud-
-     * specific sample fields to a neutral fallback here rather than
-     * throwing — the sky pass still needs an altitude/color value to blend
-     * toward even when one side of the band has nothing to actually draw.
-     * cloudCoverage itself already carries the real "how much sky is
+     * A weather with no clouds defined (e.g. Clear) resolves every one of
+     * these cloud-specific sample fields to a neutral fallback here rather
+     * than throwing — the sky pass still needs a full shading surface to
+     * blend toward even when one side of the band has nothing to actually
+     * draw. cloudCoverage itself already carries the real "how much sky is
      * covered" signal independent of these fallbacks, so a Clear weather
      * still reads as an empty sky regardless of what these placeholder
-     * values are.
+     * values are. Fallbacks mirror CloudBuilder's own JSON defaults (see
+     * EngineSetting's own doc comment on this constant block) so "no cloud
+     * resolved" reads as a generic, neutral cloud rather than an arbitrary
+     * placeholder.
      */
     private float resolveCloudAltitude(CloudChanceStruct cloud) {
         return cloud != null ? cloud.getEffectiveAltitude() : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;
@@ -446,6 +489,82 @@ class RegionSampleBranch extends BranchPackage {
 
     private float resolveCloudColorB(CloudChanceStruct cloud) {
         return cloud != null ? cloud.getCloudHandle().getCloudColor().z : EngineSetting.CLOUD_DEFAULT_SKY_COLOR_B;
+    }
+
+    private float resolveCloudTopColorR(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getTopColor().x : EngineSetting.CLOUD_DEFAULT_SKY_TOP_COLOR_R;
+    }
+
+    private float resolveCloudTopColorG(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getTopColor().y : EngineSetting.CLOUD_DEFAULT_SKY_TOP_COLOR_G;
+    }
+
+    private float resolveCloudTopColorB(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getTopColor().z : EngineSetting.CLOUD_DEFAULT_SKY_TOP_COLOR_B;
+    }
+
+    private float resolveCloudShadowColorR(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getShadowColor().x : EngineSetting.CLOUD_DEFAULT_SHADOW_COLOR_R;
+    }
+
+    private float resolveCloudShadowColorG(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getShadowColor().y : EngineSetting.CLOUD_DEFAULT_SHADOW_COLOR_G;
+    }
+
+    private float resolveCloudShadowColorB(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getShadowColor().z : EngineSetting.CLOUD_DEFAULT_SHADOW_COLOR_B;
+    }
+
+    private float resolveCloudDensity(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getDensity() : EngineSetting.CLOUD_DEFAULT_DENSITY;
+    }
+
+    private float resolveCloudShadeStrength(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getShadeStrength() : EngineSetting.CLOUD_DEFAULT_SHADE_STRENGTH;
+    }
+
+    private float resolveCloudRimLightStrength(CloudChanceStruct cloud) {
+        return cloud != null
+                ? cloud.getCloudHandle().getRimLightStrength()
+                : EngineSetting.CLOUD_DEFAULT_RIM_LIGHT_STRENGTH;
+    }
+
+    private float resolveCloudAmbientOcclusionStrength(CloudChanceStruct cloud) {
+        return cloud != null
+                ? cloud.getCloudHandle().getAmbientOcclusionStrength()
+                : EngineSetting.CLOUD_DEFAULT_AMBIENT_OCCLUSION_STRENGTH;
+    }
+
+    private float resolveCloudBrightnessMultiplier(CloudChanceStruct cloud) {
+        return cloud != null
+                ? cloud.getCloudHandle().getBrightnessMultiplier()
+                : EngineSetting.CLOUD_DEFAULT_BRIGHTNESS_MULTIPLIER;
+    }
+
+    private float resolveCloudToonBands(CloudChanceStruct cloud) {
+        return cloud != null ? (float) cloud.getCloudHandle().getToonBands() : EngineSetting.CLOUD_DEFAULT_TOON_BANDS;
+    }
+
+    private float resolveCloudDensityNoiseScale(CloudChanceStruct cloud) {
+        return cloud != null
+                ? cloud.getCloudHandle().getDensityNoiseScale()
+                : EngineSetting.CLOUD_DEFAULT_DENSITY_NOISE_SCALE;
+    }
+
+    private float resolveCloudNoiseWarpStrength(CloudChanceStruct cloud) {
+        return cloud != null
+                ? cloud.getCloudHandle().getNoiseWarpStrength()
+                : EngineSetting.CLOUD_DEFAULT_NOISE_WARP_STRENGTH;
+    }
+
+    private float resolveCloudCoverageBias(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getCoverageBias() : EngineSetting.CLOUD_DEFAULT_COVERAGE_BIAS;
+    }
+
+    private float resolveCloudSilhouetteSoftness(CloudChanceStruct cloud) {
+        return cloud != null
+                ? cloud.getCloudHandle().getSilhouetteSoftness()
+                : EngineSetting.CLOUD_DEFAULT_SILHOUETTE_SOFTNESS;
     }
 
     private float lerp(float a, float b, float t) {
