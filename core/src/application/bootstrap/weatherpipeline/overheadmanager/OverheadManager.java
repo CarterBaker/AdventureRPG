@@ -41,6 +41,9 @@ public class OverheadManager extends ManagerPackage {
      * is what stops a clear patch from being re-attempted every single
      * scan cycle. CloudRenderSystem skips these cells outright when
      * rebuilding its instance buffers — see OverheadCellStruct.hasCloud().
+     * The same "no cloud drawn" outcome now also happens for a weather
+     * that DOES define clouds but whose per-cell coverage roll misses —
+     * see streamInCell()'s own doc comment.
      *
      * Streaming is split into four passes:
      *
@@ -99,10 +102,23 @@ public class OverheadManager extends ManagerPackage {
      * wind drift — never re-centered or wrapped mid-life. Retirement is
      * checked against the cell's home distance from the player, not its
      * drifted position, so a strong gust can't retroactively "un-retire" a
-     * cell that's already fading out. Cells whose home chunk falls outside
-     * the active world's own bounds (derived from the world PNG's pixel
-     * dimensions — see WorldBuilder) are simply never streamed in; this is
-     * a bounded world, not a wrapping one, for cloud placement purposes.
+     * cell that's already fading out — distance itself is measured the same
+     * toroidal way a fresh cell's home chunk is resolved (see
+     * wrapChunkCoordinate() and wrappedDelta()), so a cell that streamed in
+     * by wrapping around one edge of the map never misreads as being on the
+     * opposite side of the world from the player. A cell's home chunk is
+     * always wrapped into the active world's own bounds (derived from the
+     * world PNG's pixel dimensions — see WorldBuilder) rather than
+     * rejected — this world is a torus for cloud placement purposes,
+     * exactly like GlobalNoiseBranch and RegionSampleBranch already treat
+     * it for weather noise sampling. Previously, any candidate offset that
+     * pushed a cell's home chunk outside [0, worldWidth) x [0, worldHeight)
+     * was silently skipped instead of wrapped — which meant any offset
+     * carrying so much as one negative axis near the world's chunk-space
+     * origin was permanently unstreamable. Visually, the overhead cloud
+     * grid could only ever grow toward positive X/Z from wherever the
+     * player happened to start, never the other way, which is what read as
+     * "the cloud grid only exists in one corner of the map."
      *
      * Streaming radius is whichever is smaller of the player's configured
      * render distance (Settings.maxRenderDistance) and
@@ -274,14 +290,24 @@ public class OverheadManager extends ManagerPackage {
             int homeChunkX = cellX * cellSizeChunks + cellSizeChunks / 2;
             int homeChunkZ = cellZ * cellSizeChunks + cellSizeChunks / 2;
 
-            if (!isWithinWorldBounds(homeChunkX, homeChunkZ))
-                continue;
+            long wrappedHome = wrapChunkCoordinate(homeChunkX, homeChunkZ);
+            int wrappedHomeChunkX = Coordinate2Long.unpackX(wrappedHome);
+            int wrappedHomeChunkZ = Coordinate2Long.unpackY(wrappedHome);
 
-            streamInCell(cellKey, homeChunkX, homeChunkZ);
+            streamInCell(cellKey, wrappedHomeChunkX, wrappedHomeChunkZ);
             streamed++;
         }
     }
 
+    /*
+     * Clear (or otherwise cloudless) cells still exist in OverheadManager's
+     * registry so their patch of weather stays trackable — see
+     * OverheadManager's own doc comment — but there is nothing to render
+     * here, and no ModelInstance is ever created for one. A cell's cloud
+     * choice is fixed for its entire lifetime (see OverheadCellStruct), so
+     * once an instance exists its archetype-level uniforms never need
+     * re-baking — only position/fade/intensity are refreshed below.
+     */
     private void streamInCell(long cellKey, int homeChunkX, int homeChunkZ) {
 
         long chunkCoordinate = Coordinate2Long.pack(homeChunkX, homeChunkZ);
@@ -296,14 +322,36 @@ public class OverheadManager extends ManagerPackage {
         // advanceIntensity()'s recompute call site permanently in
         // agreement, rather than silently diverging later.
         float intensity = resolveCellIntensity(bandScratch, weatherHandle);
+
+        // Coverage gate — decides whether THIS cell's patch of sky
+        // actually holds a cloud at all, independently of which cloud
+        // type it would pick if it does. Previously every cell whose
+        // weather defined any cloud entries streamed in with a visible
+        // cloud (most weathers give at least one entry a 100% relative
+        // chance, so nearly every cell — sunny, stormy, or anything in
+        // between — ended up drawing one), which is what read as a solid
+        // grid of boxes regardless of how overcast the weather actually
+        // was. cloudCoverage is the value every weather already defines
+        // for exactly this purpose (see WeatherData/WeatherHandle) but
+        // this streaming pass never actually consulted it — a 0.15
+        // Sunny sky now leaves roughly 85% of its cells genuinely bare, a
+        // 0.9 Stormy sky leaves roughly 90% of its cells covered, and a
+        // Clear sky (cloudCoverage 0.0, no cloud entries besides) stays
+        // exactly as bare as it always was. This roll is independent of
+        // cloudPickNoise below so "covered or not" and "which cloud type"
+        // never correlate with each other.
+        float coveragePickNoise = hash01(cellKey ^ 0xA24BAED4963EE407L);
+        boolean coveredByCloud = weatherHandle.hasClouds()
+                && coveragePickNoise < weatherHandle.getCloudCoverage();
+
         float cloudPickNoise = hash01(cellKey);
-        CloudChanceStruct cloudEntry = weatherHandle.pickCloud(cloudPickNoise);
+        CloudChanceStruct cloudEntry = coveredByCloud ? weatherHandle.pickCloud(cloudPickNoise) : null;
         float randomSeed = hash01(cellKey ^ 0x9E3779B97F4A7C15L);
 
-        // A Clear (or otherwise cloudless) weather resolves to a null
-        // cloud entry — the cell still streams in and carries its
-        // WeatherHandle identity, it simply has nothing to draw. See the
-        // class doc comment.
+        // A Clear weather, a weather whose coverage roll missed, or any
+        // other cloudless resolution all land here identically — the cell
+        // still streams in and carries its WeatherHandle identity, it
+        // simply has nothing to draw. See the class doc comment.
         CloudHandle cloudHandle = cloudEntry != null ? cloudEntry.getCloudHandle() : null;
         float effectiveAltitude = cloudEntry != null
                 ? cloudEntry.getEffectiveAltitude()
@@ -323,14 +371,26 @@ public class OverheadManager extends ManagerPackage {
         activeCells.put(cellKey, cell);
     }
 
-    private boolean isWithinWorldBounds(int chunkX, int chunkZ) {
+    /*
+     * Wraps a chunk coordinate into the active world's own bounds — the
+     * same toroidal treatment GlobalNoiseBranch and RegionSampleBranch
+     * already give the weather noise field itself (see their own doc
+     * comments on why the world is a torus for weather purposes). World
+     * scale is stored in BLOCKS (see WorldBuilder.calculateWorldScale()),
+     * so it is converted to chunk units before wrapping — the same
+     * conversion this class already performed when this method used to be
+     * a bounds check instead of a wrap.
+     */
+    private long wrapChunkCoordinate(int chunkX, int chunkZ) {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
-        return chunkX >= 0 && chunkX < worldWidthChunks
-                && chunkZ >= 0 && chunkZ < worldHeightChunks;
+        int wrappedX = Math.floorMod(chunkX, worldWidthChunks);
+        int wrappedZ = Math.floorMod(chunkZ, worldHeightChunks);
+
+        return Coordinate2Long.pack(wrappedX, wrappedZ);
     }
 
     // Wind Drift \\
@@ -531,10 +591,19 @@ public class OverheadManager extends ManagerPackage {
         float deltaTime = internal.getDeltaTime();
         LongArrayList toRemove = null;
 
+        // Same toroidal world dimensions wrapChunkCoordinate() wraps a
+        // fresh cell's home chunk into — a cell streamed in across the
+        // wrap seam must be measured against the player the same way, or
+        // it reads as being on the far side of the map the instant it
+        // spawns and immediately retires itself again. See wrappedDelta().
+        WorldHandle activeWorld = worldManager.getActiveWorld();
+        int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
+        int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
+
         for (OverheadCellStruct cell : activeCells.values()) {
 
-            double dx = cell.getHomeChunkX() - playerChunkX;
-            double dz = cell.getHomeChunkZ() - playerChunkZ;
+            double dx = wrappedDelta(cell.getHomeChunkX(), playerChunkX, worldWidthChunks);
+            double dz = wrappedDelta(cell.getHomeChunkZ(), playerChunkZ, worldHeightChunks);
             double distChunks = Math.sqrt(dx * dx + dz * dz);
 
             if (distChunks > radiusChunks && !cell.isRetiring())
@@ -561,6 +630,27 @@ public class OverheadManager extends ManagerPackage {
         if (toRemove != null)
             for (int i = 0; i < toRemove.size(); i++)
                 activeCells.remove(toRemove.getLong(i));
+    }
+
+    /*
+     * Shortest signed distance from b to a around a torus of the given
+     * period, in the range (-period/2, period/2]. Plain a - b is only
+     * correct while neither coordinate has wrapped around the world edge
+     * relative to the other; once one has, that raw difference reads as
+     * nearly a full world-width away even though the two points are
+     * physically close together across the seam — which would make a
+     * freshly wrapped-in cell (see wrapChunkCoordinate()) read as instantly
+     * out of range and retire itself the moment it streamed in.
+     */
+    private static double wrappedDelta(double a, double b, double period) {
+
+        if (period <= 0)
+            return a - b;
+
+        double delta = a - b;
+        double halfPeriod = period * 0.5;
+
+        return ((delta + halfPeriod) % period + period) % period - halfPeriod;
     }
 
     // Noise \\
