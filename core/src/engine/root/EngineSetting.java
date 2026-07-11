@@ -207,15 +207,6 @@ public class EngineSetting {
 
         // Rendering \\
 
-        // Raised from 4096 — at moderate/large render distances, terrain alone
-        // (pushed to the queue before weather, every frame — see
-        // WorldPipeline/WeatherPipeline creation order) could approach the old
-        // ceiling. RenderSystem.pushRenderCall() silently drops anything
-        // submitted once the ring buffer is full — no error, nothing drawn —
-        // so an exhausted buffer looks EXACTLY like "clouds never render",
-        // when the true cause is terrain alone eating the whole budget before
-        // CloudRenderSystem ever gets a turn this frame. Cheap to raise —
-        // RenderQueueHandle preallocates RenderCallStruct[], negligible memory.
         public static final int MAX_RENDER_CALLS_PER_FRAME = 16384;
 
         // Shader Pipeline \\
@@ -345,18 +336,6 @@ public class EngineSetting {
         public static final float DEFAULT_GRAVITY_X = 0.0f;
         public static final float DEFAULT_GRAVITY_Y = -1.0f;
         public static final float DEFAULT_GRAVITY_Z = 0.0f;
-        // Sole consumer: GlobalNoiseBranch.advanceRotation(), which drives only
-        // the global weather-noise field's slow east-west scroll (see that
-        // class's own doc comment) — never any visual day/night rotation,
-        // which is calendar-timed instead (see CalendarPipeline). Previously
-        // 0.3 (a full 360-degree sweep of the weather noise every 20 real-
-        // world minutes), which read as weather fronts racing across the
-        // entire planet. Slowed by roughly two orders of magnitude — at
-        // 0.0025 deg/sec a full sweep takes 144,000 real seconds (40 hours).
-        // The world being only 1/20th Earth's physical scale is exactly why
-        // this needs to stay this slow: large-scale planetary weather
-        // circulation should feel glacial even though every other distance
-        // in this world is compressed.
         public static final float DEFAULT_WORLD_ROTATION_SPEED = 0.0025f;
         public static final float DEFAULT_AXIAL_TILT_DEGREES = 23.5f;
 
@@ -371,22 +350,6 @@ public class EngineSetting {
         public static final float SKY_ALTITUDE_POWER = 1.2f;
 
         // Cloud Volume \\
-        //
-        // Reserved for the volumetric/toon raymarch rework and the sky<->world
-        // transition that consumes it (see CloudVolumeShader, Clouds.glsl, and
-        // CloudSettingsData's own doc comment). CLOUD_VOLUME_FADE_START_RATIO is
-        // the fraction of the near streaming radius (the lesser of the player's
-        // configured render distance and WEATHER_NEAR_RANGE_CHUNKS, converted to
-        // world units as u_cloudHorizonDistance — see
-        // CloudRenderSystem.pushCloudSettings()) at which real cloud objects
-        // begin fading in / the sky dome begins suppressing its own
-        // representation in that direction — consumed by u_cloudTransitionStart,
-        // computed once in CloudRenderSystem.pushCloudSettings(). The altitude/
-        // extent and raymarch step-count pairs are sized for a per-instance
-        // bounding-volume raymarch (one box per cloud instance draw, not one
-        // giant sky-spanning volume) and a near/far quality tier split, mirroring
-        // StandardSurfaceShader's own distance-tiered shading. None of this is
-        // consumed by shading logic yet.
 
         public static final float CLOUD_VOLUME_BASE_ALTITUDE = 140f;
         public static final float CLOUD_VOLUME_TOP_ALTITUDE = 220f;
@@ -395,13 +358,6 @@ public class EngineSetting {
         public static final int CLOUD_VOLUME_RAYMARCH_STEPS_NEAR = 48;
         public static final int CLOUD_VOLUME_RAYMARCH_STEPS_FAR = 16;
         public static final float CLOUD_VOLUME_TIER_NEAR_DISTANCE = 128f;
-        // Safety clamp — u_cloudHorizonDistance (see
-        // CloudRenderSystem.pushCloudSettings()) must never be pushed out past
-        // a safe fraction of CAMERA_FAR_PLANE. Without this, a large configured
-        // render distance can place the cloud streaming/fade horizon beyond the
-        // camera's own far clip plane, which silently clips every cloud object
-        // before it is ever drawn — visually indistinguishable from "overhead
-        // clouds are not rendering at all".
         public static final float CLOUD_HORIZON_FAR_PLANE_SAFETY_MARGIN = 0.85f;
         public static final String CLOUD_VOLUME_MESH_NAME = "clouds/CloudVolumeMesh";
         public static final String CLOUD_VOLUME_MATERIAL_NAME = "clouds/CloudVolumeMaterial";
@@ -410,16 +366,6 @@ public class EngineSetting {
 
         public static final String CLOUD_CARD_MESH_NAME = "clouds/CloudCardMesh";
         public static final String CLOUD_INSTANCED_MATERIAL_TEMPLATE = "clouds/CloudInstancedMaterial";
-        // Default world-space diameter, IN BLOCKS, applied to a cloud
-        // archetype's unit-cube volume mesh when its JSON omits "scale" — see
-        // CloudBuilder.build(). CloudVolumeMesh is a literal 1x1x1 unit cube
-        // (see CloudVolumeMesh.json / CloudVolumeShader.vsh), and u_cloudScale
-        // multiplies it directly with no other implicit base size — so this
-        // constant, and every archetype's own "scale" field, IS the cloud's
-        // full XZ width in blocks, not a small unitless multiplier. Getting
-        // this wrong (previously every archetype specified scale 1.0-3.0, a
-        // 1-3 BLOCK wide cloud) is what made every cloud object render as an
-        // imperceptible speck rather than a visible cloud.
         public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 48.0f;
         public static final String UNIFORM_CLOUD_COLOR = "u_cloudColor";
         public static final String UNIFORM_CLOUD_SCALE = "u_cloudScale";
@@ -439,12 +385,8 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_AMBIENT_OCCLUSION_STRENGTH = "u_cloudAmbientOcclusionStrength";
         public static final String UNIFORM_CLOUD_BRIGHTNESS_MULTIPLIER = "u_cloudBrightnessMultiplier";
 
-        // Cloud Instance Uniforms — per-cloud-object state, pushed fresh every
-        // frame by CloudRenderSystem onto that instance's own cloned
-        // MaterialInstance (see CloudRenderSystem.updateInstance()). Clouds
-        // draw through the same generic ModelInstance/MaterialInstance path
-        // terrain uses — no per-instance vertex attributes or shared instance
-        // VBO anymore, so these arrive as ordinary uniforms instead.
+        // Cloud Instance Uniforms \\
+
         public static final String UNIFORM_CLOUD_INSTANCE_CHUNK = "u_cloudInstanceChunk";
         public static final String UNIFORM_CLOUD_INSTANCE_LOCAL = "u_cloudInstanceLocal";
         public static final String UNIFORM_CLOUD_INSTANCE_RANDOM_SEED = "u_cloudInstanceRandomSeed";
@@ -459,11 +401,6 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_TRANSITION_START = "u_cloudTransitionStart";
         public static final float CLOUD_HORIZON_MIN_SCALE = 0.35f;
         public static final float CLOUD_HORIZON_MAX_SCALE = 1.0f;
-        // Scales the render-distance-derived cloud horizon (see
-        // CloudRenderSystem.pushCloudSettings()) — 1.0 places the horizon
-        // exactly at the edge of rendered terrain; lower values pull real
-        // cloud objects' fade-out in from that edge, e.g. to keep them clear
-        // of any far-plane fog pop.
         public static final float CLOUD_HORIZON_RENDER_DISTANCE_SCALE = 1.0f;
         public static final float CLOUD_DEFAULT_SKY_ALTITUDE = 140.0f;
         public static final float CLOUD_DEFAULT_SKY_COLOR_R = 1.0f;
@@ -484,37 +421,12 @@ public class EngineSetting {
         public static final float DEFAULT_WEATHER_VISIBILITY = 1.0f;
 
         // Weather Sampling Ranges \\
-        //
-        // WEATHER_FAR_RANGE_CHUNKS bounds the sky-dome-only 8-direction
-        // sampling (see RegionSampleBranch) — the sky is explicitly allowed
-        // to represent weather far beyond the edge of actually-rendered
-        // terrain. WEATHER_NEAR_RANGE_CHUNKS is a design-intent CAP on real,
-        // world-space cloud objects; the actual runtime radius those objects
-        // stream and fade within is whichever is smaller of this and the
-        // player's own configured render distance (Settings.maxRenderDistance)
-        // — see OverheadManager and CloudRenderSystem.pushCloudSettings() —
-        // so a real cloud object is never rendered over ground that was
-        // never drawn.
 
         public static final int WEATHER_NEAR_RANGE_CHUNKS = 192;
         public static final int WEATHER_FAR_RANGE_CHUNKS = 384;
 
         // Weather Sampling Smoothing \\
-        //
-        // Every value RegionSampleBranch resolves — the centre sample and
-        // all eight compass directions — is exposed to the rest of the
-        // engine (the WeatherData/WeatherRegionData UBOs, wind, temperature)
-        // only after passing through an exponential smoothing filter (see
-        // RegionSampleBranch.advanceSmoothing()), never as the raw
-        // resolution directly. Raw resolution can still change abruptly
-        // frame to frame — a noise value crossing a chance-band boundary, a
-        // biome/season pool swap, the sky dome's own daily cloud reseed —
-        // this constant is what keeps every visible or gameplay-facing
-        // consequence of those jumps arriving as a smooth multi-second
-        // glide instead of an instant snap. Expressed as a time constant
-        // (seconds to close ~63% of the remaining gap to the new target)
-        // rather than a flat per-frame blend factor, so the glide rate is
-        // identical regardless of frame rate.
+
         public static final float WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS = 9.0f;
 
         // Global Weather Noise \\
@@ -528,56 +440,16 @@ public class EngineSetting {
         public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
 
         // Overhead \\
-        //
-        // OVERHEAD_CELL_SIZE is in CHUNKS. This must stay comfortably smaller
-        // than any realistic Settings.maxRenderDistance: a cell only ever
-        // streams in once its fixed home CENTER — cellIndex * OVERHEAD_CELL_SIZE
-        // + half a cell — falls within the streaming radius of the player
-        // (min(maxRenderDistance, WEATHER_NEAR_RANGE_CHUNKS) — see
-        // OverheadManager.advanceFadesAndRetire()). At the previous value of
-        // 64 chunks, a cell's nearest possible home center sat tens of chunks
-        // away from any player position — farther than every ordinary render
-        // distance (8-32 chunks) — so that distance check could never pass:
-        // OverheadManager.activeCells stayed permanently empty and no overhead
-        // cloud ever streamed in, regardless of what the weather simulation
-        // resolved. 4 chunks (64 blocks) keeps several cells within range even
-        // at short render distances, so cover reads as a field of individual
-        // systems rather than one giant, never-streamed slab.
+
         public static final int OVERHEAD_CELL_SIZE = 4;
-        // Raised alongside the cell-size fix above — a typical render distance
-        // now covers dozens of cells instead of zero, so the initial stream-in
-        // needs a bigger per-frame budget to fill in within a second or two of
-        // world load rather than trickling in over many seconds.
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 8;
         public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.35f;
 
         // Weather Cell Lifecycle \\
-        //
-        // How often, in real seconds, an already-streamed-in overhead cell
-        // re-checks whether the weather at its own fixed home coordinate has
-        // actually changed (see OverheadManager.advanceWeatherReevaluation()).
-        // Each cell's own interval is jittered somewhere within this range,
-        // derived from its cellKey and never re-randomized, so cells never
-        // all recheck in the same frame. Deliberately slow — a physical cloud
-        // should read as a persistent weather system that can take minutes to
-        // form or dissipate, never as noise flickering between cloud types.
+
         public static final float WEATHER_CELL_REEVALUATION_INTERVAL_MIN_SECONDS = 45.0f;
         public static final float WEATHER_CELL_REEVALUATION_INTERVAL_MAX_SECONDS = 90.0f;
-
-        // Fast, shared cadence (deliberately NOT jittered per-cell like the
-        // reevaluation interval above) on which every active overhead cell's
-        // live weather intensity is recomputed — see
-        // OverheadManager.advanceIntensity() and OverheadCellStruct's own doc
-        // comment on why intensity and identity are deliberately decoupled:
-        // identity must never appear to change in a visible synchronized
-        // wave, but intensity is a continuous value safe to recompute for
-        // every active cell on the same tick.
         public static final float WEATHER_CELL_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
-
-        // Below this, a cell's live intensity is considered to have
-        // dissipated and the cell is retired through the normal fade-out
-        // path rather than allowed to silently revive from near-zero — see
-        // OverheadManager.advanceIntensity().
         public static final float WEATHER_CELL_DISSIPATION_INTENSITY_THRESHOLD = 0.05f;
 
         // Wind \\
@@ -591,6 +463,15 @@ public class EngineSetting {
         public static final float WIND_GUST_DIRECTION_WOBBLE_DEGREES = 8.0f;
         public static final float WIND_DIURNAL_PEAK_TIME = 0.65f;
         public static final float WIND_DIURNAL_STRENGTH = 0.25f;
+
+        // Wind Data (GPU) \\
+
+        public static final String WIND_DATA_UBO = "WindData";
+        public static final String UNIFORM_WIND_DIRECTION = "u_windDirection";
+        public static final String UNIFORM_WIND_SPEED = "u_windSpeed";
+        public static final String UNIFORM_WIND_DRIFT_OFFSET = "u_windDriftOffset";
+        public static final float SKY_WIND_DRIFT_SCALE = 0.15f;
+        public static final float SKY_WIND_DRIFT_WRAP = 100000.0f;
 
         // Temperature \\
 

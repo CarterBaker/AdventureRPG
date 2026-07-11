@@ -7,99 +7,70 @@
 #include "includes/SkyColorData.glsl"
 #include "includes/SunLightData.glsl"
 #include "includes/MoonLightData.glsl"
+#include "includes/WindData.glsl"
 #include "sky/util/CloudShapeUtility.glsl"
 
 /*
-* Sky-dome distant weather preview — v10 (relit + height-shaped raymarch;
- * see the Stage 1 note below). Builds on v9's procedural volumetric toon
- * raymarch (which itself replaced the old 2D circular-puff painter).
+* Sky-dome distant weather preview — v11 (corrected raymarch domain scale +
+ * real wind drift; see the notes below). Builds on v10's relit,
+ * height-shaped raymarch.
  *
  * What stayed the same
  * ---------------------
- * Everything about WHERE this file gets its weather data from is
- * untouched: the 8 compass-direction + centre sampling
- * (CompassSample / _compassSample / _sampleHorizonWeather /
- * sampleWeatherForSky), and the fact that every value read from
- * WeatherData/WeatherRegionData has already passed through
- * RegionSampleBranch's own temporal smoothing before it ever reaches
- * these uniforms — so a storm still visibly builds on the horizon in its
- * own direction, in the same colour and coverage RegionSampleBranch
- * already resolved for it, well before it reaches the player.
+ * The 8-compass-direction + centre sampling (CompassSample /
+ * _compassSample / _sampleHorizonWeather / sampleWeatherForSky), the fact
+ * that every value read from WeatherData/WeatherRegionData has already
+ * passed through RegionSampleBranch's own temporal smoothing, and the real
+ * sun/moon-lit shading via shadeCloudLit() are all untouched.
  *
- * Stage 1 — relit, height-shaped, and no longer artificially banded
- * --------------------------------------------------------------------
- * Three things changed here:
+ * v11 — domain scale fix + real wind
+ * -------------------------------------------------------------------
+ * Two problems, both responsible for the sky dome reading as a warped
+ * smear instead of distinct clouds:
  *
- * 1. Real lighting. This file previously had no access to sun/moon data
- *    at all and shaded every cloud sample with a fixed toon ramp — no
- *    light direction, no light color, nothing but the resolved weather's
- *    own flat color. It now includes SunLightData/MoonLightData, blends
- *    them into one direction/color/intensity exactly like
- *    CloudVolumeShader.fsh already did for physical clouds, takes a
- *    self-shadow density tap toward that direction each step, and shades
- *    with shadeCloudLit() (CloudShapeUtility.glsl) instead of the old
- *    shadeCloudToon(). The lit/shadow tints are now blended toward the
- *    sky's own zenith/horizon color (SkyColorData) rather than flat
- *    white/black, so the sky dome's clouds read as lit BY this sky
- *    rather than floating in front of it.
+ * 1. Domain scale. The raymarch samples density at `dir * radius`, where
+ *    `dir` sweeps the full unit sphere of view directions — so the entire
+ *    visible sky dome's noise-space footprint is bounded by
+ *    `radius * SKY_NOISE_SCALE`. The old radius (~22) gave a footprint of
+ *    only ~3.5 noise-space units for the WHOLE SKY — a couple of noise
+ *    cells, total — while SKY_WARP_STRENGTH (0.9) was then ~25% of that
+ *    tiny span, meaning the domain warp dominated the base shape rather
+ *    than subtly perturbing it. This is what read as "warped, not
+ *    clouds." SKY_LAYER_SCALE (and proportionally SKY_LAYER_THICKNESS and
+ *    SKY_LIGHT_TAP_DISTANCE) are raised ~8x here so the sky's noise
+ *    footprint is comparable, in proportion, to how CloudVolumeShader.fsh
+ *    samples its own physical box — the warp-to-base ratio is now the
+ *    same on both layers.
  *
- * 2. Height-shaped density. sampleCloudDensity() (CloudShapeUtility.glsl)
- *    now takes a heightT parameter and uses it to both stretch the
- *    sampling domain (thin/streaky higher up, compact/puffy lower down)
- *    and apply a vertical density gradient (a comparatively sharp flat
- *    base, a softer eroding top). Here, heightT is derived from the view
- *    ray's own elevation (dir.y) against a coverage-dependent ceiling, so
- *    an overcast/stormy sky can genuinely read as a deck reaching toward
- *    the zenith while a fair-weather sky stays thin and wispy up there —
- *    a property of the weather, not a fixed constant.
- *
- * 3. No more artificial vertical band. The old version multiplied every
- *    result by a fixed "verticalEnvelope" that hard-capped cloud
- *    existence to a narrow slice of sky (roughly 6-35 degrees above the
- *    horizon) regardless of what the weather actually resolved to. That
- *    read as clouds being physically restricted to one band, which isn't
- *    how clouds work. The only fade left is a thin sliver right at true
- *    horizon level (SKY_HORIZON_FADE_START/END below), there purely to
- *    hide the seam where the sky dome meets the rendered terrain
- *    skyline — everything above that is free to show cloud, and how much
- *    actually appears is left entirely to sampleCloudDensity()'s own
- *    height gradient and the resolved weather's coverage. A tall storm
- *    deck can now genuinely reach toward the zenith; a clear day reads as
- *    clear all the way up. This is the "just how the math works" behavior
- *    — convergence toward the horizon falls out of the density function,
- *    not a manual cutoff.
- *
- * The view-ray raymarch samples a pseudo-world position derived purely
- * from the view direction (dir * distance-along-ray + a slow wind-driven
- * scroll) — the sky dome has no true depth or world position of its own,
- * so this mirrors the old system's own approach of treating `dir` itself
- * as the noise domain coordinate, just marched through in 3D now instead
- * of sampled once on a flat blob grid.
+ * 2. Wind. This file previously faked its own scroll with a fixed
+ *    time-driven diagonal vector, with a comment flagging it as a
+ *    placeholder. It now reads the real WindData UBO — the exact same
+ *    live wind driving OverheadManager's physical cloud drift — via a
+ *    CPU-accumulated drift offset (see WindManager.advanceSkyDrift()), so
+ *    the sky preview and the physical layer always agree on which way
+ *    weather is moving.
  */
 
 // ── Sky-dome/local blend ────────────────────────────────────────────────
-// Still used only by sampleWeatherForSky() below, to blend the 8-compass
-// horizon read toward the player's own local weather sample as the view
-// ray tilts up toward the zenith — nothing to do with cloud existence.
 const float CLOUD_DIR_Y_HARD_LIMIT = 0.62;
 
 // ── Horizon seam fade ────────────────────────────────────────────────────
-// Purely cosmetic — hides the seam where the sky dome meets the rendered
-// terrain skyline. NOT a cloud-existence cutoff; see the class comment.
 const float SKY_HORIZON_FADE_START = -0.02;
 const float SKY_HORIZON_FADE_END   = 0.06;
 
 // ── Raymarch tuning ──────────────────────────────────────────────────────
-const float SKY_LAYER_SCALE        = 22.0;  // maps view direction into the density field's coordinate space
-const float SKY_LAYER_THICKNESS    = 3.0;   // how far the raymarch travels through that space, in the same units as SKY_LAYER_SCALE
+// SKY_LAYER_SCALE/THICKNESS/LIGHT_TAP_DISTANCE were all raised ~8x from
+// their original (22.0 / 3.0 / 1.1) values, keeping their ratios to each
+// other and to SKY_NOISE_SCALE fixed — see the class comment above.
+const float SKY_LAYER_SCALE        = 180.0; // maps view direction into the density field's coordinate space
+const float SKY_LAYER_THICKNESS    = 24.0;  // how far the raymarch travels through that space, in the same units as SKY_LAYER_SCALE
 const int   SKY_RAYMARCH_STEPS     = 8;
-const float SKY_WIND_SPEED         = 0.0035;
 const float SKY_NOISE_SCALE        = 0.16;
 const float SKY_WARP_STRENGTH      = 0.9;
 const float SKY_DETAIL_JITTER      = 0.35;
 const float SKY_EDGE_SOFTNESS      = 0.12;
 const float SKY_STEP_ALPHA_SCALE   = 0.65;
-const float SKY_LIGHT_TAP_DISTANCE = 1.1;
+const float SKY_LIGHT_TAP_DISTANCE = 9.0;
 const int   SKY_TOON_BANDS         = 3;
 const float SKY_SHADE_STRENGTH     = 0.55;
 const float SKY_RIM_STRENGTH       = 0.4;
@@ -109,7 +80,6 @@ const float SKY_TOP_TINT_MIX       = 0.35;
 const float SKY_SHADOW_TINT_MIX    = 0.30;
 
 // ── Weather Sampling ─────────────────────────────────────────────────────
-// Unchanged from the original file — see the header comment above.
 
 struct CompassSample {
     float coverage;
@@ -127,9 +97,6 @@ CompassSample _compassSample(int index) {
     return CompassSample(u_cloudCoverageNorthwest, u_cloudColorNorthwest);
 }
 
-// Blends the two nearest of the 8 compass samples by the view ray's
-// horizontal heading. North = -Z, east = +X, south = +Z, west = -X —
-// matches Direction2Vector / RegionSampleBranch's own sampling axes.
 void _sampleHorizonWeather(vec3 dir, out float coverage, out vec3 color) {
     float headingDeg = degrees(atan(dir.x, -dir.z));
     headingDeg = mod(headingDeg + 360.0, 360.0);
@@ -146,10 +113,6 @@ void _sampleHorizonWeather(vec3 dir, out float coverage, out vec3 color) {
     color    = mix(a.color, b.color, t);
 }
 
-// Public: resolves the coverage and colour the sky's cloud layer should
-// use for a given view ray, fading from the horizon blend above toward
-// the player's own local WeatherData sample as dir.y rises toward
-// CLOUD_DIR_Y_HARD_LIMIT.
 void sampleWeatherForSky(vec3 dir, out float coverage, out vec3 color) {
     float horizonCoverage;
     vec3  horizonColor;
@@ -176,35 +139,23 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
     vec3  weatherColor;
     sampleWeatherForSky(dir, weatherCoverage, weatherColor);
 
-    // Real light direction/color, blended sun->moon exactly like the
-    // physical cloud objects (CloudVolumeShader.fsh) so the two stay
-    // lit consistently with each other.
     float sunWeight  = clamp(u_sunIntensity / 0.3, 0.0, 1.0);
     vec3  lightDir   = normalize(mix(u_moonDirection, u_sunDirection, sunWeight));
     vec3  lightColor = mix(u_moonColor, u_sunColor, sunWeight);
     float lightPower = mix(u_moonIntensity, u_sunIntensity, sunWeight);
 
-    // Slow scroll standing in for wind — a flat time-driven drift for
-    // now; wiring this to the real WindHandle direction/speed (the same
-    // vector OverheadManager/RegionSampleBranch already read) is a
-    // natural follow-up once this pass is confirmed looking right.
+    // Real wind drift — see the class comment. dailySeed still decorrelates
+    // each day's cloud placement from the next even under identical wind.
     vec3 wind = vec3(
-        u_time * SKY_WIND_SPEED + dailySeed,
+        u_windDriftOffset.x + dailySeed,
         0.0,
-        u_time * SKY_WIND_SPEED * 0.7 + dailySeed * 1.3);
+        u_windDriftOffset.y + dailySeed * 1.3);
 
     float stepDepth = SKY_LAYER_THICKNESS / float(SKY_RAYMARCH_STEPS);
 
-    // Tinted toward this sky's own colors rather than flat white/black —
-    // see the class comment's Stage 1 note.
     vec3 topTint    = mix(weatherColor, u_skyZenithColor, SKY_TOP_TINT_MIX);
     vec3 shadowTint = mix(weatherColor, u_skyHorizonColor * 0.4, SKY_SHADOW_TINT_MIX);
 
-    // How high up the visible dome this ray looks, remapped against a
-    // coverage-dependent ceiling — see heightGradient()'s own doc comment
-    // in CloudShapeUtility.glsl. Higher coverage (a storm) pushes the
-    // ceiling up, letting overcast weather genuinely reach toward the
-    // zenith; clear/light weather stays thin well before it.
     float heightT = clamp(dir.y / mix(0.45, 1.0, clamp(weatherCoverage, 0.0, 1.0)), 0.0, 1.0);
 
     vec4 accum = vec4(0.0);
