@@ -387,8 +387,13 @@ public class EngineSetting {
 
         // Cloud Instance Uniforms \\
 
-        public static final String UNIFORM_CLOUD_INSTANCE_CHUNK = "u_cloudInstanceChunk";
-        public static final String UNIFORM_CLOUD_INSTANCE_LOCAL = "u_cloudInstanceLocal";
+        // Fully resolved on the CPU every frame — see CloudRenderSystem
+        // .updateInstance(). x/z already sit relative to the player's current
+        // chunk (see WeatherManager.getReferenceCoordinate()); y is world
+        // altitude, never wrapped or re-based. No PlayerPositionData UBO
+        // read, no chunk-index split, lives entirely on the shader side as
+        // one plain vec3.
+        public static final String UNIFORM_CLOUD_INSTANCE_POSITION = "u_cloudInstancePosition";
         public static final String UNIFORM_CLOUD_INSTANCE_RANDOM_SEED = "u_cloudInstanceRandomSeed";
         public static final String UNIFORM_CLOUD_INSTANCE_FADE_ALPHA = "u_cloudInstanceFadeAlpha";
         public static final String UNIFORM_CLOUD_INSTANCE_INTENSITY = "u_cloudInstanceIntensity";

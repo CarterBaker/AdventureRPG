@@ -13,10 +13,11 @@ import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
 import application.bootstrap.weatherpipeline.overheadmanager.OverheadCellStruct;
 import application.bootstrap.weatherpipeline.overheadmanager.OverheadManager;
+import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.mathematics.vectors.Vector2Int;
+import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -44,11 +45,20 @@ class CloudRenderSystem extends SystemPackage {
      * terrain material per chunk mesh. Archetype-level values that never
      * change for the life of the instance (color, scale, density, toon
      * shading numbers — see bakeArchetypeUniforms()) are baked in once, at
-     * creation. Per-instance values that DO change every frame — world
-     * position (chunk index + in-chunk remainder + altitude), streaming
-     * fade alpha, and live weather intensity — are refreshed every frame in
-     * updateInstance() via ordinary MaterialInstance.setUniform() calls, the
-     * same mechanism EntityRenderSystem already uses for u_hiddenBone.
+     * creation. Per-instance values that DO change every frame — render
+     * position, streaming fade alpha, and live weather intensity — are
+     * refreshed every frame in updateInstance() via ordinary
+     * MaterialInstance.setUniform() calls, the same mechanism
+     * EntityRenderSystem already uses for u_hiddenBone.
+     *
+     * Positioning is resolved ENTIRELY on the CPU, once per instance per
+     * frame — see updateInstance()'s own doc comment. Nothing about cloud
+     * placement is read back out of a GPU-side UBO (PlayerPositionData or
+     * otherwise), and nothing about cloud movement touches WindData either
+     * — wind drift is already applied CPU-side by
+     * OverheadManager.advanceWindDrift() before this class ever sees a
+     * cell's position. WindData exists purely for later GPU-visual effects
+     * (foliage sway and similar) and is deliberately never read here.
      *
      * There is deliberately no clear-and-rebuild-every-frame pass here
      * (unlike the old GPU-instanced buffer this replaces) — a cloud's
@@ -70,6 +80,7 @@ class CloudRenderSystem extends SystemPackage {
     private ModelManager modelManager;
     private UBOManager uboManager;
     private RenderManager renderManager;
+    private WeatherManager weatherManager;
 
     // Mesh
     private MeshHandle cloudMeshHandle;
@@ -93,6 +104,7 @@ class CloudRenderSystem extends SystemPackage {
         this.modelManager = get(ModelManager.class);
         this.uboManager = get(UBOManager.class);
         this.renderManager = get(RenderManager.class);
+        this.weatherManager = get(WeatherManager.class);
     }
 
     @Override
@@ -172,13 +184,27 @@ class CloudRenderSystem extends SystemPackage {
      * per-window, since the underlying cell grid is itself global (see
      * OverheadManager's own doc comment on why a cell's identity must never
      * re-roll per frame).
+     *
+     * The player's current chunk coordinate is resolved once here, up
+     * front, from WeatherManager.getReferenceCoordinate() — the exact same
+     * reference coordinate OverheadManager itself streams cells around, so
+     * the cloud layer's own idea of "where the player is" can never drift
+     * out of sync with where cells actually exist. Every cell's render
+     * position is then rebuilt from scratch against this fresh value in
+     * updateInstance() — nothing about cloud placement is cached from a
+     * previous frame, and nothing about it is read back out of a GPU-side
+     * UBO. See updateInstance()'s own doc comment.
      */
     void updateInstances() {
 
         pruneRetiredCells();
 
+        long referenceCoordinate = weatherManager.getReferenceCoordinate();
+        int playerChunkX = Coordinate2Long.unpackX(referenceCoordinate);
+        int playerChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
+
         for (OverheadCellStruct cell : overheadManager.getActiveCells().values())
-            updateInstance(cell);
+            updateInstance(cell, playerChunkX, playerChunkZ);
     }
 
     private void pruneRetiredCells() {
@@ -204,8 +230,29 @@ class CloudRenderSystem extends SystemPackage {
      * choice is fixed for its entire lifetime (see OverheadCellStruct), so
      * once an instance exists its archetype-level uniforms never need
      * re-baking — only position/fade/intensity are refreshed below.
+     *
+     * Render position is fully resolved here, on the CPU, every frame.
+     * cell.getCurrentChunkX()/Z() is this cell's absolute chunk-space
+     * position — its fixed home chunk plus accumulated wind drift, both
+     * tracked in real, never-wrapped chunk units by OverheadCellStruct /
+     * OverheadManager.advanceWindDrift(). Subtracting the player's own
+     * current chunk index (an exact integer, supplied fresh by the caller
+     * every frame — see updateInstances()) BEFORE ever scaling up to block
+     * units is what keeps the result safe to store in a float: the outcome
+     * is bounded by the streaming radius (at most a few thousand blocks)
+     * no matter how large the absolute chunk coordinate itself has grown
+     * over a long session — exactly mirroring how the terrain grid's own
+     * u_gridPosition offset stays small by construction (see
+     * GridBuildSystem). The vertex shader receives that one resolved vec3
+     * directly as u_cloudInstancePosition and does no chunk-index math, no
+     * ivec2 split, and no PlayerPositionData UBO read of its own — the
+     * previous split (an ivec2 chunk index + a shader-side subtraction
+     * against the terrain's own player-chunk uniform) was also where a
+     * latent Z/X mixup lived, silently placing every cloud thousands of
+     * blocks away from where it belonged. Resolving the whole offset here,
+     * in one place, in Java, removes that entire class of bug.
      */
-    private void updateInstance(OverheadCellStruct cell) {
+    private void updateInstance(OverheadCellStruct cell, int playerChunkX, int playerChunkZ) {
 
         if (!cell.hasCloud())
             return;
@@ -219,29 +266,14 @@ class CloudRenderSystem extends SystemPackage {
 
         MaterialInstance material = model.getMaterial();
 
-        // Player-chunk-relative encoding — mirrors StandardItemShader.vsh's
-        // chunk/local split exactly (see that shader's own comment). The
-        // cell's current position is chunk-space with a fractional wind-
-        // drift remainder (see OverheadCellStruct.getCurrentChunkX/Z()).
-        // Splitting it into a whole chunk index (precise as a genuine ivec2
-        // uniform at any distance from world origin) plus a small in-chunk
-        // remainder in blocks — rather than pre-multiplying into one large
-        // absolute-world float here — is what lets the vertex shader
-        // reconstruct render-space position relative to u_playerChunkX/Z
-        // (see PlayerPositionData.glsl) instead of having to subtract the
-        // camera position back out of an already-large float.
-        double currentChunkX = cell.getCurrentChunkX();
-        double currentChunkZ = cell.getCurrentChunkZ();
+        double relativeChunkX = cell.getCurrentChunkX() - playerChunkX;
+        double relativeChunkZ = cell.getCurrentChunkZ() - playerChunkZ;
 
-        int chunkX = (int) Math.floor(currentChunkX);
-        int chunkZ = (int) Math.floor(currentChunkZ);
+        float renderX = (float) (relativeChunkX * EngineSetting.CHUNK_SIZE);
+        float renderZ = (float) (relativeChunkZ * EngineSetting.CHUNK_SIZE);
 
-        float localX = (float) ((currentChunkX - chunkX) * EngineSetting.CHUNK_SIZE);
-        float localZ = (float) ((currentChunkZ - chunkZ) * EngineSetting.CHUNK_SIZE);
-
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_CHUNK, new Vector2Int(chunkX, chunkZ));
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_LOCAL,
-                new Vector3(localX, cell.getEffectiveAltitude(), localZ));
+        material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_POSITION,
+                new Vector3(renderX, cell.getEffectiveAltitude(), renderZ));
         material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_FADE_ALPHA, cell.getFadeAlpha());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_INSTANCE_INTENSITY, cell.getIntensity());
     }
