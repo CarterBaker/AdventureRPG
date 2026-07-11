@@ -169,3 +169,4 @@ Thumbs.db
 
 # Documentation export artifacts
 /assets/documentation/build-docx/
+*.rtf
