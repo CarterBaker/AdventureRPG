@@ -14,10 +14,12 @@ import application.bootstrap.weatherpipeline.cloud.CloudHandle;
 import application.bootstrap.weatherpipeline.overheadmanager.OverheadCellStruct;
 import application.bootstrap.weatherpipeline.overheadmanager.OverheadManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -81,6 +83,7 @@ class CloudRenderSystem extends SystemPackage {
     private UBOManager uboManager;
     private RenderManager renderManager;
     private WeatherManager weatherManager;
+    private WorldManager worldManager;
 
     // Mesh
     private MeshHandle cloudMeshHandle;
@@ -105,6 +108,7 @@ class CloudRenderSystem extends SystemPackage {
         this.uboManager = get(UBOManager.class);
         this.renderManager = get(RenderManager.class);
         this.weatherManager = get(WeatherManager.class);
+        this.worldManager = get(WorldManager.class);
     }
 
     @Override
@@ -185,12 +189,21 @@ class CloudRenderSystem extends SystemPackage {
      * OverheadManager's own doc comment on why a cell's identity must never
      * re-roll per frame).
      *
-     * The player's current chunk coordinate is resolved once here, up
-     * front, from WeatherManager.getReferenceCoordinate() — the exact same
-     * reference coordinate OverheadManager itself streams cells around, so
-     * the cloud layer's own idea of "where the player is" can never drift
-     * out of sync with where cells actually exist. Every cell's render
-     * position is then rebuilt from scratch against this fresh value in
+     * The reference position is resolved once here, up front, as a
+     * CONTINUOUS chunk-space coordinate — WeatherManager
+     * .getReferenceChunkXContinuous()/getReferenceChunkZContinuous(), not
+     * the chunk-granular getReferenceCoordinate() OverheadManager itself
+     * streams cells around. Cell EXISTENCE only ever needs chunk
+     * granularity (which cells should be active), but a cell's actual
+     * RENDER position needs the player's exact sub-chunk position too —
+     * using only the integer chunk here previously froze every cloud's
+     * contribution to its own render offset for the player's entire time
+     * inside one chunk, then snapped it by a full chunk width the instant
+     * the player's chunk index changed. That was exactly the "clouds jump
+     * when the player wraps inside a chunk" bug; see updateInstance()'s own
+     * doc comment for the fix. The active world is likewise resolved once
+     * here and threaded through to updateInstance() — every cell's render
+     * position is rebuilt from scratch against these two fresh values in
      * updateInstance() — nothing about cloud placement is cached from a
      * previous frame, and nothing about it is read back out of a GPU-side
      * UBO. See updateInstance()'s own doc comment.
@@ -199,12 +212,13 @@ class CloudRenderSystem extends SystemPackage {
 
         pruneRetiredCells();
 
-        long referenceCoordinate = weatherManager.getReferenceCoordinate();
-        int playerChunkX = Coordinate2Long.unpackX(referenceCoordinate);
-        int playerChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
+        double referenceChunkX = weatherManager.getReferenceChunkXContinuous();
+        double referenceChunkZ = weatherManager.getReferenceChunkZContinuous();
+
+        WorldHandle activeWorld = worldManager.getActiveWorld();
 
         for (OverheadCellStruct cell : overheadManager.getActiveCells().values())
-            updateInstance(cell, playerChunkX, playerChunkZ);
+            updateInstance(cell, referenceChunkX, referenceChunkZ, activeWorld);
     }
 
     private void pruneRetiredCells() {
@@ -233,26 +247,59 @@ class CloudRenderSystem extends SystemPackage {
      *
      * Render position is fully resolved here, on the CPU, every frame.
      * cell.getCurrentChunkX()/Z() is this cell's absolute chunk-space
-     * position — its fixed home chunk plus accumulated wind drift, both
-     * tracked in real, never-wrapped chunk units by OverheadCellStruct /
-     * OverheadManager.advanceWindDrift(). Subtracting the player's own
-     * current chunk index (an exact integer, supplied fresh by the caller
-     * every frame — see updateInstances()) BEFORE ever scaling up to block
-     * units is what keeps the result safe to store in a float: the outcome
-     * is bounded by the streaming radius (at most a few thousand blocks)
-     * no matter how large the absolute chunk coordinate itself has grown
-     * over a long session — exactly mirroring how the terrain grid's own
-     * u_gridPosition offset stays small by construction (see
-     * GridBuildSystem). The vertex shader receives that one resolved vec3
-     * directly as u_cloudInstancePosition and does no chunk-index math, no
-     * ivec2 split, and no PlayerPositionData UBO read of its own — the
-     * previous split (an ivec2 chunk index + a shader-side subtraction
-     * against the terrain's own player-chunk uniform) was also where a
-     * latent Z/X mixup lived, silently placing every cloud thousands of
-     * blocks away from where it belonged. Resolving the whole offset here,
-     * in one place, in Java, removes that entire class of bug.
+     * position — its fixed home chunk (wrapped into the world's own bounds
+     * at stream-in time, since the world is a torus for weather purposes —
+     * see OverheadManager.wrapChunkCoordinate()) plus accumulated wind
+     * drift, both tracked in real chunk units by OverheadCellStruct /
+     * OverheadManager.advanceWindDrift(). The offset against the player's
+     * own CONTINUOUS chunk-space position (referenceChunkX/Z — a double,
+     * carrying the player's exact sub-chunk position rather than merely
+     * which chunk they currently stand in) is resolved via WorldWrapUtility
+     * .wrappedDeltaX()/Z() — the same toroidal shortest-distance
+     * correction OverheadManager.advanceFadesAndRetire() already applies
+     * for its own retirement check — rather than a plain subtraction. A
+     * cell whose home chunk wrapped around one edge of the world (any cell
+     * west/north of a player spawned near the world's chunk-space origin,
+     * for instance) sits numerically near the OPPOSITE edge of the world;
+     * naive subtraction against the player's own small, unwrapped chunk
+     * index then read that cell as almost an entire world-width away
+     * instead of the few chunks away it actually was, which is exactly
+     * what previously kept the overhead cloud grid confined to a single
+     * quadrant of the map. Scaling up to block units only after this
+     * correction is what keeps the result safe to store in a float: the
+     * outcome is bounded by the streaming radius (at most a few thousand
+     * blocks) no matter how large the absolute chunk coordinate itself has
+     * grown over a long session — exactly mirroring how the terrain grid's
+     * own u_gridPosition offset stays small by construction (see
+     * GridBuildSystem).
+     *
+     * Using referenceChunkX/Z's fractional part is the actual fix for the
+     * chunk-wrap position jump: previously this method compared against a
+     * plain integer chunk coordinate, which is constant for as long as the
+     * player stays inside one chunk, while the camera itself keeps moving
+     * continuously within that same chunk. The cloud's contribution to the
+     * render offset silently drifted out of sync with the camera for the
+     * player's entire time inside a chunk, then corrected itself in one
+     * visible jump the instant the player's chunk index changed. Carrying
+     * the fractional chunk position through here removes that entirely —
+     * the cloud's contribution to the offset now moves continuously in
+     * lockstep with the camera's own motion, with no special case needed
+     * at the chunk boundary itself.
+     *
+     * The vertex shader receives that one resolved vec3 directly as
+     * u_cloudInstancePosition and does no chunk-index math, no ivec2 split,
+     * and no PlayerPositionData UBO read of its own — the previous split
+     * (an ivec2 chunk index + a shader-side subtraction against the
+     * terrain's own player-chunk uniform) was also where a latent Z/X mixup
+     * lived, silently placing every cloud thousands of blocks away from
+     * where it belonged. Resolving the whole offset here, in one place, in
+     * Java, removes that entire class of bug.
      */
-    private void updateInstance(OverheadCellStruct cell, int playerChunkX, int playerChunkZ) {
+    private void updateInstance(
+            OverheadCellStruct cell,
+            double referenceChunkX,
+            double referenceChunkZ,
+            WorldHandle activeWorld) {
 
         if (!cell.hasCloud())
             return;
@@ -266,8 +313,8 @@ class CloudRenderSystem extends SystemPackage {
 
         MaterialInstance material = model.getMaterial();
 
-        double relativeChunkX = cell.getCurrentChunkX() - playerChunkX;
-        double relativeChunkZ = cell.getCurrentChunkZ() - playerChunkZ;
+        double relativeChunkX = WorldWrapUtility.wrappedDeltaX(activeWorld, cell.getCurrentChunkX(), referenceChunkX);
+        double relativeChunkZ = WorldWrapUtility.wrappedDeltaZ(activeWorld, cell.getCurrentChunkZ(), referenceChunkZ);
 
         float renderX = (float) (relativeChunkX * EngineSetting.CHUNK_SIZE);
         float renderZ = (float) (relativeChunkZ * EngineSetting.CHUNK_SIZE);

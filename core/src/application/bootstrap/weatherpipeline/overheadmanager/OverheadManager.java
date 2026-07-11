@@ -6,6 +6,7 @@ import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherBandStruct;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.weatherpipeline.windmanager.WindManager;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.EngineSetting;
@@ -104,21 +105,22 @@ public class OverheadManager extends ManagerPackage {
      * drifted position, so a strong gust can't retroactively "un-retire" a
      * cell that's already fading out — distance itself is measured the same
      * toroidal way a fresh cell's home chunk is resolved (see
-     * wrapChunkCoordinate() and wrappedDelta()), so a cell that streamed in
-     * by wrapping around one edge of the map never misreads as being on the
-     * opposite side of the world from the player. A cell's home chunk is
-     * always wrapped into the active world's own bounds (derived from the
-     * world PNG's pixel dimensions — see WorldBuilder) rather than
-     * rejected — this world is a torus for cloud placement purposes,
-     * exactly like GlobalNoiseBranch and RegionSampleBranch already treat
-     * it for weather noise sampling. Previously, any candidate offset that
-     * pushed a cell's home chunk outside [0, worldWidth) x [0, worldHeight)
-     * was silently skipped instead of wrapped — which meant any offset
-     * carrying so much as one negative axis near the world's chunk-space
-     * origin was permanently unstreamable. Visually, the overhead cloud
-     * grid could only ever grow toward positive X/Z from wherever the
-     * player happened to start, never the other way, which is what read as
-     * "the cloud grid only exists in one corner of the map."
+     * wrapChunkCoordinate() and WorldWrapUtility.wrappedDelta()), so a cell
+     * that streamed in by wrapping around one edge of the map never
+     * misreads as being on the opposite side of the world from the player.
+     * A cell's home chunk is always wrapped into the active world's own
+     * bounds (derived from the world PNG's pixel dimensions — see
+     * WorldBuilder) rather than rejected — this world is a torus for cloud
+     * placement purposes, exactly like GlobalNoiseBranch and
+     * RegionSampleBranch already treat it for weather noise sampling.
+     * Previously, any candidate offset that pushed a cell's home chunk
+     * outside [0, worldWidth) x [0, worldHeight) was silently skipped
+     * instead of wrapped — which meant any offset carrying so much as one
+     * negative axis near the world's chunk-space origin was permanently
+     * unstreamable. Visually, the overhead cloud grid could only ever grow
+     * toward positive X/Z from wherever the player happened to start, never
+     * the other way, which is what read as "the cloud grid only exists in
+     * one corner of the map."
      *
      * Streaming radius is whichever is smaller of the player's configured
      * render distance (Settings.maxRenderDistance) and
@@ -595,15 +597,20 @@ public class OverheadManager extends ManagerPackage {
         // fresh cell's home chunk into — a cell streamed in across the
         // wrap seam must be measured against the player the same way, or
         // it reads as being on the far side of the map the instant it
-        // spawns and immediately retires itself again. See wrappedDelta().
+        // spawns and immediately retires itself again. See
+        // WorldWrapUtility.wrappedDelta() — the same canonical correction
+        // CloudRenderSystem now uses to resolve each cell's render
+        // position, so a cell's retirement distance and its rendered
+        // position can never disagree about which side of the seam it's
+        // really on.
         WorldHandle activeWorld = worldManager.getActiveWorld();
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
         for (OverheadCellStruct cell : activeCells.values()) {
 
-            double dx = wrappedDelta(cell.getHomeChunkX(), playerChunkX, worldWidthChunks);
-            double dz = wrappedDelta(cell.getHomeChunkZ(), playerChunkZ, worldHeightChunks);
+            double dx = WorldWrapUtility.wrappedDelta(cell.getHomeChunkX(), playerChunkX, worldWidthChunks);
+            double dz = WorldWrapUtility.wrappedDelta(cell.getHomeChunkZ(), playerChunkZ, worldHeightChunks);
             double distChunks = Math.sqrt(dx * dx + dz * dz);
 
             if (distChunks > radiusChunks && !cell.isRetiring())
@@ -630,27 +637,6 @@ public class OverheadManager extends ManagerPackage {
         if (toRemove != null)
             for (int i = 0; i < toRemove.size(); i++)
                 activeCells.remove(toRemove.getLong(i));
-    }
-
-    /*
-     * Shortest signed distance from b to a around a torus of the given
-     * period, in the range (-period/2, period/2]. Plain a - b is only
-     * correct while neither coordinate has wrapped around the world edge
-     * relative to the other; once one has, that raw difference reads as
-     * nearly a full world-width away even though the two points are
-     * physically close together across the seam — which would make a
-     * freshly wrapped-in cell (see wrapChunkCoordinate()) read as instantly
-     * out of range and retire itself the moment it streamed in.
-     */
-    private static double wrappedDelta(double a, double b, double period) {
-
-        if (period <= 0)
-            return a - b;
-
-        double delta = a - b;
-        double halfPeriod = period * 0.5;
-
-        return ((delta + halfPeriod) % period + period) % period - halfPeriod;
     }
 
     // Noise \\

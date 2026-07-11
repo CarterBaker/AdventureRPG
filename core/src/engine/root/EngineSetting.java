@@ -417,7 +417,12 @@ public class EngineSetting {
         public static final String WEATHER_DATA_UBO = "WeatherData";
         public static final String WEATHER_REGION_DATA_UBO = "WeatherRegionData";
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;
-        public static final float WEATHER_WIND_DRIFT_SCALE = 0.35f;
+        // Reduced from 0.35 — see EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE's
+        // own comment. Kept numerically equal to that constant so the CPU
+        // weather-noise pattern driving "what weather is here" migrates at
+        // the same rate as the visual cloud objects representing it, rather
+        // than the two drifting apart from each other over time.
+        public static final float WEATHER_WIND_DRIFT_SCALE = 0.05f;
         public static final float WEATHER_LOCAL_DRIFT_TIME_WRAP = 100000.0f;
         public static final float WEATHER_LOCAL_EVOLUTION_PERIOD = 420.0f;
         public static final float DEFAULT_WEATHER_WIND_SPEED_SCALE = 1.0f;
@@ -448,7 +453,13 @@ public class EngineSetting {
 
         public static final int OVERHEAD_CELL_SIZE = 4;
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 8;
-        public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.35f;
+        // Reduced from 0.35 — the physical cloud layer was drifting roughly
+        // an order of magnitude faster than a cloud layer should for a world
+        // at ~1/20 Earth scale. Kept numerically equal to
+        // WEATHER_WIND_DRIFT_SCALE (see that constant's own comment) so the
+        // visual drift rate matches the rate the underlying weather pattern
+        // itself migrates.
+        public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.05f;
 
         // Weather Cell Lifecycle \\
 
@@ -475,7 +486,13 @@ public class EngineSetting {
         public static final String UNIFORM_WIND_DIRECTION = "u_windDirection";
         public static final String UNIFORM_WIND_SPEED = "u_windSpeed";
         public static final String UNIFORM_WIND_DRIFT_OFFSET = "u_windDriftOffset";
-        public static final float SKY_WIND_DRIFT_SCALE = 0.15f;
+        // Reduced from 0.15, proportionally to OVERHEAD_DRIFT_SPEED_SCALE's
+        // own reduction — first-pass tuning only. Full sky-dome/overhead
+        // drift matching (so the two visually never slide relative to each
+        // other) is a later stage's job; this just keeps the sky preview's
+        // own drift in the same ballpark as the slowed-down physical clouds
+        // in the meantime.
+        public static final float SKY_WIND_DRIFT_SCALE = 0.02f;
         public static final float SKY_WIND_DRIFT_WRAP = 100000.0f;
 
         // Temperature \\

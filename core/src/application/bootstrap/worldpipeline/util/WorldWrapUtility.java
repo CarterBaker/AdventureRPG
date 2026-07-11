@@ -44,4 +44,27 @@ public class WorldWrapUtility extends EngineUtility {
 
         return Coordinate2Long.pack(x, y);
     }
+
+    // Wrapped Delta \\
+
+    public static double wrappedDelta(double a, double b, double period) {
+
+        if (period <= 0)
+            return a - b;
+
+        double delta = a - b;
+        double halfPeriod = period * 0.5;
+
+        return ((delta + halfPeriod) % period + period) % period - halfPeriod;
+    }
+
+    public static double wrappedDeltaX(WorldHandle worldHandle, double a, double b) {
+        int worldWidthChunks = worldHandle.getWorldScale().x / EngineSetting.CHUNK_SIZE;
+        return wrappedDelta(a, b, worldWidthChunks);
+    }
+
+    public static double wrappedDeltaZ(WorldHandle worldHandle, double a, double b) {
+        int worldHeightChunks = worldHandle.getWorldScale().y / EngineSetting.CHUNK_SIZE;
+        return wrappedDelta(a, b, worldHeightChunks);
+    }
 }
