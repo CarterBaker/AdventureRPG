@@ -64,22 +64,28 @@ public class WeatherManager extends ManagerPackage {
      * the reference coordinate already was (default origin) if there is no
      * main window or no spawned player yet — normal before a player exists.
      *
-     * The SAME method also now captures the reference entity's raw
-     * continuous world position (referenceWorldX/Z) alongside that
-     * chunk-granular coordinate — see getReferenceChunkXContinuous()/
-     * getReferenceChunkZContinuous(). OverheadManager's cell streaming only
-     * ever needs to know WHICH chunk-cells should exist, so it keeps using
-     * the chunk-granular coordinate. CloudRenderSystem's actual render-space
-     * positioning needs the player's exact sub-chunk position, though —
-     * using only the integer chunk there previously froze every cloud's
-     * contribution to its own render offset for as long as the player
-     * stayed inside one chunk (since that offset only depended on which
-     * chunk they were in), then snapped it by a full chunk width in a
-     * single frame the instant the player's chunk index changed — visible
-     * as clouds jumping position whenever the player crossed a chunk
-     * boundary. Carrying the continuous position through removes that
-     * entire class of bug: the cloud's contribution to the offset now
-     * moves continuously in lockstep with the camera's own motion.
+     * getReferenceCoordinate() — the INTEGER chunk-granular coordinate — is
+     * the single reference position both OverheadManager's cell streaming
+     * and CloudRenderSystem's render-space positioning use. Every
+     * moving-world offset elsewhere in the engine (terrain's own
+     * u_gridPosition, see GridBuildSystem; world items' u_playerChunkX/
+     * u_playerChunkZ, see StandardItemShader.vsh) is anchored to this same
+     * kind of integer chunk coordinate, never a continuous sub-chunk
+     * position — the camera's own view/projection matrix already carries
+     * the player's continuous motion within their current chunk, so
+     * nothing downstream needs to reapply it. An earlier revision of this
+     * manager additionally tracked the player's raw continuous world
+     * position for CloudRenderSystem to offset cloud instances by,
+     * reasoning that the integer chunk coordinate alone left a cloud's
+     * render offset "frozen" for as long as the player stayed inside one
+     * chunk. That double-counted the player's own sub-chunk motion on top
+     * of what the camera's view transform already applies, and was the
+     * actual source of the "clouds shift slightly when the player wraps
+     * inside a chunk" bug rather than a fix for it — see
+     * CloudRenderSystem.updateInstances()'s own doc comment for the full
+     * account. That continuous tracking has been removed; the integer
+     * coordinate below is now the only reference position this manager
+     * exposes.
      *
      * activeWeatherPool stays null until the calendar resolves its first
      * named season, which requires at least one day-tick — normal at
@@ -114,15 +120,6 @@ public class WeatherManager extends ManagerPackage {
     // Season Tracking
     private String lastSeason;
     private ObjectArrayList<WeatherPoolEntryStruct> activeWeatherPool;
-
-    // Reference Position — continuous (sub-chunk precision) world-space
-    // position of the reference entity, refreshed every frame in
-    // updateReferenceCoordinate() alongside the chunk-granular
-    // referenceCoordinate already delegated to RegionSampleBranch. See
-    // getReferenceChunkXContinuous()/getReferenceChunkZContinuous() and the
-    // class comment above for why this exists.
-    private double referenceWorldX;
-    private double referenceWorldZ;
 
     // Base \\
 
@@ -181,13 +178,12 @@ public class WeatherManager extends ManagerPackage {
     // Reference Coordinate \\
 
     /*
-     * Resolves the main window's player position into both a chunk
-     * coordinate and a continuous world-space position, and writes them as
-     * this frame's weather sampling / cloud rendering reference — the point
-     * every downstream branch (region sampling, global noise, and
-     * OverheadManager's streaming grid) treats as "here". A no-op if there
-     * is no main window or no player has spawned into it yet, leaving the
-     * reference at whatever it last resolved to (origin by default).
+     * Resolves the main window's player position into the chunk coordinate
+     * every downstream system treats as "here" — the single reference
+     * position both weather sampling and cloud/overhead-cell rendering
+     * anchor against. A no-op if there is no main window or no player has
+     * spawned into it yet, leaving the reference at whatever it last
+     * resolved to (origin by default).
      */
     private void updateReferenceCoordinate() {
 
@@ -204,15 +200,6 @@ public class WeatherManager extends ManagerPackage {
         EntityInstance player = playerManager.getPlayerForWindow(windowID);
         Vector3 position = player.getWorldPositionStruct().getPosition();
 
-        // Continuous — feeds CloudRenderSystem's render-space positioning
-        // (see getReferenceChunkXContinuous()/getReferenceChunkZContinuous()
-        // and the class comment above).
-        this.referenceWorldX = position.x;
-        this.referenceWorldZ = position.z;
-
-        // Chunk-granular — feeds OverheadManager's cell streaming and
-        // RegionSampleBranch's own noise sampling, neither of which needs
-        // sub-chunk precision.
         int chunkX = Math.floorDiv((int) Math.floor(position.x), EngineSetting.CHUNK_SIZE);
         int chunkZ = Math.floorDiv((int) Math.floor(position.z), EngineSetting.CHUNK_SIZE);
 
@@ -380,25 +367,6 @@ public class WeatherManager extends ManagerPackage {
 
     public long getReferenceCoordinate() {
         return regionSampleBranch.getReferenceCoordinate();
-    }
-
-    /*
-     * Continuous (sub-chunk precision) chunk-space position of the
-     * reference entity — CloudRenderSystem uses this instead of
-     * getReferenceCoordinate() for actual render positioning, so a cloud's
-     * contribution to its own render offset tracks the player's exact
-     * motion rather than only updating when the player's chunk index
-     * changes. Divides the raw continuous world position by CHUNK_SIZE
-     * rather than exposing raw block coordinates directly, since every
-     * consumer of chunk-space math here (WorldWrapUtility.wrappedDeltaX/Z,
-     * OverheadCellStruct.getCurrentChunkX/Z) already works in chunk units.
-     */
-    public double getReferenceChunkXContinuous() {
-        return referenceWorldX / EngineSetting.CHUNK_SIZE;
-    }
-
-    public double getReferenceChunkZContinuous() {
-        return referenceWorldZ / EngineSetting.CHUNK_SIZE;
     }
 
     /*

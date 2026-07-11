@@ -14,23 +14,29 @@ public class CloudData extends DataPackage {
      *
      * Volumetric/toon fields (topColor, toonBands, densityNoiseScale,
      * noiseWarpStrength, coverageBias, silhouetteSoftness) back the
-     * raymarched volumetric cloud shader landing in the next stage.
-     * topColor lets toon shading blend from cloudColor (shadowed/base
-     * tint) toward a brighter top-facing tint without a second lighting
-     * pass; toonBands posterizes that blend into discrete steps for the
-     * toon look. densityNoiseScale/noiseWarpStrength drive a 3D fbm
-     * density field sampled in world space, so no two instances of the
-     * same archetype look identical — each warps based on its own world
-     * position rather than a per-instance seed alone. coverageBias shifts
-     * the density threshold separating "inside the cloud" from "empty
-     * sky" — live weather cloudCoverage will bias this further at render
-     * time. silhouetteSoftness controls how soft the raymarched edge
-     * falloff is where the density field crosses that threshold.
+     * raymarched volumetric cloud shader — see
+     * clouds/util/VolumetricCloudUtility.glsl. topColor lets toon shading
+     * blend from cloudColor (shadowed/base tint) toward a brighter
+     * top-facing tint without a second lighting pass; toonBands posterizes
+     * that blend into discrete steps for the toon look.
+     * densityNoiseScale/noiseWarpStrength drive a 3D fbm density field
+     * sampled in world space, so no two instances of the same archetype
+     * look identical — each warps based on its own world position rather
+     * than a per-instance seed alone. coverageBias shifts the density
+     * threshold separating "inside the cloud" from "empty sky" — live
+     * weather cloudCoverage biases this further at render time.
+     * silhouetteSoftness controls both how soft the raymarched edge
+     * falloff is where the density field crosses that threshold AND how
+     * far inward from this instance's bounding box the cloud tapers to
+     * fully transparent — see VolumetricCloudUtility.glsl's silhouetteMask().
      *
-     * edgeSoftness/puffJitter are the old card-shader tuning knobs — left
-     * in place for now since CloudVolumeShader still reads them; they are
-     * superseded by silhouetteSoftness/noiseWarpStrength once the shader
-     * rework lands and will be removed then.
+     * edgeSoftness/puffJitter — the old card-shader tuning knobs — have
+     * been fully retired now that the volumetric shader rework has landed.
+     * They previously left the raymarch's density simply clipped by this
+     * instance's AABB rather than fading out before reaching it, which is
+     * exactly what made every physical cloud read as a visible box rather
+     * than a rounded volumetric puff. silhouetteSoftness and
+     * noiseWarpStrength now own everything those two used to control.
      */
 
     // Identity
@@ -45,8 +51,6 @@ public class CloudData extends DataPackage {
     private final float scale;
     private final float density;
     private final float verticalThickness;
-    private final float edgeSoftness;
-    private final float puffJitter;
 
     // Toon Shading
     private final int toonBands;
@@ -89,8 +93,6 @@ public class CloudData extends DataPackage {
             float scale,
             float density,
             float verticalThickness,
-            float edgeSoftness,
-            float puffJitter,
             int toonBands,
             float densityNoiseScale,
             float noiseWarpStrength,
@@ -116,8 +118,6 @@ public class CloudData extends DataPackage {
         this.scale = scale;
         this.density = density;
         this.verticalThickness = verticalThickness;
-        this.edgeSoftness = edgeSoftness;
-        this.puffJitter = puffJitter;
 
         // Toon Shading
         this.toonBands = toonBands;
@@ -172,14 +172,6 @@ public class CloudData extends DataPackage {
 
     public float getVerticalThickness() {
         return verticalThickness;
-    }
-
-    public float getEdgeSoftness() {
-        return edgeSoftness;
-    }
-
-    public float getPuffJitter() {
-        return puffJitter;
     }
 
     public int getToonBands() {

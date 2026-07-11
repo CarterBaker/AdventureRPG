@@ -30,6 +30,13 @@ class CloudBuilder extends BuilderPackage {
      * this convention correctly; the default (and every shipped archetype)
      * previously left "scale" at a leftover unitless value of 1.0-3.0,
      * which rendered every cloud object as a 1-3 block speck.
+     *
+     * "edgeSoftness" and "puffJitter" — the old card-shader tuning knobs —
+     * are no longer parsed. They're fully retired now that the volumetric
+     * shader rework has landed (see CloudData's own doc comment):
+     * silhouetteSoftness and noiseWarpStrength own everything those two
+     * used to. Any legacy JSON file that still declares them is simply
+     * ignored — no error, since a stray, unread field is harmless.
      */
 
     // Build \\
@@ -46,8 +53,6 @@ class CloudBuilder extends BuilderPackage {
         float scale = parseFloat(json, "scale", EngineSetting.CLOUD_DEFAULT_DIAMETER_BLOCKS);
         float density = parseFloat(json, "density", 0.8f);
         float verticalThickness = parseFloat(json, "verticalThickness", 8.0f);
-        float edgeSoftness = parseFloat(json, "edgeSoftness", 0.06f);
-        float puffJitter = parseFloat(json, "puffJitter", 0.55f);
         int toonBands = parseInt(json, "toonBands", 3);
         float densityNoiseScale = parseFloat(json, "densityNoiseScale", 1.0f);
         float noiseWarpStrength = parseFloat(json, "noiseWarpStrength", 0.6f);
@@ -70,8 +75,6 @@ class CloudBuilder extends BuilderPackage {
                 scale,
                 density,
                 verticalThickness,
-                edgeSoftness,
-                puffJitter,
                 toonBands,
                 densityNoiseScale,
                 noiseWarpStrength,

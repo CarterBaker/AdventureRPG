@@ -55,14 +55,6 @@ public class CloudHandle extends HandlePackage {
         return cloudData.getVerticalThickness();
     }
 
-    public float getEdgeSoftness() {
-        return cloudData.getEdgeSoftness();
-    }
-
-    public float getPuffJitter() {
-        return cloudData.getPuffJitter();
-    }
-
     public int getToonBands() {
         return cloudData.getToonBands();
     }

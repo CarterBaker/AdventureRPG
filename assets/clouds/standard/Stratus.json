@@ -4,8 +4,6 @@
     "scale": 130.0,
     "density": 0.5,
     "verticalThickness": 4.0,
-    "edgeSoftness": 0.18,
-    "puffJitter": 0.10,
     "toonBands": 2,
     "densityNoiseScale": 1.4,
     "noiseWarpStrength": 0.3,

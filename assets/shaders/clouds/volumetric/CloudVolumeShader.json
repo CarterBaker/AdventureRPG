@@ -1,0 +1,4 @@
+{
+    "vert": "clouds/volumetric/CloudVolumeShader.vsh",
+    "frag": "clouds/volumetric/CloudVolumeShader.fsh"
+}

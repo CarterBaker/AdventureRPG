@@ -13,18 +13,26 @@ layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
 
 #include "includes/CameraData.glsl"
-#include "includes/NoiseUtility.glsl"
 #include "includes/TimeData.glsl"
 #include "includes/SkyColorData.glsl"
 #include "includes/SunLightData.glsl"
 #include "includes/MoonLightData.glsl"
-#include "sky/util/CloudShapeUtility.glsl"
+#include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
 * Volumetric raymarch through this instance's own AABB (vBoxMin/vBoxMax),
- * sampling the exact same sampleCloudDensity() the sky dome uses. Writes
+ * sampling sampleVolumetricCloudDensity() — the physical-cloud-only
+ * density field defined in clouds/util/VolumetricCloudUtility.glsl. Writes
  * only UNLIT shape data (shadeCloudUnlit()) plus a real accumulated AO into
  * gMaterial.b — Lighting.fsh lights this exactly once, same as terrain.
+ *
+ * This shader no longer shares its density/shading code with the sky
+ * dome — see VolumetricCloudUtility.glsl's own class doc comment for why,
+ * and for the silhouette-taper fix that replaces the old hard AABB cutoff
+ * responsible for clouds reading as boxes. u_cloudEdgeSoftness and
+ * u_cloudPuffJitter have been retired along with it — silhouetteSoftness
+ * now drives both the density-threshold blur and the box-relative taper
+ * that used to be split across those two legacy knobs.
  *
  * CAMERA POSITION FIX: rayDir/camDist previously differenced vWorldPos
  * against u_cameraPosition directly. vWorldPos is expressed in the
@@ -39,8 +47,6 @@ layout(location = 2) out vec4 gMaterial;
 
 uniform vec3  u_cloudColor;
 uniform float u_cloudDensity;
-uniform float u_cloudEdgeSoftness;
-uniform float u_cloudPuffJitter;
 
 uniform vec3  u_cloudTopColor;
 uniform int   u_cloudToonBands;
@@ -102,16 +108,19 @@ void main() {
 
         float heightT = clamp((p.y - vBoxMin.y) / boxHeight, 0.0, 1.0);
 
-        float rawDensity = sampleCloudDensity(
-            p, heightT, u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength, u_cloudPuffJitter,
-            u_cloudCoverageBias, u_cloudSilhouetteSoftness, vRandomSeed, u_time);
+        float rawDensity = sampleVolumetricCloudDensity(
+            p, vBoxMin, vBoxMax, heightT,
+            u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
+            u_cloudCoverageBias, u_cloudSilhouetteSoftness,
+            vRandomSeed, u_time);
         float density = rawDensity * u_cloudDensity * intensityFactor;
 
         if (density > 0.01) {
-            float rawLit = sampleCloudDensity(
-                p + lightDir * CLOUD_LIGHT_TAP_DISTANCE, heightT,
-                u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength, u_cloudPuffJitter,
-                u_cloudCoverageBias, u_cloudSilhouetteSoftness, vRandomSeed, u_time);
+            float rawLit = sampleVolumetricCloudDensity(
+                p + lightDir * CLOUD_LIGHT_TAP_DISTANCE, vBoxMin, vBoxMax, heightT,
+                u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
+                u_cloudCoverageBias, u_cloudSilhouetteSoftness,
+                vRandomSeed, u_time);
             float litDensity = rawLit * u_cloudDensity * intensityFactor;
 
             float lightLift = clamp((density - litDensity) * 2.0 + 0.5, 0.0, 1.0);
