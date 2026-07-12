@@ -1,7 +1,5 @@
-// RegionSampleBranch.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
-import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -9,7 +7,6 @@ import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
-import engine.util.mathematics.extras.Direction2Vector;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.random.WeightedChanceUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -17,99 +14,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RegionSampleBranch extends BranchPackage {
 
     /*
-     * Continuously samples a coherent noise field over world-space chunk
-     * coordinates at the reference coordinate and its eight surrounding
-     * directions (Direction2Vector's own order: N, NE, E, SE, S, SW, W, NW).
-     * Each direction's local noise is blended with GlobalNoiseBranch's
-     * planet-rotation-and-tilt-driven noise
-     * (EngineSetting.GLOBAL_WEATHER_INFLUENCE)
-     * before resolving against the supplied chance-weighted pool via
-     * resolveBand() — the single canonical noise-to-weather resolution path,
-     * also reachable cross-package through WeatherManager.resolveWeatherBand().
-     *
-     * resolveBand() only reports which two pool entries a coordinate sits
-     * between and how far across that blend band it is (WeatherBandStruct).
-     * It remembers nothing between calls — a caller wanting a persistent,
-     * non-reblending identity (an overhead cell) should read
-     * WeatherBandStruct.getPrimary() once and hold it. This class's own
-     * sampleDirection() deliberately reblends every call since these 9
-     * samples only ever drive smoothly fading fog/cloud UBO values.
-     *
-     * resolveBandTowardHorizon() is a second, related entry point for
-     * exactly that persistent-identity caller (OverheadManager) — see its
-     * own doc comment below for why a real, positioned cloud object needs
-     * a blend between resolveBand()'s true-coordinate answer and this
-     * class's own far-range directional sampling, rather than either one
-     * alone.
-     *
-     * Sample distance uses EngineSetting.WEATHER_FAR_RANGE_CHUNKS — the
-     * far side of the near/far range pair (see EngineSetting's own doc
-     * comment). Deliberately larger than OverheadManager's near-range
-     * streaming radius, so the 8-direction sky-dome preview always shows
-     * an approaching weather system before it ever reaches the range real
-     * cloud objects populate.
-     *
-     * Diagonal samples are placed at the same Euclidean distance from the
-     * reference as the cardinal ones — a diagonal direction has both axes
-     * at full magnitude (dir.x, dir.y both ±1), which without correction
-     * would put it sqrt(2) times farther out. DIAGONAL_AXIS_SCALE (1/sqrt(2))
-     * corrects that per-axis before the offset is applied.
-     *
-     * Wind-driven drift — the actual "storms move with the wind" mechanic
-     * -------------------------------------------------------------------
-     * The local noise field's sampling position is displaced every frame by
-     * the SAME live WindHandle local wind vector every other wind-aware
-     * system reads (see LocalWindBranch) — not a fixed elapsedTime*constant
-     * scroll. advanceWindDrift() integrates velocity into position
-     * incrementally (drift += direction * speed * scale * dt) rather than
-     * recomputing from elapsedTime * currentWind, which would retroactively
-     * apply this instant's wind to the whole session's history the moment
-     * wind changes — a visible pop. Both drift accumulators wrap modulo the
-     * world's own chunk-space width/height every frame, exactly like
-     * GlobalNoiseBranch wraps its rotation angle. Because LocalWindBranch
-     * itself reads WeatherManager.getWindSpeedScale()/getWindTurbulenceScale()
-     * (this class's own center sample), wind and weather form one closed
-     * feedback loop: wind pushes the storm pattern, the storm's own
-     * windSpeedScale/windTurbulenceScale in turn shape the wind blowing
-     * through it — see LocalWindBranch's own doc comment for that side.
-     *
-     * Independent temporal evolution
-     * -------------------------------
-     * Wind-driven drift alone would mean a perfectly calm sky (wind speed
-     * pinned near WIND_MIN_SPEED_FLOOR) never meaningfully changes the
-     * local weather noise — the sample point simply wouldn't move very
-     * far. advanceEvolution() adds a second, fully wind-independent
-     * mechanic: the underlying hashed noise field itself is blended
-     * between two independently-seeded "time layers" a
-     * WEATHER_LOCAL_EVOLUTION_PERIOD apart (see evolvingHash()), so the
-     * resolved value at any fixed point still rises and falls smoothly
-     * over time even with no wind at all — a weather system can genuinely
-     * form and dissipate in place, not only ever change because it has
-     * been advected somewhere else.
-     *
-     * Local noise samples in normalized, wrapped world-UV space — chunk
-     * coordinates (plus the drifted offset) convert to a UV fraction of the
-     * world's own chunk-space width/height in double precision, wrapped
-     * into [0, 1), scaled to a whole number of noise cells, with the hash
-     * lookup wrapping cell indices via floorMod — seamless at the world
-     * edge instead of two unrelated hash values on either side of the seam.
-     *
-     * Temporal smoothing
-     * -------------------
-     * Every value this class resolves is exposed only after passing
-     * through advanceSmoothing() — an exponential glide toward whatever
-     * was most recently resolved, rather than the raw resolution itself.
-     * The raw path (chance-band boundaries, biome/season pool swaps) can
-     * still change abruptly frame to frame; this is what keeps every
-     * visible or gameplay-facing consequence of that (sky colour and
-     * coverage on the UBOs, wind, temperature) arriving as a smooth glide
-     * instead of a snap. See EngineSetting.
-     * WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS's own doc comment.
+     * Owns the coherent weather noise field — wind-drifted, toroidally
+     * wrapped local noise blended with GlobalNoiseBranch's planet-rotation
+     * noise — and resolves it against a chance-weighted pool via
+     * resolveBand()/resolveBandTowardHorizon(). These two methods are the
+     * single canonical noise-to-weather resolution path used by
+     * WeatherManager, WeatherPatternManager (every pattern's own identity),
+     * and this class's own center-point atmosphere sample (wind/humidity/
+     * visibility/temperature). Neither the sky dome nor the overhead cloud
+     * layer read from this class directly — both resolve their own weather
+     * per pattern through WeatherManager.resolveWeatherBandTowardHorizon(),
+     * which is what keeps the two visual layers from ever disagreeing.
      */
-
-    // Scales a diagonal direction's per-axis offset so its Euclidean
-    // distance from the reference matches the four cardinal samples exactly.
-    private static final float DIAGONAL_AXIS_SCALE = 0.70710678f;
 
     // Internal
     private GlobalNoiseBranch globalNoiseBranch;
@@ -117,7 +33,6 @@ class RegionSampleBranch extends BranchPackage {
     private WindManager windManager;
 
     // Settings
-    private int sampleDistance;
     private float noiseCellSize;
     private float windDriftScale;
 
@@ -130,27 +45,17 @@ class RegionSampleBranch extends BranchPackage {
     private double driftChunksY;
 
     // Evolution — independent of wind or drift; slowly morphs the local
-    // noise field itself over time so a weather system can intensify and
-    // fade in place, not only ever change because it has been advected
-    // somewhere else. See advanceEvolution() and evolvingHash().
+    // noise field itself over time so weather can intensify and fade in
+    // place, not only ever change because it has been advected elsewhere.
     private double evolutionElapsedSeconds;
     private int evolutionTimeCell;
     private float evolutionTimeBlend;
 
-    // Samples — index 0 is the centre; indices 1-8 mirror Direction2Vector's
-    // own ordinal order (NORTH, NORTHEAST, EAST, SOUTHEAST, SOUTH,
-    // SOUTHWEST, WEST, NORTHWEST), so a direction's ordinal and its sample
-    // index are always exactly one apart, with no separate lookup table.
-    // This is the SMOOTHED array — every external reader (getCenterSample(),
-    // WeatherBufferBranch, WeatherManager's wind/humidity/visibility
-    // getters) reads from here, never from targetSamples directly.
-    private WeatherSampleStruct[] samples;
-
-    // Smoothing — this frame's raw resolution, before the glide applied by
-    // advanceSmoothing(). Same indexing as samples. See EngineSetting.
-    // WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS's own doc comment for why
-    // samples itself is never written to directly from a resolution call.
-    private WeatherSampleStruct[] targetSamples;
+    // Center atmosphere sample — smoothed toward every frame's fresh
+    // resolution rather than snapping, so wind/humidity/temperature never
+    // pop when a chance-band boundary or season pool swap occurs.
+    private final WeatherSampleStruct sample = new WeatherSampleStruct();
+    private final WeatherSampleStruct targetSample = new WeatherSampleStruct();
     private boolean smoothingInitialized;
 
     // Scratch — reused every sample call, never reallocated
@@ -161,24 +66,10 @@ class RegionSampleBranch extends BranchPackage {
     @Override
     protected void create() {
 
-        // Settings
-        this.sampleDistance = EngineSetting.WEATHER_FAR_RANGE_CHUNKS;
         this.noiseCellSize = EngineSetting.WEATHER_NOISE_CELL_SIZE;
         this.windDriftScale = EngineSetting.WEATHER_WIND_DRIFT_SCALE;
 
-        // Reference
         this.referenceCoordinate = Coordinate2Long.pack(0, 0);
-
-        // Samples — centre + all 8 Direction2Vector entries
-        this.samples = new WeatherSampleStruct[1 + Direction2Vector.LENGTH];
-        this.targetSamples = new WeatherSampleStruct[1 + Direction2Vector.LENGTH];
-        for (int i = 0; i < samples.length; i++) {
-            samples[i] = new WeatherSampleStruct();
-            targetSamples[i] = new WeatherSampleStruct();
-        }
-
-        // Smoothing
-        this.smoothingInitialized = false;
     }
 
     @Override
@@ -208,50 +99,18 @@ class RegionSampleBranch extends BranchPackage {
         int originX = Coordinate2Long.unpackX(referenceCoordinate);
         int originY = Coordinate2Long.unpackY(referenceCoordinate);
 
-        sampleDirection(targetSamples[0], originX, originY, pool);
-
-        for (int i = 0; i < Direction2Vector.LENGTH; i++) {
-
-            Direction2Vector dir = Direction2Vector.VALUES[i];
-            boolean isDiagonal = dir.x != 0 && dir.y != 0;
-            float axisScale = isDiagonal ? DIAGONAL_AXIS_SCALE : 1.0f;
-
-            int sampleX = originX + Math.round(dir.x * sampleDistance * axisScale);
-            int sampleY = originY + Math.round(dir.y * sampleDistance * axisScale);
-
-            sampleDirection(targetSamples[i + 1], sampleX, sampleY, pool);
-        }
+        resolveBand(bandScratch, originX, originY, pool);
+        writeSample(targetSample, bandScratch.getLow(), bandScratch.getHigh(), bandScratch.getBlendFactor());
 
         advanceSmoothing();
     }
 
-    private void sampleDirection(
-            WeatherSampleStruct sample,
-            int chunkX,
-            int chunkY,
-            ObjectArrayList<WeatherPoolEntryStruct> pool) {
-
-        resolveBand(bandScratch, chunkX, chunkY, pool);
-        writeSample(sample, bandScratch.getLow(), bandScratch.getHigh(), bandScratch.getBlendFactor());
-    }
-
     // Smoothing \\
 
-    /*
-     * Glides the externally-read `samples` array a bounded fraction of the
-     * way toward this frame's freshly resolved `targetSamples` — see
-     * EngineSetting.WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS's own doc comment
-     * for why. The very first resolution snaps immediately instead of
-     * gliding from samples' zeroed defaults — otherwise the sky would
-     * visibly fade up from black/zero-coverage over the full smoothing
-     * window at world start, which reads as a bug rather than "weather
-     * settling in."
-     */
     private void advanceSmoothing() {
 
         if (!smoothingInitialized) {
-            for (int i = 0; i < samples.length; i++)
-                samples[i].copyFrom(targetSamples[i]);
+            sample.copyFrom(targetSample);
             smoothingInitialized = true;
             return;
         }
@@ -259,17 +118,11 @@ class RegionSampleBranch extends BranchPackage {
         float deltaTime = internal.getDeltaTime();
         float alpha = 1f - (float) Math.exp(-deltaTime / EngineSetting.WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS);
 
-        for (int i = 0; i < samples.length; i++)
-            samples[i].lerpToward(targetSamples[i], alpha);
+        sample.lerpToward(targetSample, alpha);
     }
 
     // Wind Drift \\
 
-    /*
-     * Advances the local weather noise field's drift from the live local
-     * wind vector — see the class comment for the full rationale. Called
-     * once per frame, before any of the 9 direction samples.
-     */
     private void advanceWindDrift() {
 
         Vector3 windDirection = windManager.getWindHandle().getLocalWindDirection();
@@ -299,16 +152,6 @@ class RegionSampleBranch extends BranchPackage {
 
     // Evolution \\
 
-    /*
-     * Advances the local noise field's independent time-evolution phase —
-     * see the class comment and the "Evolution" field group above.
-     * evolutionElapsedSeconds is wrapped against
-     * EngineSetting.WEATHER_LOCAL_DRIFT_TIME_WRAP purely to keep the
-     * accumulator bounded over an arbitrarily long session; that wrap
-     * period is far longer than WEATHER_LOCAL_EVOLUTION_PERIOD, so it
-     * never produces a visible seam in practice. Called once per frame,
-     * alongside advanceWindDrift(), before any of the 9 direction samples.
-     */
     private void advanceEvolution() {
 
         evolutionElapsedSeconds += internal.getDeltaTime();
@@ -323,18 +166,6 @@ class RegionSampleBranch extends BranchPackage {
 
     // Resolution \\
 
-    /*
-     * Combines this coordinate's wind-drifted local noise with the global
-     * rotation-and-tilt-driven noise into a single [0,1] weather intensity
-     * value — the same combined value resolveBand() has always resolved a
-     * pool against, just factored out on its own so
-     * resolveBandTowardHorizon() below can blend two different
-     * coordinates' combined noise together BEFORE either one is ever
-     * resolved against a pool (blending two already-resolved
-     * WeatherBandStructs — each its own discrete low/high pool-entry pair
-     * — has no single correct meaning; blending the raw noise upstream of
-     * that resolution does).
-     */
     private float combinedNoiseAt(int chunkX, int chunkY) {
 
         float localNoise = sampleNoise(chunkX, chunkY);
@@ -344,62 +175,24 @@ class RegionSampleBranch extends BranchPackage {
     }
 
     /*
-     * Combines this coordinate's wind-drifted local noise with the global
-     * rotation-and-tilt-driven noise, then resolves the blend against the
-     * supplied chance-weighted pool. Writes into the caller-supplied struct
-     * rather than allocating — this is the method
-     * WeatherManager.resolveWeatherBand() calls on behalf of any
-     * cross-package caller that wants the true, un-blended weather at an
-     * arbitrary coordinate. A caller resolving an overhead cloud object's
-     * own identity should use resolveBandTowardHorizon() below instead —
-     * see that method's own doc comment for why a real cloud object needs
-     * different treatment than a plain coordinate query.
+     * Resolves the true, un-blended weather at an arbitrary world-space
+     * chunk coordinate against the supplied chance-weighted pool. Writes
+     * into the caller-supplied struct rather than allocating.
      */
     void resolveBand(WeatherBandStruct out, int chunkX, int chunkY, ObjectArrayList<WeatherPoolEntryStruct> pool) {
         bandFromPool(out, pool, combinedNoiseAt(chunkX, chunkY));
     }
 
     /*
-     * Resolves a weather band for a coordinate that is not necessarily
-     * where the player is standing — specifically, for an overhead cloud
-     * OBJECT's own home coordinate, which can sit anywhere between the
-     * player's feet and the outer edge of the near-range streaming radius
-     * (see EngineSetting.WEATHER_NEAR_RANGE_CHUNKS). A cloud object
-     * streamed in right next to the player must show the weather that is
-     * ACTUALLY there; a cloud object streamed in right at the streaming
-     * edge must instead agree with whatever the sky dome is already
-     * showing along that exact bearing — see this class's own far-range
-     * directional sampling in sampleDirection()/sampleRegions() above,
-     * which resolves at EngineSetting.WEATHER_FAR_RANGE_CHUNKS. Blending
-     * smoothly between the two, keyed on how far toward the streaming
-     * edge this coordinate already sits, is what keeps a real cloud
-     * object and the sky-dome preview from ever visibly disagreeing about
-     * the weather along the same line of sight — without either system
-     * needing to know anything about the other's existence.
-     *
-     * The "far" sample is deliberately resolved along the SAME continuous
-     * bearing from referenceChunkX/Z that homeChunkX/Z already sits on —
-     * never snapped to this class's own 8 fixed compass buckets — because
-     * the sky dome's own horizon blend (_sampleHorizonWeather in
-     * Clouds.glsl) already interpolates continuously between whichever two
-     * buckets bracket a given view direction. Resolving this coordinate's
-     * own far sample on its own exact bearing, through the identical
-     * combinedNoiseAt() pipeline those buckets are themselves built from,
-     * lands inside that same interpolated result to begin with — two
-     * systems sampling the same underlying noise field at (approximately)
-     * the same point is what actually keeps them in sync, not any
-     * explicit hand-off between them.
-     *
-     * distanceChunks and the resulting blend factor are computed from a
-     * flat, unwrapped delta against the reference coordinate — a cloud
-     * object's home coordinate is already wrapped into the world's own
-     * toroidal bounds at stream-in time (see
-     * OverheadManager.wrapChunkCoordinate()), and the player's own
-     * reference coordinate never sits farther from a streamed-in cloud's
-     * home chunk than the near-range streaming radius itself — far too
-     * close for the world's toroidal wrap to ever matter here, unlike
-     * OverheadManager's own retirement distance check, which does have to
-     * account for a cloud that streamed in across the wrap seam.
+     * Resolves a weather band for a coordinate that may sit anywhere
+     * between the player's feet and the outer edge of the near-range
+     * streaming radius — the identity a real weather pattern (sky arc or
+     * overhead volume alike) is built from. Blends this coordinate's own
+     * true weather with whatever the sky already shows along the identical
+     * bearing at the far sampling range, weighted by how close this
+     * coordinate sits to the streaming edge — this is what keeps a
+     * streamed-in pattern and the sky dome's own horizon arc from ever
+     * visibly disagreeing about the weather along the same line of sight.
      */
     void resolveBandTowardHorizon(
             WeatherBandStruct out,
@@ -485,192 +278,17 @@ class RegionSampleBranch extends BranchPackage {
         }
     }
 
-    // Visual Blend \\
+    // Atmosphere Blend \\
 
-    /*
-     * Converts a resolved band into flattened, continuously-blended visual
-     * values for the region-sampling UBO path — a genuine reblend every
-     * call, not the identity-preserving path a persistent overhead cell
-     * uses. windSpeedScale/windTurbulenceScale are blended identically to
-     * every other atmosphere field — see LocalWindBranch for how the
-     * centre sample's copy of these two feeds back into wind itself.
-     * humidity/visibility are blended the same way — both are now fully
-     * resolved per-region values (previously parsed per-Weather but never
-     * carried through sampling), available via
-     * WeatherManager.getHumidity()/getVisibility(). temperatureModifier is
-     * blended the same way and read by TemperatureBranch.
-     *
-     * Every field describing the resolved cloud's actual shape/shading
-     * (color, topColor, shadowColor, density, shadeStrength,
-     * rimLightStrength, ambientOcclusionStrength, brightnessMultiplier,
-     * toonBands, densityNoiseScale, noiseWarpStrength, coverageBias,
-     * silhouetteSoftness) is now blended here too, from each side's own
-     * primary cloud archetype — this is the full CloudData surface, not
-     * just a single representative tint, so the sky dome (Clouds.glsl) can
-     * finally render each direction with its actual archetype's real shape
-     * and lighting character instead of a fixed constant shared by every
-     * direction and every weather. See resolveCloudXxx()'s own doc comment
-     * for the Clear-weather (no cloud) fallback path.
-     */
-    private void writeSample(
-            WeatherSampleStruct sample,
-            WeatherHandle low,
-            WeatherHandle high,
-            float t) {
+    private void writeSample(WeatherSampleStruct sampleOut, WeatherHandle low, WeatherHandle high, float t) {
 
-        sample.setCloudCoverage(lerp(low.getCloudCoverage(), high.getCloudCoverage(), t));
-        sample.setPrecipitationIntensity(lerp(low.getPrecipitationIntensity(), high.getPrecipitationIntensity(), t));
-        sample.setWindSpeedScale(lerp(low.getWindSpeedScale(), high.getWindSpeedScale(), t));
-        sample.setWindTurbulenceScale(lerp(low.getWindTurbulenceScale(), high.getWindTurbulenceScale(), t));
-        sample.setFogDensityScale(lerp(low.getFogDensityScale(), high.getFogDensityScale(), t));
-        sample.setHumidity(lerp(low.getHumidity(), high.getHumidity(), t));
-        sample.setVisibility(lerp(low.getVisibility(), high.getVisibility(), t));
-        sample.setTemperatureModifier(lerp(low.getTemperatureModifier(), high.getTemperatureModifier(), t));
-
-        CloudChanceStruct lowCloud = low.getPrimaryCloud();
-        CloudChanceStruct highCloud = high.getPrimaryCloud();
-
-        sample.setCloudAltitude(lerp(resolveCloudAltitude(lowCloud), resolveCloudAltitude(highCloud), t));
-
-        sample.setCloudColor(
-                lerp(resolveCloudColorR(lowCloud), resolveCloudColorR(highCloud), t),
-                lerp(resolveCloudColorG(lowCloud), resolveCloudColorG(highCloud), t),
-                lerp(resolveCloudColorB(lowCloud), resolveCloudColorB(highCloud), t));
-
-        sample.setCloudTopColor(
-                lerp(resolveCloudTopColorR(lowCloud), resolveCloudTopColorR(highCloud), t),
-                lerp(resolveCloudTopColorG(lowCloud), resolveCloudTopColorG(highCloud), t),
-                lerp(resolveCloudTopColorB(lowCloud), resolveCloudTopColorB(highCloud), t));
-
-        sample.setCloudShadowColor(
-                lerp(resolveCloudShadowColorR(lowCloud), resolveCloudShadowColorR(highCloud), t),
-                lerp(resolveCloudShadowColorG(lowCloud), resolveCloudShadowColorG(highCloud), t),
-                lerp(resolveCloudShadowColorB(lowCloud), resolveCloudShadowColorB(highCloud), t));
-
-        sample.setCloudDensity(lerp(resolveCloudDensity(lowCloud), resolveCloudDensity(highCloud), t));
-        sample.setCloudShadeStrength(
-                lerp(resolveCloudShadeStrength(lowCloud), resolveCloudShadeStrength(highCloud), t));
-        sample.setCloudRimLightStrength(
-                lerp(resolveCloudRimLightStrength(lowCloud), resolveCloudRimLightStrength(highCloud), t));
-        sample.setCloudAmbientOcclusionStrength(lerp(
-                resolveCloudAmbientOcclusionStrength(lowCloud), resolveCloudAmbientOcclusionStrength(highCloud), t));
-        sample.setCloudBrightnessMultiplier(
-                lerp(resolveCloudBrightnessMultiplier(lowCloud), resolveCloudBrightnessMultiplier(highCloud), t));
-        sample.setCloudToonBands(lerp(resolveCloudToonBands(lowCloud), resolveCloudToonBands(highCloud), t));
-        sample.setCloudDensityNoiseScale(
-                lerp(resolveCloudDensityNoiseScale(lowCloud), resolveCloudDensityNoiseScale(highCloud), t));
-        sample.setCloudNoiseWarpStrength(
-                lerp(resolveCloudNoiseWarpStrength(lowCloud), resolveCloudNoiseWarpStrength(highCloud), t));
-        sample.setCloudCoverageBias(lerp(resolveCloudCoverageBias(lowCloud), resolveCloudCoverageBias(highCloud), t));
-        sample.setCloudSilhouetteSoftness(
-                lerp(resolveCloudSilhouetteSoftness(lowCloud), resolveCloudSilhouetteSoftness(highCloud), t));
-    }
-
-    // Cloud Fallback \\
-
-    /*
-     * A weather with no clouds defined (e.g. Clear) resolves every one of
-     * these cloud-specific sample fields to a neutral fallback here rather
-     * than throwing — the sky pass still needs a full shading surface to
-     * blend toward even when one side of the band has nothing to actually
-     * draw. cloudCoverage itself already carries the real "how much sky is
-     * covered" signal independent of these fallbacks, so a Clear weather
-     * still reads as an empty sky regardless of what these placeholder
-     * values are. Fallbacks mirror CloudBuilder's own JSON defaults (see
-     * EngineSetting's own doc comment on this constant block) so "no cloud
-     * resolved" reads as a generic, neutral cloud rather than an arbitrary
-     * placeholder.
-     */
-    private float resolveCloudAltitude(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getEffectiveAltitude() : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;
-    }
-
-    private float resolveCloudColorR(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getCloudColor().x : EngineSetting.CLOUD_DEFAULT_SKY_COLOR_R;
-    }
-
-    private float resolveCloudColorG(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getCloudColor().y : EngineSetting.CLOUD_DEFAULT_SKY_COLOR_G;
-    }
-
-    private float resolveCloudColorB(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getCloudColor().z : EngineSetting.CLOUD_DEFAULT_SKY_COLOR_B;
-    }
-
-    private float resolveCloudTopColorR(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getTopColor().x : EngineSetting.CLOUD_DEFAULT_SKY_TOP_COLOR_R;
-    }
-
-    private float resolveCloudTopColorG(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getTopColor().y : EngineSetting.CLOUD_DEFAULT_SKY_TOP_COLOR_G;
-    }
-
-    private float resolveCloudTopColorB(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getTopColor().z : EngineSetting.CLOUD_DEFAULT_SKY_TOP_COLOR_B;
-    }
-
-    private float resolveCloudShadowColorR(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getShadowColor().x : EngineSetting.CLOUD_DEFAULT_SHADOW_COLOR_R;
-    }
-
-    private float resolveCloudShadowColorG(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getShadowColor().y : EngineSetting.CLOUD_DEFAULT_SHADOW_COLOR_G;
-    }
-
-    private float resolveCloudShadowColorB(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getShadowColor().z : EngineSetting.CLOUD_DEFAULT_SHADOW_COLOR_B;
-    }
-
-    private float resolveCloudDensity(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getDensity() : EngineSetting.CLOUD_DEFAULT_DENSITY;
-    }
-
-    private float resolveCloudShadeStrength(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getShadeStrength() : EngineSetting.CLOUD_DEFAULT_SHADE_STRENGTH;
-    }
-
-    private float resolveCloudRimLightStrength(CloudChanceStruct cloud) {
-        return cloud != null
-                ? cloud.getCloudHandle().getRimLightStrength()
-                : EngineSetting.CLOUD_DEFAULT_RIM_LIGHT_STRENGTH;
-    }
-
-    private float resolveCloudAmbientOcclusionStrength(CloudChanceStruct cloud) {
-        return cloud != null
-                ? cloud.getCloudHandle().getAmbientOcclusionStrength()
-                : EngineSetting.CLOUD_DEFAULT_AMBIENT_OCCLUSION_STRENGTH;
-    }
-
-    private float resolveCloudBrightnessMultiplier(CloudChanceStruct cloud) {
-        return cloud != null
-                ? cloud.getCloudHandle().getBrightnessMultiplier()
-                : EngineSetting.CLOUD_DEFAULT_BRIGHTNESS_MULTIPLIER;
-    }
-
-    private float resolveCloudToonBands(CloudChanceStruct cloud) {
-        return cloud != null ? (float) cloud.getCloudHandle().getToonBands() : EngineSetting.CLOUD_DEFAULT_TOON_BANDS;
-    }
-
-    private float resolveCloudDensityNoiseScale(CloudChanceStruct cloud) {
-        return cloud != null
-                ? cloud.getCloudHandle().getDensityNoiseScale()
-                : EngineSetting.CLOUD_DEFAULT_DENSITY_NOISE_SCALE;
-    }
-
-    private float resolveCloudNoiseWarpStrength(CloudChanceStruct cloud) {
-        return cloud != null
-                ? cloud.getCloudHandle().getNoiseWarpStrength()
-                : EngineSetting.CLOUD_DEFAULT_NOISE_WARP_STRENGTH;
-    }
-
-    private float resolveCloudCoverageBias(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getCoverageBias() : EngineSetting.CLOUD_DEFAULT_COVERAGE_BIAS;
-    }
-
-    private float resolveCloudSilhouetteSoftness(CloudChanceStruct cloud) {
-        return cloud != null
-                ? cloud.getCloudHandle().getSilhouetteSoftness()
-                : EngineSetting.CLOUD_DEFAULT_SILHOUETTE_SOFTNESS;
+        sampleOut.setPrecipitationIntensity(lerp(low.getPrecipitationIntensity(), high.getPrecipitationIntensity(), t));
+        sampleOut.setWindSpeedScale(lerp(low.getWindSpeedScale(), high.getWindSpeedScale(), t));
+        sampleOut.setWindTurbulenceScale(lerp(low.getWindTurbulenceScale(), high.getWindTurbulenceScale(), t));
+        sampleOut.setFogDensityScale(lerp(low.getFogDensityScale(), high.getFogDensityScale(), t));
+        sampleOut.setHumidity(lerp(low.getHumidity(), high.getHumidity(), t));
+        sampleOut.setVisibility(lerp(low.getVisibility(), high.getVisibility(), t));
+        sampleOut.setTemperatureModifier(lerp(low.getTemperatureModifier(), high.getTemperatureModifier(), t));
     }
 
     private float lerp(float a, float b, float t) {
@@ -686,11 +304,9 @@ class RegionSampleBranch extends BranchPackage {
     /*
      * Coherent 2D value noise over chunk coordinates, wrapped seamlessly at
      * the world edge and displaced by the wind-driven drift accumulators
-     * from advanceWindDrift() so weather fronts visibly move across the
-     * world with the wind, independently of the planet's rotation/tilt.
-     * Each grid point is itself blended between two time-decorrelated
-     * hash layers via evolvingHash() (see advanceEvolution()), so the
-     * field also morphs in place over time, independent of drift.
+     * from advanceWindDrift(), so weather fronts visibly move with the
+     * wind. Each grid point blends two time-decorrelated hash layers via
+     * evolvingHash() so the field also morphs in place over time.
      */
     private float sampleNoise(int chunkX, int chunkY) {
 
@@ -738,15 +354,6 @@ class RegionSampleBranch extends BranchPackage {
         return wrapped < 0 ? wrapped + 1.0 : wrapped;
     }
 
-    /*
-     * Value noise at one grid point, blended between two independently
-     * hashed time layers a full WEATHER_LOCAL_EVOLUTION_PERIOD apart — see
-     * advanceEvolution(). This is what lets local weather genuinely
-     * intensify and fade IN PLACE rather than only ever changing because
-     * the sample point itself was advected elsewhere by wind: even a
-     * perfectly still point sees its value drift smoothly between two
-     * decorrelated fields.
-     */
     private float evolvingHash(int x, int y) {
 
         float layerA = hash(x, y, evolutionTimeCell);
@@ -770,42 +377,6 @@ class RegionSampleBranch extends BranchPackage {
     // Accessible \\
 
     WeatherSampleStruct getCenterSample() {
-        return samples[0];
-    }
-
-    WeatherSampleStruct getSampleForDirection(Direction2Vector direction) {
-        return samples[direction.index + 1];
-    }
-
-    WeatherSampleStruct getNorthSample() {
-        return samples[Direction2Vector.NORTH.index + 1];
-    }
-
-    WeatherSampleStruct getNortheastSample() {
-        return samples[Direction2Vector.NORTHEAST.index + 1];
-    }
-
-    WeatherSampleStruct getEastSample() {
-        return samples[Direction2Vector.EAST.index + 1];
-    }
-
-    WeatherSampleStruct getSoutheastSample() {
-        return samples[Direction2Vector.SOUTHEAST.index + 1];
-    }
-
-    WeatherSampleStruct getSouthSample() {
-        return samples[Direction2Vector.SOUTH.index + 1];
-    }
-
-    WeatherSampleStruct getSouthwestSample() {
-        return samples[Direction2Vector.SOUTHWEST.index + 1];
-    }
-
-    WeatherSampleStruct getWestSample() {
-        return samples[Direction2Vector.WEST.index + 1];
-    }
-
-    WeatherSampleStruct getNorthwestSample() {
-        return samples[Direction2Vector.NORTHWEST.index + 1];
+        return sample;
     }
 }

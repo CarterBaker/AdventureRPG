@@ -21,88 +21,24 @@ import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 public class WeatherManager extends ManagerPackage {
 
     /*
-     * Owns the weather palette for the engine lifetime and drives the live
-     * weather simulation. Supports on-demand loading via InternalLoader on a
-     * cache miss, keyed by weather name (e.g. "standard/Sunny"). The active
-     * seasonal pool is re-resolved only when the season changes — season
-     * identity now comes from the active calendar (see
-     * ClockHandle.getCurrentSeason()) rather than a fixed enum, so biomes
-     * can define weather pools for whatever named seasons their world's
-     * calendar uses. Per-frame region sampling, the planet-rotation-driven
-     * global noise overlay, live temperature, and the GPU UBO pushes are
-     * delegated to branches.
-     *
-     * Weather is the fusion of three inputs, combined once per frame in
-     * RegionSampleBranch: which biome is active (resolveActiveBiome()),
-     * which named season that biome is currently in (the calendar, via
-     * ClockHandle.getCurrentSeason()), and the world's global, rotating
-     * weather noise (GlobalNoiseBranch — the "separate virtual noise map
-     * wrapped around the planet" — blended with a wind-drifted local noise
-     * layer). Neither wind nor weather is a one-way input to the other:
-     * wind drags the local noise sampling point (see
-     * RegionSampleBranch.advanceWindDrift()), so weather visibly travels
-     * with the wind, while the currently resolved weather's own
-     * windSpeedScale/windTurbulenceScale feed back into LocalWindBranch,
-     * making wind gustier and more erratic under a storm than under a
-     * clear sky. See LocalWindBranch's own doc comment for the wind side
-     * of this loop.
-     *
-     * The active season contributes more than just its name as a lookup
-     * key, too — resolveWeatherPool() reads that season's own
-     * precipitationChanceScale (SeasonData/SeasonHandle) and uses it to
-     * bias the chance weight of every precipitating weather in the
-     * biome's pool for that season, so "biome + season + noise" really
-     * does fold in the season's own climate numbers, not just its name.
-     *
-     * updateReferenceCoordinate() mirrors the main window's player onto
-     * RegionSampleBranch's reference coordinate every frame, before any
-     * sampling happens this frame — this is the "grab the data for the
-     * part of the world we're actually standing in" hookup. It reads
-     * WorldPositionStruct.getChunkCoordinate() directly — the exact same
-     * field GridInstance's own terrain recentering treats as authoritative
-     * (see GridInstance.updateActiveChunkCoordinate()) — rather than
-     * re-deriving a chunk coordinate from the player's raw continuous
-     * position. See updateReferenceCoordinate()'s own doc comment for the
-     * bug that mismatch caused and why reading the identical field fixes
-     * it outright. Falls back to whatever the reference coordinate already
-     * was (default origin) if there is no main window or no spawned player
-     * yet — normal before a player exists.
-     *
-     * getReferenceCoordinate() — the INTEGER chunk-granular coordinate — is
-     * the single reference position both OverheadManager's cell streaming
-     * and CloudRenderSystem's render-space positioning use. Every
-     * moving-world offset elsewhere in the engine (terrain's own
-     * u_gridPosition, see GridBuildSystem; world items' u_playerChunkX/
-     * u_playerChunkZ, see StandardItemShader.vsh) is anchored to this same
-     * kind of integer chunk coordinate, never a continuous sub-chunk
-     * position — the camera's own view/projection matrix already carries
-     * the player's continuous motion within their current chunk, so
-     * nothing downstream needs to reapply it. An earlier revision of this
-     * manager additionally tracked the player's raw continuous world
-     * position for CloudRenderSystem to offset cloud instances by,
-     * reasoning that the integer chunk coordinate alone left a cloud's
-     * render offset "frozen" for as long as the player stayed inside one
-     * chunk. That double-counted the player's own sub-chunk motion on top
-     * of what the camera's view transform already applies, and was the
-     * actual source of the "clouds shift slightly when the player wraps
-     * inside a chunk" bug rather than a fix for it — see
-     * CloudRenderSystem.updateInstances()'s own doc comment for the full
-     * account. That continuous tracking has been removed; the integer
-     * coordinate below is now the only reference position this manager
-     * exposes.
+     * Owns the weather palette and drives the live weather simulation.
+     * Weather is the fusion of the active biome, the calendar's current
+     * named season, and the world's wrapped/rotating noise field
+     * (GlobalNoiseBranch blended with RegionSampleBranch's wind-drifted
+     * local noise). The sky dome's pattern arcs and the overhead volumetric
+     * cloud objects both resolve their own weather identity directly
+     * through resolveWeatherBandTowardHorizon() rather than reading a
+     * shared directional sample, so the two visual layers can never
+     * disagree about what's happening at a given bearing.
      *
      * activeWeatherPool stays null until the calendar resolves its first
-     * named season, which requires at least one day-tick — normal at
-     * startup. update() skips sampling entirely until then, and any
-     * cross-package caller of resolveWeatherBand() or
-     * resolveWeatherBandTowardHorizon() should check hasActiveWeatherPool()
-     * first; calling either before that point throws rather than silently
-     * resolving against nothing. getWindSpeedScale(), getWindTurbulenceScale(),
-     * getHumidity(), and getVisibility() are the exceptions — all four fall
-     * back to a neutral value before that point instead of throwing or
-     * silently reading an unset zero, so nothing downstream (wind, fog,
-     * gameplay) goes to a dead/degenerate state during the first frames of
-     * a session.
+     * named season. hasActiveWeatherPool() must be checked by any
+     * cross-package caller of
+     * resolveWeatherBand()/resolveWeatherBandTowardHorizon()
+     * before calling either — both throw otherwise. getWindSpeedScale(),
+     * getWindTurbulenceScale(), getHumidity(), getVisibility(), and
+     * getFogDensityScale() are the exceptions — each falls back to a
+     * neutral default before that point instead of throwing.
      */
 
     // Internal
@@ -116,7 +52,6 @@ public class WeatherManager extends ManagerPackage {
     private GlobalNoiseBranch globalNoiseBranch;
     private RegionSampleBranch regionSampleBranch;
     private TemperatureBranch temperatureBranch;
-    private WeatherBufferBranch internalBuffer;
 
     // Palette
     private Object2ShortOpenHashMap<String> weatherName2WeatherID;
@@ -139,7 +74,6 @@ public class WeatherManager extends ManagerPackage {
         this.globalNoiseBranch = create(GlobalNoiseBranch.class);
         this.regionSampleBranch = create(RegionSampleBranch.class);
         this.temperatureBranch = create(TemperatureBranch.class);
-        this.internalBuffer = create(WeatherBufferBranch.class);
 
         create(WeatherLoader.class);
     }
@@ -153,11 +87,6 @@ public class WeatherManager extends ManagerPackage {
         this.windowManager = get(WindowManager.class);
         this.playerManager = get(PlayerManager.class);
         this.seasonManager = get(SeasonManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        this.internalBuffer.assignData(regionSampleBranch);
     }
 
     @Override
@@ -183,38 +112,10 @@ public class WeatherManager extends ManagerPackage {
     // Reference Coordinate \\
 
     /*
-     * Mirrors the main window's player onto the exact same chunk-granular
-     * reference every downstream weather/cloud system treats as "here".
-     *
-     * Reads WorldPositionStruct.getChunkCoordinate() directly rather than
-     * independently re-deriving a chunk coordinate from the player's raw
-     * continuous position (the previous approach). GridInstance —
-     * terrain's own moving-world recentering — already treats that exact
-     * same field as the single source of truth for "what chunk is the
-     * player standing in" (see GridInstance.updateActiveChunkCoordinate()).
-     * A second, independently-computed notion of the same concept here had
-     * no way to guarantee it would ever equal terrain's value on the exact
-     * same frame — any difference in update timing or rounding between the
-     * two computations desynced WeatherManager's reference coordinate from
-     * the terrain grid's activeChunkCoordinate for however long that
-     * mismatch lasted, most visibly right at the instant the player's
-     * chunk changes. Every position downstream of this reference
-     * (OverheadManager's cell streaming/retirement, CloudRenderSystem's
-     * per-frame cloud recentring) is expressed relative to it exactly the
-     * way terrain's own u_gridPosition is expressed relative to
-     * GridInstance's activeChunkCoordinate — so a one-frame desync between
-     * the two was exactly what read as "clouds shift slightly relative to
-     * the ground when the player crosses a chunk boundary", and, when the
-     * desync spanned more than one frame under faster movement, as several
-     * overhead cells retiring and streaming back in within the same short
-     * window rather than one at a time. Reading the identical field
-     * terrain already treats as authoritative removes the second
-     * computation entirely, so the two systems can never disagree about
-     * which chunk "here" is.
-     *
-     * A no-op if there is no main window or no player has spawned into it
-     * yet, leaving the reference at whatever it last resolved to (origin
-     * by default).
+     * Mirrors the main window's player onto the exact chunk-granular
+     * reference GridInstance already treats as authoritative for terrain
+     * recentering, so weather/cloud systems and terrain can never disagree
+     * about which chunk is "here". No-op before a player has spawned.
      */
     private void updateReferenceCoordinate() {
 
@@ -236,14 +137,9 @@ public class WeatherManager extends ManagerPackage {
     // Biome Selection \\
 
     /*
-     * Resolves which biome supplies the active seasonal weather pool.
-     * Single hardcoded biome for now (EngineSetting.DEFAULT_BIOME_NAME) —
-     * this is the one integration point a future per-location biome lookup
-     * (sampling a biome map at the current reference coordinate, the same
-     * way the world generator assigns biomes per block) needs to replace.
-     * Kept as its own method precisely so that hookup is a one-line change
-     * here rather than a change to update()'s control flow or a second
-     * biome-resolution path growing somewhere else.
+     * Single hardcoded biome for now — the one integration point a future
+     * per-location biome lookup (sampling a biome map at the reference
+     * coordinate) needs to replace.
      */
     private BiomeHandle resolveActiveBiome() {
         return biomeManager.getBiomeHandleFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
@@ -275,18 +171,6 @@ public class WeatherManager extends ManagerPackage {
 
     // Biome Resolution \\
 
-    /*
-     * Resolves a biome's named-season weather chance entries into live
-     * handles, preserving JSON declaration order — RegionSampleBranch blends
-     * across this pool by chance-weighted band, not array position, so no
-     * sort is needed here. Falls back via resolveFallbackEntries() when the
-     * biome has no entries for this exact season name — see that method.
-     *
-     * Every entry whose weather actually precipitates additionally has its
-     * chance weight scaled by the active season's own precipitationChanceScale
-     * (see resolvePrecipitationBias()) — this is what makes the active
-     * SEASON DATA, not just the season name, part of weather resolution.
-     */
     private ObjectArrayList<WeatherPoolEntryStruct> resolveWeatherPool(BiomeHandle biomeHandle, String season) {
 
         ObjectArrayList<WeatherChanceStruct> entries = biomeHandle.getWeatherEntriesForSeason(season);
@@ -313,36 +197,14 @@ public class WeatherManager extends ManagerPackage {
         return pool;
     }
 
-    /*
-     * Resolves the active season's own precipitationChanceScale (a per-
-     * season climate multiplier — see SeasonData) so wetter seasons
-     * visibly skew their biome's pool toward precipitating weathers and
-     * drier seasons skew away from them. Deliberately does not guard
-     * against a missing SeasonHandle the way resolveFallbackEntries()
-     * guards against a missing biome pool — LocalWindBranch and
-     * TemperatureBranch already assume every calendar season name has a
-     * companion season climate file and resolve it unguarded, so a
-     * genuinely missing file is a data error that should surface the same
-     * way here as it already does for wind and temperature.
-     */
     private float resolvePrecipitationBias(String season) {
         return seasonManager.getSeasonHandleFromSeasonName(season).getPrecipitationChanceScale();
     }
 
     /*
-     * Called only when the biome has no "weathers" entry for the calendar's
-     * exact current season name — a mismatched or renamed season, not
-     * necessarily a malformed biome (one biome file may be shared across
-     * worlds running different calendars with different season names).
-     * Logs a clear warning naming both the missing season and the biome's
-     * actual defined seasons, then falls back to the first season the biome
-     * DID define (JSON declaration order) so an unexpected season name
-     * degrades to "wrong-but-plausible weather" instead of crashing the
-     * engine outright the first time that season becomes active — which,
-     * for a rare or custom-calendar season, could be arbitrarily far into a
-     * session. A biome with literally no "weathers" block at all is a
-     * genuine data error and still throws — there is nothing sensible to
-     * fall back to.
+     * Falls back to the first season the biome actually defined weathers
+     * for when the calendar's exact current season name isn't one of them
+     * — a mismatched/renamed season, not necessarily a malformed biome.
      */
     private ObjectArrayList<WeatherChanceStruct> resolveFallbackEntries(BiomeHandle biomeHandle, String season) {
 
@@ -396,22 +258,10 @@ public class WeatherManager extends ManagerPackage {
         return regionSampleBranch.getReferenceCoordinate();
     }
 
-    /*
-     * Whether a seasonal weather pool has ever been resolved. False for the
-     * first frame(s) of a session, before the calendar's first day-tick —
-     * see the class comment.
-     */
     public boolean hasActiveWeatherPool() {
         return activeWeatherPool != null;
     }
 
-    /*
-     * Exposes the reference region's blended windSpeedScale for WindManager's
-     * LocalWindBranch, without leaking the package-private WeatherSampleStruct.
-     * Falls back to a neutral 1.0 (EngineSetting.DEFAULT_WEATHER_WIND_SPEED_SCALE)
-     * before the first weather pool ever resolves, rather than reading
-     * WeatherSampleStruct's unset default of 0.0 and going dead calm.
-     */
     public float getWindSpeedScale() {
 
         if (!hasActiveWeatherPool())
@@ -420,12 +270,6 @@ public class WeatherManager extends ManagerPackage {
         return regionSampleBranch.getCenterSample().getWindSpeedScale();
     }
 
-    /*
-     * Exposes the reference region's blended windTurbulenceScale for
-     * WindManager's LocalWindBranch — mirrors getWindSpeedScale() exactly,
-     * just scaling gust amplitude and direction wobble instead of base
-     * speed. Same neutral 1.0 fallback before any weather pool has resolved.
-     */
     public float getWindTurbulenceScale() {
 
         if (!hasActiveWeatherPool())
@@ -434,16 +278,6 @@ public class WeatherManager extends ManagerPackage {
         return regionSampleBranch.getCenterSample().getWindTurbulenceScale();
     }
 
-    /*
-     * Exposes the reference region's blended humidity — completes the full
-     * Weather property set (precipitation, wind, humidity, visibility) at
-     * the resolved-region level; previously parsed per-Weather but never
-     * carried through sampling. No renderer consumes this yet — it's
-     * available for future gameplay systems (crop growth, item spoilage,
-     * etc.) the same way getCurrentTemperature() already is. Falls back to
-     * a neutral 0.5 (EngineSetting.DEFAULT_WEATHER_HUMIDITY) before the
-     * first weather pool ever resolves.
-     */
     public float getHumidity() {
 
         if (!hasActiveWeatherPool())
@@ -452,15 +286,6 @@ public class WeatherManager extends ManagerPackage {
         return regionSampleBranch.getCenterSample().getHumidity();
     }
 
-    /*
-     * Exposes the reference region's blended visibility — a multiplier
-     * where 1.0 is clear air and lower values are hazier. Not yet wired
-     * into fog rendering (that needs a WeatherData UBO/shader change —
-     * see the next stage); this is the CPU-side value that stage will
-     * push to the GPU. Falls back to a neutral 1.0
-     * (EngineSetting.DEFAULT_WEATHER_VISIBILITY) before the first weather
-     * pool ever resolves.
-     */
     public float getVisibility() {
 
         if (!hasActiveWeatherPool())
@@ -470,31 +295,30 @@ public class WeatherManager extends ManagerPackage {
     }
 
     /*
-     * Exposes the reference region's live computed temperature, without
-     * leaking TemperatureBranch itself.
+     * Blended fogDensityScale at the reference coordinate — not yet wired
+     * into fog rendering (AtmosphericFog.glsl's curve is currently distance
+     * -only), exposed so a future weather-aware fog pass has this ready.
      */
+    public float getFogDensityScale() {
+
+        if (!hasActiveWeatherPool())
+            return EngineSetting.DEFAULT_WEATHER_FOG_DENSITY_SCALE;
+
+        return regionSampleBranch.getCenterSample().getFogDensityScale();
+    }
+
     public float getCurrentTemperature() {
         return temperatureBranch.getCurrentTemperature();
     }
 
-    /*
-     * Direct CPU-side query for the planet-rotation-driven global weather
-     * noise at any world-space chunk coordinate — for systems that need more
-     * than the reference-region blend already flowing through the UBOs
-     * (e.g. the overhead cell system deciding its own local intensity).
-     */
     public float getGlobalStormIntensityAt(long chunkCoordinate) {
         return globalNoiseBranch.sampleGlobalIntensity(chunkCoordinate);
     }
 
     /*
-     * Resolves which weather(s) the given world-space chunk coordinate
-     * currently sits between, against this manager's own active seasonal
-     * pool — the same canonical noise-and-chance-band algorithm this
-     * manager's own 5-point region sampling already uses. Throws if called
-     * before hasActiveWeatherPool() is true — callers driving a grid (the
-     * overhead cloud system) are expected to check that first and simply
-     * skip work for the frame, rather than treat this as a normal path.
+     * Resolves the true, un-blended weather at an arbitrary world-space
+     * chunk coordinate. Throws before the first season ever resolves —
+     * callers should check hasActiveWeatherPool() first.
      */
     public void resolveWeatherBand(WeatherBandStruct out, long chunkCoordinate) {
 
@@ -509,18 +333,12 @@ public class WeatherManager extends ManagerPackage {
     }
 
     /*
-     * Resolves which weather(s) an overhead cloud OBJECT's own home
-     * coordinate currently sits between, blended toward whatever the sky
-     * dome already shows along that same bearing the closer that
-     * coordinate sits to the outer edge of the near-range streaming radius
-     * — see RegionSampleBranch.resolveBandTowardHorizon()'s own doc
-     * comment for the full rationale. Any caller resolving a real,
-     * streamed cloud object's identity (OverheadManager) should use this
-     * instead of the plain resolveWeatherBand() above — that one stays
-     * available for any caller that genuinely wants the true, un-blended
-     * weather at an arbitrary coordinate, independent of the player's own
-     * position. Throws under the identical precondition as
-     * resolveWeatherBand() — see that method's own doc comment.
+     * Resolves the weather identity for a home coordinate anywhere between
+     * the player and the streaming edge, blended toward the sky dome's own
+     * far-range sample along the identical bearing — see
+     * RegionSampleBranch.resolveBandTowardHorizon(). Every weather pattern
+     * (sky arc and overhead volume alike) resolves through this single
+     * entry point, which is what keeps the two visual layers in sync.
      */
     public void resolveWeatherBandTowardHorizon(WeatherBandStruct out, long homeChunkCoordinate) {
 

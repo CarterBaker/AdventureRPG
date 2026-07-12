@@ -454,8 +454,6 @@ public class EngineSetting {
 
         // Weather \\
 
-        public static final String WEATHER_DATA_UBO = "WeatherData";
-        public static final String WEATHER_REGION_DATA_UBO = "WeatherRegionData";
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;
         // Reduced from 0.35 — see EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE's
         // own comment. Kept numerically equal to that constant so the CPU
@@ -469,6 +467,7 @@ public class EngineSetting {
         public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
         public static final float DEFAULT_WEATHER_HUMIDITY = 0.5f;
         public static final float DEFAULT_WEATHER_VISIBILITY = 1.0f;
+        public static final float DEFAULT_WEATHER_FOG_DENSITY_SCALE = 1.0f;
 
         // Weather Sampling Ranges \\
 
@@ -507,19 +506,17 @@ public class EngineSetting {
 
         // Overhead — Weather Patterns \\
         //
-        // Stage 1 retrofit: the overhead cloud layer no longer streams a
-        // dense uniform grid of small, independently-resolved cells. It now
-        // streams up to WEATHER_PATTERN_MAX_ACTIVE_COUNT large, persistent
-        // "weather pattern" instances — each one whole storm/fair-weather
-        // system — built from a handful of offset "lobes" (see
-        // WeatherPatternLobeStruct) that approximate an irregular real-world
-        // weather shape instead of a single cube, and that may each draw a
-        // DIFFERENT cloud archetype pulled from the same weather's own
-        // chance-weighted cloud pool. WEATHER_PATTERN_CELL_SIZE_CHUNKS is
-        // the spacing of the underlying candidate grid patterns stream
-        // from — deliberately large ("weather should be rather large") so a
-        // capped count of patterns can still cover a meaningful radius
-        // around the player. See OverheadManager's own doc comment.
+        // The overhead cloud layer streams up to WEATHER_PATTERN_MAX_ACTIVE_COUNT
+        // large, persistent "weather pattern" instances — each one whole
+        // storm/fair-weather system — built from a handful of offset
+        // "lobes" (see WeatherPatternLobeStruct) that approximate an
+        // irregular real-world weather shape instead of a single cube, and
+        // that may each draw a DIFFERENT cloud archetype pulled from the
+        // same weather's own chance-weighted cloud pool.
+        // WEATHER_PATTERN_CELL_SIZE_CHUNKS is the spacing of the underlying
+        // candidate grid patterns stream from — deliberately large
+        // ("weather should be rather large") so a capped count of patterns
+        // can still cover a meaningful radius around the player.
         public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
         public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 24;
         // Fraction of a pattern's own cell size a lobe may offset from the
