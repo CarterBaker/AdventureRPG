@@ -1,3 +1,4 @@
+// SkyWeatherPatternBranch.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import java.util.Arrays;
@@ -16,16 +17,17 @@ import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-/*
- * Flattens WeatherPatternManager's active patterns into the
- * SkyWeatherPatternData UBO every frame — one entry per pattern, carrying
- * its bearing and angular width as seen from the reference coordinate,
- * its own fade-in/out state, and its resolved primary cloud's shading
- * surface. A pattern whose weather defines no cloud archetype writes a
- * zero density and coverage bias, so it never paints a shape of its own —
- * it can only ever thin out real clouds nearby, never fake one.
- */
 class SkyWeatherPatternBranch extends BranchPackage {
+
+    /*
+     * Flattens WeatherPatternManager's active patterns into the
+     * SkyWeatherPatternData UBO every frame — one entry per pattern, written
+     * to that pattern's own stable slot (see WeatherPatternStruct.getSlot())
+     * rather than by loop position, so a given array index always belongs
+     * to the same pattern from one frame to the next. A pattern whose
+     * weather defines no cloud archetype writes a zero density and coverage
+     * bias, so it never paints a shape of its own.
+     */
 
     private static final int MAX_PATTERNS = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
     private static final float FOOTPRINT_RADIUS_CHUNKS = EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS * 0.5f;
@@ -108,20 +110,18 @@ class SkyWeatherPatternBranch extends BranchPackage {
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
+        // Cleared every frame so a slot freed by a retired pattern always
+        // contributes zero weight below, with no need to separately track
+        // which slots are currently unused.
+        Arrays.fill(fadeAlpha, 0f);
+
         Long2ObjectOpenHashMap<WeatherPatternStruct> activePatterns = weatherPatternManager.getActivePatterns();
 
-        int count = 0;
+        for (WeatherPatternStruct pattern : activePatterns.values())
+            writeEntry(pattern.getSlot(), pattern, referenceChunkX, referenceChunkZ, worldWidthChunks,
+                    worldHeightChunks);
 
-        for (WeatherPatternStruct pattern : activePatterns.values()) {
-
-            if (count >= MAX_PATTERNS)
-                break;
-
-            writeEntry(count, pattern, referenceChunkX, referenceChunkZ, worldWidthChunks, worldHeightChunks);
-            count++;
-        }
-
-        skyWeatherPatternData.updateUniform("u_patternCount", count);
+        skyWeatherPatternData.updateUniform("u_patternCount", MAX_PATTERNS);
         skyWeatherPatternData.updateUniform("u_patternBearing", bearing);
         skyWeatherPatternData.updateUniform("u_patternAngularWidth", angularWidth);
         skyWeatherPatternData.updateUniform("u_patternFadeAlpha", fadeAlpha);

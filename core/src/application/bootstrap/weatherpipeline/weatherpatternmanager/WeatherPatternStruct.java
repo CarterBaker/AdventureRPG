@@ -1,3 +1,4 @@
+// WeatherPatternStruct.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
@@ -6,8 +7,8 @@ import engine.root.StructPackage;
 public class WeatherPatternStruct extends StructPackage {
 
     /*
-     * One persistent, large-scale weather system — shared by both the
-     * volumetric overhead layer and the sky dome. Identity and lobe layout
+     * One persistent, large-scale weather system shared by both the overhead
+     * volumetric layer and the sky dome. Identity, lobe layout, and UBO slot
      * are fixed for its lifetime; only drift, fade, and intensity change.
      */
 
@@ -19,6 +20,12 @@ public class WeatherPatternStruct extends StructPackage {
 
     private final WeatherPatternLobeStruct[] lobes;
     private final float driftSpeedScale;
+
+    // Stable UBO slot assigned by WeatherPatternManager's free-slot pool at
+    // stream-in and released back to it at retirement — never reassigned
+    // for the life of this pattern, so SkyWeatherPatternBranch always writes
+    // this pattern's data to the same array index every frame.
+    private final int slot;
 
     private double driftChunkX;
     private double driftChunkZ;
@@ -37,7 +44,8 @@ public class WeatherPatternStruct extends StructPackage {
             WeatherHandle weatherHandle,
             WeatherPatternLobeStruct[] lobes,
             float driftSpeedScale,
-            float intensity) {
+            float intensity,
+            int slot) {
 
         this.patternKey = patternKey;
         this.weatherHandle = weatherHandle;
@@ -45,6 +53,7 @@ public class WeatherPatternStruct extends StructPackage {
         this.homeChunkZ = homeChunkZ;
         this.lobes = lobes;
         this.driftSpeedScale = driftSpeedScale;
+        this.slot = slot;
         this.fadeAlpha = 0f;
         this.retiring = false;
         this.intensity = intensity;
@@ -101,6 +110,10 @@ public class WeatherPatternStruct extends StructPackage {
 
     public float getDriftSpeedScale() {
         return driftSpeedScale;
+    }
+
+    public int getSlot() {
+        return slot;
     }
 
     public double getCurrentChunkX() {
