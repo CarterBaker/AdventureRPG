@@ -7,6 +7,7 @@ layout(std140) uniform SkyWeatherPatternData {
     int   u_patternCount;
     float u_patternBearing[SKY_WEATHER_PATTERN_MAX_COUNT];
     float u_patternAngularWidth[SKY_WEATHER_PATTERN_MAX_COUNT];
+    float u_patternFadeAlpha[SKY_WEATHER_PATTERN_MAX_COUNT];
     float u_patternIntensity[SKY_WEATHER_PATTERN_MAX_COUNT];
     float u_patternCoverage[SKY_WEATHER_PATTERN_MAX_COUNT];
     float u_patternAltitude[SKY_WEATHER_PATTERN_MAX_COUNT];

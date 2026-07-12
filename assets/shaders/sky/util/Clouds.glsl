@@ -12,20 +12,16 @@
 /*
 * Sky-dome distant weather preview. Raymarches a thin unbounded layer,
  * shaded by a per-fragment blend of every active pattern in
- * SkyWeatherPatternData. A pattern's contribution is weighted purely by
- * the 3D angular distance between the ray direction and the pattern's own
- * bearing, softened by that pattern's own angular width — no fixed sector
- * grid, no separate zenith case. A pattern close to the player already
- * carries a wide angular footprint (see SkyWeatherPatternBranch) and
- * dominates overhead rays on its own, through the same continuous blend
- * that covers the rest of the sky.
+ * SkyWeatherPatternData. Each pattern is weighted by its angular distance
+ * from the ray direction and by its own fade-in/out state, so a pattern
+ * never appears or disappears with a hard pop, and a weather with no
+ * cloud archetype never paints a shape of its own — it can only ever
+ * thin out real clouds nearby.
  */
 
-// ── Horizon seam fade ────────────────────────────────────────────────────
 const float SKY_HORIZON_FADE_START = -0.02;
 const float SKY_HORIZON_FADE_END   = 0.06;
 
-// ── Raymarch domain tuning ───────────────────────────────────────────────
 const float SKY_NOISE_WORLD_SCALE       = 1.0 / 45.0;
 const float SKY_LAYER_SCALE             = 180.0 * SKY_NOISE_WORLD_SCALE;
 const float SKY_LAYER_THICKNESS         = 24.0  * SKY_NOISE_WORLD_SCALE;
@@ -37,12 +33,10 @@ const float SKY_TOP_TINT_MIX            = 0.18;
 const float SKY_SHADOW_TINT_MIX         = 0.15;
 const float SKY_INTENSITY_DENSITY_FLOOR = 0.4;
 
-// ── Pattern blend tuning ─────────────────────────────────────────────────
 const float SKY_PATTERN_WEIGHT_INNER_SCALE = 0.6;
 const float SKY_PATTERN_WEIGHT_OUTER_SCALE = 1.6;
 const float SKY_PATTERN_MIN_ANGULAR_WIDTH  = 0.05;
 
-// ── Clear-sky fallback — mirrors CloudBuilder's own JSON defaults ────────
 const vec3  SKY_DEFAULT_COLOR               = vec3(1.0);
 const vec3  SKY_DEFAULT_TOP_COLOR           = vec3(1.0);
 const vec3  SKY_DEFAULT_SHADOW_COLOR        = vec3(0.6, 0.63, 0.7);
@@ -56,8 +50,6 @@ const float SKY_DEFAULT_DENSITY_NOISE_SCALE = 1.0;
 const float SKY_DEFAULT_NOISE_WARP_STRENGTH = 0.6;
 const float SKY_DEFAULT_COVERAGE_BIAS       = 0.5;
 const float SKY_DEFAULT_SILHOUETTE_SOFTNESS = 0.08;
-
-// ── Pattern Blend ─────────────────────────────────────────────────────────
 
 struct WeatherPatternSample {
     float coverage;
@@ -77,14 +69,6 @@ struct WeatherPatternSample {
     float intensity;
 };
 
-/*
-* Weighted blend of every active pattern for one ray direction. Each
- * pattern's bearing is rebuilt as a horizon-plane unit vector, so
- * acos(dot(dir, patternDir)) gives a single angular distance covering both
- * heading and elevation — a wide-angularWidth pattern near the player
- * still carries weight straight overhead, a distant one drops out long
- * before the ray points near vertical.
- */
 WeatherPatternSample resolvePatternWeather(vec3 dir) {
     WeatherPatternSample result;
     result.coverage = 0.0;
@@ -110,10 +94,12 @@ WeatherPatternSample resolvePatternWeather(vec3 dir) {
         float angularDist = acos(clamp(dot(dir, patternDir), -1.0, 1.0));
 
         float edge = max(u_patternAngularWidth[i], SKY_PATTERN_MIN_ANGULAR_WIDTH);
-        float weight = 1.0 - smoothstep(
+        float geometricWeight = 1.0 - smoothstep(
             edge * SKY_PATTERN_WEIGHT_INNER_SCALE,
             edge * SKY_PATTERN_WEIGHT_OUTER_SCALE,
             angularDist);
+
+        float weight = geometricWeight * clamp(u_patternFadeAlpha[i], 0.0, 1.0);
 
         if (weight <= 0.0001)
         continue;
@@ -173,8 +159,6 @@ WeatherPatternSample resolvePatternWeather(vec3 dir) {
 
     return result;
 }
-
-// ── Public API ────────────────────────────────────────────────────────────
 
 vec4 calculateClouds(vec3 dir, float dailySeed) {
     if (dir.y < SKY_HORIZON_FADE_START)

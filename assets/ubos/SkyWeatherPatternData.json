@@ -4,6 +4,7 @@
         { "name": "u_patternCount",                  "type": "INT"     },
         { "name": "u_patternBearing",                "type": "FLOAT",   "count": 64 },
         { "name": "u_patternAngularWidth",           "type": "FLOAT",   "count": 64 },
+        { "name": "u_patternFadeAlpha",              "type": "FLOAT",   "count": 64 },
         { "name": "u_patternIntensity",              "type": "FLOAT",   "count": 64 },
         { "name": "u_patternCoverage",                "type": "FLOAT",   "count": 64 },
         { "name": "u_patternAltitude",                "type": "FLOAT",   "count": 64 },

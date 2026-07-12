@@ -16,32 +16,30 @@ import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
+/*
+ * Flattens WeatherPatternManager's active patterns into the
+ * SkyWeatherPatternData UBO every frame — one entry per pattern, carrying
+ * its bearing and angular width as seen from the reference coordinate,
+ * its own fade-in/out state, and its resolved primary cloud's shading
+ * surface. A pattern whose weather defines no cloud archetype writes a
+ * zero density and coverage bias, so it never paints a shape of its own —
+ * it can only ever thin out real clouds nearby, never fake one.
+ */
 class SkyWeatherPatternBranch extends BranchPackage {
-
-    /*
-     * Flattens WeatherPatternManager's active patterns into the
-     * SkyWeatherPatternData UBO every frame — one entry per pattern, each
-     * carrying its bearing and angular width as seen from the reference
-     * coordinate plus its resolved primary cloud's full shading surface.
-     * Runs automatically after WeatherPatternManager's own update() since
-     * it is registered as a child of it.
-     */
 
     private static final int MAX_PATTERNS = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
     private static final float FOOTPRINT_RADIUS_CHUNKS = EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS * 0.5f;
 
-    // Internal
     private WeatherPatternManager weatherPatternManager;
     private WeatherManager weatherManager;
     private WorldManager worldManager;
     private UBOManager uboManager;
 
-    // UBO
     private UBOHandle skyWeatherPatternData;
 
-    // Scratch — reused every frame, written in place
     private Float[] bearing;
     private Float[] angularWidth;
+    private Float[] fadeAlpha;
     private Float[] intensity;
     private Float[] coverage;
     private Float[] altitude;
@@ -59,13 +57,11 @@ class SkyWeatherPatternBranch extends BranchPackage {
     private Float[] coverageBias;
     private Float[] silhouetteSoftness;
 
-    // Internal \\
-
     @Override
     protected void create() {
-
         this.bearing = newFloatArray();
         this.angularWidth = newFloatArray();
+        this.fadeAlpha = newFloatArray();
         this.intensity = newFloatArray();
         this.coverage = newFloatArray();
         this.altitude = newFloatArray();
@@ -102,8 +98,6 @@ class SkyWeatherPatternBranch extends BranchPackage {
         pushPatterns();
     }
 
-    // Push \\
-
     private void pushPatterns() {
 
         long referenceCoordinate = weatherManager.getReferenceCoordinate();
@@ -130,6 +124,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
         skyWeatherPatternData.updateUniform("u_patternCount", count);
         skyWeatherPatternData.updateUniform("u_patternBearing", bearing);
         skyWeatherPatternData.updateUniform("u_patternAngularWidth", angularWidth);
+        skyWeatherPatternData.updateUniform("u_patternFadeAlpha", fadeAlpha);
         skyWeatherPatternData.updateUniform("u_patternIntensity", intensity);
         skyWeatherPatternData.updateUniform("u_patternCoverage", coverage);
         skyWeatherPatternData.updateUniform("u_patternAltitude", altitude);
@@ -164,10 +159,12 @@ class SkyWeatherPatternBranch extends BranchPackage {
 
         bearing[index] = (float) Math.atan2(dx, -dz);
         angularWidth[index] = (float) Math.atan2(FOOTPRINT_RADIUS_CHUNKS, Math.max(distanceChunks, 0.001));
-        intensity[index] = pattern.getIntensity() * pattern.getFadeAlpha();
+        fadeAlpha[index] = pattern.getFadeAlpha();
+        intensity[index] = pattern.getIntensity();
 
         WeatherHandle weatherHandle = pattern.getWeatherHandle();
         CloudChanceStruct primaryCloud = weatherHandle.getPrimaryCloud();
+        boolean hasCloud = primaryCloud != null;
 
         coverage[index] = weatherHandle.getCloudCoverage();
         altitude[index] = resolveAltitude(primaryCloud);
@@ -179,7 +176,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
                 resolveShadowColorR(primaryCloud), resolveShadowColorG(primaryCloud),
                 resolveShadowColorB(primaryCloud));
 
-        density[index] = resolveDensity(primaryCloud);
+        density[index] = hasCloud ? resolveDensity(primaryCloud) : 0f;
         shadeStrength[index] = resolveShadeStrength(primaryCloud);
         rimLightStrength[index] = resolveRimLightStrength(primaryCloud);
         ambientOcclusionStrength[index] = resolveAmbientOcclusionStrength(primaryCloud);
@@ -187,11 +184,9 @@ class SkyWeatherPatternBranch extends BranchPackage {
         toonBands[index] = resolveToonBands(primaryCloud);
         densityNoiseScale[index] = resolveDensityNoiseScale(primaryCloud);
         noiseWarpStrength[index] = resolveNoiseWarpStrength(primaryCloud);
-        coverageBias[index] = resolveCoverageBias(primaryCloud);
+        coverageBias[index] = hasCloud ? resolveCoverageBias(primaryCloud) : 0f;
         silhouetteSoftness[index] = resolveSilhouetteSoftness(primaryCloud);
     }
-
-    // Scratch Allocation \\
 
     private Float[] newFloatArray() {
         Float[] array = new Float[MAX_PATTERNS];
@@ -205,8 +200,6 @@ class SkyWeatherPatternBranch extends BranchPackage {
             array[i] = new Vector3();
         return array;
     }
-
-    // Cloud Fallback — mirrors RegionSampleBranch's own defaults \\
 
     private float resolveAltitude(CloudChanceStruct cloud) {
         return cloud != null ? cloud.getEffectiveAltitude() : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;
@@ -249,7 +242,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
     }
 
     private float resolveDensity(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getDensity() : EngineSetting.CLOUD_DEFAULT_DENSITY;
+        return cloud.getCloudHandle().getDensity();
     }
 
     private float resolveShadeStrength(CloudChanceStruct cloud) {
@@ -291,7 +284,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
     }
 
     private float resolveCoverageBias(CloudChanceStruct cloud) {
-        return cloud != null ? cloud.getCloudHandle().getCoverageBias() : EngineSetting.CLOUD_DEFAULT_COVERAGE_BIAS;
+        return cloud.getCloudHandle().getCoverageBias();
     }
 
     private float resolveSilhouetteSoftness(CloudChanceStruct cloud) {
