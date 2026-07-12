@@ -71,6 +71,22 @@ public class OverheadManager extends ManagerPackage {
      * of exactly one pattern, so CloudRenderSystem itself needed zero
      * changes for this retrofit; only how those cells come to exist did.
      *
+     * Home Jitter
+     * -----------
+     * A pattern's home center is no longer pinned to the exact center of
+     * its own patternCellSizeChunks cell — computeHomeJitter() displaces
+     * it by up to EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO of the
+     * cell's own size, derived purely from the pattern's own patternKey
+     * (stable — the same cell always jitters the same way; never
+     * re-rolled). Without this, the capped set of patterns visibly lined
+     * up on a perfect grid regardless of how organic each individual
+     * pattern's own lobe shape was — exactly the "defined patch or grid"
+     * look the underlying weather noise field itself already avoids (see
+     * GlobalNoiseBranch/RegionSampleBranch). Jitter is applied once, at
+     * stream-in, before candidate distance sorting has any further say —
+     * it does not change which cell gets picked, only where inside that
+     * cell the resulting pattern actually sits.
+     *
      * Streaming is still split into the same four passes as before, just
      * operating on patterns rather than cells:
      *
@@ -296,6 +312,12 @@ public class OverheadManager extends ManagerPackage {
             int homeChunkX = cellX * patternCellSizeChunks + patternCellSizeChunks / 2;
             int homeChunkZ = cellZ * patternCellSizeChunks + patternCellSizeChunks / 2;
 
+            // Displace the home off the cell's exact center — see the
+            // class doc comment's "Home Jitter" section.
+            int[] jitter = computeHomeJitter(patternKey);
+            homeChunkX += jitter[0];
+            homeChunkZ += jitter[1];
+
             long wrappedHome = wrapChunkCoordinate(homeChunkX, homeChunkZ);
             int wrappedHomeChunkX = Coordinate2Long.unpackX(wrappedHome);
             int wrappedHomeChunkZ = Coordinate2Long.unpackY(wrappedHome);
@@ -303,6 +325,39 @@ public class OverheadManager extends ManagerPackage {
             streamInPattern(patternKey, wrappedHomeChunkX, wrappedHomeChunkZ);
             streamed++;
         }
+    }
+
+    /*
+     * Displaces a pattern's home center within its own streaming cell by
+     * up to EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO of the cell's
+     * own size, on each axis independently. Derived purely from
+     * patternKey (itself a pure function of the cell coordinate — see
+     * streamInBudgeted()), so the same cell always jitters the same way;
+     * no extra state needs to be stored on WeatherPatternStruct for this.
+     *
+     * Without this, every pattern's home sat exactly at its cell's
+     * center, so the capped 64 patterns visibly lined up on a perfect
+     * grid the moment more than a couple were active at once — exactly
+     * the "defined patch or grid" look the underlying weather noise field
+     * itself was already built to avoid (see GlobalNoiseBranch/
+     * RegionSampleBranch). This runs once, at stream-in, strictly after
+     * the candidate cell itself has already been chosen — it only moves
+     * the resulting pattern within that cell, never changes which cell a
+     * given scan step lands on.
+     */
+    private int[] computeHomeJitter(long patternKey) {
+
+        long jitterSeed = patternKey ^ 0x2545F4914F6CDD1DL;
+
+        float jitterTX = hash01(jitterSeed);
+        float jitterTZ = hash01(jitterSeed ^ 0x9E3779B97F4A7C15L);
+
+        float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
+
+        int jitterX = Math.round((jitterTX - 0.5f) * jitterRangeChunks);
+        int jitterZ = Math.round((jitterTZ - 0.5f) * jitterRangeChunks);
+
+        return new int[] { jitterX, jitterZ };
     }
 
     /*

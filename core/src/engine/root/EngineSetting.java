@@ -525,6 +525,15 @@ public class EngineSetting {
         // Fraction of a pattern's own cell size a lobe may offset from the
         // pattern's home center — see OverheadManager.streamInPattern().
         public static final float WEATHER_PATTERN_LOBE_SPREAD_RATIO = 0.6f;
+        // Fraction of a pattern's own cell size its HOME CENTER may be
+        // displaced from the cell's exact center — see
+        // OverheadManager.computeHomeJitter(). Without this every pattern
+        // sat dead-center in its own cell, so the capped set of patterns
+        // visibly lined up on a grid regardless of how organic each
+        // pattern's own lobe shape was. 0.5 keeps a home within the middle
+        // half of its cell on each axis — enough to break the grid look
+        // without letting two neighboring patterns' homes crowd together.
+        public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
         // A pattern's lobe count scales with its resolved weather's own
         // cloudCoverage between these two bounds — a wispy, low-coverage
         // weather reads as one or two sparse lobes; a dense storm reads as
