@@ -3,5 +3,5 @@
   "gravity_direction": [0, -1, 0],
   "days_per_day": 20.0,
   "calendar": "TerraArcanaCalendar",
-  "rotation": 4.0
+  "rotation": 1.0
 }

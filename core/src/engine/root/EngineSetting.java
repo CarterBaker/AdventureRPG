@@ -5,11 +5,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 public class EngineSetting {
 
-        /*
-         * Central compile-time constant registry. Runtime systems read shared
-         * values from this class instead of embedding literals in logic.
-         */
-
         // GL — Buffers \\
 
         public static final int GL_ARRAY_BUFFER = 0x8892;
@@ -336,7 +331,7 @@ public class EngineSetting {
         public static final float DEFAULT_GRAVITY_X = 0.0f;
         public static final float DEFAULT_GRAVITY_Y = -1.0f;
         public static final float DEFAULT_GRAVITY_Z = 0.0f;
-        public static final float DEFAULT_WORLD_ROTATION_SPEED = 0.0025f;
+        public static final float DEFAULT_WORLD_ROTATION_SPEED = 1.0f;
         public static final float DEFAULT_AXIAL_TILT_DEGREES = 23.5f;
 
         // Rotation \\
@@ -440,6 +435,11 @@ public class EngineSetting {
         public static final float DEFAULT_WEATHER_HUMIDITY = 0.5f;
         public static final float DEFAULT_WEATHER_VISIBILITY = 1.0f;
         public static final float DEFAULT_WEATHER_FOG_DENSITY_SCALE = 1.0f;
+
+        // Weather Drift \\
+
+        public static final float WEATHER_BASE_DRIFT_SPEED_KPH = 25.0f;
+        public static final float KPH_TO_METERS_PER_SECOND = 1000f / 3600f;
 
         // Weather Sampling Ranges \\
 

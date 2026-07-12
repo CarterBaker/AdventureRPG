@@ -8,12 +8,13 @@ import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
 
 /*
- * Owns the planet's continuous rotation angle, its seasonal axial-tilt
- * latitude drift, and a slow bounded meander wobble, then folds all three
- * into one continuous, seamlessly torus-wrapped noise overlay — see
- * ToroidalNoiseUtility. Rotation also drives the shared eastward drift rate
- * every other weather system reads via getWorldDriftChunksPerSecondX(), so
- * nothing can fall out of lockstep with this field's own scroll.
+ * Owns the planet's rotation angle and slow seasonal/meander drift, folding
+ * them into the toroidal weather noise field. Linear drift speed is derived
+ * from a fixed real-world KPH baseline scaled by the world's own rotation
+ * multiplier, not from raw degrees times world width, so drift speed stays
+ * physically reasonable at any world size. The noise phase and every
+ * pattern's physical position both read this same value, so they can never
+ * fall out of lockstep.
  */
 class GlobalNoiseBranch extends BranchPackage {
 
@@ -57,23 +58,37 @@ class GlobalNoiseBranch extends BranchPackage {
 
     private void advanceRotation() {
 
-        WorldHandle activeWorld = worldManager.getActiveWorld();
-        float rotationSpeed = activeWorld.getRotationSpeed();
+        int worldWidthChunks = Math.max(1, worldWidthChunks());
+        double degreesPerSecond = (getWorldDriftChunksPerSecondX() / worldWidthChunks)
+                * EngineSetting.DEGREES_PER_FULL_ROTATION;
 
-        this.rotationAngleDegrees += rotationSpeed * internal.getDeltaTime();
+        this.rotationAngleDegrees += degreesPerSecond * internal.getDeltaTime();
         this.rotationAngleDegrees %= EngineSetting.DEGREES_PER_FULL_ROTATION;
 
         if (this.rotationAngleDegrees < 0)
             this.rotationAngleDegrees += EngineSetting.DEGREES_PER_FULL_ROTATION;
     }
 
+    /*
+     * Real-world-scale linear drift speed, in chunks per second. Every
+     * weather system reads this exact value — the noise field's own
+     * rotational phase above, and every streamed WeatherPatternStruct's
+     * physical position via WeatherPatternManager.advanceWorldDrift() — so
+     * nothing can independently drift out of sync.
+     */
     float getWorldDriftChunksPerSecondX() {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
-        double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
-        float rotationSpeed = activeWorld.getRotationSpeed();
 
-        return (float) ((rotationSpeed / EngineSetting.DEGREES_PER_FULL_ROTATION) * worldWidthChunks);
+        float metersPerSecond = EngineSetting.WEATHER_BASE_DRIFT_SPEED_KPH * EngineSetting.KPH_TO_METERS_PER_SECOND;
+        float blocksPerSecond = metersPerSecond / EngineSetting.BLOCK_SIZE;
+        float chunksPerSecond = blocksPerSecond / EngineSetting.CHUNK_SIZE;
+
+        return chunksPerSecond * activeWorld.getRotationSpeed();
+    }
+
+    private int worldWidthChunks() {
+        return worldManager.getActiveWorld().getWorldScale().x / EngineSetting.CHUNK_SIZE;
     }
 
     // Tilt \\
