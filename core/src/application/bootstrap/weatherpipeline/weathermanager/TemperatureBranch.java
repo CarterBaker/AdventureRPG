@@ -9,32 +9,13 @@ import engine.root.EngineSetting;
 class TemperatureBranch extends BranchPackage {
 
     /*
-     * Computes live ambient temperature from the active named season's
-     * base temperature and variance (see SeasonData.getBaseTemperature()/
-     * getTemperatureVariance()), shaped by a diurnal day/night curve and a
-     * slow deterministic drift, then cooled by the current precipitation
-     * intensity — a storm measurably drops the temperature, a clear sky
-     * does not. On top of all that, the currently resolved weather's own
-     * temperatureModifier (see WeatherData/WeatherHandle) is added as a
-     * final signed offset — this is what lets two weathers with identical
-     * precipitationIntensity still feel thermally different (a cold front
-     * versus a merely overcast, precipitation-free system), and completes
-     * temperature as a genuine per-weather-type property rather than a
-     * side effect of precipitation alone.
-     *
-     * CPU-side only for now — nothing on the GPU reads temperature yet.
-     * Gameplay systems (cold damage, freezing water, crop growth, whatever
-     * else needs it) read WeatherManager.getCurrentTemperature() directly.
-     * If a shader effect ever needs it (a frost overlay, breath fog that
-     * reacts to cold, etc.), push it through a TemperatureData UBO at that
-     * point, mirroring TimeData's own .glsl + .json pair — trivial to add
-     * later, not worth plumbing before anything actually consumes it.
-     *
-     * Driven explicitly by WeatherManager.update() rather than its own
-     * automatic update() cascade, since it needs that same frame's freshly
-     * sampled center weather sample from RegionSampleBranch as an explicit
-     * parameter — mirrors how ClockManager's tracker branches are driven
-     * explicitly rather than relying on cascade ordering.
+     * Computes live ambient temperature from the active season's base
+     * temperature and variance, shaped by a diurnal curve and a slow
+     * drift, cooled by precipitation intensity, and offset by the
+     * currently resolved weather's own temperatureModifier. CPU-side only
+     * — nothing on the GPU reads temperature yet. Driven explicitly by
+     * WeatherManager.update() with that frame's freshly sampled center
+     * weather sample, rather than its own update() cascade.
      */
 
     // Internal
@@ -55,8 +36,6 @@ class TemperatureBranch extends BranchPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.clockManager = get(ClockManager.class);
         this.seasonManager = get(SeasonManager.class);
     }

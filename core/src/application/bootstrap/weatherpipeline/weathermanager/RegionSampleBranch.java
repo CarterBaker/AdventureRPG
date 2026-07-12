@@ -17,14 +17,10 @@ class RegionSampleBranch extends BranchPackage {
      * Owns the coherent weather noise field — wind-drifted, toroidally
      * wrapped local noise blended with GlobalNoiseBranch's planet-rotation
      * noise — and resolves it against a chance-weighted pool via
-     * resolveBand()/resolveBandTowardHorizon(). These two methods are the
-     * single canonical noise-to-weather resolution path used by
-     * WeatherManager, WeatherPatternManager (every pattern's own identity),
-     * and this class's own center-point atmosphere sample (wind/humidity/
-     * visibility/temperature). Neither the sky dome nor the overhead cloud
-     * layer read from this class directly — both resolve their own weather
-     * per pattern through WeatherManager.resolveWeatherBandTowardHorizon(),
-     * which is what keeps the two visual layers from ever disagreeing.
+     * resolveBand() and resolveBandTowardHorizon(). These are the single
+     * canonical noise-to-weather resolution path shared by WeatherManager,
+     * WeatherPatternManager, and this class's own center-point atmosphere
+     * sample.
      */
 
     // Internal
@@ -39,36 +35,29 @@ class RegionSampleBranch extends BranchPackage {
     // Reference
     private long referenceCoordinate;
 
-    // Drift — accumulated chunk-space displacement of the local weather
-    // noise field, driven every frame by the live local wind vector.
+    // Drift
     private double driftChunksX;
     private double driftChunksY;
 
-    // Evolution — independent of wind or drift; slowly morphs the local
-    // noise field itself over time so weather can intensify and fade in
-    // place, not only ever change because it has been advected elsewhere.
+    // Evolution
     private double evolutionElapsedSeconds;
     private int evolutionTimeCell;
     private float evolutionTimeBlend;
 
-    // Center atmosphere sample — smoothed toward every frame's fresh
-    // resolution rather than snapping, so wind/humidity/temperature never
-    // pop when a chance-band boundary or season pool swap occurs.
+    // Center Sample
     private final WeatherSampleStruct sample = new WeatherSampleStruct();
     private final WeatherSampleStruct targetSample = new WeatherSampleStruct();
     private boolean smoothingInitialized;
 
-    // Scratch — reused every sample call, never reallocated
+    // Scratch
     private final WeatherBandStruct bandScratch = new WeatherBandStruct();
 
     // Internal \\
 
     @Override
     protected void create() {
-
         this.noiseCellSize = EngineSetting.WEATHER_NOISE_CELL_SIZE;
         this.windDriftScale = EngineSetting.WEATHER_WIND_DRIFT_SCALE;
-
         this.referenceCoordinate = Coordinate2Long.pack(0, 0);
     }
 
@@ -87,6 +76,19 @@ class RegionSampleBranch extends BranchPackage {
 
     long getReferenceCoordinate() {
         return referenceCoordinate;
+    }
+
+    // Effective Range \\
+
+    /*
+     * The distance bound every weather system must agree on — whichever is
+     * smaller of the configured render distance or the design near range.
+     * WeatherPatternManager's streaming radius and CloudRenderSystem's
+     * horizon-fade distance both derive this identical value; this is the
+     * canonical source any other caller should use instead of recomputing it.
+     */
+    float getEffectiveNearRangeChunks() {
+        return Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
     }
 
     // Sampling \\
@@ -176,23 +178,21 @@ class RegionSampleBranch extends BranchPackage {
 
     /*
      * Resolves the true, un-blended weather at an arbitrary world-space
-     * chunk coordinate against the supplied chance-weighted pool. Writes
-     * into the caller-supplied struct rather than allocating.
+     * chunk coordinate against the supplied chance-weighted pool.
      */
     void resolveBand(WeatherBandStruct out, int chunkX, int chunkY, ObjectArrayList<WeatherPoolEntryStruct> pool) {
         bandFromPool(out, pool, combinedNoiseAt(chunkX, chunkY));
     }
 
     /*
-     * Resolves a weather band for a coordinate that may sit anywhere
-     * between the player's feet and the outer edge of the near-range
-     * streaming radius — the identity a real weather pattern (sky arc or
-     * overhead volume alike) is built from. Blends this coordinate's own
-     * true weather with whatever the sky already shows along the identical
-     * bearing at the far sampling range, weighted by how close this
-     * coordinate sits to the streaming edge — this is what keeps a
-     * streamed-in pattern and the sky dome's own horizon arc from ever
-     * visibly disagreeing about the weather along the same line of sight.
+     * Resolves a weather band for a coordinate anywhere between the player
+     * and the streaming edge, blending this coordinate's own true weather
+     * with whatever the far, horizon-range sample shows along the identical
+     * bearing — weighted by how close this coordinate sits to the streaming
+     * edge. distanceT is normalized against the same effective near range
+     * every other streaming/render system uses, so the blend actually
+     * reaches 1.0 exactly at the edge a pattern retires at, keeping a
+     * streamed-in pattern and the sky dome's own horizon arc in agreement.
      */
     void resolveBandTowardHorizon(
             WeatherBandStruct out,
@@ -206,8 +206,11 @@ class RegionSampleBranch extends BranchPackage {
         double dz = homeChunkZ - referenceChunkZ;
         double distanceChunks = Math.sqrt(dx * dx + dz * dz);
 
-        double clampedDistance = Math.min(distanceChunks, (double) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
-        float distanceT = (float) (clampedDistance / (double) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
+        double effectiveNearRangeChunks = getEffectiveNearRangeChunks();
+        double clampedDistance = Math.min(distanceChunks, effectiveNearRangeChunks);
+        float distanceT = effectiveNearRangeChunks > 0.0
+                ? (float) (clampedDistance / effectiveNearRangeChunks)
+                : 1f;
 
         float nearNoise = combinedNoiseAt(homeChunkX, homeChunkZ);
 
@@ -304,9 +307,8 @@ class RegionSampleBranch extends BranchPackage {
     /*
      * Coherent 2D value noise over chunk coordinates, wrapped seamlessly at
      * the world edge and displaced by the wind-driven drift accumulators
-     * from advanceWindDrift(), so weather fronts visibly move with the
-     * wind. Each grid point blends two time-decorrelated hash layers via
-     * evolvingHash() so the field also morphs in place over time.
+     * from advanceWindDrift(). Each grid point blends two time-decorrelated
+     * hash layers via evolvingHash() so the field also morphs in place.
      */
     private float sampleNoise(int chunkX, int chunkY) {
 

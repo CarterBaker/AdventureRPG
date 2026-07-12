@@ -1,4 +1,3 @@
-// LocalWindBranch.java
 package application.bootstrap.weatherpipeline.windmanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
@@ -15,38 +14,14 @@ class LocalWindBranch extends BranchPackage {
     /*
      * Recomputes local wind every frame. Direction is the fixed global
      * prevailing airflow rotated by the active season's own prevailing
-     * direction offset (see SeasonData.getPrevailingWindDirectionDegrees()),
-     * plus a small continuous gust wobble. Speed is the active season's own
-     * base wind speed (see SeasonData.getBaseWindSpeed()) varied by a slow
-     * two-layer gust oscillation scaled by the season's windVariance,
-     * shaped by a diurnal (time-of-day) curve, floored above zero, then
-     * scaled by the active weather's windSpeedScale.
-     *
-     * Season identity comes from ClockHandle.getCurrentSeason() — the same
-     * calendar-driven named season WeatherManager already resolves its
-     * weather pool against — so wind and weather never disagree about which
-     * season is currently active. Season changes snap immediately, matching
-     * WeatherManager's own pool-resolution behavior; continuous life within
-     * a season comes entirely from the gust and diurnal terms below, driven
-     * by windVariance, rather than from blending between two named seasons.
-     *
-     * Wind <-> weather feedback loop:
-     * - Weather -> wind: both the gust SPEED amplitude and the gust
-     * DIRECTION wobble are scaled by the active weather's own
-     * windTurbulenceScale (see WeatherData.getWindTurbulenceScale()), on
-     * top of the existing flat windSpeedScale multiplier applied to the
-     * final speed in updateSpeed(). A calm weather (low turbulence)
-     * barely perturbs the season's base wind; a storm (high turbulence)
-     * makes it visibly gustier and more directionally erratic, not just
-     * faster.
-     * - Wind -> weather: RegionSampleBranch's own local noise sampling
-     * point is dragged by this exact WindHandle (see
-     * RegionSampleBranch.advanceWindDrift()), so the resolved weather at
-     * any fixed world location keeps changing as the wind blows the
-     * pattern past it — weather moves with the wind it itself is shaping.
-     * WeatherManager.getWindSpeedScale()/getWindTurbulenceScale() both fall
-     * back to a neutral 1.0 before any weather pool has ever resolved, so
-     * wind is never accidentally zeroed out at world start.
+     * offset plus a continuous gust wobble. Speed is the season's own base
+     * speed varied by a two-layer gust oscillation, shaped by a diurnal
+     * curve, then scaled by the active weather's windSpeedScale. Gust
+     * amplitude and direction wobble both scale with the active weather's
+     * windTurbulenceScale, so a storm reads as gustier and more erratic,
+     * not just faster. In the other direction, RegionSampleBranch drags its
+     * own noise sample point by this same WindHandle, so resolved weather
+     * at a fixed location keeps changing as wind blows the pattern past it.
      */
 
     // Internal
@@ -68,8 +43,6 @@ class LocalWindBranch extends BranchPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.clockManager = get(ClockManager.class);
         this.seasonManager = get(SeasonManager.class);
         this.weatherManager = get(WeatherManager.class);
@@ -153,12 +126,9 @@ class LocalWindBranch extends BranchPackage {
         windHandle.setLocalWindSpeed(speedBeforeWeather * weatherSpeedScale);
     }
 
-    // Diurnal \\
-
     /*
      * Bell-shaped curve over the daily cycle, peaking at
-     * WIND_DIURNAL_PEAK_TIME. Returns roughly [-1, 1] — cosine of the
-     * angular distance from the peak around the full day.
+     * WIND_DIURNAL_PEAK_TIME. Returns roughly [-1, 1].
      */
     private float computeDiurnalFactor() {
 

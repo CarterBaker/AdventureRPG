@@ -21,24 +21,12 @@ import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 public class WeatherManager extends ManagerPackage {
 
     /*
-     * Owns the weather palette and drives the live weather simulation.
-     * Weather is the fusion of the active biome, the calendar's current
-     * named season, and the world's wrapped/rotating noise field
-     * (GlobalNoiseBranch blended with RegionSampleBranch's wind-drifted
-     * local noise). The sky dome's pattern arcs and the overhead volumetric
-     * cloud objects both resolve their own weather identity directly
-     * through resolveWeatherBandTowardHorizon() rather than reading a
-     * shared directional sample, so the two visual layers can never
-     * disagree about what's happening at a given bearing.
-     *
-     * activeWeatherPool stays null until the calendar resolves its first
-     * named season. hasActiveWeatherPool() must be checked by any
-     * cross-package caller of
-     * resolveWeatherBand()/resolveWeatherBandTowardHorizon()
-     * before calling either — both throw otherwise. getWindSpeedScale(),
-     * getWindTurbulenceScale(), getHumidity(), getVisibility(), and
-     * getFogDensityScale() are the exceptions — each falls back to a
-     * neutral default before that point instead of throwing.
+     * Owns the weather palette and drives the live weather simulation — the
+     * fusion of the active biome, the calendar's current named season, and
+     * the world's wrapped/rotating noise field. The sky dome and the
+     * overhead volumetric cloud layer both resolve their own weather
+     * identity through resolveWeatherBandTowardHorizon(), so the two visual
+     * layers can never disagree about what's happening at a given bearing.
      */
 
     // Internal
@@ -66,11 +54,9 @@ public class WeatherManager extends ManagerPackage {
     @Override
     protected void create() {
 
-        // Palette
         this.weatherName2WeatherID = new Object2ShortOpenHashMap<>();
         this.weatherID2WeatherHandle = new Short2ObjectOpenHashMap<>();
 
-        // Branches
         this.globalNoiseBranch = create(GlobalNoiseBranch.class);
         this.regionSampleBranch = create(RegionSampleBranch.class);
         this.temperatureBranch = create(TemperatureBranch.class);
@@ -80,8 +66,6 @@ public class WeatherManager extends ManagerPackage {
 
     @Override
     protected void get() {
-
-        // Internal
         this.clockManager = get(ClockManager.class);
         this.biomeManager = get(BiomeManager.class);
         this.windowManager = get(WindowManager.class);
@@ -113,8 +97,8 @@ public class WeatherManager extends ManagerPackage {
 
     /*
      * Mirrors the main window's player onto the exact chunk-granular
-     * reference GridInstance already treats as authoritative for terrain
-     * recentering, so weather/cloud systems and terrain can never disagree
+     * coordinate GridInstance treats as authoritative for terrain
+     * recentering, so weather/cloud systems and terrain never disagree
      * about which chunk is "here". No-op before a player has spawned.
      */
     private void updateReferenceCoordinate() {
@@ -136,11 +120,6 @@ public class WeatherManager extends ManagerPackage {
 
     // Biome Selection \\
 
-    /*
-     * Single hardcoded biome for now — the one integration point a future
-     * per-location biome lookup (sampling a biome map at the reference
-     * coordinate) needs to replace.
-     */
     private BiomeHandle resolveActiveBiome() {
         return biomeManager.getBiomeHandleFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
     }
@@ -203,8 +182,7 @@ public class WeatherManager extends ManagerPackage {
 
     /*
      * Falls back to the first season the biome actually defined weathers
-     * for when the calendar's exact current season name isn't one of them
-     * — a mismatched/renamed season, not necessarily a malformed biome.
+     * for when the calendar's current season name isn't one of them.
      */
     private ObjectArrayList<WeatherChanceStruct> resolveFallbackEntries(BiomeHandle biomeHandle, String season) {
 
@@ -262,6 +240,16 @@ public class WeatherManager extends ManagerPackage {
         return activeWeatherPool != null;
     }
 
+    /*
+     * The shared distance bound every weather system normalizes against.
+     * WeatherPatternManager and CloudRenderSystem currently derive this
+     * same value independently — this is the canonical source for any new
+     * caller going forward.
+     */
+    public float getEffectiveNearRangeChunks() {
+        return regionSampleBranch.getEffectiveNearRangeChunks();
+    }
+
     public float getWindSpeedScale() {
 
         if (!hasActiveWeatherPool())
@@ -294,11 +282,6 @@ public class WeatherManager extends ManagerPackage {
         return regionSampleBranch.getCenterSample().getVisibility();
     }
 
-    /*
-     * Blended fogDensityScale at the reference coordinate — not yet wired
-     * into fog rendering (AtmosphericFog.glsl's curve is currently distance
-     * -only), exposed so a future weather-aware fog pass has this ready.
-     */
     public float getFogDensityScale() {
 
         if (!hasActiveWeatherPool())
@@ -316,9 +299,9 @@ public class WeatherManager extends ManagerPackage {
     }
 
     /*
-     * Resolves the true, un-blended weather at an arbitrary world-space
-     * chunk coordinate. Throws before the first season ever resolves —
-     * callers should check hasActiveWeatherPool() first.
+     * Resolves the true, un-blended weather at an arbitrary chunk
+     * coordinate. Throws before the first season ever resolves — callers
+     * should check hasActiveWeatherPool() first.
      */
     public void resolveWeatherBand(WeatherBandStruct out, long chunkCoordinate) {
 
@@ -335,9 +318,8 @@ public class WeatherManager extends ManagerPackage {
     /*
      * Resolves the weather identity for a home coordinate anywhere between
      * the player and the streaming edge, blended toward the sky dome's own
-     * far-range sample along the identical bearing — see
-     * RegionSampleBranch.resolveBandTowardHorizon(). Every weather pattern
-     * (sky arc and overhead volume alike) resolves through this single
+     * far-range sample along the identical bearing. Every weather pattern —
+     * sky arc and overhead volume alike — resolves through this single
      * entry point, which is what keeps the two visual layers in sync.
      */
     public void resolveWeatherBandTowardHorizon(WeatherBandStruct out, long homeChunkCoordinate) {

@@ -1,4 +1,3 @@
-// WeatherPatternManager.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
@@ -22,13 +21,14 @@ public class WeatherPatternManager extends ManagerPackage {
 
     /*
      * Simulates the world's persistent weather patterns — up to
-     * EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT systems, each
-     * approximated by a handful of offset lobes, streamed in/out around
-     * the reference coordinate and driven by wind drift. Owns no
-     * rendering itself; OverheadManager reads getActivePatterns() for the
-     * volumetric layer and SkyWeatherPatternBranch (a child of this
-     * manager) flattens the same set into the sky dome's own UBO every
-     * frame, immediately after this manager's own update() completes.
+     * WEATHER_PATTERN_MAX_ACTIVE_COUNT systems, each approximated by a
+     * handful of offset lobes, streamed in and out around the reference
+     * coordinate and drifted by wind. Candidate cells are jittered in both
+     * position and lobe count so the streamed set never reads as a rigid
+     * grid. OverheadManager reads getActivePatterns() for the volumetric
+     * layer, and SkyWeatherPatternBranch — a child of this manager —
+     * flattens the same set into the sky dome's own UBO immediately after
+     * this manager's own update() completes.
      */
 
     private static final float FADE_IN_RATE = 0.6f;
