@@ -485,6 +485,22 @@ public class EngineSetting {
         public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f;
         public static final float GLOBAL_WEATHER_TILT_INFLUENCE = 0.20f;
 
+        // Meander influence mirrors TILT_INFLUENCE's own fraction-of-V-range
+        // scale — see GlobalNoiseBranch's own "Meander" doc comment for the
+        // full rationale behind layering a current-like wobble on top of the
+        // existing rotation/tilt-driven noise field. WAVE_NUMBER is how many
+        // meander crests/troughs appear around one full trip around the
+        // world (a small integer — real planetary wave patterns settle into
+        // a handful of standing humps, not a smooth single wobble or a
+        // high-frequency ripple). PHASE_SPEED is deliberately tiny — the
+        // meander pattern itself should drift and reshape over many
+        // minutes, the same "weather system" timescale the rest of this
+        // simulation already operates on, never anything a player perceives
+        // as animating in real time.
+        public static final int GLOBAL_WEATHER_MEANDER_WAVE_NUMBER = 3;
+        public static final float GLOBAL_WEATHER_MEANDER_INFLUENCE = 0.08f;
+        public static final float GLOBAL_WEATHER_MEANDER_PHASE_SPEED = 0.002f;
+
         // Season Blend \\
 
         public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;

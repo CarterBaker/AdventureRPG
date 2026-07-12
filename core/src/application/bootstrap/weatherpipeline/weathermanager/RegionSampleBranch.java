@@ -35,6 +35,13 @@ class RegionSampleBranch extends BranchPackage {
      * sampleDirection() deliberately reblends every call since these 9
      * samples only ever drive smoothly fading fog/cloud UBO values.
      *
+     * resolveBandTowardHorizon() is a second, related entry point for
+     * exactly that persistent-identity caller (OverheadManager) — see its
+     * own doc comment below for why a real, positioned cloud object needs
+     * a blend between resolveBand()'s true-coordinate answer and this
+     * class's own far-range directional sampling, rather than either one
+     * alone.
+     *
      * Sample distance uses EngineSetting.WEATHER_FAR_RANGE_CHUNKS — the
      * far side of the near/far range pair (see EngineSetting's own doc
      * comment). Deliberately larger than OverheadManager's near-range
@@ -318,19 +325,118 @@ class RegionSampleBranch extends BranchPackage {
 
     /*
      * Combines this coordinate's wind-drifted local noise with the global
+     * rotation-and-tilt-driven noise into a single [0,1] weather intensity
+     * value — the same combined value resolveBand() has always resolved a
+     * pool against, just factored out on its own so
+     * resolveBandTowardHorizon() below can blend two different
+     * coordinates' combined noise together BEFORE either one is ever
+     * resolved against a pool (blending two already-resolved
+     * WeatherBandStructs — each its own discrete low/high pool-entry pair
+     * — has no single correct meaning; blending the raw noise upstream of
+     * that resolution does).
+     */
+    private float combinedNoiseAt(int chunkX, int chunkY) {
+
+        float localNoise = sampleNoise(chunkX, chunkY);
+        float globalIntensity = globalNoiseBranch.sampleGlobalIntensity(Coordinate2Long.pack(chunkX, chunkY));
+
+        return lerp(localNoise, globalIntensity, globalNoiseBranch.getGlobalInfluence());
+    }
+
+    /*
+     * Combines this coordinate's wind-drifted local noise with the global
      * rotation-and-tilt-driven noise, then resolves the blend against the
      * supplied chance-weighted pool. Writes into the caller-supplied struct
      * rather than allocating — this is the method
      * WeatherManager.resolveWeatherBand() calls on behalf of any
-     * cross-package caller.
+     * cross-package caller that wants the true, un-blended weather at an
+     * arbitrary coordinate. A caller resolving an overhead cloud object's
+     * own identity should use resolveBandTowardHorizon() below instead —
+     * see that method's own doc comment for why a real cloud object needs
+     * different treatment than a plain coordinate query.
      */
     void resolveBand(WeatherBandStruct out, int chunkX, int chunkY, ObjectArrayList<WeatherPoolEntryStruct> pool) {
+        bandFromPool(out, pool, combinedNoiseAt(chunkX, chunkY));
+    }
 
-        float localNoise = sampleNoise(chunkX, chunkY);
-        float globalIntensity = globalNoiseBranch.sampleGlobalIntensity(Coordinate2Long.pack(chunkX, chunkY));
-        float combinedNoise = lerp(localNoise, globalIntensity, globalNoiseBranch.getGlobalInfluence());
+    /*
+     * Resolves a weather band for a coordinate that is not necessarily
+     * where the player is standing — specifically, for an overhead cloud
+     * OBJECT's own home coordinate, which can sit anywhere between the
+     * player's feet and the outer edge of the near-range streaming radius
+     * (see EngineSetting.WEATHER_NEAR_RANGE_CHUNKS). A cloud object
+     * streamed in right next to the player must show the weather that is
+     * ACTUALLY there; a cloud object streamed in right at the streaming
+     * edge must instead agree with whatever the sky dome is already
+     * showing along that exact bearing — see this class's own far-range
+     * directional sampling in sampleDirection()/sampleRegions() above,
+     * which resolves at EngineSetting.WEATHER_FAR_RANGE_CHUNKS. Blending
+     * smoothly between the two, keyed on how far toward the streaming
+     * edge this coordinate already sits, is what keeps a real cloud
+     * object and the sky-dome preview from ever visibly disagreeing about
+     * the weather along the same line of sight — without either system
+     * needing to know anything about the other's existence.
+     *
+     * The "far" sample is deliberately resolved along the SAME continuous
+     * bearing from referenceChunkX/Z that homeChunkX/Z already sits on —
+     * never snapped to this class's own 8 fixed compass buckets — because
+     * the sky dome's own horizon blend (_sampleHorizonWeather in
+     * Clouds.glsl) already interpolates continuously between whichever two
+     * buckets bracket a given view direction. Resolving this coordinate's
+     * own far sample on its own exact bearing, through the identical
+     * combinedNoiseAt() pipeline those buckets are themselves built from,
+     * lands inside that same interpolated result to begin with — two
+     * systems sampling the same underlying noise field at (approximately)
+     * the same point is what actually keeps them in sync, not any
+     * explicit hand-off between them.
+     *
+     * distanceChunks and the resulting blend factor are computed from a
+     * flat, unwrapped delta against the reference coordinate — a cloud
+     * object's home coordinate is already wrapped into the world's own
+     * toroidal bounds at stream-in time (see
+     * OverheadManager.wrapChunkCoordinate()), and the player's own
+     * reference coordinate never sits farther from a streamed-in cloud's
+     * home chunk than the near-range streaming radius itself — far too
+     * close for the world's toroidal wrap to ever matter here, unlike
+     * OverheadManager's own retirement distance check, which does have to
+     * account for a cloud that streamed in across the wrap seam.
+     */
+    void resolveBandTowardHorizon(
+            WeatherBandStruct out,
+            int homeChunkX,
+            int homeChunkZ,
+            int referenceChunkX,
+            int referenceChunkZ,
+            ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
-        bandFromPool(out, pool, combinedNoise);
+        double dx = homeChunkX - referenceChunkX;
+        double dz = homeChunkZ - referenceChunkZ;
+        double distanceChunks = Math.sqrt(dx * dx + dz * dz);
+
+        double clampedDistance = Math.min(distanceChunks, (double) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
+        float distanceT = (float) (clampedDistance / (double) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
+
+        float nearNoise = combinedNoiseAt(homeChunkX, homeChunkZ);
+
+        if (distanceT <= 0.0001f) {
+            bandFromPool(out, pool, nearNoise);
+            return;
+        }
+
+        int farChunkX = homeChunkX;
+        int farChunkZ = homeChunkZ;
+
+        if (distanceChunks > 0.0001) {
+            double dirX = dx / distanceChunks;
+            double dirZ = dz / distanceChunks;
+            farChunkX = referenceChunkX + (int) Math.round(dirX * EngineSetting.WEATHER_FAR_RANGE_CHUNKS);
+            farChunkZ = referenceChunkZ + (int) Math.round(dirZ * EngineSetting.WEATHER_FAR_RANGE_CHUNKS);
+        }
+
+        float farNoise = combinedNoiseAt(farChunkX, farChunkZ);
+        float blendedNoise = lerp(nearNoise, farNoise, distanceT);
+
+        bandFromPool(out, pool, blendedNoise);
     }
 
     /*

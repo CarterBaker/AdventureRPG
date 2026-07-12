@@ -94,14 +94,15 @@ public class WeatherManager extends ManagerPackage {
      * activeWeatherPool stays null until the calendar resolves its first
      * named season, which requires at least one day-tick — normal at
      * startup. update() skips sampling entirely until then, and any
-     * cross-package caller of resolveWeatherBand() should check
-     * hasActiveWeatherPool() first; calling it before that point throws
-     * rather than silently resolving against nothing. getWindSpeedScale(),
-     * getWindTurbulenceScale(), getHumidity(), and getVisibility() are the
-     * exceptions — all four fall back to a neutral value before that point
-     * instead of throwing or silently reading an unset zero, so nothing
-     * downstream (wind, fog, gameplay) goes to a dead/degenerate state
-     * during the first frames of a session.
+     * cross-package caller of resolveWeatherBand() or
+     * resolveWeatherBandTowardHorizon() should check hasActiveWeatherPool()
+     * first; calling either before that point throws rather than silently
+     * resolving against nothing. getWindSpeedScale(), getWindTurbulenceScale(),
+     * getHumidity(), and getVisibility() are the exceptions — all four fall
+     * back to a neutral value before that point instead of throwing or
+     * silently reading an unset zero, so nothing downstream (wind, fog,
+     * gameplay) goes to a dead/degenerate state during the first frames of
+     * a session.
      */
 
     // Internal
@@ -505,5 +506,36 @@ public class WeatherManager extends ManagerPackage {
         int chunkY = Coordinate2Long.unpackY(chunkCoordinate);
 
         regionSampleBranch.resolveBand(out, chunkX, chunkY, activeWeatherPool);
+    }
+
+    /*
+     * Resolves which weather(s) an overhead cloud OBJECT's own home
+     * coordinate currently sits between, blended toward whatever the sky
+     * dome already shows along that same bearing the closer that
+     * coordinate sits to the outer edge of the near-range streaming radius
+     * — see RegionSampleBranch.resolveBandTowardHorizon()'s own doc
+     * comment for the full rationale. Any caller resolving a real,
+     * streamed cloud object's identity (OverheadManager) should use this
+     * instead of the plain resolveWeatherBand() above — that one stays
+     * available for any caller that genuinely wants the true, un-blended
+     * weather at an arbitrary coordinate, independent of the player's own
+     * position. Throws under the identical precondition as
+     * resolveWeatherBand() — see that method's own doc comment.
+     */
+    public void resolveWeatherBandTowardHorizon(WeatherBandStruct out, long homeChunkCoordinate) {
+
+        if (activeWeatherPool == null)
+            throwException("Cannot resolve a weather band before any season has been resolved. "
+                    + "Callers should check hasActiveWeatherPool() first.");
+
+        int homeChunkX = Coordinate2Long.unpackX(homeChunkCoordinate);
+        int homeChunkZ = Coordinate2Long.unpackY(homeChunkCoordinate);
+
+        long referenceCoordinate = getReferenceCoordinate();
+        int referenceChunkX = Coordinate2Long.unpackX(referenceCoordinate);
+        int referenceChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
+
+        regionSampleBranch.resolveBandTowardHorizon(
+                out, homeChunkX, homeChunkZ, referenceChunkX, referenceChunkZ, activeWeatherPool);
     }
 }

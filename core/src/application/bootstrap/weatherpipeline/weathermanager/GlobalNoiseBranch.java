@@ -11,15 +11,19 @@ class GlobalNoiseBranch extends BranchPackage {
 
     /*
      * Owns the planet's continuous rotation angle, its seasonal axial-tilt
-     * latitude drift, and the CPU-side global weather noise overlay driven by
-     * both. Rotation advances independently of the in-game calendar — a flat
-     * rotationSpeed (degrees per real second) times deltaTime — so the
+     * latitude drift, a slower current-like meander wobble layered on top
+     * of both, and the CPU-side global weather noise overlay driven by all
+     * three. Rotation advances independently of the in-game calendar — a
+     * flat rotationSpeed (degrees per real second) times deltaTime — so the
      * steady east-west scroll is a pure atmospheric-simulation concept, never
      * a calendar one. Tilt is the opposite: it deliberately rides the
      * calendar's own yearProgress, exactly like SkyColorBranch's seasonal
      * tint blend and CurrentTrackerBranch's sunrise/sunset shift, since a
      * planet's storm-track latitude drifting north and south over the year
      * IS the calendar's seasons acting on weather, not an independent clock.
+     * Meander sits between the two on every axis that matters — see point 5
+     * below — real, moment-to-moment motion, but far too slow for a player
+     * to ever perceive as animating.
      *
      * Sampling works entirely in normalized, wrapped world-UV space rather
      * than raw chunk coordinates:
@@ -71,6 +75,22 @@ class GlobalNoiseBranch extends BranchPackage {
      * boundary, rather than sampling two unrelated hash values on either
      * side of the seam.
      *
+     * 5. Meander layers a third drift on top of rotation and tilt — a
+     * traveling wave in the V (north-south) sampling coordinate, driven by
+     * the SAME rotated U coordinate the sampleX below already uses (so the
+     * wave pattern itself travels with the planet's own rotation rather
+     * than sliding independently across it) plus its own much slower phase
+     * clock (meanderPhase, advanced by advanceMeander() every frame). This
+     * is what keeps the noise field reading as a genuine current — real
+     * atmospheric jet streams and ocean currents meander into a handful of
+     * standing crests and troughs around the globe
+     * (GLOBAL_WEATHER_MEANDER_WAVE_NUMBER) rather than holding one static
+     * latitude the way tilt alone would produce, and those meanders
+     * themselves slowly reshape over many minutes rather than staying
+     * rigid. GLOBAL_WEATHER_MEANDER_INFLUENCE keeps the wobble modest —
+     * noticeably wavy without ever overpowering the seasonal tilt drift it
+     * sits on top of.
+     *
      * Queried directly by RegionSampleBranch, and exposed further by
      * WeatherManager for any other system (wind, horizon, overhead) that
      * wants it — always as a plain CPU value. Never pushed to a UBO on its
@@ -86,6 +106,9 @@ class GlobalNoiseBranch extends BranchPackage {
     private float noiseCellSize;
     private float globalInfluence;
     private float tiltInfluence;
+    private int meanderWaveNumber;
+    private float meanderInfluence;
+    private float meanderPhaseSpeed;
 
     // Rotation
     private double rotationAngleDegrees;
@@ -93,6 +116,12 @@ class GlobalNoiseBranch extends BranchPackage {
     // Tilt — recomputed once per frame by advanceTilt(), reused by every
     // sampleGlobalIntensity() call that frame.
     private double latitudeShift;
+
+    // Meander — recomputed once per frame by advanceMeander(), reused by
+    // every sampleGlobalIntensity() call that frame exactly like
+    // latitudeShift. See the class comment's "Meander" section for what
+    // this represents.
+    private double meanderPhase;
 
     // Internal \\
 
@@ -103,6 +132,9 @@ class GlobalNoiseBranch extends BranchPackage {
         this.noiseCellSize = EngineSetting.GLOBAL_WEATHER_NOISE_CELL_SIZE;
         this.globalInfluence = EngineSetting.GLOBAL_WEATHER_INFLUENCE;
         this.tiltInfluence = EngineSetting.GLOBAL_WEATHER_TILT_INFLUENCE;
+        this.meanderWaveNumber = EngineSetting.GLOBAL_WEATHER_MEANDER_WAVE_NUMBER;
+        this.meanderInfluence = EngineSetting.GLOBAL_WEATHER_MEANDER_INFLUENCE;
+        this.meanderPhaseSpeed = EngineSetting.GLOBAL_WEATHER_MEANDER_PHASE_SPEED;
     }
 
     @Override
@@ -115,6 +147,7 @@ class GlobalNoiseBranch extends BranchPackage {
     protected void update() {
         advanceRotation();
         advanceTilt();
+        advanceMeander();
     }
 
     // Rotation \\
@@ -149,13 +182,32 @@ class GlobalNoiseBranch extends BranchPackage {
         this.latitudeShift = Math.sin(tiltPhase) * tiltFraction * tiltInfluence;
     }
 
+    // Meander \\
+
+    /*
+     * Advances the meander pattern's own slow phase clock — see the class
+     * comment's "Meander" section. Unlike rotationAngleDegrees (which
+     * literally IS the planet's rotation), this phase has no physical
+     * meaning of its own beyond "how far the meander pattern has evolved
+     * since world start" — it exists purely to keep the wave pattern
+     * itself gradually reshaping, rather than settling into one static
+     * meander shape that simply rotates rigidly with the planet for the
+     * entire session.
+     */
+    private void advanceMeander() {
+
+        this.meanderPhase += meanderPhaseSpeed * internal.getDeltaTime();
+        this.meanderPhase %= (Math.PI * 2.0);
+    }
+
     // Sampling \\
 
     /*
-     * Samples the rotating, tilt-drifting global noise field at a world-space
-     * chunk coordinate, returning a coherent [0, 1] "global storm intensity"
-     * value. See the class comment for why this works in wrapped UV space
-     * rather than raw coordinates, and for what the tilt term contributes.
+     * Samples the rotating, tilt-and-meander-drifting global noise field at
+     * a world-space chunk coordinate, returning a coherent [0, 1] "global
+     * storm intensity" value. See the class comment for why this works in
+     * wrapped UV space rather than raw coordinates, and for what the tilt
+     * and meander terms each contribute.
      */
     float sampleGlobalIntensity(long chunkCoordinate) {
 
@@ -168,14 +220,25 @@ class GlobalNoiseBranch extends BranchPackage {
         int chunkY = Coordinate2Long.unpackY(chunkCoordinate);
 
         double u = wrap01(chunkX / worldWidthChunks);
-        double v = wrap01(chunkY / worldHeightChunks + latitudeShift);
+        double rotationProgress = rotationAngleDegrees / EngineSetting.DEGREES_PER_FULL_ROTATION;
+        double rotatedU = wrap01(u + rotationProgress);
+
+        // Meander rides the SAME rotated longitude sampleX below already
+        // uses — see the class comment's "Meander" section — so the wave
+        // pattern travels with the planet's own rotation instead of
+        // sliding independently across it. meanderPhase then layers a
+        // second, much slower reshaping on top, so the meander humps
+        // themselves migrate and re-form over many minutes rather than
+        // rotating past a sample point in perfect lockstep forever.
+        double meanderShift = Math.sin(rotatedU * meanderWaveNumber * Math.PI * 2.0 + meanderPhase)
+                * meanderInfluence;
+
+        double v = wrap01(chunkY / worldHeightChunks + latitudeShift + meanderShift);
 
         int cellsX = (int) Math.max(1L, Math.round(worldWidthChunks / noiseCellSize));
         int cellsY = (int) Math.max(1L, Math.round(worldHeightChunks / noiseCellSize));
 
-        double rotationProgress = rotationAngleDegrees / EngineSetting.DEGREES_PER_FULL_ROTATION;
-
-        double sampleX = wrap01(u + rotationProgress) * cellsX;
+        double sampleX = rotatedU * cellsX;
         double sampleY = v * cellsY;
 
         return sampleNoise(sampleX, sampleY, cellsX, cellsY);
@@ -191,6 +254,10 @@ class GlobalNoiseBranch extends BranchPackage {
 
     double getLatitudeShift() {
         return latitudeShift;
+    }
+
+    double getMeanderPhase() {
+        return meanderPhase;
     }
 
     // Wrap \\
