@@ -387,12 +387,6 @@ public class EngineSetting {
 
         // Cloud Instance Uniforms \\
 
-        // Fully resolved on the CPU every frame — see CloudRenderSystem
-        // .updateInstance(). x/z already sit relative to the player's current
-        // chunk (see WeatherManager.getReferenceCoordinate()); y is world
-        // altitude, never wrapped or re-based. No PlayerPositionData UBO
-        // read, no chunk-index split, lives entirely on the shader side as
-        // one plain vec3.
         public static final String UNIFORM_CLOUD_INSTANCE_POSITION = "u_cloudInstancePosition";
         public static final String UNIFORM_CLOUD_INSTANCE_RANDOM_SEED = "u_cloudInstanceRandomSeed";
         public static final String UNIFORM_CLOUD_INSTANCE_DOMAIN_ROTATION = "u_cloudInstanceDomainRotation";
@@ -400,16 +394,9 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_INSTANCE_INTENSITY = "u_cloudInstanceIntensity";
 
         // Cloud Instance Shape Diversity \\
-        //
-        // Per-cell random multiplier applied to BOTH a cloud instance's
-        // baked scale and verticalThickness together (see CloudRenderSystem
-        // .bakeArchetypeUniforms()) — varies overall cloud size within a
-        // single CloudType while preserving that type's own width/height
-        // proportions, so two same-type clouds are never rendered at
-        // identical dimensions. See OverheadCellStruct's own doc comment.
+
         public static final float CLOUD_INSTANCE_SIZE_VARIANCE_MIN = 0.75f;
         public static final float CLOUD_INSTANCE_SIZE_VARIANCE_MAX = 1.3f;
-
         public static final String CLOUD_SETTINGS_DATA_UBO = "CloudSettingsData";
         public static final String UNIFORM_CLOUD_HORIZON_DISTANCE = "u_cloudHorizonDistance";
         public static final String UNIFORM_CLOUD_MIN_SCALE = "u_cloudMinScale";
@@ -425,16 +412,7 @@ public class EngineSetting {
         public static final float CLOUD_DEFAULT_SKY_COLOR_B = 1.0f;
 
         // Cloud Fallbacks — Directional Sky Sampling \\
-        //
-        // Used by RegionSampleBranch when a direction's/zenith's primary
-        // weather defines no cloud entry at all (a Clear weather — see
-        // WeatherHandle.hasClouds()). Mirror CloudBuilder's own per-field
-        // JSON defaults exactly, so "no cloud resolved" reads as a neutral,
-        // generic cloud rather than an arbitrary/inconsistent placeholder —
-        // harmless in practice since cloudCoverage is near zero whenever
-        // these are actually read, but keeping them numerically consistent
-        // with a real archetype's defaults avoids a discontinuity if
-        // coverage briefly rises before a fresh cloud choice resolves.
+
         public static final float CLOUD_DEFAULT_DENSITY = 0.8f;
         public static final float CLOUD_DEFAULT_SHADOW_COLOR_R = 0.6f;
         public static final float CLOUD_DEFAULT_SHADOW_COLOR_G = 0.63f;
@@ -455,12 +433,6 @@ public class EngineSetting {
         // Weather \\
 
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;
-        // Reduced from 0.35 — see EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE's
-        // own comment. Kept numerically equal to that constant so the CPU
-        // weather-noise pattern driving "what weather is here" migrates at
-        // the same rate as the visual cloud objects representing it, rather
-        // than the two drifting apart from each other over time.
-        public static final float WEATHER_WIND_DRIFT_SCALE = 0.05f;
         public static final float WEATHER_LOCAL_DRIFT_TIME_WRAP = 100000.0f;
         public static final float WEATHER_LOCAL_EVOLUTION_PERIOD = 420.0f;
         public static final float DEFAULT_WEATHER_WIND_SPEED_SCALE = 1.0f;
@@ -483,19 +455,6 @@ public class EngineSetting {
         public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f;
         public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f;
         public static final float GLOBAL_WEATHER_TILT_INFLUENCE = 0.20f;
-
-        // Meander influence mirrors TILT_INFLUENCE's own fraction-of-V-range
-        // scale — see GlobalNoiseBranch's own "Meander" doc comment for the
-        // full rationale behind layering a current-like wobble on top of the
-        // existing rotation/tilt-driven noise field. WAVE_NUMBER is how many
-        // meander crests/troughs appear around one full trip around the
-        // world (a small integer — real planetary wave patterns settle into
-        // a handful of standing humps, not a smooth single wobble or a
-        // high-frequency ripple). PHASE_SPEED is deliberately tiny — the
-        // meander pattern itself should drift and reshape over many
-        // minutes, the same "weather system" timescale the rest of this
-        // simulation already operates on, never anything a player perceives
-        // as animating in real time.
         public static final int GLOBAL_WEATHER_MEANDER_WAVE_NUMBER = 3;
         public static final float GLOBAL_WEATHER_MEANDER_INFLUENCE = 0.08f;
         public static final float GLOBAL_WEATHER_MEANDER_PHASE_SPEED = 0.002f;
@@ -505,46 +464,14 @@ public class EngineSetting {
         public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
 
         // Overhead — Weather Patterns \\
-        //
-        // The overhead cloud layer streams up to WEATHER_PATTERN_MAX_ACTIVE_COUNT
-        // large, persistent "weather pattern" instances — each one whole
-        // storm/fair-weather system — built from a handful of offset
-        // "lobes" (see WeatherPatternLobeStruct) that approximate an
-        // irregular real-world weather shape instead of a single cube, and
-        // that may each draw a DIFFERENT cloud archetype pulled from the
-        // same weather's own chance-weighted cloud pool.
-        // WEATHER_PATTERN_CELL_SIZE_CHUNKS is the spacing of the underlying
-        // candidate grid patterns stream from — deliberately large
-        // ("weather should be rather large") so a capped count of patterns
-        // can still cover a meaningful radius around the player.
+
         public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
         public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 24;
-        // Fraction of a pattern's own cell size a lobe may offset from the
-        // pattern's home center — see OverheadManager.streamInPattern().
         public static final float WEATHER_PATTERN_LOBE_SPREAD_RATIO = 0.6f;
-        // Fraction of a pattern's own cell size its HOME CENTER may be
-        // displaced from the cell's exact center — see
-        // OverheadManager.computeHomeJitter(). Without this every pattern
-        // sat dead-center in its own cell, so the capped set of patterns
-        // visibly lined up on a grid regardless of how organic each
-        // pattern's own lobe shape was. 0.5 keeps a home within the middle
-        // half of its cell on each axis — enough to break the grid look
-        // without letting two neighboring patterns' homes crowd together.
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
-        // A pattern's lobe count scales with its resolved weather's own
-        // cloudCoverage between these two bounds — a wispy, low-coverage
-        // weather reads as one or two sparse lobes; a dense storm reads as
-        // a fuller, multi-lobe mass. See OverheadManager.streamInPattern().
         public static final float WEATHER_PATTERN_LOBE_MIN_COUNT = 2.0f;
         public static final float WEATHER_PATTERN_LOBE_MAX_COUNT = 6.0f;
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 8;
-        // Reduced from 0.35 — the physical cloud layer was drifting roughly
-        // an order of magnitude faster than a cloud layer should for a world
-        // at ~1/20 Earth scale. Kept numerically equal to
-        // WEATHER_WIND_DRIFT_SCALE (see that constant's own comment) so the
-        // visual drift rate matches the rate the underlying weather pattern
-        // itself migrates.
-        public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.05f;
 
         // Weather Pattern Lifecycle \\
 
@@ -575,12 +502,6 @@ public class EngineSetting {
         public static final String UNIFORM_WIND_DIRECTION = "u_windDirection";
         public static final String UNIFORM_WIND_SPEED = "u_windSpeed";
         public static final String UNIFORM_WIND_DRIFT_OFFSET = "u_windDriftOffset";
-        // Reduced from 0.15, proportionally to OVERHEAD_DRIFT_SPEED_SCALE's
-        // own reduction — first-pass tuning only. Full sky-dome/overhead
-        // drift matching (so the two visually never slide relative to each
-        // other) is a later stage's job; this just keeps the sky preview's
-        // own drift in the same ballpark as the slowed-down physical clouds
-        // in the meantime.
         public static final float SKY_WIND_DRIFT_SCALE = 0.02f;
         public static final float SKY_WIND_DRIFT_WRAP = 100000.0f;
 
@@ -591,16 +512,19 @@ public class EngineSetting {
         public static final float TEMPERATURE_DRIFT_FREQUENCY = 0.02f;
         public static final float TEMPERATURE_PRECIPITATION_COOLING = 4.0f;
 
-        // Sky Noise
+        // Sky Noise \\
+
         public static final float SKY_NOISE_ALTITUDE_BLEND = 0.35f;
         public static final float SKY_NOISE_TEXTURE_STRENGTH = 0.02f;
 
-        // Sky Seasonal
+        // Sky Seasonal \\
+
         public static final float SKY_SEASONAL_TINT_OFFSET_SCALE = 0.15f;
         public static final float SKY_SEASONAL_STRENGTH_SCALE = 0.50f;
         public static final float SKY_HORIZON_DESATURATION = 0.12f;
 
-        // Sky Daily Variation
+        // Sky Daily Variation \\
+
         public static final float SKY_DAILY_OFFSET_R_SCALE = 0.08f;
         public static final float SKY_DAILY_OFFSET_R_BIAS = -0.04f;
         public static final float SKY_DAILY_OFFSET_G_SCALE = 0.06f;
@@ -610,7 +534,8 @@ public class EngineSetting {
         public static final float SKY_DAILY_HASH_G = 7919.0f;
         public static final float SKY_DAILY_HASH_B = 5333.0f;
 
-        // Sky Palette - Night
+        // Sky Palette - Night \\
+
         public static final float SKY_NIGHT_TOP_R = 0.020f;
         public static final float SKY_NIGHT_TOP_G = 0.020f;
         public static final float SKY_NIGHT_TOP_B = 0.080f;
@@ -618,7 +543,8 @@ public class EngineSetting {
         public static final float SKY_NIGHT_BOTTOM_G = 0.005f;
         public static final float SKY_NIGHT_BOTTOM_B = 0.020f;
 
-        // Sky Palette - Day
+        // Sky Palette - Day \\
+
         public static final float SKY_DAY_TOP_R = 0.60f;
         public static final float SKY_DAY_TOP_G = 0.82f;
         public static final float SKY_DAY_TOP_B = 1.00f;
@@ -626,7 +552,8 @@ public class EngineSetting {
         public static final float SKY_DAY_BOTTOM_G = 0.52f;
         public static final float SKY_DAY_BOTTOM_B = 0.80f;
 
-        // Sky Season Tints
+        // Sky Season Tints \\
+
         public static final float SKY_WINTER_TINT_R = 0.70f;
         public static final float SKY_WINTER_TINT_G = 0.75f;
         public static final float SKY_WINTER_TINT_B = 0.95f;
@@ -640,7 +567,8 @@ public class EngineSetting {
         public static final float SKY_FALL_TINT_G = 0.80f;
         public static final float SKY_FALL_TINT_B = 0.70f;
 
-        // Sky Sunrise/Sunset Colors
+        // Sky Sunrise/Sunset Colors \\
+
         public static final float SKY_WINTER_SUNRISE_R = 0.80f;
         public static final float SKY_WINTER_SUNRISE_G = 0.50f;
         public static final float SKY_WINTER_SUNRISE_B = 0.60f;

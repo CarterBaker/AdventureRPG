@@ -13,18 +13,16 @@ class GlobalNoiseBranch extends BranchPackage {
      * Owns the planet's continuous rotation angle, its seasonal axial-tilt
      * latitude drift, a slower meander wobble layered on top of both, and
      * the CPU-side global weather noise overlay driven by all three.
-     * Sampling works in normalized, toroidally wrapped world-UV space so a
-     * chunk coordinate of any magnitude stays precision-safe, and rotation
-     * drives a uniform east-west scroll of that UV field rather than
-     * spinning it around a fixed pole, matching how real planetary
-     * rotation drives zonal atmospheric banding.
+     * Sampling works in normalized, toroidally wrapped world-UV space, and
+     * rotation drives a uniform east-west scroll of that field. That same
+     * rotation-driven scroll rate is exposed as a chunk-space drift rate so
+     * every other weather system moves in lockstep with this one, rather
+     * than each maintaining its own independently-tuned drift constant.
      */
 
-    // Internal
     private WorldManager worldManager;
     private ClockManager clockManager;
 
-    // Settings
     private float noiseCellSize;
     private float globalInfluence;
     private float tiltInfluence;
@@ -32,20 +30,12 @@ class GlobalNoiseBranch extends BranchPackage {
     private float meanderInfluence;
     private float meanderPhaseSpeed;
 
-    // Rotation
     private double rotationAngleDegrees;
-
-    // Tilt — recomputed once per frame, reused by every sample that frame.
     private double latitudeShift;
-
-    // Meander — recomputed once per frame, reused by every sample that frame.
     private double meanderPhase;
-
-    // Internal \\
 
     @Override
     protected void create() {
-
         this.noiseCellSize = EngineSetting.GLOBAL_WEATHER_NOISE_CELL_SIZE;
         this.globalInfluence = EngineSetting.GLOBAL_WEATHER_INFLUENCE;
         this.tiltInfluence = EngineSetting.GLOBAL_WEATHER_TILT_INFLUENCE;
@@ -81,13 +71,24 @@ class GlobalNoiseBranch extends BranchPackage {
             this.rotationAngleDegrees += EngineSetting.DEGREES_PER_FULL_ROTATION;
     }
 
+    /*
+     * Chunk-space drift rate along the world's longitudinal (X) axis,
+     * matching exactly how fast rotationAngleDegrees scrolls the U
+     * coordinate every query. Any system whose own position should migrate
+     * with the planet's spin reads this instead of maintaining its own
+     * drift constant.
+     */
+    float getWorldDriftChunksPerSecondX() {
+
+        WorldHandle activeWorld = worldManager.getActiveWorld();
+        double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
+        float rotationSpeed = activeWorld.getRotationSpeed();
+
+        return (float) ((rotationSpeed / EngineSetting.DEGREES_PER_FULL_ROTATION) * worldWidthChunks);
+    }
+
     // Tilt \\
 
-    /*
-     * Derives this frame's seasonal north-south sampling shift from the
-     * active world's axial tilt and the active calendar's current
-     * yearProgress.
-     */
     private void advanceTilt() {
 
         float axialTiltDegrees = worldManager.getActiveWorld().getAxialTilt();
@@ -102,18 +103,12 @@ class GlobalNoiseBranch extends BranchPackage {
     // Meander \\
 
     private void advanceMeander() {
-
         this.meanderPhase += meanderPhaseSpeed * internal.getDeltaTime();
         this.meanderPhase %= (Math.PI * 2.0);
     }
 
     // Sampling \\
 
-    /*
-     * Samples the rotating, tilt-and-meander-drifting global noise field at
-     * a world-space chunk coordinate, returning a coherent [0, 1] global
-     * storm intensity value.
-     */
     float sampleGlobalIntensity(long chunkCoordinate) {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
@@ -167,11 +162,6 @@ class GlobalNoiseBranch extends BranchPackage {
 
     // Noise \\
 
-    /*
-     * Coherent 2D value noise over a bounded cell grid, wrapping seamlessly
-     * at the edges. Hash term order is swapped from RegionSampleBranch's
-     * local noise so the two fields never correlate at the same coordinates.
-     */
     private float sampleNoise(double sampleX, double sampleY, int cellsX, int cellsY) {
 
         int x0 = (int) Math.floor(sampleX);

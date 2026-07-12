@@ -5,14 +5,12 @@ import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherBandStruct;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
-import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
-import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -23,12 +21,12 @@ public class WeatherPatternManager extends ManagerPackage {
      * Simulates the world's persistent weather patterns — up to
      * WEATHER_PATTERN_MAX_ACTIVE_COUNT systems, each approximated by a
      * handful of offset lobes, streamed in and out around the reference
-     * coordinate and drifted by wind. Candidate cells are jittered in both
-     * position and lobe count so the streamed set never reads as a rigid
-     * grid. OverheadManager reads getActivePatterns() for the volumetric
-     * layer, and SkyWeatherPatternBranch — a child of this manager —
-     * flattens the same set into the sky dome's own UBO immediately after
-     * this manager's own update() completes.
+     * coordinate and drifted by the world's own rotation. Candidate cells
+     * are jittered in both position and lobe count so the streamed set
+     * never reads as a rigid grid. OverheadManager reads getActivePatterns()
+     * for the volumetric layer, and SkyWeatherPatternBranch — a child of
+     * this manager — flattens the same set into the sky dome's own UBO
+     * immediately after this manager's own update() completes.
      */
 
     private static final float FADE_IN_RATE = 0.6f;
@@ -36,14 +34,12 @@ public class WeatherPatternManager extends ManagerPackage {
 
     private WeatherManager weatherManager;
     private WorldManager worldManager;
-    private WindManager windManager;
     private SkyWeatherPatternBranch skyWeatherPatternBranch;
 
     private int patternCellSizeChunks;
     private float radiusChunks;
     private int maxPatternsStreamedPerFrame;
     private int maxActivePatternCount;
-    private float driftScale;
     private float reevaluationMinSeconds;
     private float reevaluationMaxSeconds;
 
@@ -67,7 +63,6 @@ public class WeatherPatternManager extends ManagerPackage {
         this.radiusChunks = Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
         this.maxPatternsStreamedPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
         this.maxActivePatternCount = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
-        this.driftScale = EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE;
         this.reevaluationMinSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MIN_SECONDS;
         this.reevaluationMaxSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MAX_SECONDS;
 
@@ -89,7 +84,6 @@ public class WeatherPatternManager extends ManagerPackage {
     protected void get() {
         this.weatherManager = get(WeatherManager.class);
         this.worldManager = get(WorldManager.class);
-        this.windManager = get(WindManager.class);
     }
 
     @Override
@@ -108,7 +102,7 @@ public class WeatherPatternManager extends ManagerPackage {
         int playerCellX = Math.floorDiv(playerChunkX, patternCellSizeChunks);
         int playerCellZ = Math.floorDiv(playerChunkZ, patternCellSizeChunks);
 
-        advanceWindDrift();
+        advanceWorldDrift();
         advanceWeatherReevaluation();
         advanceIntensity();
         advanceFadesAndRetire(playerChunkX, playerChunkZ);
@@ -292,20 +286,23 @@ public class WeatherPatternManager extends ManagerPackage {
         return Coordinate2Long.pack(wrappedX, wrappedZ);
     }
 
-    // Wind Drift \\
+    // World Drift \\
 
-    private void advanceWindDrift() {
+    /*
+     * Migrates every active pattern's position along the world's
+     * longitudinal axis at the exact rate the planet itself rotates — the
+     * same rate RegionSampleBranch's own noise field scrolls at — so a
+     * pattern's visual position never drifts out of step with the weather
+     * identity resolved for that position.
+     */
+    private void advanceWorldDrift() {
 
-        Vector3 windDirection = windManager.getWindHandle().getLocalWindDirection();
-        float windSpeed = windManager.getWindHandle().getLocalWindSpeed();
         float deltaTime = internal.getDeltaTime();
-
-        double baseDeltaChunkX = windDirection.x * windSpeed * driftScale * deltaTime;
-        double baseDeltaChunkZ = windDirection.z * windSpeed * driftScale * deltaTime;
+        double baseDeltaChunkX = weatherManager.getWorldDriftChunksPerSecondX() * deltaTime;
 
         for (WeatherPatternStruct pattern : activePatterns.values()) {
             float patternDriftScale = pattern.getDriftSpeedScale();
-            pattern.advanceDrift(baseDeltaChunkX * patternDriftScale, baseDeltaChunkZ * patternDriftScale);
+            pattern.advanceDrift(baseDeltaChunkX * patternDriftScale, 0.0);
         }
     }
 

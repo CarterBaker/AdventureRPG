@@ -1,63 +1,46 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
-import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
-import engine.util.mathematics.vectors.Vector3;
 import engine.util.random.WeightedChanceUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RegionSampleBranch extends BranchPackage {
 
     /*
-     * Owns the coherent weather noise field — wind-drifted, toroidally
-     * wrapped local noise blended with GlobalNoiseBranch's planet-rotation
-     * noise — and resolves it against a chance-weighted pool via
-     * resolveBand() and resolveBandTowardHorizon(). These are the single
-     * canonical noise-to-weather resolution path shared by WeatherManager,
-     * WeatherPatternManager, and this class's own center-point atmosphere
-     * sample.
+     * Owns the coherent weather noise field — a regional layer blended with
+     * GlobalNoiseBranch's planet-rotation noise, both scrolling along the
+     * world's longitudinal axis at the exact same rotation-driven rate — and
+     * resolves it against a chance-weighted pool via resolveBand() and
+     * resolveBandTowardHorizon(). These are the single canonical noise-to-
+     * weather resolution path shared by WeatherManager, WeatherPatternManager,
+     * and this class's own center-point atmosphere sample.
      */
 
-    // Internal
     private GlobalNoiseBranch globalNoiseBranch;
     private WorldManager worldManager;
-    private WindManager windManager;
 
-    // Settings
     private float noiseCellSize;
-    private float windDriftScale;
 
-    // Reference
     private long referenceCoordinate;
 
-    // Drift
-    private double driftChunksX;
-    private double driftChunksY;
-
-    // Evolution
     private double evolutionElapsedSeconds;
     private int evolutionTimeCell;
     private float evolutionTimeBlend;
 
-    // Center Sample
     private final WeatherSampleStruct sample = new WeatherSampleStruct();
     private final WeatherSampleStruct targetSample = new WeatherSampleStruct();
     private boolean smoothingInitialized;
 
-    // Scratch
     private final WeatherBandStruct bandScratch = new WeatherBandStruct();
-
-    // Internal \\
 
     @Override
     protected void create() {
         this.noiseCellSize = EngineSetting.WEATHER_NOISE_CELL_SIZE;
-        this.windDriftScale = EngineSetting.WEATHER_WIND_DRIFT_SCALE;
         this.referenceCoordinate = Coordinate2Long.pack(0, 0);
     }
 
@@ -65,7 +48,6 @@ class RegionSampleBranch extends BranchPackage {
     protected void get() {
         this.globalNoiseBranch = get(GlobalNoiseBranch.class);
         this.worldManager = get(WorldManager.class);
-        this.windManager = get(WindManager.class);
     }
 
     // Reference \\
@@ -80,13 +62,6 @@ class RegionSampleBranch extends BranchPackage {
 
     // Effective Range \\
 
-    /*
-     * The distance bound every weather system must agree on — whichever is
-     * smaller of the configured render distance or the design near range.
-     * WeatherPatternManager's streaming radius and CloudRenderSystem's
-     * horizon-fade distance both derive this identical value; this is the
-     * canonical source any other caller should use instead of recomputing it.
-     */
     float getEffectiveNearRangeChunks() {
         return Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
     }
@@ -95,7 +70,6 @@ class RegionSampleBranch extends BranchPackage {
 
     void sampleRegions(ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
-        advanceWindDrift();
         advanceEvolution();
 
         int originX = Coordinate2Long.unpackX(referenceCoordinate);
@@ -123,35 +97,6 @@ class RegionSampleBranch extends BranchPackage {
         sample.lerpToward(targetSample, alpha);
     }
 
-    // Wind Drift \\
-
-    private void advanceWindDrift() {
-
-        Vector3 windDirection = windManager.getWindHandle().getLocalWindDirection();
-        float windSpeed = windManager.getWindHandle().getLocalWindSpeed();
-        float deltaTime = internal.getDeltaTime();
-
-        driftChunksX += windDirection.x * windSpeed * windDriftScale * deltaTime;
-        driftChunksY += windDirection.z * windSpeed * windDriftScale * deltaTime;
-
-        WorldHandle activeWorld = worldManager.getActiveWorld();
-        double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
-        double worldHeightChunks = activeWorld.getWorldScale().y / (double) EngineSetting.CHUNK_SIZE;
-
-        driftChunksX = wrapPeriod(driftChunksX, worldWidthChunks);
-        driftChunksY = wrapPeriod(driftChunksY, worldHeightChunks);
-    }
-
-    private double wrapPeriod(double value, double period) {
-
-        if (period <= 0)
-            return 0.0;
-
-        double wrapped = value % period;
-
-        return wrapped < 0 ? wrapped + period : wrapped;
-    }
-
     // Evolution \\
 
     private void advanceEvolution() {
@@ -176,24 +121,10 @@ class RegionSampleBranch extends BranchPackage {
         return lerp(localNoise, globalIntensity, globalNoiseBranch.getGlobalInfluence());
     }
 
-    /*
-     * Resolves the true, un-blended weather at an arbitrary world-space
-     * chunk coordinate against the supplied chance-weighted pool.
-     */
     void resolveBand(WeatherBandStruct out, int chunkX, int chunkY, ObjectArrayList<WeatherPoolEntryStruct> pool) {
         bandFromPool(out, pool, combinedNoiseAt(chunkX, chunkY));
     }
 
-    /*
-     * Resolves a weather band for a coordinate anywhere between the player
-     * and the streaming edge, blending this coordinate's own true weather
-     * with whatever the far, horizon-range sample shows along the identical
-     * bearing — weighted by how close this coordinate sits to the streaming
-     * edge. distanceT is normalized against the same effective near range
-     * every other streaming/render system uses, so the blend actually
-     * reaches 1.0 exactly at the edge a pattern retires at, keeping a
-     * streamed-in pattern and the sky dome's own horizon arc in agreement.
-     */
     void resolveBandTowardHorizon(
             WeatherBandStruct out,
             int homeChunkX,
@@ -235,10 +166,6 @@ class RegionSampleBranch extends BranchPackage {
         bandFromPool(out, pool, blendedNoise);
     }
 
-    /*
-     * Maps noise01 onto a cumulative chance-weighted band across the pool,
-     * in JSON declaration order.
-     */
     private void bandFromPool(WeatherBandStruct out, ObjectArrayList<WeatherPoolEntryStruct> pool, float noise) {
 
         if (pool.size() == 1) {
@@ -306,9 +233,11 @@ class RegionSampleBranch extends BranchPackage {
 
     /*
      * Coherent 2D value noise over chunk coordinates, wrapped seamlessly at
-     * the world edge and displaced by the wind-driven drift accumulators
-     * from advanceWindDrift(). Each grid point blends two time-decorrelated
-     * hash layers via evolvingHash() so the field also morphs in place.
+     * the world edge. Scrolls along the world's longitudinal axis at the
+     * exact same rotation-driven rate as GlobalNoiseBranch's own field, so
+     * the two layers can never drift apart from each other. Each grid point
+     * blends two time-decorrelated hash layers via evolvingHash() so the
+     * field also morphs in place independently of that scroll.
      */
     private float sampleNoise(int chunkX, int chunkY) {
 
@@ -320,8 +249,9 @@ class RegionSampleBranch extends BranchPackage {
         int cellsX = (int) Math.max(1L, Math.round(worldWidthChunks / noiseCellSize));
         int cellsY = (int) Math.max(1L, Math.round(worldHeightChunks / noiseCellSize));
 
-        double u = wrap01((chunkX + driftChunksX) / worldWidthChunks);
-        double v = wrap01((chunkY + driftChunksY) / worldHeightChunks);
+        double rotationProgress = globalNoiseBranch.getRotationAngleDegrees() / EngineSetting.DEGREES_PER_FULL_ROTATION;
+        double u = wrap01(chunkX / worldWidthChunks + rotationProgress);
+        double v = wrap01(chunkY / worldHeightChunks);
 
         double sampleX = u * cellsX;
         double sampleY = v * cellsY;

@@ -29,23 +29,19 @@ public class WeatherManager extends ManagerPackage {
      * layers can never disagree about what's happening at a given bearing.
      */
 
-    // Internal
     private ClockManager clockManager;
     private BiomeManager biomeManager;
     private WindowManager windowManager;
     private PlayerManager playerManager;
     private SeasonManager seasonManager;
 
-    // Branches
     private GlobalNoiseBranch globalNoiseBranch;
     private RegionSampleBranch regionSampleBranch;
     private TemperatureBranch temperatureBranch;
 
-    // Palette
     private Object2ShortOpenHashMap<String> weatherName2WeatherID;
     private Short2ObjectOpenHashMap<WeatherHandle> weatherID2WeatherHandle;
 
-    // Season Tracking
     private String lastSeason;
     private ObjectArrayList<WeatherPoolEntryStruct> activeWeatherPool;
 
@@ -95,12 +91,6 @@ public class WeatherManager extends ManagerPackage {
 
     // Reference Coordinate \\
 
-    /*
-     * Mirrors the main window's player onto the exact chunk-granular
-     * coordinate GridInstance treats as authoritative for terrain
-     * recentering, so weather/cloud systems and terrain never disagree
-     * about which chunk is "here". No-op before a player has spawned.
-     */
     private void updateReferenceCoordinate() {
 
         WindowInstance mainWindow = windowManager.getMainWindow();
@@ -180,10 +170,6 @@ public class WeatherManager extends ManagerPackage {
         return seasonManager.getSeasonHandleFromSeasonName(season).getPrecipitationChanceScale();
     }
 
-    /*
-     * Falls back to the first season the biome actually defined weathers
-     * for when the calendar's current season name isn't one of them.
-     */
     private ObjectArrayList<WeatherChanceStruct> resolveFallbackEntries(BiomeHandle biomeHandle, String season) {
 
         if (!biomeHandle.hasAnyWeathers())
@@ -240,14 +226,19 @@ public class WeatherManager extends ManagerPackage {
         return activeWeatherPool != null;
     }
 
-    /*
-     * The shared distance bound every weather system normalizes against.
-     * WeatherPatternManager and CloudRenderSystem currently derive this
-     * same value independently — this is the canonical source for any new
-     * caller going forward.
-     */
     public float getEffectiveNearRangeChunks() {
         return regionSampleBranch.getEffectiveNearRangeChunks();
+    }
+
+    /*
+     * Chunk-space drift rate along the world's longitudinal axis, driven
+     * purely by the planet's own rotation speed. WeatherPatternManager reads
+     * this to migrate pattern positions, and RegionSampleBranch's own noise
+     * field scrolls at the identical rate — so both are always in lockstep
+     * by construction rather than by tuning two constants to match.
+     */
+    public float getWorldDriftChunksPerSecondX() {
+        return globalNoiseBranch.getWorldDriftChunksPerSecondX();
     }
 
     public float getWindSpeedScale() {
@@ -298,11 +289,6 @@ public class WeatherManager extends ManagerPackage {
         return globalNoiseBranch.sampleGlobalIntensity(chunkCoordinate);
     }
 
-    /*
-     * Resolves the true, un-blended weather at an arbitrary chunk
-     * coordinate. Throws before the first season ever resolves — callers
-     * should check hasActiveWeatherPool() first.
-     */
     public void resolveWeatherBand(WeatherBandStruct out, long chunkCoordinate) {
 
         if (activeWeatherPool == null)
@@ -315,13 +301,6 @@ public class WeatherManager extends ManagerPackage {
         regionSampleBranch.resolveBand(out, chunkX, chunkY, activeWeatherPool);
     }
 
-    /*
-     * Resolves the weather identity for a home coordinate anywhere between
-     * the player and the streaming edge, blended toward the sky dome's own
-     * far-range sample along the identical bearing. Every weather pattern —
-     * sky arc and overhead volume alike — resolves through this single
-     * entry point, which is what keeps the two visual layers in sync.
-     */
     public void resolveWeatherBandTowardHorizon(WeatherBandStruct out, long homeChunkCoordinate) {
 
         if (activeWeatherPool == null)
