@@ -1,4 +1,3 @@
-// WeatherPatternStruct.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
@@ -7,11 +6,9 @@ import engine.root.StructPackage;
 public class WeatherPatternStruct extends StructPackage {
 
     /*
-     * One persistent, large-scale weather system, shared by any renderer
-     * that needs to know "what weather exists where" — the volumetric
-     * overhead layer and the sky dome alike. Holds one fixed WeatherHandle
-     * identity and one fixed lobe layout for its entire lifetime; only
-     * drift, fade, and intensity change frame to frame.
+     * One persistent, large-scale weather system — shared by both the
+     * volumetric overhead layer and the sky dome. Identity and lobe layout
+     * are fixed for its lifetime; only drift, fade, and intensity change.
      */
 
     private final long patternKey;

@@ -19,14 +19,10 @@ public class WeatherPatternManager extends ManagerPackage {
 
     /*
      * Simulates the world's persistent weather patterns — up to
-     * WEATHER_PATTERN_MAX_ACTIVE_COUNT systems, each approximated by a
-     * handful of offset lobes, streamed in and out around the reference
-     * coordinate and drifted by the world's own rotation. Candidate cells
-     * are jittered in both position and lobe count so the streamed set
-     * never reads as a rigid grid. OverheadManager reads getActivePatterns()
-     * for the volumetric layer, and SkyWeatherPatternBranch — a child of
-     * this manager — flattens the same set into the sky dome's own UBO
-     * immediately after this manager's own update() completes.
+     * WEATHER_PATTERN_MAX_ACTIVE_COUNT systems, each a jittered cell holding
+     * a handful of offset cloud lobes, streamed in/out around the player and
+     * drifted with the world's rotation. OverheadManager and
+     * SkyWeatherPatternBranch both read the active set this class maintains.
      */
 
     private static final float FADE_IN_RATE = 0.6f;
@@ -111,6 +107,11 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Candidate Offsets \\
 
+    /*
+     * Every cell within radiusChunks of the player, sorted nearest-first.
+     * streamInBudgeted() jitters each cell's actual home position (see
+     * computeHomeJitter()) so the streamed set never reads as a rigid grid.
+     */
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
         int radiusCells = Math.max(1, Math.round(radiusChunks / (float) patternCellSizeChunks));
@@ -289,11 +290,10 @@ public class WeatherPatternManager extends ManagerPackage {
     // World Drift \\
 
     /*
-     * Migrates every active pattern's position along the world's
-     * longitudinal axis at the exact rate the planet itself rotates — the
-     * same rate RegionSampleBranch's own noise field scrolls at — so a
-     * pattern's visual position never drifts out of step with the weather
-     * identity resolved for that position.
+     * Migrates every active pattern along the world's rotation axis at the
+     * same rate the noise field itself scrolls, so drift only ever moves a
+     * pattern's visual position — weather identity always resolves from the
+     * fixed home coordinate below.
      */
     private void advanceWorldDrift() {
 

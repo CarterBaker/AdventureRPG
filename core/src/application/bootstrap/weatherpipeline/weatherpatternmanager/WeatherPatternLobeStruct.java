@@ -1,4 +1,3 @@
-// WeatherPatternLobeStruct.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
@@ -8,7 +7,7 @@ public class WeatherPatternLobeStruct extends StructPackage {
 
     /*
      * One fixed lobe within a larger WeatherPatternStruct — an offset, a
-     * cloud choice, and a shape-variation seed, all generated once at the
+     * cloud choice, and a shape-variation seed, generated once at the
      * owning pattern's stream-in and never re-rolled.
      */
 

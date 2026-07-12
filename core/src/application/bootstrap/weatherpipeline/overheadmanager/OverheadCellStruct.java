@@ -10,27 +10,21 @@ public class OverheadCellStruct extends StructPackage {
 
     /*
      * One renderable cloud-volume placement — what CloudRenderSystem turns
-     * into a single ModelInstance. A thin, live read-through view of one
-     * lobe belonging to one WeatherPatternStruct; every getter delegates to
-     * the owning pattern and/or lobe, so a cell's position, fade, and
-     * intensity automatically track whatever the pattern most recently
-     * resolved to, with no per-frame sync step of its own.
+     * into a single ModelInstance. A thin read-through view of one lobe
+     * belonging to one WeatherPatternStruct; every getter delegates to the
+     * owning pattern and/or lobe, so position, fade, and intensity always
+     * track whatever the pattern most recently resolved to.
      */
 
-    // Internal
     private final long cellKey;
     private final WeatherPatternStruct pattern;
     private final WeatherPatternLobeStruct lobe;
-
-    // Constructor \\
 
     OverheadCellStruct(long cellKey, WeatherPatternStruct pattern, WeatherPatternLobeStruct lobe) {
         this.cellKey = cellKey;
         this.pattern = pattern;
         this.lobe = lobe;
     }
-
-    // Accessible \\
 
     public long getCellKey() {
         return cellKey;

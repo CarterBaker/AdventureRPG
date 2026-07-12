@@ -1,4 +1,3 @@
-// OverheadManager.java
 package application.bootstrap.weatherpipeline.overheadmanager;
 
 import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternLobeStruct;
@@ -12,8 +11,8 @@ public class OverheadManager extends ManagerPackage {
 
     /*
      * Flattens WeatherPatternManager's active patterns into one renderable
-     * cell per lobe — the exact shape CloudRenderSystem already consumes.
-     * Owns no simulation of its own; reacts each frame to whichever patterns
+     * cell per lobe — the exact shape CloudRenderSystem consumes. Owns no
+     * simulation of its own; reacts each frame to whichever patterns
      * WeatherPatternManager streamed in or retired that same frame.
      */
 
