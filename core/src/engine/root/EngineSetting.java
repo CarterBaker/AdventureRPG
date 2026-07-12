@@ -556,6 +556,10 @@ public class EngineSetting {
         public static final float WEATHER_PATTERN_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
         public static final float WEATHER_PATTERN_DISSIPATION_INTENSITY_THRESHOLD = 0.05f;
 
+        // Sky Weather Pattern Data \\
+
+        public static final String SKY_WEATHER_PATTERN_DATA_UBO = "SkyWeatherPatternData";
+
         // Wind \\
 
         public static final float WIND_GLOBAL_DIRECTION_DEGREES = 45.0f;
