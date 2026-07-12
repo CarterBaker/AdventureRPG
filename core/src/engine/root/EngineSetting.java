@@ -478,7 +478,6 @@ public class EngineSetting {
         public static final float WEATHER_PATTERN_REEVALUATION_INTERVAL_MIN_SECONDS = 45.0f;
         public static final float WEATHER_PATTERN_REEVALUATION_INTERVAL_MAX_SECONDS = 90.0f;
         public static final float WEATHER_PATTERN_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
-        public static final float WEATHER_PATTERN_DISSIPATION_INTENSITY_THRESHOLD = 0.05f;
 
         // Sky Weather Pattern Data \\
 

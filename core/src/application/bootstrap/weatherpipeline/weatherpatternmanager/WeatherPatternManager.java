@@ -23,6 +23,10 @@ public class WeatherPatternManager extends ManagerPackage {
      * a handful of offset cloud lobes, streamed in/out around the player and
      * drifted with the world's rotation. OverheadManager and
      * SkyWeatherPatternBranch both read the active set this class maintains.
+     * Lifecycle belongs entirely to distance (advanceFadesAndRetire) and to
+     * the underlying weather changing (advanceWeatherReevaluation) — a
+     * pattern's intensity is a rendering-strength value only and must never
+     * retire it.
      */
 
     private static final float FADE_IN_RATE = 0.6f;
@@ -107,11 +111,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Candidate Offsets \\
 
-    /*
-     * Every cell within radiusChunks of the player, sorted nearest-first.
-     * streamInBudgeted() jitters each cell's actual home position (see
-     * computeHomeJitter()) so the streamed set never reads as a rigid grid.
-     */
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
         int radiusCells = Math.max(1, Math.round(radiusChunks / (float) patternCellSizeChunks));
@@ -289,12 +288,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // World Drift \\
 
-    /*
-     * Migrates every active pattern along the world's rotation axis at the
-     * same rate the noise field itself scrolls, so drift only ever moves a
-     * pattern's visual position — weather identity always resolves from the
-     * fixed home coordinate below.
-     */
     private void advanceWorldDrift() {
 
         float deltaTime = internal.getDeltaTime();
@@ -332,6 +325,12 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Intensity \\
 
+    /*
+     * Refreshes each pattern's visual intensity from the live weather blend
+     * at its home position. Rendering strength only — never drives
+     * lifecycle. Lifecycle belongs to advanceFadesAndRetire (distance) and
+     * advanceWeatherReevaluation (the weather itself changing).
+     */
     private void advanceIntensity() {
 
         intensityUpdateAccumulator += internal.getDeltaTime();
@@ -349,11 +348,7 @@ public class WeatherPatternManager extends ManagerPackage {
             long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
             weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate);
 
-            float intensity = resolvePatternIntensity(bandScratch, pattern.getWeatherHandle());
-            pattern.setIntensity(intensity);
-
-            if (intensity <= EngineSetting.WEATHER_PATTERN_DISSIPATION_INTENSITY_THRESHOLD)
-                pattern.setRetiring(true);
+            pattern.setIntensity(resolvePatternIntensity(bandScratch, pattern.getWeatherHandle()));
         }
     }
 
