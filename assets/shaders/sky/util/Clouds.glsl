@@ -14,9 +14,9 @@
  * shaded by a per-fragment blend of every active pattern in
  * SkyWeatherPatternData. Each pattern is weighted by its angular distance
  * from the ray direction and by its own fade-in/out state, so a pattern
- * never appears or disappears with a hard pop, and a weather with no
- * cloud archetype never paints a shape of its own — it can only ever
- * thin out real clouds nearby.
+ * never appears or disappears with a hard pop. A direction with no
+ * pattern covering it at all resolves to zero density — genuinely clear
+ * sky, not a fabricated default cloud.
  */
 
 const float SKY_HORIZON_FADE_START = -0.02;
@@ -40,7 +40,6 @@ const float SKY_PATTERN_MIN_ANGULAR_WIDTH  = 0.05;
 const vec3  SKY_DEFAULT_COLOR               = vec3(1.0);
 const vec3  SKY_DEFAULT_TOP_COLOR           = vec3(1.0);
 const vec3  SKY_DEFAULT_SHADOW_COLOR        = vec3(0.6, 0.63, 0.7);
-const float SKY_DEFAULT_DENSITY             = 0.8;
 const float SKY_DEFAULT_SHADE_STRENGTH      = 0.5;
 const float SKY_DEFAULT_RIM_LIGHT_STRENGTH  = 0.35;
 const float SKY_DEFAULT_AO_STRENGTH         = 0.4;
@@ -124,10 +123,13 @@ WeatherPatternSample resolvePatternWeather(vec3 dir) {
     }
 
     if (totalWeight <= 0.0001) {
+        // No pattern covers this direction — clear sky. density stays 0,
+        // which is the only field that actually gates the raymarch below;
+        // the rest are harmless neutral values.
         result.color = SKY_DEFAULT_COLOR;
         result.topColor = SKY_DEFAULT_TOP_COLOR;
         result.shadowColor = SKY_DEFAULT_SHADOW_COLOR;
-        result.density = SKY_DEFAULT_DENSITY;
+        result.density = 0.0;
         result.shadeStrength = SKY_DEFAULT_SHADE_STRENGTH;
         result.rimStrength = SKY_DEFAULT_RIM_LIGHT_STRENGTH;
         result.aoStrength = SKY_DEFAULT_AO_STRENGTH;
