@@ -505,9 +505,32 @@ public class EngineSetting {
 
         public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
 
-        // Overhead \\
-
-        public static final int OVERHEAD_CELL_SIZE = 4;
+        // Overhead — Weather Patterns \\
+        //
+        // Stage 1 retrofit: the overhead cloud layer no longer streams a
+        // dense uniform grid of small, independently-resolved cells. It now
+        // streams up to WEATHER_PATTERN_MAX_ACTIVE_COUNT large, persistent
+        // "weather pattern" instances — each one whole storm/fair-weather
+        // system — built from a handful of offset "lobes" (see
+        // WeatherPatternLobeStruct) that approximate an irregular real-world
+        // weather shape instead of a single cube, and that may each draw a
+        // DIFFERENT cloud archetype pulled from the same weather's own
+        // chance-weighted cloud pool. WEATHER_PATTERN_CELL_SIZE_CHUNKS is
+        // the spacing of the underlying candidate grid patterns stream
+        // from — deliberately large ("weather should be rather large") so a
+        // capped count of patterns can still cover a meaningful radius
+        // around the player. See OverheadManager's own doc comment.
+        public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
+        public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 24;
+        // Fraction of a pattern's own cell size a lobe may offset from the
+        // pattern's home center — see OverheadManager.streamInPattern().
+        public static final float WEATHER_PATTERN_LOBE_SPREAD_RATIO = 0.6f;
+        // A pattern's lobe count scales with its resolved weather's own
+        // cloudCoverage between these two bounds — a wispy, low-coverage
+        // weather reads as one or two sparse lobes; a dense storm reads as
+        // a fuller, multi-lobe mass. See OverheadManager.streamInPattern().
+        public static final float WEATHER_PATTERN_LOBE_MIN_COUNT = 2.0f;
+        public static final float WEATHER_PATTERN_LOBE_MAX_COUNT = 6.0f;
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 8;
         // Reduced from 0.35 — the physical cloud layer was drifting roughly
         // an order of magnitude faster than a cloud layer should for a world
@@ -517,12 +540,12 @@ public class EngineSetting {
         // itself migrates.
         public static final float OVERHEAD_DRIFT_SPEED_SCALE = 0.05f;
 
-        // Weather Cell Lifecycle \\
+        // Weather Pattern Lifecycle \\
 
-        public static final float WEATHER_CELL_REEVALUATION_INTERVAL_MIN_SECONDS = 45.0f;
-        public static final float WEATHER_CELL_REEVALUATION_INTERVAL_MAX_SECONDS = 90.0f;
-        public static final float WEATHER_CELL_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
-        public static final float WEATHER_CELL_DISSIPATION_INTENSITY_THRESHOLD = 0.05f;
+        public static final float WEATHER_PATTERN_REEVALUATION_INTERVAL_MIN_SECONDS = 45.0f;
+        public static final float WEATHER_PATTERN_REEVALUATION_INTERVAL_MAX_SECONDS = 90.0f;
+        public static final float WEATHER_PATTERN_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
+        public static final float WEATHER_PATTERN_DISSIPATION_INTENSITY_THRESHOLD = 0.05f;
 
         // Wind \\
 

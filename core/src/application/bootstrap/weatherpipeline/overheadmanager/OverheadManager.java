@@ -20,130 +20,108 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class OverheadManager extends ManagerPackage {
 
     /*
-     * Streams a grid of persistent-identity "overhead cells" around the
-     * weather system's current reference coordinate (see
-     * WeatherManager.updateReferenceCoordinate()) — the CPU-side source of
-     * truth Stage 2/3's instanced cloud renderer reads from. Each cell owns
-     * one fixed WeatherHandle + CloudHandle choice for its entire lifetime,
-     * resolved once at stream-in via WeatherManager.resolveWeatherBand()
-     * .getPrimary(), which is exactly the "persistent, non-reblending
-     * identity" RegionSampleBranch's own doc comment describes as this
-     * system's reason for existing — unlike the continuously-reblending
-     * 9-point horizon sampling, an overhead cloud cell must not re-roll its
-     * own identity every frame or every cloud in the sky would flicker
-     * between types constantly.
+     * Streams a capped set of persistent-identity "weather patterns" — up
+     * to EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT of them — around
+     * the weather system's current reference coordinate (see
+     * WeatherManager.updateReferenceCoordinate()). Each pattern is one
+     * whole, large-scale weather system (a storm, a fair-weather puff
+     * field, and so on), not a single small cloud.
      *
-     * A cell whose resolved weather defines no clouds at all (see
-     * WeatherHandle.hasClouds()) — a Clear weather — still streams in and
-     * holds its WeatherHandle identity exactly like any other cell; only
-     * its CloudHandle is null. That is deliberate: the weather itself is
-     * still "active" at that patch of sky even though nothing is drawn
-     * there, and keeping the cell (rather than skipping the slot entirely)
-     * is what stops a clear patch from being re-attempted every single
-     * scan cycle. CloudRenderSystem skips these cells outright when
-     * rebuilding its instance buffers — see OverheadCellStruct.hasCloud().
-     * The same "no cloud drawn" outcome now also happens for a weather
-     * that DOES define clouds but whose per-cell coverage roll misses —
-     * see streamInCell()'s own doc comment.
+     * A pattern owns one fixed WeatherHandle choice for its entire
+     * lifetime, resolved once at stream-in via
+     * WeatherManager.resolveWeatherBandTowardHorizon() — the SAME
+     * blended-toward-the-sky-dome resolution RegionSampleBranch's own doc
+     * comment describes as necessary for a real, positioned cloud object:
+     * a pattern streamed in right next to the player shows the weather
+     * that is ACTUALLY there, while a pattern streamed in near the outer
+     * edge of the streaming radius instead agrees with whatever the sky
+     * dome is already showing along that exact bearing.
+     * advanceWeatherReevaluation() and advanceIntensity() both re-resolve
+     * through this same horizon-blended path for as long as a pattern is
+     * alive, so a pattern's identity and intensity never disagree with
+     * the sky dome preview it grew out of, at any point in its lifetime —
+     * not just at the moment it streamed in.
      *
-     * Streaming is split into four passes:
+     * Stage 1 retrofit — from dense grid cells to capped weather patterns
+     * -------------------------------------------------------------------
+     * The previous design streamed a uniform grid of small (four-chunk)
+     * cells, each independently resolving its own tiny patch of weather,
+     * with no cap on how many could be active at once inside the
+     * streaming radius — a large configured render distance could stream
+     * in several hundred concurrent cells, each drawing exactly one cloud
+     * archetype as one plain cube. That satisfied neither "weather should
+     * be rather large" nor "capped to something like 64 total". This
+     * class now manages WeatherPatternStruct instances instead: far fewer
+     * of them, each spanning a much larger patternCellSizeChunks
+     * footprint (EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS), and
+     * hard-capped at maxActivePatternCount regardless of render distance
+     * — streamInBudgeted() simply stops admitting new patterns once the
+     * cap is hit, so an oversized render distance gracefully thins out
+     * toward its edge instead of ever exceeding the cap.
      *
-     * - Every frame, ALL active cells get a cheap pass: advance their wind
-     * drift, check whether they've drifted out of the streaming radius, and
-     * advance their fade-in/fade-out alpha. This is plain float math —
-     * with a few hundred to ~1000 active cells it costs nothing, so it is
-     * never budgeted.
+     * Each pattern also no longer renders as a single cube. It builds a
+     * small, fixed set of lobes once at stream-in — see
+     * WeatherPatternLobeStruct's own doc comment — offset around the
+     * pattern's own home center to approximate an irregular, organic
+     * weather shape instead of one uniform box, with each lobe free to
+     * draw a DIFFERENT cloud archetype pulled from the same weather's own
+     * chance-weighted cloud pool. OverheadCellStruct — the type
+     * CloudRenderSystem already consumes, one instance per rendered cloud
+     * volume — is now a thin, live read-through view of exactly one lobe
+     * of exactly one pattern, so CloudRenderSystem itself needed zero
+     * changes for this retrofit; only how those cells come to exist did.
      *
-     * - A second pass, advanceIntensity() — deliberately NOT the same slow,
-     * jittered cadence advanceWeatherReevaluation() uses — recomputes every
-     * active cell's live intensity (see OverheadCellStruct's own doc
-     * comment and WeatherBandStruct.getIntensityFor()) on a fast, shared
-     * cadence. This is what makes a streamed-in weather system visibly
-     * strengthen and weaken from moment to moment, rather than only ever
-     * existing at fixed full presence between the coarse identity checks
-     * below. Intensity is resolved specifically FOR the cell's own frozen
-     * weatherHandle — not for whichever weather the band's noise currently
-     * favors — and then scaled by that weather's own cloudCoverage, so a
-     * thin, low-coverage weather (a sunny day with only occasional puffs)
-     * reads as genuinely wispy while a high-coverage weather (a storm)
-     * reads as dense and near-total, rather than every weather rendering
-     * at the same strength whenever its noise band happens to be pure.
-     * A cell whose intensity has decayed near zero is retired here — through
-     * the same fade-out path an out-of-range or identity-mismatched cell
-     * uses — so a weather system that has genuinely weakened away
-     * dissipates instead of silently reviving.
+     * Streaming is still split into the same four passes as before, just
+     * operating on patterns rather than cells:
      *
-     * - A third, slower pass — advanceWeatherReevaluation() — is what keeps
-     * this whole system from reading as static once a cell has streamed in.
-     * Every active, non-retiring cell periodically re-resolves the weather
-     * at its own fixed home coordinate (the same resolveWeatherBand() call
-     * used at stream-in) on its own jittered cadence
-     * (EngineSetting.WEATHER_CELL_REEVALUATION_INTERVAL_MIN/MAX_SECONDS —
-     * cells never all recheck in the same frame). If the resolved weather's
-     * identity has changed, the cell is retired through the exact same
-     * fade-out path a cell walking out of range uses — it is never swapped
-     * in place — so a passing storm's cloud visibly dissipates rather than
-     * instantly mutating into a different cloud type, and the vacated slot
-     * is free to stream back in with whatever weather (and cloud, if any)
-     * now actually resolves there. This is the piece that makes "a weather
-     * is always active, but never static" true at the level of individual
-     * physical clouds, not only at the level of the continuously-reblending
-     * sky-dome samples RegionSampleBranch already produces.
+     * - Every frame, ALL active patterns get a cheap pass: advance their
+     * wind drift (shared by every one of their lobes — a pattern moves
+     * through the sky as one cohesive system, never as several
+     * independently-timed cloud archetypes drifting apart from each
+     * other — see WeatherPatternStruct.getDriftSpeedScale()), check
+     * whether they've drifted out of the streaming radius, and advance
+     * their fade-in/fade-out alpha.
      *
-     * - Streaming a genuinely NEW cell in (resolving its weather band,
-     * picking its cloud, allocating its struct) is capped at
-     * EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME per frame, walked across
-     * a precomputed, distance-sorted list of cell offsets relative to
-     * whichever cell the reference coordinate currently sits in — the same
-     * "offsets relative to a recentering origin" trick the world's own
-     * chunk grid uses, just at a coarser cell size and driven by weather
-     * instead of terrain streaming.
+     * - A second pass, advanceIntensity(), recomputes every active,
+     * non-retiring pattern's live intensity on a fast, shared cadence —
+     * see WeatherBandStruct.getIntensityFor(). A pattern whose intensity
+     * has decayed near zero is retired here, exactly like an out-of-range
+     * or identity-mismatched pattern, through the same fade-out path.
      *
-     * A cell's rendered position is its fixed home center plus accumulated
-     * wind drift — never re-centered or wrapped mid-life. Retirement is
-     * checked against the cell's home distance from the player, not its
-     * drifted position, so a strong gust can't retroactively "un-retire" a
-     * cell that's already fading out — distance itself is measured the same
-     * toroidal way a fresh cell's home chunk is resolved (see
-     * wrapChunkCoordinate() and WorldWrapUtility.wrappedDelta()), so a cell
-     * that streamed in by wrapping around one edge of the map never
-     * misreads as being on the opposite side of the world from the player.
-     * A cell's home chunk is always wrapped into the active world's own
-     * bounds (derived from the world PNG's pixel dimensions — see
-     * WorldBuilder) rather than rejected — this world is a torus for cloud
-     * placement purposes, exactly like GlobalNoiseBranch and
-     * RegionSampleBranch already treat it for weather noise sampling.
-     * Previously, any candidate offset that pushed a cell's home chunk
-     * outside [0, worldWidth) x [0, worldHeight) was silently skipped
-     * instead of wrapped — which meant any offset carrying so much as one
-     * negative axis near the world's chunk-space origin was permanently
-     * unstreamable. Visually, the overhead cloud grid could only ever grow
-     * toward positive X/Z from wherever the player happened to start, never
-     * the other way, which is what read as "the cloud grid only exists in
-     * one corner of the map."
+     * - A third, slower pass, advanceWeatherReevaluation(), periodically
+     * re-resolves the weather at each pattern's own fixed home coordinate
+     * on its own jittered cadence (reevaluationMinSeconds/MaxSeconds —
+     * patterns never all recheck in the same frame) and retires the
+     * pattern if its identity has changed, rather than ever swapping
+     * weather/clouds in place on a fully-formed pattern.
+     *
+     * - Streaming a genuinely NEW pattern in — resolving its weather
+     * band, building its lobes, allocating its struct — is capped at
+     * maxPatternsStreamedPerFrame per frame AND at maxActivePatternCount
+     * in total, walked across a precomputed, distance-sorted list of
+     * candidate pattern-cell offsets relative to whichever pattern cell
+     * the reference coordinate currently sits in.
+     *
+     * A pattern's rendered position (per lobe) is its fixed home center
+     * plus accumulated wind drift plus that lobe's own fixed offset —
+     * never re-centered or wrapped mid-life. Retirement is checked
+     * against the pattern's home distance from the player, not its
+     * drifted position — the same toroidal, wrap-safe distance math the
+     * previous cell design already used (see wrapChunkCoordinate() and
+     * WorldWrapUtility.wrappedDelta()) — a pattern's home chunk is always
+     * wrapped into the active world's own bounds rather than rejected,
+     * since the world is a torus for weather placement purposes exactly
+     * like GlobalNoiseBranch and RegionSampleBranch already treat it for
+     * weather noise sampling.
      *
      * Streaming radius is whichever is smaller of the player's configured
      * render distance (Settings.maxRenderDistance) and
-     * EngineSetting.WEATHER_NEAR_RANGE_CHUNKS (see EngineSetting's own doc
-     * comment) — deliberately smaller than RegionSampleBranch's far-range
-     * 8-direction sample distance, so real cloud geometry only ever exists
-     * inside the range the sky-dome preview has already been showing, AND
-     * never past the edge of terrain that is actually being drawn this
-     * session. Render distance is almost always the smaller of the two in
-     * practice, which is exactly the point — a real cloud object must never
-     * be found floating over ground that was never rendered underneath it.
-     *
-     * All streaming/retirement math below is anchored to
-     * WeatherManager.getReferenceCoordinate() — which, as of this stage,
-     * is read directly off the same WorldPositionStruct field terrain's
-     * own moving-world recentering treats as authoritative (see
-     * WeatherManager.updateReferenceCoordinate()'s own doc comment). That
-     * fix is what this class depends on to guarantee playerChunkX/Z below
-     * never disagrees, even for a single frame, with the chunk terrain is
-     * actually rendering relative to — a prior desync there was the real
-     * cause of cells appearing to shift or retire/restream in visible
-     * batches right at chunk boundaries, not anything in this class's own
-     * math.
+     * EngineSetting.WEATHER_NEAR_RANGE_CHUNKS — see EngineSetting's own
+     * doc comment — deliberately smaller than RegionSampleBranch's
+     * far-range 8-direction sample distance, so real cloud geometry only
+     * ever exists inside the range the sky-dome preview has already been
+     * showing, and never past the edge of terrain that is actually being
+     * drawn this session.
      */
 
     // Fade rates — alpha units per second
@@ -156,34 +134,42 @@ public class OverheadManager extends ManagerPackage {
     private WindManager windManager;
 
     // Settings
-    private int cellSizeChunks;
+    private int patternCellSizeChunks;
     private float radiusChunks;
-    private int maxStreamPerFrame;
+    private int maxPatternsStreamedPerFrame;
+    private int maxActivePatternCount;
     private float driftScale;
     private float reevaluationMinSeconds;
     private float reevaluationMaxSeconds;
 
-    // Registry
+    // Registry — the persistent weather systems themselves.
+    private Long2ObjectOpenHashMap<WeatherPatternStruct> activePatterns;
+
+    // Registry — flattened per-lobe render view. CloudRenderSystem reads
+    // this exactly as it always has, one OverheadCellStruct in, at most
+    // one ModelInstance out. Maintained incrementally: populated when a
+    // pattern streams in, pruned when a pattern fully retires — never
+    // rebuilt from scratch, so an already-live lobe's own ModelInstance
+    // is never needlessly recreated.
     private Long2ObjectOpenHashMap<OverheadCellStruct> activeCells;
 
-    // Streaming — distance-sorted offsets (in cells) relative to the
-    // reference cell, walked round-robin across frames.
+    // Streaming — distance-sorted offsets (in pattern-cell units) relative
+    // to the reference cell, walked round-robin across frames.
     private ObjectArrayList<int[]> candidateOffsets;
     private int scanCursor;
 
     // Weather Reevaluation — see advanceWeatherReevaluation(). A monotonic
     // simulation clock, advanced by deltaTime, purely for scheduling each
-    // cell's own slow recheck.
+    // pattern's own slow recheck.
     private double elapsedSimTime;
 
     // Intensity — see advanceIntensity(). A plain shared accumulator,
-    // deliberately not jittered per-cell like elapsedSimTime's reevaluation
-    // scheduling — intensity is safe, and desirable, to recompute for
-    // every active cell on the same tick. See EngineSetting.
-    // WEATHER_CELL_INTENSITY_UPDATE_INTERVAL_SECONDS's own doc comment.
+    // deliberately not jittered per-pattern like elapsedSimTime's
+    // reevaluation scheduling — intensity is safe, and desirable, to
+    // recompute for every active pattern on the same tick.
     private float intensityUpdateAccumulator;
 
-    // Scratch — reused every stream-in call, never reallocated
+    // Scratch — reused every resolution call, never reallocated
     private final WeatherBandStruct bandScratch = new WeatherBandStruct();
 
     // Internal \\
@@ -192,18 +178,20 @@ public class OverheadManager extends ManagerPackage {
     protected void create() {
 
         // Settings
-        this.cellSizeChunks = EngineSetting.OVERHEAD_CELL_SIZE;
+        this.patternCellSizeChunks = EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS;
         // Real cloud objects never stream past the edge of actually-drawn
         // terrain — see the class doc comment above and
         // CloudRenderSystem.pushCloudSettings(), which derives
         // u_cloudHorizonDistance from this exact same expression.
         this.radiusChunks = Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
-        this.maxStreamPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
+        this.maxPatternsStreamedPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
+        this.maxActivePatternCount = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
         this.driftScale = EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE;
-        this.reevaluationMinSeconds = EngineSetting.WEATHER_CELL_REEVALUATION_INTERVAL_MIN_SECONDS;
-        this.reevaluationMaxSeconds = EngineSetting.WEATHER_CELL_REEVALUATION_INTERVAL_MAX_SECONDS;
+        this.reevaluationMinSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MIN_SECONDS;
+        this.reevaluationMaxSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MAX_SECONDS;
 
         // Registry
+        this.activePatterns = new Long2ObjectOpenHashMap<>();
         this.activeCells = new Long2ObjectOpenHashMap<>();
 
         // Streaming
@@ -234,8 +222,8 @@ public class OverheadManager extends ManagerPackage {
         int playerChunkX = Coordinate2Long.unpackX(referenceCoordinate);
         int playerChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
 
-        int playerCellX = Math.floorDiv(playerChunkX, cellSizeChunks);
-        int playerCellZ = Math.floorDiv(playerChunkZ, cellSizeChunks);
+        int playerCellX = Math.floorDiv(playerChunkX, patternCellSizeChunks);
+        int playerCellZ = Math.floorDiv(playerChunkZ, patternCellSizeChunks);
 
         advanceWindDrift();
         advanceWeatherReevaluation();
@@ -247,24 +235,23 @@ public class OverheadManager extends ManagerPackage {
     // Candidate Offsets \\
 
     /*
-     * Builds every (offsetX, offsetZ) cell offset — in cell units, relative
-     * to whichever cell the reference coordinate currently occupies — whose
-     * center falls within radiusChunks, sorted nearest-first so newly
-     * streamed cells always fill in from the player outward rather than in
-     * scan order. A one-time cost at create() — a few hundred to ~1000
-     * entries even at default settings, trivial to sort once.
+     * Builds every (offsetX, offsetZ) pattern-cell offset — relative to
+     * whichever pattern cell the reference coordinate currently occupies
+     * — whose center falls within radiusChunks, sorted nearest-first so
+     * newly streamed patterns always fill in from the player outward
+     * rather than in scan order. A one-time cost at create().
      */
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
-        int radiusCells = Math.max(1, Math.round(radiusChunks / (float) cellSizeChunks));
+        int radiusCells = Math.max(1, Math.round(radiusChunks / (float) patternCellSizeChunks));
 
         ObjectArrayList<int[]> offsets = new ObjectArrayList<>();
 
         for (int ox = -radiusCells; ox <= radiusCells; ox++) {
             for (int oz = -radiusCells; oz <= radiusCells; oz++) {
 
-                float worldOffsetX = ox * cellSizeChunks;
-                float worldOffsetZ = oz * cellSizeChunks;
+                float worldOffsetX = ox * patternCellSizeChunks;
+                float worldOffsetZ = oz * patternCellSizeChunks;
                 float distChunks = (float) Math.sqrt(
                         worldOffsetX * worldOffsetX + worldOffsetZ * worldOffsetZ);
 
@@ -284,11 +271,16 @@ public class OverheadManager extends ManagerPackage {
 
     private void streamInBudgeted(int playerCellX, int playerCellZ) {
 
+        if (activePatterns.size() >= maxActivePatternCount)
+            return;
+
         int streamed = 0;
         int attempts = 0;
         int maxAttempts = candidateOffsets.size();
 
-        while (streamed < maxStreamPerFrame && attempts < maxAttempts) {
+        while (streamed < maxPatternsStreamedPerFrame
+                && activePatterns.size() < maxActivePatternCount
+                && attempts < maxAttempts) {
 
             int[] offset = candidateOffsets.get(scanCursor);
             scanCursor = (scanCursor + 1) % candidateOffsets.size();
@@ -296,123 +288,154 @@ public class OverheadManager extends ManagerPackage {
 
             int cellX = playerCellX + offset[0];
             int cellZ = playerCellZ + offset[1];
-            long cellKey = Coordinate2Long.pack(cellX, cellZ);
+            long patternKey = Coordinate2Long.pack(cellX, cellZ);
 
-            if (activeCells.containsKey(cellKey))
+            if (activePatterns.containsKey(patternKey))
                 continue;
 
-            int homeChunkX = cellX * cellSizeChunks + cellSizeChunks / 2;
-            int homeChunkZ = cellZ * cellSizeChunks + cellSizeChunks / 2;
+            int homeChunkX = cellX * patternCellSizeChunks + patternCellSizeChunks / 2;
+            int homeChunkZ = cellZ * patternCellSizeChunks + patternCellSizeChunks / 2;
 
             long wrappedHome = wrapChunkCoordinate(homeChunkX, homeChunkZ);
             int wrappedHomeChunkX = Coordinate2Long.unpackX(wrappedHome);
             int wrappedHomeChunkZ = Coordinate2Long.unpackY(wrappedHome);
 
-            streamInCell(cellKey, wrappedHomeChunkX, wrappedHomeChunkZ);
+            streamInPattern(patternKey, wrappedHomeChunkX, wrappedHomeChunkZ);
             streamed++;
         }
     }
 
     /*
-     * Clear (or otherwise cloudless) cells still exist in OverheadManager's
-     * registry so their patch of weather stays trackable — see
-     * OverheadManager's own doc comment — but there is nothing to render
-     * here, and no ModelInstance is ever created for one. A cell's cloud
-     * choice is fixed for its entire lifetime (see OverheadCellStruct), so
-     * once an instance exists its archetype-level uniforms never need
-     * re-baking — only position/fade/intensity are refreshed below.
+     * Streams in one new weather pattern at a fixed home coordinate,
+     * resolving its persistent WeatherHandle identity through the
+     * horizon-blended path (see the class doc comment), then building a
+     * small, fixed set of lobes to approximate that weather's shape — see
+     * WeatherPatternLobeStruct's own doc comment. Lobe count scales with
+     * the resolved weather's own cloudCoverage
+     * (WEATHER_PATTERN_LOBE_MIN_COUNT to WEATHER_PATTERN_LOBE_MAX_COUNT)
+     * so a wispy fair-weather system reads as one or two sparse lobes and
+     * a dense storm reads as a fuller, multi-lobe mass; a weather with no
+     * clouds defined at all (hasClouds() == false) always gets a single,
+     * cloudless lobe rather than wastefully allocating several — it will
+     * never draw anything regardless of lobe count.
+     *
+     * Each lobe independently rolls whether it draws a cloud at all (the
+     * same per-lobe coverage gate the old per-cell design already used),
+     * and if so independently picks one of the weather's own chance-
+     * weighted cloud entries — so one pattern can legitimately mix cloud
+     * archetypes (a storm system with both a dense Nimbus core lobe and
+     * thinner Stratus lobes trailing it) rather than every lobe sharing
+     * an identical cloud choice.
+     *
+     * Every lobe offsets from the pattern's own home center by a random
+     * angle and radius (radius forced to 0 for lobe 0, so a single-lobe
+     * pattern always reads as centered on its own resolved coordinate
+     * rather than drifting off to one side), scaled by
+     * WEATHER_PATTERN_LOBE_SPREAD_RATIO of the pattern's own cell size.
+     * All lobe-level randomness — coverage roll, cloud pick, seed, size
+     * variance, domain rotation, offset angle/radius — is derived once
+     * here from the pattern's own patternKey mixed with the lobe index,
+     * never re-rolled for the pattern's lifetime, the same "persistent,
+     * non-reblending identity" guarantee the old per-cell streaming
+     * already gave.
      */
-    private void streamInCell(long cellKey, int homeChunkX, int homeChunkZ) {
+    private void streamInPattern(long patternKey, int homeChunkX, int homeChunkZ) {
 
         long chunkCoordinate = Coordinate2Long.pack(homeChunkX, homeChunkZ);
-        weatherManager.resolveWeatherBand(bandScratch, chunkCoordinate);
+        weatherManager.resolveWeatherBandTowardHorizon(bandScratch, chunkCoordinate);
 
         WeatherHandle weatherHandle = bandScratch.getPrimary();
-        // See advanceIntensity()'s own doc comment for the full rationale
-        // behind resolveCellIntensity() over a bare getPrimaryIntensity()
-        // call. At this exact moment weatherHandle was JUST set to
-        // getPrimary(), so the two are numerically identical here — but
-        // routing through the shared helper keeps this call site and
-        // advanceIntensity()'s recompute call site permanently in
-        // agreement, rather than silently diverging later.
-        float intensity = resolveCellIntensity(bandScratch, weatherHandle);
+        float intensity = resolvePatternIntensity(bandScratch, weatherHandle);
 
-        // Coverage gate — decides whether THIS cell's patch of sky
-        // actually holds a cloud at all, independently of which cloud
-        // type it would pick if it does. Previously every cell whose
-        // weather defined any cloud entries streamed in with a visible
-        // cloud (most weathers give at least one entry a 100% relative
-        // chance, so nearly every cell — sunny, stormy, or anything in
-        // between — ended up drawing one), which is what read as a solid
-        // grid of boxes regardless of how overcast the weather actually
-        // was. cloudCoverage is the value every weather already defines
-        // for exactly this purpose (see WeatherData/WeatherHandle) but
-        // this streaming pass never actually consulted it — a 0.15
-        // Sunny sky now leaves roughly 85% of its cells genuinely bare, a
-        // 0.9 Stormy sky leaves roughly 90% of its cells covered, and a
-        // Clear sky (cloudCoverage 0.0, no cloud entries besides) stays
-        // exactly as bare as it always was. This roll is independent of
-        // cloudPickNoise below so "covered or not" and "which cloud type"
-        // never correlate with each other.
-        float coveragePickNoise = hash01(cellKey ^ 0xA24BAED4963EE407L);
-        boolean coveredByCloud = weatherHandle.hasClouds()
-                && coveragePickNoise < weatherHandle.getCloudCoverage();
+        int lobeCount = weatherHandle.hasClouds()
+                ? Math.max(1, Math.round(lerp(
+                        EngineSetting.WEATHER_PATTERN_LOBE_MIN_COUNT,
+                        EngineSetting.WEATHER_PATTERN_LOBE_MAX_COUNT,
+                        clamp01(weatherHandle.getCloudCoverage()))))
+                : 1;
 
-        float cloudPickNoise = hash01(cellKey);
-        CloudChanceStruct cloudEntry = coveredByCloud ? weatherHandle.pickCloud(cloudPickNoise) : null;
-        float randomSeed = hash01(cellKey ^ 0x9E3779B97F4A7C15L);
+        float lobeSpreadChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_LOBE_SPREAD_RATIO;
 
-        // Size/shape diversity — see OverheadCellStruct's own doc comment
-        // for why these exist. Both derived from cellKey via distinct
-        // salts, the exact same "never re-rolled for this cell's lifetime"
-        // approach as every other per-cell random above, so a cell's size
-        // and stretch direction are exactly as stable as its cloud choice.
-        // sizeVariance scales an instance's baked scale/verticalThickness
-        // together (see CloudRenderSystem.bakeArchetypeUniforms()) so its
-        // proportions stay true to its archetype while its overall size
-        // still varies. domainRotation picks which compass direction this
-        // instance's raymarch stretch elongates toward (see
-        // VolumetricCloudUtility.glsl's "Shape diversity fix").
-        float sizeVariance = lerp(
-                EngineSetting.CLOUD_INSTANCE_SIZE_VARIANCE_MIN,
-                EngineSetting.CLOUD_INSTANCE_SIZE_VARIANCE_MAX,
-                hash01(cellKey ^ 0xBF58476D1CE4E5B9L));
-        float domainRotation = hash01(cellKey ^ 0x94D049BB133111EBL) * (float) (Math.PI * 2.0);
+        WeatherPatternLobeStruct[] lobes = new WeatherPatternLobeStruct[lobeCount];
 
-        // A Clear weather, a weather whose coverage roll missed, or any
-        // other cloudless resolution all land here identically — the cell
-        // still streams in and carries its WeatherHandle identity, it
-        // simply has nothing to draw. See the class doc comment.
-        CloudHandle cloudHandle = cloudEntry != null ? cloudEntry.getCloudHandle() : null;
-        float effectiveAltitude = cloudEntry != null
-                ? cloudEntry.getEffectiveAltitude()
-                : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;
+        for (int i = 0; i < lobeCount; i++) {
 
-        OverheadCellStruct cell = new OverheadCellStruct(
-                cellKey,
-                homeChunkX, homeChunkZ,
-                weatherHandle,
-                cloudHandle,
-                effectiveAltitude,
-                randomSeed,
-                sizeVariance,
-                domainRotation,
-                intensity);
+            long lobeSeedBase = patternKey ^ (0x9E3779B97F4A7C15L * (i + 1));
 
-        cell.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(cellKey));
+            float coveragePickNoise = hash01(lobeSeedBase ^ 0xA24BAED4963EE407L);
+            boolean coveredByCloud = weatherHandle.hasClouds()
+                    && coveragePickNoise < weatherHandle.getCloudCoverage();
 
-        activeCells.put(cellKey, cell);
+            float cloudPickNoise = hash01(lobeSeedBase);
+            CloudChanceStruct cloudEntry = coveredByCloud ? weatherHandle.pickCloud(cloudPickNoise) : null;
+
+            float randomSeed = hash01(lobeSeedBase ^ 0xBF58476D1CE4E5B9L);
+            float sizeVariance = lerp(
+                    EngineSetting.CLOUD_INSTANCE_SIZE_VARIANCE_MIN,
+                    EngineSetting.CLOUD_INSTANCE_SIZE_VARIANCE_MAX,
+                    hash01(lobeSeedBase ^ 0x94D049BB133111EBL));
+            float domainRotation = hash01(lobeSeedBase ^ 0xD1B54A32D192ED03L) * (float) (Math.PI * 2.0);
+
+            float offsetAngle = hash01(lobeSeedBase ^ 0xC2B2AE3D27D4EB4FL) * (float) (Math.PI * 2.0);
+            float offsetRadiusT = i == 0 ? 0f : hash01(lobeSeedBase ^ 0x165667B19E3779F9L);
+            float offsetRadius = offsetRadiusT * lobeSpreadChunks;
+
+            float offsetChunkX = (float) Math.cos(offsetAngle) * offsetRadius;
+            float offsetChunkZ = (float) Math.sin(offsetAngle) * offsetRadius;
+
+            CloudHandle cloudHandle = cloudEntry != null ? cloudEntry.getCloudHandle() : null;
+            float effectiveAltitude = cloudEntry != null
+                    ? cloudEntry.getEffectiveAltitude()
+                    : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;
+
+            lobes[i] = new WeatherPatternLobeStruct(
+                    offsetChunkX, offsetChunkZ,
+                    cloudHandle, effectiveAltitude,
+                    randomSeed, sizeVariance, domainRotation);
+        }
+
+        float driftSpeedScale = computePatternDriftSpeedScale(lobes);
+
+        WeatherPatternStruct pattern = new WeatherPatternStruct(
+                patternKey, homeChunkX, homeChunkZ, weatherHandle, lobes, driftSpeedScale, intensity);
+
+        pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
+
+        activePatterns.put(patternKey, pattern);
+
+        for (int i = 0; i < lobes.length; i++) {
+            long lobeKey = computeLobeKey(patternKey, i);
+            activeCells.put(lobeKey, new OverheadCellStruct(lobeKey, pattern, lobes[i]));
+        }
+    }
+
+    /*
+     * A pattern's own drift speed is the average CloudData.driftSpeedScale
+     * of every one of its cloud-bearing lobes, falling back to a neutral
+     * 1.0 if none drew a cloud (nothing rendered, so nothing to keep in
+     * sync anyway). Resolved once here rather than per-lobe, since every
+     * lobe of one pattern is meant to move together as a single weather
+     * system — see the class doc comment.
+     */
+    private float computePatternDriftSpeedScale(WeatherPatternLobeStruct[] lobes) {
+
+        float sum = 0f;
+        int count = 0;
+
+        for (int i = 0; i < lobes.length; i++) {
+            if (lobes[i].hasCloud()) {
+                sum += lobes[i].getCloudHandle().getDriftSpeedScale();
+                count++;
+            }
+        }
+
+        return count > 0 ? sum / count : 1f;
     }
 
     /*
      * Wraps a chunk coordinate into the active world's own bounds — the
      * same toroidal treatment GlobalNoiseBranch and RegionSampleBranch
-     * already give the weather noise field itself (see their own doc
-     * comments on why the world is a torus for weather purposes). World
-     * scale is stored in BLOCKS (see WorldBuilder.calculateWorldScale()),
-     * so it is converted to chunk units before wrapping — the same
-     * conversion this class already performed when this method used to be
-     * a bounds check instead of a wrap.
+     * already give the weather noise field itself.
      */
     private long wrapChunkCoordinate(int chunkX, int chunkZ) {
 
@@ -429,27 +452,17 @@ public class OverheadManager extends ManagerPackage {
     // Wind Drift \\
 
     /*
-     * Advances every active cell's drifted position by the same live local
-     * wind vector every other wind-aware system reads — see
+     * Advances every active pattern's drifted position by the same live
+     * local wind vector every other wind-aware system reads — see
      * LocalWindBranch and RegionSampleBranch's own identical pattern.
-     * driftScale (EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE) is the overhead
-     * grid's own chunks-per-second-per-unit-of-wind-speed constant, kept
-     * separate from RegionSampleBranch's WEATHER_WIND_DRIFT_SCALE so the
-     * two can be tuned independently (visible cloud objects drifting at a
-     * different apparent rate than the CPU noise field driving them is
-     * fine — they're not required to stay pixel-locked to each other).
-     *
-     * Each cell's own CloudHandle.getDriftSpeedScale() is applied on top of
-     * the shared wind vector — previously every cell drifted at the exact
-     * same rate regardless of cloud type, leaving CloudData.driftSpeedScale
-     * entirely unread. A high, thin Stratus and a low, heavy Nimbus now
-     * genuinely separate over time under the same wind instead of marching
-     * across the sky in lockstep. Cloudless cells (Clear weather) have no
-     * CloudHandle to read a scale from, so they fall back to 1.0 — they
-     * have nothing rendered to visibly drift anyway, but keeping the drift
-     * accumulator advancing at a neutral rate avoids any special-cased
-     * discontinuity if that cell's weather later resolves to a cloud-
-     * bearing one without ever restarting its drift from zero.
+     * driftScale (EngineSetting.OVERHEAD_DRIFT_SPEED_SCALE) is the
+     * overhead layer's own chunks-per-second-per-unit-of-wind-speed
+     * constant. Each pattern's own driftSpeedScale (see
+     * WeatherPatternStruct.getDriftSpeedScale() /
+     * computePatternDriftSpeedScale()) is applied on top of the shared
+     * wind vector, so a pattern built mostly from a high, thin Stratus
+     * lobe set and a pattern built mostly from a low, heavy Nimbus lobe
+     * set still genuinely separate over time under the same wind.
      */
     private void advanceWindDrift() {
 
@@ -460,159 +473,120 @@ public class OverheadManager extends ManagerPackage {
         double baseDeltaChunkX = windDirection.x * windSpeed * driftScale * deltaTime;
         double baseDeltaChunkZ = windDirection.z * windSpeed * driftScale * deltaTime;
 
-        for (OverheadCellStruct cell : activeCells.values()) {
+        for (WeatherPatternStruct pattern : activePatterns.values()) {
 
-            float cellDriftScale = cell.hasCloud() ? cell.getCloudHandle().getDriftSpeedScale() : 1f;
+            float patternDriftScale = pattern.getDriftSpeedScale();
 
-            cell.advanceDrift(baseDeltaChunkX * cellDriftScale, baseDeltaChunkZ * cellDriftScale);
+            pattern.advanceDrift(baseDeltaChunkX * patternDriftScale, baseDeltaChunkZ * patternDriftScale);
         }
     }
 
     // Weather Reevaluation \\
 
     /*
-     * Slowly re-checks each active, non-retiring cell's weather against the
-     * CURRENT active weather pool at that cell's fixed home coordinate — the
-     * same resolution WeatherManager already performs for the reference
-     * region and for a cell's initial stream-in (see streamInCell() and
-     * WeatherManager.resolveWeatherBand()). If the resolved primary weather
-     * has changed since this cell was last evaluated, the cell is retired
-     * exactly like a cell that has drifted out of streaming range — it fades
-     * out via the existing fade/retire pipeline (advanceFadesAndRetire(),
-     * called right after this each frame) and, once fully gone, the normal
-     * streamInBudgeted() pass is free to fill that location again on a
-     * later frame, at which point it picks up whatever weather now resolves
-     * there. This is what makes "a weather is always active, but never
-     * static" true at the level of individual physical clouds, not just the
-     * continuously-reblending sky-dome samples RegionSampleBranch already
-     * produces — without this, a cloud streamed in under a passing storm
-     * would keep that storm's cloud type forever, even long after the
-     * storm noise had moved on, until the player wandered far enough away
-     * to force a restream.
+     * Slowly re-checks each active, non-retiring pattern's weather
+     * against the CURRENT active weather pool at that pattern's fixed
+     * home coordinate, through the same horizon-blended resolution used
+     * at stream-in (see the class doc comment). If the resolved primary
+     * weather has changed since this pattern was last evaluated, the
+     * pattern is retired exactly like a pattern that has drifted out of
+     * streaming range — it fades out via the existing fade/retire
+     * pipeline (advanceFadesAndRetire(), called right after this each
+     * frame) and, once fully gone, the normal streamInBudgeted() pass is
+     * free to fill that location again on a later frame.
      *
-     * Deliberately does NOT swap the cell's cloud/weather fields in place —
-     * they are immutable for a cell's lifetime by design (see
-     * OverheadCellStruct) — an instant swap would pop a fully-formed cloud
-     * into a different type/altitude/color with no transition. Fading the
-     * old cloud out and letting a fresh cell fade a new one in nearby reads
-     * as actual weather change — a storm cloud dissipating, a fair-weather
-     * cloud forming — rather than a glitch.
+     * Deliberately does NOT swap the pattern's cloud/weather fields in
+     * place — they are immutable for a pattern's lifetime by design (see
+     * WeatherPatternStruct) — an instant swap would pop a fully-formed
+     * weather system into a different type/altitude/color with no
+     * transition.
      *
-     * Each cell's own recheck cadence is a fixed, per-cell jittered interval
-     * derived from its own cellKey (same hashing approach used for its
-     * cloud pick and random seed) — deliberately not re-randomized every
-     * check, so a cell's personal cadence stays stable and cells never
-     * happen to sync up with each other.
+     * Each pattern's own recheck cadence is a fixed, per-pattern jittered
+     * interval derived from its own patternKey — deliberately not
+     * re-randomized every check, so a pattern's personal cadence stays
+     * stable and patterns never happen to sync up with each other.
      */
     private void advanceWeatherReevaluation() {
 
         elapsedSimTime += internal.getDeltaTime();
 
-        for (OverheadCellStruct cell : activeCells.values()) {
+        for (WeatherPatternStruct pattern : activePatterns.values()) {
 
-            if (cell.isRetiring())
+            if (pattern.isRetiring())
                 continue;
 
-            if (elapsedSimTime < cell.getNextReevaluationTime())
+            if (elapsedSimTime < pattern.getNextReevaluationTime())
                 continue;
 
-            long homeCoordinate = Coordinate2Long.pack(cell.getHomeChunkX(), cell.getHomeChunkZ());
-            weatherManager.resolveWeatherBand(bandScratch, homeCoordinate);
+            long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
+            weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate);
 
-            if (bandScratch.getPrimary() != cell.getWeatherHandle())
-                cell.setRetiring(true);
+            if (bandScratch.getPrimary() != pattern.getWeatherHandle())
+                pattern.setRetiring(true);
             else
-                cell.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(cell.getCellKey()));
+                pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(pattern.getPatternKey()));
         }
     }
 
     // Intensity \\
 
     /*
-     * Recomputes every active, non-retiring cell's live weather intensity
-     * on a fast, shared cadence — deliberately not the same slow, per-cell-
-     * jittered cadence identity uses (see advanceWeatherReevaluation()).
+     * Recomputes every active, non-retiring pattern's live weather
+     * intensity on a fast, shared cadence — deliberately not the same
+     * slow, per-pattern-jittered cadence identity uses (see
+     * advanceWeatherReevaluation()). Resolves through the same horizon-
+     * blended path (see the class doc comment) so a pattern's reported
+     * intensity always agrees with the same resolution its identity was
+     * built from, then scales the result by that weather's own
+     * cloudCoverage exactly like the previous per-cell design already
+     * did — see WeatherBandStruct.getIntensityFor()'s own doc comment for
+     * why a caller holding a persistent identity must resolve intensity
+     * for that specific handle rather than whichever weather the noise
+     * currently favors.
      *
-     * Resolves intensity specifically for THIS CELL'S OWN frozen
-     * weatherHandle via WeatherBandStruct.getIntensityFor(), not via
-     * getPrimaryIntensity(). An earlier version of this method called
-     * getPrimaryIntensity() directly, which describes whichever weather
-     * the band's noise currently favors — not necessarily the weather this
-     * cell actually committed to at stream-in. Once a cell's identity has
-     * drifted out of "primary" (the noise has moved on to favor a
-     * neighboring weather, but this cell's own slow, jittered reevaluation
-     * hasn't yet caught up to notice — see advanceWeatherReevaluation()),
-     * that older code would silently report the NEW, rising neighbor's
-     * intensity as if it belonged to this cell, so a cell whose weather
-     * should already be fading could instead appear to hold steady or even
-     * strengthen for up to a full reevaluation interval. getIntensityFor()
-     * fixes this by always measuring the specific handle passed in,
-     * correctly reading as near-zero the moment this cell's own identity
-     * stops being favored, regardless of what the noise has moved on to.
-     *
-     * The result is then scaled by that weather's own cloudCoverage (see
-     * WeatherData/WeatherHandle) — a purely noise-purity intensity treats
-     * every weather as equally "thick" whenever its band is pure, which
-     * made a wispy, low-coverage weather (a sunny day's occasional puffs)
-     * read exactly as dense as a high-coverage storm. Multiplying by
-     * coverage is what makes light weather actually look light and heavy
-     * weather actually look heavy.
-     *
-     * A cell whose final intensity has decayed below
-     * WEATHER_CELL_DISSIPATION_INTENSITY_THRESHOLD is retired here, through
-     * the exact same fade-out path advanceFadesAndRetire() already drives for
-     * an out-of-range or identity-mismatched cell — never swapped or revived
-     * in place. This is deliberately not a special case: the triangle-shaped
-     * intensity curve already dips to zero at exactly the moment a resolved
-     * band's identity would flip, so a low-intensity cell is already
-     * visually faded down before it would otherwise go stale, and letting it
-     * fully retire there rather than revive is what makes weather genuinely
-     * dissipate over time instead of only ever changing because the player
-     * wandered out of range.
+     * A pattern whose final intensity has decayed below
+     * WEATHER_PATTERN_DISSIPATION_INTENSITY_THRESHOLD is retired here,
+     * through the exact same fade-out path advanceFadesAndRetire()
+     * already drives for an out-of-range or identity-mismatched pattern
+     * — never swapped or revived in place.
      */
     private void advanceIntensity() {
 
         intensityUpdateAccumulator += internal.getDeltaTime();
 
-        if (intensityUpdateAccumulator < EngineSetting.WEATHER_CELL_INTENSITY_UPDATE_INTERVAL_SECONDS)
+        if (intensityUpdateAccumulator < EngineSetting.WEATHER_PATTERN_INTENSITY_UPDATE_INTERVAL_SECONDS)
             return;
 
         intensityUpdateAccumulator = 0f;
 
-        for (OverheadCellStruct cell : activeCells.values()) {
+        for (WeatherPatternStruct pattern : activePatterns.values()) {
 
-            if (cell.isRetiring())
+            if (pattern.isRetiring())
                 continue;
 
-            long homeCoordinate = Coordinate2Long.pack(cell.getHomeChunkX(), cell.getHomeChunkZ());
-            weatherManager.resolveWeatherBand(bandScratch, homeCoordinate);
+            long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
+            weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate);
 
-            float intensity = resolveCellIntensity(bandScratch, cell.getWeatherHandle());
-            cell.setIntensity(intensity);
+            float intensity = resolvePatternIntensity(bandScratch, pattern.getWeatherHandle());
+            pattern.setIntensity(intensity);
 
-            if (intensity <= EngineSetting.WEATHER_CELL_DISSIPATION_INTENSITY_THRESHOLD)
-                cell.setRetiring(true);
+            if (intensity <= EngineSetting.WEATHER_PATTERN_DISSIPATION_INTENSITY_THRESHOLD)
+                pattern.setRetiring(true);
         }
     }
 
     /*
      * Resolves a specific weather handle's intensity within an already-
-     * resolved band, then scales it by that weather's own cloudCoverage.
-     * See advanceIntensity()'s doc comment for the full rationale — in
-     * short: WeatherBandStruct.getIntensityFor(handle) rather than
-     * getPrimaryIntensity() so a cell's reported intensity always tracks
-     * its OWN identity rather than whichever weather the noise currently
-     * favors, and the cloudCoverage scale so a thin weather renders thin
-     * and a thick weather renders thick, rather than every weather looking
-     * equally dense whenever its own band happens to be pure.
+     * resolved band, then scales it by that weather's own cloudCoverage
+     * — see advanceIntensity()'s doc comment for the full rationale.
      */
-    private float resolveCellIntensity(WeatherBandStruct band, WeatherHandle handle) {
+    private float resolvePatternIntensity(WeatherBandStruct band, WeatherHandle handle) {
         return band.getIntensityFor(handle) * handle.getCloudCoverage();
     }
 
-    private float reevaluationIntervalFor(long cellKey) {
+    private float reevaluationIntervalFor(long patternKey) {
 
-        float t = hash01(cellKey ^ 0xD1B54A32D192ED03L);
+        float t = hash01(patternKey ^ 0xD1B54A32D192ED03L);
 
         return lerp(reevaluationMinSeconds, reevaluationMaxSeconds, t);
     }
@@ -625,59 +599,73 @@ public class OverheadManager extends ManagerPackage {
         LongArrayList toRemove = null;
 
         // Same toroidal world dimensions wrapChunkCoordinate() wraps a
-        // fresh cell's home chunk into — a cell streamed in across the
-        // wrap seam must be measured against the player the same way, or
-        // it reads as being on the far side of the map the instant it
-        // spawns and immediately retires itself again. See
-        // WorldWrapUtility.wrappedDelta() — the same canonical correction
-        // CloudRenderSystem now uses to resolve each cell's render
-        // position, so a cell's retirement distance and its rendered
-        // position can never disagree about which side of the seam it's
-        // really on.
+        // fresh pattern's home chunk into — a pattern streamed in across
+        // the wrap seam must be measured against the player the same way,
+        // or it reads as being on the far side of the map the instant it
+        // spawns and immediately retires itself again.
         WorldHandle activeWorld = worldManager.getActiveWorld();
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
-        for (OverheadCellStruct cell : activeCells.values()) {
+        for (WeatherPatternStruct pattern : activePatterns.values()) {
 
-            double dx = WorldWrapUtility.wrappedDelta(cell.getHomeChunkX(), playerChunkX, worldWidthChunks);
-            double dz = WorldWrapUtility.wrappedDelta(cell.getHomeChunkZ(), playerChunkZ, worldHeightChunks);
+            double dx = WorldWrapUtility.wrappedDelta(pattern.getHomeChunkX(), playerChunkX, worldWidthChunks);
+            double dz = WorldWrapUtility.wrappedDelta(pattern.getHomeChunkZ(), playerChunkZ, worldHeightChunks);
             double distChunks = Math.sqrt(dx * dx + dz * dz);
 
-            if (distChunks > radiusChunks && !cell.isRetiring())
-                cell.setRetiring(true);
+            if (distChunks > radiusChunks && !pattern.isRetiring())
+                pattern.setRetiring(true);
 
-            float alpha = cell.getFadeAlpha();
+            float alpha = pattern.getFadeAlpha();
 
-            if (cell.isRetiring()) {
+            if (pattern.isRetiring()) {
 
                 alpha = Math.max(0f, alpha - FADE_OUT_RATE * deltaTime);
-                cell.setFadeAlpha(alpha);
+                pattern.setFadeAlpha(alpha);
 
                 if (alpha <= 0f) {
                     if (toRemove == null)
                         toRemove = new LongArrayList();
-                    toRemove.add(cell.getCellKey());
+                    toRemove.add(pattern.getPatternKey());
                 }
 
             } else if (alpha < 1f) {
-                cell.setFadeAlpha(Math.min(1f, alpha + FADE_IN_RATE * deltaTime));
+                pattern.setFadeAlpha(Math.min(1f, alpha + FADE_IN_RATE * deltaTime));
             }
         }
 
         if (toRemove != null)
             for (int i = 0; i < toRemove.size(); i++)
-                activeCells.remove(toRemove.getLong(i));
+                removePattern(toRemove.getLong(i));
+    }
+
+    /*
+     * Removes a fully-faded pattern and every one of its flattened lobe
+     * entries from activeCells — lobe keys are deterministically
+     * reconstructed from the pattern's own key and lobe count rather than
+     * stored separately, since computeLobeKey() is a pure function of the
+     * two.
+     */
+    private void removePattern(long patternKey) {
+
+        WeatherPatternStruct pattern = activePatterns.remove(patternKey);
+
+        if (pattern == null)
+            return;
+
+        for (int i = 0; i < pattern.getLobeCount(); i++)
+            activeCells.remove(computeLobeKey(patternKey, i));
     }
 
     // Noise \\
 
     /*
      * Deterministic finalizer-style mix — same shape as
-     * DayTrackerBranch.calculateRandomNoise() — turning a cell's stable
-     * packed coordinate key into a uniform [0, 1) float. Never re-rolled
-     * for a given cell's lifetime, which is exactly what makes a cell's
-     * cloud choice and shape seed "persistent" rather than reblending.
+     * DayTrackerBranch.calculateRandomNoise() — turning a stable packed
+     * seed into a uniform [0, 1) float. Never re-rolled for a given
+     * pattern's/lobe's lifetime, which is exactly what makes a pattern's
+     * weather identity and a lobe's own shape "persistent" rather than
+     * reblending.
      */
     private static float hash01(long seed) {
 
@@ -691,17 +679,41 @@ public class OverheadManager extends ManagerPackage {
         return (float) ((h >>> 11) / (double) (1L << 53));
     }
 
+    /*
+     * Mixes a pattern key with a lobe index into a well-distributed,
+     * effectively-unique 64-bit key for that lobe's flattened entry in
+     * activeCells — collision risk is negligible at the scale this system
+     * ever operates at (at most WEATHER_PATTERN_MAX_ACTIVE_COUNT patterns
+     * times a handful of lobes each).
+     */
+    private static long computeLobeKey(long patternKey, int lobeIndex) {
+
+        long h = patternKey ^ (0x9E3779B97F4A7C15L * (lobeIndex + 1));
+        h ^= (h >>> 33);
+        h *= 0xff51afd7ed558ccdL;
+        h ^= (h >>> 33);
+        h *= 0xc4ceb9fe1a85ec53L;
+        h ^= (h >>> 33);
+
+        return h;
+    }
+
     private static float lerp(float a, float b, float t) {
         return a + (b - a) * t;
+    }
+
+    private static float clamp01(float value) {
+        return Math.max(0f, Math.min(1f, value));
     }
 
     // Accessible \\
 
     /*
-     * Live registry of active overhead cells, keyed by packed cell
-     * coordinate. Stage 2's instanced cloud renderer reads this directly
-     * each frame to keep its per-cloud-type instance buffers in sync —
-     * treat as read-only; all mutation happens here.
+     * Live, flattened registry of active renderable cloud-volume lobes,
+     * keyed by their own lobe key. Stage 2's instanced cloud renderer
+     * (CloudRenderSystem) reads this directly each frame to keep its
+     * per-cloud-type instance buffers in sync — treat as read-only; all
+     * mutation happens here.
      */
     public Long2ObjectOpenHashMap<OverheadCellStruct> getActiveCells() {
         return activeCells;
@@ -709,5 +721,9 @@ public class OverheadManager extends ManagerPackage {
 
     public int getActiveCellCount() {
         return activeCells.size();
+    }
+
+    public int getActivePatternCount() {
+        return activePatterns.size();
     }
 }

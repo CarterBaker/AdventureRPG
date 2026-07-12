@@ -7,211 +7,67 @@ import engine.root.StructPackage;
 public class OverheadCellStruct extends StructPackage {
 
     /*
-     * One streamed cell in the overhead cloud grid. Represents a single
-     * physical patch of the world's cloud layer — never a single visual
-     * cloud object; the render pipeline decides how many actual cloud
-     * instances a cell renders as (currently: exactly one, or zero — see
-     * below). Holds a persistent, non-reblending WeatherHandle identity
-     * (resolved once via WeatherManager.resolveWeatherBand().getPrimary()
-     * at stream-in time — see OverheadManager.streamInCell()) and the
-     * CloudHandle + effective altitude picked from that weather's chance-
-     * weighted cloud pool at that same moment. All three stay fixed for the
-     * cell's entire lifetime — a cell never re-rolls its own weather or
-     * cloud choice in place; only the region sampling used for horizon/skybox
-     * rendering reblends continuously.
+     * One renderable cloud-volume placement — what CloudRenderSystem
+     * actually turns into a single ModelInstance. As of the Stage 1
+     * weather-pattern retrofit (see OverheadManager's own doc comment),
+     * this is no longer an independent patch of weather with its own
+     * resolved identity — it is a thin, live read-through view of exactly
+     * one "lobe" (see WeatherPatternLobeStruct) belonging to exactly one
+     * WeatherPatternStruct. Every getter below simply delegates to the
+     * owning pattern and/or lobe, so a cell's drifted position, fade
+     * alpha, and intensity automatically reflect whatever the pattern
+     * most recently resolved to on a given frame, with no per-frame sync
+     * step of its own required.
      *
-     * That fixed identity does eventually change, though — see
-     * nextReevaluationTime and OverheadManager.advanceWeatherReevaluation().
-     * On a slow, per-cell jittered cadence, the manager re-resolves the
-     * weather at this cell's own home coordinate; if it no longer matches
-     * this cell's weatherHandle, the cell is retired through the exact same
-     * fade-out path a cell that drifted out of streaming range uses. This is
-     * deliberately never an in-place field swap — a cloud silently mutating
-     * into a different type/color/altitude would look like a glitch, not
-     * like weather changing. Fading out and letting a fresh cell fade back
-     * in at that same physical slot (picking up whatever now resolves there)
-     * is what makes weather form and dissipate over time rather than only
-     * ever changing because the player walked away.
+     * Deliberately kept as its own public type, with this exact same
+     * public API, so CloudRenderSystem — a different package, and the
+     * only outside consumer of this class — needed no changes at all for
+     * the Stage 1 retrofit; only how OverheadManager constructs and
+     * manages these changed underneath it.
      *
-     * cloudHandle may be null — a cell whose resolved weather defines no
-     * clouds at all (a Clear weather; see WeatherHandle.hasClouds()) still
-     * streams in and holds its weatherHandle identity like any other cell,
-     * since the weather itself is active there even though nothing is
-     * drawn. hasCloud() is the single source of truth for whether this
-     * cell should ever reach CloudRenderSystem's instance buffers.
+     * A pattern's lobes are fixed for the pattern's entire lifetime, each
+     * with its own stable random seed, size variance, domain rotation,
+     * and (independently, per lobe) cloud archetype choice — inherited
+     * essentially unchanged from the original per-cell design this
+     * replaces:
      *
-     * Public rather than package-private — mirrors WeatherBandStruct's own
-     * precedent — because the render pipeline (a different package) reads
-     * these directly every frame to rebuild its instance buffers. Mutation
-     * stays restricted to OverheadManager via package-private setters.
+     * randomSeed is a stable per-lobe float handed to the render system
+     * so each lobe's cloud instance can vary shape/warp without ever
+     * re-rolling and without every lobe in the world looking identical.
      *
-     * homeChunkX/homeChunkZ is the fixed world-space chunk-coordinate
-     * center this cell was streamed in at. driftChunkX/driftChunkZ is how
-     * far the cell's visual position has since drifted from that home
-     * center, advanced every frame by the same local wind vector every
-     * other wind-aware system reads — see OverheadManager.advanceWindDrift().
-     * The cell is retired once its home distance from the player exits the
-     * streaming radius (measured from home, not drift, so retirement never
-     * depends on drift direction) — see OverheadManager.advanceFadesAndRetire()
-     * — so unbounded drift is never actually reached; a fresh cell streams
-     * back in on the upwind edge to replace it.
+     * sizeVariance multiplies both an instance's baked scale and
+     * verticalThickness together (see
+     * CloudRenderSystem.bakeArchetypeUniforms()) so proportions stay true
+     * to the archetype (a Stratus stays flat and wide, a Nimbus stays
+     * tall and dense) while the actual size of any two same-type clouds
+     * still genuinely differs.
      *
-     * randomSeed is a stable per-cell float handed to the render system so
-     * each cell's cloud instance can vary shape/warp without ever
-     * re-rolling and without every cell in the world looking identical.
+     * domainRotation (see VolumetricCloudUtility.glsl's "Shape diversity
+     * fix") picks the compass direction THIS lobe's raymarch stretches
+     * toward as it climbs, so its elongation reads as a real, visible
+     * streak in a random direction rather than a symmetric bulge every
+     * lobe shares.
      *
-     * sizeVariance and domainRotation are two further stable per-cell
-     * floats serving the same "never re-rolled" purpose, added to answer
-     * a real visual complaint: every physical cloud of a given CloudType
-     * previously rendered at that type's exact scale/verticalThickness
-     * every single time, and the raymarch's horizontal stretch elongated
-     * equally along both local axes as it climbed toward heightT = 1 —
-     * which never actually produces a directional "streak", only a
-     * uniformly smoother, larger-scale blob, regardless of instance. Two
-     * clouds of the same type were therefore visually indistinguishable
-     * except for exactly where the same noise field happened to be
-     * sampled. sizeVariance (see CloudRenderSystem.bakeArchetypeUniforms())
-     * scales both an instance's baked scale and verticalThickness
-     * together — so proportions stay true to the archetype (a Stratus
-     * stays flat and wide, a Nimbus stays tall and dense) while the actual
-     * size of any two same-type clouds now genuinely differs, the way a
-     * real cloud field never renders two identically-sized decks side by
-     * side. domainRotation (see VolumetricCloudUtility.glsl's own "Shape
-     * diversity fix" doc comment) picks the compass direction THIS
-     * instance's raymarch stretches toward as it climbs — so its
-     * elongation is a real, visible streak in a random direction, not a
-     * symmetric bulge every instance shares.
-     *
-     * fadeAlpha ramps 0 -> 1 over the cell's first moments alive and
-     * 1 -> 0 just before it is retired, so streaming pop-in/pop-out at the
-     * ring edge is never visually abrupt. Owned and mutated exclusively by
-     * OverheadManager.
-     *
-     * intensity is a live, continuously-updated measure (see
-     * OverheadManager.advanceIntensity()) of how strongly this cell's OWN
-     * weather is currently expressed at its own home coordinate — derived
-     * fresh every recompute from WeatherBandStruct.getIntensityFor(this
-     * cell's weatherHandle), then scaled by that weather's own
-     * cloudCoverage, never stored/latched between recomputes. Resolving
-     * intensity for this cell's specific weatherHandle, rather than
-     * whichever weather the band's noise currently favors, matters once
-     * the noise has drifted past this cell's own identity but before its
-     * own slow, jittered reevaluation has caught up — see
-     * advanceWeatherReevaluation() — otherwise a cell already on its way
-     * out could briefly read as strengthening again, borrowing whatever
-     * intensity actually belongs to the neighboring weather about to
-     * replace it. Unlike weatherHandle/cloudHandle/effectiveAltitude, which
-     * are fixed for the cell's entire lifetime, intensity is expected to
-     * rise and fall continuously as the underlying noise field evolves —
-     * this is what lets a physical weather system visibly strengthen and
-     * weaken over time rather than only ever existing at fixed full
-     * presence or not at all, and the cloudCoverage scale is what keeps a
-     * thin, low-coverage weather reading as genuinely wispy rather than as
-     * dense as a high-coverage storm whenever its own band happens to be
-     * pure. It is recomputed on a fast, shared cadence deliberately
-     * decoupled from nextReevaluationTime's slow, per-cell-jittered
-     * identity check — see OverheadManager.advanceIntensity() for why the
-     * two must stay separate. A cell whose intensity decays near zero is
-     * retired here exactly like an identity mismatch, so a weather system
-     * that has genuinely weakened away dissipates rather than reviving in
-     * place.
+     * fadeAlpha and intensity are no longer this class's own state — they
+     * belong to the owning WeatherPatternStruct and are shared identically
+     * by every one of its lobes, since a pattern's lobes fade in, fade
+     * out, and strengthen/weaken together as one weather system, never
+     * independently.
      */
 
-    // Identity
+    // Internal
     private final long cellKey;
-    private final WeatherHandle weatherHandle;
-    private final CloudHandle cloudHandle;
-    private final float effectiveAltitude;
-    private final float randomSeed;
-    private final float sizeVariance;
-    private final float domainRotation;
-
-    // Home Position — fixed for the cell's lifetime
-    private final int homeChunkX;
-    private final int homeChunkZ;
-
-    // Drift — advanced every frame by wind
-    private double driftChunkX;
-    private double driftChunkZ;
-
-    // Fade
-    private float fadeAlpha;
-    private boolean retiring;
-
-    // Intensity — see OverheadManager.advanceIntensity().
-    private float intensity;
-
-    // Weather Reevaluation — see OverheadManager.advanceWeatherReevaluation().
-    // The simulation-time (elapsedSimTime) at which this cell should next
-    // check whether the weather at its own home coordinate has changed.
-    private double nextReevaluationTime;
+    private final WeatherPatternStruct pattern;
+    private final WeatherPatternLobeStruct lobe;
 
     // Constructor \\
 
-    OverheadCellStruct(
-            long cellKey,
-            int homeChunkX,
-            int homeChunkZ,
-            WeatherHandle weatherHandle,
-            CloudHandle cloudHandle,
-            float effectiveAltitude,
-            float randomSeed,
-            float sizeVariance,
-            float domainRotation,
-            float intensity) {
+    OverheadCellStruct(long cellKey, WeatherPatternStruct pattern, WeatherPatternLobeStruct lobe) {
 
-        // Identity
+        // Internal
         this.cellKey = cellKey;
-        this.weatherHandle = weatherHandle;
-        this.cloudHandle = cloudHandle;
-        this.effectiveAltitude = effectiveAltitude;
-        this.randomSeed = randomSeed;
-        this.sizeVariance = sizeVariance;
-        this.domainRotation = domainRotation;
-
-        // Home Position
-        this.homeChunkX = homeChunkX;
-        this.homeChunkZ = homeChunkZ;
-
-        // Fade
-        this.fadeAlpha = 0f;
-        this.retiring = false;
-
-        // Intensity
-        this.intensity = intensity;
-    }
-
-    // Drift \\
-
-    void advanceDrift(double deltaChunkX, double deltaChunkZ) {
-        this.driftChunkX += deltaChunkX;
-        this.driftChunkZ += deltaChunkZ;
-    }
-
-    // Fade \\
-
-    void setRetiring(boolean retiring) {
-        this.retiring = retiring;
-    }
-
-    void setFadeAlpha(float fadeAlpha) {
-        this.fadeAlpha = fadeAlpha;
-    }
-
-    // Intensity \\
-
-    void setIntensity(float intensity) {
-        this.intensity = intensity;
-    }
-
-    // Weather Reevaluation \\
-
-    double getNextReevaluationTime() {
-        return nextReevaluationTime;
-    }
-
-    void setNextReevaluationTime(double nextReevaluationTime) {
-        this.nextReevaluationTime = nextReevaluationTime;
+        this.pattern = pattern;
+        this.lobe = lobe;
     }
 
     // Accessible \\
@@ -221,58 +77,50 @@ public class OverheadCellStruct extends StructPackage {
     }
 
     public WeatherHandle getWeatherHandle() {
-        return weatherHandle;
+        return pattern.getWeatherHandle();
     }
 
     public CloudHandle getCloudHandle() {
-        return cloudHandle;
+        return lobe.getCloudHandle();
     }
 
     public boolean hasCloud() {
-        return cloudHandle != null;
+        return lobe.hasCloud();
     }
 
     public float getEffectiveAltitude() {
-        return effectiveAltitude;
+        return lobe.getEffectiveAltitude();
     }
 
     public float getRandomSeed() {
-        return randomSeed;
+        return lobe.getRandomSeed();
     }
 
     public float getSizeVariance() {
-        return sizeVariance;
+        return lobe.getSizeVariance();
     }
 
     public float getDomainRotation() {
-        return domainRotation;
-    }
-
-    public int getHomeChunkX() {
-        return homeChunkX;
-    }
-
-    public int getHomeChunkZ() {
-        return homeChunkZ;
+        return lobe.getDomainRotation();
     }
 
     public double getCurrentChunkX() {
-        return homeChunkX + driftChunkX;
+        return pattern.getCurrentChunkX() + lobe.getOffsetChunkX();
     }
 
     public double getCurrentChunkZ() {
-        return homeChunkZ + driftChunkZ;
+        return pattern.getCurrentChunkZ() + lobe.getOffsetChunkZ();
     }
 
     public float getFadeAlpha() {
-        return fadeAlpha;
+        return pattern.getFadeAlpha();
     }
 
     public boolean isRetiring() {
-        return retiring;
+        return pattern.isRetiring();
     }
 
     public float getIntensity() {
-        return intensity;
+        return pattern.getIntensity();
     }
 }
