@@ -9,28 +9,30 @@ import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.random.WeightedChanceUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+/*
+ * Owns the coherent regional weather noise field — a continuous, seamless
+ * torus-wrapped layer (see ToroidalNoiseUtility) blended with
+ * GlobalNoiseBranch's own broad current, both scrolling east with the
+ * world's rotation at the exact same rate — and resolves it against a
+ * chance-weighted pool via resolveBand() and resolveBandTowardHorizon().
+ * These are the single canonical noise-to-weather resolution path shared by
+ * WeatherManager, WeatherPatternManager, and this class's own center-point
+ * atmosphere sample.
+ */
 class RegionSampleBranch extends BranchPackage {
 
-    /*
-     * Owns the coherent weather noise field — a regional layer blended with
-     * GlobalNoiseBranch's planet-rotation noise, both scrolling along the
-     * world's longitudinal axis at the exact same rotation-driven rate — and
-     * resolves it against a chance-weighted pool via resolveBand() and
-     * resolveBandTowardHorizon(). These are the single canonical noise-to-
-     * weather resolution path shared by WeatherManager, WeatherPatternManager,
-     * and this class's own center-point atmosphere sample.
-     */
+    private static final long NOISE_SEED = 0x51A5F00DCAFEBEEFL;
+    private static final double WAVELENGTH_CHUNKS = 128.0;
+    private static final double DRIFT_SPEED_X = 0.006;
+    private static final double DRIFT_SPEED_Z = 0.004;
 
     private GlobalNoiseBranch globalNoiseBranch;
     private WorldManager worldManager;
 
-    private float noiseCellSize;
-
     private long referenceCoordinate;
 
-    private double evolutionElapsedSeconds;
-    private int evolutionTimeCell;
-    private float evolutionTimeBlend;
+    private double driftPhaseX;
+    private double driftPhaseZ;
 
     private final WeatherSampleStruct sample = new WeatherSampleStruct();
     private final WeatherSampleStruct targetSample = new WeatherSampleStruct();
@@ -40,7 +42,6 @@ class RegionSampleBranch extends BranchPackage {
 
     @Override
     protected void create() {
-        this.noiseCellSize = EngineSetting.WEATHER_NOISE_CELL_SIZE;
         this.referenceCoordinate = Coordinate2Long.pack(0, 0);
     }
 
@@ -70,7 +71,7 @@ class RegionSampleBranch extends BranchPackage {
 
     void sampleRegions(ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
-        advanceEvolution();
+        advanceDrift();
 
         int originX = Coordinate2Long.unpackX(referenceCoordinate);
         int originY = Coordinate2Long.unpackY(referenceCoordinate);
@@ -97,26 +98,22 @@ class RegionSampleBranch extends BranchPackage {
         sample.lerpToward(targetSample, alpha);
     }
 
-    // Evolution \\
+    // Drift \\
 
-    private void advanceEvolution() {
-
-        evolutionElapsedSeconds += internal.getDeltaTime();
-        evolutionElapsedSeconds %= EngineSetting.WEATHER_LOCAL_DRIFT_TIME_WRAP;
-
-        double phase = evolutionElapsedSeconds / EngineSetting.WEATHER_LOCAL_EVOLUTION_PERIOD;
-        double cell = Math.floor(phase);
-
-        evolutionTimeCell = (int) cell;
-        evolutionTimeBlend = smoothstep((float) (phase - cell));
+    private void advanceDrift() {
+        float deltaTime = internal.getDeltaTime();
+        driftPhaseX += DRIFT_SPEED_X * deltaTime;
+        driftPhaseZ += DRIFT_SPEED_Z * deltaTime;
+        driftPhaseX %= (Math.PI * 2.0);
+        driftPhaseZ %= (Math.PI * 2.0);
     }
 
     // Resolution \\
 
-    private float combinedNoiseAt(int chunkX, int chunkY) {
+    private float combinedNoiseAt(int chunkX, int chunkZ) {
 
-        float localNoise = sampleNoise(chunkX, chunkY);
-        float globalIntensity = globalNoiseBranch.sampleGlobalIntensity(Coordinate2Long.pack(chunkX, chunkY));
+        float localNoise = sampleNoise(chunkX, chunkZ);
+        float globalIntensity = globalNoiseBranch.sampleGlobalIntensity(Coordinate2Long.pack(chunkX, chunkZ));
 
         return lerp(localNoise, globalIntensity, globalNoiseBranch.getGlobalInfluence());
     }
@@ -231,79 +228,23 @@ class RegionSampleBranch extends BranchPackage {
 
     // Noise \\
 
-    /*
-     * Coherent 2D value noise over chunk coordinates, wrapped seamlessly at
-     * the world edge. Scrolls along the world's longitudinal axis at the
-     * exact same rotation-driven rate as GlobalNoiseBranch's own field, so
-     * the two layers can never drift apart from each other. Each grid point
-     * blends two time-decorrelated hash layers via evolvingHash() so the
-     * field also morphs in place independently of that scroll.
-     */
-    private float sampleNoise(int chunkX, int chunkY) {
+    private float sampleNoise(int chunkX, int chunkZ) {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
 
         double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
         double worldHeightChunks = activeWorld.getWorldScale().y / (double) EngineSetting.CHUNK_SIZE;
 
-        int cellsX = (int) Math.max(1L, Math.round(worldWidthChunks / noiseCellSize));
-        int cellsY = (int) Math.max(1L, Math.round(worldHeightChunks / noiseCellSize));
+        double rotationPhase = (globalNoiseBranch.getRotationAngleDegrees() / EngineSetting.DEGREES_PER_FULL_ROTATION)
+                * (Math.PI * 2.0);
 
-        double rotationProgress = globalNoiseBranch.getRotationAngleDegrees() / EngineSetting.DEGREES_PER_FULL_ROTATION;
-        double u = wrap01(chunkX / worldWidthChunks + rotationProgress);
-        double v = wrap01(chunkY / worldHeightChunks);
-
-        double sampleX = u * cellsX;
-        double sampleY = v * cellsY;
-
-        int x0 = (int) Math.floor(sampleX);
-        int y0 = (int) Math.floor(sampleY);
-
-        float tx = (float) (sampleX - x0);
-        float ty = (float) (sampleY - y0);
-
-        int wrappedX0 = Math.floorMod(x0, cellsX);
-        int wrappedY0 = Math.floorMod(y0, cellsY);
-        int wrappedX1 = Math.floorMod(x0 + 1, cellsX);
-        int wrappedY1 = Math.floorMod(y0 + 1, cellsY);
-
-        float n00 = evolvingHash(wrappedX0, wrappedY0);
-        float n10 = evolvingHash(wrappedX1, wrappedY0);
-        float n01 = evolvingHash(wrappedX0, wrappedY1);
-        float n11 = evolvingHash(wrappedX1, wrappedY1);
-
-        float smoothTx = smoothstep(tx);
-        float smoothTy = smoothstep(ty);
-
-        float nx0 = lerp(n00, n10, smoothTx);
-        float nx1 = lerp(n01, n11, smoothTx);
-
-        return lerp(nx0, nx1, smoothTy);
-    }
-
-    private double wrap01(double value) {
-        double wrapped = value % 1.0;
-        return wrapped < 0 ? wrapped + 1.0 : wrapped;
-    }
-
-    private float evolvingHash(int x, int y) {
-
-        float layerA = hash(x, y, evolutionTimeCell);
-        float layerB = hash(x, y, evolutionTimeCell + 1);
-
-        return lerp(layerA, layerB, evolutionTimeBlend);
-    }
-
-    private float hash(int x, int y, int timeLayer) {
-
-        int h = x * 374761393 + y * 668265263 + timeLayer * 1013904223;
-        h = (h ^ (h >>> 13)) * 1274126177;
-
-        return ((h ^ (h >>> 16)) & 0x7fffffff) / (float) Integer.MAX_VALUE;
-    }
-
-    private float smoothstep(float t) {
-        return t * t * (3f - 2f * t);
+        return ToroidalNoiseUtility.sample(
+                NOISE_SEED,
+                chunkX, chunkZ,
+                worldWidthChunks, worldHeightChunks,
+                WAVELENGTH_CHUNKS,
+                rotationPhase + driftPhaseX,
+                driftPhaseZ);
     }
 
     // Accessible \\
