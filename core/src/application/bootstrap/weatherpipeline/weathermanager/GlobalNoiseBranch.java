@@ -9,12 +9,11 @@ import engine.util.mathematics.extras.Coordinate2Long;
 
 /*
  * Owns the planet's rotation angle and slow seasonal/meander drift, folding
- * them into the toroidal weather noise field. Linear drift speed is derived
- * from a fixed real-world KPH baseline scaled by the world's own rotation
- * multiplier, not from raw degrees times world width, so drift speed stays
- * physically reasonable at any world size. The noise phase and every
- * pattern's physical position both read this same value, so they can never
- * fall out of lockstep.
+ * them into the 2D weather noise field. Drift speed is derived from a fixed
+ * real-world KPH baseline scaled by the world's rotation multiplier, so it
+ * stays physically reasonable at any world size. This rotation angle also
+ * drives every streamed weather pattern's physical position, so the noise
+ * field and pattern positions can never fall out of lockstep.
  */
 class GlobalNoiseBranch extends BranchPackage {
 
@@ -30,7 +29,7 @@ class GlobalNoiseBranch extends BranchPackage {
     private float tiltInfluence;
 
     private double rotationAngleDegrees;
-    private double latitudePhase;
+    private double latitudeDriftChunks;
     private double meanderElapsed;
 
     // Internal \\
@@ -69,13 +68,6 @@ class GlobalNoiseBranch extends BranchPackage {
             this.rotationAngleDegrees += EngineSetting.DEGREES_PER_FULL_ROTATION;
     }
 
-    /*
-     * Real-world-scale linear drift speed, in chunks per second. Every
-     * weather system reads this exact value — the noise field's own
-     * rotational phase above, and every streamed WeatherPatternStruct's
-     * physical position via WeatherPatternManager.advanceWorldDrift() — so
-     * nothing can independently drift out of sync.
-     */
     float getWorldDriftChunksPerSecondX() {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
@@ -99,7 +91,8 @@ class GlobalNoiseBranch extends BranchPackage {
         double yearProgress = clockManager.getClockHandle().getYearProgress();
 
         double tiltFraction = axialTiltDegrees / 90.0;
-        this.latitudePhase = Math.sin(yearProgress * 2.0 * Math.PI) * tiltFraction * tiltInfluence * Math.PI;
+        this.latitudeDriftChunks = Math.sin(yearProgress * 2.0 * Math.PI) * tiltFraction * tiltInfluence
+                * WAVELENGTH_CHUNKS;
     }
 
     // Meander \\
@@ -113,23 +106,21 @@ class GlobalNoiseBranch extends BranchPackage {
     float sampleGlobalIntensity(long chunkCoordinate) {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
-
         double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
-        double worldHeightChunks = activeWorld.getWorldScale().y / (double) EngineSetting.CHUNK_SIZE;
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
 
         double rotationPhase = (rotationAngleDegrees / EngineSetting.DEGREES_PER_FULL_ROTATION) * (Math.PI * 2.0);
-        double meanderPhase = Math.sin(meanderElapsed * MEANDER_SPEED) * MEANDER_AMPLITUDE;
-        double zPhase = latitudePhase + meanderPhase;
+        double meanderDriftChunks = Math.sin(meanderElapsed * MEANDER_SPEED) * MEANDER_AMPLITUDE * WAVELENGTH_CHUNKS;
+        double driftZ = latitudeDriftChunks + meanderDriftChunks;
 
-        return ToroidalNoiseUtility.sample(
+        return WeatherNoiseUtility.sample(
                 NOISE_SEED,
                 chunkX, chunkZ,
-                worldWidthChunks, worldHeightChunks,
+                worldWidthChunks,
                 WAVELENGTH_CHUNKS,
-                rotationPhase, zPhase);
+                rotationPhase, driftZ);
     }
 
     float getGlobalInfluence() {
