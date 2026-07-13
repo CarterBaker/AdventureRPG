@@ -1,4 +1,3 @@
-// SkyWeatherPatternBranch.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import java.util.Arrays;
@@ -21,12 +20,10 @@ class SkyWeatherPatternBranch extends BranchPackage {
 
     /*
      * Flattens WeatherPatternManager's active patterns into the
-     * SkyWeatherPatternData UBO every frame — one entry per pattern, written
-     * to that pattern's own stable slot (see WeatherPatternStruct.getSlot())
-     * rather than by loop position, so a given array index always belongs
-     * to the same pattern from one frame to the next. A pattern whose
-     * weather defines no cloud archetype writes a zero density and coverage
-     * bias, so it never paints a shape of its own.
+     * SkyWeatherPatternData UBO every frame, one entry per pattern at its
+     * own stable slot. Every field is crossfaded between a pattern's
+     * previous and current WeatherHandle over its transitionT, so a
+     * weather reassignment reads as a gradual shift rather than a pop.
      */
 
     private static final int MAX_PATTERNS = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
@@ -110,9 +107,6 @@ class SkyWeatherPatternBranch extends BranchPackage {
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
-        // Cleared every frame so a slot freed by a retired pattern always
-        // contributes zero weight below, with no need to separately track
-        // which slots are currently unused.
         Arrays.fill(fadeAlpha, 0f);
 
         Long2ObjectOpenHashMap<WeatherPatternStruct> activePatterns = weatherPatternManager.getActivePatterns();
@@ -157,35 +151,60 @@ class SkyWeatherPatternBranch extends BranchPackage {
         double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), referenceChunkZ, worldHeightChunks);
         double distanceChunks = Math.sqrt(dx * dx + dz * dz);
 
+        WeatherHandle targetWeather = pattern.getWeatherHandle();
+        WeatherHandle sourceWeather = pattern.getPreviousWeatherHandle();
+        float blend = smoothstep01(pattern.getTransitionT());
+
+        CloudChanceStruct targetCloud = targetWeather.getPrimaryCloud();
+        CloudChanceStruct sourceCloud = sourceWeather.getPrimaryCloud();
+
+        float visualScale = lerp(sourceWeather.getVisualScale(), targetWeather.getVisualScale(), blend);
+        float footprintRadius = FOOTPRINT_RADIUS_CHUNKS * visualScale;
+
         bearing[index] = (float) Math.atan2(dx, -dz);
-        angularWidth[index] = (float) Math.atan2(FOOTPRINT_RADIUS_CHUNKS, Math.max(distanceChunks, 0.001));
+        angularWidth[index] = (float) Math.atan2(footprintRadius, Math.max(distanceChunks, 0.001));
         fadeAlpha[index] = pattern.getFadeAlpha();
         intensity[index] = pattern.getIntensity();
 
-        WeatherHandle weatherHandle = pattern.getWeatherHandle();
-        CloudChanceStruct primaryCloud = weatherHandle.getPrimaryCloud();
-        boolean hasCloud = primaryCloud != null;
+        coverage[index] = lerp(sourceWeather.getCloudCoverage(), targetWeather.getCloudCoverage(), blend);
+        altitude[index] = lerp(resolveAltitude(sourceCloud), resolveAltitude(targetCloud), blend);
 
-        coverage[index] = weatherHandle.getCloudCoverage();
-        altitude[index] = resolveAltitude(primaryCloud);
-
-        color[index].set(resolveColorR(primaryCloud), resolveColorG(primaryCloud), resolveColorB(primaryCloud));
+        color[index].set(
+                lerp(resolveColorR(sourceCloud), resolveColorR(targetCloud), blend),
+                lerp(resolveColorG(sourceCloud), resolveColorG(targetCloud), blend),
+                lerp(resolveColorB(sourceCloud), resolveColorB(targetCloud), blend));
         topColor[index].set(
-                resolveTopColorR(primaryCloud), resolveTopColorG(primaryCloud), resolveTopColorB(primaryCloud));
+                lerp(resolveTopColorR(sourceCloud), resolveTopColorR(targetCloud), blend),
+                lerp(resolveTopColorG(sourceCloud), resolveTopColorG(targetCloud), blend),
+                lerp(resolveTopColorB(sourceCloud), resolveTopColorB(targetCloud), blend));
         shadowColor[index].set(
-                resolveShadowColorR(primaryCloud), resolveShadowColorG(primaryCloud),
-                resolveShadowColorB(primaryCloud));
+                lerp(resolveShadowColorR(sourceCloud), resolveShadowColorR(targetCloud), blend),
+                lerp(resolveShadowColorG(sourceCloud), resolveShadowColorG(targetCloud), blend),
+                lerp(resolveShadowColorB(sourceCloud), resolveShadowColorB(targetCloud), blend));
 
-        density[index] = hasCloud ? resolveDensity(primaryCloud) : 0f;
-        shadeStrength[index] = resolveShadeStrength(primaryCloud);
-        rimLightStrength[index] = resolveRimLightStrength(primaryCloud);
-        ambientOcclusionStrength[index] = resolveAmbientOcclusionStrength(primaryCloud);
-        brightnessMultiplier[index] = resolveBrightnessMultiplier(primaryCloud);
-        toonBands[index] = resolveToonBands(primaryCloud);
-        densityNoiseScale[index] = resolveDensityNoiseScale(primaryCloud);
-        noiseWarpStrength[index] = resolveNoiseWarpStrength(primaryCloud);
-        coverageBias[index] = hasCloud ? resolveCoverageBias(primaryCloud) : 0f;
-        silhouetteSoftness[index] = resolveSilhouetteSoftness(primaryCloud);
+        float sourceDensity = sourceCloud != null ? resolveDensity(sourceCloud) : 0f;
+        float targetDensity = targetCloud != null ? resolveDensity(targetCloud) : 0f;
+        density[index] = lerp(sourceDensity, targetDensity, blend);
+
+        shadeStrength[index] = lerp(resolveShadeStrength(sourceCloud), resolveShadeStrength(targetCloud), blend);
+        rimLightStrength[index] = lerp(
+                resolveRimLightStrength(sourceCloud), resolveRimLightStrength(targetCloud), blend);
+        ambientOcclusionStrength[index] = lerp(
+                resolveAmbientOcclusionStrength(sourceCloud), resolveAmbientOcclusionStrength(targetCloud), blend);
+        brightnessMultiplier[index] = lerp(
+                resolveBrightnessMultiplier(sourceCloud), resolveBrightnessMultiplier(targetCloud), blend);
+        toonBands[index] = lerp(resolveToonBands(sourceCloud), resolveToonBands(targetCloud), blend);
+        densityNoiseScale[index] = lerp(
+                resolveDensityNoiseScale(sourceCloud), resolveDensityNoiseScale(targetCloud), blend);
+        noiseWarpStrength[index] = lerp(
+                resolveNoiseWarpStrength(sourceCloud), resolveNoiseWarpStrength(targetCloud), blend);
+
+        float sourceCoverageBias = sourceCloud != null ? resolveCoverageBias(sourceCloud) : 0f;
+        float targetCoverageBias = targetCloud != null ? resolveCoverageBias(targetCloud) : 0f;
+        coverageBias[index] = lerp(sourceCoverageBias, targetCoverageBias, blend);
+
+        silhouetteSoftness[index] = lerp(
+                resolveSilhouetteSoftness(sourceCloud), resolveSilhouetteSoftness(targetCloud), blend);
     }
 
     private Float[] newFloatArray() {
@@ -199,6 +218,15 @@ class SkyWeatherPatternBranch extends BranchPackage {
         for (int i = 0; i < MAX_PATTERNS; i++)
             array[i] = new Vector3();
         return array;
+    }
+
+    private static float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
+    }
+
+    private static float smoothstep01(float t) {
+        float c = Math.max(0f, Math.min(1f, t));
+        return c * c * (3f - 2f * c);
     }
 
     private float resolveAltitude(CloudChanceStruct cloud) {

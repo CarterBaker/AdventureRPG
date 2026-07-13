@@ -10,5 +10,6 @@
     "fogDensityScale": 1.05,
     "humidity": 0.55,
     "visibility": 0.85,
+    "visualScale": 1.2,
     "temperatureModifier": -1.0
 }

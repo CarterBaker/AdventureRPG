@@ -1,4 +1,3 @@
-// WeatherPatternStruct.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
@@ -7,13 +6,21 @@ import engine.root.StructPackage;
 public class WeatherPatternStruct extends StructPackage {
 
     /*
-     * One persistent, large-scale weather system shared by both the overhead
-     * volumetric layer and the sky dome. Identity, lobe layout, and UBO slot
-     * are fixed for its lifetime; only drift, fade, and intensity change.
+     * One persistent, large-scale weather system shared by the overhead
+     * volumetric layer and the sky dome. Position, lobes, and UBO slot are
+     * fixed for its lifetime. Its resolved WeatherHandle may be reassigned
+     * by WeatherPatternManager as conditions change; previousWeatherHandle
+     * and transitionT let consumers blend smoothly across that change
+     * instead of popping instantly.
      */
 
+    public static final float WEATHER_TRANSITION_DURATION_SECONDS = 10.0f;
+
     private final long patternKey;
-    private final WeatherHandle weatherHandle;
+
+    private WeatherHandle weatherHandle;
+    private WeatherHandle previousWeatherHandle;
+    private float transitionT;
 
     private final int homeChunkX;
     private final int homeChunkZ;
@@ -21,10 +28,6 @@ public class WeatherPatternStruct extends StructPackage {
     private final WeatherPatternLobeStruct[] lobes;
     private final float driftSpeedScale;
 
-    // Stable UBO slot assigned by WeatherPatternManager's free-slot pool at
-    // stream-in and released back to it at retirement — never reassigned
-    // for the life of this pattern, so SkyWeatherPatternBranch always writes
-    // this pattern's data to the same array index every frame.
     private final int slot;
 
     private double driftChunkX;
@@ -49,6 +52,8 @@ public class WeatherPatternStruct extends StructPackage {
 
         this.patternKey = patternKey;
         this.weatherHandle = weatherHandle;
+        this.previousWeatherHandle = weatherHandle;
+        this.transitionT = 1f;
         this.homeChunkX = homeChunkX;
         this.homeChunkZ = homeChunkZ;
         this.lobes = lobes;
@@ -62,6 +67,26 @@ public class WeatherPatternStruct extends StructPackage {
     public void advanceDrift(double deltaChunkX, double deltaChunkZ) {
         this.driftChunkX += deltaChunkX;
         this.driftChunkZ += deltaChunkZ;
+    }
+
+    public void beginWeatherTransition(WeatherHandle newWeatherHandle) {
+        this.previousWeatherHandle = this.weatherHandle;
+        this.weatherHandle = newWeatherHandle;
+        this.transitionT = 0f;
+    }
+
+    public void advanceWeatherTransition(float deltaTime) {
+        if (transitionT >= 1f)
+            return;
+        transitionT = Math.min(1f, transitionT + deltaTime / WEATHER_TRANSITION_DURATION_SECONDS);
+    }
+
+    public float getTransitionT() {
+        return transitionT;
+    }
+
+    public WeatherHandle getPreviousWeatherHandle() {
+        return previousWeatherHandle;
     }
 
     public void setRetiring(boolean retiring) {

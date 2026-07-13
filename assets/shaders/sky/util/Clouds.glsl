@@ -12,11 +12,18 @@
 /*
 * Sky-dome distant weather preview. Raymarches a thin unbounded layer,
  * shaded by a per-fragment blend of every active pattern in
- * SkyWeatherPatternData. Each pattern is weighted by its angular distance
- * from the ray direction and by its own fade-in/out state, so a pattern
- * never appears or disappears with a hard pop. A direction with no
- * pattern covering it at all resolves to zero density — genuinely clear
- * sky, not a fabricated default cloud.
+ * SkyWeatherPatternData. Each pattern occupies an azimuthal band around its
+ * own bearing, so a storm reads as a cloud bank arching up from one
+ * direction of the horizon rather than a circle painted around a point.
+ *
+ * resolvePatternWeather() blends every pattern's shape/color as one
+ * continuous weighted average, then scales the resulting coverage/density/
+ * intensity by "presence" — the saturated sum of raw geometric weights,
+ * which itself falls smoothly to zero as a bearing leaves every pattern's
+ * band. There is no separate nearest-pattern fallback: that used to
+ * produce a hard, differently-computed result the instant a bearing
+ * crossed from "just inside" to "just outside" every band, which is what
+ * caused the sky to visibly pop between cloud states.
  */
 
 const float SKY_HORIZON_FADE_START = -0.02;
@@ -27,28 +34,18 @@ const float SKY_LAYER_SCALE             = 180.0 * SKY_NOISE_WORLD_SCALE;
 const float SKY_LAYER_THICKNESS         = 24.0  * SKY_NOISE_WORLD_SCALE;
 const int   SKY_RAYMARCH_STEPS          = 8;
 const float SKY_DETAIL_JITTER           = 0.35;
-const float SKY_STEP_ALPHA_SCALE        = 0.65;
+const float SKY_STEP_ALPHA_SCALE        = 0.45;
 const float SKY_LIGHT_TAP_DISTANCE      = 9.0   * SKY_NOISE_WORLD_SCALE;
-const float SKY_TOP_TINT_MIX            = 0.18;
-const float SKY_SHADOW_TINT_MIX         = 0.15;
-const float SKY_INTENSITY_DENSITY_FLOOR = 0.4;
+const float SKY_TOP_TINT_MIX            = 0.32;
+const float SKY_SHADOW_TINT_MIX         = 0.28;
+const float SKY_INTENSITY_DENSITY_FLOOR = 0.2;
 
 const float SKY_PATTERN_WEIGHT_INNER_SCALE = 0.6;
 const float SKY_PATTERN_WEIGHT_OUTER_SCALE = 1.6;
 const float SKY_PATTERN_MIN_ANGULAR_WIDTH  = 0.05;
-
-const vec3  SKY_DEFAULT_COLOR               = vec3(1.0);
-const vec3  SKY_DEFAULT_TOP_COLOR           = vec3(1.0);
-const vec3  SKY_DEFAULT_SHADOW_COLOR        = vec3(0.6, 0.63, 0.7);
-const float SKY_DEFAULT_SHADE_STRENGTH      = 0.5;
-const float SKY_DEFAULT_RIM_LIGHT_STRENGTH  = 0.35;
-const float SKY_DEFAULT_AO_STRENGTH         = 0.4;
-const float SKY_DEFAULT_BRIGHTNESS          = 1.0;
-const float SKY_DEFAULT_TOON_BANDS          = 3.0;
-const float SKY_DEFAULT_DENSITY_NOISE_SCALE = 1.0;
-const float SKY_DEFAULT_NOISE_WARP_STRENGTH = 0.6;
-const float SKY_DEFAULT_COVERAGE_BIAS       = 0.5;
-const float SKY_DEFAULT_SILHOUETTE_SOFTNESS = 0.08;
+const float SKY_PATTERN_AZIMUTH_EPSILON    = 0.0005;
+const float SKY_PI                         = 3.14159265359;
+const float SKY_TWO_PI                     = 6.28318530718;
 
 struct WeatherPatternSample {
     float coverage;
@@ -68,6 +65,11 @@ struct WeatherPatternSample {
     float intensity;
 };
 
+// Wraps an angle difference into [-PI, PI].
+float wrapAngleDelta(float delta) {
+    return mod(delta + SKY_PI, SKY_TWO_PI) - SKY_PI;
+}
+
 WeatherPatternSample resolvePatternWeather(vec3 dir) {
     WeatherPatternSample result;
     result.coverage = 0.0;
@@ -86,11 +88,20 @@ WeatherPatternSample resolvePatternWeather(vec3 dir) {
     result.silhouetteSoftness = 0.0;
     result.intensity = 0.0;
 
+    // Azimuth-only ray bearing — a pattern's band is a wall around its own
+    // compass direction spanning every elevation near the horizon, not a
+    // cap painted at a fixed point on the dome. Guarded for the near-zenith
+    // case where the horizontal component collapses toward zero.
+    float horizLen = length(dir.xz);
+    float rayAzimuth = horizLen > SKY_PATTERN_AZIMUTH_EPSILON
+    ? atan(dir.x, -dir.z)
+    : 0.0;
+
     float totalWeight = 0.0;
 
     for (int i = 0; i < u_patternCount; i++) {
-        vec3 patternDir = vec3(sin(u_patternBearing[i]), 0.0, -cos(u_patternBearing[i]));
-        float angularDist = acos(clamp(dot(dir, patternDir), -1.0, 1.0));
+        float azimuthDiff = wrapAngleDelta(rayAzimuth - u_patternBearing[i]);
+        float angularDist = abs(azimuthDiff);
 
         float edge = max(u_patternAngularWidth[i], SKY_PATTERN_MIN_ANGULAR_WIDTH);
         float geometricWeight = 1.0 - smoothstep(
@@ -122,42 +133,41 @@ WeatherPatternSample resolvePatternWeather(vec3 dir) {
         result.intensity           += u_patternIntensity[i] * weight;
     }
 
-    if (totalWeight <= 0.0001) {
-        // No pattern covers this direction — clear sky. density stays 0,
-        // which is the only field that actually gates the raymarch below;
-        // the rest are harmless neutral values.
-        result.color = SKY_DEFAULT_COLOR;
-        result.topColor = SKY_DEFAULT_TOP_COLOR;
-        result.shadowColor = SKY_DEFAULT_SHADOW_COLOR;
-        result.density = 0.0;
-        result.shadeStrength = SKY_DEFAULT_SHADE_STRENGTH;
-        result.rimStrength = SKY_DEFAULT_RIM_LIGHT_STRENGTH;
-        result.aoStrength = SKY_DEFAULT_AO_STRENGTH;
-        result.brightness = SKY_DEFAULT_BRIGHTNESS;
-        result.toonBands = SKY_DEFAULT_TOON_BANDS;
-        result.densityNoiseScale = SKY_DEFAULT_DENSITY_NOISE_SCALE;
-        result.noiseWarpStrength = SKY_DEFAULT_NOISE_WARP_STRENGTH;
-        result.coverageBias = SKY_DEFAULT_COVERAGE_BIAS;
-        result.silhouetteSoftness = SKY_DEFAULT_SILHOUETTE_SOFTNESS;
-        return result;
-    }
+    // How strongly ANY weather actually occupies this bearing, saturating
+    // at 1 so overlapping patterns never over-brighten. Never divided out
+    // below — this is what makes coverage/density/intensity fade smoothly
+    // to zero at the fringe of every pattern's band instead of snapping to
+    // a different formula once nothing reaches this bearing at all.
+    float presence = clamp(totalWeight, 0.0, 1.0);
 
-    float invWeight = 1.0 / totalWeight;
-    result.coverage           *= invWeight;
-    result.color              *= invWeight;
-    result.topColor           *= invWeight;
-    result.shadowColor        *= invWeight;
-    result.density             *= invWeight;
-    result.shadeStrength       *= invWeight;
-    result.rimStrength         *= invWeight;
-    result.aoStrength          *= invWeight;
-    result.brightness          *= invWeight;
-    result.toonBands           *= invWeight;
-    result.densityNoiseScale   *= invWeight;
-    result.noiseWarpStrength   *= invWeight;
-    result.coverageBias        *= invWeight;
-    result.silhouetteSoftness  *= invWeight;
-    result.intensity           *= invWeight;
+    // Safe divide — when totalWeight is exactly 0 every accumulated field
+    // is also exactly 0, so this keeps the result a clean zero rather than
+    // risking a 0 * (1/0) NaN.
+    float invWeight = totalWeight > 0.0 ? (1.0 / totalWeight) : 0.0;
+
+    result.coverage            *= invWeight;
+    result.color                *= invWeight;
+    result.topColor             *= invWeight;
+    result.shadowColor          *= invWeight;
+    result.density               *= invWeight;
+    result.shadeStrength        *= invWeight;
+    result.rimStrength          *= invWeight;
+    result.aoStrength           *= invWeight;
+    result.brightness           *= invWeight;
+    result.toonBands            *= invWeight;
+    result.densityNoiseScale    *= invWeight;
+    result.noiseWarpStrength    *= invWeight;
+    result.coverageBias         *= invWeight;
+    result.silhouetteSoftness   *= invWeight;
+    result.intensity            *= invWeight;
+
+    // Shape/color fields (topColor, shadowColor, shadeStrength, etc.) stay
+    // the pure weighted blend — they describe WHAT nearby weather looks
+    // like. coverage/density/intensity describe HOW MUCH of it is actually
+    // present in this direction, so those get the presence scale.
+    result.coverage  *= presence;
+    result.density    *= presence;
+    result.intensity  *= presence;
 
     return result;
 }

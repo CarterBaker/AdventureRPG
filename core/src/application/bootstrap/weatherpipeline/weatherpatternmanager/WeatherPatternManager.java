@@ -1,4 +1,3 @@
-// WeatherPatternManager.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
@@ -23,15 +22,16 @@ public class WeatherPatternManager extends ManagerPackage {
      * Simulates the world's persistent weather patterns — up to
      * WEATHER_PATTERN_MAX_ACTIVE_COUNT systems, each a jittered cell holding
      * a handful of offset cloud lobes, streamed in/out around the player and
-     * drifted with the world's rotation. Each active pattern owns a stable
-     * UBO slot for its whole lifetime (see the free-slot pool below) so
-     * SkyWeatherPatternBranch never has to infer array position from map
-     * iteration order. OverheadManager and SkyWeatherPatternBranch both read
-     * the active set this class maintains.
+     * drifted with the world's rotation. A pattern's resolved WeatherHandle
+     * can change over its lifetime; SkyWeatherPatternBranch crossfades that
+     * change over WeatherPatternStruct.WEATHER_TRANSITION_DURATION_SECONDS
+     * instead of popping. Physical cloud lobes stay fixed for a pattern's
+     * lifetime and only refresh when the pattern cycles out of range and a
+     * fresh one streams in.
      */
 
-    private static final float FADE_IN_RATE = 0.6f;
-    private static final float FADE_OUT_RATE = 0.6f;
+    private static final float FADE_IN_RATE = 0.4f;
+    private static final float FADE_OUT_RATE = 0.4f;
 
     private WeatherManager weatherManager;
     private WorldManager worldManager;
@@ -46,9 +46,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
     private Long2ObjectOpenHashMap<WeatherPatternStruct> activePatterns;
 
-    // Free-slot pool — one slot per possible active pattern. Popped when a
-    // pattern streams in, pushed back when it's fully retired. Guarantees
-    // every pattern keeps the same UBO array index for its entire lifetime.
     private IntArrayList freeSlots;
 
     private ObjectArrayList<int[]> candidateOffsets;
@@ -116,18 +113,8 @@ public class WeatherPatternManager extends ManagerPackage {
         streamInBudgeted(playerChunkX, playerChunkZ);
     }
 
-    // Candidate Offsets \\
-
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
-        // Filtered here using each cell's own corner-aligned offset only —
-        // the true home position (cell center plus jitter, see
-        // computeHomeJitter) can end up close to a full cell size further
-        // out once actually resolved. Scanning one extra cell size of
-        // margin guarantees no legitimately in-range cell is excluded;
-        // streamInBudgeted() re-checks the exact final distance before ever
-        // actually streaming a candidate in, so this radius only controls
-        // how many candidates get queued for that precise check.
         float candidateRadiusChunks = radiusChunks + patternCellSizeChunks;
         int radiusCells = Math.max(1, Math.round(candidateRadiusChunks / (float) patternCellSizeChunks));
 
@@ -151,8 +138,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
         return offsets;
     }
-
-    // Streaming \\
 
     private void streamInBudgeted(int playerChunkX, int playerChunkZ) {
 
@@ -192,10 +177,6 @@ public class WeatherPatternManager extends ManagerPackage {
             homeChunkX += jitter[0];
             homeChunkZ += jitter[1];
 
-            // Exact same distance metric advanceFadesAndRetire() checks this
-            // pattern's home against later — computed here, before creation,
-            // so nothing streams in only to immediately measure as already
-            // beyond the retire radius once its jitter is resolved.
             double dx = WorldWrapUtility.wrappedDelta(homeChunkX, playerChunkX, worldWidthChunks);
             double dz = WorldWrapUtility.wrappedDelta(homeChunkZ, playerChunkZ, worldHeightChunks);
             double trueDistanceChunks = Math.sqrt(dx * dx + dz * dz);
@@ -253,9 +234,17 @@ public class WeatherPatternManager extends ManagerPackage {
 
             long lobeSeedBase = patternKey ^ (0x9E3779B97F4A7C15L * (i + 1));
 
-            float coveragePickNoise = hash01(lobeSeedBase ^ 0xA24BAED4963EE407L);
-            boolean coveredByCloud = weatherHandle.hasClouds()
-                    && coveragePickNoise < weatherHandle.getCloudCoverage();
+            boolean coveredByCloud;
+
+            if (!weatherHandle.hasClouds()) {
+                coveredByCloud = false;
+            } else if (i == 0) {
+                coveredByCloud = true;
+            } else {
+                float coveragePickNoise = hash01(lobeSeedBase ^ 0xA24BAED4963EE407L);
+                float presenceChance = lerp(0.55f, 1.0f, clamp01(weatherHandle.getCloudCoverage()));
+                coveredByCloud = coveragePickNoise < presenceChance;
+            }
 
             float cloudPickNoise = hash01(lobeSeedBase);
             CloudChanceStruct cloudEntry = coveredByCloud ? weatherHandle.pickCloud(cloudPickNoise) : null;
@@ -324,8 +313,6 @@ public class WeatherPatternManager extends ManagerPackage {
         return Coordinate2Long.pack(wrappedX, wrappedZ);
     }
 
-    // World Drift \\
-
     private void advanceWorldDrift() {
 
         float deltaTime = internal.getDeltaTime();
@@ -337,13 +324,14 @@ public class WeatherPatternManager extends ManagerPackage {
         }
     }
 
-    // Weather Reevaluation \\
-
     private void advanceWeatherReevaluation() {
 
-        elapsedSimTime += internal.getDeltaTime();
+        float deltaTime = internal.getDeltaTime();
+        elapsedSimTime += deltaTime;
 
         for (WeatherPatternStruct pattern : activePatterns.values()) {
+
+            pattern.advanceWeatherTransition(deltaTime);
 
             if (pattern.isRetiring())
                 continue;
@@ -354,14 +342,14 @@ public class WeatherPatternManager extends ManagerPackage {
             long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
             weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate);
 
-            if (bandScratch.getPrimary() != pattern.getWeatherHandle())
-                pattern.setRetiring(true);
-            else
-                pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(pattern.getPatternKey()));
+            WeatherHandle resolved = bandScratch.getPrimary();
+
+            if (resolved != pattern.getWeatherHandle())
+                pattern.beginWeatherTransition(resolved);
+
+            pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(pattern.getPatternKey()));
         }
     }
-
-    // Intensity \\
 
     private void advanceIntensity() {
 
@@ -392,8 +380,6 @@ public class WeatherPatternManager extends ManagerPackage {
         float t = hash01(patternKey ^ 0xD1B54A32D192ED03L);
         return lerp(reevaluationMinSeconds, reevaluationMaxSeconds, t);
     }
-
-    // Fade / Retire \\
 
     private void advanceFadesAndRetire(int playerChunkX, int playerChunkZ) {
 
@@ -447,8 +433,6 @@ public class WeatherPatternManager extends ManagerPackage {
         retiredThisFrame.add(pattern);
     }
 
-    // Noise \\
-
     private static float hash01(long seed) {
 
         long h = seed;
@@ -468,8 +452,6 @@ public class WeatherPatternManager extends ManagerPackage {
     private static float clamp01(float value) {
         return Math.max(0f, Math.min(1f, value));
     }
-
-    // Accessible \\
 
     public Long2ObjectOpenHashMap<WeatherPatternStruct> getActivePatterns() {
         return activePatterns;

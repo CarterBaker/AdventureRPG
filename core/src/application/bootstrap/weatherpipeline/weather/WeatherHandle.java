@@ -1,4 +1,3 @@
-// WeatherHandle.java
 package application.bootstrap.weatherpipeline.weather;
 
 import engine.root.HandlePackage;
@@ -8,33 +7,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WeatherHandle extends HandlePackage {
 
     /*
-     * Persistent reference to a loaded weather definition. Registered and
-     * owned by WeatherManager. Delegates all accessors through WeatherData.
-     * Clouds are exposed as the full chance-weighted list — callers that
-     * need genuine per-instance variety (e.g. each overhead cell) should
-     * pick from getCloudEntries() themselves via WeightedChanceUtility;
-     * getPrimaryCloud() is a deterministic convenience for single-value
-     * uses like horizon tinting, always returning the highest-chance entry.
-     *
-     * A weather may define no clouds at all — see standard/ClearWeather.json
-     * — in which case hasClouds() is false and both getPrimaryCloud() and
-     * pickCloud() return null rather than throwing. Every location in the
-     * world always resolves to SOME WeatherHandle (see
-     * WeatherManager.resolveWeatherBand()), clear weather included, so
-     * "no clouds right now" is a normal, fully-supported outcome, not a
-     * missing-data error.
+     * Persistent reference to a loaded weather definition, owned by
+     * WeatherManager. A weather may define no clouds at all (clear skies),
+     * in which case hasClouds() is false and getPrimaryCloud()/pickCloud()
+     * return null rather than throwing.
      */
 
-    // Internal
     private WeatherData weatherData;
-
-    // Constructor \\
 
     public void constructor(WeatherData weatherData) {
         this.weatherData = weatherData;
     }
-
-    // Accessible \\
 
     public WeatherData getWeatherData() {
         return weatherData;
@@ -108,6 +91,10 @@ public class WeatherHandle extends HandlePackage {
 
     public float getVisibility() {
         return weatherData.getVisibility();
+    }
+
+    public float getVisualScale() {
+        return weatherData.getVisualScale();
     }
 
     public float getTemperatureModifier() {
