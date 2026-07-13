@@ -2,6 +2,7 @@ package application.bootstrap.renderpipeline.rendermanager;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
 import org.lwjgl.glfw.GLFW;
@@ -15,7 +16,9 @@ class RenderGLSLUtility extends EngineUtility {
     /*
      * Stateless OpenGL state management helpers for RenderManager. Covers buffer
      * clearing, depth and blend state, scissor, shader binding, VAO operations,
-     * UBO binding, and draw calls. Package-private.
+     * UBO binding, draw calls, and the instanced-VAO/instance-buffer helpers
+     * shared by the skinned and generic-instanced (cloud) render paths.
+     * Package-private.
      */
 
     // Buffer \\
@@ -166,13 +169,12 @@ class RenderGLSLUtility extends EngineUtility {
     // Instanced VAO \\
 
     /*
-     * Builds a VAO combining a rigged mesh's own vertex attributes (as laid
-     * out by meshAttrSizes — position, uv, boneIndices, boneWeights) with a
-     * per-instance attribute set sourced from instanceVBOHandle, one
-     * attribute location per entry in instanceAttrSizes, each with a vertex
-     * attrib divisor of 1. A 4-entry {4,4,4,4} instanceAttrSizes produces
-     * the four consecutive vec4 locations GLSL packs into a single mat4
-     * instance attribute automatically.
+     * Builds a VAO combining a mesh's own vertex attributes (as laid out by
+     * meshAttrSizes) with a per-instance attribute set sourced from
+     * instanceVBOHandle, one attribute location per entry in
+     * instanceAttrSizes, each with a vertex attrib divisor of 1. Shared by
+     * the skinned character path and the generic world-space instanced
+     * (cloud) path.
      */
     static int createInstancedVAO(
             int meshVBOHandle,
@@ -243,5 +245,37 @@ class RenderGLSLUtility extends EngineUtility {
         EngineContext.gl30.glDrawElementsInstanced(
                 EngineSetting.GL_TRIANGLES, indexCount, EngineSetting.GL_UNSIGNED_SHORT,
                 EngineSetting.GL_HANDLE_NONE, instanceCount);
+    }
+
+    // Instance Buffers \\
+
+    /*
+     * Creates a dynamic instance VBO sized for maxInstances rows of
+     * floatsPerInstance floats each. Shared by the skinned model-matrix
+     * buffer and the generic per-instance float buffer
+     * (CompositeBufferInstance) used for world-space instanced draws such
+     * as physical weather clouds.
+     */
+    static int createDynamicInstanceVBO(int maxInstances, int floatsPerInstance) {
+
+        int size = maxInstances * floatsPerInstance * Float.BYTES;
+
+        int vbo = EngineContext.gl20.glGenBuffer();
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
+        EngineContext.gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, null, EngineSetting.GL_DYNAMIC_DRAW);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
+
+        return vbo;
+    }
+
+    static void updateInstanceVBO(int vbo, FloatBuffer data, int floatCount) {
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
+        EngineContext.gl20.glBufferSubData(EngineSetting.GL_ARRAY_BUFFER, 0, floatCount * Float.BYTES, data);
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
+    }
+
+    static void deleteBuffer(int handle) {
+        if (handle != 0)
+            EngineContext.gl20.glDeleteBuffer(handle);
     }
 }

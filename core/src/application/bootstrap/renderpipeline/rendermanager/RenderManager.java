@@ -209,6 +209,20 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushCompositeCall(material, buffer, fbo, window);
     }
 
+    // Generic Instanced Composite Calls \\
+
+    public CompositeBufferInstance createInstancedCompositeBuffer(MeshHandle meshHandle, int[] instanceAttrSizes) {
+        return renderSystem.createInstancedBuffer(meshHandle, instanceAttrSizes);
+    }
+
+    public void pushInstancedCompositeCall(
+            CompositeBufferInstance buffer,
+            MaterialInstance material,
+            FboInstance fbo,
+            WindowInstance window) {
+        renderSystem.pushInstancedCompositeCall(buffer, material, fbo, window);
+    }
+
     // Skinned Calls \\
 
     public void clearSkinnedBuffers() {
