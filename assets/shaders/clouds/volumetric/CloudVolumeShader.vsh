@@ -1,20 +1,16 @@
 #version 330 core
 
-layout (location = 0) in vec3  aPos;
-layout (location = 1) in vec3  aNormal;
-layout (location = 2) in vec2  aUV;
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aUV;
+layout (location = 3) in vec4 aInstance0; // xyz = world position, w = random seed
+layout (location = 4) in vec4 aInstance1; // x = domain rotation, y = fade alpha, z = intensity, w = size variance
 
 #include "includes/CameraData.glsl"
 #include "includes/CloudSettingsData.glsl"
 
 uniform float u_cloudScale;
 uniform float u_cloudVerticalThickness;
-
-uniform vec3  u_cloudInstancePosition;    // fully resolved render-space position — CPU-computed every frame, see CloudRenderSystem.updateInstance(). x/z already relative to the player's current chunk; y is world altitude.
-uniform float u_cloudInstanceRandomSeed;  // stable per-cloud shape/warp seed
-uniform float u_cloudInstanceDomainRotation; // stable per-cloud stretch-axis angle (radians) — see VolumetricCloudUtility.glsl's "Shape diversity fix"
-uniform float u_cloudInstanceFadeAlpha;   // streaming fade — see OverheadCellStruct.fadeAlpha
-uniform float u_cloudInstanceIntensity;   // live weather strength — see OverheadCellStruct.getIntensity()
 
 out vec3  vWorldPos;
 out vec3  vNormal;
@@ -27,39 +23,32 @@ flat out vec3 vBoxMin;
 flat out vec3 vBoxMax;
 
 /*
-* Player-chunk-relative instance position is resolved ENTIRELY on the CPU,
- * once per instance per frame — see CloudRenderSystem.updateInstance().
- * This shader does no chunk-index math of its own and no longer reads
- * PlayerPositionData at all: u_cloudInstancePosition arrives already
- * expressed in the same moving-world render frame every other vertex here
- * (and the camera itself) is already in — exactly mirroring how the
- * terrain's own u_gridPosition offset works (see
- * StandardSurfaceShader.vsh), just computed once in Java per cloud
- * instance instead of read back out of a shared UBO. This keeps the whole
- * cloud pipeline CPU-driven end to end, and removes any chance of the
- * cloud layer's own reference frame drifting out of sync with whatever
- * PlayerPositionData happens to hold on a given frame.
+* Per-instance placement now arrives entirely through instanced vertex
+ * attributes, written once per instance per frame by CloudRenderSystem into
+ * the shared CompositeBufferInstance for this cloud archetype — never
+ * through per-draw uniforms. This is what actually lets every instance
+ * sharing one CloudHandle render in a single glDrawElementsInstanced call.
+ * sizeVariance scales the whole instance uniformly so no two clouds of the
+ * same archetype read as identically sized.
  *
- * CAMERA POSITION FIX: this shader must never read u_cameraPosition
- * directly for a manual world-space distance calculation against
- * instancePos. Whether u_cameraPosition happens to already sit in this
- * same recentered frame is not something to assume — LightingShader.fsh
- * avoids exactly this trap by reconstructing every view-relative vector
- * from the view/projection matrices instead of ever differencing
- * u_cameraPosition against a world position. surface/includes/Height.glsl
- * documents the correct reconstruction, used here too:
- * `(u_inverseView * vec4(0,0,0,1)).xyz` recovers the camera's own position
- * in WHATEVER frame the view matrix operates in, guaranteed to match
- * instancePos with no assumption required.
+ * cameraRenderPos is reconstructed from the view matrix rather than read
+ * from u_cameraPosition directly, since instancePos already arrives in the
+ * player-chunk-recentered render frame every other vertex here shares — see
+ * LightingShader.fsh for the same technique applied elsewhere.
  */
 void main() {
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
-    vec3 instancePos = u_cloudInstancePosition;
+    vec3  instancePos    = aInstance0.xyz;
+    float randomSeed     = aInstance0.w;
+    float domainRotation = aInstance1.x;
+    float fadeAlpha      = aInstance1.y;
+    float intensity      = aInstance1.z;
+    float sizeVariance   = aInstance1.w;
 
     float distFromCamera = length(instancePos.xz - cameraRenderPos.xz);
     float distanceT = clamp(distFromCamera / u_cloudHorizonDistance, 0.0, 1.0);
-    float sizeScale = mix(u_cloudMaxScale, u_cloudMinScale, distanceT);
+    float sizeScale = mix(u_cloudMaxScale, u_cloudMinScale, distanceT) * sizeVariance;
 
     float transitionSpan = max(u_cloudHorizonDistance - u_cloudTransitionStart, 0.001);
     float fadeT = clamp((distFromCamera - u_cloudTransitionStart) / transitionSpan, 0.0, 1.0);
@@ -76,10 +65,10 @@ void main() {
 
     vWorldPos = worldPos;
     vNormal = aNormal;
-    vRandomSeed = u_cloudInstanceRandomSeed;
-    vDomainRotation = u_cloudInstanceDomainRotation;
-    vFadeAlpha = u_cloudInstanceFadeAlpha * horizonFade;
-    vIntensity = u_cloudInstanceIntensity;
+    vRandomSeed = randomSeed;
+    vDomainRotation = domainRotation;
+    vFadeAlpha = fadeAlpha * horizonFade;
+    vIntensity = intensity;
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }
