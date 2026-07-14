@@ -1,3 +1,4 @@
+// CloudVolumeShader.vsh — clouds/volumetric/CloudVolumeShader.vsh
 #version 330 core
 
 layout (location = 0) in vec3  aPos;
@@ -21,12 +22,10 @@ flat out vec3 vHalfExtent;
 flat out vec2 vRot;
 
 /*
-* Builds this instance's oriented box from its world position, a
- * distance-based LOD scale, and the elongation/rotation rolled once at
- * stream-in. Shrinking and fading size near u_cloudHorizonDistance
- * simulates weather that is conceptually farther away than render distance
- * physically allows the box to sit, keeping this system visually
- * consistent with the sky dome's own unclamped weather sampling.
+* Builds this instance's own oriented box from its streamed world position
+ * and a distance-based size/fade LOD, so a real cloud object shrinks and
+ * fades out approaching u_cloudHorizonDistance instead of popping at the
+ * edge of the radius the world stream keeps chunks loaded within.
  */
 void main() {
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;

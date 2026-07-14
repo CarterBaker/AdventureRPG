@@ -1,64 +1,66 @@
+// VolumetricCloudUtility.glsl — clouds/util/VolumetricCloudUtility.glsl
 #ifndef VOLUMETRIC_CLOUD_UTILITY_GLSL
 #define VOLUMETRIC_CLOUD_UTILITY_GLSL
 
 #include "includes/NoiseUtility.glsl"
 
 /*
-* Shape and shading for the overhead volumetric cloud objects. Every
- * instance is a soft ellipsoid of noise inscribed inside its own oriented
- * box so the silhouette is always rounded, and noise is sampled at a fixed
- * physical frequency in true world-space distance so a cloud's detail reads
- * as the same physical size regardless of instance scale or elongation.
- * Exclusive to the overhead cloud objects — never shared with the sky dome.
+* Shape, density, and shading primitives for the overhead volumetric cloud
+ * boxes. Every instance raymarches its own oriented box treated as an
+ * inscribed ellipsoid, so silhouette, density, and lighting all agree in
+ * the same local frame regardless of world position, rotation, or
+ * elongation.
  */
 
 const float CLOUD_NOISE_WORLD_SCALE = 1.0 / 26.0;
 const float CLOUD_DETAIL_FREQUENCY  = 4.4;
 const float CLOUD_EROSION_STRENGTH  = 0.55;
 const float CLOUD_MIN_SOFTNESS      = 0.12;
-const float CLOUD_BAND_SOFTNESS     = 0.75;
+
+// Rotation \\
+
+vec2 rotateWorldToLocal(vec2 relXZ, vec2 rot) {
+    return vec2(relXZ.x * rot.x + relXZ.y * rot.y, -relXZ.x * rot.y + relXZ.y * rot.x);
+}
+
+// Intersection \\
+
+vec2 intersectCloudBox(vec3 rayOrigin, vec3 rayDir, vec3 boxCenter, vec2 rot, vec3 halfExtent) {
+    vec3 rel = rayOrigin - boxCenter;
+    vec2 localOriginXZ = rotateWorldToLocal(rel.xz, rot);
+    vec2 localDirXZ = rotateWorldToLocal(rayDir.xz, rot);
+
+    vec3 localOrigin = vec3(localOriginXZ.x, rel.y, localOriginXZ.y);
+    vec3 localDir = vec3(localDirXZ.x, rayDir.y, localDirXZ.y);
+
+    vec3 invDir = 1.0 / localDir;
+    vec3 t0 = (-halfExtent - localOrigin) * invDir;
+    vec3 t1 = (halfExtent - localOrigin) * invDir;
+    vec3 tMin = min(t0, t1);
+    vec3 tMax = max(t0, t1);
+
+    return vec2(max(max(tMin.x, tMin.y), tMin.z), min(min(tMax.x, tMax.y), tMax.z));
+}
+
+// Shape \\
 
 float remap(float value, float low1, float high1, float low2, float high2) {
     return low2 + (value - low1) * (high2 - low2) / max(high1 - low1, 0.0001);
 }
 
-vec2 worldToLocalXZ(vec2 relXZ, vec2 rot) {
-    return vec2(
-        relXZ.x * rot.x + relXZ.y * rot.y,
-        -relXZ.x * rot.y + relXZ.y * rot.x);
-}
-
-vec2 intersectCloudOBB(vec3 rayOrigin, vec3 rayDir, vec3 boxCenter, vec2 rot, vec3 halfExtent) {
-    vec3 rel = rayOrigin - boxCenter;
-    vec2 localOriginXZ = worldToLocalXZ(rel.xz, rot);
-    vec2 localDirXZ    = worldToLocalXZ(rayDir.xz, rot);
-
-    vec3 localOrigin = vec3(localOriginXZ.x, rel.y, localOriginXZ.y);
-    vec3 localDir    = vec3(localDirXZ.x, rayDir.y, localDirXZ.y);
-
-    vec3 invDir = 1.0 / localDir;
-    vec3 t0 = (-halfExtent - localOrigin) * invDir;
-    vec3 t1 = (halfExtent - localOrigin) * invDir;
-    vec3 tSmall = min(t0, t1);
-    vec3 tBig   = max(t0, t1);
-    float tNear = max(max(tSmall.x, tSmall.y), tSmall.z);
-    float tFar  = min(min(tBig.x, tBig.y), tBig.z);
-    return vec2(tNear, tFar);
-}
-
-float ellipsoidRadius(vec3 localPos, vec3 halfExtent) {
-    vec3 n = localPos / max(halfExtent, vec3(0.0001));
-    return length(n);
-}
-
-float heightShape(float heightT, float coverageBias) {
-    float baseRamp = smoothstep(0.0, 0.22, heightT);
+float cloudHeightEnvelope(float heightT, float coverageBias) {
+    float base = smoothstep(0.0, 0.22, heightT);
     float topStart = mix(0.45, 0.9, clamp(coverageBias, 0.0, 1.0));
-    float topRamp = 1.0 - smoothstep(topStart, 1.0, heightT);
-    return baseRamp * topRamp;
+    float top = 1.0 - smoothstep(topStart, 1.0, heightT);
+    return base * top;
 }
 
-float sampleVolumetricCloudDensity(
+// Density \\
+
+// worldPos/boxCenter/rot/halfExtent describe the instance's own oriented
+// box. heightT is 0 at the box floor and 1 at the box ceiling. Returns 0
+// outside the ellipsoid inscribed in that box.
+float sampleCloudDensity(
     vec3 worldPos,
     vec3 boxCenter,
     vec2 rot,
@@ -71,20 +73,24 @@ float sampleVolumetricCloudDensity(
     float seed,
     float timeSeconds) {
     vec3 rel = worldPos - boxCenter;
-    vec2 localXZ = worldToLocalXZ(rel.xz, rot);
+    vec2 localXZ = rotateWorldToLocal(rel.xz, rot);
     vec3 localPos = vec3(localXZ.x, rel.y, localXZ.y);
 
-    float radius = ellipsoidRadius(localPos, halfExtent);
+    vec3 normalizedPos = localPos / max(halfExtent, vec3(0.0001));
+    float radius = length(normalizedPos);
 
     if (radius >= 1.0)
     return 0.0;
 
     float softness = clamp(silhouetteSoftness, CLOUD_MIN_SOFTNESS, 0.7);
-    float envelope = (1.0 - smoothstep(1.0 - softness, 1.0, radius)) * heightShape(heightT, coverageBias);
+    float envelope = (1.0 - smoothstep(1.0 - softness, 1.0, radius)) * cloudHeightEnvelope(heightT, coverageBias);
 
     if (envelope <= 0.002)
     return 0.0;
 
+    // Noise is sampled at a fixed physical frequency regardless of how the
+    // box has been stretched — dividing the elongated axis back out keeps
+    // cloud detail reading as the same real-world size at any elongation.
     float elongation = max(halfExtent.x / max(halfExtent.z, 0.0001), 1.0);
     vec3 seedOffset = vec3(seed * 173.13, seed * 57.31, seed * 91.7);
     vec3 physicalPos = vec3(localXZ.x / elongation, rel.y, localXZ.y);
@@ -101,7 +107,6 @@ float sampleVolumetricCloudDensity(
 
     if (base <= 0.01)
     return 0.0;
-
     if (base > 0.98)
     return base;
 
@@ -112,7 +117,9 @@ float sampleVolumetricCloudDensity(
     return clamp(base * erosion, 0.0, 1.0);
 }
 
-vec3 volumetricCloudGradientNormal(
+// Normal \\
+
+vec3 sampleCloudGradientNormal(
     vec3 p,
     vec3 boxCenter,
     vec2 rot,
@@ -127,62 +134,60 @@ vec3 volumetricCloudGradientNormal(
     float boxHeight = max(halfExtent.y * 2.0, 0.0001);
     float baseY = boxCenter.y - halfExtent.y;
 
-    float heightTHere = clamp((p.y - baseY) / boxHeight, 0.0, 1.0);
-    float heightTUp    = clamp(((p.y + epsilon) - baseY) / boxHeight, 0.0, 1.0);
-    float heightTDown  = clamp(((p.y - epsilon) - baseY) / boxHeight, 0.0, 1.0);
+    float heightHere = clamp((p.y - baseY) / boxHeight, 0.0, 1.0);
+    float heightUp    = clamp(((p.y + epsilon) - baseY) / boxHeight, 0.0, 1.0);
+    float heightDown  = clamp(((p.y - epsilon) - baseY) / boxHeight, 0.0, 1.0);
 
-    float dx = sampleVolumetricCloudDensity(p + vec3(epsilon, 0.0, 0.0), boxCenter, rot, halfExtent, heightTHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds)
-    - sampleVolumetricCloudDensity(p - vec3(epsilon, 0.0, 0.0), boxCenter, rot, halfExtent, heightTHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds);
+    float dx = sampleCloudDensity(p + vec3(epsilon, 0.0, 0.0), boxCenter, rot, halfExtent, heightHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds)
+    - sampleCloudDensity(p - vec3(epsilon, 0.0, 0.0), boxCenter, rot, halfExtent, heightHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds);
 
-    float dy = sampleVolumetricCloudDensity(p + vec3(0.0, epsilon, 0.0), boxCenter, rot, halfExtent, heightTUp, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds)
-    - sampleVolumetricCloudDensity(p - vec3(0.0, epsilon, 0.0), boxCenter, rot, halfExtent, heightTDown, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds);
+    float dy = sampleCloudDensity(p + vec3(0.0, epsilon, 0.0), boxCenter, rot, halfExtent, heightUp, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds)
+    - sampleCloudDensity(p - vec3(0.0, epsilon, 0.0), boxCenter, rot, halfExtent, heightDown, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds);
 
-    float dz = sampleVolumetricCloudDensity(p + vec3(0.0, 0.0, epsilon), boxCenter, rot, halfExtent, heightTHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds)
-    - sampleVolumetricCloudDensity(p - vec3(0.0, 0.0, epsilon), boxCenter, rot, halfExtent, heightTHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds);
+    float dz = sampleCloudDensity(p + vec3(0.0, 0.0, epsilon), boxCenter, rot, halfExtent, heightHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds)
+    - sampleCloudDensity(p - vec3(0.0, 0.0, epsilon), boxCenter, rot, halfExtent, heightHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds);
 
     vec3 gradient = vec3(dx, dy, dz);
-    float gradLen = length(gradient);
+    float gradientLength = length(gradient);
 
-    if (gradLen < 0.0001)
+    if (gradientLength < 0.0001)
     return vec3(0.0, 1.0, 0.0);
 
-    return -gradient / gradLen;
+    return -gradient / gradientLength;
 }
 
-float softBand(float t, float bands) {
+// Shading \\
+
+float toonBand(float t, float bands) {
     float scaled = clamp(t, 0.0, 1.0) * bands;
     float index = floor(scaled);
     float frac = scaled - index;
-    float edge = smoothstep(0.5 - CLOUD_BAND_SOFTNESS * 0.5, 0.5 + CLOUD_BAND_SOFTNESS * 0.5, frac);
+    float edge = smoothstep(0.35, 0.65, frac);
     return (index + edge) / max(bands - 1.0, 1.0);
 }
 
-vec3 shadeCloudFluffy(
+vec3 shadeCloudSample(
     vec3 baseColor,
     vec3 topColor,
     vec3 shadowColor,
-    vec3 skyAmbient,
+    vec3 ambientColor,
     float heightT,
     float lightLift,
     float density,
-    float powder,
     int toonBands,
     float shadeStrength,
     float ambientOcclusionStrength,
     float brightnessMultiplier,
     out float outAO) {
     float litAmount = clamp(heightT * 0.55 + lightLift * 0.45, 0.0, 1.0);
-    float banded = softBand(litAmount, max(float(toonBands), 2.0));
+    float banded = toonBand(litAmount, max(float(toonBands), 2.0));
 
     vec3 lit = mix(baseColor, topColor, banded);
     vec3 shaded = mix(lit, shadowColor, (1.0 - banded) * shadeStrength);
-    shaded = mix(shaded, skyAmbient, 0.2 + 0.18 * (1.0 - banded));
 
     float ao = mix(1.0 - ambientOcclusionStrength, 1.0, banded);
     shaded *= ao;
-
-    shaded += skyAmbient * powder * 0.45;
-    shaded = mix(mix(shadowColor, skyAmbient, 0.4), shaded, clamp(density * 2.2, 0.0, 1.0));
+    shaded = mix(mix(shadowColor, ambientColor, 0.4), shaded, clamp(density * 2.2, 0.0, 1.0));
 
     outAO = ao;
     return shaded * brightnessMultiplier;
