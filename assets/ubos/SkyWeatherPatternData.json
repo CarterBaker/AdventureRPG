@@ -3,11 +3,12 @@
     "uniforms": [
         { "name": "u_patternCount",                  "type": "INT"     },
         { "name": "u_patternBearing",                "type": "FLOAT",   "count": 64 },
+        { "name": "u_patternElevation",              "type": "FLOAT",   "count": 64 },
         { "name": "u_patternAngularWidth",           "type": "FLOAT",   "count": 64 },
+        { "name": "u_patternAngularHeight",          "type": "FLOAT",   "count": 64 },
         { "name": "u_patternFadeAlpha",              "type": "FLOAT",   "count": 64 },
         { "name": "u_patternIntensity",              "type": "FLOAT",   "count": 64 },
         { "name": "u_patternCoverage",                "type": "FLOAT",   "count": 64 },
-        { "name": "u_patternAltitude",                "type": "FLOAT",   "count": 64 },
         { "name": "u_patternColor",                   "type": "VECTOR3", "count": 64 },
         { "name": "u_patternTopColor",                "type": "VECTOR3", "count": 64 },
         { "name": "u_patternShadowColor",             "type": "VECTOR3", "count": 64 },
@@ -20,6 +21,7 @@
         { "name": "u_patternDensityNoiseScale",       "type": "FLOAT",   "count": 64 },
         { "name": "u_patternNoiseWarpStrength",       "type": "FLOAT",   "count": 64 },
         { "name": "u_patternCoverageBias",            "type": "FLOAT",   "count": 64 },
-        { "name": "u_patternSilhouetteSoftness",      "type": "FLOAT",   "count": 64 }
+        { "name": "u_patternSilhouetteSoftness",      "type": "FLOAT",   "count": 64 },
+        { "name": "u_skyElevationLimit",              "type": "FLOAT" }
     ]
 }

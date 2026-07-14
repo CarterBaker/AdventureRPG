@@ -2,6 +2,8 @@ package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import java.util.Arrays;
 
+import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
@@ -10,6 +12,8 @@ import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import application.kernel.windowpipeline.window.WindowInstance;
+import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
@@ -21,32 +25,52 @@ class SkyWeatherPatternBranch extends BranchPackage {
     /*
      * Flattens WeatherPatternManager's active patterns into the
      * SkyWeatherPatternData UBO every frame, one entry per pattern at its
-     * own stable slot. Every field is crossfaded between a pattern's
-     * previous and current WeatherHandle over its transitionT, so a
-     * weather reassignment reads as a gradual shift rather than a pop.
+     * own stable slot, crossfaded between a pattern's previous and current
+     * WeatherHandle over its transitionT.
+     *
+     * Bearing AND elevation are both real angles derived from a pattern's
+     * true world position, altitude, and vertical thickness relative to
+     * the camera — not azimuth plus a generic view-angle falloff — so a
+     * storm appears where it physically sits instead of smearing across
+     * the whole sky. u_skyElevationLimit is the highest elevation any
+     * active, actually-cloudy pattern can reach this frame (with a margin
+     * for its own falloff); Clouds.glsl skips its entire per-pattern loop
+     * and raymarch above that line. Since real weather stays low relative
+     * to render distance, this is what keeps looking straight up cheap
+     * instead of paying full per-pixel cost across the whole screen.
      */
 
     private static final int MAX_PATTERNS = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
     // Independent of WeatherPatternManager's own placement cell size — that
     // grid spacing controls pattern density, not how large a pattern should
-    // read in the sky dome. Kept at the old cell-size-derived value for now;
-    // a real fix ties this to the pattern's actual physical footprint
-    // (distance, altitude, thickness) instead of a flat constant.
+    // read in the sky dome.
     private static final float FOOTPRINT_RADIUS_CHUNKS = EngineSetting.WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS * 0.5f;
+
+    // Fallback vertical thickness for a pattern with no primary cloud —
+    // mirrors the other CLOUD_DEFAULT_* fallbacks below in spirit.
+    private static final float DEFAULT_VERTICAL_THICKNESS = 12.0f;
+
+    // Extra headroom above the highest real pattern top so its own falloff
+    // (already zero well before its true edge) never pops as dir.y crosses
+    // the limit.
+    private static final float ELEVATION_LIMIT_MARGIN_RADIANS = (float) Math.toRadians(8.0);
 
     private WeatherPatternManager weatherPatternManager;
     private WeatherManager weatherManager;
     private WorldManager worldManager;
     private UBOManager uboManager;
+    private PlayerManager playerManager;
+    private WindowManager windowManager;
 
     private UBOHandle skyWeatherPatternData;
 
     private Float[] bearing;
+    private Float[] elevation;
     private Float[] angularWidth;
+    private Float[] angularHeight;
     private Float[] fadeAlpha;
     private Float[] intensity;
     private Float[] coverage;
-    private Float[] altitude;
     private Vector3[] color;
     private Vector3[] topColor;
     private Vector3[] shadowColor;
@@ -61,14 +85,17 @@ class SkyWeatherPatternBranch extends BranchPackage {
     private Float[] coverageBias;
     private Float[] silhouetteSoftness;
 
+    private double frameHighestElevationTop;
+
     @Override
     protected void create() {
         this.bearing = newFloatArray();
+        this.elevation = newFloatArray();
         this.angularWidth = newFloatArray();
+        this.angularHeight = newFloatArray();
         this.fadeAlpha = newFloatArray();
         this.intensity = newFloatArray();
         this.coverage = newFloatArray();
-        this.altitude = newFloatArray();
         this.color = newVector3Array();
         this.topColor = newVector3Array();
         this.shadowColor = newVector3Array();
@@ -90,6 +117,8 @@ class SkyWeatherPatternBranch extends BranchPackage {
         this.weatherManager = get(WeatherManager.class);
         this.worldManager = get(WorldManager.class);
         this.uboManager = get(UBOManager.class);
+        this.playerManager = get(PlayerManager.class);
+        this.windowManager = get(WindowManager.class);
     }
 
     @Override
@@ -112,21 +141,28 @@ class SkyWeatherPatternBranch extends BranchPackage {
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
+        float cameraY = resolveCameraY();
+
         Arrays.fill(fadeAlpha, 0f);
 
         Long2ObjectOpenHashMap<WeatherPatternStruct> activePatterns = weatherPatternManager.getActivePatterns();
 
+        this.frameHighestElevationTop = -Math.PI / 2.0;
+
         for (WeatherPatternStruct pattern : activePatterns.values())
             writeEntry(pattern.getSlot(), pattern, referenceChunkX, referenceChunkZ, worldWidthChunks,
-                    worldHeightChunks);
+                    worldHeightChunks, cameraY);
+
+        double elevationLimit = Math.min(frameHighestElevationTop + ELEVATION_LIMIT_MARGIN_RADIANS, Math.PI / 2.0);
 
         skyWeatherPatternData.updateUniform("u_patternCount", MAX_PATTERNS);
         skyWeatherPatternData.updateUniform("u_patternBearing", bearing);
+        skyWeatherPatternData.updateUniform("u_patternElevation", elevation);
         skyWeatherPatternData.updateUniform("u_patternAngularWidth", angularWidth);
+        skyWeatherPatternData.updateUniform("u_patternAngularHeight", angularHeight);
         skyWeatherPatternData.updateUniform("u_patternFadeAlpha", fadeAlpha);
         skyWeatherPatternData.updateUniform("u_patternIntensity", intensity);
         skyWeatherPatternData.updateUniform("u_patternCoverage", coverage);
-        skyWeatherPatternData.updateUniform("u_patternAltitude", altitude);
         skyWeatherPatternData.updateUniform("u_patternColor", color);
         skyWeatherPatternData.updateUniform("u_patternTopColor", topColor);
         skyWeatherPatternData.updateUniform("u_patternShadowColor", shadowColor);
@@ -140,6 +176,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
         skyWeatherPatternData.updateUniform("u_patternNoiseWarpStrength", noiseWarpStrength);
         skyWeatherPatternData.updateUniform("u_patternCoverageBias", coverageBias);
         skyWeatherPatternData.updateUniform("u_patternSilhouetteSoftness", silhouetteSoftness);
+        skyWeatherPatternData.updateUniform("u_skyElevationLimit", (float) Math.sin(elevationLimit));
 
         uboManager.push(skyWeatherPatternData);
     }
@@ -150,11 +187,13 @@ class SkyWeatherPatternBranch extends BranchPackage {
             int referenceChunkX,
             int referenceChunkZ,
             int worldWidthChunks,
-            int worldHeightChunks) {
+            int worldHeightChunks,
+            float cameraY) {
 
         double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), referenceChunkX, worldWidthChunks);
         double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), referenceChunkZ, worldHeightChunks);
         double distanceChunks = Math.sqrt(dx * dx + dz * dz);
+        double distanceBlocks = Math.max(distanceChunks * EngineSetting.CHUNK_SIZE, 1.0);
 
         WeatherHandle targetWeather = pattern.getWeatherHandle();
         WeatherHandle sourceWeather = pattern.getPreviousWeatherHandle();
@@ -168,11 +207,31 @@ class SkyWeatherPatternBranch extends BranchPackage {
 
         bearing[index] = (float) Math.atan2(dx, -dz);
         angularWidth[index] = (float) Math.atan2(footprintRadius, Math.max(distanceChunks, 0.001));
+
+        float baseAltitude = lerp(resolveAltitude(sourceCloud), resolveAltitude(targetCloud), blend);
+        float verticalThickness = lerp(
+                resolveVerticalThickness(sourceCloud), resolveVerticalThickness(targetCloud), blend);
+
+        double topRelativeY = (baseAltitude + verticalThickness) - cameraY;
+        double bottomRelativeY = baseAltitude - cameraY;
+        double elevTop = Math.atan2(topRelativeY, distanceBlocks);
+        double elevBottom = Math.atan2(bottomRelativeY, distanceBlocks);
+
+        elevation[index] = (float) ((elevTop + elevBottom) * 0.5);
+        angularHeight[index] = (float) Math.max((elevTop - elevBottom) * 0.5, 0.0);
+
         fadeAlpha[index] = pattern.getFadeAlpha();
         intensity[index] = pattern.getIntensity();
 
-        coverage[index] = lerp(sourceWeather.getCloudCoverage(), targetWeather.getCloudCoverage(), blend);
-        altitude[index] = lerp(resolveAltitude(sourceCloud), resolveAltitude(targetCloud), blend);
+        float coverageBlend = lerp(sourceWeather.getCloudCoverage(), targetWeather.getCloudCoverage(), blend);
+        coverage[index] = coverageBlend;
+
+        // Only patterns that are both active and actually cloudy get to
+        // widen the elevation bound below — a fully clear sky (or a
+        // pattern that hasn't faded in yet) should never force the sky
+        // shader to pay for a real, expensive band it will never draw.
+        if (pattern.getFadeAlpha() > 0.0f && coverageBlend > 0.001f)
+            frameHighestElevationTop = Math.max(frameHighestElevationTop, elevTop);
 
         color[index].set(
                 lerp(resolveColorR(sourceCloud), resolveColorR(targetCloud), blend),
@@ -234,8 +293,31 @@ class SkyWeatherPatternBranch extends BranchPackage {
         return c * c * (3f - 2f * c);
     }
 
+    // Camera \\
+
+    private float resolveCameraY() {
+
+        WindowInstance mainWindow = windowManager.getMainWindow();
+
+        if (mainWindow == null)
+            return 0f;
+
+        int windowID = mainWindow.getWindowID();
+
+        if (!playerManager.hasPlayerForWindow(windowID))
+            return 0f;
+
+        EntityInstance player = playerManager.getPlayerForWindow(windowID);
+
+        return player.getWorldPositionStruct().getPosition().y;
+    }
+
     private float resolveAltitude(CloudChanceStruct cloud) {
         return cloud != null ? cloud.getEffectiveAltitude() : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;
+    }
+
+    private float resolveVerticalThickness(CloudChanceStruct cloud) {
+        return cloud != null ? cloud.getCloudHandle().getVerticalThickness() : DEFAULT_VERTICAL_THICKNESS;
     }
 
     private float resolveColorR(CloudChanceStruct cloud) {

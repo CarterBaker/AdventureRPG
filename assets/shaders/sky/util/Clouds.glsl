@@ -10,20 +10,19 @@
 #include "sky/util/SkyCloudUtility.glsl"
 
 /*
-* Sky-dome distant weather preview. Raymarches a thin unbounded layer,
- * shaded by a per-fragment blend of every active pattern in
- * SkyWeatherPatternData. Each pattern occupies an azimuthal band around its
- * own bearing, so a storm reads as a cloud bank arching up from one
- * direction of the horizon rather than a circle painted around a point.
+* Sky-dome distant weather preview. Every active pattern is placed in the
+ * dome at its own true bearing AND elevation angle, both derived from its
+ * real world position, altitude, and vertical thickness relative to the
+ * camera (see SkyWeatherPatternBranch) — a storm reads as genuinely
+ * sitting where it physically is, at its own real height, rather than
+ * smearing across the whole upper sky.
  *
- * resolvePatternWeather() blends every pattern's shape/color as one
- * continuous weighted average, then scales the resulting coverage/density/
- * intensity by "presence" — the saturated sum of raw geometric weights,
- * which itself falls smoothly to zero as a bearing leaves every pattern's
- * band. There is no separate nearest-pattern fallback: that used to
- * produce a hard, differently-computed result the instant a bearing
- * crossed from "just inside" to "just outside" every band, which is what
- * caused the sky to visibly pop between cloud states.
+ * u_skyElevationLimit is the highest elevation any active, cloudy
+ * pattern's own footprint can reach this frame, with a margin for its own
+ * falloff. Every direction above that line skips the pattern loop and
+ * raymarch entirely — since real weather stays low relative to render
+ * distance, this is what keeps looking straight up cheap instead of
+ * paying full per-pattern, per-step cost across the entire screen.
  */
 
 const float SKY_HORIZON_FADE_START = -0.02;
@@ -40,12 +39,13 @@ const float SKY_TOP_TINT_MIX            = 0.32;
 const float SKY_SHADOW_TINT_MIX         = 0.28;
 const float SKY_INTENSITY_DENSITY_FLOOR = 0.2;
 
-const float SKY_PATTERN_WEIGHT_INNER_SCALE = 0.6;
-const float SKY_PATTERN_WEIGHT_OUTER_SCALE = 1.6;
-const float SKY_PATTERN_MIN_ANGULAR_WIDTH  = 0.05;
-const float SKY_PATTERN_AZIMUTH_EPSILON    = 0.0005;
-const float SKY_PI                         = 3.14159265359;
-const float SKY_TWO_PI                     = 6.28318530718;
+const float SKY_PATTERN_WEIGHT_INNER_SCALE  = 0.6;
+const float SKY_PATTERN_WEIGHT_OUTER_SCALE  = 1.6;
+const float SKY_PATTERN_MIN_ANGULAR_WIDTH   = 0.05;
+const float SKY_PATTERN_MIN_ANGULAR_HEIGHT  = 0.03;
+const float SKY_PATTERN_AZIMUTH_EPSILON     = 0.0005;
+const float SKY_PI                          = 3.14159265359;
+const float SKY_TWO_PI                      = 6.28318530718;
 
 struct WeatherPatternSample {
     float coverage;
@@ -63,6 +63,8 @@ struct WeatherPatternSample {
     float coverageBias;
     float silhouetteSoftness;
     float intensity;
+    float elevation;
+    float angularHeight;
 };
 
 // Wraps an angle difference into [-PI, PI].
@@ -70,7 +72,7 @@ float wrapAngleDelta(float delta) {
     return mod(delta + SKY_PI, SKY_TWO_PI) - SKY_PI;
 }
 
-WeatherPatternSample resolvePatternWeather(vec3 dir) {
+WeatherPatternSample resolvePatternWeather(vec3 dir, float rayElevation) {
     WeatherPatternSample result;
     result.coverage = 0.0;
     result.color = vec3(0.0);
@@ -87,11 +89,11 @@ WeatherPatternSample resolvePatternWeather(vec3 dir) {
     result.coverageBias = 0.0;
     result.silhouetteSoftness = 0.0;
     result.intensity = 0.0;
+    result.elevation = 0.0;
+    result.angularHeight = 0.0;
 
-    // Azimuth-only ray bearing — a pattern's band is a wall around its own
-    // compass direction spanning every elevation near the horizon, not a
-    // cap painted at a fixed point on the dome. Guarded for the near-zenith
-    // case where the horizontal component collapses toward zero.
+    // Azimuth-only ray bearing — guarded for the near-zenith case where the
+    // horizontal component collapses toward zero.
     float horizLen = length(dir.xz);
     float rayAzimuth = horizLen > SKY_PATTERN_AZIMUTH_EPSILON
     ? atan(dir.x, -dir.z)
@@ -100,16 +102,30 @@ WeatherPatternSample resolvePatternWeather(vec3 dir) {
     float totalWeight = 0.0;
 
     for (int i = 0; i < u_patternCount; i++) {
+        // Cheap elevation reject first — this alone skips the azimuth
+        // wrap/trig for most patterns on most pixels, since a ray's own
+        // elevation only ever lines up with a handful of active patterns.
+        float elevEdge = max(u_patternAngularHeight[i], SKY_PATTERN_MIN_ANGULAR_HEIGHT);
+        float elevDiff = abs(rayElevation - u_patternElevation[i]);
+
+        if (elevDiff > elevEdge * SKY_PATTERN_WEIGHT_OUTER_SCALE)
+        continue;
+
         float azimuthDiff = wrapAngleDelta(rayAzimuth - u_patternBearing[i]);
         float angularDist = abs(azimuthDiff);
 
-        float edge = max(u_patternAngularWidth[i], SKY_PATTERN_MIN_ANGULAR_WIDTH);
-        float geometricWeight = 1.0 - smoothstep(
-            edge * SKY_PATTERN_WEIGHT_INNER_SCALE,
-            edge * SKY_PATTERN_WEIGHT_OUTER_SCALE,
+        float azimuthEdge = max(u_patternAngularWidth[i], SKY_PATTERN_MIN_ANGULAR_WIDTH);
+        float azimuthWeight = 1.0 - smoothstep(
+            azimuthEdge * SKY_PATTERN_WEIGHT_INNER_SCALE,
+            azimuthEdge * SKY_PATTERN_WEIGHT_OUTER_SCALE,
             angularDist);
 
-        float weight = geometricWeight * clamp(u_patternFadeAlpha[i], 0.0, 1.0);
+        float elevationWeight = 1.0 - smoothstep(
+            elevEdge * SKY_PATTERN_WEIGHT_INNER_SCALE,
+            elevEdge * SKY_PATTERN_WEIGHT_OUTER_SCALE,
+            elevDiff);
+
+        float weight = azimuthWeight * elevationWeight * clamp(u_patternFadeAlpha[i], 0.0, 1.0);
 
         if (weight <= 0.0001)
         continue;
@@ -131,18 +147,16 @@ WeatherPatternSample resolvePatternWeather(vec3 dir) {
         result.coverageBias        += u_patternCoverageBias[i] * weight;
         result.silhouetteSoftness  += u_patternSilhouetteSoftness[i] * weight;
         result.intensity           += u_patternIntensity[i] * weight;
+        result.elevation           += u_patternElevation[i] * weight;
+        result.angularHeight       += u_patternAngularHeight[i] * weight;
     }
 
-    // How strongly ANY weather actually occupies this bearing, saturating
-    // at 1 so overlapping patterns never over-brighten. Never divided out
-    // below — this is what makes coverage/density/intensity fade smoothly
-    // to zero at the fringe of every pattern's band instead of snapping to
-    // a different formula once nothing reaches this bearing at all.
+    // How strongly ANY weather actually occupies this direction, saturating
+    // at 1 so overlapping patterns never over-brighten.
     float presence = clamp(totalWeight, 0.0, 1.0);
 
     // Safe divide — when totalWeight is exactly 0 every accumulated field
-    // is also exactly 0, so this keeps the result a clean zero rather than
-    // risking a 0 * (1/0) NaN.
+    // is also exactly 0.
     float invWeight = totalWeight > 0.0 ? (1.0 / totalWeight) : 0.0;
 
     result.coverage            *= invWeight;
@@ -160,11 +174,13 @@ WeatherPatternSample resolvePatternWeather(vec3 dir) {
     result.coverageBias         *= invWeight;
     result.silhouetteSoftness   *= invWeight;
     result.intensity            *= invWeight;
+    result.elevation            *= invWeight;
+    result.angularHeight        *= invWeight;
 
-    // Shape/color fields (topColor, shadowColor, shadeStrength, etc.) stay
-    // the pure weighted blend — they describe WHAT nearby weather looks
-    // like. coverage/density/intensity describe HOW MUCH of it is actually
-    // present in this direction, so those get the presence scale.
+    // Shape/color/position fields stay the pure weighted blend — they
+    // describe WHAT nearby weather looks like and WHERE it actually sits.
+    // coverage/density/intensity describe HOW MUCH of it is present in
+    // this direction, so those get the presence scale.
     result.coverage  *= presence;
     result.density    *= presence;
     result.intensity  *= presence;
@@ -176,12 +192,18 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
     if (dir.y < SKY_HORIZON_FADE_START)
     return vec4(0.0);
 
-    float horizonFade = smoothstep(SKY_HORIZON_FADE_START, SKY_HORIZON_FADE_END, dir.y);
-
-    if (horizonFade <= 0.001)
+    // Nothing any active, cloudy pattern's own footprint could possibly
+    // reach — skip the whole pattern loop and raymarch.
+    if (dir.y > u_skyElevationLimit)
     return vec4(0.0);
 
-    WeatherPatternSample weather = resolvePatternWeather(dir);
+    float horizonFade = smoothstep(SKY_HORIZON_FADE_START, SKY_HORIZON_FADE_END, dir.y);
+    float rayElevation = asin(clamp(dir.y, -1.0, 1.0));
+
+    WeatherPatternSample weather = resolvePatternWeather(dir, rayElevation);
+
+    if (weather.coverage <= 0.001 && weather.density <= 0.001)
+    return vec4(0.0);
 
     float sunWeight  = clamp(u_sunIntensity / 0.3, 0.0, 1.0);
     vec3  lightDir   = normalize(mix(u_moonDirection, u_sunDirection, sunWeight));
@@ -199,7 +221,14 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
     vec3 shadowTint = mix(weather.shadowColor, u_skyHorizonColor * 0.4, SKY_SHADOW_TINT_MIX);
 
     float effectiveCoverageBias = clamp(mix(weather.coverageBias, weather.coverage, 0.5), 0.0, 1.0);
-    float heightT = clamp(dir.y / mix(0.45, 1.0, clamp(weather.coverage, 0.0, 1.0)), 0.0, 1.0);
+
+    // heightT is this ray-sample's own position within THIS blended
+    // pattern's real vertical span — 0 at its lowest edge, 1 at its
+    // highest — never the raw view angle. A storm's own base/erosion
+    // shape now tracks where it actually sits in the sky.
+    float angularSpan = max(weather.angularHeight, SKY_PATTERN_MIN_ANGULAR_HEIGHT);
+    float heightT = clamp(0.5 + (rayElevation - weather.elevation) / (2.0 * angularSpan), 0.0, 1.0);
+
     float intensityFactor = mix(SKY_INTENSITY_DENSITY_FLOOR, 1.0, clamp(weather.intensity, 0.0, 1.0));
 
     int toonBands = max(int(weather.toonBands + 0.5), 1);
