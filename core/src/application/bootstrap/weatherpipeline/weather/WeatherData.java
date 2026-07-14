@@ -7,16 +7,17 @@ public class WeatherData extends DataPackage {
 
     /*
      * Immutable weather definition loaded from JSON — the condition-level
-     * atmosphere values for one named weather, plus its chance-weighted
-     * cloud pool. visualScale controls how large this weather reads in the
-     * sky independently of cloudCoverage, which controls how dense/opaque
-     * it reads.
+     * atmosphere values for one named weather, its chance-weighted cloud
+     * pool, and its own list of suggested next weathers. visualScale
+     * controls how large this weather reads in the sky independently of
+     * cloudCoverage, which controls how dense/opaque it reads.
      */
 
     private final String weatherName;
     private final short weatherID;
 
     private final ObjectArrayList<CloudChanceStruct> cloudEntries;
+    private final ObjectArrayList<NextWeatherChanceStruct> nextWeatherChances;
 
     private final float cloudCoverage;
     private final float precipitationIntensity;
@@ -33,6 +34,7 @@ public class WeatherData extends DataPackage {
             String weatherName,
             short weatherID,
             ObjectArrayList<CloudChanceStruct> cloudEntries,
+            ObjectArrayList<NextWeatherChanceStruct> nextWeatherChances,
             float cloudCoverage,
             float precipitationIntensity,
             float windSpeedScale,
@@ -46,6 +48,7 @@ public class WeatherData extends DataPackage {
         this.weatherName = weatherName;
         this.weatherID = weatherID;
         this.cloudEntries = cloudEntries;
+        this.nextWeatherChances = nextWeatherChances;
         this.cloudCoverage = cloudCoverage;
         this.precipitationIntensity = precipitationIntensity;
         this.windSpeedScale = windSpeedScale;
@@ -67,6 +70,10 @@ public class WeatherData extends DataPackage {
 
     public ObjectArrayList<CloudChanceStruct> getCloudEntries() {
         return cloudEntries;
+    }
+
+    public ObjectArrayList<NextWeatherChanceStruct> getNextWeatherChances() {
+        return nextWeatherChances;
     }
 
     public float getCloudCoverage() {

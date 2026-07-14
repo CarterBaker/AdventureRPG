@@ -3,6 +3,12 @@
         { "name": "standard/Stratus", "chance": 60 },
         { "name": "standard/Cumulus", "chance": 40, "altitudeOverride": 130.0 }
     ],
+    "nextWeatherChances": [
+        { "name": "standard/CloudyWeather", "chance": 35 },
+        { "name": "standard/SunnyWeather", "chance": 25 },
+        { "name": "standard/StormyWeather", "chance": 20 },
+        { "name": "standard/ClearWeather", "chance": 20 }
+    ],
     "cloudCoverage": 0.6,
     "precipitationIntensity": 0.0,
     "windSpeedScale": 1.1,

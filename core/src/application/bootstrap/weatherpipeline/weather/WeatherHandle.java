@@ -10,7 +10,9 @@ public class WeatherHandle extends HandlePackage {
      * Persistent reference to a loaded weather definition, owned by
      * WeatherManager. A weather may define no clouds at all (clear skies),
      * in which case hasClouds() is false and getPrimaryCloud()/pickCloud()
-     * return null rather than throwing.
+     * return null rather than throwing. nextWeatherChances are consulted
+     * only as a bias on top of the biome/season pool's own noise-driven
+     * pick — see WeatherManager.resolveWeatherBandTowardHorizonBiased().
      */
 
     private WeatherData weatherData;
@@ -99,5 +101,22 @@ public class WeatherHandle extends HandlePackage {
 
     public float getTemperatureModifier() {
         return weatherData.getTemperatureModifier();
+    }
+
+    // Next Weather Suggestions \\
+
+    public boolean hasNextWeatherSuggestions() {
+        return !weatherData.getNextWeatherChances().isEmpty();
+    }
+
+    public float getNextWeatherChanceFor(WeatherHandle candidate) {
+
+        ObjectArrayList<NextWeatherChanceStruct> suggestions = weatherData.getNextWeatherChances();
+
+        for (int i = 0; i < suggestions.size(); i++)
+            if (suggestions.get(i).getWeatherName().equals(candidate.getWeatherName()))
+                return suggestions.get(i).getChance();
+
+        return 0f;
     }
 }

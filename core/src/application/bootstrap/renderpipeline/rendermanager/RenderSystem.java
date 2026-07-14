@@ -98,16 +98,20 @@ class RenderSystem extends SystemPackage {
             RenderGLSLUtility.clearBuffer(0f, 0f, 0f, 0f);
             RenderGLSLUtility.clearDepthBuffer();
 
-            // Cloud objects are queued as instanced, depth-tested render
-            // calls (see CloudRenderSystem.submit() / RenderManager
-            // .pushInstancedCompositeCall()) alongside skinned characters —
-            // no separate weather draw pass. They write a complete
-            // G-buffer output (albedo, normal, material) and real depth
-            // exactly like any other opaque-ish surface — see
-            // CloudVolumeShader.fsh's own doc comment.
             drawDepthSortedBatches(queue, target, window);
             drawSkinnedBatches(queue, target, window);
+
+            // Cloud boxes are a closed convex mesh raymarched from the
+            // camera in the fragment shader (see CloudVolumeShader.fsh) —
+            // back-face culling here is a pure performance win (half the
+            // fragment invocations per box) and never a correctness
+            // requirement, since the raymarch resolves the same result
+            // regardless of which face triggered it. Accepted trade-off:
+            // a box the camera is literally inside has no front face left
+            // to cull to, so it stops rendering until the camera exits it.
+            RenderGLSLUtility.enableCulling();
             drawInstancedCompositeBatches(queue, target, window);
+            RenderGLSLUtility.disableCulling();
 
             compositeRenderSystem.draw(queue, target, window);
             target.unbind();

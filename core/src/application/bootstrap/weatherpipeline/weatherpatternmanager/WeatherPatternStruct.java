@@ -11,7 +11,9 @@ public class WeatherPatternStruct extends StructPackage {
      * fixed for its lifetime. Its resolved WeatherHandle may be reassigned
      * by WeatherPatternManager as conditions change; previousWeatherHandle
      * and transitionT let consumers blend smoothly across that change
-     * instead of popping instantly.
+     * instead of popping instantly, and intensity eases toward
+     * targetIntensity every frame rather than snapping whenever it's
+     * resampled.
      */
 
     public static final float WEATHER_TRANSITION_DURATION_SECONDS = 10.0f;
@@ -37,6 +39,7 @@ public class WeatherPatternStruct extends StructPackage {
     private boolean retiring;
 
     private float intensity;
+    private float targetIntensity;
 
     private double nextReevaluationTime;
 
@@ -62,6 +65,7 @@ public class WeatherPatternStruct extends StructPackage {
         this.fadeAlpha = 0f;
         this.retiring = false;
         this.intensity = intensity;
+        this.targetIntensity = intensity;
     }
 
     public void advanceDrift(double deltaChunkX, double deltaChunkZ) {
@@ -97,8 +101,12 @@ public class WeatherPatternStruct extends StructPackage {
         this.fadeAlpha = fadeAlpha;
     }
 
-    public void setIntensity(float intensity) {
-        this.intensity = intensity;
+    public void setTargetIntensity(float targetIntensity) {
+        this.targetIntensity = targetIntensity;
+    }
+
+    public void advanceIntensitySmoothing(float alpha) {
+        this.intensity += (targetIntensity - this.intensity) * alpha;
     }
 
     public double getNextReevaluationTime() {

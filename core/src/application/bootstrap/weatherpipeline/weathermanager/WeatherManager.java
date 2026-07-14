@@ -27,7 +27,11 @@ public class WeatherManager extends ManagerPackage {
      * overhead volumetric cloud layer both resolve their own weather
      * identity through resolveWeatherBandTowardHorizon(), so the two visual
      * layers can never disagree about what's happening at a given bearing.
+     * The biased variant folds a weather's own suggested successors in as a
+     * soft nudge on top of that same noise-driven pick — never a guarantee.
      */
+
+    private static final float NEXT_WEATHER_SUGGESTION_INFLUENCE = 1.5f;
 
     private ClockManager clockManager;
     private BiomeManager biomeManager;
@@ -186,6 +190,27 @@ public class WeatherManager extends ManagerPackage {
         return biomeHandle.getWeatherEntriesForSeason(fallbackSeason);
     }
 
+    // Next Weather Bias \\
+
+    private ObjectArrayList<WeatherPoolEntryStruct> buildBiasedPool(WeatherHandle currentWeather) {
+
+        if (!currentWeather.hasNextWeatherSuggestions())
+            return activeWeatherPool;
+
+        ObjectArrayList<WeatherPoolEntryStruct> biased = new ObjectArrayList<>(activeWeatherPool.size());
+
+        for (int i = 0; i < activeWeatherPool.size(); i++) {
+
+            WeatherPoolEntryStruct entry = activeWeatherPool.get(i);
+            float suggestionChance = currentWeather.getNextWeatherChanceFor(entry.getWeatherHandle());
+            float biasedChance = entry.getChance() + suggestionChance * NEXT_WEATHER_SUGGESTION_INFLUENCE;
+
+            biased.add(new WeatherPoolEntryStruct(entry.getWeatherHandle(), biasedChance));
+        }
+
+        return biased;
+    }
+
     // Accessible \\
 
     public boolean hasWeather(String weatherName) {
@@ -302,6 +327,20 @@ public class WeatherManager extends ManagerPackage {
     }
 
     public void resolveWeatherBandTowardHorizon(WeatherBandStruct out, long homeChunkCoordinate) {
+        resolveWeatherBandTowardHorizonInternal(out, homeChunkCoordinate, null);
+    }
+
+    public void resolveWeatherBandTowardHorizonBiased(
+            WeatherBandStruct out,
+            long homeChunkCoordinate,
+            WeatherHandle currentWeather) {
+        resolveWeatherBandTowardHorizonInternal(out, homeChunkCoordinate, currentWeather);
+    }
+
+    private void resolveWeatherBandTowardHorizonInternal(
+            WeatherBandStruct out,
+            long homeChunkCoordinate,
+            WeatherHandle currentWeather) {
 
         if (activeWeatherPool == null)
             throwException("Cannot resolve a weather band before any season has been resolved. "
@@ -314,7 +353,11 @@ public class WeatherManager extends ManagerPackage {
         int referenceChunkX = Coordinate2Long.unpackX(referenceCoordinate);
         int referenceChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
 
+        ObjectArrayList<WeatherPoolEntryStruct> pool = currentWeather == null
+                ? activeWeatherPool
+                : buildBiasedPool(currentWeather);
+
         regionSampleBranch.resolveBandTowardHorizon(
-                out, homeChunkX, homeChunkZ, referenceChunkX, referenceChunkZ, activeWeatherPool);
+                out, homeChunkX, homeChunkZ, referenceChunkX, referenceChunkZ, pool);
     }
 }

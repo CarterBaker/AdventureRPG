@@ -63,8 +63,15 @@ class RegionSampleBranch extends BranchPackage {
 
     // Effective Range \\
 
+    /*
+     * Settings.maxRenderDistance is the full chunk span the world stream
+     * loads (GridBuildSystem/FrustumCullingSystem both halve it to get the
+     * actual load radius) — halved here for the same reason, so weather's
+     * own near/far blend boundary lines up with the true edge of loaded
+     * terrain instead of extending twice as far past it.
+     */
     float getEffectiveNearRangeChunks() {
-        return Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
+        return Math.min(settings.maxRenderDistance / 2f, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
     }
 
     // Sampling \\

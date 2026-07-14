@@ -79,21 +79,22 @@ class CloudRenderSystem extends SystemPackage {
 
     /*
      * Pushed once at bootstrap, never per frame. Real cloud OBJECTS are
-     * capped to whichever is smaller: the actual configured render distance
-     * (Settings.maxRenderDistance), or the weather simulation's own
-     * design-intent near range (EngineSetting.WEATHER_NEAR_RANGE_CHUNKS) —
-     * this is what guarantees a real cloud object is never rendered
-     * floating over ground that was never drawn. OverheadManager derives
-     * its own streaming radius from this identical expression, so a cloud
-     * dissolving into the sky-dome preview and a cloud streaming out of the
-     * registry always happen at the same boundary.
+     * capped to whichever is smaller: the actual visible chunk radius
+     * (Settings.maxRenderDistance / 2, matching GridBuildSystem's own grid
+     * radius), or the weather simulation's own design-intent near range
+     * (EngineSetting.WEATHER_NEAR_RANGE_CHUNKS) — this is what guarantees a
+     * real cloud object is never rendered floating over ground that was
+     * never drawn. WeatherPatternManager derives its own streaming radius
+     * from this identical expression, so a cloud dissolving into the
+     * sky-dome preview and a cloud streaming out of the registry always
+     * happen at the same boundary.
      */
     private void pushCloudSettings() {
 
         UBOHandle cloudSettingsData = uboManager.getUBOHandleFromUBOName(EngineSetting.CLOUD_SETTINGS_DATA_UBO);
 
         float cloudObjectRangeChunks = Math.min(
-                settings.maxRenderDistance,
+                settings.maxRenderDistance / 2f,
                 (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
 
         float horizonDistanceBlocks = cloudObjectRangeChunks * EngineSetting.CHUNK_SIZE

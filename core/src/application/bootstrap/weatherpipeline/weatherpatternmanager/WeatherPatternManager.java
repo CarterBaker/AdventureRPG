@@ -21,17 +21,19 @@ public class WeatherPatternManager extends ManagerPackage {
     /*
      * Simulates the world's persistent weather patterns — up to
      * WEATHER_PATTERN_MAX_ACTIVE_COUNT systems, each a jittered cell holding
-     * a handful of offset cloud lobes, streamed in/out around the player and
-     * drifted with the world's rotation. A pattern's resolved WeatherHandle
-     * can change over its lifetime; SkyWeatherPatternBranch crossfades that
-     * change over WeatherPatternStruct.WEATHER_TRANSITION_DURATION_SECONDS
-     * instead of popping. Physical cloud lobes stay fixed for a pattern's
-     * lifetime and only refresh when the pattern cycles out of range and a
-     * fresh one streams in.
+     * a handful of offset cloud lobes. Patterns spawn in an outer ring,
+     * drift with the world, and retire once they drift back out past the
+     * simulated radius. Weather reassignment crossfades via
+     * WeatherPatternStruct's transitionT; resolved intensity is smoothed
+     * every frame rather than snapped whenever it's periodically resampled.
+     * Re-evaluation biases its pick toward the current weather's own
+     * declared next-weather suggestions — a soft nudge, never a guarantee.
      */
 
     private static final float FADE_IN_RATE = 0.4f;
     private static final float FADE_OUT_RATE = 0.4f;
+    private static final float MIN_SPAWN_DISTANCE_RATIO = 0.55f;
+    private static final float INTENSITY_SMOOTHING_TIME_SECONDS = 3.0f;
 
     private WeatherManager weatherManager;
     private WorldManager worldManager;
@@ -63,7 +65,7 @@ public class WeatherPatternManager extends ManagerPackage {
     protected void create() {
 
         this.patternCellSizeChunks = EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS;
-        this.radiusChunks = Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
+        this.radiusChunks = Math.min(settings.maxRenderDistance / 2f, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
         this.maxPatternsStreamedPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
         this.maxActivePatternCount = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
         this.reevaluationMinSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MIN_SECONDS;
@@ -109,13 +111,23 @@ public class WeatherPatternManager extends ManagerPackage {
         advanceWorldDrift();
         advanceWeatherReevaluation();
         advanceIntensity();
+        advanceIntensitySmoothing();
         advanceFadesAndRetire(playerChunkX, playerChunkZ);
         streamInBudgeted(playerChunkX, playerChunkZ);
     }
 
+    /*
+     * Candidates are restricted to an outer ring — inside MIN_SPAWN_DISTANCE_RATIO
+     * of the radius, nothing is ever allowed to spawn fresh, so weather can
+     * never be conjured near the player. Sorted upwind-first (against world
+     * drift) so fresh patterns enter from the side weather drifts in from and
+     * sweep across rather than appearing arbitrarily; farthest-first is the
+     * tiebreak.
+     */
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
         float candidateRadiusChunks = radiusChunks + patternCellSizeChunks;
+        float minSpawnDistanceChunks = radiusChunks * MIN_SPAWN_DISTANCE_RATIO;
         int radiusCells = Math.max(1, Math.round(candidateRadiusChunks / (float) patternCellSizeChunks));
 
         ObjectArrayList<int[]> offsets = new ObjectArrayList<>();
@@ -127,14 +139,17 @@ public class WeatherPatternManager extends ManagerPackage {
                 float worldOffsetZ = oz * patternCellSizeChunks;
                 float distChunks = (float) Math.sqrt(worldOffsetX * worldOffsetX + worldOffsetZ * worldOffsetZ);
 
-                if (distChunks > candidateRadiusChunks)
+                if (distChunks > candidateRadiusChunks || distChunks < minSpawnDistanceChunks)
                     continue;
 
                 offsets.add(new int[] { ox, oz, Math.round(distChunks) });
             }
         }
 
-        offsets.sort((a, b) -> Integer.compare(a[2], b[2]));
+        offsets.sort((a, b) -> {
+            int upwind = Integer.compare(a[0], b[0]);
+            return upwind != 0 ? upwind : Integer.compare(b[2], a[2]);
+        });
 
         return offsets;
     }
@@ -340,7 +355,8 @@ public class WeatherPatternManager extends ManagerPackage {
                 continue;
 
             long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
-            weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate);
+            weatherManager.resolveWeatherBandTowardHorizonBiased(bandScratch, homeCoordinate,
+                    pattern.getWeatherHandle());
 
             WeatherHandle resolved = bandScratch.getPrimary();
 
@@ -368,8 +384,23 @@ public class WeatherPatternManager extends ManagerPackage {
             long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
             weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate);
 
-            pattern.setIntensity(resolvePatternIntensity(bandScratch, pattern.getWeatherHandle()));
+            pattern.setTargetIntensity(resolvePatternIntensity(bandScratch, pattern.getWeatherHandle()));
         }
+    }
+
+    /*
+     * Runs every frame regardless of the resample cadence above, easing the
+     * displayed intensity toward whatever target the last resample produced
+     * instead of snapping to it — this is what removes the visible pop in
+     * cloud density/coverage every time intensity is resampled.
+     */
+    private void advanceIntensitySmoothing() {
+
+        float deltaTime = internal.getDeltaTime();
+        float alpha = 1f - (float) Math.exp(-deltaTime / INTENSITY_SMOOTHING_TIME_SECONDS);
+
+        for (WeatherPatternStruct pattern : activePatterns.values())
+            pattern.advanceIntensitySmoothing(alpha);
     }
 
     private float resolvePatternIntensity(WeatherBandStruct band, WeatherHandle handle) {
@@ -381,6 +412,12 @@ public class WeatherPatternManager extends ManagerPackage {
         return lerp(reevaluationMinSeconds, reevaluationMaxSeconds, t);
     }
 
+    /*
+     * Distance is measured against each pattern's own drifted position, not
+     * its fixed home — the home never moves, so checking against it would
+     * let a pattern drift indefinitely far from the player while still
+     * counting as active, permanently starving the pool of free slots.
+     */
     private void advanceFadesAndRetire(int playerChunkX, int playerChunkZ) {
 
         float deltaTime = internal.getDeltaTime();
@@ -392,8 +429,8 @@ public class WeatherPatternManager extends ManagerPackage {
 
         for (WeatherPatternStruct pattern : activePatterns.values()) {
 
-            double dx = WorldWrapUtility.wrappedDelta(pattern.getHomeChunkX(), playerChunkX, worldWidthChunks);
-            double dz = WorldWrapUtility.wrappedDelta(pattern.getHomeChunkZ(), playerChunkZ, worldHeightChunks);
+            double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), playerChunkX, worldWidthChunks);
+            double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), playerChunkZ, worldHeightChunks);
             double distChunks = Math.sqrt(dx * dx + dz * dz);
 
             if (distChunks > radiusChunks && !pattern.isRetiring())

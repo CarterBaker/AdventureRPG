@@ -4,160 +4,46 @@
 #include "includes/NoiseUtility.glsl"
 
 /*
-* Procedural volumetric toon-cloud primitives for PHYSICAL cloud objects
- * only — clouds/CloudVolumeShader.fsh's per-instance raymarched box.
+* Procedural volumetric toon-cloud primitives for physical cloud objects
+ * (clouds/CloudVolumeShader.fsh's per-instance raymarched box). Deliberately
+ * independent from the sky dome's own copy (sky/util/SkyCloudUtility.glsl) —
+ * the two raymarch different geometry (a bounded per-instance AABB here vs.
+ * an unbounded view-ray layer there) and only share NoiseUtility.glsl's
+ * primitives and the CPU-side weather/cloud data feeding them.
  *
- * This used to be shared with the sky dome's own distant-weather preview
- * (sky/util/Clouds.glsl) via a single CloudShapeUtility.glsl, on the
- * theory that "the sky and the physical layer must always agree on what
- * a cloud looks like" required sharing the actual shading code. In
- * practice the two callers raymarch fundamentally different geometry —
- * an unbounded, view-ray-driven layer for the sky; a small, bounded,
- * per-instance AABB here — and forcing one density/shading function to
- * serve both meant neither could be tuned for what it actually needs:
- * the sky never had a real box to taper against, and this file never had
- * a reason to model a raymarch layer thickness. The two now share only
- * the same CPU-side weather data (WeatherHandle/CloudHandle) and the same
- * low-level noise primitives (NoiseUtility.glsl) — never the same shading
- * function. See sky/util/SkyCloudUtility.glsl for the sky dome's own,
- * independent copy of this idea.
- *
- * Silhouette fix
- * --------------
- * The previous shared version raymarched a density field that was simply
- * CLIPPED by this instance's AABB — nothing in the density calculation
- * ever anticipated the box boundary, so a sufficiently dense/thick cloud
- * (high coverageBias, which pushes the noise threshold down until most of
- * the field reads as "inside") stayed just as dense right up against the
- * box wall as it was in the interior. The raymarch then simply stopped at
- * that wall, which is exactly what a hard-edged box looks like — this is
- * a root cause of the "clouds just look like boxes" complaint.
- * silhouetteMask() below fixes this by tapering density to zero well
- * before the true AABB boundary, in a jittered (not perfectly circular)
- * radius around the box's own horizontal center, so the visible silhouette
- * reads as a rounded, irregular puff sitting inside its bounding box
- * rather than the box itself. Vertical shape is untouched — heightGradient()
- * already gives clouds a flat-ish base and eroding top, which is correct
- * cloud behavior and was never the source of the boxy look.
- *
- * Domain scale fix
- * -----------------
- * sampleVolumetricCloudDensity() previously fed the noise functions a
- * coordinate built directly from RAW WORLD POSITION — worldPos * noiseScale
- * — with worldPos routinely tens to well over a hundred units in
- * magnitude (a cloud instance's own XZ scale, per CloudBuilder, is
- * anywhere from ~48 to ~130 blocks; its Y position carries the full world
- * altitude on top of that, ~90-220). gradientNoise3D/worleyNoise3D both
- * key off ONE WORLD UNIT PER LATTICE CELL, so a noiseScale in the
- * 0.6-1.4 range (CloudData's actual authored values) applied directly to
- * that raw position put 50-150+ noise lattice cells across a SINGLE
- * cloud — far beyond anything these functions can represent as a smooth
- * billow. The result reads as fine, chaotic grain, and any two cloud
- * instances — or the same instance from one frame to the next as it
- * drifts — sample what is statistically indistinguishable from
- * independent noise, which is exactly why every cloud ends up reading as
- * the same featureless "blob": there is no large-scale structure left for
- * a viewer to recognize as billowing shape.
- *
- * silhouetteMask() below never had this problem — it already normalizes
- * worldPos against the instance's own boxMin/boxMax before sampling.
- * sampleVolumetricCloudDensity() now follows that same established
- * pattern: worldPos is recentered on the box and divided by the box's own
- * size before noiseScale is applied, so a noiseScale of 1.0 means the
- * same thing — a small, fixed number of billow cycles across the WHOLE
- * cloud, via CLOUD_NOISE_BILLOW_CYCLES below — regardless of whether
- * CloudData.scale says 48 or 130. This is also what makes warpStrength
- * (0.3-0.85 in every shipped archetype) actually do something — against
- * the old raw-world-scale coordinate, an offset that small was never more
- * than a rounding error.
- *
- * Shape diversity fix
- * --------------------
- * Even after the domain scale fix above, sampleVolumetricCloudDensity()
- * still stretched BOTH local horizontal axes by the identical factor as
- * heightT climbed toward the top of the box. Scaling x and z equally can
- * only make the noise domain uniformly coarser near the top — a smoother,
- * larger-scale blob — it can never actually produce a directional streak,
- * since a symmetric domain has no "direction" for a streak to point in.
- * Two instances of the same archetype, differing only by a phase-shifted
- * seedOffset, therefore shared the exact same silhouette CHARACTER (same
- * roundness, same billowiness, same "how streaky it gets up top") and
- * only ever differed in exactly where that character happened to be
- * sampled — which reads, correctly, as "every cloud looks the same
- * shape."
- *
- * sampleVolumetricCloudDensity() now takes a domainRotation parameter — a
- * stable per-instance angle (see OverheadCellStruct's own doc comment;
- * baked once at stream-in via CloudRenderSystem.createInstance(), never
- * re-rolled) — and rotates localPos.xz into that instance's own axis
- * frame before stretching. The stretch itself is now ANISOTROPIC: only
- * the rotated long axis compresses (elongates) with height; the
- * perpendicular short axis stays comparatively compact. This is what
- * actually produces the long, thin striations real cumulus/stratus decks
- * fray into near their tops, and — because domainRotation differs per
- * instance — gives every physical cloud its own streak direction instead
- * of every instance of one CloudType sharing one identical bulge.
+ * Density shaping — silhouetteMask() tapers the raymarch to zero before the
+ * true AABB boundary so a cloud reads as a rounded puff rather than its own
+ * bounding box; sampleVolumetricCloudDensity() normalizes worldPos against
+ * the instance's own box before sampling so noise frequency scales correctly
+ * regardless of archetype size, and stretches only a per-instance rotated
+ * axis (domainRotation) as height increases so tops read as directional
+ * streaks rather than a uniformly-coarser blob.
  */
 
-// Fixed internal contrast boost blended into the base fbm/worley mix.
-// Replaces the old per-archetype "puffJitter" knob — see CloudData's own
-// doc comment for why that field was retired rather than kept as a
-// second detail-texture control alongside silhouetteSoftness.
 const float DETAIL_CONTRAST = 0.5;
-
-// How many billow cycles a densityNoiseScale of 1.0 (CloudBuilder's own
-// default) spans across a cloud instance's FULL local extent (-0.5 to 0.5
-// once normalized by box size — see this file's own "Domain scale fix"
-// doc comment above). Purely a "how busy does the shape look" authoring
-// knob now that the coordinate feeding the noise is properly normalized —
-// tuned so a single cloud reads as a handful of connected billows rather
-// than either one flat blob (too low) or fine static-like grain (too high).
 const float CLOUD_NOISE_BILLOW_CYCLES = 6.0;
 
-// Cheap two-axis domain warp — offsets a sample position using a second,
-// decorrelated noise field scaled by `strength`. Only X/Z are warped —
-// vertical warp buys little for a cloud whose vertical shape is already
-// fully owned by heightGradient() below, and costs a full extra noise
-// evaluation per sample. Uses gradient noise rather than value noise so
-// the warp itself is smooth — a grainy warp field shows up directly as
-// grain in the warped shape.
+// Two-axis (X/Z) domain warp using a second decorrelated noise field.
 vec3 warpCloudDomain(vec3 p, float strength, vec3 seedOffset) {
     float wx = gradientNoise3D(p.yzx * 0.7 + seedOffset);
     float wz = gradientNoise3D(p.zxy * 0.7 + seedOffset + 11.3);
     return p + vec3(wx, 0.0, wz) * strength;
 }
 
-/*
-* Vertical density gradient within this instance's own box. heightT is
- * [0, 1]: 0 at the box's own base, 1 at the top of its own vertical
- * extent. Real clouds condense at a fairly consistent altitude within a
- * given layer, giving them a comparatively sharp flat base, then erode
- * gradually into clear air above — never the reverse. coverageBias is the
- * same live-weather-derived value already driving the density threshold
- * below; a denser/stormier weather pushes the top-erosion point higher,
- * so a storm deck reads as thicker and taller than a fair-weather puff
- * without this function ever special-casing that difference.
- */
+// Vertical density falloff within the instance's own box — sharp flat base,
+// soft eroding top. coverageBias raises the top-erosion point for denser
+// weather so a storm reads taller/thicker than a fair-weather puff.
 float heightGradient(float heightT, float coverageBias) {
     float baseCutoff = 0.06;
     float baseRamp = smoothstep(baseCutoff, baseCutoff + 0.14, heightT);
-
     float topStart = mix(0.50, 0.88, clamp(coverageBias, 0.0, 1.0));
     float topRamp = 1.0 - smoothstep(topStart, 1.0, heightT);
-
     return baseRamp * topRamp;
 }
 
-/*
-* Horizontal silhouette taper — see the class comment's "Silhouette fix"
- * section for why this exists. Computes this sample's position relative
- * to the instance's own box center, normalized by the box's own XZ half-
- * extents so the taper scales correctly with CloudData.scale regardless
- * of archetype. The taper's start radius and its angular jitter strength
- * both derive from silhouetteSoftness — a single archetype knob rather
- * than a second dedicated jitter parameter, since "how soft/irregular
- * this cloud's edge reads" is one creative decision, not two.
- */
+// Horizontal silhouette taper, normalized against the box's own XZ extents,
+// with a jittered (non-circular) radius so the outline reads as an
+// irregular puff rather than the box itself.
 float silhouetteMask(vec3 worldPos, vec3 boxMin, vec3 boxMax, float silhouetteSoftness, float seed) {
     vec3 boxCenter = (boxMin + boxMax) * 0.5;
     vec2 halfExtentXZ = max((boxMax - boxMin).xz * 0.5, vec2(0.0001));
@@ -173,25 +59,10 @@ float silhouetteMask(vec3 worldPos, vec3 boxMin, vec3 boxMax, float silhouetteSo
     return 1.0 - smoothstep(startRadius, 1.0, radial);
 }
 
-/*
-* Resolves a single density sample in [0,1] at a world-scale position,
- * for a raymarch bounded to boxMin/boxMax. coverageBias shifts the noise
- * threshold separating "inside" from "empty sky" — higher bias means more
- * of the noise field reads as cloud, and this is exactly the live,
- * per-region weather coverage value the caller already has on hand, so
- * density genuinely tracks the simulation rather than a fixed archetype
- * look. silhouetteSoftness softens both that threshold crossing and the
- * box-relative taper from silhouetteMask() — see that function's own doc
- * comment. seed decorrelates this sample from every other cloud sampling
- * the same nominal position, and timeSeconds drives a slow, near-
- * imperceptible internal drift so a stationary cloud still isn't
- * perfectly static. heightT drives the vertical heightGradient() falloff
- * — see that function's own doc comment. domainRotation picks this
- * instance's own stretch-axis direction — see the class comment's "Shape
- * diversity fix". worldPos is recentered on the box and normalized by its
- * own size before any of that — see this file's "Domain scale fix" doc
- * comment above.
- */
+// Resolves density in [0,1] at a world-scale position for a raymarch bounded
+// to boxMin/boxMax. domainRotation is a stable per-instance angle (baked at
+// stream-in — see OverheadCellStruct) that elongates one rotated axis with
+// height, so every instance streaks in its own direction.
 float sampleVolumetricCloudDensity(
     vec3 worldPos,
     vec3 boxMin,
@@ -204,36 +75,15 @@ float sampleVolumetricCloudDensity(
     float seed,
     float timeSeconds,
     float domainRotation) {
-    // Recenter on the box and normalize by its own size — see the class
-    // comment's "Domain scale fix". localPos sits roughly in [-0.5, 0.5]
-    // along each axis regardless of the archetype's absolute scale, which
-    // is what makes CLOUD_NOISE_BILLOW_CYCLES/noiseScale mean the same
-    // thing for every cloud type.
     vec3 boxSize = max(boxMax - boxMin, vec3(0.0001));
     vec3 localPos = (worldPos - (boxMin + boxMax) * 0.5) / boxSize;
 
-    // Rotate into this instance's own stretch-axis frame before doing
-    // anything height-dependent — see the class comment's "Shape
-    // diversity fix". domainRotation is a stable per-instance angle
-    // (baked once at stream-in — see OverheadCellStruct), so the axis
-    // that ends up elongated below is a different compass direction for
-    // every cloud, not always world +X.
     float rotCos = cos(domainRotation);
     float rotSin = sin(domainRotation);
     vec2 rotatedXZ = vec2(
         localPos.x * rotCos - localPos.z * rotSin,
         localPos.x * rotSin + localPos.z * rotCos);
 
-    // Anisotropic stretch — ONLY the rotated long axis (x') elongates as
-    // heightT climbs; the perpendicular short axis (z') stays compact.
-    // The previous version stretched both local axes by the same factor,
-    // which only ever made the noise domain uniformly coarser near the
-    // top of the box — a smoother blob, never an actual streak, since a
-    // symmetric domain has no "direction" to streak toward. Elongating a
-    // single, per-instance-random axis instead is what actually produces
-    // the long, thin striations real cumulus/stratus decks show fraying
-    // out near their tops, and gives every instance its own streak
-    // direction rather than sharing one.
     float stretch = mix(1.0, 2.4, clamp(heightT, 0.0, 1.0));
     vec2 stretchedXZ = vec2(rotatedXZ.x / stretch, rotatedXZ.y);
 
@@ -244,9 +94,6 @@ float sampleVolumetricCloudDensity(
 
     vec3 warped = warpCloudDomain(coord, warpStrength, seedOffset);
 
-    // Macro billow (gradient FBM) blended with a cellular detail layer for
-    // the bumpy, cauliflower-like edge real clouds show — see
-    // NoiseUtility.glsl's own doc comment.
     float macro = fbmGradient3D(warped);
     float bump = worleyFbm3D(warped * 3.2 + seedOffset.yzx);
     float n = clamp(mix(macro, bump, 0.35) + (macro - 0.5) * DETAIL_CONTRAST, 0.0, 1.0);
@@ -260,25 +107,57 @@ float sampleVolumetricCloudDensity(
 }
 
 /*
-* Unlit (shape-only) toon shading for a raymarched PHYSICAL cloud sample —
- * used by clouds/CloudVolumeShader.fsh, which writes into the same
- * deferred G-buffer every opaque terrain fragment writes into
- * (gAlbedo/gNormal/gMaterial). The shared Lighting.fsh pass reads gAlbedo
- * as raw unlit surface color and applies real sun/moon/ambient lighting
- * to it — exactly once, using gNormal for the directional terms and
- * gMaterial.b for ambient occlusion. This function must therefore never
- * bake a light's own color or intensity into its result, or that pixel
- * gets lit a second time by Lighting.fsh on top of whatever this function
- * already did.
- *
- * lightLift is still real light-DIRECTION shape information — a self-
- * shadow density tap toward wherever the sun/moon actually is (see the
- * call site) — not a radiance value, so folding it into the toon band
- * alongside heightT has no relighting risk, any more than baking a
- * vertex's own ambient occlusion into gMaterial.b does for terrain.
- * outAO returns that same banded occlusion term so the caller can
- * accumulate a real ambient-occlusion value into gMaterial.b instead of
- * a hardcoded "fully exposed" constant.
+* Surface normal for lighting, derived from the density field's own
+ * gradient rather than the instance's flat box geometry. Six extra density
+ * taps (central differences per axis) — called once per fragment at the
+ * raymarch's single most-visible sample (see CloudVolumeShader.fsh), never
+ * once per step. This is what makes a cloud shade like a cloud: handing the
+ * box's own flat face normal to the deferred lighting pass made every face
+ * light as one uniform flat panel — six visibly distinct, hard-edged
+ * rectangles instead of a rounded volume.
+ */
+vec3 volumetricCloudGradientNormal(
+    vec3 p,
+    vec3 boxMin,
+    vec3 boxMax,
+    float noiseScale,
+    float warpStrength,
+    float coverageBias,
+    float silhouetteSoftness,
+    float seed,
+    float timeSeconds,
+    float domainRotation,
+    float epsilon) {
+    float boxHeight = max(boxMax.y - boxMin.y, 0.0001);
+    float heightTHere = clamp((p.y - boxMin.y) / boxHeight, 0.0, 1.0);
+    float heightTUp = clamp(((p.y + epsilon) - boxMin.y) / boxHeight, 0.0, 1.0);
+    float heightTDown = clamp(((p.y - epsilon) - boxMin.y) / boxHeight, 0.0, 1.0);
+
+    float dx = sampleVolumetricCloudDensity(p + vec3(epsilon, 0.0, 0.0), boxMin, boxMax, heightTHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds, domainRotation)
+    - sampleVolumetricCloudDensity(p - vec3(epsilon, 0.0, 0.0), boxMin, boxMax, heightTHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds, domainRotation);
+
+    float dy = sampleVolumetricCloudDensity(p + vec3(0.0, epsilon, 0.0), boxMin, boxMax, heightTUp, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds, domainRotation)
+    - sampleVolumetricCloudDensity(p - vec3(0.0, epsilon, 0.0), boxMin, boxMax, heightTDown, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds, domainRotation);
+
+    float dz = sampleVolumetricCloudDensity(p + vec3(0.0, 0.0, epsilon), boxMin, boxMax, heightTHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds, domainRotation)
+    - sampleVolumetricCloudDensity(p - vec3(0.0, 0.0, epsilon), boxMin, boxMax, heightTHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, seed, timeSeconds, domainRotation);
+
+    vec3 gradient = vec3(dx, dy, dz);
+    float gradLen = length(gradient);
+
+    if (gradLen < 0.0001)
+    return vec3(0.0, 1.0, 0.0);
+
+    return -gradient / gradLen;
+}
+
+/*
+* Unlit (shape-only) toon shading for a physical cloud sample. Writes into
+ * the same deferred G-buffer terrain uses (gAlbedo/gNormal/gMaterial) — the
+ * shared Lighting.fsh pass applies real sun/moon/ambient lighting to it
+ * exactly once, using gNormal for the directional terms and gMaterial.b for
+ * ambient occlusion. Must never bake a light's own color/intensity into its
+ * result, or the pixel gets lit twice.
  */
 vec3 shadeCloudUnlit(
     vec3 baseColor,
@@ -308,15 +187,8 @@ vec3 shadeCloudUnlit(
     return shaded * brightnessMultiplier;
 }
 
-/*
-* Ray/AABB slab intersection — bounds this instance's own raymarch to its
- * box. Returns (tNear, tFar) along rayDir from rayOrigin — tFar < tNear
- * means the ray misses the box entirely, which the caller (marching from
- * a point already known to be on the box's own surface, since GL only
- * rasterizes a convex box's outer faces) should never actually see, but is
- * left for the caller to guard against via a simple max(tFar - tNear, 0.0)
- * length check.
- */
+// Ray/AABB slab intersection. Returns (tNear, tFar) along rayDir from
+// rayOrigin — tFar < tNear means the ray misses the box entirely.
 vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
     vec3 invDir = 1.0 / rayDir;
     vec3 t0 = (boxMin - rayOrigin) * invDir;

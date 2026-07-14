@@ -9,6 +9,7 @@ import com.google.gson.JsonObject;
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
 import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
 import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
+import application.bootstrap.weatherpipeline.weather.NextWeatherChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherData;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import engine.root.BuilderPackage;
@@ -22,7 +23,12 @@ class WeatherBuilder extends BuilderPackage {
 
     /*
      * Parses weather JSON into a WeatherData and wraps it in a WeatherHandle.
-     * The "clouds" array is optional. Bootstrap-only and on-demand.
+     * "clouds" and "nextWeatherChances" are both optional. nextWeatherChances
+     * are stored as bare names rather than resolved handles — resolving them
+     * at build time would let two weathers that suggest each other deadlock
+     * the bootstrap loader, so resolution happens by name comparison instead,
+     * lazily, whenever WeatherManager consults them. Bootstrap-only and
+     * on-demand.
      */
 
     private CloudManager cloudManager;
@@ -40,6 +46,7 @@ class WeatherBuilder extends BuilderPackage {
         JsonObject json = JsonUtility.loadJsonObject(file);
 
         ObjectArrayList<CloudChanceStruct> cloudEntries = parseClouds(json);
+        ObjectArrayList<NextWeatherChanceStruct> nextWeatherChances = parseNextWeatherChances(json);
         float cloudCoverage = parseFloat(json, "cloudCoverage", 0f);
         float precipitationIntensity = parseFloat(json, "precipitationIntensity", 0f);
         float windSpeedScale = parseFloat(json, "windSpeedScale", 1f);
@@ -55,6 +62,7 @@ class WeatherBuilder extends BuilderPackage {
                 weatherName,
                 weatherID,
                 cloudEntries,
+                nextWeatherChances,
                 cloudCoverage,
                 precipitationIntensity,
                 windSpeedScale,
@@ -99,6 +107,28 @@ class WeatherBuilder extends BuilderPackage {
                 : CloudChanceStruct.NO_ALTITUDE_OVERRIDE;
 
         return new CloudChanceStruct(cloudHandle, chance, altitudeOverride);
+    }
+
+    private ObjectArrayList<NextWeatherChanceStruct> parseNextWeatherChances(JsonObject json) {
+
+        if (!json.has("nextWeatherChances"))
+            return new ObjectArrayList<>();
+
+        JsonArray array = json.getAsJsonArray("nextWeatherChances");
+        ObjectArrayList<NextWeatherChanceStruct> entries = new ObjectArrayList<>(array.size());
+
+        for (JsonElement element : array) {
+
+            JsonObject entryObject = element.getAsJsonObject();
+            String weatherName = JsonUtility.validateString(entryObject, "name");
+            float chance = entryObject.has("chance")
+                    ? entryObject.get("chance").getAsFloat()
+                    : 1.0f;
+
+            entries.add(new NextWeatherChanceStruct(weatherName, chance));
+        }
+
+        return entries;
     }
 
     private float parseFloat(JsonObject json, String field, float fallback) {

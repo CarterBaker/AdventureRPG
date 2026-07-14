@@ -1,5 +1,10 @@
 {
     "clouds": [],
+    "nextWeatherChances": [
+        { "name": "standard/ClearWeather", "chance": 50 },
+        { "name": "standard/SunnyWeather", "chance": 35 },
+        { "name": "standard/CloudyWeather", "chance": 15 }
+    ],
     "cloudCoverage": 0.0,
     "precipitationIntensity": 0.0,
     "windSpeedScale": 0.9,

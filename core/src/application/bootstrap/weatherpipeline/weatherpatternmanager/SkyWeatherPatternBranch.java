@@ -27,7 +27,12 @@ class SkyWeatherPatternBranch extends BranchPackage {
      */
 
     private static final int MAX_PATTERNS = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
-    private static final float FOOTPRINT_RADIUS_CHUNKS = EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS * 0.5f;
+    // Independent of WeatherPatternManager's own placement cell size — that
+    // grid spacing controls pattern density, not how large a pattern should
+    // read in the sky dome. Kept at the old cell-size-derived value for now;
+    // a real fix ties this to the pattern's actual physical footprint
+    // (distance, altitude, thickness) instead of a flat constant.
+    private static final float FOOTPRINT_RADIUS_CHUNKS = EngineSetting.WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS * 0.5f;
 
     private WeatherPatternManager weatherPatternManager;
     private WeatherManager weatherManager;

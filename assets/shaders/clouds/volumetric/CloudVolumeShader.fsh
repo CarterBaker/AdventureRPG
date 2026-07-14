@@ -1,7 +1,6 @@
 #version 330 core
 
 in vec3  vWorldPos;
-in vec3  vNormal;
 in float vRandomSeed;
 in float vDomainRotation;
 in float vFadeAlpha;
@@ -21,33 +20,24 @@ layout(location = 2) out vec4 gMaterial;
 #include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
-* Volumetric raymarch through this instance's own AABB (vBoxMin/vBoxMax),
- * sampling sampleVolumetricCloudDensity() — the physical-cloud-only
- * density field defined in clouds/util/VolumetricCloudUtility.glsl. Writes
- * only UNLIT shape data (shadeCloudUnlit()) plus a real accumulated AO into
- * gMaterial.b — Lighting.fsh lights this exactly once, same as terrain.
+* Raymarches this instance's own AABB (vBoxMin/vBoxMax) via
+ * sampleVolumetricCloudDensity(). Writes unlit shape data
+ * (shadeCloudUnlit()) plus a real accumulated AO into gMaterial.b —
+ * Lighting.fsh lights this exactly once, same as terrain.
  *
- * This shader no longer shares its density/shading code with the sky
- * dome — see VolumetricCloudUtility.glsl's own class doc comment for why,
- * and for the silhouette-taper fix that replaces the old hard AABB cutoff
- * responsible for clouds reading as boxes. u_cloudEdgeSoftness and
- * u_cloudPuffJitter have been retired along with it — silhouetteSoftness
- * now drives both the density-threshold blur and the box-relative taper
- * that used to be split across those two legacy knobs. vDomainRotation
- * (see VolumetricCloudUtility.glsl's "Shape diversity fix") is the newest
- * addition to that same density field — a stable per-instance angle that
- * gives every cloud its own elongation direction instead of every
- * instance of one CloudType sharing an identical silhouette character.
+ * Ray origin is the CAMERA, not this fragment's own surface position. This
+ * box gets back-face culled (see RenderSystem) so only its near side
+ * rasterizes when the camera is outside it, but using the camera as origin
+ * regardless means the march region never depends on which triangle
+ * triggered the fragment, and degrades correctly if the camera ends up
+ * inside the box: marchStart just clamps to 0 and the march begins at the
+ * camera instead of never reaching a wall it's already past.
  *
- * CAMERA POSITION FIX: rayDir/camDist previously differenced vWorldPos
- * against u_cameraPosition directly. vWorldPos is expressed in the
- * player-chunk-recentered frame (see CloudVolumeShader.vsh's own doc
- * comment) — u_cameraPosition is not guaranteed to be, and LightingShader.fsh
- * deliberately never makes that assumption elsewhere in this engine. Both
- * uses now reconstruct the camera's position in the SAME frame via
- * `(u_inverseView * vec4(0,0,0,1)).xyz` — the identical technique
- * surface/includes/Height.glsl documents — removing any dependency on
- * u_cameraPosition sharing this shader's coordinate space.
+ * gNormal is the density field's own gradient at the raymarch's single
+ * most-visible sample (see VolumetricCloudUtility.glsl's
+ * volumetricCloudGradientNormal()), not this instance's flat box-face
+ * normal — the box-face normal is what lit every cloud as six flat,
+ * hard-edged panels once Lighting.fsh applied real directional light to it.
  */
 
 uniform vec3  u_cloudColor;
@@ -78,11 +68,9 @@ void main() {
     discard;
 
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    vec3 rayDir = normalize(vWorldPos - cameraRenderPos);
 
-    vec3 rayOrigin = vWorldPos;
-    vec3 rayDir    = normalize(vWorldPos - cameraRenderPos);
-
-    vec2 boxHit = intersectAABB(rayOrigin, rayDir, vBoxMin, vBoxMax);
+    vec2 boxHit = intersectAABB(cameraRenderPos, rayDir, vBoxMin, vBoxMax);
     float marchStart = max(boxHit.x, 0.0);
     float marchLen   = max(boxHit.y - marchStart, 0.0);
 
@@ -97,10 +85,14 @@ void main() {
     vec3  lightDir  = normalize(mix(u_moonDirection, u_sunDirection, sunWeight));
 
     float intensityFactor = mix(INTENSITY_DENSITY_FLOOR, 1.0, clamp(vIntensity, 0.0, 1.0));
-    float boxHeight        = max(vBoxMax.y - vBoxMin.y, 0.001);
+    float boxHeight       = max(vBoxMax.y - vBoxMin.y, 0.001);
+    float gradientEpsilon = max(length(vBoxMax - vBoxMin) * 0.01, 0.05);
 
     vec4  accum   = vec4(0.0);
     float accumAO = 0.0;
+
+    vec3  peakPos          = vWorldPos;
+    float peakContribution = 0.0;
 
     for (int i = 0; i < CLOUD_RAYMARCH_STEPS_NEAR; i++) {
         if (i >= steps)
@@ -109,7 +101,7 @@ void main() {
         if (accum.a > 0.97)
         break;
 
-        vec3 p = rayOrigin + rayDir * (marchStart + (float(i) + 0.5) * stepSize);
+        vec3 p = cameraRenderPos + rayDir * (marchStart + (float(i) + 0.5) * stepSize);
 
         float heightT = clamp((p.y - vBoxMin.y) / boxHeight, 0.0, 1.0);
 
@@ -141,6 +133,11 @@ void main() {
             float stepAlpha = clamp(density * CLOUD_RAYMARCH_STEP_ALPHA_SCALE * stepSize, 0.0, 1.0);
             float contribution = (1.0 - accum.a) * stepAlpha;
 
+            if (contribution > peakContribution) {
+                peakContribution = contribution;
+                peakPos = p;
+            }
+
             accum.rgb += contribution * shaded;
             accumAO   += contribution * stepAO;
             accum.a   += contribution;
@@ -158,7 +155,13 @@ void main() {
 
     float ao = mix(1.0, accumAO / max(accum.a, 0.0001), finalAlpha);
 
-    vec3 normalView = normalize(mat3(u_view) * normalize(vNormal));
+    vec3 cloudNormalWorld = volumetricCloudGradientNormal(
+        peakPos, vBoxMin, vBoxMax,
+        u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
+        u_cloudCoverageBias, u_cloudSilhouetteSoftness,
+        vRandomSeed, u_time, vDomainRotation, gradientEpsilon);
+
+    vec3 normalView = normalize(mat3(u_view) * cloudNormalWorld);
 
     gAlbedo   = vec4(blended, 1.0);
     gNormal   = vec4(normalView, 1.0);
