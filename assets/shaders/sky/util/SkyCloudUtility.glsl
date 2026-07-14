@@ -4,72 +4,77 @@
 #include "includes/NoiseUtility.glsl"
 
 /*
-* Sky-dome-only cloud primitives — world-scale density and shading for
- * Clouds.glsl's raymarch. No box-local normalization, so shape stays
- * correct regardless of how flat or wide the blended pattern's bounds are.
- * Never shared with clouds/util/VolumetricCloudUtility.glsl, which is
- * exclusive to the overhead volumetric cloud objects.
+* Density and shading primitives for the sky-dome cloud preview. Every ray
+ * samples exactly one weather pattern's own real-world box (see Clouds.glsl),
+ * so the shape carved here is always a genuine cloud, never an average of
+ * unrelated patterns. Kept intentionally separate from the volumetric
+ * overhead system — different budget, different math, no shared cloud logic.
  */
 
-// Bounds the raymarch's start/end distance along a view ray against a
-// pattern's real world-space box. Never used to shape or orient density.
-vec2 intersectSkyAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
-    vec3 invDir = 1.0 / rayDir;
-    vec3 t0 = (boxMin - rayOrigin) * invDir;
-    vec3 t1 = (boxMax - rayOrigin) * invDir;
+vec2 worldToLocalXZ(vec2 relXZ, vec2 rot) {
+    return vec2(
+        relXZ.x * rot.x + relXZ.y * rot.y,
+        -relXZ.x * rot.y + relXZ.y * rot.x);
+}
+
+vec2 intersectSkyOBB(vec3 rayOrigin, vec3 rayDir, vec3 boxCenter, vec2 rot, vec3 halfExtent) {
+    vec3 rel = rayOrigin - boxCenter;
+    vec2 localOriginXZ = worldToLocalXZ(rel.xz, rot);
+    vec2 localDirXZ = worldToLocalXZ(rayDir.xz, rot);
+
+    vec3 localOrigin = vec3(localOriginXZ.x, rel.y, localOriginXZ.y);
+    vec3 localDir = vec3(localDirXZ.x, rayDir.y, localDirXZ.y);
+
+    vec3 invDir = 1.0 / localDir;
+    vec3 t0 = (-halfExtent - localOrigin) * invDir;
+    vec3 t1 = (halfExtent - localOrigin) * invDir;
     vec3 tSmall = min(t0, t1);
-    vec3 tBig   = max(t0, t1);
+    vec3 tBig = max(t0, t1);
     float tNear = max(max(tSmall.x, tSmall.y), tSmall.z);
-    float tFar  = min(min(tBig.x, tBig.y), tBig.z);
+    float tFar = min(min(tBig.x, tBig.y), tBig.z);
+
     return vec2(tNear, tFar);
 }
 
-vec3 skyWarpDomain(vec3 p, float strength, vec3 seedOffset) {
-    float wx = gradientNoise3D(p.yzx * 0.7 + seedOffset);
-    float wz = gradientNoise3D(p.zxy * 0.7 + seedOffset + 11.3);
-    return p + vec3(wx, 0.0, wz) * strength;
+float skyHeightEnvelope(float heightT, float coverageBias) {
+    float base = smoothstep(0.05, 0.25, heightT);
+    float topStart = mix(0.5, 0.9, clamp(coverageBias, 0.0, 1.0));
+    float top = 1.0 - smoothstep(topStart, 1.0, heightT);
+    return base * top;
 }
 
-float skyHeightGradient(float heightT, float coverageBias) {
-    float baseCutoff = 0.06;
-    float baseRamp = smoothstep(baseCutoff, baseCutoff + 0.14, heightT);
-
-    float topStart = mix(0.50, 0.88, clamp(coverageBias, 0.0, 1.0));
-    float topRamp = 1.0 - smoothstep(topStart, 1.0, heightT);
-
-    return baseRamp * topRamp;
-}
-
+// localPos is already relative to the pattern's own rotated box — see
+// worldToLocalXZ / intersectSkyOBB above. Cheaper than the volumetric
+// density function by design: two noise octaves instead of four, since this
+// runs across the full sky every frame rather than inside a few nearby boxes.
 float sampleSkyCloudDensity(
-    vec3 worldPos,
+    vec3 localPos,
     float heightT,
     float noiseScale,
     float warpStrength,
-    float detailJitter,
     float coverageBias,
-    float silhouetteSoftness,
+    float silhouetteEdge,
     float seed,
     float timeSeconds) {
-    float stretch = mix(1.0, 2.4, clamp(heightT, 0.0, 1.0));
-
     vec3 seedOffset = vec3(seed * 173.13, seed * 57.31, seed * 91.7);
-    vec3 stretchedPos = worldPos * vec3(1.0 / stretch, 1.0, 1.0 / stretch);
-    vec3 coord = stretchedPos * noiseScale + seedOffset + vec3(0.0, 0.0, timeSeconds * 0.003);
+    vec3 coord = localPos * noiseScale + seedOffset + vec3(0.0, 0.0, timeSeconds * 0.003);
 
-    vec3 warped = skyWarpDomain(coord, warpStrength, seedOffset);
+    float warpA = gradientNoise3D(coord.yzx * 0.6 + seedOffset);
+    float warpB = gradientNoise3D(coord.zxy * 0.6 + seedOffset + 11.3);
+    vec3 warped = coord + vec3(warpA, warpA * 0.3, warpB) * warpStrength;
 
     float macro = fbmGradient3D(warped);
-    float bump = worleyFbm3D(warped * 3.2 + seedOffset.yzx);
-    float n = clamp(mix(macro, bump, 0.35) + (macro - 0.5) * detailJitter, 0.0, 1.0);
+    float bump = worleyFbm3D(warped * 2.6 + seedOffset.yzx);
+    float shape = clamp(mix(macro, bump, 0.3), 0.0, 1.0);
 
-    float edgeSoftness = clamp(silhouetteSoftness * 1.5, 0.05, 0.35);
-    float threshold = mix(0.74, 0.22, clamp(coverageBias, 0.0, 1.0));
-    float shape = smoothstep(threshold - edgeSoftness, threshold + edgeSoftness, n);
+    float threshold = mix(0.72, 0.24, clamp(coverageBias, 0.0, 1.0));
+    float edge = clamp(silhouetteEdge, 0.05, 0.4);
+    float carved = smoothstep(threshold - edge, threshold + edge, shape);
 
-    return shape * skyHeightGradient(heightT, coverageBias);
+    return carved * skyHeightEnvelope(heightT, coverageBias);
 }
 
-vec3 shadeSkyCloudLit(
+vec3 shadeSkyCloud(
     vec3 baseColor,
     vec3 topColor,
     vec3 shadowColor,
@@ -77,28 +82,22 @@ vec3 shadeSkyCloudLit(
     float lightIntensity,
     float heightT,
     float lightLift,
-    float density,
     int toonBands,
     float shadeStrength,
-    float rimLightStrength,
+    float rimStrength,
     float ambientOcclusionStrength,
     float brightnessMultiplier) {
     float litAmount = clamp(heightT * 0.5 + lightLift * 0.5, 0.0, 1.0);
-
     float bands = max(float(toonBands), 1.0);
     float banded = floor(litAmount * bands) / max(bands - 1.0, 1.0);
 
     vec3 lit = mix(baseColor, topColor, banded);
     vec3 shaded = mix(lit, shadowColor, (1.0 - banded) * shadeStrength);
+    shaded *= mix(1.0 - ambientOcclusionStrength, 1.0, banded);
 
-    float ao = mix(1.0 - ambientOcclusionStrength, 1.0, banded);
-    shaded *= ao;
-    shaded = mix(shadowColor, shaded, clamp(density * 2.0, 0.0, 1.0));
-
-    float rim = (1.0 - clamp(density * 2.0, 0.0, 1.0)) * rimLightStrength;
+    float rim = (1.0 - banded) * rimStrength;
     shaded += lightColor * lightIntensity * rim;
-
-    shaded *= mix(vec3(1.0), lightColor, 0.35) * max(lightIntensity, 0.15);
+    shaded *= mix(vec3(1.0), lightColor, 0.3) * max(lightIntensity, 0.2);
 
     return shaded * brightnessMultiplier;
 }
