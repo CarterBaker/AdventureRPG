@@ -20,17 +20,17 @@ layout(location = 2) out vec4 gMaterial;
 #include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
-* Raymarches this instance's own oriented box directly in local space.
- * Density comes entirely from VolumetricCloudUtility's ellipsoid-bounded
- * noise field, so the silhouette is rounded and soft by construction —
- * this shader only owns step sizing, the light tap, and final compositing
- * into the G-buffer. Writes unlit shape data plus a real accumulated AO
- * into gMaterial.b; Lighting.fsh lights this exactly once, same as terrain.
+* Raymarches this instance's own oriented box in local space. Shape comes
+ * from VolumetricCloudUtility's ellipsoid-bounded noise field; this shader
+ * owns step sizing, the light tap, fake sky/rim/powder shading, and final
+ * compositing into the G-buffer. gl_FragDepth is written from the
+ * raymarch's own peak surface point rather than the box's flat entry face,
+ * so overlapping cloud instances occlude each other along their actual
+ * rounded silhouettes instead of along a hard box plane.
  */
 
 uniform vec3  u_cloudColor;
 uniform float u_cloudDensity;
-
 uniform vec3  u_cloudTopColor;
 uniform int   u_cloudToonBands;
 uniform float u_cloudDensityNoiseScale;
@@ -43,17 +43,16 @@ uniform float u_cloudRimLightStrength;
 uniform float u_cloudAmbientOcclusionStrength;
 uniform float u_cloudBrightnessMultiplier;
 
-const float CLOUD_STEP_SIZE_NEAR            = 4.0;
-const float CLOUD_STEP_SIZE_FAR             = 12.0;
-const float CLOUD_RAYMARCH_TIER_NEAR        = 60.0;
-const float CLOUD_RAYMARCH_TIER_FAR         = 220.0;
-const int   CLOUD_RAYMARCH_MIN_STEPS        = 18;
-const int   CLOUD_RAYMARCH_MAX_STEPS        = 64;
-const float CLOUD_RAYMARCH_STEP_ALPHA_SCALE = 0.1;
-const float CLOUD_LIGHT_TAP_DISTANCE        = 2.5;
-const float CLOUD_RIM_FRESNEL_POWER         = 2.5;
-
-const float INTENSITY_DENSITY_FLOOR = 0.4;
+const float CLOUD_STEP_SIZE_NEAR     = 5.0;
+const float CLOUD_STEP_SIZE_FAR      = 14.0;
+const float CLOUD_TIER_NEAR          = 60.0;
+const float CLOUD_TIER_FAR           = 220.0;
+const int   CLOUD_MIN_STEPS          = 12;
+const int   CLOUD_MAX_STEPS          = 48;
+const float CLOUD_STEP_ALPHA_SCALE   = 0.11;
+const float CLOUD_LIGHT_TAP_DISTANCE = 3.0;
+const float CLOUD_RIM_FRESNEL_POWER  = 2.2;
+const float CLOUD_INTENSITY_FLOOR    = 0.4;
 
 void main() {
     if (vFadeAlpha <= 0.001)
@@ -70,25 +69,23 @@ void main() {
     discard;
 
     float camDist = length(vWorldPos - cameraRenderPos);
-    float thicknessStep = clamp(vHalfExtent.y * 2.0 / 5.0, 2.5, 10.0);
+    float thicknessStep = clamp(vHalfExtent.y * 2.0 / 6.0, 2.0, 9.0);
     float distanceStep = mix(CLOUD_STEP_SIZE_NEAR, CLOUD_STEP_SIZE_FAR,
-        smoothstep(CLOUD_RAYMARCH_TIER_NEAR, CLOUD_RAYMARCH_TIER_FAR, camDist));
+        smoothstep(CLOUD_TIER_NEAR, CLOUD_TIER_FAR, camDist));
     float targetStepSize = max(thicknessStep, distanceStep);
 
-    int steps = clamp(int(marchLen / targetStepSize), CLOUD_RAYMARCH_MIN_STEPS, CLOUD_RAYMARCH_MAX_STEPS);
+    int steps = clamp(int(marchLen / targetStepSize), CLOUD_MIN_STEPS, CLOUD_MAX_STEPS);
     float stepSize = marchLen / float(steps);
 
-    // Dithers the sample offset per-pixel so any residual undersampling on
-    // a very large box shows up as fine grain instead of visible banding.
     float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453123);
 
     float sunWeight = clamp(u_sunIntensity / 0.3, 0.0, 1.0);
     vec3  lightDir  = normalize(mix(u_moonDirection, u_sunDirection, sunWeight));
 
     float skyAltitude = clamp(rayDir.y * 0.5 + 0.5, 0.0, 1.0);
-    vec3  approxSky   = mix(u_skyHorizonColor, u_skyZenithColor, skyAltitude);
+    vec3  skyAmbient  = mix(u_skyHorizonColor, u_skyZenithColor, skyAltitude);
 
-    float intensityFactor = mix(INTENSITY_DENSITY_FLOOR, 1.0, clamp(vIntensity, 0.0, 1.0));
+    float intensityFactor = mix(CLOUD_INTENSITY_FLOOR, 1.0, clamp(vIntensity, 0.0, 1.0));
     float boxHeight = max(vHalfExtent.y * 2.0, 0.0001);
     float baseY = vBoxCenter.y - vHalfExtent.y;
     float gradientEpsilon = max(min(vHalfExtent.x, vHalfExtent.z) * 0.05, 0.06);
@@ -99,7 +96,7 @@ void main() {
     vec3  peakPos          = vWorldPos;
     float peakContribution = 0.0;
 
-    for (int i = 0; i < CLOUD_RAYMARCH_MAX_STEPS; i++) {
+    for (int i = 0; i < CLOUD_MAX_STEPS; i++) {
         if (i >= steps)
         break;
 
@@ -125,17 +122,18 @@ void main() {
                 vRandomSeed, u_time);
             float litDensity = rawLit * u_cloudDensity * intensityFactor;
 
-            float lightLift = clamp((density - litDensity) * 2.0 + 0.5, 0.0, 1.0);
+            float lightLift = clamp((density - litDensity) * 2.2 + 0.5, 0.0, 1.0);
+            float powder = 1.0 - exp(-density * 2.4);
 
             float stepAO;
-            vec3 shaded = shadeCloudUnlit(
-                u_cloudColor, u_cloudTopColor, u_cloudShadowColor, approxSky,
-                heightT, lightLift, density,
+            vec3 shaded = shadeCloudFluffy(
+                u_cloudColor, u_cloudTopColor, u_cloudShadowColor, skyAmbient,
+                heightT, lightLift, density, powder,
                 u_cloudToonBands, u_cloudShadeStrength,
                 u_cloudAmbientOcclusionStrength, u_cloudBrightnessMultiplier,
                 stepAO);
 
-            float stepAlpha = clamp(density * CLOUD_RAYMARCH_STEP_ALPHA_SCALE * stepSize, 0.0, 1.0);
+            float stepAlpha = clamp(density * CLOUD_STEP_ALPHA_SCALE * stepSize, 0.0, 1.0);
             float contribution = (1.0 - accum.a) * stepAlpha;
 
             if (contribution > peakContribution) {
@@ -161,12 +159,15 @@ void main() {
         vRandomSeed, u_time, gradientEpsilon);
 
     float rim = pow(1.0 - clamp(dot(-rayDir, cloudNormalWorld), 0.0, 1.0), CLOUD_RIM_FRESNEL_POWER) * u_cloudRimLightStrength;
-    vec3  rimmed  = accum.rgb + approxSky * rim * finalAlpha;
-    vec3  blended = mix(approxSky, rimmed, finalAlpha);
+    vec3  rimmed  = accum.rgb + skyAmbient * rim * finalAlpha;
+    vec3  blended = mix(skyAmbient, rimmed, finalAlpha);
 
     float ao = mix(1.0, accumAO / max(accum.a, 0.0001), finalAlpha);
 
     vec3 normalView = normalize(mat3(u_view) * cloudNormalWorld);
+
+    vec4 peakClip = u_viewProjection * vec4(peakPos, 1.0);
+    gl_FragDepth = clamp(peakClip.z / peakClip.w * 0.5 + 0.5, 0.0, 1.0);
 
     gAlbedo   = vec4(blended, 1.0);
     gNormal   = vec4(normalView, 1.0);

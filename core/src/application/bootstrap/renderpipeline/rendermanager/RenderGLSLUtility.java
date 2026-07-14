@@ -58,13 +58,7 @@ class RenderGLSLUtility extends EngineUtility {
         EngineContext.gl20.glDisable(EngineSetting.GL_DEPTH_TEST);
     }
 
-    /*
-     * Toggles depth writes only, leaving the depth test/func untouched.
-     * Used to bracket translucent, depth-test-but-don't-write passes (e.g.
-     * weather/cloud instances) that must still sit behind terrain and
-     * characters but must not depth-occlude each other based on draw order
-     * within their own pass — see RenderSystem.drawToMappedTargets().
-     */
+    // Toggles depth writes only, leaving the depth test/func untouched.
     static void setDepthMask(boolean enabled) {
         EngineContext.gl20.glDepthMask(enabled);
     }

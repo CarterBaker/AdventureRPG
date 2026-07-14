@@ -3,7 +3,7 @@
 layout (location = 0) in vec3  aPos;
 layout (location = 3) in vec4  aInstance0; // xyz = world position, w = random seed
 layout (location = 4) in vec4  aInstance1; // x = domain rotation, y = fade alpha, z = intensity, w = size variance
-layout (location = 5) in float aInstance2; // elongation — long/short axis ratio, local X before rotation
+layout (location = 5) in float aInstance2; // elongation
 
 #include "includes/CameraData.glsl"
 #include "includes/CloudSettingsData.glsl"
@@ -21,12 +21,12 @@ flat out vec3 vHalfExtent;
 flat out vec2 vRot;
 
 /*
-* Builds this instance's box from its own world position, distance LOD
- * scale, and the elongation/rotation rolled once at stream-in (see
- * WeatherPatternManager). vHalfExtent is the box's true local half size
- * (elongation already applied to X) — the fragment shader intersects and
- * shades entirely in that local frame, so no separate world-aligned AABB
- * is ever computed here.
+* Builds this instance's oriented box from its world position, a
+ * distance-based LOD scale, and the elongation/rotation rolled once at
+ * stream-in. Shrinking and fading size near u_cloudHorizonDistance
+ * simulates weather that is conceptually farther away than render distance
+ * physically allows the box to sit, keeping this system visually
+ * consistent with the sky dome's own unclamped weather sampling.
  */
 void main() {
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -40,7 +40,7 @@ void main() {
     float elongation     = max(aInstance2, 1.0);
 
     float distFromCamera = length(instancePos.xz - cameraRenderPos.xz);
-    float distanceT = clamp(distFromCamera / u_cloudHorizonDistance, 0.0, 1.0);
+    float distanceT = clamp(distFromCamera / max(u_cloudHorizonDistance, 0.001), 0.0, 1.0);
     float sizeScale = mix(u_cloudMaxScale, u_cloudMinScale, distanceT) * sizeVariance;
 
     float transitionSpan = max(u_cloudHorizonDistance - u_cloudTransitionStart, 0.001);
@@ -65,14 +65,14 @@ void main() {
         instancePos.y + aPos.y * finalScaleY,
         instancePos.z + rotatedXZ.y);
 
-    vWorldPos = worldPos;
+    vWorldPos   = worldPos;
     vRandomSeed = randomSeed;
-    vFadeAlpha = fadeAlpha * horizonFade;
-    vIntensity = intensity;
+    vFadeAlpha  = fadeAlpha * horizonFade;
+    vIntensity  = intensity;
 
-    vBoxCenter = vec3(instancePos.x, instancePos.y + halfY, instancePos.z);
+    vBoxCenter  = vec3(instancePos.x, instancePos.y + halfY, instancePos.z);
     vHalfExtent = vec3(halfX, halfY, halfZ);
-    vRot = vec2(cosR, sinR);
+    vRot        = vec2(cosR, sinR);
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }
