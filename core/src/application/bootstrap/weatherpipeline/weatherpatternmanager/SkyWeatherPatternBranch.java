@@ -26,9 +26,9 @@ class SkyWeatherPatternBranch extends BranchPackage {
      * Flattens WeatherPatternManager's active patterns into the
      * SkyWeatherPatternData UBO every frame. Each pattern is pushed as a
      * real world-space cloud volume (position, altitude, footprint) so the
-     * sky raymarch (Clouds.glsl) samples true world positions through the
-     * same shape functions the overhead volumetric clouds use, rather than
-     * an ungrounded view-direction sample.
+     * sky raymarch (Clouds.glsl) samples true world positions through
+     * SkyCloudUtility.glsl's world-scale shape functions, rather than an
+     * ungrounded view-direction sample.
      */
 
     private static final int MAX_PATTERNS = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
@@ -36,6 +36,13 @@ class SkyWeatherPatternBranch extends BranchPackage {
     private static final float DEFAULT_VERTICAL_THICKNESS = 12.0f;
     private static final float ELEVATION_LIMIT_MARGIN_RADIANS = (float) Math.toRadians(8.0);
     private static final float MIN_HALF_THICKNESS_BLOCKS = 1.0f;
+
+    // A cloud's real vertical thickness reads as a paper-thin sliver once
+    // its angular height drops far enough below eye resolution — this
+    // floors the apparent thickness against distance so far patterns still
+    // read as solid bodies. Close patterns are unaffected, since their
+    // real thickness already exceeds the floor there.
+    private static final float MIN_ANGULAR_HALF_THICKNESS_RATIO = (float) Math.tan(Math.toRadians(1.25));
 
     private WeatherPatternManager weatherPatternManager;
     private WeatherManager weatherManager;
@@ -203,8 +210,11 @@ class SkyWeatherPatternBranch extends BranchPackage {
         angularWidth[index] = (float) Math.atan2(footprintRadiusChunks, Math.max(distanceChunks, 0.001));
 
         float baseAltitude = lerp(resolveAltitude(sourceCloud), resolveAltitude(targetCloud), blend);
-        float verticalThickness = lerp(
+        float rawVerticalThickness = lerp(
                 resolveVerticalThickness(sourceCloud), resolveVerticalThickness(targetCloud), blend);
+
+        float minVisibleThickness = (float) distanceBlocks * MIN_ANGULAR_HALF_THICKNESS_RATIO * 2f;
+        float verticalThickness = Math.max(rawVerticalThickness, minVisibleThickness);
 
         double topRelativeY = (baseAltitude + verticalThickness) - cameraY;
         double bottomRelativeY = baseAltitude - cameraY;

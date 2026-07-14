@@ -8,25 +8,30 @@
 #include "includes/SunLightData.glsl"
 #include "includes/MoonLightData.glsl"
 #include "includes/WindData.glsl"
-#include "clouds/util/VolumetricCloudUtility.glsl"
+#include "sky/util/SkyCloudUtility.glsl"
 
 /*
 * Sky-dome distant weather preview. Every active pattern is blended, per
- * ray direction, into one virtual cloud volume built from real world-space
- * position/altitude/footprint (see SkyWeatherPatternBranch), then
- * raymarched with the same box-intersection and density/shape functions
- * the overhead volumetric cloud objects use.
+ * ray direction, out of the SkyWeatherPatternData UBO into one virtual
+ * cloud layer, then raymarched entirely through SkyCloudUtility's
+ * unbounded, world-scale density function. Never includes
+ * clouds/util/VolumetricCloudUtility.glsl — that module belongs solely to
+ * the overhead volumetric cloud objects. The pattern's real world-space
+ * box (center / halfExtent) is used only to bound the raymarch's
+ * start/end distance along the ray — never to shape or orient the noise.
  */
 
 const float SKY_HORIZON_FADE_START = -0.02;
 const float SKY_HORIZON_FADE_END   = 0.06;
 
-const int   SKY_RAYMARCH_STEPS          = 14;
-const float SKY_STEP_ALPHA_SCALE        = 0.09;
-const float SKY_LIGHT_TAP_DISTANCE      = 8.0;
+const int   SKY_RAYMARCH_STEPS          = 20;
+const float SKY_STEP_ALPHA_SCALE        = 0.11;
+const float SKY_LIGHT_TAP_DISTANCE      = 28.0;
 const float SKY_TOP_TINT_MIX            = 0.32;
 const float SKY_SHADOW_TINT_MIX         = 0.28;
 const float SKY_INTENSITY_DENSITY_FLOOR = 0.2;
+const float SKY_NOISE_WORLD_SCALE       = 1.0 / 110.0;
+const float SKY_DETAIL_JITTER           = 0.45;
 
 const float SKY_PATTERN_WEIGHT_INNER_SCALE  = 0.6;
 const float SKY_PATTERN_WEIGHT_OUTER_SCALE  = 1.6;
@@ -55,7 +60,6 @@ struct SkyCloudVolume {
     vec3  center;
     vec3  halfExtent;
     float seed;
-    float domainRotation;
 };
 
 float wrapAngleDelta(float delta) {
@@ -82,7 +86,6 @@ SkyCloudVolume resolveSkyCloudVolume(vec3 dir, float rayElevation) {
     result.center = vec3(0.0);
     result.halfExtent = vec3(0.0);
     result.seed = 0.0;
-    result.domainRotation = 0.0;
 
     float horizLen = length(dir.xz);
     float rayAzimuth = horizLen > SKY_PATTERN_AZIMUTH_EPSILON
@@ -137,7 +140,6 @@ SkyCloudVolume resolveSkyCloudVolume(vec3 dir, float rayElevation) {
         result.center              += u_patternCenter[i] * weight;
         result.halfExtent          += u_patternHalfExtent[i] * weight;
         result.seed                += u_patternSeed[i] * weight;
-        result.domainRotation      += u_patternDomainRotation[i] * weight;
     }
 
     float presence = clamp(totalWeight, 0.0, 1.0);
@@ -161,7 +163,6 @@ SkyCloudVolume resolveSkyCloudVolume(vec3 dir, float rayElevation) {
     result.center                *= invWeight;
     result.halfExtent           *= invWeight;
     result.seed                  *= invWeight;
-    result.domainRotation       *= invWeight;
 
     result.coverage  *= presence;
     result.density    *= presence;
@@ -190,7 +191,7 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
 
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
-    vec2 boxHit = intersectAABB(cameraRenderPos, dir, boxMin, boxMax);
+    vec2 boxHit = intersectSkyAABB(cameraRenderPos, dir, boxMin, boxMax);
     float marchStart = max(boxHit.x, 0.0);
     float marchLen   = max(boxHit.y - marchStart, 0.0);
 
@@ -215,9 +216,9 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
     float boxHeight = max(boxMax.y - boxMin.y, 0.001);
     float intensityFactor = mix(SKY_INTENSITY_DENSITY_FLOOR, 1.0, clamp(weather.intensity, 0.0, 1.0));
     int toonBands = max(int(weather.toonBands + 0.5), 1);
+    float noiseScale = weather.densityNoiseScale * SKY_NOISE_WORLD_SCALE;
 
     float stepSize = marchLen / float(SKY_RAYMARCH_STEPS);
-    vec2 weatherRot = vec2(cos(weather.domainRotation), sin(weather.domainRotation));
 
     vec4 accum = vec4(0.0);
 
@@ -229,20 +230,19 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
 
         float heightT = clamp((p.y - boxMin.y) / boxHeight, 0.0, 1.0);
 
-        float density = sampleVolumetricCloudDensity(
-            p, boxMin, boxMax, weather.halfExtent.xz, heightT, weather.densityNoiseScale, weather.noiseWarpStrength,
-            weatherRot, effectiveCoverageBias, weather.silhouetteSoftness, weather.seed, u_time)
+        float density = sampleSkyCloudDensity(
+            p, heightT, noiseScale, weather.noiseWarpStrength, SKY_DETAIL_JITTER,
+            effectiveCoverageBias, weather.silhouetteSoftness, weather.seed, u_time)
         * weather.density * intensityFactor;
 
         if (density > 0.01) {
-            float litDensity = sampleVolumetricCloudDensity(
-                p + lightDir * SKY_LIGHT_TAP_DISTANCE, boxMin, boxMax, weather.halfExtent.xz, heightT, weather.densityNoiseScale,
-                weather.noiseWarpStrength, weatherRot, effectiveCoverageBias, weather.silhouetteSoftness,
-                weather.seed, u_time)
+            float litDensity = sampleSkyCloudDensity(
+                p + lightDir * SKY_LIGHT_TAP_DISTANCE, heightT, noiseScale, weather.noiseWarpStrength,
+                SKY_DETAIL_JITTER, effectiveCoverageBias, weather.silhouetteSoftness, weather.seed, u_time)
             * weather.density * intensityFactor;
             float lightLift = clamp((density - litDensity) * 2.0 + 0.5, 0.0, 1.0);
 
-            vec3 shaded = shadeCloudLit(
+            vec3 shaded = shadeSkyCloudLit(
                 weather.color, topTint, shadowTint, lightColor, lightPower,
                 heightT, lightLift, density, toonBands,
                 weather.shadeStrength, weather.rimStrength, weather.aoStrength, weather.brightness);

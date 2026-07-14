@@ -16,19 +16,17 @@ out float vRandomSeed;
 out float vFadeAlpha;
 out float vIntensity;
 
-flat out vec3  vBoxMin;
-flat out vec3  vBoxMax;
-flat out vec2  vHalfExtentXZ;
-flat out vec2  vRot;
+flat out vec3 vBoxCenter;
+flat out vec3 vHalfExtent;
+flat out vec2 vRot;
 
 /*
 * Builds this instance's box from its own world position, distance LOD
  * scale, and the elongation/rotation rolled once at stream-in (see
- * WeatherPatternManager). The mesh's local X axis is always the long axis
- * before rotation. vBoxMin/vBoxMax is the conservative axis-aligned bound
- * of that rotated rectangle for the fragment shader's raymarch; the true
- * (pre-rotation) half-extents travel separately in vHalfExtentXZ so the
- * fragment shader can still resolve a properly oriented oval silhouette.
+ * WeatherPatternManager). vHalfExtent is the box's true local half size
+ * (elongation already applied to X) — the fragment shader intersects and
+ * shades entirely in that local frame, so no separate world-aligned AABB
+ * is ever computed here.
  */
 void main() {
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -52,6 +50,7 @@ void main() {
     float finalScaleY = u_cloudVerticalThickness * sizeScale;
     float halfX = (u_cloudScale * sizeScale * elongation) * 0.5;
     float halfZ = (u_cloudScale * sizeScale) * 0.5;
+    float halfY = finalScaleY * 0.5;
 
     float cosR = cos(domainRotation);
     float sinR = sin(domainRotation);
@@ -66,17 +65,13 @@ void main() {
         instancePos.y + aPos.y * finalScaleY,
         instancePos.z + rotatedXZ.y);
 
-    float worldHalfX = abs(halfX * cosR) + abs(halfZ * sinR);
-    float worldHalfZ = abs(halfX * sinR) + abs(halfZ * cosR);
-
-    vBoxMin = vec3(instancePos.x - worldHalfX, instancePos.y, instancePos.z - worldHalfZ);
-    vBoxMax = vec3(instancePos.x + worldHalfX, instancePos.y + finalScaleY, instancePos.z + worldHalfZ);
-
     vWorldPos = worldPos;
     vRandomSeed = randomSeed;
     vFadeAlpha = fadeAlpha * horizonFade;
     vIntensity = intensity;
-    vHalfExtentXZ = vec2(halfX, halfZ);
+
+    vBoxCenter = vec3(instancePos.x, instancePos.y + halfY, instancePos.z);
+    vHalfExtent = vec3(halfX, halfY, halfZ);
     vRot = vec2(cosR, sinR);
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
