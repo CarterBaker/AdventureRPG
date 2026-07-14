@@ -28,14 +28,12 @@ class CloudRenderSystem extends SystemPackage {
      * Owns one instanced GPU buffer per cloud archetype — every active,
      * cloud-bearing overhead cell sharing a CloudHandle draws in a single
      * instanced call against a single shared MaterialInstance for that
-     * archetype, baked once the first time that archetype is ever used.
-     * Rebuilt fully every frame from OverheadManager's active cells, since
-     * position, fade, and intensity all change continuously as patterns
-     * drift, stream, and fade. Owned by WeatherRenderSystem, which supplies
-     * the per-window fbo/window pairs to submit().
+     * archetype. Rebuilt fully every frame from OverheadManager's active
+     * cells. Owned by WeatherRenderSystem, which supplies the per-window
+     * fbo/window pairs to submit().
      */
 
-    private static final int[] INSTANCE_ATTR_SIZES = { 4, 4 };
+    private static final int[] INSTANCE_ATTR_SIZES = { 4, 4, 1 };
 
     private OverheadManager overheadManager;
     private MeshManager meshManager;
@@ -50,7 +48,7 @@ class CloudRenderSystem extends SystemPackage {
     private Object2ObjectOpenHashMap<CloudHandle, CompositeBufferInstance> cloud2Buffer;
     private Object2ObjectOpenHashMap<CloudHandle, MaterialInstance> cloud2Material;
 
-    private final float[] instanceScratch = new float[8];
+    private final float[] instanceScratch = new float[9];
 
     @Override
     protected void create() {
@@ -170,6 +168,7 @@ class CloudRenderSystem extends SystemPackage {
         instanceScratch[5] = cell.getFadeAlpha();
         instanceScratch[6] = cell.getIntensity();
         instanceScratch[7] = cell.getSizeVariance();
+        instanceScratch[8] = cell.getElongation();
 
         buffer.addInstance(instanceScratch);
     }
@@ -196,9 +195,8 @@ class CloudRenderSystem extends SystemPackage {
      * Bakes every archetype-level value off CloudData into this
      * archetype's own shared MaterialInstance, once, the first time it is
      * ever used. Scale and vertical thickness stay the archetype's own
-     * base values here — per-instance size variance (see
-     * OverheadCellStruct/WeatherPatternLobeStruct) is applied later, in
-     * the vertex shader, against this shared base.
+     * base values here — per-instance size variance and elongation are
+     * applied later, in the vertex shader, against this shared base.
      */
     private void bakeArchetypeUniforms(MaterialInstance material, CloudHandle cloudHandle) {
 

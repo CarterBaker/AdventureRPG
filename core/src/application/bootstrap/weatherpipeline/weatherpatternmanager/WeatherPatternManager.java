@@ -22,12 +22,12 @@ public class WeatherPatternManager extends ManagerPackage {
      * Simulates the world's persistent weather patterns — up to
      * WEATHER_PATTERN_MAX_ACTIVE_COUNT systems, each a jittered cell holding
      * a handful of offset cloud lobes. Patterns spawn in an outer ring,
-     * drift with the world, and retire once they drift back out past the
+     * drift with the world, and retire once they drift back past the
      * simulated radius. Weather reassignment crossfades via
      * WeatherPatternStruct's transitionT; resolved intensity is smoothed
-     * every frame rather than snapped whenever it's periodically resampled.
-     * Re-evaluation biases its pick toward the current weather's own
-     * declared next-weather suggestions — a soft nudge, never a guarantee.
+     * every frame rather than snapped whenever it's resampled. Re-evaluation
+     * biases its pick toward the current weather's own next-weather
+     * suggestions — a soft nudge, never a guarantee.
      */
 
     private static final float FADE_IN_RATE = 0.4f;
@@ -117,18 +117,28 @@ public class WeatherPatternManager extends ManagerPackage {
     }
 
     /*
-     * Candidates are restricted to an outer ring — inside MIN_SPAWN_DISTANCE_RATIO
-     * of the radius, nothing is ever allowed to spawn fresh, so weather can
-     * never be conjured near the player. Sorted upwind-first (against world
-     * drift) so fresh patterns enter from the side weather drifts in from and
-     * sweep across rather than appearing arbitrarily; farthest-first is the
-     * tiebreak.
+     * Candidate cells sit in an outer ring, sized against the bound that's
+     * actually enforced later. Home-position jitter (computeHomeJitter) is
+     * deterministic per cell — never re-rolled — so any candidate whose
+     * nominal distance sat beyond radiusChunks minus the worst-case jitter
+     * magnitude could never pass streamInBudgeted's real distance check, no
+     * matter how many times it was rescanned. The previous ring extended a
+     * full cell past radiusChunks, which left roughly half of every
+     * generated candidate permanently dead and starved the active pattern
+     * pool well below its intended cap. Both bounds below are now sized
+     * against the true jitter margin instead, so every generated candidate
+     * is reachable, and nothing can jitter closer to the player than the
+     * inner exclusion promises. Sorted upwind-first so fresh patterns enter
+     * from the side weather drifts in from; farthest-first is the tiebreak.
      */
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
-        float candidateRadiusChunks = radiusChunks + patternCellSizeChunks;
-        float minSpawnDistanceChunks = radiusChunks * MIN_SPAWN_DISTANCE_RATIO;
-        int radiusCells = Math.max(1, Math.round(candidateRadiusChunks / (float) patternCellSizeChunks));
+        float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
+        float maxJitterMagnitudeChunks = (jitterRangeChunks * 0.5f) * (float) Math.sqrt(2.0);
+
+        float candidateRadiusChunks = radiusChunks + maxJitterMagnitudeChunks;
+        float minSpawnDistanceChunks = radiusChunks * MIN_SPAWN_DISTANCE_RATIO + maxJitterMagnitudeChunks;
+        int radiusCells = Math.max(1, (int) Math.ceil(candidateRadiusChunks / (float) patternCellSizeChunks));
 
         ObjectArrayList<int[]> offsets = new ObjectArrayList<>();
 
@@ -270,6 +280,10 @@ public class WeatherPatternManager extends ManagerPackage {
                     EngineSetting.CLOUD_INSTANCE_SIZE_VARIANCE_MAX,
                     hash01(lobeSeedBase ^ 0x94D049BB133111EBL));
             float domainRotation = hash01(lobeSeedBase ^ 0xD1B54A32D192ED03L) * (float) (Math.PI * 2.0);
+            float elongation = lerp(
+                    EngineSetting.CLOUD_INSTANCE_ELONGATION_MIN,
+                    EngineSetting.CLOUD_INSTANCE_ELONGATION_MAX,
+                    hash01(lobeSeedBase ^ 0x27D4EB2F165667C5L));
 
             float offsetAngle = hash01(lobeSeedBase ^ 0xC2B2AE3D27D4EB4FL) * (float) (Math.PI * 2.0);
             float offsetRadiusT = i == 0 ? 0f : hash01(lobeSeedBase ^ 0x165667B19E3779F9L);
@@ -286,7 +300,7 @@ public class WeatherPatternManager extends ManagerPackage {
             lobes[i] = new WeatherPatternLobeStruct(
                     offsetChunkX, offsetChunkZ,
                     cloudHandle, effectiveAltitude,
-                    randomSeed, sizeVariance, domainRotation);
+                    randomSeed, sizeVariance, domainRotation, elongation);
         }
 
         float driftSpeedScale = computePatternDriftSpeedScale(lobes);
@@ -388,12 +402,6 @@ public class WeatherPatternManager extends ManagerPackage {
         }
     }
 
-    /*
-     * Runs every frame regardless of the resample cadence above, easing the
-     * displayed intensity toward whatever target the last resample produced
-     * instead of snapping to it — this is what removes the visible pop in
-     * cloud density/coverage every time intensity is resampled.
-     */
     private void advanceIntensitySmoothing() {
 
         float deltaTime = internal.getDeltaTime();
@@ -414,9 +422,8 @@ public class WeatherPatternManager extends ManagerPackage {
 
     /*
      * Distance is measured against each pattern's own drifted position, not
-     * its fixed home — the home never moves, so checking against it would
-     * let a pattern drift indefinitely far from the player while still
-     * counting as active, permanently starving the pool of free slots.
+     * its fixed home, so a pattern can't drift indefinitely far while still
+     * counting as active.
      */
     private void advanceFadesAndRetire(int playerChunkX, int playerChunkZ) {
 

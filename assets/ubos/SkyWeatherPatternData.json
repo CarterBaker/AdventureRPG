@@ -22,6 +22,10 @@
         { "name": "u_patternNoiseWarpStrength",       "type": "FLOAT",   "count": 64 },
         { "name": "u_patternCoverageBias",            "type": "FLOAT",   "count": 64 },
         { "name": "u_patternSilhouetteSoftness",      "type": "FLOAT",   "count": 64 },
+        { "name": "u_patternCenter",                  "type": "VECTOR3", "count": 64 },
+        { "name": "u_patternHalfExtent",              "type": "VECTOR3", "count": 64 },
+        { "name": "u_patternSeed",                    "type": "FLOAT",   "count": 64 },
+        { "name": "u_patternDomainRotation",          "type": "FLOAT",   "count": 64 },
         { "name": "u_skyElevationLimit",              "type": "FLOAT" }
     ]
 }

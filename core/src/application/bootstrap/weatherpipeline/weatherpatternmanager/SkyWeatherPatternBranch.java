@@ -24,36 +24,18 @@ class SkyWeatherPatternBranch extends BranchPackage {
 
     /*
      * Flattens WeatherPatternManager's active patterns into the
-     * SkyWeatherPatternData UBO every frame, one entry per pattern at its
-     * own stable slot, crossfaded between a pattern's previous and current
-     * WeatherHandle over its transitionT.
-     *
-     * Bearing AND elevation are both real angles derived from a pattern's
-     * true world position, altitude, and vertical thickness relative to
-     * the camera — not azimuth plus a generic view-angle falloff — so a
-     * storm appears where it physically sits instead of smearing across
-     * the whole sky. u_skyElevationLimit is the highest elevation any
-     * active, actually-cloudy pattern can reach this frame (with a margin
-     * for its own falloff); Clouds.glsl skips its entire per-pattern loop
-     * and raymarch above that line. Since real weather stays low relative
-     * to render distance, this is what keeps looking straight up cheap
-     * instead of paying full per-pixel cost across the whole screen.
+     * SkyWeatherPatternData UBO every frame. Each pattern is pushed as a
+     * real world-space cloud volume (position, altitude, footprint) so the
+     * sky raymarch (Clouds.glsl) samples true world positions through the
+     * same shape functions the overhead volumetric clouds use, rather than
+     * an ungrounded view-direction sample.
      */
 
     private static final int MAX_PATTERNS = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
-    // Independent of WeatherPatternManager's own placement cell size — that
-    // grid spacing controls pattern density, not how large a pattern should
-    // read in the sky dome.
     private static final float FOOTPRINT_RADIUS_CHUNKS = EngineSetting.WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS * 0.5f;
-
-    // Fallback vertical thickness for a pattern with no primary cloud —
-    // mirrors the other CLOUD_DEFAULT_* fallbacks below in spirit.
     private static final float DEFAULT_VERTICAL_THICKNESS = 12.0f;
-
-    // Extra headroom above the highest real pattern top so its own falloff
-    // (already zero well before its true edge) never pops as dir.y crosses
-    // the limit.
     private static final float ELEVATION_LIMIT_MARGIN_RADIANS = (float) Math.toRadians(8.0);
+    private static final float MIN_HALF_THICKNESS_BLOCKS = 1.0f;
 
     private WeatherPatternManager weatherPatternManager;
     private WeatherManager weatherManager;
@@ -84,6 +66,10 @@ class SkyWeatherPatternBranch extends BranchPackage {
     private Float[] noiseWarpStrength;
     private Float[] coverageBias;
     private Float[] silhouetteSoftness;
+    private Vector3[] center;
+    private Vector3[] halfExtent;
+    private Float[] seed;
+    private Float[] domainRotation;
 
     private double frameHighestElevationTop;
 
@@ -109,6 +95,10 @@ class SkyWeatherPatternBranch extends BranchPackage {
         this.noiseWarpStrength = newFloatArray();
         this.coverageBias = newFloatArray();
         this.silhouetteSoftness = newFloatArray();
+        this.center = newVector3Array();
+        this.halfExtent = newVector3Array();
+        this.seed = newFloatArray();
+        this.domainRotation = newFloatArray();
     }
 
     @Override
@@ -176,6 +166,10 @@ class SkyWeatherPatternBranch extends BranchPackage {
         skyWeatherPatternData.updateUniform("u_patternNoiseWarpStrength", noiseWarpStrength);
         skyWeatherPatternData.updateUniform("u_patternCoverageBias", coverageBias);
         skyWeatherPatternData.updateUniform("u_patternSilhouetteSoftness", silhouetteSoftness);
+        skyWeatherPatternData.updateUniform("u_patternCenter", center);
+        skyWeatherPatternData.updateUniform("u_patternHalfExtent", halfExtent);
+        skyWeatherPatternData.updateUniform("u_patternSeed", seed);
+        skyWeatherPatternData.updateUniform("u_patternDomainRotation", domainRotation);
         skyWeatherPatternData.updateUniform("u_skyElevationLimit", (float) Math.sin(elevationLimit));
 
         uboManager.push(skyWeatherPatternData);
@@ -203,10 +197,10 @@ class SkyWeatherPatternBranch extends BranchPackage {
         CloudChanceStruct sourceCloud = sourceWeather.getPrimaryCloud();
 
         float visualScale = lerp(sourceWeather.getVisualScale(), targetWeather.getVisualScale(), blend);
-        float footprintRadius = FOOTPRINT_RADIUS_CHUNKS * visualScale;
+        float footprintRadiusChunks = FOOTPRINT_RADIUS_CHUNKS * visualScale;
 
         bearing[index] = (float) Math.atan2(dx, -dz);
-        angularWidth[index] = (float) Math.atan2(footprintRadius, Math.max(distanceChunks, 0.001));
+        angularWidth[index] = (float) Math.atan2(footprintRadiusChunks, Math.max(distanceChunks, 0.001));
 
         float baseAltitude = lerp(resolveAltitude(sourceCloud), resolveAltitude(targetCloud), blend);
         float verticalThickness = lerp(
@@ -226,10 +220,6 @@ class SkyWeatherPatternBranch extends BranchPackage {
         float coverageBlend = lerp(sourceWeather.getCloudCoverage(), targetWeather.getCloudCoverage(), blend);
         coverage[index] = coverageBlend;
 
-        // Only patterns that are both active and actually cloudy get to
-        // widen the elevation bound below — a fully clear sky (or a
-        // pattern that hasn't faded in yet) should never force the sky
-        // shader to pay for a real, expensive band it will never draw.
         if (pattern.getFadeAlpha() > 0.0f && coverageBlend > 0.001f)
             frameHighestElevationTop = Math.max(frameHighestElevationTop, elevTop);
 
@@ -269,6 +259,20 @@ class SkyWeatherPatternBranch extends BranchPackage {
 
         silhouetteSoftness[index] = lerp(
                 resolveSilhouetteSoftness(sourceCloud), resolveSilhouetteSoftness(targetCloud), blend);
+
+        float altitudeMid = baseAltitude + verticalThickness * 0.5f;
+        float footprintRadiusBlocks = footprintRadiusChunks * EngineSetting.CHUNK_SIZE;
+        float halfThickness = Math.max(verticalThickness * 0.5f, MIN_HALF_THICKNESS_BLOCKS);
+
+        center[index].set(
+                (float) (dx * EngineSetting.CHUNK_SIZE),
+                altitudeMid,
+                (float) (dz * EngineSetting.CHUNK_SIZE));
+        halfExtent[index].set(footprintRadiusBlocks, halfThickness, footprintRadiusBlocks);
+
+        WeatherPatternLobeStruct[] lobes = pattern.getLobes();
+        seed[index] = lobes.length > 0 ? lobes[0].getRandomSeed() : 0f;
+        domainRotation[index] = lobes.length > 0 ? lobes[0].getDomainRotation() : 0f;
     }
 
     private Float[] newFloatArray() {
@@ -292,8 +296,6 @@ class SkyWeatherPatternBranch extends BranchPackage {
         float c = Math.max(0f, Math.min(1f, t));
         return c * c * (3f - 2f * c);
     }
-
-    // Camera \\
 
     private float resolveCameraY() {
 

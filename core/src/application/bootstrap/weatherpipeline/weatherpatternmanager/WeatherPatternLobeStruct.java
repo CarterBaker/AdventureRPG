@@ -7,8 +7,12 @@ public class WeatherPatternLobeStruct extends StructPackage {
 
     /*
      * One fixed lobe within a larger WeatherPatternStruct — an offset, a
-     * cloud choice, and a shape-variation seed, generated once at the
-     * owning pattern's stream-in and never re-rolled.
+     * cloud choice, a shape-variation seed, and an elongation/orientation
+     * pair, generated once at the owning pattern's stream-in and never
+     * re-rolled. elongation stretches the lobe's footprint into an oval
+     * along domainRotation's own axis rather than a uniform circle, so a
+     * cluster of lobes reads as an irregular, organic mass instead of
+     * identical repeated blobs.
      */
 
     private final float offsetChunkX;
@@ -20,6 +24,7 @@ public class WeatherPatternLobeStruct extends StructPackage {
     private final float randomSeed;
     private final float sizeVariance;
     private final float domainRotation;
+    private final float elongation;
 
     public WeatherPatternLobeStruct(
             float offsetChunkX,
@@ -28,7 +33,8 @@ public class WeatherPatternLobeStruct extends StructPackage {
             float effectiveAltitude,
             float randomSeed,
             float sizeVariance,
-            float domainRotation) {
+            float domainRotation,
+            float elongation) {
 
         this.offsetChunkX = offsetChunkX;
         this.offsetChunkZ = offsetChunkZ;
@@ -37,6 +43,7 @@ public class WeatherPatternLobeStruct extends StructPackage {
         this.randomSeed = randomSeed;
         this.sizeVariance = sizeVariance;
         this.domainRotation = domainRotation;
+        this.elongation = elongation;
     }
 
     public float getOffsetChunkX() {
@@ -69,5 +76,9 @@ public class WeatherPatternLobeStruct extends StructPackage {
 
     public float getDomainRotation() {
         return domainRotation;
+    }
+
+    public float getElongation() {
+        return elongation;
     }
 }

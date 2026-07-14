@@ -25,6 +25,10 @@ layout(std140) uniform SkyWeatherPatternData {
     float u_patternNoiseWarpStrength[SKY_WEATHER_PATTERN_MAX_COUNT];
     float u_patternCoverageBias[SKY_WEATHER_PATTERN_MAX_COUNT];
     float u_patternSilhouetteSoftness[SKY_WEATHER_PATTERN_MAX_COUNT];
+    vec3  u_patternCenter[SKY_WEATHER_PATTERN_MAX_COUNT];
+    vec3  u_patternHalfExtent[SKY_WEATHER_PATTERN_MAX_COUNT];
+    float u_patternSeed[SKY_WEATHER_PATTERN_MAX_COUNT];
+    float u_patternDomainRotation[SKY_WEATHER_PATTERN_MAX_COUNT];
     float u_skyElevationLimit;
 };
 

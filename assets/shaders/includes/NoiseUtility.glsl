@@ -2,19 +2,11 @@
 #define NOISE_UTILITY_GLSL
 
 /*
-* Shared noise primitives for every sky, weather, and cloud shader in the
- * engine. Two families live here:
- *
- * - The original value-noise set (hash31/smoothNoise3D/fbmNoise3D/
- *   fbmNoise2D/cellNoise) — kept unchanged for SkyNoise.glsl's existing
- *   daily-variation dithering, which doesn't need anything fancier.
- *
- * - A gradient (Perlin-style) noise + Worley (cellular) noise set, added
- *   for the volumetric cloud rework (see sky/util/CloudShapeUtility.glsl).
- *   Value noise alone reads as smooth, grainy, and "cheap" — real clouds
- *   have soft billowing macro-shape (gradient noise's job) PLUS a bumpy,
- *   cauliflower-like edge detail (Worley's job); neither alone looks
- *   right, which is why CloudShapeUtility layers both together.
+* Shared noise primitives for every sky, weather, and cloud shader. A
+ * value-noise set (hash31/smoothNoise3D/fbmNoise3D/fbmNoise2D/cellNoise)
+ * for SkyNoise.glsl's daily dithering, and a gradient (Perlin-style) +
+ * Worley (cellular) set for volumetric clouds — soft billowing shape from
+ * gradient noise, bumpy cauliflower edges from Worley.
  */
 
 float hash31(vec3 p) {
@@ -94,11 +86,6 @@ float cellNoise(vec3 p) {
 }
 
 // ── Gradient (Perlin-style) noise ───────────────────────────────────────
-// Smooth, continuously-varying 3D noise — the macro "billow" shape of a
-// cloud. hash33 supplies a pseudo-random gradient direction per lattice
-// corner; gradientNoise3D dots that direction against the sample's own
-// offset from the corner, exactly like classic Perlin noise.
-
 vec3 hash33(vec3 p) {
     p = vec3(
         dot(p, vec3(127.1, 311.7, 74.7)),
@@ -150,20 +137,23 @@ float fbmGradient3D(vec3 p) {
 }
 
 // ── Worley (cellular) noise ─────────────────────────────────────────────
-// Distance to the nearest of 27 randomly-offset feature points in the
-// surrounding 3x3x3 lattice cells, remapped so 1.0 sits at a feature
-// point's own core and falls toward 0.0 at a cell boundary. This is what
-// gives cloud edges their bumpy, "cauliflower" silhouette instead of a
-// smoothly rounded blob.
+// Only the current cell plus whichever neighbor each axis leans toward
+// (2x2x2 = 8 taps) rather than the full 3x3x3 = 27 neighborhood. The true
+// nearest feature point can in principle sit in a cell this skips, but the
+// jitter is bounded within each cell so any error stays sub-cell-sized —
+// invisible once blended into the fbm layer above it, and ~3.4x cheaper
+// per call in what is by far the hottest function in the cloud raymarch.
 float worleyNoise3D(vec3 p) {
     vec3 i = floor(p);
     vec3 f = fract(p);
+    vec3 dir = sign(f - 0.5);
+
     float minDistSq = 1.0;
 
-    for (int z = -1; z <= 1; z++) {
-        for (int y = -1; y <= 1; y++) {
-            for (int x = -1; x <= 1; x++) {
-                vec3 neighbor = vec3(float(x), float(y), float(z));
+    for (int z = 0; z <= 1; z++) {
+        for (int y = 0; y <= 1; y++) {
+            for (int x = 0; x <= 1; x++) {
+                vec3 neighbor = vec3(float(x), float(y), float(z)) * dir;
                 vec3 point = hash33(i + neighbor) * 0.5 + 0.5;
                 vec3 diff = neighbor + point - f;
                 minDistSq = min(minDistSq, dot(diff, diff));
@@ -176,9 +166,6 @@ float worleyNoise3D(vec3 p) {
 
 // Two-octave Worley — a second, higher-frequency layer blended under the
 // first so cell walls read as thin wisps rather than solid cell blobs.
-// Kept to two taps (rather than three or more) so the per-sample cost of
-// the volumetric raymarch stays reasonable — see CloudShapeUtility.glsl's
-// own doc comment on where this gets called from and how often.
 float worleyFbm3D(vec3 p) {
     float w1 = worleyNoise3D(p);
     float w2 = worleyNoise3D(p * 2.4);

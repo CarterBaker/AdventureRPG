@@ -1,9 +1,9 @@
 {
     "color": { "r": 1.0, "g": 1.0, "b": 1.0 },
     "topColor": { "r": 1.0, "g": 1.0, "b": 1.0 },
-    "scale": 48.0,
+    "scale": 96.0,
     "density": 0.85,
-    "verticalThickness": 14.0,
+    "verticalThickness": 24.0,
     "toonBands": 3,
     "densityNoiseScale": 1.0,
     "noiseWarpStrength": 0.6,

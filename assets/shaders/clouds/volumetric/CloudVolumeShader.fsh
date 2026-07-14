@@ -2,11 +2,12 @@
 
 in vec3  vWorldPos;
 in float vRandomSeed;
-in float vDomainRotation;
 in float vFadeAlpha;
 in float vIntensity;
 flat in vec3 vBoxMin;
 flat in vec3 vBoxMax;
+flat in vec2 vHalfExtentXZ;
+flat in vec2 vRot;
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
@@ -20,24 +21,15 @@ layout(location = 2) out vec4 gMaterial;
 #include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
-* Raymarches this instance's own AABB (vBoxMin/vBoxMax) via
- * sampleVolumetricCloudDensity(). Writes unlit shape data
- * (shadeCloudUnlit()) plus a real accumulated AO into gMaterial.b —
- * Lighting.fsh lights this exactly once, same as terrain.
- *
- * Ray origin is the CAMERA, not this fragment's own surface position. This
- * box gets back-face culled (see RenderSystem) so only its near side
- * rasterizes when the camera is outside it, but using the camera as origin
- * regardless means the march region never depends on which triangle
- * triggered the fragment, and degrades correctly if the camera ends up
- * inside the box: marchStart just clamps to 0 and the march begins at the
- * camera instead of never reaching a wall it's already past.
- *
- * gNormal is the density field's own gradient at the raymarch's single
- * most-visible sample (see VolumetricCloudUtility.glsl's
- * volumetricCloudGradientNormal()), not this instance's flat box-face
- * normal — the box-face normal is what lit every cloud as six flat,
- * hard-edged panels once Lighting.fsh applied real directional light to it.
+* Raymarches this instance's own AABB. sampleVolumetricCloudDensity()
+ * internally gates its cellular detail layer to samples actually near the
+ * density threshold, since most of a cloud's bounding volume is empty air
+ * around a much smaller silhouette — this is what keeps looking straight
+ * up through a sky full of overlapping instances affordable. Writes unlit
+ * shape data plus a real accumulated AO into gMaterial.b — Lighting.fsh
+ * lights this exactly once, same as terrain. Ray origin is the camera, not
+ * this fragment's own surface position, so the march region never depends
+ * on which triangle of the (invisible, bounding-only) box triggered it.
  */
 
 uniform vec3  u_cloudColor;
@@ -55,8 +47,8 @@ uniform float u_cloudRimLightStrength;
 uniform float u_cloudAmbientOcclusionStrength;
 uniform float u_cloudBrightnessMultiplier;
 
-const int   CLOUD_RAYMARCH_STEPS_NEAR       = 48;
-const int   CLOUD_RAYMARCH_STEPS_FAR        = 16;
+const int   CLOUD_RAYMARCH_STEPS_NEAR       = 32;
+const int   CLOUD_RAYMARCH_STEPS_FAR        = 12;
 const float CLOUD_RAYMARCH_TIER_DISTANCE    = 128.0;
 const float CLOUD_RAYMARCH_STEP_ALPHA_SCALE = 0.09;
 const float CLOUD_LIGHT_TAP_DISTANCE        = 2.5;
@@ -106,18 +98,18 @@ void main() {
         float heightT = clamp((p.y - vBoxMin.y) / boxHeight, 0.0, 1.0);
 
         float rawDensity = sampleVolumetricCloudDensity(
-            p, vBoxMin, vBoxMax, heightT,
-            u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
+            p, vBoxMin, vBoxMax, vHalfExtentXZ, heightT,
+            u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength, vRot,
             u_cloudCoverageBias, u_cloudSilhouetteSoftness,
-            vRandomSeed, u_time, vDomainRotation);
+            vRandomSeed, u_time);
         float density = rawDensity * u_cloudDensity * intensityFactor;
 
         if (density > 0.01) {
             float rawLit = sampleVolumetricCloudDensity(
-                p + lightDir * CLOUD_LIGHT_TAP_DISTANCE, vBoxMin, vBoxMax, heightT,
-                u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
+                p + lightDir * CLOUD_LIGHT_TAP_DISTANCE, vBoxMin, vBoxMax, vHalfExtentXZ, heightT,
+                u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength, vRot,
                 u_cloudCoverageBias, u_cloudSilhouetteSoftness,
-                vRandomSeed, u_time, vDomainRotation);
+                vRandomSeed, u_time);
             float litDensity = rawLit * u_cloudDensity * intensityFactor;
 
             float lightLift = clamp((density - litDensity) * 2.0 + 0.5, 0.0, 1.0);
@@ -156,10 +148,10 @@ void main() {
     float ao = mix(1.0, accumAO / max(accum.a, 0.0001), finalAlpha);
 
     vec3 cloudNormalWorld = volumetricCloudGradientNormal(
-        peakPos, vBoxMin, vBoxMax,
-        u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
+        peakPos, vBoxMin, vBoxMax, vHalfExtentXZ,
+        u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength, vRot,
         u_cloudCoverageBias, u_cloudSilhouetteSoftness,
-        vRandomSeed, u_time, vDomainRotation, gradientEpsilon);
+        vRandomSeed, u_time, gradientEpsilon);
 
     vec3 normalView = normalize(mat3(u_view) * cloudNormalWorld);
 

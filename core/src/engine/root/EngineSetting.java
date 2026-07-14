@@ -390,8 +390,10 @@ public class EngineSetting {
 
         // Cloud Instance Shape Diversity \\
 
-        public static final float CLOUD_INSTANCE_SIZE_VARIANCE_MIN = 0.75f;
-        public static final float CLOUD_INSTANCE_SIZE_VARIANCE_MAX = 1.3f;
+        public static final float CLOUD_INSTANCE_SIZE_VARIANCE_MIN = 0.65f;
+        public static final float CLOUD_INSTANCE_SIZE_VARIANCE_MAX = 1.6f;
+        public static final float CLOUD_INSTANCE_ELONGATION_MIN = 1.0f;
+        public static final float CLOUD_INSTANCE_ELONGATION_MAX = 2.4f;
         public static final String CLOUD_SETTINGS_DATA_UBO = "CloudSettingsData";
         public static final String UNIFORM_CLOUD_HORIZON_DISTANCE = "u_cloudHorizonDistance";
         public static final String UNIFORM_CLOUD_MIN_SCALE = "u_cloudMinScale";
@@ -471,7 +473,7 @@ public class EngineSetting {
         // cell size above, which controls pattern density, not how large a
         // pattern should read in the sky. See SkyWeatherPatternBranch.
         public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 24.0f;
-        public static final float WEATHER_PATTERN_LOBE_SPREAD_RATIO = 0.6f;
+        public static final float WEATHER_PATTERN_LOBE_SPREAD_RATIO = 0.85f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
         public static final float WEATHER_PATTERN_LOBE_MIN_COUNT = 2.0f;
         public static final float WEATHER_PATTERN_LOBE_MAX_COUNT = 6.0f;

@@ -1,10 +1,9 @@
 #version 330 core
 
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec2 aUV;
-layout (location = 3) in vec4 aInstance0; // xyz = world position, w = random seed
-layout (location = 4) in vec4 aInstance1; // x = domain rotation, y = fade alpha, z = intensity, w = size variance
+layout (location = 0) in vec3  aPos;
+layout (location = 3) in vec4  aInstance0; // xyz = world position, w = random seed
+layout (location = 4) in vec4  aInstance1; // x = domain rotation, y = fade alpha, z = intensity, w = size variance
+layout (location = 5) in float aInstance2; // elongation — long/short axis ratio, local X before rotation
 
 #include "includes/CameraData.glsl"
 #include "includes/CloudSettingsData.glsl"
@@ -13,28 +12,23 @@ uniform float u_cloudScale;
 uniform float u_cloudVerticalThickness;
 
 out vec3  vWorldPos;
-out vec3  vNormal;
 out float vRandomSeed;
-out float vDomainRotation;
 out float vFadeAlpha;
 out float vIntensity;
 
-flat out vec3 vBoxMin;
-flat out vec3 vBoxMax;
+flat out vec3  vBoxMin;
+flat out vec3  vBoxMax;
+flat out vec2  vHalfExtentXZ;
+flat out vec2  vRot;
 
 /*
-* Per-instance placement now arrives entirely through instanced vertex
- * attributes, written once per instance per frame by CloudRenderSystem into
- * the shared CompositeBufferInstance for this cloud archetype — never
- * through per-draw uniforms. This is what actually lets every instance
- * sharing one CloudHandle render in a single glDrawElementsInstanced call.
- * sizeVariance scales the whole instance uniformly so no two clouds of the
- * same archetype read as identically sized.
- *
- * cameraRenderPos is reconstructed from the view matrix rather than read
- * from u_cameraPosition directly, since instancePos already arrives in the
- * player-chunk-recentered render frame every other vertex here shares — see
- * LightingShader.fsh for the same technique applied elsewhere.
+* Builds this instance's box from its own world position, distance LOD
+ * scale, and the elongation/rotation rolled once at stream-in (see
+ * WeatherPatternManager). The mesh's local X axis is always the long axis
+ * before rotation. vBoxMin/vBoxMax is the conservative axis-aligned bound
+ * of that rotated rectangle for the fragment shader's raymarch; the true
+ * (pre-rotation) half-extents travel separately in vHalfExtentXZ so the
+ * fragment shader can still resolve a properly oriented oval silhouette.
  */
 void main() {
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -45,6 +39,7 @@ void main() {
     float fadeAlpha      = aInstance1.y;
     float intensity      = aInstance1.z;
     float sizeVariance   = aInstance1.w;
+    float elongation     = max(aInstance2, 1.0);
 
     float distFromCamera = length(instancePos.xz - cameraRenderPos.xz);
     float distanceT = clamp(distFromCamera / u_cloudHorizonDistance, 0.0, 1.0);
@@ -54,21 +49,35 @@ void main() {
     float fadeT = clamp((distFromCamera - u_cloudTransitionStart) / transitionSpan, 0.0, 1.0);
     float horizonFade = 1.0 - smoothstep(0.0, 1.0, fadeT);
 
-    float finalScaleXZ = u_cloudScale * sizeScale;
     float finalScaleY = u_cloudVerticalThickness * sizeScale;
+    float halfX = (u_cloudScale * sizeScale * elongation) * 0.5;
+    float halfZ = (u_cloudScale * sizeScale) * 0.5;
 
-    vec3 scaledLocal = vec3(aPos.x * finalScaleXZ, aPos.y * finalScaleY, aPos.z * finalScaleXZ);
-    vec3 worldPos = instancePos + scaledLocal;
+    float cosR = cos(domainRotation);
+    float sinR = sin(domainRotation);
 
-    vBoxMin = vec3(instancePos.x - finalScaleXZ * 0.5, instancePos.y, instancePos.z - finalScaleXZ * 0.5);
-    vBoxMax = vec3(instancePos.x + finalScaleXZ * 0.5, instancePos.y + finalScaleY, instancePos.z + finalScaleXZ * 0.5);
+    vec2 localXZ = vec2(aPos.x * halfX * 2.0, aPos.z * halfZ * 2.0);
+    vec2 rotatedXZ = vec2(
+        localXZ.x * cosR - localXZ.y * sinR,
+        localXZ.x * sinR + localXZ.y * cosR);
+
+    vec3 worldPos = vec3(
+        instancePos.x + rotatedXZ.x,
+        instancePos.y + aPos.y * finalScaleY,
+        instancePos.z + rotatedXZ.y);
+
+    float worldHalfX = abs(halfX * cosR) + abs(halfZ * sinR);
+    float worldHalfZ = abs(halfX * sinR) + abs(halfZ * cosR);
+
+    vBoxMin = vec3(instancePos.x - worldHalfX, instancePos.y, instancePos.z - worldHalfZ);
+    vBoxMax = vec3(instancePos.x + worldHalfX, instancePos.y + finalScaleY, instancePos.z + worldHalfZ);
 
     vWorldPos = worldPos;
-    vNormal = aNormal;
     vRandomSeed = randomSeed;
-    vDomainRotation = domainRotation;
     vFadeAlpha = fadeAlpha * horizonFade;
     vIntensity = intensity;
+    vHalfExtentXZ = vec2(halfX, halfZ);
+    vRot = vec2(cosR, sinR);
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }

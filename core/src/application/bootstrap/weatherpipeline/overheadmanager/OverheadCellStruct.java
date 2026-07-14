@@ -9,11 +9,10 @@ import engine.root.StructPackage;
 public class OverheadCellStruct extends StructPackage {
 
     /*
-     * One renderable cloud-volume placement — what CloudRenderSystem turns
-     * into a single ModelInstance. A thin read-through view of one lobe
-     * belonging to one WeatherPatternStruct; every getter delegates to the
-     * owning pattern and/or lobe, so position, fade, and intensity always
-     * track whatever the pattern most recently resolved to.
+     * One renderable cloud-volume placement — a thin read-through view of
+     * one lobe belonging to one WeatherPatternStruct. Every getter
+     * delegates to the owning pattern and/or lobe, so position, fade, and
+     * intensity always track whatever the pattern most recently resolved.
      */
 
     private final long cellKey;
@@ -56,6 +55,10 @@ public class OverheadCellStruct extends StructPackage {
 
     public float getDomainRotation() {
         return lobe.getDomainRotation();
+    }
+
+    public float getElongation() {
+        return lobe.getElongation();
     }
 
     public double getCurrentChunkX() {

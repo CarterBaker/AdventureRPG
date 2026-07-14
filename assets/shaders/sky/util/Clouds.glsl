@@ -1,40 +1,29 @@
 #ifndef CLOUDS_GLSL
 #define CLOUDS_GLSL
 
+#include "includes/CameraData.glsl"
 #include "includes/TimeData.glsl"
 #include "includes/SkyWeatherPatternData.glsl"
 #include "includes/SkyColorData.glsl"
 #include "includes/SunLightData.glsl"
 #include "includes/MoonLightData.glsl"
 #include "includes/WindData.glsl"
-#include "sky/util/SkyCloudUtility.glsl"
+#include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
-* Sky-dome distant weather preview. Every active pattern is placed in the
- * dome at its own true bearing AND elevation angle, both derived from its
- * real world position, altitude, and vertical thickness relative to the
- * camera (see SkyWeatherPatternBranch) — a storm reads as genuinely
- * sitting where it physically is, at its own real height, rather than
- * smearing across the whole upper sky.
- *
- * u_skyElevationLimit is the highest elevation any active, cloudy
- * pattern's own footprint can reach this frame, with a margin for its own
- * falloff. Every direction above that line skips the pattern loop and
- * raymarch entirely — since real weather stays low relative to render
- * distance, this is what keeps looking straight up cheap instead of
- * paying full per-pattern, per-step cost across the entire screen.
+* Sky-dome distant weather preview. Every active pattern is blended, per
+ * ray direction, into one virtual cloud volume built from real world-space
+ * position/altitude/footprint (see SkyWeatherPatternBranch), then
+ * raymarched with the same box-intersection and density/shape functions
+ * the overhead volumetric cloud objects use.
  */
 
 const float SKY_HORIZON_FADE_START = -0.02;
 const float SKY_HORIZON_FADE_END   = 0.06;
 
-const float SKY_NOISE_WORLD_SCALE       = 1.0 / 45.0;
-const float SKY_LAYER_SCALE             = 180.0 * SKY_NOISE_WORLD_SCALE;
-const float SKY_LAYER_THICKNESS         = 24.0  * SKY_NOISE_WORLD_SCALE;
-const int   SKY_RAYMARCH_STEPS          = 8;
-const float SKY_DETAIL_JITTER           = 0.35;
-const float SKY_STEP_ALPHA_SCALE        = 0.45;
-const float SKY_LIGHT_TAP_DISTANCE      = 9.0   * SKY_NOISE_WORLD_SCALE;
+const int   SKY_RAYMARCH_STEPS          = 14;
+const float SKY_STEP_ALPHA_SCALE        = 0.09;
+const float SKY_LIGHT_TAP_DISTANCE      = 8.0;
 const float SKY_TOP_TINT_MIX            = 0.32;
 const float SKY_SHADOW_TINT_MIX         = 0.28;
 const float SKY_INTENSITY_DENSITY_FLOOR = 0.2;
@@ -47,7 +36,7 @@ const float SKY_PATTERN_AZIMUTH_EPSILON     = 0.0005;
 const float SKY_PI                          = 3.14159265359;
 const float SKY_TWO_PI                      = 6.28318530718;
 
-struct WeatherPatternSample {
+struct SkyCloudVolume {
     float coverage;
     vec3  color;
     vec3  topColor;
@@ -63,17 +52,18 @@ struct WeatherPatternSample {
     float coverageBias;
     float silhouetteSoftness;
     float intensity;
-    float elevation;
-    float angularHeight;
+    vec3  center;
+    vec3  halfExtent;
+    float seed;
+    float domainRotation;
 };
 
-// Wraps an angle difference into [-PI, PI].
 float wrapAngleDelta(float delta) {
     return mod(delta + SKY_PI, SKY_TWO_PI) - SKY_PI;
 }
 
-WeatherPatternSample resolvePatternWeather(vec3 dir, float rayElevation) {
-    WeatherPatternSample result;
+SkyCloudVolume resolveSkyCloudVolume(vec3 dir, float rayElevation) {
+    SkyCloudVolume result;
     result.coverage = 0.0;
     result.color = vec3(0.0);
     result.topColor = vec3(0.0);
@@ -89,11 +79,11 @@ WeatherPatternSample resolvePatternWeather(vec3 dir, float rayElevation) {
     result.coverageBias = 0.0;
     result.silhouetteSoftness = 0.0;
     result.intensity = 0.0;
-    result.elevation = 0.0;
-    result.angularHeight = 0.0;
+    result.center = vec3(0.0);
+    result.halfExtent = vec3(0.0);
+    result.seed = 0.0;
+    result.domainRotation = 0.0;
 
-    // Azimuth-only ray bearing — guarded for the near-zenith case where the
-    // horizontal component collapses toward zero.
     float horizLen = length(dir.xz);
     float rayAzimuth = horizLen > SKY_PATTERN_AZIMUTH_EPSILON
     ? atan(dir.x, -dir.z)
@@ -102,9 +92,6 @@ WeatherPatternSample resolvePatternWeather(vec3 dir, float rayElevation) {
     float totalWeight = 0.0;
 
     for (int i = 0; i < u_patternCount; i++) {
-        // Cheap elevation reject first — this alone skips the azimuth
-        // wrap/trig for most patterns on most pixels, since a ray's own
-        // elevation only ever lines up with a handful of active patterns.
         float elevEdge = max(u_patternAngularHeight[i], SKY_PATTERN_MIN_ANGULAR_HEIGHT);
         float elevDiff = abs(rayElevation - u_patternElevation[i]);
 
@@ -147,16 +134,13 @@ WeatherPatternSample resolvePatternWeather(vec3 dir, float rayElevation) {
         result.coverageBias        += u_patternCoverageBias[i] * weight;
         result.silhouetteSoftness  += u_patternSilhouetteSoftness[i] * weight;
         result.intensity           += u_patternIntensity[i] * weight;
-        result.elevation           += u_patternElevation[i] * weight;
-        result.angularHeight       += u_patternAngularHeight[i] * weight;
+        result.center              += u_patternCenter[i] * weight;
+        result.halfExtent          += u_patternHalfExtent[i] * weight;
+        result.seed                += u_patternSeed[i] * weight;
+        result.domainRotation      += u_patternDomainRotation[i] * weight;
     }
 
-    // How strongly ANY weather actually occupies this direction, saturating
-    // at 1 so overlapping patterns never over-brighten.
     float presence = clamp(totalWeight, 0.0, 1.0);
-
-    // Safe divide — when totalWeight is exactly 0 every accumulated field
-    // is also exactly 0.
     float invWeight = totalWeight > 0.0 ? (1.0 / totalWeight) : 0.0;
 
     result.coverage            *= invWeight;
@@ -174,13 +158,11 @@ WeatherPatternSample resolvePatternWeather(vec3 dir, float rayElevation) {
     result.coverageBias         *= invWeight;
     result.silhouetteSoftness   *= invWeight;
     result.intensity            *= invWeight;
-    result.elevation            *= invWeight;
-    result.angularHeight        *= invWeight;
+    result.center                *= invWeight;
+    result.halfExtent           *= invWeight;
+    result.seed                  *= invWeight;
+    result.domainRotation       *= invWeight;
 
-    // Shape/color/position fields stay the pure weighted blend — they
-    // describe WHAT nearby weather looks like and WHERE it actually sits.
-    // coverage/density/intensity describe HOW MUCH of it is present in
-    // this direction, so those get the presence scale.
     result.coverage  *= presence;
     result.density    *= presence;
     result.intensity  *= presence;
@@ -192,17 +174,27 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
     if (dir.y < SKY_HORIZON_FADE_START)
     return vec4(0.0);
 
-    // Nothing any active, cloudy pattern's own footprint could possibly
-    // reach — skip the whole pattern loop and raymarch.
     if (dir.y > u_skyElevationLimit)
     return vec4(0.0);
 
     float horizonFade = smoothstep(SKY_HORIZON_FADE_START, SKY_HORIZON_FADE_END, dir.y);
     float rayElevation = asin(clamp(dir.y, -1.0, 1.0));
 
-    WeatherPatternSample weather = resolvePatternWeather(dir, rayElevation);
+    SkyCloudVolume weather = resolveSkyCloudVolume(dir, rayElevation);
 
     if (weather.coverage <= 0.001 && weather.density <= 0.001)
+    return vec4(0.0);
+
+    vec3 boxMin = weather.center - weather.halfExtent;
+    vec3 boxMax = weather.center + weather.halfExtent;
+
+    vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+
+    vec2 boxHit = intersectAABB(cameraRenderPos, dir, boxMin, boxMax);
+    float marchStart = max(boxHit.x, 0.0);
+    float marchLen   = max(boxHit.y - marchStart, 0.0);
+
+    if (marchLen <= 0.001)
     return vec4(0.0);
 
     float sunWeight  = clamp(u_sunIntensity / 0.3, 0.0, 1.0);
@@ -210,28 +202,22 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
     vec3  lightColor = mix(u_moonColor, u_sunColor, sunWeight);
     float lightPower = mix(u_moonIntensity, u_sunIntensity, sunWeight);
 
-    vec3 wind = vec3(
-        u_windDriftOffset.x + dailySeed,
+    vec3 windOffset = vec3(
+        u_windDriftOffset.x + dailySeed * 4.0,
         0.0,
-        u_windDriftOffset.y + dailySeed * 1.3) * SKY_NOISE_WORLD_SCALE;
-
-    float stepDepth = SKY_LAYER_THICKNESS / float(SKY_RAYMARCH_STEPS);
+        u_windDriftOffset.y + dailySeed * 3.0);
 
     vec3 topTint    = mix(weather.topColor, u_skyZenithColor, SKY_TOP_TINT_MIX);
     vec3 shadowTint = mix(weather.shadowColor, u_skyHorizonColor * 0.4, SKY_SHADOW_TINT_MIX);
 
     float effectiveCoverageBias = clamp(mix(weather.coverageBias, weather.coverage, 0.5), 0.0, 1.0);
 
-    // heightT is this ray-sample's own position within THIS blended
-    // pattern's real vertical span — 0 at its lowest edge, 1 at its
-    // highest — never the raw view angle. A storm's own base/erosion
-    // shape now tracks where it actually sits in the sky.
-    float angularSpan = max(weather.angularHeight, SKY_PATTERN_MIN_ANGULAR_HEIGHT);
-    float heightT = clamp(0.5 + (rayElevation - weather.elevation) / (2.0 * angularSpan), 0.0, 1.0);
-
+    float boxHeight = max(boxMax.y - boxMin.y, 0.001);
     float intensityFactor = mix(SKY_INTENSITY_DENSITY_FLOOR, 1.0, clamp(weather.intensity, 0.0, 1.0));
-
     int toonBands = max(int(weather.toonBands + 0.5), 1);
+
+    float stepSize = marchLen / float(SKY_RAYMARCH_STEPS);
+    vec2 weatherRot = vec2(cos(weather.domainRotation), sin(weather.domainRotation));
 
     vec4 accum = vec4(0.0);
 
@@ -239,27 +225,29 @@ vec4 calculateClouds(vec3 dir, float dailySeed) {
         if (accum.a > 0.95)
         break;
 
-        vec3 p = dir * (SKY_LAYER_SCALE + float(i) * stepDepth) + wind;
+        vec3 p = cameraRenderPos + dir * (marchStart + (float(i) + 0.5) * stepSize) + windOffset;
 
-        float density = sampleSkyCloudDensity(
-            p, heightT, weather.densityNoiseScale, weather.noiseWarpStrength, SKY_DETAIL_JITTER,
-            effectiveCoverageBias, weather.silhouetteSoftness, dailySeed, u_time)
+        float heightT = clamp((p.y - boxMin.y) / boxHeight, 0.0, 1.0);
+
+        float density = sampleVolumetricCloudDensity(
+            p, boxMin, boxMax, weather.halfExtent.xz, heightT, weather.densityNoiseScale, weather.noiseWarpStrength,
+            weatherRot, effectiveCoverageBias, weather.silhouetteSoftness, weather.seed, u_time)
         * weather.density * intensityFactor;
 
         if (density > 0.01) {
-            float litDensity = sampleSkyCloudDensity(
-                p + lightDir * SKY_LIGHT_TAP_DISTANCE, heightT, weather.densityNoiseScale,
-                weather.noiseWarpStrength, SKY_DETAIL_JITTER, effectiveCoverageBias,
-                weather.silhouetteSoftness, dailySeed, u_time)
+            float litDensity = sampleVolumetricCloudDensity(
+                p + lightDir * SKY_LIGHT_TAP_DISTANCE, boxMin, boxMax, weather.halfExtent.xz, heightT, weather.densityNoiseScale,
+                weather.noiseWarpStrength, weatherRot, effectiveCoverageBias, weather.silhouetteSoftness,
+                weather.seed, u_time)
             * weather.density * intensityFactor;
             float lightLift = clamp((density - litDensity) * 2.0 + 0.5, 0.0, 1.0);
 
-            vec3 shaded = shadeSkyCloudLit(
+            vec3 shaded = shadeCloudLit(
                 weather.color, topTint, shadowTint, lightColor, lightPower,
                 heightT, lightLift, density, toonBands,
                 weather.shadeStrength, weather.rimStrength, weather.aoStrength, weather.brightness);
 
-            float stepAlpha = clamp(density * SKY_STEP_ALPHA_SCALE, 0.0, 1.0);
+            float stepAlpha = clamp(density * SKY_STEP_ALPHA_SCALE * stepSize, 0.0, 1.0);
             accum.rgb += (1.0 - accum.a) * stepAlpha * shaded;
             accum.a   += (1.0 - accum.a) * stepAlpha;
         }
