@@ -13,7 +13,8 @@ public class OverheadManager extends ManagerPackage {
      * Flattens WeatherPatternManager's active patterns into one renderable
      * cell per lobe — the exact shape CloudRenderSystem consumes. Owns no
      * simulation of its own; reacts each frame to whichever patterns
-     * WeatherPatternManager streamed in or retired that same frame.
+     * WeatherPatternManager streamed in, retired, or had their lobes
+     * rebuilt following a weather change, that same frame.
      */
 
     private WeatherPatternManager weatherPatternManager;
@@ -34,10 +35,14 @@ public class OverheadManager extends ManagerPackage {
     protected void update() {
 
         ObjectArrayList<WeatherPatternStruct> streamedIn = weatherPatternManager.getPatternsStreamedInThisFrame();
+        ObjectArrayList<WeatherPatternStruct> refreshed = weatherPatternManager.getPatternsRefreshedThisFrame();
         ObjectArrayList<WeatherPatternStruct> retired = weatherPatternManager.getPatternsRetiredThisFrame();
 
         for (int i = 0; i < streamedIn.size(); i++)
             addCellsForPattern(streamedIn.get(i));
+
+        for (int i = 0; i < refreshed.size(); i++)
+            refreshCellsForPattern(refreshed.get(i));
 
         for (int i = 0; i < retired.size(); i++)
             removeCellsForPattern(retired.get(i));
@@ -53,6 +58,19 @@ public class OverheadManager extends ManagerPackage {
             long lobeKey = computeLobeKey(pattern.getPatternKey(), i);
             activeCells.put(lobeKey, new OverheadCellStruct(lobeKey, pattern, lobes[i]));
         }
+    }
+
+    /*
+     * A pattern's lobes were just replaced after a weather transition.
+     * Removes every cell keyed under the old lobe indices, then adds fresh
+     * cells for the new lobe array under the same pattern and slot.
+     */
+    private void refreshCellsForPattern(WeatherPatternStruct pattern) {
+
+        for (int i = 0; i < pattern.getPreviousLobeCount(); i++)
+            activeCells.remove(computeLobeKey(pattern.getPatternKey(), i));
+
+        addCellsForPattern(pattern);
     }
 
     private void removeCellsForPattern(WeatherPatternStruct pattern) {

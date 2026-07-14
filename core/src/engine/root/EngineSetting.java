@@ -469,15 +469,13 @@ public class EngineSetting {
 
         public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
         public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 8;
-        // Sky-dome angular footprint size — independent of the CPU placement
-        // cell size above, which controls pattern density, not how large a
-        // pattern should read in the sky. See SkyWeatherPatternBranch.
         public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 24.0f;
         public static final float WEATHER_PATTERN_LOBE_SPREAD_RATIO = 0.85f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
-        public static final float WEATHER_PATTERN_LOBE_MIN_COUNT = 2.0f;
-        public static final float WEATHER_PATTERN_LOBE_MAX_COUNT = 6.0f;
+        public static final float WEATHER_PATTERN_LOBE_MIN_COUNT = 1.0f;
+        public static final float WEATHER_PATTERN_LOBE_MAX_COUNT = 3.0f;
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 8;
+        public static final int WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET = 64;
 
         // Weather Pattern Lifecycle \\
 

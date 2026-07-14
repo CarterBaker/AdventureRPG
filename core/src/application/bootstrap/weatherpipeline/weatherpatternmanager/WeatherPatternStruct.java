@@ -7,13 +7,15 @@ public class WeatherPatternStruct extends StructPackage {
 
     /*
      * One persistent, large-scale weather system shared by the overhead
-     * volumetric layer and the sky dome. Position, lobes, and UBO slot are
-     * fixed for its lifetime. Its resolved WeatherHandle may be reassigned
-     * by WeatherPatternManager as conditions change; previousWeatherHandle
-     * and transitionT let consumers blend smoothly across that change
-     * instead of popping instantly, and intensity eases toward
-     * targetIntensity every frame rather than snapping whenever it's
-     * resampled.
+     * volumetric layer and the sky dome. Position and UBO slot are fixed for
+     * its lifetime. Lobes are regenerated whenever the pattern's resolved
+     * weather changes, so the overhead cloud layer actually reflects live
+     * weather instead of freezing at spawn time; previousWeatherHandle and
+     * transitionT let shading blend smoothly across that change. Bounding
+     * geometry (footprint radius, altitude range) is recomputed alongside
+     * the lobes and is the single source of truth the sky dome preview
+     * derives its own box from, so the two visual layers can never disagree
+     * about where or how large a pattern's weather actually is.
      */
 
     public static final float WEATHER_TRANSITION_DURATION_SECONDS = 10.0f;
@@ -27,8 +29,10 @@ public class WeatherPatternStruct extends StructPackage {
     private final int homeChunkX;
     private final int homeChunkZ;
 
-    private final WeatherPatternLobeStruct[] lobes;
-    private final float driftSpeedScale;
+    private WeatherPatternLobeStruct[] lobes;
+    private float driftSpeedScale;
+    private int generation;
+    private int previousLobeCount;
 
     private final int slot;
 
@@ -42,6 +46,11 @@ public class WeatherPatternStruct extends StructPackage {
     private float targetIntensity;
 
     private double nextReevaluationTime;
+
+    // Bounding Geometry
+    private float footprintRadiusChunks;
+    private float altitudeCenter;
+    private float altitudeHalfThickness;
 
     public WeatherPatternStruct(
             long patternKey,
@@ -61,6 +70,8 @@ public class WeatherPatternStruct extends StructPackage {
         this.homeChunkZ = homeChunkZ;
         this.lobes = lobes;
         this.driftSpeedScale = driftSpeedScale;
+        this.generation = 0;
+        this.previousLobeCount = lobes.length;
         this.slot = slot;
         this.fadeAlpha = 0f;
         this.retiring = false;
@@ -83,6 +94,30 @@ public class WeatherPatternStruct extends StructPackage {
         if (transitionT >= 1f)
             return;
         transitionT = Math.min(1f, transitionT + deltaTime / WEATHER_TRANSITION_DURATION_SECONDS);
+    }
+
+    /*
+     * Replaces this pattern's lobes — called whenever its resolved weather
+     * changes so the overhead volumetric layer actually shows clouds
+     * matching current weather rather than whatever was rolled at spawn.
+     * previousLobeCount is recorded so OverheadManager can find and remove
+     * every cell key the old lobe array occupied before the new one is
+     * added under the same indices.
+     */
+    public void refreshLobes(WeatherPatternLobeStruct[] newLobes) {
+        this.previousLobeCount = this.lobes.length;
+        this.lobes = newLobes;
+        this.generation++;
+    }
+
+    public void setDriftSpeedScale(float driftSpeedScale) {
+        this.driftSpeedScale = driftSpeedScale;
+    }
+
+    public void setBounds(float footprintRadiusChunks, float altitudeCenter, float altitudeHalfThickness) {
+        this.footprintRadiusChunks = footprintRadiusChunks;
+        this.altitudeCenter = altitudeCenter;
+        this.altitudeHalfThickness = altitudeHalfThickness;
     }
 
     public float getTransitionT() {
@@ -141,6 +176,14 @@ public class WeatherPatternStruct extends StructPackage {
         return lobes.length;
     }
 
+    public int getPreviousLobeCount() {
+        return previousLobeCount;
+    }
+
+    public int getGeneration() {
+        return generation;
+    }
+
     public float getDriftSpeedScale() {
         return driftSpeedScale;
     }
@@ -167,5 +210,17 @@ public class WeatherPatternStruct extends StructPackage {
 
     public float getIntensity() {
         return intensity;
+    }
+
+    public float getFootprintRadiusChunks() {
+        return footprintRadiusChunks;
+    }
+
+    public float getAltitudeCenter() {
+        return altitudeCenter;
+    }
+
+    public float getAltitudeHalfThickness() {
+        return altitudeHalfThickness;
     }
 }

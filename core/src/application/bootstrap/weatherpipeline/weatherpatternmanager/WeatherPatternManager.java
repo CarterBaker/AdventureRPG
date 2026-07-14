@@ -19,21 +19,26 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WeatherPatternManager extends ManagerPackage {
 
     /*
-     * Simulates the world's persistent weather patterns — up to
-     * WEATHER_PATTERN_MAX_ACTIVE_COUNT systems, each a jittered cell holding
-     * a handful of offset cloud lobes. Patterns spawn in an outer ring,
-     * drift with the world, and retire once they drift back past the
-     * simulated radius. Weather reassignment crossfades via
-     * WeatherPatternStruct's transitionT; resolved intensity is smoothed
-     * every frame rather than snapped whenever it's resampled. Re-evaluation
-     * biases its pick toward the current weather's own next-weather
-     * suggestions — a soft nudge, never a guarantee.
+     * Simulates the world's persistent weather patterns — jittered cells
+     * streamed in around the player, each holding a handful of offset cloud
+     * lobes. Patterns drift with the world and retire once they pass back
+     * beyond the simulated radius. A pattern's lobes are rebuilt whenever
+     * its resolved weather changes, so the overhead volumetric layer always
+     * reflects live weather rather than whatever was rolled at spawn. Every
+     * rebuild also recomputes the pattern's true bounding geometry —
+     * footprint radius and altitude range — from its actual lobes, which is
+     * the single source of truth the sky dome preview reads its own box
+     * from. Total active cloud lobes (not patterns) are capped against
+     * overheadLobeBudget, since lobe count is what actually drives overhead
+     * render cost.
      */
 
     private static final float FADE_IN_RATE = 0.4f;
     private static final float FADE_OUT_RATE = 0.4f;
     private static final float MIN_SPAWN_DISTANCE_RATIO = 0.55f;
     private static final float INTENSITY_SMOOTHING_TIME_SECONDS = 3.0f;
+    private static final float MIN_ALTITUDE_HALF_THICKNESS = 4.0f;
+    private static final long GENERATION_SEED_MIX = 0x632BE59BD9B4E019L;
 
     private WeatherManager weatherManager;
     private WorldManager worldManager;
@@ -43,10 +48,12 @@ public class WeatherPatternManager extends ManagerPackage {
     private float radiusChunks;
     private int maxPatternsStreamedPerFrame;
     private int maxActivePatternCount;
+    private int overheadLobeBudget;
     private float reevaluationMinSeconds;
     private float reevaluationMaxSeconds;
 
     private Long2ObjectOpenHashMap<WeatherPatternStruct> activePatterns;
+    private int totalActiveLobeCount;
 
     private IntArrayList freeSlots;
 
@@ -60,6 +67,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
     private ObjectArrayList<WeatherPatternStruct> streamedInThisFrame;
     private ObjectArrayList<WeatherPatternStruct> retiredThisFrame;
+    private ObjectArrayList<WeatherPatternStruct> refreshedThisFrame;
 
     @Override
     protected void create() {
@@ -68,10 +76,12 @@ public class WeatherPatternManager extends ManagerPackage {
         this.radiusChunks = Math.min(settings.maxRenderDistance / 2f, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
         this.maxPatternsStreamedPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
         this.maxActivePatternCount = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
+        this.overheadLobeBudget = EngineSetting.WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET;
         this.reevaluationMinSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MIN_SECONDS;
         this.reevaluationMaxSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MAX_SECONDS;
 
         this.activePatterns = new Long2ObjectOpenHashMap<>();
+        this.totalActiveLobeCount = 0;
 
         this.freeSlots = new IntArrayList(maxActivePatternCount);
         for (int i = 0; i < maxActivePatternCount; i++)
@@ -85,6 +95,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
         this.streamedInThisFrame = new ObjectArrayList<>();
         this.retiredThisFrame = new ObjectArrayList<>();
+        this.refreshedThisFrame = new ObjectArrayList<>();
 
         this.skyWeatherPatternBranch = create(SkyWeatherPatternBranch.class);
     }
@@ -100,6 +111,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
         streamedInThisFrame.clear();
         retiredThisFrame.clear();
+        refreshedThisFrame.clear();
 
         if (!weatherManager.hasActiveWeatherPool())
             return;
@@ -117,19 +129,10 @@ public class WeatherPatternManager extends ManagerPackage {
     }
 
     /*
-     * Candidate cells sit in an outer ring, sized against the bound that's
-     * actually enforced later. Home-position jitter (computeHomeJitter) is
-     * deterministic per cell — never re-rolled — so any candidate whose
-     * nominal distance sat beyond radiusChunks minus the worst-case jitter
-     * magnitude could never pass streamInBudgeted's real distance check, no
-     * matter how many times it was rescanned. The previous ring extended a
-     * full cell past radiusChunks, which left roughly half of every
-     * generated candidate permanently dead and starved the active pattern
-     * pool well below its intended cap. Both bounds below are now sized
-     * against the true jitter margin instead, so every generated candidate
-     * is reachable, and nothing can jitter closer to the player than the
-     * inner exclusion promises. Sorted upwind-first so fresh patterns enter
-     * from the side weather drifts in from; farthest-first is the tiebreak.
+     * Candidate cells sit in an outer ring sized against the true jitter
+     * margin so every generated candidate is actually reachable once home
+     * jitter is applied. Sorted upwind-first so fresh patterns enter from
+     * the side weather drifts in from; farthest-first is the tiebreak.
      */
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
@@ -213,8 +216,8 @@ public class WeatherPatternManager extends ManagerPackage {
             int wrappedHomeChunkX = Coordinate2Long.unpackX(wrappedHome);
             int wrappedHomeChunkZ = Coordinate2Long.unpackY(wrappedHome);
 
-            streamInPattern(patternKey, wrappedHomeChunkX, wrappedHomeChunkZ);
-            streamed++;
+            if (streamInPattern(patternKey, wrappedHomeChunkX, wrappedHomeChunkZ))
+                streamed++;
         }
     }
 
@@ -233,16 +236,51 @@ public class WeatherPatternManager extends ManagerPackage {
         return new int[] { jitterX, jitterZ };
     }
 
-    private void streamInPattern(long patternKey, int homeChunkX, int homeChunkZ) {
+    /*
+     * Attempts to stream in a new pattern at the given home coordinate.
+     * Returns false without side effects if no free UBO slot remains or if
+     * doing so would exceed the overhead cloud instance budget — the
+     * candidate is simply retried on a later frame.
+     */
+    private boolean streamInPattern(long patternKey, int homeChunkX, int homeChunkZ) {
 
         if (freeSlots.isEmpty())
-            return;
+            return false;
 
         long chunkCoordinate = Coordinate2Long.pack(homeChunkX, homeChunkZ);
         weatherManager.resolveWeatherBandTowardHorizon(bandScratch, chunkCoordinate);
 
         WeatherHandle weatherHandle = bandScratch.getPrimary();
         float intensity = resolvePatternIntensity(bandScratch, weatherHandle);
+
+        WeatherPatternLobeStruct[] lobes = buildLobes(patternKey, weatherHandle, 0);
+
+        if (totalActiveLobeCount + lobes.length > overheadLobeBudget)
+            return false;
+
+        float driftSpeedScale = computePatternDriftSpeedScale(lobes);
+        int slot = freeSlots.removeInt(freeSlots.size() - 1);
+
+        WeatherPatternStruct pattern = new WeatherPatternStruct(
+                patternKey, homeChunkX, homeChunkZ, weatherHandle, lobes, driftSpeedScale, intensity, slot);
+
+        applyBounds(pattern, lobes);
+        pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
+
+        totalActiveLobeCount += lobes.length;
+        activePatterns.put(patternKey, pattern);
+        streamedInThisFrame.add(pattern);
+
+        return true;
+    }
+
+    /*
+     * Builds one pattern's lobes deterministically from its key, resolved
+     * weather, and a generation counter — the same weather resolving twice
+     * for the same pattern after an intervening transition still produces a
+     * fresh roll rather than repeating the exact same shapes.
+     */
+    private WeatherPatternLobeStruct[] buildLobes(long patternKey, WeatherHandle weatherHandle, int generation) {
 
         int lobeCount = weatherHandle.hasClouds()
                 ? Math.max(1, Math.round(lerp(
@@ -252,12 +290,13 @@ public class WeatherPatternManager extends ManagerPackage {
                 : 1;
 
         float lobeSpreadChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_LOBE_SPREAD_RATIO;
+        long generationSalt = GENERATION_SEED_MIX * (generation + 1);
 
         WeatherPatternLobeStruct[] lobes = new WeatherPatternLobeStruct[lobeCount];
 
         for (int i = 0; i < lobeCount; i++) {
 
-            long lobeSeedBase = patternKey ^ (0x9E3779B97F4A7C15L * (i + 1));
+            long lobeSeedBase = patternKey ^ generationSalt ^ (0x9E3779B97F4A7C15L * (i + 1));
 
             boolean coveredByCloud;
 
@@ -303,16 +342,54 @@ public class WeatherPatternManager extends ManagerPackage {
                     randomSeed, sizeVariance, domainRotation, elongation);
         }
 
-        float driftSpeedScale = computePatternDriftSpeedScale(lobes);
-        int slot = freeSlots.removeInt(freeSlots.size() - 1);
+        return lobes;
+    }
 
-        WeatherPatternStruct pattern = new WeatherPatternStruct(
-                patternKey, homeChunkX, homeChunkZ, weatherHandle, lobes, driftSpeedScale, intensity, slot);
+    /*
+     * Recomputes a pattern's true bounding geometry from its actual lobes —
+     * a footprint radius enveloping every lobe's own cloud footprint at its
+     * offset, and an altitude range spanning every lobe's own vertical
+     * extent. This is the only place either value is derived; the sky dome
+     * preview reads it back rather than approximating independently.
+     */
+    private void applyBounds(WeatherPatternStruct pattern, WeatherPatternLobeStruct[] lobes) {
 
-        pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
+        float maxReachChunks = 0f;
+        float altMin = Float.MAX_VALUE;
+        float altMax = -Float.MAX_VALUE;
 
-        activePatterns.put(patternKey, pattern);
-        streamedInThisFrame.add(pattern);
+        for (int i = 0; i < lobes.length; i++) {
+
+            WeatherPatternLobeStruct lobe = lobes[i];
+
+            if (!lobe.hasCloud())
+                continue;
+
+            CloudHandle cloud = lobe.getCloudHandle();
+            float footprintBlocks = cloud.getScale() * lobe.getSizeVariance() * Math.max(lobe.getElongation(), 1f);
+            float footprintChunks = (footprintBlocks * 0.5f) / EngineSetting.CHUNK_SIZE;
+            float offsetChunks = (float) Math.sqrt(
+                    lobe.getOffsetChunkX() * lobe.getOffsetChunkX()
+                            + lobe.getOffsetChunkZ() * lobe.getOffsetChunkZ());
+
+            maxReachChunks = Math.max(maxReachChunks, offsetChunks + footprintChunks);
+
+            float halfThicknessBlocks = cloud.getVerticalThickness() * lobe.getSizeVariance() * 0.5f;
+            float altitude = lobe.getEffectiveAltitude();
+
+            altMin = Math.min(altMin, altitude - halfThicknessBlocks);
+            altMax = Math.max(altMax, altitude + halfThicknessBlocks);
+        }
+
+        if (altMin > altMax) {
+            maxReachChunks = Math.max(maxReachChunks, patternCellSizeChunks * 0.5f);
+            altMin = EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE - MIN_ALTITUDE_HALF_THICKNESS;
+            altMax = EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE + MIN_ALTITUDE_HALF_THICKNESS;
+        }
+
+        float halfThickness = Math.max((altMax - altMin) * 0.5f, MIN_ALTITUDE_HALF_THICKNESS);
+
+        pattern.setBounds(maxReachChunks, (altMin + altMax) * 0.5f, halfThickness);
     }
 
     private float computePatternDriftSpeedScale(WeatherPatternLobeStruct[] lobes) {
@@ -375,10 +452,35 @@ public class WeatherPatternManager extends ManagerPackage {
             WeatherHandle resolved = bandScratch.getPrimary();
 
             if (resolved != pattern.getWeatherHandle())
-                pattern.beginWeatherTransition(resolved);
+                tryRefreshWeather(pattern, resolved);
 
             pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(pattern.getPatternKey()));
         }
+    }
+
+    /*
+     * Rebuilds a pattern's lobes for its newly resolved weather and folds
+     * the change into the running lobe budget. If the new lobe count would
+     * push the total over budget the transition is skipped for now — the
+     * pattern keeps its current weather and lobes and will be reconsidered
+     * at its next reevaluation.
+     */
+    private void tryRefreshWeather(WeatherPatternStruct pattern, WeatherHandle resolved) {
+
+        WeatherPatternLobeStruct[] newLobes = buildLobes(pattern.getPatternKey(), resolved,
+                pattern.getGeneration() + 1);
+        int delta = newLobes.length - pattern.getLobeCount();
+
+        if (totalActiveLobeCount + delta > overheadLobeBudget)
+            return;
+
+        pattern.beginWeatherTransition(resolved);
+        pattern.refreshLobes(newLobes);
+        pattern.setDriftSpeedScale(computePatternDriftSpeedScale(newLobes));
+        applyBounds(pattern, newLobes);
+
+        totalActiveLobeCount += delta;
+        refreshedThisFrame.add(pattern);
     }
 
     private void advanceIntensity() {
@@ -473,6 +575,7 @@ public class WeatherPatternManager extends ManagerPackage {
         if (pattern == null)
             return;
 
+        totalActiveLobeCount -= pattern.getLobeCount();
         freeSlots.add(pattern.getSlot());
         retiredThisFrame.add(pattern);
     }
@@ -507,6 +610,10 @@ public class WeatherPatternManager extends ManagerPackage {
 
     public ObjectArrayList<WeatherPatternStruct> getPatternsRetiredThisFrame() {
         return retiredThisFrame;
+    }
+
+    public ObjectArrayList<WeatherPatternStruct> getPatternsRefreshedThisFrame() {
+        return refreshedThisFrame;
     }
 
     public int getActivePatternCount() {
