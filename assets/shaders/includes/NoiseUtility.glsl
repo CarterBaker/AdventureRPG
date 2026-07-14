@@ -1,19 +1,26 @@
 #ifndef NOISE_UTILITY_GLSL
 #define NOISE_UTILITY_GLSL
 
-/*
-* Shared noise primitives for every sky, weather, and cloud shader. A
- * value-noise set (hash31/smoothNoise3D/fbmNoise3D/fbmNoise2D/cellNoise)
- * for SkyNoise.glsl's daily dithering, and a gradient (Perlin-style) +
- * Worley (cellular) set for volumetric clouds — soft billowing shape from
- * gradient noise, bumpy cauliflower edges from Worley.
- */
+// Shared low-level noise primitives for every sky, weather, and cloud
+// shader: hash, value noise, gradient noise, cellular (Worley) noise, and
+// a curl-based domain warp. fbm variants take an explicit octave count so
+// callers can trade quality for cost per use case.
 
 float hash31(vec3 p) {
     p = fract(p * 0.1031);
     p += dot(p, p.yzx + 33.33);
     return fract((p.x + p.y) * p.z);
 }
+
+vec3 hash33(vec3 p) {
+    p = vec3(
+        dot(p, vec3(127.1, 311.7, 74.7)),
+        dot(p, vec3(269.5, 183.3, 246.1)),
+        dot(p, vec3(113.5, 271.9, 124.6)));
+    return fract(sin(p) * 43758.5453123) * 2.0 - 1.0;
+}
+
+// ── Value noise ──────────────────────────────────────────────────────────
 
 mat3 noiseBasis = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
 
@@ -43,56 +50,19 @@ float smoothNoise3D(vec3 p) {
     return mix(nxy0, nxy1, u.z);
 }
 
-// Simple FBM - back to basics
 float fbmNoise3D(vec3 p) {
     float n = 0.0;
-    n += 0.5 * smoothNoise3D(p);
-    n += 0.25 * smoothNoise3D(p * 2.0);
+    n += 0.5   * smoothNoise3D(p);
+    n += 0.25  * smoothNoise3D(p * 2.0);
     n += 0.125 * smoothNoise3D(p * 4.0);
     return n;
 }
 
-// --- 2D FBM using existing 3D implementation ---
 float fbmNoise2D(vec2 p) {
     return fbmNoise3D(vec3(p, 0.0));
 }
 
-// --- simple 2D cell (Worley) noise ---
-float cellNoise(vec3 p) {
-    vec2 pv = p.xy;
-    vec2 i = floor(pv);
-    vec2 f = fract(pv);
-
-    float res = 1.0;
-
-    for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-            vec2 neighbor = vec2(float(x), float(y));
-            vec3 cell = vec3(i + neighbor, p.z);
-
-            // use your existing hash
-            float h = hash31(cell);
-
-            vec2 randOffset = vec2(fract(h * 113.1), fract(h * 17.3));
-
-            vec2 diff = neighbor + randOffset - f;
-
-            float d = dot(diff, diff);
-            res = min(res, d);
-        }
-    }
-
-    return 1.0 - sqrt(res);
-}
-
-// ── Gradient (Perlin-style) noise ───────────────────────────────────────
-vec3 hash33(vec3 p) {
-    p = vec3(
-        dot(p, vec3(127.1, 311.7, 74.7)),
-        dot(p, vec3(269.5, 183.3, 246.1)),
-        dot(p, vec3(113.5, 271.9, 124.6)));
-    return fract(sin(p) * 43758.5453123) * 2.0 - 1.0;
-}
+// ── Gradient (Perlin-style) noise ────────────────────────────────────────
 
 float gradientNoise3D(vec3 p) {
     vec3 i = floor(p);
@@ -119,30 +89,29 @@ float gradientNoise3D(vec3 p) {
     return mix(nxy0, nxy1, u.z);
 }
 
-// 4-octave FBM over gradientNoise3D — remapped to roughly [0, 1]. This is
-// the cloud macro-shape function: soft, continuous billows rather than
-// the grainier look a value-noise fbm produces.
-float fbmGradient3D(vec3 p) {
+float fbmGradient3D(vec3 p, int octaves, float lacunarity, float gain) {
     float sum = 0.0;
     float amp = 0.5;
     vec3 pos = p;
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < octaves; i++) {
         sum += amp * gradientNoise3D(pos);
-        pos *= 2.03; // non-power-of-2 lacunarity avoids repeating lattices
-        amp *= 0.5;
+        pos *= lacunarity;
+        amp *= gain;
     }
 
     return clamp(sum * 0.5 + 0.5, 0.0, 1.0);
 }
 
-// ── Worley (cellular) noise ─────────────────────────────────────────────
-// Only the current cell plus whichever neighbor each axis leans toward
-// (2x2x2 = 8 taps) rather than the full 3x3x3 = 27 neighborhood. The true
-// nearest feature point can in principle sit in a cell this skips, but the
-// jitter is bounded within each cell so any error stays sub-cell-sized —
-// invisible once blended into the fbm layer above it, and ~3.4x cheaper
-// per call in what is by far the hottest function in the cloud raymarch.
+float fbmGradient3D(vec3 p) {
+    return fbmGradient3D(p, 4, 2.03, 0.5);
+}
+
+// ── Worley (cellular) noise ───────────────────────────────────────────────
+// F1 samples only the current cell plus whichever neighbor each axis
+// leans toward (2x2x2 = 8 taps) rather than the full 3x3x3 = 27 — jitter
+// is bounded within each cell so the shortcut's error stays sub-cell-sized.
+
 float worleyNoise3D(vec3 p) {
     vec3 i = floor(p);
     vec3 f = fract(p);
@@ -164,12 +133,89 @@ float worleyNoise3D(vec3 p) {
     return 1.0 - clamp(sqrt(minDistSq), 0.0, 1.0);
 }
 
-// Two-octave Worley — a second, higher-frequency layer blended under the
-// first so cell walls read as thin wisps rather than solid cell blobs.
+// F1 and F2 together — F2-F1 traces thin fibrous walls along cell
+// boundaries, which plain F1 billows can't produce on their own.
+vec2 worleyCellular3D(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    vec3 dir = sign(f - 0.5);
+
+    float bestSq = 1.0;
+    float secondSq = 1.0;
+
+    for (int z = 0; z <= 1; z++) {
+        for (int y = 0; y <= 1; y++) {
+            for (int x = 0; x <= 1; x++) {
+                vec3 neighbor = vec3(float(x), float(y), float(z)) * dir;
+                vec3 point = hash33(i + neighbor) * 0.5 + 0.5;
+                vec3 diff = neighbor + point - f;
+                float distSq = dot(diff, diff);
+
+                if (distSq < bestSq) {
+                    secondSq = bestSq;
+                    bestSq = distSq;
+                } else if (distSq < secondSq) {
+                    secondSq = distSq;
+                }
+            }
+        }
+    }
+
+    return vec2(
+        1.0 - clamp(sqrt(bestSq), 0.0, 1.0),
+        1.0 - clamp(sqrt(secondSq), 0.0, 1.0));
+}
+
+float worleyFbm3D(vec3 p, int octaves, float lacunarity, float gain) {
+    float sum = 0.0;
+    float total = 0.0;
+    float amp = 0.5;
+    vec3 pos = p;
+
+    for (int i = 0; i < octaves; i++) {
+        sum += amp * worleyNoise3D(pos);
+        total += amp;
+        pos *= lacunarity;
+        amp *= gain;
+    }
+
+    return sum / max(total, 0.0001);
+}
+
 float worleyFbm3D(vec3 p) {
-    float w1 = worleyNoise3D(p);
-    float w2 = worleyNoise3D(p * 2.4);
-    return clamp(w1 * 0.65 + w2 * 0.35, 0.0, 1.0);
+    return worleyFbm3D(p, 2, 2.4, 0.55);
+}
+
+// ── Curl noise (divergence-free warp) ─────────────────────────────────────
+// Finite-difference curl of a 3-component gradient-noise potential field.
+// Meant for one evaluation per macro-shape sample, never per raymarch
+// light tap — nine gradientNoise3D calls is too costly for a hot loop.
+
+vec3 curlNoise3D(vec3 p) {
+    const float e = 0.1;
+    const vec3 seedY = vec3(31.416, 47.853, 12.793);
+    const vec3 seedZ = vec3(74.365, 9.481, 53.192);
+
+    float fx  = gradientNoise3D(p);
+    float fxY = gradientNoise3D(p + vec3(0.0, e, 0.0));
+    float fxZ = gradientNoise3D(p + vec3(0.0, 0.0, e));
+
+    float fy  = gradientNoise3D(p + seedY);
+    float fyX = gradientNoise3D(p + seedY + vec3(e, 0.0, 0.0));
+    float fyZ = gradientNoise3D(p + seedY + vec3(0.0, 0.0, e));
+
+    float fz  = gradientNoise3D(p + seedZ);
+    float fzX = gradientNoise3D(p + seedZ + vec3(e, 0.0, 0.0));
+    float fzY = gradientNoise3D(p + seedZ + vec3(0.0, e, 0.0));
+
+    float dFz_dy = (fzY - fz) / e;
+    float dFy_dz = (fyZ - fy) / e;
+    float dFx_dz = (fxZ - fx) / e;
+    float dFz_dx = (fzX - fz) / e;
+    float dFy_dx = (fyX - fy) / e;
+    float dFx_dy = (fxY - fx) / e;
+
+    return vec3(dFz_dy - dFy_dz, dFx_dz - dFz_dx, dFy_dx - dFx_dy);
 }
 
 #endif
