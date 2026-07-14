@@ -21,15 +21,12 @@ layout(location = 2) out vec4 gMaterial;
 #include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
-* Raymarches this instance's own AABB. sampleVolumetricCloudDensity()
- * internally gates its cellular detail layer to samples actually near the
- * density threshold, since most of a cloud's bounding volume is empty air
- * around a much smaller silhouette — this is what keeps looking straight
- * up through a sky full of overlapping instances affordable. Writes unlit
- * shape data plus a real accumulated AO into gMaterial.b — Lighting.fsh
- * lights this exactly once, same as terrain. Ray origin is the camera, not
- * this fragment's own surface position, so the march region never depends
- * on which triangle of the (invisible, bounding-only) box triggered it.
+* Raymarches this instance's own AABB from the camera. Step count scales
+ * with how much of the box the ray actually crosses instead of a fixed
+ * near/far tier, since cloud instances now span a wide range of sizes —
+ * a fixed step count against a very large box was the main source of the
+ * blocky, faceted look. Writes unlit shape data plus a real accumulated AO
+ * into gMaterial.b; Lighting.fsh lights this exactly once, same as terrain.
  */
 
 uniform vec3  u_cloudColor;
@@ -47,9 +44,11 @@ uniform float u_cloudRimLightStrength;
 uniform float u_cloudAmbientOcclusionStrength;
 uniform float u_cloudBrightnessMultiplier;
 
-const int   CLOUD_RAYMARCH_STEPS_NEAR       = 32;
-const int   CLOUD_RAYMARCH_STEPS_FAR        = 12;
-const float CLOUD_RAYMARCH_TIER_DISTANCE    = 128.0;
+const float CLOUD_STEP_SIZE_NEAR         = 5.0;
+const float CLOUD_STEP_SIZE_FAR          = 14.0;
+const int   CLOUD_RAYMARCH_MIN_STEPS     = 16;
+const int   CLOUD_RAYMARCH_MAX_STEPS     = 56;
+const float CLOUD_RAYMARCH_TIER_DISTANCE = 150.0;
 const float CLOUD_RAYMARCH_STEP_ALPHA_SCALE = 0.09;
 const float CLOUD_LIGHT_TAP_DISTANCE        = 2.5;
 
@@ -70,8 +69,14 @@ void main() {
     discard;
 
     float camDist = length(vWorldPos - cameraRenderPos);
-    int steps = camDist < CLOUD_RAYMARCH_TIER_DISTANCE ? CLOUD_RAYMARCH_STEPS_NEAR : CLOUD_RAYMARCH_STEPS_FAR;
+    float targetStepSize = camDist < CLOUD_RAYMARCH_TIER_DISTANCE ? CLOUD_STEP_SIZE_NEAR : CLOUD_STEP_SIZE_FAR;
+    int steps = clamp(int(marchLen / targetStepSize), CLOUD_RAYMARCH_MIN_STEPS, CLOUD_RAYMARCH_MAX_STEPS);
     float stepSize = marchLen / float(steps);
+
+    // Dithers the raymarch's sample offset per-pixel so any residual
+    // undersampling on a very large box shows up as fine grain instead of
+    // visible banding.
+    float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453123);
 
     float sunWeight = clamp(u_sunIntensity / 0.3, 0.0, 1.0);
     vec3  lightDir  = normalize(mix(u_moonDirection, u_sunDirection, sunWeight));
@@ -86,14 +91,14 @@ void main() {
     vec3  peakPos          = vWorldPos;
     float peakContribution = 0.0;
 
-    for (int i = 0; i < CLOUD_RAYMARCH_STEPS_NEAR; i++) {
+    for (int i = 0; i < CLOUD_RAYMARCH_MAX_STEPS; i++) {
         if (i >= steps)
         break;
 
         if (accum.a > 0.97)
         break;
 
-        vec3 p = cameraRenderPos + rayDir * (marchStart + (float(i) + 0.5) * stepSize);
+        vec3 p = cameraRenderPos + rayDir * (marchStart + (float(i) + dither) * stepSize);
 
         float heightT = clamp((p.y - vBoxMin.y) / boxHeight, 0.0, 1.0);
 
