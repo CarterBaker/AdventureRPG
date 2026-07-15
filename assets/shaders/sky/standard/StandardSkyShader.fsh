@@ -19,7 +19,7 @@ void main() {
     float fullNoise       = calculateSkyNoiseWithDailyVariation(baseNoise, dailyVariation);
 
     vec3 baseSky = getSkyColor(altitude, fullNoise);
-    vec4 clouds  = calculateClouds(dir, u_randomNoiseFromDay);
+    vec4 clouds  = calculateClouds(dir);
 
     vec3 finalColor = mix(baseSky, clouds.rgb, clamp(clouds.a, 0.0, 1.0));
 

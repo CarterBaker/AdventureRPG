@@ -1,3 +1,4 @@
+// Clouds.glsl — sky/util/Clouds.glsl
 #ifndef CLOUDS_GLSL
 #define CLOUDS_GLSL
 
@@ -10,191 +11,140 @@
 #include "includes/WindData.glsl"
 #include "sky/util/SkyCloudUtility.glsl"
 
-/*
-* Sky-dome weather preview. Each ray direction is tested against every
- * active pattern in SkyWeatherPatternData and resolves to at most one
- * dominant pattern — never a blend of several, since averaging two unrelated
- * patterns' positions and seeds together produces a virtual cloud that
- * belongs to neither. The winning pattern is raymarched through its own
- * real world-space box, the same box the overhead volumetric layer streams
- * around, so the two visual layers always agree on where weather actually
- * is. Bearing/elevation/center/halfExtent/rotation all come from
- * SkyWeatherPatternBranch, derived from the same lobes the overhead system
- * renders.
- */
+// Sky-dome distant weather. Every active pattern is raymarched as the exact
+// world-space box the overhead volumetric system itself streams real cloud
+// objects within, so the sky shows weather as if it were genuinely out
+// there rather than a blended stand-in. Patterns composite in array order —
+// two distinct systems sharing a ray is rare enough at this scale that
+// depth-sorting 64 boxes per pixel isn't worth the cost.
 
-const float SKY_HORIZON_FADE_START = -0.02;
-const float SKY_HORIZON_FADE_END   = 0.06;
+const float HORIZON_FADE_START     = -0.03;
+const float HORIZON_FADE_END       = 0.05;
+const float ELEVATION_LIMIT_MARGIN = 0.12;
 
-const int   SKY_RAYMARCH_STEPS          = 20;
-const float SKY_STEP_ALPHA_SCALE        = 0.11;
-const float SKY_LIGHT_TAP_DISTANCE      = 28.0;
-const float SKY_TOP_TINT_MIX            = 0.32;
-const float SKY_SHADOW_TINT_MIX         = 0.28;
-const float SKY_INTENSITY_DENSITY_FLOOR = 0.2;
-const float SKY_NOISE_WORLD_SCALE       = 1.0 / 110.0;
+const float LIGHT_TAP_DISTANCE    = 24.0;
+const float STEP_ALPHA_SCALE      = 0.05;
+const float INTENSITY_FLOOR       = 0.3;
+const int   MIN_STEPS_PER_PATTERN = 10;
+const int   MAX_STEPS_PER_PATTERN = 28;
+const float DESIRED_SAMPLES       = 22.0;
+const float MIN_STEP_SIZE         = 6.0;
+const float MAX_STEP_SIZE         = 40.0;
 
-const float SKY_PATTERN_WEIGHT_INNER_SCALE  = 0.55;
-const float SKY_PATTERN_WEIGHT_OUTER_SCALE  = 1.5;
-const float SKY_PATTERN_MIN_ANGULAR_WIDTH   = 0.05;
-const float SKY_PATTERN_MIN_ANGULAR_HEIGHT  = 0.03;
-const float SKY_PATTERN_AZIMUTH_EPSILON     = 0.0005;
-const float SKY_PI                          = 3.14159265359;
-const float SKY_TWO_PI                      = 6.28318530718;
+vec4 marchSkyPattern(
+    int i,
+    vec3 rayOrigin,
+    vec3 rayDir,
+    vec3 lightDir,
+    vec3 lightColor,
+    float lightPower,
+    vec3 skyAmbient) {
+    float fade = clamp(u_patternFadeAlpha[i], 0.0, 1.0);
 
-float wrapAngleDelta(float delta) {
-    return mod(delta + SKY_PI, SKY_TWO_PI) - SKY_PI;
-}
+    if (fade <= 0.001 || u_patternDensity[i] <= 0.001 || u_patternCoverage[i] <= 0.001)
+    return vec4(0.0);
 
-/*
-* Scans every active pattern and returns the index of whichever one this
- * ray sits most centrally inside, plus how strongly (0 at its own edge, up
- * to 1 at its own center) — used purely as a final opacity multiplier, never
- * to mix fields between patterns.
- */
-int findDominantPattern(vec3 dir, float rayElevation, out float weight) {
-    weight = 0.0;
-    int best = -1;
+    vec3 halfExtent = u_patternHalfExtent[i];
+    vec3 boxMin = u_patternCenter[i] - halfExtent;
+    vec3 boxMax = u_patternCenter[i] + halfExtent;
 
-    float horizLen = length(dir.xz);
-    float rayAzimuth = horizLen > SKY_PATTERN_AZIMUTH_EPSILON ? atan(dir.x, -dir.z) : 0.0;
+    vec2 hit = intersectSkyCloudBox(rayOrigin, rayDir, boxMin, boxMax);
+    float marchStart = max(hit.x, 0.0);
+    float marchLen = hit.y - marchStart;
 
-    for (int i = 0; i < u_patternCount; i++) {
-        float fade = clamp(u_patternFadeAlpha[i], 0.0, 1.0);
+    if (marchLen <= 0.5)
+    return vec4(0.0);
 
-        if (fade <= 0.0)
+    float coverageBlend = clamp(mix(u_patternCoverageBias[i], u_patternCoverage[i], 0.5), 0.0, 1.0);
+    float intensityFactor = mix(INTENSITY_FLOOR, 1.0, clamp(u_patternIntensity[i], 0.0, 1.0));
+
+    float rawStep = clamp(marchLen / DESIRED_SAMPLES, MIN_STEP_SIZE, MAX_STEP_SIZE);
+    int steps = clamp(int(marchLen / rawStep), MIN_STEPS_PER_PATTERN, MAX_STEPS_PER_PATTERN);
+    float stepSize = marchLen / float(steps);
+
+    float boxHeight = max(halfExtent.y * 2.0, 0.001);
+    vec3 windOffset = vec3(u_windDriftOffset.x, 0.0, u_windDriftOffset.y);
+
+    vec4 accum = vec4(0.0);
+
+    for (int s = 0; s < MAX_STEPS_PER_PATTERN; s++) {
+        if (s >= steps || accum.a > 0.96)
+        break;
+
+        float t = marchStart + (float(s) + 0.5) * stepSize;
+        vec3 p = rayOrigin + rayDir * t + windOffset;
+
+        float heightT = clamp((p.y - boxMin.y) / boxHeight, 0.0, 1.0);
+
+        float density = sampleSkyCloudDensity(
+            p, u_patternCenter[i], halfExtent, heightT,
+            u_patternDensityNoiseScale[i], u_patternNoiseWarpStrength[i],
+            coverageBlend, u_patternSilhouetteSoftness[i],
+            u_patternSeed[i], u_patternDomainRotation[i], u_time)
+        * u_patternDensity[i] * intensityFactor;
+
+        if (density <= 0.01)
         continue;
 
-        float elevEdge = max(u_patternAngularHeight[i], SKY_PATTERN_MIN_ANGULAR_HEIGHT);
-        float elevDiff = abs(rayElevation - u_patternElevation[i]);
+        float litDensity = sampleSkyCloudDensity(
+            p + lightDir * LIGHT_TAP_DISTANCE, u_patternCenter[i], halfExtent, heightT,
+            u_patternDensityNoiseScale[i], u_patternNoiseWarpStrength[i],
+            coverageBlend, u_patternSilhouetteSoftness[i],
+            u_patternSeed[i], u_patternDomainRotation[i], u_time)
+        * u_patternDensity[i] * intensityFactor;
 
-        if (elevDiff > elevEdge * SKY_PATTERN_WEIGHT_OUTER_SCALE)
-        continue;
+        float lightLift = clamp((density - litDensity) * 2.4 + 0.5, 0.0, 1.0);
 
-        float azimuthEdge = max(u_patternAngularWidth[i], SKY_PATTERN_MIN_ANGULAR_WIDTH);
-        float azimuthDiff = abs(wrapAngleDelta(rayAzimuth - u_patternBearing[i]));
+        vec3 shaded = shadeSkyCloud(
+            u_patternColor[i], u_patternTopColor[i], u_patternShadowColor[i],
+            skyAmbient, lightColor, lightPower,
+            heightT, lightLift, density, u_patternToonBands[i],
+            u_patternShadeStrength[i], u_patternRimLightStrength[i],
+            u_patternAmbientOcclusionStrength[i], u_patternBrightnessMultiplier[i]);
 
-        if (azimuthDiff > azimuthEdge * SKY_PATTERN_WEIGHT_OUTER_SCALE)
-        continue;
-
-        float azimuthWeight = 1.0 - smoothstep(
-            azimuthEdge * SKY_PATTERN_WEIGHT_INNER_SCALE,
-            azimuthEdge * SKY_PATTERN_WEIGHT_OUTER_SCALE,
-            azimuthDiff);
-
-        float elevationWeight = 1.0 - smoothstep(
-            elevEdge * SKY_PATTERN_WEIGHT_INNER_SCALE,
-            elevEdge * SKY_PATTERN_WEIGHT_OUTER_SCALE,
-            elevDiff);
-
-        float candidateWeight = azimuthWeight * elevationWeight * fade;
-
-        if (candidateWeight > weight) {
-            weight = candidateWeight;
-            best = i;
-        }
+        float stepAlpha = clamp(1.0 - exp(-density * STEP_ALPHA_SCALE * stepSize), 0.0, 1.0);
+        accum.rgb += (1.0 - accum.a) * stepAlpha * shaded;
+        accum.a   += (1.0 - accum.a) * stepAlpha;
     }
 
-    return best;
+    accum.a *= fade;
+    return accum;
 }
 
-vec4 calculateClouds(vec3 dir, float dailySeed) {
-    if (dir.y < SKY_HORIZON_FADE_START)
+vec4 calculateClouds(vec3 dir) {
+    if (dir.y < HORIZON_FADE_START)
     return vec4(0.0);
 
-    if (dir.y > u_skyElevationLimit)
+    float horizonFade = smoothstep(HORIZON_FADE_START, HORIZON_FADE_END, dir.y);
+    float elevationFade = 1.0 - smoothstep(u_skyElevationLimit, u_skyElevationLimit + ELEVATION_LIMIT_MARGIN, dir.y);
+
+    if (horizonFade <= 0.001 || elevationFade <= 0.001)
     return vec4(0.0);
-
-    float rayElevation = asin(clamp(dir.y, -1.0, 1.0));
-
-    float patternWeight;
-    int index = findDominantPattern(dir, rayElevation, patternWeight);
-
-    if (index < 0 || patternWeight <= 0.001)
-    return vec4(0.0);
-
-    if (u_patternCoverage[index] <= 0.001 && u_patternDensity[index] <= 0.001)
-    return vec4(0.0);
-
-    vec3 center = u_patternCenter[index];
-    vec3 halfExtent = u_patternHalfExtent[index];
-    float rotation = u_patternDomainRotation[index];
-    vec2 rot = vec2(cos(rotation), sin(rotation));
 
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-
-    vec2 boxHit = intersectSkyOBB(cameraRenderPos, dir, center, rot, halfExtent);
-    float marchStart = max(boxHit.x, 0.0);
-    float marchLen = max(boxHit.y - marchStart, 0.0);
-
-    if (marchLen <= 0.001)
-    return vec4(0.0);
-
-    float horizonFade = smoothstep(SKY_HORIZON_FADE_START, SKY_HORIZON_FADE_END, dir.y);
 
     float sunWeight  = clamp(u_sunIntensity / 0.3, 0.0, 1.0);
     vec3  lightDir   = normalize(mix(u_moonDirection, u_sunDirection, sunWeight));
     vec3  lightColor = mix(u_moonColor, u_sunColor, sunWeight);
     float lightPower = mix(u_moonIntensity, u_sunIntensity, sunWeight);
+    vec3  skyAmbient = mix(u_skyHorizonColor, u_skyZenithColor, clamp(dir.y * 0.5 + 0.5, 0.0, 1.0));
 
-    vec3 windOffset = vec3(
-        u_windDriftOffset.x + dailySeed * 4.0,
-        0.0,
-        u_windDriftOffset.y + dailySeed * 3.0);
-
-    vec3 topTint    = mix(u_patternTopColor[index], u_skyZenithColor, SKY_TOP_TINT_MIX);
-    vec3 shadowTint = mix(u_patternShadowColor[index], u_skyHorizonColor * 0.4, SKY_SHADOW_TINT_MIX);
-
-    float coverageBias = clamp(mix(u_patternCoverageBias[index], u_patternCoverage[index], 0.5), 0.0, 1.0);
-    float intensityFactor = mix(SKY_INTENSITY_DENSITY_FLOOR, 1.0, clamp(u_patternIntensity[index], 0.0, 1.0));
-    int   toonBands = max(int(u_patternToonBands[index] + 0.5), 1);
-    float noiseScale = u_patternDensityNoiseScale[index] * SKY_NOISE_WORLD_SCALE;
-    float warpStrength = u_patternNoiseWarpStrength[index];
-    float silhouetteSoftness = u_patternSilhouetteSoftness[index];
-    float seed = u_patternSeed[index];
-    float density0 = u_patternDensity[index];
-    float boxHeight = max(halfExtent.y * 2.0, 0.001);
-
-    float stepSize = marchLen / float(SKY_RAYMARCH_STEPS);
     vec4 accum = vec4(0.0);
 
-    for (int i = 0; i < SKY_RAYMARCH_STEPS; i++) {
-        if (accum.a > 0.95)
+    for (int i = 0; i < u_patternCount; i++) {
+        if (accum.a > 0.97)
         break;
 
-        vec3 p = cameraRenderPos + dir * (marchStart + (float(i) + 0.5) * stepSize) + windOffset;
-        vec3 rel = p - center;
-        vec2 localXZ = worldToLocalXZ(rel.xz, rot);
-        float heightT = clamp((rel.y + halfExtent.y) / boxHeight, 0.0, 1.0);
+        vec4 result = marchSkyPattern(i, cameraRenderPos, dir, lightDir, lightColor, lightPower, skyAmbient);
 
-        float density = sampleSkyCloudDensity(
-            vec3(localXZ.x, rel.y, localXZ.y), heightT, noiseScale, warpStrength,
-            coverageBias, silhouetteSoftness, seed, u_time) * density0 * intensityFactor;
+        if (result.a <= 0.0)
+        continue;
 
-        if (density > 0.01) {
-            vec3 litRel = (p + lightDir * SKY_LIGHT_TAP_DISTANCE) - center;
-            vec2 litLocalXZ = worldToLocalXZ(litRel.xz, rot);
-            float litHeightT = clamp((litRel.y + halfExtent.y) / boxHeight, 0.0, 1.0);
-
-            float litDensity = sampleSkyCloudDensity(
-                vec3(litLocalXZ.x, litRel.y, litLocalXZ.y), litHeightT, noiseScale, warpStrength,
-                coverageBias, silhouetteSoftness, seed, u_time) * density0 * intensityFactor;
-
-            float lightLift = clamp((density - litDensity) * 2.0 + 0.5, 0.0, 1.0);
-
-            vec3 shaded = shadeSkyCloud(
-                u_patternColor[index], topTint, shadowTint, lightColor, lightPower,
-                heightT, lightLift, toonBands,
-                u_patternShadeStrength[index], u_patternRimLightStrength[index],
-                u_patternAmbientOcclusionStrength[index], u_patternBrightnessMultiplier[index]);
-
-            float stepAlpha = clamp(density * SKY_STEP_ALPHA_SCALE * stepSize, 0.0, 1.0);
-            accum.rgb += (1.0 - accum.a) * stepAlpha * shaded;
-            accum.a   += (1.0 - accum.a) * stepAlpha;
-        }
+        accum.rgb += (1.0 - accum.a) * result.rgb;
+        accum.a   += (1.0 - accum.a) * result.a;
     }
 
-    accum.a *= horizonFade * patternWeight;
+    accum.a *= horizonFade * elevationFade;
 
     return accum;
 }
