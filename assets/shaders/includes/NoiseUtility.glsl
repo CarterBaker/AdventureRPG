@@ -1,10 +1,13 @@
 #ifndef NOISE_UTILITY_GLSL
 #define NOISE_UTILITY_GLSL
 
-// Shared low-level noise primitives for every sky, weather, and cloud
-// shader: hash, value noise, gradient noise, cellular (Worley) noise, and
-// a curl-based domain warp. fbm variants take an explicit octave count so
-// callers can trade quality for cost per use case.
+// Shared noise primitives for every sky, weather, and cloud shader.
+// Value noise stays in place for the existing sky background variation;
+// everything below it is the cloud-facing toolkit — gradient noise, fbm,
+// ridged fbm, Worley/cellular noise, a Perlin-Worley hybrid for billowy
+// cumulus shapes, and curl-based domain warp.
+
+// ── Hashing ──────────────────────────────────────────────────────────────
 
 float hash31(vec3 p) {
     p = fract(p * 0.1031);
@@ -20,9 +23,16 @@ vec3 hash33(vec3 p) {
     return fract(sin(p) * 43758.5453123) * 2.0 - 1.0;
 }
 
-// ── Value noise ──────────────────────────────────────────────────────────
+// ── Shared math ─────────────────────────────────────────────────────────
 
-mat3 noiseBasis = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
+float remapClamped(float value, float oldLow, float oldHigh, float newLow, float newHigh) {
+    float t = (value - oldLow) / max(oldHigh - oldLow, 0.0001);
+    return clamp(newLow + t * (newHigh - newLow), newLow, newHigh);
+}
+
+// ── Value noise (legacy path — sky background variation only) ───────────
+
+const mat3 noiseBasis = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
 
 float smoothNoise3D(vec3 p) {
     p = noiseBasis * p;
@@ -89,28 +99,53 @@ float gradientNoise3D(vec3 p) {
     return mix(nxy0, nxy1, u.z);
 }
 
+// Normalized against total amplitude so octave count doesn't shift the
+// output range, then rebiased into [0,1].
 float fbmGradient3D(vec3 p, int octaves, float lacunarity, float gain) {
     float sum = 0.0;
+    float norm = 0.0;
     float amp = 0.5;
     vec3 pos = p;
 
     for (int i = 0; i < octaves; i++) {
         sum += amp * gradientNoise3D(pos);
+        norm += amp;
         pos *= lacunarity;
         amp *= gain;
     }
 
-    return clamp(sum * 0.5 + 0.5, 0.0, 1.0);
+    return clamp((sum / max(norm, 0.0001)) * 0.5 + 0.5, 0.0, 1.0);
 }
 
 float fbmGradient3D(vec3 p) {
-    return fbmGradient3D(p, 4, 2.03, 0.5);
+    return fbmGradient3D(p, 5, 2.02, 0.5);
+}
+
+// Ridged multifractal — sharp bright ridges, dark valleys. Reserved for
+// wispy/torn-edge detail work in the shape passes.
+float ridgedFbm3D(vec3 p, int octaves, float lacunarity, float gain) {
+    float sum = 0.0;
+    float norm = 0.0;
+    float amp = 0.5;
+    vec3 pos = p;
+
+    for (int i = 0; i < octaves; i++) {
+        float n = 1.0 - abs(gradientNoise3D(pos));
+        n *= n;
+        sum += amp * n;
+        norm += amp;
+        pos *= lacunarity;
+        amp *= gain;
+    }
+
+    return clamp(sum / max(norm, 0.0001), 0.0, 1.0);
 }
 
 // ── Worley (cellular) noise ───────────────────────────────────────────────
 // F1 samples only the current cell plus whichever neighbor each axis
 // leans toward (2x2x2 = 8 taps) rather than the full 3x3x3 = 27 — jitter
 // is bounded within each cell so the shortcut's error stays sub-cell-sized.
+// Returns billowy values: ~1 at cell centers, ~0 at cell borders.
 
 float worleyNoise3D(vec3 p) {
     vec3 i = floor(p);
@@ -183,7 +218,21 @@ float worleyFbm3D(vec3 p, int octaves, float lacunarity, float gain) {
 }
 
 float worleyFbm3D(vec3 p) {
-    return worleyFbm3D(p, 2, 2.4, 0.55);
+    return worleyFbm3D(p, 3, 2.4, 0.55);
+}
+
+// ── Perlin-Worley hybrid ──────────────────────────────────────────────────
+// The standard volumetric-cloud base shape: a low-frequency gradient fbm
+// gives the billowy macro silhouette, and a Worley layer is inverted and
+// used to erode only ITS OWN low end via a subtractive remap. That means
+// erosion concentrates at Worley cell borders — carving cauliflower lobes
+// into the silhouette — rather than multiplying noise straight through the
+// whole volume, which is what punches random holes through a cloud's core.
+float perlinWorley3D(vec3 p, float worleyFrequencyMul) {
+    float perlin = fbmGradient3D(p, 5, 2.02, 0.5);
+    float worley = worleyFbm3D(p * worleyFrequencyMul, 3, 2.2, 0.5);
+    float worleyErosion = (1.0 - worley) * 0.5;
+    return remapClamped(perlin, worleyErosion, 1.0, 0.0, 1.0);
 }
 
 // ── Curl noise (divergence-free warp) ─────────────────────────────────────
