@@ -16,16 +16,22 @@ out vec3  vWorldPos;
 out float vRandomSeed;
 out float vFadeAlpha;
 out float vIntensity;
+flat out float vDetailFactor;
 
 flat out vec3 vBoxCenter;
 flat out vec3 vHalfExtent;
 flat out vec2 vRot;
 
 /*
-* Builds this instance's own oriented box from its streamed world position
- * and a distance-based size/fade LOD, so a real cloud object shrinks and
- * fades out approaching u_cloudHorizonDistance instead of popping at the
- * edge of the radius the world stream keeps chunks loaded within.
+* Builds this instance's own oriented box at full physical size — real
+ * weather objects are large by design and never shrink with distance.
+ * Only alpha fades out approaching the simulated weather radius, so a
+ * cloud is either its true size or invisible, never a shrunken sliver.
+ * u_cloudMinScale/u_cloudMaxScale are reused here as a distance-based
+ * noise-detail factor (see VolumetricCloudUtility.glsl) rather than a
+ * geometric scale, so distant clouds stay full-size but shed their finest
+ * erosion detail — the same detail that aliases into visible noise once
+ * a raymarch step covers more than a screen pixel.
  */
 void main() {
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -40,15 +46,16 @@ void main() {
 
     float distFromCamera = length(instancePos.xz - cameraRenderPos.xz);
     float distanceT = clamp(distFromCamera / max(u_cloudHorizonDistance, 0.001), 0.0, 1.0);
-    float sizeScale = mix(u_cloudMaxScale, u_cloudMinScale, distanceT) * sizeVariance;
 
     float transitionSpan = max(u_cloudHorizonDistance - u_cloudTransitionStart, 0.001);
     float fadeT = clamp((distFromCamera - u_cloudTransitionStart) / transitionSpan, 0.0, 1.0);
     float horizonFade = 1.0 - smoothstep(0.0, 1.0, fadeT);
 
-    float finalScaleY = u_cloudVerticalThickness * sizeScale;
-    float halfX = (u_cloudScale * sizeScale * elongation) * 0.5;
-    float halfZ = (u_cloudScale * sizeScale) * 0.5;
+    vDetailFactor = mix(u_cloudMaxScale, u_cloudMinScale, distanceT);
+
+    float finalScaleY = u_cloudVerticalThickness * sizeVariance;
+    float halfX = (u_cloudScale * sizeVariance * elongation) * 0.5;
+    float halfZ = (u_cloudScale * sizeVariance) * 0.5;
     float halfY = finalScaleY * 0.5;
 
     float cosR = cos(domainRotation);

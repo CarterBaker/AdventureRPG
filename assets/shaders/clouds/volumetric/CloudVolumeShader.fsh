@@ -8,6 +8,7 @@ in float vIntensity;
 flat in vec3 vBoxCenter;
 flat in vec3 vHalfExtent;
 flat in vec2 vRot;
+flat in float vDetailFactor;
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
@@ -15,19 +16,19 @@ layout(location = 2) out vec4 gMaterial;
 
 #include "includes/CameraData.glsl"
 #include "includes/TimeData.glsl"
-#include "includes/SkyColorData.glsl"
-#include "includes/SunLightData.glsl"
-#include "includes/MoonLightData.glsl"
+#include "includes/CloudSettingsData.glsl"
 #include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
-* Raymarches the box built in the vertex stage and writes into the same
- * deferred G-buffer opaque terrain uses. This pass can't read back what it
- * is drawing over, so every channel is pre-mixed toward a neutral default
- * by the cloud's own alpha before the pass's normal alpha blending
- * composites the result against whatever terrain or sky was already
- * resolved beneath — a faint wisp barely disturbs it, a solid core fully
- * replaces it.
+* Raymarches this instance's oriented box and writes an unlit albedo, a
+ * real density-gradient surface normal, and a self-shadow occlusion term
+ * into the shared deferred G-buffer — the same three channels terrain
+ * writes. Directional sun/moon response is deliberately left entirely to
+ * the shared Lighting.fsh pass rather than computed here too — baking our
+ * own sun response on top of what Lighting.fsh already applies to every
+ * G-buffer pixel is what made clouds read as permanently dark regardless
+ * of time of day. shadowColor/topColor/rim stay ours to apply since they
+ * are archetype material properties, not a second light source.
  */
 
 uniform vec3  u_cloudColor;
@@ -44,17 +45,14 @@ uniform float u_cloudRimLightStrength;
 uniform float u_cloudAmbientOcclusionStrength;
 uniform float u_cloudBrightnessMultiplier;
 
-const float CLOUD_STEP_SIZE_NEAR      = 5.0;
-const float CLOUD_STEP_SIZE_FAR       = 14.0;
-const float CLOUD_TIER_NEAR           = 60.0;
-const float CLOUD_TIER_FAR            = 220.0;
-const int   CLOUD_MIN_STEPS           = 12;
-const int   CLOUD_MAX_STEPS           = 48;
-const float CLOUD_STEP_ALPHA_SCALE    = 0.11;
-const float CLOUD_LIGHT_TAP_DISTANCE  = 3.0;
-const float CLOUD_RIM_FRESNEL_POWER   = 2.2;
-const float CLOUD_INTENSITY_FLOOR     = 0.4;
-const float CLOUD_SILVER_LINING_SCALE = 0.5;
+const float CLOUD_STEP_SIZE_NEAR    = 4.0;
+const float CLOUD_STEP_SIZE_FAR     = 12.0;
+const float CLOUD_TIER_NEAR         = 60.0;
+const float CLOUD_TIER_FAR          = 220.0;
+const int   CLOUD_MIN_STEPS         = 14;
+const int   CLOUD_MAX_STEPS         = 56;
+const float CLOUD_EXTINCTION        = 0.07;
+const float CLOUD_RIM_FRESNEL_POWER = 2.4;
 
 void main() {
     if (vFadeAlpha <= 0.001)
@@ -71,7 +69,7 @@ void main() {
     discard;
 
     float camDist = length(vWorldPos - cameraRenderPos);
-    float thicknessStep = clamp(vHalfExtent.y * 2.0 / 6.0, 2.0, 9.0);
+    float thicknessStep = clamp(vHalfExtent.y * 2.0 / 5.0, 1.5, 8.0);
     float distanceStep = mix(CLOUD_STEP_SIZE_NEAR, CLOUD_STEP_SIZE_FAR,
         smoothstep(CLOUD_TIER_NEAR, CLOUD_TIER_FAR, camDist));
     float targetStepSize = max(thicknessStep, distanceStep);
@@ -80,73 +78,50 @@ void main() {
     float stepSize = marchLen / float(steps);
     float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453123);
 
-    float sunWeight = clamp(u_sunIntensity / 0.3, 0.0, 1.0);
-    vec3  lightDir  = normalize(mix(u_moonDirection, u_sunDirection, sunWeight));
-
-    float skyAltitude = clamp(rayDir.y * 0.5 + 0.5, 0.0, 1.0);
-    vec3  skyAmbient  = mix(u_skyHorizonColor, u_skyZenithColor, skyAltitude);
-
-    float intensityFactor = mix(CLOUD_INTENSITY_FLOOR, 1.0, clamp(vIntensity, 0.0, 1.0));
     float boxHeight = max(vHalfExtent.y * 2.0, 0.0001);
     float baseY = vBoxCenter.y - vHalfExtent.y;
-    float gradientEpsilon = max(min(vHalfExtent.x, vHalfExtent.z) * 0.05, 0.06);
 
-    vec4  accum   = vec4(0.0);
-    float accumAO = 0.0;
+    vec4  accum = vec4(0.0);
+    float opticalDepth = 0.0;
+    float transmittance = 1.0;
 
-    vec3  peakPos          = vWorldPos;
+    vec3  peakPos = vWorldPos;
     float peakContribution = 0.0;
 
     for (int i = 0; i < CLOUD_MAX_STEPS; i++) {
-        if (i >= steps || accum.a > 0.97)
+        if (i >= steps || transmittance < 0.02)
         break;
 
-        vec3 p = cameraRenderPos + rayDir * (marchStart + (float(i) + dither) * stepSize);
+        float t = marchStart + (float(i) + dither) * stepSize;
+        vec3  p = cameraRenderPos + rayDir * t;
+
         float heightT = clamp((p.y - baseY) / boxHeight, 0.0, 1.0);
 
         float rawDensity = sampleCloudDensity(
             p, vBoxCenter, vRot, vHalfExtent, heightT,
             u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
             u_cloudCoverageBias, u_cloudSilhouetteSoftness,
-            vRandomSeed, u_time);
-        float density = rawDensity * u_cloudDensity * intensityFactor;
+            vDetailFactor, vRandomSeed, u_time);
+        float density = rawDensity * u_cloudDensity * vIntensity;
 
-        if (density <= 0.01)
-        continue;
+        if (density > 0.01) {
+            float stepTransmittance = exp(-density * CLOUD_EXTINCTION * stepSize);
+            float stepAlpha = 1.0 - stepTransmittance;
+            float contribution = transmittance * stepAlpha;
 
-        float rawLit = sampleCloudDensity(
-            p + lightDir * CLOUD_LIGHT_TAP_DISTANCE, vBoxCenter, vRot, vHalfExtent, heightT,
-            u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
-            u_cloudCoverageBias, u_cloudSilhouetteSoftness,
-            vRandomSeed, u_time);
-        float litDensity = rawLit * u_cloudDensity * intensityFactor;
+            vec3 tint = mix(u_cloudColor, u_cloudTopColor, heightT);
 
-        float lightLift = clamp((density - litDensity) * 2.2 + 0.5, 0.0, 1.0);
+            accum.rgb += contribution * tint;
+            accum.a   += contribution;
+            opticalDepth += contribution * density;
 
-        float stepAO;
-        vec3 shaded = shadeCloudSample(
-            u_cloudColor, u_cloudTopColor, u_cloudShadowColor, skyAmbient,
-            heightT, lightLift, density,
-            u_cloudToonBands, u_cloudShadeStrength,
-            u_cloudAmbientOcclusionStrength, u_cloudBrightnessMultiplier,
-            stepAO);
+            if (contribution > peakContribution) {
+                peakContribution = contribution;
+                peakPos = p;
+            }
 
-        // Thin, front-lit edges scatter light through — brighten those,
-        // not the opaque core, unlike a flat density-proportional boost.
-        float silverLining = (1.0 - density) * lightLift;
-        shaded += skyAmbient * silverLining * CLOUD_SILVER_LINING_SCALE;
-
-        float stepAlpha = clamp(density * CLOUD_STEP_ALPHA_SCALE * stepSize, 0.0, 1.0);
-        float contribution = (1.0 - accum.a) * stepAlpha;
-
-        if (contribution > peakContribution) {
-            peakContribution = contribution;
-            peakPos = p;
+            transmittance *= stepTransmittance;
         }
-
-        accum.rgb += contribution * shaded;
-        accumAO   += contribution * stepAO;
-        accum.a   += contribution;
     }
 
     float finalAlpha = clamp(accum.a * vFadeAlpha, 0.0, 1.0);
@@ -154,24 +129,33 @@ void main() {
     if (finalAlpha <= 0.02)
     discard;
 
+    vec3 albedoColor = accum.rgb / max(accum.a, 0.0001);
+
+    float gradientEpsilon = max(min(vHalfExtent.x, vHalfExtent.z) * 0.04, 0.05);
     vec3 cloudNormalWorld = sampleCloudGradientNormal(
         peakPos, vBoxCenter, vRot, vHalfExtent,
         u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
         u_cloudCoverageBias, u_cloudSilhouetteSoftness,
-        vRandomSeed, u_time, gradientEpsilon);
+        vDetailFactor, vRandomSeed, u_time, gradientEpsilon);
 
     float rim = pow(1.0 - clamp(dot(-rayDir, cloudNormalWorld), 0.0, 1.0), CLOUD_RIM_FRESNEL_POWER)
     * u_cloudRimLightStrength;
-    vec3 cloudColor = accum.rgb + skyAmbient * rim * finalAlpha;
-    float cloudAO = accumAO / max(accum.a, 0.0001);
+    albedoColor += vec3(1.0) * rim;
 
-    vec3 normalView    = normalize(mat3(u_view) * cloudNormalWorld);
-    vec3 neutralUpView = normalize(mat3(u_view) * vec3(0.0, 1.0, 0.0));
+    float shadeAmount = clamp(opticalDepth * u_cloudShadeStrength, 0.0, 1.0);
+    float bands = max(float(u_cloudToonBands), 2.0);
+    float banded = floor(shadeAmount * bands) / max(bands - 1.0, 1.0);
+    albedoColor = mix(albedoColor, u_cloudShadowColor, banded * 0.65);
+
+    float ao = 1.0 - clamp(opticalDepth * u_cloudAmbientOcclusionStrength, 0.0, u_cloudAmbientOcclusionStrength);
+    float fogT = clamp(smoothstep(u_cloudHorizonDistance * 0.4, u_cloudHorizonDistance * 0.95, camDist), 0.0, 0.5);
+
+    vec3 normalView = normalize(mat3(u_view) * cloudNormalWorld);
 
     vec4 peakClip = u_viewProjection * vec4(peakPos, 1.0);
     gl_FragDepth = clamp(peakClip.z / peakClip.w * 0.5 + 0.5, 0.0, 1.0);
 
-    gAlbedo   = vec4(mix(skyAmbient, cloudColor, finalAlpha), finalAlpha);
-    gNormal   = vec4(mix(neutralUpView, normalView, finalAlpha), finalAlpha);
-    gMaterial = vec4(0.0, 0.0, mix(1.0, cloudAO, finalAlpha), finalAlpha);
+    gAlbedo   = vec4(clamp(albedoColor * u_cloudBrightnessMultiplier, 0.0, 1.0), finalAlpha);
+    gNormal   = vec4(normalView, finalAlpha);
+    gMaterial = vec4(fogT, 0.0, ao, finalAlpha);
 }
