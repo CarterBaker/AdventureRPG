@@ -1,48 +1,114 @@
-// SkyCloudUtility.glsl — sky/util/SkyCloudUtility.glsl
 #ifndef SKY_CLOUD_UTILITY_GLSL
 #define SKY_CLOUD_UTILITY_GLSL
 
-#include "includes/NoiseUtility.glsl"
+/*
+* Shape, density, and shading primitives for the sky dome's distant weather
+ * clouds. Fully self-contained — the overhead volumetric system
+ * (VolumetricCloudUtility.glsl) is a completely separate shader pipeline and
+ * never shares code with this one, even though both raymarch an oriented box.
+ */
 
-// Shape and lighting primitives for the sky dome's distant weather raymarch
-// (see Clouds.glsl). Every pattern is raymarched as a real world-space box —
-// the same center/halfExtent the overhead volumetric system streams actual
-// cloud objects within — never a blended approximation.
-
-const float SKY_CLOUD_DETAIL_FREQUENCY = 5.0;
-const float SKY_CLOUD_EROSION_STRENGTH = 0.55;
-const float SKY_CLOUD_MIN_SOFTNESS     = 0.12;
-const float SKY_CLOUD_AMBIENT_FLOOR    = 0.30;
-
-vec2 intersectSkyCloudBox(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
-    vec3 invDir = 1.0 / rayDir;
-    vec3 t0 = (boxMin - rayOrigin) * invDir;
-    vec3 t1 = (boxMax - rayOrigin) * invDir;
-    vec3 tSmall = min(t0, t1);
-    vec3 tBig = max(t0, t1);
-    float tNear = max(max(tSmall.x, tSmall.y), tSmall.z);
-    float tFar = min(min(tBig.x, tBig.y), tBig.z);
-    return vec2(tNear, tFar);
+vec3 skyHash3(vec3 p) {
+    p = vec3(
+        dot(p, vec3(127.1, 311.7, 74.7)),
+        dot(p, vec3(269.5, 183.3, 246.1)),
+        dot(p, vec3(113.5, 271.9, 124.6)));
+    return fract(sin(p) * 43758.5453123) * 2.0 - 1.0;
 }
 
-float skyCloudHeightProfile(float heightT, float coverageBias) {
-    float baseCutoff = mix(0.03, 0.16, clamp(coverageBias, 0.0, 1.0));
-    float base = smoothstep(baseCutoff, baseCutoff + 0.30, heightT);
-    float topStart = mix(0.40, 0.88, clamp(coverageBias, 0.0, 1.0));
-    float top = 1.0 - smoothstep(topStart, 1.0, heightT);
-    return base * top;
+float skyGradientNoise(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    vec3 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+
+    float n000 = dot(skyHash3(i + vec3(0.0, 0.0, 0.0)), f - vec3(0.0, 0.0, 0.0));
+    float n100 = dot(skyHash3(i + vec3(1.0, 0.0, 0.0)), f - vec3(1.0, 0.0, 0.0));
+    float n010 = dot(skyHash3(i + vec3(0.0, 1.0, 0.0)), f - vec3(0.0, 1.0, 0.0));
+    float n110 = dot(skyHash3(i + vec3(1.0, 1.0, 0.0)), f - vec3(1.0, 1.0, 0.0));
+    float n001 = dot(skyHash3(i + vec3(0.0, 0.0, 1.0)), f - vec3(0.0, 0.0, 1.0));
+    float n101 = dot(skyHash3(i + vec3(1.0, 0.0, 1.0)), f - vec3(1.0, 0.0, 1.0));
+    float n011 = dot(skyHash3(i + vec3(0.0, 1.0, 1.0)), f - vec3(0.0, 1.0, 1.0));
+    float n111 = dot(skyHash3(i + vec3(1.0, 1.0, 1.0)), f - vec3(1.0, 1.0, 1.0));
+
+    float nx00 = mix(n000, n100, u.x);
+    float nx10 = mix(n010, n110, u.x);
+    float nx01 = mix(n001, n101, u.x);
+    float nx11 = mix(n011, n111, u.x);
+    float nxy0 = mix(nx00, nx10, u.y);
+    float nxy1 = mix(nx01, nx11, u.y);
+
+    return mix(nxy0, nxy1, u.z);
 }
 
-float skyCloudSilhouette(vec3 localPos, vec3 halfExtent, float softness) {
-    vec3 n = localPos / max(halfExtent, vec3(0.0001));
-    float radius = length(n.xz);
-    float soft = clamp(softness, SKY_CLOUD_MIN_SOFTNESS, 0.8);
-    return 1.0 - smoothstep(1.0 - soft, 1.0, radius);
+float skyFbm(vec3 p) {
+    float sum = 0.0;
+    float amp = 0.5;
+    vec3 pos = p;
+
+    for (int i = 0; i < 4; i++) {
+        sum += amp * skyGradientNoise(pos);
+        pos = pos * 2.02 + vec3(17.0, -9.0, 5.0);
+        amp *= 0.5;
+    }
+
+    return clamp(sum * 0.5 + 0.5, 0.0, 1.0);
+}
+
+float skyWorley(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    vec3 dir = sign(f - 0.5);
+
+    float minDistSq = 1.0;
+
+    for (int z = 0; z <= 1; z++)
+    for (int y = 0; y <= 1; y++)
+    for (int x = 0; x <= 1; x++) {
+        vec3 neighbor = vec3(float(x), float(y), float(z)) * dir;
+        vec3 point = skyHash3(i + neighbor) * 0.5 + 0.5;
+        vec3 diff = neighbor + point - f;
+        minDistSq = min(minDistSq, dot(diff, diff));
+    }
+
+    return 1.0 - clamp(sqrt(minDistSq), 0.0, 1.0);
+}
+
+vec2 intersectSkyCloudBox(vec3 rayOrigin, vec3 rayDir, vec3 boxCenter, vec2 rot, vec3 halfExtent) {
+    vec3 rel = rayOrigin - boxCenter;
+    vec2 localOriginXZ = vec2(rel.x * rot.x + rel.z * rot.y, -rel.x * rot.y + rel.z * rot.x);
+    vec2 localDirXZ = vec2(rayDir.x * rot.x + rayDir.z * rot.y, -rayDir.x * rot.y + rayDir.z * rot.x);
+
+    vec3 localOrigin = vec3(localOriginXZ.x, rel.y, localOriginXZ.y);
+    vec3 localDir = vec3(localDirXZ.x, rayDir.y, localDirXZ.y);
+
+    vec3 invDir = 1.0 / localDir;
+    vec3 t0 = (-halfExtent - localOrigin) * invDir;
+    vec3 t1 = (halfExtent - localOrigin) * invDir;
+    vec3 tMin = min(t0, t1);
+    vec3 tMax = max(t0, t1);
+
+    return vec2(max(max(tMin.x, tMin.y), tMin.z), min(min(tMax.x, tMax.y), tMax.z));
+}
+
+float skyHeightProfile(float heightT, float coverageBias) {
+    float baseCutoff = mix(0.02, 0.12, clamp(coverageBias, 0.0, 1.0));
+    float baseRamp = smoothstep(baseCutoff, baseCutoff + 0.25, heightT);
+    float topStart = mix(0.40, 0.90, clamp(coverageBias, 0.0, 1.0));
+    float topRamp = 1.0 - smoothstep(topStart, 1.0, heightT);
+    return baseRamp * topRamp;
+}
+
+float skySilhouette(vec3 localPos, vec3 halfExtent, float softness) {
+    vec3 normalized = localPos / max(halfExtent, vec3(0.001));
+    float radius = length(normalized);
+    float edge = clamp(softness, 0.05, 0.9);
+    return 1.0 - smoothstep(1.0 - edge, 1.0, radius);
 }
 
 float sampleSkyCloudDensity(
     vec3 worldPos,
     vec3 boxCenter,
+    vec2 rot,
     vec3 halfExtent,
     float heightT,
     float noiseScale,
@@ -50,86 +116,66 @@ float sampleSkyCloudDensity(
     float coverageBias,
     float silhouetteSoftness,
     float seed,
-    float domainRotation,
     float timeSeconds) {
-    vec3 local = worldPos - boxCenter;
+    vec3 rel = worldPos - boxCenter;
+    vec2 localXZ = vec2(rel.x * rot.x + rel.z * rot.y, -rel.x * rot.y + rel.z * rot.x);
+    vec3 localPos = vec3(localXZ.x, rel.y, localXZ.y);
 
-    float envelope = skyCloudSilhouette(local, halfExtent, silhouetteSoftness)
-    * skyCloudHeightProfile(heightT, coverageBias);
+    float silhouette = skySilhouette(localPos, halfExtent, silhouetteSoftness);
+    float envelope = silhouette * skyHeightProfile(heightT, coverageBias);
 
     if (envelope <= 0.002)
     return 0.0;
 
-    float cosR = cos(domainRotation);
-    float sinR = sin(domainRotation);
-    vec2 rotated = vec2(local.x * cosR - local.z * sinR, local.x * sinR + local.z * cosR);
+    vec3 seedOffset = vec3(seed * 173.13, seed * 57.31, seed * 91.7);
+    vec3 drift = vec3(timeSeconds * 0.004, 0.0, timeSeconds * 0.0015);
+    vec3 coord = worldPos * noiseScale + seedOffset + drift;
 
-    vec3 seedOffset = vec3(seed * 191.7, seed * 63.13, seed * 107.31);
-    vec3 coord = vec3(rotated.x, local.y, rotated.y) * (noiseScale / 180.0)
-    + seedOffset + vec3(timeSeconds * 0.012, 0.0, timeSeconds * 0.004);
+    float warpA = skyGradientNoise(coord.yzx * 0.6 + seedOffset);
+    float warpB = skyGradientNoise(coord.zxy * 0.6 + seedOffset - 11.3);
+    vec3 warped = coord + vec3(warpA, warpA * 0.25, warpB) * warpStrength;
 
-    float warpA = gradientNoise3D(coord.zyx * 0.5 + seedOffset);
-    float warpB = gradientNoise3D(coord.yxz * 0.5 + seedOffset + 23.7);
-    vec3 warped = coord + vec3(warpA, warpA * 0.35, warpB) * warpStrength;
+    float macro = skyFbm(warped);
+    float detail = skyWorley(warped * 3.0 + seedOffset.yzx);
+    float shape = clamp(mix(macro, detail, 0.3), 0.0, 1.0);
 
-    float macro = fbmGradient3D(warped, 4, 2.05, 0.5);
-    float coverage = clamp(1.0 - coverageBias, 0.05, 0.95);
-    float base = clamp(remapClamped(macro, coverage, 1.0, 0.0, 1.0), 0.0, 1.0) * envelope;
+    float threshold = mix(0.30, 0.62, clamp(coverageBias, 0.0, 1.0));
+    float edgeSoft = clamp(silhouetteSoftness * 1.3, 0.06, 0.4);
+    float density = smoothstep(threshold - edgeSoft, threshold + edgeSoft, shape);
 
-    if (base <= 0.01)
-    return 0.0;
-    if (base > 0.97)
-    return base;
-
-    float detail = worleyFbm3D(warped * SKY_CLOUD_DETAIL_FREQUENCY + seedOffset.yzx, 2, 2.2, 0.5);
-    float erosionWeight = smoothstep(0.0, 0.65, 1.0 - base) * smoothstep(0.0, 0.35, base);
-    float erosion = mix(1.0, detail, SKY_CLOUD_EROSION_STRENGTH * erosionWeight);
-
-    return clamp(base * erosion, 0.0, 1.0);
+    return density * envelope;
 }
 
-float skyCloudToonBand(float t, float bands) {
-    float scaled = clamp(t, 0.0, 1.0) * bands;
-    float index = floor(scaled);
-    float frac = scaled - index;
-    float edge = smoothstep(0.3, 0.7, frac);
-    return (index + edge) / max(bands - 1.0, 1.0);
-}
-
-vec3 shadeSkyCloud(
+vec3 shadeSkyCloudLit(
     vec3 baseColor,
     vec3 topColor,
     vec3 shadowColor,
-    vec3 skyAmbient,
     vec3 lightColor,
     float lightPower,
     float heightT,
     float lightLift,
     float density,
-    float toonBands,
+    int toonBands,
     float shadeStrength,
     float rimLightStrength,
     float ambientOcclusionStrength,
     float brightnessMultiplier) {
-    float litAmount = clamp(heightT * 0.5 + lightLift * 0.5, 0.0, 1.0);
-    float banded = skyCloudToonBand(litAmount, max(toonBands, 2.0));
+    float litAmount = clamp(heightT * 0.65 + lightLift * 0.35, 0.0, 1.0);
+    float bands = max(float(toonBands), 1.0);
+    float banded = floor(litAmount * bands) / max(bands - 1.0, 1.0);
 
-    vec3 directTint = mix(vec3(1.0), lightColor, 0.5) * clamp(lightPower, 0.0, 2.0);
-    vec3 lit = mix(baseColor, topColor, banded) * mix(vec3(1.0), directTint, 0.6);
+    vec3 albedo = mix(baseColor, topColor, banded);
+    albedo = mix(albedo, shadowColor, (1.0 - banded) * shadeStrength * 0.6);
 
-    vec3 shadowTint = mix(shadowColor, skyAmbient, 0.55);
-    vec3 shaded = mix(lit, shadowTint, (1.0 - banded) * shadeStrength);
+    float ao = mix(1.0 - ambientOcclusionStrength * 0.6, 1.0, banded);
+    albedo *= ao;
 
-    float ao = mix(1.0 - ambientOcclusionStrength * 0.7, 1.0, banded);
-    shaded *= ao;
+    float rim = (1.0 - clamp(density * 1.5, 0.0, 1.0)) * rimLightStrength;
 
-    float ambientFloor = SKY_CLOUD_AMBIENT_FLOOR * (0.6 + 0.4 * heightT);
-    shaded += skyAmbient * ambientFloor * (1.0 - density * 0.5);
+    vec3 ambient = mix(vec3(0.35), vec3(1.0), clamp(lightPower * 2.0, 0.0, 1.0));
+    vec3 direct = lightColor * lightPower * rim;
 
-    float silverLining = (1.0 - density) * lightLift * rimLightStrength;
-    shaded += lightColor * clamp(lightPower, 0.0, 2.0) * silverLining;
-
-    return shaded * brightnessMultiplier;
+    return (albedo * ambient + direct) * brightnessMultiplier;
 }
 
 #endif

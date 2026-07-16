@@ -1,34 +1,29 @@
 #ifndef SKY_WEATHER_PATTERN_DATA_GLSL
 #define SKY_WEATHER_PATTERN_DATA_GLSL
 
-#define SKY_WEATHER_PATTERN_MAX_COUNT 64
+#define SKY_CLOUD_MAX_COUNT 64
 
 layout(std140) uniform SkyWeatherPatternData {
-    int   u_patternCount;
-    float u_patternBearing[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternElevation[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternAngularWidth[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternAngularHeight[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternFadeAlpha[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternIntensity[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternCoverage[SKY_WEATHER_PATTERN_MAX_COUNT];
-    vec3  u_patternColor[SKY_WEATHER_PATTERN_MAX_COUNT];
-    vec3  u_patternTopColor[SKY_WEATHER_PATTERN_MAX_COUNT];
-    vec3  u_patternShadowColor[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternDensity[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternShadeStrength[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternRimLightStrength[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternAmbientOcclusionStrength[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternBrightnessMultiplier[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternToonBands[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternDensityNoiseScale[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternNoiseWarpStrength[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternCoverageBias[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternSilhouetteSoftness[SKY_WEATHER_PATTERN_MAX_COUNT];
-    vec3  u_patternCenter[SKY_WEATHER_PATTERN_MAX_COUNT];
-    vec3  u_patternHalfExtent[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternSeed[SKY_WEATHER_PATTERN_MAX_COUNT];
-    float u_patternDomainRotation[SKY_WEATHER_PATTERN_MAX_COUNT];
+    int   u_cloudCount;
+    vec3  u_cloudCenter[SKY_CLOUD_MAX_COUNT];
+    vec3  u_cloudHalfExtent[SKY_CLOUD_MAX_COUNT];
+    float u_cloudDomainRotation[SKY_CLOUD_MAX_COUNT];
+    float u_cloudFadeAlpha[SKY_CLOUD_MAX_COUNT];
+    float u_cloudIntensity[SKY_CLOUD_MAX_COUNT];
+    vec3  u_cloudColor[SKY_CLOUD_MAX_COUNT];
+    vec3  u_cloudTopColor[SKY_CLOUD_MAX_COUNT];
+    vec3  u_cloudShadowColor[SKY_CLOUD_MAX_COUNT];
+    float u_cloudDensity[SKY_CLOUD_MAX_COUNT];
+    float u_cloudShadeStrength[SKY_CLOUD_MAX_COUNT];
+    float u_cloudRimLightStrength[SKY_CLOUD_MAX_COUNT];
+    float u_cloudAmbientOcclusionStrength[SKY_CLOUD_MAX_COUNT];
+    float u_cloudBrightnessMultiplier[SKY_CLOUD_MAX_COUNT];
+    float u_cloudToonBands[SKY_CLOUD_MAX_COUNT];
+    float u_cloudDensityNoiseScale[SKY_CLOUD_MAX_COUNT];
+    float u_cloudNoiseWarpStrength[SKY_CLOUD_MAX_COUNT];
+    float u_cloudCoverageBias[SKY_CLOUD_MAX_COUNT];
+    float u_cloudSilhouetteSoftness[SKY_CLOUD_MAX_COUNT];
+    float u_cloudSeed[SKY_CLOUD_MAX_COUNT];
     float u_skyElevationLimit;
 };
 
