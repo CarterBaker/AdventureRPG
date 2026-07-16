@@ -267,4 +267,48 @@ vec3 curlNoise3D(vec3 p) {
     return vec3(dFz_dy - dFy_dz, dFx_dz - dFz_dx, dFy_dx - dFx_dy);
 }
 
+// ── 2D gradient noise (new cloud coverage shaping) ────────────────────────
+// The rewritten cloud systems shape clouds from a horizontal coverage
+// field plus an analytic height profile instead of raymarching true 3D
+// noise — cheaper, and tuned right it reads exactly as volumetric.
+
+vec2 hash22(vec2 p) {
+    p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+    return fract(sin(p) * 43758.5453123) * 2.0 - 1.0;
+}
+
+float gradientNoise2D(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+
+    float n00 = dot(hash22(i + vec2(0.0, 0.0)), f - vec2(0.0, 0.0));
+    float n10 = dot(hash22(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0));
+    float n01 = dot(hash22(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0));
+    float n11 = dot(hash22(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0));
+
+    float nx0 = mix(n00, n10, u.x);
+    float nx1 = mix(n01, n11, u.x);
+
+    return mix(nx0, nx1, u.y);
+}
+
+// Amplitude-normalized so octave count doesn't shift the output range;
+// rebiased into [0,1].
+float fbmGradient2D(vec2 p, int octaves, float lacunarity, float gain) {
+    float sum = 0.0;
+    float norm = 0.0;
+    float amp = 0.5;
+    vec2 pos = p;
+
+    for (int i = 0; i < octaves; i++) {
+        sum += amp * gradientNoise2D(pos);
+        norm += amp;
+        pos = pos * lacunarity + vec2(17.13, -9.7);
+        amp *= gain;
+    }
+
+    return clamp((sum / max(norm, 0.0001)) * 0.5 + 0.5, 0.0, 1.0);
+}
+
 #endif

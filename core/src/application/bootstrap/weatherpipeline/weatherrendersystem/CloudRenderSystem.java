@@ -20,6 +20,8 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
+import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class CloudRenderSystem extends SystemPackage {
@@ -29,11 +31,16 @@ class CloudRenderSystem extends SystemPackage {
      * cloud-bearing overhead cell sharing a CloudHandle draws in a single
      * instanced call against a single shared MaterialInstance for that
      * archetype. Rebuilt fully every frame from OverheadManager's active
-     * cells. Owned by WeatherRenderSystem, which supplies the per-window
-     * fbo/window pairs to submit().
+     * cells, farthest-first, so overlapping translucent boxes blend
+     * back-to-front with no per-pixel sorting needed — the same technique
+     * SkyWeatherPatternBranch uses for the sky dome's own array. Archetype
+     * draw order is likewise sorted by each archetype's own average
+     * distance this frame. Owned by WeatherRenderSystem.
      */
 
     private static final int[] INSTANCE_ATTR_SIZES = { 4, 4, 1 };
+    private static final int MAX_TRACKED_CELLS = EngineSetting.WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET;
+    private static final int MAX_ARCHETYPES = 32;
 
     private OverheadManager overheadManager;
     private MeshManager meshManager;
@@ -48,12 +55,32 @@ class CloudRenderSystem extends SystemPackage {
     private Object2ObjectOpenHashMap<CloudHandle, CompositeBufferInstance> cloud2Buffer;
     private Object2ObjectOpenHashMap<CloudHandle, MaterialInstance> cloud2Material;
 
+    // Distance Tracking — drives both within-archetype and cross-archetype
+    // back-to-front draw order.
+    private Object2FloatOpenHashMap<CloudHandle> cloud2DistanceSqSum;
+    private Object2IntOpenHashMap<CloudHandle> cloud2SampleCount;
+    private Object2FloatOpenHashMap<CloudHandle> cloud2AverageDistanceSq;
+
+    // Sort Scratch
+    private final OverheadCellStruct[] sortScratchCells = new OverheadCellStruct[MAX_TRACKED_CELLS];
+    private final float[] sortScratchDistanceSq = new float[MAX_TRACKED_CELLS];
+    private final CloudHandle[] archetypeOrderScratch = new CloudHandle[MAX_ARCHETYPES];
+    private final float[] archetypeDistanceScratch = new float[MAX_ARCHETYPES];
+
     private final float[] instanceScratch = new float[9];
 
     @Override
     protected void create() {
+
         this.cloud2Buffer = new Object2ObjectOpenHashMap<>();
         this.cloud2Material = new Object2ObjectOpenHashMap<>();
+
+        this.cloud2DistanceSqSum = new Object2FloatOpenHashMap<>();
+        this.cloud2DistanceSqSum.defaultReturnValue(0f);
+        this.cloud2SampleCount = new Object2IntOpenHashMap<>();
+        this.cloud2SampleCount.defaultReturnValue(0);
+        this.cloud2AverageDistanceSq = new Object2FloatOpenHashMap<>();
+        this.cloud2AverageDistanceSq.defaultReturnValue(0f);
     }
 
     @Override
@@ -76,16 +103,14 @@ class CloudRenderSystem extends SystemPackage {
     // Settings \\
 
     /*
-     * Pushed once at bootstrap, never per frame. Real cloud OBJECTS are
-     * capped to whichever is smaller: the actual visible chunk radius
-     * (Settings.maxRenderDistance / 2, matching GridBuildSystem's own grid
-     * radius), or the weather simulation's own design-intent near range
-     * (EngineSetting.WEATHER_NEAR_RANGE_CHUNKS) — this is what guarantees a
-     * real cloud object is never rendered floating over ground that was
-     * never drawn. WeatherPatternManager derives its own streaming radius
-     * from this identical expression, so a cloud dissolving into the
-     * sky-dome preview and a cloud streaming out of the registry always
-     * happen at the same boundary.
+     * Pushed once at bootstrap. Real cloud objects are capped to whichever
+     * is smaller: the actual visible chunk radius (half of
+     * Settings.maxRenderDistance) or the weather simulation's own near
+     * range (EngineSetting.WEATHER_NEAR_RANGE_CHUNKS) — this guarantees a
+     * cloud object is never drawn over ground that was never generated.
+     * WeatherPatternManager derives its own streaming radius from the same
+     * expression, so the sky dome's fade-out and the overhead system's own
+     * streaming boundary always agree.
      */
     private void pushCloudSettings() {
 
@@ -116,17 +141,13 @@ class CloudRenderSystem extends SystemPackage {
 
     // Update \\
 
-    /*
-     * Rebuilds every archetype's instance buffer from scratch each frame —
-     * cheap, since the whole active-cell set is at most a few hundred
-     * entries, and correct, since a cell's render position, fade, and
-     * intensity are never stable frame-to-frame while its pattern drifts,
-     * streams, or fades.
-     */
     void updateInstances() {
 
         for (CompositeBufferInstance buffer : cloud2Buffer.values())
             buffer.clear();
+
+        cloud2DistanceSqSum.clear();
+        cloud2SampleCount.clear();
 
         long referenceCoordinate = weatherManager.getReferenceCoordinate();
         int referenceChunkX = Coordinate2Long.unpackX(referenceCoordinate);
@@ -134,31 +155,72 @@ class CloudRenderSystem extends SystemPackage {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
 
-        for (OverheadCellStruct cell : overheadManager.getActiveCells().values())
-            accumulateInstance(cell, referenceChunkX, referenceChunkZ, activeWorld);
+        int count = gatherSortedCells(referenceChunkX, referenceChunkZ, activeWorld);
+
+        for (int i = 0; i < count; i++)
+            accumulateInstance(sortScratchCells[i], referenceChunkX, referenceChunkZ, activeWorld);
+
+        finalizeArchetypeDistances();
     }
 
     /*
-     * Resolves this cell's render-space position exactly as the old
-     * per-cell system did — see WorldWrapUtility's own toroidal delta
-     * helpers — then appends one row of instance data to its archetype's
-     * buffer. instanceScratch is reused every call; addInstance() copies
-     * it into the buffer's own backing array immediately, so reuse is safe.
+     * Collects every cloud-bearing active cell and sorts far-to-near by
+     * distance from the reference coordinate — insertion sort, allocation
+     * free, trivial at the 64-cell budget cap.
      */
+    private int gatherSortedCells(int referenceChunkX, int referenceChunkZ, WorldHandle activeWorld) {
+
+        int count = 0;
+
+        for (OverheadCellStruct cell : overheadManager.getActiveCells().values()) {
+
+            if (!cell.hasCloud() || count >= sortScratchCells.length)
+                continue;
+
+            double relativeChunkX = WorldWrapUtility.wrappedDeltaX(activeWorld, cell.getCurrentChunkX(),
+                    referenceChunkX);
+            double relativeChunkZ = WorldWrapUtility.wrappedDeltaZ(activeWorld, cell.getCurrentChunkZ(),
+                    referenceChunkZ);
+
+            sortScratchCells[count] = cell;
+            sortScratchDistanceSq[count] = (float) (relativeChunkX * relativeChunkX + relativeChunkZ * relativeChunkZ);
+            count++;
+        }
+
+        for (int i = 1; i < count; i++) {
+
+            OverheadCellStruct cell = sortScratchCells[i];
+            float distanceSq = sortScratchDistanceSq[i];
+
+            int j = i - 1;
+            while (j >= 0 && sortScratchDistanceSq[j] < distanceSq) {
+                sortScratchCells[j + 1] = sortScratchCells[j];
+                sortScratchDistanceSq[j + 1] = sortScratchDistanceSq[j];
+                j--;
+            }
+
+            sortScratchCells[j + 1] = cell;
+            sortScratchDistanceSq[j + 1] = distanceSq;
+        }
+
+        return count;
+    }
+
     private void accumulateInstance(
             OverheadCellStruct cell,
             int referenceChunkX,
             int referenceChunkZ,
             WorldHandle activeWorld) {
 
-        if (!cell.hasCloud())
-            return;
-
         CloudHandle cloudHandle = cell.getCloudHandle();
         CompositeBufferInstance buffer = getOrCreateArchetype(cloudHandle);
 
         double relativeChunkX = WorldWrapUtility.wrappedDeltaX(activeWorld, cell.getCurrentChunkX(), referenceChunkX);
         double relativeChunkZ = WorldWrapUtility.wrappedDeltaZ(activeWorld, cell.getCurrentChunkZ(), referenceChunkZ);
+
+        float distanceSq = (float) (relativeChunkX * relativeChunkX + relativeChunkZ * relativeChunkZ);
+        cloud2DistanceSqSum.addTo(cloudHandle, distanceSq);
+        cloud2SampleCount.addTo(cloudHandle, 1);
 
         instanceScratch[0] = (float) (relativeChunkX * EngineSetting.CHUNK_SIZE);
         instanceScratch[1] = cell.getEffectiveAltitude();
@@ -171,6 +233,17 @@ class CloudRenderSystem extends SystemPackage {
         instanceScratch[8] = cell.getElongation();
 
         buffer.addInstance(instanceScratch);
+    }
+
+    private void finalizeArchetypeDistances() {
+
+        cloud2AverageDistanceSq.clear();
+
+        for (var entry : cloud2DistanceSqSum.object2FloatEntrySet()) {
+            int sampleCount = cloud2SampleCount.getInt(entry.getKey());
+            if (sampleCount > 0)
+                cloud2AverageDistanceSq.put(entry.getKey(), entry.getFloatValue() / sampleCount);
+        }
     }
 
     private CompositeBufferInstance getOrCreateArchetype(CloudHandle cloudHandle) {
@@ -194,9 +267,8 @@ class CloudRenderSystem extends SystemPackage {
     /*
      * Bakes every archetype-level value off CloudData into this
      * archetype's own shared MaterialInstance, once, the first time it is
-     * ever used. Scale and vertical thickness stay the archetype's own
-     * base values here — per-instance size variance and elongation are
-     * applied later, in the vertex shader, against this shared base.
+     * ever used. Per-instance size variance and elongation are applied
+     * later, in the vertex shader, against this shared base.
      */
     private void bakeArchetypeUniforms(MaterialInstance material, CloudHandle cloudHandle) {
 
@@ -223,20 +295,46 @@ class CloudRenderSystem extends SystemPackage {
 
     /*
      * Pushes every non-empty archetype buffer into this window's render
-     * queue for the given target fbo. Safe to call once per active grid
-     * window each frame — an archetype with no active cell this frame is
-     * skipped entirely.
+     * queue, ordered farthest-average-distance first so different cloud
+     * types layered over each other this frame also composite back-to-front.
      */
     void submit(FboInstance fbo, WindowInstance window) {
 
+        int archetypeCount = 0;
+
         for (var entry : cloud2Buffer.object2ObjectEntrySet()) {
 
-            CompositeBufferInstance buffer = entry.getValue();
-
-            if (buffer.isEmpty())
+            if (entry.getValue().isEmpty())
                 continue;
 
-            MaterialInstance material = cloud2Material.get(entry.getKey());
+            if (archetypeCount >= archetypeOrderScratch.length)
+                break;
+
+            archetypeOrderScratch[archetypeCount] = entry.getKey();
+            archetypeDistanceScratch[archetypeCount] = cloud2AverageDistanceSq.getFloat(entry.getKey());
+            archetypeCount++;
+        }
+
+        for (int i = 1; i < archetypeCount; i++) {
+
+            CloudHandle handle = archetypeOrderScratch[i];
+            float distanceSq = archetypeDistanceScratch[i];
+
+            int j = i - 1;
+            while (j >= 0 && archetypeDistanceScratch[j] < distanceSq) {
+                archetypeOrderScratch[j + 1] = archetypeOrderScratch[j];
+                archetypeDistanceScratch[j + 1] = archetypeDistanceScratch[j];
+                j--;
+            }
+
+            archetypeOrderScratch[j + 1] = handle;
+            archetypeDistanceScratch[j + 1] = distanceSq;
+        }
+
+        for (int i = 0; i < archetypeCount; i++) {
+            CloudHandle handle = archetypeOrderScratch[i];
+            CompositeBufferInstance buffer = cloud2Buffer.get(handle);
+            MaterialInstance material = cloud2Material.get(handle);
             renderManager.pushInstancedCompositeCall(buffer, material, fbo, window);
         }
     }
