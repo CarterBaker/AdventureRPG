@@ -11,11 +11,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
  * Owns the coherent regional weather noise field — a continuous 2D,
- * X-wrapped layer blended with GlobalNoiseBranch's broad current, both
- * scrolling with the world's rotation at the same rate and meandering with
- * the same wave — and resolves it against a chance-weighted pool via
- * resolveBand() and resolveBandTowardHorizon(). These are the canonical
- * noise-to-weather resolution paths shared by WeatherManager,
+ * X-wrapped layer blended with GlobalNoiseBranch's broad current. Both
+ * layers scroll with the exact same planetary rotation phase and meander
+ * wave — this is a finer-detail octave on top of the global current, not a
+ * second independent wind — and resolves it against a chance-weighted pool
+ * via resolveBand() and resolveBandTowardHorizon(). These are the
+ * canonical noise-to-weather resolution paths shared by WeatherManager,
  * WeatherPatternManager, and this class's own center-point atmosphere
  * sample.
  */
@@ -23,17 +24,11 @@ class RegionSampleBranch extends BranchPackage {
 
     private static final long NOISE_SEED = 0x51A5F00DCAFEBEEFL;
     private static final double WAVELENGTH_CHUNKS = 128.0;
-    private static final double DRIFT_SPEED_X = 0.006;
-    private static final double DRIFT_SPEED_Z = 0.15;
-    private static final double DRIFT_Z_WRAP = 1.0E7;
 
     private GlobalNoiseBranch globalNoiseBranch;
     private WorldManager worldManager;
 
     private long referenceCoordinate;
-
-    private double driftPhaseX;
-    private double driftChunksZ;
 
     private final WeatherSampleStruct sample = new WeatherSampleStruct();
     private final WeatherSampleStruct targetSample = new WeatherSampleStruct();
@@ -79,8 +74,6 @@ class RegionSampleBranch extends BranchPackage {
 
     void sampleRegions(ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
-        advanceDrift();
-
         int originX = Coordinate2Long.unpackX(referenceCoordinate);
         int originY = Coordinate2Long.unpackY(referenceCoordinate);
 
@@ -104,16 +97,6 @@ class RegionSampleBranch extends BranchPackage {
         float alpha = 1f - (float) Math.exp(-deltaTime / EngineSetting.WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS);
 
         sample.lerpToward(targetSample, alpha);
-    }
-
-    // Drift \\
-
-    private void advanceDrift() {
-        float deltaTime = internal.getDeltaTime();
-        driftPhaseX += DRIFT_SPEED_X * deltaTime;
-        driftPhaseX %= (Math.PI * 2.0);
-        driftChunksZ += DRIFT_SPEED_Z * deltaTime;
-        driftChunksZ %= DRIFT_Z_WRAP;
     }
 
     // Resolution \\
@@ -251,8 +234,8 @@ class RegionSampleBranch extends BranchPackage {
                 chunkX, chunkZ,
                 worldWidthChunks,
                 WAVELENGTH_CHUNKS,
-                rotationPhase + driftPhaseX,
-                driftChunksZ,
+                rotationPhase,
+                0.0,
                 globalNoiseBranch.getMeanderWaveNumber(),
                 meanderAmplitudeChunks,
                 globalNoiseBranch.getMeanderPhase());

@@ -430,7 +430,6 @@ public class EngineSetting {
         // Weather \\
 
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;
-        public static final float WEATHER_LOCAL_DRIFT_TIME_WRAP = 100000.0f;
         public static final float WEATHER_LOCAL_EVOLUTION_PERIOD = 420.0f;
         public static final float DEFAULT_WEATHER_WIND_SPEED_SCALE = 1.0f;
         public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
