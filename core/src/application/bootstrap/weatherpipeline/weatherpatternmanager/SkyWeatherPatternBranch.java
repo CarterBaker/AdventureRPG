@@ -196,8 +196,8 @@ class SkyWeatherPatternBranch extends BranchPackage {
                 if (!lobe.hasCloud())
                     continue;
 
-                double lobeChunkX = pattern.getCurrentChunkX() + lobe.getOffsetChunkX();
-                double lobeChunkZ = pattern.getCurrentChunkZ() + lobe.getOffsetChunkZ();
+                double lobeChunkX = pattern.getLobeChunkX(lobe);
+                double lobeChunkZ = pattern.getLobeChunkZ(lobe);
 
                 double dx = WorldWrapUtility.wrappedDelta(lobeChunkX, referenceChunkX, worldWidthChunks);
                 double dz = WorldWrapUtility.wrappedDelta(lobeChunkZ, referenceChunkZ, worldHeightChunks);
@@ -250,13 +250,13 @@ class SkyWeatherPatternBranch extends BranchPackage {
 
         CloudHandle cloud = lobe.getCloudHandle();
 
-        double lobeChunkX = pattern.getCurrentChunkX() + lobe.getOffsetChunkX();
-        double lobeChunkZ = pattern.getCurrentChunkZ() + lobe.getOffsetChunkZ();
+        double lobeChunkX = pattern.getLobeChunkX(lobe);
+        double lobeChunkZ = pattern.getLobeChunkZ(lobe);
 
         double dx = WorldWrapUtility.wrappedDelta(lobeChunkX, referenceChunkX, worldWidthChunks);
         double dz = WorldWrapUtility.wrappedDelta(lobeChunkZ, referenceChunkZ, worldHeightChunks);
 
-        float sizeVariance = lobe.getSizeVariance();
+        float sizeVariance = pattern.getLobeSizeVariance(lobe);
         float elongation = Math.max(lobe.getElongation(), 1f);
 
         float halfX = (cloud.getScale() * sizeVariance * elongation) * 0.5f;

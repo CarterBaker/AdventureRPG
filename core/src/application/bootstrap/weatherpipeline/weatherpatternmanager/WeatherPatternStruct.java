@@ -9,16 +9,30 @@ public class WeatherPatternStruct extends StructPackage {
      * One persistent, large-scale weather system shared by the overhead
      * volumetric layer and the sky dome. Position and UBO slot are fixed for
      * its lifetime. Lobes are regenerated whenever the pattern's resolved
-     * weather changes, so the overhead cloud layer actually reflects live
-     * weather instead of freezing at spawn time; previousWeatherHandle and
-     * transitionT let shading blend smoothly across that change. Bounding
-     * geometry (footprint radius, altitude range) is recomputed alongside
-     * the lobes and is the single source of truth the sky dome preview
-     * derives its own box from, so the two visual layers can never disagree
-     * about where or how large a pattern's weather actually is.
+     * weather changes. Bounding geometry (footprint radius, altitude range)
+     * is recomputed alongside the lobes and is the single source of truth
+     * the sky dome preview derives its own box from.
+     *
+     * intensity and spread are tracked separately. intensity already folds
+     * in the resolved weather's own cloudCoverage and drives opacity/density
+     * — a weather with low coverage should still read faint even at the
+     * dead center of its own zone. spread is coverage-independent band
+     * purity (0 at the edge of the zone this pattern's weather owns, 1 at
+     * its center) and drives lobe geometry — how far lobes sit from the
+     * pattern's own center and how large they are. Splitting these two
+     * means a pattern approaching the boundary of its weather zone visibly
+     * condenses toward its own center and shrinks, rather than keeping a
+     * full-spread cluster of lobes that simply fades in alpha — which reads
+     * as a static, hard-edged blob rather than a natural congregation.
      */
 
     public static final float WEATHER_TRANSITION_DURATION_SECONDS = 10.0f;
+
+    // Lobes never fully collapse to a point nor fully vanish in size —
+    // floors keep a condensing pattern reading as a small, tight cluster
+    // rather than degenerating into a single stacked point.
+    private static final float MIN_EFFECTIVE_SPREAD = 0.15f;
+    private static final float MIN_LOBE_SIZE_RATIO = 0.45f;
 
     private final long patternKey;
 
@@ -45,6 +59,9 @@ public class WeatherPatternStruct extends StructPackage {
     private float intensity;
     private float targetIntensity;
 
+    private float spread;
+    private float targetSpread;
+
     private double nextReevaluationTime;
 
     // Bounding Geometry
@@ -60,6 +77,7 @@ public class WeatherPatternStruct extends StructPackage {
             WeatherPatternLobeStruct[] lobes,
             float driftSpeedScale,
             float intensity,
+            float spread,
             int slot) {
 
         this.patternKey = patternKey;
@@ -77,6 +95,8 @@ public class WeatherPatternStruct extends StructPackage {
         this.retiring = false;
         this.intensity = intensity;
         this.targetIntensity = intensity;
+        this.spread = spread;
+        this.targetSpread = spread;
     }
 
     public void advanceDrift(double deltaChunkX, double deltaChunkZ) {
@@ -142,6 +162,14 @@ public class WeatherPatternStruct extends StructPackage {
 
     public void advanceIntensitySmoothing(float alpha) {
         this.intensity += (targetIntensity - this.intensity) * alpha;
+    }
+
+    public void setTargetSpread(float targetSpread) {
+        this.targetSpread = targetSpread;
+    }
+
+    public void advanceSpreadSmoothing(float alpha) {
+        this.spread += (targetSpread - this.spread) * alpha;
     }
 
     public double getNextReevaluationTime() {
@@ -210,6 +238,44 @@ public class WeatherPatternStruct extends StructPackage {
 
     public float getIntensity() {
         return intensity;
+    }
+
+    public float getSpread() {
+        return spread;
+    }
+
+    // Lobe Geometry \\
+
+    private float effectiveSpread() {
+        return MIN_EFFECTIVE_SPREAD + (1f - MIN_EFFECTIVE_SPREAD) * Math.max(0f, Math.min(1f, spread));
+    }
+
+    /*
+     * Effective world chunk position of one lobe. Scales the lobe's fixed
+     * offset from pattern center by this pattern's own band purity, so a
+     * pattern sitting near the edge of its weather's zone pulls its lobes
+     * in toward the center rather than showing the full-spread cluster
+     * shape it would show at the zone's core. Both the sky dome and the
+     * overhead volumetric system read lobe position exclusively through
+     * this method, so the two visual layers can never disagree about
+     * where a lobe actually sits.
+     */
+    public double getLobeChunkX(WeatherPatternLobeStruct lobe) {
+        return getCurrentChunkX() + lobe.getOffsetChunkX() * effectiveSpread();
+    }
+
+    public double getLobeChunkZ(WeatherPatternLobeStruct lobe) {
+        return getCurrentChunkZ() + lobe.getOffsetChunkZ() * effectiveSpread();
+    }
+
+    /*
+     * Effective size variance of one lobe. Shrinks alongside spread so a
+     * condensing pattern reads as fewer, smaller, tighter puffs rather than
+     * full-size clouds merely fading in alpha.
+     */
+    public float getLobeSizeVariance(WeatherPatternLobeStruct lobe) {
+        float sizeT = MIN_LOBE_SIZE_RATIO + (1f - MIN_LOBE_SIZE_RATIO) * Math.max(0f, Math.min(1f, spread));
+        return lobe.getSizeVariance() * sizeT;
     }
 
     public float getFootprintRadiusChunks() {

@@ -26,11 +26,15 @@ public class WeatherPatternManager extends ManagerPackage {
      * its resolved weather changes, so the overhead volumetric layer always
      * reflects live weather rather than whatever was rolled at spawn. Every
      * rebuild also recomputes the pattern's true bounding geometry —
-     * footprint radius and altitude range — from its actual lobes, which is
-     * the single source of truth the sky dome preview reads its own box
-     * from. Total active cloud lobes (not patterns) are capped against
-     * overheadLobeBudget, since lobe count is what actually drives overhead
-     * render cost.
+     * footprint radius and altitude range — from its actual lobes, the
+     * single source of truth the sky dome preview reads its own box from.
+     *
+     * Two continuous values track how "present" a pattern is: intensity
+     * (folds in the resolved weather's own cloudCoverage, drives opacity)
+     * and spread (coverage-independent band purity, drives lobe geometry —
+     * see WeatherPatternStruct). A pattern near the edge of its weather's
+     * noise zone condenses its lobes toward its own center and shrinks them
+     * rather than showing a full-spread cluster that merely fades in alpha.
      */
 
     private static final float FADE_IN_RATE = 0.4f;
@@ -251,7 +255,8 @@ public class WeatherPatternManager extends ManagerPackage {
         weatherManager.resolveWeatherBandTowardHorizon(bandScratch, chunkCoordinate);
 
         WeatherHandle weatherHandle = bandScratch.getPrimary();
-        float intensity = resolvePatternIntensity(bandScratch, weatherHandle);
+        float spread = bandScratch.getIntensityFor(weatherHandle);
+        float intensity = spread * weatherHandle.getCloudCoverage();
 
         WeatherPatternLobeStruct[] lobes = buildLobes(patternKey, weatherHandle, 0);
 
@@ -262,7 +267,8 @@ public class WeatherPatternManager extends ManagerPackage {
         int slot = freeSlots.removeInt(freeSlots.size() - 1);
 
         WeatherPatternStruct pattern = new WeatherPatternStruct(
-                patternKey, homeChunkX, homeChunkZ, weatherHandle, lobes, driftSpeedScale, intensity, slot);
+                patternKey, homeChunkX, homeChunkZ, weatherHandle, lobes,
+                driftSpeedScale, intensity, spread, slot);
 
         applyBounds(pattern, lobes);
         pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
@@ -278,7 +284,10 @@ public class WeatherPatternManager extends ManagerPackage {
      * Builds one pattern's lobes deterministically from its key, resolved
      * weather, and a generation counter — the same weather resolving twice
      * for the same pattern after an intervening transition still produces a
-     * fresh roll rather than repeating the exact same shapes.
+     * fresh roll rather than repeating the exact same shapes. The actual
+     * on-screen spread/size of these lobes is scaled down further at read
+     * time by the pattern's own live band purity — see
+     * WeatherPatternStruct.getLobeChunkX/Z/SizeVariance.
      */
     private WeatherPatternLobeStruct[] buildLobes(long patternKey, WeatherHandle weatherHandle, int generation) {
 
@@ -348,9 +357,12 @@ public class WeatherPatternManager extends ManagerPackage {
     /*
      * Recomputes a pattern's true bounding geometry from its actual lobes —
      * a footprint radius enveloping every lobe's own cloud footprint at its
-     * offset, and an altitude range spanning every lobe's own vertical
-     * extent. This is the only place either value is derived; the sky dome
-     * preview reads it back rather than approximating independently.
+     * FULL (unscaled) offset, and an altitude range spanning every lobe's
+     * own vertical extent. Deliberately uses the raw, un-condensed offsets
+     * as a conservative upper bound — actual on-screen spread only ever
+     * shrinks from this as band purity drops, never grows past it — so
+     * retirement distance checks and the sky dome preview box never
+     * undershoot the pattern's true footprint.
      */
     private void applyBounds(WeatherPatternStruct pattern, WeatherPatternLobeStruct[] lobes) {
 
@@ -500,7 +512,10 @@ public class WeatherPatternManager extends ManagerPackage {
             long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
             weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate);
 
-            pattern.setTargetIntensity(resolvePatternIntensity(bandScratch, pattern.getWeatherHandle()));
+            float purity = bandScratch.getIntensityFor(pattern.getWeatherHandle());
+
+            pattern.setTargetSpread(purity);
+            pattern.setTargetIntensity(purity * pattern.getWeatherHandle().getCloudCoverage());
         }
     }
 
@@ -509,12 +524,10 @@ public class WeatherPatternManager extends ManagerPackage {
         float deltaTime = internal.getDeltaTime();
         float alpha = 1f - (float) Math.exp(-deltaTime / INTENSITY_SMOOTHING_TIME_SECONDS);
 
-        for (WeatherPatternStruct pattern : activePatterns.values())
+        for (WeatherPatternStruct pattern : activePatterns.values()) {
             pattern.advanceIntensitySmoothing(alpha);
-    }
-
-    private float resolvePatternIntensity(WeatherBandStruct band, WeatherHandle handle) {
-        return band.getIntensityFor(handle) * handle.getCloudCoverage();
+            pattern.advanceSpreadSmoothing(alpha);
+        }
     }
 
     private float reevaluationIntervalFor(long patternKey) {

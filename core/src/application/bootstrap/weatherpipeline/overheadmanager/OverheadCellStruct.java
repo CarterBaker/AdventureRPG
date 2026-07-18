@@ -11,8 +11,12 @@ public class OverheadCellStruct extends StructPackage {
     /*
      * One renderable cloud-volume placement — a thin read-through view of
      * one lobe belonging to one WeatherPatternStruct. Every getter
-     * delegates to the owning pattern and/or lobe, so position, fade, and
-     * intensity always track whatever the pattern most recently resolved.
+     * delegates to the owning pattern and/or lobe, so position, size, fade,
+     * and intensity always track whatever the pattern most recently
+     * resolved. Position and size specifically route through the pattern's
+     * own getLobeChunkX/Z/SizeVariance so a lobe's on-screen placement
+     * always reflects the pattern's current band purity, not just its raw
+     * fixed offset.
      */
 
     private final long cellKey;
@@ -50,7 +54,7 @@ public class OverheadCellStruct extends StructPackage {
     }
 
     public float getSizeVariance() {
-        return lobe.getSizeVariance();
+        return pattern.getLobeSizeVariance(lobe);
     }
 
     public float getDomainRotation() {
@@ -62,11 +66,11 @@ public class OverheadCellStruct extends StructPackage {
     }
 
     public double getCurrentChunkX() {
-        return pattern.getCurrentChunkX() + lobe.getOffsetChunkX();
+        return pattern.getLobeChunkX(lobe);
     }
 
     public double getCurrentChunkZ() {
-        return pattern.getCurrentChunkZ() + lobe.getOffsetChunkZ();
+        return pattern.getLobeChunkZ(lobe);
     }
 
     public float getFadeAlpha() {
