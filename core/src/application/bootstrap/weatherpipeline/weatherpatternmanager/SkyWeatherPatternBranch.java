@@ -15,17 +15,29 @@ import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.vectors.Vector4;
 
 class SkyWeatherPatternBranch extends BranchPackage {
 
     /*
-     * Flattens every active weather pattern's cloud lobes into the
-     * SkyWeatherPatternData UBO — one array slot per lobe, built from the
-     * same position/size math the overhead volumetric system uses for its
-     * instance boxes, so the sky dome and the physical cloud layer are
-     * always the same weather. Entries are gathered and sorted far-to-near
-     * before upload so the fragment shader's fixed draw-order loop
-     * composites correctly with no per-pixel sorting required.
+     * Flattens active weather patterns into the SkyWeatherPatternData UBO —
+     * one array slot per lobe, built from the same position/size math the
+     * overhead volumetric system uses for its own instance boxes, so the
+     * sky dome and the physical cloud layer are always the same weather.
+     *
+     * Only lobes sitting within the horizon ring — beyond the overhead
+     * system's own draw radius (WeatherManager.getEffectiveNearRangeChunks())
+     * and no farther than the weather noise's own far-sample radius
+     * (EngineSetting.WEATHER_FAR_RANGE_CHUNKS) — are ever written here.
+     * Anything closer is already covered by the real instanced cloud boxes
+     * (see CloudRenderSystem), so leaving it out of this UBO is what stops
+     * the sky dome from drawing a second, overlapping copy of clouds that
+     * are already physically overhead. A short smoothstep ramp at each edge
+     * of the ring avoids a hard pop as a pattern crosses either boundary.
+     *
+     * Entries are gathered and sorted far-to-near before upload so the
+     * fragment shader's fixed draw-order loop composites correctly with no
+     * per-pixel sorting required.
      */
 
     private static final int MAX_CLOUDS = EngineSetting.WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET;
@@ -44,22 +56,18 @@ class SkyWeatherPatternBranch extends BranchPackage {
     private WeatherPatternStruct[] gatheredPatterns;
     private WeatherPatternLobeStruct[] gatheredLobes;
     private float[] gatheredDistanceSq;
+    private float[] gatheredRingFade;
 
     // UBO Arrays
     private Vector3[] center;
     private Vector3[] halfExtent;
     private Float[] domainRotation;
+    private Vector4[] bounds;
+    private Float[] distanceFromCenter;
     private Float[] fadeAlpha;
     private Float[] intensity;
     private Vector3[] color;
-    private Vector3[] topColor;
-    private Vector3[] shadowColor;
     private Float[] density;
-    private Float[] shadeStrength;
-    private Float[] rimLightStrength;
-    private Float[] ambientOcclusionStrength;
-    private Float[] brightnessMultiplier;
-    private Float[] toonBands;
     private Float[] densityNoiseScale;
     private Float[] noiseWarpStrength;
     private Float[] coverageBias;
@@ -72,21 +80,17 @@ class SkyWeatherPatternBranch extends BranchPackage {
         this.gatheredPatterns = new WeatherPatternStruct[MAX_CLOUDS];
         this.gatheredLobes = new WeatherPatternLobeStruct[MAX_CLOUDS];
         this.gatheredDistanceSq = new float[MAX_CLOUDS];
+        this.gatheredRingFade = new float[MAX_CLOUDS];
 
         this.center = newVector3Array();
         this.halfExtent = newVector3Array();
         this.domainRotation = newFloatArray();
+        this.bounds = newVector4Array();
+        this.distanceFromCenter = newFloatArray();
         this.fadeAlpha = newFloatArray();
         this.intensity = newFloatArray();
         this.color = newVector3Array();
-        this.topColor = newVector3Array();
-        this.shadowColor = newVector3Array();
         this.density = newFloatArray();
-        this.shadeStrength = newFloatArray();
-        this.rimLightStrength = newFloatArray();
-        this.ambientOcclusionStrength = newFloatArray();
-        this.brightnessMultiplier = newFloatArray();
-        this.toonBands = newFloatArray();
         this.densityNoiseScale = newFloatArray();
         this.noiseWarpStrength = newFloatArray();
         this.coverageBias = newFloatArray();
@@ -160,17 +164,12 @@ class SkyWeatherPatternBranch extends BranchPackage {
         skyWeatherPatternData.updateUniform("u_cloudCenter", center);
         skyWeatherPatternData.updateUniform("u_cloudHalfExtent", halfExtent);
         skyWeatherPatternData.updateUniform("u_cloudDomainRotation", domainRotation);
+        skyWeatherPatternData.updateUniform("u_cloudBounds", bounds);
+        skyWeatherPatternData.updateUniform("u_cloudDistanceFromCenter", distanceFromCenter);
         skyWeatherPatternData.updateUniform("u_cloudFadeAlpha", fadeAlpha);
         skyWeatherPatternData.updateUniform("u_cloudIntensity", intensity);
         skyWeatherPatternData.updateUniform("u_cloudColor", color);
-        skyWeatherPatternData.updateUniform("u_cloudTopColor", topColor);
-        skyWeatherPatternData.updateUniform("u_cloudShadowColor", shadowColor);
         skyWeatherPatternData.updateUniform("u_cloudDensity", density);
-        skyWeatherPatternData.updateUniform("u_cloudShadeStrength", shadeStrength);
-        skyWeatherPatternData.updateUniform("u_cloudRimLightStrength", rimLightStrength);
-        skyWeatherPatternData.updateUniform("u_cloudAmbientOcclusionStrength", ambientOcclusionStrength);
-        skyWeatherPatternData.updateUniform("u_cloudBrightnessMultiplier", brightnessMultiplier);
-        skyWeatherPatternData.updateUniform("u_cloudToonBands", toonBands);
         skyWeatherPatternData.updateUniform("u_cloudDensityNoiseScale", densityNoiseScale);
         skyWeatherPatternData.updateUniform("u_cloudNoiseWarpStrength", noiseWarpStrength);
         skyWeatherPatternData.updateUniform("u_cloudCoverageBias", coverageBias);
@@ -184,6 +183,14 @@ class SkyWeatherPatternBranch extends BranchPackage {
 
     // Gather / Sort \\
 
+    /*
+     * Collects every cloud-bearing lobe whose current distance from the
+     * reference coordinate falls inside the horizon ring, in chunks:
+     * [weatherManager.getEffectiveNearRangeChunks(), WEATHER_FAR_RANGE_CHUNKS].
+     * The near edge deliberately matches the exact same formula
+     * CloudRenderSystem uses to fade out the physical cloud objects, so the
+     * two systems' boundaries always agree and never overlap or gap.
+     */
     private int gatherVisibleLobes(
             int referenceChunkX,
             int referenceChunkZ,
@@ -191,6 +198,10 @@ class SkyWeatherPatternBranch extends BranchPackage {
             int worldHeightChunks) {
 
         int count = 0;
+
+        float minDistanceChunks = weatherManager.getEffectiveNearRangeChunks();
+        float maxDistanceChunks = EngineSetting.WEATHER_FAR_RANGE_CHUNKS;
+        float ringMarginChunks = Math.max((maxDistanceChunks - minDistanceChunks) * 0.15f, 0.001f);
 
         for (WeatherPatternStruct pattern : weatherPatternManager.getActivePatterns().values()) {
 
@@ -212,9 +223,19 @@ class SkyWeatherPatternBranch extends BranchPackage {
                 double dx = WorldWrapUtility.wrappedDelta(lobeChunkX, referenceChunkX, worldWidthChunks);
                 double dz = WorldWrapUtility.wrappedDelta(lobeChunkZ, referenceChunkZ, worldHeightChunks);
 
+                float distanceChunks = (float) Math.sqrt(dx * dx + dz * dz);
+
+                if (distanceChunks < minDistanceChunks || distanceChunks > maxDistanceChunks)
+                    continue;
+
+                float fadeIn = smoothstep(minDistanceChunks, minDistanceChunks + ringMarginChunks, distanceChunks);
+                float fadeOut = 1f
+                        - smoothstep(maxDistanceChunks - ringMarginChunks, maxDistanceChunks, distanceChunks);
+
                 gatheredPatterns[count] = pattern;
                 gatheredLobes[count] = lobe;
-                gatheredDistanceSq[count] = (float) (dx * dx + dz * dz);
+                gatheredDistanceSq[count] = distanceChunks * distanceChunks;
+                gatheredRingFade[count] = fadeIn * fadeOut;
                 count++;
             }
         }
@@ -233,18 +254,21 @@ class SkyWeatherPatternBranch extends BranchPackage {
             WeatherPatternStruct pattern = gatheredPatterns[i];
             WeatherPatternLobeStruct lobe = gatheredLobes[i];
             float distanceSq = gatheredDistanceSq[i];
+            float ringFade = gatheredRingFade[i];
 
             int j = i - 1;
             while (j >= 0 && gatheredDistanceSq[j] < distanceSq) {
                 gatheredPatterns[j + 1] = gatheredPatterns[j];
                 gatheredLobes[j + 1] = gatheredLobes[j];
                 gatheredDistanceSq[j + 1] = gatheredDistanceSq[j];
+                gatheredRingFade[j + 1] = gatheredRingFade[j];
                 j--;
             }
 
             gatheredPatterns[j + 1] = pattern;
             gatheredLobes[j + 1] = lobe;
             gatheredDistanceSq[j + 1] = distanceSq;
+            gatheredRingFade[j + 1] = ringFade;
         }
     }
 
@@ -283,28 +307,27 @@ class SkyWeatherPatternBranch extends BranchPackage {
         center[index].set(centerX, centerY, centerZ);
         halfExtent[index].set(halfX, halfY, halfZ);
         domainRotation[index] = lobe.getDomainRotation();
-        fadeAlpha[index] = pattern.getFadeAlpha();
+
+        float distanceBlocks = (float) Math.sqrt(centerX * centerX + centerZ * centerZ);
+
+        bounds[index].set(centerX - halfX, centerZ - halfZ, centerX + halfX, centerZ + halfZ);
+        distanceFromCenter[index] = distanceBlocks;
+
+        fadeAlpha[index] = pattern.getFadeAlpha() * gatheredRingFade[index];
         intensity[index] = pattern.getIntensity();
 
         color[index].set(cloud.getCloudColor());
-        topColor[index].set(cloud.getTopColor());
-        shadowColor[index].set(cloud.getShadowColor());
         density[index] = cloud.getDensity();
-        shadeStrength[index] = cloud.getShadeStrength();
-        rimLightStrength[index] = cloud.getRimLightStrength();
-        ambientOcclusionStrength[index] = cloud.getAmbientOcclusionStrength();
-        brightnessMultiplier[index] = cloud.getBrightnessMultiplier();
-        toonBands[index] = (float) cloud.getToonBands();
         densityNoiseScale[index] = cloud.getDensityNoiseScale();
         noiseWarpStrength[index] = cloud.getNoiseWarpStrength();
         coverageBias[index] = cloud.getCoverageBias();
         silhouetteSoftness[index] = cloud.getSilhouetteSoftness();
         seed[index] = lobe.getRandomSeed();
 
-        float distanceBlocks = Math.max((float) Math.sqrt(centerX * centerX + centerZ * centerZ), 1f);
+        float distanceForElevation = Math.max(distanceBlocks, 1f);
         float topRelativeY = (baseAltitude + verticalThickness) - cameraY;
 
-        return (float) Math.atan2(topRelativeY, distanceBlocks);
+        return (float) Math.atan2(topRelativeY, distanceForElevation);
     }
 
     private Float[] newFloatArray() {
@@ -318,6 +341,22 @@ class SkyWeatherPatternBranch extends BranchPackage {
         for (int i = 0; i < MAX_CLOUDS; i++)
             array[i] = new Vector3();
         return array;
+    }
+
+    private Vector4[] newVector4Array() {
+        Vector4[] array = new Vector4[MAX_CLOUDS];
+        for (int i = 0; i < MAX_CLOUDS; i++)
+            array[i] = new Vector4();
+        return array;
+    }
+
+    private static float smoothstep(float edge0, float edge1, float x) {
+        float t = clamp01((x - edge0) / Math.max(edge1 - edge0, 0.0001f));
+        return t * t * (3f - 2f * t);
+    }
+
+    private static float clamp01(float value) {
+        return Math.max(0f, Math.min(1f, value));
     }
 
     private float resolveCameraY() {

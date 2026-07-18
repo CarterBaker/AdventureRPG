@@ -1,19 +1,12 @@
 {
     "color": { "r": 0.90, "g": 0.91, "b": 0.94 },
-    "topColor": { "r": 0.97, "g": 0.97, "b": 0.98 },
     "scale": 260.0,
     "density": 0.5,
     "verticalThickness": 9.0,
-    "toonBands": 2,
     "densityNoiseScale": 1.4,
     "noiseWarpStrength": 0.3,
     "coverageBias": 0.6,
     "silhouetteSoftness": 0.15,
     "baseAltitude": 220.0,
-    "driftSpeedScale": 0.6,
-    "shadowColor": { "r": 0.55, "g": 0.57, "b": 0.62 },
-    "shadeStrength": 0.3,
-    "rimLightStrength": 0.2,
-    "ambientOcclusionStrength": 0.15,
-    "brightnessMultiplier": 0.95
+    "driftSpeedScale": 0.6
 }

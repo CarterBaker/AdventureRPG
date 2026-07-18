@@ -2,8 +2,11 @@
 #define SKY_CLOUD_UTILITY_GLSL
 
 /*
-* Shape, density, and shading primitives for the sky dome's distant weather
- * clouds. Fully self-contained — the overhead volumetric system
+* Shape, density, and lighting primitives for the sky dome's distant
+ * weather clouds. Relies on SkyColorData's u_skyHorizonColor/u_skyZenithColor
+ * already being declared earlier in the flattened shader source (see
+ * Clouds.glsl's own include order, which always places SkyColorData.glsl
+ * ahead of this file). The overhead volumetric system
  * (VolumetricCloudUtility.glsl) is a separate shader pipeline and never
  * shares code with this one, even though both raymarch an oriented box.
  */
@@ -149,36 +152,27 @@ float sampleSkyCloudDensity(
     return density * envelope;
 }
 
+/*
+* Real (non-toon) lighting for one raymarch sample. Ambient is the sky's own
+ * current horizon/zenith color, blended toward zenith as heightT rises — a
+ * cloud's underside reads like it's catching horizon-tinted bounce light,
+ * its top like open sky, matching the overhead volumetric system's own
+ * sky/ground tint technique. Direct is the real sun/moon color and
+ * intensity, modulated by lightLift — the caller's own density-gradient
+ * self-shadow term — so a cloud's lit side is genuinely brighter than its
+ * shadowed side without any material-level lighting knobs.
+ */
 vec3 shadeSkyCloudLit(
     vec3 baseColor,
-    vec3 topColor,
-    vec3 shadowColor,
     vec3 lightColor,
     float lightPower,
     float heightT,
-    float lightLift,
-    float density,
-    int toonBands,
-    float shadeStrength,
-    float rimLightStrength,
-    float ambientOcclusionStrength,
-    float brightnessMultiplier) {
-    float litAmount = clamp(heightT * 0.65 + lightLift * 0.35, 0.0, 1.0);
-    float bands = max(float(toonBands), 1.0);
-    float banded = floor(litAmount * bands) / max(bands - 1.0, 1.0);
+    float lightLift) {
+    vec3 ambientTint = mix(u_skyHorizonColor, u_skyZenithColor, heightT);
+    vec3 ambient = ambientTint * mix(0.5, 1.0, heightT);
+    vec3 direct = lightColor * lightPower * lightLift;
 
-    vec3 albedo = mix(baseColor, topColor, banded);
-    albedo = mix(albedo, shadowColor, (1.0 - banded) * shadeStrength * 0.6);
-
-    float ao = mix(1.0 - ambientOcclusionStrength * 0.6, 1.0, banded);
-    albedo *= ao;
-
-    float rim = (1.0 - clamp(density * 1.5, 0.0, 1.0)) * rimLightStrength;
-
-    vec3 ambient = mix(vec3(0.35), vec3(1.0), clamp(lightPower * 2.0, 0.0, 1.0));
-    vec3 direct = lightColor * lightPower * rim;
-
-    return (albedo * ambient + direct) * brightnessMultiplier;
+    return baseColor * (ambient + direct);
 }
 
 #endif

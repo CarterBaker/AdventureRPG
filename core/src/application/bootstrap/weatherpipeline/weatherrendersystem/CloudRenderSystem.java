@@ -109,8 +109,9 @@ class CloudRenderSystem extends SystemPackage {
      * range (EngineSetting.WEATHER_NEAR_RANGE_CHUNKS) — this guarantees a
      * cloud object is never drawn over ground that was never generated.
      * WeatherPatternManager derives its own streaming radius from the same
-     * expression, so the sky dome's fade-out and the overhead system's own
-     * streaming boundary always agree.
+     * expression, so the sky dome's own horizon-ring near edge
+     * (SkyWeatherPatternBranch) and the overhead system's own streaming
+     * boundary always agree.
      */
     private void pushCloudSettings() {
 
@@ -265,10 +266,14 @@ class CloudRenderSystem extends SystemPackage {
     }
 
     /*
-     * Bakes every archetype-level value off CloudData into this
+     * Bakes every archetype-level SHAPE value off CloudData into this
      * archetype's own shared MaterialInstance, once, the first time it is
-     * ever used. Per-instance size variance and elongation are applied
-     * later, in the vertex shader, against this shared base.
+     * ever used. Every one of these maps directly to a CloudData field —
+     * there is no lighting here; lighting is computed identically for
+     * every archetype in the shader (real sun/moon response via the
+     * shared deferred pass) rather than being an adjustable material knob.
+     * Per-instance size variance and elongation are applied later, in the
+     * vertex shader, against this shared base.
      */
     private void bakeArchetypeUniforms(MaterialInstance material, CloudHandle cloudHandle) {
 
@@ -276,19 +281,10 @@ class CloudRenderSystem extends SystemPackage {
         material.setUniform(EngineSetting.UNIFORM_CLOUD_SCALE, cloudHandle.getScale());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_VERTICAL_THICKNESS, cloudHandle.getVerticalThickness());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_DENSITY, cloudHandle.getDensity());
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_TOP_COLOR, cloudHandle.getTopColor());
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_TOON_BANDS, cloudHandle.getToonBands());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_DENSITY_NOISE_SCALE, cloudHandle.getDensityNoiseScale());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_NOISE_WARP_STRENGTH, cloudHandle.getNoiseWarpStrength());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_COVERAGE_BIAS, cloudHandle.getCoverageBias());
         material.setUniform(EngineSetting.UNIFORM_CLOUD_SILHOUETTE_SOFTNESS, cloudHandle.getSilhouetteSoftness());
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_SHADOW_COLOR, cloudHandle.getShadowColor());
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_SHADE_STRENGTH, cloudHandle.getShadeStrength());
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_RIM_LIGHT_STRENGTH, cloudHandle.getRimLightStrength());
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_AMBIENT_OCCLUSION_STRENGTH,
-                cloudHandle.getAmbientOcclusionStrength());
-        material.setUniform(EngineSetting.UNIFORM_CLOUD_BRIGHTNESS_MULTIPLIER,
-                cloudHandle.getBrightnessMultiplier());
     }
 
     // Submit \\

@@ -21,35 +21,28 @@ layout(location = 2) out vec4 gMaterial;
 #include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
-* Raymarches this instance's oriented box and writes an unlit albedo, a
- * real density-gradient surface normal, and a self-shadow occlusion term
- * into the shared deferred G-buffer — the same three channels terrain
- * writes. Directional sun/moon response is left entirely to the shared
- * Lighting.fsh pass. Sky zenith/horizon color and a fake ground-bounce
- * tint are baked into the albedo here instead, the same way shadowColor/
- * topColor already are — material variation, not a second light source.
- * Every surviving fragment writes alpha = 1.0 on all three outputs: this
- * pass runs with blending enabled, and any partial alpha here gets
- * silently scaled down against the frame's black clear color by the ROP
- * blend equation — which is what previously made every cloud read as
- * unlit black regardless of the sun. A dithered cutoff against
- * finalAlpha stands in for the soft edge a partial alpha can no longer
- * represent.
+* Raymarches this instance's oriented box and writes an UNLIT albedo, a real
+ * density-gradient surface normal, and an ambient-occlusion term into the
+ * shared deferred G-buffer — the same three channels terrain writes.
+ * Directional sun/moon response is deliberately never computed here — it is
+ * left entirely to the shared Lighting.fsh pass reading gNormal, exactly
+ * like every other surface in the world. Everything baked into gAlbedo here
+ * is material variation only: the cloud's own base color, a fixed
+ * ambient-occlusion darkening driven by how deep/thick this pixel's own
+ * density reads, a fixed rim brighten at grazing silhouette angles, and a
+ * sky/ground bounce tint so a cloud agrees with the current sky color
+ * before real lighting is even applied. None of this reads from
+ * per-archetype data — shape (density, coverage, silhouette softness,
+ * noise) is the only thing that varies cloud to cloud; lighting response
+ * is identical for every cloud type by construction.
  */
 
 uniform vec3  u_cloudColor;
 uniform float u_cloudDensity;
-uniform vec3  u_cloudTopColor;
-uniform int   u_cloudToonBands;
 uniform float u_cloudDensityNoiseScale;
 uniform float u_cloudNoiseWarpStrength;
 uniform float u_cloudCoverageBias;
 uniform float u_cloudSilhouetteSoftness;
-uniform vec3  u_cloudShadowColor;
-uniform float u_cloudShadeStrength;
-uniform float u_cloudRimLightStrength;
-uniform float u_cloudAmbientOcclusionStrength;
-uniform float u_cloudBrightnessMultiplier;
 
 const float CLOUD_STEP_SIZE_NEAR    = 4.0;
 const float CLOUD_STEP_SIZE_FAR     = 12.0;
@@ -59,9 +52,11 @@ const int   CLOUD_MIN_STEPS         = 14;
 const int   CLOUD_MAX_STEPS         = 56;
 const float CLOUD_EXTINCTION        = 0.07;
 const float CLOUD_RIM_FRESNEL_POWER = 2.4;
-const float CLOUD_SKY_TINT_STRENGTH      = 0.22;
-const float CLOUD_GROUND_BOUNCE_STRENGTH = 0.16;
-const float CLOUD_GROUND_BOUNCE_DARKEN   = 0.35;
+const float CLOUD_RIM_LIGHT_STRENGTH          = 0.35;
+const float CLOUD_AMBIENT_OCCLUSION_STRENGTH  = 0.4;
+const float CLOUD_SKY_TINT_STRENGTH           = 0.22;
+const float CLOUD_GROUND_BOUNCE_STRENGTH      = 0.16;
+const float CLOUD_GROUND_BOUNCE_DARKEN        = 0.35;
 
 void main() {
     if (vFadeAlpha <= 0.001)
@@ -118,9 +113,7 @@ void main() {
             float stepAlpha = 1.0 - stepTransmittance;
             float contribution = transmittance * stepAlpha;
 
-            vec3 tint = mix(u_cloudColor, u_cloudTopColor, heightT);
-
-            accum.rgb += contribution * tint;
+            accum.rgb += contribution * u_cloudColor;
             accum.a   += contribution;
             opticalDepth += contribution * density;
 
@@ -147,34 +140,27 @@ void main() {
         u_cloudCoverageBias, u_cloudSilhouetteSoftness,
         vDetailFactor, vRandomSeed, u_time, gradientEpsilon);
 
+    float ao = 1.0 - clamp(opticalDepth * CLOUD_AMBIENT_OCCLUSION_STRENGTH, 0.0, CLOUD_AMBIENT_OCCLUSION_STRENGTH);
+    albedoColor *= ao;
+
     float rim = pow(1.0 - clamp(dot(-rayDir, cloudNormalWorld), 0.0, 1.0), CLOUD_RIM_FRESNEL_POWER)
-    * u_cloudRimLightStrength;
+    * CLOUD_RIM_LIGHT_STRENGTH;
     albedoColor += vec3(1.0) * rim;
 
-    float shadeAmount = clamp(opticalDepth * u_cloudShadeStrength, 0.0, 1.0);
-    float bands = max(float(u_cloudToonBands), 2.0);
-    float banded = floor(shadeAmount * bands) / max(bands - 1.0, 1.0);
-    albedoColor = mix(albedoColor, u_cloudShadowColor, banded * 0.65);
-
-    // Sky/ground tint — fake bounce lighting baked directly into the
-    // unlit material color rather than computed as a real light source.
-    // Top-facing surface picks up a fraction of the sky's own current
-    // zenith/horizon color, so a cloud tints correctly with time of day
-    // and season and agrees with the sky dome's own clouds (see
-    // SkyCloudUtility.glsl's identical topTint technique). Underside
-    // surface picks up a muted, darkened fraction of horizon color
-    // standing in for ambient light bounced up off the terrain below —
-    // grazing horizon-level light is what actually reaches the ground —
-    // scaled down further wherever the cloud reads as thick/self-shadowed,
-    // since bounce light doesn't reach a cloud's dense interior either.
+    // Sky/ground tint — fake bounce lighting baked directly into the unlit
+    // material color. Top-facing surface picks up a fraction of the sky's
+    // own current zenith/horizon color, so a cloud tints correctly with
+    // time of day and season and agrees with the sky dome's own clouds
+    // (see SkyCloudUtility.glsl's identical technique). Underside surface
+    // picks up a muted, darkened fraction of horizon color standing in for
+    // ambient light bounced up off the terrain below, scaled down further
+    // by ao wherever the cloud reads as thick/self-occluded.
     float upFacing = clamp(cloudNormalWorld.y * 0.5 + 0.5, 0.0, 1.0);
     vec3 skyTint = mix(u_skyHorizonColor, u_skyZenithColor, upFacing);
     vec3 groundBounce = u_skyHorizonColor * CLOUD_GROUND_BOUNCE_DARKEN;
     albedoColor = mix(albedoColor, skyTint, CLOUD_SKY_TINT_STRENGTH * upFacing);
-    albedoColor = mix(albedoColor, groundBounce,
-        CLOUD_GROUND_BOUNCE_STRENGTH * (1.0 - upFacing) * (1.0 - shadeAmount));
+    albedoColor = mix(albedoColor, groundBounce, CLOUD_GROUND_BOUNCE_STRENGTH * (1.0 - upFacing) * ao);
 
-    float ao = 1.0 - clamp(opticalDepth * u_cloudAmbientOcclusionStrength, 0.0, u_cloudAmbientOcclusionStrength);
     float fogT = clamp(smoothstep(u_cloudHorizonDistance * 0.4, u_cloudHorizonDistance * 0.95, camDist), 0.0, 0.5);
 
     vec3 normalView = normalize(mat3(u_view) * cloudNormalWorld);
@@ -191,7 +177,7 @@ void main() {
     if (finalAlpha < alphaDither)
     discard;
 
-    gAlbedo   = vec4(clamp(albedoColor * u_cloudBrightnessMultiplier, 0.0, 1.0), 1.0);
+    gAlbedo   = vec4(clamp(albedoColor, 0.0, 1.0), 1.0);
     gNormal   = vec4(normalView, 1.0);
     gMaterial = vec4(fogT, 0.0, ao, 1.0);
 }

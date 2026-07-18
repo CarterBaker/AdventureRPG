@@ -12,16 +12,11 @@ public class CloudHandle extends HandlePackage {
      * cloned or mutated at runtime.
      */
 
-    // Internal
     private CloudData cloudData;
-
-    // Constructor \\
 
     public void constructor(CloudData cloudData) {
         this.cloudData = cloudData;
     }
-
-    // Accessible \\
 
     public CloudData getCloudData() {
         return cloudData;
@@ -39,10 +34,6 @@ public class CloudHandle extends HandlePackage {
         return cloudData.getCloudColor();
     }
 
-    public Vector3 getTopColor() {
-        return cloudData.getTopColor();
-    }
-
     public float getScale() {
         return cloudData.getScale();
     }
@@ -53,10 +44,6 @@ public class CloudHandle extends HandlePackage {
 
     public float getVerticalThickness() {
         return cloudData.getVerticalThickness();
-    }
-
-    public int getToonBands() {
-        return cloudData.getToonBands();
     }
 
     public float getDensityNoiseScale() {
@@ -81,25 +68,5 @@ public class CloudHandle extends HandlePackage {
 
     public float getDriftSpeedScale() {
         return cloudData.getDriftSpeedScale();
-    }
-
-    public Vector3 getShadowColor() {
-        return cloudData.getShadowColor();
-    }
-
-    public float getShadeStrength() {
-        return cloudData.getShadeStrength();
-    }
-
-    public float getRimLightStrength() {
-        return cloudData.getRimLightStrength();
-    }
-
-    public float getAmbientOcclusionStrength() {
-        return cloudData.getAmbientOcclusionStrength();
-    }
-
-    public float getBrightnessMultiplier() {
-        return cloudData.getBrightnessMultiplier();
     }
 }

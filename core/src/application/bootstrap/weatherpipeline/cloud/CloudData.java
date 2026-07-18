@@ -6,56 +6,28 @@ import engine.util.mathematics.vectors.Vector3;
 public class CloudData extends DataPackage {
 
     /*
-     * Immutable cloud archetype definition loaded from JSON. Holds shape,
-     * color, altitude, motion, and lighting tuning for one named cloud.
-     * Weathers reference these by name — never cloned, since a cloud
-     * archetype carries no per-instance mutable state. Owned by CloudHandle
-     * for the full engine session.
-     *
-     * Volumetric/toon fields (topColor, toonBands, densityNoiseScale,
-     * noiseWarpStrength, coverageBias, silhouetteSoftness) back the
-     * raymarched volumetric cloud shader — see
-     * clouds/util/VolumetricCloudUtility.glsl. topColor lets toon shading
-     * blend from cloudColor (shadowed/base tint) toward a brighter
-     * top-facing tint without a second lighting pass; toonBands posterizes
-     * that blend into discrete steps for the toon look.
-     * densityNoiseScale/noiseWarpStrength drive a 3D fbm density field
-     * sampled in world space, so no two instances of the same archetype
-     * look identical — each warps based on its own world position rather
-     * than a per-instance seed alone. coverageBias shifts the density
-     * threshold separating "inside the cloud" from "empty sky" — live
-     * weather cloudCoverage biases this further at render time.
-     * silhouetteSoftness controls both how soft the raymarched edge
-     * falloff is where the density field crosses that threshold AND how
-     * far inward from this instance's bounding box the cloud tapers to
-     * fully transparent — see VolumetricCloudUtility.glsl's silhouetteMask().
-     *
-     * edgeSoftness/puffJitter — the old card-shader tuning knobs — have
-     * been fully retired now that the volumetric shader rework has landed.
-     * They previously left the raymarch's density simply clipped by this
-     * instance's AABB rather than fading out before reaching it, which is
-     * exactly what made every physical cloud read as a visible box rather
-     * than a rounded volumetric puff. silhouetteSoftness and
-     * noiseWarpStrength now own everything those two used to control.
+     * Immutable cloud archetype definition loaded from JSON — pure shape and
+     * motion data for one named cloud (cumulus, nimbus, stratus, etc.).
+     * Lighting is never per-archetype: every cloud is lit by the same real
+     * sun/moon-driven shading in the shader, so two archetypes with identical
+     * shape numbers always look identically lit and differ only in
+     * silhouette, density, and placement. cloudColor is the one exception —
+     * the cloud's base material tint — not a lighting response.
      */
 
     // Identity
     private final String cloudName;
     private final short cloudID;
 
-    // Color
+    // Material Tint
     private final Vector3 cloudColor;
-    private final Vector3 topColor;
 
     // Shape
     private final float scale;
     private final float density;
     private final float verticalThickness;
 
-    // Toon Shading
-    private final int toonBands;
-
-    // Density Noise
+    // Density Noise — silhouette detail and turbulence
     private final float densityNoiseScale;
     private final float noiseWarpStrength;
     private final float coverageBias;
@@ -69,79 +41,34 @@ public class CloudData extends DataPackage {
     // Motion
     private final float driftSpeedScale;
 
-    // Lighting — drives the volumetric toon shading pass. shadowColor is
-    // the tint blended in on a cloud's unlit/interior side (the "shade
-    // band" of the toon look); shadeStrength controls how far that blend
-    // reaches. rimLightStrength brightens the silhouette facing the light
-    // source. ambientOcclusionStrength darkens deep/thick regions of the
-    // volume. brightnessMultiplier is a final exposure scalar applied to
-    // the lit color, letting e.g. a storm cloud read as inherently darker
-    // than a cumulus cloud even under identical sun conditions.
-    private final Vector3 shadowColor;
-    private final float shadeStrength;
-    private final float rimLightStrength;
-    private final float ambientOcclusionStrength;
-    private final float brightnessMultiplier;
-
     // Constructor \\
 
     public CloudData(
             String cloudName,
             short cloudID,
             Vector3 cloudColor,
-            Vector3 topColor,
             float scale,
             float density,
             float verticalThickness,
-            int toonBands,
             float densityNoiseScale,
             float noiseWarpStrength,
             float coverageBias,
             float silhouetteSoftness,
             float baseAltitude,
-            float driftSpeedScale,
-            Vector3 shadowColor,
-            float shadeStrength,
-            float rimLightStrength,
-            float ambientOcclusionStrength,
-            float brightnessMultiplier) {
+            float driftSpeedScale) {
 
-        // Identity
         this.cloudName = cloudName;
         this.cloudID = cloudID;
-
-        // Color
         this.cloudColor = cloudColor;
-        this.topColor = topColor;
-
-        // Shape
         this.scale = scale;
         this.density = density;
         this.verticalThickness = verticalThickness;
-
-        // Toon Shading
-        this.toonBands = toonBands;
-
-        // Density Noise
         this.densityNoiseScale = densityNoiseScale;
         this.noiseWarpStrength = noiseWarpStrength;
         this.coverageBias = coverageBias;
-
-        // Silhouette
         this.silhouetteSoftness = silhouetteSoftness;
-
-        // Placement
         this.baseAltitude = baseAltitude;
-
-        // Motion
         this.driftSpeedScale = driftSpeedScale;
-
-        // Lighting
-        this.shadowColor = shadowColor;
-        this.shadeStrength = shadeStrength;
-        this.rimLightStrength = rimLightStrength;
-        this.ambientOcclusionStrength = ambientOcclusionStrength;
-        this.brightnessMultiplier = brightnessMultiplier;
     }
 
     // Accessible \\
@@ -158,10 +85,6 @@ public class CloudData extends DataPackage {
         return cloudColor;
     }
 
-    public Vector3 getTopColor() {
-        return topColor;
-    }
-
     public float getScale() {
         return scale;
     }
@@ -172,10 +95,6 @@ public class CloudData extends DataPackage {
 
     public float getVerticalThickness() {
         return verticalThickness;
-    }
-
-    public int getToonBands() {
-        return toonBands;
     }
 
     public float getDensityNoiseScale() {
@@ -200,25 +119,5 @@ public class CloudData extends DataPackage {
 
     public float getDriftSpeedScale() {
         return driftSpeedScale;
-    }
-
-    public Vector3 getShadowColor() {
-        return shadowColor;
-    }
-
-    public float getShadeStrength() {
-        return shadeStrength;
-    }
-
-    public float getRimLightStrength() {
-        return rimLightStrength;
-    }
-
-    public float getAmbientOcclusionStrength() {
-        return ambientOcclusionStrength;
-    }
-
-    public float getBrightnessMultiplier() {
-        return brightnessMultiplier;
     }
 }

@@ -13,7 +13,10 @@
 /*
 * Sky-dome distant weather preview. Every active cloud lobe is its own real
  * oriented box in world space — the same box the overhead volumetric system
- * builds — raymarched independently and composited front-to-back.
+ * builds — raymarched independently and composited front-to-back. Only
+ * lobes inside the horizon ring (see SkyWeatherPatternBranch) ever reach
+ * this UBO, so this pass never overlaps the physically-instanced clouds
+ * the overhead system draws close to the player.
  * Output is premultiplied (rgb already alpha-weighted) — consumers must
  * add rgb directly rather than re-blending it against alpha a second time.
  */
@@ -43,11 +46,9 @@ vec4 marchSkyCloud(int index, vec3 rayOrigin, vec3 rayDir, vec3 lightDir, vec3 l
     if (marchLen <= 0.001)
     return vec4(0.0);
 
-    // Visibility scales directly off this lobe's own fade alpha and its
-    // pattern's live intensity (spread * the resolved weather's own
-    // cloudCoverage) — no artificial floor. A pattern sitting near the edge
-    // of its weather zone genuinely fades to nothing instead of staying
-    // stuck at some minimum opacity.
+    // Visibility scales directly off this lobe's own fade alpha (which
+    // already folds in the horizon-ring edge fade) and its pattern's live
+    // intensity — no artificial floor.
     float visibility = u_cloudFadeAlpha[index] * clamp(u_cloudIntensity[index], 0.0, 1.0);
 
     if (visibility <= 0.001)
@@ -66,10 +67,6 @@ vec4 marchSkyCloud(int index, vec3 rayOrigin, vec3 rayDir, vec3 lightDir, vec3 l
     float coverageBias = u_cloudCoverageBias[index];
     float softness = u_cloudSilhouetteSoftness[index];
     float densityScale = u_cloudDensity[index];
-    int toonBands = max(int(u_cloudToonBands[index] + 0.5), 1);
-
-    vec3 topTint = mix(u_cloudTopColor[index], u_skyZenithColor, 0.30);
-    vec3 shadowTint = mix(u_cloudShadowColor[index], u_skyHorizonColor * 0.4, 0.25);
 
     vec4 accum = vec4(0.0);
 
@@ -93,11 +90,7 @@ vec4 marchSkyCloud(int index, vec3 rayOrigin, vec3 rayDir, vec3 lightDir, vec3 l
 
             float lightLift = clamp((density - litDensity) * 2.0 + 0.5, 0.0, 1.0);
 
-            vec3 shaded = shadeSkyCloudLit(
-                u_cloudColor[index], topTint, shadowTint, lightColor, lightPower,
-                heightT, lightLift, density, toonBands,
-                u_cloudShadeStrength[index], u_cloudRimLightStrength[index],
-                u_cloudAmbientOcclusionStrength[index], u_cloudBrightnessMultiplier[index]);
+            vec3 shaded = shadeSkyCloudLit(u_cloudColor[index], lightColor, lightPower, heightT, lightLift);
 
             float stepAlpha = clamp(1.0 - exp(-density * STEP_ALPHA_SCALE * stepSize), 0.0, 1.0);
             accum.rgb += (1.0 - accum.a) * stepAlpha * shaded;
