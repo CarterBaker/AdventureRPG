@@ -24,6 +24,13 @@ public class WeatherPatternStruct extends StructPackage {
      * condenses toward its own center and shrinks, rather than keeping a
      * full-spread cluster of lobes that simply fades in alpha — which reads
      * as a static, hard-edged blob rather than a natural congregation.
+     *
+     * getIntensity() also folds in a transition damper — when the pattern's
+     * resolved weather just changed, its lobes rebuild immediately (no way
+     * to interpolate between two different lobe shapes cheaply), so opacity
+     * dips through the middle of the transition window and recovers by the
+     * end. That reads as the weather thickening or clearing rather than an
+     * instant pop.
      */
 
     public static final float WEATHER_TRANSITION_DURATION_SECONDS = 10.0f;
@@ -31,8 +38,11 @@ public class WeatherPatternStruct extends StructPackage {
     // Lobes never fully collapse to a point nor fully vanish in size —
     // floors keep a condensing pattern reading as a small, tight cluster
     // rather than degenerating into a single stacked point.
-    private static final float MIN_EFFECTIVE_SPREAD = 0.15f;
-    private static final float MIN_LOBE_SIZE_RATIO = 0.45f;
+    private static final float MIN_EFFECTIVE_SPREAD = 0.10f;
+    private static final float MIN_LOBE_SIZE_RATIO = 0.35f;
+
+    // How far intensity dips at the midpoint of a weather transition.
+    private static final float TRANSITION_DIP_STRENGTH = 0.6f;
 
     private final long patternKey;
 
@@ -237,7 +247,7 @@ public class WeatherPatternStruct extends StructPackage {
     }
 
     public float getIntensity() {
-        return intensity;
+        return intensity * transitionDampingMultiplier();
     }
 
     public float getSpread() {
@@ -288,5 +298,16 @@ public class WeatherPatternStruct extends StructPackage {
 
     public float getAltitudeHalfThickness() {
         return altitudeHalfThickness;
+    }
+
+    /*
+     * 1.0 outside any transition. Dips through the middle of the transition
+     * window and recovers to 1.0 by the end, masking the instant lobe
+     * reshape that happens the moment a pattern's resolved weather changes.
+     */
+    private float transitionDampingMultiplier() {
+        if (transitionT >= 1f)
+            return 1f;
+        return 1f - (float) Math.sin(transitionT * Math.PI) * TRANSITION_DIP_STRENGTH;
     }
 }

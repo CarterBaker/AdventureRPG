@@ -11,12 +11,13 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
  * Owns the coherent regional weather noise field — a continuous 2D,
- * X-wrapped layer (see ToroidalNoiseUtility) blended with GlobalNoiseBranch's
- * broad current, both scrolling with the world's rotation at the same rate
- * — and resolves it against a chance-weighted pool via resolveBand() and
- * resolveBandTowardHorizon(). These are the canonical noise-to-weather
- * resolution paths shared by WeatherManager, WeatherPatternManager, and
- * this class's own center-point atmosphere sample.
+ * X-wrapped layer blended with GlobalNoiseBranch's broad current, both
+ * scrolling with the world's rotation at the same rate and meandering with
+ * the same wave — and resolves it against a chance-weighted pool via
+ * resolveBand() and resolveBandTowardHorizon(). These are the canonical
+ * noise-to-weather resolution paths shared by WeatherManager,
+ * WeatherPatternManager, and this class's own center-point atmosphere
+ * sample.
  */
 class RegionSampleBranch extends BranchPackage {
 
@@ -243,13 +244,18 @@ class RegionSampleBranch extends BranchPackage {
         double rotationPhase = (globalNoiseBranch.getRotationAngleDegrees() / EngineSetting.DEGREES_PER_FULL_ROTATION)
                 * (Math.PI * 2.0);
 
+        double meanderAmplitudeChunks = EngineSetting.GLOBAL_WEATHER_MEANDER_INFLUENCE * WAVELENGTH_CHUNKS;
+
         return WeatherNoiseUtility.sample(
                 NOISE_SEED,
                 chunkX, chunkZ,
                 worldWidthChunks,
                 WAVELENGTH_CHUNKS,
                 rotationPhase + driftPhaseX,
-                driftChunksZ);
+                driftChunksZ,
+                globalNoiseBranch.getMeanderWaveNumber(),
+                meanderAmplitudeChunks,
+                globalNoiseBranch.getMeanderPhase());
     }
 
     // Accessible \\

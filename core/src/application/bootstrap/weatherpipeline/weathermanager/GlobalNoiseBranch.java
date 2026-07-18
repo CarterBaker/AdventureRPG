@@ -8,19 +8,20 @@ import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
 
 /*
- * Owns the planet's rotation angle and slow seasonal/meander drift, folding
- * them into the 2D weather noise field. Drift speed is derived from a fixed
- * real-world KPH baseline scaled by the world's rotation multiplier, so it
- * stays physically reasonable at any world size. This rotation angle also
- * drives every streamed weather pattern's physical position, so the noise
- * field and pattern positions can never fall out of lockstep.
+ * Owns the planet's rotation angle, seasonal tilt drift, and meander wobble,
+ * folding all three into the 2D weather noise field. Drift speed comes from
+ * a fixed real-world KPH baseline scaled by the world's rotation multiplier.
+ * The meander is a traveling wave around the rotation axis (wave number and
+ * phase speed from EngineSetting) rather than a single uniform oscillation,
+ * so different longitudes wobble out of phase with each other — this is
+ * what stops weather bands from reading as straight parallel stripes.
+ * RegionSampleBranch samples its own local noise with the same wave number
+ * and phase so the two layers meander coherently together.
  */
 class GlobalNoiseBranch extends BranchPackage {
 
     private static final long NOISE_SEED = 0x9E3779B97F4A7C15L;
     private static final double WAVELENGTH_CHUNKS = 768.0;
-    private static final double MEANDER_SPEED = 0.015;
-    private static final double MEANDER_AMPLITUDE = 0.6;
 
     private WorldManager worldManager;
     private ClockManager clockManager;
@@ -101,6 +102,14 @@ class GlobalNoiseBranch extends BranchPackage {
         this.meanderElapsed += internal.getDeltaTime();
     }
 
+    double getMeanderWaveNumber() {
+        return EngineSetting.GLOBAL_WEATHER_MEANDER_WAVE_NUMBER;
+    }
+
+    double getMeanderPhase() {
+        return meanderElapsed * EngineSetting.GLOBAL_WEATHER_MEANDER_PHASE_SPEED;
+    }
+
     // Sampling \\
 
     float sampleGlobalIntensity(long chunkCoordinate) {
@@ -112,15 +121,15 @@ class GlobalNoiseBranch extends BranchPackage {
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
 
         double rotationPhase = (rotationAngleDegrees / EngineSetting.DEGREES_PER_FULL_ROTATION) * (Math.PI * 2.0);
-        double meanderDriftChunks = Math.sin(meanderElapsed * MEANDER_SPEED) * MEANDER_AMPLITUDE * WAVELENGTH_CHUNKS;
-        double driftZ = latitudeDriftChunks + meanderDriftChunks;
+        double meanderAmplitudeChunks = EngineSetting.GLOBAL_WEATHER_MEANDER_INFLUENCE * WAVELENGTH_CHUNKS;
 
         return WeatherNoiseUtility.sample(
                 NOISE_SEED,
                 chunkX, chunkZ,
                 worldWidthChunks,
                 WAVELENGTH_CHUNKS,
-                rotationPhase, driftZ);
+                rotationPhase, latitudeDriftChunks,
+                getMeanderWaveNumber(), meanderAmplitudeChunks, getMeanderPhase());
     }
 
     float getGlobalInfluence() {
