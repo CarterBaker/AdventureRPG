@@ -14,7 +14,31 @@ One system will be the sky itself, it should draw clouds in the background sky s
 The other system is more complex and will be used to approximate realistic clouds moving over the terrain. We need a system which will approximate weather patterns using stretched, instanced, simple cube mesh. one per cloud, per weather. sometimes weather may be more complex a "T" or a boot shape for example now we can use 2 mesh to approximate the shape or 3 or 4 if really necesary. but minimal stretched mesh per cloud per weather. These stretched mesh will get the material for the cloud type that we instanced. The material should define variables for a shader. Similar to the sky shader the shader should work off the same clouds variables to draw cloud types. This will tell the game how to draw a AAA volumetric cloud inside the box.\par
 The tricky part is a bit hard to wrap yoru head around but is important to avoid clipping distances. Weather mesh should at most be settings.maxRenderDistance far away. This is to keep them always ont eh screen int eh cameras range. However this created a gap between what we can see and what the skybox should be displaying. To cover this distance and minimize seams we need to ramp up the distance at which the overhead system samples weather patterns fromt eh center of the world. towards center where the player is we need to sample the actual weather int hat area of the world but as we get closer to settings.maxRenderDistance  we need to sample the weather at the near side of where the skybox is sampling weather defined in EngineSetting. This means the overhead clouds are a simulation of the total sky between the player and the skybox but localized over the world itself at all times.\par
 When done correctly weather in the skybox will be derrived from the weather UBO within the defined distance. The weather will be simply handed off to the overhead system to be rendered directly over the terrain. Nothing CPU side will actually do the handoff it is a byproduct of the design of how we track weather and how the systems handle clouds and the shaders render them. So long as we track things correctly and consume them using similar shader mathematics things will naturally line up enough there should not be a huge seam. A seam yes but with hopefully any luck it will nto be huge.\par
-Current problems: The overhead weather clouds are too dark, I see no lighting ont hem at all. They should be based off lighting, sky color and they should approximate lighting being bounced off the world itself using efficient fake designs for performance. All overhead clouds right now look black.\par
+Current problems: I see clouds overhead int he skybox itself. The UBO should store a 2D (same 2D horizontal plane chunks are sampled on not screen space 2D) coordinate in a vec 4, so we have starting XY, and ending ZW coords so we define a sqaure in the UBO. Perhaps a distance from center for easy access as well in the UBO. So now only weather patterns in the defined range in the engine settings get sampled in the sky. All of a sudden bam we have a nice neat ring on the horizon because the sky only samples weather within this range, no closer, no further.\par
+The overhead clouds are broken too, I see liek black little dots in the sky. Not clouds. They overhead weather is also always black no matter what you change it needs both real lighting and approximated lighting bouncing off the terrains surface so they are not too dark underneath. They also need to blend with the sky color from another UBO too. I forget which UBO stores the sky color.\par
+The SkyWeatherPatternData UBO does not have the correct variables.\par
+Taken directly from cloudData.java:\par
+            String cloudName,\par
+            short cloudID,\par
+            Vector3 cloudColor,\par
+            Vector3 topColor,\par
+            float scale,\par
+            float density,\par
+            float verticalThickness,\par
+            int toonBands,\par
+            float densityNoiseScale,\par
+            float noiseWarpStrength,\par
+            float coverageBias,\par
+            float silhouetteSoftness,\par
+            float baseAltitude,\par
+            float driftSpeedScale,\par
+            Vector3 shadowColor,\par
+            float shadeStrength,\par
+            float rimLightStrength,\par
+            float ambientOcclusionStrength,\par
+            float brightnessMultiplier\par
+What are these? Most define lighting shit in the shader this is entirely wrong these need to define how to draw a cloud so that we can make accurate cumulus and nimbus and any other cloud type we need to make. Shape not lighting. The shader should handle lighting no nbeed for that shit to be adjustable lighting is not adjustable. Shape shape shape. What you have here is subjectively wrong. I also do not see the vec 4 for the weather patterns position in world space. how do we know where to draw it? Also when the fuck did I say I wanted toon style clouds? the fuck is that? How do you draw stratus from this and cumulus by changing variables most of these seem like lgithing shit. lighting shit is handled int he fucking shader itself not a goddamn adjustable setting per cloud type.\par
+I am entirely unhappy with your performance and you are wasting my fucking time now make this shit fucking work.\par
 Instructions: Do not be lazy. No shortcuts or half assing. This should be done correctly and professionally no matter how big the stages are. Almost no notes. Nothing needs to be documented. A brief paragraph maybe at the top of classes maximum. Existing notes can be stripped out for neatness. Implement this in discrete stages to preserve tokens. Stop after each stage for review. Print every modified file in full directly in chat, and never generate downloadable files or partial code. Give stage one immediately.\par
 }
  
