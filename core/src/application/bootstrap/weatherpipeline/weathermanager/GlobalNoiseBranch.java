@@ -1,3 +1,4 @@
+// GlobalNoiseBranch.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
@@ -9,14 +10,12 @@ import engine.util.mathematics.extras.Coordinate2Long;
 
 /*
  * Owns the planet's rotation angle, seasonal tilt drift, and meander wobble,
- * folding all three into the 2D weather noise field. Drift speed comes from
- * a fixed real-world KPH baseline scaled by the world's rotation multiplier.
- * The meander is a traveling wave around the rotation axis (wave number and
- * phase speed from EngineSetting) rather than a single uniform oscillation,
- * so different longitudes wobble out of phase with each other — this is
- * what stops weather bands from reading as straight parallel stripes.
- * RegionSampleBranch samples its own local noise with the same wave number
- * and phase so the two layers meander coherently together.
+ * folding all three into the 2D weather noise field. Rotation and meander
+ * both advance from the same KPH-derived angular speed, scaled by the
+ * meander's own wave number, so the two are always the same physical
+ * current rather than two independently-tuned rates. RegionSampleBranch
+ * samples its own local noise with the same wave number and phase so the
+ * two layers meander coherently together.
  */
 class GlobalNoiseBranch extends BranchPackage {
 
@@ -31,7 +30,7 @@ class GlobalNoiseBranch extends BranchPackage {
 
     private double rotationAngleDegrees;
     private double latitudeDriftChunks;
-    private double meanderElapsed;
+    private double meanderPhase;
 
     // Internal \\
 
@@ -54,13 +53,18 @@ class GlobalNoiseBranch extends BranchPackage {
         advanceMeander();
     }
 
+    // Angular Speed \\
+
+    private double angularSpeedRadiansPerSecond(int worldWidthChunks) {
+        return (getWorldDriftChunksPerSecondX() / worldWidthChunks) * (Math.PI * 2.0);
+    }
+
     // Rotation \\
 
     private void advanceRotation() {
 
         int worldWidthChunks = Math.max(1, worldWidthChunks());
-        double degreesPerSecond = (getWorldDriftChunksPerSecondX() / worldWidthChunks)
-                * EngineSetting.DEGREES_PER_FULL_ROTATION;
+        double degreesPerSecond = Math.toDegrees(angularSpeedRadiansPerSecond(worldWidthChunks));
 
         this.rotationAngleDegrees += degreesPerSecond * internal.getDeltaTime();
         this.rotationAngleDegrees %= EngineSetting.DEGREES_PER_FULL_ROTATION;
@@ -99,7 +103,16 @@ class GlobalNoiseBranch extends BranchPackage {
     // Meander \\
 
     private void advanceMeander() {
-        this.meanderElapsed += internal.getDeltaTime();
+
+        int worldWidthChunks = Math.max(1, worldWidthChunks());
+        double radiansPerSecond = angularSpeedRadiansPerSecond(worldWidthChunks)
+                * EngineSetting.GLOBAL_WEATHER_MEANDER_WAVE_NUMBER;
+
+        this.meanderPhase += radiansPerSecond * internal.getDeltaTime();
+        this.meanderPhase %= (Math.PI * 2.0);
+
+        if (this.meanderPhase < 0)
+            this.meanderPhase += Math.PI * 2.0;
     }
 
     double getMeanderWaveNumber() {
@@ -107,7 +120,7 @@ class GlobalNoiseBranch extends BranchPackage {
     }
 
     double getMeanderPhase() {
-        return meanderElapsed * EngineSetting.GLOBAL_WEATHER_MEANDER_PHASE_SPEED;
+        return meanderPhase;
     }
 
     // Sampling \\

@@ -1,3 +1,4 @@
+// EngineSetting.java
 package engine.root;
 
 import engine.graphics.color.Color;
@@ -456,9 +457,8 @@ public class EngineSetting {
         public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f;
         public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f;
         public static final float GLOBAL_WEATHER_TILT_INFLUENCE = 0.20f;
-        public static final int GLOBAL_WEATHER_MEANDER_WAVE_NUMBER = 3;
+        public static final int GLOBAL_WEATHER_MEANDER_WAVE_NUMBER = 1;
         public static final float GLOBAL_WEATHER_MEANDER_INFLUENCE = 0.08f;
-        public static final float GLOBAL_WEATHER_MEANDER_PHASE_SPEED = 0.002f;
 
         // Season Blend \\
 
