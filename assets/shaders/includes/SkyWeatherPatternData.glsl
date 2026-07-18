@@ -24,6 +24,7 @@ layout(std140) uniform SkyWeatherPatternData {
     float u_cloudCoverageBias[SKY_CLOUD_MAX_COUNT];
     float u_cloudSilhouetteSoftness[SKY_CLOUD_MAX_COUNT];
     float u_cloudSeed[SKY_CLOUD_MAX_COUNT];
+    float u_skyElevationFadeStart;
     float u_skyElevationLimit;
 };
 

@@ -21,6 +21,7 @@
         { "name": "u_cloudCoverageBias",              "type": "FLOAT",   "count": 64 },
         { "name": "u_cloudSilhouetteSoftness",        "type": "FLOAT",   "count": 64 },
         { "name": "u_cloudSeed",                      "type": "FLOAT",   "count": 64 },
-        { "name": "u_skyElevationLimit",               "type": "FLOAT" }
+        { "name": "u_skyElevationFadeStart",          "type": "FLOAT" },
+        { "name": "u_skyElevationLimit",              "type": "FLOAT" }
     ]
 }

@@ -4,9 +4,12 @@
 /*
 * Shape, density, and shading primitives for the sky dome's distant weather
  * clouds. Fully self-contained — the overhead volumetric system
- * (VolumetricCloudUtility.glsl) is a completely separate shader pipeline and
- * never shares code with this one, even though both raymarch an oriented box.
+ * (VolumetricCloudUtility.glsl) is a separate shader pipeline and never
+ * shares code with this one, even though both raymarch an oriented box.
  */
+
+const float SKY_SILHOUETTE_MIN_SOFTNESS = 0.12;
+const float SKY_DENSITY_EDGE_MIN_SOFTNESS = 0.10;
 
 vec3 skyHash3(vec3 p) {
     p = vec3(
@@ -101,7 +104,7 @@ float skyHeightProfile(float heightT, float coverageBias) {
 float skySilhouette(vec3 localPos, vec3 halfExtent, float softness) {
     vec3 normalized = localPos / max(halfExtent, vec3(0.001));
     float radius = length(normalized);
-    float edge = clamp(softness, 0.05, 0.9);
+    float edge = clamp(softness, SKY_SILHOUETTE_MIN_SOFTNESS, 0.9);
     return 1.0 - smoothstep(1.0 - edge, 1.0, radius);
 }
 
@@ -140,7 +143,7 @@ float sampleSkyCloudDensity(
     float shape = clamp(mix(macro, detail, 0.3), 0.0, 1.0);
 
     float threshold = mix(0.30, 0.62, clamp(coverageBias, 0.0, 1.0));
-    float edgeSoft = clamp(silhouetteSoftness * 1.3, 0.06, 0.4);
+    float edgeSoft = clamp(silhouetteSoftness * 1.3, SKY_DENSITY_EDGE_MIN_SOFTNESS, 0.4);
     float density = smoothstep(threshold - edgeSoft, threshold + edgeSoft, shape);
 
     return density * envelope;

@@ -145,7 +145,16 @@ class SkyWeatherPatternBranch extends BranchPackage {
         for (int i = count; i < MAX_CLOUDS; i++)
             fadeAlpha[i] = 0f;
 
-        float elevationLimit = Math.min(highestTopElevation + ELEVATION_LIMIT_MARGIN_RADIANS, (float) Math.PI * 0.5f);
+        // The dome fades clouds out smoothly between fadeStart (the tallest
+        // active cloud's own top elevation) and elevationLimit (that plus a
+        // safety margin) — never a hard cutoff, which used to draw a visible
+        // line across the sky wherever the tallest active cloud happened to
+        // reach.
+        float fadeStartElevation = highestTopElevation;
+        float elevationLimit = Math.min(fadeStartElevation + ELEVATION_LIMIT_MARGIN_RADIANS, (float) Math.PI * 0.5f);
+
+        if (elevationLimit <= fadeStartElevation)
+            fadeStartElevation = elevationLimit - 0.001f;
 
         skyWeatherPatternData.updateUniform("u_cloudCount", count);
         skyWeatherPatternData.updateUniform("u_cloudCenter", center);
@@ -167,6 +176,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
         skyWeatherPatternData.updateUniform("u_cloudCoverageBias", coverageBias);
         skyWeatherPatternData.updateUniform("u_cloudSilhouetteSoftness", silhouetteSoftness);
         skyWeatherPatternData.updateUniform("u_cloudSeed", seed);
+        skyWeatherPatternData.updateUniform("u_skyElevationFadeStart", (float) Math.sin(fadeStartElevation));
         skyWeatherPatternData.updateUniform("u_skyElevationLimit", (float) Math.sin(elevationLimit));
 
         uboManager.push(skyWeatherPatternData);

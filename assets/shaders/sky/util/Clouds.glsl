@@ -13,8 +13,9 @@
 /*
 * Sky-dome distant weather preview. Every active cloud lobe is its own real
  * oriented box in world space — the same box the overhead volumetric system
- * builds (see CloudVolumeShader.vsh) — so each is raymarched independently
- * and composited, rather than blended into one averaged volume.
+ * builds — raymarched independently and composited front-to-back.
+ * Output is premultiplied (rgb already alpha-weighted) — consumers must
+ * add rgb directly rather than re-blending it against alpha a second time.
  */
 
 const float HORIZON_FADE_START = -0.02;
@@ -27,7 +28,6 @@ const float MIN_STEP_SIZE = 10.0;
 const float MAX_STEP_SIZE = 80.0;
 const float STEP_ALPHA_SCALE = 0.05;
 const float LIGHT_TAP_DISTANCE = 40.0;
-const float INTENSITY_FLOOR = 0.35;
 const float SKY_CLOUD_NOISE_WORLD_SCALE = 1.0 / 220.0;
 
 vec4 marchSkyCloud(int index, vec3 rayOrigin, vec3 rayDir, vec3 lightDir, vec3 lightColor, float lightPower) {
@@ -43,7 +43,12 @@ vec4 marchSkyCloud(int index, vec3 rayOrigin, vec3 rayDir, vec3 lightDir, vec3 l
     if (marchLen <= 0.001)
     return vec4(0.0);
 
-    float visibility = u_cloudFadeAlpha[index] * mix(INTENSITY_FLOOR, 1.0, clamp(u_cloudIntensity[index], 0.0, 1.0));
+    // Visibility scales directly off this lobe's own fade alpha and its
+    // pattern's live intensity (spread * the resolved weather's own
+    // cloudCoverage) — no artificial floor. A pattern sitting near the edge
+    // of its weather zone genuinely fades to nothing instead of staying
+    // stuck at some minimum opacity.
+    float visibility = u_cloudFadeAlpha[index] * clamp(u_cloudIntensity[index], 0.0, 1.0);
 
     if (visibility <= 0.001)
     return vec4(0.0);
@@ -100,16 +105,26 @@ vec4 marchSkyCloud(int index, vec3 rayOrigin, vec3 rayDir, vec3 lightDir, vec3 l
         }
     }
 
-    accum.a *= visibility;
+    // Both channels scaled together so a low-visibility lobe contributes
+    // proportionally less of its color AND its coverage to the composite —
+    // scaling alpha alone left full-brightness color bleeding through even
+    // when a lobe was meant to read as nearly invisible.
+    accum.rgb *= visibility;
+    accum.a   *= visibility;
 
     return accum;
 }
 
 vec4 calculateClouds(vec3 dir) {
-    if (dir.y < HORIZON_FADE_START || dir.y > u_skyElevationLimit)
+    if (dir.y < HORIZON_FADE_START)
     return vec4(0.0);
 
     float horizonFade = smoothstep(HORIZON_FADE_START, HORIZON_FADE_END, dir.y);
+    float elevationFade = 1.0 - smoothstep(u_skyElevationFadeStart, u_skyElevationLimit, dir.y);
+    float edgeFade = horizonFade * elevationFade;
+
+    if (edgeFade <= 0.0005)
+    return vec4(0.0);
 
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
@@ -133,7 +148,8 @@ vec4 calculateClouds(vec3 dir) {
         accum.a   += (1.0 - accum.a) * contribution.a;
     }
 
-    accum.a *= horizonFade;
+    accum.rgb *= edgeFade;
+    accum.a   *= edgeFade;
 
     return accum;
 }
