@@ -20,26 +20,16 @@ public class WeatherPatternManager extends ManagerPackage {
 
     /*
      * Simulates the world's persistent weather patterns — jittered cells
-     * streamed in around the player, each holding a handful of offset cloud
-     * lobes. Patterns drift with the world and retire once they pass back
-     * beyond the simulated radius. A pattern's lobes are rebuilt whenever
-     * its resolved weather changes, so the overhead volumetric layer always
-     * reflects live weather rather than whatever was rolled at spawn. Every
-     * rebuild also recomputes the pattern's true bounding geometry —
-     * footprint radius and altitude range — from its actual lobes, the
-     * single source of truth the sky dome preview reads its own box from.
-     *
-     * Two continuous values track how "present" a pattern is: intensity
-     * (folds in the resolved weather's own cloudCoverage, drives opacity)
-     * and spread (coverage-independent band purity, drives lobe geometry —
-     * see WeatherPatternStruct). A pattern near the edge of its weather's
-     * noise zone condenses its lobes toward its own center and shrinks them
-     * rather than showing a full-spread cluster that merely fades in alpha.
+     * streamed in across the full radius around the player, each holding a
+     * handful of offset cloud lobes that drift with world rotation and
+     * retire once they pass beyond the simulated radius. A pattern's lobes
+     * rebuild whenever its resolved weather changes, and its bounding
+     * geometry is recomputed alongside them — the single source of truth
+     * the sky dome preview reads its own box from.
      */
 
     private static final float FADE_IN_RATE = 0.4f;
     private static final float FADE_OUT_RATE = 0.4f;
-    private static final float MIN_SPAWN_DISTANCE_RATIO = 0.55f;
     private static final float INTENSITY_SMOOTHING_TIME_SECONDS = 3.0f;
     private static final float MIN_ALTITUDE_HALF_THICKNESS = 4.0f;
     private static final long GENERATION_SEED_MIX = 0x632BE59BD9B4E019L;
@@ -133,18 +123,19 @@ public class WeatherPatternManager extends ManagerPackage {
     }
 
     /*
-     * Candidate cells sit in an outer ring sized against the true jitter
-     * margin so every generated candidate is actually reachable once home
-     * jitter is applied. Sorted upwind-first so fresh patterns enter from
-     * the side weather drifts in from; farthest-first is the tiebreak.
+     * Every cell within the streaming radius is a spawn candidate, including
+     * the one directly under the player — patterns must cover the full disc
+     * from the first frame, not just its edge, or nothing is ever overhead
+     * until one drifts all the way in from the rim. Sorted upwind-first,
+     * then nearest-first, so a budget-constrained frame still prioritizes
+     * both the side weather drifts in from and the area right around the
+     * player.
      */
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
         float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
         float maxJitterMagnitudeChunks = (jitterRangeChunks * 0.5f) * (float) Math.sqrt(2.0);
-
         float candidateRadiusChunks = radiusChunks + maxJitterMagnitudeChunks;
-        float minSpawnDistanceChunks = radiusChunks * MIN_SPAWN_DISTANCE_RATIO + maxJitterMagnitudeChunks;
         int radiusCells = Math.max(1, (int) Math.ceil(candidateRadiusChunks / (float) patternCellSizeChunks));
 
         ObjectArrayList<int[]> offsets = new ObjectArrayList<>();
@@ -156,7 +147,7 @@ public class WeatherPatternManager extends ManagerPackage {
                 float worldOffsetZ = oz * patternCellSizeChunks;
                 float distChunks = (float) Math.sqrt(worldOffsetX * worldOffsetX + worldOffsetZ * worldOffsetZ);
 
-                if (distChunks > candidateRadiusChunks || distChunks < minSpawnDistanceChunks)
+                if (distChunks > candidateRadiusChunks)
                     continue;
 
                 offsets.add(new int[] { ox, oz, Math.round(distChunks) });
@@ -165,7 +156,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
         offsets.sort((a, b) -> {
             int upwind = Integer.compare(a[0], b[0]);
-            return upwind != 0 ? upwind : Integer.compare(b[2], a[2]);
+            return upwind != 0 ? upwind : Integer.compare(a[2], b[2]);
         });
 
         return offsets;
@@ -240,12 +231,6 @@ public class WeatherPatternManager extends ManagerPackage {
         return new int[] { jitterX, jitterZ };
     }
 
-    /*
-     * Attempts to stream in a new pattern at the given home coordinate.
-     * Returns false without side effects if no free UBO slot remains or if
-     * doing so would exceed the overhead cloud instance budget — the
-     * candidate is simply retried on a later frame.
-     */
     private boolean streamInPattern(long patternKey, int homeChunkX, int homeChunkZ) {
 
         if (freeSlots.isEmpty())
@@ -280,15 +265,6 @@ public class WeatherPatternManager extends ManagerPackage {
         return true;
     }
 
-    /*
-     * Builds one pattern's lobes deterministically from its key, resolved
-     * weather, and a generation counter — the same weather resolving twice
-     * for the same pattern after an intervening transition still produces a
-     * fresh roll rather than repeating the exact same shapes. The actual
-     * on-screen spread/size of these lobes is scaled down further at read
-     * time by the pattern's own live band purity — see
-     * WeatherPatternStruct.getLobeChunkX/Z/SizeVariance.
-     */
     private WeatherPatternLobeStruct[] buildLobes(long patternKey, WeatherHandle weatherHandle, int generation) {
 
         int lobeCount = weatherHandle.hasClouds()
@@ -354,16 +330,6 @@ public class WeatherPatternManager extends ManagerPackage {
         return lobes;
     }
 
-    /*
-     * Recomputes a pattern's true bounding geometry from its actual lobes —
-     * a footprint radius enveloping every lobe's own cloud footprint at its
-     * FULL (unscaled) offset, and an altitude range spanning every lobe's
-     * own vertical extent. Deliberately uses the raw, un-condensed offsets
-     * as a conservative upper bound — actual on-screen spread only ever
-     * shrinks from this as band purity drops, never grows past it — so
-     * retirement distance checks and the sky dome preview box never
-     * undershoot the pattern's true footprint.
-     */
     private void applyBounds(WeatherPatternStruct pattern, WeatherPatternLobeStruct[] lobes) {
 
         float maxReachChunks = 0f;
@@ -470,13 +436,6 @@ public class WeatherPatternManager extends ManagerPackage {
         }
     }
 
-    /*
-     * Rebuilds a pattern's lobes for its newly resolved weather and folds
-     * the change into the running lobe budget. If the new lobe count would
-     * push the total over budget the transition is skipped for now — the
-     * pattern keeps its current weather and lobes and will be reconsidered
-     * at its next reevaluation.
-     */
     private void tryRefreshWeather(WeatherPatternStruct pattern, WeatherHandle resolved) {
 
         WeatherPatternLobeStruct[] newLobes = buildLobes(pattern.getPatternKey(), resolved,
@@ -535,11 +494,6 @@ public class WeatherPatternManager extends ManagerPackage {
         return lerp(reevaluationMinSeconds, reevaluationMaxSeconds, t);
     }
 
-    /*
-     * Distance is measured against each pattern's own drifted position, not
-     * its fixed home, so a pattern can't drift indefinitely far while still
-     * counting as active.
-     */
     private void advanceFadesAndRetire(int playerChunkX, int playerChunkZ) {
 
         float deltaTime = internal.getDeltaTime();
