@@ -26,19 +26,6 @@ public class WeatherPatternManager extends ManagerPackage {
      * rebuild whenever its resolved weather changes, and its bounding
      * geometry is recomputed alongside them — the single source of truth
      * the sky dome preview reads its own box from.
-     *
-     * radiusChunks spans the FULL near+far span (out to
-     * EngineSetting.WEATHER_FAR_RANGE_CHUNKS) — deliberately NOT just the
-     * overhead system's own near visual cutoff
-     * (WeatherManager.getEffectiveNearRangeChunks()). SkyWeatherPatternBranch
-     * only ever accepts lobes sitting beyond that near cutoff, out to the far
-     * cutoff — if patterns only ever simulated within the near ring, no lobe
-     * could ever exist far enough out for the sky dome to find one, and the
-     * sky would never show a single cloud. The overhead system's own visual
-     * cutoff is enforced independently and correctly by CloudSettingsData's
-     * horizon fade in CloudVolumeShader.vsh, so widening this radius only
-     * feeds the sky dome real data — it does not pop distant real geometry
-     * into view.
      */
 
     private static final float FADE_IN_RATE = 0.4f;
@@ -80,7 +67,6 @@ public class WeatherPatternManager extends ManagerPackage {
     protected void create() {
 
         this.patternCellSizeChunks = EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS;
-        this.radiusChunks = EngineSetting.WEATHER_FAR_RANGE_CHUNKS;
         this.maxPatternsStreamedPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
         this.maxActivePatternCount = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
         this.overheadLobeBudget = EngineSetting.WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET;
@@ -94,7 +80,6 @@ public class WeatherPatternManager extends ManagerPackage {
         for (int i = 0; i < maxActivePatternCount; i++)
             freeSlots.add(i);
 
-        this.candidateOffsets = buildCandidateOffsets();
         this.scanCursor = 0;
 
         this.elapsedSimTime = 0.0;
@@ -111,6 +96,20 @@ public class WeatherPatternManager extends ManagerPackage {
     protected void get() {
         this.weatherManager = get(WeatherManager.class);
         this.worldManager = get(WorldManager.class);
+    }
+
+    /*
+     * radiusChunks reads WeatherManager.getEffectiveNearRangeChunks() — the
+     * exact same boundary the sky dome's own near ring is built from —
+     * rather than recomputing the range formula locally, so the overhead
+     * system's outer edge and the sky's handoff point can never drift out
+     * of sync. Deferred to awake() since weatherManager isn't wired until
+     * get() has run.
+     */
+    @Override
+    protected void awake() {
+        this.radiusChunks = weatherManager.getEffectiveNearRangeChunks();
+        this.candidateOffsets = buildCandidateOffsets();
     }
 
     @Override

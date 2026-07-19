@@ -55,8 +55,18 @@ class RegionSampleBranch extends BranchPackage {
 
     // Effective Range \\
 
+    /*
+     * The single shared boundary between the overhead system's outer edge
+     * and the sky dome's near horizon ring. WeatherPatternManager and
+     * SkyWeatherPatternBranch both read this method rather than recomputing
+     * their own radius, so the two visual layers always hand off at the
+     * same distance instead of drifting apart. The cap against
+     * WEATHER_NEAR_RANGE_CHUNKS is a sanity ceiling only — under normal
+     * settings the boundary sits at exactly settings.maxRenderDistance,
+     * never half of it.
+     */
     float getEffectiveNearRangeChunks() {
-        return Math.min(settings.maxRenderDistance / 2f, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
+        return Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
     }
 
     // Sampling \\
