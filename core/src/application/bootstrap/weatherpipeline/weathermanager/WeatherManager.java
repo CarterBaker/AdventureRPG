@@ -1,3 +1,4 @@
+// WeatherManager.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
@@ -18,18 +19,15 @@ import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
+/*
+ * Owns the weather palette and drives the live weather simulation — the
+ * fusion of the active biome, the calendar's current season, and the
+ * world's wrapped/rotating noise field. The sky dome and the overhead
+ * volumetric layer both resolve their own weather through
+ * resolveWeatherBandTowardHorizon(), so the two visual layers can never
+ * disagree about what's happening at a given bearing.
+ */
 public class WeatherManager extends ManagerPackage {
-
-    /*
-     * Owns the weather palette and drives the live weather simulation — the
-     * fusion of the active biome, the calendar's current named season, and
-     * the world's wrapped/rotating noise field. The sky dome and the
-     * overhead volumetric cloud layer both resolve their own weather
-     * identity through resolveWeatherBandTowardHorizon(), so the two visual
-     * layers can never disagree about what's happening at a given bearing.
-     * The biased variant folds a weather's own suggested successors in as a
-     * soft nudge on top of that same noise-driven pick — never a guarantee.
-     */
 
     private static final float NEXT_WEATHER_SUGGESTION_INFLUENCE = 1.5f;
 
@@ -146,12 +144,15 @@ public class WeatherManager extends ManagerPackage {
 
     private ObjectArrayList<WeatherPoolEntryStruct> resolveWeatherPool(BiomeHandle biomeHandle, String season) {
 
+        String resolvedSeason = season;
         ObjectArrayList<WeatherChanceStruct> entries = biomeHandle.getWeatherEntriesForSeason(season);
 
-        if (entries.isEmpty())
-            entries = resolveFallbackEntries(biomeHandle, season);
+        if (entries.isEmpty()) {
+            resolvedSeason = resolveFallbackSeasonName(biomeHandle, season);
+            entries = biomeHandle.getWeatherEntriesForSeason(resolvedSeason);
+        }
 
-        float precipitationBias = resolvePrecipitationBias(season);
+        float precipitationBias = resolvePrecipitationBias(resolvedSeason);
 
         ObjectArrayList<WeatherPoolEntryStruct> pool = new ObjectArrayList<>(entries.size());
 
@@ -174,7 +175,7 @@ public class WeatherManager extends ManagerPackage {
         return seasonManager.getSeasonHandleFromSeasonName(season).getPrecipitationChanceScale();
     }
 
-    private ObjectArrayList<WeatherChanceStruct> resolveFallbackEntries(BiomeHandle biomeHandle, String season) {
+    private String resolveFallbackSeasonName(BiomeHandle biomeHandle, String season) {
 
         if (!biomeHandle.hasAnyWeathers())
             throwException("Biome \"" + biomeHandle.getBiomeName() +
@@ -187,7 +188,7 @@ public class WeatherManager extends ManagerPackage {
                 "\" has no weathers defined for season \"" + season + "\" — falling back to \"" +
                 fallbackSeason + "\". Defined seasons: " + biomeHandle.getDefinedSeasonNames());
 
-        return biomeHandle.getWeatherEntriesForSeason(fallbackSeason);
+        return fallbackSeason;
     }
 
     // Next Weather Bias \\
@@ -255,13 +256,6 @@ public class WeatherManager extends ManagerPackage {
         return regionSampleBranch.getEffectiveNearRangeChunks();
     }
 
-    /*
-     * Chunk-space drift rate along the world's longitudinal axis, driven
-     * purely by the planet's own rotation speed. WeatherPatternManager reads
-     * this to migrate pattern positions, and RegionSampleBranch's own noise
-     * field scrolls at the identical rate — so both are always in lockstep
-     * by construction rather than by tuning two constants to match.
-     */
     public float getWorldDriftChunksPerSecondX() {
         return globalNoiseBranch.getWorldDriftChunksPerSecondX();
     }

@@ -1,6 +1,8 @@
+// RegionSampleBranch.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.BranchPackage;
@@ -10,15 +12,9 @@ import engine.util.random.WeightedChanceUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /*
- * Owns the coherent regional weather noise field — a continuous 2D,
- * X-wrapped layer blended with GlobalNoiseBranch's broad current. Both
- * layers scroll with the exact same planetary rotation phase and meander
- * wave — this is a finer-detail octave on top of the global current, not a
- * second independent wind — and resolves it against a chance-weighted pool
- * via resolveBand() and resolveBandTowardHorizon(). These are the
- * canonical noise-to-weather resolution paths shared by WeatherManager,
- * WeatherPatternManager, and this class's own center-point atmosphere
- * sample.
+ * Owns the coherent regional weather noise field and resolves it against a
+ * chance-weighted pool, both for the player's own position and for any
+ * arbitrary home coordinate blended toward its own horizon-direction sample.
  */
 class RegionSampleBranch extends BranchPackage {
 
@@ -59,13 +55,6 @@ class RegionSampleBranch extends BranchPackage {
 
     // Effective Range \\
 
-    /*
-     * Settings.maxRenderDistance is the full chunk span the world stream
-     * loads (GridBuildSystem/FrustumCullingSystem both halve it to get the
-     * actual load radius) — halved here for the same reason, so weather's
-     * own near/far blend boundary lines up with the true edge of loaded
-     * terrain instead of extending twice as far past it.
-     */
     float getEffectiveNearRangeChunks() {
         return Math.min(settings.maxRenderDistance / 2f, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
     }
@@ -113,6 +102,14 @@ class RegionSampleBranch extends BranchPackage {
         bandFromPool(out, pool, combinedNoiseAt(chunkX, chunkY));
     }
 
+    /*
+     * Home and reference coordinates can legally sit on opposite sides of
+     * the world's wrap seam while still being physically close together —
+     * both the distance and the direction toward the horizon sample must
+     * go through wrap-aware deltas, the same as every other distance check
+     * in this pipeline, or a pattern near the seam resolves against a
+     * meaningless direction and effectively random weather.
+     */
     void resolveBandTowardHorizon(
             WeatherBandStruct out,
             int homeChunkX,
@@ -121,8 +118,10 @@ class RegionSampleBranch extends BranchPackage {
             int referenceChunkZ,
             ObjectArrayList<WeatherPoolEntryStruct> pool) {
 
-        double dx = homeChunkX - referenceChunkX;
-        double dz = homeChunkZ - referenceChunkZ;
+        WorldHandle activeWorld = worldManager.getActiveWorld();
+
+        double dx = WorldWrapUtility.wrappedDeltaX(activeWorld, homeChunkX, referenceChunkX);
+        double dz = WorldWrapUtility.wrappedDeltaZ(activeWorld, homeChunkZ, referenceChunkZ);
         double distanceChunks = Math.sqrt(dx * dx + dz * dz);
 
         double effectiveNearRangeChunks = getEffectiveNearRangeChunks();

@@ -369,17 +369,10 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_VERTICAL_THICKNESS = "u_cloudVerticalThickness";
         public static final String UNIFORM_CLOUD_EDGE_SOFTNESS = "u_cloudEdgeSoftness";
         public static final String UNIFORM_CLOUD_PUFF_JITTER = "u_cloudPuffJitter";
-        public static final String UNIFORM_CLOUD_TOP_COLOR = "u_cloudTopColor";
-        public static final String UNIFORM_CLOUD_TOON_BANDS = "u_cloudToonBands";
         public static final String UNIFORM_CLOUD_DENSITY_NOISE_SCALE = "u_cloudDensityNoiseScale";
         public static final String UNIFORM_CLOUD_NOISE_WARP_STRENGTH = "u_cloudNoiseWarpStrength";
         public static final String UNIFORM_CLOUD_COVERAGE_BIAS = "u_cloudCoverageBias";
         public static final String UNIFORM_CLOUD_SILHOUETTE_SOFTNESS = "u_cloudSilhouetteSoftness";
-        public static final String UNIFORM_CLOUD_SHADOW_COLOR = "u_cloudShadowColor";
-        public static final String UNIFORM_CLOUD_SHADE_STRENGTH = "u_cloudShadeStrength";
-        public static final String UNIFORM_CLOUD_RIM_LIGHT_STRENGTH = "u_cloudRimLightStrength";
-        public static final String UNIFORM_CLOUD_AMBIENT_OCCLUSION_STRENGTH = "u_cloudAmbientOcclusionStrength";
-        public static final String UNIFORM_CLOUD_BRIGHTNESS_MULTIPLIER = "u_cloudBrightnessMultiplier";
 
         // Cloud Instance Uniforms \\
 
@@ -412,21 +405,10 @@ public class EngineSetting {
         // Cloud Fallbacks — Directional Sky Sampling \\
 
         public static final float CLOUD_DEFAULT_DENSITY = 0.8f;
-        public static final float CLOUD_DEFAULT_SHADOW_COLOR_R = 0.6f;
-        public static final float CLOUD_DEFAULT_SHADOW_COLOR_G = 0.63f;
-        public static final float CLOUD_DEFAULT_SHADOW_COLOR_B = 0.7f;
-        public static final float CLOUD_DEFAULT_SHADE_STRENGTH = 0.5f;
-        public static final float CLOUD_DEFAULT_RIM_LIGHT_STRENGTH = 0.35f;
-        public static final float CLOUD_DEFAULT_AMBIENT_OCCLUSION_STRENGTH = 0.4f;
-        public static final float CLOUD_DEFAULT_BRIGHTNESS_MULTIPLIER = 1.0f;
-        public static final float CLOUD_DEFAULT_TOON_BANDS = 3.0f;
         public static final float CLOUD_DEFAULT_DENSITY_NOISE_SCALE = 1.0f;
         public static final float CLOUD_DEFAULT_NOISE_WARP_STRENGTH = 0.6f;
         public static final float CLOUD_DEFAULT_COVERAGE_BIAS = 0.5f;
         public static final float CLOUD_DEFAULT_SILHOUETTE_SOFTNESS = 0.08f;
-        public static final float CLOUD_DEFAULT_SKY_TOP_COLOR_R = 1.0f;
-        public static final float CLOUD_DEFAULT_SKY_TOP_COLOR_G = 1.0f;
-        public static final float CLOUD_DEFAULT_SKY_TOP_COLOR_B = 1.0f;
 
         // Weather \\
 
