@@ -6,6 +6,7 @@
         { "name": "standard/CloudyWeather", "chance": 15 }
     ],
     "cloudCoverage": 0.0,
+    "cloudDensityMultiplier": 1.0,
     "precipitationIntensity": 0.0,
     "windSpeedScale": 0.9,
     "windTurbulenceScale": 0.2,

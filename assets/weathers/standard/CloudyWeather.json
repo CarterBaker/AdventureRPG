@@ -10,6 +10,7 @@
         { "name": "standard/ClearWeather", "chance": 20 }
     ],
     "cloudCoverage": 0.6,
+    "cloudDensityMultiplier": 1.0,
     "precipitationIntensity": 0.0,
     "windSpeedScale": 1.1,
     "windTurbulenceScale": 0.7,

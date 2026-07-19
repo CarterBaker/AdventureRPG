@@ -8,9 +8,11 @@ public class WeatherData extends DataPackage {
     /*
      * Immutable weather definition loaded from JSON — the condition-level
      * atmosphere values for one named weather, its chance-weighted cloud
-     * pool, and its own list of suggested next weathers. visualScale
-     * controls how large this weather reads in the sky independently of
-     * cloudCoverage, which controls how dense/opaque it reads.
+     * pool, and its own list of suggested next weathers. cloudCoverage is
+     * the fraction of sky/area this weather's clouds occupy; cloudDensityMultiplier
+     * separately scales how thick/opaque those clouds read, independent of
+     * how much area they cover. visualScale controls how large this weather
+     * reads in the sky.
      */
 
     private final String weatherName;
@@ -20,6 +22,7 @@ public class WeatherData extends DataPackage {
     private final ObjectArrayList<NextWeatherChanceStruct> nextWeatherChances;
 
     private final float cloudCoverage;
+    private final float cloudDensityMultiplier;
     private final float precipitationIntensity;
     private final float windSpeedScale;
     private final float windTurbulenceScale;
@@ -36,6 +39,7 @@ public class WeatherData extends DataPackage {
             ObjectArrayList<CloudChanceStruct> cloudEntries,
             ObjectArrayList<NextWeatherChanceStruct> nextWeatherChances,
             float cloudCoverage,
+            float cloudDensityMultiplier,
             float precipitationIntensity,
             float windSpeedScale,
             float windTurbulenceScale,
@@ -50,6 +54,7 @@ public class WeatherData extends DataPackage {
         this.cloudEntries = cloudEntries;
         this.nextWeatherChances = nextWeatherChances;
         this.cloudCoverage = cloudCoverage;
+        this.cloudDensityMultiplier = cloudDensityMultiplier;
         this.precipitationIntensity = precipitationIntensity;
         this.windSpeedScale = windSpeedScale;
         this.windTurbulenceScale = windTurbulenceScale;
@@ -78,6 +83,10 @@ public class WeatherData extends DataPackage {
 
     public float getCloudCoverage() {
         return cloudCoverage;
+    }
+
+    public float getCloudDensityMultiplier() {
+        return cloudDensityMultiplier;
     }
 
     public float getPrecipitationIntensity() {

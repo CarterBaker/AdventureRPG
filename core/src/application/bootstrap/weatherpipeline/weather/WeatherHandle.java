@@ -71,6 +71,10 @@ public class WeatherHandle extends HandlePackage {
         return weatherData.getCloudCoverage();
     }
 
+    public float getCloudDensityMultiplier() {
+        return weatherData.getCloudDensityMultiplier();
+    }
+
     public float getPrecipitationIntensity() {
         return weatherData.getPrecipitationIntensity();
     }

@@ -9,6 +9,7 @@
         { "name": "standard/SunnyWeather", "chance": 20 }
     ],
     "cloudCoverage": 0.9,
+    "cloudDensityMultiplier": 1.3,
     "precipitationIntensity": 0.85,
     "windSpeedScale": 1.6,
     "windTurbulenceScale": 2.0,

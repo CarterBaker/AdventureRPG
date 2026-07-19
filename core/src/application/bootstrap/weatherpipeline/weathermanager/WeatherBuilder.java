@@ -48,6 +48,7 @@ class WeatherBuilder extends BuilderPackage {
         ObjectArrayList<CloudChanceStruct> cloudEntries = parseClouds(json);
         ObjectArrayList<NextWeatherChanceStruct> nextWeatherChances = parseNextWeatherChances(json);
         float cloudCoverage = parseFloat(json, "cloudCoverage", 0f);
+        float cloudDensityMultiplier = parseFloat(json, "cloudDensityMultiplier", 1f);
         float precipitationIntensity = parseFloat(json, "precipitationIntensity", 0f);
         float windSpeedScale = parseFloat(json, "windSpeedScale", 1f);
         float windTurbulenceScale = parseFloat(json, "windTurbulenceScale",
@@ -64,6 +65,7 @@ class WeatherBuilder extends BuilderPackage {
                 cloudEntries,
                 nextWeatherChances,
                 cloudCoverage,
+                cloudDensityMultiplier,
                 precipitationIntensity,
                 windSpeedScale,
                 windTurbulenceScale,
