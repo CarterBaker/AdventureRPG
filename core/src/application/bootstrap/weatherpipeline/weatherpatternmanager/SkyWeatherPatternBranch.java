@@ -128,7 +128,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
         int count = gatherRing(0, 0, nearRangeChunks, referenceChunkX, referenceChunkZ);
         count = gatherRing(count, 1, farRangeChunks, referenceChunkX, referenceChunkZ);
 
-        sortGatheredFarToNear(count);
+        sortGatheredNearToFar(count);
 
         float highestTopElevation = -(float) Math.PI * 0.5f;
         float cameraY = resolveCameraY();
@@ -221,7 +221,13 @@ class SkyWeatherPatternBranch extends BranchPackage {
         return count;
     }
 
-    private void sortGatheredFarToNear(int count) {
+    /*
+     * Nearest first. Clouds.glsl's calculateClouds() composites front-to-back
+     * — whichever entry is processed first dominates, and its own alpha
+     * early-out only skips work that would be hidden behind it — so the UBO
+     * must present the closest ring entry at index 0, not the farthest.
+     */
+    private void sortGatheredNearToFar(int count) {
 
         for (int i = 1; i < count; i++) {
 
@@ -232,7 +238,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
             float sliceIntensity = sortIntensity[i];
 
             int j = i - 1;
-            while (j >= 0 && sortDistanceChunks[j] < distance) {
+            while (j >= 0 && sortDistanceChunks[j] > distance) {
                 sortRing[j + 1] = sortRing[j];
                 sortSlice[j + 1] = sortSlice[j];
                 sortCloudEntry[j + 1] = sortCloudEntry[j];
