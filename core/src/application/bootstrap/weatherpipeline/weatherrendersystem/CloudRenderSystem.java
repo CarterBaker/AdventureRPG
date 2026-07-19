@@ -168,6 +168,8 @@ class CloudRenderSystem extends SystemPackage {
     private int gatherSortedCells(int referenceChunkX, int referenceChunkZ, WorldHandle activeWorld) {
 
         int count = 0;
+        float nearRangeChunks = weatherManager.getEffectiveNearRangeChunks();
+        float nearRangeChunksSq = nearRangeChunks * nearRangeChunks;
 
         for (OverheadCellStruct cell : overheadManager.getActiveCells().values()) {
 
@@ -179,8 +181,13 @@ class CloudRenderSystem extends SystemPackage {
             double relativeChunkZ = WorldWrapUtility.wrappedDeltaZ(activeWorld, cell.getCurrentChunkZ(),
                     referenceChunkZ);
 
+            float distanceSq = (float) (relativeChunkX * relativeChunkX + relativeChunkZ * relativeChunkZ);
+
+            if (distanceSq > nearRangeChunksSq)
+                continue;
+
             sortScratchCells[count] = cell;
-            sortScratchDistanceSq[count] = (float) (relativeChunkX * relativeChunkX + relativeChunkZ * relativeChunkZ);
+            sortScratchDistanceSq[count] = distanceSq;
             count++;
         }
 

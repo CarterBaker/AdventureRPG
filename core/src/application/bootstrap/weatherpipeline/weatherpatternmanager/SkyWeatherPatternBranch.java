@@ -5,10 +5,10 @@ import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
+import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
+import application.bootstrap.weatherpipeline.weather.WeatherHandle;
+import application.bootstrap.weatherpipeline.weathermanager.WeatherBandStruct;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
-import application.bootstrap.worldpipeline.world.WorldHandle;
-import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.BranchPackage;
@@ -20,43 +20,33 @@ import engine.util.mathematics.vectors.Vector4;
 class SkyWeatherPatternBranch extends BranchPackage {
 
     /*
-     * Flattens active weather patterns into the SkyWeatherPatternData UBO —
-     * one array slot per lobe, built from the same position/size math the
-     * overhead volumetric system uses for its own instance boxes, so the
-     * sky dome and the physical cloud layer are always the same weather.
-     *
-     * Only lobes sitting within the horizon ring — beyond the overhead
-     * system's own draw radius (WeatherManager.getEffectiveNearRangeChunks())
-     * and no farther than the weather noise's own far-sample radius
-     * (EngineSetting.WEATHER_FAR_RANGE_CHUNKS) — are ever written here.
-     * Anything closer is already covered by the real instanced cloud boxes
-     * (see CloudRenderSystem), so leaving it out of this UBO is what stops
-     * the sky dome from drawing a second, overlapping copy of clouds that
-     * are already physically overhead. A short smoothstep ramp at each edge
-     * of the ring avoids a hard pop as a pattern crosses either boundary.
-     *
-     * Entries are gathered and sorted far-to-near before upload so the
-     * fragment shader's fixed draw-order loop composites correctly with no
-     * per-pixel sorting required.
+     * Populates the SkyWeatherPatternData UBO by independently sampling the
+     * weather noise field around two fixed horizon rings — one at the exact
+     * distance the overhead physical cloud system stops drawing
+     * (WeatherManager.getEffectiveNearRangeChunks()), one at the far edge of
+     * weather simulation (EngineSetting.WEATHER_FAR_RANGE_CHUNKS). Each ring
+     * is divided into angular slices; every slice resolves its own weather
+     * via WeatherManager.resolveWeatherBandTowardHorizon() — the same noise
+     * field the overhead system reads — and picks a cloud archetype from
+     * whatever weather resolves there. This has no dependency on
+     * WeatherPatternManager's own streamed pattern budget, so the horizon
+     * ring is always fully populated regardless of how many physical
+     * patterns are active near the player.
      */
 
     private static final int MAX_CLOUDS = EngineSetting.WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET;
+    private static final int SLICES_PER_RING = MAX_CLOUDS / 2;
     private static final float ELEVATION_LIMIT_MARGIN_RADIANS = (float) Math.toRadians(8.0);
+    private static final long RING_SEED_MIX = 0xA24BAED4963EE407L;
 
-    private WeatherPatternManager weatherPatternManager;
     private WeatherManager weatherManager;
-    private WorldManager worldManager;
     private UBOManager uboManager;
     private PlayerManager playerManager;
     private WindowManager windowManager;
 
     private UBOHandle skyWeatherPatternData;
 
-    // Gather / Sort Scratch
-    private WeatherPatternStruct[] gatheredPatterns;
-    private WeatherPatternLobeStruct[] gatheredLobes;
-    private float[] gatheredDistanceSq;
-    private float[] gatheredRingFade;
+    private final WeatherBandStruct bandScratch = new WeatherBandStruct();
 
     // UBO Arrays
     private Vector3[] center;
@@ -74,13 +64,15 @@ class SkyWeatherPatternBranch extends BranchPackage {
     private Float[] silhouetteSoftness;
     private Float[] seed;
 
+    // Sort Scratch
+    private final int[] sortRing = new int[MAX_CLOUDS];
+    private final int[] sortSlice = new int[MAX_CLOUDS];
+    private final CloudChanceStruct[] sortCloudEntry = new CloudChanceStruct[MAX_CLOUDS];
+    private final float[] sortDistanceChunks = new float[MAX_CLOUDS];
+    private final float[] sortIntensity = new float[MAX_CLOUDS];
+
     @Override
     protected void create() {
-
-        this.gatheredPatterns = new WeatherPatternStruct[MAX_CLOUDS];
-        this.gatheredLobes = new WeatherPatternLobeStruct[MAX_CLOUDS];
-        this.gatheredDistanceSq = new float[MAX_CLOUDS];
-        this.gatheredRingFade = new float[MAX_CLOUDS];
 
         this.center = newVector3Array();
         this.halfExtent = newVector3Array();
@@ -100,9 +92,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
 
     @Override
     protected void get() {
-        this.weatherPatternManager = get(WeatherPatternManager.class);
         this.weatherManager = get(WeatherManager.class);
-        this.worldManager = get(WorldManager.class);
         this.uboManager = get(UBOManager.class);
         this.playerManager = get(PlayerManager.class);
         this.windowManager = get(WindowManager.class);
@@ -122,38 +112,37 @@ class SkyWeatherPatternBranch extends BranchPackage {
 
     private void pushClouds() {
 
+        if (!weatherManager.hasActiveWeatherPool()) {
+            skyWeatherPatternData.updateUniform("u_cloudCount", 0);
+            uboManager.push(skyWeatherPatternData);
+            return;
+        }
+
         long referenceCoordinate = weatherManager.getReferenceCoordinate();
         int referenceChunkX = Coordinate2Long.unpackX(referenceCoordinate);
         int referenceChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
 
-        WorldHandle activeWorld = worldManager.getActiveWorld();
-        int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
-        int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
+        float nearRangeChunks = weatherManager.getEffectiveNearRangeChunks();
+        float farRangeChunks = EngineSetting.WEATHER_FAR_RANGE_CHUNKS;
 
-        float cameraY = resolveCameraY();
+        int count = gatherRing(0, 0, nearRangeChunks, referenceChunkX, referenceChunkZ);
+        count = gatherRing(count, 1, farRangeChunks, referenceChunkX, referenceChunkZ);
 
-        int count = gatherVisibleLobes(referenceChunkX, referenceChunkZ, worldWidthChunks, worldHeightChunks);
         sortGatheredFarToNear(count);
 
         float highestTopElevation = -(float) Math.PI * 0.5f;
+        float cameraY = resolveCameraY();
 
         for (int index = 0; index < count; index++) {
             float topElevation = writeCloudEntry(
-                    index, gatheredPatterns[index], gatheredLobes[index],
-                    referenceChunkX, referenceChunkZ,
-                    worldWidthChunks, worldHeightChunks,
-                    cameraY);
+                    index, sortCloudEntry[index], sortDistanceChunks[index], sortIntensity[index],
+                    sortRing[index], sortSlice[index], cameraY);
             highestTopElevation = Math.max(highestTopElevation, topElevation);
         }
 
         for (int i = count; i < MAX_CLOUDS; i++)
             fadeAlpha[i] = 0f;
 
-        // The dome fades clouds out smoothly between fadeStart (the tallest
-        // active cloud's own top elevation) and elevationLimit (that plus a
-        // safety margin) — never a hard cutoff, which used to draw a visible
-        // line across the sky wherever the tallest active cloud happened to
-        // reach.
         float fadeStartElevation = highestTopElevation;
         float elevationLimit = Math.min(fadeStartElevation + ELEVATION_LIMIT_MARGIN_RADIANS, (float) Math.PI * 0.5f);
 
@@ -181,140 +170,126 @@ class SkyWeatherPatternBranch extends BranchPackage {
         uboManager.push(skyWeatherPatternData);
     }
 
-    // Gather / Sort \\
+    // Ring Sampling \\
 
     /*
-     * Collects every cloud-bearing lobe whose current distance from the
-     * reference coordinate falls inside the horizon ring, in chunks:
-     * [weatherManager.getEffectiveNearRangeChunks(), WEATHER_FAR_RANGE_CHUNKS].
-     * The near edge deliberately matches the exact same formula
-     * CloudRenderSystem uses to fade out the physical cloud objects, so the
-     * two systems' boundaries always agree and never overlap or gap.
+     * Resolves every angular slice of one horizon ring against the weather
+     * noise field. A slice that resolves to cloudless weather, or whose
+     * resolved intensity is negligible, contributes nothing — the ring is
+     * allowed gaps of clear sky, exactly like the ground truth weather it
+     * is sampling.
      */
-    private int gatherVisibleLobes(
-            int referenceChunkX,
-            int referenceChunkZ,
-            int worldWidthChunks,
-            int worldHeightChunks) {
+    private int gatherRing(int count, int ringIndex, float ringDistanceChunks, int referenceChunkX,
+            int referenceChunkZ) {
 
-        int count = 0;
+        for (int slice = 0; slice < SLICES_PER_RING && count < MAX_CLOUDS; slice++) {
 
-        float minDistanceChunks = weatherManager.getEffectiveNearRangeChunks();
-        float maxDistanceChunks = EngineSetting.WEATHER_FAR_RANGE_CHUNKS;
-        float ringMarginChunks = Math.max((maxDistanceChunks - minDistanceChunks) * 0.15f, 0.001f);
+            long sliceSeed = sliceSeed(ringIndex, slice);
+            float angle = sliceAngle(sliceSeed, slice);
 
-        for (WeatherPatternStruct pattern : weatherPatternManager.getActivePatterns().values()) {
+            int homeChunkX = referenceChunkX + Math.round((float) Math.cos(angle) * ringDistanceChunks);
+            int homeChunkZ = referenceChunkZ + Math.round((float) Math.sin(angle) * ringDistanceChunks);
 
-            if (pattern.getFadeAlpha() <= 0.001f)
+            long homeCoordinate = Coordinate2Long.pack(homeChunkX, homeChunkZ);
+            weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate);
+
+            WeatherHandle weatherHandle = bandScratch.getPrimary();
+
+            if (!weatherHandle.hasClouds())
                 continue;
 
-            WeatherPatternLobeStruct[] lobes = pattern.getLobes();
+            float spread = bandScratch.getIntensityFor(weatherHandle);
+            float sliceIntensity = spread * weatherHandle.getCloudCoverage();
 
-            for (int i = 0; i < lobes.length && count < MAX_CLOUDS; i++) {
+            if (sliceIntensity <= 0.02f)
+                continue;
 
-                WeatherPatternLobeStruct lobe = lobes[i];
+            float cloudPickNoise = hash01(sliceSeed ^ 0xBF58476D1CE4E5B9L);
+            CloudChanceStruct cloudEntry = weatherHandle.pickCloud(cloudPickNoise);
 
-                if (!lobe.hasCloud())
-                    continue;
+            if (cloudEntry == null)
+                continue;
 
-                double lobeChunkX = pattern.getLobeChunkX(lobe);
-                double lobeChunkZ = pattern.getLobeChunkZ(lobe);
-
-                double dx = WorldWrapUtility.wrappedDelta(lobeChunkX, referenceChunkX, worldWidthChunks);
-                double dz = WorldWrapUtility.wrappedDelta(lobeChunkZ, referenceChunkZ, worldHeightChunks);
-
-                float distanceChunks = (float) Math.sqrt(dx * dx + dz * dz);
-
-                if (distanceChunks < minDistanceChunks || distanceChunks > maxDistanceChunks)
-                    continue;
-
-                float fadeIn = smoothstep(minDistanceChunks, minDistanceChunks + ringMarginChunks, distanceChunks);
-                float fadeOut = 1f
-                        - smoothstep(maxDistanceChunks - ringMarginChunks, maxDistanceChunks, distanceChunks);
-
-                gatheredPatterns[count] = pattern;
-                gatheredLobes[count] = lobe;
-                gatheredDistanceSq[count] = distanceChunks * distanceChunks;
-                gatheredRingFade[count] = fadeIn * fadeOut;
-                count++;
-            }
+            sortRing[count] = ringIndex;
+            sortSlice[count] = slice;
+            sortCloudEntry[count] = cloudEntry;
+            sortDistanceChunks[count] = ringDistanceChunks;
+            sortIntensity[count] = sliceIntensity;
+            count++;
         }
 
         return count;
     }
 
-    /*
-     * Insertion sort, farthest first — count never exceeds MAX_CLOUDS (64),
-     * so this stays allocation-free and the O(n^2) cost is trivial.
-     */
     private void sortGatheredFarToNear(int count) {
 
         for (int i = 1; i < count; i++) {
 
-            WeatherPatternStruct pattern = gatheredPatterns[i];
-            WeatherPatternLobeStruct lobe = gatheredLobes[i];
-            float distanceSq = gatheredDistanceSq[i];
-            float ringFade = gatheredRingFade[i];
+            int ring = sortRing[i];
+            int slice = sortSlice[i];
+            CloudChanceStruct cloudEntry = sortCloudEntry[i];
+            float distance = sortDistanceChunks[i];
+            float sliceIntensity = sortIntensity[i];
 
             int j = i - 1;
-            while (j >= 0 && gatheredDistanceSq[j] < distanceSq) {
-                gatheredPatterns[j + 1] = gatheredPatterns[j];
-                gatheredLobes[j + 1] = gatheredLobes[j];
-                gatheredDistanceSq[j + 1] = gatheredDistanceSq[j];
-                gatheredRingFade[j + 1] = gatheredRingFade[j];
+            while (j >= 0 && sortDistanceChunks[j] < distance) {
+                sortRing[j + 1] = sortRing[j];
+                sortSlice[j + 1] = sortSlice[j];
+                sortCloudEntry[j + 1] = sortCloudEntry[j];
+                sortDistanceChunks[j + 1] = sortDistanceChunks[j];
+                sortIntensity[j + 1] = sortIntensity[j];
                 j--;
             }
 
-            gatheredPatterns[j + 1] = pattern;
-            gatheredLobes[j + 1] = lobe;
-            gatheredDistanceSq[j + 1] = distanceSq;
-            gatheredRingFade[j + 1] = ringFade;
+            sortRing[j + 1] = ring;
+            sortSlice[j + 1] = slice;
+            sortCloudEntry[j + 1] = cloudEntry;
+            sortDistanceChunks[j + 1] = distance;
+            sortIntensity[j + 1] = sliceIntensity;
         }
     }
 
     private float writeCloudEntry(
             int index,
-            WeatherPatternStruct pattern,
-            WeatherPatternLobeStruct lobe,
-            int referenceChunkX,
-            int referenceChunkZ,
-            int worldWidthChunks,
-            int worldHeightChunks,
+            CloudChanceStruct cloudEntry,
+            float distanceChunks,
+            float sliceIntensity,
+            int ringIndex,
+            int slice,
             float cameraY) {
 
-        CloudHandle cloud = lobe.getCloudHandle();
+        CloudHandle cloud = cloudEntry.getCloudHandle();
 
-        double lobeChunkX = pattern.getLobeChunkX(lobe);
-        double lobeChunkZ = pattern.getLobeChunkZ(lobe);
+        long sliceSeed = sliceSeed(ringIndex, slice);
+        float angle = sliceAngle(sliceSeed, slice);
 
-        double dx = WorldWrapUtility.wrappedDelta(lobeChunkX, referenceChunkX, worldWidthChunks);
-        double dz = WorldWrapUtility.wrappedDelta(lobeChunkZ, referenceChunkZ, worldHeightChunks);
+        float centerXBlocks = (float) Math.cos(angle) * distanceChunks * EngineSetting.CHUNK_SIZE;
+        float centerZBlocks = (float) Math.sin(angle) * distanceChunks * EngineSetting.CHUNK_SIZE;
 
-        float sizeVariance = pattern.getLobeSizeVariance(lobe);
-        float elongation = Math.max(lobe.getElongation(), 1f);
+        float angularSliceRadians = (float) (Math.PI * 2.0 / SLICES_PER_RING);
+        float halfX = Math.max(distanceChunks * EngineSetting.CHUNK_SIZE * angularSliceRadians * 0.65f, 4f);
+        float halfZ = Math.max(distanceChunks * EngineSetting.CHUNK_SIZE * 0.12f, 4f);
 
-        float halfX = (cloud.getScale() * sizeVariance * elongation) * 0.5f;
-        float halfZ = (cloud.getScale() * sizeVariance) * 0.5f;
+        float sizeVariance = 0.85f + hash01(sliceSeed ^ 0x94D049BB133111EBL) * 0.4f;
         float verticalThickness = cloud.getVerticalThickness() * sizeVariance;
         float halfY = verticalThickness * 0.5f;
 
-        float baseAltitude = lobe.getEffectiveAltitude();
-
-        float centerX = (float) (dx * EngineSetting.CHUNK_SIZE);
-        float centerZ = (float) (dz * EngineSetting.CHUNK_SIZE);
+        float baseAltitude = cloudEntry.getEffectiveAltitude();
         float centerY = baseAltitude + halfY;
 
-        center[index].set(centerX, centerY, centerZ);
+        center[index].set(centerXBlocks, centerY, centerZBlocks);
         halfExtent[index].set(halfX, halfY, halfZ);
-        domainRotation[index] = lobe.getDomainRotation();
+        domainRotation[index] = angle + (float) (Math.PI * 0.5);
 
-        float distanceBlocks = (float) Math.sqrt(centerX * centerX + centerZ * centerZ);
+        bounds[index].set(
+                centerXBlocks - halfX, centerZBlocks - halfZ,
+                centerXBlocks + halfX, centerZBlocks + halfZ);
 
-        bounds[index].set(centerX - halfX, centerZ - halfZ, centerX + halfX, centerZ + halfZ);
+        float distanceBlocks = distanceChunks * EngineSetting.CHUNK_SIZE;
         distanceFromCenter[index] = distanceBlocks;
 
-        fadeAlpha[index] = pattern.getFadeAlpha() * gatheredRingFade[index];
-        intensity[index] = pattern.getIntensity();
+        fadeAlpha[index] = clamp01(sliceIntensity);
+        intensity[index] = sliceIntensity;
 
         color[index].set(cloud.getCloudColor());
         density[index] = cloud.getDensity();
@@ -322,12 +297,39 @@ class SkyWeatherPatternBranch extends BranchPackage {
         noiseWarpStrength[index] = cloud.getNoiseWarpStrength();
         coverageBias[index] = cloud.getCoverageBias();
         silhouetteSoftness[index] = cloud.getSilhouetteSoftness();
-        seed[index] = lobe.getRandomSeed();
+        seed[index] = hash01(sliceSeed ^ 0xD1B54A32D192ED03L);
 
         float distanceForElevation = Math.max(distanceBlocks, 1f);
         float topRelativeY = (baseAltitude + verticalThickness) - cameraY;
 
         return (float) Math.atan2(topRelativeY, distanceForElevation);
+    }
+
+    // Slice Math \\
+
+    private long sliceSeed(int ringIndex, int slice) {
+        return ((long) ringIndex << 32) ^ ((long) slice * 0x9E3779B97F4A7C15L) ^ RING_SEED_MIX;
+    }
+
+    private float sliceAngle(long sliceSeed, int slice) {
+        return (slice + hash01(sliceSeed ^ 0x2545F4914F6CDD1DL) * 0.5f)
+                * (float) (Math.PI * 2.0 / SLICES_PER_RING);
+    }
+
+    private static float hash01(long seed) {
+
+        long h = seed;
+        h ^= (h >>> 33);
+        h *= 0xff51afd7ed558ccdL;
+        h ^= (h >>> 33);
+        h *= 0xc4ceb9fe1a85ec53L;
+        h ^= (h >>> 33);
+
+        return (float) ((h >>> 11) / (double) (1L << 53));
+    }
+
+    private static float clamp01(float value) {
+        return Math.max(0f, Math.min(1f, value));
     }
 
     private Float[] newFloatArray() {
@@ -348,15 +350,6 @@ class SkyWeatherPatternBranch extends BranchPackage {
         for (int i = 0; i < MAX_CLOUDS; i++)
             array[i] = new Vector4();
         return array;
-    }
-
-    private static float smoothstep(float edge0, float edge1, float x) {
-        float t = clamp01((x - edge0) / Math.max(edge1 - edge0, 0.0001f));
-        return t * t * (3f - 2f * t);
-    }
-
-    private static float clamp01(float value) {
-        return Math.max(0f, Math.min(1f, value));
     }
 
     private float resolveCameraY() {
