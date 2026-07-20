@@ -22,20 +22,16 @@ layout(location = 2) out vec4 gMaterial;
 #include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
-* Raymarches this instance's oriented box and writes an UNLIT albedo, a real
- * density-gradient surface normal, and an ambient-occlusion term into the
- * shared deferred G-buffer — the same three channels terrain writes.
- * Directional sun/moon response is deliberately never computed here — it is
- * left entirely to the shared Lighting.fsh pass reading gNormal, exactly
- * like every other surface in the world. Everything baked into gAlbedo here
- * is material variation only: the cloud's own base color, a fixed
- * ambient-occlusion darkening driven by how deep/thick this pixel's own
- * density reads, a fixed rim brighten at grazing silhouette angles, and a
- * sky/ground bounce tint so a cloud agrees with the current sky color
- * before real lighting is even applied. u_cloudDensity is this archetype's
- * own intrinsic density; vDensityMultiplier is the resolved per-instance
- * weather multiplier on top of it — see CloudRenderSystem/
- * WeatherPatternLobeStruct for how the two compose.
+* Raymarches this instance's oriented box and writes an unlit albedo, a
+ * density-gradient normal, and an ambient-occlusion term into the shared
+ * deferred G-buffer, exactly like every other surface in the world.
+ * Directional sun/moon response is left entirely to the shared Lighting.fsh
+ * pass. Partial coverage is faked via an ordered Bayer dither rather than a
+ * random hash — this engine has no TAA to accumulate stochastic samples
+ * over time, so a single-frame random dither reads as visible static; a
+ * fixed, evenly-distributed ordered matrix does not. u_cloudDensity is this
+ * archetype's own intrinsic density; vDensityMultiplier is the resolved
+ * per-instance weather multiplier on top of it.
  */
 
 uniform vec3  u_cloudColor;
@@ -59,6 +55,32 @@ const float CLOUD_SKY_TINT_STRENGTH           = 0.22;
 const float CLOUD_GROUND_BOUNCE_STRENGTH      = 0.16;
 const float CLOUD_GROUND_BOUNCE_DARKEN        = 0.35;
 
+// Ordered 8x8 Bayer threshold matrix (values 0..63). Indexed by screen
+// position modulo 8 on each axis, normalized to a [0,1) threshold below.
+const float BAYER_8X8[64] = float[64](
+    0.0, 32.0,  8.0, 40.0,  2.0, 34.0, 10.0, 42.0,
+    48.0, 16.0, 56.0, 24.0, 50.0, 18.0, 58.0, 26.0,
+    12.0, 44.0,  4.0, 36.0, 14.0, 46.0,  6.0, 38.0,
+    60.0, 28.0, 52.0, 20.0, 62.0, 30.0, 54.0, 22.0,
+    3.0, 35.0, 11.0, 43.0,  1.0, 33.0,  9.0, 41.0,
+    51.0, 19.0, 59.0, 27.0, 49.0, 17.0, 57.0, 25.0,
+    15.0, 47.0,  7.0, 39.0, 13.0, 45.0,  5.0, 37.0,
+    63.0, 31.0, 55.0, 23.0, 61.0, 29.0, 53.0, 21.0);
+
+float bayerThreshold(vec2 screenPos) {
+    ivec2 cell = ivec2(mod(screenPos, 8.0));
+    return (BAYER_8X8[cell.y * 8 + cell.x] + 0.5) / 64.0;
+}
+
+// Interleaved Gradient Noise (Jimenez, "Next Generation Post Processing in
+// Call of Duty: Advanced Warfare") — a well-distributed spatial hash with
+// none of the clustering or sin()-precision artifacts a naive
+// fract(sin(dot(...))) hash produces at typical screen-space magnitudes.
+// Used only to jitter raymarch sample positions, never for the alpha test.
+float interleavedGradientNoise(vec2 screenPos) {
+    return fract(52.9829189 * fract(dot(screenPos, vec2(0.06711056, 0.00583715))));
+}
+
 void main() {
     if (vFadeAlpha <= 0.001)
     discard;
@@ -81,7 +103,7 @@ void main() {
 
     int steps = clamp(int(marchLen / targetStepSize), CLOUD_MIN_STEPS, CLOUD_MAX_STEPS);
     float stepSize = marchLen / float(steps);
-    float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+    float dither = interleavedGradientNoise(gl_FragCoord.xy);
 
     float boxHeight = max(vHalfExtent.y * 2.0, 0.0001);
     float baseY = vBoxCenter.y - vHalfExtent.y;
@@ -148,14 +170,6 @@ void main() {
     * CLOUD_RIM_LIGHT_STRENGTH;
     albedoColor += vec3(1.0) * rim;
 
-    // Sky/ground tint — fake bounce lighting baked directly into the unlit
-    // material color. Top-facing surface picks up a fraction of the sky's
-    // own current zenith/horizon color, so a cloud tints correctly with
-    // time of day and season and agrees with the sky dome's own clouds
-    // (see SkyCloudUtility.glsl's identical technique). Underside surface
-    // picks up a muted, darkened fraction of horizon color standing in for
-    // ambient light bounced up off the terrain below, scaled down further
-    // by ao wherever the cloud reads as thick/self-occluded.
     float upFacing = clamp(cloudNormalWorld.y * 0.5 + 0.5, 0.0, 1.0);
     vec3 skyTint = mix(u_skyHorizonColor, u_skyZenithColor, upFacing);
     vec3 groundBounce = u_skyHorizonColor * CLOUD_GROUND_BOUNCE_DARKEN;
@@ -169,13 +183,10 @@ void main() {
     vec4 peakClip = u_viewProjection * vec4(peakPos, 1.0);
     gl_FragDepth = clamp(peakClip.z / peakClip.w * 0.5 + 0.5, 0.0, 1.0);
 
-    // Stochastic alpha test — decorrelated from the raymarch jitter hash
-    // above so the dither pattern doesn't lock to the same screen-space
-    // grid as the sampling offsets. Every fragment that survives this
-    // writes fully opaque into the G-buffer; see the class doc comment.
-    float alphaDither = fract(sin(dot(gl_FragCoord.xy, vec2(39.9898, 61.233))) * 24634.6345);
-
-    if (finalAlpha < alphaDither)
+    // Ordered alpha test — every fragment that survives this writes fully
+    // opaque into the G-buffer; see the class doc comment for why this
+    // exists at all instead of real blending.
+    if (finalAlpha < bayerThreshold(gl_FragCoord.xy))
     discard;
 
     gAlbedo   = vec4(clamp(albedoColor, 0.0, 1.0), 1.0);
