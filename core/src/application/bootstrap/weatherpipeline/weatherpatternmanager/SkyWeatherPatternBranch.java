@@ -293,7 +293,10 @@ class SkyWeatherPatternBranch extends BranchPackage {
         float halfZ = Math.max(distanceChunks * EngineSetting.CHUNK_SIZE * 0.12f, 4f);
 
         float sizeVariance = resolveSizeVariance(sliceSeed);
-        float verticalThickness = cloud.getVerticalThickness() * sizeVariance;
+
+        float horizontalHalfSize = (halfX + halfZ) * 0.5f;
+        float archetypeThicknessRatio = cloud.getVerticalThickness() / Math.max(cloud.getScale(), 0.0001f);
+        float verticalThickness = horizontalHalfSize * 2f * archetypeThicknessRatio * sizeVariance;
         float halfY = verticalThickness * 0.5f;
 
         float baseAltitude = cloudEntry.getEffectiveAltitude();
