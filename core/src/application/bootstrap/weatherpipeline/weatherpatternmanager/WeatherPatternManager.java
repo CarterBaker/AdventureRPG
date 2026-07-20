@@ -332,10 +332,13 @@ public class WeatherPatternManager extends ManagerPackage {
             float effectiveAltitude = cloudEntry != null
                     ? cloudEntry.getEffectiveAltitude()
                     : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;
+            float densityMultiplier = cloudEntry != null
+                    ? weatherHandle.getCloudDensityMultiplier() * cloudEntry.getDensityMultiplier()
+                    : 1f;
 
             lobes[i] = new WeatherPatternLobeStruct(
                     offsetChunkX, offsetChunkZ,
-                    cloudHandle, effectiveAltitude,
+                    cloudHandle, effectiveAltitude, densityMultiplier,
                     randomSeed, sizeVariance, domainRotation, elongation);
         }
 

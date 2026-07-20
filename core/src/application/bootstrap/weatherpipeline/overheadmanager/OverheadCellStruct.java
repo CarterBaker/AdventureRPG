@@ -49,6 +49,10 @@ public class OverheadCellStruct extends StructPackage {
         return lobe.getEffectiveAltitude();
     }
 
+    public float getDensityMultiplier() {
+        return lobe.getDensityMultiplier();
+    }
+
     public float getRandomSeed() {
         return lobe.getRandomSeed();
     }

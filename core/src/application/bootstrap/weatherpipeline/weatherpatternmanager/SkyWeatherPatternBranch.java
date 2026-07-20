@@ -20,18 +20,12 @@ import engine.util.mathematics.vectors.Vector4;
 class SkyWeatherPatternBranch extends BranchPackage {
 
     /*
-     * Populates the SkyWeatherPatternData UBO by independently sampling the
-     * weather noise field around two fixed horizon rings — one at the exact
-     * distance the overhead physical cloud system stops drawing
-     * (WeatherManager.getEffectiveNearRangeChunks()), one at the far edge of
-     * weather simulation (EngineSetting.WEATHER_FAR_RANGE_CHUNKS). Each ring
-     * is divided into angular slices; every slice resolves its own weather
-     * via WeatherManager.resolveWeatherBandTowardHorizon() — the same noise
-     * field the overhead system reads — and picks a cloud archetype from
-     * whatever weather resolves there. This has no dependency on
-     * WeatherPatternManager's own streamed pattern budget, so the horizon
-     * ring is always fully populated regardless of how many physical
-     * patterns are active near the player.
+     * Populates the SkyWeatherPatternData UBO by sampling the weather noise
+     * field around a near and far horizon ring. Entries are depth-sorted by
+     * true camera distance — horizontal ring distance combined with each
+     * cloud's own altitude — so Clouds.glsl's front-to-back compositing
+     * always draws the genuinely closer lobe on top, regardless of which
+     * cloud type it is.
      */
 
     private static final int MAX_CLOUDS = EngineSetting.WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET;
@@ -69,7 +63,9 @@ class SkyWeatherPatternBranch extends BranchPackage {
     private final int[] sortSlice = new int[MAX_CLOUDS];
     private final CloudChanceStruct[] sortCloudEntry = new CloudChanceStruct[MAX_CLOUDS];
     private final float[] sortDistanceChunks = new float[MAX_CLOUDS];
+    private final float[] sortDepthBlocks = new float[MAX_CLOUDS];
     private final float[] sortIntensity = new float[MAX_CLOUDS];
+    private final float[] sortDensityMultiplier = new float[MAX_CLOUDS];
 
     @Override
     protected void create() {
@@ -125,18 +121,19 @@ class SkyWeatherPatternBranch extends BranchPackage {
         float nearRangeChunks = weatherManager.getEffectiveNearRangeChunks();
         float farRangeChunks = EngineSetting.WEATHER_FAR_RANGE_CHUNKS;
 
-        int count = gatherRing(0, 0, nearRangeChunks, referenceChunkX, referenceChunkZ);
-        count = gatherRing(count, 1, farRangeChunks, referenceChunkX, referenceChunkZ);
+        float cameraY = resolveCameraY();
+
+        int count = gatherRing(0, 0, nearRangeChunks, referenceChunkX, referenceChunkZ, cameraY);
+        count = gatherRing(count, 1, farRangeChunks, referenceChunkX, referenceChunkZ, cameraY);
 
         sortGatheredNearToFar(count);
 
         float highestTopElevation = -(float) Math.PI * 0.5f;
-        float cameraY = resolveCameraY();
 
         for (int index = 0; index < count; index++) {
             float topElevation = writeCloudEntry(
                     index, sortCloudEntry[index], sortDistanceChunks[index], sortIntensity[index],
-                    sortRing[index], sortSlice[index], cameraY);
+                    sortDensityMultiplier[index], sortRing[index], sortSlice[index], cameraY);
             highestTopElevation = Math.max(highestTopElevation, topElevation);
         }
 
@@ -172,15 +169,13 @@ class SkyWeatherPatternBranch extends BranchPackage {
 
     // Ring Sampling \\
 
-    /*
-     * Resolves every angular slice of one horizon ring against the weather
-     * noise field. A slice that resolves to cloudless weather, or whose
-     * resolved intensity is negligible, contributes nothing — the ring is
-     * allowed gaps of clear sky, exactly like the ground truth weather it
-     * is sampling.
-     */
-    private int gatherRing(int count, int ringIndex, float ringDistanceChunks, int referenceChunkX,
-            int referenceChunkZ) {
+    private int gatherRing(
+            int count,
+            int ringIndex,
+            float ringDistanceChunks,
+            int referenceChunkX,
+            int referenceChunkZ,
+            float cameraY) {
 
         for (int slice = 0; slice < SLICES_PER_RING && count < MAX_CLOUDS; slice++) {
 
@@ -210,11 +205,24 @@ class SkyWeatherPatternBranch extends BranchPackage {
             if (cloudEntry == null)
                 continue;
 
+            float sizeVariance = resolveSizeVariance(sliceSeed);
+            float centerY = cloudEntry.getEffectiveAltitude()
+                    + cloudEntry.getCloudHandle().getVerticalThickness() * sizeVariance * 0.5f;
+
+            float horizontalDistanceBlocks = ringDistanceChunks * EngineSetting.CHUNK_SIZE;
+            float verticalDistanceBlocks = centerY - cameraY;
+            float trueDistanceBlocks = (float) Math.sqrt(
+                    horizontalDistanceBlocks * horizontalDistanceBlocks
+                            + verticalDistanceBlocks * verticalDistanceBlocks);
+
             sortRing[count] = ringIndex;
             sortSlice[count] = slice;
             sortCloudEntry[count] = cloudEntry;
             sortDistanceChunks[count] = ringDistanceChunks;
+            sortDepthBlocks[count] = trueDistanceBlocks;
             sortIntensity[count] = sliceIntensity;
+            sortDensityMultiplier[count] = weatherHandle.getCloudDensityMultiplier()
+                    * cloudEntry.getDensityMultiplier();
             count++;
         }
 
@@ -222,10 +230,11 @@ class SkyWeatherPatternBranch extends BranchPackage {
     }
 
     /*
-     * Nearest first. Clouds.glsl's calculateClouds() composites front-to-back
-     * — whichever entry is processed first dominates, and its own alpha
-     * early-out only skips work that would be hidden behind it — so the UBO
-     * must present the closest ring entry at index 0, not the farthest.
+     * Nearest-true-distance first, so Clouds.glsl's front-to-back compositing
+     * always draws the genuinely closer lobe on top. Ring distance alone left
+     * same-ring entries at unrelated altitudes in an arbitrary order; combining
+     * ring distance with each lobe's own altitude fixes that while still
+     * always keeping near-ring entries ahead of far-ring ones.
      */
     private void sortGatheredNearToFar(int count) {
 
@@ -235,15 +244,19 @@ class SkyWeatherPatternBranch extends BranchPackage {
             int slice = sortSlice[i];
             CloudChanceStruct cloudEntry = sortCloudEntry[i];
             float distance = sortDistanceChunks[i];
+            float depth = sortDepthBlocks[i];
             float sliceIntensity = sortIntensity[i];
+            float densityMultiplier = sortDensityMultiplier[i];
 
             int j = i - 1;
-            while (j >= 0 && sortDistanceChunks[j] > distance) {
+            while (j >= 0 && sortDepthBlocks[j] > depth) {
                 sortRing[j + 1] = sortRing[j];
                 sortSlice[j + 1] = sortSlice[j];
                 sortCloudEntry[j + 1] = sortCloudEntry[j];
                 sortDistanceChunks[j + 1] = sortDistanceChunks[j];
+                sortDepthBlocks[j + 1] = sortDepthBlocks[j];
                 sortIntensity[j + 1] = sortIntensity[j];
+                sortDensityMultiplier[j + 1] = sortDensityMultiplier[j];
                 j--;
             }
 
@@ -251,7 +264,9 @@ class SkyWeatherPatternBranch extends BranchPackage {
             sortSlice[j + 1] = slice;
             sortCloudEntry[j + 1] = cloudEntry;
             sortDistanceChunks[j + 1] = distance;
+            sortDepthBlocks[j + 1] = depth;
             sortIntensity[j + 1] = sliceIntensity;
+            sortDensityMultiplier[j + 1] = densityMultiplier;
         }
     }
 
@@ -260,6 +275,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
             CloudChanceStruct cloudEntry,
             float distanceChunks,
             float sliceIntensity,
+            float densityMultiplier,
             int ringIndex,
             int slice,
             float cameraY) {
@@ -276,7 +292,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
         float halfX = Math.max(distanceChunks * EngineSetting.CHUNK_SIZE * angularSliceRadians * 0.65f, 4f);
         float halfZ = Math.max(distanceChunks * EngineSetting.CHUNK_SIZE * 0.12f, 4f);
 
-        float sizeVariance = 0.85f + hash01(sliceSeed ^ 0x94D049BB133111EBL) * 0.4f;
+        float sizeVariance = resolveSizeVariance(sliceSeed);
         float verticalThickness = cloud.getVerticalThickness() * sizeVariance;
         float halfY = verticalThickness * 0.5f;
 
@@ -298,7 +314,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
         intensity[index] = sliceIntensity;
 
         color[index].set(cloud.getCloudColor());
-        density[index] = cloud.getDensity();
+        density[index] = cloud.getDensity() * densityMultiplier;
         densityNoiseScale[index] = cloud.getDensityNoiseScale();
         noiseWarpStrength[index] = cloud.getNoiseWarpStrength();
         coverageBias[index] = cloud.getCoverageBias();
@@ -320,6 +336,10 @@ class SkyWeatherPatternBranch extends BranchPackage {
     private float sliceAngle(long sliceSeed, int slice) {
         return (slice + hash01(sliceSeed ^ 0x2545F4914F6CDD1DL) * 0.5f)
                 * (float) (Math.PI * 2.0 / SLICES_PER_RING);
+    }
+
+    private float resolveSizeVariance(long sliceSeed) {
+        return 0.85f + hash01(sliceSeed ^ 0x94D049BB133111EBL) * 0.4f;
     }
 
     private static float hash01(long seed) {

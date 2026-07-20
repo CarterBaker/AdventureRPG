@@ -5,6 +5,7 @@ layout (location = 0) in vec3  aPos;
 layout (location = 3) in vec4  aInstance0; // xyz = world position, w = random seed
 layout (location = 4) in vec4  aInstance1; // x = domain rotation, y = fade alpha, z = intensity, w = size variance
 layout (location = 5) in float aInstance2; // elongation
+layout (location = 6) in float aInstance3; // density multiplier (weather x per-cloud-entry, resolved on CPU)
 
 #include "includes/CameraData.glsl"
 #include "includes/CloudSettingsData.glsl"
@@ -16,6 +17,7 @@ out vec3  vWorldPos;
 out float vRandomSeed;
 out float vFadeAlpha;
 out float vIntensity;
+out float vDensityMultiplier;
 flat out float vDetailFactor;
 
 flat out vec3 vBoxCenter;
@@ -36,13 +38,14 @@ flat out vec2 vRot;
 void main() {
     vec3 cameraRenderPos = (u_inverseView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
-    vec3  instancePos    = aInstance0.xyz;
-    float randomSeed     = aInstance0.w;
-    float domainRotation = aInstance1.x;
-    float fadeAlpha      = aInstance1.y;
-    float intensity      = aInstance1.z;
-    float sizeVariance   = aInstance1.w;
-    float elongation     = max(aInstance2, 1.0);
+    vec3  instancePos       = aInstance0.xyz;
+    float randomSeed        = aInstance0.w;
+    float domainRotation    = aInstance1.x;
+    float fadeAlpha         = aInstance1.y;
+    float intensity         = aInstance1.z;
+    float sizeVariance      = aInstance1.w;
+    float elongation        = max(aInstance2, 1.0);
+    float densityMultiplier = aInstance3;
 
     float distFromCamera = length(instancePos.xz - cameraRenderPos.xz);
     float distanceT = clamp(distFromCamera / max(u_cloudHorizonDistance, 0.001), 0.0, 1.0);
@@ -75,6 +78,7 @@ void main() {
     vRandomSeed = randomSeed;
     vFadeAlpha  = fadeAlpha * horizonFade;
     vIntensity  = intensity;
+    vDensityMultiplier = densityMultiplier;
 
     vBoxCenter  = vec3(instancePos.x, instancePos.y + halfY, instancePos.z);
     vHalfExtent = vec3(halfX, halfY, halfZ);

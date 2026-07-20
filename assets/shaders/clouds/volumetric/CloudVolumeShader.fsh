@@ -5,6 +5,7 @@ in vec3  vWorldPos;
 in float vRandomSeed;
 in float vFadeAlpha;
 in float vIntensity;
+in float vDensityMultiplier;
 flat in vec3 vBoxCenter;
 flat in vec3 vHalfExtent;
 flat in vec2 vRot;
@@ -31,10 +32,10 @@ layout(location = 2) out vec4 gMaterial;
  * ambient-occlusion darkening driven by how deep/thick this pixel's own
  * density reads, a fixed rim brighten at grazing silhouette angles, and a
  * sky/ground bounce tint so a cloud agrees with the current sky color
- * before real lighting is even applied. None of this reads from
- * per-archetype data — shape (density, coverage, silhouette softness,
- * noise) is the only thing that varies cloud to cloud; lighting response
- * is identical for every cloud type by construction.
+ * before real lighting is even applied. u_cloudDensity is this archetype's
+ * own intrinsic density; vDensityMultiplier is the resolved per-instance
+ * weather multiplier on top of it — see CloudRenderSystem/
+ * WeatherPatternLobeStruct for how the two compose.
  */
 
 uniform vec3  u_cloudColor;
@@ -106,7 +107,7 @@ void main() {
             u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
             u_cloudCoverageBias, u_cloudSilhouetteSoftness,
             vDetailFactor, vRandomSeed, u_time);
-        float density = rawDensity * u_cloudDensity * vIntensity;
+        float density = rawDensity * u_cloudDensity * vDensityMultiplier * vIntensity;
 
         if (density > 0.01) {
             float stepTransmittance = exp(-density * CLOUD_EXTINCTION * stepSize);

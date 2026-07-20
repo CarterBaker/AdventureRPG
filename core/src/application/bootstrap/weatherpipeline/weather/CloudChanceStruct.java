@@ -8,33 +8,26 @@ public class CloudChanceStruct extends StructPackage implements ChanceWeighted {
 
     /*
      * One cloud archetype a weather may spawn, paired with its relative
-     * chance weight and an optional altitude override. A negative
-     * altitudeOverride means "no override" — the cloud's own baseAltitude
-     * applies. Overriding altitude per weather lets, for example, a storm
-     * push its nimbus layer lower than that same cloud would sit under a
-     * calmer condition, without needing a second cloud archetype.
+     * chance weight, an optional altitude override, and a per-weather
+     * density multiplier applied on top of the cloud's own base density —
+     * lets one weather run the same archetype thinner or thicker than
+     * another without needing a second archetype.
      */
 
-    // Sentinel — no per-weather altitude override, use the cloud's own
-    // baseAltitude.
     public static final float NO_ALTITUDE_OVERRIDE = -1f;
+    public static final float DEFAULT_DENSITY_MULTIPLIER = 1.0f;
 
-    // Internal
     private final CloudHandle cloudHandle;
     private final float chance;
     private final float altitudeOverride;
+    private final float densityMultiplier;
 
-    // Constructor \\
-
-    public CloudChanceStruct(CloudHandle cloudHandle, float chance, float altitudeOverride) {
-
-        // Internal
+    public CloudChanceStruct(CloudHandle cloudHandle, float chance, float altitudeOverride, float densityMultiplier) {
         this.cloudHandle = cloudHandle;
         this.chance = chance;
         this.altitudeOverride = altitudeOverride;
+        this.densityMultiplier = densityMultiplier;
     }
-
-    // Accessible \\
 
     public CloudHandle getCloudHandle() {
         return cloudHandle;
@@ -51,5 +44,9 @@ public class CloudChanceStruct extends StructPackage implements ChanceWeighted {
 
     public float getEffectiveAltitude() {
         return altitudeOverride >= 0f ? altitudeOverride : cloudHandle.getBaseAltitude();
+    }
+
+    public float getDensityMultiplier() {
+        return densityMultiplier;
     }
 }

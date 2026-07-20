@@ -38,7 +38,7 @@ class CloudRenderSystem extends SystemPackage {
      * distance this frame. Owned by WeatherRenderSystem.
      */
 
-    private static final int[] INSTANCE_ATTR_SIZES = { 4, 4, 1 };
+    private static final int[] INSTANCE_ATTR_SIZES = { 4, 4, 1, 1 };
     private static final int MAX_TRACKED_CELLS = EngineSetting.WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET;
     private static final int MAX_ARCHETYPES = 32;
 
@@ -67,7 +67,7 @@ class CloudRenderSystem extends SystemPackage {
     private final CloudHandle[] archetypeOrderScratch = new CloudHandle[MAX_ARCHETYPES];
     private final float[] archetypeDistanceScratch = new float[MAX_ARCHETYPES];
 
-    private final float[] instanceScratch = new float[9];
+    private final float[] instanceScratch = new float[10];
 
     @Override
     protected void create() {
@@ -235,6 +235,7 @@ class CloudRenderSystem extends SystemPackage {
         instanceScratch[6] = cell.getIntensity();
         instanceScratch[7] = cell.getSizeVariance();
         instanceScratch[8] = cell.getElongation();
+        instanceScratch[9] = cell.getDensityMultiplier();
 
         buffer.addInstance(instanceScratch);
     }
@@ -271,11 +272,14 @@ class CloudRenderSystem extends SystemPackage {
     /*
      * Bakes every archetype-level SHAPE value off CloudData into this
      * archetype's own shared MaterialInstance, once, the first time it is
-     * ever used. Every one of these maps directly to a CloudData field —
-     * there is no lighting here; lighting is computed identically for
-     * every archetype in the shader (real sun/moon response via the
-     * shared deferred pass) rather than being an adjustable material knob.
-     * Per-instance size variance and elongation are applied later, in the
+     * ever used. u_cloudDensity here is the archetype's own intrinsic
+     * density — Nimbus reads inherently thicker than Stratus regardless of
+     * which weather spawned it. The weather-specific multiplier on top of
+     * that (weather's own cloudDensityMultiplier combined with this cloud
+     * entry's own per-weather multiplier — see WeatherPatternLobeStruct) is
+     * per-instance, not per-archetype, since the same archetype can be
+     * spawned by multiple weathers wanting different density. Per-instance
+     * size variance and elongation are likewise applied later, in the
      * vertex shader, against this shared base.
      */
     private void bakeArchetypeUniforms(MaterialInstance material, CloudHandle cloudHandle) {

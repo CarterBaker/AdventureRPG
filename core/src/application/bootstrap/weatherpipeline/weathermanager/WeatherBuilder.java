@@ -108,7 +108,14 @@ class WeatherBuilder extends BuilderPackage {
                 ? entryObject.get("altitudeOverride").getAsFloat()
                 : CloudChanceStruct.NO_ALTITUDE_OVERRIDE;
 
-        return new CloudChanceStruct(cloudHandle, chance, altitudeOverride);
+        float densityMultiplier = entryObject.has("densityMultiplier")
+                ? entryObject.get("densityMultiplier").getAsFloat()
+                : CloudChanceStruct.DEFAULT_DENSITY_MULTIPLIER;
+
+        if (densityMultiplier < 0f)
+            throwException("Cloud entry \"" + cloudName + "\" has a negative densityMultiplier: " + densityMultiplier);
+
+        return new CloudChanceStruct(cloudHandle, chance, altitudeOverride, densityMultiplier);
     }
 
     private ObjectArrayList<NextWeatherChanceStruct> parseNextWeatherChances(JsonObject json) {

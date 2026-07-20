@@ -12,7 +12,11 @@ public class WeatherPatternLobeStruct extends StructPackage {
      * re-rolled. elongation stretches the lobe's footprint into an oval
      * along domainRotation's own axis rather than a uniform circle, so a
      * cluster of lobes reads as an irregular, organic mass instead of
-     * identical repeated blobs.
+     * identical repeated blobs. densityMultiplier is already resolved at
+     * build time — the owning weather's own cloudDensityMultiplier folded
+     * together with this lobe's cloud entry's own per-weather multiplier —
+     * so both the sky and overhead renderers apply the exact same effective
+     * per-lobe density without re-deriving it independently.
      */
 
     private final float offsetChunkX;
@@ -20,6 +24,7 @@ public class WeatherPatternLobeStruct extends StructPackage {
 
     private final CloudHandle cloudHandle;
     private final float effectiveAltitude;
+    private final float densityMultiplier;
 
     private final float randomSeed;
     private final float sizeVariance;
@@ -31,6 +36,7 @@ public class WeatherPatternLobeStruct extends StructPackage {
             float offsetChunkZ,
             CloudHandle cloudHandle,
             float effectiveAltitude,
+            float densityMultiplier,
             float randomSeed,
             float sizeVariance,
             float domainRotation,
@@ -40,6 +46,7 @@ public class WeatherPatternLobeStruct extends StructPackage {
         this.offsetChunkZ = offsetChunkZ;
         this.cloudHandle = cloudHandle;
         this.effectiveAltitude = effectiveAltitude;
+        this.densityMultiplier = densityMultiplier;
         this.randomSeed = randomSeed;
         this.sizeVariance = sizeVariance;
         this.domainRotation = domainRotation;
@@ -64,6 +71,10 @@ public class WeatherPatternLobeStruct extends StructPackage {
 
     public float getEffectiveAltitude() {
         return effectiveAltitude;
+    }
+
+    public float getDensityMultiplier() {
+        return densityMultiplier;
     }
 
     public float getRandomSeed() {
