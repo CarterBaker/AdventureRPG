@@ -20,18 +20,25 @@ import engine.util.mathematics.vectors.Vector4;
 class SkyWeatherPatternBranch extends BranchPackage {
 
     /*
-     * Populates the SkyWeatherPatternData UBO by sampling the weather noise
-     * field around a near and far horizon ring. Entries are depth-sorted by
-     * true camera distance — horizontal ring distance combined with each
-     * cloud's own altitude — so Clouds.glsl's front-to-back compositing
-     * always draws the genuinely closer lobe on top, regardless of which
-     * cloud type it is.
+     * Populates the SkyWeatherPatternData UBO from the weather noise field
+     * sampled around a near and far horizon ring. Entries are depth-sorted
+     * so the sky dome's front-to-back compositing always draws the closer
+     * lobe on top, and every cloud's height in the sky is derived from its
+     * altitude against a fixed reference distance rather than from whichever
+     * ring supplied it, so a high thin layer always reads above a low thick
+     * one regardless of streaming distance.
      */
 
     private static final int MAX_CLOUDS = EngineSetting.WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET;
     private static final int SLICES_PER_RING = MAX_CLOUDS / 2;
     private static final float ELEVATION_LIMIT_MARGIN_RADIANS = (float) Math.toRadians(8.0);
     private static final long RING_SEED_MIX = 0xA24BAED4963EE407L;
+
+    // Every cloud's altitude is converted to an elevation angle against this
+    // fixed distance, then re-projected onto whatever distance its own ring
+    // actually renders at — see resolveCenterY().
+    private static final float ELEVATION_REFERENCE_DISTANCE_BLOCKS = EngineSetting.WEATHER_FAR_RANGE_CHUNKS
+            * EngineSetting.CHUNK_SIZE;
 
     private WeatherManager weatherManager;
     private UBOManager uboManager;
@@ -206,8 +213,8 @@ class SkyWeatherPatternBranch extends BranchPackage {
                 continue;
 
             float sizeVariance = resolveSizeVariance(sliceSeed);
-            float centerY = cloudEntry.getEffectiveAltitude()
-                    + cloudEntry.getCloudHandle().getVerticalThickness() * sizeVariance * 0.5f;
+            float halfY = cloudEntry.getCloudHandle().getVerticalThickness() * sizeVariance * 0.5f;
+            float centerY = resolveCenterY(cloudEntry.getEffectiveAltitude(), halfY, ringDistanceChunks, cameraY);
 
             float horizontalDistanceBlocks = ringDistanceChunks * EngineSetting.CHUNK_SIZE;
             float verticalDistanceBlocks = centerY - cameraY;
@@ -229,13 +236,6 @@ class SkyWeatherPatternBranch extends BranchPackage {
         return count;
     }
 
-    /*
-     * Nearest-true-distance first, so Clouds.glsl's front-to-back compositing
-     * always draws the genuinely closer lobe on top. Ring distance alone left
-     * same-ring entries at unrelated altitudes in an arbitrary order; combining
-     * ring distance with each lobe's own altitude fixes that while still
-     * always keeping near-ring entries ahead of far-ring ones.
-     */
     private void sortGatheredNearToFar(int count) {
 
         for (int i = 1; i < count; i++) {
@@ -297,7 +297,7 @@ class SkyWeatherPatternBranch extends BranchPackage {
         float halfY = verticalThickness * 0.5f;
 
         float baseAltitude = cloudEntry.getEffectiveAltitude();
-        float centerY = baseAltitude + halfY;
+        float centerY = resolveCenterY(baseAltitude, halfY, distanceChunks, cameraY);
 
         center[index].set(centerXBlocks, centerY, centerZBlocks);
         halfExtent[index].set(halfX, halfY, halfZ);
@@ -321,10 +321,28 @@ class SkyWeatherPatternBranch extends BranchPackage {
         silhouetteSoftness[index] = cloud.getSilhouetteSoftness();
         seed[index] = hash01(sliceSeed ^ 0xD1B54A32D192ED03L);
 
+        float topWorldY = centerY + halfY;
         float distanceForElevation = Math.max(distanceBlocks, 1f);
-        float topRelativeY = (baseAltitude + verticalThickness) - cameraY;
 
-        return (float) Math.atan2(topRelativeY, distanceForElevation);
+        return (float) Math.atan2(topWorldY - cameraY, distanceForElevation);
+    }
+
+    /*
+     * Resolves a cloud's altitude to an elevation angle against the fixed
+     * reference distance, then re-projects that same angle onto the distance
+     * this cloud is actually rendered at. Two clouds sharing an altitude end
+     * up at the same apparent height in the sky this way, regardless of
+     * whether one was sampled from the near ring and the other from the far
+     * ring.
+     */
+    private float resolveCenterY(float baseAltitude, float halfY, float ringDistanceChunks, float cameraY) {
+
+        float altitudeDiff = (baseAltitude + halfY) - cameraY;
+        float elevationAngle = (float) Math.atan2(altitudeDiff, ELEVATION_REFERENCE_DISTANCE_BLOCKS);
+
+        float distanceBlocks = Math.max(ringDistanceChunks * EngineSetting.CHUNK_SIZE, 1f);
+
+        return cameraY + (float) Math.tan(elevationAngle) * distanceBlocks;
     }
 
     // Slice Math \\
