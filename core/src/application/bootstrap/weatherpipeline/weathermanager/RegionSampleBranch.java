@@ -19,7 +19,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RegionSampleBranch extends BranchPackage {
 
     private static final long NOISE_SEED = 0x51A5F00DCAFEBEEFL;
-    private static final double WAVELENGTH_CHUNKS = 128.0;
 
     private GlobalNoiseBranch globalNoiseBranch;
     private WorldManager worldManager;
@@ -232,19 +231,20 @@ class RegionSampleBranch extends BranchPackage {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
         double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
+        double wavelengthChunks = EngineSetting.WEATHER_NOISE_CELL_SIZE;
 
         double rotationPhase = (globalNoiseBranch.getRotationAngleDegrees() / EngineSetting.DEGREES_PER_FULL_ROTATION)
                 * (Math.PI * 2.0);
 
-        double meanderAmplitudeChunks = EngineSetting.GLOBAL_WEATHER_MEANDER_INFLUENCE * WAVELENGTH_CHUNKS;
+        double meanderAmplitudeChunks = EngineSetting.GLOBAL_WEATHER_MEANDER_INFLUENCE * wavelengthChunks;
 
         return WeatherNoiseUtility.sample(
                 NOISE_SEED,
                 chunkX, chunkZ,
                 worldWidthChunks,
-                WAVELENGTH_CHUNKS,
+                wavelengthChunks,
                 rotationPhase,
-                0.0,
+                globalNoiseBranch.getSeasonalDriftZChunks(),
                 globalNoiseBranch.getMeanderWaveNumber(),
                 meanderAmplitudeChunks,
                 globalNoiseBranch.getMeanderPhase());
