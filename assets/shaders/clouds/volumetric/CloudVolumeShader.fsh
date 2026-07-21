@@ -18,20 +18,29 @@ layout(location = 2) out vec4 gMaterial;
 #include "includes/CameraData.glsl"
 #include "includes/TimeData.glsl"
 #include "includes/SkyColorData.glsl"
+#include "includes/SunLightData.glsl"
+#include "includes/MoonLightData.glsl"
 #include "includes/CloudSettingsData.glsl"
 #include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
-* Raymarches this instance's oriented box and writes an unlit albedo, a
+* Raymarches this instance's oriented box and writes a shaded albedo, a
  * density-gradient normal, and an ambient-occlusion term into the shared
- * deferred G-buffer, exactly like every other surface in the world.
- * Directional sun/moon response is left entirely to the shared Lighting.fsh
- * pass. Partial coverage is faked via an ordered Bayer dither rather than a
- * random hash — this engine has no TAA to accumulate stochastic samples
- * over time, so a single-frame random dither reads as visible static; a
- * fixed, evenly-distributed ordered matrix does not. u_cloudDensity is this
- * archetype's own intrinsic density; vDensityMultiplier is the resolved
- * per-instance weather multiplier on top of it.
+ * deferred G-buffer, like every other surface in the world — the shared
+ * Lighting.fsh pass still applies the real sun/moon diffuse term against
+ * that normal. What this shader adds is a cheap raymarched self-shadow
+ * (sampleCloudLightLift) used to bias ambient occlusion and to gate a
+ * tinted silver-lining rim toward whichever side is actually backlit, so
+ * the volume reads as lit from one side and shadowed on the other instead
+ * of a single flat fresnel edge.
+ *
+ * Partial coverage is faked via an ordered Bayer dither rather than a
+ * random hash, since this engine has no TAA to accumulate stochastic
+ * samples over time. That dither only reads as visible stipple where the
+ * accumulated alpha genuinely sits in a translucent middle band — the
+ * density model in VolumetricCloudUtility keeps a cloud's interior pinned
+ * near full density specifically so that band stays a thin edge shell
+ * rather than the whole visible body.
  */
 
 uniform vec3  u_cloudColor;
@@ -41,19 +50,21 @@ uniform float u_cloudNoiseWarpStrength;
 uniform float u_cloudCoverageBias;
 uniform float u_cloudSilhouetteSoftness;
 
-const float CLOUD_STEP_SIZE_NEAR    = 4.0;
-const float CLOUD_STEP_SIZE_FAR     = 12.0;
+const float CLOUD_STEP_SIZE_NEAR    = 3.0;
+const float CLOUD_STEP_SIZE_FAR     = 9.0;
 const float CLOUD_TIER_NEAR         = 60.0;
 const float CLOUD_TIER_FAR          = 220.0;
-const int   CLOUD_MIN_STEPS         = 14;
-const int   CLOUD_MAX_STEPS         = 56;
-const float CLOUD_EXTINCTION        = 0.07;
+const int   CLOUD_MIN_STEPS         = 16;
+const int   CLOUD_MAX_STEPS         = 64;
+const float CLOUD_EXTINCTION        = 0.18;
 const float CLOUD_RIM_FRESNEL_POWER = 2.4;
-const float CLOUD_RIM_LIGHT_STRENGTH          = 0.35;
-const float CLOUD_AMBIENT_OCCLUSION_STRENGTH  = 0.4;
+const float CLOUD_RIM_LIGHT_STRENGTH          = 0.9;
+const float CLOUD_AMBIENT_OCCLUSION_STRENGTH  = 0.45;
+const float CLOUD_SELF_SHADOW_STRENGTH        = 0.35;
 const float CLOUD_SKY_TINT_STRENGTH           = 0.22;
 const float CLOUD_GROUND_BOUNCE_STRENGTH      = 0.16;
 const float CLOUD_GROUND_BOUNCE_DARKEN        = 0.35;
+const float CLOUD_DIRECT_BOUNCE_STRENGTH      = 0.14;
 
 // Ordered 8x8 Bayer threshold matrix (values 0..63). Indexed by screen
 // position modulo 8 on each axis, normalized to a [0,1) threshold below.
@@ -73,10 +84,8 @@ float bayerThreshold(vec2 screenPos) {
 }
 
 // Interleaved Gradient Noise (Jimenez, "Next Generation Post Processing in
-// Call of Duty: Advanced Warfare") — a well-distributed spatial hash with
-// none of the clustering or sin()-precision artifacts a naive
-// fract(sin(dot(...))) hash produces at typical screen-space magnitudes.
-// Used only to jitter raymarch sample positions, never for the alpha test.
+// Call of Duty: Advanced Warfare") — a well-distributed spatial hash used
+// only to jitter raymarch sample positions, never for the alpha test.
 float interleavedGradientNoise(vec2 screenPos) {
     return fract(52.9829189 * fract(dot(screenPos, vec2(0.06711056, 0.00583715))));
 }
@@ -113,6 +122,7 @@ void main() {
     float transmittance = 1.0;
 
     vec3  peakPos = vWorldPos;
+    float peakDensity = 0.0;
     float peakContribution = 0.0;
 
     for (int i = 0; i < CLOUD_MAX_STEPS; i++) {
@@ -143,6 +153,7 @@ void main() {
             if (contribution > peakContribution) {
                 peakContribution = contribution;
                 peakPos = p;
+                peakDensity = density;
             }
 
             transmittance *= stepTransmittance;
@@ -163,12 +174,39 @@ void main() {
         u_cloudCoverageBias, u_cloudSilhouetteSoftness,
         vDetailFactor, vRandomSeed, u_time, gradientEpsilon);
 
+    // Light direction — blend sun/moon exactly like every other lit surface,
+    // so the cloud's own self-shadow and rim agree with whichever body is
+    // actually driving the scene's light this time of day.
+    float sunWeight = clamp(u_sunIntensity / 0.3, 0.0, 1.0);
+    vec3  lightDir = normalize(mix(u_moonDirection, u_sunDirection, sunWeight));
+    vec3  lightColor = mix(u_moonColor, u_sunColor, sunWeight);
+    float lightPower = mix(u_moonIntensity, u_sunIntensity, sunWeight);
+
+    float tapDistance = clamp(min(vHalfExtent.x, vHalfExtent.z) * 0.3, 3.0, 18.0);
+    float lightLift = sampleCloudLightLift(
+        peakPos, vBoxCenter, vRot, vHalfExtent,
+        u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
+        u_cloudCoverageBias, u_cloudSilhouetteSoftness,
+        vDetailFactor, vRandomSeed, u_time,
+        lightDir, tapDistance, peakDensity);
+
     float ao = 1.0 - clamp(opticalDepth * CLOUD_AMBIENT_OCCLUSION_STRENGTH, 0.0, CLOUD_AMBIENT_OCCLUSION_STRENGTH);
+    ao = clamp(ao + (lightLift - 0.5) * CLOUD_SELF_SHADOW_STRENGTH, 0.0, 1.0);
     albedoColor *= ao;
 
-    float rim = pow(1.0 - clamp(dot(-rayDir, cloudNormalWorld), 0.0, 1.0), CLOUD_RIM_FRESNEL_POWER)
-    * CLOUD_RIM_LIGHT_STRENGTH;
-    albedoColor += vec3(1.0) * rim;
+    // Silver lining — a fresnel rim gated by how directly the view ray is
+    // looking back toward the light, so it only shows up on genuinely
+    // backlit edges rather than every edge regardless of light direction.
+    float backlit = pow(clamp(dot(rayDir, lightDir), 0.0, 1.0), 1.5);
+    float rimFresnel = pow(1.0 - clamp(dot(-rayDir, cloudNormalWorld), 0.0, 1.0), CLOUD_RIM_FRESNEL_POWER);
+    float rim = rimFresnel * mix(0.1, 1.0, backlit) * lightLift * CLOUD_RIM_LIGHT_STRENGTH;
+    albedoColor += lightColor * lightPower * rim;
+
+    // A small direct-light bounce accent — not a full relight (the shared
+    // deferred pass already applies the real sun/moon diffuse against the
+    // gradient normal), just enough to warm the lit side and cool the
+    // shadowed side so the volume reads as genuinely lit from one direction.
+    albedoColor += lightColor * lightPower * (lightLift - 0.5) * CLOUD_DIRECT_BOUNCE_STRENGTH;
 
     float upFacing = clamp(cloudNormalWorld.y * 0.5 + 0.5, 0.0, 1.0);
     vec3 skyTint = mix(u_skyHorizonColor, u_skyZenithColor, upFacing);
@@ -184,7 +222,7 @@ void main() {
     gl_FragDepth = clamp(peakClip.z / peakClip.w * 0.5 + 0.5, 0.0, 1.0);
 
     // Ordered alpha test — every fragment that survives this writes fully
-    // opaque into the G-buffer; see the class doc comment for why this
+    // opaque into the G-buffer; see the top-of-file comment for why this
     // exists at all instead of real blending.
     if (finalAlpha < bayerThreshold(gl_FragCoord.xy))
     discard;
