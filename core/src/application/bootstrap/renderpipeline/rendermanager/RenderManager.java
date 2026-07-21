@@ -223,6 +223,18 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushInstancedCompositeCall(buffer, material, fbo, window);
     }
 
+    /*
+     * Guarantees the given FBO is registered as a render target for this
+     * window this frame — bound, cleared, and processed by
+     * drawToMappedTargets() — even if no draw calls are ever queued into
+     * it this frame. Overhead weather needs this: a clear-sky frame pushes
+     * zero cloud instances, but the FBO still has to come back transparent
+     * rather than showing whatever it last held.
+     */
+    public void ensureFboRendered(FboInstance fbo, WindowInstance window) {
+        renderSystem.ensureTargetQueued(fbo, window);
+    }
+
     // Skinned Calls \\
 
     public void clearSkinnedBuffers() {

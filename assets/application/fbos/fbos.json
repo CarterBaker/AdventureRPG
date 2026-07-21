@@ -18,6 +18,13 @@
             ]
         },
         {
+            "name": "OverheadScene",
+            "sizingStrategy": "WINDOW_RELATIVE",
+            "attachments": [
+                { "type": "color", "format": "RGBA8", "name": "color" }
+            ]
+        },
+        {
             "name": "LitScene",
             "sizingStrategy": "WINDOW_RELATIVE",
             "attachments": [

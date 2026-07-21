@@ -456,6 +456,16 @@ class RenderSystem extends SystemPackage {
         ensureFboQueued(queue, fbo, window);
     }
 
+    void ensureTargetQueued(FboInstance fbo, WindowInstance window) {
+
+        RenderQueueHandle queue = window.getRenderQueueHandle();
+
+        if (queue == null || fbo == null)
+            return;
+
+        ensureFboQueued(queue, fbo, window);
+    }
+
     private void ensureFboQueued(RenderQueueHandle queue, FboInstance fbo, WindowInstance window) {
 
         if (queue.queuedFbos.contains(fbo))

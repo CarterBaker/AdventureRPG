@@ -4,17 +4,20 @@
 
 #include "includes/NoiseUtility.glsl"
 
-// Shape and density primitives for the overhead volumetric cloud boxes.
-// Each instance raymarches its own oriented box as an inscribed ellipsoid.
-// The density field is built to stay mostly solid through the core, with
-// noise confined to a thin boundary shell — a wide translucent mid-density
-// haze is exactly what turns a per-pixel dithered alpha test into a field
-// of flickering dots instead of a puffy, mostly-opaque cloud body.
+/*
+* Shape, density, and in-scatter lighting primitives for the overhead
+ * volumetric cloud boxes. Each instance raymarches its own oriented box as
+ * an inscribed ellipsoid. The macro silhouette comes from a low-frequency
+ * gradient fbm; two layered Worley octaves erode it into rounded
+ * cauliflower lobes rather than a smooth blob, concentrated toward the
+ * boundary so the interior stays a coherent, believable mass of vapor.
+ */
 
-const float CLOUD_NOISE_WORLD_SCALE = 1.0 / 26.0;
-const float CLOUD_DETAIL_FREQUENCY  = 2.6;
-const float CLOUD_EROSION_STRENGTH  = 0.55;
-const float CLOUD_MIN_SOFTNESS      = 0.12;
+const float CLOUD_NOISE_WORLD_SCALE  = 1.0 / 26.0;
+const float CLOUD_DETAIL_FREQUENCY   = 2.6;
+const float CLOUD_EROSION_STRENGTH   = 0.5;
+const float CLOUD_MIN_SOFTNESS       = 0.14;
+const float CLOUD_BASE_DENSITY_BOOST = 0.25;
 
 // Rotation \\
 
@@ -43,34 +46,29 @@ vec2 intersectCloudBox(vec3 rayOrigin, vec3 rayDir, vec3 boxCenter, vec2 rot, ve
 
 // Shape \\
 
-// Flat, dense base with a rounded taper at the top — a cumulus profile
-// rather than a symmetric blob. The wide plateau keeps most of the box's
-// vertical extent at full envelope instead of fading across the whole height.
+/*
+* Flat, dense base with a rounded taper at the top — a cumulus profile,
+ * not a symmetric blob. baseWeight compresses density further toward the
+ * floor on top of the plateau, matching how a real cumulus reads dense and
+ * flat-bottomed near its base and thins into a soft crown above.
+ */
 float cloudHeightEnvelope(float heightT, float coverageBias) {
     float base = smoothstep(0.0, 0.10, heightT);
     float topStart = mix(0.45, 0.90, clamp(coverageBias, 0.0, 1.0));
     float top = 1.0 - smoothstep(topStart, 1.0, heightT);
-    return base * top;
+    float baseWeight = 1.0 + CLOUD_BASE_DENSITY_BOOST * (1.0 - smoothstep(0.0, 0.35, heightT));
+    return base * top * baseWeight;
 }
 
 // Density \\
 
 /*
-* worldPos/boxCenter/rot/halfExtent describe the instance's own oriented
- * box. heightT is 0 at the box floor and 1 at the box ceiling. Returns 0
- * outside the ellipsoid inscribed in that box. detailFactor fades the
- * highest-frequency erosion detail out with distance so a raymarch step
- * that now covers many world units per pixel never aliases into visible
+* detailFactor fades the highest-frequency erosion out with distance so a
+ * raymarch step that covers many world units per pixel never aliases into
  * shimmer — the silhouette itself never changes, only how much cauliflower
- * texture rides on top of it.
- *
- * The macro shape is pushed through a narrow smoothstep rather than a wide
- * linear remap, so most of the interior sits solidly near 1.0 and only a
- * thin band around the silhouette carries partial density. A secondary
- * inverted-Worley "billow" layer rides on top of that core to read as
- * rounded lobes rather than a flat blob, and the finest erosion detail is
- * confined to that same thin edge band so it carves the boundary instead
- * of punching holes through the body.
+ * texture rides on top of it. Two Worley octaves at different frequencies
+ * drive the erosion: a coarse one clusters the macro shape into rounded
+ * lobes, a fine one chews those lobes' boundaries into smaller detail.
  */
 float sampleCloudDensity(
     vec3 worldPos,
@@ -115,79 +113,54 @@ float sampleCloudDensity(
     vec3 warped = coord + vec3(warpA, warpA * 0.25, warpB) * warpStrength;
 
     float macro = fbmGradient3D(warped, 4, 2.05, 0.52);
-    float coverage = clamp(1.0 - coverageBias, 0.08, 0.92);
-    float coreBand = mix(0.22, 0.08, clamp(detailFactor, 0.0, 1.0));
+    float coverage = clamp(1.0 - coverageBias, 0.10, 0.90);
+    float coreBand = mix(0.30, 0.12, clamp(detailFactor, 0.0, 1.0));
     float core = smoothstep(coverage - coreBand * 0.5, coverage + coreBand, macro);
 
     float base = core * envelope;
 
-    if (base <= 0.015)
+    if (base <= 0.01)
     return 0.0;
 
-    float billow = 1.0 - worleyFbm3D(warped * 1.6 + seedOffset.zxy, 2, 2.1, 0.55);
-    float billowed = clamp(mix(base, base * 0.55 + billow * 0.65, 0.35 * envelope), 0.0, 1.0);
+    float billowCoarse = 1.0 - worleyFbm3D(warped * 1.1 + seedOffset.zxy, 2, 2.1, 0.55);
+    float billowed = clamp(mix(base, base * 0.5 + billowCoarse * 0.7, 0.45 * envelope), 0.0, 1.0);
 
-    float detail = worleyFbm3D(warped * CLOUD_DETAIL_FREQUENCY + seedOffset.yzx, 2, 2.3, 0.5);
-    float edgeWeight = smoothstep(0.0, 0.30, 1.0 - billowed) * smoothstep(0.0, 0.22, billowed);
-    float erosionStrength = CLOUD_EROSION_STRENGTH * mix(0.2, 1.0, clamp(detailFactor, 0.0, 1.0));
-    float eroded = mix(billowed, billowed * detail, erosionStrength * edgeWeight);
+    float detail = worleyFbm3D(warped * CLOUD_DETAIL_FREQUENCY + seedOffset.yzx, 3, 2.3, 0.5);
+    float edgeWeight = smoothstep(0.0, 0.35, 1.0 - billowed) * smoothstep(0.0, 0.28, billowed);
+    float erosionStrength = CLOUD_EROSION_STRENGTH * mix(0.25, 1.0, clamp(detailFactor, 0.0, 1.0));
+    float eroded = mix(billowed, billowed * mix(0.4, 1.0, detail), erosionStrength * edgeWeight);
 
     return clamp(eroded, 0.0, 1.0);
 }
 
-// Normal \\
+// Lighting \\
 
-vec3 sampleCloudGradientNormal(
-    vec3 p,
-    vec3 boxCenter,
-    vec2 rot,
-    vec3 halfExtent,
-    float noiseScale,
-    float warpStrength,
-    float coverageBias,
-    float silhouetteSoftness,
-    float detailFactor,
-    float seed,
-    float timeSeconds,
-    float epsilon) {
-    float boxHeight = max(halfExtent.y * 2.0, 0.0001);
-    float baseY = boxCenter.y - halfExtent.y;
-
-    float heightHere = clamp((p.y - baseY) / boxHeight, 0.0, 1.0);
-    float heightUp    = clamp(((p.y + epsilon) - baseY) / boxHeight, 0.0, 1.0);
-    float heightDown  = clamp(((p.y - epsilon) - baseY) / boxHeight, 0.0, 1.0);
-
-    float dx = sampleCloudDensity(p + vec3(epsilon, 0.0, 0.0), boxCenter, rot, halfExtent, heightHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, detailFactor, seed, timeSeconds)
-    - sampleCloudDensity(p - vec3(epsilon, 0.0, 0.0), boxCenter, rot, halfExtent, heightHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, detailFactor, seed, timeSeconds);
-
-    float dy = sampleCloudDensity(p + vec3(0.0, epsilon, 0.0), boxCenter, rot, halfExtent, heightUp, noiseScale, warpStrength, coverageBias, silhouetteSoftness, detailFactor, seed, timeSeconds)
-    - sampleCloudDensity(p - vec3(0.0, epsilon, 0.0), boxCenter, rot, halfExtent, heightDown, noiseScale, warpStrength, coverageBias, silhouetteSoftness, detailFactor, seed, timeSeconds);
-
-    float dz = sampleCloudDensity(p + vec3(0.0, 0.0, epsilon), boxCenter, rot, halfExtent, heightHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, detailFactor, seed, timeSeconds)
-    - sampleCloudDensity(p - vec3(0.0, 0.0, epsilon), boxCenter, rot, halfExtent, heightHere, noiseScale, warpStrength, coverageBias, silhouetteSoftness, detailFactor, seed, timeSeconds);
-
-    vec3 gradient = vec3(dx, dy, dz);
-    float gradientLength = length(gradient);
-
-    if (gradientLength < 0.0001)
-    return vec3(0.0, 1.0, 0.0);
-
-    return -gradient / gradientLength;
+float henyeyGreenstein(float cosAngle, float g) {
+    float g2 = g * g;
+    return (1.0 - g2) / (4.0 * 3.14159265 * pow(max(1.0 + g2 - 2.0 * g * cosAngle, 0.0001), 1.5));
 }
 
-// Self-Shadow \\
+/*
+* Dual-lobe phase approximation — a strong forward-scattering lobe (the
+ * bright halo seen looking toward the light through thin cloud) blended
+ * with a weaker back-scattering lobe. Evaluated once per fragment — the
+ * view/light angle is constant across the whole raymarch.
+ */
+float cloudPhase(float cosAngle, float forwardG, float backG, float blend) {
+    float forward = henyeyGreenstein(cosAngle, forwardG);
+    float back = henyeyGreenstein(cosAngle, backG);
+    return mix(back, forward, blend);
+}
 
 /*
-* Cheap directional occlusion proxy: compares density here against density
- * a short hop toward the light. If density falls off moving toward the
- * light, this point sits on the near/lit side of the body and light reaches
- * it fairly directly; if density climbs, this point is behind more of the
- * cloud's own mass as seen from the light and reads as shadowed. One extra
- * density sample, evaluated once per pixel at the raymarch's peak-
- * contribution position rather than per step, so it stays cheap.
+* Multi-tap in-scattering toward the light — a cheap substitute for a full
+ * shadow raymarch. Density falling off moving toward the light means this
+ * point sits on the near/lit side of the body; density climbing means it's
+ * buried deeper in the cloud's own mass as seen from the light.
  */
-float sampleCloudLightLift(
+float sampleCloudLightTransmittance(
     vec3 p,
+    vec3 lightDir,
     vec3 boxCenter,
     vec2 rot,
     vec3 halfExtent,
@@ -198,21 +171,25 @@ float sampleCloudLightLift(
     float detailFactor,
     float seed,
     float timeSeconds,
-    vec3 lightDir,
-    float tapDistance,
-    float densityHere) {
+    float stepDistance,
+    int tapCount,
+    float extinction) {
     float boxHeight = max(halfExtent.y * 2.0, 0.0001);
     float baseY = boxCenter.y - halfExtent.y;
 
-    vec3 litPos = p + lightDir * tapDistance;
-    float heightLit = clamp((litPos.y - baseY) / boxHeight, 0.0, 1.0);
+    float opticalDepth = 0.0;
+    vec3 samplePos = p;
 
-    float densityLit = sampleCloudDensity(
-        litPos, boxCenter, rot, halfExtent, heightLit,
-        noiseScale, warpStrength, coverageBias, silhouetteSoftness,
-        detailFactor, seed, timeSeconds);
+    for (int i = 0; i < tapCount; i++) {
+        samplePos += lightDir * stepDistance;
+        float heightT = clamp((samplePos.y - baseY) / boxHeight, 0.0, 1.0);
+        opticalDepth += sampleCloudDensity(
+            samplePos, boxCenter, rot, halfExtent, heightT,
+            noiseScale, warpStrength, coverageBias, silhouetteSoftness,
+            detailFactor, seed, timeSeconds);
+    }
 
-    return clamp((densityHere - densityLit) * 2.0 + 0.5, 0.0, 1.0);
+    return exp(-opticalDepth * extinction * stepDistance);
 }
 
 #endif
