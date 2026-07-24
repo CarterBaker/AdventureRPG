@@ -8,14 +8,13 @@ import engine.root.EngineSetting;
 class CurrentTrackerBranch extends BranchPackage {
 
     /*
-     * Advances the sub-day clock each frame. Derives day progress from the
-     * real system clock modulo the game day length so time of day is always
-     * consistent regardless of session start time. Derives total days elapsed
-     * from the world epoch so the in-game date accumulates correctly across
-     * sessions. Returns true when the day rolls over. Hours-per-day, minutes-
-     * per-hour, and the midday offset all come from the active calendar now,
-     * rather than fixed engine-wide constants — MILLIS_PER_REAL_DAY is the
-     * one real-world unit left, so it stays put in EngineSetting.
+     * Advances the sub-day clock every frame from the real system clock,
+     * applying the calendar's middayOffset so real-world noon lines up with
+     * in-game noon. visualTimeOfDay additionally folds in a location phase
+     * (see WorldWrapUtility.wrappedPlanetaryOffset, supplied by ClockManager)
+     * before the seasonal sunrise/sunset bend, so different points along the
+     * world's Y axis experience day and night at different moments, wrapping
+     * seamlessly at the world edges.
      */
 
     // Internal
@@ -83,15 +82,7 @@ class CurrentTrackerBranch extends BranchPackage {
 
     // Current Tracker \\
 
-    /*
-     * Day progress is derived from the current system clock mod the game day
-     * length — not from the epoch. This ensures time of day always reflects
-     * real time divided by daysPerDay regardless of when the world was created.
-     *
-     * Total days elapsed uses the epoch so the in-game date accumulates
-     * correctly from world creation and survives across sessions.
-     */
-    boolean advanceTime() {
+    boolean advanceTime(double locationOffset) {
 
         long now = internal.getTime();
         long millisPerGameDay = (long) (MILLIS_PER_REAL_DAY / daysPerDay);
@@ -103,7 +94,9 @@ class CurrentTrackerBranch extends BranchPackage {
         int currentMinute = calculateMinute(rawTimeOfDay);
         int currentHour = calculateHour(rawTimeOfDay);
         double yearProgress = clockHandle.getYearProgress();
-        double visualTimeOfDay = calculateVisualTimeOfDay(rawTimeOfDay, yearProgress);
+
+        double localRawTimeOfDay = wrapFraction(rawTimeOfDay + locationOffset);
+        double visualTimeOfDay = calculateVisualTimeOfDay(localRawTimeOfDay, yearProgress);
 
         clockHandle.setTotalDaysElapsed(totalDaysElapsed);
         clockHandle.setDayProgress(dayProgress);
@@ -164,5 +157,15 @@ class CurrentTrackerBranch extends BranchPackage {
             return NOON + ((rawTimeOfDay - NOON) / (actualSunset - NOON)) * QUARTER;
 
         return THREE_QUARTERS + ((rawTimeOfDay - actualSunset) / (1.0 - actualSunset)) * QUARTER;
+    }
+
+    double wrapFraction(double value) {
+
+        double wrapped = value % 1.0;
+
+        if (wrapped < 0)
+            wrapped += 1.0;
+
+        return wrapped;
     }
 }

@@ -9,9 +9,11 @@ public class WorldData extends DataPackage {
 
     /*
      * Immutable world definition loaded from a PNG map and optional companion
-     * JSON. Holds identity, pixel map, scale, gravity, rotation, tilt, and time
-     * configuration. worldEpochStart is the one mutable field — written from
-     * the save file at runtime, never from the world definition itself.
+     * JSON. Holds identity, pixel map, scale, gravity, rotation, tilt, time
+     * configuration, and the planetary offset used to phase the day/night
+     * gradient across the world's Y axis. worldEpochStart is the one mutable
+     * field — written from the save file at runtime, never from the world
+     * definition itself.
      */
 
     // Identity
@@ -38,6 +40,11 @@ public class WorldData extends DataPackage {
     // east-west rotation scroll applies.
     private final float axialTilt;
 
+    // Planetary Offset — fractional position (0-1) along this world's Y span
+    // that lines up with the calendar's global reference time at real-world
+    // noon. See WorldWrapUtility.wrappedPlanetaryOffset.
+    private final float planetaryOffset;
+
     // Constructor \\
 
     public WorldData(
@@ -50,7 +57,8 @@ public class WorldData extends DataPackage {
             float daysPerDay,
             String calendarName,
             float rotationSpeed,
-            float axialTilt) {
+            float axialTilt,
+            float planetaryOffset) {
 
         // Identity
         this.worldName = worldName;
@@ -72,6 +80,9 @@ public class WorldData extends DataPackage {
 
         // Tilt
         this.axialTilt = axialTilt;
+
+        // Planetary Offset
+        this.planetaryOffset = planetaryOffset;
     }
 
     // Accessible \\
@@ -122,5 +133,9 @@ public class WorldData extends DataPackage {
 
     public float getAxialTilt() {
         return axialTilt;
+    }
+
+    public float getPlanetaryOffset() {
+        return planetaryOffset;
     }
 }

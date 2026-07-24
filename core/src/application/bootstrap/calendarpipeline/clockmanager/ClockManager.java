@@ -4,24 +4,29 @@ import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import application.bootstrap.calendarpipeline.calendarmanager.CalendarManager;
 import application.bootstrap.calendarpipeline.clock.ClockData;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.ManagerPackage;
 
 public class ClockManager extends ManagerPackage {
 
     /*
      * Drives the in-game clock for the active world. Owns the ClockHandle and
-     * all tracker branches. Wires branches to the active world's calendar and
-     * epoch, and advances time each update frame. Supports world switching by
-     * rewiring branches to the new world's data. Every fixed time constant —
-     * starting point, day/year shape, years-per-age — now comes from the
-     * active calendar, validated once at calendar build time.
+     * all tracker branches, and wires them to the active world's calendar and
+     * epoch. Every fixed time constant — starting point, day/year shape,
+     * years-per-age — comes from the active calendar. Each frame also resolves
+     * the current render viewpoint's position along the world's Y axis into a
+     * location phase offset (WorldWrapUtility.wrappedPlanetaryOffset), so
+     * visualTimeOfDay reflects day/night at that specific point on the world
+     * rather than a single global value.
      */
 
     // Internal
     private CalendarManager calendarManager;
     private WorldManager worldManager;
+    private WorldStreamManager worldStreamManager;
 
     // Branches
     private CurrentTrackerBranch currentTracker;
@@ -58,6 +63,7 @@ public class ClockManager extends ManagerPackage {
         // Internal
         this.calendarManager = get(CalendarManager.class);
         this.worldManager = get(WorldManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     @Override
@@ -93,10 +99,30 @@ public class ClockManager extends ManagerPackage {
     }
 
     private void advanceGameClock() {
-        if (currentTracker.advanceTime())
+
+        double locationOffset = computeLocationOffset();
+
+        if (currentTracker.advanceTime(locationOffset))
             if (dayTracker.advanceTime())
                 if (monthTracker.advanceTime())
                     yearTracker.advanceTime();
+    }
+
+    // Location \\
+
+    private double computeLocationOffset() {
+
+        if (!worldStreamManager.hasGrids())
+            return 0.0;
+
+        WorldHandle activeWorld = worldStreamManager.getActiveWorldHandle();
+
+        if (activeWorld == null)
+            return 0.0;
+
+        long chunkCoordinate = worldStreamManager.getGrids().get(0).getActiveChunkCoordinate();
+
+        return WorldWrapUtility.wrappedPlanetaryOffset(activeWorld, chunkCoordinate);
     }
 
     // World Switch \\

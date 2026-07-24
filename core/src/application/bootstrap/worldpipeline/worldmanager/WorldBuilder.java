@@ -41,6 +41,7 @@ class WorldBuilder extends BuilderPackage {
         String calendarName = EngineSetting.DEFAULT_CALENDAR_NAME;
         float rotationSpeed = EngineSetting.DEFAULT_WORLD_ROTATION_SPEED;
         float axialTilt = EngineSetting.DEFAULT_AXIAL_TILT_DEGREES;
+        float planetaryOffset = EngineSetting.DEFAULT_PLANETARY_OFFSET;
 
         File jsonFile = resolveCompanionJson(file);
 
@@ -69,6 +70,9 @@ class WorldBuilder extends BuilderPackage {
 
             if (json.has("axial_tilt"))
                 axialTilt = json.get("axial_tilt").getAsFloat();
+
+            if (json.has("planetary_offset"))
+                planetaryOffset = json.get("planetary_offset").getAsFloat();
         }
 
         WorldData data = new WorldData(
@@ -81,7 +85,8 @@ class WorldBuilder extends BuilderPackage {
                 daysPerDay,
                 calendarName,
                 rotationSpeed,
-                axialTilt);
+                axialTilt,
+                planetaryOffset);
 
         WorldHandle handle = create(WorldHandle.class);
         handle.constructor(data);

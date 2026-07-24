@@ -334,6 +334,7 @@ public class EngineSetting {
         public static final float DEFAULT_GRAVITY_Z = 0.0f;
         public static final float DEFAULT_WORLD_ROTATION_SPEED = 1.0f;
         public static final float DEFAULT_AXIAL_TILT_DEGREES = 23.5f;
+        public static final float DEFAULT_PLANETARY_OFFSET = 0.0f;
 
         // Rotation \\
 

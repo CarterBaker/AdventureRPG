@@ -75,4 +75,8 @@ public class WorldHandle extends HandlePackage {
     public float getAxialTilt() {
         return data.getAxialTilt();
     }
+
+    public float getPlanetaryOffset() {
+        return data.getPlanetaryOffset();
+    }
 }

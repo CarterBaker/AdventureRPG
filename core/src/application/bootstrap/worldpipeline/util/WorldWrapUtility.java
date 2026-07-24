@@ -67,4 +67,30 @@ public class WorldWrapUtility extends EngineUtility {
         int worldHeightChunks = worldHandle.getWorldScale().y / EngineSetting.CHUNK_SIZE;
         return wrappedDelta(a, b, worldHeightChunks);
     }
+
+    // Planetary Phase \\
+
+    /*
+     * Fractional phase offset (0-1) to add to the global raw time of day for
+     * a location at the given chunk coordinate. Derived from that chunk's
+     * position along the world's Y span relative to the world's own
+     * planetaryOffset. Wraps cleanly at the world edges — a full traversal
+     * of world height adds exactly 1.0, which is a no-op against a value
+     * that's already cyclic mod 1, so there is no seam.
+     */
+    public static double wrappedPlanetaryOffset(WorldHandle worldHandle, long chunkCoordinate) {
+
+        int worldHeightChunks = worldHandle.getWorldScale().y / EngineSetting.CHUNK_SIZE;
+
+        if (worldHeightChunks <= 0)
+            return 0.0;
+
+        long chunkY = Coordinate2Long.unpackY(chunkCoordinate);
+        long wrappedY = ((chunkY % worldHeightChunks) + worldHeightChunks) % worldHeightChunks;
+        double yFraction = (double) wrappedY / worldHeightChunks;
+
+        double offset = yFraction - worldHandle.getPlanetaryOffset();
+
+        return (offset % 1.0 + 1.0) % 1.0;
+    }
 }
