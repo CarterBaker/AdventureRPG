@@ -1,3 +1,4 @@
+// WorldWrapUtility.java
 package application.bootstrap.worldpipeline.util;
 
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -8,6 +9,8 @@ import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
 
 public class WorldWrapUtility extends EngineUtility {
+
+    private static final double TWO_PI = Math.PI * 2.0;
 
     public static Vector3 wrapAroundChunk(Vector3 input) {
 
@@ -68,6 +71,27 @@ public class WorldWrapUtility extends EngineUtility {
         return wrappedDelta(a, b, worldHeightChunks);
     }
 
+    // Y-Axis Fraction \\
+
+    /*
+     * Shared basis for every location-based day/night calculation below.
+     * Wraps a chunk's position along the world's Y span into a 0-1 fraction
+     * so the planetary phase offset and the latitude bend are always
+     * derived from the exact same value and can never drift out of sync.
+     */
+    private static double wrappedYFraction(WorldHandle worldHandle, long chunkCoordinate) {
+
+        int worldHeightChunks = worldHandle.getWorldScale().y / EngineSetting.CHUNK_SIZE;
+
+        if (worldHeightChunks <= 0)
+            return 0.0;
+
+        long chunkY = Coordinate2Long.unpackY(chunkCoordinate);
+        long wrappedY = ((chunkY % worldHeightChunks) + worldHeightChunks) % worldHeightChunks;
+
+        return (double) wrappedY / worldHeightChunks;
+    }
+
     // Planetary Phase \\
 
     /*
@@ -80,17 +104,31 @@ public class WorldWrapUtility extends EngineUtility {
      */
     public static double wrappedPlanetaryOffset(WorldHandle worldHandle, long chunkCoordinate) {
 
-        int worldHeightChunks = worldHandle.getWorldScale().y / EngineSetting.CHUNK_SIZE;
-
-        if (worldHeightChunks <= 0)
-            return 0.0;
-
-        long chunkY = Coordinate2Long.unpackY(chunkCoordinate);
-        long wrappedY = ((chunkY % worldHeightChunks) + worldHeightChunks) % worldHeightChunks;
-        double yFraction = (double) wrappedY / worldHeightChunks;
-
+        double yFraction = wrappedYFraction(worldHandle, chunkCoordinate);
         double offset = yFraction - worldHandle.getPlanetaryOffset();
 
         return (offset % 1.0 + 1.0) % 1.0;
+    }
+
+    // Latitude Bend \\
+
+    /*
+     * Signed latitude factor (-1 to 1) for a location at the given chunk
+     * coordinate, used to bend seasonal day length toward the poles and
+     * flatten it toward the equator. The world's Y span is treated as one
+     * full lap of a meridian great circle rather than a bounded strip —
+     * sin(yFraction * 2π) crosses zero twice (two equators) and peaks twice
+     * (two poles) per lap, which wraps with no seam at the world edges and
+     * needs no special-casing at either end of the Y axis. The sign carries
+     * the hemisphere: CurrentTrackerBranch multiplies it straight into the
+     * day length delta, so the two poles bend in opposite directions
+     * relative to the calendar's authored season, exactly like real winter
+     * and summer on opposite hemispheres.
+     */
+    public static double wrappedLatitudeFactor(WorldHandle worldHandle, long chunkCoordinate) {
+
+        double yFraction = wrappedYFraction(worldHandle, chunkCoordinate);
+
+        return Math.sin(yFraction * TWO_PI);
     }
 }

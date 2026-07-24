@@ -447,6 +447,11 @@ public class EngineSetting {
 
         public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
 
+        // Latitude Day Length \\
+
+        public static final float LATITUDE_DAYLENGTH_REFERENCE_TILT_DEGREES = 23.5f;
+        public static final float LATITUDE_DAYLENGTH_CURVE_POWER = 1.0f;
+
         // Overhead — Weather Patterns \\
 
         public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;

@@ -1,3 +1,4 @@
+// ClockManager.java
 package application.bootstrap.calendarpipeline.clockmanager;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
@@ -18,7 +19,8 @@ public class ClockManager extends ManagerPackage {
      * epoch. Every fixed time constant — starting point, day/year shape,
      * years-per-age — comes from the active calendar. Each frame also
      * resolves the current render viewpoint's position along the world's Y
-     * axis into a location phase offset (WorldWrapUtility.wrappedPlanetaryOffset),
+     * axis into a location phase offset and a latitude factor (see
+     * WorldWrapUtility's wrappedPlanetaryOffset and wrappedLatitudeFactor),
      * and SeasonBlendBranch resolves the calendar's own named seasons into a
      * current daylight fraction, so visualTimeOfDay reflects both where and
      * when on the world a viewer actually is.
@@ -94,7 +96,12 @@ public class ClockManager extends ManagerPackage {
 
     private void wireData(WorldHandle activeWorld) {
         seasonBlendBranch.assignData(calendarHandle);
-        currentTracker.assignData(calendarHandle, clockHandle, activeWorld.getDaysPerDay(), seasonBlendBranch);
+        currentTracker.assignData(
+                calendarHandle,
+                clockHandle,
+                activeWorld.getDaysPerDay(),
+                activeWorld.getAxialTilt(),
+                seasonBlendBranch);
         dayTracker.assignData(calendarHandle, clockHandle);
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
@@ -104,9 +111,18 @@ public class ClockManager extends ManagerPackage {
 
     private void advanceGameClock() {
 
-        double locationOffset = computeLocationOffset();
+        WorldHandle locationWorld = resolveLocationWorld();
 
-        if (currentTracker.advanceTime(locationOffset))
+        double locationOffset = 0.0;
+        double latitudeFactor = 0.0;
+
+        if (locationWorld != null) {
+            long chunkCoordinate = worldStreamManager.getGrids().get(0).getActiveChunkCoordinate();
+            locationOffset = WorldWrapUtility.wrappedPlanetaryOffset(locationWorld, chunkCoordinate);
+            latitudeFactor = WorldWrapUtility.wrappedLatitudeFactor(locationWorld, chunkCoordinate);
+        }
+
+        if (currentTracker.advanceTime(locationOffset, latitudeFactor))
             if (dayTracker.advanceTime())
                 if (monthTracker.advanceTime())
                     yearTracker.advanceTime();
@@ -114,26 +130,19 @@ public class ClockManager extends ManagerPackage {
 
     // Location \\
 
-    private double computeLocationOffset() {
+    private WorldHandle resolveLocationWorld() {
 
         if (!worldStreamManager.hasGrids())
-            return 0.0;
+            return null;
 
-        WorldHandle activeWorld = worldStreamManager.getActiveWorldHandle();
-
-        if (activeWorld == null)
-            return 0.0;
-
-        long chunkCoordinate = worldStreamManager.getGrids().get(0).getActiveChunkCoordinate();
-
-        return WorldWrapUtility.wrappedPlanetaryOffset(activeWorld, chunkCoordinate);
+        return worldStreamManager.getActiveWorldHandle();
     }
 
     // World Switch \\
 
     /*
      * Call when the player travels to a different world.
-     * Swaps calendar, time rate, and epoch anchor.
+     * Swaps calendar, time rate, axial tilt, and epoch anchor.
      * Time of day will immediately reflect the new world's game day cycle.
      */
     public void switchWorld(WorldHandle newWorld) {
@@ -147,6 +156,7 @@ public class ClockManager extends ManagerPackage {
         clockHandle.setCalendarHandle(calendarHandle);
         currentTracker.setCalendarHandle(calendarHandle);
         currentTracker.setDaysPerDay(newWorld.getDaysPerDay());
+        currentTracker.setAxialTilt(newWorld.getAxialTilt());
 
         seasonBlendBranch.assignData(calendarHandle);
         dayTracker.assignData(calendarHandle, clockHandle);
