@@ -327,7 +327,6 @@ public class EngineSetting {
         // World Defaults \\
 
         public static final String DEFAULT_CALENDAR_NAME = "standard/Default";
-        public static final float DEFAULT_DAYS_PER_DAY = 20.0f;
         public static final float DEFAULT_GRAVITY_MULTIPLIER = 1.0f;
         public static final float DEFAULT_GRAVITY_X = 0.0f;
         public static final float DEFAULT_GRAVITY_Y = -1.0f;

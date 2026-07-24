@@ -11,7 +11,8 @@ class CurrentTrackerBranch extends BranchPackage {
     /*
      * Advances the sub-day clock every frame from the real system clock,
      * applying the calendar's middayOffset so real-world noon lines up with
-     * in-game noon. visualTimeOfDay folds in a location phase (see
+     * in-game noon. daysPerDay is read from the active calendar — never a
+     * fixed engine constant. visualTimeOfDay folds in a location phase (see
      * WorldWrapUtility.wrappedPlanetaryOffset, supplied by ClockManager)
      * before the day-length bend, so different points along the world's Y
      * axis experience day and night at different moments, wrapping
@@ -78,22 +79,18 @@ class CurrentTrackerBranch extends BranchPackage {
     void assignData(
             CalendarHandle calendarHandle,
             ClockHandle clockHandle,
-            float daysPerDay,
             float axialTilt,
             SeasonBlendBranch seasonBlendBranch) {
         this.calendarHandle = calendarHandle;
         this.clockHandle = clockHandle;
-        this.daysPerDay = daysPerDay;
+        this.daysPerDay = calendarHandle.getDaysPerDay();
         this.seasonBlendBranch = seasonBlendBranch;
         setAxialTilt(axialTilt);
     }
 
     void setCalendarHandle(CalendarHandle calendarHandle) {
         this.calendarHandle = calendarHandle;
-    }
-
-    void setDaysPerDay(float daysPerDay) {
-        this.daysPerDay = daysPerDay;
+        this.daysPerDay = calendarHandle.getDaysPerDay();
     }
 
     void setAxialTilt(float axialTilt) {

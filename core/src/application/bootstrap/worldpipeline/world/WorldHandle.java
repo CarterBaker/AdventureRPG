@@ -52,10 +52,6 @@ public class WorldHandle extends HandlePackage {
         return data.getGravityDirection();
     }
 
-    public float getDaysPerDay() {
-        return data.getDaysPerDay();
-    }
-
     public String getCalendarName() {
         return data.getCalendarName();
     }

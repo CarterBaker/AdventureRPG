@@ -9,11 +9,12 @@ public class WorldData extends DataPackage {
 
     /*
      * Immutable world definition loaded from a PNG map and optional companion
-     * JSON. Holds identity, pixel map, scale, gravity, rotation, tilt, time
-     * configuration, and the planetary offset used to phase the day/night
-     * gradient across the world's Y axis. worldEpochStart is the one mutable
-     * field — written from the save file at runtime, never from the world
-     * definition itself.
+     * JSON. Holds identity, pixel map, scale, gravity, rotation, tilt, and the
+     * planetary offset used to phase the day/night gradient across the
+     * world's Y axis. calendarName points to the per-world calendar
+     * definition, which owns daysPerDay and every other day/year shape
+     * setting. worldEpochStart is the one mutable field — written from the
+     * save file at runtime, never from the world definition itself.
      */
 
     // Identity
@@ -27,7 +28,6 @@ public class WorldData extends DataPackage {
     private final Vector3 gravityDirection;
 
     // Time
-    private final float daysPerDay;
     private final String calendarName;
     private long worldEpochStart;
 
@@ -54,7 +54,6 @@ public class WorldData extends DataPackage {
             Vector2Int worldScale,
             float gravityMultiplier,
             Vector3 gravityDirection,
-            float daysPerDay,
             String calendarName,
             float rotationSpeed,
             float axialTilt,
@@ -71,7 +70,6 @@ public class WorldData extends DataPackage {
         this.gravityDirection = gravityDirection;
 
         // Time
-        this.daysPerDay = daysPerDay;
         this.calendarName = calendarName;
         this.worldEpochStart = -1L;
 
@@ -109,10 +107,6 @@ public class WorldData extends DataPackage {
 
     public Vector3 getGravityDirection() {
         return gravityDirection;
-    }
-
-    public float getDaysPerDay() {
-        return daysPerDay;
     }
 
     public String getCalendarName() {

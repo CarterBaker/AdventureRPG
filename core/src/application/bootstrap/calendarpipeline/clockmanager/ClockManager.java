@@ -17,9 +17,9 @@ public class ClockManager extends ManagerPackage {
      * Drives the in-game clock for the active world. Owns the ClockHandle and
      * all tracker branches, and wires them to the active world's calendar and
      * epoch. Every fixed time constant — starting point, day/year shape,
-     * years-per-age — comes from the active calendar. Each frame also
-     * resolves the current render viewpoint's position along the world's Y
-     * axis into a location phase offset and a latitude factor (see
+     * years-per-age, daysPerDay — comes from the active calendar. Each frame
+     * also resolves the current render viewpoint's position along the
+     * world's Y axis into a location phase offset and a latitude factor (see
      * WorldWrapUtility's wrappedPlanetaryOffset and wrappedLatitudeFactor),
      * and SeasonBlendBranch resolves the calendar's own named seasons into a
      * current daylight fraction, so visualTimeOfDay reflects both where and
@@ -99,7 +99,6 @@ public class ClockManager extends ManagerPackage {
         currentTracker.assignData(
                 calendarHandle,
                 clockHandle,
-                activeWorld.getDaysPerDay(),
                 activeWorld.getAxialTilt(),
                 seasonBlendBranch);
         dayTracker.assignData(calendarHandle, clockHandle);
@@ -155,7 +154,6 @@ public class ClockManager extends ManagerPackage {
         clockHandle.setWorldEpochStart(newWorld.getWorldEpochStart());
         clockHandle.setCalendarHandle(calendarHandle);
         currentTracker.setCalendarHandle(calendarHandle);
-        currentTracker.setDaysPerDay(newWorld.getDaysPerDay());
         currentTracker.setAxialTilt(newWorld.getAxialTilt());
 
         seasonBlendBranch.assignData(calendarHandle);

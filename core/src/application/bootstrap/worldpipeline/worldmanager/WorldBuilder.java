@@ -37,7 +37,6 @@ class WorldBuilder extends BuilderPackage {
                 EngineSetting.DEFAULT_GRAVITY_X,
                 EngineSetting.DEFAULT_GRAVITY_Y,
                 EngineSetting.DEFAULT_GRAVITY_Z);
-        float daysPerDay = EngineSetting.DEFAULT_DAYS_PER_DAY;
         String calendarName = EngineSetting.DEFAULT_CALENDAR_NAME;
         float rotationSpeed = EngineSetting.DEFAULT_WORLD_ROTATION_SPEED;
         float axialTilt = EngineSetting.DEFAULT_AXIAL_TILT_DEGREES;
@@ -59,9 +58,6 @@ class WorldBuilder extends BuilderPackage {
                         dir.get(2).getAsFloat());
             }
 
-            if (json.has("days_per_day"))
-                daysPerDay = json.get("days_per_day").getAsFloat();
-
             if (json.has("calendar"))
                 calendarName = json.get("calendar").getAsString();
 
@@ -82,7 +78,6 @@ class WorldBuilder extends BuilderPackage {
                 worldScale,
                 gravityMultiplier,
                 gravityDirection,
-                daysPerDay,
                 calendarName,
                 rotationSpeed,
                 axialTilt,
