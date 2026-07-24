@@ -587,7 +587,6 @@ public class EngineSetting {
 
         // Clock \\
 
-        public static final double CLOCK_MAX_SEASON_SHIFT = 0.08;
         public static final double CLOCK_MIDNIGHT = 0.0;
         public static final double CLOCK_NOISE_DIVISOR = 1.6777216E7;
         public static final long CLOCK_NOISE_MASK = 16777215L;

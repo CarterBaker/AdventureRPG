@@ -37,9 +37,9 @@
         { "name": "Starseed", "days": 31 }
     ],
     "seasons": [
-        { "name": "Spring", "startMonth": 0, "startDayOfMonth": 1 },
-        { "name": "Summer", "startMonth": 3, "startDayOfMonth": 1 },
-        { "name": "Autumn", "startMonth": 6, "startDayOfMonth": 1 },
-        { "name": "Winter", "startMonth": 9, "startDayOfMonth": 1 }
+        { "name": "Spring", "startMonth": 0, "startDayOfMonth": 1, "dayLength": 0.55 },
+        { "name": "Summer", "startMonth": 3, "startDayOfMonth": 1, "dayLength": 0.65 },
+        { "name": "Autumn", "startMonth": 6, "startDayOfMonth": 1, "dayLength": 0.50 },
+        { "name": "Winter", "startMonth": 9, "startDayOfMonth": 1, "dayLength": 0.35 }
     ]
 }

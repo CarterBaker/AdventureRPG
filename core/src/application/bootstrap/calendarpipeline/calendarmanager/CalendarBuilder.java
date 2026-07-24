@@ -21,10 +21,11 @@ class CalendarBuilder extends BuilderPackage {
      * Parses calendar JSON into a CalendarData and wraps it in a CalendarHandle.
      * Computes total days in year from parsed month data. Also parses this
      * calendar's own day/year shape (daysPerDay, hoursPerDay, minutesPerHour,
-     * lunarCycleDays, middayOffset, yearsPerAge — formerly fixed engine-wide
-     * constants), its own starting point (the "start" block — also formerly
-     * fixed constants), and its own named seasons, all validated against the
-     * parsed month layout. Bootstrap-only.
+     * lunarCycleDays, middayOffset, yearsPerAge), its own starting point (the
+     * "start" block), and its own named seasons, all validated against the
+     * parsed month layout. Each season also carries a dayLength (0-1 fraction
+     * of daylight at that season's center date), consumed by SeasonBlendBranch.
+     * Bootstrap-only.
      */
 
     // Build \\
@@ -149,6 +150,7 @@ class CalendarBuilder extends BuilderPackage {
             String name = JsonUtility.validateString(seasonObject, "name");
             int startMonth = JsonUtility.validateInt(seasonObject, "startMonth");
             int startDayOfMonth = JsonUtility.getInt(seasonObject, "startDayOfMonth", 1);
+            float dayLength = JsonUtility.validateFloat(seasonObject, "dayLength");
 
             if (startMonth < 0 || startMonth >= monthNames.size())
                 throwException("Calendar \"" + calendarName + "\" season \"" + name + "\" startMonth " + startMonth +
@@ -161,6 +163,10 @@ class CalendarBuilder extends BuilderPackage {
                         startDayOfMonth + " is out of range for month \"" + monthNames.get(startMonth) +
                         "\" (" + daysInStartMonth + " days)");
 
+            if (dayLength < 0f || dayLength > 1f)
+                throwException("Calendar \"" + calendarName + "\" season \"" + name + "\" dayLength " +
+                        dayLength + " is out of range — must be between 0.0 and 1.0");
+
             boolean isAfterPrevious = startMonth > lastStartMonth
                     || (startMonth == lastStartMonth && startDayOfMonth > lastStartDay);
 
@@ -171,7 +177,7 @@ class CalendarBuilder extends BuilderPackage {
             lastStartMonth = startMonth;
             lastStartDay = startDayOfMonth;
 
-            seasons.add(new SeasonRangeStruct(name, startMonth, startDayOfMonth));
+            seasons.add(new SeasonRangeStruct(name, startMonth, startDayOfMonth, dayLength));
         }
 
         return seasons;

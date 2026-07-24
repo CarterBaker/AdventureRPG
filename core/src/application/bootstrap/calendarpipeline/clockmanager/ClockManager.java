@@ -16,11 +16,12 @@ public class ClockManager extends ManagerPackage {
      * Drives the in-game clock for the active world. Owns the ClockHandle and
      * all tracker branches, and wires them to the active world's calendar and
      * epoch. Every fixed time constant — starting point, day/year shape,
-     * years-per-age — comes from the active calendar. Each frame also resolves
-     * the current render viewpoint's position along the world's Y axis into a
-     * location phase offset (WorldWrapUtility.wrappedPlanetaryOffset), so
-     * visualTimeOfDay reflects day/night at that specific point on the world
-     * rather than a single global value.
+     * years-per-age — comes from the active calendar. Each frame also
+     * resolves the current render viewpoint's position along the world's Y
+     * axis into a location phase offset (WorldWrapUtility.wrappedPlanetaryOffset),
+     * and SeasonBlendBranch resolves the calendar's own named seasons into a
+     * current daylight fraction, so visualTimeOfDay reflects both where and
+     * when on the world a viewer actually is.
      */
 
     // Internal
@@ -35,6 +36,7 @@ public class ClockManager extends ManagerPackage {
     private YearTrackerBranch yearTracker;
     private InternalBufferBranch internalBuffer;
     private SkyColorBranch skyColorBranch;
+    private SeasonBlendBranch seasonBlendBranch;
 
     // Clock
     private CalendarHandle calendarHandle;
@@ -52,6 +54,7 @@ public class ClockManager extends ManagerPackage {
         this.yearTracker = create(YearTrackerBranch.class);
         this.internalBuffer = create(InternalBufferBranch.class);
         this.skyColorBranch = create(SkyColorBranch.class);
+        this.seasonBlendBranch = create(SeasonBlendBranch.class);
 
         // Clock
         this.clockHandle = create(ClockHandle.class);
@@ -90,7 +93,8 @@ public class ClockManager extends ManagerPackage {
     // Clock \\
 
     private void wireData(WorldHandle activeWorld) {
-        currentTracker.assignData(calendarHandle, clockHandle, activeWorld.getDaysPerDay());
+        seasonBlendBranch.assignData(calendarHandle);
+        currentTracker.assignData(calendarHandle, clockHandle, activeWorld.getDaysPerDay(), seasonBlendBranch);
         dayTracker.assignData(calendarHandle, clockHandle);
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
@@ -144,6 +148,7 @@ public class ClockManager extends ManagerPackage {
         currentTracker.setCalendarHandle(calendarHandle);
         currentTracker.setDaysPerDay(newWorld.getDaysPerDay());
 
+        seasonBlendBranch.assignData(calendarHandle);
         dayTracker.assignData(calendarHandle, clockHandle);
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);

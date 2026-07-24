@@ -10,18 +10,20 @@ class CurrentTrackerBranch extends BranchPackage {
     /*
      * Advances the sub-day clock every frame from the real system clock,
      * applying the calendar's middayOffset so real-world noon lines up with
-     * in-game noon. visualTimeOfDay additionally folds in a location phase
-     * (see WorldWrapUtility.wrappedPlanetaryOffset, supplied by ClockManager)
-     * before the seasonal sunrise/sunset bend, so different points along the
+     * in-game noon. visualTimeOfDay folds in a location phase (see
+     * WorldWrapUtility.wrappedPlanetaryOffset, supplied by ClockManager)
+     * before the seasonal day-length bend, so different points along the
      * world's Y axis experience day and night at different moments, wrapping
-     * seamlessly at the world edges.
+     * seamlessly at the world edges. The day-length bend itself comes from
+     * SeasonBlendBranch, which blends between the calendar's own named
+     * seasons rather than a fixed sine assumption.
      */
 
     // Internal
     private long MILLIS_PER_REAL_DAY;
 
-    // Seasonal Bending
-    private double MAX_SEASON_SHIFT;
+    // Seasonal Bending — safety bounds only; the shift amount itself now
+    // comes from SeasonBlendBranch's data-driven day length.
     private double SUNRISE_MIN;
     private double SUNRISE_MAX;
     private double SUNSET_MIN;
@@ -33,6 +35,7 @@ class CurrentTrackerBranch extends BranchPackage {
 
     // Calendar
     private CalendarHandle calendarHandle;
+    private SeasonBlendBranch seasonBlendBranch;
 
     // Per-world
     private float daysPerDay;
@@ -50,7 +53,6 @@ class CurrentTrackerBranch extends BranchPackage {
         this.MILLIS_PER_REAL_DAY = EngineSetting.MILLIS_PER_REAL_DAY;
 
         // Seasonal Bending
-        this.MAX_SEASON_SHIFT = EngineSetting.CLOCK_MAX_SEASON_SHIFT;
         this.SUNRISE_MIN = EngineSetting.CLOCK_SUNRISE_MIN;
         this.SUNRISE_MAX = EngineSetting.CLOCK_SUNRISE_MAX;
         this.SUNSET_MIN = EngineSetting.CLOCK_SUNSET_MIN;
@@ -66,10 +68,15 @@ class CurrentTrackerBranch extends BranchPackage {
 
     // Assignment \\
 
-    void assignData(CalendarHandle calendarHandle, ClockHandle clockHandle, float daysPerDay) {
+    void assignData(
+            CalendarHandle calendarHandle,
+            ClockHandle clockHandle,
+            float daysPerDay,
+            SeasonBlendBranch seasonBlendBranch) {
         this.calendarHandle = calendarHandle;
         this.clockHandle = clockHandle;
         this.daysPerDay = daysPerDay;
+        this.seasonBlendBranch = seasonBlendBranch;
     }
 
     void setCalendarHandle(CalendarHandle calendarHandle) {
@@ -135,15 +142,17 @@ class CurrentTrackerBranch extends BranchPackage {
     }
 
     /*
-     * Bends raw time of day using seasonal sunrise/sunset offsets so that
-     * summers have longer days and winters have longer nights.
-     * 0.0 and 1.0 are always midnight. 0.5 is always visual noon.
-     * The bend only affects the rate at which time moves between those anchors.
+     * Bends raw time of day using the season blend's current daylight
+     * fraction, so day length actually shrinks and grows through the year
+     * according to each season's own data rather than a fixed sine curve.
+     * 0.0 and 1.0 are always midnight. 0.5 is always visual noon. The bend
+     * only affects the rate at which time moves between those anchors.
      */
     double calculateVisualTimeOfDay(double rawTimeOfDay, double yearProgress) {
 
-        double seasonEffect = Math.sin(yearProgress * 2 * Math.PI);
-        double shift = seasonEffect * MAX_SEASON_SHIFT;
+        float dayLength = seasonBlendBranch.getDayLengthForYearProgress(yearProgress);
+        double shift = (dayLength - 0.5) * 0.5;
+
         double actualSunrise = Math.max(SUNRISE_MIN, Math.min(SUNRISE_MAX, QUARTER - shift));
         double actualSunset = Math.max(SUNSET_MIN, Math.min(SUNSET_MAX, THREE_QUARTERS + shift));
 
