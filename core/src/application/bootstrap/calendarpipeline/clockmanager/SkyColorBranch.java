@@ -10,20 +10,18 @@ import engine.util.mathematics.vectors.Vector3;
 class SkyColorBranch extends BranchPackage {
 
     /*
-     * Replicates SkyColor.glsl CPU-side at altitude=0 (horizon) and altitude=1
-     * (zenith), then pushes both to SkyColorData UBO each frame. The sky shader
-     * reads these directly instead of recomputing them. Chunk shaders use
-     * u_skyHorizonColor for distance fog blending via AtmosphericFog.glsl.
-     * u_maxDistanceFromCenter is owned by SettingsSystem via SettingsData UBO.
-     *
-     * NOTE: computeCycleFactors() and computeSeasonFactors() mirror
-     * DayNightCycle.glsl and SeasonCycle.glsl — verify against your GLSL if
-     * results diverge.
+     * Replicates SkyColor.glsl CPU-side at altitude=0 (horizon) and
+     * altitude=1 (zenith), pushing both to SkyColorData each frame so the
+     * sky shader can read them directly. Season tint and sunrise/sunset
+     * color come from the active calendar's own seasons via
+     * SeasonBlendBranch, so they track whatever seasons that calendar
+     * defines rather than a fixed set.
      */
 
     // Internal
     private UBOManager uboManager;
     private ClockHandle clockHandle;
+    private SeasonBlendBranch seasonBlendBranch;
 
     // UBO
     private UBOHandle skyColorData;
@@ -42,8 +40,9 @@ class SkyColorBranch extends BranchPackage {
 
     // Assignment \\
 
-    void assignData(ClockHandle clockHandle) {
+    void assignData(ClockHandle clockHandle, SeasonBlendBranch seasonBlendBranch) {
         this.clockHandle = clockHandle;
+        this.seasonBlendBranch = seasonBlendBranch;
     }
 
     // Update \\
@@ -59,7 +58,7 @@ class SkyColorBranch extends BranchPackage {
 
         float t = (float) clockHandle.getVisualTimeOfDay();
         float yearProgress = (float) clockHandle.getVisualYearProgress();
-        float dailyRandom = clockHandle.getRandomNoiseFromDay() / 2147483647.0f;
+        float dailyRandom = clockHandle.getRandomNoiseFromDay();
         float dailyVar = computeDailyVariationMask(t);
 
         float[] cycle = computeCycleFactors(t);
@@ -67,12 +66,6 @@ class SkyColorBranch extends BranchPackage {
         float nightF = cycle[1];
         float sunriseF = cycle[2];
         float sunsetF = cycle[3];
-
-        float[] season = computeSeasonFactors(yearProgress);
-        float springF = season[0];
-        float summerF = season[1];
-        float fallF = season[2];
-        float winterF = season[3];
 
         float[] nightTop = { EngineSetting.SKY_NIGHT_TOP_R, EngineSetting.SKY_NIGHT_TOP_G,
                 EngineSetting.SKY_NIGHT_TOP_B };
@@ -85,23 +78,14 @@ class SkyColorBranch extends BranchPackage {
         float[] horizon = blend2(nightBottom, nightF, dayBottom, dayF);
         float[] zenith = blend2(nightTop, nightF, dayTop, dayF);
 
-        float[] winterTint = { EngineSetting.SKY_WINTER_TINT_R, EngineSetting.SKY_WINTER_TINT_G,
-                EngineSetting.SKY_WINTER_TINT_B };
-        float[] summerTint = { EngineSetting.SKY_SUMMER_TINT_R, EngineSetting.SKY_SUMMER_TINT_G,
-                EngineSetting.SKY_SUMMER_TINT_B };
-        float[] springTint = { EngineSetting.SKY_SPRING_TINT_R, EngineSetting.SKY_SPRING_TINT_G,
-                EngineSetting.SKY_SPRING_TINT_B };
-        float[] fallTint = { EngineSetting.SKY_FALL_TINT_R, EngineSetting.SKY_FALL_TINT_G,
-                EngineSetting.SKY_FALL_TINT_B };
-
-        float[] seasonTint = blend4(winterTint, winterF, summerTint, summerF, springTint, springF, fallTint, fallF);
+        Vector3 seasonTint = seasonBlendBranch.getTintColorForYearProgress(yearProgress);
         float dailySeasonStr = dailyRandom * dailyVar;
         float seasonStrength = dayF * dailySeasonStr * EngineSetting.SKY_SEASONAL_STRENGTH_SCALE;
         float tintScale = EngineSetting.SKY_SEASONAL_TINT_OFFSET_SCALE;
         float[] seasonOffset = {
-                (seasonTint[0] - 1.0f) * tintScale,
-                (seasonTint[1] - 1.0f) * tintScale,
-                (seasonTint[2] - 1.0f) * tintScale
+                (seasonTint.x - 1.0f) * tintScale,
+                (seasonTint.y - 1.0f) * tintScale,
+                (seasonTint.z - 1.0f) * tintScale
         };
 
         addScaled(horizon, seasonOffset, seasonStrength);
@@ -119,16 +103,8 @@ class SkyColorBranch extends BranchPackage {
         addScaled(horizon, dailyOffset, dailyStrength);
         addScaled(zenith, dailyOffset, dailyStrength);
 
-        float[] winterSS = { EngineSetting.SKY_WINTER_SUNRISE_R, EngineSetting.SKY_WINTER_SUNRISE_G,
-                EngineSetting.SKY_WINTER_SUNRISE_B };
-        float[] summerSS = { EngineSetting.SKY_SUMMER_SUNRISE_R, EngineSetting.SKY_SUMMER_SUNRISE_G,
-                EngineSetting.SKY_SUMMER_SUNRISE_B };
-        float[] springSS = { EngineSetting.SKY_SPRING_SUNRISE_R, EngineSetting.SKY_SPRING_SUNRISE_G,
-                EngineSetting.SKY_SPRING_SUNRISE_B };
-        float[] fallSS = { EngineSetting.SKY_FALL_SUNRISE_R, EngineSetting.SKY_FALL_SUNRISE_G,
-                EngineSetting.SKY_FALL_SUNRISE_B };
-
-        float[] seasonSS = blend4(winterSS, winterF, summerSS, summerF, springSS, springF, fallSS, fallF);
+        Vector3 seasonSunrise = seasonBlendBranch.getSunriseColorForYearProgress(yearProgress);
+        float[] seasonSS = { seasonSunrise.x, seasonSunrise.y, seasonSunrise.z };
         float ssF = Math.min(1.0f, sunriseF + sunsetF);
 
         lerpInPlace(horizon, seasonSS, ssF);
@@ -159,18 +135,6 @@ class SkyColorBranch extends BranchPackage {
         return new float[] { day, night, sunrise, sunset };
     }
 
-    // Season Factors \\
-
-    private float[] computeSeasonFactors(float y) {
-
-        float spring = triangleWave(y, 0.00f, 0.25f, 0.50f);
-        float summer = triangleWave(y, 0.25f, 0.50f, 0.75f);
-        float fall = triangleWave(y, 0.50f, 0.75f, 1.00f);
-        float winter = Math.max(0.0f, 1.0f - spring - summer - fall);
-
-        return new float[] { spring, summer, fall, winter };
-    }
-
     // Daily Variation Mask \\
 
     private float computeDailyVariationMask(float t) {
@@ -186,15 +150,6 @@ class SkyColorBranch extends BranchPackage {
                 a[0] * wa + b[0] * wb,
                 a[1] * wa + b[1] * wb,
                 a[2] * wa + b[2] * wb
-        };
-    }
-
-    private float[] blend4(float[] a, float wa, float[] b, float wb,
-            float[] c, float wc, float[] d, float wd) {
-        return new float[] {
-                a[0] * wa + b[0] * wb + c[0] * wc + d[0] * wd,
-                a[1] * wa + b[1] * wb + c[1] * wc + d[1] * wd,
-                a[2] * wa + b[2] * wb + c[2] * wc + d[2] * wd
         };
     }
 
@@ -219,12 +174,6 @@ class SkyColorBranch extends BranchPackage {
         if (t <= min || t >= max)
             return 0.0f;
         return t <= peak ? smoothstep(min, peak, t) : 1.0f - smoothstep(peak, max, t);
-    }
-
-    private float triangleWave(float y, float start, float peak, float end) {
-        if (y <= start || y >= end)
-            return 0.0f;
-        return y <= peak ? smoothstep(start, peak, y) : 1.0f - smoothstep(peak, end, y);
     }
 
     private float fract(float v) {

@@ -6,12 +6,12 @@ import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
-class InternalBufferBranch extends SystemPackage {
+class ClockBufferSystem extends SystemPackage {
 
     /*
      * Pushes clock state to the GPU time UBO each frame. Accumulates elapsed
-     * real time for the shader u_time uniform. Wired to the active ClockHandle
-     * via assignData() after awake.
+     * real time for the shader u_time uniform. Wired to the active
+     * ClockHandle via assignData() after awake.
      */
 
     // Internal

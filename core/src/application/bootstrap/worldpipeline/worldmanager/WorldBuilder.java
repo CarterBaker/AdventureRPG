@@ -68,7 +68,7 @@ class WorldBuilder extends BuilderPackage {
                 axialTilt = json.get("axial_tilt").getAsFloat();
 
             if (json.has("planetary_offset"))
-                planetaryOffset = json.get("planetary_offset").getAsFloat();
+                planetaryOffset = wrapUnitFraction(json.get("planetary_offset").getAsFloat());
         }
 
         WorldData data = new WorldData(
@@ -106,5 +106,14 @@ class WorldBuilder extends BuilderPackage {
         int worldHeight = pixmap.getHeight() * EngineSetting.CHUNKS_PER_PIXEL * EngineSetting.CHUNK_SIZE;
 
         return new Vector2Int(worldWidth, worldHeight);
+    }
+
+    // planetary_offset is a fractional position (0-1) along the world's Y
+    // span — wrap any out-of-range authored value once, at load time.
+    private float wrapUnitFraction(float value) {
+        float wrapped = value % 1.0f;
+        if (wrapped < 0f)
+            wrapped += 1.0f;
+        return wrapped;
     }
 }

@@ -541,36 +541,6 @@ public class EngineSetting {
         public static final float SKY_DAY_BOTTOM_G = 0.52f;
         public static final float SKY_DAY_BOTTOM_B = 0.80f;
 
-        // Sky Season Tints \\
-
-        public static final float SKY_WINTER_TINT_R = 0.70f;
-        public static final float SKY_WINTER_TINT_G = 0.75f;
-        public static final float SKY_WINTER_TINT_B = 0.95f;
-        public static final float SKY_SUMMER_TINT_R = 1.05f;
-        public static final float SKY_SUMMER_TINT_G = 0.95f;
-        public static final float SKY_SUMMER_TINT_B = 0.85f;
-        public static final float SKY_SPRING_TINT_R = 1.00f;
-        public static final float SKY_SPRING_TINT_G = 0.90f;
-        public static final float SKY_SPRING_TINT_B = 0.80f;
-        public static final float SKY_FALL_TINT_R = 0.95f;
-        public static final float SKY_FALL_TINT_G = 0.80f;
-        public static final float SKY_FALL_TINT_B = 0.70f;
-
-        // Sky Sunrise/Sunset Colors \\
-
-        public static final float SKY_WINTER_SUNRISE_R = 0.80f;
-        public static final float SKY_WINTER_SUNRISE_G = 0.50f;
-        public static final float SKY_WINTER_SUNRISE_B = 0.60f;
-        public static final float SKY_SUMMER_SUNRISE_R = 1.00f;
-        public static final float SKY_SUMMER_SUNRISE_G = 0.50f;
-        public static final float SKY_SUMMER_SUNRISE_B = 0.25f;
-        public static final float SKY_SPRING_SUNRISE_R = 0.95f;
-        public static final float SKY_SPRING_SUNRISE_G = 0.65f;
-        public static final float SKY_SPRING_SUNRISE_B = 0.45f;
-        public static final float SKY_FALL_SUNRISE_R = 0.85f;
-        public static final float SKY_FALL_SUNRISE_G = 0.45f;
-        public static final float SKY_FALL_SUNRISE_B = 0.25f;
-
         // Lighting \\
 
         public static final float MOON_BRIGHTNESS_BASE = 0.7f;

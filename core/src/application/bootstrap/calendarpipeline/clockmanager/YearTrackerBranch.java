@@ -7,11 +7,12 @@ import engine.root.BranchPackage;
 class YearTrackerBranch extends BranchPackage {
 
     /*
-     * Detects year and age rollovers from total days with offset. Updates the
-     * current year and age on the ClockHandle when a year change is detected.
-     * Returns true when an age boundary is crossed. Starting year/age and
-     * years-per-age all come from the active calendar now, rather than fixed
-     * engine-wide constants.
+     * Detects year and age rollovers from total days with offset.
+     * totalDaysWithOffset already measures elapsed days from year 0 of the
+     * calendar's starting age, so dividing by totalDaysInYear yields the
+     * absolute current year directly — no additional startYear term is
+     * added on top. Returns true when an age boundary is crossed (the year
+     * has wrapped back to 0 within the new age).
      */
 
     // Internal
@@ -25,8 +26,6 @@ class YearTrackerBranch extends BranchPackage {
 
     @Override
     protected void create() {
-
-        // Tracking
         this.lastYear = -1;
     }
 
@@ -43,13 +42,12 @@ class YearTrackerBranch extends BranchPackage {
 
         long totalDaysWithOffset = clockHandle.getTotalDaysWithOffset();
         int totalDaysInYear = calendarHandle.getTotalDaysInYear();
-        int startYear = calendarHandle.getStartYear();
         int startAge = calendarHandle.getStartAge();
         int yearsPerAge = calendarHandle.getYearsPerAge();
 
         long yearsPerAgeDays = (long) yearsPerAge * totalDaysInYear;
         long dayOfAge = totalDaysWithOffset % yearsPerAgeDays;
-        int currentYear = (int) (dayOfAge / totalDaysInYear) + startYear;
+        int currentYear = (int) (dayOfAge / totalDaysInYear);
 
         if (lastYear == currentYear)
             return false;
@@ -57,11 +55,10 @@ class YearTrackerBranch extends BranchPackage {
         lastYear = currentYear;
 
         int currentAge = (int) (totalDaysWithOffset / yearsPerAgeDays) + startAge;
-        int yearsElapsed = currentYear - startYear;
 
         clockHandle.setCurrentYear(currentYear);
         clockHandle.setCurrentAge(currentAge);
 
-        return yearsElapsed % yearsPerAge == 0;
+        return currentYear == 0;
     }
 }

@@ -14,16 +14,15 @@ import engine.root.ManagerPackage;
 public class ClockManager extends ManagerPackage {
 
     /*
-     * Drives the in-game clock for the active world. Owns the ClockHandle and
-     * all tracker branches, and wires them to the active world's calendar and
-     * epoch. Every fixed time constant — starting point, day/year shape,
-     * years-per-age, daysPerDay — comes from the active calendar. Each frame
-     * also resolves the current render viewpoint's position along the
-     * world's Y axis into a location phase offset and a latitude factor (see
-     * WorldWrapUtility's wrappedPlanetaryOffset and wrappedLatitudeFactor),
-     * and SeasonBlendBranch resolves the calendar's own named seasons into a
-     * current daylight fraction, so visualTimeOfDay reflects both where and
-     * when on the world a viewer actually is.
+     * Drives the in-game clock for the active world. Owns the ClockHandle
+     * and all tracker branches, wired to the active world's calendar and
+     * epoch. Starting point, day/year shape, and years-per-age all come
+     * from the active calendar. Each frame resolves the current viewpoint's
+     * position along the world's Y axis into a location time offset and a
+     * latitude factor (see WorldWrapUtility), and SeasonBlendBranch
+     * resolves the calendar's named seasons into daylight fraction and sky
+     * colors, so visualTimeOfDay and the sky reflect both where and when on
+     * the world a viewer is.
      */
 
     // Internal
@@ -36,7 +35,7 @@ public class ClockManager extends ManagerPackage {
     private DayTrackerBranch dayTracker;
     private MonthTrackerBranch monthTracker;
     private YearTrackerBranch yearTracker;
-    private InternalBufferBranch internalBuffer;
+    private ClockBufferSystem internalBuffer;
     private SkyColorBranch skyColorBranch;
     private SeasonBlendBranch seasonBlendBranch;
 
@@ -54,7 +53,7 @@ public class ClockManager extends ManagerPackage {
         this.dayTracker = create(DayTrackerBranch.class);
         this.monthTracker = create(MonthTrackerBranch.class);
         this.yearTracker = create(YearTrackerBranch.class);
-        this.internalBuffer = create(InternalBufferBranch.class);
+        this.internalBuffer = create(ClockBufferSystem.class);
         this.skyColorBranch = create(SkyColorBranch.class);
         this.seasonBlendBranch = create(SeasonBlendBranch.class);
 
@@ -105,7 +104,7 @@ public class ClockManager extends ManagerPackage {
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
         internalBuffer.assignData(clockHandle);
-        skyColorBranch.assignData(clockHandle);
+        skyColorBranch.assignData(clockHandle, seasonBlendBranch);
     }
 
     private void advanceGameClock() {
@@ -140,9 +139,8 @@ public class ClockManager extends ManagerPackage {
     // World Switch \\
 
     /*
-     * Call when the player travels to a different world.
-     * Swaps calendar, time rate, axial tilt, and epoch anchor.
-     * Time of day will immediately reflect the new world's game day cycle.
+     * Call when the player travels to a different world. Swaps calendar,
+     * time rate, axial tilt, and epoch anchor immediately.
      */
     public void switchWorld(WorldHandle newWorld) {
 

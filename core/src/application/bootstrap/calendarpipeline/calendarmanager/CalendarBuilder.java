@@ -12,20 +12,18 @@ import application.bootstrap.calendarpipeline.calendar.CalendarTimeStruct;
 import application.bootstrap.calendarpipeline.calendar.SeasonRangeStruct;
 import engine.root.BuilderPackage;
 import engine.util.io.JsonUtility;
+import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class CalendarBuilder extends BuilderPackage {
 
     /*
-     * Parses calendar JSON into a CalendarData and wraps it in a CalendarHandle.
-     * Computes total days in year from parsed month data. Also parses this
-     * calendar's own day/year shape (daysPerDay, hoursPerDay, minutesPerHour,
-     * lunarCycleDays, middayOffset, yearsPerAge), its own starting point (the
-     * "start" block), and its own named seasons, all validated against the
-     * parsed month layout. Each season also carries a dayLength (0-1 fraction
-     * of daylight at that season's center date), consumed by SeasonBlendBranch.
-     * Bootstrap-only.
+     * Parses calendar JSON into a CalendarData/CalendarHandle: the day-of-
+     * week and month layout, this calendar's own day/year shape, its
+     * starting point, and its named seasons — each carrying a day length
+     * plus the sky tint/sunrise colors that season blends toward. Bootstrap-
+     * only.
      */
 
     // Build \\
@@ -151,6 +149,8 @@ class CalendarBuilder extends BuilderPackage {
             int startMonth = JsonUtility.validateInt(seasonObject, "startMonth");
             int startDayOfMonth = JsonUtility.getInt(seasonObject, "startDayOfMonth", 1);
             float dayLength = JsonUtility.validateFloat(seasonObject, "dayLength");
+            Vector3 tintColor = parseColor(seasonObject, "tintColor", new Vector3(1.0f, 1.0f, 1.0f));
+            Vector3 sunriseColor = parseColor(seasonObject, "sunriseColor", new Vector3(0.90f, 0.53f, 0.39f));
 
             if (startMonth < 0 || startMonth >= monthNames.size())
                 throwException("Calendar \"" + calendarName + "\" season \"" + name + "\" startMonth " + startMonth +
@@ -177,10 +177,23 @@ class CalendarBuilder extends BuilderPackage {
             lastStartMonth = startMonth;
             lastStartDay = startDayOfMonth;
 
-            seasons.add(new SeasonRangeStruct(name, startMonth, startDayOfMonth, dayLength));
+            seasons.add(new SeasonRangeStruct(name, startMonth, startDayOfMonth, dayLength, tintColor, sunriseColor));
         }
 
         return seasons;
+    }
+
+    private Vector3 parseColor(JsonObject seasonObject, String key, Vector3 fallback) {
+
+        if (!seasonObject.has(key))
+            return fallback;
+
+        JsonArray array = seasonObject.getAsJsonArray(key);
+
+        return new Vector3(
+                array.get(0).getAsFloat(),
+                array.get(1).getAsFloat(),
+                array.get(2).getAsFloat());
     }
 
     // Validation \\

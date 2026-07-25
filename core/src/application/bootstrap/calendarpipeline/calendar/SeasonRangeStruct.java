@@ -1,38 +1,41 @@
 package application.bootstrap.calendarpipeline.calendar;
 
 import engine.root.StructPackage;
+import engine.util.mathematics.vectors.Vector3;
 
 public class SeasonRangeStruct extends StructPackage {
 
     /*
-     * One named season within a calendar's year: the exact month + day-of-
-     * month it begins on, plus its dayLength — the fraction (0-1) of a full
-     * day/night cycle that is daylight at this season's center date. A season
-     * runs from its own start date up to (but not including) the next
-     * season's start date — the final season in the list wraps around,
-     * continuing into the days before the first season's start date.
-     * dayLength is consumed by SeasonBlendBranch to blend the actual daylight
-     * fraction smoothly between one season's center and the next.
+     * One named season within a calendar: the month/day it starts on, its
+     * dayLength (fraction of a day/night cycle that is daylight at this
+     * season's center date), and the sky tint/sunrise colors that season
+     * blends toward at that same center date. A season runs from its own
+     * start date up to the next season's start date, wrapping for the
+     * final season in the list.
      */
 
-    // Internal
     private final String name;
     private final int startMonth;
     private final int startDayOfMonth;
     private final float dayLength;
+    private final Vector3 tintColor;
+    private final Vector3 sunriseColor;
 
-    // Constructor \\
+    public SeasonRangeStruct(
+            String name,
+            int startMonth,
+            int startDayOfMonth,
+            float dayLength,
+            Vector3 tintColor,
+            Vector3 sunriseColor) {
 
-    public SeasonRangeStruct(String name, int startMonth, int startDayOfMonth, float dayLength) {
-
-        // Internal
         this.name = name;
         this.startMonth = startMonth;
         this.startDayOfMonth = startDayOfMonth;
         this.dayLength = dayLength;
+        this.tintColor = tintColor;
+        this.sunriseColor = sunriseColor;
     }
-
-    // Accessible \\
 
     public String getName() {
         return name;
@@ -48,5 +51,13 @@ public class SeasonRangeStruct extends StructPackage {
 
     public float getDayLength() {
         return dayLength;
+    }
+
+    public Vector3 getTintColor() {
+        return tintColor;
+    }
+
+    public Vector3 getSunriseColor() {
+        return sunriseColor;
     }
 }
