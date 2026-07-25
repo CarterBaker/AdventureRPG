@@ -11,7 +11,9 @@ public class ClockHandle extends HandlePackage {
      * Delegates all accessors and mutators through ClockData. The current
      * season is resolved live from the active calendar rather than a fixed
      * enum — see CalendarData.getSeasonNameForMonth() — so it reflects
-     * whatever seasons that calendar defines.
+     * whatever seasons that calendar defines. Everything here is global and
+     * location-independent; per-location visual time of day lives on each
+     * grid's own LocationTimeStruct instead.
      */
 
     // Internal
@@ -71,12 +73,12 @@ public class ClockHandle extends HandlePackage {
         clockData.setDayProgress(dayProgress);
     }
 
-    public double getVisualTimeOfDay() {
-        return clockData.getVisualTimeOfDay();
+    public double getRawTimeOfDay() {
+        return clockData.getRawTimeOfDay();
     }
 
-    public void setVisualTimeOfDay(double visualTimeOfDay) {
-        clockData.setVisualTimeOfDay(visualTimeOfDay);
+    public void setRawTimeOfDay(double rawTimeOfDay) {
+        clockData.setRawTimeOfDay(rawTimeOfDay);
     }
 
     public double getYearProgress() {

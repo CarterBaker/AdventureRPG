@@ -12,16 +12,12 @@ import engine.util.mathematics.vectors.Vector3;
 class LocalWindBranch extends BranchPackage {
 
     /*
-     * Recomputes local wind every frame. Direction is the fixed global
-     * prevailing airflow rotated by the active season's own prevailing
-     * offset plus a continuous gust wobble. Speed is the season's own base
-     * speed varied by a two-layer gust oscillation, shaped by a diurnal
-     * curve, then scaled by the active weather's windSpeedScale. Gust
-     * amplitude and direction wobble both scale with the active weather's
-     * windTurbulenceScale, so a storm reads as gustier and more erratic,
-     * not just faster. In the other direction, RegionSampleBranch drags its
-     * own noise sample point by this same WindHandle, so resolved weather
-     * at a fixed location keeps changing as wind blows the pattern past it.
+     * Recomputes local wind every frame. Direction is the global prevailing
+     * airflow rotated by the active season's prevailing offset plus a gust
+     * wobble. Speed is the season's base speed varied by a two-layer gust
+     * oscillation, shaped by the diurnal curve at the primary grid's current
+     * location, then scaled by the active weather's windSpeedScale. Gust
+     * amplitude and direction wobble both scale with windTurbulenceScale.
      */
 
     // Internal
@@ -127,12 +123,12 @@ class LocalWindBranch extends BranchPackage {
     }
 
     /*
-     * Bell-shaped curve over the daily cycle, peaking at
-     * WIND_DIURNAL_PEAK_TIME. Returns roughly [-1, 1].
+     * Bell-shaped curve over the daily cycle at the primary grid's current
+     * location, peaking at WIND_DIURNAL_PEAK_TIME. Returns roughly [-1, 1].
      */
     private float computeDiurnalFactor() {
 
-        double visualTimeOfDay = clockManager.getClockHandle().getVisualTimeOfDay();
+        double visualTimeOfDay = clockManager.getPrimaryLocationTime().getVisualTimeOfDay();
         double angle = (visualTimeOfDay - EngineSetting.WIND_DIURNAL_PEAK_TIME) * Math.PI * 2.0;
 
         return (float) Math.cos(angle);

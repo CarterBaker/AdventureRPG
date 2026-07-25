@@ -1,4 +1,3 @@
-// CurrentTrackerBranch.java
 package application.bootstrap.calendarpipeline.clockmanager;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
@@ -12,15 +11,21 @@ class CurrentTrackerBranch extends BranchPackage {
      * Advances the sub-day clock every frame from the real system clock,
      * applying the calendar's middayOffset so real-world noon lines up with
      * in-game noon. daysPerDay is read from the active calendar — never a
-     * fixed engine constant. visualTimeOfDay folds in a location phase (see
-     * WorldWrapUtility.wrappedPlanetaryOffset, supplied by ClockManager)
-     * before the day-length bend, so different points along the world's Y
-     * axis experience day and night at different moments, wrapping
-     * seamlessly at the world edges. The day-length bend itself starts from
+     * fixed engine constant.
+     *
+     * advanceGlobalTime() is location-independent — one call per frame
+     * updates the single shared calendar clock (day count, raw time of day,
+     * hour/minute). computeVisualTimeOfDay() is the per-location half:
+     * given a location's phase offset and latitude factor (see
+     * WorldWrapUtility), it localizes the global raw time before applying
+     * the day-length bend, so different points along the world's Y axis
+     * experience day and night at different moments, wrapping seamlessly at
+     * the world edges. The day-length bend itself starts from
      * SeasonBlendBranch's data-driven curve and is then reshaped by
      * latitude (see WorldWrapUtility.wrappedLatitudeFactor) — flat toward
      * the equator, exaggerated toward the poles, scaled by the world's own
-     * axial tilt.
+     * axial tilt. ClockManager calls computeVisualTimeOfDay once per active
+     * grid, so every player's location resolves independently.
      */
 
     // Internal
@@ -100,9 +105,9 @@ class CurrentTrackerBranch extends BranchPackage {
                 axialTilt / EngineSetting.LATITUDE_DAYLENGTH_REFERENCE_TILT_DEGREES);
     }
 
-    // Current Tracker \\
+    // Global Time \\
 
-    boolean advanceTime(double locationOffset, double latitudeFactor) {
+    boolean advanceGlobalTime() {
 
         long now = internal.getTime();
         long millisPerGameDay = (long) (MILLIS_PER_REAL_DAY / daysPerDay);
@@ -113,14 +118,10 @@ class CurrentTrackerBranch extends BranchPackage {
         double rawTimeOfDay = calculateRawTimeOfDay(dayProgress);
         int currentMinute = calculateMinute(rawTimeOfDay);
         int currentHour = calculateHour(rawTimeOfDay);
-        double yearProgress = clockHandle.getYearProgress();
-
-        double localRawTimeOfDay = wrapFraction(rawTimeOfDay + locationOffset);
-        double visualTimeOfDay = calculateVisualTimeOfDay(localRawTimeOfDay, yearProgress, latitudeFactor);
 
         clockHandle.setTotalDaysElapsed(totalDaysElapsed);
         clockHandle.setDayProgress(dayProgress);
-        clockHandle.setVisualTimeOfDay(visualTimeOfDay);
+        clockHandle.setRawTimeOfDay(rawTimeOfDay);
         clockHandle.setCurrentMinute(currentMinute);
         clockHandle.setCurrentHour(currentHour);
 
@@ -128,6 +129,18 @@ class CurrentTrackerBranch extends BranchPackage {
         lastDay = totalDaysElapsed;
 
         return dayChanged;
+    }
+
+    // Location Time \\
+
+    double computeVisualTimeOfDay(double locationOffset, double latitudeFactor) {
+
+        double rawTimeOfDay = clockHandle.getRawTimeOfDay();
+        double yearProgress = clockHandle.getYearProgress();
+
+        double localRawTimeOfDay = wrapFraction(rawTimeOfDay + locationOffset);
+
+        return calculateVisualTimeOfDay(localRawTimeOfDay, yearProgress, latitudeFactor);
     }
 
     // Calculations \\

@@ -15,12 +15,15 @@ class SkyColorBranch extends BranchPackage {
      * sky shader can read them directly. Season tint and sunrise/sunset
      * color come from the active calendar's own seasons via
      * SeasonBlendBranch, so they track whatever seasons that calendar
-     * defines rather than a fixed set.
+     * defines rather than a fixed set. Time of day is read from
+     * ClockManager's primary grid location — see
+     * ClockManager.getPrimaryLocationTime() — pending per-window sky UBOs.
      */
 
     // Internal
     private UBOManager uboManager;
     private ClockHandle clockHandle;
+    private ClockManager clockManager;
     private SeasonBlendBranch seasonBlendBranch;
 
     // UBO
@@ -40,9 +43,10 @@ class SkyColorBranch extends BranchPackage {
 
     // Assignment \\
 
-    void assignData(ClockHandle clockHandle, SeasonBlendBranch seasonBlendBranch) {
+    void assignData(ClockHandle clockHandle, SeasonBlendBranch seasonBlendBranch, ClockManager clockManager) {
         this.clockHandle = clockHandle;
         this.seasonBlendBranch = seasonBlendBranch;
+        this.clockManager = clockManager;
     }
 
     // Update \\
@@ -56,7 +60,7 @@ class SkyColorBranch extends BranchPackage {
 
     private void pushData() {
 
-        float t = (float) clockHandle.getVisualTimeOfDay();
+        float t = (float) clockManager.getPrimaryLocationTime().getVisualTimeOfDay();
         float yearProgress = (float) clockHandle.getVisualYearProgress();
         float dailyRandom = clockHandle.getRandomNoiseFromDay();
         float dailyVar = computeDailyVariationMask(t);

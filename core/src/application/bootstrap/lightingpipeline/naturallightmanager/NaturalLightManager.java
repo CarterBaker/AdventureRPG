@@ -13,6 +13,8 @@ public class NaturalLightManager extends ManagerPackage {
      * Drives the natural lighting pipeline each frame. Sun and moon are
      * independent directional lights, both always active — no blending.
      * Owns both light systems and pushes each light's state to its own UBO.
+     * Time of day is read from ClockManager's primary grid location — see
+     * ClockManager.getPrimaryLocationTime() — pending per-window lighting.
      */
 
     // Internal
@@ -62,7 +64,7 @@ public class NaturalLightManager extends ManagerPackage {
     @Override
     protected void update() {
 
-        float visualTimeOfDay = (float) clockManager.getClockHandle().getVisualTimeOfDay();
+        float visualTimeOfDay = (float) clockManager.getPrimaryLocationTime().getVisualTimeOfDay();
 
         sunLightSystem.update(visualTimeOfDay);
         moonLightSystem.update(visualTimeOfDay);

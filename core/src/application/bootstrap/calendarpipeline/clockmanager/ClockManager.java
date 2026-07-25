@@ -5,11 +5,14 @@ import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import application.bootstrap.calendarpipeline.calendarmanager.CalendarManager;
 import application.bootstrap.calendarpipeline.clock.ClockData;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
+import application.bootstrap.calendarpipeline.clock.LocationTimeStruct;
+import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.ManagerPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ClockManager extends ManagerPackage {
 
@@ -17,12 +20,13 @@ public class ClockManager extends ManagerPackage {
      * Drives the in-game clock for the active world. Owns the ClockHandle
      * and all tracker branches, wired to the active world's calendar and
      * epoch. Starting point, day/year shape, and years-per-age all come
-     * from the active calendar. Each frame resolves the current viewpoint's
-     * position along the world's Y axis into a location time offset and a
-     * latitude factor (see WorldWrapUtility), and SeasonBlendBranch
-     * resolves the calendar's named seasons into daylight fraction and sky
-     * colors, so visualTimeOfDay and the sky reflect both where and when on
-     * the world a viewer is.
+     * from the active calendar. The calendar tick itself (day/month/year/
+     * season progression) is global and location-independent — there is
+     * one shared timeline per world. Visual time of day is not: each
+     * active grid tracks its own position along the world's Y axis, so
+     * updateLocationTimes() resolves a LocationTimeStruct per grid every
+     * frame (see WorldWrapUtility), letting every player experience day
+     * and night independently at the same real-world instant.
      */
 
     // Internal
@@ -42,6 +46,7 @@ public class ClockManager extends ManagerPackage {
     // Clock
     private CalendarHandle calendarHandle;
     private ClockHandle clockHandle;
+    private final LocationTimeStruct fallbackLocationTime = new LocationTimeStruct();
 
     // Internal \\
 
@@ -103,27 +108,51 @@ public class ClockManager extends ManagerPackage {
         dayTracker.assignData(calendarHandle, clockHandle);
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
-        internalBuffer.assignData(clockHandle);
-        skyColorBranch.assignData(clockHandle, seasonBlendBranch);
+        internalBuffer.assignData(clockHandle, this);
+        skyColorBranch.assignData(clockHandle, seasonBlendBranch, this);
     }
 
     private void advanceGameClock() {
 
-        WorldHandle locationWorld = resolveLocationWorld();
+        boolean dayChanged = currentTracker.advanceGlobalTime();
 
-        double locationOffset = 0.0;
-        double latitudeFactor = 0.0;
-
-        if (locationWorld != null) {
-            long chunkCoordinate = worldStreamManager.getGrids().get(0).getActiveChunkCoordinate();
-            locationOffset = WorldWrapUtility.wrappedPlanetaryOffset(locationWorld, chunkCoordinate);
-            latitudeFactor = WorldWrapUtility.wrappedLatitudeFactor(locationWorld, chunkCoordinate);
-        }
-
-        if (currentTracker.advanceTime(locationOffset, latitudeFactor))
+        if (dayChanged)
             if (dayTracker.advanceTime())
                 if (monthTracker.advanceTime())
                     yearTracker.advanceTime();
+
+        updateLocationTimes();
+    }
+
+    /*
+     * Recomputes visual time of day for every active grid independently.
+     * Each grid tracks a different player's position along the world's Y
+     * axis, so each can sit at a different, correctly season-and-latitude
+     * bent point of the day/night cycle at the same real-world instant —
+     * this is what used to be hardcoded to grid zero only.
+     */
+    private void updateLocationTimes() {
+
+        WorldHandle locationWorld = resolveLocationWorld();
+
+        if (locationWorld == null)
+            return;
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++) {
+
+            GridInstance grid = (GridInstance) elements[i];
+            long chunkCoordinate = grid.getActiveChunkCoordinate();
+
+            double locationOffset = WorldWrapUtility.wrappedPlanetaryOffset(locationWorld, chunkCoordinate);
+            double latitudeFactor = WorldWrapUtility.wrappedLatitudeFactor(locationWorld, chunkCoordinate);
+            double visualTimeOfDay = currentTracker.computeVisualTimeOfDay(locationOffset, latitudeFactor);
+
+            grid.getLocationTimeStruct().update(visualTimeOfDay, locationOffset, latitudeFactor);
+        }
     }
 
     // Location \\
@@ -164,5 +193,20 @@ public class ClockManager extends ManagerPackage {
 
     public ClockHandle getClockHandle() {
         return clockHandle;
+    }
+
+    /*
+     * Single shared location still feeding the legacy sky/lighting/time
+     * UBOs, which are not yet per-window. The fully correct per-grid values
+     * are already computed above every frame — see
+     * GridInstance.getLocationTimeStruct() — and are what the render layer
+     * should move to once those UBOs are cloned per window (stage 2).
+     */
+    public LocationTimeStruct getPrimaryLocationTime() {
+
+        if (!worldStreamManager.hasGrids())
+            return fallbackLocationTime;
+
+        return worldStreamManager.getGrids().get(0).getLocationTimeStruct();
     }
 }

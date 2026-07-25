@@ -10,12 +10,11 @@ class TemperatureBranch extends BranchPackage {
 
     /*
      * Computes live ambient temperature from the active season's base
-     * temperature and variance, shaped by a diurnal curve and a slow
-     * drift, cooled by precipitation intensity, and offset by the
-     * currently resolved weather's own temperatureModifier. CPU-side only
-     * — nothing on the GPU reads temperature yet. Driven explicitly by
-     * WeatherManager.update() with that frame's freshly sampled center
-     * weather sample, rather than its own update() cascade.
+     * temperature and variance, shaped by a diurnal curve at the primary
+     * grid's current location and a slow drift, cooled by precipitation
+     * intensity, and offset by the resolved weather's temperatureModifier.
+     * CPU-side only. Driven explicitly by WeatherManager.update() with that
+     * frame's freshly sampled center weather sample.
      */
 
     // Internal
@@ -79,12 +78,13 @@ class TemperatureBranch extends BranchPackage {
     }
 
     /*
-     * Bell-shaped curve over the daily cycle, peaking at
-     * TEMPERATURE_DIURNAL_PEAK_TIME. Returns roughly [-1, 1].
+     * Bell-shaped curve over the daily cycle at the primary grid's current
+     * location, peaking at TEMPERATURE_DIURNAL_PEAK_TIME. Returns roughly
+     * [-1, 1].
      */
     private float computeDiurnalOffset() {
 
-        double visualTimeOfDay = clockManager.getClockHandle().getVisualTimeOfDay();
+        double visualTimeOfDay = clockManager.getPrimaryLocationTime().getVisualTimeOfDay();
         double angle = (visualTimeOfDay - EngineSetting.TEMPERATURE_DIURNAL_PEAK_TIME) * Math.PI * 2.0;
 
         return (float) Math.cos(angle);

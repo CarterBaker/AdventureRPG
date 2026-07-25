@@ -11,7 +11,9 @@ public class ClockData extends DataPackage {
      * (source of the current season and the world's starting point), plus
      * all calculated current time fields updated each frame by the clock
      * branches. The epoch is the only field that needs to be persisted to
-     * disk to fully restore session state.
+     * disk to fully restore session state. This is global, location-
+     * independent state — visual time of day for a specific place on the
+     * world's Y axis lives in LocationTimeStruct instead.
      */
 
     // Epoch
@@ -24,7 +26,7 @@ public class ClockData extends DataPackage {
     private long totalDaysElapsed;
     private long totalDaysWithOffset;
     private double dayProgress;
-    private double visualTimeOfDay;
+    private double rawTimeOfDay;
     private double yearProgress;
     private double visualYearProgress;
 
@@ -90,12 +92,12 @@ public class ClockData extends DataPackage {
         this.dayProgress = dayProgress;
     }
 
-    public double getVisualTimeOfDay() {
-        return visualTimeOfDay;
+    public double getRawTimeOfDay() {
+        return rawTimeOfDay;
     }
 
-    public void setVisualTimeOfDay(double visualTimeOfDay) {
-        this.visualTimeOfDay = visualTimeOfDay;
+    public void setRawTimeOfDay(double rawTimeOfDay) {
+        this.rawTimeOfDay = rawTimeOfDay;
     }
 
     public double getYearProgress() {

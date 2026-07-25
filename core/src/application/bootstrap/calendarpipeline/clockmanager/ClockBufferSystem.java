@@ -11,12 +11,15 @@ class ClockBufferSystem extends SystemPackage {
     /*
      * Pushes clock state to the GPU time UBO each frame. Accumulates elapsed
      * real time for the shader u_time uniform. Wired to the active
-     * ClockHandle via assignData() after awake.
+     * ClockHandle via assignData() after awake. u_timeOfDay is read from
+     * ClockManager's primary grid location — see
+     * ClockManager.getPrimaryLocationTime() — pending per-window time UBOs.
      */
 
     // Internal
     private UBOManager uboManager;
     private ClockHandle clockHandle;
+    private ClockManager clockManager;
 
     // UBO
     private UBOHandle timeData;
@@ -50,14 +53,15 @@ class ClockBufferSystem extends SystemPackage {
 
     // Assignment \\
 
-    void assignData(ClockHandle clockHandle) {
+    void assignData(ClockHandle clockHandle, ClockManager clockManager) {
         this.clockHandle = clockHandle;
+        this.clockManager = clockManager;
     }
 
     // Buffer \\
 
     private void pushData(float deltaTime) {
-        timeData.updateUniform("u_timeOfDay", (float) clockHandle.getVisualTimeOfDay());
+        timeData.updateUniform("u_timeOfDay", (float) clockManager.getPrimaryLocationTime().getVisualTimeOfDay());
         timeData.updateUniform("u_timeOfYear", (float) clockHandle.getVisualYearProgress());
         timeData.updateUniform("u_rawTimeOfDay", (float) clockHandle.getDayProgress());
         timeData.updateUniform("u_time", elapsedTime);

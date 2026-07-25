@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.grid;
 
+import application.bootstrap.calendarpipeline.clock.LocationTimeStruct;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -28,7 +29,9 @@ public class GridInstance extends InstancePackage {
      * time so no reverse lookup is needed at render time. rebuildRenderQueue()
      * is called internally when the focal entity crosses a chunk boundary. The
      * window this grid renders into is stored here so FrustumCullingSystem reads
-     * the correct camera per grid independently.
+     * the correct camera per grid independently. locationTimeStruct holds this
+     * grid's own visual time of day, refreshed every frame by ClockManager from
+     * this grid's active chunk coordinate — see LocationTimeStruct.
      */
 
     // Focal
@@ -47,6 +50,9 @@ public class GridInstance extends InstancePackage {
 
     // Active State
     private long activeChunkCoordinate;
+
+    // Location Time
+    private LocationTimeStruct locationTimeStruct;
 
     // Chunk State
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
@@ -93,6 +99,9 @@ public class GridInstance extends InstancePackage {
 
         // Active State
         this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
+
+        // Location Time
+        this.locationTimeStruct = new LocationTimeStruct();
 
         // Chunk State
         this.activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);
@@ -249,6 +258,10 @@ public class GridInstance extends InstancePackage {
 
     public float getRadiusSquared() {
         return radiusSquared;
+    }
+
+    public LocationTimeStruct getLocationTimeStruct() {
+        return locationTimeStruct;
     }
 
     public Long2ObjectLinkedOpenHashMap<ChunkInstance> getActiveChunks() {
