@@ -8,37 +8,27 @@ import engine.root.EngineSetting;
 class CurrentTrackerBranch extends BranchPackage {
 
     /*
-     * Advances the sub-day clock every frame from the real system clock,
-     * applying the calendar's middayOffset so real-world noon lines up with
-     * in-game noon. daysPerDay is read from the active calendar — never a
-     * fixed engine constant.
-     *
-     * advanceGlobalTime() is location-independent — one call per frame
-     * updates the single shared calendar clock (day count, raw time of day,
-     * hour/minute). computeVisualTimeOfDay() is the per-location half:
-     * given a location's phase offset and latitude factor (see
-     * WorldWrapUtility), it localizes the global raw time before applying
-     * the day-length bend, so different points along the world's Y axis
-     * experience day and night at different moments, wrapping seamlessly at
-     * the world edges. The day-length bend itself starts from
-     * SeasonBlendBranch's data-driven curve and is then reshaped by
-     * latitude (see WorldWrapUtility.wrappedLatitudeFactor) — flat toward
-     * the equator, exaggerated toward the poles, scaled by the world's own
-     * axial tilt. ClockManager calls computeVisualTimeOfDay once per active
-     * grid, so every player's location resolves independently.
+     * Advances the sub-day clock every frame from the real system clock.
+     * totalDaysElapsed (whole calendar days since the world's epoch) and
+     * dayProgress (fraction of the current calendar day) are both derived
+     * from the same elapsed-since-epoch value and the same
+     * millisPerGameDay divisor, so the calendar date always rolls over at
+     * exactly the instant dayProgress wraps to midnight. computeVisualTimeOfDay()
+     * then localizes that shared raw time per grid, bending it by season
+     * and by latitude so day length varies correctly with time of year and
+     * with distance from the equator.
      */
 
     // Internal
     private long MILLIS_PER_REAL_DAY;
     private double LATITUDE_CURVE_POWER;
 
-    // Seasonal Bending — safety bounds only; the shift amount itself now
-    // comes from SeasonBlendBranch's data-driven day length.
+    // Seasonal Bending — safety bounds only; the shift amount itself comes
+    // from SeasonBlendBranch's data-driven day length.
     private double SUNRISE_MIN;
     private double SUNRISE_MAX;
     private double SUNSET_MIN;
     private double SUNSET_MAX;
-    private double MIDNIGHT;
     private double NOON;
     private double QUARTER;
     private double THREE_QUARTERS;
@@ -48,7 +38,7 @@ class CurrentTrackerBranch extends BranchPackage {
     private SeasonBlendBranch seasonBlendBranch;
 
     // Per-world
-    private float daysPerDay;
+    private int daysPerDay;
     private float axialTilt;
     private double axialTiltStrength;
     private ClockHandle clockHandle;
@@ -61,21 +51,17 @@ class CurrentTrackerBranch extends BranchPackage {
     @Override
     protected void create() {
 
-        // Internal
         this.MILLIS_PER_REAL_DAY = EngineSetting.MILLIS_PER_REAL_DAY;
         this.LATITUDE_CURVE_POWER = EngineSetting.LATITUDE_DAYLENGTH_CURVE_POWER;
 
-        // Seasonal Bending
         this.SUNRISE_MIN = EngineSetting.CLOCK_SUNRISE_MIN;
         this.SUNRISE_MAX = EngineSetting.CLOCK_SUNRISE_MAX;
         this.SUNSET_MIN = EngineSetting.CLOCK_SUNSET_MIN;
         this.SUNSET_MAX = EngineSetting.CLOCK_SUNSET_MAX;
-        this.MIDNIGHT = EngineSetting.CLOCK_MIDNIGHT;
         this.NOON = EngineSetting.CLOCK_NOON;
         this.QUARTER = EngineSetting.CLOCK_QUARTER;
         this.THREE_QUARTERS = EngineSetting.CLOCK_THREE_QUARTERS;
 
-        // Tracking
         this.lastDay = -1;
     }
 
@@ -86,10 +72,9 @@ class CurrentTrackerBranch extends BranchPackage {
             ClockHandle clockHandle,
             float axialTilt,
             SeasonBlendBranch seasonBlendBranch) {
-        this.calendarHandle = calendarHandle;
         this.clockHandle = clockHandle;
-        this.daysPerDay = calendarHandle.getDaysPerDay();
         this.seasonBlendBranch = seasonBlendBranch;
+        setCalendarHandle(calendarHandle);
         setAxialTilt(axialTilt);
     }
 
@@ -110,10 +95,13 @@ class CurrentTrackerBranch extends BranchPackage {
     boolean advanceGlobalTime() {
 
         long now = internal.getTime();
-        long millisPerGameDay = (long) (MILLIS_PER_REAL_DAY / daysPerDay);
+        long millisPerGameDay = MILLIS_PER_REAL_DAY / daysPerDay;
 
-        long totalDaysElapsed = (now - clockHandle.getWorldEpochStart()) / millisPerGameDay;
-        double dayProgress = ((double) (now % MILLIS_PER_REAL_DAY) / MILLIS_PER_REAL_DAY * daysPerDay) % 1.0;
+        long elapsedSinceEpoch = now - clockHandle.getWorldEpochStart();
+        long totalDaysElapsed = Math.floorDiv(elapsedSinceEpoch, millisPerGameDay);
+        long millisIntoCurrentGameDay = Math.floorMod(elapsedSinceEpoch, millisPerGameDay);
+
+        double dayProgress = millisIntoCurrentGameDay / (double) millisPerGameDay;
 
         double rawTimeOfDay = calculateRawTimeOfDay(dayProgress);
         int currentMinute = calculateMinute(rawTimeOfDay);
@@ -167,13 +155,6 @@ class CurrentTrackerBranch extends BranchPackage {
         return (int) (rawTimeOfDay * calendarHandle.getHoursPerDay());
     }
 
-    /*
-     * Bends raw time of day using the current daylight fraction, so day
-     * length actually shrinks and grows through the year and across
-     * latitude rather than following a fixed sine curve. 0.0 and 1.0 are
-     * always midnight. 0.5 is always visual noon. The bend only affects the
-     * rate at which time moves between those anchors.
-     */
     double calculateVisualTimeOfDay(double rawTimeOfDay, double yearProgress, double latitudeFactor) {
 
         float seasonDayLength = seasonBlendBranch.getDayLengthForYearProgress(yearProgress);
@@ -195,17 +176,13 @@ class CurrentTrackerBranch extends BranchPackage {
         return THREE_QUARTERS + ((rawTimeOfDay - actualSunset) / (1.0 - actualSunset)) * QUARTER;
     }
 
-    /*
-     * Reshapes the calendar's authored seasonal day length by latitude.
-     * latitudeFactor is signed (-1 at one pole, 0 at either equator
-     * crossing, +1 at the other pole — see
-     * WorldWrapUtility.wrappedLatitudeFactor), so the deviation from an
-     * even 0.5 day/night split fades smoothly to nothing at the equator and
-     * reaches full strength at the poles, flipping direction between the
-     * two hemispheres exactly as real seasons do. axialTiltStrength is the
-     * world's own axial tilt normalized against an Earth-like reference —
-     * an upright world (tilt 0) collapses this to a flat 0.5 everywhere.
-     */
+    // latitudeFactor is signed (-1 at one pole, 0 at either equator
+    // crossing, +1 at the other pole), so the deviation from an even 0.5
+    // day/night split fades to nothing at the equator and reaches full
+    // strength at the poles, flipping direction between hemispheres.
+    // axialTiltStrength normalizes the world's own axial tilt against an
+    // Earth-like reference — an upright world (tilt 0) collapses this to
+    // a flat 0.5 everywhere.
     double applyLatitudeBend(float seasonDayLength, double latitudeFactor) {
 
         double curvedLatitude = Math.signum(latitudeFactor)
