@@ -1,66 +1,66 @@
 package application.bootstrap.calendarpipeline.clockmanager;
 
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
-import application.bootstrap.shaderpipeline.ubo.UBOHandle;
+import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class SkyColorBranch extends BranchPackage {
 
     /*
      * Replicates SkyColor.glsl CPU-side at altitude=0 (horizon) and
-     * altitude=1 (zenith), pushing both to SkyColorData each frame so the
-     * sky shader can read them directly. Season tint and sunrise/sunset
-     * color come from the active calendar's own seasons via
-     * SeasonBlendBranch, so they track whatever seasons that calendar
-     * defines rather than a fixed set. Time of day is read from
-     * ClockManager's primary grid location — see
-     * ClockManager.getPrimaryLocationTime() — pending per-window sky UBOs.
+     * altitude=1 (zenith) for every active grid, pushing both into that
+     * grid's own SkyColorData UBOInstance each frame so each window's sky
+     * shader reads the correct color for wherever its own player sits.
+     * Season tint and sunrise/sunset color come from the calendar's own
+     * seasons via SeasonBlendBranch, which is location-independent; time of
+     * day is not, so each grid reads its own LocationTimeStruct.
      */
 
     // Internal
     private UBOManager uboManager;
+    private WorldStreamManager worldStreamManager;
     private ClockHandle clockHandle;
-    private ClockManager clockManager;
     private SeasonBlendBranch seasonBlendBranch;
-
-    // UBO
-    private UBOHandle skyColorData;
 
     // Internal \\
 
     @Override
     protected void get() {
         this.uboManager = get(UBOManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        this.skyColorData = uboManager.getUBOHandleFromUBOName(EngineSetting.SKY_COLOR_UBO);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     // Assignment \\
 
-    void assignData(ClockHandle clockHandle, SeasonBlendBranch seasonBlendBranch, ClockManager clockManager) {
+    void assignData(ClockHandle clockHandle, SeasonBlendBranch seasonBlendBranch) {
         this.clockHandle = clockHandle;
         this.seasonBlendBranch = seasonBlendBranch;
-        this.clockManager = clockManager;
     }
 
     // Update \\
 
     @Override
     protected void update() {
-        pushData();
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++)
+            pushData((GridInstance) elements[i]);
     }
 
     // Push \\
 
-    private void pushData() {
+    private void pushData(GridInstance grid) {
 
-        float t = (float) clockManager.getPrimaryLocationTime().getVisualTimeOfDay();
+        float t = (float) grid.getLocationTimeStruct().getVisualTimeOfDay();
         float yearProgress = (float) clockHandle.getVisualYearProgress();
         float dailyRandom = clockHandle.getRandomNoiseFromDay();
         float dailyVar = computeDailyVariationMask(t);
@@ -117,9 +117,10 @@ class SkyColorBranch extends BranchPackage {
         float gray = (horizon[0] + horizon[1] + horizon[2]) * 0.333f;
         lerpInPlace(horizon, new float[] { gray, gray, gray }, EngineSetting.SKY_HORIZON_DESATURATION);
 
-        skyColorData.updateUniform("u_skyHorizonColor", new Vector3(horizon[0], horizon[1], horizon[2]));
-        skyColorData.updateUniform("u_skyZenithColor", new Vector3(zenith[0], zenith[1], zenith[2]));
-        uboManager.push(skyColorData);
+        UBOInstance skyColorUBO = grid.getSkyColorUBO();
+        skyColorUBO.updateUniform("u_skyHorizonColor", new Vector3(horizon[0], horizon[1], horizon[2]));
+        skyColorUBO.updateUniform("u_skyZenithColor", new Vector3(zenith[0], zenith[1], zenith[2]));
+        uboManager.push(skyColorUBO);
     }
 
     // Cycle Factors \\

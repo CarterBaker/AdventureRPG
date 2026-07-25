@@ -1,28 +1,27 @@
 package application.bootstrap.calendarpipeline.clockmanager;
 
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
-import application.bootstrap.shaderpipeline.ubo.UBOHandle;
+import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import engine.root.EngineSetting;
+import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.SystemPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class ClockBufferSystem extends SystemPackage {
 
     /*
-     * Pushes clock state to the GPU time UBO each frame. Accumulates elapsed
-     * real time for the shader u_time uniform. Wired to the active
-     * ClockHandle via assignData() after awake. u_timeOfDay is read from
-     * ClockManager's primary grid location — see
-     * ClockManager.getPrimaryLocationTime() — pending per-window time UBOs.
+     * Pushes clock state to each active grid's own TimeData UBOInstance
+     * every frame. u_timeOfDay is location-dependent, read from that
+     * grid's own LocationTimeStruct; everything else (calendar date, year
+     * progress, elapsed real seconds) is shared and identical across every
+     * window.
      */
 
     // Internal
     private UBOManager uboManager;
+    private WorldStreamManager worldStreamManager;
     private ClockHandle clockHandle;
-    private ClockManager clockManager;
-
-    // UBO
-    private UBOHandle timeData;
 
     // Frame Tracking
     private float elapsedTime;
@@ -37,31 +36,36 @@ class ClockBufferSystem extends SystemPackage {
     @Override
     protected void get() {
         this.uboManager = get(UBOManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        this.timeData = uboManager.getUBOHandleFromUBOName(EngineSetting.UBO_TIME_DATA_NAME);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     @Override
     protected void update() {
+
         float deltaTime = internal.getDeltaTime();
         elapsedTime += deltaTime;
-        pushData(deltaTime);
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++)
+            pushData((GridInstance) elements[i], deltaTime);
     }
 
     // Assignment \\
 
-    void assignData(ClockHandle clockHandle, ClockManager clockManager) {
+    void assignData(ClockHandle clockHandle) {
         this.clockHandle = clockHandle;
-        this.clockManager = clockManager;
     }
 
     // Buffer \\
 
-    private void pushData(float deltaTime) {
-        timeData.updateUniform("u_timeOfDay", (float) clockManager.getPrimaryLocationTime().getVisualTimeOfDay());
+    private void pushData(GridInstance grid, float deltaTime) {
+
+        UBOInstance timeData = grid.getTimeDataUBO();
+
+        timeData.updateUniform("u_timeOfDay", (float) grid.getLocationTimeStruct().getVisualTimeOfDay());
         timeData.updateUniform("u_timeOfYear", (float) clockHandle.getVisualYearProgress());
         timeData.updateUniform("u_rawTimeOfDay", (float) clockHandle.getDayProgress());
         timeData.updateUniform("u_time", elapsedTime);

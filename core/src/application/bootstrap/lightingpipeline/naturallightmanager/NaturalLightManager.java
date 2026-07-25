@@ -1,70 +1,67 @@
 package application.bootstrap.lightingpipeline.naturallightmanager;
 
-import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.lightingpipeline.directionallight.DirectionalLightStruct;
-import application.bootstrap.shaderpipeline.ubo.UBOHandle;
+import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class NaturalLightManager extends ManagerPackage {
 
     /*
-     * Drives the natural lighting pipeline each frame. Sun and moon are
-     * independent directional lights, both always active — no blending.
-     * Owns both light systems and pushes each light's state to its own UBO.
-     * Time of day is read from ClockManager's primary grid location — see
-     * ClockManager.getPrimaryLocationTime() — pending per-window lighting.
+     * Drives natural lighting once per active grid each frame — sun and
+     * moon are independent, always-active directional lights computed from
+     * that grid's own LocationTimeStruct, so each window sees the sun/moon
+     * position for wherever its own player currently sits on the world's Y
+     * axis. Each grid owns its own Sun/Moon UBOInstance (built in
+     * GridBuildSystem); LightingSystem binds them onto its own pass.
      */
 
     // Internal
-    private ClockManager clockManager;
     private UBOManager uboManager;
+    private WorldStreamManager worldStreamManager;
 
     // Systems
     private SunLightSystem sunLightSystem;
     private MoonLightSystem moonLightSystem;
 
-    // Light State
-    private DirectionalLightStruct sunLight;
-    private DirectionalLightStruct moonLight;
-
-    // UBOs
-    private UBOHandle sunLightUBO;
-    private UBOHandle moonLightUBO;
+    // Scratch
+    private final DirectionalLightStruct sunLight = new DirectionalLightStruct();
+    private final DirectionalLightStruct moonLight = new DirectionalLightStruct();
 
     // Internal \\
 
     @Override
     protected void create() {
-
-        // Systems
         this.sunLightSystem = create(SunLightSystem.class);
         this.moonLightSystem = create(MoonLightSystem.class);
-
-        // Light State
-        this.sunLight = new DirectionalLightStruct();
-        this.moonLight = new DirectionalLightStruct();
     }
 
     @Override
     protected void get() {
-
-        // Internal
-        this.clockManager = get(ClockManager.class);
         this.uboManager = get(UBOManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        this.sunLightUBO = uboManager.getUBOHandleFromUBOName(EngineSetting.SUN_LIGHT_UBO);
-        this.moonLightUBO = uboManager.getUBOHandleFromUBOName(EngineSetting.MOON_LIGHT_UBO);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     @Override
     protected void update() {
 
-        float visualTimeOfDay = (float) clockManager.getPrimaryLocationTime().getVisualTimeOfDay();
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++)
+            updateGridLighting((GridInstance) elements[i]);
+    }
+
+    // Per-Grid Lighting \\
+
+    private void updateGridLighting(GridInstance grid) {
+
+        float visualTimeOfDay = (float) grid.getLocationTimeStruct().getVisualTimeOfDay();
 
         sunLightSystem.update(visualTimeOfDay);
         moonLightSystem.update(visualTimeOfDay);
@@ -89,12 +86,12 @@ public class NaturalLightManager extends ManagerPackage {
                 moonLightSystem.getColor().z);
         moonLight.setIntensity(moonLightSystem.getIntensity());
 
-        pushLight(sunLight, sunLightUBO,
+        pushLight(sunLight, grid.getSunLightUBO(),
                 EngineSetting.UNIFORM_SUN_DIRECTION,
                 EngineSetting.UNIFORM_SUN_INTENSITY,
                 EngineSetting.UNIFORM_SUN_COLOR);
 
-        pushLight(moonLight, moonLightUBO,
+        pushLight(moonLight, grid.getMoonLightUBO(),
                 EngineSetting.UNIFORM_MOON_DIRECTION,
                 EngineSetting.UNIFORM_MOON_INTENSITY,
                 EngineSetting.UNIFORM_MOON_COLOR);
@@ -104,7 +101,7 @@ public class NaturalLightManager extends ManagerPackage {
 
     private void pushLight(
             DirectionalLightStruct light,
-            UBOHandle ubo,
+            UBOInstance ubo,
             String directionName,
             String intensityName,
             String colorName) {
@@ -113,23 +110,5 @@ public class NaturalLightManager extends ManagerPackage {
         ubo.updateUniform(intensityName, light.getIntensity());
         ubo.updateUniform(colorName, light.getColor());
         uboManager.push(ubo);
-    }
-
-    // Accessible \\
-
-    public SunLightSystem getSunLightSystem() {
-        return sunLightSystem;
-    }
-
-    public MoonLightSystem getMoonLightSystem() {
-        return moonLightSystem;
-    }
-
-    public DirectionalLightStruct getSunLight() {
-        return sunLight;
-    }
-
-    public DirectionalLightStruct getMoonLight() {
-        return moonLight;
     }
 }

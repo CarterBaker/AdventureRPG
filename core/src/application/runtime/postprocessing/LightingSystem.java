@@ -7,6 +7,7 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
+import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
 import application.runtime.world.WorldSystem;
 import engine.root.SystemPackage;
@@ -15,8 +16,9 @@ public class LightingSystem extends SystemPackage {
 
     /*
      * Deferred lighting pass. Reads the full G-buffer and SSAO result,
-     * computes final lit color, and writes into LitScene. LitScene composites
-     * at LAYER_WORLD — replacing the old direct MainScene composite.
+     * computes final lit color, and writes into LitScene. Binds this
+     * window's own grid's Sun/Moon UBO instances onto the lighting pass
+     * material each frame so lighting reflects the correct location.
      */
 
     // Internal
@@ -61,7 +63,24 @@ public class LightingSystem extends SystemPackage {
 
     @Override
     protected void update() {
+
+        bindGridLightingData();
+
         renderManager.pushRenderCall(lightingPass.getModelInstance(), litFbo, 0, context.getWindow());
         fboRenderSystem.pushFbo(litFbo, RuntimeSetting.LAYER_WORLD, context.getWindow());
+    }
+
+    // Grid Lighting \\
+
+    private void bindGridLightingData() {
+
+        GridInstance grid = worldSystem.getGridInstance();
+
+        if (grid == null)
+            return;
+
+        MaterialInstance mat = lightingPass.getModelInstance().getMaterial();
+        mat.setUBO(grid.getSunLightUBO());
+        mat.setUBO(grid.getMoonLightUBO());
     }
 }

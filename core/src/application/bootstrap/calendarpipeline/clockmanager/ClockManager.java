@@ -25,8 +25,8 @@ public class ClockManager extends ManagerPackage {
      * one shared timeline per world. Visual time of day is not: each
      * active grid tracks its own position along the world's Y axis, so
      * updateLocationTimes() resolves a LocationTimeStruct per grid every
-     * frame (see WorldWrapUtility), letting every player experience day
-     * and night independently at the same real-world instant.
+     * frame, letting every player experience day and night independently
+     * at the same real-world instant.
      */
 
     // Internal
@@ -108,8 +108,8 @@ public class ClockManager extends ManagerPackage {
         dayTracker.assignData(calendarHandle, clockHandle);
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
-        internalBuffer.assignData(clockHandle, this);
-        skyColorBranch.assignData(clockHandle, seasonBlendBranch, this);
+        internalBuffer.assignData(clockHandle);
+        skyColorBranch.assignData(clockHandle, seasonBlendBranch);
     }
 
     private void advanceGameClock() {
@@ -128,8 +128,7 @@ public class ClockManager extends ManagerPackage {
      * Recomputes visual time of day for every active grid independently.
      * Each grid tracks a different player's position along the world's Y
      * axis, so each can sit at a different, correctly season-and-latitude
-     * bent point of the day/night cycle at the same real-world instant —
-     * this is what used to be hardcoded to grid zero only.
+     * bent point of the day/night cycle at the same real-world instant.
      */
     private void updateLocationTimes() {
 
@@ -196,11 +195,11 @@ public class ClockManager extends ManagerPackage {
     }
 
     /*
-     * Single shared location still feeding the legacy sky/lighting/time
-     * UBOs, which are not yet per-window. The fully correct per-grid values
-     * are already computed above every frame — see
-     * GridInstance.getLocationTimeStruct() — and are what the render layer
-     * should move to once those UBOs are cloned per window (stage 2).
+     * Shared reference location used only by the weather system's diurnal
+     * wind/temperature curves, which remain a single simulation for the
+     * whole world rather than per-window. Lighting, sky color, and the
+     * time UBO are resolved per-window directly through each GridInstance
+     * now — see GridInstance's own UBO instances.
      */
     public LocationTimeStruct getPrimaryLocationTime() {
 

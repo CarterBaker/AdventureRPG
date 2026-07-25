@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.grid;
 import application.bootstrap.calendarpipeline.clock.LocationTimeStruct;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
@@ -22,16 +23,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class GridInstance extends InstancePackage {
 
     /*
-     * The active spatial grid for a single focal entity. Owns the load order,
-     * slot handles, active chunks, active mega chunks, pending load and unload
-     * requests, and the render queues for this grid. Render queues map chunk
-     * world coordinates directly to their GridSlotHandle — populated at rebuild
-     * time so no reverse lookup is needed at render time. rebuildRenderQueue()
-     * is called internally when the focal entity crosses a chunk boundary. The
-     * window this grid renders into is stored here so FrustumCullingSystem reads
-     * the correct camera per grid independently. locationTimeStruct holds this
-     * grid's own visual time of day, refreshed every frame by ClockManager from
-     * this grid's active chunk coordinate — see LocationTimeStruct.
+     * The active spatial grid for a single focal entity — one per window.
+     * Owns the load order, slot handles, active chunks, active mega chunks,
+     * pending load/unload requests, and the render queues for this grid.
+     * locationTimeStruct holds this grid's own visual time of day,
+     * refreshed every frame by ClockManager from this grid's active chunk
+     * coordinate. timeDataUBO/sunLightUBO/moonLightUBO/skyColorUBO are this
+     * grid's own GPU buffer instances — created once in GridBuildSystem —
+     * so this window's sun, moon, sky, and time render independently of
+     * any other active window.
      */
 
     // Focal
@@ -53,6 +53,12 @@ public class GridInstance extends InstancePackage {
 
     // Location Time
     private LocationTimeStruct locationTimeStruct;
+
+    // Location Lighting UBOs
+    private UBOInstance timeDataUBO;
+    private UBOInstance sunLightUBO;
+    private UBOInstance moonLightUBO;
+    private UBOInstance skyColorUBO;
 
     // Chunk State
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
@@ -81,7 +87,11 @@ public class GridInstance extends InstancePackage {
             LongOpenHashSet gridCoordinates,
             Long2ObjectOpenHashMap<GridSlotHandle> gridSlots,
             float radiusSquared,
-            int maxChunks) {
+            int maxChunks,
+            UBOInstance timeDataUBO,
+            UBOInstance sunLightUBO,
+            UBOInstance moonLightUBO,
+            UBOInstance skyColorUBO) {
 
         // Focal
         this.focalEntity = focalEntity;
@@ -102,6 +112,12 @@ public class GridInstance extends InstancePackage {
 
         // Location Time
         this.locationTimeStruct = new LocationTimeStruct();
+
+        // Location Lighting UBOs
+        this.timeDataUBO = timeDataUBO;
+        this.sunLightUBO = sunLightUBO;
+        this.moonLightUBO = moonLightUBO;
+        this.skyColorUBO = skyColorUBO;
 
         // Chunk State
         this.activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);
@@ -262,6 +278,22 @@ public class GridInstance extends InstancePackage {
 
     public LocationTimeStruct getLocationTimeStruct() {
         return locationTimeStruct;
+    }
+
+    public UBOInstance getTimeDataUBO() {
+        return timeDataUBO;
+    }
+
+    public UBOInstance getSunLightUBO() {
+        return sunLightUBO;
+    }
+
+    public UBOInstance getMoonLightUBO() {
+        return moonLightUBO;
+    }
+
+    public UBOInstance getSkyColorUBO() {
+        return skyColorUBO;
     }
 
     public Long2ObjectLinkedOpenHashMap<ChunkInstance> getActiveChunks() {

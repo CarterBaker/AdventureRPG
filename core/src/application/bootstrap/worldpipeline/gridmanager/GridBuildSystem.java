@@ -22,9 +22,12 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 class GridBuildSystem extends SystemPackage {
 
     /*
-     * Constructs a GridInstance and all GridSlotHandles for a given focal entity
-     * and window. The window is stored on the grid so FrustumCullingSystem can
-     * read the correct camera per grid independently.
+     * Constructs a GridInstance and all GridSlotHandles for a given focal
+     * entity and window. The window is stored on the grid so
+     * FrustumCullingSystem can read the correct camera per grid
+     * independently. Each grid also gets its own Time/Sun/Moon/Sky UBO
+     * instances here, cloned from the shared base handles, so every window
+     * renders its own location's day/night state independently.
      */
 
     // Internal
@@ -34,6 +37,12 @@ class GridBuildSystem extends SystemPackage {
     private int chunkSize;
     private int megaChunkSize;
     private int chunkPoolMaxOverflow;
+
+    // Base UBO Handles
+    private UBOHandle timeDataBase;
+    private UBOHandle sunLightBase;
+    private UBOHandle moonLightBase;
+    private UBOHandle skyColorBase;
 
     // Internal \\
 
@@ -47,6 +56,14 @@ class GridBuildSystem extends SystemPackage {
     @Override
     protected void get() {
         this.uboManager = get(UBOManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        this.timeDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.UBO_TIME_DATA_NAME);
+        this.sunLightBase = uboManager.getUBOHandleFromUBOName(EngineSetting.SUN_LIGHT_UBO);
+        this.moonLightBase = uboManager.getUBOHandleFromUBOName(EngineSetting.MOON_LIGHT_UBO);
+        this.skyColorBase = uboManager.getUBOHandleFromUBOName(EngineSetting.SKY_COLOR_UBO);
     }
 
     // Build \\
@@ -82,7 +99,11 @@ class GridBuildSystem extends SystemPackage {
                 gridCoordinates,
                 gridSlots,
                 radiusSquared,
-                maxChunks);
+                maxChunks,
+                uboManager.createUBOInstance(timeDataBase),
+                uboManager.createUBOInstance(sunLightBase),
+                uboManager.createUBOInstance(moonLightBase),
+                uboManager.createUBOInstance(skyColorBase));
 
         return gridInstance;
     }
