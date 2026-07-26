@@ -4,11 +4,10 @@
 /*
 * Shape, density, and lighting primitives for the sky dome's distant
  * weather clouds. Relies on SkyColorData's u_skyHorizonColor/u_skyZenithColor
- * already being declared earlier in the flattened shader source (see
- * Clouds.glsl's own include order, which always places SkyColorData.glsl
- * ahead of this file). The overhead volumetric system
- * (VolumetricCloudUtility.glsl) is a separate shader pipeline and never
- * shares code with this one, even though both raymarch an oriented box.
+ * already being declared earlier in the flattened shader source. The
+ * overhead volumetric system is a separate shader pipeline and never
+ * shares code with this one. sampleSkyCloudDensityApprox is a cheaper
+ * stand-in used only by the self-shadow light tap in Clouds.glsl.
  */
 
 const float SKY_SILHOUETTE_MIN_SOFTNESS = 0.12;
@@ -57,6 +56,18 @@ float skyFbm(vec3 p) {
         amp *= 0.5;
     }
 
+    return clamp(sum * 0.5 + 0.5, 0.0, 1.0);
+}
+
+/*
+* Two-octave stand-in for skyFbm — same lacunarity/gain schedule, half the
+ * octaves. Used only where an approximate, correlated density is enough
+ * (the self-shadow light tap), never for the visible silhouette.
+ */
+float skyFbmApprox(vec3 p) {
+    float sum = 0.0;
+    sum += 0.5 * skyGradientNoise(p);
+    sum += 0.25 * skyGradientNoise(p * 2.02 + vec3(17.0, -9.0, 5.0));
     return clamp(sum * 0.5 + 0.5, 0.0, 1.0);
 }
 
@@ -111,6 +122,11 @@ float skySilhouette(vec3 localPos, vec3 halfExtent, float softness) {
     return 1.0 - smoothstep(1.0 - edge, 1.0, radius);
 }
 
+/*
+* Full-detail density: domain-warped macro fbm blended with a Worley detail
+ * layer. seedOffset and drift are resolved once per lobe in
+ * Clouds.glsl::marchSkyCloud rather than rebuilt on every call.
+ */
 float sampleSkyCloudDensity(
     vec3 worldPos,
     vec3 boxCenter,
@@ -121,8 +137,8 @@ float sampleSkyCloudDensity(
     float warpStrength,
     float coverageBias,
     float silhouetteSoftness,
-    float seed,
-    float timeSeconds) {
+    vec3 seedOffset,
+    vec3 drift) {
     vec3 rel = worldPos - boxCenter;
     vec2 localXZ = vec2(rel.x * rot.x + rel.z * rot.y, -rel.x * rot.y + rel.z * rot.x);
     vec3 localPos = vec3(localXZ.x, rel.y, localXZ.y);
@@ -133,8 +149,6 @@ float sampleSkyCloudDensity(
     if (envelope <= 0.002)
     return 0.0;
 
-    vec3 seedOffset = vec3(seed * 173.13, seed * 57.31, seed * 91.7);
-    vec3 drift = vec3(timeSeconds * 0.004, 0.0, timeSeconds * 0.0015);
     vec3 coord = worldPos * noiseScale + seedOffset + drift;
 
     float warpA = skyGradientNoise(coord.yzx * 0.6 + seedOffset);
@@ -153,14 +167,45 @@ float sampleSkyCloudDensity(
 }
 
 /*
+* Cheap stand-in for sampleSkyCloudDensity used only by the self-shadow
+ * light tap — no domain warp, no Worley detail, half the fbm octaves. A
+ * shadow estimate only needs to know where the mass is thick or thin.
+ */
+float sampleSkyCloudDensityApprox(
+    vec3 worldPos,
+    vec3 boxCenter,
+    vec2 rot,
+    vec3 halfExtent,
+    float heightT,
+    float noiseScale,
+    float coverageBias,
+    float silhouetteSoftness,
+    vec3 seedOffset,
+    vec3 drift) {
+    vec3 rel = worldPos - boxCenter;
+    vec2 localXZ = vec2(rel.x * rot.x + rel.z * rot.y, -rel.x * rot.y + rel.z * rot.x);
+    vec3 localPos = vec3(localXZ.x, rel.y, localXZ.y);
+
+    float silhouette = skySilhouette(localPos, halfExtent, silhouetteSoftness);
+    float envelope = silhouette * skyHeightProfile(heightT, coverageBias);
+
+    if (envelope <= 0.002)
+    return 0.0;
+
+    vec3 coord = worldPos * noiseScale + seedOffset + drift;
+    float macro = skyFbmApprox(coord);
+
+    float threshold = mix(0.30, 0.62, clamp(coverageBias, 0.0, 1.0));
+    float core = smoothstep(threshold - 0.18, threshold + 0.18, macro);
+
+    return core * envelope;
+}
+
+/*
 * Real (non-toon) lighting for one raymarch sample. Ambient is the sky's own
- * current horizon/zenith color, blended toward zenith as heightT rises — a
- * cloud's underside reads like it's catching horizon-tinted bounce light,
- * its top like open sky, matching the overhead volumetric system's own
- * sky/ground tint technique. Direct is the real sun/moon color and
- * intensity, modulated by lightLift — the caller's own density-gradient
- * self-shadow term — so a cloud's lit side is genuinely brighter than its
- * shadowed side without any material-level lighting knobs.
+ * current horizon/zenith color, blended toward zenith as heightT rises.
+ * Direct is the real sun/moon color and intensity, modulated by lightLift —
+ * the caller's own density-gradient self-shadow term.
  */
 vec3 shadeSkyCloudLit(
     vec3 baseColor,

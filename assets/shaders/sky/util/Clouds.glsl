@@ -12,13 +12,11 @@
 
 /*
 * Sky-dome distant weather preview. Every active cloud lobe is its own real
- * oriented box in world space — the same box the overhead volumetric system
- * builds — raymarched independently and composited front-to-back. Only
- * lobes inside the horizon ring (see SkyWeatherPatternBranch) ever reach
- * this UBO, so this pass never overlaps the physically-instanced clouds
- * the overhead system draws close to the player.
- * Output is premultiplied (rgb already alpha-weighted) — consumers must
- * add rgb directly rather than re-blending it against alpha a second time.
+ * oriented box in world space, raymarched independently and composited
+ * front-to-back. Only lobes inside the horizon ring ever reach this UBO,
+ * so this pass never overlaps the overhead system's own physically
+ * instanced clouds. Output is premultiplied — consumers add rgb directly
+ * rather than re-blending against alpha a second time.
  */
 
 const float HORIZON_FADE_START = -0.02;
@@ -68,6 +66,13 @@ vec4 marchSkyCloud(int index, vec3 rayOrigin, vec3 rayDir, vec3 lightDir, vec3 l
     float softness = u_cloudSilhouetteSoftness[index];
     float densityScale = u_cloudDensity[index];
 
+    // Per-lobe invariants — constant across every step and across both the
+    // main and light-tap density samples this lobe takes this frame, so
+    // they're resolved once here instead of being rebuilt from scratch
+    // inside every one of those calls.
+    vec3 seedOffset = vec3(seed * 173.13, seed * 57.31, seed * 91.7);
+    vec3 drift = vec3(u_time * 0.004, 0.0, u_time * 0.0015);
+
     vec4 accum = vec4(0.0);
 
     for (int i = 0; i < MAX_RAYMARCH_STEPS; i++) {
@@ -81,12 +86,15 @@ vec4 marchSkyCloud(int index, vec3 rayOrigin, vec3 rayDir, vec3 lightDir, vec3 l
 
         float density = sampleSkyCloudDensity(
             p, boxCenter, rot, halfExtent, heightT,
-            noiseScale, warpStrength, coverageBias, softness, seed, u_time) * densityScale;
+            noiseScale, warpStrength, coverageBias, softness, seedOffset, drift) * densityScale;
 
         if (density > 0.01) {
-            float litDensity = sampleSkyCloudDensity(
+            // Cheaper approximate density for the self-shadow tap — it only
+            // needs to know where the mass is thick or thin, not the fine
+            // domain-warped surface detail the visible sample resolves.
+            float litDensity = sampleSkyCloudDensityApprox(
                 p + lightDir * LIGHT_TAP_DISTANCE, boxCenter, rot, halfExtent, heightT,
-                noiseScale, warpStrength, coverageBias, softness, seed, u_time) * densityScale;
+                noiseScale, coverageBias, softness, seedOffset, drift) * densityScale;
 
             float lightLift = clamp((density - litDensity) * 2.0 + 0.5, 0.0, 1.0);
 
@@ -99,9 +107,7 @@ vec4 marchSkyCloud(int index, vec3 rayOrigin, vec3 rayDir, vec3 lightDir, vec3 l
     }
 
     // Both channels scaled together so a low-visibility lobe contributes
-    // proportionally less of its color AND its coverage to the composite —
-    // scaling alpha alone left full-brightness color bleeding through even
-    // when a lobe was meant to read as nearly invisible.
+    // proportionally less of its color AND its coverage to the composite.
     accum.rgb *= visibility;
     accum.a   *= visibility;
 
