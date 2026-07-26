@@ -27,15 +27,9 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class CloudRenderSystem extends SystemPackage {
 
     /*
-     * Owns one instanced GPU buffer per cloud archetype — every active,
-     * cloud-bearing overhead cell sharing a CloudHandle draws in a single
-     * instanced call against a single shared MaterialInstance for that
-     * archetype. Rebuilt fully every frame from OverheadManager's active
-     * cells, farthest-first, so overlapping translucent boxes blend
-     * back-to-front with no per-pixel sorting needed — the same technique
-     * SkyWeatherPatternBranch uses for the sky dome's own array. Archetype
-     * draw order is likewise sorted by each archetype's own average
-     * distance this frame. Owned by WeatherRenderSystem.
+     * Owns one instanced GPU buffer per cloud archetype, rebuilt every frame
+     * from OverheadManager's active cells and submitted farthest-first so
+     * overlapping translucent boxes blend correctly. Owned by WeatherRenderSystem.
      */
 
     private static final int[] INSTANCE_ATTR_SIZES = { 4, 4, 1, 1 };
@@ -55,8 +49,6 @@ class CloudRenderSystem extends SystemPackage {
     private Object2ObjectOpenHashMap<CloudHandle, CompositeBufferInstance> cloud2Buffer;
     private Object2ObjectOpenHashMap<CloudHandle, MaterialInstance> cloud2Material;
 
-    // Distance Tracking — drives both within-archetype and cross-archetype
-    // back-to-front draw order.
     private Object2FloatOpenHashMap<CloudHandle> cloud2DistanceSqSum;
     private Object2IntOpenHashMap<CloudHandle> cloud2SampleCount;
     private Object2FloatOpenHashMap<CloudHandle> cloud2AverageDistanceSq;
@@ -64,6 +56,8 @@ class CloudRenderSystem extends SystemPackage {
     // Sort Scratch
     private final OverheadCellStruct[] sortScratchCells = new OverheadCellStruct[MAX_TRACKED_CELLS];
     private final float[] sortScratchDistanceSq = new float[MAX_TRACKED_CELLS];
+    private final double[] sortScratchRelativeX = new double[MAX_TRACKED_CELLS];
+    private final double[] sortScratchRelativeZ = new double[MAX_TRACKED_CELLS];
     private final CloudHandle[] archetypeOrderScratch = new CloudHandle[MAX_ARCHETYPES];
     private final float[] archetypeDistanceScratch = new float[MAX_ARCHETYPES];
 
@@ -102,15 +96,6 @@ class CloudRenderSystem extends SystemPackage {
 
     // Settings \\
 
-    /*
-     * Pushed once at bootstrap. Real cloud objects are capped to exactly
-     * WeatherManager.getEffectiveNearRangeChunks() — the same
-     * min(Settings.maxRenderDistance / 2, WEATHER_NEAR_RANGE_CHUNKS) formula
-     * RegionSampleBranch and SkyWeatherPatternBranch's own horizon ring both
-     * key off — read through that one shared method rather than recomputed
-     * here, so the overhead system's streaming boundary and the sky dome's
-     * ring can never drift apart from each other.
-     */
     private void pushCloudSettings() {
 
         UBOHandle cloudSettingsData = uboManager.getUBOHandleFromUBOName(EngineSetting.CLOUD_SETTINGS_DATA_UBO);
@@ -155,15 +140,21 @@ class CloudRenderSystem extends SystemPackage {
         int count = gatherSortedCells(referenceChunkX, referenceChunkZ, activeWorld);
 
         for (int i = 0; i < count; i++)
-            accumulateInstance(sortScratchCells[i], referenceChunkX, referenceChunkZ, activeWorld);
+            accumulateInstance(
+                    sortScratchCells[i],
+                    sortScratchRelativeX[i],
+                    sortScratchRelativeZ[i],
+                    sortScratchDistanceSq[i]);
 
         finalizeArchetypeDistances();
     }
 
     /*
-     * Collects every cloud-bearing active cell and sorts far-to-near by
-     * distance from the reference coordinate — insertion sort, allocation
-     * free, trivial at the 64-cell budget cap.
+     * Collects every cloud-bearing active cell, sorted far-to-near by
+     * distance from the reference coordinate. Each surviving cell's wrapped
+     * relative position and squared distance are resolved exactly once
+     * here and carried through the sort, rather than being re-derived a
+     * second time in accumulateInstance.
      */
     private int gatherSortedCells(int referenceChunkX, int referenceChunkZ, WorldHandle activeWorld) {
 
@@ -188,6 +179,8 @@ class CloudRenderSystem extends SystemPackage {
 
             sortScratchCells[count] = cell;
             sortScratchDistanceSq[count] = distanceSq;
+            sortScratchRelativeX[count] = relativeChunkX;
+            sortScratchRelativeZ[count] = relativeChunkZ;
             count++;
         }
 
@@ -195,16 +188,22 @@ class CloudRenderSystem extends SystemPackage {
 
             OverheadCellStruct cell = sortScratchCells[i];
             float distanceSq = sortScratchDistanceSq[i];
+            double relativeX = sortScratchRelativeX[i];
+            double relativeZ = sortScratchRelativeZ[i];
 
             int j = i - 1;
             while (j >= 0 && sortScratchDistanceSq[j] < distanceSq) {
                 sortScratchCells[j + 1] = sortScratchCells[j];
                 sortScratchDistanceSq[j + 1] = sortScratchDistanceSq[j];
+                sortScratchRelativeX[j + 1] = sortScratchRelativeX[j];
+                sortScratchRelativeZ[j + 1] = sortScratchRelativeZ[j];
                 j--;
             }
 
             sortScratchCells[j + 1] = cell;
             sortScratchDistanceSq[j + 1] = distanceSq;
+            sortScratchRelativeX[j + 1] = relativeX;
+            sortScratchRelativeZ[j + 1] = relativeZ;
         }
 
         return count;
@@ -212,17 +211,13 @@ class CloudRenderSystem extends SystemPackage {
 
     private void accumulateInstance(
             OverheadCellStruct cell,
-            int referenceChunkX,
-            int referenceChunkZ,
-            WorldHandle activeWorld) {
+            double relativeChunkX,
+            double relativeChunkZ,
+            float distanceSq) {
 
         CloudHandle cloudHandle = cell.getCloudHandle();
         CompositeBufferInstance buffer = getOrCreateArchetype(cloudHandle);
 
-        double relativeChunkX = WorldWrapUtility.wrappedDeltaX(activeWorld, cell.getCurrentChunkX(), referenceChunkX);
-        double relativeChunkZ = WorldWrapUtility.wrappedDeltaZ(activeWorld, cell.getCurrentChunkZ(), referenceChunkZ);
-
-        float distanceSq = (float) (relativeChunkX * relativeChunkX + relativeChunkZ * relativeChunkZ);
         cloud2DistanceSqSum.addTo(cloudHandle, distanceSq);
         cloud2SampleCount.addTo(cloudHandle, 1);
 
@@ -269,19 +264,6 @@ class CloudRenderSystem extends SystemPackage {
         return buffer;
     }
 
-    /*
-     * Bakes every archetype-level SHAPE value off CloudData into this
-     * archetype's own shared MaterialInstance, once, the first time it is
-     * ever used. u_cloudDensity here is the archetype's own intrinsic
-     * density — Nimbus reads inherently thicker than Stratus regardless of
-     * which weather spawned it. The weather-specific multiplier on top of
-     * that (weather's own cloudDensityMultiplier combined with this cloud
-     * entry's own per-weather multiplier — see WeatherPatternLobeStruct) is
-     * per-instance, not per-archetype, since the same archetype can be
-     * spawned by multiple weathers wanting different density. Per-instance
-     * size variance and elongation are likewise applied later, in the
-     * vertex shader, against this shared base.
-     */
     private void bakeArchetypeUniforms(MaterialInstance material, CloudHandle cloudHandle) {
 
         material.setUniform(EngineSetting.UNIFORM_CLOUD_COLOR, cloudHandle.getCloudColor());
@@ -296,11 +278,6 @@ class CloudRenderSystem extends SystemPackage {
 
     // Submit \\
 
-    /*
-     * Pushes every non-empty archetype buffer into this window's render
-     * queue, ordered farthest-average-distance first so different cloud
-     * types layered over each other this frame also composite back-to-front.
-     */
     void submit(FboInstance fbo, WindowInstance window) {
 
         int archetypeCount = 0;

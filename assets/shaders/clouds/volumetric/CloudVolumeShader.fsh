@@ -2,19 +2,20 @@
 #version 330 core
 
 in vec3  vWorldPos;
-in float vRandomSeed;
-in float vFadeAlpha;
-in float vIntensity;
-in float vDensityMultiplier;
+flat in float vFadeAlpha;
+flat in float vIntensity;
+flat in float vDensityMultiplier;
 flat in vec3 vBoxCenter;
 flat in vec3 vHalfExtent;
 flat in vec2 vRot;
 flat in float vDetailFactor;
+flat in float vElongation;
+flat in vec3 vSeedOffset;
+flat in vec3 vTimeDrift;
 
 out vec4 fragColor;
 
 #include "includes/CameraData.glsl"
-#include "includes/TimeData.glsl"
 #include "includes/SkyColorData.glsl"
 #include "includes/SunLightData.glsl"
 #include "includes/MoonLightData.glsl"
@@ -22,13 +23,10 @@ out vec4 fragColor;
 #include "clouds/util/VolumetricCloudUtility.glsl"
 
 /*
-* Forward-lit, alpha-blended raymarch of this instance's oriented box.
- * Composited as its own screen layer between the sky and the lit world
- * (see WeatherRenderSystem) — never touches the deferred G-buffer, so
- * every bit of a cloud's lighting is computed once, right here. Instances
- * are submitted farthest-first (see CloudRenderSystem), drawn with depth
- * write disabled, so ordinary alpha blending composites them correctly
- * with no dithered alpha-test approximation.
+* Forward-lit, alpha-blended raymarch of this instance's oriented box,
+ * composited between the sky and the lit world (see WeatherRenderSystem).
+ * Instances submit farthest-first (see CloudRenderSystem) with depth write
+ * disabled, so ordinary alpha blending composites correctly.
  */
 
 uniform vec3  u_cloudColor;
@@ -110,15 +108,14 @@ void main() {
             p, vBoxCenter, vRot, vHalfExtent, heightT,
             u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
             u_cloudCoverageBias, u_cloudSilhouetteSoftness,
-            vDetailFactor, vRandomSeed, u_time);
+            vDetailFactor, vElongation, vSeedOffset, vTimeDrift);
         float density = rawDensity * u_cloudDensity * vDensityMultiplier * vIntensity;
 
         if (density > 0.01) {
             float lightTransmittance = sampleCloudLightTransmittance(
                 p, lightDir, vBoxCenter, vRot, vHalfExtent,
-                u_cloudDensityNoiseScale, u_cloudNoiseWarpStrength,
-                u_cloudCoverageBias, u_cloudSilhouetteSoftness,
-                vDetailFactor, vRandomSeed, u_time,
+                u_cloudDensityNoiseScale, u_cloudCoverageBias, u_cloudSilhouetteSoftness,
+                vElongation, vSeedOffset, vTimeDrift,
                 CLOUD_LIGHT_STEP_SIZE, CLOUD_LIGHT_TAPS, CLOUD_EXTINCTION);
 
             float powder = 1.0 - exp(-density * CLOUD_POWDER_STRENGTH);
@@ -147,8 +144,6 @@ void main() {
 
     vec3 straightColor = accum.rgb / max(accum.a, 0.0001);
 
-    // Aerial-perspective fade toward the horizon color as a cloud
-    // approaches the edge of the simulated weather radius.
     float fogT = smoothstep(
         u_cloudHorizonDistance * CLOUD_FOG_MIN_DISTANCE_RATIO,
         u_cloudHorizonDistance * CLOUD_FOG_MAX_DISTANCE_RATIO,
