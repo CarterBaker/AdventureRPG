@@ -345,66 +345,9 @@ public class EngineSetting {
         public static final float SKY_FOG_BLEND_START = 0.4f;
         public static final float SKY_ALTITUDE_POWER = 1.2f;
 
-        // Cloud Volume \\
+        // Cloud \\
 
-        public static final float CLOUD_VOLUME_BASE_ALTITUDE = 140f;
-        public static final float CLOUD_VOLUME_TOP_ALTITUDE = 220f;
-        public static final float CLOUD_VOLUME_HALF_EXTENT = 512f;
-        public static final float CLOUD_VOLUME_FADE_START_RATIO = 0.70f;
-        public static final int CLOUD_VOLUME_RAYMARCH_STEPS_NEAR = 48;
-        public static final int CLOUD_VOLUME_RAYMARCH_STEPS_FAR = 16;
-        public static final float CLOUD_VOLUME_TIER_NEAR_DISTANCE = 128f;
-        public static final float CLOUD_HORIZON_FAR_PLANE_SAFETY_MARGIN = 0.85f;
-        public static final String CLOUD_VOLUME_MESH_NAME = "clouds/CloudVolumeMesh";
-        public static final String CLOUD_VOLUME_MATERIAL_NAME = "clouds/CloudVolumeMaterial";
-
-        // Cloud Instancing \\
-
-        public static final String CLOUD_CARD_MESH_NAME = "clouds/CloudCardMesh";
-        public static final String CLOUD_INSTANCED_MATERIAL_TEMPLATE = "clouds/CloudInstancedMaterial";
         public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 48.0f;
-        public static final String UNIFORM_CLOUD_COLOR = "u_cloudColor";
-        public static final String UNIFORM_CLOUD_SCALE = "u_cloudScale";
-        public static final String UNIFORM_CLOUD_DENSITY = "u_cloudDensity";
-        public static final String UNIFORM_CLOUD_VERTICAL_THICKNESS = "u_cloudVerticalThickness";
-        public static final String UNIFORM_CLOUD_EDGE_SOFTNESS = "u_cloudEdgeSoftness";
-        public static final String UNIFORM_CLOUD_PUFF_JITTER = "u_cloudPuffJitter";
-        public static final String UNIFORM_CLOUD_DENSITY_NOISE_SCALE = "u_cloudDensityNoiseScale";
-        public static final String UNIFORM_CLOUD_NOISE_WARP_STRENGTH = "u_cloudNoiseWarpStrength";
-        public static final String UNIFORM_CLOUD_COVERAGE_BIAS = "u_cloudCoverageBias";
-        public static final String UNIFORM_CLOUD_SILHOUETTE_SOFTNESS = "u_cloudSilhouetteSoftness";
-
-        // Cloud Instance Uniforms \\
-
-        public static final String UNIFORM_CLOUD_INSTANCE_POSITION = "u_cloudInstancePosition";
-        public static final String UNIFORM_CLOUD_INSTANCE_RANDOM_SEED = "u_cloudInstanceRandomSeed";
-        public static final String UNIFORM_CLOUD_INSTANCE_DOMAIN_ROTATION = "u_cloudInstanceDomainRotation";
-        public static final String UNIFORM_CLOUD_INSTANCE_FADE_ALPHA = "u_cloudInstanceFadeAlpha";
-        public static final String UNIFORM_CLOUD_INSTANCE_INTENSITY = "u_cloudInstanceIntensity";
-
-        // Cloud Settings UBO \\
-
-        public static final String CLOUD_SETTINGS_DATA_UBO = "CloudSettingsData";
-        public static final String UNIFORM_CLOUD_HORIZON_DISTANCE = "u_cloudHorizonDistance";
-        public static final String UNIFORM_CLOUD_MIN_SCALE = "u_cloudMinScale";
-        public static final String UNIFORM_CLOUD_MAX_SCALE = "u_cloudMaxScale";
-        public static final String UNIFORM_CLOUD_SKY_VIEW_DISTANCE = "u_cloudSkyViewDistance";
-        public static final String UNIFORM_CLOUD_TRANSITION_START = "u_cloudTransitionStart";
-        public static final float CLOUD_HORIZON_MIN_SCALE = 0.35f;
-        public static final float CLOUD_HORIZON_MAX_SCALE = 1.0f;
-        public static final float CLOUD_HORIZON_RENDER_DISTANCE_SCALE = 1.0f;
-        public static final float CLOUD_DEFAULT_SKY_ALTITUDE = 140.0f;
-        public static final float CLOUD_DEFAULT_SKY_COLOR_R = 1.0f;
-        public static final float CLOUD_DEFAULT_SKY_COLOR_G = 1.0f;
-        public static final float CLOUD_DEFAULT_SKY_COLOR_B = 1.0f;
-
-        // Cloud Fallbacks — Directional Sky Sampling \\
-
-        public static final float CLOUD_DEFAULT_DENSITY = 0.8f;
-        public static final float CLOUD_DEFAULT_DENSITY_NOISE_SCALE = 1.0f;
-        public static final float CLOUD_DEFAULT_NOISE_WARP_STRENGTH = 0.6f;
-        public static final float CLOUD_DEFAULT_COVERAGE_BIAS = 0.5f;
-        public static final float CLOUD_DEFAULT_SILHOUETTE_SOFTNESS = 0.08f;
 
         // Weather \\
 
@@ -453,20 +396,13 @@ public class EngineSetting {
         public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 8;
         public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 24.0f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
-        public static final float WEATHER_PATTERN_LOBE_MIN_COUNT = 1.0f;
-        public static final float WEATHER_PATTERN_LOBE_MAX_COUNT = 3.0f;
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 8;
-        public static final int WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET = 64;
 
         // Weather Pattern Lifecycle \\
 
         public static final float WEATHER_PATTERN_REEVALUATION_INTERVAL_MIN_SECONDS = 45.0f;
         public static final float WEATHER_PATTERN_REEVALUATION_INTERVAL_MAX_SECONDS = 90.0f;
         public static final float WEATHER_PATTERN_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
-
-        // Sky Weather Pattern Data \\
-
-        public static final String SKY_WEATHER_PATTERN_DATA_UBO = "SkyWeatherPatternData";
 
         // Wind \\
 

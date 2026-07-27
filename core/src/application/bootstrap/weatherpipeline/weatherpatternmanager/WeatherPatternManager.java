@@ -1,7 +1,5 @@
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
-import application.bootstrap.weatherpipeline.cloud.CloudHandle;
-import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherBandStruct;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
@@ -19,43 +17,29 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WeatherPatternManager extends ManagerPackage {
 
     /*
-     * Simulates the world's persistent weather patterns — jittered cells
-     * streamed in across the full radius around the player, each holding a
-     * handful of offset cloud lobes that drift with world rotation and
-     * retire once they pass beyond the simulated radius. Placement variance
-     * per lobe (spread, size, elongation) comes from whichever cloud
-     * archetype that lobe actually picked, so different cloud types read as
-     * genuinely different shapes instead of sharing one global jitter.
+     * Simulates the world's persistent weather patterns: jittered cells
+     * streamed in across the radius around the player, tracking which
+     * weather each cell resolves to and drifting them with world rotation
+     * until they retire beyond the simulated radius.
      */
+
+    private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
 
     private static final float FADE_IN_RATE = 0.4f;
     private static final float FADE_OUT_RATE = 0.4f;
     private static final float INTENSITY_SMOOTHING_TIME_SECONDS = 3.0f;
-    private static final float MIN_ALTITUDE_HALF_THICKNESS = 4.0f;
-    private static final long GENERATION_SEED_MIX = 0x632BE59BD9B4E019L;
-
-    // Fallbacks for a lobe that picked no cloud at all — never rendered,
-    // but still needs a position.
-    private static final float DEFAULT_SPREAD_RATIO = 0.85f;
-    private static final float DEFAULT_SIZE_VARIANCE_MIN = 0.65f;
-    private static final float DEFAULT_SIZE_VARIANCE_MAX = 1.6f;
-    private static final float DEFAULT_ELONGATION_MIN = 1.0f;
-    private static final float DEFAULT_ELONGATION_MAX = 2.4f;
 
     private WeatherManager weatherManager;
     private WorldManager worldManager;
-    private SkyWeatherPatternBranch skyWeatherPatternBranch;
 
     private int patternCellSizeChunks;
     private float radiusChunks;
     private int maxPatternsStreamedPerFrame;
     private int maxActivePatternCount;
-    private int overheadLobeBudget;
     private float reevaluationMinSeconds;
     private float reevaluationMaxSeconds;
 
     private Long2ObjectOpenHashMap<WeatherPatternStruct> activePatterns;
-    private int totalActiveLobeCount;
 
     private IntArrayList freeSlots;
 
@@ -77,12 +61,10 @@ public class WeatherPatternManager extends ManagerPackage {
         this.patternCellSizeChunks = EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS;
         this.maxPatternsStreamedPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
         this.maxActivePatternCount = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
-        this.overheadLobeBudget = EngineSetting.WEATHER_PATTERN_OVERHEAD_LOBE_BUDGET;
         this.reevaluationMinSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MIN_SECONDS;
         this.reevaluationMaxSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MAX_SECONDS;
 
         this.activePatterns = new Long2ObjectOpenHashMap<>();
-        this.totalActiveLobeCount = 0;
 
         this.freeSlots = new IntArrayList(maxActivePatternCount);
         for (int i = 0; i < maxActivePatternCount; i++)
@@ -96,8 +78,6 @@ public class WeatherPatternManager extends ManagerPackage {
         this.streamedInThisFrame = new ObjectArrayList<>();
         this.retiredThisFrame = new ObjectArrayList<>();
         this.refreshedThisFrame = new ObjectArrayList<>();
-
-        this.skyWeatherPatternBranch = create(SkyWeatherPatternBranch.class);
     }
 
     @Override
@@ -248,152 +228,18 @@ public class WeatherPatternManager extends ManagerPackage {
         float spread = bandScratch.getIntensityFor(weatherHandle);
         float intensity = spread * weatherHandle.getCloudCoverage();
 
-        WeatherPatternLobeStruct[] lobes = buildLobes(patternKey, weatherHandle, 0);
-
-        if (totalActiveLobeCount + lobes.length > overheadLobeBudget)
-            return false;
-
-        float driftSpeedScale = computePatternDriftSpeedScale(lobes);
         int slot = freeSlots.removeInt(freeSlots.size() - 1);
 
         WeatherPatternStruct pattern = new WeatherPatternStruct(
-                patternKey, homeChunkX, homeChunkZ, weatherHandle, lobes,
-                driftSpeedScale, intensity, spread, slot);
+                patternKey, homeChunkX, homeChunkZ, weatherHandle,
+                DEFAULT_DRIFT_SPEED_SCALE, intensity, spread, slot);
 
-        applyBounds(pattern, lobes);
         pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
 
-        totalActiveLobeCount += lobes.length;
         activePatterns.put(patternKey, pattern);
         streamedInThisFrame.add(pattern);
 
         return true;
-    }
-
-    // Every placement variance below comes from whichever cloud archetype
-    // this specific lobe picked — a lobe with no cloud falls back to a
-    // neutral default, since it will never be visible either way.
-    private WeatherPatternLobeStruct[] buildLobes(long patternKey, WeatherHandle weatherHandle, int generation) {
-
-        int lobeCount = weatherHandle.hasClouds()
-                ? Math.max(1, Math.round(lerp(
-                        EngineSetting.WEATHER_PATTERN_LOBE_MIN_COUNT,
-                        EngineSetting.WEATHER_PATTERN_LOBE_MAX_COUNT,
-                        clamp01(weatherHandle.getCloudCoverage()))))
-                : 1;
-
-        long generationSalt = GENERATION_SEED_MIX * (generation + 1);
-
-        WeatherPatternLobeStruct[] lobes = new WeatherPatternLobeStruct[lobeCount];
-
-        for (int i = 0; i < lobeCount; i++) {
-
-            long lobeSeedBase = patternKey ^ generationSalt ^ (0x9E3779B97F4A7C15L * (i + 1));
-
-            boolean coveredByCloud;
-
-            if (!weatherHandle.hasClouds()) {
-                coveredByCloud = false;
-            } else if (i == 0) {
-                coveredByCloud = true;
-            } else {
-                float coveragePickNoise = hash01(lobeSeedBase ^ 0xA24BAED4963EE407L);
-                float presenceChance = lerp(0.55f, 1.0f, clamp01(weatherHandle.getCloudCoverage()));
-                coveredByCloud = coveragePickNoise < presenceChance;
-            }
-
-            float cloudPickNoise = hash01(lobeSeedBase);
-            CloudChanceStruct cloudEntry = coveredByCloud ? weatherHandle.pickCloud(cloudPickNoise) : null;
-            CloudHandle cloudHandle = cloudEntry != null ? cloudEntry.getCloudHandle() : null;
-
-            float spreadRatio = cloudHandle != null ? cloudHandle.getSpreadRatio() : DEFAULT_SPREAD_RATIO;
-            float sizeVarianceMin = cloudHandle != null ? cloudHandle.getSizeVarianceMin() : DEFAULT_SIZE_VARIANCE_MIN;
-            float sizeVarianceMax = cloudHandle != null ? cloudHandle.getSizeVarianceMax() : DEFAULT_SIZE_VARIANCE_MAX;
-            float elongationMin = cloudHandle != null ? cloudHandle.getElongationMin() : DEFAULT_ELONGATION_MIN;
-            float elongationMax = cloudHandle != null ? cloudHandle.getElongationMax() : DEFAULT_ELONGATION_MAX;
-
-            float randomSeed = hash01(lobeSeedBase ^ 0xBF58476D1CE4E5B9L);
-            float sizeVariance = lerp(sizeVarianceMin, sizeVarianceMax, hash01(lobeSeedBase ^ 0x94D049BB133111EBL));
-            float domainRotation = hash01(lobeSeedBase ^ 0xD1B54A32D192ED03L) * (float) (Math.PI * 2.0);
-            float elongation = lerp(elongationMin, elongationMax, hash01(lobeSeedBase ^ 0x27D4EB2F165667C5L));
-
-            float lobeSpreadChunks = patternCellSizeChunks * spreadRatio;
-            float offsetAngle = hash01(lobeSeedBase ^ 0xC2B2AE3D27D4EB4FL) * (float) (Math.PI * 2.0);
-            float offsetRadiusT = i == 0 ? 0f : hash01(lobeSeedBase ^ 0x165667B19E3779F9L);
-            float offsetRadius = offsetRadiusT * lobeSpreadChunks;
-
-            float offsetChunkX = (float) Math.cos(offsetAngle) * offsetRadius;
-            float offsetChunkZ = (float) Math.sin(offsetAngle) * offsetRadius;
-
-            float effectiveAltitude = cloudEntry != null
-                    ? cloudEntry.getEffectiveAltitude()
-                    : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;
-            float densityMultiplier = cloudEntry != null
-                    ? weatherHandle.getCloudDensityMultiplier() * cloudEntry.getDensityMultiplier()
-                    : 1f;
-
-            lobes[i] = new WeatherPatternLobeStruct(
-                    offsetChunkX, offsetChunkZ,
-                    cloudHandle, effectiveAltitude, densityMultiplier,
-                    randomSeed, sizeVariance, domainRotation, elongation);
-        }
-
-        return lobes;
-    }
-
-    private void applyBounds(WeatherPatternStruct pattern, WeatherPatternLobeStruct[] lobes) {
-
-        float maxReachChunks = 0f;
-        float altMin = Float.MAX_VALUE;
-        float altMax = -Float.MAX_VALUE;
-
-        for (int i = 0; i < lobes.length; i++) {
-
-            WeatherPatternLobeStruct lobe = lobes[i];
-
-            if (!lobe.hasCloud())
-                continue;
-
-            CloudHandle cloud = lobe.getCloudHandle();
-            float footprintBlocks = cloud.getScale() * lobe.getSizeVariance() * Math.max(lobe.getElongation(), 1f);
-            float footprintChunks = (footprintBlocks * 0.5f) / EngineSetting.CHUNK_SIZE;
-            float offsetChunks = (float) Math.sqrt(
-                    lobe.getOffsetChunkX() * lobe.getOffsetChunkX()
-                            + lobe.getOffsetChunkZ() * lobe.getOffsetChunkZ());
-
-            maxReachChunks = Math.max(maxReachChunks, offsetChunks + footprintChunks);
-
-            float halfThicknessBlocks = cloud.getVerticalThickness() * lobe.getSizeVariance() * 0.5f;
-            float altitude = lobe.getEffectiveAltitude();
-
-            altMin = Math.min(altMin, altitude - halfThicknessBlocks);
-            altMax = Math.max(altMax, altitude + halfThicknessBlocks);
-        }
-
-        if (altMin > altMax) {
-            maxReachChunks = Math.max(maxReachChunks, patternCellSizeChunks * 0.5f);
-            altMin = EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE - MIN_ALTITUDE_HALF_THICKNESS;
-            altMax = EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE + MIN_ALTITUDE_HALF_THICKNESS;
-        }
-
-        float halfThickness = Math.max((altMax - altMin) * 0.5f, MIN_ALTITUDE_HALF_THICKNESS);
-
-        pattern.setBounds(maxReachChunks, (altMin + altMax) * 0.5f, halfThickness);
-    }
-
-    private float computePatternDriftSpeedScale(WeatherPatternLobeStruct[] lobes) {
-
-        float sum = 0f;
-        int count = 0;
-
-        for (int i = 0; i < lobes.length; i++) {
-            if (lobes[i].hasCloud()) {
-                sum += lobes[i].getCloudHandle().getDriftSpeedScale();
-                count++;
-            }
-        }
-
-        return count > 0 ? sum / count : 1f;
     }
 
     private long wrapChunkCoordinate(int chunkX, int chunkZ) {
@@ -448,20 +294,7 @@ public class WeatherPatternManager extends ManagerPackage {
     }
 
     private void tryRefreshWeather(WeatherPatternStruct pattern, WeatherHandle resolved) {
-
-        WeatherPatternLobeStruct[] newLobes = buildLobes(pattern.getPatternKey(), resolved,
-                pattern.getGeneration() + 1);
-        int delta = newLobes.length - pattern.getLobeCount();
-
-        if (totalActiveLobeCount + delta > overheadLobeBudget)
-            return;
-
         pattern.beginWeatherTransition(resolved);
-        pattern.refreshLobes(newLobes);
-        pattern.setDriftSpeedScale(computePatternDriftSpeedScale(newLobes));
-        applyBounds(pattern, newLobes);
-
-        totalActiveLobeCount += delta;
         refreshedThisFrame.add(pattern);
     }
 
@@ -553,7 +386,6 @@ public class WeatherPatternManager extends ManagerPackage {
         if (pattern == null)
             return;
 
-        totalActiveLobeCount -= pattern.getLobeCount();
         freeSlots.add(pattern.getSlot());
         retiredThisFrame.add(pattern);
     }
@@ -572,10 +404,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
     private static float lerp(float a, float b, float t) {
         return a + (b - a) * t;
-    }
-
-    private static float clamp01(float value) {
-        return Math.max(0f, Math.min(1f, value));
     }
 
     public Long2ObjectOpenHashMap<WeatherPatternStruct> getActivePatterns() {
