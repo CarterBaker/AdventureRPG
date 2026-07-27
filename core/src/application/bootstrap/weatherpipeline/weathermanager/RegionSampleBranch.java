@@ -55,17 +55,24 @@ class RegionSampleBranch extends BranchPackage {
     // Effective Range \\
 
     /*
-     * The single shared boundary between the overhead system's outer edge
-     * and the sky dome's near horizon ring. WeatherPatternManager and
-     * SkyWeatherPatternBranch both read this method rather than recomputing
-     * their own radius, so the two visual layers always hand off at the
-     * same distance instead of drifting apart. The cap against
-     * WEATHER_NEAR_RANGE_CHUNKS is a sanity ceiling only — under normal
-     * settings the boundary sits at exactly settings.maxRenderDistance,
-     * never half of it.
+     * The outer boundary shared by the CPU weather-pattern simulation and
+     * the sky dome's distant cloud sampling. WeatherPatternManager and the
+     * sky dome both read this rather than recomputing their own radius, so
+     * neither visual layer ever samples weather the simulation doesn't
+     * actually maintain. The cap against WEATHER_OUTER_RANGE_CHUNKS is a
+     * sanity ceiling only — under normal settings the boundary sits at
+     * exactly settings.maxRenderDistance.
+     */
+    float getEffectiveOuterRangeChunks() {
+        return Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_OUTER_RANGE_CHUNKS);
+    }
+
+    /*
+     * The inner boundary the overhead volumetric mesh samples against.
+     * Always clamped to the outer range above so it can never exceed it.
      */
     float getEffectiveNearRangeChunks() {
-        return Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
+        return Math.min(getEffectiveOuterRangeChunks(), (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
     }
 
     // Sampling \\
@@ -133,10 +140,10 @@ class RegionSampleBranch extends BranchPackage {
         double dz = WorldWrapUtility.wrappedDeltaZ(activeWorld, homeChunkZ, referenceChunkZ);
         double distanceChunks = Math.sqrt(dx * dx + dz * dz);
 
-        double effectiveNearRangeChunks = getEffectiveNearRangeChunks();
-        double clampedDistance = Math.min(distanceChunks, effectiveNearRangeChunks);
-        float distanceT = effectiveNearRangeChunks > 0.0
-                ? (float) (clampedDistance / effectiveNearRangeChunks)
+        double effectiveOuterRangeChunks = getEffectiveOuterRangeChunks();
+        double clampedDistance = Math.min(distanceChunks, effectiveOuterRangeChunks);
+        float distanceT = effectiveOuterRangeChunks > 0.0
+                ? (float) (clampedDistance / effectiveOuterRangeChunks)
                 : 1f;
 
         float nearNoise = combinedNoiseAt(homeChunkX, homeChunkZ);

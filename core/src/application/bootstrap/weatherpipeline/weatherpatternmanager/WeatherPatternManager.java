@@ -36,7 +36,8 @@ public class WeatherPatternManager extends ManagerPackage {
     private WorldManager worldManager;
 
     private int patternCellSizeChunks;
-    private float radiusChunks;
+    private float outerRangeChunks;
+    private float nearRangeChunks;
     private int maxPatternsStreamedPerFrame;
     private int maxActivePatternCount;
     private float reevaluationNoiseFraction;
@@ -97,7 +98,8 @@ public class WeatherPatternManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        this.radiusChunks = weatherManager.getEffectiveNearRangeChunks();
+        this.outerRangeChunks = weatherManager.getEffectiveOuterRangeChunks();
+        this.nearRangeChunks = weatherManager.getEffectiveNearRangeChunks();
         this.candidateOffsets = buildCandidateOffsets();
     }
 
@@ -129,7 +131,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
         float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
         float maxJitterMagnitudeChunks = (jitterRangeChunks * 0.5f) * (float) Math.sqrt(2.0);
-        float candidateRadiusChunks = radiusChunks + maxJitterMagnitudeChunks;
+        float candidateRadiusChunks = outerRangeChunks + maxJitterMagnitudeChunks;
         int radiusCells = Math.max(1, (int) Math.ceil(candidateRadiusChunks / (float) patternCellSizeChunks));
 
         ObjectArrayList<int[]> offsets = new ObjectArrayList<>();
@@ -198,7 +200,7 @@ public class WeatherPatternManager extends ManagerPackage {
             double dz = WorldWrapUtility.wrappedDelta(homeChunkZ, playerChunkZ, worldHeightChunks);
             double trueDistanceChunks = Math.sqrt(dx * dx + dz * dz);
 
-            if (trueDistanceChunks > radiusChunks)
+            if (trueDistanceChunks > outerRangeChunks)
                 continue;
 
             long wrappedHome = wrapChunkCoordinate(homeChunkX, homeChunkZ);
@@ -388,7 +390,7 @@ public class WeatherPatternManager extends ManagerPackage {
             pattern.setDistanceFromReferenceChunks((float) distChunks);
             pattern.updateBounds();
 
-            if (distChunks > radiusChunks && !pattern.isRetiring())
+            if (distChunks > outerRangeChunks && !pattern.isRetiring())
                 pattern.setRetiring(true);
 
             float alpha = pattern.getFadeAlpha();
@@ -459,5 +461,13 @@ public class WeatherPatternManager extends ManagerPackage {
 
     public int getActivePatternCount() {
         return activePatterns.size();
+    }
+
+    public float getOuterRangeChunks() {
+        return outerRangeChunks;
+    }
+
+    public float getNearRangeChunks() {
+        return nearRangeChunks;
     }
 }

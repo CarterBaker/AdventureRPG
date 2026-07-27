@@ -367,7 +367,16 @@ public class EngineSetting {
 
         // Weather Sampling Ranges \\
 
-        public static final int WEATHER_NEAR_RANGE_CHUNKS = 192;
+        // Outer boundary of the CPU weather-pattern simulation and the sky
+        // dome's distant cloud sampling.
+        public static final int WEATHER_OUTER_RANGE_CHUNKS = 192;
+
+        // Inner boundary, always closer than the outer range above, that the
+        // overhead volumetric mesh samples against instead of the full range.
+        public static final int WEATHER_NEAR_RANGE_CHUNKS = 96;
+
+        // Directional lookahead distance for RegionSampleBranch's own
+        // horizon-direction probe — unrelated to the near/outer pair above.
         public static final int WEATHER_FAR_RANGE_CHUNKS = 384;
 
         // Weather Sampling Smoothing \\
