@@ -1,7 +1,6 @@
 // WeatherPatternManager.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
-import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherBandStruct;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
@@ -22,7 +21,9 @@ public class WeatherPatternManager extends ManagerPackage {
      * Simulates the world's persistent weather patterns: jittered cells
      * streamed in across the radius around the player, tracking which
      * weather each cell resolves to and drifting them with world rotation
-     * until they retire beyond the simulated radius.
+     * until they retire beyond the simulated radius. Reevaluation cadence
+     * is derived from the world's own KPH-based drift speed rather than a
+     * fixed timer — see reevaluationIntervalFor().
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
@@ -38,6 +39,9 @@ public class WeatherPatternManager extends ManagerPackage {
     private float radiusChunks;
     private int maxPatternsStreamedPerFrame;
     private int maxActivePatternCount;
+    private float reevaluationNoiseFraction;
+    private float reevaluationJitterMin;
+    private float reevaluationJitterMax;
     private float reevaluationMinSeconds;
     private float reevaluationMaxSeconds;
 
@@ -63,8 +67,11 @@ public class WeatherPatternManager extends ManagerPackage {
         this.patternCellSizeChunks = EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS;
         this.maxPatternsStreamedPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
         this.maxActivePatternCount = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
-        this.reevaluationMinSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MIN_SECONDS;
-        this.reevaluationMaxSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_INTERVAL_MAX_SECONDS;
+        this.reevaluationNoiseFraction = EngineSetting.WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION;
+        this.reevaluationJitterMin = EngineSetting.WEATHER_PATTERN_REEVALUATION_JITTER_MIN;
+        this.reevaluationJitterMax = EngineSetting.WEATHER_PATTERN_REEVALUATION_JITTER_MAX;
+        this.reevaluationMinSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_MIN_SECONDS;
+        this.reevaluationMaxSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_MAX_SECONDS;
 
         this.activePatterns = new Long2ObjectOpenHashMap<>();
 
@@ -218,49 +225,6 @@ public class WeatherPatternManager extends ManagerPackage {
         return new int[] { jitterX, jitterZ };
     }
 
-    /*
-     * Normalizes a weather's cloud pool into a fixed-size, cloud-type-
-     * indexed weight array — the same array shape WeatherPatternStruct
-     * carries and the weather map UBO will read from. Chance is
-     * normalized against the pool's own total (not the weather's absolute
-     * chance values) so density reads consistently regardless of how a
-     * given weather happened to weight its entries; densityMultiplier is
-     * then applied on top per entry, exactly as it already scales that
-     * cloud's own base density elsewhere. Clear weather (no cloud
-     * entries) resolves to an all-zero array.
-     */
-    private float[] resolveCloudTypeWeights(WeatherHandle weatherHandle) {
-
-        float[] weights = new float[EngineSetting.MAX_CLOUD_TYPES];
-
-        ObjectArrayList<CloudChanceStruct> entries = weatherHandle.getCloudEntries();
-
-        if (entries.isEmpty())
-            return weights;
-
-        float totalChance = 0f;
-
-        for (int i = 0; i < entries.size(); i++)
-            totalChance += Math.max(0f, entries.get(i).getChance());
-
-        if (totalChance <= 0f)
-            return weights;
-
-        for (int i = 0; i < entries.size(); i++) {
-
-            CloudChanceStruct entry = entries.get(i);
-            int typeIndex = entry.getCloudHandle().getCloudTypeIndex();
-
-            if (typeIndex < 0 || typeIndex >= weights.length)
-                continue;
-
-            float normalizedChance = Math.max(0f, entry.getChance()) / totalChance;
-            weights[typeIndex] += normalizedChance * entry.getDensityMultiplier();
-        }
-
-        return weights;
-    }
-
     private boolean streamInPattern(long patternKey, int homeChunkX, int homeChunkZ, double distanceChunks) {
 
         if (freeSlots.isEmpty())
@@ -277,8 +241,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
         WeatherPatternStruct pattern = new WeatherPatternStruct(
                 patternKey, homeChunkX, homeChunkZ, weatherHandle,
-                DEFAULT_DRIFT_SPEED_SCALE, intensity, spread, slot,
-                resolveCloudTypeWeights(weatherHandle));
+                DEFAULT_DRIFT_SPEED_SCALE, intensity, spread, slot);
 
         pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
         pattern.setDistanceFromReferenceChunks((float) distanceChunks);
@@ -342,7 +305,7 @@ public class WeatherPatternManager extends ManagerPackage {
     }
 
     private void tryRefreshWeather(WeatherPatternStruct pattern, WeatherHandle resolved) {
-        pattern.beginWeatherTransition(resolved, resolveCloudTypeWeights(resolved));
+        pattern.beginWeatherTransition(resolved);
         refreshedThisFrame.add(pattern);
     }
 
@@ -381,9 +344,30 @@ public class WeatherPatternManager extends ManagerPackage {
         }
     }
 
+    /*
+     * Base cadence is the time it takes the world to drift one
+     * WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION of a full noise
+     * wavelength at its current KPH-derived speed — faster drift means
+     * the noise field underneath a pattern changes sooner, so it should
+     * check back sooner too. Clamped for safety (a near-zero drift speed
+     * would otherwise produce an absurdly long interval), then jittered
+     * per pattern so the active set never reevaluates in lockstep.
+     */
     private float reevaluationIntervalFor(long patternKey) {
-        float t = hash01(patternKey ^ 0xD1B54A32D192ED03L);
-        return lerp(reevaluationMinSeconds, reevaluationMaxSeconds, t);
+
+        float driftChunksPerSecond = Math.abs(weatherManager.getWorldDriftChunksPerSecondX());
+        float wavelengthChunks = EngineSetting.WEATHER_NOISE_CELL_SIZE;
+
+        float baseSeconds = driftChunksPerSecond > 0.0001f
+                ? (wavelengthChunks * reevaluationNoiseFraction) / driftChunksPerSecond
+                : reevaluationMaxSeconds;
+
+        float clampedSeconds = Math.max(reevaluationMinSeconds, Math.min(reevaluationMaxSeconds, baseSeconds));
+
+        float jitterT = hash01(patternKey ^ 0xD1B54A32D192ED03L);
+        float jitterScale = lerp(reevaluationJitterMin, reevaluationJitterMax, jitterT);
+
+        return clampedSeconds * jitterScale;
     }
 
     private void advanceFadesAndRetire(int playerChunkX, int playerChunkZ) {

@@ -11,21 +11,23 @@ public class WeatherPatternStruct extends StructPackage {
     /*
      * One persistent, large-scale weather system shared by the overhead
      * volumetric layer and the sky dome. Position and UBO slot are fixed
-     * for its lifetime. Tracks which weather it has resolved to, its
-     * drift, fade/intensity/spread state, and the rough spatial data the
-     * sky and overhead renderers sample from the weather map UBO: an
-     * axis-aligned world-space footprint (bounds), distance from the
-     * reference coordinate, and a per-cloud-type weight array indexed by
-     * CloudHandle.getCloudTypeIndex().
+     * for its lifetime. Tracks which weather it has resolved to, its drift,
+     * fade/intensity/spread state, and the rough spatial data the sky and
+     * overhead renderers will sample from the weather map UBO: an axis-
+     * aligned world-space footprint (bounds) and distance from the
+     * reference coordinate. Which clouds this pattern draws is read
+     * directly off getWeatherHandle().getCloudEntries() — no separate
+     * per-pattern cloud list is kept here.
      *
      * intensity already folds in the resolved weather's own cloudCoverage;
      * spread is coverage-independent band purity (0 at the edge of the
      * zone this pattern's weather owns, 1 at its center). getIntensity()
      * also folds in a transition damper so a weather swap reads as
-     * thickening/clearing rather than an instant pop — cloudTypeWeights
-     * swaps immediately on transition and relies on that same damper to
-     * mask the pop rather than cross-fading between the old and new
-     * cloud sets.
+     * thickening/clearing rather than an instant pop — the cloud set
+     * swaps immediately on transition and relies on that same damper,
+     * plus getPreviousWeatherHandle()/getTransitionT(), to mask the pop
+     * instead of cross-fading between the old and new cloud sets frame
+     * by frame.
      */
 
     public static final float WEATHER_TRANSITION_DURATION_SECONDS = 10.0f;
@@ -60,7 +62,6 @@ public class WeatherPatternStruct extends StructPackage {
     private double nextReevaluationTime;
 
     // Spatial Data — sampled by the sky dome and overhead renderers
-    private float[] cloudTypeWeights;
     private float distanceFromReferenceChunks;
     private final Vector4 bounds = new Vector4();
 
@@ -72,8 +73,7 @@ public class WeatherPatternStruct extends StructPackage {
             float driftSpeedScale,
             float intensity,
             float spread,
-            int slot,
-            float[] cloudTypeWeights) {
+            int slot) {
 
         this.patternKey = patternKey;
         this.weatherHandle = weatherHandle;
@@ -89,7 +89,6 @@ public class WeatherPatternStruct extends StructPackage {
         this.targetIntensity = intensity;
         this.spread = spread;
         this.targetSpread = spread;
-        this.cloudTypeWeights = cloudTypeWeights;
     }
 
     public void advanceDrift(double deltaChunkX, double deltaChunkZ) {
@@ -97,10 +96,9 @@ public class WeatherPatternStruct extends StructPackage {
         this.driftChunkZ += deltaChunkZ;
     }
 
-    public void beginWeatherTransition(WeatherHandle newWeatherHandle, float[] newCloudTypeWeights) {
+    public void beginWeatherTransition(WeatherHandle newWeatherHandle) {
         this.previousWeatherHandle = this.weatherHandle;
         this.weatherHandle = newWeatherHandle;
-        this.cloudTypeWeights = newCloudTypeWeights;
         this.transitionT = 0f;
     }
 
@@ -209,10 +207,6 @@ public class WeatherPatternStruct extends StructPackage {
     }
 
     // Spatial Data \\
-
-    public float[] getCloudTypeWeights() {
-        return cloudTypeWeights;
-    }
 
     public void setDistanceFromReferenceChunks(float distanceFromReferenceChunks) {
         this.distanceFromReferenceChunks = distanceFromReferenceChunks;

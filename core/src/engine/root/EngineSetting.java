@@ -401,8 +401,17 @@ public class EngineSetting {
 
         // Weather Pattern Lifecycle \\
 
-        public static final float WEATHER_PATTERN_REEVALUATION_INTERVAL_MIN_SECONDS = 45.0f;
-        public static final float WEATHER_PATTERN_REEVALUATION_INTERVAL_MAX_SECONDS = 90.0f;
+        // A pattern re-samples the noise field once the world has drifted this
+        // fraction of one noise wavelength — cadence is derived directly from
+        // the same KPH-based drift speed the noise field itself scrolls at,
+        // instead of an arbitrary fixed timer. The result is jittered per
+        // pattern between the two ratios below so many active patterns never
+        // all reevaluate on the same frame.
+        public static final float WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION = 0.12f;
+        public static final float WEATHER_PATTERN_REEVALUATION_JITTER_MIN = 0.5f;
+        public static final float WEATHER_PATTERN_REEVALUATION_JITTER_MAX = 1.5f;
+        public static final float WEATHER_PATTERN_REEVALUATION_MIN_SECONDS = 20.0f;
+        public static final float WEATHER_PATTERN_REEVALUATION_MAX_SECONDS = 180.0f;
         public static final float WEATHER_PATTERN_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
 
         // Wind \\
