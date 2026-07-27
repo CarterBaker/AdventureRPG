@@ -8,5 +8,10 @@
     "coverageBias": 0.55,
     "silhouetteSoftness": 0.08,
     "baseAltitude": 140.0,
-    "driftSpeedScale": 1.0
+    "driftSpeedScale": 1.0,
+    "spread": 0.9,
+    "sizeVarianceMin": 0.7,
+    "sizeVarianceMax": 1.7,
+    "elongationMin": 1.0,
+    "elongationMax": 2.0
 }

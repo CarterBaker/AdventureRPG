@@ -17,13 +17,9 @@ class CloudBuilder extends BuilderPackage {
 
     /*
      * Parses cloud JSON into a CloudData and wraps it in a CloudHandle. Every
-     * field falls back to a sensible default when omitted, so a minimal
-     * cloud JSON is valid with just a filename. Bootstrap-only and on-demand.
-     *
-     * "scale" is a real-world measurement, IN BLOCKS — the full XZ width of
-     * the cloud object. CloudVolumeMesh is a literal 1x1x1 unit cube,
-     * multiplied directly by u_cloudScale with no other implicit base size,
-     * so whatever this field resolves to IS the cloud's footprint in blocks.
+     * field falls back to a sensible default when omitted. "scale" is the
+     * cloud's full XZ width in blocks; CloudVolumeMesh is a literal 1x1x1
+     * unit cube multiplied directly by it, with no other implicit base size.
      */
 
     CloudHandle build(File file, File root) {
@@ -43,6 +39,11 @@ class CloudBuilder extends BuilderPackage {
         float silhouetteSoftness = parseFloat(json, "silhouetteSoftness", 0.08f);
         float baseAltitude = parseFloat(json, "baseAltitude", 128.0f);
         float driftSpeedScale = parseFloat(json, "driftSpeedScale", 1.0f);
+        float spreadRatio = parseFloat(json, "spread", 0.85f);
+        float sizeVarianceMin = parseFloat(json, "sizeVarianceMin", 0.65f);
+        float sizeVarianceMax = parseFloat(json, "sizeVarianceMax", 1.6f);
+        float elongationMin = parseFloat(json, "elongationMin", 1.0f);
+        float elongationMax = parseFloat(json, "elongationMax", 2.4f);
 
         CloudData cloudData = new CloudData(
                 cloudName,
@@ -56,7 +57,12 @@ class CloudBuilder extends BuilderPackage {
                 coverageBias,
                 silhouetteSoftness,
                 baseAltitude,
-                driftSpeedScale);
+                driftSpeedScale,
+                spreadRatio,
+                sizeVarianceMin,
+                sizeVarianceMax,
+                elongationMin,
+                elongationMax);
 
         CloudHandle cloudHandle = create(CloudHandle.class);
         cloudHandle.constructor(cloudData);

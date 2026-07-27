@@ -22,10 +22,10 @@ public class WeatherPatternManager extends ManagerPackage {
      * Simulates the world's persistent weather patterns — jittered cells
      * streamed in across the full radius around the player, each holding a
      * handful of offset cloud lobes that drift with world rotation and
-     * retire once they pass beyond the simulated radius. A pattern's lobes
-     * rebuild whenever its resolved weather changes, and its bounding
-     * geometry is recomputed alongside them — the single source of truth
-     * the sky dome preview reads its own box from.
+     * retire once they pass beyond the simulated radius. Placement variance
+     * per lobe (spread, size, elongation) comes from whichever cloud
+     * archetype that lobe actually picked, so different cloud types read as
+     * genuinely different shapes instead of sharing one global jitter.
      */
 
     private static final float FADE_IN_RATE = 0.4f;
@@ -33,6 +33,14 @@ public class WeatherPatternManager extends ManagerPackage {
     private static final float INTENSITY_SMOOTHING_TIME_SECONDS = 3.0f;
     private static final float MIN_ALTITUDE_HALF_THICKNESS = 4.0f;
     private static final long GENERATION_SEED_MIX = 0x632BE59BD9B4E019L;
+
+    // Fallbacks for a lobe that picked no cloud at all — never rendered,
+    // but still needs a position.
+    private static final float DEFAULT_SPREAD_RATIO = 0.85f;
+    private static final float DEFAULT_SIZE_VARIANCE_MIN = 0.65f;
+    private static final float DEFAULT_SIZE_VARIANCE_MAX = 1.6f;
+    private static final float DEFAULT_ELONGATION_MIN = 1.0f;
+    private static final float DEFAULT_ELONGATION_MAX = 2.4f;
 
     private WeatherManager weatherManager;
     private WorldManager worldManager;
@@ -98,14 +106,6 @@ public class WeatherPatternManager extends ManagerPackage {
         this.worldManager = get(WorldManager.class);
     }
 
-    /*
-     * radiusChunks reads WeatherManager.getEffectiveNearRangeChunks() — the
-     * exact same boundary the sky dome's own near ring is built from —
-     * rather than recomputing the range formula locally, so the overhead
-     * system's outer edge and the sky's handoff point can never drift out
-     * of sync. Deferred to awake() since weatherManager isn't wired until
-     * get() has run.
-     */
     @Override
     protected void awake() {
         this.radiusChunks = weatherManager.getEffectiveNearRangeChunks();
@@ -134,15 +134,8 @@ public class WeatherPatternManager extends ManagerPackage {
         streamInBudgeted(playerChunkX, playerChunkZ);
     }
 
-    /*
-     * Every cell within the streaming radius is a spawn candidate, including
-     * the one directly under the player — patterns must cover the full disc
-     * from the first frame, not just its edge, or nothing is ever overhead
-     * until one drifts all the way in from the rim. Sorted upwind-first,
-     * then nearest-first, so a budget-constrained frame still prioritizes
-     * both the side weather drifts in from and the area right around the
-     * player.
-     */
+    // Candidate cells within streaming radius, sorted upwind-first then
+    // nearest-first, so a budget-constrained frame still prioritizes both.
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
         float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
@@ -277,6 +270,9 @@ public class WeatherPatternManager extends ManagerPackage {
         return true;
     }
 
+    // Every placement variance below comes from whichever cloud archetype
+    // this specific lobe picked — a lobe with no cloud falls back to a
+    // neutral default, since it will never be visible either way.
     private WeatherPatternLobeStruct[] buildLobes(long patternKey, WeatherHandle weatherHandle, int generation) {
 
         int lobeCount = weatherHandle.hasClouds()
@@ -286,7 +282,6 @@ public class WeatherPatternManager extends ManagerPackage {
                         clamp01(weatherHandle.getCloudCoverage()))))
                 : 1;
 
-        float lobeSpreadChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_LOBE_SPREAD_RATIO;
         long generationSalt = GENERATION_SEED_MIX * (generation + 1);
 
         WeatherPatternLobeStruct[] lobes = new WeatherPatternLobeStruct[lobeCount];
@@ -309,18 +304,20 @@ public class WeatherPatternManager extends ManagerPackage {
 
             float cloudPickNoise = hash01(lobeSeedBase);
             CloudChanceStruct cloudEntry = coveredByCloud ? weatherHandle.pickCloud(cloudPickNoise) : null;
+            CloudHandle cloudHandle = cloudEntry != null ? cloudEntry.getCloudHandle() : null;
+
+            float spreadRatio = cloudHandle != null ? cloudHandle.getSpreadRatio() : DEFAULT_SPREAD_RATIO;
+            float sizeVarianceMin = cloudHandle != null ? cloudHandle.getSizeVarianceMin() : DEFAULT_SIZE_VARIANCE_MIN;
+            float sizeVarianceMax = cloudHandle != null ? cloudHandle.getSizeVarianceMax() : DEFAULT_SIZE_VARIANCE_MAX;
+            float elongationMin = cloudHandle != null ? cloudHandle.getElongationMin() : DEFAULT_ELONGATION_MIN;
+            float elongationMax = cloudHandle != null ? cloudHandle.getElongationMax() : DEFAULT_ELONGATION_MAX;
 
             float randomSeed = hash01(lobeSeedBase ^ 0xBF58476D1CE4E5B9L);
-            float sizeVariance = lerp(
-                    EngineSetting.CLOUD_INSTANCE_SIZE_VARIANCE_MIN,
-                    EngineSetting.CLOUD_INSTANCE_SIZE_VARIANCE_MAX,
-                    hash01(lobeSeedBase ^ 0x94D049BB133111EBL));
+            float sizeVariance = lerp(sizeVarianceMin, sizeVarianceMax, hash01(lobeSeedBase ^ 0x94D049BB133111EBL));
             float domainRotation = hash01(lobeSeedBase ^ 0xD1B54A32D192ED03L) * (float) (Math.PI * 2.0);
-            float elongation = lerp(
-                    EngineSetting.CLOUD_INSTANCE_ELONGATION_MIN,
-                    EngineSetting.CLOUD_INSTANCE_ELONGATION_MAX,
-                    hash01(lobeSeedBase ^ 0x27D4EB2F165667C5L));
+            float elongation = lerp(elongationMin, elongationMax, hash01(lobeSeedBase ^ 0x27D4EB2F165667C5L));
 
+            float lobeSpreadChunks = patternCellSizeChunks * spreadRatio;
             float offsetAngle = hash01(lobeSeedBase ^ 0xC2B2AE3D27D4EB4FL) * (float) (Math.PI * 2.0);
             float offsetRadiusT = i == 0 ? 0f : hash01(lobeSeedBase ^ 0x165667B19E3779F9L);
             float offsetRadius = offsetRadiusT * lobeSpreadChunks;
@@ -328,7 +325,6 @@ public class WeatherPatternManager extends ManagerPackage {
             float offsetChunkX = (float) Math.cos(offsetAngle) * offsetRadius;
             float offsetChunkZ = (float) Math.sin(offsetAngle) * offsetRadius;
 
-            CloudHandle cloudHandle = cloudEntry != null ? cloudEntry.getCloudHandle() : null;
             float effectiveAltitude = cloudEntry != null
                     ? cloudEntry.getEffectiveAltitude()
                     : EngineSetting.CLOUD_DEFAULT_SKY_ALTITUDE;

@@ -7,9 +7,8 @@ public class CloudHandle extends HandlePackage {
 
     /*
      * Persistent cloud archetype record. Wraps CloudData and delegates all
-     * access through it. Registered in CloudManager from bootstrap to
-     * shutdown. Referenced directly by weathers and overhead cells — never
-     * cloned or mutated at runtime.
+     * access through it. Registered in CloudManager for the engine session;
+     * referenced directly by weathers and weather patterns, never cloned.
      */
 
     private CloudData cloudData;
@@ -68,5 +67,25 @@ public class CloudHandle extends HandlePackage {
 
     public float getDriftSpeedScale() {
         return cloudData.getDriftSpeedScale();
+    }
+
+    public float getSpreadRatio() {
+        return cloudData.getSpreadRatio();
+    }
+
+    public float getSizeVarianceMin() {
+        return cloudData.getSizeVarianceMin();
+    }
+
+    public float getSizeVarianceMax() {
+        return cloudData.getSizeVarianceMax();
+    }
+
+    public float getElongationMin() {
+        return cloudData.getElongationMin();
+    }
+
+    public float getElongationMax() {
+        return cloudData.getElongationMax();
     }
 }

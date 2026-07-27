@@ -382,12 +382,8 @@ public class EngineSetting {
         public static final String UNIFORM_CLOUD_INSTANCE_FADE_ALPHA = "u_cloudInstanceFadeAlpha";
         public static final String UNIFORM_CLOUD_INSTANCE_INTENSITY = "u_cloudInstanceIntensity";
 
-        // Cloud Instance Shape Diversity \\
+        // Cloud Settings UBO \\
 
-        public static final float CLOUD_INSTANCE_SIZE_VARIANCE_MIN = 0.65f;
-        public static final float CLOUD_INSTANCE_SIZE_VARIANCE_MAX = 1.6f;
-        public static final float CLOUD_INSTANCE_ELONGATION_MIN = 1.0f;
-        public static final float CLOUD_INSTANCE_ELONGATION_MAX = 2.4f;
         public static final String CLOUD_SETTINGS_DATA_UBO = "CloudSettingsData";
         public static final String UNIFORM_CLOUD_HORIZON_DISTANCE = "u_cloudHorizonDistance";
         public static final String UNIFORM_CLOUD_MIN_SCALE = "u_cloudMinScale";
@@ -456,7 +452,6 @@ public class EngineSetting {
         public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
         public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 8;
         public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 24.0f;
-        public static final float WEATHER_PATTERN_LOBE_SPREAD_RATIO = 0.85f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
         public static final float WEATHER_PATTERN_LOBE_MIN_COUNT = 1.0f;
         public static final float WEATHER_PATTERN_LOBE_MAX_COUNT = 3.0f;
