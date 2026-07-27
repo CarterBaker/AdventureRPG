@@ -1,5 +1,7 @@
+// WeatherPatternManager.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
+import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherBandStruct;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
@@ -196,7 +198,7 @@ public class WeatherPatternManager extends ManagerPackage {
             int wrappedHomeChunkX = Coordinate2Long.unpackX(wrappedHome);
             int wrappedHomeChunkZ = Coordinate2Long.unpackY(wrappedHome);
 
-            if (streamInPattern(patternKey, wrappedHomeChunkX, wrappedHomeChunkZ))
+            if (streamInPattern(patternKey, wrappedHomeChunkX, wrappedHomeChunkZ, trueDistanceChunks))
                 streamed++;
         }
     }
@@ -216,7 +218,50 @@ public class WeatherPatternManager extends ManagerPackage {
         return new int[] { jitterX, jitterZ };
     }
 
-    private boolean streamInPattern(long patternKey, int homeChunkX, int homeChunkZ) {
+    /*
+     * Normalizes a weather's cloud pool into a fixed-size, cloud-type-
+     * indexed weight array — the same array shape WeatherPatternStruct
+     * carries and the weather map UBO will read from. Chance is
+     * normalized against the pool's own total (not the weather's absolute
+     * chance values) so density reads consistently regardless of how a
+     * given weather happened to weight its entries; densityMultiplier is
+     * then applied on top per entry, exactly as it already scales that
+     * cloud's own base density elsewhere. Clear weather (no cloud
+     * entries) resolves to an all-zero array.
+     */
+    private float[] resolveCloudTypeWeights(WeatherHandle weatherHandle) {
+
+        float[] weights = new float[EngineSetting.MAX_CLOUD_TYPES];
+
+        ObjectArrayList<CloudChanceStruct> entries = weatherHandle.getCloudEntries();
+
+        if (entries.isEmpty())
+            return weights;
+
+        float totalChance = 0f;
+
+        for (int i = 0; i < entries.size(); i++)
+            totalChance += Math.max(0f, entries.get(i).getChance());
+
+        if (totalChance <= 0f)
+            return weights;
+
+        for (int i = 0; i < entries.size(); i++) {
+
+            CloudChanceStruct entry = entries.get(i);
+            int typeIndex = entry.getCloudHandle().getCloudTypeIndex();
+
+            if (typeIndex < 0 || typeIndex >= weights.length)
+                continue;
+
+            float normalizedChance = Math.max(0f, entry.getChance()) / totalChance;
+            weights[typeIndex] += normalizedChance * entry.getDensityMultiplier();
+        }
+
+        return weights;
+    }
+
+    private boolean streamInPattern(long patternKey, int homeChunkX, int homeChunkZ, double distanceChunks) {
 
         if (freeSlots.isEmpty())
             return false;
@@ -232,9 +277,12 @@ public class WeatherPatternManager extends ManagerPackage {
 
         WeatherPatternStruct pattern = new WeatherPatternStruct(
                 patternKey, homeChunkX, homeChunkZ, weatherHandle,
-                DEFAULT_DRIFT_SPEED_SCALE, intensity, spread, slot);
+                DEFAULT_DRIFT_SPEED_SCALE, intensity, spread, slot,
+                resolveCloudTypeWeights(weatherHandle));
 
         pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
+        pattern.setDistanceFromReferenceChunks((float) distanceChunks);
+        pattern.updateBounds();
 
         activePatterns.put(patternKey, pattern);
         streamedInThisFrame.add(pattern);
@@ -294,7 +342,7 @@ public class WeatherPatternManager extends ManagerPackage {
     }
 
     private void tryRefreshWeather(WeatherPatternStruct pattern, WeatherHandle resolved) {
-        pattern.beginWeatherTransition(resolved);
+        pattern.beginWeatherTransition(resolved, resolveCloudTypeWeights(resolved));
         refreshedThisFrame.add(pattern);
     }
 
@@ -352,6 +400,9 @@ public class WeatherPatternManager extends ManagerPackage {
             double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), playerChunkX, worldWidthChunks);
             double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), playerChunkZ, worldHeightChunks);
             double distChunks = Math.sqrt(dx * dx + dz * dz);
+
+            pattern.setDistanceFromReferenceChunks((float) distChunks);
+            pattern.updateBounds();
 
             if (distChunks > radiusChunks && !pattern.isRetiring())
                 pattern.setRetiring(true);

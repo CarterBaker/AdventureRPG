@@ -1,6 +1,8 @@
+// CloudManager.java
 package application.bootstrap.weatherpipeline.cloudmanager;
 
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
@@ -13,11 +15,20 @@ public class CloudManager extends ManagerPackage {
      * loading via InternalLoader and exposes the standard registry API.
      * Cloud archetypes are immutable and shared — weathers and overhead
      * cells hold CloudHandle references directly, never clones.
+     *
+     * Also owns the cloud type registry — every archetype gets a stable,
+     * sequential index (0..MAX_CLOUD_TYPES-1) the moment it's registered,
+     * whether it loaded during bootstrap or on-demand. That index is what
+     * the weather map UBO uses to slot each weather pattern's
+     * per-cloud-type weight.
      */
 
     // Palette
     private Object2ShortOpenHashMap<String> cloudName2CloudID;
     private Short2ObjectOpenHashMap<CloudHandle> cloudID2CloudHandle;
+
+    // Cloud Type Registry
+    private int nextCloudTypeIndex;
 
     // Base \\
 
@@ -27,6 +38,9 @@ public class CloudManager extends ManagerPackage {
         // Palette
         this.cloudName2CloudID = new Object2ShortOpenHashMap<>();
         this.cloudID2CloudHandle = new Short2ObjectOpenHashMap<>();
+
+        // Cloud Type Registry
+        this.nextCloudTypeIndex = 0;
 
         create(CloudLoader.class);
     }
@@ -44,6 +58,14 @@ public class CloudManager extends ManagerPackage {
                         + existing.getCloudName() + "' (ID " + cloudHandle.getCloudID()
                         + ") — rename one cloud to resolve");
         }
+
+        if (nextCloudTypeIndex >= EngineSetting.MAX_CLOUD_TYPES)
+            throwException("Exceeded EngineSetting.MAX_CLOUD_TYPES (" + EngineSetting.MAX_CLOUD_TYPES
+                    + ") while registering cloud \"" + cloudHandle.getCloudName()
+                    + "\" — raise MAX_CLOUD_TYPES or reduce the number of cloud archetypes.");
+
+        cloudHandle.assignCloudTypeIndex(nextCloudTypeIndex);
+        nextCloudTypeIndex++;
 
         cloudName2CloudID.put(cloudHandle.getCloudName(), cloudHandle.getCloudID());
         cloudID2CloudHandle.put(cloudHandle.getCloudID(), cloudHandle);
@@ -81,5 +103,9 @@ public class CloudManager extends ManagerPackage {
 
     public CloudHandle getCloudHandleFromCloudName(String cloudName) {
         return getCloudHandleFromCloudID(getCloudIDFromCloudName(cloudName));
+    }
+
+    public int getCloudTypeCount() {
+        return nextCloudTypeIndex;
     }
 }

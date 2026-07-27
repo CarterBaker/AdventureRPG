@@ -348,6 +348,7 @@ public class EngineSetting {
         // Cloud \\
 
         public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 48.0f;
+        public static final int MAX_CLOUD_TYPES = 8;
 
         // Weather \\
 

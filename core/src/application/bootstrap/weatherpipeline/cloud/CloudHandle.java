@@ -1,3 +1,4 @@
+// CloudHandle.java
 package application.bootstrap.weatherpipeline.cloud;
 
 import engine.root.HandlePackage;
@@ -9,9 +10,13 @@ public class CloudHandle extends HandlePackage {
      * Persistent cloud archetype record. Wraps CloudData and delegates all
      * access through it. Registered in CloudManager for the engine session;
      * referenced directly by weathers and weather patterns, never cloned.
+     * cloudTypeIndex is a small, stable slot assigned by CloudManager at
+     * registration — the index this archetype occupies in every
+     * fixed-size, per-cloud-type array the weather map UBO carries.
      */
 
     private CloudData cloudData;
+    private int cloudTypeIndex = -1;
 
     public void constructor(CloudData cloudData) {
         this.cloudData = cloudData;
@@ -87,5 +92,15 @@ public class CloudHandle extends HandlePackage {
 
     public float getElongationMax() {
         return cloudData.getElongationMax();
+    }
+
+    // Cloud Type Registry \\
+
+    public void assignCloudTypeIndex(int cloudTypeIndex) {
+        this.cloudTypeIndex = cloudTypeIndex;
+    }
+
+    public int getCloudTypeIndex() {
+        return cloudTypeIndex;
     }
 }
