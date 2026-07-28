@@ -165,6 +165,17 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushRenderCall(modelInstance, fbo, depth, mask, window);
     }
 
+    /*
+     * instanceCount > 1 draws the model's mesh via glDrawElementsInstanced
+     * with no per-instance CPU buffer — see RenderSystem.pushRenderCall for
+     * the shader-side contract (gl_InstanceID against a bound UBO). The
+     * overhead cloud box is the first consumer of this overload.
+     */
+    public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, int instanceCount,
+            WindowInstance window) {
+        renderSystem.pushRenderCall(modelInstance, fbo, depth, null, window, instanceCount);
+    }
+
     public void pushScreenCall(ModelInstance modelInstance) {
         renderSystem.pushScreenCall(modelInstance, null, resolveDefaultWindow(), 0);
     }

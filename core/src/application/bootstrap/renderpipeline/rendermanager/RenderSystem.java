@@ -294,6 +294,8 @@ class RenderSystem extends SystemPackage {
         if (tessellated)
             RenderGLSLUtility.drawPatches(
                     model.getIndexCount() / EngineSetting.QUAD_INDEX_COUNT * EngineSetting.QUAD_VERTEX_COUNT);
+        else if (renderCall.getInstanceCount() > 1)
+            RenderGLSLUtility.drawElementsInstanced(model.getIndexCount(), renderCall.getInstanceCount());
         else
             RenderGLSLUtility.drawElements(model.getIndexCount());
 
@@ -302,6 +304,18 @@ class RenderSystem extends SystemPackage {
 
     void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
             WindowInstance window) {
+        pushRenderCall(modelInstance, fbo, depth, mask, window, 1);
+    }
+
+    /*
+     * instanceCount > 1 issues a glDrawElementsInstanced call against this
+     * mesh's normal (non-instanced) VAO — no per-instance CPU buffer is
+     * built or uploaded. The shader is expected to index any per-instance
+     * data it needs from gl_InstanceID against a UBO already bound as a
+     * source UBO on the material.
+     */
+    void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
+            WindowInstance window, int instanceCount) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
 
@@ -309,7 +323,7 @@ class RenderSystem extends SystemPackage {
             return;
 
         RenderCallStruct renderCall = queue.nextCall();
-        renderCall.init(modelInstance, mask);
+        renderCall.init(modelInstance, mask, instanceCount);
 
         MaterialInstance material = modelInstance.getMaterial();
         int materialID = material.getMaterialID();

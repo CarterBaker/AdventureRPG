@@ -351,6 +351,12 @@ public class EngineSetting {
         public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 48.0f;
         public static final int MAX_CLOUD_TYPES = 8;
 
+        // Cloud Box Mesh/Material — the overhead volumetric render system's
+        // single shared box and shader, drawn once per near-range weather
+        // map entry via instancing; see OverheadCloudSystem.
+        public static final String CLOUD_BOX_MESH_NAME = "clouds/CloudVolumeMesh";
+        public static final String CLOUD_VOLUME_DEFAULT_MATERIAL = "clouds/CloudVolumeMaterial";
+
         // Weather \\
 
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;

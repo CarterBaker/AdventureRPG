@@ -16,9 +16,12 @@ class WeatherMapBufferSystem extends SystemPackage {
      * UBO every frame. One array slot is written per (pattern, cloud entry)
      * pair, so a pattern suggesting several cloud archetypes occupies several
      * consecutive slots sharing the same bounds/distance but carrying
-     * different cloud settings. Patterns are written nearest-first so the
-     * fixed-capacity UBO degrades gracefully if the active set ever exceeds
-     * it. The near/outer sampling ranges are written once on awake — they
+     * different cloud settings. Patterns are written nearest-first — this
+     * ordering is load-bearing: the overhead volumetric render system draws
+     * its box mesh instanced exactly nearRangeEntryCount times and indexes
+     * gl_InstanceID directly into these same array slots, so the leading N
+     * entries of this UBO must always be exactly the near-range entries.
+     * The near/outer sampling ranges are written once on awake — they
      * never change at runtime, so the per-frame update only ever touches the
      * entry data. Consumed by the sky dome and the overhead volumetric mesh.
      */
@@ -44,6 +47,9 @@ class WeatherMapBufferSystem extends SystemPackage {
 
     private ObjectArrayList<WeatherPatternStruct> sortScratch;
 
+    // Near Range Tracking
+    private int nearRangeEntryCount;
+
     // Internal \\
 
     @Override
@@ -61,6 +67,8 @@ class WeatherMapBufferSystem extends SystemPackage {
         this.cloudVariance1 = allocate(capacity);
 
         this.sortScratch = new ObjectArrayList<>(EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT);
+
+        this.nearRangeEntryCount = 0;
     }
 
     @Override
@@ -107,12 +115,23 @@ class WeatherMapBufferSystem extends SystemPackage {
         sortScratch.sort((a, b) -> Float.compare(
                 a.getDistanceFromReferenceChunks(), b.getDistanceFromReferenceChunks()));
 
+        float nearRangeChunks = weatherPatternManager.getNearRangeChunks();
         int capacity = EngineSetting.WEATHER_MAP_UBO_MAX_ENTRIES;
         int entryCount = 0;
+        int resolvedNearRangeCount = -1;
 
         for (int i = 0; i < sortScratch.size() && entryCount < capacity; i++) {
 
             WeatherPatternStruct pattern = sortScratch.get(i);
+
+            // Once sorted ascending by distance, the first pattern beyond
+            // the near range marks the boundary — every entry after it is
+            // guaranteed to be at least as far, so entryCount right now is
+            // exactly how many leading slots the overhead box mesh should
+            // instance against.
+            if (resolvedNearRangeCount < 0 && pattern.getDistanceFromReferenceChunks() > nearRangeChunks)
+                resolvedNearRangeCount = entryCount;
+
             WeatherHandle weatherHandle = pattern.getWeatherHandle();
             ObjectArrayList<CloudChanceStruct> cloudEntries = weatherHandle.getCloudEntries();
 
@@ -121,6 +140,8 @@ class WeatherMapBufferSystem extends SystemPackage {
                 entryCount++;
             }
         }
+
+        this.nearRangeEntryCount = resolvedNearRangeCount < 0 ? entryCount : resolvedNearRangeCount;
 
         return entryCount;
     }
@@ -174,6 +195,12 @@ class WeatherMapBufferSystem extends SystemPackage {
                 (float) cloudHandle.getCloudTypeIndex(),
                 WeatherPatternManager.hash01(pattern.getPatternKey() ^ RENDER_SEED_MIX),
                 0f);
+    }
+
+    // Accessible \\
+
+    int getNearRangeEntryCount() {
+        return nearRangeEntryCount;
     }
 
     // Utility \\

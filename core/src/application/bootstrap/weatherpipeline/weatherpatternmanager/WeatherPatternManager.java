@@ -43,6 +43,7 @@ public class WeatherPatternManager extends ManagerPackage {
     private WeatherManager weatherManager;
     private WorldManager worldManager;
     private TemperatureBranch temperatureBranch;
+    private WeatherMapBufferSystem weatherMapBufferSystem;
 
     private int patternCellSizeChunks;
     private float outerRangeChunks;
@@ -100,8 +101,7 @@ public class WeatherPatternManager extends ManagerPackage {
         this.refreshedThisFrame = new ObjectArrayList<>();
 
         this.temperatureBranch = create(TemperatureBranch.class);
-
-        create(WeatherMapBufferSystem.class);
+        this.weatherMapBufferSystem = create(WeatherMapBufferSystem.class);
     }
 
     @Override
@@ -534,6 +534,16 @@ public class WeatherPatternManager extends ManagerPackage {
 
     public float getNearRangeChunks() {
         return nearRangeChunks;
+    }
+
+    /*
+     * Count of leading WeatherMapData UBO slots that fall within the near
+     * range this frame. The overhead volumetric render system instances its
+     * box mesh exactly this many times, reading gl_InstanceID directly as
+     * the WeatherMapData array index — see WeatherMapBufferSystem.
+     */
+    public int getNearRangeWeatherMapEntryCount() {
+        return weatherMapBufferSystem.getNearRangeEntryCount();
     }
 
     // Local Weather Accessible \\
