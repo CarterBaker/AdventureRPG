@@ -500,6 +500,37 @@ public class EngineSetting {
         public static final float SKY_DAY_BOTTOM_G = 0.52f;
         public static final float SKY_DAY_BOTTOM_B = 0.80f;
 
+        // Sky Temperature Accent \\
+
+        // Reference range temperature is normalized against before lerping
+        // between the cold and hot accent colors below.
+        public static final float SKY_TEMPERATURE_COLD_REFERENCE = -10.0f;
+        public static final float SKY_TEMPERATURE_HOT_REFERENCE = 30.0f;
+
+        // Cotton-candy pink/lavender at the cold end...
+        public static final float SKY_TEMPERATURE_COLD_ACCENT_R = 0.95f;
+        public static final float SKY_TEMPERATURE_COLD_ACCENT_G = 0.75f;
+        public static final float SKY_TEMPERATURE_COLD_ACCENT_B = 0.88f;
+
+        // ...fiery orange/yellow at the hot end.
+        public static final float SKY_TEMPERATURE_HOT_ACCENT_R = 1.00f;
+        public static final float SKY_TEMPERATURE_HOT_ACCENT_G = 0.55f;
+        public static final float SKY_TEMPERATURE_HOT_ACCENT_B = 0.18f;
+
+        // How strongly the temperature accent overrides the season's own
+        // authored sunrise/sunset color during the sunrise/sunset window.
+        public static final float SKY_TEMPERATURE_ACCENT_STRENGTH = 0.55f;
+
+        // Sky Cloud Color \\
+
+        // Cloud color leans mostly on horizon rather than zenith — clouds
+        // catch horizon-level light far more than they catch zenith light.
+        public static final float SKY_CLOUD_COLOR_HORIZON_WEIGHT = 0.65f;
+
+        // Clouds pick up an even stronger dose of the temperature accent
+        // than the sky itself during sunrise/sunset.
+        public static final float SKY_CLOUD_COLOR_ACCENT_STRENGTH = 0.7f;
+
         // Lighting \\
 
         public static final float MOON_BRIGHTNESS_BASE = 0.7f;

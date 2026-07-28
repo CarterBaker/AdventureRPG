@@ -3,6 +3,7 @@ package application.bootstrap.calendarpipeline.clockmanager;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
@@ -14,19 +15,27 @@ class SkyColorBranch extends BranchPackage {
 
     /*
      * Replicates SkyColor.glsl CPU-side at altitude=0 (horizon) and
-     * altitude=1 (zenith) for every active grid, pushing both into that
-     * grid's own SkyColorData UBOInstance each frame so each window's sky
-     * shader reads the correct color for wherever its own player sits.
-     * Season tint and sunrise/sunset color come from the calendar's own
-     * seasons via SeasonBlendBranch, which is location-independent; time of
-     * day is not, so each grid reads its own LocationTimeStruct.
+     * altitude=1 (zenith) for every active grid, pushing both plus a third
+     * ambient cloud color into that grid's own SkyColorData UBOInstance each
+     * frame. Season tint and sunrise/sunset color come from the calendar's
+     * own seasons via SeasonBlendBranch; current temperature comes from the
+     * weather system and biases the sunrise/sunset glow and cloud color
+     * toward a cold or hot accent palette — cotton-candy pinks in cold
+     * conditions, fiery oranges in hot ones. Time of day is location-
+     * dependent, so each grid reads its own LocationTimeStruct; temperature
+     * is a single global weather-system value shared by every grid this
+     * frame.
      */
 
     // Internal
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
+    private WeatherManager weatherManager;
     private ClockHandle clockHandle;
     private SeasonBlendBranch seasonBlendBranch;
+
+    // Scratch — temperature accent is identical for every grid this frame
+    private final float[] temperatureAccentScratch = new float[3];
 
     // Internal \\
 
@@ -34,6 +43,7 @@ class SkyColorBranch extends BranchPackage {
     protected void get() {
         this.uboManager = get(UBOManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.weatherManager = get(WeatherManager.class);
     }
 
     // Assignment \\
@@ -48,12 +58,31 @@ class SkyColorBranch extends BranchPackage {
     @Override
     protected void update() {
 
+        resolveTemperatureAccent(weatherManager.getCurrentTemperature());
+
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
         Object[] elements = grids.elements();
         int size = grids.size();
 
         for (int i = 0; i < size; i++)
             pushData((GridInstance) elements[i]);
+    }
+
+    // Temperature Accent \\
+
+    private void resolveTemperatureAccent(float temperature) {
+
+        float t = remapClamped(
+                temperature,
+                EngineSetting.SKY_TEMPERATURE_COLD_REFERENCE,
+                EngineSetting.SKY_TEMPERATURE_HOT_REFERENCE);
+
+        temperatureAccentScratch[0] = lerp(
+                EngineSetting.SKY_TEMPERATURE_COLD_ACCENT_R, EngineSetting.SKY_TEMPERATURE_HOT_ACCENT_R, t);
+        temperatureAccentScratch[1] = lerp(
+                EngineSetting.SKY_TEMPERATURE_COLD_ACCENT_G, EngineSetting.SKY_TEMPERATURE_HOT_ACCENT_G, t);
+        temperatureAccentScratch[2] = lerp(
+                EngineSetting.SKY_TEMPERATURE_COLD_ACCENT_B, EngineSetting.SKY_TEMPERATURE_HOT_ACCENT_B, t);
     }
 
     // Push \\
@@ -109,10 +138,18 @@ class SkyColorBranch extends BranchPackage {
 
         Vector3 seasonSunrise = seasonBlendBranch.getSunriseColorForYearProgress(yearProgress);
         float[] seasonSS = { seasonSunrise.x, seasonSunrise.y, seasonSunrise.z };
+        float[] effectiveSunrise = blend2(
+                seasonSS, 1f - EngineSetting.SKY_TEMPERATURE_ACCENT_STRENGTH,
+                temperatureAccentScratch, EngineSetting.SKY_TEMPERATURE_ACCENT_STRENGTH);
         float ssF = Math.min(1.0f, sunriseF + sunsetF);
 
-        lerpInPlace(horizon, seasonSS, ssF);
-        lerpInPlace(zenith, seasonSS, ssF);
+        lerpInPlace(horizon, effectiveSunrise, ssF);
+        lerpInPlace(zenith, effectiveSunrise, ssF);
+
+        float[] cloudColor = blend2(
+                horizon, EngineSetting.SKY_CLOUD_COLOR_HORIZON_WEIGHT,
+                zenith, 1f - EngineSetting.SKY_CLOUD_COLOR_HORIZON_WEIGHT);
+        lerpInPlace(cloudColor, temperatureAccentScratch, ssF * EngineSetting.SKY_CLOUD_COLOR_ACCENT_STRENGTH);
 
         float gray = (horizon[0] + horizon[1] + horizon[2]) * 0.333f;
         lerpInPlace(horizon, new float[] { gray, gray, gray }, EngineSetting.SKY_HORIZON_DESATURATION);
@@ -120,6 +157,7 @@ class SkyColorBranch extends BranchPackage {
         UBOInstance skyColorUBO = grid.getSkyColorUBO();
         skyColorUBO.updateUniform("u_skyHorizonColor", new Vector3(horizon[0], horizon[1], horizon[2]));
         skyColorUBO.updateUniform("u_skyZenithColor", new Vector3(zenith[0], zenith[1], zenith[2]));
+        skyColorUBO.updateUniform("u_skyCloudColor", new Vector3(cloudColor[0], cloudColor[1], cloudColor[2]));
         uboManager.push(skyColorUBO);
     }
 
@@ -183,5 +221,14 @@ class SkyColorBranch extends BranchPackage {
 
     private float fract(float v) {
         return v - (float) Math.floor(v);
+    }
+
+    private float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
+    }
+
+    private float remapClamped(float value, float low, float high) {
+        float t = (value - low) / Math.max(high - low, 0.0001f);
+        return Math.max(0.0f, Math.min(1.0f, t));
     }
 }

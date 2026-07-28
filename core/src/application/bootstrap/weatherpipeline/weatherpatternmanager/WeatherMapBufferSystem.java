@@ -18,7 +18,9 @@ class WeatherMapBufferSystem extends SystemPackage {
      * consecutive slots sharing the same bounds/distance but carrying
      * different cloud settings. Patterns are written nearest-first so the
      * fixed-capacity UBO degrades gracefully if the active set ever exceeds
-     * it. Consumed by the sky dome and the overhead volumetric mesh.
+     * it. The near/outer sampling ranges are written once on awake — they
+     * never change at runtime, so the per-frame update only ever touches the
+     * entry data. Consumed by the sky dome and the overhead volumetric mesh.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
@@ -67,7 +69,13 @@ class WeatherMapBufferSystem extends SystemPackage {
 
     @Override
     protected void awake() {
+
         this.weatherMapData = uboManager.getUBOHandleFromUBOName(EngineSetting.WEATHER_MAP_UBO);
+
+        weatherMapData.updateUniform("u_weatherOuterRangeChunks", weatherPatternManager.getOuterRangeChunks());
+        weatherMapData.updateUniform("u_weatherNearRangeChunks", weatherPatternManager.getNearRangeChunks());
+
+        uboManager.push(weatherMapData);
     }
 
     @Override

@@ -1,13 +1,15 @@
 {
     "blockName": "WeatherMapData",
     "uniforms": [
-        { "name": "u_weatherBounds",          "type": "VECTOR4", "count": 128 },
-        { "name": "u_weatherPatternState",    "type": "VECTOR4", "count": 128 },
-        { "name": "u_weatherCloudColorScale", "type": "VECTOR4", "count": 128 },
-        { "name": "u_weatherCloudShape",      "type": "VECTOR4", "count": 128 },
-        { "name": "u_weatherCloudNoise",      "type": "VECTOR4", "count": 128 },
-        { "name": "u_weatherCloudVariance0",  "type": "VECTOR4", "count": 128 },
-        { "name": "u_weatherCloudVariance1",  "type": "VECTOR4", "count": 128 },
-        { "name": "u_weatherEntryCount",      "type": "INT" }
+        { "name": "u_weatherBounds",           "type": "VECTOR4", "count": 128 },
+        { "name": "u_weatherPatternState",     "type": "VECTOR4", "count": 128 },
+        { "name": "u_weatherCloudColorScale",  "type": "VECTOR4", "count": 128 },
+        { "name": "u_weatherCloudShape",       "type": "VECTOR4", "count": 128 },
+        { "name": "u_weatherCloudNoise",       "type": "VECTOR4", "count": 128 },
+        { "name": "u_weatherCloudVariance0",   "type": "VECTOR4", "count": 128 },
+        { "name": "u_weatherCloudVariance1",   "type": "VECTOR4", "count": 128 },
+        { "name": "u_weatherEntryCount",       "type": "INT" },
+        { "name": "u_weatherOuterRangeChunks", "type": "FLOAT" },
+        { "name": "u_weatherNearRangeChunks",  "type": "FLOAT" }
     ]
 }

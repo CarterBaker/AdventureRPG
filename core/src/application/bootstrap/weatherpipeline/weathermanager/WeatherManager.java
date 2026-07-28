@@ -305,6 +305,10 @@ public class WeatherManager extends ManagerPackage {
     }
 
     public float getCurrentTemperature() {
+
+        if (!hasActiveWeatherPool())
+            return EngineSetting.DEFAULT_BASE_TEMPERATURE;
+
         return temperatureBranch.getCurrentTemperature();
     }
 
