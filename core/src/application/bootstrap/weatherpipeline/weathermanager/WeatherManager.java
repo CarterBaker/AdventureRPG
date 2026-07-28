@@ -21,10 +21,9 @@ import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 /*
  * Owns the weather definition palette and resolves the active biome/season
  * into a chance-weighted pool of candidate weathers. The actual noise-driven
- * resolution of that pool — both for the persistent spatial weather map and
- * for the player's own local conditions — is driven by WeatherPatternManager,
- * the single "Determined Weather Pattern" system every downstream consumer
- * (temperature, wind, the GPU weather map) reads from.
+ * resolution of that pool is driven by WeatherPatternManager — the single
+ * "Determined Weather Pattern" system every downstream consumer (temperature,
+ * wind, the GPU weather map) reads from.
  */
 public class WeatherManager extends ManagerPackage {
 
@@ -36,7 +35,7 @@ public class WeatherManager extends ManagerPackage {
     private PlayerManager playerManager;
     private SeasonManager seasonManager;
 
-    private GlobalNoiseBranch globalNoiseBranch;
+    private GlobalNoiseSystem globalNoiseSystem;
     private RegionSampleBranch regionSampleBranch;
 
     private Object2ShortOpenHashMap<String> weatherName2WeatherID;
@@ -53,7 +52,7 @@ public class WeatherManager extends ManagerPackage {
         this.weatherName2WeatherID = new Object2ShortOpenHashMap<>();
         this.weatherID2WeatherHandle = new Short2ObjectOpenHashMap<>();
 
-        this.globalNoiseBranch = create(GlobalNoiseBranch.class);
+        this.globalNoiseSystem = create(GlobalNoiseSystem.class);
         this.regionSampleBranch = create(RegionSampleBranch.class);
 
         create(WeatherLoader.class);
@@ -252,11 +251,11 @@ public class WeatherManager extends ManagerPackage {
     }
 
     public float getWorldDriftChunksPerSecondX() {
-        return globalNoiseBranch.getWorldDriftChunksPerSecondX();
+        return globalNoiseSystem.getWorldDriftChunksPerSecondX();
     }
 
     public float getGlobalStormIntensityAt(long chunkCoordinate) {
-        return globalNoiseBranch.sampleGlobalIntensity(chunkCoordinate);
+        return globalNoiseSystem.sampleGlobalIntensity(chunkCoordinate);
     }
 
     public void resolveWeatherBand(WeatherBandStruct out, long chunkCoordinate) {

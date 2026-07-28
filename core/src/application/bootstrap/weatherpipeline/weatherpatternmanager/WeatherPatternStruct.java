@@ -13,17 +13,13 @@ public class WeatherPatternStruct extends StructPackage {
      * player's own reference coordinate for temperature and wind. Which
      * clouds a spatial pattern draws is read directly off
      * getWeatherHandle().getCloudEntries() — no separate per-pattern cloud
-     * list is kept here.
-     *
-     * getIntensity() folds in a transition damper so a weather swap reads
-     * as thickening/clearing rather than an instant pop for cloud coverage.
-     * The getBlended*() family instead cross-fades a raw previous/current
-     * weather value directly across the same transition window — the right
-     * choice for a number like temperature or wind speed, where dipping
-     * toward zero would read as a calm/cold snap that never happened.
+     * list is kept here. getIntensity() folds in a transition damper so a
+     * weather swap reads as thickening/clearing rather than an instant pop
+     * for cloud coverage. The getBlended*() family instead cross-fades a
+     * raw previous/current weather value directly across the same window —
+     * the right choice for a number like temperature or wind speed, where
+     * dipping toward zero would read as a calm/cold snap that never happened.
      */
-
-    public static final float WEATHER_TRANSITION_DURATION_SECONDS = 10.0f;
 
     private static final float TRANSITION_DIP_STRENGTH = 0.6f;
 
@@ -97,7 +93,7 @@ public class WeatherPatternStruct extends StructPackage {
     public void advanceWeatherTransition(float deltaTime) {
         if (transitionT >= 1f)
             return;
-        transitionT = Math.min(1f, transitionT + deltaTime / WEATHER_TRANSITION_DURATION_SECONDS);
+        transitionT = Math.min(1f, transitionT + deltaTime / EngineSetting.WEATHER_PATTERN_TRANSITION_DURATION_SECONDS);
     }
 
     public void setDriftSpeedScale(float driftSpeedScale) {

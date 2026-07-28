@@ -17,25 +17,16 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WeatherPatternManager extends ManagerPackage {
 
     /*
-     * The "Determined Weather Pattern" system — the single authority every
-     * downstream consumer reads from. Streams jittered spatial cells around
-     * the player and tracks which weather each one resolves to for the GPU
-     * weather map, drifting them with world rotation until they retire
-     * beyond the simulated radius. Also resolves one additional pattern
-     * pinned exactly to the player's own reference coordinate — never
-     * streamed, never jittered, always present once a pool is active —
-     * whose blended values drive temperature and local wind, so those can
-     * never disagree with what the visual weather map shows at the
-     * player's own position. Reevaluation cadence for both is derived from
-     * the world's own KPH-based drift speed rather than a fixed timer —
-     * see reevaluationIntervalFor().
+     * The Determined Weather Pattern system. Streams jittered spatial cells
+     * around the player and tracks which weather each resolves to for the
+     * GPU weather map, drifting them with world rotation until they retire.
+     * Also resolves one pattern pinned to the player's own reference
+     * coordinate, never streamed, whose blended values drive temperature
+     * and local wind. Reevaluation cadence for both derives from the
+     * world's KPH-based drift speed rather than a fixed timer.
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
-
-    private static final float FADE_IN_RATE = 0.4f;
-    private static final float FADE_OUT_RATE = 0.4f;
-    private static final float INTENSITY_SMOOTHING_TIME_SECONDS = 3.0f;
 
     private static final long LOCAL_PATTERN_KEY = Long.MIN_VALUE;
     private static final int LOCAL_PATTERN_SLOT = -1;
@@ -55,6 +46,9 @@ public class WeatherPatternManager extends ManagerPackage {
     private float reevaluationJitterMax;
     private float reevaluationMinSeconds;
     private float reevaluationMaxSeconds;
+    private float intensitySmoothingTimeSeconds;
+    private float fadeInRate;
+    private float fadeOutRate;
 
     private Long2ObjectOpenHashMap<WeatherPatternStruct> activePatterns;
     private WeatherPatternStruct localPattern;
@@ -84,6 +78,9 @@ public class WeatherPatternManager extends ManagerPackage {
         this.reevaluationJitterMax = EngineSetting.WEATHER_PATTERN_REEVALUATION_JITTER_MAX;
         this.reevaluationMinSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_MIN_SECONDS;
         this.reevaluationMaxSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_MAX_SECONDS;
+        this.intensitySmoothingTimeSeconds = EngineSetting.WEATHER_PATTERN_INTENSITY_SMOOTHING_TIME_SECONDS;
+        this.fadeInRate = EngineSetting.WEATHER_PATTERN_FADE_IN_RATE;
+        this.fadeOutRate = EngineSetting.WEATHER_PATTERN_FADE_OUT_RATE;
 
         this.activePatterns = new Long2ObjectOpenHashMap<>();
 
@@ -144,8 +141,7 @@ public class WeatherPatternManager extends ManagerPackage {
         temperatureBranch.updateTemperature(localPattern);
     }
 
-    // Candidate cells within streaming radius, sorted upwind-first then
-    // nearest-first, so a budget-constrained frame still prioritizes both.
+    // Candidate cells sorted upwind-first, then nearest-first.
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
         float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
@@ -332,12 +328,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Local Weather \\
 
-    /*
-     * Resolves and advances the one pattern pinned to the player's exact
-     * reference coordinate rather than a jittered cell — never streamed,
-     * never budget-limited, available the same frame a weather pool first
-     * becomes active.
-     */
     private void advanceLocalWeather(long referenceCoordinate) {
 
         float deltaTime = internal.getDeltaTime();
@@ -405,7 +395,7 @@ public class WeatherPatternManager extends ManagerPackage {
     private void advanceIntensitySmoothing() {
 
         float deltaTime = internal.getDeltaTime();
-        float alpha = 1f - (float) Math.exp(-deltaTime / INTENSITY_SMOOTHING_TIME_SECONDS);
+        float alpha = 1f - (float) Math.exp(-deltaTime / intensitySmoothingTimeSeconds);
 
         for (WeatherPatternStruct pattern : activePatterns.values()) {
             pattern.advanceIntensitySmoothing(alpha);
@@ -413,13 +403,10 @@ public class WeatherPatternManager extends ManagerPackage {
         }
     }
 
-    /*
-     * Base cadence is the time it takes the world to drift one
-     * WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION of a full noise
-     * wavelength at its current KPH-derived speed. Clamped for safety,
-     * then jittered per pattern so the active set never reevaluates in
-     * lockstep.
-     */
+    // Base cadence: time for the world to drift one
+    // WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION of a full noise
+    // wavelength at its current KPH-derived speed, clamped, then jittered
+    // per pattern so the active set never reevaluates in lockstep.
     private float reevaluationIntervalFor(long patternKey) {
 
         float driftChunksPerSecond = Math.abs(weatherManager.getWorldDriftChunksPerSecondX());
@@ -462,7 +449,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
             if (pattern.isRetiring()) {
 
-                alpha = Math.max(0f, alpha - FADE_OUT_RATE * deltaTime);
+                alpha = Math.max(0f, alpha - fadeOutRate * deltaTime);
                 pattern.setFadeAlpha(alpha);
 
                 if (alpha <= 0f) {
@@ -472,7 +459,7 @@ public class WeatherPatternManager extends ManagerPackage {
                 }
 
             } else if (alpha < 1f) {
-                pattern.setFadeAlpha(Math.min(1f, alpha + FADE_IN_RATE * deltaTime));
+                pattern.setFadeAlpha(Math.min(1f, alpha + fadeInRate * deltaTime));
             }
         }
 
@@ -536,12 +523,6 @@ public class WeatherPatternManager extends ManagerPackage {
         return nearRangeChunks;
     }
 
-    /*
-     * Count of leading WeatherMapData UBO slots that fall within the near
-     * range this frame. The overhead volumetric render system instances its
-     * box mesh exactly this many times, reading gl_InstanceID directly as
-     * the WeatherMapData array index — see WeatherMapBufferSystem.
-     */
     public int getNearRangeWeatherMapEntryCount() {
         return weatherMapBufferSystem.getNearRangeEntryCount();
     }

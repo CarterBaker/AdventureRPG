@@ -386,10 +386,6 @@ public class EngineSetting {
         // horizon-direction probe — unrelated to the near/outer pair above.
         public static final int WEATHER_FAR_RANGE_CHUNKS = 384;
 
-        // Weather Sampling Smoothing \\
-
-        public static final float WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS = 9.0f;
-
         // Global Weather Noise \\
 
         public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f;
@@ -419,16 +415,23 @@ public class EngineSetting {
 
         // A pattern re-samples the noise field once the world has drifted this
         // fraction of one noise wavelength — cadence is derived directly from
-        // the same KPH-based drift speed the noise field itself scrolls at,
-        // instead of an arbitrary fixed timer. The result is jittered per
-        // pattern between the two ratios below so many active patterns never
-        // all reevaluate on the same frame.
+        // the same KPH-based drift speed the noise field itself scrolls at.
+        // Jittered per pattern between the two ratios below so many active
+        // patterns never all reevaluate on the same frame.
         public static final float WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION = 0.12f;
         public static final float WEATHER_PATTERN_REEVALUATION_JITTER_MIN = 0.5f;
         public static final float WEATHER_PATTERN_REEVALUATION_JITTER_MAX = 1.5f;
         public static final float WEATHER_PATTERN_REEVALUATION_MIN_SECONDS = 20.0f;
         public static final float WEATHER_PATTERN_REEVALUATION_MAX_SECONDS = 180.0f;
         public static final float WEATHER_PATTERN_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
+
+        // How quickly a pattern's blended intensity/spread glide toward their
+        // freshly resolved targets, and how quickly its fade-in/fade-out alpha
+        // and cross-fade between two weather handles progress.
+        public static final float WEATHER_PATTERN_INTENSITY_SMOOTHING_TIME_SECONDS = 3.0f;
+        public static final float WEATHER_PATTERN_TRANSITION_DURATION_SECONDS = 10.0f;
+        public static final float WEATHER_PATTERN_FADE_IN_RATE = 0.4f;
+        public static final float WEATHER_PATTERN_FADE_OUT_RATE = 0.4f;
 
         // Weather Map (GPU) \\
 

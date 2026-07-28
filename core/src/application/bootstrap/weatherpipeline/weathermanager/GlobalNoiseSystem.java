@@ -3,26 +3,17 @@ package application.bootstrap.weatherpipeline.weathermanager;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
-import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.NoiseUtility;
 
-class GlobalNoiseBranch extends BranchPackage {
+class GlobalNoiseSystem extends SystemPackage {
 
     /*
-     * Owns the planet-scale motion behind the regional weather noise field.
-     * Rotation is derived directly from accumulated drift distance divided
-     * by the world's own circumference in chunks, so a full drift lap is
-     * always exactly one full wrap regardless of world size. Meander runs
-     * on its own separate, slow clock, matching WeatherNoiseUtility's own
-     * expectation that the north-south wobble stay decoupled from rotation
-     * speed. seasonalDriftZChunks applies that same idea across a full year
-     * instead of a full rotation — the active world's own axial tilt
-     * migrates the whole field north/south as the calendar progresses.
-     * sampleGlobalIntensity() is a second, much coarser noise layer, using
-     * the same circular embedding as the local field so it also wraps
-     * seamlessly, just at a far lower frequency.
+     * Drives the planet-scale motion behind the regional weather noise
+     * field — rotation, meander, and seasonal drift — and exposes a
+     * second, coarser noise layer used for global storm intensity.
      */
 
     private static final long GLOBAL_INTENSITY_SEED = 0xB16B00B5DEADC0DEL;
@@ -57,7 +48,7 @@ class GlobalNoiseBranch extends BranchPackage {
 
         if (activeWorld == null)
             throwException(
-                    "GlobalNoiseBranch could not resolve an active world — weather noise has nothing to scroll against.");
+                    "GlobalNoiseSystem could not resolve an active world — weather noise has nothing to scroll against.");
 
         this.worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
 

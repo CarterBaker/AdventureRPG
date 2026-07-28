@@ -22,7 +22,7 @@ class RegionSampleBranch extends BranchPackage {
 
     private static final long NOISE_SEED = 0x51A5F00DCAFEBEEFL;
 
-    private GlobalNoiseBranch globalNoiseBranch;
+    private GlobalNoiseSystem globalNoiseSystem;
     private WorldManager worldManager;
 
     private long referenceCoordinate;
@@ -34,7 +34,7 @@ class RegionSampleBranch extends BranchPackage {
 
     @Override
     protected void get() {
-        this.globalNoiseBranch = get(GlobalNoiseBranch.class);
+        this.globalNoiseSystem = get(GlobalNoiseSystem.class);
         this.worldManager = get(WorldManager.class);
     }
 
@@ -63,9 +63,9 @@ class RegionSampleBranch extends BranchPackage {
     private float combinedNoiseAt(int chunkX, int chunkZ) {
 
         float localNoise = sampleNoise(chunkX, chunkZ);
-        float globalIntensity = globalNoiseBranch.sampleGlobalIntensity(Coordinate2Long.pack(chunkX, chunkZ));
+        float globalIntensity = globalNoiseSystem.sampleGlobalIntensity(Coordinate2Long.pack(chunkX, chunkZ));
 
-        return lerp(localNoise, globalIntensity, globalNoiseBranch.getGlobalInfluence());
+        return lerp(localNoise, globalIntensity, globalNoiseSystem.getGlobalInfluence());
     }
 
     void resolveBand(WeatherBandStruct out, int chunkX, int chunkY, ObjectArrayList<WeatherPoolEntryStruct> pool) {
@@ -173,7 +173,7 @@ class RegionSampleBranch extends BranchPackage {
         double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
         double wavelengthChunks = EngineSetting.WEATHER_NOISE_CELL_SIZE;
 
-        double rotationPhase = (globalNoiseBranch.getRotationAngleDegrees() / EngineSetting.DEGREES_PER_FULL_ROTATION)
+        double rotationPhase = (globalNoiseSystem.getRotationAngleDegrees() / EngineSetting.DEGREES_PER_FULL_ROTATION)
                 * (Math.PI * 2.0);
 
         double meanderAmplitudeChunks = EngineSetting.GLOBAL_WEATHER_MEANDER_INFLUENCE * wavelengthChunks;
@@ -184,9 +184,9 @@ class RegionSampleBranch extends BranchPackage {
                 worldWidthChunks,
                 wavelengthChunks,
                 rotationPhase,
-                globalNoiseBranch.getSeasonalDriftZChunks(),
-                globalNoiseBranch.getMeanderWaveNumber(),
+                globalNoiseSystem.getSeasonalDriftZChunks(),
+                globalNoiseSystem.getMeanderWaveNumber(),
                 meanderAmplitudeChunks,
-                globalNoiseBranch.getMeanderPhase());
+                globalNoiseSystem.getMeanderPhase());
     }
 }

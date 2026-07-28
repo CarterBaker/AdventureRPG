@@ -7,24 +7,32 @@ import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class SkyColorBranch extends BranchPackage {
+class SkyColorSystem extends SystemPackage {
 
     /*
      * The single authoritative source of every weather-pipeline daytime
      * color: horizon, zenith, cloud, and fog. Replicates SkyColor.glsl's
-     * altitude=0/altitude=1 keyframes CPU-side for every active grid, then
-     * derives cloud and fog tints from those same keyframes, pushing all
-     * four into that grid's own SkyColorData UBO every frame. Season tint
-     * and sunrise/sunset color come from SeasonColorBlendBranch; current
-     * temperature comes from WeatherPatternManager's local weather pattern
-     * and biases the sunrise/sunset glow and cloud color toward a cold or
-     * hot accent palette.
+     * altitude keyframes CPU-side for every active grid, derives cloud and
+     * fog tints from those same keyframes, and pushes all four into that
+     * grid's own SkyColorData UBO every frame. Season tint and sunrise/
+     * sunset color come from SeasonColorBlendBranch; current temperature
+     * comes from WeatherPatternManager and biases the sunrise/sunset glow
+     * and cloud color toward a cold or hot accent palette.
      */
+
+    private static final float[] NIGHT_TOP = {
+            EngineSetting.SKY_NIGHT_TOP_R, EngineSetting.SKY_NIGHT_TOP_G, EngineSetting.SKY_NIGHT_TOP_B };
+    private static final float[] NIGHT_BOTTOM = {
+            EngineSetting.SKY_NIGHT_BOTTOM_R, EngineSetting.SKY_NIGHT_BOTTOM_G, EngineSetting.SKY_NIGHT_BOTTOM_B };
+    private static final float[] DAY_TOP = {
+            EngineSetting.SKY_DAY_TOP_R, EngineSetting.SKY_DAY_TOP_G, EngineSetting.SKY_DAY_TOP_B };
+    private static final float[] DAY_BOTTOM = {
+            EngineSetting.SKY_DAY_BOTTOM_R, EngineSetting.SKY_DAY_BOTTOM_G, EngineSetting.SKY_DAY_BOTTOM_B };
 
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
@@ -33,7 +41,20 @@ class SkyColorBranch extends BranchPackage {
     private ClockHandle clockHandle;
     private SeasonColorBlendBranch seasonColorBlendBranch;
 
+    // Scratch — reused every push, never reallocated
     private final float[] temperatureAccentScratch = new float[3];
+    private final float[] cycleScratch = new float[4];
+    private final float[] horizonScratch = new float[3];
+    private final float[] zenithScratch = new float[3];
+    private final float[] cloudColorScratch = new float[3];
+    private final float[] fogColorScratch = new float[3];
+    private final float[] offsetScratch = new float[3];
+    private final float[] sunriseScratch = new float[3];
+
+    private final Vector3 horizonVector = new Vector3();
+    private final Vector3 zenithVector = new Vector3();
+    private final Vector3 cloudColorVector = new Vector3();
+    private final Vector3 fogColorVector = new Vector3();
 
     @Override
     protected void get() {
@@ -95,83 +116,79 @@ class SkyColorBranch extends BranchPackage {
         float dailyRandom = clockHandle.getRandomNoiseFromDay();
         float dailyVar = computeDailyVariationMask(t);
 
-        float[] cycle = computeCycleFactors(t);
-        float dayF = cycle[0];
-        float nightF = cycle[1];
-        float sunriseF = cycle[2];
-        float sunsetF = cycle[3];
+        computeCycleFactors(t);
+        float dayF = cycleScratch[0];
+        float sunriseF = cycleScratch[2];
+        float sunsetF = cycleScratch[3];
 
-        float[] nightTop = { EngineSetting.SKY_NIGHT_TOP_R, EngineSetting.SKY_NIGHT_TOP_G,
-                EngineSetting.SKY_NIGHT_TOP_B };
-        float[] nightBottom = { EngineSetting.SKY_NIGHT_BOTTOM_R, EngineSetting.SKY_NIGHT_BOTTOM_G,
-                EngineSetting.SKY_NIGHT_BOTTOM_B };
-        float[] dayTop = { EngineSetting.SKY_DAY_TOP_R, EngineSetting.SKY_DAY_TOP_G, EngineSetting.SKY_DAY_TOP_B };
-        float[] dayBottom = { EngineSetting.SKY_DAY_BOTTOM_R, EngineSetting.SKY_DAY_BOTTOM_G,
-                EngineSetting.SKY_DAY_BOTTOM_B };
-
-        float[] horizon = blend2(nightBottom, nightF, dayBottom, dayF);
-        float[] zenith = blend2(nightTop, nightF, dayTop, dayF);
+        blend2(horizonScratch, NIGHT_BOTTOM, cycleScratch[1], DAY_BOTTOM, dayF);
+        blend2(zenithScratch, NIGHT_TOP, cycleScratch[1], DAY_TOP, dayF);
 
         Vector3 seasonTint = seasonColorBlendBranch.getTintColorForYearProgress(yearProgress);
         float dailySeasonStr = dailyRandom * dailyVar;
         float seasonStrength = dayF * dailySeasonStr * EngineSetting.SKY_SEASONAL_STRENGTH_SCALE;
         float tintScale = EngineSetting.SKY_SEASONAL_TINT_OFFSET_SCALE;
-        float[] seasonOffset = {
-                (seasonTint.x - 1.0f) * tintScale,
-                (seasonTint.y - 1.0f) * tintScale,
-                (seasonTint.z - 1.0f) * tintScale
-        };
 
-        addScaled(horizon, seasonOffset, seasonStrength);
-        addScaled(zenith, seasonOffset, seasonStrength);
+        offsetScratch[0] = (seasonTint.x - 1.0f) * tintScale;
+        offsetScratch[1] = (seasonTint.y - 1.0f) * tintScale;
+        offsetScratch[2] = (seasonTint.z - 1.0f) * tintScale;
 
-        float[] dailyOffset = {
-                fract(dailyRandom) * EngineSetting.SKY_DAILY_OFFSET_R_SCALE + EngineSetting.SKY_DAILY_OFFSET_R_BIAS,
-                fract(dailyRandom * EngineSetting.SKY_DAILY_HASH_G) * EngineSetting.SKY_DAILY_OFFSET_G_SCALE
-                        + EngineSetting.SKY_DAILY_OFFSET_G_BIAS,
-                fract(dailyRandom * EngineSetting.SKY_DAILY_HASH_B) * EngineSetting.SKY_DAILY_OFFSET_B_SCALE
-                        + EngineSetting.SKY_DAILY_OFFSET_B_BIAS
-        };
+        addScaled(horizonScratch, offsetScratch, seasonStrength);
+        addScaled(zenithScratch, offsetScratch, seasonStrength);
+
+        offsetScratch[0] = fract(dailyRandom) * EngineSetting.SKY_DAILY_OFFSET_R_SCALE
+                + EngineSetting.SKY_DAILY_OFFSET_R_BIAS;
+        offsetScratch[1] = fract(dailyRandom * EngineSetting.SKY_DAILY_HASH_G) * EngineSetting.SKY_DAILY_OFFSET_G_SCALE
+                + EngineSetting.SKY_DAILY_OFFSET_G_BIAS;
+        offsetScratch[2] = fract(dailyRandom * EngineSetting.SKY_DAILY_HASH_B) * EngineSetting.SKY_DAILY_OFFSET_B_SCALE
+                + EngineSetting.SKY_DAILY_OFFSET_B_BIAS;
 
         float dailyStrength = dailyVar * dayF;
-        addScaled(horizon, dailyOffset, dailyStrength);
-        addScaled(zenith, dailyOffset, dailyStrength);
+        addScaled(horizonScratch, offsetScratch, dailyStrength);
+        addScaled(zenithScratch, offsetScratch, dailyStrength);
 
         Vector3 seasonSunrise = seasonColorBlendBranch.getSunriseColorForYearProgress(yearProgress);
-        float[] seasonSS = { seasonSunrise.x, seasonSunrise.y, seasonSunrise.z };
-        float[] effectiveSunrise = blend2(
-                seasonSS, 1f - EngineSetting.SKY_TEMPERATURE_ACCENT_STRENGTH,
+        sunriseScratch[0] = seasonSunrise.x;
+        sunriseScratch[1] = seasonSunrise.y;
+        sunriseScratch[2] = seasonSunrise.z;
+
+        blend2(sunriseScratch, sunriseScratch, 1f - EngineSetting.SKY_TEMPERATURE_ACCENT_STRENGTH,
                 temperatureAccentScratch, EngineSetting.SKY_TEMPERATURE_ACCENT_STRENGTH);
         float ssF = Math.min(1.0f, sunriseF + sunsetF);
 
-        lerpInPlace(horizon, effectiveSunrise, ssF);
-        lerpInPlace(zenith, effectiveSunrise, ssF);
+        lerpInPlace(horizonScratch, sunriseScratch, ssF);
+        lerpInPlace(zenithScratch, sunriseScratch, ssF);
 
-        float[] cloudColor = blend2(
-                horizon, EngineSetting.SKY_CLOUD_COLOR_HORIZON_WEIGHT,
-                zenith, 1f - EngineSetting.SKY_CLOUD_COLOR_HORIZON_WEIGHT);
-        lerpInPlace(cloudColor, temperatureAccentScratch, ssF * EngineSetting.SKY_CLOUD_COLOR_ACCENT_STRENGTH);
+        blend2(cloudColorScratch, horizonScratch, EngineSetting.SKY_CLOUD_COLOR_HORIZON_WEIGHT,
+                zenithScratch, 1f - EngineSetting.SKY_CLOUD_COLOR_HORIZON_WEIGHT);
+        lerpInPlace(cloudColorScratch, temperatureAccentScratch, ssF * EngineSetting.SKY_CLOUD_COLOR_ACCENT_STRENGTH);
 
-        float gray = (horizon[0] + horizon[1] + horizon[2]) * 0.333f;
-        lerpInPlace(horizon, new float[] { gray, gray, gray }, EngineSetting.SKY_HORIZON_DESATURATION);
+        float gray = (horizonScratch[0] + horizonScratch[1] + horizonScratch[2]) * 0.333f;
+        horizonScratch[0] += (gray - horizonScratch[0]) * EngineSetting.SKY_HORIZON_DESATURATION;
+        horizonScratch[1] += (gray - horizonScratch[1]) * EngineSetting.SKY_HORIZON_DESATURATION;
+        horizonScratch[2] += (gray - horizonScratch[2]) * EngineSetting.SKY_HORIZON_DESATURATION;
 
-        float[] fogColor = {
-                horizon[0] + EngineSetting.SKY_FOG_COLOR_LIFT,
-                horizon[1] + EngineSetting.SKY_FOG_COLOR_LIFT,
-                horizon[2] + EngineSetting.SKY_FOG_COLOR_LIFT
-        };
+        fogColorScratch[0] = horizonScratch[0] + EngineSetting.SKY_FOG_COLOR_LIFT;
+        fogColorScratch[1] = horizonScratch[1] + EngineSetting.SKY_FOG_COLOR_LIFT;
+        fogColorScratch[2] = horizonScratch[2] + EngineSetting.SKY_FOG_COLOR_LIFT;
 
         UBOInstance skyColorUBO = grid.getSkyColorUBO();
-        skyColorUBO.updateUniform("u_skyHorizonColor", new Vector3(horizon[0], horizon[1], horizon[2]));
-        skyColorUBO.updateUniform("u_skyZenithColor", new Vector3(zenith[0], zenith[1], zenith[2]));
-        skyColorUBO.updateUniform("u_skyCloudColor", new Vector3(cloudColor[0], cloudColor[1], cloudColor[2]));
-        skyColorUBO.updateUniform("u_skyFogColor", new Vector3(fogColor[0], fogColor[1], fogColor[2]));
+
+        horizonVector.set(horizonScratch[0], horizonScratch[1], horizonScratch[2]);
+        zenithVector.set(zenithScratch[0], zenithScratch[1], zenithScratch[2]);
+        cloudColorVector.set(cloudColorScratch[0], cloudColorScratch[1], cloudColorScratch[2]);
+        fogColorVector.set(fogColorScratch[0], fogColorScratch[1], fogColorScratch[2]);
+
+        skyColorUBO.updateUniform("u_skyHorizonColor", horizonVector);
+        skyColorUBO.updateUniform("u_skyZenithColor", zenithVector);
+        skyColorUBO.updateUniform("u_skyCloudColor", cloudColorVector);
+        skyColorUBO.updateUniform("u_skyFogColor", fogColorVector);
         uboManager.push(skyColorUBO);
     }
 
     // Cycle Factors \\
 
-    private float[] computeCycleFactors(float t) {
+    private void computeCycleFactors(float t) {
 
         float sunriseMin = (float) EngineSetting.CLOCK_SUNRISE_MIN;
         float sunriseMax = (float) EngineSetting.CLOCK_SUNRISE_MAX;
@@ -183,7 +200,10 @@ class SkyColorBranch extends BranchPackage {
         float day = Math.max(0.0f, smoothstep(sunriseMin, sunriseMax, t) - smoothstep(sunsetMin, sunsetMax, t));
         float night = Math.max(0.0f, 1.0f - day - sunrise - sunset);
 
-        return new float[] { day, night, sunrise, sunset };
+        cycleScratch[0] = day;
+        cycleScratch[1] = night;
+        cycleScratch[2] = sunrise;
+        cycleScratch[3] = sunset;
     }
 
     // Daily Variation Mask \\
@@ -196,12 +216,10 @@ class SkyColorBranch extends BranchPackage {
 
     // Math Helpers \\
 
-    private float[] blend2(float[] a, float wa, float[] b, float wb) {
-        return new float[] {
-                a[0] * wa + b[0] * wb,
-                a[1] * wa + b[1] * wb,
-                a[2] * wa + b[2] * wb
-        };
+    private void blend2(float[] target, float[] a, float wa, float[] b, float wb) {
+        target[0] = a[0] * wa + b[0] * wb;
+        target[1] = a[1] * wa + b[1] * wb;
+        target[2] = a[2] * wa + b[2] * wb;
     }
 
     private void addScaled(float[] target, float[] source, float scale) {
