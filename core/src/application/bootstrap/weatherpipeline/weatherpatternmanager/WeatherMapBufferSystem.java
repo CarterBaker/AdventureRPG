@@ -36,6 +36,7 @@ class WeatherMapBufferSystem extends SystemPackage {
     private Vector4[] bounds;
     private Vector4[] patternState;
     private Vector4[] cloudColorScale;
+    private Vector4[] cloudMaterial;
     private Vector4[] cloudShape;
     private Vector4[] cloudNoise;
     private Vector4[] cloudVariance0;
@@ -53,6 +54,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         this.bounds = allocate(capacity);
         this.patternState = allocate(capacity);
         this.cloudColorScale = allocate(capacity);
+        this.cloudMaterial = allocate(capacity);
         this.cloudShape = allocate(capacity);
         this.cloudNoise = allocate(capacity);
         this.cloudVariance0 = allocate(capacity);
@@ -86,6 +88,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         weatherMapData.updateUniform("u_weatherBounds", bounds);
         weatherMapData.updateUniform("u_weatherPatternState", patternState);
         weatherMapData.updateUniform("u_weatherCloudColorScale", cloudColorScale);
+        weatherMapData.updateUniform("u_weatherCloudMaterial", cloudMaterial);
         weatherMapData.updateUniform("u_weatherCloudShape", cloudShape);
         weatherMapData.updateUniform("u_weatherCloudNoise", cloudNoise);
         weatherMapData.updateUniform("u_weatherCloudVariance0", cloudVariance0);
@@ -141,6 +144,8 @@ class WeatherMapBufferSystem extends SystemPackage {
         var color = cloudHandle.getCloudColor();
 
         cloudColorScale[index].set(color.x, color.y, color.z, cloudHandle.getScale());
+
+        cloudMaterial[index].set(cloudHandle.getSaturation(), cloudHandle.getFullness(), 0f, 0f);
 
         float resolvedDensity = cloudHandle.getDensity()
                 * weatherHandle.getCloudDensityMultiplier()

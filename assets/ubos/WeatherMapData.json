@@ -4,6 +4,7 @@
         { "name": "u_weatherBounds",           "type": "VECTOR4", "count": 128 },
         { "name": "u_weatherPatternState",     "type": "VECTOR4", "count": 128 },
         { "name": "u_weatherCloudColorScale",  "type": "VECTOR4", "count": 128 },
+        { "name": "u_weatherCloudMaterial",    "type": "VECTOR4", "count": 128 },
         { "name": "u_weatherCloudShape",       "type": "VECTOR4", "count": 128 },
         { "name": "u_weatherCloudNoise",       "type": "VECTOR4", "count": 128 },
         { "name": "u_weatherCloudVariance0",   "type": "VECTOR4", "count": 128 },
