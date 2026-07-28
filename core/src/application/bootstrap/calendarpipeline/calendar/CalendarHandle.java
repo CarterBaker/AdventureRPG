@@ -122,4 +122,8 @@ public class CalendarHandle extends HandlePackage {
     public String getSeasonNameForDate(int monthIndex, int dayOfMonth) {
         return calendarData.getSeasonNameForDate(monthIndex, dayOfMonth);
     }
+
+    public SeasonKeyframeStruct getSeasonKeyframes() {
+        return calendarData.getSeasonKeyframes();
+    }
 }

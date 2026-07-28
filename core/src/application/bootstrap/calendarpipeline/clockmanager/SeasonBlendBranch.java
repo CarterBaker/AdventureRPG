@@ -1,31 +1,32 @@
 package application.bootstrap.calendarpipeline.clockmanager;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
+import application.bootstrap.calendarpipeline.calendar.SeasonKeyframeStruct;
 import application.bootstrap.calendarpipeline.calendar.SeasonRangeStruct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.mathematics.extras.SeasonBlendResultStruct;
+import engine.util.mathematics.extras.SeasonBlendUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class SeasonBlendBranch extends BranchPackage {
 
     /*
-     * Resolves the active calendar's named seasons into a smoothly
-     * blended day length for the current point in the year — the
-     * fraction of a day/night cycle that is daylight, used to bend the
-     * calendar's own visual time-of-day curve. Exact at each season's own
-     * center date, blending toward its neighbor as the year progresses
-     * and wrapping across the year boundary with no discontinuity.
+     * Resolves the active calendar's named seasons into a smoothly blended
+     * day length for the current point in the year, used to bend the
+     * calendar's own visual time-of-day curve. Keyframe centers come from
+     * CalendarHandle.getSeasonKeyframes(); this branch only owns the
+     * day-length values themselves and the recompute caching.
      */
 
-    private CalendarHandle calendarHandle;
-
-    private double[] seasonCenters;
+    private SeasonKeyframeStruct keyframes;
     private float[] seasonDayLengths;
-    private int seasonCount;
 
     private double lastYearProgress;
     private float lastDayLength;
     private float RECOMPUTE_EPSILON;
+
+    private final SeasonBlendResultStruct blendResult = new SeasonBlendResultStruct();
 
     // Internal \\
 
@@ -39,63 +40,21 @@ class SeasonBlendBranch extends BranchPackage {
     // Assignment \\
 
     void assignData(CalendarHandle calendarHandle) {
-        this.calendarHandle = calendarHandle;
-        buildSeasonKeyframes();
+        this.keyframes = calendarHandle.getSeasonKeyframes();
+        buildDayLengths(calendarHandle);
         this.lastYearProgress = -1.0;
     }
 
-    // Keyframe Construction \\
-
-    private void buildSeasonKeyframes() {
+    private void buildDayLengths(CalendarHandle calendarHandle) {
 
         ObjectArrayList<SeasonRangeStruct> seasons = calendarHandle.getSeasons();
-        int count = seasons.size();
-        int totalDaysInYear = calendarHandle.getTotalDaysInYear();
+        int[] order = keyframes.getOrder();
+        int count = keyframes.getCount();
 
-        double[] startFractions = new double[count];
-
-        for (int i = 0; i < count; i++) {
-            SeasonRangeStruct season = seasons.get(i);
-            int dayOfYear = dayOfYearZeroIndexed(season.getStartMonth(), season.getStartDayOfMonth());
-            startFractions[i] = dayOfYear / (double) totalDaysInYear;
-        }
-
-        double[] rawCenters = new double[count];
-        float[] rawDayLengths = new float[count];
-
-        for (int i = 0; i < count; i++) {
-            double start = startFractions[i];
-            double end = (i + 1 < count) ? startFractions[i + 1] : startFractions[0] + 1.0;
-            rawCenters[i] = wrapFraction((start + end) * 0.5);
-            rawDayLengths[i] = seasons.get(i).getDayLength();
-        }
-
-        Integer[] order = new Integer[count];
-        for (int i = 0; i < count; i++)
-            order[i] = i;
-
-        java.util.Arrays.sort(order, (a, b) -> Double.compare(rawCenters[a], rawCenters[b]));
-
-        this.seasonCount = count;
-        this.seasonCenters = new double[count];
         this.seasonDayLengths = new float[count];
 
-        for (int i = 0; i < count; i++) {
-            seasonCenters[i] = rawCenters[order[i]];
-            seasonDayLengths[i] = rawDayLengths[order[i]];
-        }
-    }
-
-    private int dayOfYearZeroIndexed(int month, int dayOfMonth) {
-
-        int dayOfYear = 0;
-
-        for (int i = 0; i < month; i++)
-            dayOfYear += calendarHandle.getMonthDays(i);
-
-        dayOfYear += dayOfMonth - 1;
-
-        return dayOfYear;
+        for (int i = 0; i < count; i++)
+            seasonDayLengths[i] = seasons.get(order[i]).getDayLength();
     }
 
     // Blend \\
@@ -107,81 +66,29 @@ class SeasonBlendBranch extends BranchPackage {
 
     private void resolveBlend(double yearProgress) {
 
-        if (seasonCount == 0)
+        int count = keyframes.getCount();
+
+        if (count == 0)
             return;
 
-        if (seasonCount == 1) {
+        if (count == 1) {
             lastDayLength = seasonDayLengths[0];
             return;
         }
 
-        double t = wrapFraction(yearProgress);
+        double t = SeasonBlendUtility.wrapFraction(yearProgress);
 
-        if (lastYearProgress >= 0.0 && Math.abs(wrappedDiff(t, lastYearProgress)) < RECOMPUTE_EPSILON)
+        if (lastYearProgress >= 0.0
+                && Math.abs(SeasonBlendUtility.wrappedDiff(t, lastYearProgress)) < RECOMPUTE_EPSILON)
             return;
 
-        computeBlend(t);
+        SeasonBlendUtility.resolve(keyframes.getCenters(), count, t, blendResult);
+
+        lastDayLength = SeasonBlendUtility.lerp(
+                seasonDayLengths[blendResult.getPrevIndex()],
+                seasonDayLengths[blendResult.getNextIndex()],
+                blendResult.getEasedT());
+
         lastYearProgress = t;
-    }
-
-    private void computeBlend(double t) {
-
-        int nextIndex = -1;
-
-        for (int i = 0; i < seasonCount; i++) {
-            if (seasonCenters[i] > t) {
-                nextIndex = i;
-                break;
-            }
-        }
-
-        int prevIndex;
-        double prevCenter;
-        double nextCenter;
-
-        if (nextIndex == -1) {
-            prevIndex = seasonCount - 1;
-            nextIndex = 0;
-            prevCenter = seasonCenters[prevIndex];
-            nextCenter = seasonCenters[nextIndex] + 1.0;
-        } else if (nextIndex == 0) {
-            prevIndex = seasonCount - 1;
-            prevCenter = seasonCenters[prevIndex] - 1.0;
-            nextCenter = seasonCenters[nextIndex];
-        } else {
-            prevIndex = nextIndex - 1;
-            prevCenter = seasonCenters[prevIndex];
-            nextCenter = seasonCenters[nextIndex];
-        }
-
-        double span = nextCenter - prevCenter;
-        double localT = (span <= 0.0) ? 0.0 : (t - prevCenter) / span;
-        double eased = smoothstep(localT);
-
-        lastDayLength = lerp(seasonDayLengths[prevIndex], seasonDayLengths[nextIndex], eased);
-    }
-
-    // Math Helpers \\
-
-    private float lerp(float a, float b, double t) {
-        return (float) (a + (b - a) * t);
-    }
-
-    private double smoothstep(double t) {
-        t = Math.max(0.0, Math.min(1.0, t));
-        return t * t * (3.0 - 2.0 * t);
-    }
-
-    private double wrapFraction(double value) {
-        double wrapped = value % 1.0;
-        if (wrapped < 0)
-            wrapped += 1.0;
-        return wrapped;
-    }
-
-    private double wrappedDiff(double a, double b) {
-        double d = a - b;
-        d = ((d + 0.5) % 1.0 + 1.0) % 1.0 - 0.5;
-        return d;
     }
 }
