@@ -20,6 +20,10 @@
  * in the forward/per-chunk stage, and carried through the G-buffer instead.
  * applyAtmosphericFog() stays available for any future forward-shaded
  * material that computes lighting and distance in the same pass.
+ *
+ * Fog COLOR (u_skyFogColor) is never derived here or anywhere else in GLSL —
+ * it's computed once per frame by the weather pipeline's SkyColorBranch and
+ * read straight from SkyColorData.
  */
 
 // Raised from the original 0.25 / 0.15 — fog was barely visible at the old
@@ -57,8 +61,7 @@ float computeFogAmount() {
 
 vec3 applyAtmosphericFog(vec3 litColor) {
     float fogT = computeFogAmount();
-    vec3 fogColor = u_skyHorizonColor + 0.04;
-    return mix(litColor, fogColor, fogT);
+    return mix(litColor, u_skyFogColor, fogT);
 }
 
 #endif

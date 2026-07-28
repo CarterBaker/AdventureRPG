@@ -16,6 +16,10 @@ out vec4 fragColor;
 // and this is a single deferred fullscreen pass that runs after every
 // chunk has already drawn, so that UBO would just hold stale leftover data.
 //
+// Fog COLOR (u_skyFogColor) is likewise pre-computed once per frame by the
+// weather pipeline's SkyColorBranch and read directly from SkyColorData —
+// never re-derived here.
+//
 // FOG_SHADOW_SCALE / FOG_LIT_SCALE re-weight the incoming fogT by how
 // directly lit the fragment is, since fog should read stronger on sunlit
 // distant terrain and weaker in shadow — not the reverse.
@@ -77,8 +81,7 @@ void main() {
     float litAmount = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
     float fogBlend  = clamp(fogT * mix(FOG_SHADOW_SCALE, FOG_LIT_SCALE, litAmount), 0.0, 1.0);
 
-    vec3 fogColor = u_skyHorizonColor + 0.04;
-    lit = mix(lit, fogColor, fogBlend);
+    lit = mix(lit, u_skyFogColor, fogBlend);
 
     fragColor = vec4(lit, 1.0);
 }

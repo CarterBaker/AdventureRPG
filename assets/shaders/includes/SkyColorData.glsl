@@ -4,5 +4,6 @@ layout(std140) uniform SkyColorData {
     vec3  u_skyHorizonColor;
     vec3  u_skyZenithColor;
     vec3  u_skyCloudColor;
+    vec3  u_skyFogColor;
 };
 #endif

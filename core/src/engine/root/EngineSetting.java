@@ -1,4 +1,5 @@
 // EngineSetting.java
+// EngineSetting.java
 package engine.root;
 
 import engine.graphics.color.Color;
@@ -530,6 +531,15 @@ public class EngineSetting {
         // Clouds pick up an even stronger dose of the temperature accent
         // than the sky itself during sunrise/sunset.
         public static final float SKY_CLOUD_COLOR_ACCENT_STRENGTH = 0.7f;
+
+        // Sky Fog Color \\
+
+        // Fog is the atmosphere's own haze color — a lifted, hazier version
+        // of the horizon color rather than an exact copy of it. Computed
+        // once here, alongside horizon/zenith/cloud, so every shader that
+        // ever needs a fog tint reads the same authoritative value instead
+        // of re-deriving its own.
+        public static final float SKY_FOG_COLOR_LIFT = 0.04f;
 
         // Lighting \\
 

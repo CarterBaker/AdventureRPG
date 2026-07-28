@@ -15,17 +15,19 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class SkyColorBranch extends BranchPackage {
 
     /*
-     * Replicates SkyColor.glsl CPU-side at altitude=0 (horizon) and
-     * altitude=1 (zenith) for every active grid, pushing both plus a
-     * third ambient cloud color into that grid's own SkyColorData
-     * UBOInstance every frame. Season tint and sunrise/sunset color come
-     * from SeasonColorBlendBranch; current temperature comes from
-     * WeatherManager and biases the sunrise/sunset glow and cloud color
-     * toward a cold or hot accent palette — cotton-candy pinks in cold
-     * conditions, fiery oranges in hot ones. Time of day is location-
-     * dependent, so each grid reads its own LocationTimeStruct;
-     * temperature is a single global weather-system value shared by
-     * every grid this frame.
+     * The single authoritative source of every weather-pipeline daytime
+     * color: horizon, zenith, cloud, and fog. Replicates SkyColor.glsl's
+     * altitude=0/altitude=1 keyframes CPU-side for every active grid, then
+     * derives cloud and fog tints from those same keyframes, and pushes all
+     * four into that grid's own SkyColorData UBO every frame. No other
+     * system — CPU or GPU — may derive or re-blend a sky/fog color of its
+     * own; every consumer reads one of these four UBO values directly.
+     * Season tint and sunrise/sunset color come from SeasonColorBlendBranch;
+     * current temperature comes from WeatherManager and biases the
+     * sunrise/sunset glow and cloud color toward a cold or hot accent
+     * palette. Time of day is location-dependent, so each grid reads its
+     * own LocationTimeStruct; temperature is a single global weather-system
+     * value shared by every grid this frame.
      */
 
     private UBOManager uboManager;
@@ -159,10 +161,21 @@ class SkyColorBranch extends BranchPackage {
         float gray = (horizon[0] + horizon[1] + horizon[2]) * 0.333f;
         lerpInPlace(horizon, new float[] { gray, gray, gray }, EngineSetting.SKY_HORIZON_DESATURATION);
 
+        // Fog is derived from the FINAL horizon color (post-desaturation) —
+        // a hazy, slightly lifted version of it. This is the one and only
+        // place fog color is ever computed; every shader that needs a fog
+        // tint reads u_skyFogColor rather than re-deriving it.
+        float[] fogColor = {
+                horizon[0] + EngineSetting.SKY_FOG_COLOR_LIFT,
+                horizon[1] + EngineSetting.SKY_FOG_COLOR_LIFT,
+                horizon[2] + EngineSetting.SKY_FOG_COLOR_LIFT
+        };
+
         UBOInstance skyColorUBO = grid.getSkyColorUBO();
         skyColorUBO.updateUniform("u_skyHorizonColor", new Vector3(horizon[0], horizon[1], horizon[2]));
         skyColorUBO.updateUniform("u_skyZenithColor", new Vector3(zenith[0], zenith[1], zenith[2]));
         skyColorUBO.updateUniform("u_skyCloudColor", new Vector3(cloudColor[0], cloudColor[1], cloudColor[2]));
+        skyColorUBO.updateUniform("u_skyFogColor", new Vector3(fogColor[0], fogColor[1], fogColor[2]));
         uboManager.push(skyColorUBO);
     }
 

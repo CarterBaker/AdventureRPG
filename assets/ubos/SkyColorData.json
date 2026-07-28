@@ -3,6 +3,7 @@
     "uniforms": [
         { "name": "u_skyHorizonColor", "type": "VECTOR3" },
         { "name": "u_skyZenithColor",  "type": "VECTOR3" },
-        { "name": "u_skyCloudColor",   "type": "VECTOR3" }
+        { "name": "u_skyCloudColor",   "type": "VECTOR3" },
+        { "name": "u_skyFogColor",     "type": "VECTOR3" }
     ]
 }
