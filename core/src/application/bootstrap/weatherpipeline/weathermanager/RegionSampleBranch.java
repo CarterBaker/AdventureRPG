@@ -1,4 +1,3 @@
-// RegionSampleBranch.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
@@ -11,12 +10,15 @@ import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.random.WeightedChanceUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Owns the coherent regional weather noise field and resolves it against a
- * chance-weighted pool, both for the player's own position and for any
- * arbitrary home coordinate blended toward its own horizon-direction sample.
- */
 class RegionSampleBranch extends BranchPackage {
+
+    /*
+     * Owns the coherent regional weather noise field and resolves it against
+     * a chance-weighted pool, either at an exact coordinate or blended toward
+     * a horizon-direction sample. Pure resolution logic only — every caller
+     * (spatial patterns, the local weather pattern) owns its own state and
+     * smoothing on top of whatever this returns.
+     */
 
     private static final long NOISE_SEED = 0x51A5F00DCAFEBEEFL;
 
@@ -24,12 +26,6 @@ class RegionSampleBranch extends BranchPackage {
     private WorldManager worldManager;
 
     private long referenceCoordinate;
-
-    private final WeatherSampleStruct sample = new WeatherSampleStruct();
-    private final WeatherSampleStruct targetSample = new WeatherSampleStruct();
-    private boolean smoothingInitialized;
-
-    private final WeatherBandStruct bandScratch = new WeatherBandStruct();
 
     @Override
     protected void create() {
@@ -54,54 +50,12 @@ class RegionSampleBranch extends BranchPackage {
 
     // Effective Range \\
 
-    /*
-     * The outer boundary shared by the CPU weather-pattern simulation and
-     * the sky dome's distant cloud sampling. WeatherPatternManager and the
-     * sky dome both read this rather than recomputing their own radius, so
-     * neither visual layer ever samples weather the simulation doesn't
-     * actually maintain. The cap against WEATHER_OUTER_RANGE_CHUNKS is a
-     * sanity ceiling only — under normal settings the boundary sits at
-     * exactly settings.maxRenderDistance.
-     */
     float getEffectiveOuterRangeChunks() {
         return Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_OUTER_RANGE_CHUNKS);
     }
 
-    /*
-     * The inner boundary the overhead volumetric mesh samples against.
-     * Always clamped to the outer range above so it can never exceed it.
-     */
     float getEffectiveNearRangeChunks() {
         return Math.min(getEffectiveOuterRangeChunks(), (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
-    }
-
-    // Sampling \\
-
-    void sampleRegions(ObjectArrayList<WeatherPoolEntryStruct> pool) {
-
-        int originX = Coordinate2Long.unpackX(referenceCoordinate);
-        int originY = Coordinate2Long.unpackY(referenceCoordinate);
-
-        resolveBand(bandScratch, originX, originY, pool);
-        writeSample(targetSample, bandScratch.getLow(), bandScratch.getHigh(), bandScratch.getBlendFactor());
-
-        advanceSmoothing();
-    }
-
-    // Smoothing \\
-
-    private void advanceSmoothing() {
-
-        if (!smoothingInitialized) {
-            sample.copyFrom(targetSample);
-            smoothingInitialized = true;
-            return;
-        }
-
-        float deltaTime = internal.getDeltaTime();
-        float alpha = 1f - (float) Math.exp(-deltaTime / EngineSetting.WEATHER_SAMPLE_SMOOTHING_TIME_SECONDS);
-
-        sample.lerpToward(targetSample, alpha);
     }
 
     // Resolution \\
@@ -118,14 +72,6 @@ class RegionSampleBranch extends BranchPackage {
         bandFromPool(out, pool, combinedNoiseAt(chunkX, chunkY));
     }
 
-    /*
-     * Home and reference coordinates can legally sit on opposite sides of
-     * the world's wrap seam while still being physically close together —
-     * both the distance and the direction toward the horizon sample must
-     * go through wrap-aware deltas, the same as every other distance check
-     * in this pipeline, or a pattern near the seam resolves against a
-     * meaningless direction and effectively random weather.
-     */
     void resolveBandTowardHorizon(
             WeatherBandStruct out,
             int homeChunkX,
@@ -211,19 +157,6 @@ class RegionSampleBranch extends BranchPackage {
         }
     }
 
-    // Atmosphere Blend \\
-
-    private void writeSample(WeatherSampleStruct sampleOut, WeatherHandle low, WeatherHandle high, float t) {
-
-        sampleOut.setPrecipitationIntensity(lerp(low.getPrecipitationIntensity(), high.getPrecipitationIntensity(), t));
-        sampleOut.setWindSpeedScale(lerp(low.getWindSpeedScale(), high.getWindSpeedScale(), t));
-        sampleOut.setWindTurbulenceScale(lerp(low.getWindTurbulenceScale(), high.getWindTurbulenceScale(), t));
-        sampleOut.setFogDensityScale(lerp(low.getFogDensityScale(), high.getFogDensityScale(), t));
-        sampleOut.setHumidity(lerp(low.getHumidity(), high.getHumidity(), t));
-        sampleOut.setVisibility(lerp(low.getVisibility(), high.getVisibility(), t));
-        sampleOut.setTemperatureModifier(lerp(low.getTemperatureModifier(), high.getTemperatureModifier(), t));
-    }
-
     private float lerp(float a, float b, float t) {
         return a + (b - a) * t;
     }
@@ -255,11 +188,5 @@ class RegionSampleBranch extends BranchPackage {
                 globalNoiseBranch.getMeanderWaveNumber(),
                 meanderAmplitudeChunks,
                 globalNoiseBranch.getMeanderPhase());
-    }
-
-    // Accessible \\
-
-    WeatherSampleStruct getCenterSample() {
-        return sample;
     }
 }

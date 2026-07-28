@@ -1,4 +1,3 @@
-// WeatherPatternStruct.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
@@ -9,25 +8,19 @@ import engine.util.mathematics.vectors.Vector4;
 public class WeatherPatternStruct extends StructPackage {
 
     /*
-     * One persistent, large-scale weather system shared by the overhead
-     * volumetric layer and the sky dome. Position and UBO slot are fixed
-     * for its lifetime. Tracks which weather it has resolved to, its drift,
-     * fade/intensity/spread state, and the rough spatial data the sky and
-     * overhead renderers will sample from the weather map UBO: an axis-
-     * aligned world-space footprint (bounds) and distance from the
-     * reference coordinate. Which clouds this pattern draws is read
-     * directly off getWeatherHandle().getCloudEntries() — no separate
-     * per-pattern cloud list is kept here.
+     * One persistent weather system — either a spatial cell streamed for
+     * the visual weather map, or the single instance pinned to the
+     * player's own reference coordinate for temperature and wind. Which
+     * clouds a spatial pattern draws is read directly off
+     * getWeatherHandle().getCloudEntries() — no separate per-pattern cloud
+     * list is kept here.
      *
-     * intensity already folds in the resolved weather's own cloudCoverage;
-     * spread is coverage-independent band purity (0 at the edge of the
-     * zone this pattern's weather owns, 1 at its center). getIntensity()
-     * also folds in a transition damper so a weather swap reads as
-     * thickening/clearing rather than an instant pop — the cloud set
-     * swaps immediately on transition and relies on that same damper,
-     * plus getPreviousWeatherHandle()/getTransitionT(), to mask the pop
-     * instead of cross-fading between the old and new cloud sets frame
-     * by frame.
+     * getIntensity() folds in a transition damper so a weather swap reads
+     * as thickening/clearing rather than an instant pop for cloud coverage.
+     * The getBlended*() family instead cross-fades a raw previous/current
+     * weather value directly across the same transition window — the right
+     * choice for a number like temperature or wind speed, where dipping
+     * toward zero would read as a calm/cold snap that never happened.
      */
 
     public static final float WEATHER_TRANSITION_DURATION_SECONDS = 10.0f;
@@ -61,7 +54,6 @@ public class WeatherPatternStruct extends StructPackage {
 
     private double nextReevaluationTime;
 
-    // Spatial Data — sampled by the sky dome and overhead renderers
     private float distanceFromReferenceChunks;
     private final Vector4 bounds = new Vector4();
 
@@ -206,6 +198,43 @@ public class WeatherPatternStruct extends StructPackage {
         return 1f - (float) Math.sin(transitionT * Math.PI) * TRANSITION_DIP_STRENGTH;
     }
 
+    // Blended Atmosphere \\
+
+    public float getBlendedTemperatureModifier() {
+        return lerp(previousWeatherHandle.getTemperatureModifier(), weatherHandle.getTemperatureModifier(),
+                transitionT);
+    }
+
+    public float getBlendedPrecipitationIntensity() {
+        return lerp(previousWeatherHandle.getPrecipitationIntensity(), weatherHandle.getPrecipitationIntensity(),
+                transitionT);
+    }
+
+    public float getBlendedWindSpeedScale() {
+        return lerp(previousWeatherHandle.getWindSpeedScale(), weatherHandle.getWindSpeedScale(), transitionT);
+    }
+
+    public float getBlendedWindTurbulenceScale() {
+        return lerp(previousWeatherHandle.getWindTurbulenceScale(), weatherHandle.getWindTurbulenceScale(),
+                transitionT);
+    }
+
+    public float getBlendedHumidity() {
+        return lerp(previousWeatherHandle.getHumidity(), weatherHandle.getHumidity(), transitionT);
+    }
+
+    public float getBlendedVisibility() {
+        return lerp(previousWeatherHandle.getVisibility(), weatherHandle.getVisibility(), transitionT);
+    }
+
+    public float getBlendedFogDensityScale() {
+        return lerp(previousWeatherHandle.getFogDensityScale(), weatherHandle.getFogDensityScale(), transitionT);
+    }
+
+    private static float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
+    }
+
     // Spatial Data \\
 
     public void setDistanceFromReferenceChunks(float distanceFromReferenceChunks) {
@@ -216,11 +245,6 @@ public class WeatherPatternStruct extends StructPackage {
         return distanceFromReferenceChunks;
     }
 
-    /*
-     * Recomputes the axis-aligned world-space footprint from the pattern's
-     * current (drifted) position. Called once per frame — the footprint
-     * has to move with the pattern even between weather reevaluations.
-     */
     public void updateBounds() {
 
         float radius = getFootprintRadiusChunks();

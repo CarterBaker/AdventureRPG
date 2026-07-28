@@ -3,7 +3,7 @@ package application.bootstrap.weatherpipeline.windmanager;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.weatherpipeline.season.SeasonHandle;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
-import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
+import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
 import application.bootstrap.weatherpipeline.wind.WindHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -16,32 +16,26 @@ class LocalWindBranch extends BranchPackage {
      * airflow rotated by the active season's prevailing offset plus a gust
      * wobble. Speed is the season's base speed varied by a two-layer gust
      * oscillation, shaped by the diurnal curve at the primary grid's current
-     * location, then scaled by the active weather's windSpeedScale. Gust
-     * amplitude and direction wobble both scale with windTurbulenceScale.
+     * location, then scaled by the current local weather's windSpeedScale.
+     * Gust amplitude and direction wobble both scale with windTurbulenceScale.
      */
 
-    // Internal
     private ClockManager clockManager;
     private SeasonManager seasonManager;
-    private WeatherManager weatherManager;
+    private WeatherPatternManager weatherPatternManager;
 
-    // Wind
     private WindHandle windHandle;
 
-    // Season Tracking
     private String lastSeasonName;
     private SeasonHandle activeSeason;
 
-    // Time
     private float elapsedTime;
-
-    // Internal \\
 
     @Override
     protected void get() {
         this.clockManager = get(ClockManager.class);
         this.seasonManager = get(SeasonManager.class);
-        this.weatherManager = get(WeatherManager.class);
+        this.weatherPatternManager = get(WeatherPatternManager.class);
     }
 
     // Assignment \\
@@ -68,7 +62,7 @@ class LocalWindBranch extends BranchPackage {
             seasonalDirectionOffsetDegrees = activeSeason.getPrevailingWindDirectionDegrees();
         }
 
-        float weatherTurbulence = weatherManager.getWindTurbulenceScale();
+        float weatherTurbulence = weatherPatternManager.getWindTurbulenceScale();
 
         updateDirection(seasonalDirectionOffsetDegrees, weatherTurbulence);
         updateSpeed(baseWindSpeed, windVariance, weatherTurbulence);
@@ -117,15 +111,11 @@ class LocalWindBranch extends BranchPackage {
                 EngineSetting.WIND_MIN_SPEED_FLOOR,
                 seasonalSpeed * diurnalFactor);
 
-        float weatherSpeedScale = weatherManager.getWindSpeedScale();
+        float weatherSpeedScale = weatherPatternManager.getWindSpeedScale();
 
         windHandle.setLocalWindSpeed(speedBeforeWeather * weatherSpeedScale);
     }
 
-    /*
-     * Bell-shaped curve over the daily cycle at the primary grid's current
-     * location, peaking at WIND_DIURNAL_PEAK_TIME. Returns roughly [-1, 1].
-     */
     private float computeDiurnalFactor() {
 
         double visualTimeOfDay = clockManager.getPrimaryLocationTime().getVisualTimeOfDay();

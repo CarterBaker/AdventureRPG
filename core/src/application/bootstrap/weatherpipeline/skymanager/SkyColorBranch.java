@@ -4,7 +4,7 @@ import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
+import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
@@ -18,34 +18,28 @@ class SkyColorBranch extends BranchPackage {
      * The single authoritative source of every weather-pipeline daytime
      * color: horizon, zenith, cloud, and fog. Replicates SkyColor.glsl's
      * altitude=0/altitude=1 keyframes CPU-side for every active grid, then
-     * derives cloud and fog tints from those same keyframes, and pushes all
-     * four into that grid's own SkyColorData UBO every frame. No other
-     * system — CPU or GPU — may derive or re-blend a sky/fog color of its
-     * own; every consumer reads one of these four UBO values directly.
-     * Season tint and sunrise/sunset color come from SeasonColorBlendBranch;
-     * current temperature comes from WeatherManager and biases the
-     * sunrise/sunset glow and cloud color toward a cold or hot accent
-     * palette. Time of day is location-dependent, so each grid reads its
-     * own LocationTimeStruct; temperature is a single global weather-system
-     * value shared by every grid this frame.
+     * derives cloud and fog tints from those same keyframes, pushing all
+     * four into that grid's own SkyColorData UBO every frame. Season tint
+     * and sunrise/sunset color come from SeasonColorBlendBranch; current
+     * temperature comes from WeatherPatternManager's local weather pattern
+     * and biases the sunrise/sunset glow and cloud color toward a cold or
+     * hot accent palette.
      */
 
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
-    private WeatherManager weatherManager;
+    private WeatherPatternManager weatherPatternManager;
     private ClockManager clockManager;
     private ClockHandle clockHandle;
     private SeasonColorBlendBranch seasonColorBlendBranch;
 
     private final float[] temperatureAccentScratch = new float[3];
 
-    // Internal \\
-
     @Override
     protected void get() {
         this.uboManager = get(UBOManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
-        this.weatherManager = get(WeatherManager.class);
+        this.weatherPatternManager = get(WeatherPatternManager.class);
         this.clockManager = get(ClockManager.class);
     }
 
@@ -65,7 +59,7 @@ class SkyColorBranch extends BranchPackage {
     @Override
     protected void update() {
 
-        resolveTemperatureAccent(weatherManager.getCurrentTemperature());
+        resolveTemperatureAccent(weatherPatternManager.getCurrentTemperature());
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
         Object[] elements = grids.elements();
@@ -161,10 +155,6 @@ class SkyColorBranch extends BranchPackage {
         float gray = (horizon[0] + horizon[1] + horizon[2]) * 0.333f;
         lerpInPlace(horizon, new float[] { gray, gray, gray }, EngineSetting.SKY_HORIZON_DESATURATION);
 
-        // Fog is derived from the FINAL horizon color (post-desaturation) —
-        // a hazy, slightly lifted version of it. This is the one and only
-        // place fog color is ever computed; every shader that needs a fog
-        // tint reads u_skyFogColor rather than re-deriving it.
         float[] fogColor = {
                 horizon[0] + EngineSetting.SKY_FOG_COLOR_LIFT,
                 horizon[1] + EngineSetting.SKY_FOG_COLOR_LIFT,

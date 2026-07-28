@@ -1,4 +1,3 @@
-// WeatherManager.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
@@ -20,12 +19,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 /*
- * Owns the weather palette and drives the live weather simulation — the
- * fusion of the active biome, the calendar's current season, and the
- * world's wrapped/rotating noise field. The sky dome and the overhead
- * volumetric layer both resolve their own weather through
- * resolveWeatherBandTowardHorizon(), so the two visual layers can never
- * disagree about what's happening at a given bearing.
+ * Owns the weather definition palette and resolves the active biome/season
+ * into a chance-weighted pool of candidate weathers. The actual noise-driven
+ * resolution of that pool — both for the persistent spatial weather map and
+ * for the player's own local conditions — is driven by WeatherPatternManager,
+ * the single "Determined Weather Pattern" system every downstream consumer
+ * (temperature, wind, the GPU weather map) reads from.
  */
 public class WeatherManager extends ManagerPackage {
 
@@ -39,7 +38,6 @@ public class WeatherManager extends ManagerPackage {
 
     private GlobalNoiseBranch globalNoiseBranch;
     private RegionSampleBranch regionSampleBranch;
-    private TemperatureBranch temperatureBranch;
 
     private Object2ShortOpenHashMap<String> weatherName2WeatherID;
     private Short2ObjectOpenHashMap<WeatherHandle> weatherID2WeatherHandle;
@@ -57,7 +55,6 @@ public class WeatherManager extends ManagerPackage {
 
         this.globalNoiseBranch = create(GlobalNoiseBranch.class);
         this.regionSampleBranch = create(RegionSampleBranch.class);
-        this.temperatureBranch = create(TemperatureBranch.class);
 
         create(WeatherLoader.class);
     }
@@ -83,12 +80,6 @@ public class WeatherManager extends ManagerPackage {
             this.activeWeatherPool = resolveWeatherPool(activeBiome, currentSeason);
             this.lastSeason = currentSeason;
         }
-
-        if (activeWeatherPool == null)
-            return;
-
-        regionSampleBranch.sampleRegions(activeWeatherPool);
-        temperatureBranch.updateTemperature(regionSampleBranch.getCenterSample());
     }
 
     // Reference Coordinate \\
@@ -262,54 +253,6 @@ public class WeatherManager extends ManagerPackage {
 
     public float getWorldDriftChunksPerSecondX() {
         return globalNoiseBranch.getWorldDriftChunksPerSecondX();
-    }
-
-    public float getWindSpeedScale() {
-
-        if (!hasActiveWeatherPool())
-            return EngineSetting.DEFAULT_WEATHER_WIND_SPEED_SCALE;
-
-        return regionSampleBranch.getCenterSample().getWindSpeedScale();
-    }
-
-    public float getWindTurbulenceScale() {
-
-        if (!hasActiveWeatherPool())
-            return EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE;
-
-        return regionSampleBranch.getCenterSample().getWindTurbulenceScale();
-    }
-
-    public float getHumidity() {
-
-        if (!hasActiveWeatherPool())
-            return EngineSetting.DEFAULT_WEATHER_HUMIDITY;
-
-        return regionSampleBranch.getCenterSample().getHumidity();
-    }
-
-    public float getVisibility() {
-
-        if (!hasActiveWeatherPool())
-            return EngineSetting.DEFAULT_WEATHER_VISIBILITY;
-
-        return regionSampleBranch.getCenterSample().getVisibility();
-    }
-
-    public float getFogDensityScale() {
-
-        if (!hasActiveWeatherPool())
-            return EngineSetting.DEFAULT_WEATHER_FOG_DENSITY_SCALE;
-
-        return regionSampleBranch.getCenterSample().getFogDensityScale();
-    }
-
-    public float getCurrentTemperature() {
-
-        if (!hasActiveWeatherPool())
-            return EngineSetting.DEFAULT_BASE_TEMPERATURE;
-
-        return temperatureBranch.getCurrentTemperature();
     }
 
     public float getGlobalStormIntensityAt(long chunkCoordinate) {

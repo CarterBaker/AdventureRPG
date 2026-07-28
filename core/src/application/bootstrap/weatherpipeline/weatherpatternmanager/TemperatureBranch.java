@@ -1,4 +1,4 @@
-package application.bootstrap.weatherpipeline.weathermanager;
+package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.weatherpipeline.season.SeasonHandle;
@@ -10,28 +10,21 @@ class TemperatureBranch extends BranchPackage {
 
     /*
      * Computes live ambient temperature from the active season's base
-     * temperature and variance, shaped by a diurnal curve at the primary
-     * grid's current location and a slow drift, cooled by precipitation
-     * intensity, and offset by the resolved weather's temperatureModifier.
-     * CPU-side only. Driven explicitly by WeatherManager.update() with that
-     * frame's freshly sampled center weather sample.
+     * temperature and variance, shaped by a diurnal curve and a slow drift,
+     * cooled by the current local weather pattern's precipitation intensity
+     * and offset by its temperature modifier — both blended across any
+     * in-progress transition. Driven each frame by WeatherPatternManager
+     * once its local pattern has been resolved.
      */
 
-    // Internal
     private ClockManager clockManager;
     private SeasonManager seasonManager;
 
-    // Season Tracking
     private String lastSeasonName;
     private SeasonHandle activeSeason;
 
-    // Time
     private float elapsedTime;
-
-    // Output
     private float currentTemperature;
-
-    // Internal \\
 
     @Override
     protected void get() {
@@ -41,7 +34,7 @@ class TemperatureBranch extends BranchPackage {
 
     // Temperature \\
 
-    void updateTemperature(WeatherSampleStruct centerSample) {
+    void updateTemperature(WeatherPatternStruct localPattern) {
 
         elapsedTime += internal.getDeltaTime();
 
@@ -59,11 +52,13 @@ class TemperatureBranch extends BranchPackage {
         float driftOffset = (float) Math.sin(elapsedTime * EngineSetting.TEMPERATURE_DRIFT_FREQUENCY)
                 * 0.5f * temperatureVariance;
 
-        float precipitationCooling = centerSample.getPrecipitationIntensity()
-                * EngineSetting.TEMPERATURE_PRECIPITATION_COOLING;
+        float precipitationIntensity = localPattern != null ? localPattern.getBlendedPrecipitationIntensity() : 0f;
+        float temperatureModifier = localPattern != null ? localPattern.getBlendedTemperatureModifier() : 0f;
+
+        float precipitationCooling = precipitationIntensity * EngineSetting.TEMPERATURE_PRECIPITATION_COOLING;
 
         this.currentTemperature = baseTemperature + diurnalOffset + driftOffset - precipitationCooling
-                + centerSample.getTemperatureModifier();
+                + temperatureModifier;
     }
 
     private void resolveActiveSeason() {
@@ -77,11 +72,6 @@ class TemperatureBranch extends BranchPackage {
         activeSeason = seasonManager.getSeasonHandleFromSeasonName(currentSeasonName);
     }
 
-    /*
-     * Bell-shaped curve over the daily cycle at the primary grid's current
-     * location, peaking at TEMPERATURE_DIURNAL_PEAK_TIME. Returns roughly
-     * [-1, 1].
-     */
     private float computeDiurnalOffset() {
 
         double visualTimeOfDay = clockManager.getPrimaryLocationTime().getVisualTimeOfDay();

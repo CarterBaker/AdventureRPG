@@ -1,4 +1,3 @@
-// WeatherPatternManager.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
@@ -18,12 +17,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WeatherPatternManager extends ManagerPackage {
 
     /*
-     * Simulates the world's persistent weather patterns: jittered cells
-     * streamed in across the radius around the player, tracking which
-     * weather each cell resolves to and drifting them with world rotation
-     * until they retire beyond the simulated radius. Reevaluation cadence
-     * is derived from the world's own KPH-based drift speed rather than a
-     * fixed timer — see reevaluationIntervalFor().
+     * The "Determined Weather Pattern" system — the single authority every
+     * downstream consumer reads from. Streams jittered spatial cells around
+     * the player and tracks which weather each one resolves to for the GPU
+     * weather map, drifting them with world rotation until they retire
+     * beyond the simulated radius. Also resolves one additional pattern
+     * pinned exactly to the player's own reference coordinate — never
+     * streamed, never jittered, always present once a pool is active —
+     * whose blended values drive temperature and local wind, so those can
+     * never disagree with what the visual weather map shows at the
+     * player's own position. Reevaluation cadence for both is derived from
+     * the world's own KPH-based drift speed rather than a fixed timer —
+     * see reevaluationIntervalFor().
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
@@ -32,8 +37,12 @@ public class WeatherPatternManager extends ManagerPackage {
     private static final float FADE_OUT_RATE = 0.4f;
     private static final float INTENSITY_SMOOTHING_TIME_SECONDS = 3.0f;
 
+    private static final long LOCAL_PATTERN_KEY = Long.MIN_VALUE;
+    private static final int LOCAL_PATTERN_SLOT = -1;
+
     private WeatherManager weatherManager;
     private WorldManager worldManager;
+    private TemperatureBranch temperatureBranch;
 
     private int patternCellSizeChunks;
     private float outerRangeChunks;
@@ -47,6 +56,7 @@ public class WeatherPatternManager extends ManagerPackage {
     private float reevaluationMaxSeconds;
 
     private Long2ObjectOpenHashMap<WeatherPatternStruct> activePatterns;
+    private WeatherPatternStruct localPattern;
 
     private IntArrayList freeSlots;
 
@@ -89,6 +99,8 @@ public class WeatherPatternManager extends ManagerPackage {
         this.retiredThisFrame = new ObjectArrayList<>();
         this.refreshedThisFrame = new ObjectArrayList<>();
 
+        this.temperatureBranch = create(TemperatureBranch.class);
+
         create(WeatherMapBufferSystem.class);
     }
 
@@ -112,8 +124,10 @@ public class WeatherPatternManager extends ManagerPackage {
         retiredThisFrame.clear();
         refreshedThisFrame.clear();
 
-        if (!weatherManager.hasActiveWeatherPool())
+        if (!weatherManager.hasActiveWeatherPool()) {
+            localPattern = null;
             return;
+        }
 
         long referenceCoordinate = weatherManager.getReferenceCoordinate();
         int playerChunkX = Coordinate2Long.unpackX(referenceCoordinate);
@@ -121,10 +135,13 @@ public class WeatherPatternManager extends ManagerPackage {
 
         advanceWorldDrift();
         advanceWeatherReevaluation();
+        advanceLocalWeather(referenceCoordinate);
         advanceIntensity();
         advanceIntensitySmoothing();
         advanceFadesAndRetire(playerChunkX, playerChunkZ);
         streamInBudgeted(playerChunkX, playerChunkZ);
+
+        temperatureBranch.updateTemperature(localPattern);
     }
 
     // Candidate cells within streaming radius, sorted upwind-first then
@@ -313,6 +330,54 @@ public class WeatherPatternManager extends ManagerPackage {
         refreshedThisFrame.add(pattern);
     }
 
+    // Local Weather \\
+
+    /*
+     * Resolves and advances the one pattern pinned to the player's exact
+     * reference coordinate rather than a jittered cell — never streamed,
+     * never budget-limited, available the same frame a weather pool first
+     * becomes active.
+     */
+    private void advanceLocalWeather(long referenceCoordinate) {
+
+        float deltaTime = internal.getDeltaTime();
+
+        if (localPattern == null) {
+
+            weatherManager.resolveWeatherBandTowardHorizon(bandScratch, referenceCoordinate);
+            WeatherHandle initial = bandScratch.getPrimary();
+            float spread = bandScratch.getIntensityFor(initial);
+
+            this.localPattern = new WeatherPatternStruct(
+                    LOCAL_PATTERN_KEY,
+                    Coordinate2Long.unpackX(referenceCoordinate),
+                    Coordinate2Long.unpackY(referenceCoordinate),
+                    initial,
+                    DEFAULT_DRIFT_SPEED_SCALE,
+                    spread * initial.getCloudCoverage(),
+                    spread,
+                    LOCAL_PATTERN_SLOT);
+
+            localPattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(LOCAL_PATTERN_KEY));
+            return;
+        }
+
+        localPattern.advanceWeatherTransition(deltaTime);
+
+        if (elapsedSimTime < localPattern.getNextReevaluationTime())
+            return;
+
+        weatherManager.resolveWeatherBandTowardHorizonBiased(
+                bandScratch, referenceCoordinate, localPattern.getWeatherHandle());
+
+        WeatherHandle resolved = bandScratch.getPrimary();
+
+        if (resolved != localPattern.getWeatherHandle())
+            localPattern.beginWeatherTransition(resolved);
+
+        localPattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(LOCAL_PATTERN_KEY));
+    }
+
     private void advanceIntensity() {
 
         intensityUpdateAccumulator += internal.getDeltaTime();
@@ -351,11 +416,9 @@ public class WeatherPatternManager extends ManagerPackage {
     /*
      * Base cadence is the time it takes the world to drift one
      * WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION of a full noise
-     * wavelength at its current KPH-derived speed — faster drift means
-     * the noise field underneath a pattern changes sooner, so it should
-     * check back sooner too. Clamped for safety (a near-zero drift speed
-     * would otherwise produce an absurdly long interval), then jittered
-     * per pattern so the active set never reevaluates in lockstep.
+     * wavelength at its current KPH-derived speed. Clamped for safety,
+     * then jittered per pattern so the active set never reevaluates in
+     * lockstep.
      */
     private float reevaluationIntervalFor(long patternKey) {
 
@@ -471,5 +534,51 @@ public class WeatherPatternManager extends ManagerPackage {
 
     public float getNearRangeChunks() {
         return nearRangeChunks;
+    }
+
+    // Local Weather Accessible \\
+
+    public boolean hasLocalWeather() {
+        return localPattern != null;
+    }
+
+    public WeatherHandle getCurrentWeatherHandle() {
+        return localPattern != null ? localPattern.getWeatherHandle() : null;
+    }
+
+    public float getWindSpeedScale() {
+        return localPattern != null
+                ? localPattern.getBlendedWindSpeedScale()
+                : EngineSetting.DEFAULT_WEATHER_WIND_SPEED_SCALE;
+    }
+
+    public float getWindTurbulenceScale() {
+        return localPattern != null
+                ? localPattern.getBlendedWindTurbulenceScale()
+                : EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE;
+    }
+
+    public float getHumidity() {
+        return localPattern != null
+                ? localPattern.getBlendedHumidity()
+                : EngineSetting.DEFAULT_WEATHER_HUMIDITY;
+    }
+
+    public float getVisibility() {
+        return localPattern != null
+                ? localPattern.getBlendedVisibility()
+                : EngineSetting.DEFAULT_WEATHER_VISIBILITY;
+    }
+
+    public float getFogDensityScale() {
+        return localPattern != null
+                ? localPattern.getBlendedFogDensityScale()
+                : EngineSetting.DEFAULT_WEATHER_FOG_DENSITY_SCALE;
+    }
+
+    public float getCurrentTemperature() {
+        if (!weatherManager.hasActiveWeatherPool())
+            return EngineSetting.DEFAULT_BASE_TEMPERATURE;
+        return temperatureBranch.getCurrentTemperature();
     }
 }
