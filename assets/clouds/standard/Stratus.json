@@ -1,8 +1,10 @@
 {
     "color": { "r": 0.90, "g": 0.91, "b": 0.94 },
+    "saturation": 0.9,
     "scale": 260.0,
     "density": 0.5,
     "verticalThickness": 9.0,
+    "fullness": 0.15,
     "densityNoiseScale": 1.4,
     "noiseWarpStrength": 0.3,
     "coverageBias": 0.6,

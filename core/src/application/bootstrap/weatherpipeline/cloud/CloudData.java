@@ -6,9 +6,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class CloudData extends DataPackage {
 
     /*
-     * Immutable cloud archetype definition loaded from JSON — shape, motion,
-     * and placement-variance data for one named cloud. Lighting is never
-     * per-archetype; only cloudColor tints the shared real-time shading.
+     * Immutable "Cloud Settings" for one named cloud archetype, loaded from
+     * JSON. Every value a shader needs to draw this archetype — shape,
+     * material, motion, and instance variance — lives here and only here.
+     * CloudHandle wraps this class and delegates every accessor to it, so
+     * there is exactly one place any cloud value can ever live.
      */
 
     // Identity
@@ -17,11 +19,13 @@ public class CloudData extends DataPackage {
 
     // Material Tint
     private final Vector3 cloudColor;
+    private final float saturation;
 
-    // Shape — width, height
+    // Shape — width, height, fullness
     private final float scale;
     private final float density;
     private final float verticalThickness;
+    private final float fullness;
 
     // Density Noise
     private final float densityNoiseScale;
@@ -50,9 +54,11 @@ public class CloudData extends DataPackage {
             String cloudName,
             short cloudID,
             Vector3 cloudColor,
+            float saturation,
             float scale,
             float density,
             float verticalThickness,
+            float fullness,
             float densityNoiseScale,
             float noiseWarpStrength,
             float coverageBias,
@@ -68,9 +74,11 @@ public class CloudData extends DataPackage {
         this.cloudName = cloudName;
         this.cloudID = cloudID;
         this.cloudColor = cloudColor;
+        this.saturation = saturation;
         this.scale = scale;
         this.density = density;
         this.verticalThickness = verticalThickness;
+        this.fullness = fullness;
         this.densityNoiseScale = densityNoiseScale;
         this.noiseWarpStrength = noiseWarpStrength;
         this.coverageBias = coverageBias;
@@ -98,6 +106,10 @@ public class CloudData extends DataPackage {
         return cloudColor;
     }
 
+    public float getSaturation() {
+        return saturation;
+    }
+
     public float getScale() {
         return scale;
     }
@@ -108,6 +120,10 @@ public class CloudData extends DataPackage {
 
     public float getVerticalThickness() {
         return verticalThickness;
+    }
+
+    public float getFullness() {
+        return fullness;
     }
 
     public float getDensityNoiseScale() {

@@ -1,4 +1,3 @@
-// CloudHandle.java
 package application.bootstrap.weatherpipeline.cloud;
 
 import engine.root.HandlePackage;
@@ -7,12 +6,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class CloudHandle extends HandlePackage {
 
     /*
-     * Persistent cloud archetype record. Wraps CloudData and delegates all
-     * access through it. Registered in CloudManager for the engine session;
-     * referenced directly by weathers and weather patterns, never cloned.
-     * cloudTypeIndex is a small, stable slot assigned by CloudManager at
-     * registration — the index this archetype occupies in every
-     * fixed-size, per-cloud-type array the weather map UBO carries.
+     * Persistent reference to one loaded cloud archetype. Every accessor
+     * below delegates straight through to the wrapped CloudData — this
+     * class holds no Cloud Setting of its own. cloudTypeIndex is the one
+     * exception: it's a registry slot assigned by CloudManager at
+     * registration time, not an authored setting, so it lives here instead.
      */
 
     private CloudData cloudData;
@@ -38,6 +36,10 @@ public class CloudHandle extends HandlePackage {
         return cloudData.getCloudColor();
     }
 
+    public float getSaturation() {
+        return cloudData.getSaturation();
+    }
+
     public float getScale() {
         return cloudData.getScale();
     }
@@ -48,6 +50,10 @@ public class CloudHandle extends HandlePackage {
 
     public float getVerticalThickness() {
         return cloudData.getVerticalThickness();
+    }
+
+    public float getFullness() {
+        return cloudData.getFullness();
     }
 
     public float getDensityNoiseScale() {

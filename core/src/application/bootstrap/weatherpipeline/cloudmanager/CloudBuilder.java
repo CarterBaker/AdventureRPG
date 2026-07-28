@@ -30,9 +30,11 @@ class CloudBuilder extends BuilderPackage {
         JsonObject json = JsonUtility.loadJsonObject(file);
 
         Vector3 cloudColor = parseColor(json, "color", new Vector3(1f, 1f, 1f));
+        float saturation = parseUnitFloat(json, cloudName, "saturation", 1.0f);
         float scale = parseFloat(json, "scale", EngineSetting.CLOUD_DEFAULT_DIAMETER_BLOCKS);
         float density = parseFloat(json, "density", 0.8f);
         float verticalThickness = parseFloat(json, "verticalThickness", 8.0f);
+        float fullness = parseUnitFloat(json, cloudName, "fullness", 0.7f);
         float densityNoiseScale = parseFloat(json, "densityNoiseScale", 1.0f);
         float noiseWarpStrength = parseFloat(json, "noiseWarpStrength", 0.6f);
         float coverageBias = parseFloat(json, "coverageBias", 0.5f);
@@ -49,9 +51,11 @@ class CloudBuilder extends BuilderPackage {
                 cloudName,
                 cloudID,
                 cloudColor,
+                saturation,
                 scale,
                 density,
                 verticalThickness,
+                fullness,
                 densityNoiseScale,
                 noiseWarpStrength,
                 coverageBias,
@@ -78,6 +82,20 @@ class CloudBuilder extends BuilderPackage {
             return fallback;
 
         return json.get(field).getAsFloat();
+    }
+
+    private float parseUnitFloat(JsonObject json, String cloudName, String field, float fallback) {
+
+        if (!json.has(field))
+            return fallback;
+
+        float value = json.get(field).getAsFloat();
+
+        if (value < 0f || value > 1f)
+            throwException("Cloud \"" + cloudName + "\" field \"" + field
+                    + "\" must be between 0.0 and 1.0, got: " + value);
+
+        return value;
     }
 
     private Vector3 parseColor(JsonObject json, String field, Vector3 fallback) {
