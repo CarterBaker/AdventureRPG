@@ -423,6 +423,15 @@ public class EngineSetting {
         public static final float WEATHER_PATTERN_REEVALUATION_MAX_SECONDS = 180.0f;
         public static final float WEATHER_PATTERN_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
 
+        // Weather Map (GPU) \\
+
+        // Flattened (pattern × cloud entry) capacity of WeatherMapData — must
+        // match WeatherMapData.json/.glsl. Deliberately larger than
+        // WEATHER_PATTERN_MAX_ACTIVE_COUNT since a single pattern can occupy
+        // more than one slot (one per cloud archetype it draws).
+        public static final String WEATHER_MAP_UBO = "WeatherMapData";
+        public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 128;
+
         // Wind \\
 
         public static final float WIND_GLOBAL_DIRECTION_DEGREES = 45.0f;

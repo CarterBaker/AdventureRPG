@@ -88,6 +88,8 @@ public class WeatherPatternManager extends ManagerPackage {
         this.streamedInThisFrame = new ObjectArrayList<>();
         this.retiredThisFrame = new ObjectArrayList<>();
         this.refreshedThisFrame = new ObjectArrayList<>();
+
+        create(WeatherMapBufferSystem.class);
     }
 
     @Override
@@ -427,7 +429,7 @@ public class WeatherPatternManager extends ManagerPackage {
         retiredThisFrame.add(pattern);
     }
 
-    private static float hash01(long seed) {
+    static float hash01(long seed) {
 
         long h = seed;
         h ^= (h >>> 33);
