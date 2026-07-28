@@ -1,6 +1,7 @@
-package application.bootstrap.calendarpipeline.clockmanager;
+package application.bootstrap.weatherpipeline.skymanager;
 
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
@@ -15,26 +16,25 @@ class SkyColorBranch extends BranchPackage {
 
     /*
      * Replicates SkyColor.glsl CPU-side at altitude=0 (horizon) and
-     * altitude=1 (zenith) for every active grid, pushing both plus a third
-     * ambient cloud color into that grid's own SkyColorData UBOInstance each
-     * frame. Season tint and sunrise/sunset color come from the calendar's
-     * own seasons via SeasonBlendBranch; current temperature comes from the
-     * weather system and biases the sunrise/sunset glow and cloud color
+     * altitude=1 (zenith) for every active grid, pushing both plus a
+     * third ambient cloud color into that grid's own SkyColorData
+     * UBOInstance every frame. Season tint and sunrise/sunset color come
+     * from SeasonColorBlendBranch; current temperature comes from
+     * WeatherManager and biases the sunrise/sunset glow and cloud color
      * toward a cold or hot accent palette — cotton-candy pinks in cold
      * conditions, fiery oranges in hot ones. Time of day is location-
-     * dependent, so each grid reads its own LocationTimeStruct; temperature
-     * is a single global weather-system value shared by every grid this
-     * frame.
+     * dependent, so each grid reads its own LocationTimeStruct;
+     * temperature is a single global weather-system value shared by
+     * every grid this frame.
      */
 
-    // Internal
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
     private WeatherManager weatherManager;
+    private ClockManager clockManager;
     private ClockHandle clockHandle;
-    private SeasonBlendBranch seasonBlendBranch;
+    private SeasonColorBlendBranch seasonColorBlendBranch;
 
-    // Scratch — temperature accent is identical for every grid this frame
     private final float[] temperatureAccentScratch = new float[3];
 
     // Internal \\
@@ -44,13 +44,18 @@ class SkyColorBranch extends BranchPackage {
         this.uboManager = get(UBOManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.weatherManager = get(WeatherManager.class);
+        this.clockManager = get(ClockManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        this.clockHandle = clockManager.getClockHandle();
     }
 
     // Assignment \\
 
-    void assignData(ClockHandle clockHandle, SeasonBlendBranch seasonBlendBranch) {
-        this.clockHandle = clockHandle;
-        this.seasonBlendBranch = seasonBlendBranch;
+    void assignData(SeasonColorBlendBranch seasonColorBlendBranch) {
+        this.seasonColorBlendBranch = seasonColorBlendBranch;
     }
 
     // Update \\
@@ -111,7 +116,7 @@ class SkyColorBranch extends BranchPackage {
         float[] horizon = blend2(nightBottom, nightF, dayBottom, dayF);
         float[] zenith = blend2(nightTop, nightF, dayTop, dayF);
 
-        Vector3 seasonTint = seasonBlendBranch.getTintColorForYearProgress(yearProgress);
+        Vector3 seasonTint = seasonColorBlendBranch.getTintColorForYearProgress(yearProgress);
         float dailySeasonStr = dailyRandom * dailyVar;
         float seasonStrength = dayF * dailySeasonStr * EngineSetting.SKY_SEASONAL_STRENGTH_SCALE;
         float tintScale = EngineSetting.SKY_SEASONAL_TINT_OFFSET_SCALE;
@@ -136,7 +141,7 @@ class SkyColorBranch extends BranchPackage {
         addScaled(horizon, dailyOffset, dailyStrength);
         addScaled(zenith, dailyOffset, dailyStrength);
 
-        Vector3 seasonSunrise = seasonBlendBranch.getSunriseColorForYearProgress(yearProgress);
+        Vector3 seasonSunrise = seasonColorBlendBranch.getSunriseColorForYearProgress(yearProgress);
         float[] seasonSS = { seasonSunrise.x, seasonSunrise.y, seasonSunrise.z };
         float[] effectiveSunrise = blend2(
                 seasonSS, 1f - EngineSetting.SKY_TEMPERATURE_ACCENT_STRENGTH,

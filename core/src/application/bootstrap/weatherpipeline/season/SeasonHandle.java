@@ -1,27 +1,24 @@
 package application.bootstrap.weatherpipeline.season;
 
 import engine.root.HandlePackage;
+import engine.util.mathematics.vectors.Vector3;
 
 public class SeasonHandle extends HandlePackage {
 
     /*
-     * Persistent climate record for one named season. Wraps SeasonData and
-     * delegates all access through it. Registered in SeasonManager from
-     * bootstrap to shutdown, keyed by name — the same open-ended registry
-     * pattern as clouds, weathers, and biomes, since the set of seasons is
-     * entirely defined by whichever calendar a world uses.
+     * Persistent climate and sky-color record for one named season. Wraps
+     * SeasonData and delegates all access through it. Registered in
+     * SeasonManager from bootstrap to shutdown, keyed by name — the same
+     * open-ended registry pattern as clouds, weathers, and biomes, since
+     * the set of seasons is entirely defined by whichever calendar a
+     * world uses.
      */
 
-    // Internal
     private SeasonData seasonData;
-
-    // Constructor \\
 
     public void constructor(SeasonData seasonData) {
         this.seasonData = seasonData;
     }
-
-    // Accessible \\
 
     public SeasonData getSeasonData() {
         return seasonData;
@@ -53,5 +50,13 @@ public class SeasonHandle extends HandlePackage {
 
     public float getPrecipitationChanceScale() {
         return seasonData.getPrecipitationChanceScale();
+    }
+
+    public Vector3 getTintColor() {
+        return seasonData.getTintColor();
+    }
+
+    public Vector3 getSunriseColor() {
+        return seasonData.getSunriseColor();
     }
 }

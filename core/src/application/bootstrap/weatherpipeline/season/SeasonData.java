@@ -1,35 +1,33 @@
 package application.bootstrap.weatherpipeline.season;
 
 import engine.root.DataPackage;
+import engine.util.mathematics.vectors.Vector3;
 
 public class SeasonData extends DataPackage {
 
     /*
-     * Immutable climate definition for one season, loaded from JSON and
-     * identified by name. Season identity and ordering are entirely defined
-     * by the active calendar (see CalendarData.getSeasons()) — this class
-     * only carries the climate numbers a named season contributes once it's
-     * active. Feeds base wind and temperature values that WindManager and
-     * WeatherManager read each frame. Owned by SeasonHandle for the full
-     * engine session.
+     * Immutable climate and sky-color definition for one named season,
+     * loaded from JSON. Wind and temperature values drive WindManager and
+     * WeatherManager; tintColor and sunriseColor are the season's own
+     * contribution to the sky's blended color palette, consumed by the
+     * weather pipeline's sky system. Season identity and calendar
+     * ordering are defined by the active calendar instead — this class
+     * only carries the values a named season contributes once active.
      */
 
-    // Identity
     private final String seasonName;
 
-    // Wind
     private final float baseWindSpeed;
     private final float windVariance;
     private final float prevailingWindDirectionDegrees;
 
-    // Temperature
     private final float baseTemperature;
     private final float temperatureVariance;
 
-    // Weather Influence
     private final float precipitationChanceScale;
 
-    // Constructor \\
+    private final Vector3 tintColor;
+    private final Vector3 sunriseColor;
 
     public SeasonData(
             String seasonName,
@@ -38,25 +36,20 @@ public class SeasonData extends DataPackage {
             float prevailingWindDirectionDegrees,
             float baseTemperature,
             float temperatureVariance,
-            float precipitationChanceScale) {
+            float precipitationChanceScale,
+            Vector3 tintColor,
+            Vector3 sunriseColor) {
 
-        // Identity
         this.seasonName = seasonName;
-
-        // Wind
         this.baseWindSpeed = baseWindSpeed;
         this.windVariance = windVariance;
         this.prevailingWindDirectionDegrees = prevailingWindDirectionDegrees;
-
-        // Temperature
         this.baseTemperature = baseTemperature;
         this.temperatureVariance = temperatureVariance;
-
-        // Weather Influence
         this.precipitationChanceScale = precipitationChanceScale;
+        this.tintColor = tintColor;
+        this.sunriseColor = sunriseColor;
     }
-
-    // Accessible \\
 
     public String getSeasonName() {
         return seasonName;
@@ -84,5 +77,13 @@ public class SeasonData extends DataPackage {
 
     public float getPrecipitationChanceScale() {
         return precipitationChanceScale;
+    }
+
+    public Vector3 getTintColor() {
+        return tintColor;
+    }
+
+    public Vector3 getSunriseColor() {
+        return sunriseColor;
     }
 }

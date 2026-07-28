@@ -37,9 +37,9 @@
         { "name": "Starseed", "days": 31 }
     ],
     "seasons": [
-        { "name": "Spring", "startMonth": 0, "startDayOfMonth": 1, "dayLength": 0.55, "tintColor": [1.00, 0.90, 0.80], "sunriseColor": [0.95, 0.65, 0.45] },
-        { "name": "Summer", "startMonth": 3, "startDayOfMonth": 1, "dayLength": 0.65, "tintColor": [1.05, 0.95, 0.85], "sunriseColor": [1.00, 0.50, 0.25] },
-        { "name": "Autumn", "startMonth": 6, "startDayOfMonth": 1, "dayLength": 0.50, "tintColor": [0.95, 0.80, 0.70], "sunriseColor": [0.85, 0.45, 0.25] },
-        { "name": "Winter", "startMonth": 9, "startDayOfMonth": 1, "dayLength": 0.35, "tintColor": [0.70, 0.75, 0.95], "sunriseColor": [0.80, 0.50, 0.60] }
+        { "name": "Spring", "startMonth": 0, "startDayOfMonth": 1, "dayLength": 0.55 },
+        { "name": "Summer", "startMonth": 3, "startDayOfMonth": 1, "dayLength": 0.65 },
+        { "name": "Autumn", "startMonth": 6, "startDayOfMonth": 1, "dayLength": 0.50 },
+        { "name": "Winter", "startMonth": 9, "startDayOfMonth": 1, "dayLength": 0.35 }
     ]
 }

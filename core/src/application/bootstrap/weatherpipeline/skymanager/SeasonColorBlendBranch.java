@@ -1,30 +1,36 @@
-package application.bootstrap.calendarpipeline.clockmanager;
+package application.bootstrap.weatherpipeline.skymanager;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import application.bootstrap.calendarpipeline.calendar.SeasonRangeStruct;
+import application.bootstrap.weatherpipeline.season.SeasonHandle;
+import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class SeasonBlendBranch extends BranchPackage {
+class SeasonColorBlendBranch extends BranchPackage {
 
     /*
-     * Resolves the active calendar's named seasons into a smoothly
-     * blended day length for the current point in the year — the
-     * fraction of a day/night cycle that is daylight, used to bend the
-     * calendar's own visual time-of-day curve. Exact at each season's own
-     * center date, blending toward its neighbor as the year progresses
-     * and wrapping across the year boundary with no discontinuity.
+     * Resolves the calendar's own season date keyframes into a smoothly
+     * blended sky tint and sunrise color for the current point in the
+     * year. Each season's colors are exact at that season's own calendar
+     * center date and blend toward its neighbor as the year progresses,
+     * wrapping across the year boundary with no discontinuity. Keyframe
+     * dates come from the active CalendarHandle; the color values
+     * themselves come from each season's own SeasonHandle.
      */
 
-    private CalendarHandle calendarHandle;
+    private SeasonManager seasonManager;
 
     private double[] seasonCenters;
-    private float[] seasonDayLengths;
+    private Vector3[] seasonTintColors;
+    private Vector3[] seasonSunriseColors;
     private int seasonCount;
 
     private double lastYearProgress;
-    private float lastDayLength;
+    private final Vector3 lastTintColor = new Vector3();
+    private final Vector3 lastSunriseColor = new Vector3();
     private float RECOMPUTE_EPSILON;
 
     // Internal \\
@@ -33,20 +39,25 @@ class SeasonBlendBranch extends BranchPackage {
     protected void create() {
         this.RECOMPUTE_EPSILON = EngineSetting.SEASON_BLEND_RECOMPUTE_EPSILON;
         this.lastYearProgress = -1.0;
-        this.lastDayLength = 0.5f;
+        this.lastTintColor.set(1f, 1f, 1f);
+        this.lastSunriseColor.set(1f, 1f, 1f);
+    }
+
+    @Override
+    protected void get() {
+        this.seasonManager = get(SeasonManager.class);
     }
 
     // Assignment \\
 
     void assignData(CalendarHandle calendarHandle) {
-        this.calendarHandle = calendarHandle;
-        buildSeasonKeyframes();
+        buildSeasonKeyframes(calendarHandle);
         this.lastYearProgress = -1.0;
     }
 
     // Keyframe Construction \\
 
-    private void buildSeasonKeyframes() {
+    private void buildSeasonKeyframes(CalendarHandle calendarHandle) {
 
         ObjectArrayList<SeasonRangeStruct> seasons = calendarHandle.getSeasons();
         int count = seasons.size();
@@ -56,18 +67,22 @@ class SeasonBlendBranch extends BranchPackage {
 
         for (int i = 0; i < count; i++) {
             SeasonRangeStruct season = seasons.get(i);
-            int dayOfYear = dayOfYearZeroIndexed(season.getStartMonth(), season.getStartDayOfMonth());
+            int dayOfYear = dayOfYearZeroIndexed(calendarHandle, season.getStartMonth(), season.getStartDayOfMonth());
             startFractions[i] = dayOfYear / (double) totalDaysInYear;
         }
 
         double[] rawCenters = new double[count];
-        float[] rawDayLengths = new float[count];
+        Vector3[] rawTints = new Vector3[count];
+        Vector3[] rawSunrises = new Vector3[count];
 
         for (int i = 0; i < count; i++) {
             double start = startFractions[i];
             double end = (i + 1 < count) ? startFractions[i + 1] : startFractions[0] + 1.0;
             rawCenters[i] = wrapFraction((start + end) * 0.5);
-            rawDayLengths[i] = seasons.get(i).getDayLength();
+
+            SeasonHandle seasonHandle = seasonManager.getSeasonHandleFromSeasonName(seasons.get(i).getName());
+            rawTints[i] = seasonHandle.getTintColor();
+            rawSunrises[i] = seasonHandle.getSunriseColor();
         }
 
         Integer[] order = new Integer[count];
@@ -78,15 +93,17 @@ class SeasonBlendBranch extends BranchPackage {
 
         this.seasonCount = count;
         this.seasonCenters = new double[count];
-        this.seasonDayLengths = new float[count];
+        this.seasonTintColors = new Vector3[count];
+        this.seasonSunriseColors = new Vector3[count];
 
         for (int i = 0; i < count; i++) {
             seasonCenters[i] = rawCenters[order[i]];
-            seasonDayLengths[i] = rawDayLengths[order[i]];
+            seasonTintColors[i] = rawTints[order[i]];
+            seasonSunriseColors[i] = rawSunrises[order[i]];
         }
     }
 
-    private int dayOfYearZeroIndexed(int month, int dayOfMonth) {
+    private int dayOfYearZeroIndexed(CalendarHandle calendarHandle, int month, int dayOfMonth) {
 
         int dayOfYear = 0;
 
@@ -100,9 +117,14 @@ class SeasonBlendBranch extends BranchPackage {
 
     // Blend \\
 
-    float getDayLengthForYearProgress(double yearProgress) {
+    Vector3 getTintColorForYearProgress(double yearProgress) {
         resolveBlend(yearProgress);
-        return lastDayLength;
+        return lastTintColor;
+    }
+
+    Vector3 getSunriseColorForYearProgress(double yearProgress) {
+        resolveBlend(yearProgress);
+        return lastSunriseColor;
     }
 
     private void resolveBlend(double yearProgress) {
@@ -111,7 +133,8 @@ class SeasonBlendBranch extends BranchPackage {
             return;
 
         if (seasonCount == 1) {
-            lastDayLength = seasonDayLengths[0];
+            lastTintColor.set(seasonTintColors[0].x, seasonTintColors[0].y, seasonTintColors[0].z);
+            lastSunriseColor.set(seasonSunriseColors[0].x, seasonSunriseColors[0].y, seasonSunriseColors[0].z);
             return;
         }
 
@@ -158,7 +181,19 @@ class SeasonBlendBranch extends BranchPackage {
         double localT = (span <= 0.0) ? 0.0 : (t - prevCenter) / span;
         double eased = smoothstep(localT);
 
-        lastDayLength = lerp(seasonDayLengths[prevIndex], seasonDayLengths[nextIndex], eased);
+        Vector3 prevTint = seasonTintColors[prevIndex];
+        Vector3 nextTint = seasonTintColors[nextIndex];
+        lastTintColor.set(
+                lerp(prevTint.x, nextTint.x, eased),
+                lerp(prevTint.y, nextTint.y, eased),
+                lerp(prevTint.z, nextTint.z, eased));
+
+        Vector3 prevSunrise = seasonSunriseColors[prevIndex];
+        Vector3 nextSunrise = seasonSunriseColors[nextIndex];
+        lastSunriseColor.set(
+                lerp(prevSunrise.x, nextSunrise.x, eased),
+                lerp(prevSunrise.y, nextSunrise.y, eased),
+                lerp(prevSunrise.z, nextSunrise.z, eased));
     }
 
     // Math Helpers \\

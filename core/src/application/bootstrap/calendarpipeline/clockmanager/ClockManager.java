@@ -40,7 +40,6 @@ public class ClockManager extends ManagerPackage {
     private MonthTrackerBranch monthTracker;
     private YearTrackerBranch yearTracker;
     private ClockBufferSystem internalBuffer;
-    private SkyColorBranch skyColorBranch;
     private SeasonBlendBranch seasonBlendBranch;
 
     // Clock
@@ -59,7 +58,6 @@ public class ClockManager extends ManagerPackage {
         this.monthTracker = create(MonthTrackerBranch.class);
         this.yearTracker = create(YearTrackerBranch.class);
         this.internalBuffer = create(ClockBufferSystem.class);
-        this.skyColorBranch = create(SkyColorBranch.class);
         this.seasonBlendBranch = create(SeasonBlendBranch.class);
 
         // Clock
@@ -109,7 +107,6 @@ public class ClockManager extends ManagerPackage {
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
         internalBuffer.assignData(clockHandle);
-        skyColorBranch.assignData(clockHandle, seasonBlendBranch);
     }
 
     private void advanceGameClock() {
@@ -192,6 +189,10 @@ public class ClockManager extends ManagerPackage {
 
     public ClockHandle getClockHandle() {
         return clockHandle;
+    }
+
+    public CalendarHandle getCalendarHandle() {
+        return calendarHandle;
     }
 
     /*

@@ -4,5 +4,7 @@
     "prevailingWindDirectionDegrees": 310.0,
     "baseTemperature": -2.0,
     "temperatureVariance": 8.0,
-    "precipitationChanceScale": 1.30
+    "precipitationChanceScale": 1.30,
+    "tintColor": [0.70, 0.75, 0.95],
+    "sunriseColor": [0.80, 0.50, 0.60]
 }
