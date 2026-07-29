@@ -13,7 +13,7 @@ class ClockBufferSystem extends SystemPackage {
     /*
      * Pushes clock state to each active grid's own TimeData UBOInstance
      * every frame. u_timeOfDay is location-dependent, read from that
-     * grid's own LocationTimeStruct; everything else (calendar date, year
+     * grid's own ClockInstance; everything else (calendar date, year
      * progress, elapsed real seconds) is shared and identical across every
      * window.
      */
@@ -65,7 +65,7 @@ class ClockBufferSystem extends SystemPackage {
 
         UBOInstance timeData = grid.getTimeDataUBO();
 
-        timeData.updateUniform("u_timeOfDay", (float) grid.getLocationTimeStruct().getVisualTimeOfDay());
+        timeData.updateUniform("u_timeOfDay", (float) grid.getClockInstance().getVisualTimeOfDay());
         timeData.updateUniform("u_timeOfYear", (float) clockHandle.getVisualYearProgress());
         timeData.updateUniform("u_rawTimeOfDay", (float) clockHandle.getDayProgress());
         timeData.updateUniform("u_time", elapsedTime);

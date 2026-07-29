@@ -1,6 +1,6 @@
 package application.bootstrap.worldpipeline.grid;
 
-import application.bootstrap.calendarpipeline.clock.LocationTimeStruct;
+import application.bootstrap.calendarpipeline.clock.ClockInstance;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
@@ -26,7 +26,7 @@ public class GridInstance extends InstancePackage {
      * The active spatial grid for a single focal entity — one per window.
      * Owns the load order, slot handles, active chunks, active mega chunks,
      * pending load/unload requests, and the render queues for this grid.
-     * locationTimeStruct holds this grid's own visual time of day,
+     * clockInstance holds this grid's own visual time of day,
      * refreshed every frame by ClockManager from this grid's active chunk
      * coordinate. timeDataUBO/sunLightUBO/moonLightUBO/skyColorUBO are this
      * grid's own GPU buffer instances — created once in GridBuildSystem —
@@ -52,7 +52,7 @@ public class GridInstance extends InstancePackage {
     private long activeChunkCoordinate;
 
     // Location Time
-    private LocationTimeStruct locationTimeStruct;
+    private ClockInstance clockInstance;
 
     // Location Lighting UBOs
     private UBOInstance timeDataUBO;
@@ -75,6 +75,13 @@ public class GridInstance extends InstancePackage {
 
     // Scan cursor
     private int scanCursor;
+
+    // Internal \\
+
+    @Override
+    protected void create() {
+        this.clockInstance = create(ClockInstance.class);
+    }
 
     // Constructor \\
 
@@ -109,9 +116,6 @@ public class GridInstance extends InstancePackage {
 
         // Active State
         this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
-
-        // Location Time
-        this.locationTimeStruct = new LocationTimeStruct();
 
         // Location Lighting UBOs
         this.timeDataUBO = timeDataUBO;
@@ -276,8 +280,8 @@ public class GridInstance extends InstancePackage {
         return radiusSquared;
     }
 
-    public LocationTimeStruct getLocationTimeStruct() {
-        return locationTimeStruct;
+    public ClockInstance getClockInstance() {
+        return clockInstance;
     }
 
     public UBOInstance getTimeDataUBO() {

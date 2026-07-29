@@ -113,7 +113,7 @@ class SkyColorSystem extends SystemPackage {
 
     private void pushData(GridInstance grid) {
 
-        float t = (float) grid.getLocationTimeStruct().getVisualTimeOfDay();
+        float t = (float) grid.getClockInstance().getVisualTimeOfDay();
         float yearProgress = (float) clockHandle.getVisualYearProgress();
         float dailyRandom = clockHandle.getRandomNoiseFromDay();
         float dailyVar = computeDailyVariationMask(t);

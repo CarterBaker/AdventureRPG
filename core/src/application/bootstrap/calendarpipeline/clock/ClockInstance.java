@@ -1,15 +1,16 @@
 package application.bootstrap.calendarpipeline.clock;
 
-import engine.root.StructPackage;
+import engine.root.InstancePackage;
 
-public class LocationTimeStruct extends StructPackage {
+public class ClockInstance extends InstancePackage {
 
     /*
      * Time-of-day state for one place on the world's Y axis rather than the
      * world as a whole — two locations far enough apart on that axis can be
      * in day and night simultaneously. Recomputed every frame per grid by
      * ClockManager, from the shared global clock plus that grid's own
-     * active chunk coordinate. Never shared between grids.
+     * active chunk coordinate. One instance per grid, created once and
+     * held for that grid's lifetime — never shared, never rebuilt.
      */
 
     // State

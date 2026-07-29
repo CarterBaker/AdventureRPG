@@ -456,7 +456,7 @@ public class WeatherPatternManager extends ManagerPackage {
                 }
             }
 
-            double visualTimeOfDay = grid.getLocationTimeStruct().getVisualTimeOfDay();
+            double visualTimeOfDay = grid.getClockInstance().getVisualTimeOfDay();
             float temperature = temperatureSystem.computeTemperature(pattern, visualTimeOfDay);
             gridToTemperature.put(grid, temperature);
         }

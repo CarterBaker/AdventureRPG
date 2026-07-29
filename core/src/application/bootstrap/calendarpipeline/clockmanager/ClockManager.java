@@ -5,7 +5,7 @@ import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import application.bootstrap.calendarpipeline.calendarmanager.CalendarManager;
 import application.bootstrap.calendarpipeline.clock.ClockData;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
-import application.bootstrap.calendarpipeline.clock.LocationTimeStruct;
+import application.bootstrap.calendarpipeline.clock.ClockInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -24,7 +24,7 @@ public class ClockManager extends ManagerPackage {
      * season progression) is global and location-independent — there is
      * one shared timeline per world. Visual time of day is not: each
      * active grid tracks its own position along the world's Y axis, so
-     * updateLocationTimes() resolves a LocationTimeStruct per grid every
+     * updateLocationTimes() resolves a ClockInstance per grid every
      * frame, letting every player experience day and night independently
      * at the same real-world instant.
      */
@@ -44,7 +44,7 @@ public class ClockManager extends ManagerPackage {
     // Clock
     private CalendarHandle calendarHandle;
     private ClockHandle clockHandle;
-    private final LocationTimeStruct fallbackLocationTime = new LocationTimeStruct();
+    private ClockInstance fallbackLocationTime;
 
     // Internal \\
 
@@ -60,6 +60,7 @@ public class ClockManager extends ManagerPackage {
 
         // Clock
         this.clockHandle = create(ClockHandle.class);
+        this.fallbackLocationTime = create(ClockInstance.class);
     }
 
     @Override
@@ -143,7 +144,7 @@ public class ClockManager extends ManagerPackage {
             double latitudeFactor = WorldWrapUtility.wrappedLatitudeFactor(locationWorld, chunkCoordinate);
             double visualTimeOfDay = currentTracker.computeVisualTimeOfDay(locationOffset, latitudeFactor);
 
-            grid.getLocationTimeStruct().update(visualTimeOfDay, locationOffset, latitudeFactor);
+            grid.getClockInstance().update(visualTimeOfDay, locationOffset, latitudeFactor);
         }
     }
 
@@ -207,11 +208,11 @@ public class ClockManager extends ManagerPackage {
      * time UBO are resolved per-window directly through each GridInstance
      * now — see GridInstance's own UBO instances.
      */
-    public LocationTimeStruct getPrimaryLocationTime() {
+    public ClockInstance getPrimaryLocationTime() {
 
         if (!worldStreamManager.hasGrids())
             return fallbackLocationTime;
 
-        return worldStreamManager.getGrids().get(0).getLocationTimeStruct();
+        return worldStreamManager.getGrids().get(0).getClockInstance();
     }
 }
