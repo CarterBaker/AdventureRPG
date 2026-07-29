@@ -13,27 +13,22 @@ class GlobalNoiseSystem extends SystemPackage {
     /*
      * Drives the planet-scale motion behind the regional weather noise
      * field — rotation, meander, and seasonal drift — and exposes a
-     * second, coarser noise layer used for global storm intensity.
+     * coarser second noise layer for global storm intensity.
      */
 
     private static final long GLOBAL_INTENSITY_SEED = 0xB16B00B5DEADC0DEL;
 
-    // Internal
     private WorldManager worldManager;
     private ClockManager clockManager;
 
-    // World
     private WorldHandle activeWorld;
     private double worldWidthChunks;
     private float worldDriftChunksPerSecondX;
 
-    // Motion State
     private double elapsedDriftChunksX;
     private double rotationAngleDegrees;
     private double meanderPhase;
     private double seasonalDriftZChunks;
-
-    // Internal \\
 
     @Override
     protected void get() {
@@ -47,14 +42,12 @@ class GlobalNoiseSystem extends SystemPackage {
         this.activeWorld = worldManager.getActiveWorld();
 
         if (activeWorld == null)
-            throwException(
-                    "GlobalNoiseSystem could not resolve an active world — weather noise has nothing to scroll against.");
+            throwException("GlobalNoiseSystem could not resolve an active world.");
 
         this.worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
 
         if (worldWidthChunks <= 0.0)
-            throwException(
-                    "Active world resolved a non-positive width in chunks — cannot drive global weather rotation.");
+            throwException("Active world resolved a non-positive width in chunks.");
 
         float driftMetersPerSecond = EngineSetting.WEATHER_BASE_DRIFT_SPEED_KPH
                 * EngineSetting.KPH_TO_METERS_PER_SECOND;
@@ -73,8 +66,6 @@ class GlobalNoiseSystem extends SystemPackage {
         advanceSeasonalDrift();
     }
 
-    // Rotation \\
-
     private void advanceRotation(float deltaTime) {
 
         elapsedDriftChunksX += worldDriftChunksPerSecondX * deltaTime;
@@ -83,8 +74,6 @@ class GlobalNoiseSystem extends SystemPackage {
         rotationAngleDegrees = (elapsedDriftChunksX / worldWidthChunks) * EngineSetting.DEGREES_PER_FULL_ROTATION;
     }
 
-    // Meander \\
-
     private void advanceMeander(float deltaTime) {
 
         double meanderPhaseSpeed = (Math.PI * 2.0) / EngineSetting.WEATHER_LOCAL_EVOLUTION_PERIOD;
@@ -92,8 +81,6 @@ class GlobalNoiseSystem extends SystemPackage {
         meanderPhase += meanderPhaseSpeed * deltaTime;
         meanderPhase %= (Math.PI * 2.0);
     }
-
-    // Seasonal Drift \\
 
     private void advanceSeasonalDrift() {
 
@@ -104,8 +91,6 @@ class GlobalNoiseSystem extends SystemPackage {
         this.seasonalDriftZChunks = seasonWave * tiltFraction * EngineSetting.GLOBAL_WEATHER_TILT_INFLUENCE
                 * EngineSetting.WEATHER_NOISE_CELL_SIZE;
     }
-
-    // Global Intensity \\
 
     float sampleGlobalIntensity(long chunkCoordinate) {
 
@@ -127,8 +112,6 @@ class GlobalNoiseSystem extends SystemPackage {
     private static float clamp01(float value) {
         return Math.max(0f, Math.min(1f, value));
     }
-
-    // Accessible \\
 
     float getGlobalInfluence() {
         return EngineSetting.GLOBAL_WEATHER_INFLUENCE;

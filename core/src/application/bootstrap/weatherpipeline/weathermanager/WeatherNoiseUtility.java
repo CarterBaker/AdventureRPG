@@ -3,23 +3,14 @@ package application.bootstrap.weatherpipeline.weathermanager;
 import engine.root.EngineUtility;
 import engine.util.mathematics.extras.NoiseUtility;
 
-/*
- * Continuous 2D weather noise field, seamless across the world's X wrap and
- * non-repeating along Z. chunkX sits on a small circle in noise space — a
- * full lap always lands on the same (ex, ey), so the field is bit-exact
- * seamless across the wrap. The circle is small relative to a real lap, so
- * one noise feature spans a wide arc — that's what stretches weather into
- * long, current-like bands along the rotation axis instead of round blobs.
- * The meander term rides on the same spatial angle used for that embedding
- * (not on the rotated angle), so its wave crests are pinned to world
- * position and only wander over time via meanderPhase — decoupled from
- * rotation speed, so the wobble stays "large and slow" regardless of how
- * fast the planet turns and never compounds with it.
- * chunkZ itself is folded in as an independent third dimension — never
- * embedded on the circle, so it never wraps or grows patterns with distance
- * — and sampled at a tighter frequency than X so bands stay narrow crossways.
- */
 final class WeatherNoiseUtility extends EngineUtility {
+
+    /*
+     * Continuous 2D weather noise field sampled per chunk coordinate.
+     * Seamless across the world's X wrap and elongated along the same
+     * axis the world rotates, so a single noise feature reads as a long
+     * moving weather band rather than a round blob.
+     */
 
     private static final double MIN_CYCLES_AROUND_WORLD = 4.0;
     private static final double CROSS_STREAM_COMPRESSION = 3.2;
@@ -49,26 +40,13 @@ final class WeatherNoiseUtility extends EngineUtility {
                 wavelengthChunks,
                 Math.max(worldWidthChunks / MIN_CYCLES_AROUND_WORLD, 0.001));
 
-        // Spatial angle is the piece that has to repeat exactly every lap
-        // for a seamless wrap. rotationPhase is position-independent — it
-        // scrolls the whole field in X over time without ever affecting
-        // that continuity — so it's kept separate from the spatial angle
-        // rather than folded into it.
         double spatialAngle = (chunkX / worldWidthChunks) * (Math.PI * 2.0);
         double angle = spatialAngle + rotationPhase;
 
-        // Tangential (X) embedding — periodic by construction, and the
-        // only place X frequency is set. Never touched by Z.
         double embeddingRadius = worldWidthChunks / (Math.PI * 2.0 * effectiveWavelength);
         double ex = Math.cos(angle) * embeddingRadius;
         double ey = Math.sin(angle) * embeddingRadius;
 
-        // Cross-stream (Z) — an independent third dimension, sampled at a
-        // tighter frequency than the tangential embedding so bands read as
-        // long and thin rather than round. The meander wave rides on the
-        // unrotated spatial angle, so its crests stay fixed to world
-        // position and travel only through meanderPhase's own slow clock —
-        // never sped up by how fast the planet itself is turning.
         double meander = Math.sin(spatialAngle * meanderWaveNumber + meanderPhase) * meanderAmplitudeChunks;
         double ez = (chunkZ + driftZ + meander) / (effectiveWavelength / CROSS_STREAM_COMPRESSION);
 

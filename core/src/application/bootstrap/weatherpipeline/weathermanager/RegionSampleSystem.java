@@ -1,4 +1,3 @@
-// RegionSampleSystem.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
@@ -14,11 +13,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RegionSampleSystem extends SystemPackage {
 
     /*
-     * Owns the coherent regional weather noise field and resolves it against
-     * a chance-weighted pool, either at an exact coordinate or blended toward
-     * a horizon-direction sample. Pure resolution logic only — every caller
-     * (spatial patterns, the local weather pattern) owns its own state and
-     * smoothing on top of whatever this returns.
+     * Resolves the regional weather noise field against a chance-weighted
+     * pool, either at an exact chunk coordinate or blended toward a
+     * horizon-direction sample. Pure resolution logic — callers own their
+     * own state and smoothing on top of whatever this returns.
      */
 
     private static final long NOISE_SEED = 0x51A5F00DCAFEBEEFL;
@@ -39,8 +37,6 @@ class RegionSampleSystem extends SystemPackage {
         this.worldManager = get(WorldManager.class);
     }
 
-    // Reference \\
-
     void setReferenceCoordinate(long chunkCoordinate) {
         this.referenceCoordinate = chunkCoordinate;
     }
@@ -48,8 +44,6 @@ class RegionSampleSystem extends SystemPackage {
     long getReferenceCoordinate() {
         return referenceCoordinate;
     }
-
-    // Effective Range \\
 
     float getEffectiveOuterRangeChunks() {
         return Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_OUTER_RANGE_CHUNKS);
@@ -59,8 +53,6 @@ class RegionSampleSystem extends SystemPackage {
         return Math.min(getEffectiveOuterRangeChunks(), (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
     }
 
-    // Resolution \\
-
     private float combinedNoiseAt(int chunkX, int chunkZ) {
 
         float localNoise = sampleNoise(chunkX, chunkZ);
@@ -69,8 +61,8 @@ class RegionSampleSystem extends SystemPackage {
         return lerp(localNoise, globalIntensity, globalNoiseSystem.getGlobalInfluence());
     }
 
-    void resolveBand(WeatherBandStruct out, int chunkX, int chunkY, ObjectArrayList<WeatherPoolEntryStruct> pool) {
-        bandFromPool(out, pool, combinedNoiseAt(chunkX, chunkY));
+    void resolveBand(WeatherBandStruct out, int chunkX, int chunkZ, ObjectArrayList<WeatherPoolEntryStruct> pool) {
+        bandFromPool(out, pool, combinedNoiseAt(chunkX, chunkZ));
     }
 
     void resolveBandTowardHorizon(
@@ -165,8 +157,6 @@ class RegionSampleSystem extends SystemPackage {
     private float clamp01(float value) {
         return Math.max(0f, Math.min(1f, value));
     }
-
-    // Noise \\
 
     private float sampleNoise(int chunkX, int chunkZ) {
 
