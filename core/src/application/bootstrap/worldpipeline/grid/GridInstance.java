@@ -26,12 +26,10 @@ public class GridInstance extends InstancePackage {
      * The active spatial grid for a single focal entity — one per window.
      * Owns the load order, slot handles, active chunks, active mega chunks,
      * pending load/unload requests, and the render queues for this grid.
-     * clockInstance holds this grid's own visual time of day,
-     * refreshed every frame by ClockManager from this grid's active chunk
-     * coordinate. timeDataUBO/sunLightUBO/moonLightUBO/skyColorUBO are this
-     * grid's own GPU buffer instances — created once in GridBuildSystem —
-     * so this window's sun, moon, sky, and time render independently of
-     * any other active window.
+     * clockInstance and the Time/Sun/Moon/Sky UBO instances are all handed
+     * to this grid by GridBuildSystem — clockInstance from ClockManager,
+     * the UBOs cloned from their shared base handles — so every window
+     * tracks its own location's time, sun, moon, and sky independently.
      */
 
     // Focal
@@ -76,13 +74,6 @@ public class GridInstance extends InstancePackage {
     // Scan cursor
     private int scanCursor;
 
-    // Internal \\
-
-    @Override
-    protected void create() {
-        this.clockInstance = create(ClockInstance.class);
-    }
-
     // Constructor \\
 
     public void constructor(
@@ -95,6 +86,7 @@ public class GridInstance extends InstancePackage {
             Long2ObjectOpenHashMap<GridSlotHandle> gridSlots,
             float radiusSquared,
             int maxChunks,
+            ClockInstance clockInstance,
             UBOInstance timeDataUBO,
             UBOInstance sunLightUBO,
             UBOInstance moonLightUBO,
@@ -116,6 +108,9 @@ public class GridInstance extends InstancePackage {
 
         // Active State
         this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
+
+        // Location Time
+        this.clockInstance = clockInstance;
 
         // Location Lighting UBOs
         this.timeDataUBO = timeDataUBO;

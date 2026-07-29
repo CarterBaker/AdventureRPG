@@ -17,16 +17,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ClockManager extends ManagerPackage {
 
     /*
-     * Drives the in-game clock for the active world. Owns the ClockHandle
-     * and all tracker branches, wired to the active world's calendar and
-     * epoch. Starting point, day/year shape, and years-per-age all come
-     * from the active calendar. The calendar tick itself (day/month/year/
-     * season progression) is global and location-independent — there is
-     * one shared timeline per world. Visual time of day is not: each
-     * active grid tracks its own position along the world's Y axis, so
-     * updateLocationTimes() resolves a ClockInstance per grid every
-     * frame, letting every player experience day and night independently
-     * at the same real-world instant.
+     * Drives the in-game clock for the active world. Owns the global
+     * ClockHandle and calendar wiring; each grid holds its own
+     * ClockInstance, handed out by this manager, so time of day resolves
+     * independently per location.
      */
 
     // Internal
@@ -60,7 +54,7 @@ public class ClockManager extends ManagerPackage {
 
         // Clock
         this.clockHandle = create(ClockHandle.class);
-        this.fallbackLocationTime = create(ClockInstance.class);
+        this.fallbackLocationTime = createClockInstance();
     }
 
     @Override
@@ -179,6 +173,17 @@ public class ClockManager extends ManagerPackage {
         dayTracker.assignData(calendarHandle, clockHandle);
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
+    }
+
+    // Location Clocks \\
+
+    /*
+     * Hands out a fresh ClockInstance for a caller to own — one per grid,
+     * created here rather than by the grid itself, so ClockManager stays
+     * the single owner of ClockInstance creation.
+     */
+    public ClockInstance createClockInstance() {
+        return create(ClockInstance.class);
     }
 
     // Accessible \\

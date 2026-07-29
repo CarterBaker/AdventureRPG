@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.gridmanager;
 
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
@@ -23,15 +24,15 @@ class GridBuildSystem extends SystemPackage {
 
     /*
      * Constructs a GridInstance and all GridSlotHandles for a given focal
-     * entity and window. The window is stored on the grid so
-     * FrustumCullingSystem can read the correct camera per grid
-     * independently. Each grid also gets its own Time/Sun/Moon/Sky UBO
-     * instances here, cloned from the shared base handles, so every window
-     * renders its own location's day/night state independently.
+     * entity and window. Each grid gets its own ClockInstance from
+     * ClockManager and its own Time/Sun/Moon/Sky UBO instances cloned from
+     * the shared base handles, so every window tracks its own location
+     * independently.
      */
 
     // Internal
     private UBOManager uboManager;
+    private ClockManager clockManager;
 
     // Config
     private int chunkSize;
@@ -56,6 +57,7 @@ class GridBuildSystem extends SystemPackage {
     @Override
     protected void get() {
         this.uboManager = get(UBOManager.class);
+        this.clockManager = get(ClockManager.class);
     }
 
     @Override
@@ -100,6 +102,7 @@ class GridBuildSystem extends SystemPackage {
                 gridSlots,
                 radiusSquared,
                 maxChunks,
+                clockManager.createClockInstance(),
                 uboManager.createUBOInstance(timeDataBase),
                 uboManager.createUBOInstance(sunLightBase),
                 uboManager.createUBOInstance(moonLightBase),
